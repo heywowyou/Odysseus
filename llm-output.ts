@@ -1,0 +1,122 @@
+/**
+ * LLM layer contract. LOCKED.
+ *
+ * The governing rule of Odysseus: deterministic scanners detect, the LLM
+ * explains, groups, prioritizes, and writes. The model may never
+ * introduce a finding that is not present in the structured input it
+ * received.
+ *
+ * This file encodes that rule as a schema plus a guard. The guard is not
+ * optional and not advisory. One hallucinated finding in front of a
+ * client's developer damages the entire offer.
+ */
+
+import { z } from 'zod';
+import type { Finding } from './findings.js';
+
+export const effortSchema = z.enum(['low', 'medium', 'high']);
+export const impactSchema = z.enum(['low', 'medium', 'high']);
+
+export const themeSchema = z.object({
+  title: z.string().min(1),
+  category: z.enum(['accessibility', 'seo', 'performance', 'rendering']),
+  /** Why this matters commercially, in plain language, no jargon. */
+  businessImpact: z.string().min(1),
+  /** Populated for accessibility themes only. States the relevant
+   *  obligation without overstating it. Never asserts that a specific
+   *  law applies to a specific client. */
+  legalRelevance: z.string().optional(),
+  effort: effortSchema,
+  impact: impactSchema,
+  priorityRank: z.number().int().positive(),
+  /** Must reference findingId values from the input. Enforced below. */
+  findingIds: z.array(z.string()).min(1),
+  recommendedActions: z.array(z.string()).min(1),
+});
+
+export const llmOutputSchema = z.object({
+  executiveSummary: z.string().min(1),
+  overallRisk: z.enum(['low', 'medium', 'high']),
+  themes: z.array(themeSchema).min(1).max(20),
+  quickWins: z.array(z.string()),
+  notes: z.string(),
+});
+
+export type LlmOutput = z.infer<typeof llmOutputSchema>;
+export type Theme = z.infer<typeof themeSchema>;
+
+/**
+ * Hard guard against invented findings.
+ *
+ * Returns the set of finding IDs the model referenced that do not exist
+ * in the input. A non-empty result means the response is rejected, logged
+ * with the offending IDs, and retried. After a configured number of
+ * retries the audit fails loudly rather than shipping a report that
+ * cannot be traced to scanner output.
+ */
+export function findInventedFindingIds(
+  output: LlmOutput,
+  inputFindings: Finding[],
+): string[] {
+  const known = new Set(inputFindings.map((f) => f.findingId));
+  const referenced = new Set<string>();
+
+  for (const theme of output.themes) {
+    for (const id of theme.findingIds) referenced.add(id);
+  }
+  for (const id of output.quickWins) referenced.add(id);
+
+  return [...referenced].filter((id) => !known.has(id));
+}
+
+/**
+ * Coverage check. Not a hard failure, but a report that silently drops
+ * half the findings is a quality problem worth surfacing.
+ */
+export function findUnreferencedFindingIds(
+  output: LlmOutput,
+  inputFindings: Finding[],
+): string[] {
+  const referenced = new Set<string>();
+  for (const theme of output.themes) {
+    for (const id of theme.findingIds) referenced.add(id);
+  }
+  return inputFindings
+    .map((f) => f.findingId)
+    .filter((id) => !referenced.has(id));
+}
+
+/** Report output language. Bilingual delivery is a product requirement,
+ *  not an afterthought, so it is a parameter from the first call. */
+export type ReportLanguage = 'fr' | 'en';
+
+/**
+ * Everything the LLM layer is allowed to see. Never raw HTML, never full
+ * page content. This keeps token cost trivial and keeps the model on
+ * rails.
+ */
+export interface LlmInput {
+  language: ReportLanguage;
+  siteContext: {
+    businessType: string;
+    primaryGoal: string;
+    languagesServed: string[];
+    targetMarkets: string[];
+    sizeBracket?: string;
+  };
+  findings: Array<
+    Pick<
+      Finding,
+      | 'findingId'
+      | 'source'
+      | 'ruleId'
+      | 'category'
+      | 'severity'
+      | 'wcagCriteria'
+      | 'title'
+      | 'description'
+      | 'pageUrls'
+      | 'occurrences'
+    >
+  >;
+}
