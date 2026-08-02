@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  extractCoreWebVitals,
   extractLighthouseCandidates,
   extractLighthouseExcludedCategoryScores,
 } from './normalize-lighthouse.js';
@@ -192,5 +193,71 @@ describe('extractLighthouseExcludedCategoryScores', () => {
       accessibility: null,
       bestPractices: null,
     });
+  });
+});
+
+describe('extractCoreWebVitals', () => {
+  it('extracts LCP, CLS, and TBT unconditionally, even when every audit scores above the emission threshold', () => {
+    const lhr = buildLighthouseResultInput({
+      audits: {
+        'largest-contentful-paint': buildLighthouseAudit({
+          score: 0.99,
+          numericValue: 1200,
+          displayValue: '1.2 s',
+        }),
+        'cumulative-layout-shift': buildLighthouseAudit({
+          score: 1,
+          numericValue: 0.02,
+          displayValue: '0.02',
+        }),
+        'total-blocking-time': buildLighthouseAudit({
+          score: 1,
+          numericValue: 10,
+          displayValue: '10 ms',
+        }),
+      },
+    });
+
+    const cwv = extractCoreWebVitals(lhr);
+
+    expect(cwv.lcp).toEqual({ score: 0.99, numericValue: 1200, displayValue: '1.2 s' });
+    expect(cwv.cls).toEqual({ score: 1, numericValue: 0.02, displayValue: '0.02' });
+    expect(cwv.tbt).toEqual({ score: 1, numericValue: 10, displayValue: '10 ms' });
+  });
+
+  it('extracts a failing metric the same way as a passing one, since this path does not gate on score', () => {
+    const lhr = buildLighthouseResultInput({
+      audits: {
+        'largest-contentful-paint': buildLighthouseAudit({
+          score: 0,
+          numericValue: 31000,
+          displayValue: '31.0 s',
+        }),
+        'cumulative-layout-shift': buildLighthouseAudit({ score: 0.9, numericValue: 0.09, displayValue: '0.09' }),
+        'total-blocking-time': buildLighthouseAudit({ score: 0.03, numericValue: 2800, displayValue: '2,800 ms' }),
+      },
+    });
+
+    const cwv = extractCoreWebVitals(lhr);
+    expect(cwv.lcp.numericValue).toBe(31000);
+  });
+
+  it('falls back to nulls per metric when an audit id is absent, rather than throwing', () => {
+    const lhr = buildLighthouseResultInput({
+      audits: {
+        'largest-contentful-paint': buildLighthouseAudit({ numericValue: 2000, displayValue: '2.0 s' }),
+        // cumulative-layout-shift and total-blocking-time deliberately omitted
+      },
+    });
+
+    const cwv = extractCoreWebVitals(lhr);
+    expect(cwv.lcp.numericValue).toBe(2000);
+    expect(cwv.cls).toEqual({ score: null, numericValue: null, displayValue: null });
+    expect(cwv.tbt).toEqual({ score: null, numericValue: null, displayValue: null });
+  });
+
+  it('never produces an inp field: navigation-mode Lighthouse has no INP audit to read', () => {
+    const cwv = extractCoreWebVitals(buildLighthouseResultInput());
+    expect(cwv).not.toHaveProperty('inp');
   });
 });

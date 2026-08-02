@@ -7,3 +7,6 @@ export { persistAudit } from './persist-audit.js';
 export { createAnalysisModel } from './schemas/analysis.schema.js';
 export type { AnalysisDocument, AnalysisDocumentFields } from './schemas/analysis.schema.js';
 export { persistAnalysis } from './persist-analysis.js';
+export { createReportModel } from './schemas/report.schema.js';
+export type { ReportDocument, ReportDocumentFields } from './schemas/report.schema.js';
+export { persistReport } from './persist-report.js';

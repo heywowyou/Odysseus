@@ -14,7 +14,11 @@
 
 import { MAX_ELEMENTS_PER_FINDING } from '../types/findings.js';
 import type { FindingCategory } from '../types/findings.js';
-import type { LighthouseExcludedCategoryScores } from '../types/manifest.js';
+import type {
+  CoreWebVitalMeasurement,
+  CoreWebVitals,
+  LighthouseExcludedCategoryScores,
+} from '../types/manifest.js';
 import { severityFromLighthouse } from './severity.js';
 import {
   LIGHTHOUSE_EMISSION_SCORE_THRESHOLD,
@@ -100,6 +104,40 @@ export function extractLighthouseExcludedCategoryScores(
   return {
     accessibility: lhr.categories['accessibility']?.score ?? null,
     bestPractices: lhr.categories['best-practices']?.score ?? null,
+  };
+}
+
+const CORE_WEB_VITAL_AUDIT_IDS = {
+  lcp: 'largest-contentful-paint',
+  cls: 'cumulative-layout-shift',
+  tbt: 'total-blocking-time',
+} as const;
+
+function extractCoreWebVitalMeasurement(
+  lhr: LighthouseResultInput,
+  auditId: string,
+): CoreWebVitalMeasurement {
+  const audit = lhr.audits[auditId];
+  if (!audit) return { score: null, numericValue: null, displayValue: null };
+  return {
+    score: audit.score,
+    numericValue: audit.numericValue ?? null,
+    displayValue: audit.displayValue ?? null,
+  };
+}
+
+/** Recorded unconditionally, unlike extractLighthouseCandidates: this is
+ *  about capturing the measurement, not deciding whether it is a defect,
+ *  so neither LIGHTHOUSE_EMISSION_SCORE_THRESHOLD nor
+ *  SKIPPED_DISPLAY_MODES applies here. INP is deliberately not read:
+ *  Lighthouse in navigation mode never emits an INP audit, since INP
+ *  requires an actual user interaction during the trace. TBT is recorded
+ *  instead, as the lab-available proxy for responsiveness. */
+export function extractCoreWebVitals(lhr: LighthouseResultInput): CoreWebVitals {
+  return {
+    lcp: extractCoreWebVitalMeasurement(lhr, CORE_WEB_VITAL_AUDIT_IDS.lcp),
+    cls: extractCoreWebVitalMeasurement(lhr, CORE_WEB_VITAL_AUDIT_IDS.cls),
+    tbt: extractCoreWebVitalMeasurement(lhr, CORE_WEB_VITAL_AUDIT_IDS.tbt),
   };
 }
 

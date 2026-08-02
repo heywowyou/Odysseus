@@ -9,6 +9,7 @@
     { "path": "../core" },
     { "path": "../scanner" },
     { "path": "../store" },
-    { "path": "../llm" }
+    { "path": "../llm" },
+    { "path": "../report" }
   ]
 }

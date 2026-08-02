@@ -64,15 +64,38 @@ const lighthouseExcludedCategoryScoresSchema = new Schema(
   { _id: false },
 );
 
+const coreWebVitalMeasurementSchema = new Schema(
+  {
+    score: { type: Number, default: null },
+    numericValue: { type: Number, default: null },
+    displayValue: { type: String, default: null },
+  },
+  { _id: false },
+);
+
+const coreWebVitalsSchema = new Schema(
+  {
+    lcp: { type: coreWebVitalMeasurementSchema, required: true },
+    cls: { type: coreWebVitalMeasurementSchema, required: true },
+    tbt: { type: coreWebVitalMeasurementSchema, required: true },
+  },
+  { _id: false },
+);
+
 const manifestPageEntrySchema = new Schema(
   {
     url: { type: String, required: true },
     pageDir: { type: String },
     depth: { type: Number, required: true },
-    status: { type: String, required: true, enum: ['visited', 'skipped-robots', 'error'] },
+    status: {
+      type: String,
+      required: true,
+      enum: ['visited', 'skipped-robots', 'skipped-non-html', 'error'],
+    },
     httpStatus: { type: Number },
     renderDiffMissingPercent: { type: Number },
     lighthouseExcludedCategoryScores: { type: lighthouseExcludedCategoryScoresSchema },
+    coreWebVitals: { type: coreWebVitalsSchema },
     crawlError: { type: String },
     errors: {
       _id: false,

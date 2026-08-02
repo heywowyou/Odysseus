@@ -10,6 +10,7 @@ import { registerScanCommand } from './commands/scan.js';
 import { registerAuditCommand } from './commands/audit.js';
 import { registerNormalizeCommand } from './commands/normalize.js';
 import { registerAnalyzeCommand } from './commands/analyze.js';
+import { registerReportCommand } from './commands/report.js';
 
 const program = new Command();
 
@@ -24,5 +25,6 @@ registerScanCommand(program);
 registerAuditCommand(program);
 registerNormalizeCommand(program);
 registerAnalyzeCommand(program);
+registerReportCommand(program);
 
 program.parse(process.argv);

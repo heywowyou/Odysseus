@@ -5,6 +5,7 @@
     { "path": "./packages/scanner" },
     { "path": "./packages/store" },
     { "path": "./packages/llm" },
+    { "path": "./packages/report" },
     { "path": "./packages/cli" }
   ]
 }
