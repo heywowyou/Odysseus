@@ -1,0 +1,19 @@
+{
+  "name": "@odysseus/cli",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Command-line entry point for Odysseus. No queue, no API, no dashboard: this is the interface until volume justifies one.",
+  "type": "module",
+  "bin": {
+    "odysseus": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@odysseus/core": "workspace:*",
+    "commander": "^13.1.0"
+  }
+}

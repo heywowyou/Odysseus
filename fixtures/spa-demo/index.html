@@ -1,0 +1,28 @@
+<!doctype html>
+<!--
+  Fixture: no <meta name="description">.
+  Fault: meta-description-missing (custom check).
+  This is deliberate. Do not add one, it would defeat the fixture.
+-->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Domaine des Trois Chenes</title>
+    <!--
+      No <script type="application/ld+json"> anywhere in this document.
+      Fault: jsonld-missing (custom check). Absence is the fault, there
+      is nothing to add here.
+    -->
+  </head>
+  <body>
+    <!--
+      Everything below this point is empty until React hydrates. A raw,
+      non-JavaScript fetch of this page sees only this div and the
+      script tag: no heading, no text, no links. That gap between raw
+      and rendered content is the render-diff fixture.
+    -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

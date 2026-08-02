@@ -1,0 +1,24 @@
+{
+  "name": "odysseus",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Deterministic web audit engine: technical/SPA-SEO and accessibility audits, prioritized by an LLM layer that never detects.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.18.0",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --pretty",
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.2",
+    "vitest": "^3.0.4"
+  }
+}

@@ -1,0 +1,35 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+.page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.hero {
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  background: #d8cfc0;
+}
+
+/* Fault: color-contrast. #b3b3b3 on #ffffff is roughly 2.3:1, well
+   under the 4.5:1 threshold WCAG 2.2 AA requires for normal text. */
+.tasting-note {
+  color: #b3b3b3;
+}
+
+.newsletter {
+  margin-top: 2rem;
+}
+
+.page__footer {
+  margin-top: 3rem;
+  color: #555555;
+  font-size: 0.875rem;
+}

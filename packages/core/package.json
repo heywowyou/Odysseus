@@ -1,0 +1,20 @@
+{
+  "name": "@odysseus/core",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Findings model, severity normalization, and the LLM output contract shared by every downstream layer.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": "./dist/*"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}
