@@ -7,6 +7,8 @@ import { Command } from 'commander';
 import { registerRenderDiffCommand } from './commands/render-diff.js';
 import { registerCrawlCommand } from './commands/crawl.js';
 import { registerScanCommand } from './commands/scan.js';
+import { registerAuditCommand } from './commands/audit.js';
+import { registerNormalizeCommand } from './commands/normalize.js';
 
 const program = new Command();
 
@@ -18,5 +20,7 @@ program
 registerRenderDiffCommand(program);
 registerCrawlCommand(program);
 registerScanCommand(program);
+registerAuditCommand(program);
+registerNormalizeCommand(program);
 
 program.parse(process.argv);

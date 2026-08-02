@@ -5,9 +5,17 @@ import type { RenderDiffResult } from '@odysseus/core';
 import { DEFAULT_TIMEOUT_MS } from './browser.js';
 import { getArtifactsRoot, getCrawlerUserAgent } from './config.js';
 import { computeMissingPercent, extractTextFromHtml } from './extract-text.js';
+import { buildPageDir } from './artifacts/paths.js';
 
 export interface RenderDiffOptions {
   timeoutMs?: number;
+  /** The `pages/` parent directory for this run (see artifacts/paths.ts
+   *  for the layout). Screenshots land at
+   *  `<screenshotDir>/<slug>-<hash>/{raw,rendered}.png`. Defaults to
+   *  `<artifactsRoot>/render-diff/` when unset, a legacy fallback used
+   *  only when renderDiff() is called directly without going through the
+   *  CLI's audit/render-diff orchestration (which always passes an
+   *  explicit, already-timestamped screenshotDir). */
   screenshotDir?: string;
   userAgent?: string;
   /** Politeness delay to wait after the raw pass closes and before the
@@ -39,7 +47,7 @@ export async function renderDiff(
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
   const screenshotDir = options.screenshotDir ?? path.join(getArtifactsRoot(), 'render-diff');
 
-  const runDir = path.join(screenshotDir, buildRunSlug(url));
+  const runDir = path.join(screenshotDir, buildPageDir(url));
   await fs.mkdir(runDir, { recursive: true });
   const rawScreenshotRef = path.join(runDir, 'raw.png');
   const renderedScreenshotRef = path.join(runDir, 'rendered.png');
@@ -99,13 +107,4 @@ export async function renderDiff(
     consoleErrors,
     httpStatus,
   };
-}
-
-function buildRunSlug(url: string): string {
-  const parsed = new URL(url);
-  const base = `${parsed.hostname}${parsed.pathname}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return `${base || 'root'}-${Date.now()}`;
 }

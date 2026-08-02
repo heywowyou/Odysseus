@@ -15,6 +15,7 @@
   "dependencies": {
     "@odysseus/core": "workspace:*",
     "@odysseus/scanner": "workspace:*",
+    "@odysseus/store": "workspace:*",
     "commander": "^13.1.0"
   }
 }

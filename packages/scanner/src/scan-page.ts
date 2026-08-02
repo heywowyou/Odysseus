@@ -10,6 +10,9 @@ export interface ScanPageOptions {
   delayMs?: number;
   timeoutMs?: number;
   userAgent?: string;
+  /** Forwarded to renderDiff's own screenshotDir option (the `pages/`
+   *  parent directory for this run). */
+  screenshotDir?: string;
 }
 
 /**
@@ -58,6 +61,7 @@ export async function scanPage(
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
       ...(options.delayMs !== undefined ? { preRenderedDelayMs: options.delayMs } : {}),
+      ...(options.screenshotDir !== undefined ? { screenshotDir: options.screenshotDir } : {}),
       onRenderedPage: async (page) => {
         try {
           axeResult = await runAxe(page);

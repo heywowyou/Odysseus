@@ -1,0 +1,21 @@
+{
+  "name": "@odysseus/store",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Mongoose models and connection handling for persisted audits and findings. The only package that talks to MongoDB.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": "./dist/*"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@odysseus/core": "workspace:*",
+    "mongoose": "^9.9.1"
+  }
+}

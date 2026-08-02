@@ -36,6 +36,38 @@ Every downstream layer reads these shapes. Changing them invalidates
 stored audits and breaks monitoring diffs. If a change is genuinely
 needed, say so and stop. Do not change them and continue.
 
+## Known trade-offs, do not silently reverse
+
+1. **Lighthouse's `accessibility` and `best-practices` categories emit no
+   findings**, decided in Milestone 4. `accessibility` is axe-core
+   underneath, and axe already scans WCAG 2.2 AA directly against the same
+   page, so emitting both produced duplicate findings with two different
+   severity mappings for the same rule. `best-practices` bundles unrelated
+   concerns (HTTPS usage, deprecated APIs, console errors, image aspect
+   ratio) that have no correct home among the four locked
+   `FindingCategory` values; forcing one onto a client-facing report
+   section mislabels it. Both category scores are still recorded per page
+   in the audit manifest (`ManifestPageEntry.lighthouseExcludedCategoryScores`),
+   so the numbers are not lost, only unused for findings.
+
+   This is why `heading-order` (documented in
+   `docs/manual-accessibility-checklist.md` as a confirmed axe detection
+   gap, tagged best-practice rather than WCAG) remains a real gap rather
+   than something a future session should "fix" by re-adding Lighthouse's
+   accessibility category. `best-practices` gets a deliberate per-audit-id
+   mapping table in Milestone 8, alongside the custom checks. Do not
+   re-enable either category for finding emission without that argued
+   change.
+
+2. **Screenshot pruning has one canonical implementation.**
+   `packages/scanner/src/artifacts/prune-screenshots.ts`'s
+   `selectPageDirsToKeep` / `pruneScreenshots` is the single place that
+   decides which page screenshots survive a scan (always the homepage,
+   plus the top N pages by render-diff `missingPercent`). Report
+   generation (Milestone 6) must import and call these functions rather
+   than reimplementing the selection logic, or the report will eventually
+   ask for a screenshot the scan already deleted.
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.

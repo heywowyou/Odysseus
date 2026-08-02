@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty",
     "build": "tsc -b",
-    "clean": "tsc -b --clean"
+    "clean": "tsc -b --clean",
+    "test:store:up": "docker compose up -d mongo-test",
+    "test:store:down": "docker compose down"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

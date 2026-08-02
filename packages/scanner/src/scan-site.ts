@@ -10,6 +10,10 @@ export interface ScanSiteOptions {
   delayMs?: number;
   timeoutMs?: number;
   userAgent?: string;
+  /** The `pages/` parent directory every scanned page's screenshots are
+   *  written under; renderDiff appends its own <slug>-<hash> subdirectory
+   *  per page. */
+  screenshotDir?: string;
 }
 
 export interface SiteScanResult {
@@ -53,6 +57,7 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
       delayMs: crawl.effectiveDelayMs,
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
+      ...(options.screenshotDir !== undefined ? { screenshotDir: options.screenshotDir } : {}),
     });
     pages.push(pageResult);
   }

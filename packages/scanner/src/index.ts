@@ -29,3 +29,24 @@ export {
   DEFAULT_PAGE_TIMEOUT_MS,
   DEFAULT_LIGHTHOUSE_TIMEOUT_MS,
 } from './config.js';
+export {
+  buildAuditTimestampDir,
+  slugify,
+  hashUrl,
+  buildPageDir,
+  buildAuditDir,
+} from './artifacts/paths.js';
+export { toAuditRelativeRefs } from './artifacts/relativize.js';
+export { collectToolVersions } from './artifacts/versions.js';
+export type { CollectedToolVersions } from './artifacts/versions.js';
+export { buildManifest } from './artifacts/manifest.js';
+export type { BuildManifestInput } from './artifacts/manifest.js';
+export {
+  SCREENSHOT_PRUNE_KEEP_TOP_N,
+  selectPageDirsToKeep,
+  pruneScreenshots,
+} from './artifacts/prune-screenshots.js';
+export type { PrunePageInfo } from './artifacts/prune-screenshots.js';
+export { writeAuditArtifacts } from './artifacts/write-audit.js';
+export type { WriteAuditArtifactsInput, WriteAuditArtifactsResult } from './artifacts/write-audit.js';
+export { writeFindingsFile } from './artifacts/write-findings.js';

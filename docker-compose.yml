@@ -1,0 +1,13 @@
+services:
+  # Local MongoDB for packages/store's integration tests only. Never used
+  # by the CLI itself (that reads MONGODB_URI, not this). Offset port so
+  # it never collides with a developer's own local Mongo on 27017.
+  mongo-test:
+    image: mongo:7
+    ports:
+      - '27018:27017'
+    volumes:
+      - mongo-test-data:/data/db
+
+volumes:
+  mongo-test-data:
