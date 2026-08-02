@@ -16,7 +16,11 @@ import { MAX_ELEMENTS_PER_FINDING } from '../types/findings.js';
 import type { FindingCategory } from '../types/findings.js';
 import type { LighthouseExcludedCategoryScores } from '../types/manifest.js';
 import { severityFromLighthouse } from './severity.js';
-import { LIGHTHOUSE_EMISSION_SCORE_THRESHOLD, MAX_LIGHTHOUSE_DETAILS_ITEMS } from './constants.js';
+import {
+  LIGHTHOUSE_EMISSION_SCORE_THRESHOLD,
+  LIGHTHOUSE_EXCLUDED_AUDITS,
+  MAX_LIGHTHOUSE_DETAILS_ITEMS,
+} from './constants.js';
 import type { FindingCandidate } from './candidate.js';
 
 export interface LighthouseAuditRefInput {
@@ -34,6 +38,12 @@ export interface LighthouseAuditInput {
   scoreDisplayMode: string;
   title: string;
   description: string;
+  /** The raw measurement behind `score` (e.g. milliseconds for LCP). Not
+   *  every audit has one; score is a normalized ranking, this is the
+   *  actual measurement the report needs to show alongside it. */
+  numericValue?: number;
+  /** Human-readable rendering of numericValue (e.g. "3.2 s"). */
+  displayValue?: string;
   /** items is typed loosely (not Array<Record<string, unknown>>) because
    *  Lighthouse's real Details union includes variants (e.g. Checklist)
    *  whose "items" is a Record keyed by id, not an array. Narrowing this
@@ -56,6 +66,8 @@ const SCANNED_CATEGORIES: Array<{ id: string; category: FindingCategory }> = [
 ];
 
 const SKIPPED_DISPLAY_MODES = new Set(['informative', 'notApplicable', 'manual', 'error']);
+
+const EXCLUDED_AUDITS = new Set<string>(LIGHTHOUSE_EXCLUDED_AUDITS);
 
 interface LighthouseNodeValue {
   type: 'node';
@@ -105,6 +117,7 @@ export function extractLighthouseCandidates(
       const audit = lhr.audits[auditRef.id];
       if (!audit) continue;
       if (SKIPPED_DISPLAY_MODES.has(audit.scoreDisplayMode)) continue;
+      if (EXCLUDED_AUDITS.has(auditRef.id)) continue;
       if (audit.score === null || audit.score >= LIGHTHOUSE_EMISSION_SCORE_THRESHOLD) continue;
 
       // The score<0.9 gate above means severityFromLighthouse's own
@@ -144,6 +157,8 @@ export function extractLighthouseCandidates(
             rawEvidenceForPage: {
               score: audit.score,
               scoreDisplayMode: audit.scoreDisplayMode,
+              numericValue: audit.numericValue ?? null,
+              displayValue: audit.displayValue ?? null,
               title: audit.title,
               node,
             },
@@ -166,6 +181,8 @@ export function extractLighthouseCandidates(
         rawEvidenceForPage: {
           score: audit.score,
           scoreDisplayMode: audit.scoreDisplayMode,
+          numericValue: audit.numericValue ?? null,
+          displayValue: audit.displayValue ?? null,
           title: audit.title,
           details: {
             type: audit.details?.type ?? null,

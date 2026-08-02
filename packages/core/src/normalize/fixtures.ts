@@ -48,6 +48,8 @@ export function buildLighthouseAudit(overrides: Partial<LighthouseAuditInput> = 
     scoreDisplayMode: 'numeric',
     title: 'Largest Contentful Paint',
     description: 'Largest Contentful Paint marks the time at which the largest text or image is painted.',
+    numericValue: 3200,
+    displayValue: '3.2 s',
     ...overrides,
   };
 }

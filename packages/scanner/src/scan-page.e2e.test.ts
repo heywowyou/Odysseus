@@ -1,7 +1,9 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser } from 'playwright';
 import { launchBrowser } from './browser.js';
 import { scanPage } from './scan-page.js';
@@ -16,6 +18,7 @@ const viteBin = path.join(spaDemoDir, 'node_modules', '.bin', 'vite');
 let devServer: ChildProcess;
 let browser: Browser;
 let debugPort: number;
+let scratchScreenshotDir: string;
 
 async function waitForServer(url: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
@@ -46,10 +49,18 @@ describe('scanPage against fixtures/spa-demo', () => {
     devServer?.kill();
   });
 
+  afterEach(async () => {
+    if (scratchScreenshotDir) await fs.rm(scratchScreenshotDir, { recursive: true, force: true });
+  });
+
   it(
     'runs render-diff, axe, and Lighthouse against the homepage with no scanner failures',
     async () => {
-      const result = await scanPage(browser, debugPort, TEST_URL, { delayMs: 0 });
+      scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-page-'));
+      const result = await scanPage(browser, debugPort, TEST_URL, {
+        delayMs: 0,
+        screenshotDir: scratchScreenshotDir,
+      });
 
       expect(result.renderDiffError).toBeUndefined();
       expect(result.axeError).toBeUndefined();

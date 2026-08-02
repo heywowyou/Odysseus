@@ -66,6 +66,8 @@ export default function App() {
           <a href="/about.html">A propos</a>
           {/* Disallowed by robots.txt; must be discovered but never crawled. */}
           <a href="/private.html">Espace prive</a>
+          {/* Non-HTML resource; the crawler must drop it before enqueuing. */}
+          <a href="/vineyard.svg">Illustration</a>
         </nav>
       </footer>
     </div>

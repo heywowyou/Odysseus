@@ -74,6 +74,60 @@ describe('normalizeAudit', () => {
     expect(findings[0]?.occurrences).toBe(2);
   });
 
+  it('merges the same rule with different selectors on one page into one finding', () => {
+    const axe = buildAxeResultsInput([
+      buildAxeViolation({
+        id: 'link-in-text-block',
+        nodes: [buildAxeNode({ target: ['#a'] }), buildAxeNode({ target: ['#b'] })],
+      }),
+    ]);
+
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [buildNormalizePageInput({ url: 'https://example.com/mentions-legales', axe })],
+    });
+
+    expect(findings).toHaveLength(1);
+    const finding = findings[0];
+    expect(finding?.occurrences).toBe(2);
+    expect(finding?.elements.map((e) => e.selector).sort()).toEqual(['#a', '#b']);
+    expect(finding?.pageUrls).toEqual(['https://example.com/mentions-legales']);
+
+    // Neither selector's own dedupe key, since two fine groups collided
+    // on this page and were merged under a page-based key instead.
+    const soloA = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({
+          url: 'https://example.com/mentions-legales',
+          axe: buildAxeResultsInput([
+            buildAxeViolation({ id: 'link-in-text-block', nodes: [buildAxeNode({ target: ['#a'] })] }),
+          ]),
+        }),
+      ],
+    });
+    expect(finding?.dedupeKey).not.toBe(soloA[0]?.dedupeKey);
+  });
+
+  it('caps elements at MAX_ELEMENTS_PER_FINDING when many selectors collide on one page', () => {
+    const nodes = Array.from({ length: 25 }, (_, i) => buildAxeNode({ target: [`#node-${i}`] }));
+    const axe = buildAxeResultsInput([
+      buildAxeViolation({ id: 'link-in-text-block', nodes }),
+    ]);
+
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [buildNormalizePageInput({ url: 'https://example.com/mentions-legales', axe })],
+    });
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.occurrences).toBe(25);
+    expect(findings[0]?.elements).toHaveLength(20);
+  });
+
   it('assigns sequential findingIds and stamps schemaVersion/auditId/dedupeKey/timestamps', () => {
     const renderDiff = buildRenderDiffResult({ missingPercent: 90 });
     const findings = normalizeAudit({

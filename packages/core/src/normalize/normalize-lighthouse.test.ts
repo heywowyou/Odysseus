@@ -67,6 +67,14 @@ describe('extractLighthouseCandidates', () => {
     expect(extractLighthouseCandidates(lhr, 'https://example.com/')).toEqual([]);
   });
 
+  it('skips image-alt under seo because it duplicates an axe rule', () => {
+    const lhr = buildLighthouseResultInput({
+      categories: { seo: { score: 0.3, auditRefs: [{ id: 'image-alt', weight: 10 }] } },
+      audits: { 'image-alt': buildLighthouseAudit({ score: 0.3 }) },
+    });
+    expect(extractLighthouseCandidates(lhr, 'https://example.com/')).toEqual([]);
+  });
+
   it('caps severity at moderate for weight < 3', () => {
     const lhr = buildLighthouseResultInput({
       categories: { performance: { score: 0.4, auditRefs: [{ id: 'x', weight: 1 }] } },
@@ -144,6 +152,18 @@ describe('extractLighthouseCandidates', () => {
     expect(details.items).toHaveLength(MAX_LIGHTHOUSE_DETAILS_ITEMS);
     expect(details.truncated).toBe(true);
     expect(details.totalItems).toBe(MAX_LIGHTHOUSE_DETAILS_ITEMS + 5);
+  });
+
+  it('carries numericValue and displayValue through to rawEvidenceForPage', () => {
+    const lhr = buildLighthouseResultInput({
+      categories: { performance: { score: 0.3, auditRefs: [{ id: 'lcp', weight: 25 }] } },
+      audits: {
+        lcp: buildLighthouseAudit({ score: 0.3, numericValue: 4100, displayValue: '4.1 s' }),
+      },
+    });
+    const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
+    expect(candidates[0]?.rawEvidenceForPage['numericValue']).toBe(4100);
+    expect(candidates[0]?.rawEvidenceForPage['displayValue']).toBe('4.1 s');
   });
 
   it('never stores the full LHR in rawEvidenceForPage, only the single audit', () => {

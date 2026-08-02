@@ -42,3 +42,17 @@ export const RENDER_DIFF_EMISSION_THRESHOLD_PERCENT = 20;
  * normalize-lighthouse.ts, so the numbers are not lost.
  */
 export const LIGHTHOUSE_EXCLUDED_CATEGORIES = ['accessibility', 'best-practices'] as const;
+
+/**
+ * Individual Lighthouse audit IDs excluded from finding emission because
+ * they duplicate an axe-core rule that already covers the same page,
+ * with a different severity mapping. Category-level exclusion
+ * (LIGHTHOUSE_EXCLUDED_CATEGORIES above) does not catch these because the
+ * duplicate lives inside a category that IS scanned (e.g. 'seo').
+ *
+ * image-alt: Lighthouse's seo-category `image-alt` audit and axe's
+ * `image-alt` rule both flag <img> without alternative text on the same
+ * element. Confirmed duplicate. Only add an ID here once overlap with a
+ * specific axe rule is confirmed, not on suspicion.
+ */
+export const LIGHTHOUSE_EXCLUDED_AUDITS = ['image-alt'] as const;

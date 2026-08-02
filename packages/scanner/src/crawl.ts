@@ -18,7 +18,7 @@ export interface CrawlOptions {
   userAgent?: string;
 }
 
-export type CrawledPageStatus = 'visited' | 'skipped-robots' | 'error';
+export type CrawledPageStatus = 'visited' | 'skipped-robots' | 'skipped-non-html' | 'error';
 
 export interface CrawledPage {
   url: string;
@@ -46,6 +46,17 @@ interface QueueItem {
   url: string;
   depth: number;
   discoveredFrom?: string;
+}
+
+/**
+ * Fallback for URLs whose extension doesn't reveal what they are;
+ * links.ts's extension check already caught the common case (e.g.
+ * wp-content/uploads/*.jpg) before a navigation ever happens. A missing
+ * Content-Type is treated as HTML rather than skipped, since there's
+ * nothing here to justify dropping the page.
+ */
+export function isNonHtmlContentType(contentType: string | undefined): boolean {
+  return contentType !== undefined && !contentType.toLowerCase().includes('text/html');
 }
 
 /**
@@ -101,20 +112,28 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       try {
         const response = await browserPage.goto(item.url, { waitUntil: 'load' });
         const httpStatus = response?.status();
+        const contentType = response?.headers()['content-type'];
 
-        const visitedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'visited' };
-        if (httpStatus !== undefined) visitedPage.httpStatus = httpStatus;
-        if (item.discoveredFrom !== undefined) visitedPage.discoveredFrom = item.discoveredFrom;
-        pages.push(visitedPage);
+        if (isNonHtmlContentType(contentType)) {
+          const skippedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'skipped-non-html' };
+          if (httpStatus !== undefined) skippedPage.httpStatus = httpStatus;
+          if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
+          pages.push(skippedPage);
+        } else {
+          const visitedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'visited' };
+          if (httpStatus !== undefined) visitedPage.httpStatus = httpStatus;
+          if (item.discoveredFrom !== undefined) visitedPage.discoveredFrom = item.discoveredFrom;
+          pages.push(visitedPage);
 
-        if (item.depth < maxDepth) {
-          const hrefs = await browserPage.$$eval('a[href]', (anchors) =>
-            anchors.map((a) => a.getAttribute('href')),
-          );
-          for (const link of normalizeInternalLinks(hrefs, item.url)) {
-            if (enqueued.has(link) || enqueued.size >= maxPages) continue;
-            enqueued.add(link);
-            queue.push({ url: link, depth: item.depth + 1, discoveredFrom: item.url });
+          if (item.depth < maxDepth) {
+            const hrefs = await browserPage.$$eval('a[href]', (anchors) =>
+              anchors.map((a) => a.getAttribute('href')),
+            );
+            for (const link of normalizeInternalLinks(hrefs, item.url)) {
+              if (enqueued.has(link) || enqueued.size >= maxPages) continue;
+              enqueued.add(link);
+              queue.push({ url: link, depth: item.depth + 1, discoveredFrom: item.url });
+            }
           }
         }
       } catch (error) {

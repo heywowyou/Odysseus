@@ -1,7 +1,9 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser } from 'playwright';
 import { launchBrowser } from './browser.js';
 import { scanSite } from './scan-site.js';
@@ -16,6 +18,7 @@ const viteBin = path.join(spaDemoDir, 'node_modules', '.bin', 'vite');
 let devServer: ChildProcess;
 let browser: Browser;
 let debugPort: number;
+let scratchScreenshotDir: string;
 
 async function waitForServer(url: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
@@ -46,15 +49,21 @@ describe('scanSite against fixtures/spa-demo', () => {
     devServer?.kill();
   });
 
+  afterEach(async () => {
+    if (scratchScreenshotDir) await fs.rm(scratchScreenshotDir, { recursive: true, force: true });
+  });
+
   it(
     'crawls then scans every visited page, skipping the robots-disallowed one',
     async () => {
+      scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-site-'));
       const result = await scanSite(TEST_URL, {
         browser,
         debugPort,
         maxPages: 10,
         maxDepth: 3,
         delayMs: 0,
+        screenshotDir: scratchScreenshotDir,
       });
 
       expect(result.crawl.visitedCount).toBe(2);

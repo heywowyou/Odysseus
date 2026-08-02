@@ -118,19 +118,88 @@ function mergeGroup(
   };
 }
 
+/**
+ * Some axe rules (link-in-text-block is the confirmed case, from a real
+ * scan of sas-fernande.fr) hand out a distinct positional selector per
+ * node even when every node is the same underlying defect repeated many
+ * times on one page. The fine per-selector groups above are correct and
+ * stay untouched: a selector genuinely repeated across pages must still
+ * collapse into one finding, and genuinely different selectors must stay
+ * distinct. This second pass only catches the case that fine grouping
+ * cannot: two or more fine groups that are each confined to the exact
+ * same single page for the same source and rule. Only then are they
+ * combined into one finding, with a new dedupeKey computed from the page
+ * instead of a selector (reusing computeDedupeKey unchanged, the same way
+ * page-scoped candidates already reuse it with an empty-string selector).
+ * A fine group that is the only occupant of its coarse bucket (the common
+ * case: one selector, one occurrence) or that already spans multiple
+ * pages passes through with its original dedupeKey, unchanged.
+ */
+function aggregateSamePageOccurrences(
+  fineGroups: Map<string, FindingCandidate[]>,
+): Map<string, FindingCandidate[]> {
+  const coarseKeyByFineKey = new Map<string, string>();
+  const fineKeysByCoarseKey = new Map<string, string[]>();
+
+  for (const [fineKey, group] of fineGroups) {
+    const first = group[0];
+    if (!first) continue;
+
+    const pageUrls = new Set(group.map((c) => c.pageUrl));
+    if (pageUrls.size !== 1) continue;
+
+    const coarseKey = `${first.source}|${first.ruleId}|${[...pageUrls][0]}`;
+    coarseKeyByFineKey.set(fineKey, coarseKey);
+    const fineKeys = fineKeysByCoarseKey.get(coarseKey);
+    if (fineKeys) {
+      fineKeys.push(fineKey);
+    } else {
+      fineKeysByCoarseKey.set(coarseKey, [fineKey]);
+    }
+  }
+
+  const result = new Map<string, FindingCandidate[]>();
+  const consumedFineKeys = new Set<string>();
+
+  for (const [, fineKeys] of fineKeysByCoarseKey) {
+    if (fineKeys.length < 2) continue;
+
+    const combined: FindingCandidate[] = [];
+    for (const fineKey of fineKeys) {
+      combined.push(...(fineGroups.get(fineKey) ?? []));
+      consumedFineKeys.add(fineKey);
+    }
+
+    const first = combined[0];
+    if (!first) continue;
+    const pageUrl = [...new Set(combined.map((c) => c.pageUrl))][0] ?? '';
+    const dedupeKey = computeDedupeKey(first.source, first.ruleId, pageUrl);
+    result.set(dedupeKey, combined);
+  }
+
+  for (const [fineKey, group] of fineGroups) {
+    if (consumedFineKeys.has(fineKey)) continue;
+    result.set(fineKey, group);
+  }
+
+  return result;
+}
+
 export function normalizeAudit(input: NormalizeAuditInput): Finding[] {
   const candidates = collectCandidates(input);
 
-  const groups = new Map<string, FindingCandidate[]>();
+  const fineGroups = new Map<string, FindingCandidate[]>();
   for (const candidate of candidates) {
     const key = computeDedupeKey(candidate.source, candidate.ruleId, candidate.element?.selector ?? '');
-    const group = groups.get(key);
+    const group = fineGroups.get(key);
     if (group) {
       group.push(candidate);
     } else {
-      groups.set(key, [candidate]);
+      fineGroups.set(key, [candidate]);
     }
   }
+
+  const groups = aggregateSamePageOccurrences(fineGroups);
 
   const merged = [...groups.entries()].map(([dedupeKey, group]) =>
     mergeGroup(input.auditId, dedupeKey, group, input.startedAt),

@@ -1,6 +1,7 @@
+import path from 'node:path';
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
-import { launchBrowser, scanSite } from '@odysseus/scanner';
+import { buildAuditDir, getArtifactsRoot, launchBrowser, scanSite } from '@odysseus/scanner';
 
 function parsePositiveInt(value: string): number {
   const parsed = Number.parseInt(value, 10);
@@ -30,9 +31,16 @@ export function registerScanCommand(program: Command): void {
 
       const { browser, debugPort } = await launchBrowser();
       try {
+        const hostname = new URL(url).hostname;
+        const screenshotDir = path.join(
+          buildAuditDir(getArtifactsRoot(), hostname, new Date()),
+          'pages',
+        );
+
         const result = await scanSite(url, {
           browser,
           debugPort,
+          screenshotDir,
           ...(opts.maxPages !== undefined ? { maxPages: opts.maxPages } : {}),
           ...(opts.maxDepth !== undefined ? { maxDepth: opts.maxDepth } : {}),
         });

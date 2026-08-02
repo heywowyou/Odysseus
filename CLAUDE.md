@@ -4,7 +4,7 @@ Internal tooling for a productized web audit service sold to French small
 and mid-size businesses. Two audit types share one engine: technical /
 SPA-SEO, and accessibility against WCAG 2.2 AA and EN 301 549.
 
-Full context: `docs/brief.md`. Read it before proposing any architecture.
+Full context: `docs/odysseus-project-brief-v2.md`. Read it before proposing any architecture.
 
 ## Non-negotiable rules
 

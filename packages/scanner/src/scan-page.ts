@@ -12,7 +12,7 @@ export interface ScanPageOptions {
   userAgent?: string;
   /** Forwarded to renderDiff's own screenshotDir option (the `pages/`
    *  parent directory for this run). */
-  screenshotDir?: string;
+  screenshotDir: string;
 }
 
 /**
@@ -50,7 +50,7 @@ export async function scanPage(
   browser: Browser,
   debugPort: number,
   url: string,
-  options: ScanPageOptions = {},
+  options: ScanPageOptions,
 ): Promise<PageScanResult> {
   const result: PageScanResult = { url };
   let axeResult: AxeResults | undefined;
@@ -58,10 +58,10 @@ export async function scanPage(
 
   try {
     result.renderDiff = await renderDiff(browser, url, {
+      screenshotDir: options.screenshotDir,
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
       ...(options.delayMs !== undefined ? { preRenderedDelayMs: options.delayMs } : {}),
-      ...(options.screenshotDir !== undefined ? { screenshotDir: options.screenshotDir } : {}),
       onRenderedPage: async (page) => {
         try {
           axeResult = await runAxe(page);

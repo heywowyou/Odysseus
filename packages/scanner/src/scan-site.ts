@@ -13,7 +13,7 @@ export interface ScanSiteOptions {
   /** The `pages/` parent directory every scanned page's screenshots are
    *  written under; renderDiff appends its own <slug>-<hash> subdirectory
    *  per page. */
-  screenshotDir?: string;
+  screenshotDir: string;
 }
 
 export interface SiteScanResult {
@@ -55,9 +55,9 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
 
     const pageResult = await scanPage(options.browser, options.debugPort, crawledPage.url, {
       delayMs: crawl.effectiveDelayMs,
+      screenshotDir: options.screenshotDir,
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
-      ...(options.screenshotDir !== undefined ? { screenshotDir: options.screenshotDir } : {}),
     });
     pages.push(pageResult);
   }

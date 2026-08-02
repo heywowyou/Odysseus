@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { Browser, Page } from 'playwright';
 import type { RenderDiffResult } from '@odysseus/core';
 import { DEFAULT_TIMEOUT_MS } from './browser.js';
-import { getArtifactsRoot, getCrawlerUserAgent } from './config.js';
+import { getCrawlerUserAgent } from './config.js';
 import { computeMissingPercent, extractTextFromHtml } from './extract-text.js';
 import { buildPageDir } from './artifacts/paths.js';
 
@@ -11,12 +11,10 @@ export interface RenderDiffOptions {
   timeoutMs?: number;
   /** The `pages/` parent directory for this run (see artifacts/paths.ts
    *  for the layout). Screenshots land at
-   *  `<screenshotDir>/<slug>-<hash>/{raw,rendered}.png`. Defaults to
-   *  `<artifactsRoot>/render-diff/` when unset, a legacy fallback used
-   *  only when renderDiff() is called directly without going through the
-   *  CLI's audit/render-diff orchestration (which always passes an
-   *  explicit, already-timestamped screenshotDir). */
-  screenshotDir?: string;
+   *  `<screenshotDir>/<slug>-<hash>/{raw,rendered}.png`. Always an
+   *  explicit, already-timestamped directory from the CLI's audit/
+   *  render-diff orchestration. */
+  screenshotDir: string;
   userAgent?: string;
   /** Politeness delay to wait after the raw pass closes and before the
    *  rendered pass opens. Unset by default so the standalone render-diff
@@ -41,11 +39,11 @@ export interface RenderDiffOptions {
 export async function renderDiff(
   browser: Browser,
   url: string,
-  options: RenderDiffOptions = {},
+  options: RenderDiffOptions,
 ): Promise<RenderDiffResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
-  const screenshotDir = options.screenshotDir ?? path.join(getArtifactsRoot(), 'render-diff');
+  const { screenshotDir } = options;
 
   const runDir = path.join(screenshotDir, buildPageDir(url));
   await fs.mkdir(runDir, { recursive: true });

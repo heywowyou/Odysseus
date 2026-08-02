@@ -54,4 +54,18 @@ describe('normalizeInternalLinks', () => {
       'https://client.example/valid',
     ]);
   });
+
+  it('drops links to non-HTML resources by extension', () => {
+    expect(
+      normalizeInternalLinks(
+        [
+          '/wp-content/uploads/2024/01/photo.jpg',
+          '/downloads/brochure.PDF',
+          '/assets/logo.svg',
+          '/about',
+        ],
+        BASE,
+      ),
+    ).toEqual(['https://client.example/about']);
+  });
 });

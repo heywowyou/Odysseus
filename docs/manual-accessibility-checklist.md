@@ -18,7 +18,11 @@ Confirmed on fixtures/spa-demo, 2026-08-02.
 
 ### Heading hierarchy skips
 `heading-order` is tagged best-practice in axe, not WCAG, so it is
-outside the tag set Odysseus scans. To be covered by a custom check.
+outside the tag set Odysseus scans. It is also excluded on the
+Lighthouse side: Lighthouse's own `heading-order` audit lives under the
+`accessibility` category, which is excluded from finding emission this
+milestone (see `LIGHTHOUSE_EXCLUDED_CATEGORIES` in constants.ts). To be
+covered by a custom check.
 
 ## To verify
 

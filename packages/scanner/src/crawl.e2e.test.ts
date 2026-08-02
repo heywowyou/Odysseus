@@ -70,6 +70,10 @@ describe('crawlSite against fixtures/spa-demo', () => {
 
     const privatePage = byUrl.get('/private.html');
     expect(privatePage?.status).toBe('skipped-robots');
+
+    // Dropped by links.ts's extension filter before ever being enqueued,
+    // so it never costs a visited slot and never appears in pages at all.
+    expect(byUrl.get('/vineyard.svg')).toBeUndefined();
   }, 45_000);
 
   it('stops discovering new links once maxDepth is reached', async () => {

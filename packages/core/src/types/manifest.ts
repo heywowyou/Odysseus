@@ -39,7 +39,7 @@ export interface AuditConfigSnapshot {
  * by import: packages/core must not depend on packages/scanner. Keep the
  * two in sync by hand.
  */
-export type ManifestPageStatus = 'visited' | 'skipped-robots' | 'error';
+export type ManifestPageStatus = 'visited' | 'skipped-robots' | 'skipped-non-html' | 'error';
 
 /**
  * Lighthouse's accessibility and best-practices categories are excluded
