@@ -42,13 +42,14 @@ Whether ChatGPT, Perplexity, and Google's AI answers mention the business or rec
 
 Three tiers, priced flat, never hourly.
 
-| Tier | What it is | Indicative price |
-|---|---|---|
-| Audit | Full scan, prioritized report, PDF in FR or EN, recorded video walkthrough | EUR 1,500 to 3,000 depending on site size |
-| Implementation | Fixing the prioritized issues | EUR 2,000 to 6,000, scoped per project |
-| Monitoring | Monthly re-scan, regression alerts, short delta report | EUR 150 to 500 per month |
+| Tier           | What it is                                                                 | Indicative price                          |
+| -------------- | -------------------------------------------------------------------------- | ----------------------------------------- |
+| Audit          | Full scan, prioritized report, PDF in FR or EN, recorded video walkthrough | EUR 1,500 to 3,000 depending on site size |
+| Implementation | Fixing the prioritized issues                                              | EUR 2,000 to 6,000, scoped per project    |
+| Monitoring     | Monthly re-scan, regression alerts, short delta report                     | EUR 150 to 500 per month                  |
 
 Notes on pricing logic:
+
 - The audit is the wedge. Implementation and monitoring are where revenue compounds.
 - Price on business impact and legal exposure, not on hours or page count.
 - Small sites (under roughly 20 pages) can take a lighter fixed offer around EUR 900 to 1,200 to lower the entry barrier.
@@ -66,12 +67,14 @@ Notes on pricing logic:
 ## 4. Target market
 
 **Primary targets.**
+
 - E-commerce sites and consumer-facing service businesses above the microenterprise exemption threshold (see 8.1), since those are the ones legally exposed under the EAA.
 - Wine estates, hospitality, and tourism businesses, often bilingual, often on modern JavaScript sites built by agencies that neglected rendering and accessibility.
 - Real estate agencies, clinics, and professional service firms with lead-generation sites.
 - Web agencies as white-label partners, reselling audits to their own client base. Higher volume, lower per-unit price.
 
 **Deliberate non-targets.**
+
 - Businesses under the EAA microenterprise exemption, for the accessibility angle specifically. They may still buy an SEO audit.
 - Very large enterprises, which have procurement processes and long sales cycles.
 
@@ -79,16 +82,17 @@ Notes on pricing logic:
 
 ## 5. Client workflow
 
-| Stage | Mechanism |
-|---|---|
-| Qualification | Automated mini-scan producing one piece of concrete evidence |
-| Scoping | Written intake questionnaire, 8 to 12 targeted questions |
-| Proposal | Written proposal page presenting the three tiers |
-| Delivery | PDF report plus recorded video walkthrough |
-| Follow-up | Written question rounds, scoped and included in the price |
-| Implementation kickoff | Written scope document plus a shared task board |
+| Stage                  | Mechanism                                                    |
+| ---------------------- | ------------------------------------------------------------ |
+| Qualification          | Automated mini-scan producing one piece of concrete evidence |
+| Scoping                | Written intake questionnaire, 8 to 12 targeted questions     |
+| Proposal               | Written proposal page presenting the three tiers             |
+| Delivery               | PDF report plus recorded video walkthrough                   |
+| Follow-up              | Written question rounds, scoped and included in the price    |
+| Implementation kickoff | Written scope document plus a shared task board              |
 
 **Intake questionnaire must capture:**
+
 - Site URL, CMS or framework, hosting.
 - Whether there is a staging environment, and access if implementation is likely.
 - Primary business goal for the site (leads, sales, bookings).
@@ -114,6 +118,7 @@ This single rule is the credibility of the entire business. An LLM asked to audi
 
 **Stage 1: Crawl and render.**
 Fetch each target page twice:
+
 - Raw HTTP fetch, no JavaScript execution. This is the naive crawler view.
 - Full render via headless Chromium (Playwright). Capture the final DOM, a full-page screenshot, and console errors.
 
@@ -123,6 +128,7 @@ Crawl scope: start from the homepage, follow internal links, respect robots.txt,
 
 **Stage 2: Run the scanners.**
 Against the rendered page:
+
 - **axe-core**, via `@axe-core/playwright`. Industry-standard accessibility engine. Maps findings to WCAG success criteria, which is what EN 301 549 references, so reports cite real criteria rather than opinions. Configure the rule set for WCAG 2.2 level AA.
 - **Lighthouse**, run programmatically as a Node module against the same Chromium instance. Provides Core Web Vitals (LCP, CLS, INP), performance diagnostics, and SEO basics. Its accessibility category is collected but emits no findings, because it is axe-core underneath and duplicates the direct axe pass with a different severity mapping. Its best-practices category emits none either, for the reasons in stage 3. Both category scores are recorded per page in the audit manifest.
 - **Custom checks**, written in-house for what the above miss or report poorly: meta title and description presence and length, canonical tags, Open Graph, JSON-LD structured data presence and validity, sitemap.xml and robots.txt, hreflang correctness for bilingual sites, heading hierarchy, HTTP status and redirect chains, mixed content, image formats and sizes.
@@ -158,9 +164,14 @@ Selector normalization was considered and rejected. Stripping positional compone
 Cross-run identity for the monitoring tier is the dedupe key, so which pass produced a given key is a fact the monitoring layer will need to handle.
 
 **Stage 4: The LLM layer.**
+Built in milestone 5. Full behaviour and reasoning: `docs/llm-layer-rules.md`.
+
 Input: the normalized findings array plus site context from the intake questionnaire (business type, goals, languages, audience). Never the raw HTML, never the full page. This keeps token cost trivial (a few cents per report) and keeps the model on rails.
 
+Findings are filtered before they reach the model: critical, serious, and moderate only. On the first real site that was 17 of 78, since the remaining 61 were low-weight Lighthouse audits that would have consumed most of the model's attention on trivia. Minor findings still appear in the report appendix, which reads the unfiltered findings file. The guard functions receive exactly the filtered array the model received, never the full set, or a response could reference a finding it never saw and still validate.
+
 Tasks:
+
 - Group 200 raw findings into roughly 8 to 15 themes a human can act on.
 - Write a plain-language business impact statement per theme.
 - Estimate implementation effort per theme (low / medium / high) and flag which require design decisions versus pure code changes.
@@ -201,6 +212,7 @@ Report contents: cover, executive summary, overall risk, prioritized themes with
 
 **Stage 6: Prospecting mode.**
 The same pipeline in a stripped-down configuration:
+
 - Input: a list of candidate URLs.
 - Run only the fast, high-signal checks: render diff, axe critical and serious violations, Lighthouse performance score, missing meta and structured data.
 - Output: a ranked table of prospects by a composite "brokenness score", plus one auto-generated evidence screenshot each.
@@ -290,9 +302,11 @@ Two bugs were found only by scanning a real site after the full test suite passe
 
 Verified on sas-fernande.fr: 11 pages, 78 findings, render diff 0 on every page as expected for a server-rendered site.
 
-**Milestone 5: LLM prioritization.** Next. Structured input, Zod-validated output, hard rejection of any finding ID absent from the input, retry then fail loudly. First decision to make, before building: whether to floor severity before the model sees the findings. See open item 7.
+**Milestone 5: LLM prioritization.** Done 2026-08-02. New `packages/llm`, the only package that talks to the Anthropic API. Structured output plus explicit Zod validation on every response, hard rejection of any finding ID absent from the input, two retries then a thrown error rather than a partial analysis. Analyses are stored insert-only, one per language and again after a prompt change, each recording the model identifier and effort level.
 
-**Milestone 6: report generation.** HTML and Tailwind template printed to PDF by Chromium. Bilingual. This is the client-facing artifact and the thing the whole business is actually selling.
+Verified live in both languages against the real capture: 11 themes from 17 findings, plain-language French that reads as French, and legal relevance lines naming the WCAG criterion and EN 301 549 without asserting the EAA applies to the business. The top-ranked theme was traced by hand to a single `is-crawlable` finding, and `curl` confirmed the quote request page carries `noindex, follow`. A client can check that claim in ten seconds, which is the whole proposition working end to end for the first time.
+
+**Milestone 6: report generation.** Next. HTML and Tailwind template printed to PDF by Chromium. Bilingual. This is the client-facing artifact and the thing the whole business is actually selling.
 
 **Milestone 7: interface.** Queue, API, and web UI. Scope defined in 7.1 below, and not started before that section is filled in.
 
@@ -309,6 +323,7 @@ Verified on sas-fernande.fr: 11 pages, 78 findings, render diff 0 on every page 
 The question to answer: what must the interface do before the first outreach email is sent, and what is explicitly a later addition? Anything not on the first list waits, no matter how appealing it looks mid-build.
 
 A reasonable starting position, to be confirmed or replaced:
+
 - Trigger an audit against a URL and watch it progress
 - View findings for a completed audit, grouped and prioritized
 - Trigger report generation and download the PDF
@@ -387,6 +402,7 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 - **No free public scanner.** Private prospecting only. A free scanner is a distribution play and there is no traffic yet to distribute to. Revisit if outreach proves the evidence converts.
 - **Vertical choice deferred.** It shapes outreach, not the build. Decide when building the prospect list, informed by which sectors actually scan badly.
 - **Build fully, then sell.** See section 7.
+- **Severity floor before the LLM.** Critical, serious, and moderate reach the model; minor findings do not, but still appear in the report appendix. The filter shapes the narrative, not the completeness of the document. The rejected alternative (send everything, marked low priority, capped at one or two catch-all themes) is recorded in `docs/llm-layer-rules.md` for when real reports show whether the filter drops anything clients ask about.
 
 ### Blocking, with a named dependency
 
@@ -399,19 +415,21 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 4. Current EAA enforcement status in France, verified against primary sources.
 5. Whether to publish prices on a proposal page or quote per prospect.
 6. Which site to use as the first public case study.
-7. **Whether to floor severity before the LLM sees findings.** On sas-fernande, 61 of 78 findings were minor, almost all low-weight Lighthouse audits a client report should probably not carry. Sending everything spends most of the model's attention on trivia and risks themes built around it. Flooring risks silently dropping something a client cares about, and the coverage check in `llm-output.ts` would stop meaning what it currently means. Decide at the start of milestone 5 and record the reasoning.
+7. **How the report handles analysis variance.** Identical findings produced eight quick wins in French and seven in English on the first live run. Expected, since the model groups and ranks rather than computes, but it means monitoring deltas must be derived from the deterministic findings layer with the analysis regenerated, not diffed. Decide the mechanics in milestone 10, not before.
 
 ---
 
 ## 12. Success metrics and kill criteria
 
 **Working:**
+
 - Three paid audits completed manually within the first eight weeks.
 - Reply rate above roughly 5 percent on evidence-led cold email.
 - At least one audit converting to implementation or monitoring.
 - Time per audit falling measurably as the pipeline is built.
 
 **Not working, reassess:**
+
 - No paid audit after 60 days of consistent outreach with real evidence attached.
 - Consistent pushback that the deliverable is not worth the price, after testing lower tiers.
 - Milestone 7 running substantially past the scope written in section 7.1. Under the revised build-first sequence, this is the specific measurable form of the overbuilding risk. The response is to ship against the original scope, not to extend it.

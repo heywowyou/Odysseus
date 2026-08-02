@@ -6,7 +6,8 @@ SPA-SEO, and accessibility against WCAG 2.2 AA and EN 301 549.
 
 Full context: `docs/odysseus-project-brief-v2.md`. Read it before
 proposing any architecture. Normalization behaviour and the reasoning
-behind it: `docs/normalization-rules.md`.
+behind it: `docs/normalization-rules.md`. What the model may see, must
+return, and how failures are handled: `docs/llm-layer-rules.md`.
 
 ## Non-negotiable rules
 
@@ -111,11 +112,27 @@ needed, say so and stop. Do not change them and continue.
    Extension-dropped URLs never appear in the manifest at all; only the
    Content-Type path records `skipped-non-html`.
 
+5. **Analyses are inserted, never upserted.** `persistAudit` upserts by
+   `auditId` because an audit re-run under the same ID is a retry of the
+   same work. `persistAnalysis` inserts, because an analysis re-run is
+   not: one per language, and again after a prompt change, are all
+   legitimately distinct documents. Each records its model identifier and
+   effort level, for the same provenance reason the manifest records
+   scanner versions.
+
+6. **`packages/llm/src/output-schema.ts` is a hand-mirrored copy of the
+   locked `llmOutputSchema`**, needed because the SDK's `zodOutputFormat`
+   helper requires zod v4 and the locked contract is zod v3. It is an API
+   shape hint, never the validation authority: `llmOutputSchema.parse()`
+   runs explicitly on every response. A test asserts the two describe the
+   same shape so drift fails loudly. If `core` ever moves to zod v4,
+   delete the mirror and use the helper.
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
-module, Mongoose 9, Zod, Commander, Vitest, pino.
+module, Mongoose 9, Zod, Commander, Vitest, pino, `@anthropic-ai/sdk`.
 
 No Redis, no BullMQ, no Express API, no Next.js dashboard, no public web
 interface. Those are later phases and are deliberately not being built.
@@ -140,7 +157,15 @@ rejected because it cannot produce those metrics.
 - `scanner` — owns the Chromium lifecycle, render diff, crawler, axe,
   Lighthouse, config, and the artifacts layout.
 - `store` — Mongoose models and connection handling. Nothing else.
-- `cli` — Commander entry points.
+- `llm` — the only package that talks to the Anthropic API. Peer of
+  scanner, not a consumer: it depends on `core` and nothing else in the
+  workspace.
+- `cli` — Commander entry points, thin. Real logic lives in the packages
+  above.
+
+Five packages for a tool one person runs is close to the ceiling. If a
+sixth is proposed, check that its one-sentence description does not
+overlap an existing package before agreeing.
 
 ## Artifacts layout
 
@@ -152,7 +177,11 @@ artifacts/<hostname>/<ISO-8601-UTC-timestamp>/
     raw.png
     rendered.png
     scan.json
+  analyses/<ISO-timestamp>-<language>.json
 ```
+
+One `analyses/` file per run rather than one per audit, since multiple
+analyses per audit are expected and must not overwrite each other.
 
 Screenshot references are relative to the audit directory, never absolute
 paths, so stored findings survive the artifacts root moving or the
@@ -189,6 +218,12 @@ real-site scan. Saved artifacts under `artifacts/sas-fernande.fr/` are
 real-site reference data; `normalize <dir>` re-runs against them offline
 without touching the site.
 
+Tests never call the live Anthropic API. The LLM package is tested with
+a stubbed client, including the path where retries are exhausted and the
+call throws rather than returning a partial analysis. Live verification
+is a manual step, and for anything client-facing it means reading the
+output as the client would, not just checking that it validated.
+
 Any fixture dev server started during a session must be stopped before the
 session ends. Verify it is stopped with `pgrep` before reporting
 completion.
@@ -206,14 +241,14 @@ completion.
 
 ## Build order
 
-Milestones 0 through 4 are complete. Milestone 5 is next. Work in
+Milestones 0 through 5 are complete. Milestone 6 is next. Work in
 vertical slices, one milestone per session.
 
 1. Render diff only, CLI invocable — done
 2. Crawler: internal link discovery, robots.txt, depth and page caps — done
 3. Scanners: axe-core and Lighthouse against one shared Chromium instance — done
 4. Normalize and dedupe into MongoDB — done
-5. LLM prioritization layer with schema validation
+5. LLM prioritization layer with schema validation — done
 6. PDF report generation, bilingual
 
 Full milestone list, including the phases beyond 6, is in the brief.

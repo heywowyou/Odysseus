@@ -77,7 +77,7 @@ produced.
 
 **Structured output**, via the Anthropic SDK's `output_config.format`
 (built from `llmOutputSchema` with `zodOutputFormat`), constrains the
-response shape server-side. This is a schema guarantee about *shape*, not
+response shape server-side. This is a schema guarantee about _shape_, not
 a validation step in itself - the code still runs an explicit,
 auditable `llmOutputSchema.parse()` on every response, because CLAUDE.md's
 Zod-validation rule is a business rule, not an SDK implementation detail
@@ -124,7 +124,70 @@ and persisted to MongoDB, keyed by `auditId`.
 Stored separately from the audit document rather than embedded, because
 the same audit can be analysed more than once: once per language, and
 again if the analysis is re-run after a prompt change. Each analysis
-records its language, model identifier, temperature, and timestamp.
+records its language, model identifier, effort level, and timestamp.
 
 The analysis step reads `findings.json` from disk and never re-scans.
 Re-running an analysis must never touch the client's site.
+
+---
+
+## 6. Output language and factual restraint
+
+Added after the first live run, which produced good French prose with
+three specific faults.
+
+**Every prose field is in the requested language, including `title`.**
+The first live run returned all eleven theme titles in English inside a
+French analysis. Titles become the section headings in the PDF, so they
+are the first thing a French client reads. `title`, `businessImpact`,
+`legalRelevance`, `recommendedActions`, `executiveSummary`, and `notes`
+are all prose. The only fields that stay fixed are the enums and the
+finding IDs.
+
+**Cite WCAG 2.2.** The scanner runs axe against the WCAG 2.2 AA tag set,
+so the report cites 2.2. The first live run mixed 2.1 and 2.2 citations.
+Criterion numbers are identical across versions so nothing was factually
+wrong, but a client's developer will notice a report claiming to audit
+2.2 while citing 2.1.
+
+**Do not assert business facts that were not supplied.** The first live
+run described the quote page as "la page la plus rentable du site". A
+reasonable inference, stated as knowledge, and nobody had said it. This
+extends section 4: without an intake file the model must not invent a
+business type, a primary goal, revenue attribution, traffic assumptions,
+or relative page value. It may say a page _appears_ commercially
+important and why, which is inference the client can weigh, not a claim
+they have to correct.
+
+---
+
+## 7. Analysis variance across runs
+
+Identical findings produced eight quick wins in French and seven in
+English on the first live run. Expected: the model is grouping and
+ranking, not computing.
+
+Milestone 10 compares runs to produce delta reports. Analysis variance
+will appear there alongside real site changes, and the two must be
+distinguishable. The finding layer is deterministic and diffable by
+`dedupeKey`; the analysis layer is not. Monitoring deltas should be
+computed from findings, with the analysis regenerated rather than
+compared.
+
+---
+
+## 8. The hand-mirrored output schema
+
+`packages/llm/src/output-schema.ts` hand-mirrors the locked
+`llmOutputSchema` as a JSON Schema, because the SDK's `zodOutputFormat`
+helper requires a zod v4 schema and the locked contract is built with
+zod v3. Editing the locked contract to satisfy a helper was the wrong
+trade, so the mirror exists instead.
+
+It is an API shape hint only. It is **not** the validation authority:
+`llmOutputSchema.parse()` runs explicitly on every response regardless.
+
+A hand-maintained mirror decays silently. A test asserts the two describe
+the same shape, so adding a field to the locked contract fails loudly
+rather than quietly leaving the shape hint stale. If `packages/core` ever
+moves to zod v4, delete the mirror and use the helper directly.
