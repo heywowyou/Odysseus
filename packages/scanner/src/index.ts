@@ -15,6 +15,7 @@ export { scanSite } from './scan-site.js';
 export type { SiteScanResult, ScanSiteOptions } from './scan-site.js';
 export {
   findWorkspaceRoot,
+  ensureEnvLoaded,
   getArtifactsRoot,
   getMaxPages,
   getMaxCrawlDepth,

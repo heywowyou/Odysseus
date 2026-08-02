@@ -27,7 +27,7 @@ export function findWorkspaceRoot(): string {
 
 let envLoaded = false;
 
-function ensureEnvLoaded(): void {
+export function ensureEnvLoaded(): void {
   if (envLoaded) return;
   envLoaded = true;
   try {
