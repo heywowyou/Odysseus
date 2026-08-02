@@ -26,8 +26,9 @@ export default function App() {
 
         {/*
           Fault: heading-hierarchy-skip. Jumps from h1 straight to h3,
-          skipping h2. A common pattern when a page is built by nesting
-          components without checking the resulting outline.
+          skipping h2. This is a best practice check outside the WCAG
+          tags, so axe will not flag it. It will come from a custom
+          check later.
         */}
         <h3>Nos vins</h3>
         <p>
@@ -47,11 +48,13 @@ export default function App() {
         <section className="newsletter" aria-label="Inscription">
           <h3>Restez informe de nos vendanges</h3>
           {/*
-            Fault: label. No <label>, no aria-label, no aria-labelledby.
-            A placeholder is not an accessible name.
+            Fault: label. No <label>, no aria-label, no aria-labelledby,
+            and no placeholder. A placeholder alone still computes to an
+            accessible name, so axe would not flag it. This input has no
+            accessible name at all.
           */}
           <form>
-            <input type="email" placeholder="Votre email" />
+            <input type="email" />
             <button type="submit">S'inscrire</button>
           </form>
         </section>

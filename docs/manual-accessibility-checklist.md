@@ -1,0 +1,29 @@
+# Manual accessibility review checklist
+
+Automated scanning catches roughly 30 to 40 percent of WCAG issues.
+This file records what Odysseus provably cannot detect, so an
+accessibility audit is not sold as if the scanner covers everything.
+
+Every entry here was confirmed against a real scan, not assumed.
+
+## Confirmed detection gaps
+
+### Placeholder used as the only label
+An input with a `placeholder` and no `<label>`, `aria-label`, or
+`aria-labelledby` passes axe's `label` rule, because accessible-name
+computation treats the placeholder as sufficient. It is still a real
+usability failure: the text disappears on focus, is often low
+contrast, and is unreliable with screen magnification.
+Confirmed on fixtures/spa-demo, 2026-08-02.
+
+### Heading hierarchy skips
+`heading-order` is tagged best-practice in axe, not WCAG, so it is
+outside the tag set Odysseus scans. To be covered by a custom check.
+
+## To verify
+
+- Keyboard traps
+- Focus order and visible focus indicators
+- Alt text quality (present but unhelpful passes automated checks)
+- Form error messaging and error identification
+- Reading order versus visual order

@@ -19,7 +19,9 @@ Full context: `docs/brief.md`. Read it before proposing any architecture.
 4. The LLM never receives raw HTML or full page content. Normalized
    findings plus site context only.
 5. Crawling is polite: respect robots.txt, identifiable user agent,
-   delay between requests, hard page cap, hard per-page timeout.
+   delay between requests, hard page cap, hard per-page timeout. The
+   delay is enforced between scanner passes on a page as well, not only
+   between crawl requests.
 6. Never overstate legal exposure in any generated text. Accessibility
    obligations depend on company size and sector. State the criterion,
    not a verdict on whether a law applies to a given client.
@@ -48,8 +50,12 @@ dependency, not two.
 
 Lighthouse cannot accept a Playwright `Page`. Launch Chromium with a
 remote debugging port and pass that port to Lighthouse, reusing the same
-browser instance used for rendering and the axe pass. Do not load each
-page more than twice (once raw, once rendered).
+browser instance used for rendering and the axe pass. Playwright makes
+at most two explicit loads per page (once raw, once rendered). Lighthouse
+adds its own internal navigation on top of that when run in navigation
+mode. That extra load is unavoidable and required to produce trace based
+Core Web Vitals (LCP, CLS, INP). Snapshot mode was considered and
+rejected because it cannot produce those metrics.
 
 ## Scope discipline
 
