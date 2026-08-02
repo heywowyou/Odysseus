@@ -1,8 +1,8 @@
 import type { LlmInput, ReportLanguage } from '@odysseus/core';
 
 const LANGUAGE_INSTRUCTION: Record<ReportLanguage, string> = {
-  fr: 'Write executiveSummary, businessImpact, legalRelevance, recommendedActions, quickWins commentary, and notes in French. Keep title, category, and every enum value in the schema-defined English tokens.',
-  en: 'Write executiveSummary, businessImpact, legalRelevance, recommendedActions, quickWins commentary, and notes in English.',
+  fr: 'Write title, executiveSummary, businessImpact, legalRelevance, recommendedActions, quickWins commentary, and notes in French. Keep category and every enum value in the schema-defined English tokens.',
+  en: 'Write title, executiveSummary, businessImpact, legalRelevance, recommendedActions, quickWins commentary, and notes in English.',
 };
 
 /** System prompt for the prioritization call. usedFallbackContext tells
@@ -11,7 +11,7 @@ const LANGUAGE_INSTRUCTION: Record<ReportLanguage, string> = {
  *  docs/llm-layer-rules.md section 4. */
 export function buildSystemPrompt(language: ReportLanguage, usedFallbackContext: boolean): string {
   const fallbackNote = usedFallbackContext
-    ? '\n\nNo intake questionnaire context was provided for this site. Rank findings by severity and commercial risk alone. Say plainly in the `notes` field that no site context was provided and that priorities reflect finding severity only, not stated business goals. Do not invent a business type, primary goal, target market, or languages served to fill the gap.'
+    ? '\n\nNo intake questionnaire context was provided for this site. Rank findings by severity and commercial risk alone. Say plainly in the `notes` field that no site context was provided and that priorities reflect finding severity only, not stated business goals. Do not invent a business type, primary goal, target market, or languages served to fill the gap. Do not assert revenue attribution, traffic assumptions, or relative page value either, for example do not call a page "the most profitable" or "the highest-traffic" page. You may say a page appears commercially important and explain why, which is inference the client can weigh, not a claim they have to correct.'
     : '';
 
   return `You are the prioritization layer of Odysseus, a web audit tool for French small and mid-size businesses.
@@ -22,7 +22,7 @@ Group the findings into roughly 8 to 15 themes a business owner can act on. Do n
 
 For each theme:
 - Write a plain-language businessImpact statement: why this matters commercially, no jargon, no scanner terminology.
-- For accessibility themes, you may populate legalRelevance: state the relevant WCAG or EN 301 549 criterion. Never assert that a specific law (the European Accessibility Act, RGAA, or any other) applies to this specific client. Accessibility obligations depend on company size and sector, which you have not been told. State the criterion, not a verdict.
+- For accessibility themes, you may populate legalRelevance: state the relevant WCAG 2.2 or EN 301 549 criterion. Never assert that a specific law (the European Accessibility Act, RGAA, or any other) applies to this specific client. Accessibility obligations depend on company size and sector, which you have not been told. State the criterion, not a verdict.
 - Set effort (low/medium/high) and impact (low/medium/high) for fixing the theme.
 - Set priorityRank as a dense ranking starting at 1, no gaps, no ties, most urgent first.
 - Write recommendedActions as concrete next steps.
