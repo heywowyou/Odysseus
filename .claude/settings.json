@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "ask": [
+      "Edit(/packages/core/src/types/findings.ts)",
+      "Edit(/packages/core/src/types/llm-output.ts)",
+      "Edit(/packages/core/src/normalize/severity.ts)",
+      "Edit(/CLAUDE.md)"
+    ],
+    "deny": [
+      "Read(./.env)"
+    ]
+  }
+}

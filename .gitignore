@@ -2,7 +2,7 @@
 node_modules/
 dist/
 artifacts/
-.claude/
+.claude/settings.local.json
 reports/
 *.pdf
 .DS_Store
