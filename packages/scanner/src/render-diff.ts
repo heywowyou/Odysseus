@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import type { Browser } from 'playwright';
+import type { Browser, Page } from 'playwright';
 import type { RenderDiffResult } from '@odysseus/core';
 import { DEFAULT_TIMEOUT_MS } from './browser.js';
 import { getArtifactsRoot, getCrawlerUserAgent } from './config.js';
@@ -10,6 +10,15 @@ export interface RenderDiffOptions {
   timeoutMs?: number;
   screenshotDir?: string;
   userAgent?: string;
+  /** Politeness delay to wait after the raw pass closes and before the
+   *  rendered pass opens. Unset by default so the standalone render-diff
+   *  CLI keeps its existing back-to-back timing. */
+  preRenderedDelayMs?: number;
+  /** Invoked once against the fully rendered page, before its context
+   *  closes, so callers (the scanner orchestration) can run additional
+   *  analysis (axe-core) against the exact same navigation instead of
+   *  triggering another page load. */
+  onRenderedPage?: (page: Page) => Promise<void>;
 }
 
 /**
@@ -54,6 +63,10 @@ export async function renderDiff(
     await rawContext.close();
   }
 
+  if (options.preRenderedDelayMs) {
+    await new Promise((resolve) => setTimeout(resolve, options.preRenderedDelayMs));
+  }
+
   const renderedContext = await browser.newContext({ userAgent });
   let renderedTextLength: number;
   const consoleErrors: string[] = [];
@@ -71,6 +84,7 @@ export async function renderDiff(
     const renderedText = await renderedPage.evaluate(() => document.body.innerText);
     renderedTextLength = renderedText.trim().length;
     await renderedPage.screenshot({ path: path.resolve(renderedScreenshotRef), fullPage: true });
+    await options.onRenderedPage?.(renderedPage);
   } finally {
     await renderedContext.close();
   }

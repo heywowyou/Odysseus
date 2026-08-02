@@ -27,7 +27,7 @@ export function registerCrawlCommand(program: Command): void {
         return;
       }
 
-      const browser = await launchBrowser();
+      const { browser } = await launchBrowser();
       try {
         const result = await crawlSite(url, {
           browser,

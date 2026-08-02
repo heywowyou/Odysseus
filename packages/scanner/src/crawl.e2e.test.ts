@@ -2,7 +2,8 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { chromium, type Browser } from 'playwright';
+import type { Browser } from 'playwright';
+import { launchBrowser } from './browser.js';
 import { crawlSite } from './crawl.js';
 
 const TEST_PORT = 5187;
@@ -36,7 +37,7 @@ describe('crawlSite against fixtures/spa-demo', () => {
       stdio: 'ignore',
     });
     await waitForServer(TEST_URL, 30_000);
-    browser = await chromium.launch();
+    ({ browser } = await launchBrowser());
   }, 45_000);
 
   afterAll(async () => {

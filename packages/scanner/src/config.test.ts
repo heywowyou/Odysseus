@@ -2,14 +2,21 @@ import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  DEFAULT_LIGHTHOUSE_TIMEOUT_MS,
   DEFAULT_MAX_PAGES,
   findWorkspaceRoot,
   getArtifactsRoot,
+  getLighthouseTimeoutMs,
   getMaxCrawlDepth,
   getMaxPages,
 } from './config.js';
 
-const ENV_KEYS = ['ODYSSEUS_ARTIFACTS_ROOT', 'MAX_PAGES', 'MAX_CRAWL_DEPTH'] as const;
+const ENV_KEYS = [
+  'ODYSSEUS_ARTIFACTS_ROOT',
+  'MAX_PAGES',
+  'MAX_CRAWL_DEPTH',
+  'LIGHTHOUSE_TIMEOUT_MS',
+] as const;
 const originalEnv: Record<string, string | undefined> = {};
 for (const key of ENV_KEYS) originalEnv[key] = process.env[key];
 
@@ -83,5 +90,15 @@ describe('positive-int env getters', () => {
     delete process.env.MAX_CRAWL_DEPTH;
     process.env.MAX_PAGES = '99';
     expect(getMaxCrawlDepth()).toBe(5);
+  });
+
+  it('getLighthouseTimeoutMs falls back to the default when unset', () => {
+    delete process.env.LIGHTHOUSE_TIMEOUT_MS;
+    expect(getLighthouseTimeoutMs()).toBe(DEFAULT_LIGHTHOUSE_TIMEOUT_MS);
+  });
+
+  it('getLighthouseTimeoutMs reads a valid override', () => {
+    process.env.LIGHTHOUSE_TIMEOUT_MS = '90000';
+    expect(getLighthouseTimeoutMs()).toBe(90_000);
   });
 });

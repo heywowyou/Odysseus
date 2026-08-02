@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@odysseus/core": "workspace:*",
+    "@axe-core/playwright": "^4.12.1",
+    "lighthouse": "^12.8.2",
     "playwright": "^1.49.0"
   }
 }

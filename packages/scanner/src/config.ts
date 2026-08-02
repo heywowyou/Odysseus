@@ -42,6 +42,10 @@ export const DEFAULT_MAX_PAGES = 20;
 export const DEFAULT_MAX_CRAWL_DEPTH = 5;
 export const DEFAULT_CRAWL_DELAY_MS = 1000;
 export const DEFAULT_PAGE_TIMEOUT_MS = 30_000;
+/** Lighthouse's own navigation-mode run routinely runs well past a single
+ *  page's load timeout, since it collects a full trace across throttled
+ *  network/CPU simulation on top of the audits themselves. */
+export const DEFAULT_LIGHTHOUSE_TIMEOUT_MS = 60_000;
 
 /**
  * Single configured root for everything the scanner writes to disk, so a
@@ -78,6 +82,10 @@ export function getCrawlDelayMs(): number {
 
 export function getPageTimeoutMs(): number {
   return getPositiveIntEnv('PAGE_TIMEOUT_MS', DEFAULT_PAGE_TIMEOUT_MS);
+}
+
+export function getLighthouseTimeoutMs(): number {
+  return getPositiveIntEnv('LIGHTHOUSE_TIMEOUT_MS', DEFAULT_LIGHTHOUSE_TIMEOUT_MS);
 }
 
 /**

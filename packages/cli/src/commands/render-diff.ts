@@ -16,7 +16,7 @@ export function registerRenderDiffCommand(program: Command): void {
         return;
       }
 
-      const browser = await launchBrowser();
+      const { browser } = await launchBrowser();
       try {
         const result = await renderDiff(browser, url);
         console.log(JSON.stringify(result, null, 2));

@@ -1,0 +1,48 @@
+import type { Command } from 'commander';
+import { InvalidArgumentError } from 'commander';
+import { launchBrowser, scanSite } from '@odysseus/scanner';
+
+function parsePositiveInt(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new InvalidArgumentError(`must be a positive integer, got "${value}"`);
+  }
+  return parsed;
+}
+
+export function registerScanCommand(program: Command): void {
+  program
+    .command('scan <url>')
+    .description(
+      'Crawl a site and run axe-core (WCAG 2.2 AA) and Lighthouse against every page visited, ' +
+        'reusing one Chromium instance. Outputs raw per-page scanner results, not normalized findings.',
+    )
+    .option('--max-pages <n>', 'Maximum number of pages to visit', parsePositiveInt)
+    .option('--max-depth <n>', 'Maximum link depth from the homepage', parsePositiveInt)
+    .action(async (url: string, opts: { maxPages?: number; maxDepth?: number }) => {
+      try {
+        new URL(url);
+      } catch {
+        console.error(`odysseus scan: "${url}" is not a valid URL`);
+        process.exitCode = 1;
+        return;
+      }
+
+      const { browser, debugPort } = await launchBrowser();
+      try {
+        const result = await scanSite(url, {
+          browser,
+          debugPort,
+          ...(opts.maxPages !== undefined ? { maxPages: opts.maxPages } : {}),
+          ...(opts.maxDepth !== undefined ? { maxDepth: opts.maxDepth } : {}),
+        });
+        console.log(JSON.stringify(result, null, 2));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`odysseus scan: failed to scan ${url}\n${message}`);
+        process.exitCode = 1;
+      } finally {
+        await browser.close();
+      }
+    });
+}

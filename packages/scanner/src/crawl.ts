@@ -36,6 +36,10 @@ export interface CrawlResult {
   maxPages: number;
   maxDepth: number;
   robotsTxtFound: boolean;
+  /** The stricter-of-config-and-robots delay actually used between
+   *  requests, so later stages (the scanner passes) can reuse the exact
+   *  same politeness pacing without re-fetching robots.txt. */
+  effectiveDelayMs: number;
 }
 
 interface QueueItem {
@@ -133,5 +137,6 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     maxPages,
     maxDepth,
     robotsTxtFound: robotsRules.found,
+    effectiveDelayMs,
   };
 }
