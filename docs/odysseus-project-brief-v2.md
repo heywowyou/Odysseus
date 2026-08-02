@@ -124,13 +124,15 @@ Crawl scope: start from the homepage, follow internal links, respect robots.txt,
 **Stage 2: Run the scanners.**
 Against the rendered page:
 - **axe-core**, via `@axe-core/playwright`. Industry-standard accessibility engine. Maps findings to WCAG success criteria, which is what EN 301 549 references, so reports cite real criteria rather than opinions. Configure the rule set for WCAG 2.2 level AA.
-- **Lighthouse**, run programmatically as a Node module against the same Chromium instance. Provides Core Web Vitals (LCP, CLS, INP), performance diagnostics, SEO basics, and an independent accessibility pass.
+- **Lighthouse**, run programmatically as a Node module against the same Chromium instance. Provides Core Web Vitals (LCP, CLS, INP), performance diagnostics, and SEO basics. Its accessibility category is collected but emits no findings, because it is axe-core underneath and duplicates the direct axe pass with a different severity mapping. Its best-practices category emits none either, for the reasons in stage 3. Both category scores are recorded per page in the audit manifest.
 - **Custom checks**, written in-house for what the above miss or report poorly: meta title and description presence and length, canonical tags, Open Graph, JSON-LD structured data presence and validity, sitemap.xml and robots.txt, hreflang correctness for bilingual sites, heading hierarchy, HTTP status and redirect chains, mixed content, image formats and sizes.
 
 **Stage 3: Normalize and deduplicate.**
-Scanners overlap and are noisy. axe and Lighthouse will both report the same contrast failure. Collapse everything into one findings model. This layer is what makes the service productizable, because everything downstream depends on a single stable shape.
+Scanners overlap and are noisy. Collapse everything into one findings model. This layer is what makes the service productizable, because everything downstream depends on a single stable shape.
 
-Proposed finding document:
+Built in milestone 4. Full behaviour and reasoning: `docs/normalization-rules.md`. The finding document below is the shape it produces, and the locked contract in `packages/core/src/types/findings.ts` survived contact with real multi-scanner data unchanged.
+
+Finding document:
 
 ```
 {
@@ -147,7 +149,13 @@ Proposed finding document:
 }
 ```
 
-Deduplication key: `ruleId + selector` across pages, aggregating page URLs and occurrence counts so a site-wide issue appears once with a count rather than 400 times.
+Deduplication runs in two passes, and the distinction matters enough that both are documented in `CLAUDE.md` as a trade-off not to reverse.
+
+The fine pass keys on a hash of `source|ruleId|selector` and collapses the same selector appearing across many pages into one finding with a count, so a site-wide issue appears once rather than 400 times. The coarse pass then collapses different selectors for the same rule within a single page, because axe emits distinct positional selectors for some rules: on a real site, 69 instances of one body-text link defect on one page produced 69 separate findings, each with a count of one. Aggregation touches only groups confined to a single page; multi-page groups pass through untouched.
+
+Selector normalization was considered and rejected. Stripping positional components would merge genuinely distinct elements, and a real scan confirmed that stable selectors (IDs, classes) dedupe correctly without it.
+
+Cross-run identity for the monitoring tier is the dedupe key, so which pass produced a given key is a fact the monitoring layer will need to handle.
 
 **Stage 4: The LLM layer.**
 Input: the normalized findings array plus site context from the intake questionnaire (business type, goals, languages, audience). Never the raw HTML, never the full page. This keeps token cost trivial (a few cents per report) and keeps the model on rails.
@@ -187,7 +195,7 @@ Proposed output schema:
 ```
 
 **Stage 5: Report generation.**
-Render the structured result into a branded PDF. Puppeteer printing a styled HTML template is the pragmatic choice, since the template can be built in React and Tailwind and the same HTML can be served as a web version.
+Render the structured result into a branded PDF. Printing a styled HTML template from Chromium is the pragmatic choice, since the template can be built in React and Tailwind and the same HTML can be served as a web version. Use Playwright's Chromium, which the scanner already depends on, rather than adding Puppeteer as a second browser dependency.
 
 Report contents: cover, executive summary, overall risk, prioritized themes with impact and effort, render diff evidence with screenshots, Core Web Vitals table, full findings appendix grouped by category, methodology and tooling statement (important for credibility and for defensibility of accessibility claims), and a limitations statement (see 6.6).
 
@@ -219,7 +227,7 @@ Worker process:
     scanners (axe-core, Lighthouse, custom)
     normalize + dedupe -> MongoDB
     LLM prioritization call -> validate schema
-    PDF generation (Puppeteer)
+    PDF generation (Playwright Chromium)
     mark complete
     |
     v
@@ -229,7 +237,7 @@ Dashboard polls / subscribes -> renders result, download link
 ### 6.4 Data model, top level
 
 - `clients`: name, contacts, language preference, sector, size bracket, notes.
-- `audits`: clientId, targetUrl, type, config, status, timestamps, cost metrics, reportRef.
+- `audits`: as built in milestone 4. Site URL, timestamps, config snapshot, crawl statistics and page list, per-phase errors, and self-reported tool versions. The same type is written to `manifest.json` on disk, which is what lets normalization re-run offline against any artifacts folder with no database attached.
 - `findings`: as specified in 6.2 stage 3, linked to auditId.
 - `prospects`: url, sector, brokennessScore, evidenceRefs, outreach status, last scanned.
 - `outreach`: prospectId, sequence step, sent timestamps, replies, outcome.
@@ -244,7 +252,10 @@ Version the findings model from day one. Reports will need regenerating and comp
 - **LLM cost is negligible, scanning cost is not.** Optimize crawl scope, not prompt length.
 - **Flaky performance metrics.** Core Web Vitals from a single lab run are noisy. Run performance passes more than once and report medians, or clearly label lab data as lab data. Consider pulling field data (CrUX) where available for larger sites, and say so in the methodology.
 - **Rate limiting and politeness.** Prospect scanning touches sites without permission. Keep it to a single lightweight pass per site, respect robots.txt, identify the crawler, and do not hammer. This matters both ethically and to avoid being blocked.
-- **Monitoring means diffing.** The monitoring tier needs stored historical findings and a regression detector, so design the findings model to support comparison across runs from the start.
+- **Monitoring means diffing.** The monitoring tier needs stored historical findings and a regression detector, so design the findings model to support comparison across runs from the start. This is why every audit records the version of every tool that produced it: a scanner upgrade between two monthly scans otherwise reads as phantom regressions and phantom fixes with no way to attribute them.
+- **Not everything a site links to is a page.** A real WordPress site linked four image attachment URLs from its gallery, and each one cost a full render, an axe pass, and a Lighthouse pass before producing findings against binary content. Non-HTML resources are dropped by extension before being enqueued, with a Content-Type check as a fallback. This matters more in prospecting mode, where a brokenness score computed partly from attachment pages is measuring nothing.
+- **Screenshots are captured for every page and kept for almost none.** Only the homepage pair and the worst pages by render-diff percentage survive a scan. The reason is data minimisation rather than disk: full-page screenshots of a client site incidentally capture personal data, and not capturing is a stronger position than deleting later. The selection rule has one canonical implementation that report generation must reuse.
+- **The fixture cannot find everything.** Both bugs above passed a full green test suite and were visible only in a scan of a real site. A milestone is not finished until its output has been checked against something real.
 
 ### 6.6 Honest limits to state in every report
 
@@ -271,9 +282,15 @@ Two constraints survive the change, because they are dependency facts rather tha
 
 **Milestone 3: scanners.** Done 2026-08-02. axe-core against WCAG 2.2 AA reusing the rendered navigation, Lighthouse across four categories via a CDP port on the same Chromium instance. Per-phase error isolation. Validated on a real 10-page site in roughly five minutes with zero errors.
 
-**Milestone 4: normalization and persistence.** Next. Collapse three scanners' output into the Finding model, dedupe on rule plus selector, persist to MongoDB. This is where the locked schema meets reality; a contract change here is legitimate if argued, not a failure.
+**Milestone 4: normalization and persistence.** Done 2026-08-02. Three scanners collapsed into the Finding model, two-pass dedupe, MongoDB persistence, and a restructured artifacts layout with a manifest recording self-reported tool versions. The locked contracts survived unchanged, which was the open question going in. Full rules and reasoning in `docs/normalization-rules.md`.
 
-**Milestone 5: LLM prioritization.** Structured input, Zod-validated output, hard rejection of any finding ID absent from the input, retry then fail loudly.
+Two decisions reduced scope rather than adding it. Lighthouse's accessibility category emits no findings, because axe already covers it directly and running both produced duplicates with conflicting severities. Its best-practices category emits none either, because the four locked category values have no correct home for it, and filing "uses a deprecated API" under an SEO heading in a client report is the kind of thing a client's developer notices first. Both are revisited in milestone 8.
+
+Two bugs were found only by scanning a real site after the full test suite passed: the crawler followed WordPress attachment URLs as pages, and axe's positional selectors defeated per-selector dedupe. Both fixed, and the lesson recorded in `CLAUDE.md`.
+
+Verified on sas-fernande.fr: 11 pages, 78 findings, render diff 0 on every page as expected for a server-rendered site.
+
+**Milestone 5: LLM prioritization.** Next. Structured input, Zod-validated output, hard rejection of any finding ID absent from the input, retry then fail loudly. First decision to make, before building: whether to floor severity before the model sees the findings. See open item 7.
 
 **Milestone 6: report generation.** HTML and Tailwind template printed to PDF by Chromium. Bilingual. This is the client-facing artifact and the thing the whole business is actually selling.
 
@@ -373,8 +390,8 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 
 ### Blocking, with a named dependency
 
-1. **A real domain with a bot-information page.** The crawler user agent currently points at a placeholder that can never resolve. Any site owner who checks their logs sees a bot they cannot identify. This gates all prospecting, and is roughly twenty minutes of work.
-2. **The manual accessibility checklist** (`docs/manual-accessibility-checklist.md`). Two confirmed entries so far, both discovered by testing rather than assumed: placeholder-as-only-label passes axe because the placeholder supplies an accessible name, and heading-order is tagged best-practice rather than WCAG so it falls outside the scanned tag set. This checklist determines how long an accessibility audit takes, which determines whether the pricing holds. It gates selling accessibility audits, not the build.
+1. **A real domain with a bot-information page.** The crawler user agent still points at `https://your-domain.example/bot`, which can never resolve, so any site owner checking their logs sees a bot they cannot identify. Two real scans have now gone out under that placeholder. It does not block the build, but it blocks every scan of a site not owned by the operator, which is all of prospecting. Roughly twenty minutes of work and increasingly overdue.
+2. **The manual accessibility checklist** (`docs/manual-accessibility-checklist.md`). Two confirmed entries so far, both discovered by testing rather than assumed: placeholder-as-only-label passes axe because the placeholder supplies an accessible name, and heading-order is excluded twice over, once by axe's tag set (tagged best-practice rather than WCAG) and again by the milestone 4 decision to emit nothing from Lighthouse's accessibility category. This checklist determines how long an accessibility audit takes, which determines whether the pricing holds. It gates selling accessibility audits, not the build.
 3. **Interface scope**, section 7.1. Gates milestone 7.
 
 ### Still open, non-blocking
@@ -382,6 +399,7 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 4. Current EAA enforcement status in France, verified against primary sources.
 5. Whether to publish prices on a proposal page or quote per prospect.
 6. Which site to use as the first public case study.
+7. **Whether to floor severity before the LLM sees findings.** On sas-fernande, 61 of 78 findings were minor, almost all low-weight Lighthouse audits a client report should probably not carry. Sending everything spends most of the model's attention on trivia and risks themes built around it. Flooring risks silently dropping something a client cares about, and the coverage check in `llm-output.ts` would stop meaning what it currently means. Decide at the start of milestone 5 and record the reasoning.
 
 ---
 
