@@ -1,7 +1,8 @@
 .env
 node_modules/
 dist/
-artifacts/
+/artifacts/
+/packages/*/artifacts/
 .claude/settings.local.json
 reports/
 *.pdf
