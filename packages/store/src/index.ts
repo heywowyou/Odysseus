@@ -4,3 +4,6 @@ export type { AuditDocument, AuditDocumentFields } from './schemas/audit.schema.
 export { createFindingModel } from './schemas/finding.schema.js';
 export type { FindingDocument } from './schemas/finding.schema.js';
 export { persistAudit } from './persist-audit.js';
+export { createAnalysisModel } from './schemas/analysis.schema.js';
+export type { AnalysisDocument, AnalysisDocumentFields } from './schemas/analysis.schema.js';
+export { persistAnalysis } from './persist-analysis.js';

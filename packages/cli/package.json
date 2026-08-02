@@ -16,6 +16,7 @@
     "@odysseus/core": "workspace:*",
     "@odysseus/scanner": "workspace:*",
     "@odysseus/store": "workspace:*",
+    "@odysseus/llm": "workspace:*",
     "commander": "^13.1.0"
   }
 }

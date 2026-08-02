@@ -68,14 +68,34 @@ worth surfacing, but it is not a credibility failure.
 
 ## 3. Determinism and provenance
 
-Set a low temperature. This is a client deliverable, not a brainstorm, and
-two runs over the same findings should not produce materially different
-priorities.
+Claude Opus 5 and other current-generation Claude models reject the
+`temperature` parameter outright (HTTP 400) - it no longer exists at this
+model tier. Determinism comes from two things instead, neither of which
+touches Zod validation or the invented-finding guard: those run
+regardless, on every response, independent of how the response was
+produced.
 
-**Record the model identifier and temperature alongside the output**, for
-the same reason the audit manifest records axe and Lighthouse versions: a
-model change between two monthly monitoring runs would otherwise read as
-the client's site having changed. Not retrofittable onto stored analyses.
+**Structured output**, via the Anthropic SDK's `output_config.format`
+(built from `llmOutputSchema` with `zodOutputFormat`), constrains the
+response shape server-side. This is a schema guarantee about *shape*, not
+a validation step in itself - the code still runs an explicit,
+auditable `llmOutputSchema.parse()` on every response, because CLAUDE.md's
+Zod-validation rule is a business rule, not an SDK implementation detail
+to trust implicitly.
+
+**A low or medium `effort` level** (Claude's reasoning-depth parameter,
+values `low`/`medium`/`high`/`xhigh`/`max`, set via the same
+`output_config` object as `format`) keeps the model from over-exploring
+alternative groupings on a task that calls for a stable, repeatable
+answer over the same findings. This is a client deliverable, not a
+brainstorm, and two runs over the same findings should not produce
+materially different priorities.
+
+**Record the model identifier and effort level alongside the output**,
+for the same reason the audit manifest records axe and Lighthouse
+versions: a model or effort-level change between two monthly monitoring
+runs would otherwise read as the client's site having changed. Not
+retrofittable onto stored analyses.
 
 ---
 

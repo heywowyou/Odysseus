@@ -5,5 +5,10 @@
     "rootDir": "./src"
   },
   "include": ["src"],
-  "references": [{ "path": "../core" }, { "path": "../scanner" }, { "path": "../store" }]
+  "references": [
+    { "path": "../core" },
+    { "path": "../scanner" },
+    { "path": "../store" },
+    { "path": "../llm" }
+  ]
 }
