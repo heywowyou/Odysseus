@@ -73,6 +73,9 @@ deliberately seeded faults. Never run development scans against live
 third-party sites. Vitest for unit tests, with scanner output fixtures
 committed so tests do not require a browser.
 
+Any fixture dev server started during a session must be stopped before the
+session ends. Verify it is stopped with `pgrep` before reporting completion.
+
 ## Style
 
 - TypeScript strict, no `any`, explicit return types on exported functions.

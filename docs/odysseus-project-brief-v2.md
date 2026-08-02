@@ -254,27 +254,50 @@ Automated accessibility scanning catches a well-documented minority of WCAG issu
 
 ## 7. Build sequence
 
-Deliberately staged so the tool is shaped by real demand rather than assumptions.
+**Revised 2026-08-02.** The original sequence deferred the interface until volume justified it, on the reasoning that a dashboard saves nothing at three clients. That reasoning is sound in the abstract and wrong for how this operator works. Building the tool complete, then selling, is the chosen approach. The tradeoff is accepted explicitly: slower to first revenue, in exchange for a deliverable and a workflow the operator is willing to put his name on.
 
-**Phase 0: Manual audits, first 3 paying clients.**
-Run axe-core and Lighthouse from the command line. Write a quick Playwright script for the render diff, since that is the differentiating artifact and worth having early. Paste structured output into an LLM by hand for prioritization. Format the PDF manually from a template. The goal is learning what clients actually ask about, argue with, and pay for. Do not build the platform yet.
+Two constraints survive the change, because they are dependency facts rather than philosophy:
 
-**Phase 1: Core engine.**
-Playwright crawl with raw versus rendered diff, axe-core integration, Lighthouse integration, normalization and dedupe into MongoDB. Command-line driven.
+1. **Normalization before interface.** The dashboard is a view onto the findings model. That model does not meet real multi-scanner data until milestone 4. Building UI before that guarantees rebuilding it after.
+2. **Scope must be written down before the interface is started**, or "fully functional" recedes indefinitely. See 7.1.
 
-**Phase 2: Report pipeline.**
-LLM prioritization layer with schema validation and the anti-hallucination guard, plus PDF generation from an HTML template. Bilingual output.
+### Milestones
 
-**Phase 3: Prospecting mode.**
-Batch scanning, brokenness scoring, evidence screenshot generation, prospect database.
+**Milestone 0: contracts and scaffold.** Done 2026-08-02. Findings schema v1, severity mapping, LLM output schema with hallucination guards, all locked before any code. pnpm workspace, strict TypeScript, client-rendered fixture with seeded faults.
 
-**Phase 4: Queue and dashboard.**
-BullMQ, Express API, Next.js interface. Only worth building once volume justifies it. Before that, command-line invocation is sufficient and faster to iterate on.
+**Milestone 1: render diff.** Done 2026-08-02. Raw pass with JavaScript disabled versus fully rendered pass, both text extractions scoped to body, screenshots, console errors, HTTP status. Verified returning 0 on a server-rendered site, confirming no extraction bias.
 
-**Phase 5: Monitoring.**
-Scheduled re-scans, regression detection, delta reports. This is what makes the monthly tier real.
+**Milestone 2: crawler.** Done 2026-08-02. BFS with robots.txt enforcement, exact-origin internal links, depth and page caps, politeness delay taking the stricter of local config and the site's own stated delay.
 
-**Phase 6, optional:** self-serve access for agency partners, only if demand appears.
+**Milestone 3: scanners.** Done 2026-08-02. axe-core against WCAG 2.2 AA reusing the rendered navigation, Lighthouse across four categories via a CDP port on the same Chromium instance. Per-phase error isolation. Validated on a real 10-page site in roughly five minutes with zero errors.
+
+**Milestone 4: normalization and persistence.** Next. Collapse three scanners' output into the Finding model, dedupe on rule plus selector, persist to MongoDB. This is where the locked schema meets reality; a contract change here is legitimate if argued, not a failure.
+
+**Milestone 5: LLM prioritization.** Structured input, Zod-validated output, hard rejection of any finding ID absent from the input, retry then fail loudly.
+
+**Milestone 6: report generation.** HTML and Tailwind template printed to PDF by Chromium. Bilingual. This is the client-facing artifact and the thing the whole business is actually selling.
+
+**Milestone 7: interface.** Queue, API, and web UI. Scope defined in 7.1 below, and not started before that section is filled in.
+
+**Milestone 8: custom checks.** Meta, canonical, JSON-LD, sitemap, hreflang, heading hierarchy, redirect chains. Deferred because axe and Lighthouse already produce enough to sell an audit; these deepen it rather than enable it.
+
+**Milestone 9: prospecting mode.** Batch scanning, brokenness scoring, evidence screenshots, prospect database.
+
+**Milestone 10: monitoring.** Scheduled re-scans, regression detection, delta reports. What makes the monthly tier real.
+
+### 7.1 Definition of done for the interface
+
+**To be filled in before milestone 7 begins. Building against an undefined scope is the specific way this approach fails.**
+
+The question to answer: what must the interface do before the first outreach email is sent, and what is explicitly a later addition? Anything not on the first list waits, no matter how appealing it looks mid-build.
+
+A reasonable starting position, to be confirmed or replaced:
+- Trigger an audit against a URL and watch it progress
+- View findings for a completed audit, grouped and prioritized
+- Trigger report generation and download the PDF
+- List past audits per client
+
+Explicitly not required for the first email: client login, self-serve signup, billing, agency multi-tenancy, in-app remediation tracking, real-time collaboration.
 
 ---
 
@@ -333,20 +356,32 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 - **Report credibility collapse.** One hallucinated or wrong finding in front of a client's developer damages the whole offer. Mitigated by the deterministic-detection rule and schema validation, but the manual review step must be genuinely performed.
 - **Automated-scan commoditization.** Free scanners exist and clients know it. The differentiator must be prioritization, business framing, bilingual delivery, and the manual layer, not the scan itself. Never let the report look like raw tool output.
 - **Legal overreach in marketing.** Claiming EAA applicability to an exempt microenterprise is wrong and reputationally risky. Check the size threshold before using the legal angle.
-- **Overbuilding the tool.** Building phases 4 and 5 before selling three audits manually is the predictable failure mode. The tool is leverage for a service, not a product to perfect.
+- **Scope drift in the build-first approach.** The original brief called overbuilding the predictable failure mode and recommended selling three audits before building the platform. Section 7 revises that deliberately: the tool gets built complete first. The risk does not disappear, it changes shape. It is no longer "building the wrong thing," it is "never declaring the thing finished." The guardrail is section 7.1: interface scope written down before milestone 7 starts, and anything not on that list waits. If the interface milestone runs long past its written scope, that is the signal, not a reason to extend the scope.
 - **One-off revenue.** Audits do not repeat. Without the monitoring tier and agency partnerships, this is a treadmill. Build the recurring layer early.
 - **Prospect list exhaustion.** A regional market has a finite number of qualifying businesses. Plan for expansion by sector or geography before the list runs dry.
 
 ---
 
-## 11. Open questions to resolve
+## 11. Open questions
 
-1. Which vertical to attack first: wine and tourism, e-commerce, or web agencies as white-label resellers.
-2. Whether to lead with accessibility (legal urgency, clearer buyer) or SPA-SEO (clearer technical differentiation, easier evidence).
-3. Current EAA enforcement status in France, verified against primary sources.
-4. Whether to publish prices on a proposal page or quote per prospect.
-5. Whether to offer a free automated mini-report as a lead magnet, and how much to give away without cannibalizing the paid audit.
-6. Which site to use as the first end-to-end test case for the engine, ideally one that can double as a public case study.
+### Settled 2026-08-02
+
+- **Both audit types, equal weight.** They share one engine, so this costs nothing in code. The cost is in delivery time: accessibility requires a genuine manual pass, SPA-SEO does not.
+- **No free public scanner.** Private prospecting only. A free scanner is a distribution play and there is no traffic yet to distribute to. Revisit if outreach proves the evidence converts.
+- **Vertical choice deferred.** It shapes outreach, not the build. Decide when building the prospect list, informed by which sectors actually scan badly.
+- **Build fully, then sell.** See section 7.
+
+### Blocking, with a named dependency
+
+1. **A real domain with a bot-information page.** The crawler user agent currently points at a placeholder that can never resolve. Any site owner who checks their logs sees a bot they cannot identify. This gates all prospecting, and is roughly twenty minutes of work.
+2. **The manual accessibility checklist** (`docs/manual-accessibility-checklist.md`). Two confirmed entries so far, both discovered by testing rather than assumed: placeholder-as-only-label passes axe because the placeholder supplies an accessible name, and heading-order is tagged best-practice rather than WCAG so it falls outside the scanned tag set. This checklist determines how long an accessibility audit takes, which determines whether the pricing holds. It gates selling accessibility audits, not the build.
+3. **Interface scope**, section 7.1. Gates milestone 7.
+
+### Still open, non-blocking
+
+4. Current EAA enforcement status in France, verified against primary sources.
+5. Whether to publish prices on a proposal page or quote per prospect.
+6. Which site to use as the first public case study.
 
 ---
 
@@ -361,7 +396,7 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 **Not working, reassess:**
 - No paid audit after 60 days of consistent outreach with real evidence attached.
 - Consistent pushback that the deliverable is not worth the price, after testing lower tiers.
-- Tool build time expanding while sales stall, which is the classic failure mode here.
+- Milestone 7 running substantially past the scope written in section 7.1. Under the revised build-first sequence, this is the specific measurable form of the overbuilding risk. The response is to ship against the original scope, not to extend it.
 
 ---
 
