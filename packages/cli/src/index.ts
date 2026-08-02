@@ -5,6 +5,7 @@
 
 import { Command } from 'commander';
 import { registerRenderDiffCommand } from './commands/render-diff.js';
+import { registerCrawlCommand } from './commands/crawl.js';
 
 const program = new Command();
 
@@ -14,5 +15,6 @@ program
   .version('0.1.0');
 
 registerRenderDiffCommand(program);
+registerCrawlCommand(program);
 
 program.parse(process.argv);

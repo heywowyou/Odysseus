@@ -53,7 +53,9 @@ describe('renderDiff against fixtures/spa-demo', () => {
     expect(result.renderedTextLength).toBeGreaterThan(100);
     expect(result.missingPercent).toBeGreaterThan(90);
     expect(result.consoleErrors).toEqual([]);
-    expect(existsSync(path.resolve(result.rawScreenshotRef!))).toBe(true);
-    expect(existsSync(path.resolve(result.renderedScreenshotRef!))).toBe(true);
+    expect(path.isAbsolute(result.rawScreenshotRef!)).toBe(true);
+    expect(path.isAbsolute(result.renderedScreenshotRef!)).toBe(true);
+    expect(existsSync(result.rawScreenshotRef!)).toBe(true);
+    expect(existsSync(result.renderedScreenshotRef!)).toBe(true);
   }, 45_000);
 });

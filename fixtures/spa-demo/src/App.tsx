@@ -59,6 +59,11 @@ export default function App() {
 
       <footer className="page__footer">
         <p>Domaine des Trois Chenes, Route des Vignes, 33000 Bordeaux</p>
+        <nav>
+          <a href="/about.html">A propos</a>
+          {/* Disallowed by robots.txt; must be discovered but never crawled. */}
+          <a href="/private.html">Espace prive</a>
+        </nav>
       </footer>
     </div>
   );

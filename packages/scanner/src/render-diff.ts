@@ -2,7 +2,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Browser } from 'playwright';
 import type { RenderDiffResult } from '@odysseus/core';
-import { DEFAULT_SCREENSHOT_DIR, DEFAULT_TIMEOUT_MS, ODYSSEUS_USER_AGENT } from './browser.js';
+import { DEFAULT_TIMEOUT_MS } from './browser.js';
+import { getArtifactsRoot, getCrawlerUserAgent } from './config.js';
 import { computeMissingPercent, extractTextFromHtml } from './extract-text.js';
 
 export interface RenderDiffOptions {
@@ -26,8 +27,8 @@ export async function renderDiff(
   options: RenderDiffOptions = {},
 ): Promise<RenderDiffResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const userAgent = options.userAgent ?? ODYSSEUS_USER_AGENT;
-  const screenshotDir = options.screenshotDir ?? DEFAULT_SCREENSHOT_DIR;
+  const userAgent = options.userAgent ?? getCrawlerUserAgent();
+  const screenshotDir = options.screenshotDir ?? path.join(getArtifactsRoot(), 'render-diff');
 
   const runDir = path.join(screenshotDir, buildRunSlug(url));
   await fs.mkdir(runDir, { recursive: true });
