@@ -1,9 +1,28 @@
-import type { Finding } from '@odysseus/core';
+import type { Finding, Theme } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml } from '../html-utils.js';
 
 const TOP_THEME_COUNT = 3;
+
+/**
+ * Finding.title is always the raw scanner string (axe/Lighthouse/custom
+ * check), documented in findings.ts as "taken from the scanner, not
+ * generated", so it must never be rendered directly in a client-facing
+ * section. The theme grouping this finding belongs to already carries an
+ * LLM-written title in the report's language; when no theme claims the
+ * finding (should not happen with real data, but quickWins is model
+ * output and not schema-guaranteed to overlap themes.findingIds), fall
+ * back to the category and severity labels, which are already bilingual.
+ */
+function quickWinLabel(strings: ReportStrings, finding: Finding, themes: Theme[]): string {
+  const theme = themes.find((candidate) => candidate.findingIds.includes(finding.findingId));
+  if (theme) return theme.title;
+
+  const category = strings.findingsAppendix.categoryLabels[finding.category];
+  const severity = strings.findingsAppendix.severityLabels[finding.severity];
+  return `${category} (${severity})`;
+}
 
 export function renderWhatToDoFirst(
   strings: ReportStrings,
@@ -15,7 +34,7 @@ export function renderWhatToDoFirst(
   const quickWinItems = analysis.quickWins
     .map((findingId) => findingsById.get(findingId))
     .filter((finding): finding is Finding => finding !== undefined)
-    .map((finding) => `<li>${escapeHtml(finding.title)}</li>`)
+    .map((finding) => `<li>${escapeHtml(quickWinLabel(strings, finding, analysis.themes))}</li>`)
     .join('');
 
   const topThemes = [...analysis.themes]
