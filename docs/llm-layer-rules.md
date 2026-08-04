@@ -323,7 +323,7 @@ helper directly.
 
 Milestone 6.1. Sections 6 and 7 above both document the same root cause
 from two angles: a single `analyze --language X` call asked one model
-response to decide grouping, ranking, *and* write prose, in the
+response to decide grouping, ranking, _and_ write prose, in the
 requested language, all at once. That produced two independent, real
 failures on the same site - different theme counts and quick-win counts
 per language (section 7), and English prose surviving inside a French
@@ -391,3 +391,69 @@ merged output is indistinguishable in shape from the pre-6.1 single-pass
 output - this section is the one to check first if a future reader is
 confused about why an `analyses/*.json` file's `themes[]` never has a
 `themeKey`.
+
+---
+
+## 10. Cost gating: when the LLM is not called at all
+
+Decided 2026-08-03. Everything above assumes the model is called. This
+section covers the two places it deliberately is not, so a call is not
+spent when a scan has not produced enough to justify one.
+
+Both gates reuse `SEVERITY_ORDER` (critical 4, serious 3, moderate 2,
+minor 1) as the weight, rather than inventing a second scale to justify
+separately. The score sums this weight across distinct findings, not
+occurrences, since occurrences are already collapsed per finding by the
+normalization layer (section 1 above, and `docs/normalization-rules.md`
+section 2), so counting findings avoids double-counting template-driven
+issues.
+
+**Audit fallback gate.** A paying client still receives a report
+regardless of findings volume, so this gate only decides whether to call
+the LLM or fall back to a static "no significant issues found" template
+pulled from the existing `ReportStrings` chrome. Skip the LLM only when
+both hold:
+
+- No finding at `critical` or `serious` severity
+- Fewer than 5 `moderate` findings total
+
+Deliberately conservative. Expected to trigger rarely, a paying full-audit
+client is unlikely to have an unusually clean site, this exists mainly as
+a safety net.
+
+**Prospecting worthiness gate.** Decides whether a scanned prospect is
+worth an LLM call at all, both for the single-sentence hook and for the
+personalized outreach email (see brief section 6.2 stage 6 and section
+9). Intentionally stricter than the audit fallback gate, since a
+prospect with only moderate or minor findings is not compelling cold
+outreach evidence. Call the LLM only when at least one holds:
+
+- At least one `critical` severity finding
+- At least two `serious` severity findings
+- Any page with render diff `missingPercent` at 50 or above (the
+  existing `serious` floor in `severityFromRenderDiff`)
+
+Everything below this bar is still scored and stored, it simply never
+reaches the LLM.
+
+**Where this lives.** One `computeBrokennessScore(findings)` function
+plus two predicates, `isAuditFallbackEligible` and `isProspectingWorthy`,
+belong in `packages/core`, since both the report path and the
+prospecting path need the same numbers and neither should duplicate the
+scoring logic.
+
+**Outreach email generation is a new call, same governing rule.** When a
+prospect clears the worthiness gate, the LLM writes the cold email
+itself, not just a one-sentence hook, but it does not choose which
+finding to lead with. That choice is already made by the deterministic
+brokenness scoring and evidence selection in prospecting mode. The
+anti-hallucination guard from section 6 below applies verbatim in this
+context: state the WCAG criterion, never assert the EAA applies to this
+specific business, and this has to be written into the outreach prompt
+directly, it is not inherited automatically just because the audit
+prompt has it. Output is a draft, never sent automatically. Language
+follows the prospect's own site language, not a French default.
+
+**Thresholds are starting positions**, same status as the render diff
+percentage thresholds already in the codebase, revisit once milestone 9
+produces real distribution data across many scanned sites, not before.

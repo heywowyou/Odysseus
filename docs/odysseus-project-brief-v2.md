@@ -40,27 +40,35 @@ Whether ChatGPT, Perplexity, and Google's AI answers mention the business or rec
 
 ### 3.2 Packaging and pricing
 
-Three tiers, priced flat, never hourly.
+**Revised 2026-08-03.** Three tiers, reduced to two. Implementation and monitoring are dropped entirely, not deferred. Reasoning below.
 
-| Tier           | What it is                                                                 | Indicative price                          |
-| -------------- | -------------------------------------------------------------------------- | ----------------------------------------- |
-| Audit          | Full scan, prioritized report, PDF in FR or EN, recorded video walkthrough | EUR 1,500 to 3,000 depending on site size |
-| Implementation | Fixing the prioritized issues                                              | EUR 2,000 to 6,000, scoped per project    |
-| Monitoring     | Monthly re-scan, regression alerts, short delta report                     | EUR 150 to 500 per month                  |
+| Tier       | What it is                                                                               | Price                                                                 |
+| ---------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Screening  | Automated scan only, no manual verification layer, generated framing                     | EUR 290 flat, published                                               |
+| Full audit | Full scan plus manual accessibility verification, PDF report, recorded video walkthrough | EUR 1,200 to 1,900, set by risk band (see below), not quoted freehand |
 
-Notes on pricing logic:
+**Screening is the outreach offer.** Fast, cheap, published, card payment, 48 hour turnaround, no calls. It exists to be a low-friction decision for a cold prospect, closer to an impulse purchase than a considered one. If a screening client upgrades to a full audit within 30 days, the screening fee is deducted from the audit price.
 
-- The audit is the wedge. Implementation and monitoring are where revenue compounds.
+**Full audit pricing is risk-banded, not continuous.** The already-computed overall risk level (low, medium, high) places the audit at one of a small number of fixed price points inside the 1,200 to 1,900 range, rather than a formula that climbs with every additional finding found. A continuous per-finding price was considered and rejected: the sites that score worst are usually the best prospecting targets, since a badly broken site is the most convincing outreach evidence, and charging those same sites the most works against volume-based prospecting. It also does not track real effort, since the manual accessibility checklist runs once per site regardless of whether it turns up 15 violations or 60. The risk band keeps the justification power, the report's risk badge and its reasoning already lead the document, without the incentive problem or the pricing unpredictability of a continuous formula.
+
+**Implementation and monitoring, dropped.** Both required an ongoing client relationship to deliver well, which competes directly with the operator's primary allocation of time to Aurora. This is a deliberate tradeoff, made with the cost understood: it removes the mechanism that was meant to make revenue compounding rather than purely transactional (see section 10). The accepted alternative is volume, repeated one-off sales across many prospects, on the reasoning that the addressable market of prospect websites is large enough to sustain that. This raises the importance of milestone 9 (prospecting mode) relative to where it sat under the three-tier model, since there is no retained client base to fall back on if outreach volume drops.
+
+Notes on pricing logic, unchanged from the original reasoning:
+
 - Price on business impact and legal exposure, not on hours or page count.
-- Small sites (under roughly 20 pages) can take a lighter fixed offer around EUR 900 to 1,200 to lower the entry barrier.
 
 ### 3.3 What the client receives
+
+**Full audit**, all of the following:
 
 1. Prioritized PDF report, in their language, structured by theme rather than as a raw violation list.
 2. Each theme: what is wrong, why it matters commercially or legally, effort to fix, impact if fixed, affected pages, code-level detail in an appendix.
 3. Before and after evidence for the SPA rendering issue (screenshot of raw HTML view versus rendered view).
 4. A recorded video walkthrough, 5 to 10 minutes, covering the priorities and the reasoning.
 5. A short "what to do first" summary aimed at a non-technical decision maker.
+6. The manual accessibility verification layer (see `docs/manual-accessibility-checklist.md`), covering what automated scanning provably cannot catch.
+
+**Screening**, a lighter subset: automated findings only, no manual verification pass, generated executive framing, no video walkthrough. Positioned as evidence of a problem worth investigating further, not as a compliance-grade deliverable.
 
 ---
 
@@ -86,7 +94,7 @@ Notes on pricing logic:
 | ---------------------- | ------------------------------------------------------------ |
 | Qualification          | Automated mini-scan producing one piece of concrete evidence |
 | Scoping                | Written intake questionnaire, 8 to 12 targeted questions     |
-| Proposal               | Written proposal page presenting the three tiers             |
+| Proposal               | Written proposal page presenting the two tiers               |
 | Delivery               | PDF report plus recorded video walkthrough                   |
 | Follow-up              | Written question rounds, scoped and included in the price    |
 | Implementation kickoff | Written scope document plus a shared task board              |
@@ -181,6 +189,8 @@ Tasks:
 
 Interface: strict JSON in, strict JSON out. System prompt instructs the model to return only JSON matching a fixed schema, no prose, no markdown fences. Validate the response against the schema (Zod) and retry on failure. Reject and log any output containing a finding ID not present in the input, as a hard guard against invented findings.
 
+**The LLM is not called at all when a scan has not produced enough to justify it (2026-08-03).** Applies before this stage runs, on the full audit path: when findings are limited enough that a static "no significant issues found" template is more honest than spending a call on it. Full thresholds and reasoning in `docs/llm-layer-rules.md`.
+
 Proposed output schema:
 
 ```
@@ -218,7 +228,9 @@ The same pipeline in a stripped-down configuration:
 - Output: a ranked table of prospects by a composite "brokenness score", plus one auto-generated evidence screenshot each.
 - Feeds directly into the outreach system in section 9.
 
-This mode must be cheap and fast per site, since it runs against hundreds. Skip the LLM layer entirely here, or use one very short call to generate a single-sentence hook per prospect.
+This mode must be cheap and fast per site, since it runs against hundreds. The LLM is called only for prospects that clear a worthiness gate (defined in `docs/llm-layer-rules.md`, based on the severity mix of findings), never for every scanned site. Below that gate, a site is still scored and stored, it simply never reaches the LLM.
+
+**Personalized outreach email generation (2026-08-03).** For prospects that clear the gate, the tool generates the cold email itself, not just a one-sentence hook, personalized to that site's specific findings. Evidence selection stays deterministic: the LLM does not choose which finding to feature, that choice is already made by the brokenness scoring and evidence selection above. The LLM's role is narrowly to write the email around evidence already selected. Output is a draft into a queue, never sent automatically, both because the manual review step is what keeps EU AI Act exposure low for the LLM layer (see 8.4) and because CNIL B2B email rules require clear identification and an opt-out in every message, which a human should confirm is present before send. The anti-hallucination guard carries over explicitly: state the WCAG criterion, never assert the EAA applies to this specific business. Email language follows the prospect's own site language, not a French default.
 
 ### 6.3 System architecture
 
@@ -264,6 +276,7 @@ Version the findings model from day one. Reports will need regenerating and comp
 - **LLM cost is negligible, scanning cost is not.** Optimize crawl scope, not prompt length.
 - **Flaky performance metrics.** Core Web Vitals from a single lab run are noisy. Run performance passes more than once and report medians, or clearly label lab data as lab data. Consider pulling field data (CrUX) where available for larger sites, and say so in the methodology.
 - **Rate limiting and politeness.** Prospect scanning touches sites without permission. Keep it to a single lightweight pass per site, respect robots.txt, identify the crawler, and do not hammer. This matters both ethically and to avoid being blocked.
+- **Parallel crawl means concurrency, not a shorter delay (2026-08-03).** When multiple pages of one site, or multiple sites in a queue, run concurrently, the per-request politeness delay stays exactly as configured. Speed comes from running more concurrent browser contexts against different origins, or more concurrent pages within a rate-limit budget still enforced per origin through a shared limiter, never from lowering the delay. The rate limiter is scoped per origin, since two different websites share no politeness budget between them, only machine resources (CPU, Chromium memory) cap how many run at once.
 - **Monitoring means diffing.** The monitoring tier needs stored historical findings and a regression detector, so design the findings model to support comparison across runs from the start. This is why every audit records the version of every tool that produced it: a scanner upgrade between two monthly scans otherwise reads as phantom regressions and phantom fixes with no way to attribute them.
 - **Not everything a site links to is a page.** A real WordPress site linked four image attachment URLs from its gallery, and each one cost a full render, an axe pass, and a Lighthouse pass before producing findings against binary content. Non-HTML resources are dropped by extension before being enqueued, with a Content-Type check as a fallback. This matters more in prospecting mode, where a brokenness score computed partly from attachment pages is measuring nothing.
 - **Screenshots are captured for every page and kept for almost none.** Only the homepage pair and the worst pages by render-diff percentage survive a scan. The reason is data minimisation rather than disk: full-page screenshots of a client site incidentally capture personal data, and not capturing is a stronger position than deleting later. The selection rule has one canonical implementation that report generation must reuse.
@@ -322,12 +335,14 @@ Verified live in both languages against the real capture: 11 themes from 17 find
 
 The question to answer: what must the interface do before the first outreach email is sent, and what is explicitly a later addition? Anything not on the first list waits, no matter how appealing it looks mid-build.
 
-A reasonable starting position, to be confirmed or replaced:
+**Updated 2026-08-03, ahead of milestone 7 starting.** Private single-user tool, so no auth, multi-tenancy, or permissions layer of any kind is needed anywhere in this. That simplifies the scope meaningfully relative to a multi-client dashboard.
 
-- Trigger an audit against a URL and watch it progress
-- View findings for a completed audit, grouped and prioritized
-- Trigger report generation and download the PDF
-- List past audits per client
+- URL input field, scan/search button, and a collapsed-by-default advanced options section (max crawl depth, max pages, delay override).
+- A progress indicator with an estimated time to completion. Two segments, since the two phases have different predictability: crawling has a reasonably accurate live estimate from `maxPages` and `effectiveDelayMs`, scanning is looser since Lighthouse's navigation mode adds its own extra page load. One combined number across both phases would be false precision.
+- On completion, a severity roll-up only (counts of critical, serious, moderate, minor), not the full findings list, with a click-through to the detailed view. Already supported by existing fields on the locked `Finding` schema.
+- A history log tab: date, site URL, risk or severity roll-up, status, linking into the full report. A view over the existing `audits` collection, not new data modeling.
+- Two distinct scan types sharing one engine, both feeding the history log but shown distinguishably (a type column, or separate sub-tabs): **full audit scans** (single site, full checks, queued sequentially or a few at a time) and **prospecting scans** (batch of many URLs, lighter checks only, feeding the ranked prospect table from milestone 9 rather than the full findings log).
+- Simple FIFO queueing across sites of either type, per-origin rate limiting per the engineering constraints above. No queue-priority system, not needed for a single-user tool yet.
 
 Explicitly not required for the first email: client login, self-serve signup, billing, agency multi-tenancy, in-app remediation tracking, real-time collaboration.
 
@@ -367,15 +382,15 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 
 **Sequence.**
 
-1. Prospecting mode scans a batch of candidate sites and ranks them.
-2. For the top prospects, generate one piece of evidence: the raw-versus-rendered screenshot, or the top accessibility violations with counts.
-3. Cold email: short, specific, evidence-led. Lead with the finding, not with credentials. One clear ask, linking to a proposal page or a short intake form.
+1. Prospecting mode scans a batch of candidate sites and ranks them, and gates which prospects are worth the LLM cost of outreach generation (see 6.2 stage 6 and `docs/llm-layer-rules.md`).
+2. For prospects clearing the gate, generate one piece of evidence, the raw-versus-rendered screenshot or the top accessibility violations with counts, plus a personalized cold email draft built around that evidence.
+3. Cold email drafts wait in a queue for a human send, never sent automatically. Short, specific, evidence-led. Lead with the finding, not with credentials. One clear ask, linking to the screening offer or a short intake form.
 4. Follow-up sequence: two or three emails, spaced, each adding one new piece of information rather than repeating the ask.
-5. Interested prospect completes the intake questionnaire.
-6. Written proposal with three tiers.
-7. Payment, ideally partly up front for first-time clients.
+5. Interested prospect either pays for screening directly (published, self-serve) or completes the intake questionnaire for a full audit.
+6. Written proposal for the full audit tier, price set by risk band per 3.2.
+7. Payment, ideally partly up front for first-time full-audit clients.
 8. Audit runs, report and video walkthrough delivered.
-9. Upsell to implementation or monitoring in the report's closing section, and in a follow-up email a week later.
+9. No implementation or monitoring upsell step (dropped 2026-08-03, see 3.2 and 10). The report's closing section instead frames the report as something the client or their own developer can act on directly.
 
 **What to test and measure:** open and reply rates by vertical, which evidence type converts better (SEO invisibility versus accessibility exposure versus AI visibility), which price point closes fastest, and time from first email to payment.
 
@@ -389,7 +404,7 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 - **Automated-scan commoditization.** Free scanners exist and clients know it. The differentiator must be prioritization, business framing, bilingual delivery, and the manual layer, not the scan itself. Never let the report look like raw tool output.
 - **Legal overreach in marketing.** Claiming EAA applicability to an exempt microenterprise is wrong and reputationally risky. Check the size threshold before using the legal angle.
 - **Scope drift in the build-first approach.** The original brief called overbuilding the predictable failure mode and recommended selling three audits before building the platform. Section 7 revises that deliberately: the tool gets built complete first. The risk does not disappear, it changes shape. It is no longer "building the wrong thing," it is "never declaring the thing finished." The guardrail is section 7.1: interface scope written down before milestone 7 starts, and anything not on that list waits. If the interface milestone runs long past its written scope, that is the signal, not a reason to extend the scope.
-- **One-off revenue.** Audits do not repeat. Without the monitoring tier and agency partnerships, this is a treadmill. Build the recurring layer early.
+- **One-off revenue, accepted deliberately (2026-08-03).** Implementation and monitoring were dropped rather than deferred (see 3.2), which removes the mechanism that would have made revenue compounding rather than purely transactional. This was a conscious choice to protect time for Aurora, not an oversight, but it means the business now depends entirely on outreach volume with no retained base to fall back on. Milestone 9 (prospecting mode) carries more weight under this model than it did under the three-tier one. Agency white-label partnerships remain a way to add volume without adding retention.
 - **Prospect list exhaustion.** A regional market has a finite number of qualifying businesses. Plan for expansion by sector or geography before the list runs dry.
 
 ---
@@ -404,6 +419,13 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 - **Build fully, then sell.** See section 7.
 - **Severity floor before the LLM.** Critical, serious, and moderate reach the model; minor findings do not, but still appear in the report appendix. The filter shapes the narrative, not the completeness of the document. The rejected alternative (send everything, marked low priority, capped at one or two catch-all themes) is recorded in `docs/llm-layer-rules.md` for when real reports show whether the filter drops anything clients ask about.
 
+### Settled 2026-08-03
+
+- **Pricing structure.** Two tiers, not three. Screening at EUR 290 flat and published. Full audit at EUR 1,200 to 1,900, set by risk band rather than a continuous formula or a freehand quote. Implementation and monitoring dropped entirely. Full reasoning in 3.2.
+- **Cost gating for the LLM layer.** The LLM is not called when a scan has not produced enough to justify it, on both the audit path (static template fallback) and the prospecting path (worthiness gate before outreach generation is attempted). Thresholds in `docs/llm-layer-rules.md`.
+- **Personalized outreach email generation.** Built on top of prospecting mode, evidence stays deterministic, output is a reviewed draft, never auto-sent. See 6.2 stage 6 and section 9.
+- **Interface scope for milestone 7.** Progress indication with ETA, severity-roll-up-only completion feedback, a history log distinguishing full audit scans from prospecting scans, and per-origin concurrent scanning. Updated 7.1.
+
 ### Blocking, with a named dependency
 
 1. **A real domain with a bot-information page.** The crawler user agent still points at `https://your-domain.example/bot`, which can never resolve, so any site owner checking their logs sees a bot they cannot identify. Two real scans have now gone out under that placeholder. It does not block the build, but it blocks every scan of a site not owned by the operator, which is all of prospecting. Roughly twenty minutes of work and increasingly overdue.
@@ -413,7 +435,7 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 ### Still open, non-blocking
 
 4. Current EAA enforcement status in France, verified against primary sources.
-5. Whether to publish prices on a proposal page or quote per prospect.
+5. **Partially resolved 2026-08-03.** Screening is published at a flat EUR 290. The full audit price is not published as a single number, since it is set by risk band, but the bands themselves (1,200 to 1,900) could still be published on a proposal page rather than quoted freehand. Whether to publish the bands or reveal the specific price only after a screening result is still open.
 6. Which site to use as the first public case study.
 7. **How the report handles analysis variance.** Identical findings produced eight quick wins in French and seven in English on the first live run. Expected, since the model groups and ranks rather than computes, but it means monitoring deltas must be derived from the deterministic findings layer with the analysis regenerated, not diffed. Decide the mechanics in milestone 10, not before.
 
@@ -423,9 +445,9 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 
 **Working:**
 
-- Three paid audits completed manually within the first eight weeks.
+- Three paid audits or screenings completed manually within the first eight weeks.
 - Reply rate above roughly 5 percent on evidence-led cold email.
-- At least one audit converting to implementation or monitoring.
+- Screening-to-full-audit upgrade rate within the 30 day window, as the first read on whether the two-tier structure actually converts.
 - Time per audit falling measurably as the pipeline is built.
 
 **Not working, reassess:**

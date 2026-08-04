@@ -120,7 +120,20 @@ needed, say so and stop. Do not change them and continue.
    effort level, for the same provenance reason the manifest records
    scanner versions.
 
-6. **`packages/llm/src/output-schema.ts` is a hand-mirrored copy of the
+6. **The LLM is not called when a scan has not produced enough to justify
+   it**, decided 2026-08-03. Two gates: a conservative audit fallback
+   (falls back to a static template only when there is no critical or
+   serious finding and fewer than 5 moderate findings) and a stricter
+   prospecting worthiness gate before spending a call on outreach
+   generation (at least one critical finding, or two serious, or a page
+   with render diff missing 50 percent or more). Full thresholds and
+   reasoning in `docs/llm-layer-rules.md` section 10. Both gates score
+   findings using the existing `SEVERITY_ORDER` weights rather than a new
+   scale, and count distinct findings rather than occurrences. Do not
+   remove either gate to "always get a full analysis" without revisiting
+   the reasoning there first.
+
+7. **`packages/llm/src/output-schema.ts` is a hand-mirrored copy of the
    locked `llmOutputSchema`**, needed because the SDK's `zodOutputFormat`
    helper requires zod v4 and the locked contract is zod v3. It is an API
    shape hint, never the validation authority: `llmOutputSchema.parse()`
