@@ -1,0 +1,74 @@
+import { callClaudeForWriting } from './client.js';
+import { CLAUDE_EFFORT, CLAUDE_MODEL, MAX_RETRIES } from './constants.js';
+import { findLanguageComplianceViolations } from './language-guard.js';
+import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
+import type { WritingInput, WritingPassOutput } from './writing-schema.js';
+
+export interface AnalyzeWritingResult {
+  output: WritingPassOutput;
+  model: string;
+  effort: string;
+}
+
+/** Retry-and-guard orchestration for the writing pass, independent of
+ *  the structure pass's own retry budget. Rejects a response whose
+ *  themeKeys don't exactly match what it was shown (the correlation
+ *  guard needed to merge prose back onto the right structural theme),
+ *  and rejects a response that fails the language-compliance heuristic.
+ *  Both are treated exactly like an invented finding ID: rejected,
+ *  logged, retried, then fail loudly. See docs/llm-layer-rules.md
+ *  sections 2, 6, and 9. */
+export async function analyzeWriting(
+  input: WritingInput,
+  expectedThemeKeys: readonly string[],
+  usedFallbackContext: boolean,
+): Promise<AnalyzeWritingResult> {
+  let lastFailureReason = '';
+
+  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+    let result: Awaited<ReturnType<typeof callClaudeForWriting>>;
+    try {
+      result = await callClaudeForWriting(input, usedFallbackContext);
+    } catch (error) {
+      // See analyzeStructure's identical comment - a parse/validation
+      // failure is retried like any other rejected attempt.
+      lastFailureReason = error instanceof Error ? error.message : String(error);
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} failed - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    if (result.refused || !result.output) {
+      lastFailureReason = 'Claude declined to respond (stop_reason: refusal)';
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} refused by the model, retrying if attempts remain`,
+      );
+      continue;
+    }
+
+    const mismatch = findThemeKeyMismatches(expectedThemeKeys, result.output);
+    if (!isThemeKeyMismatchEmpty(mismatch)) {
+      lastFailureReason = `theme key mismatch - missing: [${mismatch.missing.join(', ')}], extra: [${mismatch.extra.join(', ')}], duplicate: [${mismatch.duplicate.join(', ')}]`;
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    const violations = findLanguageComplianceViolations(result.output, input.language);
+    if (violations.length > 0) {
+      lastFailureReason = `language compliance violations in field(s): ${violations.map((v) => v.field).join(', ')}`;
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    return { output: result.output, model: CLAUDE_MODEL, effort: CLAUDE_EFFORT };
+  }
+
+  throw new Error(
+    `odysseus analyze (writing pass, language=${input.language}): exhausted ${MAX_RETRIES + 1} attempts without a valid response. Last failure: ${lastFailureReason}`,
+  );
+}

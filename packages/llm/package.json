@@ -16,9 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
-    "@odysseus/core": "workspace:*"
-  },
-  "devDependencies": {
+    "@odysseus/core": "workspace:*",
     "zod": "^3.24.1"
   }
 }

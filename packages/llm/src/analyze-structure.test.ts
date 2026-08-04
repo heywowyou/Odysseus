@@ -1,13 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Finding, LlmInput, LlmOutput } from '@odysseus/core';
+import type { Finding } from '@odysseus/core';
 import { CLAUDE_EFFORT, CLAUDE_MODEL, MAX_RETRIES } from './constants.js';
+import type { StructureInput, StructurePassOutput } from './structure-schema.js';
 
 vi.mock('./client.js', () => ({
-  callClaude: vi.fn(),
+  callClaudeForStructure: vi.fn(),
 }));
 
-const { callClaude } = await import('./client.js');
-const { analyzeFindings } = await import('./analyze.js');
+const { callClaudeForStructure } = await import('./client.js');
+const { analyzeStructure } = await import('./analyze-structure.js');
 
 function buildFinding(findingId: string): Finding {
   return {
@@ -33,8 +34,7 @@ function buildFinding(findingId: string): Finding {
 
 const filteredFindings: Finding[] = [buildFinding('f1'), buildFinding('f2')];
 
-const input: LlmInput = {
-  language: 'en',
+const input: StructureInput = {
   siteContext: {
     businessType: 'e-commerce',
     primaryGoal: 'sales',
@@ -55,69 +55,64 @@ const input: LlmInput = {
   })),
 };
 
-function buildCleanOutput(): LlmOutput {
+function buildCleanOutput(): StructurePassOutput {
   return {
-    executiveSummary: 'Summary.',
-    overallRisk: 'medium',
     themes: [
       {
-        title: 'Contrast issues',
         category: 'accessibility',
-        businessImpact: 'Some users cannot read the text.',
         effort: 'low',
         impact: 'high',
         priorityRank: 1,
         findingIds: ['f1', 'f2'],
-        recommendedActions: ['Increase contrast ratio.'],
       },
     ],
     quickWins: ['f1'],
-    notes: '',
+    overallRisk: 'medium',
   };
 }
 
-function buildInventedOutput(): LlmOutput {
+function buildInventedOutput(): StructurePassOutput {
   const output = buildCleanOutput();
   output.themes[0]!.findingIds.push('bogus-id-not-in-input');
   return output;
 }
 
-describe('analyzeFindings', () => {
-  it('returns the output on a clean pass and reports unreferenced findings', async () => {
-    vi.mocked(callClaude).mockReset().mockResolvedValueOnce({
+describe('analyzeStructure', () => {
+  it('returns themeKey-assigned themes on a clean pass and reports unreferenced findings', async () => {
+    vi.mocked(callClaudeForStructure).mockReset().mockResolvedValueOnce({
       output: buildCleanOutput(),
       refused: false,
     });
 
-    const result = await analyzeFindings(input, filteredFindings, false);
+    const result = await analyzeStructure(input, filteredFindings, false);
 
-    expect(result.output.themes).toHaveLength(1);
+    expect(result.themes).toEqual([
+      { themeKey: 't1', category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1, findingIds: ['f1', 'f2'] },
+    ]);
     expect(result.model).toBe(CLAUDE_MODEL);
     expect(result.effort).toBe(CLAUDE_EFFORT);
     expect(result.unreferencedFindingCount).toBe(0);
-    expect(callClaude).toHaveBeenCalledTimes(1);
+    expect(callClaudeForStructure).toHaveBeenCalledTimes(1);
   });
 
   it('retries once when the first response invents a finding ID, then succeeds', async () => {
-    vi.mocked(callClaude)
+    vi.mocked(callClaudeForStructure)
       .mockReset()
       .mockResolvedValueOnce({ output: buildInventedOutput(), refused: false })
       .mockResolvedValueOnce({ output: buildCleanOutput(), refused: false });
 
-    const result = await analyzeFindings(input, filteredFindings, false);
+    const result = await analyzeStructure(input, filteredFindings, false);
 
-    expect(result.output.themes[0]!.findingIds).toEqual(['f1', 'f2']);
-    expect(callClaude).toHaveBeenCalledTimes(2);
+    expect(result.themes[0]!.findingIds).toEqual(['f1', 'f2']);
+    expect(callClaudeForStructure).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries rather than returning a partial result', async () => {
-    vi.mocked(callClaude)
+    vi.mocked(callClaudeForStructure)
       .mockReset()
       .mockResolvedValue({ output: buildInventedOutput(), refused: false });
 
-    await expect(analyzeFindings(input, filteredFindings, false)).rejects.toThrow(
-      /exhausted \d+ attempts/,
-    );
-    expect(callClaude).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    await expect(analyzeStructure(input, filteredFindings, false)).rejects.toThrow(/exhausted \d+ attempts/);
+    expect(callClaudeForStructure).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 });

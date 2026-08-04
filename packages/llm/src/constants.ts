@@ -23,7 +23,13 @@ export const CLAUDE_MODEL = 'claude-opus-5';
  *  client's site changing. */
 export const CLAUDE_EFFORT = 'medium';
 
-/** Generous enough for up to 20 themes plus a full findings echo across
- *  findingIds and quickWins, per the locked llmOutputSchema's max theme
- *  count. */
-export const MAX_OUTPUT_TOKENS = 8192;
+/** Generous enough for up to 20 themes of French or English prose (writing
+ *  pass) or a full findings echo across findingIds and quickWins (structure
+ *  pass), per the locked llmOutputSchema's max theme count. Raised from
+ *  8192 after a real run against a 124-finding site (15 themes) truncated
+ *  mid-JSON: Claude Opus 5 runs adaptive thinking by default even when the
+ *  `thinking` param is omitted, and thinking output shares this same
+ *  budget. See client.ts, which explicitly disables thinking for these
+ *  calls - both changes work together to keep the full budget available
+ *  for the structured JSON response. */
+export const MAX_OUTPUT_TOKENS = 16000;

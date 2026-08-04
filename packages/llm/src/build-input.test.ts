@@ -3,7 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { Finding } from '@odysseus/core';
-import { buildFallbackSiteContext, buildLlmInput, filterFindingsForLlm } from './build-input.js';
+import { buildFallbackSiteContext, buildStructureInput, buildWritingInput, filterFindingsForLlm } from './build-input.js';
+import type { StructureThemeWithKey } from './structure-schema.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -45,16 +46,16 @@ describe('filterFindingsForLlm', () => {
   });
 });
 
-describe('buildLlmInput', () => {
-  it('maps filtered findings to the LlmInput.findings Pick shape', () => {
+describe('buildStructureInput', () => {
+  it('maps filtered findings to the StructureInput.findings Pick shape, no language field', () => {
     const filtered = filterFindingsForLlm(loadSasFernandeFindings());
     const siteContext = buildFallbackSiteContext();
 
-    const input = buildLlmInput(filtered, siteContext, 'fr');
+    const input = buildStructureInput(filtered, siteContext);
 
-    expect(input.language).toBe('fr');
     expect(input.siteContext).toBe(siteContext);
     expect(input.findings).toHaveLength(filtered.length);
+    expect('language' in input).toBe(false);
 
     const mapped = input.findings[0];
     const source = filtered[0];
@@ -87,6 +88,78 @@ describe('buildLlmInput', () => {
         'pageUrls',
         'occurrences',
       ].sort(),
+    );
+  });
+});
+
+describe('buildWritingInput', () => {
+  it('groups each structure theme with the finding records for its findingIds', () => {
+    const filtered = filterFindingsForLlm(loadSasFernandeFindings());
+    const siteContext = buildFallbackSiteContext();
+    const [first, second, ...rest] = filtered;
+    if (!first || !second) throw new Error('expected at least two findings in the fixture');
+
+    const structureThemes: StructureThemeWithKey[] = [
+      {
+        themeKey: 't1',
+        findingIds: [first.findingId],
+        category: first.category,
+        effort: 'low',
+        impact: 'high',
+        priorityRank: 1,
+      },
+      {
+        themeKey: 't2',
+        findingIds: [second.findingId, ...rest.slice(0, 1).map((f) => f.findingId)],
+        category: second.category,
+        effort: 'medium',
+        impact: 'medium',
+        priorityRank: 2,
+      },
+    ];
+
+    const input = buildWritingInput(structureThemes, filtered, siteContext, 'fr');
+
+    expect(input.language).toBe('fr');
+    expect(input.siteContext).toBe(siteContext);
+    expect(input.themes).toHaveLength(2);
+    expect(input.themes[0]).toEqual({
+      themeKey: 't1',
+      category: first.category,
+      findings: [
+        {
+          findingId: first.findingId,
+          source: first.source,
+          ruleId: first.ruleId,
+          category: first.category,
+          severity: first.severity,
+          wcagCriteria: first.wcagCriteria,
+          title: first.title,
+          description: first.description,
+          pageUrls: first.pageUrls,
+          occurrences: first.occurrences,
+        },
+      ],
+    });
+    expect(input.themes[1]!.findings).toHaveLength(structureThemes[1]!.findingIds.length);
+  });
+
+  it('throws when a structure theme references a findingId no longer in the current findings', () => {
+    const filtered = filterFindingsForLlm(loadSasFernandeFindings());
+    const siteContext = buildFallbackSiteContext();
+    const staleThemes: StructureThemeWithKey[] = [
+      {
+        themeKey: 't1',
+        findingIds: ['this-finding-id-does-not-exist'],
+        category: 'accessibility',
+        effort: 'low',
+        impact: 'low',
+        priorityRank: 1,
+      },
+    ];
+
+    expect(() => buildWritingInput(staleThemes, filtered, siteContext, 'fr')).toThrow(
+      /references unknown findingId/,
     );
   });
 });

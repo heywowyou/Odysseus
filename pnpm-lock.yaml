@@ -81,7 +81,6 @@ importers:
       '@odysseus/core':
         specifier: workspace:*
         version: link:../core
-    devDependencies:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
