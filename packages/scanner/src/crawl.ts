@@ -9,6 +9,16 @@ import {
 import { normalizeInternalLinks } from './links.js';
 import { fetchRobotsRules, isAllowedByRobots } from './robots.js';
 
+/** Progress events for a live ETA display. Purely additive: emitted only
+ *  when a caller supplies onProgress, no behavior change otherwise.
+ *  crawl-start fires once, right after effectiveDelayMs is known, so an
+ *  ETA can be shown before the first page is even fetched. crawl-page
+ *  fires once per page dequeued (visited, skipped, or errored alike),
+ *  since all three consume one iteration of the politeness delay. */
+export type CrawlProgressEvent =
+  | { type: 'crawl-start'; maxPages: number; effectiveDelayMs: number; robotsTxtFound: boolean }
+  | { type: 'crawl-page'; visited: number; maxPages: number; queued: number };
+
 export interface CrawlOptions {
   browser: Browser;
   maxPages?: number;
@@ -16,6 +26,7 @@ export interface CrawlOptions {
   delayMs?: number;
   timeoutMs?: number;
   userAgent?: string;
+  onProgress?: (event: CrawlProgressEvent) => void;
 }
 
 export type CrawledPageStatus = 'visited' | 'skipped-robots' | 'skipped-non-html' | 'error';
@@ -80,6 +91,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const robotsRules = await fetchRobotsRules(start.origin, userAgent, timeoutMs);
   const effectiveDelayMs = Math.max(delayMs, robotsRules.crawlDelayMs ?? 0);
 
+  options.onProgress?.({
+    type: 'crawl-start',
+    maxPages,
+    effectiveDelayMs,
+    robotsTxtFound: robotsRules.found,
+  });
+
   const pages: CrawledPage[] = [];
   const visited = new Set<string>();
   const enqueued = new Set<string>([start.toString()]);
@@ -107,6 +125,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       }
       isFirstNavigation = false;
       visited.add(item.url);
+      options.onProgress?.({ type: 'crawl-page', visited: visited.size, maxPages, queued: queue.length });
 
       const browserPage = await context.newPage();
       try {

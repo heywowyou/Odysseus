@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Odysseus</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <span class="brand">Odysseus</span>
+      <nav>
+        <a href="/index.html" data-i18n="nav.newScan">New scan</a>
+        <a href="/history.html" data-i18n="nav.history">History</a>
+      </nav>
+    </header>
+    <main>
+      <h1 data-i18n="auditDetail.heading">Audit detail</h1>
+      <div class="error-banner" id="error-banner"></div>
+
+      <section class="card">
+        <div class="meta-row">
+          <span><strong data-i18n="auditDetail.siteLabel">Site</strong>: <span id="meta-site"></span></span>
+          <span><strong data-i18n="auditDetail.dateLabel">Date</strong>: <span id="meta-date"></span></span>
+          <span><strong data-i18n="auditDetail.pagesVisitedLabel">Pages visited</strong>: <span id="meta-pages"></span></span>
+        </div>
+        <div class="rollup" id="rollup"></div>
+      </section>
+
+      <h2 data-i18n="auditDetail.reportsHeading">Reports</h2>
+      <section class="card" id="reports-card">
+        <p class="empty-state" id="no-reports" data-i18n="auditDetail.noReportsYet" hidden>No report generated yet.</p>
+        <div id="report-links"></div>
+      </section>
+
+      <h2 data-i18n="auditDetail.findingsHeading">Findings</h2>
+      <section class="card">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="auditDetail.severityColumn">Severity</th>
+              <th data-i18n="auditDetail.categoryColumn">Category</th>
+              <th data-i18n="auditDetail.titleColumn">Finding</th>
+              <th data-i18n="auditDetail.occurrencesColumn">Occurrences</th>
+              <th data-i18n="auditDetail.pagesColumn">Affected pages</th>
+            </tr>
+          </thead>
+          <tbody id="findings-rows"></tbody>
+        </table>
+      </section>
+    </main>
+    <script type="module" src="/app-audit.js"></script>
+  </body>
+</html>

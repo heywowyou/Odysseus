@@ -1,0 +1,83 @@
+/**
+ * The queued composition the CLI's five manual invocations
+ * (audit -> analyze fr -> analyze en -> report fr -> report en) collapse
+ * into. Calls the same stage functions cli's audit/analyze/report
+ * commands call - see the stage files for the shared implementation.
+ *
+ * Both languages are always generated: bilingual delivery is a product
+ * requirement (CLAUDE.md style rules) and LLM cost is negligible per the
+ * brief's own engineering constraints, so there is no reason to make the
+ * operator come back for a second language later.
+ */
+
+import { completeJob, updateJobProgress, type JobDocument } from '@odysseus/store';
+import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
+import { runAuditStage } from '../../pipeline/audit-stage.js';
+import { runReportStage } from '../../pipeline/report-stage.js';
+import type { PipelineContext } from '../job-queue.js';
+import { createScanProgressReporter } from '../report-progress.js';
+
+export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
+  const { connection, originLock } = ctx;
+  const url = job.siteUrl;
+  if (!url) {
+    throw new Error(`odysseus interface: full-audit job ${job.jobId} has no siteUrl`);
+  }
+
+  const origin = new URL(url).origin;
+  const release = await originLock.acquire(origin);
+
+  try {
+    const onProgress = createScanProgressReporter(connection, job.jobId);
+    const auditResult = await runAuditStage(
+      url,
+      {
+        ...(job.options.maxPages !== undefined ? { maxPages: job.options.maxPages } : {}),
+        ...(job.options.maxDepth !== undefined ? { maxDepth: job.options.maxDepth } : {}),
+        ...(job.options.delayMs !== undefined ? { delayMs: job.options.delayMs } : {}),
+        onProgress,
+      },
+      connection,
+    );
+
+    await updateJobProgress(connection, job.jobId, { phase: 'analyze-fr' });
+    const frAnalysis = await runAnalysisStage(
+      auditResult.auditDir,
+      auditResult.manifest,
+      auditResult.findings,
+      { language: 'fr' },
+      connection,
+    );
+
+    await updateJobProgress(connection, job.jobId, { phase: 'analyze-en' });
+    const enAnalysis = await runAnalysisStage(
+      auditResult.auditDir,
+      auditResult.manifest,
+      auditResult.findings,
+      { language: 'en' },
+      connection,
+    );
+
+    await updateJobProgress(connection, job.jobId, { phase: 'report-fr' });
+    await runReportStage(
+      auditResult.auditDir,
+      auditResult.manifest,
+      auditResult.findings,
+      frAnalysis.analysis,
+      connection,
+    );
+
+    await updateJobProgress(connection, job.jobId, { phase: 'report-en' });
+    await runReportStage(
+      auditResult.auditDir,
+      auditResult.manifest,
+      auditResult.findings,
+      enAnalysis.analysis,
+      connection,
+    );
+
+    await completeJob(connection, job.jobId, { auditId: auditResult.auditId });
+  } finally {
+    release();
+  }
+}

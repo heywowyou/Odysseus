@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Odysseus</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <span class="brand">Odysseus</span>
+      <nav>
+        <a href="/index.html" data-i18n="nav.newScan">New scan</a>
+        <a href="/history.html" aria-current="page" data-i18n="nav.history">History</a>
+      </nav>
+    </header>
+    <main>
+      <h1 data-i18n="history.heading">History</h1>
+      <div class="error-banner" id="error-banner"></div>
+
+      <section class="card">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="history.dateColumn">Date</th>
+              <th data-i18n="history.siteColumn">Site</th>
+              <th data-i18n="history.typeColumn">Type</th>
+              <th data-i18n="history.statusColumn">Status</th>
+              <th data-i18n="history.severityColumn">Severity</th>
+            </tr>
+          </thead>
+          <tbody id="history-rows"></tbody>
+        </table>
+        <p class="empty-state" id="empty-state" data-i18n="history.emptyState" hidden>No scans yet.</p>
+      </section>
+    </main>
+    <script type="module" src="/app-history.js"></script>
+  </body>
+</html>

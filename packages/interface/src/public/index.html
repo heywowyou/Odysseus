@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Odysseus</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <span class="brand">Odysseus</span>
+      <nav>
+        <a href="/index.html" aria-current="page" data-i18n="nav.newScan">New scan</a>
+        <a href="/history.html" data-i18n="nav.history">History</a>
+      </nav>
+    </header>
+    <main>
+      <h1 data-i18n="newScan.heading">New scan</h1>
+      <div class="error-banner" id="error-banner"></div>
+
+      <form class="card" id="new-scan-form">
+        <div class="type-toggle">
+          <label>
+            <input type="radio" name="type" value="full-audit" checked />
+            <span data-i18n="newScan.typeFullAudit">Full audit</span>
+          </label>
+          <label>
+            <input type="radio" name="type" value="prospecting" />
+            <span data-i18n="newScan.typeProspecting">Prospecting</span>
+          </label>
+        </div>
+
+        <div id="full-audit-fields">
+          <label for="url" data-i18n="newScan.urlLabel">Site URL</label>
+          <input type="url" id="url" name="url" data-i18n-placeholder="newScan.urlPlaceholder" required />
+        </div>
+
+        <div id="prospecting-fields" hidden>
+          <label for="urls" data-i18n="newScan.urlsLabel">Site URLs</label>
+          <textarea id="urls" name="urls" data-i18n-placeholder="newScan.urlsPlaceholder"></textarea>
+        </div>
+
+        <details class="advanced" id="advanced-options">
+          <summary data-i18n="newScan.advancedOptions">Advanced options</summary>
+          <label for="maxPages" data-i18n="newScan.maxPagesLabel">Maximum pages</label>
+          <input type="number" id="maxPages" name="maxPages" min="1" />
+          <label for="maxDepth" data-i18n="newScan.maxDepthLabel">Maximum link depth</label>
+          <input type="number" id="maxDepth" name="maxDepth" min="0" />
+          <label for="delayMs" data-i18n="newScan.delayLabel">Delay between requests (ms)</label>
+          <input type="number" id="delayMs" name="delayMs" min="0" />
+        </details>
+
+        <button type="submit" id="submit-button" data-i18n="newScan.submitButton">Start scan</button>
+      </form>
+    </main>
+    <script type="module" src="/app-new-scan.js"></script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "@odysseus/interface",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Runs the job queue and a small private HTTP server that serves the single-user dashboard. The only package that binds a network port.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": "./dist/*"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -b && tsc -p tsconfig.public.json && mkdir -p dist/public && cp src/public/*.html src/public/*.css dist/public/",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.public.json --noEmit"
+  },
+  "dependencies": {
+    "@odysseus/core": "workspace:*",
+    "@odysseus/scanner": "workspace:*",
+    "@odysseus/store": "workspace:*",
+    "@odysseus/llm": "workspace:*",
+    "@odysseus/report": "workspace:*"
+  }
+}

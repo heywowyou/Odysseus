@@ -1,6 +1,16 @@
 import type { Browser } from 'playwright';
-import { type CrawlResult, crawlSite } from './crawl.js';
+import { type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import { type PageScanResult, scanPage } from './scan-page.js';
+
+/** Extends crawl's own events with the scan phase's. scan-start fires
+ *  once, after the crawl finishes (the total page count isn't known
+ *  until then). scan-page fires once per completed scanPage call, not
+ *  per axe/Lighthouse sub-step - the progress indicator this feeds is
+ *  scoped to crawl vs. scan, not page-internal sub-phases. */
+export type ScanProgressEvent =
+  | CrawlProgressEvent
+  | { type: 'scan-start'; totalPages: number }
+  | { type: 'scan-page'; scanned: number; totalPages: number; url: string };
 
 export interface ScanSiteOptions {
   browser: Browser;
@@ -14,6 +24,7 @@ export interface ScanSiteOptions {
    *  written under; renderDiff appends its own <slug>-<hash> subdirectory
    *  per page. */
   screenshotDir: string;
+  onProgress?: (event: ScanProgressEvent) => void;
 }
 
 export interface SiteScanResult {
@@ -40,14 +51,16 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
     ...(options.delayMs !== undefined ? { delayMs: options.delayMs } : {}),
     ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
     ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
+    ...(options.onProgress !== undefined ? { onProgress: options.onProgress } : {}),
   });
+
+  const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
+  options.onProgress?.({ type: 'scan-start', totalPages: pagesToScan.length });
 
   const pages: PageScanResult[] = [];
   let isFirstScan = true;
 
-  for (const crawledPage of crawl.pages) {
-    if (crawledPage.status !== 'visited') continue;
-
+  for (const crawledPage of pagesToScan) {
     if (!isFirstScan) {
       await sleep(crawl.effectiveDelayMs);
     }
@@ -60,6 +73,7 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
     });
     pages.push(pageResult);
+    options.onProgress?.({ type: 'scan-page', scanned: pages.length, totalPages: pagesToScan.length, url: crawledPage.url });
   }
 
   return { crawl, pages };

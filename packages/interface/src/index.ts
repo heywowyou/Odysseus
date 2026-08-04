@@ -1,0 +1,31 @@
+/**
+ * Public entry point for @odysseus/interface.
+ */
+
+export { runAuditStage } from './pipeline/audit-stage.js';
+export type { RunAuditStageOptions, AuditStageResult } from './pipeline/audit-stage.js';
+export { runAnalysisStage } from './pipeline/analysis-stage.js';
+export type { RunAnalysisStageOptions, AnalysisStageResult } from './pipeline/analysis-stage.js';
+export { runReportStage } from './pipeline/report-stage.js';
+export type { ReportStageResult } from './pipeline/report-stage.js';
+export {
+  DEFAULT_INTERFACE_PORT,
+  DEFAULT_INTERFACE_HOST,
+  DEFAULT_QUEUE_CONCURRENCY,
+  PROSPECTING_MAX_PAGES,
+  PROSPECTING_MAX_DEPTH,
+  getInterfacePort,
+  getInterfaceHost,
+  getQueueConcurrency,
+  getPublicDir,
+} from './config.js';
+export { computeCrawlEtaMs, computeScanEtaMs } from './queue/eta.js';
+export type { CrawlEtaInput, ScanEtaInput } from './queue/eta.js';
+export { JobQueue } from './queue/job-queue.js';
+export type { JobQueueOptions, PipelineContext, PipelineFn } from './queue/job-queue.js';
+export { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
+export { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
+export { Router } from './router.js';
+export type { RouteContext, RouteHandler } from './router.js';
+export { startInterfaceServer } from './server.js';
+export type { InterfaceServerHandle } from './server.js';

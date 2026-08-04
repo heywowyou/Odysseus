@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Odysseus</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <span class="brand">Odysseus</span>
+      <nav>
+        <a href="/index.html" data-i18n="nav.newScan">New scan</a>
+        <a href="/history.html" data-i18n="nav.history">History</a>
+      </nav>
+    </header>
+    <main>
+      <h1 data-i18n="progress.heading">Scan in progress</h1>
+      <div class="error-banner" id="error-banner"></div>
+
+      <section class="card" id="progress-card">
+        <div id="two-phase" hidden>
+          <div class="progress-phase">
+            <div class="label">
+              <span data-i18n="progress.crawlPhaseLabel">Crawling the site</span>
+              <span class="eta" id="crawl-eta"></span>
+            </div>
+            <div class="progress-bar-track"><div class="progress-bar-fill" id="crawl-bar"></div></div>
+          </div>
+          <div class="progress-phase">
+            <div class="label">
+              <span data-i18n="progress.scanPhaseLabel">Scanning pages</span>
+              <span class="eta" id="scan-eta"></span>
+            </div>
+            <div class="progress-bar-track"><div class="progress-bar-fill" id="scan-bar"></div></div>
+          </div>
+        </div>
+
+        <div id="phase-status"></div>
+
+        <ul class="url-result-list" id="url-results" hidden></ul>
+      </section>
+
+      <section class="card" id="result-card" hidden>
+        <h2 id="result-heading"></h2>
+        <div class="rollup" id="result-rollup"></div>
+        <p><a id="result-link" href="#" data-i18n="progress.viewDetailLink">View the full report</a></p>
+      </section>
+    </main>
+    <script type="module" src="/app-progress.js"></script>
+  </body>
+</html>

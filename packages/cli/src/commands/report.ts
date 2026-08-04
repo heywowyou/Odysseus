@@ -3,18 +3,15 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
 import type { AuditManifest, Finding, LlmOutput, ReportLanguage } from '@odysseus/core';
-import { generateReportPdf, REPORT_TEMPLATE_VERSION, type StoredAnalysis } from '@odysseus/report';
-import { connectToMongo, disconnectFromMongo, persistReport } from '@odysseus/store';
+import type { StoredAnalysis } from '@odysseus/report';
+import { runReportStage } from '@odysseus/interface';
+import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
 
 function parseLanguage(value: string): ReportLanguage {
   if (value !== 'fr' && value !== 'en') {
     throw new InvalidArgumentError(`must be "fr" or "en", got "${value}"`);
   }
   return value;
-}
-
-function timestampForFilename(date: Date): string {
-  return date.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/:/g, '-');
 }
 
 /** analyses/<timestamp>-<lang>.json filenames sort lexicographically in
@@ -78,30 +75,12 @@ export function registerReportCommand(program: Command): void {
         }
         const analysis = await readAnalysis(analysisPath);
 
-        const pdf = await generateReportPdf({ auditDir: resolvedDir, manifest, findings, analysis });
-
-        const generatedAt = new Date();
-        const reportsDir = path.join(resolvedDir, 'reports');
-        await fs.mkdir(reportsDir, { recursive: true });
-        const outputPath = path.join(
-          reportsDir,
-          `${timestampForFilename(generatedAt)}-${opts.language}.pdf`,
-        );
-        await fs.writeFile(outputPath, pdf);
-
         mongoConnection = await connectToMongo();
-        await persistReport(mongoConnection, {
-          auditId: manifest.auditId,
-          language: opts.language,
-          reportTemplateVersion: REPORT_TEMPLATE_VERSION,
-          analysisGeneratedAt: analysis.generatedAt,
-          fileRef: path.relative(resolvedDir, outputPath),
-          generatedAt,
-        });
+        const result = await runReportStage(resolvedDir, manifest, findings, analysis, mongoConnection);
 
         console.log(`Report for ${manifest.auditId} complete (${opts.language})`);
         console.log(`  Analysis used: ${path.relative(resolvedDir, analysisPath)}`);
-        console.log(`  Written: ${outputPath}`);
+        console.log(`  Written: ${result.reportPath}`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`odysseus report: failed to generate a report for ${resolvedDir}\n${message}`);

@@ -51,6 +51,9 @@ importers:
       '@odysseus/core':
         specifier: workspace:*
         version: link:../core
+      '@odysseus/interface':
+        specifier: workspace:*
+        version: link:../interface
       '@odysseus/llm':
         specifier: workspace:*
         version: link:../llm
@@ -72,6 +75,24 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+
+  packages/interface:
+    dependencies:
+      '@odysseus/core':
+        specifier: workspace:*
+        version: link:../core
+      '@odysseus/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@odysseus/report':
+        specifier: workspace:*
+        version: link:../report
+      '@odysseus/scanner':
+        specifier: workspace:*
+        version: link:../scanner
+      '@odysseus/store':
+        specifier: workspace:*
+        version: link:../store
 
   packages/llm:
     dependencies:

@@ -1,0 +1,39 @@
+/**
+ * Two independent ETA formulas, deliberately not combined into one
+ * number (7.1's explicit requirement: crawling has a reasonably accurate
+ * live estimate, scanning is looser, and one blended number would be
+ * false precision).
+ */
+
+export interface CrawlEtaInput {
+  visited: number;
+  maxPages: number;
+  effectiveDelayMs: number;
+}
+
+/** Config-based: the crawl's pacing is a known constant
+ *  (effectiveDelayMs), so remaining pages times that delay is a direct,
+ *  reasonably accurate projection. */
+export function computeCrawlEtaMs(input: CrawlEtaInput): number {
+  const remaining = Math.max(input.maxPages - input.visited, 0);
+  return remaining * input.effectiveDelayMs;
+}
+
+export interface ScanEtaInput {
+  scanned: number;
+  target: number;
+  elapsedMs: number;
+}
+
+/** Empirical: there is no config value for how long a Lighthouse
+ *  navigation-mode pass takes per page, so this is a running average of
+ *  pages actually scanned so far, projected across the remaining pages.
+ *  Returns undefined before the first page finishes - noisy on page one
+ *  is expected, showing nothing is more honest than showing a number
+ *  built from zero data. */
+export function computeScanEtaMs(input: ScanEtaInput): number | undefined {
+  if (input.scanned <= 0) return undefined;
+  const avgMsPerPage = input.elapsedMs / input.scanned;
+  const remaining = Math.max(input.target - input.scanned, 0);
+  return avgMsPerPage * remaining;
+}

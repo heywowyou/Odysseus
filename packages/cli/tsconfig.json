@@ -10,6 +10,7 @@
     { "path": "../scanner" },
     { "path": "../store" },
     { "path": "../llm" },
-    { "path": "../report" }
+    { "path": "../report" },
+    { "path": "../interface" }
   ]
 }

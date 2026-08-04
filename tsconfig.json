@@ -6,6 +6,7 @@
     { "path": "./packages/store" },
     { "path": "./packages/llm" },
     { "path": "./packages/report" },
+    { "path": "./packages/interface" },
     { "path": "./packages/cli" }
   ]
 }

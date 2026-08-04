@@ -4,7 +4,8 @@ export { launchBrowser, ODYSSEUS_USER_AGENT, DEFAULT_TIMEOUT_MS } from './browse
 export type { LaunchedBrowser } from './browser.js';
 export { extractTextFromHtml, computeMissingPercent } from './extract-text.js';
 export { crawlSite } from './crawl.js';
-export type { CrawlOptions, CrawlResult, CrawledPage, CrawledPageStatus } from './crawl.js';
+export type { CrawlOptions, CrawlProgressEvent, CrawlResult, CrawledPage, CrawledPageStatus } from './crawl.js';
+export { OriginLock } from './origin-lock.js';
 export { runAxe, WCAG22AA_TAGS } from './axe.js';
 export type { AxeResults } from './axe.js';
 export { runLighthouse } from './lighthouse.js';
@@ -12,7 +13,7 @@ export type { LighthouseOptions } from './lighthouse.js';
 export { scanPage } from './scan-page.js';
 export type { PageScanResult, ScanPageOptions } from './scan-page.js';
 export { scanSite } from './scan-site.js';
-export type { SiteScanResult, ScanSiteOptions } from './scan-site.js';
+export type { SiteScanResult, ScanSiteOptions, ScanProgressEvent } from './scan-site.js';
 export {
   findWorkspaceRoot,
   ensureEnvLoaded,

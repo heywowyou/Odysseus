@@ -173,11 +173,17 @@ rejected because it cannot produce those metrics.
 - `llm` — the only package that talks to the Anthropic API. Peer of
   scanner, not a consumer: it depends on `core` and nothing else in the
   workspace.
+- `report` — renders a stored analysis and the findings appendix into a
+  branded, bilingual PDF via Playwright's Chromium, reusing `scanner`'s
+  browser lifecycle rather than adding Puppeteer as a second dependency.
+- `interface` — runs the job queue and a small private HTTP server that
+  serves the single-user dashboard. The only package that binds a
+  network port.
 - `cli` — Commander entry points, thin. Real logic lives in the packages
   above.
 
-Five packages for a tool one person runs is close to the ceiling. If a
-sixth is proposed, check that its one-sentence description does not
+Seven packages for a tool one person runs is close to the ceiling. If an
+eighth is proposed, check that its one-sentence description does not
 overlap an existing package before agreeing.
 
 ## Artifacts layout
@@ -254,7 +260,7 @@ completion.
 
 ## Build order
 
-Milestones 0 through 6.1 are complete. Milestone 7 is next. Work in
+Milestones 0 through 7 are complete. Milestone 8 is next. Work in
 vertical slices, one milestone per session.
 
 1. Render diff only, CLI invocable — done
@@ -262,7 +268,8 @@ vertical slices, one milestone per session.
 3. Scanners: axe-core and Lighthouse against one shared Chromium instance — done
 4. Normalize and dedupe into MongoDB — done
 5. LLM prioritization layer with schema validation — done
-6. PDF report generation, bilingual
+6. PDF report generation, bilingual — done
+7. Interface: queue and a private single-user dashboard (`odysseus serve`) — done
 
 Full milestone list, including the phases beyond 6, is in the brief.
 

@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src"],
+  "exclude": ["src/public"],
+  "references": [
+    { "path": "../core" },
+    { "path": "../scanner" },
+    { "path": "../store" },
+    { "path": "../llm" },
+    { "path": "../report" }
+  ]
+}

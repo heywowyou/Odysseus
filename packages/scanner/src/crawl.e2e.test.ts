@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser } from 'playwright';
 import { launchBrowser } from './browser.js';
-import { crawlSite } from './crawl.js';
+import { crawlSite, type CrawlProgressEvent } from './crawl.js';
 
 const TEST_PORT = 5187;
 const TEST_URL = `http://localhost:${TEST_PORT}`;
@@ -97,5 +97,25 @@ describe('crawlSite against fixtures/spa-demo', () => {
     });
 
     expect(result.visitedCount).toBe(1);
+  }, 45_000);
+
+  it('emits crawl-start once and crawl-page once per visited page', async () => {
+    const events: CrawlProgressEvent[] = [];
+
+    const result = await crawlSite(TEST_URL, {
+      browser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+      onProgress: (event) => events.push(event),
+    });
+
+    const starts = events.filter((event) => event.type === 'crawl-start');
+    expect(starts).toHaveLength(1);
+    expect(starts[0]).toMatchObject({ maxPages: 10, robotsTxtFound: true });
+
+    const pageEvents = events.filter((event) => event.type === 'crawl-page');
+    expect(pageEvents).toHaveLength(result.visitedCount);
+    expect(pageEvents.map((event) => (event.type === 'crawl-page' ? event.visited : undefined))).toEqual([1, 2]);
   }, 45_000);
 });

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser } from 'playwright';
 import { launchBrowser } from './browser.js';
-import { scanSite } from './scan-site.js';
+import { scanSite, type ScanProgressEvent } from './scan-site.js';
 
 const TEST_PORT = 5195;
 const TEST_URL = `http://localhost:${TEST_PORT}`;
@@ -80,6 +80,36 @@ describe('scanSite against fixtures/spa-demo', () => {
 
       const scannedUrls = new Set(result.pages.map((p) => new URL(p.url).pathname));
       expect(scannedUrls.has('/private.html')).toBe(false);
+    },
+    180_000,
+  );
+
+  it(
+    'emits scan-start once and scan-page once per scanned page, alongside crawl events',
+    async () => {
+      scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-site-'));
+      const events: ScanProgressEvent[] = [];
+
+      const result = await scanSite(TEST_URL, {
+        browser,
+        debugPort,
+        maxPages: 10,
+        maxDepth: 3,
+        delayMs: 0,
+        screenshotDir: scratchScreenshotDir,
+        onProgress: (event) => events.push(event),
+      });
+
+      expect(events.filter((event) => event.type === 'crawl-start')).toHaveLength(1);
+      expect(events.filter((event) => event.type === 'crawl-page')).toHaveLength(result.crawl.visitedCount);
+
+      const starts = events.filter((event) => event.type === 'scan-start');
+      expect(starts).toHaveLength(1);
+      expect(starts[0]).toMatchObject({ totalPages: result.pages.length });
+
+      const pageEvents = events.filter((event) => event.type === 'scan-page');
+      expect(pageEvents).toHaveLength(result.pages.length);
+      expect(pageEvents.map((event) => (event.type === 'scan-page' ? event.scanned : undefined))).toEqual([1, 2]);
     },
     180_000,
   );

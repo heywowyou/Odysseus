@@ -1,0 +1,194 @@
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@odysseus/llm', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@odysseus/llm')>();
+  return { ...actual, analyzeStructure: vi.fn(), analyzeWriting: vi.fn() };
+});
+vi.mock('@odysseus/store', () => ({ persistAnalysis: vi.fn() }));
+
+import { analyzeStructure, analyzeWriting } from '@odysseus/llm';
+import { persistAnalysis } from '@odysseus/store';
+import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type Finding } from '@odysseus/core';
+import { runAnalysisStage } from './analysis-stage.js';
+
+const fakeConnection = {} as never;
+
+function buildFinding(overrides: Partial<Finding> = {}): Finding {
+  return {
+    findingId: 'f1',
+    auditId: 'audit-1',
+    schemaVersion: FINDINGS_SCHEMA_VERSION,
+    source: 'axe',
+    ruleId: 'color-contrast',
+    category: 'accessibility',
+    severity: 'serious',
+    wcagCriteria: ['1.4.3'],
+    title: 'Color contrast',
+    description: 'Insufficient color contrast',
+    pageUrls: ['https://example.com/'],
+    occurrences: 1,
+    elements: [],
+    rawEvidence: {},
+    dedupeKey: 'd1',
+    firstSeenAt: new Date('2026-08-02T00:00:00.000Z'),
+    lastSeenAt: new Date('2026-08-02T00:00:00.000Z'),
+    ...overrides,
+  };
+}
+
+function fakeManifest(): AuditManifest {
+  return {
+    auditId: 'audit-1',
+    kind: 'audit',
+    siteUrl: 'https://example.com/',
+    startedAt: '2026-08-02T00:00:00.000Z',
+    finishedAt: '2026-08-02T00:05:00.000Z',
+    tool: {
+      odysseusVersion: '0.1.0',
+      findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
+      axeCoreVersion: '4.12.1',
+      lighthouseVersion: '12.8.2',
+      playwrightVersion: '1.49.0',
+      chromiumVersion: '130.0.0.0',
+    },
+    config: {
+      maxPages: 20,
+      maxDepth: 5,
+      crawlDelayMs: 1000,
+      pageTimeoutMs: 30_000,
+      lighthouseTimeoutMs: 60_000,
+      userAgent: 'OdysseusAuditBot/0.1',
+    },
+    crawl: {
+      startUrl: 'https://example.com/',
+      visitedCount: 1,
+      maxPages: 20,
+      maxDepth: 5,
+      robotsTxtFound: true,
+      effectiveDelayMs: 1000,
+    },
+    pages: [],
+  };
+}
+
+let auditDir: string;
+
+beforeEach(async () => {
+  vi.clearAllMocks();
+  auditDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-analysis-stage-'));
+
+  vi.mocked(analyzeStructure).mockResolvedValue({
+    themes: [
+      { themeKey: 't1', findingIds: ['f1'], category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1 },
+    ],
+    quickWins: ['f1'],
+    overallRisk: 'high',
+    model: 'claude-test',
+    effort: 'medium',
+    unreferencedFindingCount: 0,
+  });
+  vi.mocked(analyzeWriting).mockResolvedValue({
+    output: {
+      themes: [{ themeKey: 't1', title: 'Contrast', businessImpact: 'Impact', recommendedActions: ['Fix it'] }],
+      executiveSummary: 'Summary',
+      notes: '',
+    },
+    model: 'claude-test',
+    effort: 'medium',
+  });
+  vi.mocked(persistAnalysis).mockResolvedValue(undefined);
+});
+
+afterEach(async () => {
+  await fs.rm(auditDir, { recursive: true, force: true });
+});
+
+describe('runAnalysisStage', () => {
+  it('generates a fresh structure pass when none exists, writes both files, and persists', async () => {
+    const manifest = fakeManifest();
+    const result = await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'fr' }, fakeConnection);
+
+    expect(analyzeStructure).toHaveBeenCalledTimes(1);
+    expect(result.structureReused).toBe(false);
+    expect(result.usedFallbackContext).toBe(true);
+    expect(result.analysis.language).toBe('fr');
+    expect(result.analysis.executiveSummary).toBe('Summary');
+    expect(result.unreferencedFindingCount).toBe(0);
+
+    const analysesDir = path.join(auditDir, 'analyses');
+    const files = await fs.readdir(analysesDir);
+    expect(files.some((f) => f.endsWith('-structure.json'))).toBe(true);
+    expect(files.some((f) => f.endsWith('-fr.json'))).toBe(true);
+
+    expect(persistAnalysis).toHaveBeenCalledWith(
+      fakeConnection,
+      'audit-1',
+      'fr',
+      'claude-test',
+      'medium',
+      expect.any(Date),
+      expect.objectContaining({ executiveSummary: 'Summary' }),
+    );
+  });
+
+  it('reuses an existing structure file for a second language call, without calling analyzeStructure again', async () => {
+    const manifest = fakeManifest();
+    await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'fr' }, fakeConnection);
+    vi.mocked(analyzeStructure).mockClear();
+
+    const result = await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'en' }, fakeConnection);
+
+    expect(analyzeStructure).not.toHaveBeenCalled();
+    expect(result.structureReused).toBe(true);
+  });
+
+  it('regenerateStructure forces a fresh structure pass even when one exists', async () => {
+    const manifest = fakeManifest();
+    await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'fr' }, fakeConnection);
+    vi.mocked(analyzeStructure).mockClear();
+
+    await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'en', regenerateStructure: true },
+      fakeConnection,
+    );
+
+    expect(analyzeStructure).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws loudly when a reused structure file references a finding no longer present', async () => {
+    const manifest = fakeManifest();
+    await runAnalysisStage(auditDir, manifest, [buildFinding({ findingId: 'f1' })], { language: 'fr' }, fakeConnection);
+
+    await expect(
+      runAnalysisStage(
+        auditDir,
+        manifest,
+        [buildFinding({ findingId: 'f2', dedupeKey: 'd2' })],
+        { language: 'en' },
+        fakeConnection,
+      ),
+    ).rejects.toThrow(/stale/);
+  });
+
+  it('reports usedFallbackContext: false when an explicit siteContext is passed', async () => {
+    const manifest = fakeManifest();
+    const result = await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      {
+        language: 'fr',
+        siteContext: { businessType: 'wine estate', primaryGoal: 'leads', languagesServed: ['fr'], targetMarkets: ['FR'] },
+      },
+      fakeConnection,
+    );
+
+    expect(result.usedFallbackContext).toBe(false);
+  });
+});
