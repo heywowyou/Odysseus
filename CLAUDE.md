@@ -254,7 +254,7 @@ completion.
 
 ## Build order
 
-Milestones 0 through 5 are complete. Milestone 6 is next. Work in
+Milestones 0 through 6.1 are complete. Milestone 7 is next. Work in
 vertical slices, one milestone per session.
 
 1. Render diff only, CLI invocable — done
