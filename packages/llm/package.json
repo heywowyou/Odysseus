@@ -17,6 +17,7 @@
   "dependencies": {
     "@mistralai/mistralai": "^2.5.0",
     "@odysseus/core": "workspace:*",
+    "franc-min": "^6.2.0",
     "zod": "^3.24.1"
   }
 }

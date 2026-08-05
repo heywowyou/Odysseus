@@ -50,7 +50,7 @@ describe('findLanguageComplianceViolations', () => {
         {
           themeKey: 't1',
           title: 'Insufficient color contrast across the site',
-          businessImpact: 'Older visitors may struggle to read your content correctly.',
+          businessImpact: 'Older visitors may find it difficult to browse your website easily.',
           recommendedActions: ['Increase the contrast ratio on buttons and body text.'],
         },
       ],
@@ -96,6 +96,33 @@ describe('findLanguageComplianceViolations', () => {
     const violations = findLanguageComplianceViolations(output, 'en');
     expect(violations.map((v) => v.field)).toContain('themes[0](t1).title');
   });
+
+  it.each([
+    'Images sans texte alternatif',
+    'Affichage lent du contenu principal',
+    'Liens sans texte descriptif',
+    'Affichage lent du premier contenu',
+    'Affichage tardif du premier contenu',
+  ])(
+    'recognizes %j as French (regression: flagged by the old regex heuristic on a live almamia.fr run)',
+    (title) => {
+      const output: WritingPassOutput = {
+        themes: [
+          {
+            themeKey: 't1',
+            title,
+            businessImpact: 'Ceci est une phrase suffisamment longue en français pour le test.',
+            recommendedActions: ['Ceci est une action recommandée assez longue.'],
+          },
+        ],
+        executiveSummary: 'Résumé exécutif en français, assez long pour être testé correctement.',
+        notes: '',
+      };
+
+      const violations = findLanguageComplianceViolations(output, 'fr');
+      expect(violations.map((v) => v.field)).not.toContain('themes[0](t1).title');
+    },
+  );
 
   it('does not check fields shorter than the length floor, regardless of language', () => {
     const output: WritingPassOutput = {

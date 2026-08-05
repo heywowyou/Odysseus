@@ -1,13 +1,13 @@
+import { franc } from 'franc-min';
 import type { ReportLanguage } from '@odysseus/core';
 import type { WritingPassOutput } from './writing-schema.js';
 
 const MIN_CHECKED_LENGTH = 20;
-const FRENCH_ACCENT_CHARS = /[éèêàçùôîâœÉÈÊÀÇÙÔÎÂŒ]/;
-const FRENCH_STOPWORDS = /\b(le|la|les|de|des|un|une|et|pour|dans|avec|votre|vous|sur)\b/i;
-
-function looksFrench(text: string): boolean {
-  return FRENCH_ACCENT_CHARS.test(text) || FRENCH_STOPWORDS.test(text);
-}
+const FRANC_CANDIDATES = ['fra', 'eng'];
+const EXPECTED_FRANC_CODE: Record<ReportLanguage, 'fra' | 'eng'> = {
+  fr: 'fra',
+  en: 'eng',
+};
 
 export interface LanguageComplianceViolation {
   field: string;
@@ -15,50 +15,58 @@ export interface LanguageComplianceViolation {
 }
 
 /**
- * Heuristic language-compliance guard for the writing pass output.
+ * Language-compliance guard for the writing pass output, backed by real
+ * language detection (`franc-min`'s `franc()`), not a regex heuristic.
  *
- * THIS IS NOT REAL LANGUAGE DETECTION. It is a cheap regex check, added
- * because the prompt-instruction-only approach documented previously in
- * docs/llm-layer-rules.md section 6 did not hold: a real fr analysis
- * (artifacts/sas-fernande.fr/2026-08-02T17-31-56Z/analyses/2026-08-02T18-28-34Z-fr.json)
- * had every theme.title in English despite the instruction being present
- * in the system prompt at the time.
+ * This replaced an accent-character / stopword regex check
+ * (`FRENCH_ACCENT_CHARS` / `FRENCH_STOPWORDS`) that produced real false
+ * positives on real output, not a hypothetical risk: a live fr analysis
+ * of almamia.fr flagged theme titles that were already fully correct
+ * French, because they happened to avoid every word in the short
+ * stopword list and contained no accented character -
+ * "Images sans texte alternatif", "Liens sans texte descriptif", and
+ * "Affichage lent/tardif du premier/principal contenu" (the last group
+ * failing because "du" was never in the checked stopword list). Those
+ * five strings are regression fixtures below.
  *
- * Direction:
- * - language 'fr': flag a field if it does NOT look French (no accented
- *   character, no whole-word French stopword). High confidence - this is
- *   the direction that actually failed in production.
- * - language 'en': flag a field if it DOES look French. Included for
- *   symmetry but LOWER CONFIDENCE - fluent English prose can legitimately
- *   contain a French loanword or proper noun without being wrong-
- *   language. The only observed failure so far is English leaking into
- *   French, not the reverse.
+ * `franc()` is called with `only: ['fra', 'eng']` rather than its default
+ * 82-language candidate set. Restricting the candidates improves
+ * accuracy specifically on short strings like theme titles, which franc's
+ * own documentation flags as a known weak spot under roughly 50
+ * characters - narrowing the field to just the two languages this tool
+ * ever writes in reduces how often a short string is misclassified as a
+ * third, irrelevant language.
  *
- * Only fields >= MIN_CHECKED_LENGTH characters are checked - short
- * fields carry no reliable signal either way.
+ * Direction: both 'fr' and 'en' now get equal-confidence treatment,
+ * unlike the old regex (which explicitly trusted the fr-check direction
+ * more, since English-into-French was the only failure actually observed
+ * in production). Real detection doesn't have that asymmetry - it either
+ * recognizes the language or it doesn't, in both directions.
  *
- * Known false positives (accepted trade-off): a field just over the
- * length floor with no stopword/accent signal in either language (a
- * proper noun, a URL, a code snippet). Known false negatives (accepted
- * trade-off): fluent wrong-language prose that happens to contain an
- * accented character or a checked stopword (a French place name inside
- * otherwise-English prose; an English sentence using a French loanword).
- * Real language detection was considered and rejected as its own
- * dependency decision - this guard exists to catch one specific,
- * already-observed failure mode, and the retry loop it drives already
- * fails loudly on repeated violations rather than shipping bad prose.
+ * Only fields >= MIN_CHECKED_LENGTH characters are checked; below that,
+ * franc itself has too little signal to call reliably, so a short field
+ * is skipped rather than passed to the detector.
+ *
+ * Known limitation (reduced, not eliminated, by the fra/eng restriction):
+ * franc's accuracy still degrades on very short strings, so a short but
+ * technical, proper-noun-heavy, or code-like field near the length floor
+ * remains a possible misdetection. `franc()` returns `'und'` when it
+ * cannot confidently pick between the two candidates; that is treated as
+ * no signal rather than a violation, the same treatment the old regex
+ * gave a field with neither an accent nor a stopword match.
  */
 export function findLanguageComplianceViolations(
   output: WritingPassOutput,
   language: ReportLanguage,
 ): LanguageComplianceViolation[] {
   const violations: LanguageComplianceViolation[] = [];
+  const expected = EXPECTED_FRANC_CODE[language];
 
   function check(field: string, text: string): void {
     if (text.length < MIN_CHECKED_LENGTH) return;
-    const isFrench = looksFrench(text);
-    if (language === 'fr' && !isFrench) violations.push({ field, text });
-    if (language === 'en' && isFrench) violations.push({ field, text });
+    const detected = franc(text, { only: FRANC_CANDIDATES });
+    if (detected === 'und') return;
+    if (detected !== expected) violations.push({ field, text });
   }
 
   check('executiveSummary', output.executiveSummary);

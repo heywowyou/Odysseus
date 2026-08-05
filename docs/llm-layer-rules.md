@@ -211,33 +211,41 @@ same document were correctly in French. A prompt instruction is not a
 guard: it shapes the model's behaviour but nothing checks whether it
 worked.
 
-**Fix: a heuristic language-compliance guard on the writing pass's
-output** (`findLanguageComplianceViolations` in `language-guard.ts`),
-run inside `analyzeWriting`'s retry loop alongside the theme-key guard
-(section 9), same retry-then-fail-loud treatment as an invented finding
-ID. It checks every prose field (`title`, `businessImpact`,
-`legalRelevance`, each `recommendedActions` entry, `executiveSummary`,
-`notes`) that is at least 20 characters long - shorter fields carry no
-reliable signal. For a French request, a field is flagged if it contains
-neither a common French accented character (`é è ê à ç ù ô î â œ`) nor a
-whole-word, case-insensitive match of a common French function word
-(`le la les de des un une et pour dans avec votre vous sur`). For an
-English request, the reverse check (a French signal present in English
-output) is included for symmetry but is explicitly lower confidence:
-fluent English prose can legitimately contain a French loanword or
-proper noun without being wrong-language, and the only failure actually
-observed in production so far is English leaking into French, not the
-reverse.
+**Fix: a language-compliance guard on the writing pass's output**
+(`findLanguageComplianceViolations` in `language-guard.ts`), run inside
+`analyzeWriting`'s retry loop alongside the theme-key guard (section 9),
+same retry-then-fail-loud treatment as an invented finding ID. It checks
+every prose field (`title`, `businessImpact`, `legalRelevance`, each
+`recommendedActions` entry, `executiveSummary`, `notes`) that is at least
+20 characters long - shorter fields carry too little text for any
+detector to call reliably. Each checked field is run through `franc-min`'s
+`franc()` detector, restricted to `only: ['fra', 'eng']` rather than its
+default 82-language candidate set: narrowing the candidates to just the
+two languages this tool ever writes in improves accuracy specifically on
+short strings like theme titles, which franc's own documentation flags as
+a known weak spot under roughly 50 characters. A field is flagged if
+`franc()` returns the other language of the pair; a return of `'und'`
+(no confident call) is treated as no signal, not a violation.
 
-**This is a heuristic, not real language detection**, and the code says
-so. Known false positives: a short field just over the length floor with
-no signal in either language (a proper noun, a URL). Known false
-negatives: fluent wrong-language prose that happens to contain an
-accented character or a checked stopword (a French place name inside
-otherwise-English prose; an English sentence using a French loanword).
-Real language detection was considered and rejected as a dependency
-decision of its own - this guard exists to catch one specific,
-already-observed, already-recurring failure mode, and repeated failures
+**This guard was originally a regex heuristic (accented characters plus a
+short French stopword list), and was replaced after it produced a real
+false positive on real output, not a hypothetical one.** A live fr
+analysis of almamia.fr flagged six already-correct French theme titles -
+"Images sans texte alternatif", "Liens sans texte descriptif", and three
+variants of "Affichage lent/tardif du premier/principal contenu" - because
+none of them contained an accented character or hit any of the thirteen
+words in the old stopword list ("du" in particular was never on it,
+despite being one of the most common words in French). All three attempts
+of that writing-pass run exhausted their retries and failed loudly on
+titles that needed no correction at all. Real detection removes that
+specific failure mode; franc-min was chosen over hand-maintaining a larger
+stopword list because language identification is exactly the kind of
+problem a small model-free library solves better than an ad hoc regex.
+
+**Known limitation, reduced but not eliminated by the fra/eng
+restriction:** franc's accuracy still degrades on very short strings, so a
+short but technical, proper-noun-heavy, or code-like field near the
+20-character floor remains a possible misdetection. Repeated violations
 still fail the analysis loudly rather than shipping mixed-language
 output.
 

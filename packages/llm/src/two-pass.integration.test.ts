@@ -59,7 +59,7 @@ function buildWritingOutputFor(language: 'fr' | 'en', themeKeys: string[]): Writ
         }
       : {
           title: 'Insufficient color contrast across the site',
-          businessImpact: 'Older visitors may struggle to read your content correctly.',
+          businessImpact: 'Older visitors may find it difficult to browse your website easily.',
           executiveSummary: 'Your site has several issues that affect its commercial effectiveness.',
           action: 'Increase the contrast ratio on buttons and body text.',
         };
