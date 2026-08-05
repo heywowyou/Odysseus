@@ -250,6 +250,29 @@ Any fixture dev server started during a session must be stopped before the
 session ends. Verify it is stopped with `pgrep` before reporting
 completion.
 
+## MCP servers
+
+Start Claude Code sessions in this repo with `codysseus` (alias for
+`./scripts/dev.sh`), not a bare `claude`, so `.env` is sourced and the
+MCP servers below authenticate correctly.
+
+Three MCP servers are available during development:
+
+- **context7** — current documentation for any library in the stack.
+- **mongodb-readonly** — a read-only view into the Atlas cluster, through
+  a dedicated read-only database user separate from the app's own
+  pro_db_user, for inspecting real findings and audit data while
+  debugging.
+- **playwright** — a separate Playwright instance for ad hoc, local page
+  inspection during development: the dashboard UI, the spa-demo fixture,
+  or a real page while writing a milestone 8 custom check. Not wired
+  into the scanner package's own Playwright dependency.
+
+Both mongodb-readonly and playwright are set to ask before every call,
+not auto-allow. mongodb-readonly can read real audit and prospect data;
+playwright can navigate to arbitrary URLs, including live client or
+prospect sites. Each call is approved before it runs.
+
 ## Style
 
 - TypeScript strict, no `any`, explicit return types on exported functions.
