@@ -15,7 +15,8 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "test:store:up": "docker compose up -d mongo-test",
-    "test:store:down": "docker compose down"
+    "test:store:down": "docker compose down",
+    "serve": "tsx packages/cli/src/index.ts serve"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

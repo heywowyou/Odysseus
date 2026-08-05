@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
-import { startInterfaceServer } from '@odysseus/interface';
+import { startInterfaceServer, getInterfacePort } from '@odysseus/interface';
 import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
 
 function parsePort(value: string): number {
@@ -24,24 +24,37 @@ export function registerServeCommand(program: Command): void {
         process.env['ODYSSEUS_INTERFACE_PORT'] = String(opts.port);
       }
 
-      const mongoConnection = await connectToMongo();
-      const handle = await startInterfaceServer(mongoConnection);
-      console.log(`odysseus serve: listening at ${handle.url}`);
+      try {
+        const mongoConnection = await connectToMongo();
+        const handle = await startInterfaceServer(mongoConnection);
+        console.log(`odysseus serve: listening at ${handle.url}`);
 
-      let shuttingDown = false;
-      const shutdown = async (signal: string): Promise<void> => {
-        if (shuttingDown) return;
-        shuttingDown = true;
-        console.log(`\nodysseus serve: received ${signal}, shutting down`);
-        try {
-          await handle.close();
-        } finally {
-          await disconnectFromMongo(mongoConnection);
+        let shuttingDown = false;
+        const shutdown = async (signal: string): Promise<void> => {
+          if (shuttingDown) return;
+          shuttingDown = true;
+          console.log(`\nodysseus serve: received ${signal}, shutting down`);
+          try {
+            await handle.close();
+          } finally {
+            await disconnectFromMongo(mongoConnection);
+          }
+          process.exit(0);
+        };
+
+        process.on('SIGINT', () => void shutdown('SIGINT'));
+        process.on('SIGTERM', () => void shutdown('SIGTERM'));
+      } catch (error) {
+        const err = error as NodeJS.ErrnoException;
+        if (err.code === 'EADDRINUSE') {
+          console.error(
+            `odysseus serve: port ${getInterfacePort()} is already in use. ` +
+              'Stop the other process or pass --port <n> to use a different one.',
+          );
+        } else {
+          console.error(`odysseus serve: failed to start\n${err.message ?? String(error)}`);
         }
-        process.exit(0);
-      };
-
-      process.on('SIGINT', () => void shutdown('SIGINT'));
-      process.on('SIGTERM', () => void shutdown('SIGTERM'));
+        process.exit(1);
+      }
     });
 }
