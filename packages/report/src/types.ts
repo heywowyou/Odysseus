@@ -12,7 +12,7 @@ export interface StoredAnalysis extends LlmOutput {
   auditId: string;
   language: ReportLanguage;
   model: string;
-  effort: string;
+  temperature: number;
   generatedAt: Date;
 }
 

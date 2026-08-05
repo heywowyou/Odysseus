@@ -29,7 +29,7 @@ const baseAnalysis: StoredAnalysis = {
   auditId: 'a',
   language: 'fr',
   model: 'test',
-  effort: 'low',
+  temperature: 0.2,
   generatedAt: new Date(),
   executiveSummary: 'summary',
   overallRisk: 'medium',

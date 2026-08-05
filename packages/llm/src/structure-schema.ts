@@ -51,7 +51,7 @@ export const structureDocumentSchema = z
     quickWins: z.array(z.string()),
     overallRisk: z.enum(['low', 'medium', 'high']),
     model: z.string().min(1),
-    effort: z.string().min(1),
+    temperature: z.number(),
     generatedAt: z.string().min(1),
   })
   .strict();

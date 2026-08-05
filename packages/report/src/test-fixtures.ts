@@ -43,7 +43,7 @@ export async function loadSasFernandeAnalysis(language: ReportLanguage): Promise
     auditId: string;
     language: ReportLanguage;
     model: string;
-    effort: string;
+    temperature: number;
     generatedAt: string;
   };
   return { ...parsed, generatedAt: new Date(parsed.generatedAt) };

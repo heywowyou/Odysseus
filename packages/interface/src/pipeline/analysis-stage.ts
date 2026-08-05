@@ -1,6 +1,6 @@
 /**
  * Groups, prioritizes, and writes a completed audit's findings via the
- * Claude API, exactly as the `odysseus analyze` CLI command does today -
+ * Mistral API, exactly as the `odysseus analyze` CLI command does today -
  * extracted so `cli` and the queued pipeline share one implementation.
  * See audit-stage.ts's header for why this was extracted.
  *
@@ -117,7 +117,7 @@ async function loadOrGenerateStructure(
     quickWins: structureResult.quickWins,
     overallRisk: structureResult.overallRisk,
     model: structureResult.model,
-    effort: structureResult.effort,
+    temperature: structureResult.temperature,
     generatedAt: generatedAt.toISOString(),
   };
 
@@ -168,7 +168,7 @@ export async function runAnalysisStage(
         auditId: manifest.auditId,
         language: options.language,
         model: writingResult.model,
-        effort: writingResult.effort,
+        temperature: writingResult.temperature,
         generatedAt: generatedAt.toISOString(),
         ...merged,
       },
@@ -182,7 +182,7 @@ export async function runAnalysisStage(
     manifest.auditId,
     options.language,
     writingResult.model,
-    writingResult.effort,
+    writingResult.temperature,
     generatedAt,
     merged,
   );
@@ -193,7 +193,7 @@ export async function runAnalysisStage(
       auditId: manifest.auditId,
       language: options.language,
       model: writingResult.model,
-      effort: writingResult.effort,
+      temperature: writingResult.temperature,
       generatedAt,
     },
     analysisPath,

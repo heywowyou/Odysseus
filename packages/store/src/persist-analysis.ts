@@ -18,7 +18,7 @@ export async function persistAnalysis(
   auditId: string,
   language: ReportLanguage,
   model: string,
-  effort: string,
+  temperature: number,
   generatedAt: Date,
   output: LlmOutput,
 ): Promise<void> {
@@ -27,7 +27,7 @@ export async function persistAnalysis(
     auditId,
     language,
     model,
-    effort,
+    temperature,
     generatedAt,
     executiveSummary: output.executiveSummary,
     overallRisk: output.overallRisk,

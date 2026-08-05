@@ -315,7 +315,7 @@ Two bugs were found only by scanning a real site after the full test suite passe
 
 Verified on sas-fernande.fr: 11 pages, 78 findings, render diff 0 on every page as expected for a server-rendered site.
 
-**Milestone 5: LLM prioritization.** Done 2026-08-02. New `packages/llm`, the only package that talks to the Anthropic API. Structured output plus explicit Zod validation on every response, hard rejection of any finding ID absent from the input, two retries then a thrown error rather than a partial analysis. Analyses are stored insert-only, one per language and again after a prompt change, each recording the model identifier and effort level.
+**Milestone 5: LLM prioritization.** Done 2026-08-02. New `packages/llm`, the only package that talks to the Mistral API. Structured output plus explicit Zod validation on every response, hard rejection of any finding ID absent from the input, two retries then a thrown error rather than a partial analysis. Analyses are stored insert-only, one per language and again after a prompt change, each recording the model identifier and temperature.
 
 Verified live in both languages against the real capture: 11 themes from 17 findings, plain-language French that reads as French, and legal relevance lines naming the WCAG criterion and EN 301 549 without asserting the EAA applies to the business. The top-ranked theme was traced by hand to a single `is-crawlable` finding, and `curl` confirmed the quote request page carries `noindex, follow`. A client can check that claim in ten seconds, which is the whole proposition working end to end for the first time.
 

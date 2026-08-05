@@ -38,7 +38,7 @@ async function readAnalysis(analysisPath: string): Promise<StoredAnalysis> {
     auditId: string;
     language: ReportLanguage;
     model: string;
-    effort: string;
+    temperature: number;
     generatedAt: string;
   };
   return { ...parsed, generatedAt: new Date(parsed.generatedAt) };

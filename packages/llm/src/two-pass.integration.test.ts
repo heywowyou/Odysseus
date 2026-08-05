@@ -8,11 +8,11 @@ import type { StructurePassOutput } from './structure-schema.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
 vi.mock('./client.js', () => ({
-  callClaudeForStructure: vi.fn(),
-  callClaudeForWriting: vi.fn(),
+  callMistralForStructure: vi.fn(),
+  callMistralForWriting: vi.fn(),
 }));
 
-const { callClaudeForStructure, callClaudeForWriting } = await import('./client.js');
+const { callMistralForStructure, callMistralForWriting } = await import('./client.js');
 const { analyzeStructure } = await import('./analyze-structure.js');
 const { analyzeWriting } = await import('./analyze-writing.js');
 const { mergeAnalysisPasses } = await import('./merge.js');
@@ -84,9 +84,8 @@ describe('two-pass analysis produces identical structure across languages', () =
     const siteContext = buildFallbackSiteContext();
     const structureInput = buildStructureInput(filtered, siteContext);
 
-    vi.mocked(callClaudeForStructure).mockReset().mockResolvedValueOnce({
+    vi.mocked(callMistralForStructure).mockReset().mockResolvedValueOnce({
       output: buildFixedStructureOutput(filtered),
-      refused: false,
     });
 
     const structureResult = await analyzeStructure(structureInput, filtered, false);
@@ -98,17 +97,15 @@ describe('two-pass analysis produces identical structure across languages', () =
       overallRisk: structureResult.overallRisk,
     };
 
-    vi.mocked(callClaudeForWriting).mockReset().mockResolvedValueOnce({
+    vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
       output: buildWritingOutputFor('fr', themeKeys),
-      refused: false,
     });
     const frWritingInput = buildWritingInput(structureResult.themes, filtered, siteContext, 'fr');
     const frWriting = await analyzeWriting(frWritingInput, themeKeys, false);
     const mergedFr = mergeAnalysisPasses(structureDoc, frWriting.output);
 
-    vi.mocked(callClaudeForWriting).mockReset().mockResolvedValueOnce({
+    vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
       output: buildWritingOutputFor('en', themeKeys),
-      refused: false,
     });
     const enWritingInput = buildWritingInput(structureResult.themes, filtered, siteContext, 'en');
     const enWriting = await analyzeWriting(enWritingInput, themeKeys, false);

@@ -1,10 +1,11 @@
 /**
  * A hand-built JSON Schema mirroring structurePassOutputSchema
- * (structure-schema.ts), for the Anthropic API's output_config.format
+ * (structure-schema.ts), for the Mistral API's response_format json_schema
  * shape hint only. Same rationale as the deleted output-schema.ts had
  * for the old single-pass llmOutputSchema: the installed
- * @anthropic-ai/sdk's zodOutputFormat helper requires a zod/v4 schema,
- * and this workspace is on zod v3. See docs/llm-layer-rules.md section 8.
+ * @mistralai/mistralai SDK's responseFormatFromZodObject helper requires a
+ * zod v4 schema, and this workspace is on zod v3. See
+ * docs/llm-layer-rules.md section 8.
  *
  * This schema only constrains the API's output shape server-side. It is
  * NOT the validation authority - structurePassOutputSchema.parse() in

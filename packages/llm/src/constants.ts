@@ -7,29 +7,34 @@ import type { Severity } from '@odysseus/core';
 export const LLM_SEVERITY_FLOOR: readonly Severity[] = ['critical', 'serious', 'moderate'];
 
 /** Hard rejection retry budget. After this many failed attempts
- *  (schema-invalid response, invented finding IDs, or a refusal
- *  stop_reason), the analyze command fails loudly. See
- *  docs/llm-layer-rules.md section 2. */
+ *  (schema-invalid response or invented finding IDs), the analyze command
+ *  fails loudly. See docs/llm-layer-rules.md section 2. */
 export const MAX_RETRIES = 2;
 
-export const CLAUDE_MODEL = 'claude-opus-5';
+export const MISTRAL_MODEL = 'mistral-large-latest';
 
-/** Claude's reasoning-depth parameter (output_config.effort). 'medium' is
- *  a deliberate middle ground: this is a reasoning-heavy grouping and
- *  prioritization task worth spending on, but not one where the highest
- *  tier is obviously justified. Revisit with real cost/quality data.
- *  Recorded on every persisted analysis (see docs/llm-layer-rules.md
- *  section 3) so an effort-level change never gets mistaken for the
- *  client's site changing. */
-export const CLAUDE_EFFORT = 'medium';
+/** Determinism lever for a task with one correct, repeatable answer over
+ *  the same findings, not a brainstorm: two runs over the same findings
+ *  should not produce materially different priorities. 0.2 is a
+ *  deliberate low value favoring repeatability over variety. Unlike
+ *  Claude Opus 5 (which rejected the temperature parameter outright with
+ *  an HTTP 400), Mistral accepts it normally, so this is a real sampling
+ *  knob, not just a label. Revisit with real cost/quality data. Recorded
+ *  on every persisted analysis (see docs/llm-layer-rules.md section 3) so
+ *  a temperature change never gets mistaken for the client's site
+ *  changing. */
+export const MISTRAL_TEMPERATURE = 0.2;
 
 /** Generous enough for up to 20 themes of French or English prose (writing
  *  pass) or a full findings echo across findingIds and quickWins (structure
  *  pass), per the locked llmOutputSchema's max theme count. Raised from
  *  8192 after a real run against a 124-finding site (15 themes) truncated
- *  mid-JSON: Claude Opus 5 runs adaptive thinking by default even when the
- *  `thinking` param is omitted, and thinking output shares this same
- *  budget. See client.ts, which explicitly disables thinking for these
- *  calls - both changes work together to keep the full budget available
- *  for the structured JSON response. */
+ *  mid-JSON under the previous provider (Claude Opus 5, whose adaptive
+ *  thinking shared this same budget). Preserved at this size for Mistral:
+ *  reasoningEffort is deliberately never set in client.ts precisely to
+ *  avoid reintroducing that failure mode (Magistral's chain-of-thought
+ *  "thinking" content blocks would share this same budget with the JSON
+ *  answer), and client.ts explicitly checks for a truncated
+ *  (finishReason: 'length') response as a defensive measure against this
+ *  budget ever being exceeded again. */
 export const MAX_OUTPUT_TOKENS = 16000;

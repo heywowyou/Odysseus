@@ -12,16 +12,17 @@ import type { ReportLanguage, Theme } from '@odysseus/core';
 export interface AnalysisDocumentFields {
   auditId: string;
   language: ReportLanguage;
-  /** Claude model identifier, e.g. 'claude-opus-5'. Recorded alongside
-   *  effort for the same provenance reason the audit manifest records
-   *  axe/Lighthouse versions: a model or effort-level change between two
-   *  monitoring runs must never read as the client's site changing. */
+  /** Mistral model identifier, e.g. 'mistral-large-latest'. Recorded
+   *  alongside temperature for the same provenance reason the audit
+   *  manifest records axe/Lighthouse versions: a model or temperature
+   *  change between two monitoring runs must never read as the client's
+   *  site changing. */
   model: string;
-  /** Claude's reasoning-depth parameter (output_config.effort) at the
-   *  time this analysis was generated. Replaces what would have been a
-   *  temperature field: Opus-tier models reject the temperature
-   *  parameter outright. See docs/llm-layer-rules.md section 3. */
-  effort: string;
+  /** Mistral's temperature parameter at the time this analysis was
+   *  generated. Unlike Claude Opus 5 (which rejected temperature
+   *  outright), Mistral accepts it normally, so this is a real sampling
+   *  knob, not just a label. See docs/llm-layer-rules.md section 3. */
+  temperature: number;
   generatedAt: Date;
   executiveSummary: string;
   overallRisk: 'low' | 'medium' | 'high';
@@ -56,7 +57,7 @@ const analysisSchema = new Schema<AnalysisDocument>(
     auditId: { type: String, required: true },
     language: { type: String, required: true, enum: ['fr', 'en'] },
     model: { type: String, required: true },
-    effort: { type: String, required: true },
+    temperature: { type: Number, required: true },
     generatedAt: { type: Date, required: true },
     executiveSummary: { type: String, required: true },
     overallRisk: { type: String, required: true, enum: ['low', 'medium', 'high'] },

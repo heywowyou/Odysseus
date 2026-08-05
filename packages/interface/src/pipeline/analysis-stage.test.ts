@@ -86,8 +86,8 @@ beforeEach(async () => {
     ],
     quickWins: ['f1'],
     overallRisk: 'high',
-    model: 'claude-test',
-    effort: 'medium',
+    model: 'mistral-test',
+    temperature: 0.2,
     unreferencedFindingCount: 0,
   });
   vi.mocked(analyzeWriting).mockResolvedValue({
@@ -96,8 +96,8 @@ beforeEach(async () => {
       executiveSummary: 'Summary',
       notes: '',
     },
-    model: 'claude-test',
-    effort: 'medium',
+    model: 'mistral-test',
+    temperature: 0.2,
   });
   vi.mocked(persistAnalysis).mockResolvedValue(undefined);
 });
@@ -127,8 +127,8 @@ describe('runAnalysisStage', () => {
       fakeConnection,
       'audit-1',
       'fr',
-      'claude-test',
-      'medium',
+      'mistral-test',
+      0.2,
       expect.any(Date),
       expect.objectContaining({ executiveSummary: 'Summary' }),
     );

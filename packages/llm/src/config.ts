@@ -31,7 +31,7 @@ function findWorkspaceRoot(): string {
 let envLoaded = false;
 
 /** Populates process.env from .env as a side effect. Calling this early
- *  (via getAnthropicApiKey) also makes a later getMongoUri() call
+ *  (via getMistralApiKey) also makes a later getMongoUri() call
  *  succeed, since getMongoUri() does not trigger env loading itself. */
 export function ensureEnvLoaded(): void {
   if (envLoaded) return;
@@ -43,16 +43,16 @@ export function ensureEnvLoaded(): void {
   }
 }
 
-/** Reads ANTHROPIC_API_KEY from the environment, loading .env first.
+/** Reads MISTRAL_API_KEY from the environment, loading .env first.
  *  Throws a clear, loud error if unset rather than letting the SDK fail
  *  later with an opaque auth error, matching getMongoUri()'s style in
  *  packages/store/src/connection.ts. */
-export function getAnthropicApiKey(): string {
+export function getMistralApiKey(): string {
   ensureEnvLoaded();
-  const key = process.env['ANTHROPIC_API_KEY'];
+  const key = process.env['MISTRAL_API_KEY'];
   if (!key) {
     throw new Error(
-      'odysseus: ANTHROPIC_API_KEY is not set. Set it in the environment or in .env before running a command that calls the Claude API.',
+      'odysseus: MISTRAL_API_KEY is not set. Set it in the environment or in .env before running a command that calls the Mistral API.',
     );
   }
   return key;

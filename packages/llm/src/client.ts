@@ -1,6 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { getAnthropicApiKey } from './config.js';
-import { CLAUDE_EFFORT, CLAUDE_MODEL, MAX_OUTPUT_TOKENS } from './constants.js';
+import { Mistral } from '@mistralai/mistralai';
+import { getMistralApiKey } from './config.js';
+import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_OUTPUT_TOKENS } from './constants.js';
 import { structurePassOutputSchema, type StructureInput, type StructurePassOutput } from './structure-schema.js';
 import { STRUCTURE_OUTPUT_JSON_SCHEMA } from './structure-output-schema.js';
 import { buildStructureSystemPrompt, buildStructureUserPrompt } from './structure-prompt.js';
@@ -8,103 +8,132 @@ import { writingPassOutputSchema, type WritingInput, type WritingPassOutput } fr
 import { WRITING_OUTPUT_JSON_SCHEMA } from './writing-output-schema.js';
 import { buildWritingSystemPrompt, buildWritingUserPrompt } from './writing-prompt.js';
 
-function createClient(): Anthropic {
-  return new Anthropic({ apiKey: getAnthropicApiKey() });
+function createClient(): Mistral {
+  return new Mistral({ apiKey: getMistralApiKey() });
 }
 
 export interface RawStructureCallResult {
-  /** Present only when refused is false. */
-  output: StructurePassOutput | undefined;
-  refused: boolean;
+  output: StructurePassOutput;
 }
 
 export interface RawWritingCallResult {
-  /** Present only when refused is false. */
-  output: WritingPassOutput | undefined;
-  refused: boolean;
+  output: WritingPassOutput;
 }
 
-/** Single call to Claude for the structure pass. Returns either a
- *  schema-validated StructurePassOutput or refused: true. Throws only
- *  on transport/API errors - those propagate to analyzeStructure's retry
- *  loop like any other failed attempt.
+/** Single call to Mistral for the structure pass. Returns a
+ *  schema-validated StructurePassOutput. Throws on transport/API errors, a
+ *  truncated response, or a malformed/schema-invalid body - all three
+ *  propagate to analyzeStructure's retry loop like any other failed
+ *  attempt. Mistral has no distinct refusal signal equivalent to
+ *  Anthropic's stop_reason 'refusal'; refusal-like model behavior surfaces
+ *  as a JSON parse or Zod validation failure instead and is caught the
+ *  same way.
  *
- *  Uses output_config.format as a shape hint (see
- *  structure-output-schema.ts for why it's a hand-built JSON Schema
- *  rather than the SDK's zodOutputFormat helper), then runs an explicit,
- *  visible structurePassOutputSchema.parse() on the response text - not
- *  implicit trust in the API's shape constraint - because CLAUDE.md's
- *  "all LLM output is validated with Zod" rule is a non-negotiable
- *  business rule and must be an obvious, auditable line in this code. */
-export async function callClaudeForStructure(
+ *  Uses responseFormat as a shape hint (see structure-output-schema.ts for
+ *  why it's a hand-built JSON Schema rather than the SDK's
+ *  responseFormatFromZodObject helper), then runs an explicit, visible
+ *  structurePassOutputSchema.parse() on the response text - not implicit
+ *  trust in the API's shape constraint - because CLAUDE.md's "all LLM
+ *  output is validated with Zod" rule is a non-negotiable business rule
+ *  and must be an obvious, auditable line in this code. */
+export async function callMistralForStructure(
   input: StructureInput,
   usedFallbackContext: boolean,
 ): Promise<RawStructureCallResult> {
   const client = createClient();
 
-  const response = await client.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: MAX_OUTPUT_TOKENS,
-    // Claude Opus 5 runs adaptive thinking by default when `thinking` is
-    // omitted, and thinking output shares max_tokens with the response.
-    // This is a bounded, non-agentic structured-output call (no tools, no
-    // exploration needed) - disabling thinking keeps the whole budget
-    // available for the JSON response and avoids the truncation this
-    // caused on a real 124-finding site. Accepted at effort 'medium'
-    // (disabling thinking 400s only above 'high').
-    thinking: { type: 'disabled' },
-    system: buildStructureSystemPrompt(usedFallbackContext),
-    messages: [{ role: 'user', content: buildStructureUserPrompt(input) }],
-    output_config: {
-      format: { type: 'json_schema', schema: STRUCTURE_OUTPUT_JSON_SCHEMA },
-      effort: CLAUDE_EFFORT,
+  const response = await client.chat.complete({
+    model: MISTRAL_MODEL,
+    maxTokens: MAX_OUTPUT_TOKENS,
+    temperature: MISTRAL_TEMPERATURE,
+    // reasoningEffort is deliberately never set: Magistral's chain-of-thought
+    // "thinking" content blocks share this same maxTokens budget with the
+    // JSON answer, the exact failure mode that already forced
+    // MAX_OUTPUT_TOKENS to 16000 once for Claude's adaptive thinking. Leaving
+    // it unset also keeps message.content a plain string (see below) rather
+    // than a content-chunk array.
+    messages: [
+      { role: 'system', content: buildStructureSystemPrompt(usedFallbackContext) },
+      { role: 'user', content: buildStructureUserPrompt(input) },
+    ],
+    responseFormat: {
+      type: 'json_schema',
+      jsonSchema: {
+        name: 'structure_pass_output',
+        schemaDefinition: STRUCTURE_OUTPUT_JSON_SCHEMA,
+        strict: true,
+      },
     },
   });
 
-  if (response.stop_reason === 'refusal') {
-    return { output: undefined, refused: true };
+  const choice = response.choices?.[0];
+  if (!choice) {
+    throw new Error('odysseus analyze (structure pass): Mistral response contained no choices');
   }
 
-  const textBlock = response.content.find((block) => block.type === 'text');
-  if (!textBlock) {
-    throw new Error('odysseus analyze (structure pass): Claude response contained no text content block');
+  if (choice.finishReason === 'length') {
+    throw new Error(
+      'odysseus analyze (structure pass): Mistral response was truncated (finishReason: length) - increase MAX_OUTPUT_TOKENS',
+    );
   }
 
-  const output = structurePassOutputSchema.parse(JSON.parse(textBlock.text));
-  return { output, refused: false };
+  const content = choice.message?.content;
+  if (typeof content !== 'string') {
+    throw new Error(
+      'odysseus analyze (structure pass): Mistral response content was not a plain string (unexpected shape)',
+    );
+  }
+
+  const output = structurePassOutputSchema.parse(JSON.parse(content));
+  return { output };
 }
 
-/** Single call to Claude for the writing pass. Same posture as
- *  callClaudeForStructure, against writingPassOutputSchema and
+/** Single call to Mistral for the writing pass. Same posture as
+ *  callMistralForStructure, against writingPassOutputSchema and
  *  WRITING_OUTPUT_JSON_SCHEMA instead. */
-export async function callClaudeForWriting(
+export async function callMistralForWriting(
   input: WritingInput,
   usedFallbackContext: boolean,
 ): Promise<RawWritingCallResult> {
   const client = createClient();
 
-  const response = await client.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: MAX_OUTPUT_TOKENS,
-    // See callClaudeForStructure's comment - same rationale applies here.
-    thinking: { type: 'disabled' },
-    system: buildWritingSystemPrompt(input.language, usedFallbackContext),
-    messages: [{ role: 'user', content: buildWritingUserPrompt(input) }],
-    output_config: {
-      format: { type: 'json_schema', schema: WRITING_OUTPUT_JSON_SCHEMA },
-      effort: CLAUDE_EFFORT,
+  const response = await client.chat.complete({
+    model: MISTRAL_MODEL,
+    maxTokens: MAX_OUTPUT_TOKENS,
+    temperature: MISTRAL_TEMPERATURE,
+    // See callMistralForStructure's comment - same rationale applies here.
+    messages: [
+      { role: 'system', content: buildWritingSystemPrompt(input.language, usedFallbackContext) },
+      { role: 'user', content: buildWritingUserPrompt(input) },
+    ],
+    responseFormat: {
+      type: 'json_schema',
+      jsonSchema: {
+        name: 'writing_pass_output',
+        schemaDefinition: WRITING_OUTPUT_JSON_SCHEMA,
+        strict: true,
+      },
     },
   });
 
-  if (response.stop_reason === 'refusal') {
-    return { output: undefined, refused: true };
+  const choice = response.choices?.[0];
+  if (!choice) {
+    throw new Error('odysseus analyze (writing pass): Mistral response contained no choices');
   }
 
-  const textBlock = response.content.find((block) => block.type === 'text');
-  if (!textBlock) {
-    throw new Error('odysseus analyze (writing pass): Claude response contained no text content block');
+  if (choice.finishReason === 'length') {
+    throw new Error(
+      'odysseus analyze (writing pass): Mistral response was truncated (finishReason: length) - increase MAX_OUTPUT_TOKENS',
+    );
   }
 
-  const output = writingPassOutputSchema.parse(JSON.parse(textBlock.text));
-  return { output, refused: false };
+  const content = choice.message?.content;
+  if (typeof content !== 'string') {
+    throw new Error(
+      'odysseus analyze (writing pass): Mistral response content was not a plain string (unexpected shape)',
+    );
+  }
+
+  const output = writingPassOutputSchema.parse(JSON.parse(content));
+  return { output };
 }

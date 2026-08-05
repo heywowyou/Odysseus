@@ -117,7 +117,7 @@ needed, say so and stop. Do not change them and continue.
    same work. `persistAnalysis` inserts, because an analysis re-run is
    not: one per language, and again after a prompt change, are all
    legitimately distinct documents. Each records its model identifier and
-   effort level, for the same provenance reason the manifest records
+   temperature, for the same provenance reason the manifest records
    scanner versions.
 
 6. **The LLM is not called when a scan has not produced enough to justify
@@ -133,19 +133,22 @@ needed, say so and stop. Do not change them and continue.
    remove either gate to "always get a full analysis" without revisiting
    the reasoning there first.
 
-7. **`packages/llm/src/output-schema.ts` is a hand-mirrored copy of the
-   locked `llmOutputSchema`**, needed because the SDK's `zodOutputFormat`
-   helper requires zod v4 and the locked contract is zod v3. It is an API
-   shape hint, never the validation authority: `llmOutputSchema.parse()`
-   runs explicitly on every response. A test asserts the two describe the
-   same shape so drift fails loudly. If `core` ever moves to zod v4,
-   delete the mirror and use the helper.
+7. **`packages/llm/src/structure-output-schema.ts` and
+   `writing-output-schema.ts` are hand-mirrored copies of their
+   respective non-locked Zod schemas**, needed because the SDK's
+   `responseFormatFromZodObject` helper requires zod v4 and this
+   workspace is zod v3. Each is an API shape hint, never the validation
+   authority: `structurePassOutputSchema.parse()` /
+   `writingPassOutputSchema.parse()` run explicitly on every response.
+   A test asserts each mirror and its Zod schema describe the same
+   shape so drift fails loudly. If `core` ever moves to zod v4, delete
+   the mirrors and use the helper.
 
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
-module, Mongoose 9, Zod, Commander, Vitest, pino, `@anthropic-ai/sdk`.
+module, Mongoose 9, Zod, Commander, Vitest, pino, `@mistralai/mistralai`.
 
 No Redis, no BullMQ, no Express API, no Next.js dashboard, no public web
 interface. Those are later phases and are deliberately not being built.
@@ -170,7 +173,7 @@ rejected because it cannot produce those metrics.
 - `scanner` — owns the Chromium lifecycle, render diff, crawler, axe,
   Lighthouse, config, and the artifacts layout.
 - `store` — Mongoose models and connection handling. Nothing else.
-- `llm` — the only package that talks to the Anthropic API. Peer of
+- `llm` — the only package that talks to the Mistral API. Peer of
   scanner, not a consumer: it depends on `core` and nothing else in the
   workspace.
 - `report` — renders a stored analysis and the findings appendix into a
@@ -237,7 +240,7 @@ real-site scan. Saved artifacts under `artifacts/sas-fernande.fr/` are
 real-site reference data; `normalize <dir>` re-runs against them offline
 without touching the site.
 
-Tests never call the live Anthropic API. The LLM package is tested with
+Tests never call the live Mistral API. The LLM package is tested with
 a stubbed client, including the path where retries are exhausted and the
 call throws rather than returning a partial analysis. Live verification
 is a manual step, and for anything client-facing it means reading the

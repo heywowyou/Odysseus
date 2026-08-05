@@ -1,5 +1,5 @@
-import { callClaudeForWriting } from './client.js';
-import { CLAUDE_EFFORT, CLAUDE_MODEL, MAX_RETRIES } from './constants.js';
+import { callMistralForWriting } from './client.js';
+import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { findLanguageComplianceViolations } from './language-guard.js';
 import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
@@ -7,7 +7,7 @@ import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 export interface AnalyzeWritingResult {
   output: WritingPassOutput;
   model: string;
-  effort: string;
+  temperature: number;
 }
 
 /** Retry-and-guard orchestration for the writing pass, independent of
@@ -26,23 +26,17 @@ export async function analyzeWriting(
   let lastFailureReason = '';
 
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
-    let result: Awaited<ReturnType<typeof callClaudeForWriting>>;
+    let result: Awaited<ReturnType<typeof callMistralForWriting>>;
     try {
-      result = await callClaudeForWriting(input, usedFallbackContext);
+      result = await callMistralForWriting(input, usedFallbackContext);
     } catch (error) {
       // See analyzeStructure's identical comment - a parse/validation
-      // failure is retried like any other rejected attempt.
+      // failure is retried like any other rejected attempt, including
+      // refusal-like model behavior since Mistral has no distinct refusal
+      // signal.
       lastFailureReason = error instanceof Error ? error.message : String(error);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} failed - ${lastFailureReason}`,
-      );
-      continue;
-    }
-
-    if (result.refused || !result.output) {
-      lastFailureReason = 'Claude declined to respond (stop_reason: refusal)';
-      console.error(
-        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} refused by the model, retrying if attempts remain`,
       );
       continue;
     }
@@ -65,7 +59,7 @@ export async function analyzeWriting(
       continue;
     }
 
-    return { output: result.output, model: CLAUDE_MODEL, effort: CLAUDE_EFFORT };
+    return { output: result.output, model: MISTRAL_MODEL, temperature: MISTRAL_TEMPERATURE };
   }
 
   throw new Error(

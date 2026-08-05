@@ -80,46 +80,57 @@ theme, or the wrong language is the failure mode that ends the business.
 
 ## 3. Determinism and provenance
 
-Claude Opus 5 and other current-generation Claude models reject the
-`temperature` parameter outright (HTTP 400) - it no longer exists at this
-model tier. Determinism comes from two things instead, neither of which
-touches Zod validation or the invented-finding guard: those run
-regardless, on every response, independent of how the response was
-produced.
+Claude Opus 5 and other current-generation Claude models rejected the
+`temperature` parameter outright (HTTP 400); Mistral has no such
+restriction and accepts `temperature` normally. Determinism comes from
+two things instead, neither of which touches Zod validation or the
+invented-finding guard: those run regardless, on every response,
+independent of how the response was produced.
 
-**Structured output**, via the Anthropic SDK's `output_config.format`,
-constrains the response shape server-side. Each pass passes its own
-hand-built JSON Schema (`STRUCTURE_OUTPUT_JSON_SCHEMA` /
+**Structured output**, via the Mistral SDK's `chat.complete`
+`responseFormat: { type: 'json_schema', jsonSchema: { name, schemaDefinition,
+strict: true } }`, constrains the response shape server-side. Each pass
+passes its own hand-built JSON Schema (`STRUCTURE_OUTPUT_JSON_SCHEMA` /
 `WRITING_OUTPUT_JSON_SCHEMA`, see section 8) rather than the SDK's
-`zodOutputFormat` helper. This is a schema guarantee about _shape_, not
-a validation step in itself - the code still runs an explicit, auditable
-`structurePassOutputSchema.parse()` / `writingPassOutputSchema.parse()`
-on every response, because CLAUDE.md's Zod-validation rule is a business
-rule, not an SDK implementation detail to trust implicitly.
+`responseFormatFromZodObject` helper. This is a schema guarantee about
+_shape_, not a validation step in itself - the code still runs an
+explicit, auditable `structurePassOutputSchema.parse()` /
+`writingPassOutputSchema.parse()` on every response, because CLAUDE.md's
+Zod-validation rule is a business rule, not an SDK implementation detail
+to trust implicitly.
 
-**A low or medium `effort` level** (Claude's reasoning-depth parameter,
-values `low`/`medium`/`high`/`xhigh`/`max`, set via the same
-`output_config` object as `format`) keeps the model from over-exploring
+**A low `temperature`** (0.2) keeps the model from over-exploring
 alternative groupings on a task that calls for a stable, repeatable
 answer over the same findings. This is a client deliverable, not a
 brainstorm, and two runs over the same findings should not produce
 materially different priorities. Both passes use the same
-`CLAUDE_MODEL`/`CLAUDE_EFFORT` constants; there is no separate
-configuration tier per pass.
+`MISTRAL_MODEL`/`MISTRAL_TEMPERATURE` constants; there is no separate
+configuration tier per pass. `reasoningEffort` is deliberately never set:
+Mistral's reasoning-enabled models (Magistral) return chain-of-thought as
+explicit "thinking" content blocks that share this same `maxTokens`
+budget with the JSON answer, the same failure mode that already forced
+`MAX_OUTPUT_TOKENS` to 16000 once under the previous provider (see
+constants.ts).
 
-**Record the model identifier and effort level alongside the output**,
+**Record the model identifier and temperature alongside the output**,
 for the same reason the audit manifest records axe and Lighthouse
-versions: a model or effort-level change between two monthly monitoring
+versions: a model or temperature change between two monthly monitoring
 runs would otherwise read as the client's site having changed. Not
 retrofittable onto stored analyses. The persisted per-language document's
-`model`/`effort` reflect the writing pass's call. Since both passes
+`model`/`temperature` reflect the writing pass's call. Since both passes
 always use the same constants this is a non-issue today; if the
 constants were ever changed between a structure pass being generated and
 a later `--language` run reusing it via cache-hit (section 5), that
-reused run's actual structure-pass model/effort would not be separately
-recorded - the locked `AnalysisDocumentFields` shape has one
-`model`/`effort` slot, and adding a second pair was judged out of scope
-for this fix.
+reused run's actual structure-pass model/temperature would not be
+separately recorded - the locked `AnalysisDocumentFields` shape has one
+`model`/`temperature` slot, and adding a second pair was judged out of
+scope for this fix.
+
+Mistral has no distinct refusal signal equivalent to Anthropic's
+`stop_reason === 'refusal'`. Any refusal-like model behavior surfaces
+indirectly - as a JSON parse failure or a Zod validation rejection - and
+is caught by the same retry loop as any other malformed response (see
+section 2).
 
 ---
 
@@ -290,9 +301,9 @@ Two files, `packages/llm/src/structure-output-schema.ts` and
 `packages/llm/src/writing-output-schema.ts`, each hand-mirror one of the
 two-pass, non-locked Zod schemas (`structurePassOutputSchema` /
 `writingPassOutputSchema`, both in section 9) as a JSON Schema, because
-the SDK's `zodOutputFormat` helper requires a zod v4 schema and this
-workspace is on zod v3. Editing a schema to satisfy a helper was the
-wrong trade, so the mirrors exist instead. (Before the two-pass split, a
+the Mistral SDK's `responseFormatFromZodObject` helper requires a zod v4
+schema and this workspace is on zod v3. Editing a schema to satisfy a
+helper was the wrong trade, so the mirrors exist instead. (Before the two-pass split, a
 single `output-schema.ts` mirrored the locked `llmOutputSchema` the same
 way; it was deleted when no call any longer asks the model for a full
 `LlmOutput`-shaped response in one shot.)
@@ -314,8 +325,8 @@ reject anything else outright.
 A hand-maintained mirror decays silently. A test asserts each mirror and
 its Zod schema describe the same shape, so adding a field to either
 schema fails loudly rather than quietly leaving the shape hint stale. If
-this workspace ever moves to zod v4, delete the mirrors and use the SDK
-helper directly.
+this workspace ever moves to zod v4, delete the mirrors and use the
+Mistral SDK's `responseFormatFromZodObject` helper directly.
 
 ---
 

@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Finding } from '@odysseus/core';
-import { CLAUDE_EFFORT, CLAUDE_MODEL, MAX_RETRIES } from './constants.js';
+import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import type { StructureInput, StructurePassOutput } from './structure-schema.js';
 
 vi.mock('./client.js', () => ({
-  callClaudeForStructure: vi.fn(),
+  callMistralForStructure: vi.fn(),
 }));
 
-const { callClaudeForStructure } = await import('./client.js');
+const { callMistralForStructure } = await import('./client.js');
 const { analyzeStructure } = await import('./analyze-structure.js');
 
 function buildFinding(findingId: string): Finding {
@@ -79,9 +79,8 @@ function buildInventedOutput(): StructurePassOutput {
 
 describe('analyzeStructure', () => {
   it('returns themeKey-assigned themes on a clean pass and reports unreferenced findings', async () => {
-    vi.mocked(callClaudeForStructure).mockReset().mockResolvedValueOnce({
+    vi.mocked(callMistralForStructure).mockReset().mockResolvedValueOnce({
       output: buildCleanOutput(),
-      refused: false,
     });
 
     const result = await analyzeStructure(input, filteredFindings, false);
@@ -89,30 +88,30 @@ describe('analyzeStructure', () => {
     expect(result.themes).toEqual([
       { themeKey: 't1', category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1, findingIds: ['f1', 'f2'] },
     ]);
-    expect(result.model).toBe(CLAUDE_MODEL);
-    expect(result.effort).toBe(CLAUDE_EFFORT);
+    expect(result.model).toBe(MISTRAL_MODEL);
+    expect(result.temperature).toBe(MISTRAL_TEMPERATURE);
     expect(result.unreferencedFindingCount).toBe(0);
-    expect(callClaudeForStructure).toHaveBeenCalledTimes(1);
+    expect(callMistralForStructure).toHaveBeenCalledTimes(1);
   });
 
   it('retries once when the first response invents a finding ID, then succeeds', async () => {
-    vi.mocked(callClaudeForStructure)
+    vi.mocked(callMistralForStructure)
       .mockReset()
-      .mockResolvedValueOnce({ output: buildInventedOutput(), refused: false })
-      .mockResolvedValueOnce({ output: buildCleanOutput(), refused: false });
+      .mockResolvedValueOnce({ output: buildInventedOutput() })
+      .mockResolvedValueOnce({ output: buildCleanOutput() });
 
     const result = await analyzeStructure(input, filteredFindings, false);
 
     expect(result.themes[0]!.findingIds).toEqual(['f1', 'f2']);
-    expect(callClaudeForStructure).toHaveBeenCalledTimes(2);
+    expect(callMistralForStructure).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries rather than returning a partial result', async () => {
-    vi.mocked(callClaudeForStructure)
+    vi.mocked(callMistralForStructure)
       .mockReset()
-      .mockResolvedValue({ output: buildInventedOutput(), refused: false });
+      .mockResolvedValue({ output: buildInventedOutput() });
 
     await expect(analyzeStructure(input, filteredFindings, false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callClaudeForStructure).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callMistralForStructure).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 });

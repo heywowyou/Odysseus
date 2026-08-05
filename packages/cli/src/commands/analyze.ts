@@ -29,7 +29,7 @@ export function registerAnalyzeCommand(program: Command): void {
   program
     .command('analyze <artifacts-dir>')
     .description(
-      "Group, prioritize, and explain a completed audit's findings via the Claude API. " +
+      "Group, prioritize, and explain a completed audit's findings via the Mistral API. " +
         'Reads findings.json and manifest.json only; never re-scans the client site.',
     )
     .requiredOption('--language <fr|en>', 'Report language: fr or en', parseLanguage)

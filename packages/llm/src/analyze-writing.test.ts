@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CLAUDE_EFFORT, CLAUDE_MODEL, MAX_RETRIES } from './constants.js';
+import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 
 vi.mock('./client.js', () => ({
-  callClaudeForWriting: vi.fn(),
+  callMistralForWriting: vi.fn(),
 }));
 
-const { callClaudeForWriting } = await import('./client.js');
+const { callMistralForWriting } = await import('./client.js');
 const { analyzeWriting } = await import('./analyze-writing.js');
 
 const input: WritingInput = {
@@ -71,49 +71,48 @@ function buildMismatchedKeyOutput(): WritingPassOutput {
 
 describe('analyzeWriting', () => {
   it('returns the output on a clean pass', async () => {
-    vi.mocked(callClaudeForWriting).mockReset().mockResolvedValueOnce({
+    vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
       output: buildCleanFrenchOutput(),
-      refused: false,
     });
 
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.themes).toHaveLength(1);
-    expect(result.model).toBe(CLAUDE_MODEL);
-    expect(result.effort).toBe(CLAUDE_EFFORT);
-    expect(callClaudeForWriting).toHaveBeenCalledTimes(1);
+    expect(result.model).toBe(MISTRAL_MODEL);
+    expect(result.temperature).toBe(MISTRAL_TEMPERATURE);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(1);
   });
 
   it('retries once on a theme-key mismatch, then succeeds', async () => {
-    vi.mocked(callClaudeForWriting)
+    vi.mocked(callMistralForWriting)
       .mockReset()
-      .mockResolvedValueOnce({ output: buildMismatchedKeyOutput(), refused: false })
-      .mockResolvedValueOnce({ output: buildCleanFrenchOutput(), refused: false });
+      .mockResolvedValueOnce({ output: buildMismatchedKeyOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
 
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.themes[0]!.themeKey).toBe('t1');
-    expect(callClaudeForWriting).toHaveBeenCalledTimes(2);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
   });
 
   it('retries once when the first response fails the language-compliance guard, then succeeds', async () => {
-    vi.mocked(callClaudeForWriting)
+    vi.mocked(callMistralForWriting)
       .mockReset()
-      .mockResolvedValueOnce({ output: buildFailingEnglishTitleOutput(), refused: false })
-      .mockResolvedValueOnce({ output: buildCleanFrenchOutput(), refused: false });
+      .mockResolvedValueOnce({ output: buildFailingEnglishTitleOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
 
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.themes[0]!.title).toBe('Contraste des couleurs insuffisant');
-    expect(callClaudeForWriting).toHaveBeenCalledTimes(2);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries when every attempt fails language compliance', async () => {
-    vi.mocked(callClaudeForWriting)
+    vi.mocked(callMistralForWriting)
       .mockReset()
-      .mockResolvedValue({ output: buildFailingEnglishTitleOutput(), refused: false });
+      .mockResolvedValue({ output: buildFailingEnglishTitleOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callClaudeForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 });

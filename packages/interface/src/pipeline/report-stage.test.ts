@@ -55,8 +55,8 @@ function fakeAnalysis() {
   return {
     auditId: 'audit-1',
     language: 'fr' as const,
-    model: 'claude-test',
-    effort: 'medium',
+    model: 'mistral-test',
+    temperature: 0.2,
     generatedAt: new Date('2026-08-02T00:10:00.000Z'),
     executiveSummary: 'Summary',
     overallRisk: 'high' as const,

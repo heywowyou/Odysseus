@@ -2,7 +2,7 @@
   "name": "@odysseus/llm",
   "private": true,
   "version": "0.1.0",
-  "description": "Calls the Claude API to group, prioritize, and explain findings already produced by deterministic scanners. Never scans, never detects. The only package that talks to the Anthropic API.",
+  "description": "Calls the Mistral API to group, prioritize, and explain findings already produced by deterministic scanners. Never scans, never detects. The only package that talks to the Mistral API.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.115.0",
+    "@mistralai/mistralai": "^2.5.0",
     "@odysseus/core": "workspace:*",
     "zod": "^3.24.1"
   }

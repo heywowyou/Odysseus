@@ -1,4 +1,4 @@
-export { LLM_SEVERITY_FLOOR, MAX_RETRIES, CLAUDE_MODEL, CLAUDE_EFFORT, MAX_OUTPUT_TOKENS } from './constants.js';
+export { LLM_SEVERITY_FLOOR, MAX_RETRIES, MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_OUTPUT_TOKENS } from './constants.js';
 export { filterFindingsForLlm, buildStructureInput, buildWritingInput, buildFallbackSiteContext } from './build-input.js';
 export type { SiteContextInput } from './build-input.js';
 
@@ -25,4 +25,4 @@ export type { ThemeKeyMismatch } from './theme-key-guard.js';
 export { findLanguageComplianceViolations } from './language-guard.js';
 export type { LanguageComplianceViolation } from './language-guard.js';
 
-export { ensureEnvLoaded, getAnthropicApiKey } from './config.js';
+export { ensureEnvLoaded, getMistralApiKey } from './config.js';
