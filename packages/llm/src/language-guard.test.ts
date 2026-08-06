@@ -141,4 +141,118 @@ describe('findLanguageComplianceViolations', () => {
     const violations = findLanguageComplianceViolations(output, 'fr');
     expect(violations.map((v) => v.field)).not.toContain('themes[0](t1).title');
   });
+
+  describe('legalRelevance is exempt from the check entirely', () => {
+    it('never flags legalRelevance, even a citation confirmed to score near-tied against the wrong language', () => {
+      // Verbatim from a live en analysis of almamia.fr
+      // (artifacts/almamia.fr/2026-08-05T22-33-38Z): standalone francAll
+      // scored this "WCAG 2.2 criterion 1.1.1 (Non-text Content)" string
+      // [["fra",1],["eng",0.9586815227483751]] when checked against fr -
+      // the old per-field check would have flagged it as a violation
+      // when checked against en, despite the string being a correct,
+      // language-neutral citation.
+      const output: WritingPassOutput = {
+        themes: [
+          {
+            themeKey: 't1',
+            title: 'Missing image descriptions',
+            businessImpact:
+              'Visitors who rely on screen readers cannot understand the content or purpose of images on your site.',
+            legalRelevance: 'WCAG 2.2 criterion 1.1.1 (Non-text Content)',
+            recommendedActions: ['Add descriptive alternative text to every image that conveys its content.'],
+          },
+        ],
+        executiveSummary: 'Your site has several accessibility issues that affect its commercial effectiveness.',
+        notes: '',
+      };
+
+      // Checked against 'fr', where legalRelevance's own franc score
+      // would have been mismatched under the old per-field check -
+      // if the field were still being checked at all, this is exactly
+      // the case that would flag it.
+      const violations = findLanguageComplianceViolations(output, 'fr');
+      expect(violations.map((v) => v.field)).not.toContain('themes[0](t1).legalRelevance');
+    });
+  });
+
+  describe('title and recommendedActions require franc and the regex heuristic to agree (dual-detector gate)', () => {
+    it.each([
+      'Missing image descriptions',
+      'Unstable page layout',
+      'Unexpected page layout shifts',
+      'Missing page descriptions for search engines',
+      'Missing meta descriptions for pages',
+    ])(
+      'does not flag %j as a title (regression: franc alone misread this as French on a live almamia.fr run, but it contains no accent and no French stopword)',
+      (title) => {
+        const output: WritingPassOutput = {
+          themes: [
+            {
+              themeKey: 't1',
+              title,
+              businessImpact: 'This business impact sentence is deliberately generic filler text for the test case.',
+              recommendedActions: ['Test the site to confirm the fix works as expected in this scenario.'],
+            },
+          ],
+          executiveSummary: 'Your site has several issues that affect its commercial effectiveness.',
+          notes: '',
+        };
+
+        const violations = findLanguageComplianceViolations(output, 'en');
+        expect(violations.map((v) => v.field)).not.toContain('themes[0](t1).title');
+      },
+    );
+
+    it.each([
+      'Write unique, concise meta descriptions (150-160 characters) for each page, summarizing its content and purpose.',
+      'Use tools like Google Search Console to monitor how your pages appear in search results.',
+      "Avoid duplicate meta descriptions across pages.",
+      "Avoid generic link text like 'click here' or 'read more.' Instead, use specific text like 'View our menu' or 'Book a table.'",
+    ])(
+      'does not flag %j as a recommendedAction (regression: franc alone misread this as French on a live almamia.fr run, but it contains no accent and no French stopword)',
+      (action) => {
+        const output: WritingPassOutput = {
+          themes: [
+            {
+              themeKey: 't7',
+              title: 'Missing page descriptions for search engines',
+              businessImpact: 'This business impact sentence is deliberately generic filler text for the test case.',
+              recommendedActions: [action],
+            },
+          ],
+          executiveSummary: 'Your site has several issues that affect its commercial effectiveness.',
+          notes: '',
+        };
+
+        const violations = findLanguageComplianceViolations(output, 'en');
+        expect(violations.map((v) => v.field)).not.toContain('themes[0](t7).recommendedActions[0]');
+      },
+    );
+
+    it('still flags a genuine recommendedActions-only leak (both franc and the regex heuristic agree)', () => {
+      // Constructed, not observed in production like the other fixtures
+      // in this file - deliberately proves the class title's leak
+      // regression represents (a single wrong-language field in an
+      // otherwise-correct theme) is still caught for recommendedActions
+      // too, which wasn't exercised by any real example before the
+      // anchoring approach's regression surfaced this gap.
+      const output: WritingPassOutput = {
+        themes: [
+          {
+            themeKey: 't7',
+            title: 'Missing page descriptions for search engines',
+            businessImpact: 'Pages without meta descriptions may not rank as well in search results.',
+            recommendedActions: [
+              'Optimisez la vitesse de chargement du site pour réduire le taux de rebond des visiteurs et améliorer les conversions.',
+            ],
+          },
+        ],
+        executiveSummary: 'Your site has several issues that affect its commercial effectiveness.',
+        notes: '',
+      };
+
+      const violations = findLanguageComplianceViolations(output, 'en');
+      expect(violations.map((v) => v.field)).toContain('themes[0](t7).recommendedActions[0]');
+    });
+  });
 });
