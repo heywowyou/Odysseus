@@ -1,7 +1,7 @@
-import type { Finding, ReportLanguage } from '@odysseus/core';
+import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
 import { LLM_SEVERITY_FLOOR } from './constants.js';
 import type { StructureInput, StructureThemeWithKey } from './structure-schema.js';
-import type { WritingInput, WritingThemeInput } from './writing-schema.js';
+import type { WritingInput, WritingSiteStats, WritingThemeInput } from './writing-schema.js';
 
 export type SiteContextInput = StructureInput['siteContext'];
 
@@ -52,6 +52,8 @@ export function buildWritingInput(
   filteredFindings: readonly Finding[],
   siteContext: SiteContextInput,
   language: ReportLanguage,
+  siteStats: WritingSiteStats,
+  dominantPerformanceMetric: 'lcp' | 'cls' | 'tbt' | null,
 ): WritingInput {
   const byId = new Map(filteredFindings.map((f) => [f.findingId, f]));
 
@@ -70,7 +72,24 @@ export function buildWritingInput(
     }),
   }));
 
-  return { language, siteContext, themes };
+  return { language, siteContext, themes, siteStats, dominantPerformanceMetric };
+}
+
+/** Deterministic counts for the writing pass's executiveSummary to cite,
+ *  computed from the audit's unfiltered findings (not the severity- and
+ *  diversion-filtered set the model otherwise sees), so the summary
+ *  reports the true scope of the scan. See docs/report-v2-refactor.md
+ *  B10. pagesScanned counts visited pages only, matching the crawled-page
+ *  count structure-ranking.ts uses for the site-wide accessibility floor. */
+export function computeSiteStats(allFindings: readonly Finding[], manifest: AuditManifest): WritingSiteStats {
+  const bySeverity = { critical: 0, serious: 0, moderate: 0, minor: 0 };
+  for (const finding of allFindings) bySeverity[finding.severity]++;
+
+  return {
+    pagesScanned: manifest.pages.filter((page) => page.status === 'visited').length,
+    totalFindings: allFindings.length,
+    ...bySeverity,
+  };
 }
 
 /** Minimal fallback site context, used when no --context file is passed.

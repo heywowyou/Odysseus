@@ -1,7 +1,35 @@
 import { describe, expect, it } from 'vitest';
+import type { Finding } from '@odysseus/core';
 import { mergeAnalysisPasses } from './merge.js';
 import type { StructureDocument } from './structure-schema.js';
 import type { WritingPassOutput } from './writing-schema.js';
+
+function buildFinding(findingId: string, wcagCriteria: string[]): Finding {
+  return {
+    findingId,
+    auditId: 'audit-1',
+    schemaVersion: 1,
+    source: 'axe',
+    ruleId: 'color-contrast',
+    category: 'accessibility',
+    severity: 'serious',
+    wcagCriteria,
+    title: 'Insufficient color contrast',
+    description: 'Text does not meet minimum contrast ratio',
+    pageUrls: ['https://example.com/'],
+    occurrences: 1,
+    elements: [],
+    rawEvidence: {},
+    dedupeKey: `dedupe-${findingId}`,
+    firstSeenAt: new Date('2026-08-02T00:00:00Z'),
+    lastSeenAt: new Date('2026-08-02T00:00:00Z'),
+  };
+}
+
+// f2 deliberately carries a wcagCriteria value even though its theme's
+// category is 'seo' - legalRelevance must gate on the theme's category,
+// not merely on whether the underlying finding happens to have a WCAG tag.
+const filteredFindings: Finding[] = [buildFinding('f1', ['1.4.3']), buildFinding('f2', ['1.1.1'])];
 
 function buildStructureDoc(): Pick<StructureDocument, 'themes' | 'quickWins' | 'overallRisk'> {
   return {
@@ -35,16 +63,12 @@ function buildWritingOutput(): WritingPassOutput {
         themeKey: 't1',
         title: 'Contrast issues',
         businessImpact: 'Some users cannot read the text.',
-        legalRelevance: 'WCAG 2.2 1.4.3',
         recommendedActions: ['Increase contrast ratio.'],
       },
       {
         themeKey: 't2',
         title: 'Missing meta descriptions',
         businessImpact: 'Search results look less compelling.',
-        // Hallucinated legalRelevance on a non-accessibility theme -
-        // must be stripped by the merge.
-        legalRelevance: 'This should never survive the merge.',
         recommendedActions: ['Add meta descriptions.'],
       },
     ],
@@ -55,7 +79,7 @@ function buildWritingOutput(): WritingPassOutput {
 
 describe('mergeAnalysisPasses', () => {
   it('merges structure and writing themes by themeKey, and themeKey never leaks into the output', () => {
-    const merged = mergeAnalysisPasses(buildStructureDoc(), buildWritingOutput());
+    const merged = mergeAnalysisPasses(buildStructureDoc(), buildWritingOutput(), filteredFindings, 'en');
 
     expect(merged.themes).toHaveLength(2);
     for (const theme of merged.themes) {
@@ -63,18 +87,20 @@ describe('mergeAnalysisPasses', () => {
     }
   });
 
-  it('strips legalRelevance on a non-accessibility theme even if the writing pass supplied one', () => {
-    const merged = mergeAnalysisPasses(buildStructureDoc(), buildWritingOutput());
+  it('builds legalRelevance deterministically for an accessibility theme, and omits it for a non-accessibility theme even when its finding carries a WCAG criterion', () => {
+    const merged = mergeAnalysisPasses(buildStructureDoc(), buildWritingOutput(), filteredFindings, 'fr');
 
     const accessibilityTheme = merged.themes.find((t) => t.category === 'accessibility');
     const seoTheme = merged.themes.find((t) => t.category === 'seo');
 
-    expect(accessibilityTheme?.legalRelevance).toBe('WCAG 2.2 1.4.3');
+    expect(accessibilityTheme?.legalRelevance).toBe(
+      'Critère 1.4.3 (Contraste minimum), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.',
+    );
     expect(seoTheme?.legalRelevance).toBeUndefined();
   });
 
   it('carries structure-decided fields and writing-decided prose onto the same theme', () => {
-    const merged = mergeAnalysisPasses(buildStructureDoc(), buildWritingOutput());
+    const merged = mergeAnalysisPasses(buildStructureDoc(), buildWritingOutput(), filteredFindings, 'en');
     const theme = merged.themes.find((t) => t.findingIds.includes('f1'));
 
     expect(theme).toMatchObject({
@@ -96,6 +122,8 @@ describe('mergeAnalysisPasses', () => {
     const writingOutput = buildWritingOutput();
     writingOutput.themes = writingOutput.themes.filter((t) => t.themeKey !== 't2');
 
-    expect(() => mergeAnalysisPasses(buildStructureDoc(), writingOutput)).toThrow(/merge invariant violated/);
+    expect(() => mergeAnalysisPasses(buildStructureDoc(), writingOutput, filteredFindings, 'en')).toThrow(
+      /merge invariant violated/,
+    );
   });
 });

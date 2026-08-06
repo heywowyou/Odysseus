@@ -33,7 +33,6 @@ describe('findLanguageComplianceViolations', () => {
           themeKey: 't1',
           title: 'Contraste des couleurs insuffisant sur le site',
           businessImpact: 'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
-          legalRelevance: 'Concerne le critère WCAG 2.2 1.4.3 relatif au contraste des couleurs.',
           recommendedActions: ['Augmenter le contraste des couleurs sur les boutons et le texte.'],
         },
       ],
@@ -142,38 +141,12 @@ describe('findLanguageComplianceViolations', () => {
     expect(violations.map((v) => v.field)).not.toContain('themes[0](t1).title');
   });
 
-  describe('legalRelevance is exempt from the check entirely', () => {
-    it('never flags legalRelevance, even a citation confirmed to score near-tied against the wrong language', () => {
-      // Verbatim from a live en analysis of almamia.fr
-      // (artifacts/almamia.fr/2026-08-05T22-33-38Z): standalone francAll
-      // scored this "WCAG 2.2 criterion 1.1.1 (Non-text Content)" string
-      // [["fra",1],["eng",0.9586815227483751]] when checked against fr -
-      // the old per-field check would have flagged it as a violation
-      // when checked against en, despite the string being a correct,
-      // language-neutral citation.
-      const output: WritingPassOutput = {
-        themes: [
-          {
-            themeKey: 't1',
-            title: 'Missing image descriptions',
-            businessImpact:
-              'Visitors who rely on screen readers cannot understand the content or purpose of images on your site.',
-            legalRelevance: 'WCAG 2.2 criterion 1.1.1 (Non-text Content)',
-            recommendedActions: ['Add descriptive alternative text to every image that conveys its content.'],
-          },
-        ],
-        executiveSummary: 'Your site has several accessibility issues that affect its commercial effectiveness.',
-        notes: '',
-      };
-
-      // Checked against 'fr', where legalRelevance's own franc score
-      // would have been mismatched under the old per-field check -
-      // if the field were still being checked at all, this is exactly
-      // the case that would flag it.
-      const violations = findLanguageComplianceViolations(output, 'fr');
-      expect(violations.map((v) => v.field)).not.toContain('themes[0](t1).legalRelevance');
-    });
-  });
+  // legalRelevance is no longer a writing-pass field at all as of
+  // docs/report-v2-refactor.md 4.3 (built deterministically in
+  // legal-relevance.ts instead), so there is nothing left for this guard
+  // to exempt - the field's own type no longer permits constructing it
+  // here. The exemption reasoning that used to be tested is preserved in
+  // language-guard.ts's doc comment for historical context.
 
   describe('title and recommendedActions require franc and the regex heuristic to agree (dual-detector gate)', () => {
     it.each([

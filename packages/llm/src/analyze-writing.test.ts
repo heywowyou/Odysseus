@@ -37,6 +37,8 @@ const input: WritingInput = {
       ],
     },
   ],
+  siteStats: { pagesScanned: 1, totalFindings: 1, critical: 0, serious: 1, moderate: 0, minor: 0 },
+  dominantPerformanceMetric: null,
 };
 
 function buildCleanFrenchOutput(): WritingPassOutput {
@@ -46,7 +48,6 @@ function buildCleanFrenchOutput(): WritingPassOutput {
         themeKey: 't1',
         title: 'Contraste des couleurs insuffisant',
         businessImpact: 'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
-        legalRelevance: 'Concerne le critère WCAG 2.2 1.4.3 relatif au contraste des couleurs.',
         recommendedActions: ['Augmenter le contraste des couleurs sur les boutons et le texte.'],
       },
     ],

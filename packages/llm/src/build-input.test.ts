@@ -2,8 +2,14 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { Finding } from '@odysseus/core';
-import { buildFallbackSiteContext, buildStructureInput, buildWritingInput, filterFindingsForLlm } from './build-input.js';
+import type { AuditManifest, Finding } from '@odysseus/core';
+import {
+  buildFallbackSiteContext,
+  buildStructureInput,
+  buildWritingInput,
+  computeSiteStats,
+  filterFindingsForLlm,
+} from './build-input.js';
 import type { StructureThemeWithKey } from './structure-schema.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -19,6 +25,14 @@ function loadSasFernandeFindings(): Finding[] {
     '../../../artifacts/sas-fernande.fr/2026-08-02T17-31-56Z/findings.json',
   );
   return JSON.parse(readFileSync(findingsPath, 'utf-8')) as Finding[];
+}
+
+function loadSasFernandeManifest(): AuditManifest {
+  const manifestPath = path.join(
+    moduleDir,
+    '../../../artifacts/sas-fernande.fr/2026-08-02T17-31-56Z/manifest.json',
+  );
+  return JSON.parse(readFileSync(manifestPath, 'utf-8')) as AuditManifest;
 }
 
 describe('filterFindingsForLlm', () => {
@@ -118,7 +132,8 @@ describe('buildWritingInput', () => {
       },
     ];
 
-    const input = buildWritingInput(structureThemes, filtered, siteContext, 'fr');
+    const siteStats = computeSiteStats(loadSasFernandeFindings(), loadSasFernandeManifest());
+    const input = buildWritingInput(structureThemes, filtered, siteContext, 'fr', siteStats, null);
 
     expect(input.language).toBe('fr');
     expect(input.siteContext).toBe(siteContext);
@@ -158,9 +173,25 @@ describe('buildWritingInput', () => {
       },
     ];
 
-    expect(() => buildWritingInput(staleThemes, filtered, siteContext, 'fr')).toThrow(
+    const siteStats = computeSiteStats(loadSasFernandeFindings(), loadSasFernandeManifest());
+    expect(() => buildWritingInput(staleThemes, filtered, siteContext, 'fr', siteStats, null)).toThrow(
       /references unknown findingId/,
     );
+  });
+});
+
+describe('computeSiteStats', () => {
+  it('computes the full severity breakdown from unfiltered findings on the real sas-fernande scan', () => {
+    const stats = computeSiteStats(loadSasFernandeFindings(), loadSasFernandeManifest());
+
+    expect(stats).toEqual({
+      pagesScanned: 11,
+      totalFindings: 78,
+      critical: 7,
+      serious: 8,
+      moderate: 2,
+      minor: 61,
+    });
   });
 });
 

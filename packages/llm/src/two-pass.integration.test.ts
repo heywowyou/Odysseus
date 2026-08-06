@@ -2,8 +2,14 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
-import type { Finding } from '@odysseus/core';
-import { buildFallbackSiteContext, buildStructureInput, buildWritingInput, filterFindingsForLlm } from './build-input.js';
+import type { AuditManifest, Finding } from '@odysseus/core';
+import {
+  buildFallbackSiteContext,
+  buildStructureInput,
+  buildWritingInput,
+  computeSiteStats,
+  filterFindingsForLlm,
+} from './build-input.js';
 import type { StructurePassOutput } from './structure-schema.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
@@ -31,6 +37,22 @@ function loadSasFernandeFilteredFindings(): Finding[] {
   );
   const findings = JSON.parse(readFileSync(findingsPath, 'utf-8')) as Finding[];
   return filterFindingsForLlm(findings);
+}
+
+function loadSasFernandeAllFindings(): Finding[] {
+  const findingsPath = path.join(
+    moduleDir,
+    '../../../artifacts/sas-fernande.fr/2026-08-02T17-31-56Z/findings.json',
+  );
+  return JSON.parse(readFileSync(findingsPath, 'utf-8')) as Finding[];
+}
+
+function loadSasFernandeManifest(): AuditManifest {
+  const manifestPath = path.join(
+    moduleDir,
+    '../../../artifacts/sas-fernande.fr/2026-08-02T17-31-56Z/manifest.json',
+  );
+  return JSON.parse(readFileSync(manifestPath, 'utf-8')) as AuditManifest;
 }
 
 function buildFixedStructureOutput(findings: readonly Finding[]): StructurePassOutput {
@@ -88,7 +110,7 @@ describe('two-pass analysis produces identical structure across languages', () =
       output: buildFixedStructureOutput(filtered),
     });
 
-    const structureResult = await analyzeStructure(structureInput, filtered, false);
+    const structureResult = await analyzeStructure(structureInput, filtered, false, loadSasFernandeManifest());
     const themeKeys = structureResult.themes.map((t) => t.themeKey);
 
     const structureDoc = {
@@ -96,20 +118,21 @@ describe('two-pass analysis produces identical structure across languages', () =
       quickWins: structureResult.quickWins,
       overallRisk: structureResult.overallRisk,
     };
+    const siteStats = computeSiteStats(loadSasFernandeAllFindings(), loadSasFernandeManifest());
 
     vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
       output: buildWritingOutputFor('fr', themeKeys),
     });
-    const frWritingInput = buildWritingInput(structureResult.themes, filtered, siteContext, 'fr');
+    const frWritingInput = buildWritingInput(structureResult.themes, filtered, siteContext, 'fr', siteStats, null);
     const frWriting = await analyzeWriting(frWritingInput, themeKeys, false);
-    const mergedFr = mergeAnalysisPasses(structureDoc, frWriting.output);
+    const mergedFr = mergeAnalysisPasses(structureDoc, frWriting.output, filtered, 'fr');
 
     vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
       output: buildWritingOutputFor('en', themeKeys),
     });
-    const enWritingInput = buildWritingInput(structureResult.themes, filtered, siteContext, 'en');
+    const enWritingInput = buildWritingInput(structureResult.themes, filtered, siteContext, 'en', siteStats, null);
     const enWriting = await analyzeWriting(enWritingInput, themeKeys, false);
-    const mergedEn = mergeAnalysisPasses(structureDoc, enWriting.output);
+    const mergedEn = mergeAnalysisPasses(structureDoc, enWriting.output, filtered, 'en');
 
     const structuralProjection = (output: typeof mergedFr) =>
       output.themes.map((t) => ({

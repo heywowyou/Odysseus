@@ -319,11 +319,13 @@ Verified on sas-fernande.fr: 11 pages, 78 findings, render diff 0 on every page 
 
 Verified live in both languages against the real capture: 11 themes from 17 findings, plain-language French that reads as French, and legal relevance lines naming the WCAG criterion and EN 301 549 without asserting the EAA applies to the business. The top-ranked theme was traced by hand to a single `is-crawlable` finding, and `curl` confirmed the quote request page carries `noindex, follow`. A client can check that claim in ten seconds, which is the whole proposition working end to end for the first time.
 
-**Milestone 6: report generation.** Done. HTML and Tailwind template printed to PDF by Chromium. Bilingual. This is the client-facing artifact and the thing the whole business is actually selling.
+**Milestone 6: report generation.** Done. HTML template printed to PDF by Chromium. Bilingual. This is the client-facing artifact and the thing the whole business is actually selling. Originally a Tailwind template; replaced in milestone 6.2.
 
 **Milestone 6.1: two-pass LLM split.** Done. Split the single prioritization call into a structure pass (grouping, ranking, language-independent, run once per audit) and a writing pass (prose, run once per language, constrained by the structure pass's fixed grouping). Fixed two real failures found on the first live run: theme and quick-win counts differing between French and English analyses of the same findings, and English prose surviving inside a French analysis despite an explicit instruction not to. Full mechanics in `docs/llm-layer-rules.md` section 9.
 
-**Milestone 7: interface.** Next. Queue and a private single-user dashboard. Scope defined in 7.1 below, updated 2026-08-03 ahead of this milestone starting.
+**Milestone 6.2: report v2 refactor.** Done 2026-08-07. A second real-client scan (haaitza.com) surfaced 40 defects across credibility, structure, legal framing, layout, the report's own accessibility, and content, recorded in `docs/report-v2-refactor.md` alongside a hand-verified prototype. Fixed: wrapper and noindex-legal pages are now diverted from the LLM entirely rather than trusted to be explained correctly (the v1 top-ranked theme was SEO advice on a Facebook embed); a deterministic site-wide accessibility floor and occurrence-volume weighting keep a defect present on 18 of 20 pages from ranking below a single-occurrence minor; `legalRelevance` is now built from a code-owned WCAG criterion table instead of model prose, closing off the one place the model could invent a legal claim; evidence screenshots are downscaled through a canvas pass instead of embedded at full resolution (30.7MB to under 600KB on the real haaitza report, verified); the PDF is now tagged with a bookmark outline and passes its own axe-core WCAG 2.2 AA audit with zero violations; the template moved off Tailwind onto the prototype's own hand-maintained CSS. `packages/report` gained a dependency on `packages/llm` so both the analysis and the report's Observations section always agree on which findings were diverted. None of the three locked contracts changed.
+
+**Milestone 7: interface.** Done 2026-08-04. Queue and a private single-user dashboard (`odysseus serve`). Scope defined in 7.1 below.
 
 **Milestone 8: custom checks.** Meta, canonical, JSON-LD, sitemap, hreflang, heading hierarchy, redirect chains. Deferred because axe and Lighthouse already produce enough to sell an audit; these deepen it rather than enable it.
 
@@ -428,11 +430,16 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 - **Personalized outreach email generation.** Built on top of prospecting mode, evidence stays deterministic, output is a reviewed draft, never auto-sent. See 6.2 stage 6 and section 9.
 - **Interface scope for milestone 7.** Progress indication with ETA, severity-roll-up-only completion feedback, a history log distinguishing full audit scans from prospecting scans, and per-origin concurrent scanning. Updated 7.1.
 
+### Settled 2026-08-07
+
+- **Divert, don't instruct, for findings the LLM cannot give good advice about.** The v1 report's single most damaging line was SEO advice about indexing a Facebook embed. Rather than prompting the model to be careful around wrapper pages and noindex'd legal pages, those findings are now filtered out of its input entirely (`packages/llm/src/diversion.ts`) and rendered instead by a fixed-copy template section. The model cannot produce bad advice about a finding it never sees. Full reasoning in `docs/report-v2-refactor.md` part 4.1.
+- **`legalRelevance` is built in code from a WCAG criterion name table, never written by the model.** Closes the one remaining place the writing pass could describe a legal obligation in its own words. See `docs/report-v2-refactor.md` part 4.3.
+
 ### Blocking, with a named dependency
 
 1. **A real domain with a bot-information page.** The crawler user agent still points at `https://your-domain.example/bot`, which can never resolve, so any site owner checking their logs sees a bot they cannot identify. Two real scans have now gone out under that placeholder. It does not block the build, but it blocks every scan of a site not owned by the operator, which is all of prospecting. Roughly twenty minutes of work and increasingly overdue.
 2. **The manual accessibility checklist** (`docs/manual-accessibility-checklist.md`). Two confirmed entries so far, both discovered by testing rather than assumed: placeholder-as-only-label passes axe because the placeholder supplies an accessible name, and heading-order is excluded twice over, once by axe's tag set (tagged best-practice rather than WCAG) and again by the milestone 4 decision to emit nothing from Lighthouse's accessibility category. This checklist determines how long an accessibility audit takes, which determines whether the pricing holds. It gates selling accessibility audits, not the build.
-3. **Interface scope**, section 7.1. Gates milestone 7.
+3. ~~**Interface scope**, section 7.1. Gates milestone 7.~~ Resolved: milestone 7 shipped 2026-08-04 against that scope.
 
 ### Still open, non-blocking
 

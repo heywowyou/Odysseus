@@ -21,10 +21,13 @@ import {
   buildFallbackSiteContext,
   buildStructureInput,
   buildWritingInput,
+  computeDominantPerformanceMetric,
+  computeSiteStats,
   filterFindingsForLlm,
   findUnreferencedStructureFindingIds,
   mergeAnalysisPasses,
   parseStructureDocument,
+  partitionFindings,
   type SiteContextInput,
   type StructureDocument,
 } from '@odysseus/llm';
@@ -79,10 +82,11 @@ async function findLatestStructureFile(analysesDir: string): Promise<string | un
 async function loadOrGenerateStructure(
   analysesDir: string,
   auditId: string,
-  filtered: readonly Finding[],
+  forModel: readonly Finding[],
   siteContext: SiteContextInput,
   usedFallback: boolean,
   regenerate: boolean,
+  manifest: AuditManifest,
 ): Promise<{ structureDoc: StructureDocument; reused: boolean; structurePath: string }> {
   if (!regenerate) {
     const existingPath = await findLatestStructureFile(analysesDir);
@@ -90,7 +94,7 @@ async function loadOrGenerateStructure(
       const raw = JSON.parse(await fs.readFile(existingPath, 'utf-8'));
       const structureDoc = parseStructureDocument(raw);
 
-      const knownIds = new Set(filtered.map((f) => f.findingId));
+      const knownIds = new Set(forModel.map((f) => f.findingId));
       const referenced = new Set<string>();
       for (const theme of structureDoc.themes) for (const id of theme.findingIds) referenced.add(id);
       for (const id of structureDoc.quickWins) referenced.add(id);
@@ -107,8 +111,8 @@ async function loadOrGenerateStructure(
     }
   }
 
-  const structureInput = buildStructureInput(filtered, siteContext);
-  const structureResult = await analyzeStructure(structureInput, filtered, usedFallback);
+  const structureInput = buildStructureInput(forModel, siteContext);
+  const structureResult = await analyzeStructure(structureInput, forModel, usedFallback, manifest);
 
   const generatedAt = new Date();
   const structureDoc: StructureDocument = {
@@ -137,27 +141,44 @@ export async function runAnalysisStage(
 ): Promise<AnalysisStageResult> {
   const usedFallbackContext = options.siteContext === undefined;
   const siteContext = options.siteContext ?? buildFallbackSiteContext();
-  const filtered = filterFindingsForLlm(allFindings);
+  // Diversion (docs/report-v2-refactor.md 4.1) runs after the severity
+  // floor, on the same set: forModel must be exactly what reaches the
+  // structure and writing passes and their guards, never allFindings.
+  const severityFiltered = filterFindingsForLlm(allFindings);
+  const { forModel } = partitionFindings(severityFiltered, manifest);
   const analysesDir = path.join(auditDir, 'analyses');
 
   const { structureDoc, reused, structurePath } = await loadOrGenerateStructure(
     analysesDir,
     manifest.auditId,
-    filtered,
+    forModel,
     siteContext,
     usedFallbackContext,
     options.regenerateStructure ?? false,
+    manifest,
   );
 
-  const writingInput = buildWritingInput(structureDoc.themes, filtered, siteContext, options.language);
+  // siteStats is computed from allFindings (unfiltered), not forModel, so
+  // the executive summary cites the audit's true scope rather than only
+  // what the model was shown. See docs/report-v2-refactor.md B10.
+  const siteStats = computeSiteStats(allFindings, manifest);
+  const dominantPerformanceMetric = computeDominantPerformanceMetric(manifest);
+  const writingInput = buildWritingInput(
+    structureDoc.themes,
+    forModel,
+    siteContext,
+    options.language,
+    siteStats,
+    dominantPerformanceMetric,
+  );
   const generatedAt = new Date();
   const writingResult = await analyzeWriting(
     writingInput,
     structureDoc.themes.map((t) => t.themeKey),
     usedFallbackContext,
   );
-  const merged = mergeAnalysisPasses(structureDoc, writingResult.output);
-  const unreferencedFindingCount = findUnreferencedStructureFindingIds(structureDoc, filtered).length;
+  const merged = mergeAnalysisPasses(structureDoc, writingResult.output, forModel, options.language);
+  const unreferencedFindingCount = findUnreferencedStructureFindingIds(structureDoc, forModel).length;
 
   await fs.mkdir(analysesDir, { recursive: true });
   const analysisPath = path.join(analysesDir, `${timestampForFilename(generatedAt)}-${options.language}.json`);

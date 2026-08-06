@@ -1,0 +1,164 @@
+import type { AuditManifest, Finding } from '@odysseus/core';
+import { buildMissingPercentIndex, classifyDiversion } from './diversion.js';
+import type { StructureThemeWithKey } from './structure-schema.js';
+
+/** A finding present on this share of crawled pages, and carrying at
+ *  least one WCAG criterion, may not be ranked in the bottom quartile of
+ *  themes, and its theme's impact may not be below 'medium'. This is what
+ *  put blocked zoom (18 of 20 pages) at position 11 in the v1 report.
+ *  See docs/report-v2-refactor.md A5. */
+export const SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD = 80;
+const BOTTOM_QUARTILE_FRACTION = 0.75;
+
+function crawledPageCount(manifest: AuditManifest): number {
+  return manifest.pages.filter((page) => page.status === 'visited').length;
+}
+
+function isSiteWideAccessibilityFinding(finding: Finding, crawledPages: number): boolean {
+  if (finding.wcagCriteria.length === 0 || crawledPages === 0) return false;
+  return (finding.pageUrls.length / crawledPages) * 100 >= SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD;
+}
+
+function themeFindings(theme: StructureThemeWithKey, findingsById: ReadonlyMap<string, Finding>): Finding[] {
+  return theme.findingIds
+    .map((id) => findingsById.get(id))
+    .filter((finding): finding is Finding => finding !== undefined);
+}
+
+function renumberRanks(themes: readonly StructureThemeWithKey[]): StructureThemeWithKey[] {
+  return themes.map((theme, index) => ({ ...theme, priorityRank: index + 1 }));
+}
+
+/** Enforces the floor described above: bumps impact to at least 'medium'
+ *  for any theme with a site-wide, WCAG-tagged finding, then, if such a
+ *  theme's model-assigned rank falls in the bottom quartile, moves it up
+ *  to sit just above that boundary. Everything else keeps its relative
+ *  order. Returns a densely renumbered 1..N priorityRank sequence. */
+export function enforceSiteWideAccessibilityFloor(
+  themes: readonly StructureThemeWithKey[],
+  findings: readonly Finding[],
+  manifest: AuditManifest,
+): StructureThemeWithKey[] {
+  const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
+  const crawledPages = crawledPageCount(manifest);
+  const isFloorTheme = (theme: StructureThemeWithKey): boolean =>
+    themeFindings(theme, findingsById).some((finding) => isSiteWideAccessibilityFinding(finding, crawledPages));
+
+  const withImpactFloor = themes.map((theme) =>
+    isFloorTheme(theme) && theme.impact === 'low' ? { ...theme, impact: 'medium' as const } : theme,
+  );
+
+  const sorted = [...withImpactFloor].sort((a, b) => a.priorityRank - b.priorityRank);
+  const bottomQuartileStart = Math.ceil(sorted.length * BOTTOM_QUARTILE_FRACTION);
+
+  const promoted = sorted.filter((theme, index) => index >= bottomQuartileStart && isFloorTheme(theme));
+  if (promoted.length === 0) return renumberRanks(sorted);
+
+  const remaining = sorted.filter((theme, index) => !(index >= bottomQuartileStart && isFloorTheme(theme)));
+  // Insert promoted themes so their final indices land strictly below
+  // bottomQuartileStart, not at it - the boundary index is itself "in
+  // the bottom quartile" by the index >= bottomQuartileStart rule below.
+  const insertAt = Math.max(0, bottomQuartileStart - promoted.length);
+  const reordered = [...remaining.slice(0, insertAt), ...promoted, ...remaining.slice(insertAt)];
+
+  return renumberRanks(reordered);
+}
+
+/** occurrences already means "pages" for a page-scoped finding and
+ *  "nodes" for an element-scoped one (docs/normalization-rules.md
+ *  section 3), so summing it per theme is a single volume signal that
+ *  already reflects page count as well as raw occurrence count -
+ *  matching docs/report-v2-refactor.md A6's "rank by occurrence volume
+ *  as well as page count" without a second, potentially contradictory
+ *  page-count factor (a single-page, 180-occurrence finding and a
+ *  17-page, 203-occurrence finding are both exactly the kind of finding
+ *  this rule exists to surface; they should not be weighed against each
+ *  other). */
+function totalOccurrences(theme: StructureThemeWithKey, findingsById: ReadonlyMap<string, Finding>): number {
+  return themeFindings(theme, findingsById).reduce((sum, finding) => sum + finding.occurrences, 0);
+}
+
+/** Promotes a theme that is in the top half by occurrence volume but the
+ *  bottom half by the model's own rank, so a 180- or 203-occurrence
+ *  finding cannot rank below a single-occurrence minor. This condition is
+ *  independent of theme count (unlike a fixed multiplier against the
+ *  median, which is unstable with few themes), and mirrors
+ *  enforceSiteWideAccessibilityFloor's own promote-to-the-boundary shape.
+ *  See docs/report-v2-refactor.md A6 - the one rule in 4.2 with prose but
+ *  no exact formula, most likely to need tuning once run against more
+ *  than the two real fixtures on hand (sas-fernande, haaitza). */
+export function applyOccurrenceWeighting(
+  themes: readonly StructureThemeWithKey[],
+  findings: readonly Finding[],
+): StructureThemeWithKey[] {
+  if (themes.length <= 1) return renumberRanks(themes);
+
+  const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
+  const sorted = [...themes].sort((a, b) => a.priorityRank - b.priorityRank);
+  const halfIndex = Math.floor(sorted.length / 2);
+
+  const byOccurrenceDesc = [...sorted].sort(
+    (a, b) => totalOccurrences(b, findingsById) - totalOccurrences(a, findingsById),
+  );
+  const occurrenceRankIndex = new Map(byOccurrenceDesc.map((theme, index) => [theme.themeKey, index]));
+
+  const promoted = sorted.filter(
+    (theme, modelRankIndex) =>
+      modelRankIndex >= halfIndex && (occurrenceRankIndex.get(theme.themeKey) ?? Infinity) < halfIndex,
+  );
+  if (promoted.length === 0) return renumberRanks(sorted);
+  promoted.sort(
+    (a, b) => (occurrenceRankIndex.get(a.themeKey) ?? 0) - (occurrenceRankIndex.get(b.themeKey) ?? 0),
+  );
+
+  const rest = sorted.filter((theme) => !promoted.includes(theme));
+  const insertAt = Math.max(0, halfIndex - promoted.length);
+  const reordered = [...rest.slice(0, insertAt), ...promoted, ...rest.slice(insertAt)];
+
+  return renumberRanks(reordered);
+}
+
+/** Should be unreachable after the 4.1 diversion filter, since a diverted
+ *  finding can never be referenced by a structure-pass theme in the first
+ *  place (it was never in the input). Logs rather than rejects, so a
+ *  regression in the diversion filter is visible instead of silently
+ *  shipping the exact A1-A3 bad advice the filter exists to prevent. */
+export function logContainmentWarnings(
+  themes: readonly StructureThemeWithKey[],
+  findings: readonly Finding[],
+  manifest: AuditManifest,
+): void {
+  const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
+  const missingPercentByUrl = buildMissingPercentIndex(manifest);
+
+  for (const theme of themes) {
+    const themeFindingRecords = themeFindings(theme, findingsById);
+    if (themeFindingRecords.length === 0) continue;
+
+    const allDiverted = themeFindingRecords.every(
+      (finding) => classifyDiversion(finding, missingPercentByUrl) !== null,
+    );
+    if (allDiverted) {
+      console.warn(
+        `odysseus analyze (structure pass): theme ${theme.themeKey} resolves entirely to diverted ` +
+          `pages (findings: ${themeFindingRecords.map((finding) => finding.findingId).join(', ')}). ` +
+          'This should be unreachable after the diversion filter - investigate.',
+      );
+    }
+  }
+}
+
+/** Applies all three post-structure-pass ranking rules in order, per
+ *  docs/report-v2-refactor.md 4.2. Enforced in code after the structure
+ *  pass returns, not asked of the model, since a model cannot be trusted
+ *  to remember a numeric threshold rule across every response. */
+export function applyStructureRankingRules(
+  themes: readonly StructureThemeWithKey[],
+  findings: readonly Finding[],
+  manifest: AuditManifest,
+): StructureThemeWithKey[] {
+  const floored = enforceSiteWideAccessibilityFloor(themes, findings, manifest);
+  const weighted = applyOccurrenceWeighting(floored, findings);
+  logContainmentWarnings(weighted, findings, manifest);
+  return weighted;
+}

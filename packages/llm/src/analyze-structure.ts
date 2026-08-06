@@ -1,6 +1,7 @@
-import type { Finding } from '@odysseus/core';
+import type { AuditManifest, Finding } from '@odysseus/core';
 import { callMistralForStructure } from './client.js';
 import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
+import { applyStructureRankingRules } from './structure-ranking.js';
 import { findInventedStructureFindingIds, findUnreferencedStructureFindingIds } from './structure-guards.js';
 import { assignThemeKeys, type StructureInput, type StructureThemeWithKey } from './structure-schema.js';
 
@@ -28,6 +29,7 @@ export async function analyzeStructure(
   input: StructureInput,
   filteredFindings: readonly Finding[],
   usedFallbackContext: boolean,
+  manifest: AuditManifest,
 ): Promise<AnalyzeStructureResult> {
   let lastFailureReason = '';
 
@@ -66,8 +68,10 @@ export async function analyzeStructure(
       );
     }
 
+    const themes = applyStructureRankingRules(assignThemeKeys(result.output), filteredFindings, manifest);
+
     return {
-      themes: assignThemeKeys(result.output),
+      themes,
       quickWins: result.output.quickWins,
       overallRisk: result.output.overallRisk,
       model: MISTRAL_MODEL,

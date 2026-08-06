@@ -3,6 +3,7 @@ import { renderHtml } from './render-html.js';
 import { escapeHtml } from './html-utils.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import {
+  buildStubBrowser,
   loadSasFernandeAnalysis,
   loadSasFernandeFindings,
   loadSasFernandeManifest,
@@ -14,15 +15,21 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
     const analysis = await loadSasFernandeAnalysis('fr');
-    const renderDiffEvidencePages = await resolveRenderDiffEvidence(manifest, SAS_FERNANDE_AUDIT_DIR);
+    const renderDiffEvidencePages = await resolveRenderDiffEvidence(
+      manifest,
+      SAS_FERNANDE_AUDIT_DIR,
+      findings,
+      buildStubBrowser(),
+    );
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
 
     expect(html).toMatch(/^<!doctype html>/);
     expect(html).toContain('<html lang="fr">');
     expect(html).toContain('<style>');
-    // report.css was precompiled with these section files as @source input.
-    expect(html).toContain('.avoid-break');
+    // report.css is the hand-maintained stylesheet ported from the
+    // verified prototype (docs/report-v2-refactor.md 3.0).
+    expect(html).toContain('.keep');
     expect(html).not.toContain('undefined');
     expect(html).not.toContain('http://localhost'); // no CDN/external reference
     expect(html).toContain(escapeHtml(analysis.executiveSummary.slice(0, 20)));
@@ -36,7 +43,7 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
     expect(html).toContain('<html lang="en">');
-    expect(html).toContain('Executive summary');
+    expect(html).toContain('What to take away');
     expect(html).not.toContain('Résumé');
   });
 });

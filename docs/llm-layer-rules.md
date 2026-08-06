@@ -46,6 +46,49 @@ filtered array, never the full set. Passing the full set to the guard
 while sending the filtered set to the model would let a response reference
 a finding it never saw and still pass validation.
 
+**A second filter, added 2026-08-07, removes findings the model cannot be
+trusted to give good advice about at all: wrapper pages and noindex'd
+legal pages.** `packages/llm/src/diversion.ts`'s `partitionFindings` runs
+after the severity floor, on the severity-filtered set, and removes any
+finding whose `pageUrls` are confined entirely to pages the render diff
+shows as near-total third-party embeds (`missingPercent >= 95`) or whose
+URL matches a legal-page pattern (`cgu`, `mentions-legales`, `cookies`,
+`privacy`, and similar). This is not a severity concern, so it is a
+separate pass rather than a lower threshold: a `noindex` finding on a
+cookie-policy page can be `serious` and still be the wrong thing to show
+the model, because the correct response is "confirm this is intentional,"
+not a recommendation the model has no way to phrase safely. The rejected
+alternative was a prompt instruction telling the model not to recommend
+indexing legal pages or optimizing third-party embeds; it was rejected
+before being tried, on the same reasoning section 6 already proves for
+language compliance, that a prompt instruction shapes behaviour but
+nothing checks whether it held. Diverted findings still appear in the
+report, in a deterministic "Observations" section built by
+`packages/report` calling the same `partitionFindings` function against
+the same `findings.json` and `manifest.json` the analysis used, so the
+report can never describe a different diversion decision than the one the
+model actually experienced. Full defect record in
+`docs/report-v2-refactor.md` part 4.1 (A1-A3).
+
+**Post-structure-pass ranking rules, also added 2026-08-07, correct for
+two things a model cannot be trusted to weigh consistently: coverage and
+volume.** `packages/llm/src/structure-ranking.ts` runs immediately after
+`assignThemeKeys` inside `analyzeStructure`, never inside the prompt.
+`enforceSiteWideAccessibilityFloor` guarantees a WCAG-tagged finding
+present on 80% or more of crawled pages cannot rank in the bottom quartile
+of themes or carry `impact: 'low'` — this is what let a one-line,
+site-wide blocked-zoom fix rank below a single missing meta description
+in a real report. `applyOccurrenceWeighting` promotes a theme that is
+high-volume (top half by summed `occurrences`) but model-ranked in the
+bottom half, so a 180- or 203-occurrence finding cannot sit at the same
+visual weight as a single-occurrence one. Both are deterministic
+post-processing over the model's own output, not re-prompting: the model
+still decides which findings belong together and why, these two rules
+only correct its ranking of what it already grouped. Full reasoning,
+including why occurrence weighting has no exact formula and is expected
+to need tuning against more real reports, in `docs/report-v2-refactor.md`
+part 4.2 (A5, A6).
+
 ---
 
 ## 2. Failure handling

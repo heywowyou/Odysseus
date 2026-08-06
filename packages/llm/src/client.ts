@@ -103,7 +103,10 @@ export async function callMistralForWriting(
     temperature: MISTRAL_TEMPERATURE,
     // See callMistralForStructure's comment - same rationale applies here.
     messages: [
-      { role: 'system', content: buildWritingSystemPrompt(input.language, usedFallbackContext) },
+      {
+        role: 'system',
+        content: buildWritingSystemPrompt(input.language, usedFallbackContext, input.dominantPerformanceMetric),
+      },
       { role: 'user', content: buildWritingUserPrompt(input) },
     ],
     responseFormat: {

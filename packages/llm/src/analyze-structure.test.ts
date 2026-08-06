@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Finding } from '@odysseus/core';
+import type { AuditManifest, Finding } from '@odysseus/core';
 import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import type { StructureInput, StructurePassOutput } from './structure-schema.js';
 
@@ -33,6 +33,53 @@ function buildFinding(findingId: string): Finding {
 }
 
 const filteredFindings: Finding[] = [buildFinding('f1'), buildFinding('f2')];
+
+function buildManifest(): AuditManifest {
+  return {
+    auditId: 'audit-1',
+    kind: 'audit',
+    siteUrl: 'https://example.com/',
+    startedAt: '2026-08-02T00:00:00Z',
+    finishedAt: '2026-08-02T00:05:00Z',
+    tool: {
+      odysseusVersion: '0.1.0',
+      findingsSchemaVersion: 1,
+      axeCoreVersion: '4.12.1',
+      lighthouseVersion: '12.8.2',
+      playwrightVersion: '1.49.0',
+      chromiumVersion: '131.0.0',
+    },
+    config: {
+      maxPages: 50,
+      maxDepth: 3,
+      crawlDelayMs: 500,
+      pageTimeoutMs: 30000,
+      lighthouseTimeoutMs: 45000,
+      userAgent: 'OdysseusBot/1.0',
+    },
+    crawl: {
+      startUrl: 'https://example.com/',
+      visitedCount: 1,
+      maxPages: 50,
+      maxDepth: 3,
+      robotsTxtFound: true,
+      effectiveDelayMs: 500,
+    },
+    pages: [
+      {
+        url: 'https://example.com/',
+        pageDir: 'pages/home-abc123',
+        depth: 0,
+        status: 'visited',
+        httpStatus: 200,
+        renderDiffMissingPercent: 0,
+        errors: {},
+      },
+    ],
+  };
+}
+
+const manifest = buildManifest();
 
 const input: StructureInput = {
   siteContext: {
@@ -83,7 +130,7 @@ describe('analyzeStructure', () => {
       output: buildCleanOutput(),
     });
 
-    const result = await analyzeStructure(input, filteredFindings, false);
+    const result = await analyzeStructure(input, filteredFindings, false, manifest);
 
     expect(result.themes).toEqual([
       { themeKey: 't1', category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1, findingIds: ['f1', 'f2'] },
@@ -100,7 +147,7 @@ describe('analyzeStructure', () => {
       .mockResolvedValueOnce({ output: buildInventedOutput() })
       .mockResolvedValueOnce({ output: buildCleanOutput() });
 
-    const result = await analyzeStructure(input, filteredFindings, false);
+    const result = await analyzeStructure(input, filteredFindings, false, manifest);
 
     expect(result.themes[0]!.findingIds).toEqual(['f1', 'f2']);
     expect(callMistralForStructure).toHaveBeenCalledTimes(2);
@@ -111,7 +158,7 @@ describe('analyzeStructure', () => {
       .mockReset()
       .mockResolvedValue({ output: buildInventedOutput() });
 
-    await expect(analyzeStructure(input, filteredFindings, false)).rejects.toThrow(/exhausted \d+ attempts/);
+    await expect(analyzeStructure(input, filteredFindings, false, manifest)).rejects.toThrow(/exhausted \d+ attempts/);
     expect(callMistralForStructure).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 });

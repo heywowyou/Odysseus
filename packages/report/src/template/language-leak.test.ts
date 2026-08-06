@@ -4,9 +4,11 @@
  * the full rendered document against every strings/en.ts value that has
  * no identical counterpart in strings/fr.ts (shared cognates like
  * "Performance" or "SEO" are legitimately identical in both and must not
- * trip this), and the reverse. The <style> block is stripped first since
- * compiled Tailwind CSS is not subject to fr/en rules and can coincide
- * with short English words like "high".
+ * trip this), and the reverse. The <style> block and every class="..."
+ * attribute are stripped first, since neither is subject to fr/en rules
+ * and both can coincide with real English chrome words - report.css with
+ * short keywords like "high", and kebab-case class names like
+ * "sev-critical" with the severity word "critical" itself.
  */
 import { describe, expect, it } from 'vitest';
 import { renderHtml } from './render-html.js';
@@ -14,6 +16,7 @@ import { resolveRenderDiffEvidence } from '../screenshots.js';
 import { en } from './strings/en.js';
 import { fr } from './strings/fr.js';
 import {
+  buildStubBrowser,
   loadSasFernandeAnalysis,
   loadSasFernandeFindings,
   loadSasFernandeManifest,
@@ -29,7 +32,7 @@ function flattenStrings(value: unknown): string[] {
 }
 
 function stripStyleBlock(html: string): string {
-  return html.replace(/<style>[\s\S]*?<\/style>/, '');
+  return html.replace(/<style>[\s\S]*?<\/style>/, '').replace(/\sclass="[^"]*"/g, '');
 }
 
 /**
@@ -62,7 +65,12 @@ describe('report chrome strings never leak into the other language', () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
     const analysis = await loadSasFernandeAnalysis('fr');
-    const renderDiffEvidencePages = await resolveRenderDiffEvidence(manifest, SAS_FERNANDE_AUDIT_DIR);
+    const renderDiffEvidencePages = await resolveRenderDiffEvidence(
+      manifest,
+      SAS_FERNANDE_AUDIT_DIR,
+      findings,
+      buildStubBrowser(),
+    );
 
     const html = stripStyleBlock(
       await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages }),
@@ -79,7 +87,12 @@ describe('report chrome strings never leak into the other language', () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
     const analysis = await loadSasFernandeAnalysis('en');
-    const renderDiffEvidencePages = await resolveRenderDiffEvidence(manifest, SAS_FERNANDE_AUDIT_DIR);
+    const renderDiffEvidencePages = await resolveRenderDiffEvidence(
+      manifest,
+      SAS_FERNANDE_AUDIT_DIR,
+      findings,
+      buildStubBrowser(),
+    );
 
     const html = stripStyleBlock(
       await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages }),

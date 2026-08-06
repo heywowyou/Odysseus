@@ -144,6 +144,44 @@ needed, say so and stop. Do not change them and continue.
    shape so drift fails loudly. If `core` ever moves to zod v4, delete
    the mirrors and use the helper.
 
+8. **Findings the LLM cannot give good advice about are diverted before
+   the structure pass, not passed in with a prompt instruction to be
+   careful**, decided during the report v2 refactor (2026-08-07) after a
+   real second-client scan (haaitza.com) put SEO advice about indexing a
+   third-party Facebook embed at rank 1 of the whole report.
+   `packages/llm/src/diversion.ts`'s `partitionFindings` removes findings
+   confined entirely to wrapper pages (`missingPercent >= 95`) or to a
+   `noindex`-legal-page URL pattern before they ever reach
+   `buildStructureInput`. Diverted findings are not dropped: they render
+   in a fixed-copy "Observations" section in the report template, built
+   from the same `partitionFindings` call against the same
+   `findings.json` and `manifest.json`, so the report's account of what
+   was diverted can never drift from what the model actually saw.
+   `packages/report` depends on `packages/llm` specifically for this
+   function; that dependency edge exists so there is exactly one
+   implementation of the diversion rule, not two hand-synced ones. Do not
+   revert to explaining these findings to the model instead of filtering
+   them, and do not duplicate the predicate in `packages/report` instead
+   of importing it. Similarly, `legalRelevance` on an accessibility theme
+   is built by `packages/llm/src/legal-relevance.ts` from a code-owned
+   WCAG criterion name table, never written by the writing pass (which
+   has no field for it at all) — the model choosing zero words of a legal
+   claim is the point. Full defect list and reasoning in
+   `docs/report-v2-refactor.md`.
+
+9. **`packages/report`'s template is hand-maintained CSS, not Tailwind**,
+   since the same 2026-08-07 refactor. The compiled-Tailwind approach from
+   milestone 6 is gone: no `tailwind-input.css`, no `build:css` script, no
+   `tailwindcss`/`@tailwindcss/cli` dependency. `report.css` is written
+   directly, ported from a hand-designed, print-verified prototype
+   (`docs/report-v2-prototype-haaitza-fr.html`) rather than derived from
+   utility classes. Do not reintroduce a Tailwind build step for this
+   package without first checking whether the prototype's design system
+   (color tokens, badge/scale/tile components, print rules) still covers
+   the need; it was chosen specifically because re-deriving that design
+   in a utility framework risked drifting from the one version that was
+   actually print-tested.
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.

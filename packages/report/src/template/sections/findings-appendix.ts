@@ -1,45 +1,81 @@
-import type { Finding, FindingCategory } from '@odysseus/core';
+import type { AuditManifest, Finding, FindingCategory, ReportLanguage } from '@odysseus/core';
+import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml } from '../html-utils.js';
+import { escapeHtml, formatNumber, renderSectionHeader } from '../html-utils.js';
+import { renderSeverityBadge } from '../severity-badge.js';
+import {
+  aggregateMinorFindings,
+  groupAppendix,
+  APPENDIX_GROUP_KEEP_THRESHOLD,
+  type MinorFindingSummary,
+  type RuleGroup,
+} from '../appendix-grouping.js';
 
-const CATEGORY_ORDER: FindingCategory[] = ['accessibility', 'seo', 'performance', 'rendering'];
+/** Performance last: it is almost entirely the minor, low-visual-weight
+ *  findings this refactor exists to de-emphasize (B11). Rendering last,
+ *  not skipped: every category still gets its full section. */
+const CATEGORY_ORDER: FindingCategory[] = ['accessibility', 'seo', 'rendering', 'performance'];
 
-function renderRow(strings: ReportStrings, finding: Finding): string {
-  const wcag = finding.wcagCriteria.join(', ');
+function pluralize(count: number, singular: string, plural: string): string {
+  return count === 1 ? singular : plural;
+}
+
+function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: RuleGroup): string {
+  const a = strings.findingsAppendix;
+  const parts = [
+    `${formatNumber(group.findings.length, language)} ${pluralize(group.findings.length, a.findingSingular, a.findingPlural)}`,
+    `${formatNumber(group.totalOccurrences, language)} ${pluralize(group.totalOccurrences, a.occurrenceSingular, a.occurrencePlural)}`,
+    `${a.upToLabel} ${formatNumber(group.maxPages, language)} ${pluralize(group.maxPages, a.pageSingular, a.pagePlural)}`,
+  ];
+  if (group.wcagCriteria.length > 0) {
+    parts.push(`${a.wcagLabel} ${group.wcagCriteria.join(', ')}`);
+  }
+  return escapeHtml(parts.join(' · '));
+}
+
+function renderSubTableRow(language: ReportLanguage, finding: Finding): string {
+  const selector = finding.elements[0]?.selector ?? '';
   return `
-    <tr class="border-b border-slate-100 align-top">
-      <td class="py-2 pr-4 text-xs">
-        <span class="font-semibold text-slate-800">${escapeHtml(finding.title)}</span>
-        <span class="ml-1 text-slate-400">(${escapeHtml(finding.ruleId)})</span>
-        <div class="mt-1 text-slate-500">${escapeHtml(strings.findingsAppendix.severityLabels[finding.severity])}</div>
-      </td>
-      <td class="py-2 pr-4 text-xs text-slate-600">${escapeHtml(finding.pageUrls.length.toString())}</td>
-      <td class="py-2 pr-4 text-xs text-slate-600">${escapeHtml(finding.occurrences.toString())}</td>
-      <td class="py-2 pr-4 text-xs text-slate-600">${wcag ? escapeHtml(wcag) : ''}</td>
+    <tr>
+      <td class="mono fid">${escapeHtml(finding.findingId)}</td>
+      <td class="num">${formatNumber(finding.pageUrls.length, language)}</td>
+      <td class="num">${formatNumber(finding.occurrences, language)}</td>
+      <td class="mono sel">${escapeHtml(selector)}</td>
     </tr>
   `;
 }
 
-function renderCategorySection(
+function renderRuleGroup(
   strings: ReportStrings,
-  category: FindingCategory,
-  findings: Finding[],
+  language: ReportLanguage,
+  group: RuleGroup,
+  isFullyDiverted: boolean,
 ): string {
-  if (findings.length === 0) return '';
-
-  const sorted = [...findings].sort((a, b) => a.findingId.localeCompare(b.findingId));
-  const rows = sorted.map((finding) => renderRow(strings, finding)).join('');
+  const a = strings.findingsAppendix;
+  const keepClass = group.findings.length <= APPENDIX_GROUP_KEEP_THRESHOLD ? ' keep' : '';
+  const representativeTitle = group.findings[0]?.title ?? group.ruleId;
+  const sortedFindings = [...group.findings].sort((x, y) => x.findingId.localeCompare(y.findingId));
+  const rows = sortedFindings.map((finding) => renderSubTableRow(language, finding)).join('');
+  const obsTag = isFullyDiverted
+    ? `<span class="obs-tag">${escapeHtml(a.observationsCrossRefLabel)}</span>`
+    : '';
 
   return `
-    <div class="mt-6 avoid-break">
-      <h3 class="text-lg font-semibold text-slate-900">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h3>
-      <table class="mt-2 w-full border-collapse text-left">
+    <div class="rule-group${keepClass}">
+      <div class="rule-head">
+        ${renderSeverityBadge(strings, group.severity)}
+        <span class="rule-title">${escapeHtml(representativeTitle)}</span>
+        <span class="mono rule-code">${escapeHtml(group.ruleId)}</span>
+        ${obsTag}
+        <span class="rule-sum">${renderRuleSum(strings, language, group)}</span>
+      </div>
+      <table class="sub">
         <thead>
-          <tr class="border-b-2 border-slate-300 text-xs uppercase text-slate-500">
-            <th class="py-2 pr-4">${escapeHtml(strings.findingsAppendix.ruleColumnLabel)}</th>
-            <th class="py-2 pr-4">${escapeHtml(strings.findingsAppendix.pagesColumnLabel)}</th>
-            <th class="py-2 pr-4">${escapeHtml(strings.findingsAppendix.occurrencesColumnLabel)}</th>
-            <th class="py-2 pr-4">${escapeHtml(strings.findingsAppendix.wcagColumnLabel)}</th>
+          <tr>
+            <th>${escapeHtml(a.findingIdColumnLabel)}</th>
+            <th class="num">${escapeHtml(a.pagesColumnLabel)}</th>
+            <th class="num">${escapeHtml(a.occurrencesColumnLabel)}</th>
+            <th>${escapeHtml(a.selectorColumnLabel)}</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -48,22 +84,109 @@ function renderCategorySection(
   `;
 }
 
-export function renderFindingsAppendix(strings: ReportStrings, findings: Finding[]): string {
-  const byCategory = CATEGORY_ORDER.map((category) => ({
-    category,
-    findings: findings.filter((finding) => finding.category === category),
-  }));
+function renderMinorAggregateGroup(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  summaries: MinorFindingSummary[],
+): string {
+  if (summaries.length === 0) return '';
+  const a = strings.findingsAppendix;
+  const totalFindings = summaries.reduce((sum, s) => sum + s.findingCount, 0);
 
-  const sections = byCategory
-    .map(({ category, findings: categoryFindings }) =>
-      renderCategorySection(strings, category, categoryFindings),
+  const rows = summaries
+    .map(
+      (s) => `
+        <tr>
+          <td class="mono">${escapeHtml(s.ruleId)}</td>
+          <td class="num">${formatNumber(s.findingCount, language)}</td>
+          <td class="num">${formatNumber(s.maxPages, language)}</td>
+          <td class="num">${formatNumber(s.totalOccurrences, language)}</td>
+        </tr>
+      `,
     )
     .join('');
 
   return `
-    <section class="page-break-before pt-8">
-      <h2 class="text-2xl font-bold text-slate-900">${escapeHtml(strings.findingsAppendix.heading)}</h2>
-      <p class="mt-2 text-sm text-slate-600">${escapeHtml(strings.findingsAppendix.intro)}</p>
+    <div class="rule-group">
+      <div class="rule-head">
+        ${renderSeverityBadge(strings, 'minor')}
+        <span class="rule-title">${escapeHtml(a.minorAggregateTitle)}</span>
+        <span class="rule-sum">${escapeHtml(`${formatNumber(totalFindings, language)} ${pluralize(totalFindings, a.findingSingular, a.findingPlural)} ${a.minorAggregateGroupedSuffix}`)}</span>
+      </div>
+      <p class="note">${escapeHtml(a.minorAggregateNote)}</p>
+      <table class="sub">
+        <thead>
+          <tr>
+            <th>${escapeHtml(a.ruleColumnLabel)}</th>
+            <th class="num">${escapeHtml(a.findingPlural)}</th>
+            <th class="num">${escapeHtml(a.pagesMaxColumnLabel)}</th>
+            <th class="num">${escapeHtml(a.occurrencesColumnLabel)}</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderCategorySection(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  category: FindingCategory,
+  categoryFindings: Finding[],
+  missingPercentByUrl: ReadonlyMap<string, number>,
+  isFirstRendered: boolean,
+): string {
+  if (categoryFindings.length === 0) return '';
+
+  const regular = categoryFindings.filter((f) => f.severity !== 'minor');
+  const minor = categoryFindings.filter((f) => f.severity === 'minor');
+  const groups = groupAppendix(regular);
+  const minorSummaries = aggregateMinorFindings(minor);
+
+  const groupBlocks = groups
+    .map((group) => {
+      const isFullyDiverted = group.findings.every(
+        (f) => classifyDiversion(f, missingPercentByUrl) !== null,
+      );
+      return renderRuleGroup(strings, language, group, isFullyDiverted);
+    })
+    .join('');
+  const minorBlock = renderMinorAggregateGroup(strings, language, minorSummaries);
+
+  const a = strings.findingsAppendix;
+  const totalCount = categoryFindings.length;
+  const headingClass = isFirstRendered ? '' : ' class="new-page"';
+  const heading = `${escapeHtml(a.categoryLabels[category])} · ${formatNumber(totalCount, language)} ${escapeHtml(pluralize(totalCount, a.findingSingular, a.findingPlural))}`;
+
+  return `
+    <h3${headingClass} style="margin-top:5mm">${heading}</h3>
+    ${groupBlocks}
+    ${minorBlock}
+  `;
+}
+
+export function renderFindingsAppendix(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  findings: Finding[],
+  manifest: AuditManifest,
+): string {
+  const missingPercentByUrl = buildMissingPercentIndex(manifest);
+  let firstRendered = true;
+
+  const sections = CATEGORY_ORDER.map((category) => {
+    const categoryFindings = findings.filter((finding) => finding.category === category);
+    if (categoryFindings.length === 0) return '';
+    const section = renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, firstRendered);
+    firstRendered = false;
+    return section;
+  }).join('');
+
+  return `
+    <section class="new-page">
+      ${renderSectionHeader(strings.findingsAppendix.eyebrow, strings.findingsAppendix.heading)}
+      <p class="intro">${escapeHtml(strings.findingsAppendix.intro)}</p>
       ${sections}
     </section>
   `;

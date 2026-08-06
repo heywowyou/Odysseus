@@ -1,65 +1,92 @@
-import type { Finding, Theme } from '@odysseus/core';
+import type { AuditManifest, Finding, ReportLanguage, Theme } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatFindingIdRefs, formatNumber, renderSectionHeader } from '../html-utils.js';
 
-function affectedPagesFor(theme: Theme, findingsById: Map<string, Finding>): string[] {
-  const pages = new Set<string>();
-  for (const findingId of theme.findingIds) {
-    const finding = findingsById.get(findingId);
-    if (!finding) continue;
-    for (const pageUrl of finding.pageUrls) pages.add(pageUrl);
-  }
-  return [...pages];
+const TOP_RANK_ACCENT_COUNT = 3;
+
+/** F40: a quick win is low effort with medium or high impact, computed
+ *  here in template code from the theme's own effort/impact - not from
+ *  analysis.quickWins (which is a findingId list, a different, narrower
+ *  concept: individual quick-fix findings, not whole themes). Verified
+ *  against docs/report-v2-prototype-haaitza-fr.html: exactly the four
+ *  low-effort themes (ranks 3, 4, 6, 7) carry the badge there. */
+export function isQuickWinTheme(theme: Pick<Theme, 'effort' | 'impact'>): boolean {
+  return theme.effort === 'low' && theme.impact !== 'low';
 }
 
-function renderTheme(strings: ReportStrings, theme: Theme, findingsById: Map<string, Finding>): string {
-  const levels = strings.themes.effortImpactLevels;
-  const affectedPages = affectedPagesFor(theme, findingsById);
-  const actions = theme.recommendedActions
-    .map((action) => `<li>${escapeHtml(action)}</li>`)
+function renderScale(strings: ReportStrings, level: 'low' | 'medium' | 'high'): string {
+  const filledCount = level === 'low' ? 1 : level === 'medium' ? 2 : 3;
+  const dots = [0, 1, 2]
+    .map((i) => `<i class="d${i < filledCount ? ' f' : ''}"></i>`)
     .join('');
-  const pages = affectedPages.map((url) => `<li>${escapeHtml(url)}</li>`).join('');
+  return `<span class="scale">${dots}<b>${escapeHtml(strings.themes.effortImpactLevels[level])}</b></span>`;
+}
+
+function pageWord(strings: ReportStrings, count: number): string {
+  return count === 1 ? strings.findingsAppendix.pageSingular : strings.findingsAppendix.pagePlural;
+}
+
+function renderTheme(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  theme: Theme,
+  findingsById: Map<string, Finding>,
+  totalPagesScanned: number,
+): string {
+  const t = strings.themes;
+  const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
+  const uniquePages = new Set(themeFindings.flatMap((f) => f.pageUrls)).size;
+  const totalOccurrences = themeFindings.reduce((sum, f) => sum + f.occurrences, 0);
+
+  const topRankClass = theme.priorityRank <= TOP_RANK_ACCENT_COUNT ? ' theme-top' : '';
+  const quickWinBadge = isQuickWinTheme(theme)
+    ? `<span class="badge qw">&#9733;&nbsp;${escapeHtml(t.quickWinBadgeLabel)}</span>`
+    : '';
+
+  const isNonConformant = theme.legalRelevance !== undefined;
+  const conformityValue = isNonConformant
+    ? `<span class="v vnc">${escapeHtml(t.conformityNonConformant)}</span>`
+    : `<span class="v">${escapeHtml(t.conformityNotApplicable)}</span>`;
+
+  const legalBox = theme.legalRelevance
+    ? `<div class="legal"><span class="legal-tag">${escapeHtml(t.legalTagLabel)}</span><p>${escapeHtml(theme.legalRelevance)}</p></div>`
+    : '';
+
+  const actions = theme.recommendedActions.map((action) => `<li>${escapeHtml(action)}</li>`).join('');
+
+  const pagesText = fillTemplate(t.pagesOfTotalTemplate, {
+    pages: formatNumber(uniquePages, language),
+    pageWord: pageWord(strings, uniquePages),
+    totalPages: formatNumber(totalPagesScanned, language),
+  });
+  const occurrencesText =
+    totalOccurrences !== uniquePages
+      ? ` · ${formatNumber(totalOccurrences, language)} ${totalOccurrences === 1 ? strings.findingsAppendix.occurrenceSingular : strings.findingsAppendix.occurrencePlural}`
+      : '';
 
   return `
-    <article class="mt-6 avoid-break rounded border border-slate-200 p-4">
-      <div class="flex items-baseline justify-between">
-        <h3 class="text-lg font-semibold text-slate-900">
-          <span class="text-slate-400">#${theme.priorityRank}</span> ${escapeHtml(theme.title)}
-        </h3>
+    <article class="theme keep${topRankClass}">
+      <div class="theme-head">
+        <span class="rank">${theme.priorityRank}</span>
+        <div class="theme-title">
+          <span class="eyebrow">${escapeHtml(strings.findingsAppendix.categoryLabels[theme.category])}</span>
+          <h3>${escapeHtml(theme.title)}</h3>
+        </div>
+        <div class="theme-badges">${quickWinBadge}</div>
       </div>
-      <p class="mt-2 text-sm text-slate-700">${escapeHtml(theme.businessImpact)}</p>
-      ${
-        theme.legalRelevance
-          ? `<p class="mt-2 text-sm text-slate-600"><span class="font-semibold">${escapeHtml(strings.themes.legalRelevanceLabel)}:</span> ${escapeHtml(theme.legalRelevance)}</p>`
-          : ''
-      }
-      <dl class="mt-3 flex gap-6 text-sm">
-        <div>
-          <dt class="text-slate-500">${escapeHtml(strings.themes.effortLabel)}</dt>
-          <dd class="font-semibold text-slate-800">${escapeHtml(levels[theme.effort])}</dd>
-        </div>
-        <div>
-          <dt class="text-slate-500">${escapeHtml(strings.themes.impactLabel)}</dt>
-          <dd class="font-semibold text-slate-800">${escapeHtml(levels[theme.impact])}</dd>
-        </div>
-      </dl>
-      ${
-        actions
-          ? `<div class="mt-3">
-               <p class="text-sm font-semibold text-slate-700">${escapeHtml(strings.themes.recommendedActionsLabel)}</p>
-               <ul class="mt-1 list-disc space-y-1 pl-6 text-sm text-slate-700">${actions}</ul>
-             </div>`
-          : ''
-      }
-      ${
-        pages
-          ? `<div class="mt-3">
-               <p class="text-sm font-semibold text-slate-700">${escapeHtml(strings.themes.affectedPagesLabel)}</p>
-               <ul class="mt-1 list-disc space-y-1 pl-6 text-xs text-slate-500">${pages}</ul>
-             </div>`
-          : ''
-      }
+      <div class="theme-meta">
+        <div class="m"><span class="k">${escapeHtml(t.effortLabel)}</span>${renderScale(strings, theme.effort)}</div>
+        <div class="m"><span class="k">${escapeHtml(t.impactLabel)}</span>${renderScale(strings, theme.impact)}</div>
+        <div class="m"><span class="k">${escapeHtml(t.conformityLabel)}</span>${conformityValue}</div>
+      </div>
+      ${legalBox}
+      <p class="impact">${escapeHtml(theme.businessImpact)}</p>
+      ${actions ? `<ol class="actions">${actions}</ol>` : ''}
+      <div class="theme-foot">
+        <span>${escapeHtml(pagesText)}${escapeHtml(occurrencesText)}</span>
+        <span class="refs">${escapeHtml(t.refsLabel)}: ${escapeHtml(formatFindingIdRefs(theme.findingIds))}</span>
+      </div>
     </article>
   `;
 }
@@ -68,14 +95,18 @@ export function renderThemes(
   strings: ReportStrings,
   analysis: StoredAnalysis,
   findings: Finding[],
+  manifest: AuditManifest,
 ): string {
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
+  const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
   const sortedThemes = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank);
-  const themeBlocks = sortedThemes.map((theme) => renderTheme(strings, theme, findingsById)).join('');
+  const themeBlocks = sortedThemes
+    .map((theme) => renderTheme(strings, analysis.language, theme, findingsById, totalPagesScanned))
+    .join('');
 
   return `
-    <section class="page-break-before pt-8">
-      <h2 class="text-2xl font-bold text-slate-900">${escapeHtml(strings.themes.heading)}</h2>
+    <section class="new-page">
+      ${renderSectionHeader(strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }))}
       ${themeBlocks}
     </section>
   `;

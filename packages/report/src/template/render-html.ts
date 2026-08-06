@@ -2,9 +2,10 @@
  * Composes the full HTML document handed to Chromium via page.setContent().
  * report.css is read from disk and inlined into a <style> tag rather than
  * linked, because setContent() has no base URL to resolve a relative
- * stylesheet against, and the entire point of precompiling instead of a
- * Tailwind CDN is a zero-network render: nothing here may reference an
- * external URL.
+ * stylesheet against, and the whole document must be a zero-network
+ * render: nothing here may reference an external URL, since a missing
+ * CDN or font fetch would fail silently and produce an unstyled client
+ * deliverable.
  */
 
 import { promises as fs } from 'node:fs';
@@ -15,14 +16,16 @@ import type { StoredAnalysis } from '../types.js';
 import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
 import { renderCover } from './sections/cover.js';
+import { renderToc } from './sections/toc.js';
+import { renderStatistics } from './sections/statistics.js';
 import { renderExecutiveSummary } from './sections/executive-summary.js';
-import { renderWhatToDoFirst } from './sections/quick-wins.js';
+import { renderConformanceSummary } from './sections/conformance-summary.js';
 import { renderThemes } from './sections/themes.js';
+import { renderObservations } from './sections/observations.js';
 import { renderRenderDiffEvidence } from './sections/render-diff-evidence.js';
 import { renderCoreWebVitalsTable } from './sections/core-web-vitals-table.js';
 import { renderFindingsAppendix } from './sections/findings-appendix.js';
 import { renderMethodology } from './sections/methodology.js';
-import { renderLimitations } from './sections/limitations.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -51,15 +54,17 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
   const css = await readReportCss();
 
   const body = [
-    renderCover(strings, manifest.siteUrl, new Date(manifest.startedAt), analysis.language),
+    renderCover(strings, manifest, analysis),
+    renderToc(strings),
+    renderStatistics(strings, analysis.language, findings, manifest),
     renderExecutiveSummary(strings, analysis),
-    renderWhatToDoFirst(strings, analysis, findings),
-    renderThemes(strings, analysis, findings),
-    renderRenderDiffEvidence(strings, renderDiffEvidencePages),
+    renderConformanceSummary(strings, findings, analysis.language),
+    renderThemes(strings, analysis, findings, manifest),
+    renderObservations(strings, findings, manifest),
+    renderRenderDiffEvidence(strings, analysis.language, manifest, renderDiffEvidencePages),
     renderCoreWebVitalsTable(strings, manifest),
-    renderFindingsAppendix(strings, findings),
-    renderMethodology(strings, manifest),
-    renderLimitations(strings),
+    renderFindingsAppendix(strings, analysis.language, findings, manifest),
+    renderMethodology(strings, manifest, analysis.language),
   ].join('\n');
 
   return `<!doctype html>
@@ -69,10 +74,10 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     <title>${strings.cover.reportTitle}</title>
     <style>${css}</style>
   </head>
-  <body class="bg-white text-slate-900">
-    <main class="mx-auto max-w-3xl px-4">
+  <body>
+    <div class="doc">
       ${body}
-    </main>
+    </div>
   </body>
 </html>`;
 }
