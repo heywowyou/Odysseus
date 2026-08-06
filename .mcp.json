@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "mongodb-readonly": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mongodb-mcp-server@latest",
+        "--readOnly"
+      ],
+      "env": {
+        "MDB_MCP_CONNECTION_STRING": "${MDB_MCP_CONNECTION_STRING}"
+      }
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless",
+        "--isolated",
+        "--executable-path",
+        "/home/heywow/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome"
+      ],
+      "env": {}
+    }
+  }
+}

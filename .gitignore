@@ -11,3 +11,4 @@ reports/
 coverage/
 .vitest/
 *.tsbuildinfo
+.playwright-mcp/
