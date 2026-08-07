@@ -5,12 +5,11 @@ import { chromium, type Browser } from 'playwright';
  * Identifies Odysseus per the crawling-politeness rule. This is the
  * fallback config.ts's getCrawlerUserAgent() returns when CRAWLER_USER_AGENT
  * is unset, so it is the identity that actually goes out on the wire by
- * default. The odysseus.example domain is a placeholder: replace it with
- * a real, reachable domain before running against any site not owned by
- * the operator.
+ * default. Points at packages/site's /bot route, which explains the bot to
+ * anyone who checks their logs.
  */
 export const ODYSSEUS_USER_AGENT =
-  'OdysseusAuditBot/0.1 (+https://odysseus.example/bot)';
+  'OdysseusAuditBot/0.1 (+https://odysseusaudit.com/bot)';
 
 /** Hard per-page timeout in ms, applied independently to each pass. */
 export const DEFAULT_TIMEOUT_MS = 30_000;

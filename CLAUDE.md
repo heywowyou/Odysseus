@@ -182,6 +182,21 @@ needed, say so and stop. Do not change them and continue.
    in a utility framework risked drifting from the one version that was
    actually print-tested.
 
+10. **Scan-phase concurrency runs pages in lanes, not the crawl.** Shipped
+    2026-08-07. The crawl stays sequential; render-diff, axe, and Lighthouse
+    now run across `SCAN_CONCURRENCY` lanes (default 3) instead of one page
+    at a time, with the per-origin politeness delay unchanged in every lane,
+    per the "concurrency, not a shorter delay" rule already in the project
+    brief. Lighthouse calls are additionally serialized behind a small
+    in-process queue even though the lanes themselves run in parallel:
+    concurrent `lighthouse()` calls collide on Node's process-global
+    `perf_hooks` marks, confirmed 100% reproducible against the spa-demo
+    fixture, and unrelated to the CDP debug port each lane already gets its
+    own connection to. Do not remove that serialization queue to "let
+    Lighthouse run in the lanes too" without re-confirming the collision is
+    gone; `scanConcurrency` is recorded on `AuditConfigSnapshot` for the
+    same provenance reason other scan config fields are.
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
@@ -189,7 +204,11 @@ Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
 module, Mongoose 9, Zod, Commander, Vitest, pino, `@mistralai/mistralai`.
 
 No Redis, no BullMQ, no Express API, no Next.js dashboard, no public web
-interface. Those are later phases and are deliberately not being built.
+interface to the audit engine itself. Those are later phases and are
+deliberately not being built. `packages/site` (added 2026-08-07) is not
+an exception to this: it is a standalone Next.js marketing/bot-info site
+with no access to the queue, the database, or any other package, not a
+public front end for the tool.
 
 PDF generation uses Playwright's Chromium, not Puppeteer. One browser
 dependency, not two.
@@ -222,9 +241,15 @@ rejected because it cannot produce those metrics.
   network port.
 - `cli` — Commander entry points, thin. Real logic lives in the packages
   above.
+- `site` — the public marketing site and bot-information page at
+  odysseusaudit.com, added 2026-08-07. A standalone Next.js app deployed
+  separately to Vercel, not part of the `tsc -b` build graph the other
+  packages share, and does not import from and is not imported by any of
+  them. Exists so `ODYSSEUS_USER_AGENT` points at a domain that actually
+  resolves, per the crawling-politeness rule.
 
-Seven packages for a tool one person runs is close to the ceiling. If an
-eighth is proposed, check that its one-sentence description does not
+Eight packages for a tool one person runs is close to the ceiling. If a
+ninth is proposed, check that its one-sentence description does not
 overlap an existing package before agreeing.
 
 ## Artifacts layout

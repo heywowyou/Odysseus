@@ -327,6 +327,8 @@ Verified live in both languages against the real capture: 11 themes from 17 find
 
 **Milestone 7: interface.** Done 2026-08-04. Queue and a private single-user dashboard (`odysseus serve`). Scope defined in 7.1 below.
 
+**Post-7.1: scan concurrency and reskin, 2026-08-07.** Not a milestone, three same-day increments on top of shipped work. Scan-phase concurrency (render-diff, axe, Lighthouse in `SCAN_CONCURRENCY` lanes, Lighthouse itself serialized behind an in-process queue to avoid a confirmed `perf_hooks` collision; full mechanics in `CLAUDE.md` trade-off 10) implements the "concurrency, not a shorter delay" decision from 6.5 that had been written down but not yet built. The dashboard and the PDF report were both restyled in a GlassWire-inspired dark theme, pure CSS on the dashboard (no markup or script changes), CSS plus the removal of two decorative print artifacts on the report, re-verified against the report's own axe-core WCAG 2.2 AA self-test after a first-pass contrast failure was caught and fixed.
+
 **Milestone 8: custom checks.** Meta, canonical, JSON-LD, sitemap, hreflang, heading hierarchy, redirect chains. Deferred because axe and Lighthouse already produce enough to sell an audit; these deepen it rather than enable it.
 
 **Milestone 9: prospecting mode.** Batch scanning, brokenness scoring, evidence screenshots, prospect database.
@@ -437,7 +439,7 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 
 ### Blocking, with a named dependency
 
-1. **A real domain with a bot-information page.** The crawler user agent still points at `https://your-domain.example/bot`, which can never resolve, so any site owner checking their logs sees a bot they cannot identify. Two real scans have now gone out under that placeholder. It does not block the build, but it blocks every scan of a site not owned by the operator, which is all of prospecting. Roughly twenty minutes of work and increasingly overdue.
+1. ~~**A real domain with a bot-information page.**~~ Partially resolved 2026-08-07: `odysseusaudit.com` (and `.fr`) purchased, `ODYSSEUS_USER_AGENT` and both `.env` files now point at `https://odysseusaudit.com/bot`, and `packages/site` (a standalone Next.js app, not part of the tsc build graph, deployed separately to Vercel) scaffolds that route. Still blocking until the `/bot` page actually has content (placeholder component only, next turn) and the site is deployed, so a site owner checking their logs still finds nothing live yet.
 2. **The manual accessibility checklist** (`docs/manual-accessibility-checklist.md`). Two confirmed entries so far, both discovered by testing rather than assumed: placeholder-as-only-label passes axe because the placeholder supplies an accessible name, and heading-order is excluded twice over, once by axe's tag set (tagged best-practice rather than WCAG) and again by the milestone 4 decision to emit nothing from Lighthouse's accessibility category. This checklist determines how long an accessibility audit takes, which determines whether the pricing holds. It gates selling accessibility audits, not the build.
 3. ~~**Interface scope**, section 7.1. Gates milestone 7.~~ Resolved: milestone 7 shipped 2026-08-04 against that scope.
 
