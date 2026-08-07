@@ -121,7 +121,7 @@ describe('runAuditStage', () => {
 
     const result = await runAuditStage('https://example.com/', {}, fakeConnection);
 
-    expect(runObligationStage).toHaveBeenCalledWith(fakeManifest(), fakeConnection, undefined);
+    expect(runObligationStage).toHaveBeenCalledWith(fakeManifest(), fakeConnection, undefined, undefined);
     expect(result.obligationAssessment).toEqual({
       status: 'in_scope',
       basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }],
@@ -131,7 +131,14 @@ describe('runAuditStage', () => {
   it('passes options.manualSiren through to runObligationStage', async () => {
     await runAuditStage('https://example.com/', { manualSiren: '732829320' }, fakeConnection);
 
-    expect(runObligationStage).toHaveBeenCalledWith(fakeManifest(), fakeConnection, '732829320');
+    expect(runObligationStage).toHaveBeenCalledWith(fakeManifest(), fakeConnection, '732829320', undefined);
+  });
+
+  it('passes options.siteSignalOverrides through to runObligationStage', async () => {
+    const siteSignalOverrides = { hasTransactionalFlow: { value: true, reason: 'confirmed by hand' } };
+    await runAuditStage('https://example.com/', { siteSignalOverrides }, fakeConnection);
+
+    expect(runObligationStage).toHaveBeenCalledWith(fakeManifest(), fakeConnection, undefined, siteSignalOverrides);
   });
 
   it('passes maxPages/maxDepth through to scanSite when provided', async () => {

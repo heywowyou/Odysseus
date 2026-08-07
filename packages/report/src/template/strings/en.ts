@@ -197,6 +197,12 @@ export const en: ReportStrings = {
       'The SIREN number used for this determination was provided manually; this site does not publish this number itself.',
     legalCitationSirenMismatchTemplate:
       'The manually supplied SIREN ({manualSiren}) differs from the one published on the site ({extractedSiren}). This determination uses the manually supplied number.',
+    legalCitationManualTransactionalFlowWithReasonTemplate:
+      "The presence of an online booking flow was confirmed manually by the auditor rather than detected automatically ({reason}).",
+    legalCitationManualTransactionalFlowNoReasonSentence:
+      'The presence of an online booking flow was confirmed manually by the auditor rather than detected automatically.',
+    legalCitationTransactionalFlowDisagreementSentence:
+      'This manual confirmation disagrees with the result of the automated detection.',
   },
   footer: {
     confidentialityLabel: 'Confidential report',

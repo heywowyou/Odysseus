@@ -1,5 +1,6 @@
 import type { Browser } from 'playwright';
 import { getScanConcurrency } from './config.js';
+import type { RedirectHostCache } from './checks/transactional-flow.js';
 import { type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import { type PageScanResult, scanPage } from './scan-page.js';
 
@@ -62,6 +63,7 @@ async function runScanLane(
   timeoutMs: number | undefined,
   userAgent: string | undefined,
   mentionsLegalesUrl: string | undefined,
+  redirectHostCache: RedirectHostCache,
   onPageDone: (pageResult: PageScanResult) => void,
 ): Promise<void> {
   let nextDelayMs = startDelayMs;
@@ -75,6 +77,7 @@ async function runScanLane(
     const pageResult = await scanPage(browser, debugPort, url, {
       delayMs,
       screenshotDir,
+      redirectHostCache,
       ...(timeoutMs !== undefined ? { timeoutMs } : {}),
       ...(userAgent !== undefined ? { userAgent } : {}),
       ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
@@ -140,6 +143,12 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
     options.onProgress?.({ type: 'scan-page', scanned: pages.length, totalPages: pagesToScan.length, url: pageResult.url });
   };
 
+  // One cache for the whole site, shared across every lane, so a
+  // booking-engine link repeated on every page (a real hotel site's nav)
+  // costs one third-party navigation per audit, not one per page. See
+  // transactional-flow.ts's RedirectHostCache doc comment.
+  const redirectHostCache: RedirectHostCache = new Map();
+
   await Promise.all(
     lanes
       .filter((laneUrls) => laneUrls.length > 0)
@@ -154,6 +163,7 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
           options.timeoutMs,
           options.userAgent,
           mentionsLegalesUrlForScan,
+          redirectHostCache,
           onPageDone,
         ),
       ),

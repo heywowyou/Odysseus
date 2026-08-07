@@ -58,7 +58,9 @@ function renderFact(fact: ObligationBasisFact, strings: ReportStrings, language:
         label: translateEffectifLabel(fact.code, fact.label, language),
       });
     case 'turnover':
-      return fillTemplate(m.legalCitationTurnoverFactTemplate, { threshold: formatEur(fact.thresholdEur, language) });
+      return fillTemplate(m.legalCitationTurnoverFactTemplate, {
+        threshold: formatEur(fact.thresholdEur, language),
+      });
     case 'transactional-flow':
       return m.legalCitationTransactionalFlowFact;
     case 'transactional-flow-unknown':
@@ -89,7 +91,9 @@ function renderFacts(basis: ObligationBasis, strings: ReportStrings, language: R
  *  picked as primary precisely when EAA's own status does not already
  *  explain the merged 'in_scope' - citing EAA in that case would
  *  overstate what the EAA gate itself determined. */
-function pickPrimaryBasis(assessment: Extract<ObligationAssessment, { status: 'in_scope' | 'likely_in_scope' }>): ObligationBasis | undefined {
+function pickPrimaryBasis(
+  assessment: Extract<ObligationAssessment, { status: 'in_scope' | 'likely_in_scope' }>,
+): ObligationBasis | undefined {
   const eaaBasis = assessment.basis.find((b) => b.regimeId === EAA_REGIME_ID);
   const article47Basis = assessment.basis.find((b) => b.regimeId === ARTICLE_47_REGIME_ID);
 
@@ -130,8 +134,14 @@ function renderLegalCitationParagraph(
   }
 
   const facts = renderFacts(basis, strings, language);
-  const template = assessment.status === 'in_scope' ? m.legalCitationInScopeTemplate : m.legalCitationLikelyInScopeTemplate;
-  const paragraph = fillTemplate(template, { regimeName: regime.name, authority: regime.authority, legalCitation: regime.legalCitation, facts });
+  const template =
+    assessment.status === 'in_scope' ? m.legalCitationInScopeTemplate : m.legalCitationLikelyInScopeTemplate;
+  const paragraph = fillTemplate(template, {
+    regimeName: regime.name,
+    authority: regime.authority,
+    legalCitation: regime.legalCitation,
+    facts,
+  });
 
   return `${paragraph} ${m.legalCitationExemptionRouteSentence}`;
 }
@@ -170,11 +180,44 @@ function renderSirenProvenanceNote(
   if (assessment.sirenSource === 'manual') {
     const findingId = findings.find((f) => f.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID)?.findingId;
     return findingId
-      ? fillTemplate(m.legalCitationManualSirenWithFindingTemplate, { findingId })
+      ? fillTemplate(m.legalCitationManualSirenWithFindingTemplate, {
+          findingId,
+        })
       : m.legalCitationManualSirenNoFindingSentence;
   }
 
   return '';
+}
+
+/**
+ * Manual site-signal override milestone. Mirrors
+ * renderSirenProvenanceNote's shape: rendered only when
+ * siteSignalResolutions.hasTransactionalFlow.source is 'manual' - never
+ * for 'detected', which is the common case and gets no note at all, same
+ * precedent as sirenSource: 'extracted' above. When the manual value
+ * disagreed with the detector (detectedValue present and different), that
+ * is stated plainly as a second sentence, no editorializing about which
+ * is "correct".
+ */
+function renderTransactionalFlowProvenanceNote(
+  strings: ReportStrings,
+  assessment: ObligationAssessment | undefined,
+): string {
+  const m = strings.methodology;
+  const resolution = assessment?.siteSignalResolutions?.['hasTransactionalFlow'];
+  if (!resolution || resolution.source !== 'manual') return '';
+
+  const base = resolution.reason
+    ? fillTemplate(m.legalCitationManualTransactionalFlowWithReasonTemplate, {
+        reason: resolution.reason,
+      })
+    : m.legalCitationManualTransactionalFlowNoReasonSentence;
+
+  if (resolution.detectedValue !== undefined && resolution.detectedValue !== resolution.value) {
+    return `${base} ${m.legalCitationTransactionalFlowDisagreementSentence}`;
+  }
+
+  return base;
 }
 
 /** B15/B16: methodology and limitations used to be two sections that
@@ -202,6 +245,7 @@ export function renderMethodology(
   });
 
   const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings);
+  const transactionalFlowNote = renderTransactionalFlowProvenanceNote(strings, obligationAssessment);
 
   return `
     <section class="new-page">
@@ -210,6 +254,7 @@ export function renderMethodology(
       <p>${escapeHtml(m.automatedCoverageCaveat)}</p>
       <p>${escapeHtml(renderLegalCitationParagraph(strings, obligationAssessment, language))}</p>
       ${sirenNote ? `<p>${escapeHtml(sirenNote)}</p>` : ''}
+      ${transactionalFlowNote ? `<p>${escapeHtml(transactionalFlowNote)}</p>` : ''}
     </section>
   `;
 }

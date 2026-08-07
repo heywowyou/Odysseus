@@ -210,3 +210,95 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
     expect(html).toContain('differs from');
   });
 });
+
+describe('renderMethodology transactional-flow provenance note (manual site-signal override milestone)', () => {
+  const inScopeAssessment: ObligationAssessment = {
+    status: 'in_scope',
+    basis: [
+      {
+        regimeId: 'eaa-loi-2023-171',
+        facts: [
+          { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+          { kind: 'transactional-flow', evidence: [] },
+        ],
+      },
+    ],
+  };
+
+  it('renders no note when the resolution source is detected', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const assessment: ObligationAssessment = {
+      ...inScopeAssessment,
+      siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'detected' } },
+    };
+    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
+    expect(html).not.toContain('confirmée manuellement');
+  });
+
+  it('renders no note when there is no siteSignalResolutions at all', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const html = renderMethodology(getStrings('fr'), manifest, 'fr', inScopeAssessment);
+    expect(html).not.toContain('confirmée manuellement');
+  });
+
+  it('renders the manual note with the reason when the source is manual', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const assessment: ObligationAssessment = {
+      ...inScopeAssessment,
+      siteSignalResolutions: {
+        hasTransactionalFlow: {
+          value: true,
+          source: 'manual',
+          reason: 'redirige vers un moteur de réservation dédié',
+        },
+      },
+    };
+    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
+    expect(html).toContain('confirmée manuellement');
+    expect(html).toContain('redirige vers un moteur de réservation dédié');
+  });
+
+  it('renders the manual note without a reason clause when none was supplied', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const assessment: ObligationAssessment = {
+      ...inScopeAssessment,
+      siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'manual' } },
+    };
+    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
+    expect(html).toContain('confirmée manuellement');
+  });
+
+  it('appends the disagreement sentence when the manual value differs from the detected one', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const assessment: ObligationAssessment = {
+      ...inScopeAssessment,
+      siteSignalResolutions: {
+        hasTransactionalFlow: { value: true, source: 'manual', detectedValue: false },
+      },
+    };
+    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
+    expect(html).toContain('diverge du résultat de la détection automatisée');
+  });
+
+  it('does not append the disagreement sentence when the manual value matches the detected one', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const assessment: ObligationAssessment = {
+      ...inScopeAssessment,
+      siteSignalResolutions: {
+        hasTransactionalFlow: { value: true, source: 'manual', detectedValue: true },
+      },
+    };
+    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
+    expect(html).not.toContain('diverge du résultat');
+  });
+
+  it('renders in English', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const assessment: ObligationAssessment = {
+      ...inScopeAssessment,
+      siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'manual' } },
+    };
+    const html = renderMethodology(getStrings('en'), manifest, 'en', assessment);
+    expect(html).toContain('confirmed manually by the auditor');
+  });
+});

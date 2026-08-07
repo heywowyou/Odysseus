@@ -11,6 +11,7 @@
  */
 
 import { completeJob, updateJobProgress, type JobDocument } from '@odysseus/store';
+import type { SiteSignalOverrides } from '@odysseus/core';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { runReportStage } from '../../pipeline/report-stage.js';
@@ -29,6 +30,19 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
 
   try {
     const onProgress = createScanProgressReporter(connection, job.jobId);
+
+    const siteSignalOverrides: SiteSignalOverrides | undefined =
+      job.options.transactionalFlow !== undefined
+        ? {
+            hasTransactionalFlow: {
+              value: job.options.transactionalFlow,
+              ...(job.options.transactionalFlowReason !== undefined
+                ? { reason: job.options.transactionalFlowReason }
+                : {}),
+            },
+          }
+        : undefined;
+
     const auditResult = await runAuditStage(
       url,
       {
@@ -36,6 +50,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
         ...(job.options.maxDepth !== undefined ? { maxDepth: job.options.maxDepth } : {}),
         ...(job.options.delayMs !== undefined ? { delayMs: job.options.delayMs } : {}),
         ...(job.options.siren !== undefined ? { manualSiren: job.options.siren } : {}),
+        ...(siteSignalOverrides !== undefined ? { siteSignalOverrides } : {}),
         onProgress,
       },
       connection,

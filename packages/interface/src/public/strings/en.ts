@@ -28,6 +28,12 @@ export const en: DashboardStrings = {
     sirenHint:
       'Fill in if you already know the audited company’s SIREN. Never clears the finding if the site does not publish its own.',
     sirenInvalidError: 'This SIREN fails the INSEE checksum',
+    transactionalFlowLabel: 'Does this site take bookings or sell online for its own account?',
+    transactionalFlowAutoOption: 'Let the tool detect',
+    transactionalFlowYesOption: 'Yes',
+    transactionalFlowNoOption: 'No',
+    transactionalFlowReasonLabel: 'Reason (optional)',
+    transactionalFlowReasonPlaceholder: 'E.g. redirects to a dedicated booking engine, confirmed by hand',
     advancedOptions: 'Advanced options',
     maxPagesLabel: 'Maximum pages',
     maxDepthLabel: 'Maximum link depth',

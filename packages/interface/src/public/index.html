@@ -37,6 +37,24 @@
           <label for="siren" data-i18n="newScan.sirenLabel">SIREN (optional)</label>
           <input type="text" id="siren" name="siren" inputmode="numeric" data-i18n-placeholder="newScan.sirenPlaceholder" />
           <p class="hint" data-i18n="newScan.sirenHint"></p>
+
+          <label for="transactionalFlow" data-i18n="newScan.transactionalFlowLabel">
+            Does this site take bookings or sell online for its own account?
+          </label>
+          <select id="transactionalFlow" name="transactionalFlow">
+            <option value="" data-i18n="newScan.transactionalFlowAutoOption">Let the tool detect</option>
+            <option value="true" data-i18n="newScan.transactionalFlowYesOption">Yes</option>
+            <option value="false" data-i18n="newScan.transactionalFlowNoOption">No</option>
+          </select>
+          <div id="transactional-flow-reason-field" hidden>
+            <label for="transactionalFlowReason" data-i18n="newScan.transactionalFlowReasonLabel">Reason (optional)</label>
+            <input
+              type="text"
+              id="transactionalFlowReason"
+              name="transactionalFlowReason"
+              data-i18n-placeholder="newScan.transactionalFlowReasonPlaceholder"
+            />
+          </div>
         </div>
 
         <div id="prospecting-fields" hidden>

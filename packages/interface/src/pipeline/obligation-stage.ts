@@ -17,10 +17,14 @@ import {
   assessObligations,
   isValidSiren,
   type AuditManifest,
+  type AuditManifestSiteSignals,
   type ObligationAssessment,
   type OperatorProfile,
   type Provenanced,
   type SirenMismatch,
+  type SiteSignalOverrides,
+  type SiteSignalResolution,
+  type SiteSignals,
 } from '@odysseus/core';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 
@@ -67,10 +71,79 @@ function resolveEffectiveSiren(extracted: string | undefined, manual: string | u
   return undefined;
 }
 
+/**
+ * Resolves the effective SiteSignals passed to assessObligations, mirroring
+ * resolveEffectiveSiren above: a manual override wins whenever present
+ * (the auditor is asserting a personally verified fact), the detector's
+ * own value otherwise. Unlike the SIREN case there is no "both present
+ * and equal, prefer the stronger claim" branch - a manual override that
+ * happens to agree with the detector is still recorded as manual, since
+ * it was still explicitly asserted.
+ *
+ * Only 'hasTransactionalFlow' is read from overrides today (the only
+ * signal this milestone's UI/CLI surface exposes), but the loop is
+ * written generically over overrides' own keys so the next overridable
+ * SiteSignals boolean field needs a new map key here, not new branching.
+ * detected may be undefined (no scan-derived siteSignals at all, e.g. a
+ * pre-milestone-5 manifest) - a manual override still produces a usable
+ * SiteSignals in that case, which is the whole point of the escape hatch.
+ */
+function resolveSiteSignals(
+  detected: AuditManifestSiteSignals | undefined,
+  overrides: SiteSignalOverrides | undefined,
+): {
+  siteSignals: SiteSignals | undefined;
+  resolutions: Record<string, SiteSignalResolution>;
+} {
+  const resolutions: Record<string, SiteSignalResolution> = {};
+
+  if (detected) {
+    resolutions.hasTransactionalFlow = {
+      value: detected.hasTransactionalFlow,
+      source: 'detected',
+    };
+  }
+
+  const override = overrides?.['hasTransactionalFlow'];
+  if (override === undefined) {
+    return { siteSignals: detected, resolutions };
+  }
+
+  const detectedValue = detected?.hasTransactionalFlow;
+  if (detectedValue !== undefined && detectedValue !== override.value) {
+    // A confirmed fact disagreeing with the detector is itself useful
+    // signal for future detector work, per the milestone's design
+    // constraints - logged, never used to change the resolved value.
+    console.warn(
+      `odysseus: manual hasTransactionalFlow override (${override.value}) disagrees with the detector (${detectedValue})`,
+    );
+  }
+
+  resolutions.hasTransactionalFlow = {
+    value: override.value,
+    source: 'manual',
+    ...(override.reason !== undefined ? { reason: override.reason } : {}),
+    ...(detectedValue !== undefined && detectedValue !== override.value ? { detectedValue } : {}),
+  };
+
+  const siteSignals: SiteSignals = {
+    hasTransactionalFlow: override.value,
+    transactionalFlowEvidence: detected?.transactionalFlowEvidence ?? [],
+    ...(detected?.transactionalFlowRedirectChecks !== undefined
+      ? {
+          transactionalFlowRedirectChecks: detected.transactionalFlowRedirectChecks,
+        }
+      : {}),
+  };
+
+  return { siteSignals, resolutions };
+}
+
 export async function runObligationStage(
   manifest: AuditManifest,
   connection: Connection,
   manualSiren?: string,
+  siteSignalOverrides?: SiteSignalOverrides,
 ): Promise<ObligationAssessment> {
   const extractedSiren = manifest.siteSignals?.siren;
   // Trusts the CLI/interface boundary to have already validated this
@@ -115,16 +188,14 @@ export async function runObligationStage(
       siren: { ...lookup.profile.siren, source: `siren:${sirenSource}` },
     };
 
-    if (!manifest.siteSignals) {
-      return attachProvenance(assessObligations(profile));
-    }
+    const { siteSignals, resolutions } = resolveSiteSignals(manifest.siteSignals, siteSignalOverrides);
 
-    return attachProvenance(
-      assessObligations(profile, {
-        hasTransactionalFlow: manifest.siteSignals.hasTransactionalFlow,
-        transactionalFlowEvidence: manifest.siteSignals.transactionalFlowEvidence,
-      }),
-    );
+    const assessment = siteSignals ? assessObligations(profile, siteSignals) : assessObligations(profile);
+
+    return attachProvenance({
+      ...assessment,
+      ...(Object.keys(resolutions).length > 0 ? { siteSignalResolutions: resolutions } : {}),
+    });
   } catch {
     // Any unexpected failure (e.g. Mongo unreachable) must not block the
     // rest of the audit - degrade to undetermined the same as a known

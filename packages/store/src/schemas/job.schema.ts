@@ -34,6 +34,12 @@ export interface JobOptionsSnapshot {
    *  created (see the manual-SIREN milestone) - full-audit jobs only,
    *  never read for a prospecting job. */
   siren?: string;
+  /** Manual override of the hasTransactionalFlow site signal (see the
+   *  manual site-signal override milestone), same "full-audit jobs only"
+   *  scope as siren above. Absent means "let the detector decide", not
+   *  false - false must be an explicit operator assertion. */
+  transactionalFlow?: boolean;
+  transactionalFlowReason?: string;
 }
 
 export interface JobProgressCrawl {
@@ -91,6 +97,8 @@ const jobOptionsSchema = new Schema(
     maxDepth: { type: Number },
     delayMs: { type: Number },
     siren: { type: String },
+    transactionalFlow: { type: Boolean },
+    transactionalFlowReason: { type: String },
   },
   { _id: false },
 );

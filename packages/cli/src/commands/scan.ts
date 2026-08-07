@@ -3,6 +3,7 @@ import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
 import { buildAuditDir, getArtifactsRoot, launchBrowser, scanSite } from '@odysseus/scanner';
 import { parseSirenOption } from '../parse-siren-option.js';
+import { parseBooleanOption } from '../parse-boolean-option.js';
 
 function parsePositiveInt(value: string): number {
   const parsed = Number.parseInt(value, 10);
@@ -27,37 +28,55 @@ export function registerScanCommand(program: Command): void {
         'no obligation-determination stage of its own to feed - it is accepted and checked, not used.',
       parseSirenOption,
     )
-    .action(async (url: string, opts: { maxPages?: number; maxDepth?: number; siren?: string }) => {
-      try {
-        new URL(url);
-      } catch {
-        console.error(`odysseus scan: "${url}" is not a valid URL`);
-        process.exitCode = 1;
-        return;
-      }
+    .option(
+      '--override-transactional-flow <true|false>',
+      'Manual hasTransactionalFlow override. Validated here for consistency with `audit`, same ' +
+        '"accepted and checked, not used" posture as --siren above.',
+      parseBooleanOption,
+    )
+    .option(
+      '--override-transactional-flow-reason <text>',
+      'Optional free-text reason for --override-transactional-flow. Accepted and checked, not used.',
+    )
+    .action(
+      async (
+        url: string,
+        opts: {
+          maxPages?: number;
+          maxDepth?: number;
+          siren?: string;
+          overrideTransactionalFlow?: boolean;
+          overrideTransactionalFlowReason?: string;
+        },
+      ) => {
+        try {
+          new URL(url);
+        } catch {
+          console.error(`odysseus scan: "${url}" is not a valid URL`);
+          process.exitCode = 1;
+          return;
+        }
 
-      const { browser, debugPort } = await launchBrowser();
-      try {
-        const hostname = new URL(url).hostname;
-        const screenshotDir = path.join(
-          buildAuditDir(getArtifactsRoot(), hostname, new Date()),
-          'pages',
-        );
+        const { browser, debugPort } = await launchBrowser();
+        try {
+          const hostname = new URL(url).hostname;
+          const screenshotDir = path.join(buildAuditDir(getArtifactsRoot(), hostname, new Date()), 'pages');
 
-        const result = await scanSite(url, {
-          browser,
-          debugPort,
-          screenshotDir,
-          ...(opts.maxPages !== undefined ? { maxPages: opts.maxPages } : {}),
-          ...(opts.maxDepth !== undefined ? { maxDepth: opts.maxDepth } : {}),
-        });
-        console.log(JSON.stringify(result, null, 2));
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(`odysseus scan: failed to scan ${url}\n${message}`);
-        process.exitCode = 1;
-      } finally {
-        await browser.close();
-      }
-    });
+          const result = await scanSite(url, {
+            browser,
+            debugPort,
+            screenshotDir,
+            ...(opts.maxPages !== undefined ? { maxPages: opts.maxPages } : {}),
+            ...(opts.maxDepth !== undefined ? { maxDepth: opts.maxDepth } : {}),
+          });
+          console.log(JSON.stringify(result, null, 2));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`odysseus scan: failed to scan ${url}\n${message}`);
+          process.exitCode = 1;
+        } finally {
+          await browser.close();
+        }
+      },
+    );
 }

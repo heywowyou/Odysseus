@@ -178,3 +178,88 @@ describe('runObligationStage with a manual SIREN', () => {
     expect(result.sirenSource).toBe('extracted');
   });
 });
+
+describe('runObligationStage with a manual hasTransactionalFlow override', () => {
+  it('uses the manual value, tagged as source manual, when there is no detected siteSignals at all', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile() });
+    const manifest = fakeManifest();
+
+    const result = await runObligationStage(manifest, fakeConnection, '732829320', {
+      hasTransactionalFlow: { value: true, reason: 'confirmed by hand' },
+    });
+
+    expect(result.status).toBe('in_scope');
+    expect(result.siteSignalResolutions?.['hasTransactionalFlow']).toEqual({
+      value: true,
+      source: 'manual',
+      reason: 'confirmed by hand',
+    });
+  });
+
+  it('uses the manual value false, tagged as source manual, with no detector signal', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile() });
+    const manifest = fakeManifest();
+
+    const result = await runObligationStage(manifest, fakeConnection, '732829320', {
+      hasTransactionalFlow: { value: false },
+    });
+
+    expect(result.status).toBe('out_of_scope');
+    expect(result.siteSignalResolutions?.['hasTransactionalFlow']).toEqual({ value: false, source: 'manual' });
+  });
+
+  it('leaves the detected-only behavior unchanged when no override is supplied', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile() });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection);
+
+    expect(result.status).toBe('in_scope');
+    expect(result.siteSignalResolutions?.['hasTransactionalFlow']).toEqual({ value: true, source: 'detected' });
+  });
+
+  it('lets a manual true win over a detected false, tagged manual, and records the disagreement', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile() });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: false, transactionalFlowEvidence: [] },
+    });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const result = await runObligationStage(manifest, fakeConnection, undefined, {
+      hasTransactionalFlow: { value: true, reason: 'redirects to a dedicated booking engine' },
+    });
+
+    expect(result.status).toBe('in_scope');
+    expect(result.siteSignalResolutions?.['hasTransactionalFlow']).toEqual({
+      value: true,
+      source: 'manual',
+      reason: 'redirects to a dedicated booking engine',
+      detectedValue: false,
+    });
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('never lets the override set status directly - it still runs through assessObligations via siteSignals', async () => {
+    // The exempt profile (small headcount) forces out_of_scope on EAA's
+    // own terms regardless of siteSignals - a manual hasTransactionalFlow
+    // override must not bypass that, since only siteSignals is what the
+    // override ever touches.
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({
+      status: 'found',
+      profile: foundProfile({
+        effectifBand: { value: { code: '01', label: '1 a 2 salaries' }, source: 'sirene-api', retrievedAt: new Date() },
+        turnover: { value: 100_000, source: 'sirene-api', retrievedAt: new Date() },
+      }),
+    });
+    const manifest = fakeManifest();
+
+    const result = await runObligationStage(manifest, fakeConnection, '732829320', {
+      hasTransactionalFlow: { value: true },
+    });
+
+    expect(result.status).toBe('out_of_scope');
+  });
+});

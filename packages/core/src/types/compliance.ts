@@ -19,7 +19,7 @@ export interface Regime {
 }
 
 export interface TransactionalFlowEvidence {
-  kind: 'booking-engine-script' | 'checkout-form' | 'payment-embed';
+  kind: 'booking-engine-script' | 'checkout-form' | 'payment-embed' | 'delegated-booking-redirect';
   selector: string;
   pageUrl: string;
   /** e.g. the matched script src, form action, or provider domain. Kept
@@ -27,9 +27,60 @@ export interface TransactionalFlowEvidence {
   detail: string;
 }
 
+/**
+ * A record of every outbound booking-intent link the detector followed
+ * (or deliberately did not follow), whatever it concluded. Recorded
+ * regardless of the resolution so a false negative like haaitza.com's
+ * (delegated booking engine misread as no transactional flow) is visible
+ * from siteSignals alone, not only from a manual site visit. Only
+ * resolution 'single-property' also produces a matching
+ * TransactionalFlowEvidence entry (kind 'delegated-booking-redirect');
+ * 'marketplace' and 'undetermined' are evidence of what was checked, not
+ * evidence of a transactional flow, so they never flip hasTransactionalFlow.
+ */
+export interface TransactionalFlowRedirectCheck {
+  pageUrl: string;
+  linkUrl: string;
+  /** Absent when the link was recognized as a known OTA marketplace host
+   *  and never followed, or when navigation failed outright. */
+  destinationUrl?: string;
+  resolution: 'single-property' | 'marketplace' | 'undetermined';
+  detail: string;
+}
+
 export interface SiteSignals {
   hasTransactionalFlow: boolean;
   transactionalFlowEvidence: TransactionalFlowEvidence[];
+  /** Optional for the same backward-compatibility reason other manifest
+   *  fields are: absent for audits captured before this milestone. */
+  transactionalFlowRedirectChecks?: TransactionalFlowRedirectCheck[];
+}
+
+/** Part B: a human-supplied fact about one boolean SiteSignals field,
+ *  the same evidentiary role a manually supplied SIREN plays for
+ *  profile.siren - it feeds in as an input, assessObligations still runs
+ *  unchanged. Generic on purpose: this milestone's UI/CLI surface only
+ *  exposes 'hasTransactionalFlow', but the next overridable signal should
+ *  only need a new map key, not a new mechanism. */
+export interface SiteSignalOverride {
+  value: boolean;
+  reason?: string;
+}
+
+export type SiteSignalOverrides = Record<string, SiteSignalOverride>;
+
+/** How one boolean SiteSignals field was actually resolved, spliced onto
+ *  ObligationAssessment by the caller (obligation-stage.ts) the same way
+ *  sirenSource/sirenMismatch are - assessObligations itself has no notion
+ *  of provenance, only of the value it was given. detectedValue is kept
+ *  only when it disagrees with a manual override, purely so a detector
+ *  that keeps missing the same pattern is visible in stored data, never
+ *  to change the resolved value. */
+export interface SiteSignalResolution {
+  value: boolean;
+  source: 'detected' | 'manual';
+  reason?: string;
+  detectedValue?: boolean;
 }
 
 export type ObligationBasisFact =
@@ -80,4 +131,10 @@ export type ObligationAssessment = (
 ) & {
   sirenSource?: 'extracted' | 'manual';
   sirenMismatch?: SirenMismatch;
+  /** Keyed by SiteSignals boolean-field name, e.g. 'hasTransactionalFlow'.
+   *  Same "never set by assessObligations itself" rule as sirenSource:
+   *  spliced on by obligation-stage.ts once a value has been resolved
+   *  from possibly two candidates (detected, manual). Absent entirely
+   *  when siteSignals was never supplied at all. */
+  siteSignalResolutions?: Record<string, SiteSignalResolution>;
 };

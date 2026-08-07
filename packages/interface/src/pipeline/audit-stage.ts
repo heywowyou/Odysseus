@@ -27,7 +27,14 @@ import {
   type PrunePageInfo,
   type ScanProgressEvent,
 } from '@odysseus/scanner';
-import { normalizeAudit, type AuditConfigSnapshot, type AuditManifest, type Finding, type ObligationAssessment } from '@odysseus/core';
+import {
+  normalizeAudit,
+  type AuditConfigSnapshot,
+  type AuditManifest,
+  type Finding,
+  type ObligationAssessment,
+  type SiteSignalOverrides,
+} from '@odysseus/core';
 import { persistAudit } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 
@@ -47,6 +54,10 @@ export interface RunAuditStageOptions {
    *  the site's own mentions-legales page, decided entirely by the scan,
    *  independent of anything supplied here. */
   manualSiren?: string;
+  /** Manual site-signal override milestone. Only 'hasTransactionalFlow'
+   *  is exposed by the CLI/interface today - see obligation-stage.ts's
+   *  resolveSiteSignals for why the mechanism itself stays generic. */
+  siteSignalOverrides?: SiteSignalOverrides;
 }
 
 export interface AuditStageResult {
@@ -120,7 +131,12 @@ export async function runAuditStage(
     // siteSignals (populated by writeAuditArtifacts above), never
     // findings.json, so a failed or slow Sirene lookup can never block
     // normalization.
-    const obligationAssessment = await runObligationStage(artifacts.manifest, connection, options.manualSiren);
+    const obligationAssessment = await runObligationStage(
+      artifacts.manifest,
+      connection,
+      options.manualSiren,
+      options.siteSignalOverrides,
+    );
 
     const findings = normalizeAudit({
       auditId: artifacts.auditId,

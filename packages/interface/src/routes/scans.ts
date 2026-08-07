@@ -40,6 +40,13 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
     options.siren = cleaned;
   }
 
+  if (typeof record['transactionalFlow'] === 'boolean') {
+    options.transactionalFlow = record['transactionalFlow'];
+  }
+  if (typeof record['transactionalFlowReason'] === 'string' && record['transactionalFlowReason'].trim() !== '') {
+    options.transactionalFlowReason = record['transactionalFlowReason'].trim();
+  }
+
   return options;
 }
 

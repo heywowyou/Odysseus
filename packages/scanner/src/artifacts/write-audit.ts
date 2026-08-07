@@ -72,6 +72,9 @@ function buildScanJson(
     ...(scanResult.transactionalFlowEvidence !== undefined
       ? { transactionalFlowEvidence: scanResult.transactionalFlowEvidence }
       : {}),
+    ...(scanResult.transactionalFlowRedirectChecks !== undefined
+      ? { transactionalFlowRedirectChecks: scanResult.transactionalFlowRedirectChecks }
+      : {}),
   };
 }
 
@@ -83,6 +86,9 @@ function buildScanJson(
  *  AuditManifest only for backward compatibility with older manifests. */
 function buildSiteSignals(siteResult: WriteAuditArtifactsInput['siteResult']): AuditManifestSiteSignals {
   const transactionalFlowEvidence = siteResult.pages.flatMap((page) => page.transactionalFlowEvidence ?? []);
+  const transactionalFlowRedirectChecks = siteResult.pages.flatMap(
+    (page) => page.transactionalFlowRedirectChecks ?? [],
+  );
   const mentionsLegalesPageUrl = siteResult.crawl.mentionsLegalesPageUrl;
   const mentionsLegalesPage = mentionsLegalesPageUrl
     ? siteResult.pages.find((page) => page.url === mentionsLegalesPageUrl)
@@ -92,6 +98,7 @@ function buildSiteSignals(siteResult: WriteAuditArtifactsInput['siteResult']): A
   return {
     hasTransactionalFlow: transactionalFlowEvidence.length > 0,
     transactionalFlowEvidence,
+    ...(transactionalFlowRedirectChecks.length > 0 ? { transactionalFlowRedirectChecks } : {}),
     ...(siren !== undefined ? { siren } : {}),
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
   };

@@ -199,6 +199,12 @@ export const fr: ReportStrings = {
       "Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne publie pas ce numéro lui-même.",
     legalCitationSirenMismatchTemplate:
       "Le numéro SIREN fourni manuellement ({manualSiren}) diffère de celui publié sur le site ({extractedSiren}). Cette détermination retient le numéro fourni manuellement.",
+    legalCitationManualTransactionalFlowWithReasonTemplate:
+      "La présence d'un parcours de réservation en ligne a été confirmée manuellement par l'auditeur plutôt que détectée automatiquement ({reason}).",
+    legalCitationManualTransactionalFlowNoReasonSentence:
+      "La présence d'un parcours de réservation en ligne a été confirmée manuellement par l'auditeur plutôt que détectée automatiquement.",
+    legalCitationTransactionalFlowDisagreementSentence:
+      "Cette confirmation manuelle diverge du résultat de la détection automatisée.",
   },
   footer: {
     confidentialityLabel: 'Rapport confidentiel',

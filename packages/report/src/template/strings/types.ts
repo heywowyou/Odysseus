@@ -224,6 +224,18 @@ export interface ReportStrings {
      *  entity than the one being audited. Template: {manualSiren},
      *  {extractedSiren}. */
     legalCitationSirenMismatchTemplate: string;
+    /** Manual site-signal override milestone: mirrors
+     *  legalCitationManualSirenWithFindingTemplate's role but for
+     *  hasTransactionalFlow - appended after the main paragraph when the
+     *  auditor manually asserted the site's transactional-flow status
+     *  rather than relying on the automated detector. Template: {reason}. */
+    legalCitationManualTransactionalFlowWithReasonTemplate: string;
+    /** Same case, no reason supplied. */
+    legalCitationManualTransactionalFlowNoReasonSentence: string;
+    /** Appended after either of the two above only when the manual
+     *  override actually disagreed with the detector - stated plainly,
+     *  no editorializing about which is "correct". */
+    legalCitationTransactionalFlowDisagreementSentence: string;
   };
   footer: {
     confidentialityLabel: string;

@@ -37,6 +37,18 @@ export interface DashboardStrings {
     sirenPlaceholder: string;
     sirenHint: string;
     sirenInvalidError: string;
+    /** Part B of the transactional-flow milestone: a manual escape hatch
+     *  for whatever the behavioral detector still misses (phone-only
+     *  booking, messaging flows, patterns not yet seen). Full-audit only,
+     *  same reasoning as the SIREN field above. Absent (the "let the tool
+     *  detect" option) falls through to detection entirely; the reason
+     *  field is only shown once yes/no is picked. */
+    transactionalFlowLabel: string;
+    transactionalFlowAutoOption: string;
+    transactionalFlowYesOption: string;
+    transactionalFlowNoOption: string;
+    transactionalFlowReasonLabel: string;
+    transactionalFlowReasonPlaceholder: string;
     advancedOptions: string;
     maxPagesLabel: string;
     maxDepthLabel: string;

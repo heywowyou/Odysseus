@@ -32,6 +32,17 @@ const fullAuditFields = document.getElementById('full-audit-fields')!;
 const prospectingFields = document.getElementById('prospecting-fields')!;
 const advancedOptions = document.getElementById('advanced-options')!;
 const submitButton = document.getElementById('submit-button') as HTMLButtonElement;
+const transactionalFlowSelect = document.getElementById('transactionalFlow') as HTMLSelectElement;
+const transactionalFlowReasonField = document.getElementById('transactional-flow-reason-field')!;
+
+/** The reason field only makes sense once the operator has actually
+ *  asserted yes/no - left visible for "let the tool detect" it would
+ *  invite a reason for a fact nobody supplied. */
+function updateTransactionalFlowReasonVisibility(): void {
+  transactionalFlowReasonField.hidden = transactionalFlowSelect.value === '';
+}
+transactionalFlowSelect.addEventListener('change', updateTransactionalFlowReasonVisibility);
+updateTransactionalFlowReasonVisibility();
 
 function currentType(): 'full-audit' | 'prospecting' {
   const checked = form.querySelector<HTMLInputElement>('input[name="type"]:checked');
@@ -82,6 +93,9 @@ async function submit(): Promise<void> {
       return;
     }
 
+    const rawTransactionalFlow = String(formData.get('transactionalFlow') ?? '');
+    const rawTransactionalFlowReason = String(formData.get('transactionalFlowReason') ?? '').trim();
+
     const body =
       type === 'full-audit'
         ? {
@@ -92,6 +106,10 @@ async function submit(): Promise<void> {
               maxDepth: parsePositiveIntField(formData, 'maxDepth', true),
               delayMs: parsePositiveIntField(formData, 'delayMs', true),
               ...(rawSiren !== '' ? { siren: rawSiren.replace(/\s/g, '') } : {}),
+              ...(rawTransactionalFlow !== '' ? { transactionalFlow: rawTransactionalFlow === 'true' } : {}),
+              ...(rawTransactionalFlow !== '' && rawTransactionalFlowReason !== ''
+                ? { transactionalFlowReason: rawTransactionalFlowReason }
+                : {}),
             },
           }
         : {

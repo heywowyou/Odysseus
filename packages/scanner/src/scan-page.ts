@@ -1,11 +1,15 @@
 import type { Browser } from 'playwright';
 import type { Result as LighthouseResult } from 'lighthouse';
-import type { RenderDiffResult, TransactionalFlowEvidence } from '@odysseus/core';
+import type { RenderDiffResult, TransactionalFlowEvidence, TransactionalFlowRedirectCheck } from '@odysseus/core';
 import { type AxeResults, runAxe } from './axe.js';
 import { runLighthouse } from './lighthouse.js';
 import { renderDiff } from './render-diff.js';
 import { extractMentionsLegales, type MentionsLegalesExtraction } from './checks/mentions-legales.js';
-import { detectTransactionalFlow } from './checks/transactional-flow.js';
+import {
+  detectTransactionalFlow,
+  findDelegatedBookingRedirectChecks,
+  type RedirectHostCache,
+} from './checks/transactional-flow.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -20,6 +24,10 @@ export interface ScanPageOptions {
    *  SIREN/RCS/TVA text extraction; every page runs transactional-flow
    *  detection, since checkout/cart UI can appear anywhere. */
   mentionsLegalesUrl?: string;
+  /** Shared across every page of one scanSite() run - see
+   *  transactional-flow.ts's RedirectHostCache doc comment for why a
+   *  per-page cache alone isn't enough. */
+  redirectHostCache?: RedirectHostCache;
 }
 
 /**
@@ -38,6 +46,7 @@ export interface PageScanResult {
   mentionsLegales?: MentionsLegalesExtraction;
   mentionsLegalesError?: string;
   transactionalFlowEvidence?: TransactionalFlowEvidence[];
+  transactionalFlowRedirectChecks?: TransactionalFlowRedirectCheck[];
 }
 
 function toErrorMessage(error: unknown): string {
@@ -87,6 +96,7 @@ export async function scanPage(
   let mentionsLegalesResult: MentionsLegalesExtraction | undefined;
   let mentionsLegalesError: string | undefined;
   let transactionalFlowEvidence: TransactionalFlowEvidence[] | undefined;
+  let transactionalFlowRedirectChecks: TransactionalFlowRedirectCheck[] | undefined;
 
   try {
     result.renderDiff = await renderDiff(browser, url, {
@@ -119,6 +129,36 @@ export async function scanPage(
           // already the correct fallback for "nothing detected".
           transactionalFlowEvidence = [];
         }
+
+        try {
+          transactionalFlowRedirectChecks = await findDelegatedBookingRedirectChecks(page, url, {
+            browser,
+            ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
+            ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
+            ...(options.redirectHostCache !== undefined ? { hostCache: options.redirectHostCache } : {}),
+          });
+          // Only a confirmed single-property redirect promotes to
+          // transactional-flow evidence (drives hasTransactionalFlow);
+          // 'marketplace' and 'undetermined' checks stay recorded on
+          // transactionalFlowRedirectChecks only, per the "attach
+          // evidence for whatever was concluded, not just the boolean"
+          // rule.
+          for (const check of transactionalFlowRedirectChecks) {
+            if (check.resolution === 'single-property') {
+              transactionalFlowEvidence.push({
+                kind: 'delegated-booking-redirect',
+                selector: 'a[href]',
+                pageUrl: url,
+                detail: `${check.linkUrl} -> ${check.destinationUrl ?? check.linkUrl}: ${check.detail}`,
+              });
+            }
+          }
+        } catch {
+          // Same best-effort posture as detectTransactionalFlow above: a
+          // failure to follow a redirect must not surface as a page
+          // error, and an empty result is the correct fallback.
+          transactionalFlowRedirectChecks = [];
+        }
       },
     });
   } catch (error) {
@@ -130,6 +170,7 @@ export async function scanPage(
   if (mentionsLegalesResult !== undefined) result.mentionsLegales = mentionsLegalesResult;
   if (mentionsLegalesError !== undefined) result.mentionsLegalesError = mentionsLegalesError;
   if (transactionalFlowEvidence !== undefined) result.transactionalFlowEvidence = transactionalFlowEvidence;
+  if (transactionalFlowRedirectChecks !== undefined) result.transactionalFlowRedirectChecks = transactionalFlowRedirectChecks;
 
   if (options.delayMs) {
     await sleep(options.delayMs);
