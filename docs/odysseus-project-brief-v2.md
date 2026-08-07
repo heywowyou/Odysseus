@@ -33,7 +33,7 @@ Reasoning, so it can be re-evaluated rather than assumed:
 The core finding most React and Next.js marketing sites are exposed to: content renders client-side only, so the raw HTML a crawler receives is close to empty. The business has flat organic traffic and no idea why. Also covers Core Web Vitals, meta and canonical tags, structured data (JSON-LD), sitemap and robots.txt, internal linking, and hreflang (relevant for bilingual FR/EN sites, common in the wine and tourism markets).
 
 **B. Accessibility audit (EAA / WCAG 2.2 / EN 301 549).**
-Automated conformance scan plus manual verification of the criteria automation cannot cover (keyboard traps, focus order, meaningful alt text, form labelling, video captions). Delivered as a compliance-oriented report with prioritized remediation. This is the audit type with externally generated urgency, see section 8.
+Automated conformance scan plus an extended accessibility pass (milestone 8, see `docs/milestone-8-scope-addendum.md`) automating detection of keyboard traps, focus order, form error handling, and video caption presence, plus a heuristic red-flag check for low-quality alt text. Delivered as a compliance-oriented report with prioritized remediation. Not marketed as a manual verification pass; see 3.2 and 3.3 for why. This is the audit type with externally generated urgency, see section 8.
 
 **C. AI visibility check (AEO / GEO), used as a hook, not as a core product.**
 Whether ChatGPT, Perplexity, and Google's AI answers mention the business or recommend a competitor. This sells hard because the screenshot is visceral. It is deliberately positioned as an add-on section inside the main report rather than a standalone paid product, because the detection is noisy run-to-run and the main lever (off-site brand mentions) is slow and largely outside the client's control. Sharp tip, solid spine.
@@ -42,14 +42,20 @@ Whether ChatGPT, Perplexity, and Google's AI answers mention the business or rec
 
 **Revised 2026-08-03.** Three tiers, reduced to two. Implementation and monitoring are dropped entirely, not deferred. Reasoning below.
 
-| Tier       | What it is                                                                               | Price                                                                 |
-| ---------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Screening  | Automated scan only, no manual verification layer, generated framing                     | EUR 290 flat, published                                               |
-| Full audit | Full scan plus manual accessibility verification, PDF report, recorded video walkthrough | EUR 1,200 to 1,900, set by risk band (see below), not quoted freehand |
+**Revised again 2026-08-07** (commercial planning session, full detail in `docs/milestone-8-scope-addendum.md`): the video walkthrough is dropped from both tiers, and screening versus full audit is now a report-rendering distinction, not a scan-scope distinction, both tiers run the exact same crawl and scanners against `findings.json` (see 6.2 stage 5 and the addendum's section 1.2). The pricing band itself did not change and is not being revisited by this decision.
+
+| Tier       | What it is                                                                                                                               | Price                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Screening  | Same underlying scan as full audit; report shows summary-level findings only, no extended accessibility pass detail, generated framing    | EUR 290 flat, published                                                                                                     |
+| Full audit | Same underlying scan; report adds full theme grouping, full finding detail, before/after evidence, and extended accessibility pass detail | EUR 1,200 to 1,900, set by risk band (see below), range published on the proposal page, exact price not quoted freehand |
 
 **Screening is the outreach offer.** Fast, cheap, published, card payment, 48 hour turnaround, no calls. It exists to be a low-friction decision for a cold prospect, closer to an impulse purchase than a considered one. If a screening client upgrades to a full audit within 30 days, the screening fee is deducted from the audit price.
 
-**Full audit pricing is risk-banded, not continuous.** The already-computed overall risk level (low, medium, high) places the audit at one of a small number of fixed price points inside the 1,200 to 1,900 range, rather than a formula that climbs with every additional finding found. A continuous per-finding price was considered and rejected: the sites that score worst are usually the best prospecting targets, since a badly broken site is the most convincing outreach evidence, and charging those same sites the most works against volume-based prospecting. It also does not track real effort, since the manual accessibility checklist runs once per site regardless of whether it turns up 15 violations or 60. The risk band keeps the justification power, the report's risk badge and its reasoning already lead the document, without the incentive problem or the pricing unpredictability of a continuous formula.
+**Full audit pricing is risk-banded, not continuous.** The already-computed overall risk level (low, medium, high) places the audit at one of a small number of fixed price points inside the 1,200 to 1,900 range, rather than a formula that climbs with every additional finding found. A continuous per-finding price was considered and rejected: the sites that score worst are usually the best prospecting targets, since a badly broken site is the most convincing outreach evidence, and charging those same sites the most works against volume-based prospecting. It also does not track real effort, since the extended accessibility pass runs once per site regardless of whether it turns up 15 violations or 60. The risk band keeps the justification power, the report's risk badge and its reasoning already lead the document, without the incentive problem or the pricing unpredictability of a continuous formula.
+
+**Price band unchanged despite most manual verification becoming automated (2026-08-07).** The narrower gap between tiers is now mostly report depth rather than a genuinely separate manual pass, but the band was never justified by labor cost in the first place, see the pricing logic note below, so this doesn't move it. What protects the price is the full audit report staying meaningfully deeper than screening (3.3's tier split). Do not reopen the price band without a specific trigger, e.g. consistent client pushback that the deliverable isn't worth the price (already a kill-criterion in section 12). Full reasoning in `docs/milestone-8-scope-addendum.md` section 3.2.
+
+**Price range published, exact price still not (resolved 2026-08-07).** "1,200 to 1,900 EUR depending on site risk level" is published on the proposal page and any public pricing page, removing the main friction point for a cold prospect deciding whether the service is even in their budget. The specific number within that band is still set from the client's own risk band after the scan runs, preserving its anchoring value. This resolves open question 5 in section 11.
 
 **Implementation and monitoring, dropped.** Both required an ongoing client relationship to deliver well, which competes directly with the operator's primary allocation of time to Aurora. This is a deliberate tradeoff, made with the cost understood: it removes the mechanism that was meant to make revenue compounding rather than purely transactional (see section 10). The accepted alternative is volume, repeated one-off sales across many prospects, on the reasoning that the addressable market of prospect websites is large enough to sustain that. This raises the importance of milestone 9 (prospecting mode) relative to where it sat under the three-tier model, since there is no retained client base to fall back on if outreach volume drops.
 
@@ -59,16 +65,17 @@ Notes on pricing logic, unchanged from the original reasoning:
 
 ### 3.3 What the client receives
 
+**Revised 2026-08-07** (full detail in `docs/milestone-8-scope-addendum.md` section 1.6): both tiers are PDF report only, no video walkthrough (dropped entirely, not a full-audit-only feature that got demoted), and both are rendered from the same `findings.json`. The split below is what the report template shows, not what the scan covers.
+
 **Full audit**, all of the following:
 
 1. Prioritized PDF report, in their language, structured by theme rather than as a raw violation list.
 2. Each theme: what is wrong, why it matters commercially or legally, effort to fix, impact if fixed, affected pages, code-level detail in an appendix.
 3. Before and after evidence for the SPA rendering issue (screenshot of raw HTML view versus rendered view).
-4. A recorded video walkthrough, 5 to 10 minutes, covering the priorities and the reasoning.
-5. A short "what to do first" summary aimed at a non-technical decision maker.
-6. The manual accessibility verification layer (see `docs/manual-accessibility-checklist.md`), covering what automated scanning provably cannot catch.
+4. A short "what to do first" summary aimed at a non-technical decision maker.
+5. Full page and selector detail for every finding, including the extended accessibility pass (keyboard traps, focus order, form error handling, video captions, alt text heuristic; see `docs/manual-accessibility-checklist.md` for what remains genuinely outside automated reach). Not marketed as a manual verification layer, see 3.2.
 
-**Screening**, a lighter subset: automated findings only, no manual verification pass, generated executive framing, no video walkthrough. Positioned as evidence of a problem worth investigating further, not as a compliance-grade deliverable.
+**Screening**, a lighter view of the same scan: executive summary, overall risk badge, top findings by severity (critical and serious only, not full detail), and the extended accessibility pass results as counts or categories only (e.g. "3 keyboard navigation issues detected across the site") with no page-level detail, selectors, or remediation guidance. No theme grouping, no before/after render diff evidence, no "what to do first" summary. Positioned as evidence of a problem worth investigating further, not as a compliance-grade deliverable, and specifically not as a free-form todo list a client could hand their own developer without paying for the full audit's detail.
 
 ---
 
@@ -95,7 +102,7 @@ Notes on pricing logic, unchanged from the original reasoning:
 | Qualification          | Automated mini-scan producing one piece of concrete evidence |
 | Scoping                | Written intake questionnaire, 8 to 12 targeted questions     |
 | Proposal               | Written proposal page presenting the two tiers               |
-| Delivery               | PDF report plus recorded video walkthrough                   |
+| Delivery               | PDF report only (video walkthrough dropped 2026-08-07)        |
 | Follow-up              | Written question rounds, scoped and included in the price    |
 | Implementation kickoff | Written scope document plus a shared task board              |
 
@@ -132,7 +139,7 @@ Fetch each target page twice:
 
 Diff the two. Text content present in the rendered version but absent from the raw version is the SPA-SEO finding. Quantify it (percentage of visible text missing from raw HTML) and screenshot both. This diff is the single most sellable artifact the tool produces.
 
-Crawl scope: start from the homepage, follow internal links, respect robots.txt, cap depth and page count (default 20 pages, configurable). Politeness delay between requests. Identifiable user agent.
+Crawl scope: start from the homepage, follow internal links, respect robots.txt, cap depth and page count (default 20 pages, configurable). Politeness delay between requests. Identifiable user agent. Crawl scope is never tier-dependent (resolved 2026-08-07, `docs/milestone-8-scope-addendum.md` section 1.2): screening and full audit run the identical crawl and scanners, `runAuditStage` takes no tier parameter, and the two tiers differ only in what stage 5 (report generation) renders from the resulting `findings.json`.
 
 **Stage 2: Run the scanners.**
 Against the rendered page:
@@ -220,6 +227,8 @@ Render the structured result into a branded PDF. Printing a styled HTML template
 
 Report contents: cover, executive summary, overall risk, prioritized themes with impact and effort, render diff evidence with screenshots, Core Web Vitals table, full findings appendix grouped by category, methodology and tooling statement (important for credibility and for defensibility of accessibility claims), and a limitations statement (see 6.6).
 
+**Tier is a report-generation parameter, not a scan parameter (2026-08-07).** Screening and full audit share every stage above; this stage alone takes a tier argument that controls section inclusion and detail depth. Screening gets the executive summary, risk badge, and top critical/serious findings, with milestone 8's extended accessibility checks (see stage 2, custom checks) shown as counts or categories only. Full audit adds theme grouping, full page and selector detail, render diff evidence, and the "what to do first" summary. Reuses the existing aggregation pattern already built for minor findings (count and category shown, full detail withheld) rather than a new mechanism. Full reasoning in `docs/milestone-8-scope-addendum.md` sections 1.6 and 2.
+
 **Stage 6: Prospecting mode.**
 The same pipeline in a stripped-down configuration:
 
@@ -284,7 +293,7 @@ Version the findings model from day one. Reports will need regenerating and comp
 
 ### 6.6 Honest limits to state in every report
 
-Automated accessibility scanning catches a well-documented minority of WCAG issues, commonly cited around 30 to 40 percent. Keyboard navigation, focus order, alt text quality, form error handling, and media captions require manual checking. The report must say this explicitly, and the manual verification pass must actually be performed for accessibility audits. Overstating automated coverage is both a credibility risk and, in a compliance context, a liability risk. It is also a pricing argument: the manual layer is what a client cannot get from a free scanner.
+Automated accessibility scanning catches a well-documented minority of WCAG issues, commonly cited around 30 to 40 percent. **Revised 2026-08-07:** keyboard navigation, focus order, form error handling, and media captions move from "requires manual checking" to milestone 8's extended accessibility pass, a genuinely automated (not LLM-judged) set of checks; alt text quality gets a heuristic red-flag check only, since judging editorial meaningfulness is a judgment call the governing rule in 6.1 does not permit a scanner or the LLM to make. Full scope in `docs/milestone-8-scope-addendum.md` sections 1.3 and 1.4. The report must state plainly what the extended pass covers and, for whatever remains genuinely outside automated reach once milestone 8 ships and is validated against real sites (`docs/manual-accessibility-checklist.md`), that it may still benefit from manual review. Do not claim a manual pass was performed when it was not, see 3.2 and 3.3. Overstating automated coverage is both a credibility risk and, in a compliance context, a liability risk. It is also a pricing argument: the extended pass is what a client cannot get from a free scanner.
 
 ---
 
@@ -329,7 +338,9 @@ Verified live in both languages against the real capture: 11 themes from 17 find
 
 **Post-7.1: scan concurrency and reskin, 2026-08-07.** Not a milestone, three same-day increments on top of shipped work. Scan-phase concurrency (render-diff, axe, Lighthouse in `SCAN_CONCURRENCY` lanes, Lighthouse itself serialized behind an in-process queue to avoid a confirmed `perf_hooks` collision; full mechanics in `CLAUDE.md` trade-off 10) implements the "concurrency, not a shorter delay" decision from 6.5 that had been written down but not yet built. The dashboard and the PDF report were both restyled in a GlassWire-inspired dark theme, pure CSS on the dashboard (no markup or script changes), CSS plus the removal of two decorative print artifacts on the report, re-verified against the report's own axe-core WCAG 2.2 AA self-test after a first-pass contrast failure was caught and fixed.
 
-**Milestone 8: custom checks.** Meta, canonical, JSON-LD, sitemap, hreflang, heading hierarchy, redirect chains. Deferred because axe and Lighthouse already produce enough to sell an audit; these deepen it rather than enable it.
+**Milestone 8: custom checks.** Original scope: meta, canonical, JSON-LD, sitemap, hreflang, heading hierarchy, redirect chains. Deferred because axe and Lighthouse already produce enough to sell an audit; these deepen it rather than enable it.
+
+**Scope expanded 2026-08-07** (full detail in `docs/milestone-8-scope-addendum.md` section 1.3): most of `docs/manual-accessibility-checklist.md`'s "to verify" list is folded in here as genuinely automated checks rather than a separate manual milestone. Added: keyboard traps and focus order (tab through every interactive element via Playwright, record focus order, flag traps and bad divergence from visual/DOM order), form error handling (submit required fields empty, check whether the resulting error is programmatically associated with the field versus conveyed by color alone), video captions (`<track kind="captions">` on native `<video>`, embed API query for YouTube/Vimeo where feasible), and an alt text quality heuristic (filename-pattern alt text, generic placeholder strings, empty alt on a non-decorative image, identical alt repeated across visually different images) as a red-flag check only, not a full editorial-quality judgment, since that would require the LLM to judge rather than detect. Every one of these must meet the same real-finding, real-selector, no-invented-content bar as every other check; the alt text heuristic is the only one that stays intentionally partial in what it claims to catch.
 
 **Milestone 9: prospecting mode.** Batch scanning, brokenness scoring, evidence screenshots, prospect database.
 
@@ -395,7 +406,7 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 5. Interested prospect either pays for screening directly (published, self-serve) or completes the intake questionnaire for a full audit.
 6. Written proposal for the full audit tier, price set by risk band per 3.2.
 7. Payment, ideally partly up front for first-time full-audit clients.
-8. Audit runs, report and video walkthrough delivered.
+8. Audit runs, PDF report delivered (video walkthrough dropped 2026-08-07, see 3.2).
 9. No implementation or monitoring upsell step (dropped 2026-08-03, see 3.2 and 10). The report's closing section instead frames the report as something the client or their own developer can act on directly.
 
 **What to test and measure:** open and reply rates by vertical, which evidence type converts better (SEO invisibility versus accessibility exposure versus AI visibility), which price point closes fastest, and time from first email to payment.
@@ -406,8 +417,8 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 
 ## 10. Risks and failure modes
 
-- **Report credibility collapse.** One hallucinated or wrong finding in front of a client's developer damages the whole offer. Mitigated by the deterministic-detection rule and schema validation, but the manual review step must be genuinely performed.
-- **Automated-scan commoditization.** Free scanners exist and clients know it. The differentiator must be prioritization, business framing, bilingual delivery, and the manual layer, not the scan itself. Never let the report look like raw tool output.
+- **Report credibility collapse.** One hallucinated or wrong finding in front of a client's developer damages the whole offer. Mitigated by the deterministic-detection rule and schema validation. **Revised 2026-08-07:** this now extends to the marketing claim itself, not just finding accuracy, since most of the accessibility checklist moved from a manual pass to milestone 8's automated extended accessibility pass. Do not claim "manual verification" when the check is automated; see 3.2 and 3.3 for the "extended accessibility pass" replacement language and why it matters here specifically.
+- **Automated-scan commoditization.** Free scanners exist and clients know it. The differentiator must be prioritization, business framing, bilingual delivery, and the extended accessibility pass, not the scan itself. Never let the report look like raw tool output.
 - **Legal overreach in marketing.** Claiming EAA applicability to an exempt microenterprise is wrong and reputationally risky. Check the size threshold before using the legal angle.
 - **Scope drift in the build-first approach.** The original brief called overbuilding the predictable failure mode and recommended selling three audits before building the platform. Section 7 revises that deliberately: the tool gets built complete first. The risk does not disappear, it changes shape. It is no longer "building the wrong thing," it is "never declaring the thing finished." The guardrail is section 7.1: interface scope written down before milestone 7 starts, and anything not on that list waits. If the interface milestone runs long past its written scope, that is the signal, not a reason to extend the scope.
 - **One-off revenue, accepted deliberately (2026-08-03).** Implementation and monitoring were dropped rather than deferred (see 3.2), which removes the mechanism that would have made revenue compounding rather than purely transactional. This was a conscious choice to protect time for Aurora, not an oversight, but it means the business now depends entirely on outreach volume with no retained base to fall back on. Milestone 9 (prospecting mode) carries more weight under this model than it did under the three-tier one. Agency white-label partnerships remain a way to add volume without adding retention.
@@ -437,16 +448,28 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 - **Divert, don't instruct, for findings the LLM cannot give good advice about.** The v1 report's single most damaging line was SEO advice about indexing a Facebook embed. Rather than prompting the model to be careful around wrapper pages and noindex'd legal pages, those findings are now filtered out of its input entirely (`packages/llm/src/diversion.ts`) and rendered instead by a fixed-copy template section. The model cannot produce bad advice about a finding it never sees. Full reasoning in `docs/report-v2-refactor.md` part 4.1.
 - **`legalRelevance` is built in code from a WCAG criterion name table, never written by the model.** Closes the one remaining place the writing pass could describe a legal obligation in its own words. See `docs/report-v2-refactor.md` part 4.3.
 
+### Settled 2026-08-07 (commercial planning session)
+
+Full detail in `docs/milestone-8-scope-addendum.md`, which should be read alongside this brief for milestone 8 work.
+
+- **No video walkthrough.** Dropped entirely from both tiers, not deferred. Delivery is PDF report only. See 3.2, 3.3, 5, and 9.
+- **One crawl, two report views.** Screening and full audit run the identical crawl and scanners; tier only affects what the report template renders from the shared `findings.json`. `runAuditStage` takes no tier parameter. See 6.2 stage 1 and stage 5.
+- **Milestone 8 scope expanded.** Keyboard traps, focus order, form error handling, and video captions move from the manual accessibility checklist to genuinely automated milestone 8 checks. Alt text quality gets a heuristic red-flag check only, deliberately not a full editorial judgment, since that would require the LLM to judge rather than a scanner to detect. See 6.6 and the milestone 8 entry in section 7.
+- **"Extended accessibility pass" replaces "manual accessibility verification" in all client-facing copy.** The full audit tier can no longer honestly claim a manual pass once most of the checklist is automated. See 3.1, 3.2, 3.3, and 10.
+- **Report tier content split decided.** Screening gets executive summary, risk badge, top critical/serious findings, and milestone 8 checks as counts/categories only. Full audit adds theme grouping, full page/selector detail, render diff evidence, and the "what to do first" summary. See 3.3 and 6.2 stage 5.
+- **Price band (1,200 to 1,900 EUR) unchanged.** The band was never justified by labor cost, so automating most of the manual pass doesn't move it. Not to be reopened without a specific trigger already listed in section 12. See 3.2.
+- **Price range published, exact price still risk-banded per client.** Resolves open question 5 below.
+
 ### Blocking, with a named dependency
 
 1. ~~**A real domain with a bot-information page.**~~ Partially resolved 2026-08-07: `odysseusaudit.com` (and `.fr`) purchased, `ODYSSEUS_USER_AGENT` and both `.env` files now point at `https://odysseusaudit.com/bot`, and `packages/site` (a standalone Next.js app, not part of the tsc build graph, deployed separately to Vercel) scaffolds that route. Still blocking until the `/bot` page actually has content (placeholder component only, next turn) and the site is deployed, so a site owner checking their logs still finds nothing live yet.
-2. **The manual accessibility checklist** (`docs/manual-accessibility-checklist.md`). Two confirmed entries so far, both discovered by testing rather than assumed: placeholder-as-only-label passes axe because the placeholder supplies an accessible name, and heading-order is excluded twice over, once by axe's tag set (tagged best-practice rather than WCAG) and again by the milestone 4 decision to emit nothing from Lighthouse's accessibility category. This checklist determines how long an accessibility audit takes, which determines whether the pricing holds. It gates selling accessibility audits, not the build.
+2. **The manual accessibility checklist** (`docs/manual-accessibility-checklist.md`). Two confirmed entries so far, both discovered by testing rather than assumed: placeholder-as-only-label passes axe because the placeholder supplies an accessible name, and heading-order is excluded twice over, once by axe's tag set (tagged best-practice rather than WCAG) and again by the milestone 4 decision to emit nothing from Lighthouse's accessibility category. This checklist determines how long an accessibility audit takes, which determines whether the pricing holds. It gates selling accessibility audits, not the build. **Scoped but not resolved, 2026-08-07:** most of this list is now scheduled to become automated milestone 8 checks rather than a manual pass (`docs/milestone-8-scope-addendum.md` section 1.3), which addresses the "how long does this take" concern going forward, but the checks themselves are not yet built or validated against a real site, so this item stays blocking until milestone 8 ships.
 3. ~~**Interface scope**, section 7.1. Gates milestone 7.~~ Resolved: milestone 7 shipped 2026-08-04 against that scope.
 
 ### Still open, non-blocking
 
 4. Current EAA enforcement status in France, verified against primary sources.
-5. **Partially resolved 2026-08-03.** Screening is published at a flat EUR 290. The full audit price is not published as a single number, since it is set by risk band, but the bands themselves (1,200 to 1,900) could still be published on a proposal page rather than quoted freehand. Whether to publish the bands or reveal the specific price only after a screening result is still open.
+5. ~~**Whether to publish the full audit price band.**~~ Resolved 2026-08-07: "1,200 to 1,900 EUR depending on site risk level" is published on the proposal page and any public pricing page. The specific number within that band is still set from the client's own risk band after the scan runs, not quoted freehand. See 3.2.
 6. Which site to use as the first public case study.
 7. **How the report handles analysis variance.** Identical findings produced eight quick wins in French and seven in English on the first live run. Expected, since the model groups and ranks rather than computes, but it means monitoring deltas must be derived from the deterministic findings layer with the analysis regenerated, not diffed. Decide the mechanics in milestone 10, not before.
 
