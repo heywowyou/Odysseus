@@ -10,6 +10,7 @@ import {
   findDelegatedBookingRedirectChecks,
   type RedirectHostCache,
 } from './checks/transactional-flow.js';
+import { extractHeadMetadata, type HeadMetadataExtraction } from './checks/head-metadata.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -47,6 +48,8 @@ export interface PageScanResult {
   mentionsLegalesError?: string;
   transactionalFlowEvidence?: TransactionalFlowEvidence[];
   transactionalFlowRedirectChecks?: TransactionalFlowRedirectCheck[];
+  headMetadata?: HeadMetadataExtraction;
+  headMetadataError?: string;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -97,6 +100,8 @@ export async function scanPage(
   let mentionsLegalesError: string | undefined;
   let transactionalFlowEvidence: TransactionalFlowEvidence[] | undefined;
   let transactionalFlowRedirectChecks: TransactionalFlowRedirectCheck[] | undefined;
+  let headMetadataResult: HeadMetadataExtraction | undefined;
+  let headMetadataError: string | undefined;
 
   try {
     result.renderDiff = await renderDiff(browser, url, {
@@ -159,6 +164,12 @@ export async function scanPage(
           // error, and an empty result is the correct fallback.
           transactionalFlowRedirectChecks = [];
         }
+
+        try {
+          headMetadataResult = await extractHeadMetadata(page, url);
+        } catch (error) {
+          headMetadataError = toErrorMessage(error);
+        }
       },
     });
   } catch (error) {
@@ -171,6 +182,8 @@ export async function scanPage(
   if (mentionsLegalesError !== undefined) result.mentionsLegalesError = mentionsLegalesError;
   if (transactionalFlowEvidence !== undefined) result.transactionalFlowEvidence = transactionalFlowEvidence;
   if (transactionalFlowRedirectChecks !== undefined) result.transactionalFlowRedirectChecks = transactionalFlowRedirectChecks;
+  if (headMetadataResult !== undefined) result.headMetadata = headMetadataResult;
+  if (headMetadataError !== undefined) result.headMetadataError = headMetadataError;
 
   if (options.delayMs) {
     await sleep(options.delayMs);

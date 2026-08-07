@@ -27,6 +27,7 @@ import { extractAxeCandidates, type AxeResultsInput } from './normalize-axe.js';
 import { extractLighthouseCandidates, type LighthouseResultInput } from './normalize-lighthouse.js';
 import { extractRenderDiffCandidates } from './normalize-renderdiff.js';
 import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
+import { extractHeadMetadataCandidates, type HeadMetadataCheckInput } from './normalize-head-metadata.js';
 import type { FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
 
@@ -42,6 +43,11 @@ export interface NormalizePageInput {
    *  legales page. */
   mentionsLegales?: MentionsLegalesCheckInput;
   mentionsLegalesError?: string;
+  /** Milestone 8, slice 1: runs on every page (unlike mentionsLegales,
+   *  which is scoped to one page) since meta tags, canonical, JSON-LD,
+   *  and headings are all per-page concerns. */
+  headMetadata?: HeadMetadataCheckInput;
+  headMetadataError?: string;
 }
 
 export interface NormalizeAuditInput {
@@ -60,6 +66,7 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.lighthouse) candidates.push(...extractLighthouseCandidates(page.lighthouse, page.url));
     if (page.renderDiff) candidates.push(...extractRenderDiffCandidates(page.renderDiff, page.url));
     if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
+    if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));
   }
 
   return candidates;

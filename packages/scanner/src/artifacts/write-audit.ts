@@ -75,6 +75,8 @@ function buildScanJson(
     ...(scanResult.transactionalFlowRedirectChecks !== undefined
       ? { transactionalFlowRedirectChecks: scanResult.transactionalFlowRedirectChecks }
       : {}),
+    ...(scanResult.headMetadata !== undefined ? { headMetadata: scanResult.headMetadata } : {}),
+    ...(scanResult.headMetadataError !== undefined ? { headMetadataError: scanResult.headMetadataError } : {}),
   };
 }
 
