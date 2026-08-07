@@ -113,6 +113,10 @@ describe('writeAuditArtifacts against fixtures/spa-demo', () => {
       expect(result.manifest.kind).toBe('audit');
       expect(result.manifest.pages.length).toBeGreaterThan(0);
 
+      expect(result.manifest.siteSignals?.siren).toBe('732829320');
+      expect(result.manifest.siteSignals?.mentionsLegalesPageUrl).toBe(`${TEST_URL}/mentions-legales.html`);
+      expect(result.manifest.siteSignals?.hasTransactionalFlow).toBe(true);
+
       for (const pageResult of siteResult.pages) {
         const pageDir = buildPageDir(pageResult.url);
         const pageDirPath = path.join(result.auditDir, 'pages', pageDir);

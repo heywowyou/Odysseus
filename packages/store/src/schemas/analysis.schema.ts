@@ -7,7 +7,7 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { ReportLanguage, Theme } from '@odysseus/core';
+import type { ObligationAssessment, ReportLanguage, Theme } from '@odysseus/core';
 
 export interface AnalysisDocumentFields {
   auditId: string;
@@ -29,6 +29,10 @@ export interface AnalysisDocumentFields {
   themes: Theme[];
   quickWins: string[];
   notes: string;
+  /** Computed once per audit by @odysseus/core's assessObligations, not
+   *  by the model - see entity.ts's doc comment. Optional: older
+   *  analyses predate this milestone. */
+  obligationAssessment?: ObligationAssessment;
 }
 
 export type AnalysisDocument = AnalysisDocumentFields;
@@ -52,6 +56,40 @@ const themeSchemaMongo = new Schema(
   { _id: false },
 );
 
+// basis's internal shape is a small, closed, code-owned union (see
+// @odysseus/core's ObligationBasisFact), not user input - Mixed here is
+// the same acceptable pattern Finding.rawEvidence already uses.
+const obligationAssessmentSchemaMongo = new Schema(
+  {
+    status: {
+      type: String,
+      required: true,
+      enum: ['in_scope', 'likely_in_scope', 'out_of_scope', 'undetermined'],
+    },
+    basis: {
+      type: [
+        new Schema(
+          { regimeId: { type: String, required: true }, facts: { type: [Schema.Types.Mixed], default: [] } },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
+    // Never set by assessObligations itself - spliced on by
+    // packages/interface's obligation-stage.ts once a SIREN has been
+    // chosen from possibly two candidates. Absent when no SIREN was ever
+    // available. See the manual-SIREN milestone.
+    sirenSource: { type: String, enum: ['extracted', 'manual'] },
+    sirenMismatch: {
+      type: new Schema(
+        { extractedSiren: { type: String, required: true }, manualSiren: { type: String, required: true } },
+        { _id: false },
+      ),
+    },
+  },
+  { _id: false },
+);
+
 const analysisSchema = new Schema<AnalysisDocument>(
   {
     auditId: { type: String, required: true },
@@ -64,6 +102,7 @@ const analysisSchema = new Schema<AnalysisDocument>(
     themes: { type: [themeSchemaMongo], default: [] },
     quickWins: { type: [String], default: [] },
     notes: { type: String, required: true },
+    obligationAssessment: { type: obligationAssessmentSchemaMongo },
   },
   { collection: 'analyses' },
 );

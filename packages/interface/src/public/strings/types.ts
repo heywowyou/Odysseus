@@ -29,6 +29,14 @@ export interface DashboardStrings {
     urlPlaceholder: string;
     urlsLabel: string;
     urlsPlaceholder: string;
+    /** Full-audit only (single-audit input, no bulk equivalent for
+     *  prospecting yet). Optional: used for the obligation determination
+     *  when the site itself does not publish a SIREN, or to cross-check
+     *  one that does. Never suppresses the site's own LCEN finding. */
+    sirenLabel: string;
+    sirenPlaceholder: string;
+    sirenHint: string;
+    sirenInvalidError: string;
     advancedOptions: string;
     maxPagesLabel: string;
     maxDepthLabel: string;

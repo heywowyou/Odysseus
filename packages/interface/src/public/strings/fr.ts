@@ -23,6 +23,11 @@ export const fr: DashboardStrings = {
     urlPlaceholder: 'https://exemple.fr',
     urlsLabel: 'Adresses des sites (une par ligne)',
     urlsPlaceholder: 'https://exemple1.fr\nhttps://exemple2.fr',
+    sirenLabel: 'SIREN (facultatif)',
+    sirenPlaceholder: '123 456 789',
+    sirenHint:
+      'À renseigner si vous connaissez déjà le SIREN de l’entreprise auditée. N’efface jamais le constat si le site ne publie pas le sien.',
+    sirenInvalidError: 'Ce SIREN ne passe pas la clé de contrôle INSEE',
     advancedOptions: 'Options avancées',
     maxPagesLabel: 'Nombre maximum de pages',
     maxDepthLabel: 'Profondeur maximale des liens',

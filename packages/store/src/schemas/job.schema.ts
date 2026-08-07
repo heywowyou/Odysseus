@@ -30,6 +30,10 @@ export interface JobOptionsSnapshot {
   maxPages?: number;
   maxDepth?: number;
   delayMs?: number;
+  /** Checksum-validated by the route handler before a job is ever
+   *  created (see the manual-SIREN milestone) - full-audit jobs only,
+   *  never read for a prospecting job. */
+  siren?: string;
 }
 
 export interface JobProgressCrawl {
@@ -86,6 +90,7 @@ const jobOptionsSchema = new Schema(
     maxPages: { type: Number },
     maxDepth: { type: Number },
     delayMs: { type: Number },
+    siren: { type: String },
   },
   { _id: false },
 );

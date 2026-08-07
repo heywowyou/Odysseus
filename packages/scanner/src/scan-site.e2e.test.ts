@@ -66,8 +66,8 @@ describe('scanSite against fixtures/spa-demo', () => {
         screenshotDir: scratchScreenshotDir,
       });
 
-      expect(result.crawl.visitedCount).toBe(2);
-      expect(result.pages).toHaveLength(2);
+      expect(result.crawl.visitedCount).toBe(3);
+      expect(result.pages).toHaveLength(3);
 
       for (const pageResult of result.pages) {
         expect(pageResult.renderDiffError).toBeUndefined();
@@ -80,6 +80,18 @@ describe('scanSite against fixtures/spa-demo', () => {
 
       const scannedUrls = new Set(result.pages.map((p) => new URL(p.url).pathname));
       expect(scannedUrls.has('/private.html')).toBe(false);
+
+      const home = result.pages.find((p) => new URL(p.url).pathname === '/');
+      expect(home?.transactionalFlowEvidence?.some((e) => e.kind === 'checkout-form')).toBe(true);
+
+      const mentionsLegalesPage = result.pages.find((p) => new URL(p.url).pathname === '/mentions-legales.html');
+      expect(mentionsLegalesPage?.mentionsLegalesError).toBeUndefined();
+      expect(mentionsLegalesPage?.mentionsLegales?.siren).toBe('732829320');
+
+      // The outbound-only Booking.com link must not have been treated as a
+      // first-party check-out flow on any other page.
+      const about = result.pages.find((p) => new URL(p.url).pathname === '/about.html');
+      expect(about?.mentionsLegales).toBeUndefined();
     },
     180_000,
   );
@@ -109,7 +121,7 @@ describe('scanSite against fixtures/spa-demo', () => {
 
       const pageEvents = events.filter((event) => event.type === 'scan-page');
       expect(pageEvents).toHaveLength(result.pages.length);
-      expect(pageEvents.map((event) => (event.type === 'scan-page' ? event.scanned : undefined))).toEqual([1, 2]);
+      expect(pageEvents.map((event) => (event.type === 'scan-page' ? event.scanned : undefined))).toEqual([1, 2, 3]);
     },
     180_000,
   );

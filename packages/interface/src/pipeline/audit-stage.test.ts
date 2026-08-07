@@ -18,6 +18,7 @@ vi.mock('@odysseus/scanner', () => ({
 }));
 vi.mock('@odysseus/core', () => ({ normalizeAudit: vi.fn() }));
 vi.mock('@odysseus/store', () => ({ persistAudit: vi.fn() }));
+vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 
 import {
   buildAuditDir,
@@ -29,6 +30,7 @@ import {
 } from '@odysseus/scanner';
 import { normalizeAudit } from '@odysseus/core';
 import { persistAudit } from '@odysseus/store';
+import { runObligationStage } from './obligation-stage.js';
 import { runAuditStage } from './audit-stage.js';
 
 const browserClose = vi.fn();
@@ -65,6 +67,7 @@ beforeEach(() => {
   vi.mocked(writeFindingsFile).mockResolvedValue(undefined);
   vi.mocked(pruneScreenshots).mockResolvedValue({ prunedPageDirs: ['about-def456'] } as never);
   vi.mocked(persistAudit).mockResolvedValue(undefined);
+  vi.mocked(runObligationStage).mockResolvedValue({ status: 'undetermined', basis: [] });
 });
 
 describe('runAuditStage', () => {
@@ -77,6 +80,10 @@ describe('runAuditStage', () => {
     vi.mocked(writeAuditArtifacts).mockImplementation(async () => {
       calls.push('writeAuditArtifacts');
       return { auditId: 'audit-123', auditDir: '/dir', manifest: fakeManifest(), pages: [] } as never;
+    });
+    vi.mocked(runObligationStage).mockImplementation(async () => {
+      calls.push('runObligationStage');
+      return { status: 'undetermined', basis: [] };
     });
     vi.mocked(normalizeAudit).mockImplementation(() => {
       calls.push('normalizeAudit');
@@ -98,11 +105,33 @@ describe('runAuditStage', () => {
     expect(calls).toEqual([
       'scanSite',
       'writeAuditArtifacts',
+      'runObligationStage',
       'normalizeAudit',
       'writeFindingsFile',
       'pruneScreenshots',
       'persistAudit',
     ]);
+  });
+
+  it('calls runObligationStage with the manifest writeAuditArtifacts produced, and threads its result into the result', async () => {
+    vi.mocked(runObligationStage).mockResolvedValue({
+      status: 'in_scope',
+      basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }],
+    });
+
+    const result = await runAuditStage('https://example.com/', {}, fakeConnection);
+
+    expect(runObligationStage).toHaveBeenCalledWith(fakeManifest(), fakeConnection, undefined);
+    expect(result.obligationAssessment).toEqual({
+      status: 'in_scope',
+      basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }],
+    });
+  });
+
+  it('passes options.manualSiren through to runObligationStage', async () => {
+    await runAuditStage('https://example.com/', { manualSiren: '732829320' }, fakeConnection);
+
+    expect(runObligationStage).toHaveBeenCalledWith(fakeManifest(), fakeConnection, '732829320');
   });
 
   it('passes maxPages/maxDepth through to scanSite when provided', async () => {
@@ -148,6 +177,7 @@ describe('runAuditStage', () => {
       auditDir: '/artifacts/example.com/2026-08-04T00-00-00Z',
       visitedCount: 2,
       prunedPageDirCount: 1,
+      obligationAssessment: { status: 'undetermined', basis: [] },
     });
   });
 

@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { FINDINGS_SCHEMA_VERSION } from '@odysseus/core';
-import type { AuditConfigSnapshot, AuditManifest, ManifestKind, ManifestPageEntry } from '@odysseus/core';
+import type {
+  AuditConfigSnapshot,
+  AuditManifest,
+  AuditManifestSiteSignals,
+  ManifestKind,
+  ManifestPageEntry,
+} from '@odysseus/core';
 import { findWorkspaceRoot } from '../config.js';
 import type { CrawlResult } from '../crawl.js';
 import type { CollectedToolVersions } from './versions.js';
@@ -26,6 +32,7 @@ export interface BuildManifestInput {
   config: AuditConfigSnapshot;
   crawl: CrawlResult;
   pages: ManifestPageEntry[];
+  siteSignals?: AuditManifestSiteSignals;
 }
 
 export function buildManifest(input: BuildManifestInput): AuditManifest {
@@ -53,5 +60,6 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
       effectiveDelayMs: input.crawl.effectiveDelayMs,
     },
     pages: input.pages,
+    ...(input.siteSignals !== undefined ? { siteSignals: input.siteSignals } : {}),
   };
 }

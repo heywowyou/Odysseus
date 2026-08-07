@@ -180,12 +180,50 @@ export interface ReportStrings {
     /** brief section 6.6: the well-documented ~30-40% automated coverage
      *  figure, stated in every report, not only accessibility audits. */
     automatedCoverageCaveat: string;
-    /** brief section 6.6 restated for the client, merged with the old
-     *  standalone "limitations" section per docs/report-v2-refactor.md
-     *  B15 (the two duplicated near-verbatim). No legal-exposure verdict
-     *  here, per CLAUDE.md rule 6: state the criterion, never assert a
-     *  law applies to this business. */
-    legalCitationParagraph: string;
+    /** Entity-layer milestone: replaces the old single legalCitationParagraph
+     *  hedge with a status-branched determination, code-rendered from
+     *  ObligationAssessment (@odysseus/core's assessObligations), never
+     *  written by the LLM. Template: {regimeName}, {authority},
+     *  {legalCitation}, {facts}. */
+    legalCitationInScopeTemplate: string;
+    /** Same placeholders as legalCitationInScopeTemplate, softened
+     *  framing for the case where assessObligations ran without
+     *  SiteSignals (the B2C transactional-flow gate unconfirmed). */
+    legalCitationLikelyInScopeTemplate: string;
+    /** Fixed: an out_of_scope determination states the facts used but has
+     *  no regime, authority, or citation to name. */
+    legalCitationOutOfScopeParagraph: string;
+    /** The pre-milestone hedge, moved here verbatim, unchanged. Rendered
+     *  for status 'undetermined' and for any audit predating this
+     *  milestone (manifest.siteSignals absent, or no analysis.
+     *  obligationAssessment at all). No legal-exposure verdict here, per
+     *  CLAUDE.md rule 6: state the criterion, never assert a law applies
+     *  to this business when the determination itself could not run. */
+    legalCitationUndeterminedParagraph: string;
+    /** Template: {label}, the effectif band's human-readable text. */
+    legalCitationEffectifFactTemplate: string;
+    /** Template: {threshold}, a formatted currency amount. */
+    legalCitationTurnoverFactTemplate: string;
+    legalCitationTransactionalFlowFact: string;
+    legalCitationTransactionalFlowUnknownFact: string;
+    /** The only documented exemption route (Demarche Simplifiee), stated
+     *  once per report per the milestone's acceptance criteria, appended
+     *  after legalCitationInScopeTemplate/legalCitationLikelyInScopeTemplate. */
+    legalCitationExemptionRouteSentence: string;
+    /** Manual-SIREN milestone: appended after the main paragraph
+     *  (whichever status it is) when the SIREN used came from a manual
+     *  override rather than the site's own mentions-legales page, and a
+     *  matching LCEN finding exists to reference. Template: {findingId}. */
+    legalCitationManualSirenWithFindingTemplate: string;
+    /** Same case, but no LCEN finding exists to reference - the site
+     *  published an RCS or TVA number without a SIREN, so the check did
+     *  not fire, yet a manual SIREN was still supplied. */
+    legalCitationManualSirenNoFindingSentence: string;
+    /** Both numbers stated, no editorializing about which is "correct" -
+     *  a mismatch can mean the site is operated by a different legal
+     *  entity than the one being audited. Template: {manualSiren},
+     *  {extractedSiren}. */
+    legalCitationSirenMismatchTemplate: string;
   };
   footer: {
     confidentialityLabel: string;

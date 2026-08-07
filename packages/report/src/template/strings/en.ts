@@ -175,8 +175,28 @@ export const en: ReportStrings = {
       'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages crawled on {date} starting from the homepage.',
     automatedCoverageCaveat:
       'Automated tools detect a well-documented but limited share of accessibility issues, commonly estimated between 30 and 40 percent of criteria. This is a property of any automated audit, not a reservation about this one: it guarantees every finding listed is verifiable. Keyboard navigation, focus order, the editorial quality of alt text, form error handling, and video captioning require manual verification, delivered as a separate service.',
-    legalCitationParagraph:
+    legalCitationInScopeTemplate:
+      'This site falls under the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts}',
+    legalCitationLikelyInScopeTemplate:
+      "The available evidence indicates this site likely falls under the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts} This assessment could not be fully confirmed without a complete review of the site's transactional flow.",
+    legalCitationOutOfScopeParagraph:
+      'Based on the available evidence (company size and the absence of a first party transactional flow), this site does not fall under the digital accessibility obligation set by loi n° 2023-171.',
+    legalCitationUndeterminedParagraph:
       'This report cites the relevant technical criteria (WCAG 2.2, EN 301 549) without asserting whether a specific legal obligation applies to your business, which depends on its size and sector.',
+    legalCitationEffectifFactTemplate: 'The company has {label} according to the Sirene registry.',
+    legalCitationTurnoverFactTemplate: 'Declared annual turnover exceeds the {threshold} threshold.',
+    legalCitationTransactionalFlowFact:
+      'The site offers a first party transactional flow (booking, cart, or checkout).',
+    legalCitationTransactionalFlowUnknownFact:
+      'Whether the site offers a first party transactional flow could not be confirmed across the whole site.',
+    legalCitationExemptionRouteSentence:
+      'The only documented route to exemption from this obligation is a disproportionate burden waiver request filed via Demarche Simplifiee.',
+    legalCitationManualSirenWithFindingTemplate:
+      'The SIREN number used for this determination was provided manually; this site does not publish it itself (see finding {findingId}).',
+    legalCitationManualSirenNoFindingSentence:
+      'The SIREN number used for this determination was provided manually; this site does not publish this number itself.',
+    legalCitationSirenMismatchTemplate:
+      'The manually supplied SIREN ({manualSiren}) differs from the one published on the site ({extractedSiren}). This determination uses the manually supplied number.',
   },
   footer: {
     confidentialityLabel: 'Confidential report',

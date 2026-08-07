@@ -35,6 +35,7 @@ function fakeAuditResult() {
     auditDir: '/artifacts/example.com/dir',
     visitedCount: 2,
     prunedPageDirCount: 0,
+    obligationAssessment: { status: 'undetermined', basis: [] } as never,
   };
 }
 
@@ -118,6 +119,27 @@ describe('runFullAuditJob', () => {
     await runFullAuditJob(job, ctx);
 
     expect(completeJob).toHaveBeenCalledWith(fakeConnection, 'job-1', { auditId: 'audit-1' });
+  });
+
+  it('passes the same obligationAssessment, computed once by runAuditStage, into both language analyses', async () => {
+    const job = fakeJob();
+    await runFullAuditJob(job, ctx);
+
+    const obligationAssessment = fakeAuditResult().obligationAssessment;
+    expect(runAnalysisStage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ language: 'fr', obligationAssessment }),
+      fakeConnection,
+    );
+    expect(runAnalysisStage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ language: 'en', obligationAssessment }),
+      fakeConnection,
+    );
   });
 
   it('releases the origin lock even when a stage throws', async () => {

@@ -3,6 +3,30 @@ import { fetchJson, showError } from './app-shared.js';
 
 const strings = applyStrings();
 
+/** Duplicated from @odysseus/core's isValidSiren rather than imported:
+ *  this script is served directly to the browser as a plain ES module
+ *  (tsconfig.public.json has no path mapping to workspace packages, and
+ *  there is no bundler step to resolve a bare "@odysseus/core" specifier
+ *  at runtime), the same reason manifest.ts duplicates scanner's
+ *  CrawledPageStatus by value rather than importing it. Client-side
+ *  validation here is a UX nicety only - the server (routes/scans.ts)
+ *  re-validates with the real implementation and is the actual boundary
+ *  that fails a request. */
+function isValidSiren(value: string): boolean {
+  const cleaned = value.replace(/\s/g, '');
+  if (!/^\d{9}$/.test(cleaned)) return false;
+  let sum = 0;
+  for (let i = 0; i < cleaned.length; i++) {
+    let digit = Number(cleaned[cleaned.length - 1 - i]);
+    if (i % 2 === 1) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+  }
+  return sum % 10 === 0;
+}
+
 const form = document.getElementById('new-scan-form') as HTMLFormElement;
 const fullAuditFields = document.getElementById('full-audit-fields')!;
 const prospectingFields = document.getElementById('prospecting-fields')!;
@@ -50,6 +74,14 @@ async function submit(): Promise<void> {
   try {
     const formData = new FormData(form);
     const type = currentType();
+
+    const rawSiren = String(formData.get('siren') ?? '').trim();
+    if (type === 'full-audit' && rawSiren !== '' && !isValidSiren(rawSiren)) {
+      showError(strings.newScan.sirenInvalidError);
+      submitButton.disabled = false;
+      return;
+    }
+
     const body =
       type === 'full-audit'
         ? {
@@ -59,6 +91,7 @@ async function submit(): Promise<void> {
               maxPages: parsePositiveIntField(formData, 'maxPages', false),
               maxDepth: parsePositiveIntField(formData, 'maxDepth', true),
               delayMs: parsePositiveIntField(formData, 'delayMs', true),
+              ...(rawSiren !== '' ? { siren: rawSiren.replace(/\s/g, '') } : {}),
             },
           }
         : {

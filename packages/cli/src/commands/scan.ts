@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
 import { buildAuditDir, getArtifactsRoot, launchBrowser, scanSite } from '@odysseus/scanner';
+import { parseSirenOption } from '../parse-siren-option.js';
 
 function parsePositiveInt(value: string): number {
   const parsed = Number.parseInt(value, 10);
@@ -20,7 +21,13 @@ export function registerScanCommand(program: Command): void {
     )
     .option('--max-pages <n>', 'Maximum number of pages to visit', parsePositiveInt)
     .option('--max-depth <n>', 'Maximum link depth from the homepage', parsePositiveInt)
-    .action(async (url: string, opts: { maxPages?: number; maxDepth?: number }) => {
+    .option(
+      '--siren <number>',
+      'Manually supplied SIREN. Validated here for consistency with `audit`, but this command has ' +
+        'no obligation-determination stage of its own to feed - it is accepted and checked, not used.',
+      parseSirenOption,
+    )
+    .action(async (url: string, opts: { maxPages?: number; maxDepth?: number; siren?: string }) => {
       try {
         new URL(url);
       } catch {

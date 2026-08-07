@@ -14,7 +14,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
-import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
+import type { AuditManifest, Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
 import {
   analyzeStructure,
   analyzeWriting,
@@ -33,6 +33,7 @@ import {
 } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
 import type { StoredAnalysis } from '@odysseus/report';
+import { runObligationStage } from './obligation-stage.js';
 
 export interface RunAnalysisStageOptions {
   language: ReportLanguage;
@@ -41,6 +42,14 @@ export interface RunAnalysisStageOptions {
    *  docs/llm-layer-rules.md section 4). */
   siteContext?: SiteContextInput;
   regenerateStructure?: boolean;
+  /** Computed once per audit by runAuditStage and passed through by the
+   *  queued pipeline (run-full-audit-job.ts), so both languages reuse the
+   *  same, language-neutral determination rather than looking it up
+   *  twice. Omitted means the standalone `odysseus analyze <dir>` CLI
+   *  path, which never calls runAuditStage - runAnalysisStage computes it
+   *  itself in that case (the Sirene cache absorbs the repeat lookup
+   *  cost), so `analyze <dir>` stays independently runnable. */
+  obligationAssessment?: ObligationAssessment;
 }
 
 export interface AnalysisStageResult {
@@ -180,6 +189,13 @@ export async function runAnalysisStage(
   const merged = mergeAnalysisPasses(structureDoc, writingResult.output, forModel, options.language);
   const unreferencedFindingCount = findUnreferencedStructureFindingIds(structureDoc, forModel).length;
 
+  // Not present in the queued pipeline (run-full-audit-job.ts passes it
+  // through, computed once by runAuditStage), but the standalone
+  // `odysseus analyze <dir>` CLI path calls this stage directly - computed
+  // lazily here so that path stays independently runnable. The Sirene
+  // cache absorbs the cost of a repeat lookup for the same SIREN.
+  const obligationAssessment = options.obligationAssessment ?? (await runObligationStage(manifest, connection));
+
   await fs.mkdir(analysesDir, { recursive: true });
   const analysisPath = path.join(analysesDir, `${timestampForFilename(generatedAt)}-${options.language}.json`);
   await fs.writeFile(
@@ -192,6 +208,7 @@ export async function runAnalysisStage(
         temperature: writingResult.temperature,
         generatedAt: generatedAt.toISOString(),
         ...merged,
+        obligationAssessment,
       },
       null,
       2,
@@ -206,6 +223,7 @@ export async function runAnalysisStage(
     writingResult.temperature,
     generatedAt,
     merged,
+    obligationAssessment,
   );
 
   return {
@@ -216,6 +234,7 @@ export async function runAnalysisStage(
       model: writingResult.model,
       temperature: writingResult.temperature,
       generatedAt,
+      obligationAssessment,
     },
     analysisPath,
     structurePath,

@@ -1,9 +1,11 @@
 import type { Browser } from 'playwright';
 import type { Result as LighthouseResult } from 'lighthouse';
-import type { RenderDiffResult } from '@odysseus/core';
+import type { RenderDiffResult, TransactionalFlowEvidence } from '@odysseus/core';
 import { type AxeResults, runAxe } from './axe.js';
 import { runLighthouse } from './lighthouse.js';
 import { renderDiff } from './render-diff.js';
+import { extractMentionsLegales, type MentionsLegalesExtraction } from './checks/mentions-legales.js';
+import { detectTransactionalFlow } from './checks/transactional-flow.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -13,6 +15,11 @@ export interface ScanPageOptions {
   /** Forwarded to renderDiff's own screenshotDir option (the `pages/`
    *  parent directory for this run). */
   screenshotDir: string;
+  /** The one crawled URL scanSite identified as the mentions-legales
+   *  page (from crawl.mentionsLegalesPageUrl). Only that page runs the
+   *  SIREN/RCS/TVA text extraction; every page runs transactional-flow
+   *  detection, since checkout/cart UI can appear anywhere. */
+  mentionsLegalesUrl?: string;
 }
 
 /**
@@ -28,6 +35,9 @@ export interface PageScanResult {
   axeError?: string;
   lighthouse?: LighthouseResult;
   lighthouseError?: string;
+  mentionsLegales?: MentionsLegalesExtraction;
+  mentionsLegalesError?: string;
+  transactionalFlowEvidence?: TransactionalFlowEvidence[];
 }
 
 function toErrorMessage(error: unknown): string {
@@ -74,6 +84,9 @@ export async function scanPage(
   const result: PageScanResult = { url };
   let axeResult: AxeResults | undefined;
   let axeError: string | undefined;
+  let mentionsLegalesResult: MentionsLegalesExtraction | undefined;
+  let mentionsLegalesError: string | undefined;
+  let transactionalFlowEvidence: TransactionalFlowEvidence[] | undefined;
 
   try {
     result.renderDiff = await renderDiff(browser, url, {
@@ -87,6 +100,25 @@ export async function scanPage(
         } catch (error) {
           axeError = toErrorMessage(error);
         }
+
+        if (options.mentionsLegalesUrl !== undefined && url === options.mentionsLegalesUrl) {
+          try {
+            const bodyText = await page.evaluate(() => document.body.innerText);
+            mentionsLegalesResult = extractMentionsLegales(url, bodyText);
+          } catch (error) {
+            mentionsLegalesError = toErrorMessage(error);
+          }
+        }
+
+        try {
+          transactionalFlowEvidence = await detectTransactionalFlow(page, url);
+        } catch {
+          // Transactional-flow detection is best-effort evidence, not a
+          // finding: a failure here must not surface as a page error the
+          // way axe/render-diff failures do, and an empty result is
+          // already the correct fallback for "nothing detected".
+          transactionalFlowEvidence = [];
+        }
       },
     });
   } catch (error) {
@@ -95,6 +127,9 @@ export async function scanPage(
 
   if (axeResult !== undefined) result.axe = axeResult;
   if (axeError !== undefined) result.axeError = axeError;
+  if (mentionsLegalesResult !== undefined) result.mentionsLegales = mentionsLegalesResult;
+  if (mentionsLegalesError !== undefined) result.mentionsLegalesError = mentionsLegalesError;
+  if (transactionalFlowEvidence !== undefined) result.transactionalFlowEvidence = transactionalFlowEvidence;
 
   if (options.delayMs) {
     await sleep(options.delayMs);

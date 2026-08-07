@@ -1,0 +1,26 @@
+<!doctype html>
+<!--
+  Fixture: mentions legales page with a valid SIREN, RCS, and TVA number.
+  Used by the LCEN mentions-legales scanner check
+  (packages/scanner/src/checks/mentions-legales.ts) and the entity-layer
+  obligation engine end-to-end test. Do not change the SIREN without also
+  updating the checksum expectations in packages/core's siren.test.ts and
+  packages/scanner's mentions-legales.test.ts (732829320 is a real,
+  checksum-valid SIREN).
+-->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Mentions legales du Domaine des Trois Chenes" />
+    <title>Mentions legales - Domaine des Trois Chenes</title>
+  </head>
+  <body>
+    <h1>Mentions legales</h1>
+    <p>Domaine des Trois Chenes SAS au capital de 10 000 euros.</p>
+    <p>SIREN : 732 829 320</p>
+    <p>RCS Bordeaux 732 829 320</p>
+    <p>TVA intracommunautaire : FR 12 732829320</p>
+    <p>Siege social : Route des Vignes, 33000 Bordeaux.</p>
+  </body>
+</html>

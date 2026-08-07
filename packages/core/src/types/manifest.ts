@@ -10,6 +10,7 @@
  */
 
 import { FINDINGS_SCHEMA_VERSION } from './findings.js';
+import type { SiteSignals } from './compliance.js';
 
 export type ManifestKind = 'audit' | 'render-diff';
 
@@ -112,6 +113,19 @@ export interface ManifestPageEntry {
   };
 }
 
+/** Site-level facts the obligation engine (compliance/assessObligations.ts)
+ *  needs, gathered once across the whole crawl rather than per page.
+ *  Optional on AuditManifest, same precedent as coreWebVitals: absent for
+ *  audits captured before this milestone, and report/pipeline code must
+ *  treat absence as "not measured", not assume presence. */
+export interface AuditManifestSiteSignals extends SiteSignals {
+  /** The checksum-validated SIREN found on the mentions-legales page, if
+   *  any. Absent (not empty string) when no mentions-legales page was
+   *  identified or no valid SIREN was found on it. */
+  siren?: string;
+  mentionsLegalesPageUrl?: string;
+}
+
 export interface AuditManifest {
   auditId: string;
   kind: ManifestKind;
@@ -133,4 +147,5 @@ export interface AuditManifest {
     effectiveDelayMs: number;
   };
   pages: ManifestPageEntry[];
+  siteSignals?: AuditManifestSiteSignals;
 }

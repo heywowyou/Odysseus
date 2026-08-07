@@ -61,6 +61,7 @@ async function runScanLane(
   screenshotDir: string,
   timeoutMs: number | undefined,
   userAgent: string | undefined,
+  mentionsLegalesUrl: string | undefined,
   onPageDone: (pageResult: PageScanResult) => void,
 ): Promise<void> {
   let nextDelayMs = startDelayMs;
@@ -76,6 +77,7 @@ async function runScanLane(
       screenshotDir,
       ...(timeoutMs !== undefined ? { timeoutMs } : {}),
       ...(userAgent !== undefined ? { userAgent } : {}),
+      ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
     });
     onPageDone(pageResult);
   }
@@ -112,6 +114,19 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
   const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
   options.onProgress?.({ type: 'scan-start', totalPages: pagesToScan.length });
 
+  // When no URL matched the mentions-legales heuristic, the LCEN check
+  // must still run somewhere - otherwise a site with no legal notice page
+  // at all silently never gets the missing-SIREN finding, exactly the
+  // "non-HTML resources silently skipped" failure mode CLAUDE.md's
+  // crawling rules warn against. Falling back to the homepage means the
+  // absence itself still surfaces as a finding, attributed to the one
+  // page every site has. Not used for manifest.siteSignals.
+  // mentionsLegalesPageUrl (write-audit.ts still reads crawl's own value,
+  // undefined here), only for choosing which already-visited page's
+  // onRenderedPage hook runs the text extraction.
+  const mentionsLegalesUrlForScan =
+    crawl.mentionsLegalesPageUrl ?? (pagesToScan.some((page) => page.url === crawl.startUrl) ? crawl.startUrl : undefined);
+
   const concurrency = Math.max(1, Math.min(options.concurrency ?? getScanConcurrency(), pagesToScan.length || 1));
 
   const lanes: string[][] = Array.from({ length: concurrency }, () => []);
@@ -138,6 +153,7 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
           options.screenshotDir,
           options.timeoutMs,
           options.userAgent,
+          mentionsLegalesUrlForScan,
           onPageDone,
         ),
       ),

@@ -1,0 +1,180 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../sirene/sirene-cache.js', () => ({ lookupOperatorProfile: vi.fn() }));
+
+import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
+import { runObligationStage } from './obligation-stage.js';
+import type { AuditManifest, OperatorProfile } from '@odysseus/core';
+
+const fakeConnection = {} as never;
+
+function fakeManifest(overrides: Partial<AuditManifest> = {}): AuditManifest {
+  return {
+    auditId: 'audit-1',
+    kind: 'audit',
+    siteUrl: 'https://example.com/',
+    startedAt: '2026-08-02T00:00:00.000Z',
+    finishedAt: '2026-08-02T00:05:00.000Z',
+    tool: {
+      odysseusVersion: '0.1.0',
+      findingsSchemaVersion: 1,
+      axeCoreVersion: '4.12.1',
+      lighthouseVersion: '12.8.2',
+      playwrightVersion: '1.49.0',
+      chromiumVersion: '130.0.0.0',
+    },
+    config: {
+      maxPages: 20,
+      maxDepth: 5,
+      crawlDelayMs: 1000,
+      pageTimeoutMs: 30_000,
+      lighthouseTimeoutMs: 60_000,
+      userAgent: 'OdysseusAuditBot/0.1',
+      scanConcurrency: 3,
+    },
+    crawl: {
+      startUrl: 'https://example.com/',
+      visitedCount: 1,
+      maxPages: 20,
+      maxDepth: 5,
+      robotsTxtFound: true,
+      effectiveDelayMs: 1000,
+    },
+    pages: [],
+    ...overrides,
+  } as AuditManifest;
+}
+
+function foundProfile(overrides: Partial<OperatorProfile> = {}): OperatorProfile {
+  const retrievedAt = new Date('2026-01-01T00:00:00.000Z');
+  return {
+    siren: { value: '732829320', source: 'sirene-api', retrievedAt },
+    denomination: { value: 'Test Co', source: 'sirene-api', retrievedAt },
+    naf: { value: '62.01Z', source: 'sirene-api', retrievedAt },
+    legalForm: { value: 'SAS', source: 'sirene-api', retrievedAt },
+    effectifBand: { value: { code: '22', label: '100 a 199 salaries' }, source: 'sirene-api', retrievedAt },
+    turnover: { value: null, source: 'sirene-api:turnover-unreliable-for-band', retrievedAt },
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('runObligationStage', () => {
+  it('is undetermined without a network call when the manifest has no SIREN', async () => {
+    const result = await runObligationStage(fakeManifest(), fakeConnection);
+    expect(result.status).toBe('undetermined');
+    expect(lookupOperatorProfile).not.toHaveBeenCalled();
+  });
+
+  it('is undetermined when the Sirene lookup fails, without throwing', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'api-unreachable', siren: '732829320', detail: 'x' });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: false, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection);
+    expect(result.status).toBe('undetermined');
+  });
+
+  it('resolves a found profile with the manifest siteSignals', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile() });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection);
+    expect(result.status).toBe('in_scope');
+  });
+
+  it('degrades to undetermined rather than throwing when the lookup itself throws', async () => {
+    vi.mocked(lookupOperatorProfile).mockRejectedValue(new Error('mongo down'));
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection);
+    expect(result.status).toBe('undetermined');
+  });
+
+  it('tags sirenSource: extracted when only an extracted SIREN is present', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile() });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection);
+    expect(result.sirenSource).toBe('extracted');
+    expect(result.sirenMismatch).toBeUndefined();
+  });
+});
+
+describe('runObligationStage with a manual SIREN', () => {
+  it('uses the manual SIREN, tagged accordingly, when no SIREN was extracted', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile({ siren: { value: '552032534', source: 'sirene-api', retrievedAt: new Date() } }) });
+    const manifest = fakeManifest({
+      siteSignals: { hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection, '552032534');
+
+    expect(lookupOperatorProfile).toHaveBeenCalledWith(fakeConnection, '552032534');
+    expect(result.status).toBe('in_scope');
+    expect(result.sirenSource).toBe('manual');
+    expect(result.sirenMismatch).toBeUndefined();
+  });
+
+  it('tags sirenSource: extracted, with no mismatch, when both are present and equal', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile() });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection, '732829320');
+
+    expect(lookupOperatorProfile).toHaveBeenCalledWith(fakeConnection, '732829320');
+    expect(result.sirenSource).toBe('extracted');
+    expect(result.sirenMismatch).toBeUndefined();
+  });
+
+  it('uses the manual SIREN and attaches a mismatch note when both are present and differ', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile({ siren: { value: '552032534', source: 'sirene-api', retrievedAt: new Date() } }) });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection, '552032534');
+
+    expect(lookupOperatorProfile).toHaveBeenCalledWith(fakeConnection, '552032534');
+    expect(result.sirenSource).toBe('manual');
+    expect(result.sirenMismatch).toEqual({ extractedSiren: '732829320', manualSiren: '552032534' });
+  });
+
+  it('degrades to undetermined without falling back to the extracted SIREN when the manual lookup fails', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'not-found', siren: '552032534' });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection, '552032534');
+
+    expect(lookupOperatorProfile).toHaveBeenCalledTimes(1);
+    expect(lookupOperatorProfile).toHaveBeenCalledWith(fakeConnection, '552032534');
+    expect(result.status).toBe('undetermined');
+    expect(result.sirenSource).toBe('manual');
+  });
+
+  it('ignores a manual SIREN that fails the checksum, falling back to whatever the extraction found', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile() });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection, '000000001');
+
+    expect(lookupOperatorProfile).toHaveBeenCalledWith(fakeConnection, '732829320');
+    expect(result.sirenSource).toBe('extracted');
+  });
+});

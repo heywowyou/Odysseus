@@ -12,6 +12,9 @@
  *  - heading-hierarchy-skip (custom): h1 -> h3, no h2
  *  - meta-description-missing (custom): see index.html
  *  - jsonld-missing (custom): see index.html
+ *  - transactional-flow (entity layer): a first-party checkout form
+ *    below must be detected (hasTransactionalFlow: true), and the
+ *    outbound-only Booking.com link must NOT set it on its own.
  */
 export default function App() {
   return (
@@ -58,12 +61,32 @@ export default function App() {
             <button type="submit">S'inscrire</button>
           </form>
         </section>
+
+        <section className="reservation" aria-label="Reservation">
+          <h3>Reservez une degustation</h3>
+          {/*
+            Fault seed for the transactional-flow scanner check
+            (packages/scanner/src/checks/transactional-flow.ts). A form
+            whose action contains "panier" matches the checkout-form
+            selector, so this page's hasTransactionalFlow must be true.
+          */}
+          <form action="/panier">
+            <button type="submit">Ajouter au panier</button>
+          </form>
+          {/*
+            Outbound-only link to a third-party booking platform. Must
+            NOT set hasTransactionalFlow on its own - only the first-party
+            form above should.
+          */}
+          <a href="https://www.booking.com/hotel/fr/domaine-des-trois-chenes.html">Reserver sur Booking.com</a>
+        </section>
       </main>
 
       <footer className="page__footer">
         <p>Domaine des Trois Chenes, Route des Vignes, 33000 Bordeaux</p>
         <nav>
           <a href="/about.html">A propos</a>
+          <a href="/mentions-legales.html">Mentions legales</a>
           {/* Disallowed by robots.txt; must be discovered but never crawled. */}
           <a href="/private.html">Espace prive</a>
           {/* Non-HTML resource; the crawler must drop it before enqueuing. */}

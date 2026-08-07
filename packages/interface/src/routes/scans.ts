@@ -1,4 +1,5 @@
 import type { Connection } from 'mongoose';
+import { isValidSiren } from '@odysseus/core';
 import { createJob, getJob, getSeverityRollups, listJobs, type JobOptionsSnapshot } from '@odysseus/store';
 import type { Router } from '../router.js';
 import { readJsonBody, sendError, sendJson } from '../http-utils.js';
@@ -14,6 +15,14 @@ function isValidUrl(value: unknown): value is string {
   }
 }
 
+/** Thrown only for siren: an invalid maxPages/maxDepth/delayMs is
+ *  silently ignored (matching this function's existing behavior for
+ *  those), but a manually supplied SIREN must fail fast rather than
+ *  travel further into the pipeline, per the manual-SIREN milestone's
+ *  design constraints - same checksum validation, same fail-fast
+ *  behavior, as the CLI boundary. */
+class OptionsValidationError extends Error {}
+
 function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
   const options: JobOptionsSnapshot = {};
   if (raw === undefined || raw === null || typeof raw !== 'object') return options;
@@ -21,6 +30,16 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
   if (typeof record['maxPages'] === 'number') options.maxPages = record['maxPages'];
   if (typeof record['maxDepth'] === 'number') options.maxDepth = record['maxDepth'];
   if (typeof record['delayMs'] === 'number') options.delayMs = record['delayMs'];
+
+  const rawSiren = record['siren'];
+  if (typeof rawSiren === 'string' && rawSiren.trim() !== '') {
+    const cleaned = rawSiren.replace(/\s/g, '');
+    if (!isValidSiren(cleaned)) {
+      throw new OptionsValidationError('siren must be a valid SIREN (9 digits, passing the INSEE checksum)');
+    }
+    options.siren = cleaned;
+  }
+
   return options;
 }
 
@@ -49,10 +68,18 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         sendError(res, 400, 'url must be a valid URL');
         return;
       }
+      let options: JobOptionsSnapshot;
+      try {
+        options = parseOptionsSnapshot(parsed['options']);
+      } catch (error) {
+        sendError(res, 400, error instanceof Error ? error.message : 'invalid options');
+        return;
+      }
+
       const job = await createJob(connection, {
         type: 'full-audit',
         siteUrl: url,
-        options: parseOptionsSnapshot(parsed['options']),
+        options,
       });
       queue.notify();
       sendJson(res, 201, { jobId: job.jobId });

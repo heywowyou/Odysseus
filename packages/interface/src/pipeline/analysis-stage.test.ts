@@ -8,10 +8,12 @@ vi.mock('@odysseus/llm', async (importOriginal) => {
   return { ...actual, analyzeStructure: vi.fn(), analyzeWriting: vi.fn() };
 });
 vi.mock('@odysseus/store', () => ({ persistAnalysis: vi.fn() }));
+vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 
 import { analyzeStructure, analyzeWriting } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
 import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type Finding } from '@odysseus/core';
+import { runObligationStage } from './obligation-stage.js';
 import { runAnalysisStage } from './analysis-stage.js';
 
 const fakeConnection = {} as never;
@@ -101,6 +103,7 @@ beforeEach(async () => {
     temperature: 0.2,
   });
   vi.mocked(persistAnalysis).mockResolvedValue(undefined);
+  vi.mocked(runObligationStage).mockResolvedValue({ status: 'undetermined', basis: [] });
 });
 
 afterEach(async () => {
@@ -132,6 +135,7 @@ describe('runAnalysisStage', () => {
       0.2,
       expect.any(Date),
       expect.objectContaining({ executiveSummary: 'Summary' }),
+      { status: 'undetermined', basis: [] },
     );
   });
 
@@ -175,6 +179,48 @@ describe('runAnalysisStage', () => {
         fakeConnection,
       ),
     ).rejects.toThrow(/stale/);
+  });
+
+  it('computes obligationAssessment lazily via runObligationStage when not supplied, and persists it', async () => {
+    const manifest = fakeManifest();
+    vi.mocked(runObligationStage).mockResolvedValue({
+      status: 'in_scope',
+      basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }],
+    });
+
+    const result = await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'fr' }, fakeConnection);
+
+    expect(runObligationStage).toHaveBeenCalledWith(manifest, fakeConnection);
+    expect(result.analysis.obligationAssessment).toEqual({
+      status: 'in_scope',
+      basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }],
+    });
+    expect(persistAnalysis).toHaveBeenCalledWith(
+      fakeConnection,
+      'audit-1',
+      'fr',
+      'mistral-test',
+      0.2,
+      expect.any(Date),
+      expect.objectContaining({ executiveSummary: 'Summary' }),
+      { status: 'in_scope', basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }] },
+    );
+  });
+
+  it('reuses the obligationAssessment passed in options instead of calling runObligationStage', async () => {
+    const manifest = fakeManifest();
+    const obligationAssessment = { status: 'out_of_scope' as const, basis: [] };
+
+    const result = await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'fr', obligationAssessment },
+      fakeConnection,
+    );
+
+    expect(runObligationStage).not.toHaveBeenCalled();
+    expect(result.analysis.obligationAssessment).toEqual(obligationAssessment);
   });
 
   it('reports usedFallbackContext: false when an explicit siteContext is passed', async () => {

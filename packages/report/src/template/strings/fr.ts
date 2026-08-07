@@ -177,8 +177,28 @@ export const fr: ReportStrings = {
       "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages explorées le {date} à partir de la page d'accueil.",
     automatedCoverageCaveat:
       "Les outils automatisés détectent une part reconnue mais limitée des problèmes d'accessibilité, généralement estimée entre 30 et 40 pour cent des critères. C'est une propriété de tout audit automatisé, pas une réserve sur celui-ci : elle garantit que chaque constat listé est vérifiable. La navigation au clavier, l'ordre de focus, la qualité rédactionnelle des textes alternatifs, la gestion des erreurs de formulaire et le sous-titrage des vidéos exigent une vérification manuelle, qui fait l'objet d'une prestation distincte.",
-    legalCitationParagraph:
+    legalCitationInScopeTemplate:
+      "Ce site relève de l'obligation suivante : {regimeName}, sous le contrôle de {authority} ({legalCitation}). {facts}",
+    legalCitationLikelyInScopeTemplate:
+      "Les éléments disponibles indiquent que ce site relève probablement de l'obligation suivante : {regimeName}, sous le contrôle de {authority} ({legalCitation}). {facts} Cette évaluation n'a pas pu être confirmée faute d'une vérification complète du parcours du site.",
+    legalCitationOutOfScopeParagraph:
+      "Sur la base des éléments disponibles (taille de l'entreprise et absence de parcours transactionnel de premier niveau), ce site ne relève pas de l'obligation d'accessibilité numérique prévue par la loi n° 2023-171.",
+    legalCitationUndeterminedParagraph:
       "Ce rapport cite les critères techniques concernés (WCAG 2.2, EN 301 549) sans se prononcer sur l'applicabilité d'une obligation légale particulière à votre entreprise, laquelle dépend de sa taille et de son secteur d'activité.",
+    legalCitationEffectifFactTemplate: "L'entreprise compte {label} d'après le répertoire Sirene.",
+    legalCitationTurnoverFactTemplate: "Le chiffre d'affaires annuel déclaré dépasse le seuil de {threshold}.",
+    legalCitationTransactionalFlowFact:
+      'Le site propose un parcours transactionnel de premier niveau (réservation, panier ou paiement).',
+    legalCitationTransactionalFlowUnknownFact:
+      "La présence d'un parcours transactionnel de premier niveau n'a pas pu être confirmée sur l'ensemble du site.",
+    legalCitationExemptionRouteSentence:
+      "La seule voie documentée pour s'exempter de cette obligation est une demande de dérogation pour charge disproportionnée, déposée sur Démarche Simplifiée.",
+    legalCitationManualSirenWithFindingTemplate:
+      "Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne le publie pas lui-même (voir constat {findingId}).",
+    legalCitationManualSirenNoFindingSentence:
+      "Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne publie pas ce numéro lui-même.",
+    legalCitationSirenMismatchTemplate:
+      "Le numéro SIREN fourni manuellement ({manualSiren}) diffère de celui publié sur le site ({extractedSiren}). Cette détermination retient le numéro fourni manuellement.",
   },
   footer: {
     confidentialityLabel: 'Rapport confidentiel',

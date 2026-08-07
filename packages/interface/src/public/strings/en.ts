@@ -23,6 +23,11 @@ export const en: DashboardStrings = {
     urlPlaceholder: 'https://example.com',
     urlsLabel: 'Site URLs (one per line)',
     urlsPlaceholder: 'https://example1.com\nhttps://example2.com',
+    sirenLabel: 'SIREN (optional)',
+    sirenPlaceholder: '123 456 789',
+    sirenHint:
+      'Fill in if you already know the audited company’s SIREN. Never clears the finding if the site does not publish its own.',
+    sirenInvalidError: 'This SIREN fails the INSEE checksum',
     advancedOptions: 'Advanced options',
     maxPagesLabel: 'Maximum pages',
     maxDepthLabel: 'Maximum link depth',

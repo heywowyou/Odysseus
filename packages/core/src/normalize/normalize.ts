@@ -26,6 +26,7 @@ import { compareCriteria } from './wcag-tags.js';
 import { extractAxeCandidates, type AxeResultsInput } from './normalize-axe.js';
 import { extractLighthouseCandidates, type LighthouseResultInput } from './normalize-lighthouse.js';
 import { extractRenderDiffCandidates } from './normalize-renderdiff.js';
+import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
 import type { FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
 
@@ -37,6 +38,10 @@ export interface NormalizePageInput {
   lighthouseError?: string;
   renderDiff?: RenderDiffResult;
   renderDiffError?: string;
+  /** Only set on the one page the crawl identified as the mentions-
+   *  legales page. */
+  mentionsLegales?: MentionsLegalesCheckInput;
+  mentionsLegalesError?: string;
 }
 
 export interface NormalizeAuditInput {
@@ -54,6 +59,7 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.axe) candidates.push(...extractAxeCandidates(page.axe, page.url));
     if (page.lighthouse) candidates.push(...extractLighthouseCandidates(page.lighthouse, page.url));
     if (page.renderDiff) candidates.push(...extractRenderDiffCandidates(page.renderDiff, page.url));
+    if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
   }
 
   return candidates;

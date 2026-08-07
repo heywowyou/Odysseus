@@ -27,8 +27,9 @@ import {
   type PrunePageInfo,
   type ScanProgressEvent,
 } from '@odysseus/scanner';
-import { normalizeAudit, type AuditConfigSnapshot, type AuditManifest, type Finding } from '@odysseus/core';
+import { normalizeAudit, type AuditConfigSnapshot, type AuditManifest, type Finding, type ObligationAssessment } from '@odysseus/core';
 import { persistAudit } from '@odysseus/store';
+import { runObligationStage } from './obligation-stage.js';
 
 export interface RunAuditStageOptions {
   maxPages?: number;
@@ -39,6 +40,13 @@ export interface RunAuditStageOptions {
    *  what the CLI command it was extracted from did. */
   delayMs?: number;
   onProgress?: (event: ScanProgressEvent) => void;
+  /** Checksum-validated at the CLI/interface boundary before it ever
+   *  reaches this stage (see the manual-SIREN milestone) - runObligationStage
+   *  re-checks defensively but trusts the caller for the primary
+   *  validation. Never suppresses the LCEN finding: that is a fact about
+   *  the site's own mentions-legales page, decided entirely by the scan,
+   *  independent of anything supplied here. */
+  manualSiren?: string;
 }
 
 export interface AuditStageResult {
@@ -48,6 +56,7 @@ export interface AuditStageResult {
   auditDir: string;
   visitedCount: number;
   prunedPageDirCount: number;
+  obligationAssessment: ObligationAssessment;
 }
 
 /** Derives pruneScreenshots' page list from the manifest it already
@@ -107,6 +116,12 @@ export async function runAuditStage(
       config,
     });
 
+    // Runs before normalizeAudit deliberately: it only needs manifest.
+    // siteSignals (populated by writeAuditArtifacts above), never
+    // findings.json, so a failed or slow Sirene lookup can never block
+    // normalization.
+    const obligationAssessment = await runObligationStage(artifacts.manifest, connection, options.manualSiren);
+
     const findings = normalizeAudit({
       auditId: artifacts.auditId,
       startedAt,
@@ -128,6 +143,7 @@ export async function runAuditStage(
       auditDir: artifacts.auditDir,
       visitedCount: siteResult.crawl.visitedCount,
       prunedPageDirCount: prunedPageDirs.length,
+      obligationAssessment,
     };
   } finally {
     await browser.close();

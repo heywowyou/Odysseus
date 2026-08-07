@@ -53,6 +53,7 @@ describe('runProspectingJob', () => {
       auditDir: '/dir',
       visitedCount: 1,
       prunedPageDirCount: 0,
+      obligationAssessment: { status: 'undetermined', basis: [] } as never,
     });
 
     const job = fakeJob(['https://a.example/', 'https://b.example/']);
@@ -81,6 +82,7 @@ describe('runProspectingJob', () => {
       auditDir: '/dir',
       visitedCount: 1,
       prunedPageDirCount: 0,
+      obligationAssessment: { status: 'undetermined', basis: [] } as never,
     });
 
     await runProspectingJob(fakeJob(['https://a.example/', 'https://b.example/']), ctx);
@@ -102,6 +104,7 @@ describe('runProspectingJob', () => {
         auditDir: '/dir',
         visitedCount: 1,
         prunedPageDirCount: 0,
+        obligationAssessment: { status: 'undetermined', basis: [] } as never,
       });
 
     await runProspectingJob(fakeJob(['https://a.example/', 'https://b.example/']), ctx);

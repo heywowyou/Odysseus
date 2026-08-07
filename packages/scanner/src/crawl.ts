@@ -8,6 +8,7 @@ import {
 } from './config.js';
 import { normalizeInternalLinks } from './links.js';
 import { fetchRobotsRules, isAllowedByRobots } from './robots.js';
+import { findMentionsLegalesUrl } from './checks/mentions-legales.js';
 
 /** Progress events for a live ETA display. Purely additive: emitted only
  *  when a caller supplies onProgress, no behavior change otherwise.
@@ -51,6 +52,11 @@ export interface CrawlResult {
    *  requests, so later stages (the scanner passes) can reuse the exact
    *  same politeness pacing without re-fetching robots.txt. */
   effectiveDelayMs: number;
+  /** The one visited page URL matching the mentions-legales heuristic, if
+   *  any. Resolved from URLs already collected during the crawl, no extra
+   *  navigation. scanSite forwards this into scanPage so only that one
+   *  page runs the SIREN/RCS/TVA text extraction. */
+  mentionsLegalesPageUrl?: string;
 }
 
 interface QueueItem {
@@ -168,6 +174,9 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     await context.close();
   }
 
+  const visitedUrls = pages.filter((page) => page.status === 'visited').map((page) => page.url);
+  const mentionsLegalesPageUrl = findMentionsLegalesUrl(visitedUrls) ?? undefined;
+
   return {
     startUrl: start.toString(),
     pages,
@@ -176,5 +185,6 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     maxDepth,
     robotsTxtFound: robotsRules.found,
     effectiveDelayMs,
+    ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
   };
 }

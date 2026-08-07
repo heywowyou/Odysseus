@@ -64,7 +64,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     renderRenderDiffEvidence(strings, analysis.language, manifest, renderDiffEvidencePages),
     renderCoreWebVitalsTable(strings, manifest),
     renderFindingsAppendix(strings, analysis.language, findings, manifest),
-    renderMethodology(strings, manifest, analysis.language),
+    renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings),
   ].join('\n');
 
   return `<!doctype html>

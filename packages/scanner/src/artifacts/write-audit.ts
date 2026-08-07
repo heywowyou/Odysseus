@@ -22,6 +22,7 @@ import {
   extractLighthouseExcludedCategoryScores,
   type AuditConfigSnapshot,
   type AuditManifest,
+  type AuditManifestSiteSignals,
   type ManifestKind,
   type ManifestPageEntry,
 } from '@odysseus/core';
@@ -66,6 +67,33 @@ function buildScanJson(
     ...(scanResult.axeError !== undefined ? { axeError: scanResult.axeError } : {}),
     ...(scanResult.lighthouse !== undefined ? { lighthouse: scanResult.lighthouse } : {}),
     ...(scanResult.lighthouseError !== undefined ? { lighthouseError: scanResult.lighthouseError } : {}),
+    ...(scanResult.mentionsLegales !== undefined ? { mentionsLegales: scanResult.mentionsLegales } : {}),
+    ...(scanResult.mentionsLegalesError !== undefined ? { mentionsLegalesError: scanResult.mentionsLegalesError } : {}),
+    ...(scanResult.transactionalFlowEvidence !== undefined
+      ? { transactionalFlowEvidence: scanResult.transactionalFlowEvidence }
+      : {}),
+  };
+}
+
+/** Accumulates the two site-level obligation-engine signals across every
+ *  scanned page: the SIREN found on the identified mentions-legales page
+ *  (if any), and whether any page anywhere on the site shows a
+ *  first-party transactional flow. Always populated for an audit run
+ *  under this milestone's code - AuditManifestSiteSignals is optional on
+ *  AuditManifest only for backward compatibility with older manifests. */
+function buildSiteSignals(siteResult: WriteAuditArtifactsInput['siteResult']): AuditManifestSiteSignals {
+  const transactionalFlowEvidence = siteResult.pages.flatMap((page) => page.transactionalFlowEvidence ?? []);
+  const mentionsLegalesPageUrl = siteResult.crawl.mentionsLegalesPageUrl;
+  const mentionsLegalesPage = mentionsLegalesPageUrl
+    ? siteResult.pages.find((page) => page.url === mentionsLegalesPageUrl)
+    : undefined;
+  const siren = mentionsLegalesPage?.mentionsLegales?.siren;
+
+  return {
+    hasTransactionalFlow: transactionalFlowEvidence.length > 0,
+    transactionalFlowEvidence,
+    ...(siren !== undefined ? { siren } : {}),
+    ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
   };
 }
 
@@ -147,6 +175,7 @@ export async function writeAuditArtifacts(
     config: input.config,
     crawl: input.siteResult.crawl,
     pages: manifestPages,
+    siteSignals: buildSiteSignals(input.siteResult),
   });
 
   await fs.writeFile(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest, null, 2));

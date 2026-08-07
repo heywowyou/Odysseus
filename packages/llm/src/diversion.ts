@@ -1,4 +1,4 @@
-import type { AuditManifest, Finding } from '@odysseus/core';
+import { LEGAL_PATH_PATTERN, type AuditManifest, type Finding } from '@odysseus/core';
 
 /** A page whose raw HTML is missing this much of its rendered content is
  *  treated as a third-party embed wrapper (a Facebook/Instagram page
@@ -7,9 +7,6 @@ import type { AuditManifest, Finding } from '@odysseus/core';
  *  deliberately: most client-rendered pages are not wrapper pages, this
  *  only catches the near-total case. See docs/report-v2-refactor.md A1-A3. */
 export const WRAPPER_PAGE_MISSING_PERCENT_THRESHOLD = 95;
-
-const LEGAL_PATH_PATTERN =
-  /(cgu|cgv|conditions|mentions-legales|cookies|confidentialite|privacy|terms|legal)/i;
 
 export type DiversionReason = 'wrapper' | 'legal';
 

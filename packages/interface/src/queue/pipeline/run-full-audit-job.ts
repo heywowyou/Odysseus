@@ -35,6 +35,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
         ...(job.options.maxPages !== undefined ? { maxPages: job.options.maxPages } : {}),
         ...(job.options.maxDepth !== undefined ? { maxDepth: job.options.maxDepth } : {}),
         ...(job.options.delayMs !== undefined ? { delayMs: job.options.delayMs } : {}),
+        ...(job.options.siren !== undefined ? { manualSiren: job.options.siren } : {}),
         onProgress,
       },
       connection,
@@ -45,7 +46,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       auditResult.auditDir,
       auditResult.manifest,
       auditResult.findings,
-      { language: 'fr' },
+      { language: 'fr', obligationAssessment: auditResult.obligationAssessment },
       connection,
     );
 
@@ -54,7 +55,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       auditResult.auditDir,
       auditResult.manifest,
       auditResult.findings,
-      { language: 'en' },
+      { language: 'en', obligationAssessment: auditResult.obligationAssessment },
       connection,
     );
 

@@ -54,7 +54,7 @@ describe('crawlSite against fixtures/spa-demo', () => {
     });
 
     expect(result.robotsTxtFound).toBe(true);
-    expect(result.visitedCount).toBe(2);
+    expect(result.visitedCount).toBe(3);
 
     const byUrl = new Map(result.pages.map((page) => [new URL(page.url).pathname, page]));
 
@@ -67,6 +67,11 @@ describe('crawlSite against fixtures/spa-demo', () => {
     expect(about?.status).toBe('visited');
     expect(about?.depth).toBe(1);
     expect(about?.discoveredFrom).toBe(`${TEST_URL}/`);
+
+    const mentionsLegales = byUrl.get('/mentions-legales.html');
+    expect(mentionsLegales?.status).toBe('visited');
+    expect(mentionsLegales?.depth).toBe(1);
+    expect(result.mentionsLegalesPageUrl).toBe(`${TEST_URL}/mentions-legales.html`);
 
     const privatePage = byUrl.get('/private.html');
     expect(privatePage?.status).toBe('skipped-robots');
@@ -116,6 +121,6 @@ describe('crawlSite against fixtures/spa-demo', () => {
 
     const pageEvents = events.filter((event) => event.type === 'crawl-page');
     expect(pageEvents).toHaveLength(result.visitedCount);
-    expect(pageEvents.map((event) => (event.type === 'crawl-page' ? event.visited : undefined))).toEqual([1, 2]);
+    expect(pageEvents.map((event) => (event.type === 'crawl-page' ? event.visited : undefined))).toEqual([1, 2, 3]);
   }, 45_000);
 });

@@ -126,6 +126,9 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   // Assets
   'image-oversized': 'moderate',
   'image-legacy-format': 'minor',
+
+  // Legal transparency
+  'lcen-mentions-legales-missing': 'serious',
 };
 
 export function severityFromCustom(ruleId: string): Severity {
