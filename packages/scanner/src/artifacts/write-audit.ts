@@ -77,6 +77,7 @@ function buildScanJson(
       : {}),
     ...(scanResult.headMetadata !== undefined ? { headMetadata: scanResult.headMetadata } : {}),
     ...(scanResult.headMetadataError !== undefined ? { headMetadataError: scanResult.headMetadataError } : {}),
+    ...(scanResult.sitemapCheck !== undefined ? { sitemapCheck: scanResult.sitemapCheck } : {}),
   };
 }
 

@@ -11,6 +11,7 @@ import {
   type RedirectHostCache,
 } from './checks/transactional-flow.js';
 import { extractHeadMetadata, type HeadMetadataExtraction } from './checks/head-metadata.js';
+import type { SitemapCheckResult } from './checks/sitemap.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -29,6 +30,19 @@ export interface ScanPageOptions {
    *  transactional-flow.ts's RedirectHostCache doc comment for why a
    *  per-page cache alone isn't enough. */
   redirectHostCache?: RedirectHostCache;
+  /** The crawl's own start URL. Only used to gate sitemapCheck below to
+   *  the one page it should attach to. */
+  homepageUrl?: string;
+  /** Pre-fetched once per site in scanSite(), not per page - sitemap.xml
+   *  is a site-level concept. Attached to this page's result only when
+   *  url === homepageUrl, the same "attribute a site-level fact to the
+   *  one page every site has" pattern mentionsLegalesUrl's own fallback
+   *  already uses. crawledUrls (every page the crawl actually visited)
+   *  is bundled alongside the fetch result here, not inside
+   *  checkSitemap()'s own return type, since deciding staleness by
+   *  comparing the two is core's job, not scanner's - scanner only
+   *  reports facts. */
+  sitemapCheck?: SitemapCheckResult & { crawledUrls: string[] };
 }
 
 /**
@@ -50,6 +64,7 @@ export interface PageScanResult {
   transactionalFlowRedirectChecks?: TransactionalFlowRedirectCheck[];
   headMetadata?: HeadMetadataExtraction;
   headMetadataError?: string;
+  sitemapCheck?: SitemapCheckResult & { crawledUrls: string[]; pageUrl: string };
 }
 
 function toErrorMessage(error: unknown): string {
@@ -94,6 +109,9 @@ export async function scanPage(
   options: ScanPageOptions,
 ): Promise<PageScanResult> {
   const result: PageScanResult = { url };
+  if (options.sitemapCheck !== undefined && url === options.homepageUrl) {
+    result.sitemapCheck = { ...options.sitemapCheck, pageUrl: url };
+  }
   let axeResult: AxeResults | undefined;
   let axeError: string | undefined;
   let mentionsLegalesResult: MentionsLegalesExtraction | undefined;

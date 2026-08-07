@@ -57,6 +57,10 @@ export interface CrawlResult {
    *  navigation. scanSite forwards this into scanPage so only that one
    *  page runs the SIREN/RCS/TVA text extraction. */
   mentionsLegalesPageUrl?: string;
+  /** Sitemap: directive values from the already-fetched robots.txt (see
+   *  RobotsRules.sitemapUrls), passed through so checks/sitemap.ts never
+   *  fetches robots.txt a second time. */
+  robotsSitemapUrls: string[];
 }
 
 interface QueueItem {
@@ -186,5 +190,6 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     robotsTxtFound: robotsRules.found,
     effectiveDelayMs,
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
+    robotsSitemapUrls: robotsRules.sitemapUrls,
   };
 }

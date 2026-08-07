@@ -28,6 +28,7 @@ import { extractLighthouseCandidates, type LighthouseResultInput } from './norma
 import { extractRenderDiffCandidates } from './normalize-renderdiff.js';
 import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
 import { extractHeadMetadataCandidates, type HeadMetadataCheckInput } from './normalize-head-metadata.js';
+import { extractSitemapCandidates, type SitemapCheckInput } from './normalize-sitemap.js';
 import type { FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
 
@@ -48,6 +49,9 @@ export interface NormalizePageInput {
    *  and headings are all per-page concerns. */
   headMetadata?: HeadMetadataCheckInput;
   headMetadataError?: string;
+  /** Only set on the crawl's own start URL (see scan-site.ts) - sitemap
+   *  is a site-level concept, not a per-page one. */
+  sitemapCheck?: SitemapCheckInput;
 }
 
 export interface NormalizeAuditInput {
@@ -67,6 +71,7 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.renderDiff) candidates.push(...extractRenderDiffCandidates(page.renderDiff, page.url));
     if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
     if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));
+    if (page.sitemapCheck) candidates.push(...extractSitemapCandidates(page.sitemapCheck));
   }
 
   return candidates;

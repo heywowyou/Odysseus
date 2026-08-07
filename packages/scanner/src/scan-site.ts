@@ -1,6 +1,7 @@
 import type { Browser } from 'playwright';
-import { getScanConcurrency } from './config.js';
+import { getPageTimeoutMs, getScanConcurrency } from './config.js';
 import type { RedirectHostCache } from './checks/transactional-flow.js';
+import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
 import { type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import { type PageScanResult, scanPage } from './scan-page.js';
 
@@ -64,6 +65,8 @@ async function runScanLane(
   userAgent: string | undefined,
   mentionsLegalesUrl: string | undefined,
   redirectHostCache: RedirectHostCache,
+  homepageUrl: string | undefined,
+  sitemapCheck: (SitemapCheckResult & { crawledUrls: string[] }) | undefined,
   onPageDone: (pageResult: PageScanResult) => void,
 ): Promise<void> {
   let nextDelayMs = startDelayMs;
@@ -81,6 +84,8 @@ async function runScanLane(
       ...(timeoutMs !== undefined ? { timeoutMs } : {}),
       ...(userAgent !== undefined ? { userAgent } : {}),
       ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
+      ...(homepageUrl !== undefined ? { homepageUrl } : {}),
+      ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
     });
     onPageDone(pageResult);
   }
@@ -130,6 +135,27 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
   const mentionsLegalesUrlForScan =
     crawl.mentionsLegalesPageUrl ?? (pagesToScan.some((page) => page.url === crawl.startUrl) ? crawl.startUrl : undefined);
 
+  // Sitemap.xml is a site-level concept, not a per-page one, so its
+  // check runs once here rather than inside scanPage, and its result is
+  // attributed only to the homepage's scan.json - the same "attribute a
+  // site-level fact to the one page every site has" pattern
+  // mentionsLegalesUrlForScan's own fallback already established above.
+  // Skipped entirely (both fields left undefined) when the homepage
+  // itself was never visited (e.g. disallowed by its own robots.txt),
+  // since there is no page to attribute the finding to.
+  const homepageWasVisited = pagesToScan.some((page) => page.url === crawl.startUrl);
+  const sitemapCheck = homepageWasVisited
+    ? {
+        ...(await checkSitemap(
+          new URL(crawl.startUrl).origin,
+          crawl.robotsSitemapUrls,
+          options.timeoutMs ?? getPageTimeoutMs(),
+        )),
+        crawledUrls: pagesToScan.map((page) => page.url),
+      }
+    : undefined;
+  const homepageUrlForScan = homepageWasVisited ? crawl.startUrl : undefined;
+
   const concurrency = Math.max(1, Math.min(options.concurrency ?? getScanConcurrency(), pagesToScan.length || 1));
 
   const lanes: string[][] = Array.from({ length: concurrency }, () => []);
@@ -164,6 +190,8 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
           options.userAgent,
           mentionsLegalesUrlForScan,
           redirectHostCache,
+          homepageUrlForScan,
+          sitemapCheck,
           onPageDone,
         ),
       ),

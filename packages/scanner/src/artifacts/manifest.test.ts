@@ -12,6 +12,7 @@ function buildCrawlResult(overrides: Partial<CrawlResult> = {}): CrawlResult {
     maxDepth: 5,
     robotsTxtFound: true,
     effectiveDelayMs: 1000,
+    robotsSitemapUrls: [],
     ...overrides,
   };
 }

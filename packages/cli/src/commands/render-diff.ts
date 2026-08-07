@@ -51,6 +51,7 @@ export function registerRenderDiffCommand(program: Command): void {
           maxDepth: 0,
           robotsTxtFound: false,
           effectiveDelayMs: 0,
+          robotsSitemapUrls: [],
         };
 
         const artifacts = await writeAuditArtifacts({

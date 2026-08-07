@@ -4,6 +4,12 @@ export interface RobotsRules {
   disallow: string[];
   allow: string[];
   crawlDelayMs?: number;
+  /** Sitemap: directive values, if any. Unlike disallow/allow/crawl-delay
+   *  these are not scoped to a user-agent group - the spec treats them as
+   *  global, so they are collected from the whole file regardless of
+   *  which group is "current" when the line is seen. Reused by
+   *  checks/sitemap.ts so a sitemap check never re-fetches robots.txt. */
+  sitemapUrls: string[];
 }
 
 /**
@@ -40,6 +46,7 @@ interface RobotsGroup {
  */
 export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
   const groups: RobotsGroup[] = [];
+  const sitemapUrls: string[] = [];
   let current: RobotsGroup | null = null;
 
   for (const rawLine of text.split(/\r\n|\r|\n/)) {
@@ -49,6 +56,11 @@ export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
     if (separatorIndex === -1) continue;
     const field = line.slice(0, separatorIndex).trim().toLowerCase();
     const value = line.slice(separatorIndex + 1).trim();
+
+    if (field === 'sitemap') {
+      if (value) sitemapUrls.push(value);
+      continue;
+    }
 
     if (field === 'user-agent') {
       const groupIsOpen = current !== null && current.disallow.length === 0 && current.allow.length === 0 && current.crawlDelayMs === undefined;
@@ -77,9 +89,9 @@ export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
   const ua = userAgent.toLowerCase();
   const matched = groups.find((g) => g.agents.includes(ua)) ?? groups.find((g) => g.agents.includes('*'));
 
-  if (!matched) return { found: true, disallow: [], allow: [] };
+  if (!matched) return { found: true, disallow: [], allow: [], sitemapUrls };
 
-  const result: RobotsRules = { found: true, disallow: matched.disallow, allow: matched.allow };
+  const result: RobotsRules = { found: true, disallow: matched.disallow, allow: matched.allow, sitemapUrls };
   if (matched.crawlDelayMs !== undefined) result.crawlDelayMs = matched.crawlDelayMs;
   return result;
 }
@@ -124,13 +136,13 @@ export async function fetchRobotsRules(
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) {
-      return { found: false, disallow: [], allow: [] };
+      return { found: false, disallow: [], allow: [], sitemapUrls: [] };
     }
     const text = await response.text();
     return parseRobotsTxt(text, userAgent);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`odysseus: failed to fetch robots.txt for ${origin}: ${message}`);
-    return { found: false, disallow: [], allow: [] };
+    return { found: false, disallow: [], allow: [], sitemapUrls: [] };
   }
 }
