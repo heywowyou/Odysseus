@@ -101,6 +101,7 @@ describe('writeAuditArtifacts against fixtures/spa-demo', () => {
             pageTimeoutMs: 30000,
             lighthouseTimeoutMs: 60000,
             userAgent: 'OdysseusAuditBot/0.1 (test)',
+            scanConcurrency: 3,
           },
         });
       } finally {

@@ -23,6 +23,7 @@ export {
   getCrawlDelayMs,
   getPageTimeoutMs,
   getLighthouseTimeoutMs,
+  getScanConcurrency,
   getCrawlerUserAgent,
   DEFAULT_ARTIFACTS_DIR_NAME,
   DEFAULT_MAX_PAGES,
@@ -30,6 +31,7 @@ export {
   DEFAULT_CRAWL_DELAY_MS,
   DEFAULT_PAGE_TIMEOUT_MS,
   DEFAULT_LIGHTHOUSE_TIMEOUT_MS,
+  DEFAULT_SCAN_CONCURRENCY,
 } from './config.js';
 export {
   buildAuditTimestampDir,

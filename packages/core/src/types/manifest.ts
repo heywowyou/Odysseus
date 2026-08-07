@@ -32,6 +32,10 @@ export interface AuditConfigSnapshot {
   pageTimeoutMs: number;
   lighthouseTimeoutMs: number;
   userAgent: string;
+  /** Number of pages the scan phase processed at once. Each lane keeps
+   *  crawlDelayMs pacing independently; this does not change politeness
+   *  per request, only how many page-lanes run concurrently. */
+  scanConcurrency: number;
 }
 
 /**

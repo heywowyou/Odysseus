@@ -14,6 +14,7 @@ vi.mock('@odysseus/scanner', () => ({
   getMaxCrawlDepth: vi.fn(() => 5),
   getMaxPages: vi.fn(() => 20),
   getPageTimeoutMs: vi.fn(() => 30_000),
+  getScanConcurrency: vi.fn(() => 3),
 }));
 vi.mock('@odysseus/core', () => ({ normalizeAudit: vi.fn() }));
 vi.mock('@odysseus/store', () => ({ persistAudit: vi.fn() }));

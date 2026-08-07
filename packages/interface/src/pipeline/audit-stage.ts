@@ -18,6 +18,7 @@ import {
   getMaxCrawlDepth,
   getMaxPages,
   getPageTimeoutMs,
+  getScanConcurrency,
   launchBrowser,
   pruneScreenshots,
   scanSite,
@@ -94,6 +95,7 @@ export async function runAuditStage(
       pageTimeoutMs: getPageTimeoutMs(),
       lighthouseTimeoutMs: getLighthouseTimeoutMs(),
       userAgent: getCrawlerUserAgent(),
+      scanConcurrency: getScanConcurrency(),
     };
 
     const artifacts = await writeAuditArtifacts({

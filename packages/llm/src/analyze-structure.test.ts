@@ -56,6 +56,7 @@ function buildManifest(): AuditManifest {
       pageTimeoutMs: 30000,
       lighthouseTimeoutMs: 45000,
       userAgent: 'OdysseusBot/1.0',
+      scanConcurrency: 3,
     },
     crawl: {
       startUrl: 'https://example.com/',

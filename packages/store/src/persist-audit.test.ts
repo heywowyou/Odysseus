@@ -36,6 +36,7 @@ function buildManifest(overrides: Partial<AuditManifest> = {}): AuditManifest {
       pageTimeoutMs: 30000,
       lighthouseTimeoutMs: 60000,
       userAgent: 'OdysseusAuditBot/0.1',
+      scanConcurrency: 3,
     },
     crawl: {
       startUrl: 'https://example.com/',

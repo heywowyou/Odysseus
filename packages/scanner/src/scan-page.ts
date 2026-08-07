@@ -39,6 +39,25 @@ async function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Lighthouse times its own gather/audit phases via Node's process-global
+ * perf_hooks Performance API (through the `marky`/`lighthouse-logger`
+ * deps), not anything scoped to the browser or debugPort. Two `lighthouse()`
+ * calls racing in the same process step on each other's marks and fail with
+ * "performance mark has not been set" - confirmed by running scanSite's
+ * concurrent lanes against the fixture, 100% reproducible. Concurrent
+ * render-diff/axe work (plain Playwright, no shared Node-global state) is
+ * unaffected, so only the Lighthouse call itself is serialized here, across
+ * every lane in a scanSite() run.
+ */
+let lighthouseQueue: Promise<unknown> = Promise.resolve();
+
+async function runLighthouseSerialized(url: string, debugPort: number): Promise<LighthouseResult> {
+  const run = lighthouseQueue.then(() => runLighthouse(url, debugPort));
+  lighthouseQueue = run.catch(() => undefined);
+  return run;
+}
+
+/**
  * Scans one page with all three scanners, reusing a single rendered
  * navigation for both render-diff's text/screenshot extraction and
  * axe-core (via renderDiff's onRenderedPage hook), so only two page loads
@@ -82,7 +101,7 @@ export async function scanPage(
   }
 
   try {
-    result.lighthouse = await runLighthouse(url, debugPort);
+    result.lighthouse = await runLighthouseSerialized(url, debugPort);
   } catch (error) {
     result.lighthouseError = toErrorMessage(error);
   }

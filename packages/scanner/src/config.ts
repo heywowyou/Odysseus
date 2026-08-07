@@ -46,6 +46,11 @@ export const DEFAULT_PAGE_TIMEOUT_MS = 30_000;
  *  page's load timeout, since it collects a full trace across throttled
  *  network/CPU simulation on top of the audits themselves. */
 export const DEFAULT_LIGHTHOUSE_TIMEOUT_MS = 60_000;
+/** Number of pages the scan phase (render-diff + axe + Lighthouse) processes
+ *  at once. Each lane keeps the same CRAWL_DELAY_MS pacing it always had;
+ *  this only adds lanes, it never shortens the delay between requests. The
+ *  crawl (link-discovery) phase is unaffected and stays sequential. */
+export const DEFAULT_SCAN_CONCURRENCY = 3;
 
 /**
  * Single configured root for everything the scanner writes to disk, so a
@@ -86,6 +91,10 @@ export function getPageTimeoutMs(): number {
 
 export function getLighthouseTimeoutMs(): number {
   return getPositiveIntEnv('LIGHTHOUSE_TIMEOUT_MS', DEFAULT_LIGHTHOUSE_TIMEOUT_MS);
+}
+
+export function getScanConcurrency(): number {
+  return getPositiveIntEnv('SCAN_CONCURRENCY', DEFAULT_SCAN_CONCURRENCY);
 }
 
 /**

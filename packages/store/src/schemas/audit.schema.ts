@@ -40,6 +40,7 @@ const configSnapshotSchema = new Schema(
     pageTimeoutMs: { type: Number, required: true },
     lighthouseTimeoutMs: { type: Number, required: true },
     userAgent: { type: String, required: true },
+    scanConcurrency: { type: Number, required: true },
   },
   { _id: false },
 );

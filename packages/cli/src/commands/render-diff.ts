@@ -66,6 +66,7 @@ export function registerRenderDiffCommand(program: Command): void {
             pageTimeoutMs: getPageTimeoutMs(),
             lighthouseTimeoutMs: getLighthouseTimeoutMs(),
             userAgent: getCrawlerUserAgent(),
+            scanConcurrency: 1,
           },
         });
 
