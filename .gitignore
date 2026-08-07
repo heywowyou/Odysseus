@@ -12,3 +12,4 @@ coverage/
 .vitest/
 *.tsbuildinfo
 .playwright-mcp/
+/docs/GlassWire/

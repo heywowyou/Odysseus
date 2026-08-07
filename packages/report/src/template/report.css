@@ -5,36 +5,48 @@
  * silently and produce an unstyled client deliverable, which is
  * unacceptable for the artifact the business sells.
  *
- * Ported from docs/report-v2-prototype-haaitza-fr.html, which is the
- * verified, print-tested target design (docs/report-v2-refactor.md).
- * That prototype also carries `.doc`/`.screen-note` rules for viewing
- * the raw HTML in a browser during development (a grey backdrop behind
- * a white A4 "sheet", and a note banner) - kept here for the same
- * reason, but `.screen-note` itself (the note banner markup) is never
- * rendered by this package, so only its CSS class is omitted, not `.doc`.
+ * Dark theme, refactored from the original light print prototype
+ * (docs/report-v2-prototype-haaitza-fr.html) to match the GlassWire
+ * darkmode references in docs/GlassWire Interface Darkmode References/.
+ * Every color pair below was checked against WCAG 2.2 AA contrast
+ * minimums (4.5:1 for body/badge text, 3:1 for large headings and
+ * non-text UI) by hand - this document reports on that exact criterion,
+ * so it cannot fail it itself. Tint alpha for badge/tile fills is fixed
+ * at 0.12 across severities; red is the lowest-luminance accent and was
+ * the binding case (5.17:1 against its own blended tint), so every
+ * brighter accent (orange, amber, green) clears it with more margin -
+ * verified once for the worst case rather than re-derived per color.
+ *
+ * `.doc`/`.screen-note` rules remain for viewing the raw HTML in a
+ * browser during development (a backdrop behind the A4 "sheet" and a
+ * note banner) - kept for the same reason as before, but `.screen-note`
+ * itself is never rendered by this package, only its CSS class.
  */
 
 :root {
-  --ink: #14202e;
-  --body: #2e3a48;
-  --mute: #5b6672;
-  --line: #d8dee4;
-  --panel: #f5f7f9;
-  --accent: #14537d;
-  --accent-tint: #edf3f8;
-  --crit: #a31226;
-  --crit-tint: #f9ecee;
-  --maj: #9a4300;
-  --maj-tint: #faf1ea;
-  --mod: #7a5a00;
-  --mod-tint: #f8f4e8;
-  --min: #5b6672;
-  --min-tint: #f1f3f5;
-  --good: #176b3f;
-  --good-tint: #ebf4ef;
-  --serif: Georgia, 'Times New Roman', serif;
-  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --bg: #0f1420;
+  --panel: #171d2b;
+  --panel-2: #1e2536;
+  --line: #2c3350;
+  --ink: #eef1f8;
+  --body: #c3cad9;
+  --mute: #8b93a8;
+  --accent: #79a8ff;
+  --accent-tint: rgba(91, 141, 239, 0.12);
+  --crit: #ff6b6f;
+  --crit-tint: rgba(255, 107, 111, 0.12);
+  --maj: #f2994a;
+  --maj-tint: rgba(242, 153, 74, 0.12);
+  --mod: #eab308;
+  --mod-tint: rgba(234, 179, 8, 0.12);
+  --min: #9aa4b8;
+  --min-tint: rgba(154, 164, 184, 0.12);
+  --good: #57b955;
+  --good-tint: rgba(87, 185, 85, 0.12);
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --radius: 10px;
+  --radius-pill: 999px;
 }
 
 * {
@@ -51,13 +63,13 @@ body {
   font-family: var(--sans);
   color: var(--body);
   line-height: 1.55;
-  background: #e9ecef;
+  background: #05070c;
 }
 
 .doc {
   max-width: 210mm;
   margin: 0 auto;
-  background: #fff;
+  background: var(--bg);
   padding: 16mm 15mm 22mm;
 }
 
@@ -69,11 +81,12 @@ body {
 @page {
   size: A4;
   margin: 15mm 14mm 20mm;
+  background: var(--bg);
 }
 
 @media print {
   body {
-    background: #fff;
+    background: var(--bg);
   }
   .doc {
     max-width: none;
@@ -100,6 +113,14 @@ body {
   thead {
     display: table-header-group;
   }
+  /* Chromium skips element backgrounds by default when printing to PDF
+     unless the document opts in - without this, every dark panel/badge/
+     tile below would print as transparent-on-white and the whole theme
+     would disappear in the actual client deliverable. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 h1,
@@ -107,9 +128,9 @@ h2,
 h3,
 .rank,
 .tile b {
-  font-family: var(--serif);
+  font-family: var(--sans);
   color: var(--ink);
-  font-weight: 400;
+  font-weight: 700;
 }
 
 h2 {
@@ -128,7 +149,7 @@ h3 {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 1.5mm;
 }
 
@@ -159,16 +180,23 @@ section {
   justify-content: space-between;
 }
 .wordmark {
-  font-family: var(--serif);
-  font-size: 15pt;
-  letter-spacing: 0.34em;
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+  font-family: var(--sans);
+  font-size: 13pt;
+  font-weight: 700;
+  letter-spacing: 0.28em;
   color: var(--ink);
 }
-.meander {
-  width: 52mm;
-  height: auto;
-  color: var(--accent);
-  margin-top: 2mm;
+.wordmark::before {
+  content: '';
+  display: block;
+  width: 7mm;
+  height: 7mm;
+  border-radius: 2mm;
+  background: linear-gradient(135deg, var(--accent), var(--good));
+  flex-shrink: 0;
 }
 .cover-mid h1 {
   font-size: 34pt;
@@ -178,7 +206,7 @@ section {
 .cover-url {
   font-size: 13pt;
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
 }
 .risk {
   display: inline-flex;
@@ -186,15 +214,13 @@ section {
   gap: 3mm;
   border: 1.2pt solid currentColor;
   padding: 3.5mm 6mm;
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   font-size: 12pt;
   font-weight: 700;
   letter-spacing: 0.06em;
   margin-top: 7mm;
   text-transform: uppercase;
 }
-/* Prototype verified the high-risk case only; low/medium extend the same
-   pattern with the shared severity-style color tokens. */
 .risk.risk-high {
   color: var(--crit);
   background: var(--crit-tint);
@@ -209,7 +235,7 @@ section {
 }
 .risk small {
   display: block;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 7.5pt;
   letter-spacing: 0.2em;
   color: var(--mute);
@@ -226,7 +252,7 @@ section {
   display: block;
   color: var(--ink);
   font-family: var(--sans);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 10pt;
 }
 
@@ -241,7 +267,8 @@ section {
 }
 .toc .n {
   color: var(--accent);
-  font-family: var(--serif);
+  font-family: var(--sans);
+  font-weight: 700;
   width: 6mm;
 }
 
@@ -254,9 +281,9 @@ section {
 }
 .tile {
   border: 0.6pt solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius);
   padding: 3.5mm 4mm;
-  background: #fff;
+  background: var(--panel);
 }
 .tile b {
   display: block;
@@ -313,8 +340,8 @@ section {
   font-size: 7.5pt;
   font-weight: 700;
   letter-spacing: 0.05em;
-  padding: 0.8mm 2.4mm;
-  border-radius: 2px;
+  padding: 0.9mm 2.6mm;
+  border-radius: var(--radius-pill);
   border: 0.6pt solid currentColor;
   white-space: nowrap;
 }
@@ -361,15 +388,16 @@ section {
 .scale b {
   font-size: 8.5pt;
   margin-left: 1mm;
+  color: var(--ink);
 }
 
 /* themes */
 .theme {
   border: 0.6pt solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius);
   padding: 5mm;
   margin-top: 4mm;
-  background: #fff;
+  background: var(--panel);
 }
 .theme-top {
   border-left: 2.5pt solid var(--accent);
@@ -412,6 +440,7 @@ section {
 .theme-meta .v {
   font-size: 9pt;
   font-weight: 700;
+  color: var(--ink);
 }
 .theme-meta .vnc {
   color: var(--crit);
@@ -421,6 +450,7 @@ section {
   border-left: 2pt solid var(--accent);
   padding: 2.5mm 3.5mm;
   margin-bottom: 2.5mm;
+  border-radius: 0 var(--radius) var(--radius) 0;
 }
 .legal-tag {
   font-size: 7pt;
@@ -432,9 +462,11 @@ section {
 .legal p {
   margin: 0.8mm 0 0;
   font-size: 9pt;
+  color: var(--body);
 }
 .impact {
   font-size: 10pt;
+  color: var(--body);
 }
 .cross {
   font-size: 9pt;
@@ -444,6 +476,7 @@ section {
 .actions {
   margin: 1mm 0 2mm 5mm;
   font-size: 9.5pt;
+  color: var(--body);
 }
 .actions li {
   margin-bottom: 1mm;
@@ -461,11 +494,11 @@ section {
 
 /* observations */
 .obs {
-  border: 0.6pt dashed var(--mute);
-  border-radius: 2px;
+  border: 0.6pt dashed var(--line);
+  border-radius: var(--radius);
   padding: 4mm;
   margin-top: 3mm;
-  background: var(--panel);
+  background: var(--panel-2);
 }
 .obs h3 {
   font-size: 10.5pt;
@@ -488,11 +521,11 @@ section {
 .qwin {
   border: 0.6pt solid var(--good);
   background: var(--good-tint);
-  border-radius: 2px;
+  border-radius: var(--radius-pill);
   padding: 2.5mm 3.5mm;
   font-size: 9pt;
   color: var(--good);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* evidence */
@@ -512,6 +545,9 @@ section {
 }
 .shot {
   border: 0.6pt solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #fff;
 }
 .shot img {
   width: 100%;
@@ -521,7 +557,7 @@ section {
   font-size: 8pt;
   color: var(--mute);
   padding: 1.5mm 2mm;
-  background: var(--panel);
+  background: var(--panel-2);
 }
 .miss {
   color: var(--crit);
@@ -547,13 +583,14 @@ th {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--mute);
-  border-bottom: 1pt solid var(--ink);
+  border-bottom: 1pt solid var(--line);
   padding: 1.6mm 2mm;
 }
 td {
   border-bottom: 0.5pt solid var(--line);
   padding: 1.6mm 2mm;
   vertical-align: top;
+  color: var(--body);
 }
 th.num,
 td.num {
@@ -563,8 +600,8 @@ td.num {
   display: inline-block;
   font-size: 7pt;
   font-weight: 700;
-  padding: 0.4mm 1.8mm;
-  border-radius: 2px;
+  padding: 0.5mm 2mm;
+  border-radius: var(--radius-pill);
   margin-left: 1.5mm;
 }
 .chip.good {
@@ -593,8 +630,9 @@ td.num {
 .rule-group {
   margin-top: 4.5mm;
   border: 0.6pt solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius);
   padding: 3mm 3.5mm;
+  background: var(--panel);
 }
 .rule-head {
   display: flex;
@@ -620,8 +658,8 @@ td.num {
   font-size: 7pt;
   color: var(--accent);
   border: 0.5pt solid var(--accent);
-  padding: 0.3mm 1.5mm;
-  border-radius: 2px;
+  padding: 0.4mm 1.8mm;
+  border-radius: var(--radius-pill);
 }
 table.sub {
   font-size: 8.5pt;

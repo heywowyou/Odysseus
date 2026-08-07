@@ -19,21 +19,13 @@ const RISK_GLYPH: Record<StoredAnalysis['overallRisk'], string> = {
   low: '&#9679;', // filled circle, same glyph as sev-moderate
 };
 
-/** Inline, self-contained per docs/report-v2-refactor.md's zero-network-
- *  render rule - a meander (Greek key) pattern under the wordmark, from
- *  docs/report-v2-prototype-haaitza-fr.html verbatim. */
-const MEANDER_SVG = `<svg class="meander" viewBox="0 0 240 12" aria-hidden="true" preserveAspectRatio="xMinYMid meet"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M0 11 H6 V1 H18 V8 H12 V5 M18 1 H30 V11 H24 M30 11 H36 V1 H48 V8 H42 V5 M48 1 H60 V11 H54 M60 11 H66 V1 H78 V8 H72 V5 M78 1 H90 V11 H84 M90 11 H96 V1 H108 V8 H102 V5 M108 1 H120 V11 H114 M120 11 H126 V1 H138 V8 H132 V5 M138 1 H150 V11 H144 M150 11 H156 V1 H168 V8 H162 V5 M168 1 H180 V11 H174 M180 11 H186 V1 H198 V8 H192 V5 M198 1 H210 V11 H204 M210 11 H216 V1 H228 V8 H222 V5 M228 1 H240 V11 H234"/></svg>`;
-
 export function renderCover(strings: ReportStrings, manifest: AuditManifest, analysis: StoredAnalysis): string {
   const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
   const riskLabel = strings.cover.riskLevels[analysis.overallRisk];
 
   return `
     <header class="cover">
-      <div>
-        <div class="wordmark">ODYSSEUS</div>
-        ${MEANDER_SVG}
-      </div>
+      <div class="wordmark">ODYSSEUS</div>
       <div class="cover-mid">
         <span class="eyebrow">${escapeHtml(strings.cover.eyebrow)}</span>
         <h1>${escapeHtml(strings.cover.reportTitle)}</h1>
