@@ -137,16 +137,44 @@ gap status.
 
 ---
 
-## 3. Decided in follow-up: copy, pricing, and publication
+## 3. Documentation cleanup: stale "monitoring tier" references
 
-### 3.1 Replacement copy: locked
+Pricing was revised to two tiers on 2026-08-03, with implementation and monitoring dropped entirely, not deferred (brief section 3.2). Milestone 10 remains a real technical capability (scheduled re-scans, regression detection), it's just no longer wrapped in a paid subscription tier. A few places in the codebase and docs still carry wording written before that revision, implying a live monitoring pricing tier. Clean these up for accuracy, no functional change:
+
+**`docs/odysseus-project-brief-v2.md`, milestone 10 description:**
+- Find: `**Milestone 10: monitoring.** Scheduled re-scans, regression detection, delta reports. What makes the monthly tier real.`
+- Replace: `**Milestone 10: monitoring.** Scheduled re-scans, regression detection, delta reports. Supports future monitoring capability; no monitoring pricing tier exists under the current two-tier model (see 3.2).`
+
+**`docs/odysseus-project-brief-v2.md`, section 6.5 "Monitoring means diffing" bullet:**
+- Find: `**Monitoring means diffing.** The monitoring tier needs stored historical findings and a regression detector, so design the findings model to support comparison across runs from the start.`
+- Replace: `**Monitoring means diffing.** Future monitoring work needs stored historical findings and a regression detector, so design the findings model to support comparison across runs from the start.`
+
+**`packages/scanner/src/artifacts/versions.ts`, module docstring:**
+- Find: `the monitoring tier (Milestone 10) compares findings across runs, and an axe-core upgrade between two monthly scans must not read as a phantom regression or phantom fix`
+- Replace: `future monitoring work (Milestone 10) compares findings across runs, and an axe-core upgrade between two scans must not read as a phantom regression or phantom fix`
+
+**`docs/llm-layer-rules.md`, model/temperature recording rationale:**
+- Find: `a model or temperature change between two monthly monitoring runs would otherwise read as the client's site having changed`
+- Replace: `a model or temperature change between two monitoring runs would otherwise read as the client's site having changed`
+
+No test or contract changes needed, this is comment and documentation text only.
+
+**Shipped 2026-08-08.** All four replacements applied verbatim.
+
+## 4. Decided in follow-up: copy, pricing, and publication
+
+### 4.1 Replacement copy: locked
 
 "Extended accessibility pass" is the client-facing term, see 1.5 above. Update every occurrence of "manual accessibility verification" in the brief and any proposal or marketing copy.
 
-### 3.2 Pricing band: kept as is, no revisit trigger
+**Done.** No remaining "manual accessibility verification" occurrences in the brief; brief section 10 explicitly instructs against reintroducing the claim (see the "report credibility collapse" entry).
+
+### 4.2 Pricing band: kept as is, no revisit trigger
 
 The narrower gap between screening and full audit (now mostly report depth rather than a genuinely separate manual verification pass) does not justify revisiting the 1,200 to 1,900 EUR band. The brief's original pricing logic was never based on labor cost: section 3.2 already states the band is set by business impact and legal exposure, not hours or page count. That justification holds regardless of how much of the verification is automated. What actually protects the price is the full audit report staying meaningfully deeper than screening, which section 1.6's tier split (theme grouping, full selector detail, before/after evidence, the non-technical summary) already secures. No further review of the price band is scheduled. Do not reopen this without a specific trigger (e.g. consistent client pushback that the deliverable isn't worth the price, which is already a listed kill-criterion in brief section 12).
 
-### 3.3 Publish the range, not the number
+### 4.3 Publish the range, not the number
 
 Publish "1,200 to 1,900 EUR depending on site risk level" on the proposal page and any public pricing page. This removes the main friction point for a cold prospect (not knowing if the service is even in their budget before engaging) while keeping the anchoring value of setting the specific number from their own risk band after the scan runs. Full price opacity mainly serves negotiated enterprise sales cycles, which the brief already excludes as a target market (section 4, deliberate non-targets). Update brief section 3.2's "still open" list to remove this item as resolved.
+
+**Done.** Brief section 3.2 already states the range is published (resolved 2026-08-07) and open question 5 in section 11 is struck.

@@ -5,9 +5,9 @@
  * are not even direct dependencies of this package (see axe.ts's comment
  * on why AxeResults is derived structurally instead).
  *
- * Not retrofittable onto stored audits, and that's deliberate: the
- * monitoring tier (Milestone 10) compares findings across runs, and an
- * axe-core upgrade between two monthly scans must not read as a phantom
+ * Not retrofittable onto stored audits, and that's deliberate: future
+ * monitoring work (Milestone 10) compares findings across runs, and an
+ * axe-core upgrade between two scans must not read as a phantom
  * regression or phantom fix with no way to attribute it to a tool version
  * change rather than a real change on the client's site.
  */

@@ -157,7 +157,7 @@ constants.ts).
 
 **Record the model identifier and temperature alongside the output**,
 for the same reason the audit manifest records axe and Lighthouse
-versions: a model or temperature change between two monthly monitoring
+versions: a model or temperature change between two monitoring
 runs would otherwise read as the client's site having changed. Not
 retrofittable onto stored analyses. The persisted per-language document's
 `model`/`temperature` reflect the writing pass's call. Since both passes
