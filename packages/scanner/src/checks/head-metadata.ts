@@ -37,6 +37,11 @@ export interface HeadingFact {
   selector: string;
 }
 
+export interface HreflangLink {
+  lang: string;
+  href: string;
+}
+
 export interface HeadMetadataExtraction {
   pageUrl: string;
   title: string | null;
@@ -48,6 +53,16 @@ export interface HeadMetadataExtraction {
   openGraphTags: Record<string, string>;
   jsonLdBlocks: JsonLdBlock[];
   headings: HeadingFact[];
+  /** Every <link rel="alternate" hreflang="..."> found on this page.
+   *  Reciprocity (does the linked page link back) is a cross-page
+   *  question this module cannot answer on its own - see
+   *  normalize-hreflang.ts, which is given every page's set at once. */
+  hreflangLinks: HreflangLink[];
+  /** Lowercased content of <meta name="robots">, or null if absent.
+   *  X-Robots-Tag response headers are not read here (this hook only
+   *  has DOM access, not response headers) - a known, documented
+   *  simplification. */
+  robotsMeta: string | null;
 }
 
 /** Pure: JSON.parse each raw block, capturing a parse error rather than
@@ -107,7 +122,13 @@ export async function extractHeadMetadata(page: Page, pageUrl: string): Promise<
       selector: computeSelector(el, headingElements),
     }));
 
-    return { title, metaDescription, canonicalUrls, openGraphTags, jsonLdRawBlocks, headings };
+    const hreflangLinks = Array.from(document.querySelectorAll('link[rel="alternate"][hreflang]'))
+      .map((el) => ({ lang: el.getAttribute('hreflang') ?? '', href: el.getAttribute('href') ?? '' }))
+      .filter((link) => link.lang.length > 0 && link.href.length > 0);
+
+    const robotsMeta = document.querySelector('meta[name="robots"]')?.getAttribute('content')?.trim().toLowerCase() || null;
+
+    return { title, metaDescription, canonicalUrls, openGraphTags, jsonLdRawBlocks, headings, hreflangLinks, robotsMeta };
   });
 
   return {
@@ -118,5 +139,7 @@ export async function extractHeadMetadata(page: Page, pageUrl: string): Promise<
     openGraphTags: raw.openGraphTags,
     jsonLdBlocks: parseJsonLdBlocks(raw.jsonLdRawBlocks),
     headings: raw.headings,
+    hreflangLinks: raw.hreflangLinks,
+    robotsMeta: raw.robotsMeta,
   };
 }

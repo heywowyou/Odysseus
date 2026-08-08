@@ -30,6 +30,8 @@ import { extractCustomCandidates, type MentionsLegalesCheckInput } from './norma
 import { extractHeadMetadataCandidates, type HeadMetadataCheckInput } from './normalize-head-metadata.js';
 import { extractSitemapCandidates, type SitemapCheckInput } from './normalize-sitemap.js';
 import { extractCrawlCandidates, type NormalizeCrawlInput } from './normalize-crawl.js';
+import { extractHreflangCandidates } from './normalize-hreflang.js';
+import { extractMixedContentCandidates, type MixedContentCheckInput } from './normalize-mixed-content.js';
 import type { FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
 
@@ -53,6 +55,7 @@ export interface NormalizePageInput {
   /** Only set on the crawl's own start URL (see scan-site.ts) - sitemap
    *  is a site-level concept, not a per-page one. */
   sitemapCheck?: SitemapCheckInput;
+  mixedContent?: MixedContentCheckInput;
 }
 
 export interface NormalizeAuditInput {
@@ -79,9 +82,15 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
     if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));
     if (page.sitemapCheck) candidates.push(...extractSitemapCandidates(page.sitemapCheck));
+    if (page.mixedContent) candidates.push(...extractMixedContentCandidates(page.mixedContent));
   }
 
   if (input.crawl) candidates.push(...extractCrawlCandidates(input.crawl));
+
+  const pagesWithHreflang = input.pages
+    .filter((page) => page.headMetadata && page.headMetadata.hreflangLinks.length > 0)
+    .map((page) => ({ url: page.url, hreflangLinks: page.headMetadata!.hreflangLinks }));
+  if (pagesWithHreflang.length > 0) candidates.push(...extractHreflangCandidates(pagesWithHreflang));
 
   return candidates;
 }

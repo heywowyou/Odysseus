@@ -10,6 +10,7 @@ import {
   MULTIPLE_H1_RULE_ID,
   NO_H1_RULE_ID,
   OPENGRAPH_MISSING_RULE_ID,
+  NOINDEX_ON_PUBLIC_PAGE_RULE_ID,
   type HeadMetadataCheckInput,
 } from './normalize-head-metadata.js';
 
@@ -28,6 +29,8 @@ function baseInput(overrides: Partial<HeadMetadataCheckInput> = {}): HeadMetadat
       { level: 1, text: 'Main heading', selector: 'h1:nth-of-type(1)' },
       { level: 2, text: 'Sub heading', selector: 'h2:nth-of-type(1)' },
     ],
+    hreflangLinks: [],
+    robotsMeta: null,
     ...overrides,
   };
 }
@@ -221,5 +224,29 @@ describe('opengraph-missing', () => {
         baseInput({ openGraphTags: { 'og:title': 'Title', 'og:locale': 'en_US' } }),
       ),
     ).toEqual([]);
+  });
+});
+
+describe('noindex-on-public-page', () => {
+  it('fires when a non-legal page has a noindex directive', () => {
+    const candidates = extractHeadMetadataCandidates(baseInput({ robotsMeta: 'noindex, follow' }));
+    expect(ruleIds(candidates)).toEqual([NOINDEX_ON_PUBLIC_PAGE_RULE_ID]);
+    expect(candidates[0]?.severity).toBe('critical');
+    expect(candidates[0]?.category).toBe('seo');
+  });
+
+  it('does not fire when the page has no robots meta tag at all', () => {
+    expect(extractHeadMetadataCandidates(baseInput({ robotsMeta: null }))).toEqual([]);
+  });
+
+  it('does not fire when robots meta is present but does not include noindex', () => {
+    expect(extractHeadMetadataCandidates(baseInput({ robotsMeta: 'index, follow' }))).toEqual([]);
+  });
+
+  it('does not fire on a page matching the shared legal-path pattern, even with noindex set', () => {
+    const candidates = extractHeadMetadataCandidates(
+      baseInput({ pageUrl: 'https://example.com/mentions-legales', robotsMeta: 'noindex' }),
+    );
+    expect(candidates).toEqual([]);
   });
 });

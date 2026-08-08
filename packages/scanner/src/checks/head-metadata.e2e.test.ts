@@ -129,5 +129,23 @@ describe('extractHeadMetadata against real pages', () => {
     expect(result.openGraphTags).toEqual({});
     expect(result.jsonLdBlocks).toEqual([]);
     expect(result.headings).toEqual([]);
+    expect(result.hreflangLinks).toEqual([]);
+    expect(result.robotsMeta).toBeNull();
+  });
+
+  it('reads hreflang alternate links and the robots meta directive', async () => {
+    const html = `<head>
+      <link rel="alternate" hreflang="en" href="https://example.com/en/" />
+      <link rel="alternate" hreflang="fr" href="https://example.com/fr/" />
+      <meta name="robots" content="NOINDEX, follow" />
+    </head><body></body>`;
+
+    const result = await extractFromHtml(html);
+
+    expect(result.hreflangLinks).toEqual([
+      { lang: 'en', href: 'https://example.com/en/' },
+      { lang: 'fr', href: 'https://example.com/fr/' },
+    ]);
+    expect(result.robotsMeta).toBe('noindex, follow');
   });
 });

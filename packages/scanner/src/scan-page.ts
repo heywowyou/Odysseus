@@ -12,6 +12,7 @@ import {
 } from './checks/transactional-flow.js';
 import { extractHeadMetadata, type HeadMetadataExtraction } from './checks/head-metadata.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
+import { extractMixedContentResources, type MixedContentExtraction } from './checks/mixed-content.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -65,6 +66,8 @@ export interface PageScanResult {
   headMetadata?: HeadMetadataExtraction;
   headMetadataError?: string;
   sitemapCheck?: SitemapCheckResult & { crawledUrls: string[]; pageUrl: string };
+  mixedContent?: MixedContentExtraction;
+  mixedContentError?: string;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -120,6 +123,8 @@ export async function scanPage(
   let transactionalFlowRedirectChecks: TransactionalFlowRedirectCheck[] | undefined;
   let headMetadataResult: HeadMetadataExtraction | undefined;
   let headMetadataError: string | undefined;
+  let mixedContentResult: MixedContentExtraction | undefined;
+  let mixedContentError: string | undefined;
 
   try {
     result.renderDiff = await renderDiff(browser, url, {
@@ -188,6 +193,12 @@ export async function scanPage(
         } catch (error) {
           headMetadataError = toErrorMessage(error);
         }
+
+        try {
+          mixedContentResult = await extractMixedContentResources(page, url);
+        } catch (error) {
+          mixedContentError = toErrorMessage(error);
+        }
       },
     });
   } catch (error) {
@@ -202,6 +213,8 @@ export async function scanPage(
   if (transactionalFlowRedirectChecks !== undefined) result.transactionalFlowRedirectChecks = transactionalFlowRedirectChecks;
   if (headMetadataResult !== undefined) result.headMetadata = headMetadataResult;
   if (headMetadataError !== undefined) result.headMetadataError = headMetadataError;
+  if (mixedContentResult !== undefined) result.mixedContent = mixedContentResult;
+  if (mixedContentError !== undefined) result.mixedContentError = mixedContentError;
 
   if (options.delayMs) {
     await sleep(options.delayMs);

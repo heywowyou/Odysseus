@@ -17,6 +17,7 @@
  * accessibility.
  */
 
+import { LEGAL_PATH_PATTERN } from '../urls.js';
 import type { FindingCandidate } from './candidate.js';
 import { severityFromCustom } from './severity.js';
 
@@ -33,6 +34,11 @@ export interface HeadingInput {
   selector: string;
 }
 
+export interface HreflangLinkInput {
+  lang: string;
+  href: string;
+}
+
 export interface HeadMetadataCheckInput {
   pageUrl: string;
   title: string | null;
@@ -41,6 +47,8 @@ export interface HeadMetadataCheckInput {
   openGraphTags: Record<string, string>;
   jsonLdBlocks: JsonLdBlockInput[];
   headings: HeadingInput[];
+  hreflangLinks: HreflangLinkInput[];
+  robotsMeta: string | null;
 }
 
 export const META_TITLE_LENGTH_RULE_ID = 'meta-title-length';
@@ -52,6 +60,7 @@ export const HEADING_HIERARCHY_SKIP_RULE_ID = 'heading-hierarchy-skip';
 export const MULTIPLE_H1_RULE_ID = 'multiple-h1';
 export const NO_H1_RULE_ID = 'no-h1';
 export const OPENGRAPH_MISSING_RULE_ID = 'opengraph-missing';
+export const NOINDEX_ON_PUBLIC_PAGE_RULE_ID = 'noindex-on-public-page';
 
 /** Common SERP-display guidance (Google truncates around 50-60 chars for
  *  titles, ~155-160 for descriptions); a title/description far outside
@@ -252,6 +261,31 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
         pageUrl,
         null,
         {},
+      ),
+    );
+  }
+
+  // Lighthouse's own is-crawlable audit (seo category, not excluded)
+  // already flags a noindex directive on any page it scans - including
+  // pages where that is intentional (the mentions-legales/legal-page
+  // pattern), which is exactly the kind of false alarm CLAUDE.md's
+  // diversion rule exists to prevent for other findings. This check
+  // reuses the same shared LEGAL_PATH_PATTERN mentions-legales.ts and
+  // packages/llm's diversion logic already agree on, rather than
+  // inventing a second, potentially-drifting definition of "this looks
+  // like a legal page" - so a page is only flagged here when its own
+  // noindex is genuinely unexpected, not merely present.
+  if (input.robotsMeta?.includes('noindex') && !LEGAL_PATH_PATTERN.test(pageUrl)) {
+    candidates.push(
+      pageCandidate(
+        NOINDEX_ON_PUBLIC_PAGE_RULE_ID,
+        'seo',
+        [],
+        'A public page is excluded from search results',
+        `This page's <meta name="robots"> tag includes "noindex" ("${input.robotsMeta}"), and its URL does not match the pattern this tool treats as an intentionally-excluded legal page (mentions légales, CGU/CGV, cookies, privacy policy). If this exclusion was not deliberate, the page cannot appear in search results at all.`,
+        pageUrl,
+        null,
+        { robotsMeta: input.robotsMeta },
       ),
     );
   }

@@ -78,6 +78,8 @@ function buildScanJson(
     ...(scanResult.headMetadata !== undefined ? { headMetadata: scanResult.headMetadata } : {}),
     ...(scanResult.headMetadataError !== undefined ? { headMetadataError: scanResult.headMetadataError } : {}),
     ...(scanResult.sitemapCheck !== undefined ? { sitemapCheck: scanResult.sitemapCheck } : {}),
+    ...(scanResult.mixedContent !== undefined ? { mixedContent: scanResult.mixedContent } : {}),
+    ...(scanResult.mixedContentError !== undefined ? { mixedContentError: scanResult.mixedContentError } : {}),
   };
 }
 
