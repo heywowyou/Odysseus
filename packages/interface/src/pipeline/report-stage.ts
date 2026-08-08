@@ -9,7 +9,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import type { AuditManifest, Finding } from '@odysseus/core';
-import { generateReportPdf, REPORT_TEMPLATE_VERSION, type StoredAnalysis } from '@odysseus/report';
+import { generateReportPdf, REPORT_TEMPLATE_VERSION, type ReportTier, type StoredAnalysis } from '@odysseus/report';
 import { persistReport } from '@odysseus/store';
 
 export interface ReportStageResult {
@@ -27,18 +27,22 @@ export async function runReportStage(
   findings: Finding[],
   analysis: StoredAnalysis,
   connection: Connection,
+  /** Milestone 8 addendum section 1.6. Defaults to 'full', matching this
+   *  stage's behavior before the tier split existed. */
+  tier: ReportTier = 'full',
 ): Promise<ReportStageResult> {
-  const pdf = await generateReportPdf({ auditDir, manifest, findings, analysis });
+  const pdf = await generateReportPdf({ auditDir, manifest, findings, analysis, tier });
 
   const generatedAt = new Date();
   const reportsDir = path.join(auditDir, 'reports');
   await fs.mkdir(reportsDir, { recursive: true });
-  const reportPath = path.join(reportsDir, `${timestampForFilename(generatedAt)}-${analysis.language}.pdf`);
+  const reportPath = path.join(reportsDir, `${timestampForFilename(generatedAt)}-${analysis.language}-${tier}.pdf`);
   await fs.writeFile(reportPath, pdf);
 
   await persistReport(connection, {
     auditId: manifest.auditId,
     language: analysis.language,
+    tier,
     reportTemplateVersion: REPORT_TEMPLATE_VERSION,
     analysisGeneratedAt: analysis.generatedAt,
     fileRef: path.relative(auditDir, reportPath),

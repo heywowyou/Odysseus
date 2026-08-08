@@ -12,7 +12,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AuditManifest, Finding } from '@odysseus/core';
-import type { StoredAnalysis } from '../types.js';
+import type { ReportTier, StoredAnalysis } from '../types.js';
 import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
 import { renderCover } from './sections/cover.js';
@@ -25,6 +25,7 @@ import { renderObservations } from './sections/observations.js';
 import { renderRenderDiffEvidence } from './sections/render-diff-evidence.js';
 import { renderCoreWebVitalsTable } from './sections/core-web-vitals-table.js';
 import { renderFindingsAppendix } from './sections/findings-appendix.js';
+import { renderScreeningFindings } from './sections/screening-findings.js';
 import { renderMethodology } from './sections/methodology.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -46,18 +47,45 @@ export interface RenderHtmlInput {
   findings: Finding[];
   analysis: StoredAnalysis;
   renderDiffEvidencePages: RenderDiffEvidencePage[];
+  /** Milestone 8 addendum section 1.6. Defaults to 'full', matching this
+   *  template's behavior before the tier split existed - every caller
+   *  that predates this milestone keeps rendering the full audit view
+   *  without needing to change. */
+  tier?: ReportTier;
 }
 
-export async function renderHtml(input: RenderHtmlInput): Promise<string> {
-  const { manifest, findings, analysis, renderDiffEvidencePages } = input;
-  const strings = getStrings(analysis.language);
-  const css = await readReportCss();
+/** Screening gets a much shorter body: executive summary (without its
+ *  full-only "what to do first"/quick-wins, which reference themes this
+ *  tier never shows), the screening-findings section in place of
+ *  themes/observations/render-diff-evidence/core-web-vitals/full
+ *  appendix, and methodology unchanged (the legal citation is core value
+ *  at every tier, not detail being withheld for the upsell). See
+ *  docs/milestone-8-scope-addendum.md section 1.6 for the exact split
+ *  and its business reasoning. */
+function renderBody(
+  strings: ReturnType<typeof getStrings>,
+  tier: ReportTier,
+  manifest: AuditManifest,
+  findings: Finding[],
+  analysis: StoredAnalysis,
+  renderDiffEvidencePages: RenderDiffEvidencePage[],
+): string {
+  if (tier === 'screening') {
+    return [
+      renderCover(strings, manifest, analysis, tier),
+      renderToc(strings, tier),
+      renderStatistics(strings, analysis.language, findings, manifest),
+      renderExecutiveSummary(strings, analysis, tier),
+      renderScreeningFindings(strings, analysis.language, findings),
+      renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings),
+    ].join('\n');
+  }
 
-  const body = [
-    renderCover(strings, manifest, analysis),
-    renderToc(strings),
+  return [
+    renderCover(strings, manifest, analysis, tier),
+    renderToc(strings, tier),
     renderStatistics(strings, analysis.language, findings, manifest),
-    renderExecutiveSummary(strings, analysis),
+    renderExecutiveSummary(strings, analysis, tier),
     renderConformanceSummary(strings, findings, analysis.language),
     renderThemes(strings, analysis, findings, manifest),
     renderObservations(strings, findings, manifest),
@@ -66,6 +94,15 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     renderFindingsAppendix(strings, analysis.language, findings, manifest),
     renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings),
   ].join('\n');
+}
+
+export async function renderHtml(input: RenderHtmlInput): Promise<string> {
+  const { manifest, findings, analysis, renderDiffEvidencePages } = input;
+  const tier = input.tier ?? 'full';
+  const strings = getStrings(analysis.language);
+  const css = await readReportCss();
+
+  const body = renderBody(strings, tier, manifest, findings, analysis, renderDiffEvidencePages);
 
   return `<!doctype html>
 <html lang="${analysis.language}">

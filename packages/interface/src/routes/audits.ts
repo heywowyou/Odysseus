@@ -8,6 +8,7 @@ import {
   getLatestReport,
   getSeverityRollup,
   listReportLanguages,
+  type StoredReportTier,
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
@@ -15,6 +16,10 @@ import { sendError, sendJson } from '../http-utils.js';
 
 function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
+}
+
+function isReportTier(value: string): value is StoredReportTier {
+  return value === 'screening' || value === 'full';
 }
 
 export function registerAuditRoutes(router: Router, connection: Connection): void {
@@ -44,11 +49,18 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     });
   });
 
-  router.get('/api/audits/:auditId/report/:language', async ({ res, params }) => {
+  router.get('/api/audits/:auditId/report/:language', async ({ res, params, query }) => {
     const auditId = params['auditId']!;
     const language = params['language']!;
     if (!isReportLanguage(language)) {
       sendError(res, 400, 'language must be "fr" or "en"');
+      return;
+    }
+    // Defaults to 'full', matching this route's behavior before the
+    // milestone 8 tier split - existing links/bookmarks keep working.
+    const tierParam = query.get('tier') ?? 'full';
+    if (!isReportTier(tierParam)) {
+      sendError(res, 400, 'tier must be "screening" or "full"');
       return;
     }
 
@@ -58,9 +70,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const report = await getLatestReport(connection, auditId, language);
+    const report = await getLatestReport(connection, auditId, language, tierParam);
     if (!report) {
-      sendError(res, 404, `no ${language} report generated yet for this audit`);
+      sendError(res, 404, `no ${language} ${tierParam} report generated yet for this audit`);
       return;
     }
 

@@ -14,6 +14,7 @@ describe.skipIf(!mongoAvailable)('reports read helpers', () => {
     await persistReport(connection!, {
       auditId: 'reports-read-1',
       language: 'fr',
+      tier: 'full',
       reportTemplateVersion: 1,
       analysisGeneratedAt: new Date('2026-08-02T00:00:00.000Z'),
       fileRef: 'reports/old-fr.pdf',
@@ -22,6 +23,7 @@ describe.skipIf(!mongoAvailable)('reports read helpers', () => {
     await persistReport(connection!, {
       auditId: 'reports-read-1',
       language: 'fr',
+      tier: 'full',
       reportTemplateVersion: 2,
       analysisGeneratedAt: new Date('2026-08-03T00:00:00.000Z'),
       fileRef: 'reports/new-fr.pdf',
@@ -37,10 +39,29 @@ describe.skipIf(!mongoAvailable)('reports read helpers', () => {
     expect(missing).toBeNull();
   });
 
+  it('defaults to the full tier and does not return a screening report for the same audit/language', async () => {
+    await persistReport(connection!, {
+      auditId: 'reports-read-tier',
+      language: 'fr',
+      tier: 'screening',
+      reportTemplateVersion: 1,
+      analysisGeneratedAt: new Date(),
+      fileRef: 'reports/x-fr-screening.pdf',
+      generatedAt: new Date(),
+    });
+
+    const full = await getLatestReport(connection!, 'reports-read-tier', 'fr');
+    expect(full).toBeNull();
+
+    const screening = await getLatestReport(connection!, 'reports-read-tier', 'fr', 'screening');
+    expect(screening?.fileRef).toBe('reports/x-fr-screening.pdf');
+  });
+
   it('listReportLanguages returns the distinct languages generated for an audit', async () => {
     await persistReport(connection!, {
       auditId: 'reports-read-2',
       language: 'fr',
+      tier: 'full',
       reportTemplateVersion: 1,
       analysisGeneratedAt: new Date(),
       fileRef: 'reports/x-fr.pdf',
@@ -49,6 +70,7 @@ describe.skipIf(!mongoAvailable)('reports read helpers', () => {
     await persistReport(connection!, {
       auditId: 'reports-read-2',
       language: 'en',
+      tier: 'full',
       reportTemplateVersion: 1,
       analysisGeneratedAt: new Date(),
       fileRef: 'reports/x-en.pdf',

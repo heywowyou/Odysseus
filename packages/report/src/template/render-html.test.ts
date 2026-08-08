@@ -46,4 +46,33 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
     expect(html).toContain('What to take away');
     expect(html).not.toContain('Résumé');
   });
+
+  it('defaults to the full tier when tier is omitted, unchanged from before the tier split', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSasFernandeFindings();
+    const analysis = await loadSasFernandeAnalysis('en');
+
+    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
+
+    expect(html).toContain('Full audit report');
+    // Full-only sections still render.
+    expect(html).toContain('Appendix: full findings list');
+  });
+});
+
+describe('renderHtml, screening tier', () => {
+  it('omits full-audit-only sections and labels the cover as a screening report', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSasFernandeFindings();
+    const analysis = await loadSasFernandeAnalysis('en');
+
+    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [], tier: 'screening' });
+
+    expect(html).toContain('Screening report');
+    expect(html).toContain('Key findings');
+    expect(html).not.toContain('Appendix: full findings list');
+    expect(html).not.toContain('Ranked priorities');
+    expect(html).not.toContain('Render evidence');
+    expect(html).not.toContain('undefined');
+  });
 });

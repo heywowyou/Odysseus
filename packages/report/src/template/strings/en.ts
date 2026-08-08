@@ -15,6 +15,12 @@ export const en: ReportStrings = {
       'Appendix: full findings list',
       'Methodology and limitations',
     ],
+    itemsScreening: [
+      'The audit in numbers',
+      'Executive summary',
+      'Key findings',
+      'Methodology and limitations',
+    ],
     note: "Page numbers appear in the footer and in the PDF file's bookmarks.",
   },
   statistics: {
@@ -71,6 +77,7 @@ export const en: ReportStrings = {
     wcagReferentialLabel: 'Standard audited',
     riskSmallLabel: 'Overall risk level',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
+    tierLabels: { screening: 'Screening report', full: 'Full audit report' },
   },
   executiveSummary: {
     eyebrow: '2 · Summary',
@@ -79,6 +86,33 @@ export const en: ReportStrings = {
     seeThemeTemplate: 'See priority {rank}.',
     quickWinsLabel: 'Quick wins',
     quickWinsSuffix: 'low effort, immediate effect',
+  },
+  screeningFindings: {
+    eyebrow: '3 · Key findings',
+    heading: 'Critical and serious findings',
+    intro:
+      'The findings below are the ones with the most direct impact on your visitors, on search engine indexing, or on legal conformance. This screening report names and counts each issue without exact page locations, HTML selectors, or remediation guidance.',
+    noneFoundNote: 'No critical or serious findings were detected on this site.',
+    upgradeNote:
+      'This screening report shows that these issues exist. The full audit report adds the exact page and element for every finding, plus step by step remediation guidance.',
+    extendedPassHeading: 'Extended accessibility pass',
+    extendedPassIntro:
+      'This audit also includes an extended accessibility pass covering keyboard navigation, focus order, form error handling, video caption presence, and a heuristic red flag for alt text quality. Results below as counts only.',
+    extendedPassNoneFoundNote: 'No extended accessibility pass issues were detected on this site.',
+    extendedPassCountTemplate: '{count} {label} detected across the site',
+    extendedPassRuleLabels: {
+      keyboardTrap: { singular: 'keyboard trap', plural: 'keyboard traps' },
+      focusOrderMismatch: { singular: 'confusing tab order issue', plural: 'confusing tab order issues' },
+      formErrorNotAssociated: {
+        singular: 'form with inaccessible error handling',
+        plural: 'forms with inaccessible error handling',
+      },
+      videoMissingCaptions: { singular: 'video missing captions', plural: 'videos missing captions' },
+      altTextQualityHeuristic: {
+        singular: 'low quality alt text red flag',
+        plural: 'low quality alt text red flags',
+      },
+    },
   },
   themes: {
     eyebrow: '4 · Priorities',
@@ -174,7 +208,7 @@ export const en: ReportStrings = {
     toolingParagraphTemplate:
       'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages crawled on {date} starting from the homepage.',
     automatedCoverageCaveat:
-      'Automated tools detect a well-documented but limited share of accessibility issues, commonly estimated between 30 and 40 percent of criteria. This is a property of any automated audit, not a reservation about this one: it guarantees every finding listed is verifiable. Keyboard navigation, focus order, the editorial quality of alt text, form error handling, and video captioning require manual verification, delivered as a separate service.',
+      'Automated tools detect a well-documented but limited share of accessibility issues, commonly estimated between 30 and 40 percent of criteria. This is a property of any automated audit, not a reservation about this one: it guarantees every finding listed is verifiable. This audit adds an extended accessibility pass covering keyboard navigation, focus order, form error handling, video caption presence, and a heuristic red flag for alt text quality; reading order versus visual order still requires manual verification, delivered as a separate service.',
     legalCitationInScopeTemplate:
       'This site falls under the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts}',
     legalCitationLikelyInScopeTemplate:

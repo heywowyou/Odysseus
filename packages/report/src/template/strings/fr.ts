@@ -15,6 +15,12 @@ export const fr: ReportStrings = {
       'Annexe : liste complète des constats',
       'Méthodologie et limites',
     ],
+    itemsScreening: [
+      "L'audit en chiffres",
+      'Résumé',
+      'Constats principaux',
+      'Méthodologie et limites',
+    ],
     note: 'Les numéros de page figurent en pied de page et dans les signets du fichier PDF.',
   },
   statistics: {
@@ -72,6 +78,7 @@ export const fr: ReportStrings = {
     wcagReferentialLabel: 'Référentiel audité',
     riskSmallLabel: 'Niveau de risque global',
     riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
+    tierLabels: { screening: 'Rapport de repérage', full: "Rapport d'audit complet" },
   },
   executiveSummary: {
     eyebrow: '2 · Résumé',
@@ -80,6 +87,39 @@ export const fr: ReportStrings = {
     seeThemeTemplate: 'Voir priorité {rank}.',
     quickWinsLabel: 'Gains rapides',
     quickWinsSuffix: 'faibles en effort, immédiates en effet',
+  },
+  screeningFindings: {
+    eyebrow: '3 · Constats principaux',
+    heading: 'Constats critiques et majeurs',
+    intro:
+      "Les constats ci-dessous sont ceux qui ont l'impact le plus direct sur vos visiteurs, sur l'indexation par les moteurs de recherche, ou sur la conformité légale. Ce rapport de repérage nomme et compte chaque problème sans indiquer la page ou le sélecteur HTML exact, ni de recommandation de correction.",
+    noneFoundNote: "Aucun constat critique ou majeur n'a été détecté sur ce site.",
+    upgradeNote:
+      "Ce rapport de repérage montre que ces problèmes existent. Le rapport d'audit complet ajoute la page et l'élément exacts pour chaque constat, ainsi qu'une recommandation de correction détaillée.",
+    extendedPassHeading: 'Passe d\'accessibilité étendue',
+    extendedPassIntro:
+      "Cet audit inclut aussi une passe d'accessibilité étendue couvrant la navigation au clavier, l'ordre de focus, la gestion des erreurs de formulaire, la présence de sous-titres vidéo, et un signal heuristique sur la qualité des textes alternatifs. Résultats ci-dessous sous forme de comptages uniquement.",
+    extendedPassNoneFoundNote: "Aucun problème de la passe d'accessibilité étendue n'a été détecté sur ce site.",
+    extendedPassCountTemplate: '{count} {label} détecté(s) sur le site',
+    extendedPassRuleLabels: {
+      keyboardTrap: { singular: 'piège au clavier', plural: 'pièges au clavier' },
+      focusOrderMismatch: {
+        singular: "problème d'ordre de tabulation confus",
+        plural: "problèmes d'ordre de tabulation confus",
+      },
+      formErrorNotAssociated: {
+        singular: 'formulaire avec une gestion des erreurs inaccessible',
+        plural: 'formulaires avec une gestion des erreurs inaccessible',
+      },
+      videoMissingCaptions: {
+        singular: 'vidéo sans sous-titres',
+        plural: 'vidéos sans sous-titres',
+      },
+      altTextQualityHeuristic: {
+        singular: 'signal de texte alternatif de faible qualité',
+        plural: 'signaux de texte alternatif de faible qualité',
+      },
+    },
   },
   themes: {
     eyebrow: '4 · Priorités',
@@ -176,7 +216,7 @@ export const fr: ReportStrings = {
     toolingParagraphTemplate:
       "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages explorées le {date} à partir de la page d'accueil.",
     automatedCoverageCaveat:
-      "Les outils automatisés détectent une part reconnue mais limitée des problèmes d'accessibilité, généralement estimée entre 30 et 40 pour cent des critères. C'est une propriété de tout audit automatisé, pas une réserve sur celui-ci : elle garantit que chaque constat listé est vérifiable. La navigation au clavier, l'ordre de focus, la qualité rédactionnelle des textes alternatifs, la gestion des erreurs de formulaire et le sous-titrage des vidéos exigent une vérification manuelle, qui fait l'objet d'une prestation distincte.",
+      "Les outils automatisés détectent une part reconnue mais limitée des problèmes d'accessibilité, généralement estimée entre 30 et 40 pour cent des critères. C'est une propriété de tout audit automatisé, pas une réserve sur celui-ci : elle garantit que chaque constat listé est vérifiable. Cet audit inclut une passe d'accessibilité étendue couvrant la navigation au clavier, l'ordre de focus, la gestion des erreurs de formulaire, la présence de sous-titres vidéo, et un signal heuristique sur la qualité des textes alternatifs ; l'ordre de lecture par rapport à l'ordre visuel exige encore une vérification manuelle, qui fait l'objet d'une prestation distincte.",
     legalCitationInScopeTemplate:
       "Ce site relève de l'obligation suivante : {regimeName}, sous le contrôle de {authority} ({legalCitation}). {facts}",
     legalCitationLikelyInScopeTemplate:

@@ -61,4 +61,31 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
       await browser.close();
     }
   }, 30_000);
+
+  it('has zero WCAG 2.2 AA violations on the screening tier report, which has its own new markup', async () => {
+    const [manifest, findings, analysis] = await Promise.all([
+      loadSasFernandeManifest(),
+      loadSasFernandeFindings(),
+      loadSasFernandeAnalysis('fr'),
+    ]);
+    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [], tier: 'screening' });
+
+    const { browser } = await launchBrowser();
+    try {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      await page.setContent(html, { waitUntil: 'load' });
+      const results = await new AxeBuilder({ page }).withTags(WCAG22AA_TAGS).analyze();
+
+      if (results.violations.length > 0) {
+        const summary = results.violations
+          .map((v) => `${v.id} (${v.impact}): ${v.nodes.length} node(s) - ${v.help}`)
+          .join('\n');
+        throw new Error(`Screening report HTML failed its own axe-core audit:\n${summary}`);
+      }
+      expect(results.violations).toEqual([]);
+    } finally {
+      await browser.close();
+    }
+  }, 30_000);
 });

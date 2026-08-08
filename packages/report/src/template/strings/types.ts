@@ -15,6 +15,13 @@ export interface ReportStrings {
     eyebrow: string;
     heading: string;
     items: readonly [string, string, string, string, string, string, string, string, string];
+    /** The screening tier's much shorter section list (statistics,
+     *  executive summary, key findings, methodology) - see
+     *  screeningFindings below and render-html.ts's tier branch. Kept as
+     *  a distinct array rather than a slice of `items` above, since
+     *  screening's "key findings" section is not the same section as
+     *  full audit's "ranked priorities" or "appendix". */
+    itemsScreening: readonly [string, string, string, string];
     note: string;
   };
   statistics: {
@@ -71,6 +78,10 @@ export interface ReportStrings {
     wcagReferentialLabel: string;
     riskSmallLabel: string;
     riskLevels: { low: string; medium: string; high: string };
+    /** Milestone 8 addendum section 1.6: both tiers render from the same
+     *  findings.json, so the cover must say plainly which view of it this
+     *  particular PDF is. */
+    tierLabels: { screening: string; full: string };
   };
   executiveSummary: {
     eyebrow: string;
@@ -80,6 +91,31 @@ export interface ReportStrings {
     seeThemeTemplate: string;
     quickWinsLabel: string;
     quickWinsSuffix: string;
+  };
+  /** Screening-tier-only section (milestone-8-scope-addendum.md 1.6):
+   *  critical/serious findings named and counted, but without the
+   *  page/selector detail the findingsAppendix table shows in the full
+   *  audit, plus the five extended-accessibility-pass checks reduced to
+   *  a bare per-rule count. Never rendered when tier is 'full' - that
+   *  tier gets themes.ts and findings-appendix.ts's full detail instead. */
+  screeningFindings: {
+    eyebrow: string;
+    heading: string;
+    intro: string;
+    noneFoundNote: string;
+    upgradeNote: string;
+    extendedPassHeading: string;
+    extendedPassIntro: string;
+    extendedPassNoneFoundNote: string;
+    /** Template: {count}, {label}. */
+    extendedPassCountTemplate: string;
+    extendedPassRuleLabels: {
+      keyboardTrap: { singular: string; plural: string };
+      focusOrderMismatch: { singular: string; plural: string };
+      formErrorNotAssociated: { singular: string; plural: string };
+      videoMissingCaptions: { singular: string; plural: string };
+      altTextQualityHeuristic: { singular: string; plural: string };
+    };
   };
   themes: {
     eyebrow: string;

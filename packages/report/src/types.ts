@@ -22,6 +22,14 @@ export interface StoredAnalysis extends LlmOutput {
   obligationAssessment?: ObligationAssessment;
 }
 
+/** Milestone 8 addendum section 1.6: both tiers render from the same
+ *  findings.json (section 1.2 - crawl scope is never tier-dependent), so
+ *  tier is purely a report-rendering decision made at generation time,
+ *  never stored on a Finding or threaded into @odysseus/core. Defaults
+ *  to 'full' wherever it is optional, preserving every pre-milestone-8
+ *  caller's existing behavior unchanged. */
+export type ReportTier = 'screening' | 'full';
+
 export interface GenerateReportInput {
   /** Used to resolve page screenshot files on disk (manifest.pages[].pageDir
    *  is relative to this directory). Never read for anything else: findings
@@ -32,4 +40,6 @@ export interface GenerateReportInput {
    *  the appendix must include minor findings the model never saw. */
   findings: Finding[];
   analysis: StoredAnalysis;
+  /** Defaults to 'full' when omitted. */
+  tier?: ReportTier;
 }

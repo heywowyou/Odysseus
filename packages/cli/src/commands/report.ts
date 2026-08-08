@@ -3,13 +3,20 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
 import type { AuditManifest, Finding, LlmOutput, ReportLanguage } from '@odysseus/core';
-import type { StoredAnalysis } from '@odysseus/report';
+import type { ReportTier, StoredAnalysis } from '@odysseus/report';
 import { runReportStage } from '@odysseus/interface';
 import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
 
 function parseLanguage(value: string): ReportLanguage {
   if (value !== 'fr' && value !== 'en') {
     throw new InvalidArgumentError(`must be "fr" or "en", got "${value}"`);
+  }
+  return value;
+}
+
+function parseTier(value: string): ReportTier {
+  if (value !== 'screening' && value !== 'full') {
+    throw new InvalidArgumentError(`must be "screening" or "full", got "${value}"`);
   }
   return value;
 }
@@ -53,7 +60,14 @@ export function registerReportCommand(program: Command): void {
     )
     .requiredOption('--language <fr|en>', 'Report language: fr or en', parseLanguage)
     .option('--analysis <file>', 'Path to a specific analysis file; defaults to the latest for --language')
-    .action(async (artifactsDir: string, opts: { language: ReportLanguage; analysis?: string }) => {
+    .option(
+      '--tier <screening|full>',
+      'Report tier: screening (executive summary, risk badge, top critical/serious findings, extended ' +
+        'accessibility pass as counts only) or full (adds theme grouping, full page/selector detail, render ' +
+        'diff evidence, and the "what to do first" summary). Defaults to full.',
+      parseTier,
+    )
+    .action(async (artifactsDir: string, opts: { language: ReportLanguage; analysis?: string; tier?: ReportTier }) => {
       const resolvedDir = path.resolve(artifactsDir);
       let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
 
@@ -75,10 +89,11 @@ export function registerReportCommand(program: Command): void {
         }
         const analysis = await readAnalysis(analysisPath);
 
+        const tier = opts.tier ?? 'full';
         mongoConnection = await connectToMongo();
-        const result = await runReportStage(resolvedDir, manifest, findings, analysis, mongoConnection);
+        const result = await runReportStage(resolvedDir, manifest, findings, analysis, mongoConnection, tier);
 
-        console.log(`Report for ${manifest.auditId} complete (${opts.language})`);
+        console.log(`Report for ${manifest.auditId} complete (${opts.language}, ${tier})`);
         console.log(`  Analysis used: ${path.relative(resolvedDir, analysisPath)}`);
         console.log(`  Written: ${result.reportPath}`);
       } catch (error) {

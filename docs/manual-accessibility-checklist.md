@@ -17,12 +17,20 @@ partial rather than becoming an LLM editorial judgment.
 (meta/canonical/JSON-LD/sitemap/hreflang/heading-hierarchy/redirects,
 plus mixed-content and noindex-on-public-page) has shipped and been
 verified against a real site, and the heading-hierarchy-skips entry
-below is struck accordingly. The behavioral checks the 2026-08-07
-addendum *added* to milestone 8 (keyboard traps, focus order, form
-error handling, video captions, alt-text heuristic) are still not
-built - the "to verify" list below is otherwise unchanged, since
-claiming coverage before those specific checks exist and are validated
-would repeat the exact overstatement this file exists to prevent.
+below is struck accordingly.
+
+**Updated again 2026-08-08:** the addendum's five behavioral checks
+(keyboard traps, focus order, form error handling, video captions,
+alt-text heuristic) have also shipped, verified against
+`fixtures/spa-demo` end to end (not just in isolated unit/e2e tests)
+and against the safety-sensitive form-error-handling check specifically
+with dedicated zero-network-escape tests. Keyboard traps and form error
+messaging are struck below as fully covered. Focus order and alt text
+quality are struck as *partially* covered, not fully: each ships a
+real, narrower check than the checklist item originally named, see
+their entries for exactly what is and isn't caught. Reading order
+versus visual order remains untouched - nothing in milestone 8 detects
+it.
 
 ## Confirmed detection gaps
 
@@ -44,10 +52,38 @@ a dedicated custom check instead of re-enabling either
 against `fixtures/spa-demo`'s seeded h1-to-h3 skip and against a real
 site.
 
+### ~~Keyboard traps~~ - resolved 2026-08-08
+A real Tab-key walk (`packages/scanner/src/checks/keyboard-navigation.ts`)
+detects the same element being focused twice consecutively, the
+signature of a genuine trap. Rule ID `keyboard-trap`.
+
+### ~~Focus order~~ - partially resolved 2026-08-08
+The same Tab-key walk flags a confusing reorder when the observed focus
+sequence moves backward past an earlier element two or more times
+(deliberately conservative: a single reorder is common and often
+intentional). Rule ID `focus-order-mismatch`. Visible focus indicators
+(whether a focused element actually shows a visible outline or ring)
+is a different property entirely and is not checked by this or any
+other rule; still genuinely manual.
+
+### ~~Alt text quality~~ - partially resolved 2026-08-08
+A heuristic red-flag check (`packages/core/src/normalize/normalize-alt-text.ts`,
+rule ID `alt-text-quality-heuristic`) catches filename-pattern alt text
+("IMG_4021.jpg"), generic placeholders ("image", "photo"), empty alt on
+a non-decorative image, and duplicate alt text across different images.
+Deliberately partial by design (see the rule's severity.ts comment):
+alt text that is grammatically fine, present, and simply doesn't
+describe the image still passes, since judging that needs a human or a
+vision model, neither of which this pipeline has.
+
+### ~~Form error messaging and error identification~~ - resolved 2026-08-08
+`packages/scanner/src/checks/form-error-handling.ts` triggers native
+form validation on empty required fields (`reportValidity()` plus a
+synthetic, untrusted `submit` event, never a real submission) and
+checks whether the resulting error is exposed to assistive technology
+via `aria-invalid`, `aria-describedby` pointing at real text, or a
+`role="alert"`/`aria-live` region. Rule ID `form-error-not-associated`.
+
 ## To verify
 
-- Keyboard traps
-- Focus order and visible focus indicators
-- Alt text quality (present but unhelpful passes automated checks)
-- Form error messaging and error identification
 - Reading order versus visual order

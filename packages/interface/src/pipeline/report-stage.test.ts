@@ -87,16 +87,17 @@ describe('runReportStage', () => {
 
     const result = await runReportStage(auditDir, manifest, [], analysis, fakeConnection);
 
-    expect(generateReportPdf).toHaveBeenCalledWith({ auditDir, manifest, findings: [], analysis });
+    expect(generateReportPdf).toHaveBeenCalledWith({ auditDir, manifest, findings: [], analysis, tier: 'full' });
 
     const written = await fs.readFile(result.reportPath);
     expect(written.toString()).toBe('%PDF-fake');
     expect(path.dirname(result.reportPath)).toBe(path.join(auditDir, 'reports'));
-    expect(result.reportPath.endsWith('-fr.pdf')).toBe(true);
+    expect(result.reportPath.endsWith('-fr-full.pdf')).toBe(true);
 
     expect(persistReport).toHaveBeenCalledWith(fakeConnection, {
       auditId: 'audit-1',
       language: 'fr',
+      tier: 'full',
       reportTemplateVersion: 3,
       analysisGeneratedAt: analysis.generatedAt,
       fileRef: path.relative(auditDir, result.reportPath),
@@ -107,6 +108,20 @@ describe('runReportStage', () => {
   it('names the file after the analysis language', async () => {
     const manifest = fakeManifest();
     const result = await runReportStage(auditDir, manifest, [], { ...fakeAnalysis(), language: 'en' }, fakeConnection);
-    expect(result.reportPath.endsWith('-en.pdf')).toBe(true);
+    expect(result.reportPath.endsWith('-en-full.pdf')).toBe(true);
+  });
+
+  it('defaults to the full tier when tier is omitted, and threads an explicit tier through to both generateReportPdf and the stored report document', async () => {
+    const manifest = fakeManifest();
+    const analysis = fakeAnalysis();
+
+    const result = await runReportStage(auditDir, manifest, [], analysis, fakeConnection, 'screening');
+
+    expect(generateReportPdf).toHaveBeenCalledWith({ auditDir, manifest, findings: [], analysis, tier: 'screening' });
+    expect(result.reportPath.endsWith('-fr-screening.pdf')).toBe(true);
+    expect(persistReport).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({ tier: 'screening' }),
+    );
   });
 });

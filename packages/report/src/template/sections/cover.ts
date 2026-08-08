@@ -1,5 +1,5 @@
 import type { AuditManifest } from '@odysseus/core';
-import type { StoredAnalysis } from '../../types.js';
+import type { ReportTier, StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, formatDate } from '../html-utils.js';
 
@@ -19,15 +19,21 @@ const RISK_GLYPH: Record<StoredAnalysis['overallRisk'], string> = {
   low: '&#9679;', // filled circle, same glyph as sev-moderate
 };
 
-export function renderCover(strings: ReportStrings, manifest: AuditManifest, analysis: StoredAnalysis): string {
+export function renderCover(
+  strings: ReportStrings,
+  manifest: AuditManifest,
+  analysis: StoredAnalysis,
+  tier: ReportTier,
+): string {
   const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
   const riskLabel = strings.cover.riskLevels[analysis.overallRisk];
+  const tierLabel = strings.cover.tierLabels[tier];
 
   return `
     <header class="cover">
       <div class="wordmark">ODYSSEUS</div>
       <div class="cover-mid">
-        <span class="eyebrow">${escapeHtml(strings.cover.eyebrow)}</span>
+        <span class="eyebrow">${escapeHtml(strings.cover.eyebrow)} · ${escapeHtml(tierLabel)}</span>
         <h1>${escapeHtml(strings.cover.reportTitle)}</h1>
         <div class="cover-url">${escapeHtml(manifest.siteUrl)}</div>
         <div class="risk risk-${analysis.overallRisk}">

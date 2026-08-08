@@ -94,6 +94,47 @@ Not fully specified here, left for the build session to work out concretely, but
 - The report template needs a tier parameter that controls section inclusion and detail depth, likely reusing the existing aggregation pattern used for minor findings (count and category shown, full detail withheld) and applying that same pattern to the new milestone 8 checks specifically for the screening view.
 - New finding categories or rule IDs will be needed for keyboard traps, focus order, form error handling, video captions, and the alt text heuristic, fitting into the existing severity mapping (`packages/core/src/normalize/severity.ts`) rather than a separate scale.
 
+**Shipped 2026-08-08.** All five behavioral rule IDs landed first
+(`keyboard-trap`, `focus-order-mismatch`, `form-error-not-associated`,
+`video-missing-captions`, `alt-text-quality-heuristic`, added to
+`severity.ts` only after asking, per its locked-file status), then the
+report tier split. `packages/report/src/types.ts` exports `ReportTier =
+'screening' | 'full'`; `RenderHtmlInput.tier` and
+`GenerateReportInput.tier` both default to `'full'` when omitted, so
+no caller from before this milestone needed to change. Section
+inclusion is branched in `render-html.ts`'s `renderBody`, not scattered
+per-section: screening renders cover, TOC, statistics, executive
+summary (without "what to do first"/quick wins, both of which reference
+themes this tier never shows), a new
+`packages/report/src/template/sections/screening-findings.ts` (critical
+and serious findings named and counted with no page/selector detail,
+plus the five rule IDs above reduced to a bare per-rule count, exactly
+this section's example copy), and methodology unchanged (the legal
+citation is core value at every tier, not detail withheld for the
+upsell). Full audit keeps every section it had before. The rule ID list
+that decides what counts as "extended accessibility pass" for the
+screening view is duplicated in `screening-findings.ts` from
+`severity.ts`'s `CUSTOM_CHECK_SEVERITY` table rather than imported,
+matching the "tier is a report-rendering decision, not a
+detection-time one" framing above and the small-duplicated-table
+precedent `methodology.ts` already uses for `EFFECTIF_BAND_LABELS_EN`.
+Threaded through `odysseus report --tier <screening|full>` on the CLI,
+`runReportStage`, and a `tier` field on the stored report document
+(`ReportDocumentFields.tier`, `getLatestReport`'s new optional tier
+parameter, and an optional `?tier=` query param on the dashboard's
+report-download route), all defaulting to `'full'` for the same
+backward-compatibility reason. Also fixed as part of this pass: the
+`automatedCoverageCaveat` report string (both languages) previously
+claimed keyboard navigation, focus order, alt text quality, form error
+handling, and video captioning "require manual verification, delivered
+as a separate service" - stale the moment those five became automated
+checks, and exactly the overstatement section 1.5 above warns against.
+Corrected to name the extended accessibility pass and narrow the
+manual-verification claim to what is actually still manual (reading
+order versus visual order). See
+`docs/manual-accessibility-checklist.md` for the item-by-item detection
+gap status.
+
 ---
 
 ## 3. Decided in follow-up: copy, pricing, and publication
