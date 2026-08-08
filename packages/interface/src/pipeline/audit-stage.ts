@@ -142,6 +142,15 @@ export async function runAuditStage(
       auditId: artifacts.auditId,
       startedAt,
       pages: artifacts.pages,
+      crawl: {
+        startUrl: artifacts.manifest.crawl.startUrl,
+        pages: artifacts.manifest.pages.map((page) => ({
+          url: page.url,
+          status: page.status,
+          ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
+          ...(page.discoveredFrom !== undefined ? { discoveredFrom: page.discoveredFrom } : {}),
+        })),
+      },
     });
     await writeFindingsFile(artifacts.auditDir, findings);
 

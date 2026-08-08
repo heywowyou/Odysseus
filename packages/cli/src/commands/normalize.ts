@@ -48,6 +48,15 @@ export function registerNormalizeCommand(program: Command): void {
           auditId: manifest.auditId,
           startedAt: new Date(manifest.startedAt),
           pages,
+          crawl: {
+            startUrl: manifest.crawl.startUrl,
+            pages: manifest.pages.map((page) => ({
+              url: page.url,
+              status: page.status,
+              ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
+              ...(page.discoveredFrom !== undefined ? { discoveredFrom: page.discoveredFrom } : {}),
+            })),
+          },
         });
 
         await fs.writeFile(

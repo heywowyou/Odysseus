@@ -1,0 +1,102 @@
+/**
+ * Milestone 8: the two custom checks that judge the crawl's own results
+ * rather than any one page's content - robots-blocks-indexing and
+ * broken-internal-link. Unlike every other custom check, neither has a
+ * successfully-scanned page to attach to in the failing case (a
+ * robots-blocked homepage is never visited at all; a broken target page
+ * is never scanned past a 404 or a network failure), so this runs once
+ * per audit from NormalizeAuditInput.crawl directly, not per page via
+ * collectCandidates' page loop.
+ *
+ * robots-blocks-indexing and http-error-status (the target page's own
+ * bad status) are deliberately not the same check: Lighthouse's own
+ * http-status-code audit (seo category, not excluded) already flags a
+ * visited page that returns a bad status. What Lighthouse cannot do is
+ * say which page(s) link to a broken target at all - it audits one page
+ * in isolation and has no notion of "internal link", and it never even
+ * runs on a page the crawler could not visit (a network-level failure).
+ * broken-internal-link fills exactly that gap: it is a statement about
+ * the link, not the target.
+ */
+
+import type { FindingCandidate } from './candidate.js';
+import { severityFromCustom } from './severity.js';
+
+export const ROBOTS_BLOCKS_INDEXING_RULE_ID = 'robots-blocks-indexing';
+export const BROKEN_INTERNAL_LINK_RULE_ID = 'broken-internal-link';
+
+export type CrawlPageStatus = 'visited' | 'skipped-robots' | 'skipped-non-html' | 'error';
+
+export interface CrawlPageInput {
+  url: string;
+  status: CrawlPageStatus;
+  httpStatus?: number;
+  /** The one page that first linked to this URL, if any. Absent for the
+   *  start URL itself. */
+  discoveredFrom?: string;
+}
+
+export interface NormalizeCrawlInput {
+  startUrl: string;
+  pages: CrawlPageInput[];
+}
+
+function isBrokenTarget(page: CrawlPageInput): boolean {
+  if (page.status === 'error') return true;
+  return page.status === 'visited' && page.httpStatus !== undefined && page.httpStatus >= 400;
+}
+
+export function extractCrawlCandidates(input: NormalizeCrawlInput): FindingCandidate[] {
+  const candidates: FindingCandidate[] = [];
+
+  const homepage = input.pages.find((page) => page.url === input.startUrl);
+  if (homepage?.status === 'skipped-robots') {
+    candidates.push({
+      source: 'custom',
+      ruleId: ROBOTS_BLOCKS_INDEXING_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(ROBOTS_BLOCKS_INDEXING_RULE_ID),
+      wcagCriteria: [],
+      title: "robots.txt blocks the site's own homepage",
+      description:
+        "This site's robots.txt disallows crawling the homepage itself. Search engines that respect robots.txt cannot index anything, since the homepage is where discovery starts for a site with no other known entry point.",
+      pageUrl: input.startUrl,
+      element: null,
+      rawEvidenceForPage: {},
+    });
+  }
+
+  for (const page of input.pages) {
+    if (!page.discoveredFrom || !isBrokenTarget(page)) continue;
+    candidates.push({
+      source: 'custom',
+      ruleId: BROKEN_INTERNAL_LINK_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(BROKEN_INTERNAL_LINK_RULE_ID),
+      wcagCriteria: [],
+      title: 'Internal link points to a broken page',
+      description:
+        page.status === 'error'
+          ? `This page links to ${page.url}, which could not be reached during the crawl.`
+          : `This page links to ${page.url}, which returned HTTP ${page.httpStatus}.`,
+      pageUrl: page.discoveredFrom,
+      // Not a DOM-queried selector (the crawler only captures hrefs, not
+      // element positions) but a real, derived one, not a sentinel: an
+      // attribute selector built from the actual href discovered during
+      // the crawl. This also keeps the dedupe key (source|ruleId|
+      // selector) distinct per (source, target) pair - without it, every
+      // broken-internal-link candidate would share one empty selector
+      // and merge into a single finding regardless of which page links
+      // to which broken target, exactly the cross-selector conflation
+      // CLAUDE.md's dedupe/aggregation trade-off warns about.
+      element: {
+        pageUrl: page.discoveredFrom,
+        selector: `a[href="${page.url}"]`,
+        snippet: `Links to ${page.url}`,
+      },
+      rawEvidenceForPage: { targetUrl: page.url, targetStatus: page.status, targetHttpStatus: page.httpStatus },
+    });
+  }
+
+  return candidates;
+}

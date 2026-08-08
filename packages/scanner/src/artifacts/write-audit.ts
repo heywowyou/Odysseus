@@ -130,6 +130,7 @@ export async function writeAuditArtifacts(
         status: crawledPage.status,
         ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
         ...(crawledPage.error !== undefined ? { crawlError: crawledPage.error } : {}),
+        ...(crawledPage.discoveredFrom !== undefined ? { discoveredFrom: crawledPage.discoveredFrom } : {}),
         errors: {},
       });
       continue;
@@ -152,6 +153,7 @@ export async function writeAuditArtifacts(
       depth: crawledPage.depth,
       status: 'visited',
       ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
+      ...(crawledPage.discoveredFrom !== undefined ? { discoveredFrom: crawledPage.discoveredFrom } : {}),
       ...(scanResult.renderDiff !== undefined
         ? { renderDiffMissingPercent: scanResult.renderDiff.missingPercent }
         : {}),

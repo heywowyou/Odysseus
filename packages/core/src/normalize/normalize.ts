@@ -29,6 +29,7 @@ import { extractRenderDiffCandidates } from './normalize-renderdiff.js';
 import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
 import { extractHeadMetadataCandidates, type HeadMetadataCheckInput } from './normalize-head-metadata.js';
 import { extractSitemapCandidates, type SitemapCheckInput } from './normalize-sitemap.js';
+import { extractCrawlCandidates, type NormalizeCrawlInput } from './normalize-crawl.js';
 import type { FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
 
@@ -60,6 +61,12 @@ export interface NormalizeAuditInput {
    *  population is Milestone 10). */
   startedAt: Date;
   pages: NormalizePageInput[];
+  /** Optional so offline re-normalization against a pre-Milestone-8
+   *  manifest (no discoveredFrom recorded) still works, just without
+   *  robots-blocks-indexing/broken-internal-link. Judges the crawl's own
+   *  results (a blocked homepage, a broken link target), not any one
+   *  page's content, so it is collected once here rather than per page. */
+  crawl?: NormalizeCrawlInput;
 }
 
 function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
@@ -73,6 +80,8 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));
     if (page.sitemapCheck) candidates.push(...extractSitemapCandidates(page.sitemapCheck));
   }
+
+  if (input.crawl) candidates.push(...extractCrawlCandidates(input.crawl));
 
   return candidates;
 }

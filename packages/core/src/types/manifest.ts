@@ -106,6 +106,13 @@ export interface ManifestPageEntry {
    *  Distinct from `errors` below, which covers per-scanner failures on a
    *  page that was otherwise successfully visited and scanned. */
   crawlError?: string;
+  /** The one page that first linked to this URL during the crawl, if
+   *  any (absent for the start URL itself). Milestone 8's
+   *  broken-internal-link check reads this to attribute a broken target
+   *  back to the page that links to it - kept in the manifest, not just
+   *  the in-memory crawl result, so `normalize <dir>` can re-derive that
+   *  finding offline from stored artifacts alone. */
+  discoveredFrom?: string;
   errors: {
     renderDiff?: string;
     axe?: string;
