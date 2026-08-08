@@ -89,12 +89,21 @@ export function parseJsonLdBlocks(
 
 export async function extractHeadMetadata(page: Page, pageUrl: string): Promise<HeadMetadataExtraction> {
   const raw = await page.evaluate(() => {
-    function computeSelector(el: Element, tagList: Element[]): string {
-      if (el.id) return `#${el.id}`;
-      const index = tagList.indexOf(el);
-      return `${el.tagName.toLowerCase()}:nth-of-type(${index + 1})`;
-    }
-
+    // The selector expression below is duplicated at each of its two use
+    // sites (jsonLdRawBlocks, headings) rather than pulled into a shared
+    // named helper: this callback is serialized via
+    // Function.prototype.toString() and sent into the page's own JS
+    // context by page.evaluate(), which has no knowledge of the file's
+    // outer scope. Under tsx's dev runtime (esbuild --keep-names, used so
+    // stack traces stay readable), any named function declaration OR any
+    // function assigned to a const inside this block gets a
+    // __name(fn, "fn") call spliced in right after it for .name
+    // preservation - a helper that only exists in the *outer* module, not
+    // in the serialized string sent to the page, so it throws
+    // ReferenceError there and this whole evaluate() call fails silently
+    // into headMetadataError. Only a fully anonymous, unbound expression
+    // avoids the injection. See keyboard-navigation.ts for the same fix
+    // applied to a different check.
     const title = document.title.trim() || null;
     const metaDescription = document.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || null;
 
@@ -112,14 +121,14 @@ export async function extractHeadMetadata(page: Page, pageUrl: string): Promise<
     const jsonLdElements = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
     const jsonLdRawBlocks = jsonLdElements.map((el) => ({
       raw: el.textContent ?? '',
-      selector: computeSelector(el, jsonLdElements),
+      selector: el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}:nth-of-type(${jsonLdElements.indexOf(el) + 1})`,
     }));
 
     const headingElements = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
     const headings = headingElements.map((el) => ({
       level: Number(el.tagName.slice(1)),
       text: (el.textContent ?? '').trim(),
-      selector: computeSelector(el, headingElements),
+      selector: el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}:nth-of-type(${headingElements.indexOf(el) + 1})`,
     }));
 
     const hreflangLinks = Array.from(document.querySelectorAll('link[rel="alternate"][hreflang]'))

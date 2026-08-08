@@ -13,6 +13,10 @@ import {
 import { extractHeadMetadata, type HeadMetadataExtraction } from './checks/head-metadata.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
 import { extractMixedContentResources, type MixedContentExtraction } from './checks/mixed-content.js';
+import { walkKeyboardNavigation, type KeyboardNavigationExtraction } from './checks/keyboard-navigation.js';
+import { checkFormErrorHandling, type FormErrorHandlingExtraction } from './checks/form-error-handling.js';
+import { checkVideoCaptions, type VideoCaptionsExtraction } from './checks/video-captions.js';
+import { extractAltTextFacts, type AltTextExtraction } from './checks/alt-text.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -68,6 +72,14 @@ export interface PageScanResult {
   sitemapCheck?: SitemapCheckResult & { crawledUrls: string[]; pageUrl: string };
   mixedContent?: MixedContentExtraction;
   mixedContentError?: string;
+  keyboardNavigation?: KeyboardNavigationExtraction;
+  keyboardNavigationError?: string;
+  formErrorHandling?: FormErrorHandlingExtraction;
+  formErrorHandlingError?: string;
+  videoCaptions?: VideoCaptionsExtraction;
+  videoCaptionsError?: string;
+  altText?: AltTextExtraction;
+  altTextError?: string;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -125,6 +137,14 @@ export async function scanPage(
   let headMetadataError: string | undefined;
   let mixedContentResult: MixedContentExtraction | undefined;
   let mixedContentError: string | undefined;
+  let keyboardNavigationResult: KeyboardNavigationExtraction | undefined;
+  let keyboardNavigationError: string | undefined;
+  let formErrorHandlingResult: FormErrorHandlingExtraction | undefined;
+  let formErrorHandlingError: string | undefined;
+  let videoCaptionsResult: VideoCaptionsExtraction | undefined;
+  let videoCaptionsError: string | undefined;
+  let altTextResult: AltTextExtraction | undefined;
+  let altTextError: string | undefined;
 
   try {
     result.renderDiff = await renderDiff(browser, url, {
@@ -199,6 +219,40 @@ export async function scanPage(
         } catch (error) {
           mixedContentError = toErrorMessage(error);
         }
+
+        try {
+          videoCaptionsResult = await checkVideoCaptions(page, url);
+        } catch (error) {
+          videoCaptionsError = toErrorMessage(error);
+        }
+
+        try {
+          altTextResult = await extractAltTextFacts(page, url);
+        } catch (error) {
+          altTextError = toErrorMessage(error);
+        }
+
+        // Runs after every read-only DOM check above: this is the only
+        // other check on the page that sends real input events, so it
+        // goes late purely so a future check added here never has to
+        // reason about DOM state a Tab walk might have changed (focus
+        // styles, a dropdown opened on :focus, etc.).
+        try {
+          keyboardNavigationResult = await walkKeyboardNavigation(page, url);
+        } catch (error) {
+          keyboardNavigationError = toErrorMessage(error);
+        }
+
+        // Runs last of all: the only check that triggers form
+        // validation on the page (see form-error-handling.ts's own file
+        // header for the safety reasoning - request-blocking route,
+        // never a real click or submit()). Kept last so nothing else
+        // this hook does can be affected by it.
+        try {
+          formErrorHandlingResult = await checkFormErrorHandling(page, url);
+        } catch (error) {
+          formErrorHandlingError = toErrorMessage(error);
+        }
       },
     });
   } catch (error) {
@@ -215,6 +269,14 @@ export async function scanPage(
   if (headMetadataError !== undefined) result.headMetadataError = headMetadataError;
   if (mixedContentResult !== undefined) result.mixedContent = mixedContentResult;
   if (mixedContentError !== undefined) result.mixedContentError = mixedContentError;
+  if (keyboardNavigationResult !== undefined) result.keyboardNavigation = keyboardNavigationResult;
+  if (keyboardNavigationError !== undefined) result.keyboardNavigationError = keyboardNavigationError;
+  if (formErrorHandlingResult !== undefined) result.formErrorHandling = formErrorHandlingResult;
+  if (formErrorHandlingError !== undefined) result.formErrorHandlingError = formErrorHandlingError;
+  if (videoCaptionsResult !== undefined) result.videoCaptions = videoCaptionsResult;
+  if (videoCaptionsError !== undefined) result.videoCaptionsError = videoCaptionsError;
+  if (altTextResult !== undefined) result.altText = altTextResult;
+  if (altTextError !== undefined) result.altTextError = altTextError;
 
   if (options.delayMs) {
     await sleep(options.delayMs);

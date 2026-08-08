@@ -1,0 +1,149 @@
+/**
+ * Milestone 8 (extended accessibility pass): violation judgment for the
+ * alt-text quality heuristic. Same scanner-extracts/core-decides split
+ * as every other custom check, with one deliberate difference from the
+ * rest of this table: this is explicitly a heuristic red-flag check,
+ * not a definitive detection, per docs/milestone-8-scope-addendum.md
+ * section 1.4. Judging whether alt text is genuinely *meaningful* is an
+ * editorial call this codebase's governing rule does not let a scanner
+ * or the LLM make - so this only catches the specific, checkable
+ * patterns the addendum names, and the report methodology section must
+ * say plainly that clearing this heuristic is not the same as a human
+ * review (see docs/report-v2-refactor.md's precedent for how that kind
+ * of caveat gets worded).
+ *
+ * Never flags a missing alt attribute (axe's image-alt rule already
+ * does) - only alt text that is present but low-signal.
+ */
+
+import type { FindingCandidate } from './candidate.js';
+import { severityFromCustom } from './severity.js';
+
+export const ALT_TEXT_QUALITY_HEURISTIC_RULE_ID = 'alt-text-quality-heuristic';
+
+export interface ImageCheckInput {
+  selector: string;
+  alt: string | null;
+  src: string;
+  isMarkedDecorative: boolean;
+  width: number;
+  height: number;
+}
+
+export interface AltTextCheckInput {
+  pageUrl: string;
+  images: ImageCheckInput[];
+}
+
+/** e.g. IMG_4021.jpg, DSC00123.png, PXL_20240102_030405.jpg. */
+const FILENAME_PATTERN_ALT = /^(img|dsc|dcim|pxl|photo|image|picture)[-_ ]?\d{3,}(\.(jpe?g|png|gif|webp|bmp|heic))?$/i;
+const HAS_FILE_EXTENSION = /\.(jpe?g|png|gif|webp|bmp|heic)$/i;
+
+const GENERIC_PLACEHOLDER_ALT_TEXT = new Set(['image', 'photo', 'picture', 'img', 'graphic', 'icon']);
+
+/** Below this, a 0-width/height decorative-looking image is very
+ *  commonly a spacer or icon even without explicit decorative markup -
+ *  conservative on purpose, so this does not flag small UI chrome. */
+const MIN_DECORATIVE_CHECK_DIMENSION = 50;
+
+function candidate(
+  pageUrl: string,
+  image: ImageCheckInput,
+  reason: string,
+  title: string,
+  description: string,
+): FindingCandidate {
+  return {
+    source: 'custom',
+    ruleId: ALT_TEXT_QUALITY_HEURISTIC_RULE_ID,
+    category: 'accessibility',
+    severity: severityFromCustom(ALT_TEXT_QUALITY_HEURISTIC_RULE_ID),
+    wcagCriteria: ['1.1.1'],
+    title,
+    description,
+    pageUrl,
+    element: { pageUrl, selector: image.selector, snippet: image.alt ?? '' },
+    rawEvidenceForPage: { reason, alt: image.alt, src: image.src },
+  };
+}
+
+export function extractAltTextCandidates(input: AltTextCheckInput): FindingCandidate[] {
+  const candidates: FindingCandidate[] = [];
+  const { pageUrl } = input;
+
+  const altGroups = new Map<string, ImageCheckInput[]>();
+
+  for (const image of input.images) {
+    if (image.alt === null) continue; // missing entirely - axe's territory, not this heuristic's
+
+    const trimmedAlt = image.alt.trim();
+
+    if (trimmedAlt === '') {
+      if (
+        !image.isMarkedDecorative &&
+        image.width >= MIN_DECORATIVE_CHECK_DIMENSION &&
+        image.height >= MIN_DECORATIVE_CHECK_DIMENSION
+      ) {
+        candidates.push(
+          candidate(
+            pageUrl,
+            image,
+            'empty-alt-non-decorative',
+            'Empty alt text on an image that may not be decorative',
+            `This image (${Math.round(image.width)}x${Math.round(image.height)}px) has alt="" but is not marked role="presentation"/"none" or aria-hidden="true". Empty alt text is only correct for genuinely decorative images - if this one carries real content, it is currently invisible to screen readers.`,
+          ),
+        );
+      }
+      continue;
+    }
+
+    if (GENERIC_PLACEHOLDER_ALT_TEXT.has(trimmedAlt.toLowerCase())) {
+      candidates.push(
+        candidate(
+          pageUrl,
+          image,
+          'generic-placeholder',
+          'Alt text is a generic placeholder word',
+          `The alt text "${trimmedAlt}" describes the image as a category, not what it actually shows. This is present but not meaningful to a screen reader user.`,
+        ),
+      );
+      continue;
+    }
+
+    if (FILENAME_PATTERN_ALT.test(trimmedAlt) || HAS_FILE_EXTENSION.test(trimmedAlt)) {
+      candidates.push(
+        candidate(
+          pageUrl,
+          image,
+          'filename-pattern',
+          'Alt text looks like a raw filename',
+          `The alt text "${trimmedAlt}" looks like an unedited camera or file name rather than a description of the image.`,
+        ),
+      );
+      continue;
+    }
+
+    const key = trimmedAlt.toLowerCase();
+    const group = altGroups.get(key) ?? [];
+    group.push(image);
+    altGroups.set(key, group);
+  }
+
+  for (const group of altGroups.values()) {
+    const distinctSrcs = new Set(group.map((image) => image.src));
+    if (group.length < 2 || distinctSrcs.size < 2) continue;
+    for (const image of group) {
+      candidates.push(
+        candidate(
+          pageUrl,
+          image,
+          'duplicate-alt-across-different-images',
+          'Alt text is identical across visually different images',
+          `${group.length} images on this page share the exact alt text "${image.alt!.trim()}" but have different sources. If they show different content, sharing identical alt text does not describe any of them individually.`,
+        ),
+      );
+    }
+  }
+
+  return candidates;
+}

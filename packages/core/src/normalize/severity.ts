@@ -129,6 +129,22 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
 
   // Legal transparency
   'lcen-mentions-legales-missing': 'serious',
+
+  // Extended accessibility pass (milestone-8-scope-addendum.md section 1.3).
+  // keyboard-trap: WCAG 2.1.2, page becomes unusable via keyboard alone.
+  // focus-order-mismatch: real usability confusion, page stays operable.
+  // form-error-not-associated: WCAG 3.3.1/4.1.2, error genuinely
+  // imperceptible to assistive tech, not merely suboptimal.
+  // video-missing-captions: WCAG 1.2.2, zero access for deaf/hard-of-
+  // hearing users to that content.
+  // alt-text-quality-heuristic: explicitly the lowest-confidence check in
+  // this table by design (a heuristic red-flag, not a definitive
+  // detection - see docs/milestone-8-scope-addendum.md section 1.4).
+  'keyboard-trap': 'critical',
+  'focus-order-mismatch': 'moderate',
+  'form-error-not-associated': 'serious',
+  'video-missing-captions': 'serious',
+  'alt-text-quality-heuristic': 'minor',
 };
 
 export function severityFromCustom(ruleId: string): Severity {

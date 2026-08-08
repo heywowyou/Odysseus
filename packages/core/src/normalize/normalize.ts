@@ -32,6 +32,16 @@ import { extractSitemapCandidates, type SitemapCheckInput } from './normalize-si
 import { extractCrawlCandidates, type NormalizeCrawlInput } from './normalize-crawl.js';
 import { extractHreflangCandidates } from './normalize-hreflang.js';
 import { extractMixedContentCandidates, type MixedContentCheckInput } from './normalize-mixed-content.js';
+import {
+  extractKeyboardNavigationCandidates,
+  type KeyboardNavigationCheckInput,
+} from './normalize-keyboard-navigation.js';
+import {
+  extractFormErrorHandlingCandidates,
+  type FormErrorHandlingCheckInput,
+} from './normalize-form-error-handling.js';
+import { extractVideoCaptionsCandidates, type VideoCaptionsCheckInput } from './normalize-video-captions.js';
+import { extractAltTextCandidates, type AltTextCheckInput } from './normalize-alt-text.js';
 import type { FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
 
@@ -56,6 +66,10 @@ export interface NormalizePageInput {
    *  is a site-level concept, not a per-page one. */
   sitemapCheck?: SitemapCheckInput;
   mixedContent?: MixedContentCheckInput;
+  keyboardNavigation?: KeyboardNavigationCheckInput;
+  formErrorHandling?: FormErrorHandlingCheckInput;
+  videoCaptions?: VideoCaptionsCheckInput;
+  altText?: AltTextCheckInput;
 }
 
 export interface NormalizeAuditInput {
@@ -83,6 +97,10 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));
     if (page.sitemapCheck) candidates.push(...extractSitemapCandidates(page.sitemapCheck));
     if (page.mixedContent) candidates.push(...extractMixedContentCandidates(page.mixedContent));
+    if (page.keyboardNavigation) candidates.push(...extractKeyboardNavigationCandidates(page.keyboardNavigation));
+    if (page.formErrorHandling) candidates.push(...extractFormErrorHandlingCandidates(page.formErrorHandling));
+    if (page.videoCaptions) candidates.push(...extractVideoCaptionsCandidates(page.videoCaptions));
+    if (page.altText) candidates.push(...extractAltTextCandidates(page.altText));
   }
 
   if (input.crawl) candidates.push(...extractCrawlCandidates(input.crawl));

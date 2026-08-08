@@ -80,6 +80,18 @@ function buildScanJson(
     ...(scanResult.sitemapCheck !== undefined ? { sitemapCheck: scanResult.sitemapCheck } : {}),
     ...(scanResult.mixedContent !== undefined ? { mixedContent: scanResult.mixedContent } : {}),
     ...(scanResult.mixedContentError !== undefined ? { mixedContentError: scanResult.mixedContentError } : {}),
+    ...(scanResult.keyboardNavigation !== undefined ? { keyboardNavigation: scanResult.keyboardNavigation } : {}),
+    ...(scanResult.keyboardNavigationError !== undefined
+      ? { keyboardNavigationError: scanResult.keyboardNavigationError }
+      : {}),
+    ...(scanResult.formErrorHandling !== undefined ? { formErrorHandling: scanResult.formErrorHandling } : {}),
+    ...(scanResult.formErrorHandlingError !== undefined
+      ? { formErrorHandlingError: scanResult.formErrorHandlingError }
+      : {}),
+    ...(scanResult.videoCaptions !== undefined ? { videoCaptions: scanResult.videoCaptions } : {}),
+    ...(scanResult.videoCaptionsError !== undefined ? { videoCaptionsError: scanResult.videoCaptionsError } : {}),
+    ...(scanResult.altText !== undefined ? { altText: scanResult.altText } : {}),
+    ...(scanResult.altTextError !== undefined ? { altTextError: scanResult.altTextError } : {}),
   };
 }
 
