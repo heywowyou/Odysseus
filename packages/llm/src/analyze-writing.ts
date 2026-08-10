@@ -1,6 +1,7 @@
 import { callMistralForWriting } from './client.js';
 import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { findLanguageComplianceViolations } from './language-guard.js';
+import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js';
 import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 
@@ -53,6 +54,15 @@ export async function analyzeWriting(
     const violations = findLanguageComplianceViolations(result.output, input.language);
     if (violations.length > 0) {
       lastFailureReason = `language compliance violations in field(s): ${violations.map((v) => v.field).join(', ')}`;
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    const severityViolations = findSeverityVocabularyViolations(result.output, input.language);
+    if (severityViolations.length > 0) {
+      lastFailureReason = `severity vocabulary violations in field(s): ${severityViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );

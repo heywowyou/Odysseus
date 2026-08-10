@@ -78,7 +78,13 @@ describe('renderMethodology legal citation branch', () => {
     const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
     expect(html).toContain("Obligation d&#39;accessibilité numérique");
     expect(html).toContain('DGCCRF');
+    // End-to-end regression: packages/interface's sirene-client.ts used to
+    // hand this fact's label in without accents ("100 a 199 salaries"),
+    // and that ASCII-folded string would have rendered faithfully too -
+    // the bug was at the source, not in this render path. This asserts
+    // both: the correct string is present, and the mangled one is not.
     expect(html).toContain('100 à 199 salariés');
+    expect(html).not.toContain('100 a 199 salaries');
     expect(html).toContain('parcours transactionnel de premier niveau');
     expect(html).toContain('Démarche Simplifiée');
     expect(html).not.toContain('50 000');
@@ -211,7 +217,13 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
   });
 });
 
-describe('renderMethodology transactional-flow provenance note (manual site-signal override milestone)', () => {
+/** Milestone: the report must never disclose whether a given input
+ *  (transactional-flow status, in particular) was detected automatically
+ *  or confirmed manually by the auditor. The override still resolves
+ *  siteSignals exactly as before (packages/interface's obligation-stage.ts
+ *  resolveSiteSignals()) and a detector disagreement is still logged
+ *  internally there; only the client-facing PDF text was removed. */
+describe('renderMethodology never discloses manual vs automated resolution of a site signal', () => {
   const inScopeAssessment: ObligationAssessment = {
     status: 'in_scope',
     basis: [
@@ -225,23 +237,9 @@ describe('renderMethodology transactional-flow provenance note (manual site-sign
     ],
   };
 
-  it('renders no note when the resolution source is detected', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const assessment: ObligationAssessment = {
-      ...inScopeAssessment,
-      siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'detected' } },
-    };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
-    expect(html).not.toContain('confirmée manuellement');
-  });
+  const bannedPhrases = ['confirmée manuellement', 'confirmed manually', 'auditeur', 'auditor', 'diverge du résultat', 'disagrees with the result'];
 
-  it('renders no note when there is no siteSignalResolutions at all', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', inScopeAssessment);
-    expect(html).not.toContain('confirmée manuellement');
-  });
-
-  it('renders the manual note with the reason when the source is manual', async () => {
+  it('never mentions manual confirmation or auditor override when the resolution source is manual, with a disagreement', async () => {
     const manifest = await loadSasFernandeManifest();
     const assessment: ObligationAssessment = {
       ...inScopeAssessment,
@@ -250,55 +248,40 @@ describe('renderMethodology transactional-flow provenance note (manual site-sign
           value: true,
           source: 'manual',
           reason: 'redirige vers un moteur de réservation dédié',
+          detectedValue: false,
         },
       },
     };
     const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
-    expect(html).toContain('confirmée manuellement');
-    expect(html).toContain('redirige vers un moteur de réservation dédié');
+    for (const phrase of bannedPhrases) {
+      expect(html).not.toContain(phrase);
+    }
   });
 
-  it('renders the manual note without a reason clause when none was supplied', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const assessment: ObligationAssessment = {
-      ...inScopeAssessment,
-      siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'manual' } },
-    };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
-    expect(html).toContain('confirmée manuellement');
-  });
-
-  it('appends the disagreement sentence when the manual value differs from the detected one', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const assessment: ObligationAssessment = {
-      ...inScopeAssessment,
-      siteSignalResolutions: {
-        hasTransactionalFlow: { value: true, source: 'manual', detectedValue: false },
-      },
-    };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
-    expect(html).toContain('diverge du résultat de la détection automatisée');
-  });
-
-  it('does not append the disagreement sentence when the manual value matches the detected one', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const assessment: ObligationAssessment = {
-      ...inScopeAssessment,
-      siteSignalResolutions: {
-        hasTransactionalFlow: { value: true, source: 'manual', detectedValue: true },
-      },
-    };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
-    expect(html).not.toContain('diverge du résultat');
-  });
-
-  it('renders in English', async () => {
+  it('never mentions manual confirmation or auditor override in English either', async () => {
     const manifest = await loadSasFernandeManifest();
     const assessment: ObligationAssessment = {
       ...inScopeAssessment,
       siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'manual' } },
     };
     const html = renderMethodology(getStrings('en'), manifest, 'en', assessment);
-    expect(html).toContain('confirmed manually by the auditor');
+    for (const phrase of bannedPhrases) {
+      expect(html).not.toContain(phrase);
+    }
+  });
+
+  it('renders identically to the detected-source case, since the note no longer exists', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const detected: ObligationAssessment = {
+      ...inScopeAssessment,
+      siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'detected' } },
+    };
+    const manual: ObligationAssessment = {
+      ...inScopeAssessment,
+      siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'manual' } },
+    };
+    const htmlDetected = renderMethodology(getStrings('fr'), manifest, 'fr', detected);
+    const htmlManual = renderMethodology(getStrings('fr'), manifest, 'fr', manual);
+    expect(htmlManual).toBe(htmlDetected);
   });
 });

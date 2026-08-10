@@ -86,7 +86,7 @@ function renderBody(
     renderToc(strings, tier),
     renderStatistics(strings, analysis.language, findings, manifest),
     renderExecutiveSummary(strings, analysis, tier),
-    renderConformanceSummary(strings, findings, analysis.language),
+    renderConformanceSummary(strings, findings, analysis.language, analysis.obligationAssessment),
     renderThemes(strings, analysis, findings, manifest),
     renderObservations(strings, findings, manifest),
     renderRenderDiffEvidence(strings, analysis.language, manifest, renderDiffEvidencePages),

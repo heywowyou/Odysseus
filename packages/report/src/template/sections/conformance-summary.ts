@@ -1,5 +1,5 @@
 import { getCriterionName } from '@odysseus/llm';
-import type { Finding, ReportLanguage } from '@odysseus/core';
+import type { Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, formatNumber, renderSectionHeader } from '../html-utils.js';
 import { buildConformanceRollup } from '../conformance-rollup.js';
@@ -11,9 +11,17 @@ export function renderConformanceSummary(
   strings: ReportStrings,
   findings: Finding[],
   language: ReportLanguage,
+  obligationAssessment?: ObligationAssessment,
 ): string {
   const rows = buildConformanceRollup(findings);
   const c = strings.conformanceSummary;
+  // Section 9's methodology chapter states a specific obligation
+  // determination whenever assessObligations() reached one; this intro's
+  // generic "we don't rule on applicability" hedge must not contradict
+  // that by printing unconditionally. Same status check, no duplicated
+  // logic: undetermined (or no assessment at all, same fallback
+  // methodology.ts uses) is the only case where the hedge still applies.
+  const showHedge = !obligationAssessment || obligationAssessment.status === 'undetermined';
 
   const body = rows.length
     ? `
@@ -50,7 +58,7 @@ export function renderConformanceSummary(
   return `
     <section class="new-page">
       ${renderSectionHeader(c.eyebrow, c.heading)}
-      <p class="intro">${escapeHtml(c.intro)}</p>
+      ${showHedge ? `<p class="intro">${escapeHtml(c.intro)}</p>` : ''}
       ${body}
     </section>
   `;

@@ -189,37 +189,6 @@ function renderSirenProvenanceNote(
   return '';
 }
 
-/**
- * Manual site-signal override milestone. Mirrors
- * renderSirenProvenanceNote's shape: rendered only when
- * siteSignalResolutions.hasTransactionalFlow.source is 'manual' - never
- * for 'detected', which is the common case and gets no note at all, same
- * precedent as sirenSource: 'extracted' above. When the manual value
- * disagreed with the detector (detectedValue present and different), that
- * is stated plainly as a second sentence, no editorializing about which
- * is "correct".
- */
-function renderTransactionalFlowProvenanceNote(
-  strings: ReportStrings,
-  assessment: ObligationAssessment | undefined,
-): string {
-  const m = strings.methodology;
-  const resolution = assessment?.siteSignalResolutions?.['hasTransactionalFlow'];
-  if (!resolution || resolution.source !== 'manual') return '';
-
-  const base = resolution.reason
-    ? fillTemplate(m.legalCitationManualTransactionalFlowWithReasonTemplate, {
-        reason: resolution.reason,
-      })
-    : m.legalCitationManualTransactionalFlowNoReasonSentence;
-
-  if (resolution.detectedValue !== undefined && resolution.detectedValue !== resolution.value) {
-    return `${base} ${m.legalCitationTransactionalFlowDisagreementSentence}`;
-  }
-
-  return base;
-}
-
 /** B15/B16: methodology and limitations used to be two sections that
  *  duplicated the same automated-coverage caveat near-verbatim, and
  *  neither stated the crawl size. Merged into one section
@@ -245,7 +214,6 @@ export function renderMethodology(
   });
 
   const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings);
-  const transactionalFlowNote = renderTransactionalFlowProvenanceNote(strings, obligationAssessment);
 
   return `
     <section class="new-page">
@@ -254,7 +222,6 @@ export function renderMethodology(
       <p>${escapeHtml(m.automatedCoverageCaveat)}</p>
       <p>${escapeHtml(renderLegalCitationParagraph(strings, obligationAssessment, language))}</p>
       ${sirenNote ? `<p>${escapeHtml(sirenNote)}</p>` : ''}
-      ${transactionalFlowNote ? `<p>${escapeHtml(transactionalFlowNote)}</p>` : ''}
     </section>
   `;
 }

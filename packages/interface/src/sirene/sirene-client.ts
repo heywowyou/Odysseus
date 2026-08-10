@@ -19,22 +19,22 @@ const SIRENE_SEARCH_URL = 'https://recherche-entreprises.api.gouv.fr/search';
  *  needing an English rendering translates by `code`, not by this
  *  string, keeping this client itself language-neutral. */
 const EFFECTIF_BAND_LABELS_FR: Record<string, string> = {
-  NN: 'Effectif non renseigne',
-  '00': '0 salarie',
-  '01': '1 a 2 salaries',
-  '02': '3 a 5 salaries',
-  '03': '6 a 9 salaries',
-  '11': '10 a 19 salaries',
-  '12': '20 a 49 salaries',
-  '21': '50 a 99 salaries',
-  '22': '100 a 199 salaries',
-  '31': '200 a 249 salaries',
-  '32': '250 a 499 salaries',
-  '41': '500 a 999 salaries',
-  '42': '1 000 a 1 999 salaries',
-  '51': '2 000 a 4 999 salaries',
-  '52': '5 000 a 9 999 salaries',
-  '53': '10 000 salaries et plus',
+  NN: 'Effectif non renseigné',
+  '00': '0 salarié',
+  '01': '1 à 2 salariés',
+  '02': '3 à 5 salariés',
+  '03': '6 à 9 salariés',
+  '11': '10 à 19 salariés',
+  '12': '20 à 49 salariés',
+  '21': '50 à 99 salariés',
+  '22': '100 à 199 salariés',
+  '31': '200 à 249 salariés',
+  '32': '250 à 499 salariés',
+  '41': '500 à 999 salariés',
+  '42': '1 000 à 1 999 salariés',
+  '51': '2 000 à 4 999 salariés',
+  '52': '5 000 à 9 999 salariés',
+  '53': '10 000 salariés et plus',
 };
 
 interface RawSireneFinances {

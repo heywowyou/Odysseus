@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { ObligationAssessment } from '@odysseus/core';
 import { renderHtml } from './render-html.js';
 import { escapeHtml } from './html-utils.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
@@ -57,6 +58,61 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
     expect(html).toContain('Full audit report');
     // Full-only sections still render.
     expect(html).toContain('Appendix: full findings list');
+  });
+});
+
+describe('renderHtml, section 3 and section 9 never disagree on whether a determination was reached', () => {
+  const resolvedAssessment: ObligationAssessment = {
+    status: 'in_scope',
+    basis: [
+      {
+        regimeId: 'eaa-loi-2023-171',
+        facts: [
+          { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+          { kind: 'transactional-flow', evidence: [] },
+        ],
+      },
+    ],
+  };
+
+  const undeterminedAssessment: ObligationAssessment = {
+    status: 'undetermined',
+    basis: [{ regimeId: 'eaa-loi-2023-171', facts: [{ kind: 'siren-missing' }] }],
+  };
+
+  it('resolved: section 9 names a specific obligation and section 3 does not hedge', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSasFernandeFindings();
+    const analysis = { ...(await loadSasFernandeAnalysis('fr')), obligationAssessment: resolvedAssessment };
+
+    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
+
+    expect(html).toContain('relève de l&#39;obligation suivante');
+    expect(html).not.toContain("sans se prononcer sur l&#39;applicabilité");
+  });
+
+  it('undetermined: section 3 hedges and section 9 gives no specific determination', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSasFernandeFindings();
+    const analysis = { ...(await loadSasFernandeAnalysis('fr')), obligationAssessment: undeterminedAssessment };
+
+    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
+
+    const hedgeOccurrences = html.split("sans se prononcer sur l&#39;applicabilité").length - 1;
+    expect(hedgeOccurrences).toBe(2);
+    expect(html).not.toContain('relève de l&#39;obligation suivante');
+  });
+
+  it('absent assessment: treated the same as undetermined in both sections', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSasFernandeFindings();
+    const { obligationAssessment: _drop, ...rest } = await loadSasFernandeAnalysis('fr');
+    const analysis = rest as Awaited<ReturnType<typeof loadSasFernandeAnalysis>>;
+
+    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
+
+    const hedgeOccurrences = html.split("sans se prononcer sur l&#39;applicabilité").length - 1;
+    expect(hedgeOccurrences).toBe(2);
   });
 });
 

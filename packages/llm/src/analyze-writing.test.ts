@@ -70,6 +70,15 @@ function buildMismatchedKeyOutput(): WritingPassOutput {
   return output;
 }
 
+function buildNonCanonicalSeverityWordOutput(): WritingPassOutput {
+  // Verbatim from the real observed failure, artifacts/haaitza.com/
+  // 2026-08-08T11-07-43Z/analyses/2026-08-08T11-23-48Z-fr.json: "26
+  // sérieux" where the stats box and annex both said "majeurs".
+  const output = buildCleanFrenchOutput();
+  output.executiveSummary = 'Nous avons identifié 130 problèmes, dont 8 critiques, 26 sérieux et 24 modérés.';
+  return output;
+}
+
 describe('analyzeWriting', () => {
   it('returns the output on a clean pass', async () => {
     vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
@@ -112,6 +121,27 @@ describe('analyzeWriting', () => {
     vi.mocked(callMistralForWriting)
       .mockReset()
       .mockResolvedValue({ output: buildFailingEnglishTitleOutput() });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+  });
+
+  it('retries once when the first response uses a non-canonical severity word, then succeeds', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildNonCanonicalSeverityWordOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(result.output.executiveSummary).not.toMatch(/sérieux/i);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws after exhausting retries when every attempt uses a non-canonical severity word', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValue({ output: buildNonCanonicalSeverityWordOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
     expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);

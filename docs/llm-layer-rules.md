@@ -307,6 +307,24 @@ or relative page value. It may say a page _appears_ commercially
 important and why, which is inference the client can weigh, not a claim
 they have to correct.
 
+**Severity vocabulary must match the report's canonical labels, added
+2026-08-10 after a real manual review of a haaitza.com full audit.** The
+stats box and findings annex both use critique/majeur/modéré/mineur
+throughout (report-level, code-owned strings, never written by the
+model), but the writing pass's free-text `executiveSummary` said "26
+sérieux" for a count every other rendering of the same figure labeled
+"majeurs" - a plausible French synonym for "serious", not the report's
+term for it. Same fix shape as the language-compliance guard above: a
+prompt instruction alone (`writing-prompt.ts` now states the exact four
+words per language and forbids a synonym) is not trusted on its own.
+`findSeverityVocabularyViolations` (`severity-vocabulary-guard.ts`) scans
+every prose field for a small set of known synonyms
+(sérieux/grave/sévère/anodin and their inflections in French; major/severe/
+trivial/negligible in English) and is run inside `analyzeWriting`'s retry
+loop alongside the language guard and the theme-key guard (section 9),
+same retry-then-fail-loud treatment as an invented finding ID or a
+language leak.
+
 ---
 
 ## 7. Analysis variance across runs

@@ -1,4 +1,5 @@
 import type { ReportLanguage } from '@odysseus/core';
+import { SEVERITY_VOCABULARY } from './severity-vocabulary-guard.js';
 import type { WritingInput } from './writing-schema.js';
 
 const LANGUAGE_INSTRUCTION: Record<ReportLanguage, string> = {
@@ -28,6 +29,9 @@ export function buildWritingSystemPrompt(
     ? `\n\nThe dominant performance problem on this site is ${DOMINANT_METRIC_LABEL[dominantPerformanceMetric]}. For any performance-category theme, recommendedActions must address this cause first, before any advice about image weight, CSS, or caching. Do not lead with image or CSS advice when the actual bottleneck is something else.`
     : '';
 
+  const v = SEVERITY_VOCABULARY[language];
+  const severityVocabularyNote = `\n\nWhen referring to a severity level anywhere in your prose (executiveSummary, notes, businessImpact, or recommendedActions), use exactly one of these four words, never a synonym: "${v.critical}", "${v.serious}", "${v.moderate}", "${v.minor}". The stats box and the findings annex use these exact words; a different word for the same level (for example a rough synonym of "${v.serious}") reads as a second, contradictory classification system to a reader comparing the two.`;
+
   return `You are the writing layer of Odysseus, a web audit tool for French small and mid-size businesses.
 
 A separate structuring pass has already grouped this audit's findings into themes and decided each theme's category, effort, impact, priority rank, quick wins, and overall risk. Those decisions are final: you cannot change groupings, priorities, effort, impact, category, quick wins, or overall risk, and your response schema has no fields for any of them.
@@ -42,7 +46,7 @@ Each theme you are given below has a themeKey (for example "t1"). For every them
 You must return exactly one theme object per themeKey shown to you, echoing its themeKey verbatim. Do not invent a themeKey you were not shown, do not omit one you were shown, and do not return more than one object for the same themeKey.
 
 Also write an executiveSummary aimed at a non-technical decision maker, citing the exact siteStats figures you are given (pages scanned, total findings, and the count at each severity) rather than estimating them yourself, and a notes field for anything else worth telling the client.
-${dominantMetricNote}
+${dominantMetricNote}${severityVocabularyNote}
 ${LANGUAGE_INSTRUCTION[language]}${fallbackNote}
 
 Respond with structured JSON matching the required schema only. No prose outside the JSON fields, no markdown fences.`;

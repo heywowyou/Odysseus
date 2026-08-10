@@ -68,6 +68,29 @@ describe('fetchSireneProfile', () => {
     expect(result.profile.turnover.source).toBe('sirene-api:turnover-unreliable-for-band');
   });
 
+  it('renders the effectif band label with correct French accents, not the ASCII-folded typo', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      jsonResponse({
+        results: [
+          {
+            siren: '503932568',
+            nom_complet: 'CARREFOUR',
+            etat_administratif: 'A',
+            tranche_effectif_salarie: '22',
+            finances: { 2023: { ca: 1_000_000 } },
+          },
+        ],
+      }),
+    );
+
+    const result = await fetchSireneProfile('503932568');
+    expect(result.status).toBe('found');
+    if (result.status !== 'found') throw new Error('expected found');
+    // Real regression: this label used to read "100 a 199 salaries",
+    // missing both accents.
+    expect(result.profile.effectifBand.value?.label).toBe('100 à 199 salariés');
+  });
+
   it('returns not-found when the API returns zero results', async () => {
     vi.mocked(global.fetch).mockResolvedValueOnce(jsonResponse({ results: [] }));
     expect(await fetchSireneProfile('000000000')).toEqual({ status: 'not-found', siren: '000000000' });
