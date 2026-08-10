@@ -18,6 +18,7 @@ export const fr: ReportStrings = {
     itemsScreening: [
       "L'audit en chiffres",
       'Résumé',
+      'Conformité accessibilité, WCAG 2.2 niveau AA',
       'Constats principaux',
       'Méthodologie et limites',
     ],
@@ -89,7 +90,7 @@ export const fr: ReportStrings = {
     quickWinsSuffix: 'faibles en effort, immédiates en effet',
   },
   screeningFindings: {
-    eyebrow: '3 · Constats principaux',
+    eyebrow: '4 · Constats principaux',
     heading: 'Constats critiques et majeurs',
     intro:
       "Les constats ci-dessous sont ceux qui ont l'impact le plus direct sur vos visiteurs, sur l'indexation par les moteurs de recherche, ou sur la conformité légale. Ce rapport de repérage nomme et compte chaque problème sans indiquer la page ou le sélecteur HTML exact, ni de recommandation de correction.",

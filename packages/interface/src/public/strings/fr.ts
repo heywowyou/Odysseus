@@ -9,6 +9,7 @@ export const fr: DashboardStrings = {
     severityLabels: { critical: 'Critique', serious: 'Sérieux', moderate: 'Modéré', minor: 'Mineur' },
     statusLabels: { queued: 'En attente', running: 'En cours', complete: 'Terminé', failed: 'Échoué' },
     typeLabels: { fullAudit: 'Audit complet', prospecting: 'Prospection' },
+    tierLabels: { screening: 'Repérage', full: 'Audit complet' },
     downloadReport: 'Télécharger le rapport',
     viewDetails: 'Voir le détail',
     error: 'Erreur',

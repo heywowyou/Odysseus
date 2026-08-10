@@ -12,7 +12,7 @@ vi.mock('@odysseus/store', () => ({ persistReport: vi.fn() }));
 import { generateReportPdf } from '@odysseus/report';
 import { persistReport } from '@odysseus/store';
 import type { AuditManifest } from '@odysseus/core';
-import { runReportStage } from './report-stage.js';
+import { runAllReportsStage, runReportStage } from './report-stage.js';
 
 const fakeConnection = {} as never;
 
@@ -92,7 +92,7 @@ describe('runReportStage', () => {
     const written = await fs.readFile(result.reportPath);
     expect(written.toString()).toBe('%PDF-fake');
     expect(path.dirname(result.reportPath)).toBe(path.join(auditDir, 'reports'));
-    expect(result.reportPath.endsWith('-fr-full.pdf')).toBe(true);
+    expect(result.reportPath.endsWith('-full-fr.pdf')).toBe(true);
 
     expect(persistReport).toHaveBeenCalledWith(fakeConnection, {
       auditId: 'audit-1',
@@ -108,7 +108,7 @@ describe('runReportStage', () => {
   it('names the file after the analysis language', async () => {
     const manifest = fakeManifest();
     const result = await runReportStage(auditDir, manifest, [], { ...fakeAnalysis(), language: 'en' }, fakeConnection);
-    expect(result.reportPath.endsWith('-en-full.pdf')).toBe(true);
+    expect(result.reportPath.endsWith('-full-en.pdf')).toBe(true);
   });
 
   it('defaults to the full tier when tier is omitted, and threads an explicit tier through to both generateReportPdf and the stored report document', async () => {
@@ -118,10 +118,59 @@ describe('runReportStage', () => {
     const result = await runReportStage(auditDir, manifest, [], analysis, fakeConnection, 'screening');
 
     expect(generateReportPdf).toHaveBeenCalledWith({ auditDir, manifest, findings: [], analysis, tier: 'screening' });
-    expect(result.reportPath.endsWith('-fr-screening.pdf')).toBe(true);
+    expect(result.reportPath.endsWith('-screening-fr.pdf')).toBe(true);
     expect(persistReport).toHaveBeenCalledWith(
       fakeConnection,
       expect.objectContaining({ tier: 'screening' }),
     );
+  });
+});
+
+describe('runAllReportsStage', () => {
+  it('generates exactly four reports (fr/en x screening/full) with tier-first, language-second file naming', async () => {
+    const manifest = fakeManifest();
+    const fr = fakeAnalysis();
+    const en = { ...fakeAnalysis(), language: 'en' as const };
+
+    const results = await runAllReportsStage(auditDir, manifest, [], { fr, en }, fakeConnection);
+
+    expect(results).toHaveLength(4);
+    expect(results.map((r) => `${r.tier}-${r.language}`)).toEqual([
+      'screening-fr',
+      'full-fr',
+      'screening-en',
+      'full-en',
+    ]);
+    for (const result of results) {
+      expect(path.basename(result.reportPath).endsWith(`-${result.tier}-${result.language}.pdf`)).toBe(true);
+    }
+    expect(generateReportPdf).toHaveBeenCalledTimes(4);
+  });
+
+  it('persists a report document with the correct tier for each of the four generated reports', async () => {
+    const manifest = fakeManifest();
+    const fr = fakeAnalysis();
+    const en = { ...fakeAnalysis(), language: 'en' as const };
+
+    await runAllReportsStage(auditDir, manifest, [], { fr, en }, fakeConnection);
+
+    expect(persistReport).toHaveBeenCalledTimes(4);
+    const persistedCombos = vi
+      .mocked(persistReport)
+      .mock.calls.map(([, fields]) => `${fields.tier}-${fields.language}`);
+    expect(persistedCombos.sort()).toEqual(['full-en', 'full-fr', 'screening-en', 'screening-fr'].sort());
+  });
+
+  it('routes each report to runReportStage using the matching language analysis', async () => {
+    const manifest = fakeManifest();
+    const fr = fakeAnalysis();
+    const en = { ...fakeAnalysis(), language: 'en' as const };
+
+    await runAllReportsStage(auditDir, manifest, [], { fr, en }, fakeConnection);
+
+    const calledLanguages = vi
+      .mocked(generateReportPdf)
+      .mock.calls.map(([input]) => (input as { analysis: { language: string } }).analysis.language);
+    expect(calledLanguages.sort()).toEqual(['en', 'en', 'fr', 'fr']);
   });
 });

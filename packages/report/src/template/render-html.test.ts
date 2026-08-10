@@ -126,6 +126,10 @@ describe('renderHtml, screening tier', () => {
 
     expect(html).toContain('Screening report');
     expect(html).toContain('Key findings');
+    // Aggregate WCAG conformance table (2026-08-10 commercial-planning
+    // addendum): included at screening tier too, since it's a
+    // criterion/count rollup, not selector-level detail.
+    expect(html).toContain('Accessibility conformance');
     expect(html).not.toContain('Appendix: full findings list');
     expect(html).not.toContain('Ranked priorities');
     expect(html).not.toContain('Render evidence');

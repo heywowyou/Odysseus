@@ -7,6 +7,7 @@ import {
   getFindingsForAudit,
   getLatestReport,
   getSeverityRollup,
+  listReportCombos,
   listReportLanguages,
   type StoredReportTier,
 } from '@odysseus/store';
@@ -31,10 +32,11 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const [findings, severityRollup, reportLanguages] = await Promise.all([
+    const [findings, severityRollup, reportLanguages, reportCombos] = await Promise.all([
       getFindingsForAudit(connection, auditId),
       getSeverityRollup(connection, auditId),
       listReportLanguages(connection, auditId),
+      listReportCombos(connection, auditId),
     ]);
 
     sendJson(res, 200, {
@@ -45,7 +47,10 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       pagesVisited: audit.crawl.visitedCount,
       severityRollup,
       findings,
+      // reportLanguages is kept for any pre-tier-split consumer; the
+      // dashboard's per-report tier label uses reportCombos instead.
       reportLanguages,
+      reportCombos,
     });
   });
 

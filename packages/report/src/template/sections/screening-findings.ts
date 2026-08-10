@@ -23,6 +23,15 @@ const EXTENDED_ACCESSIBILITY_PASS_RULE_IDS = [
   'alt-text-quality-heuristic',
 ] as const;
 
+/** Commercial-planning addendum, decided alongside the multi-tier PDF
+ *  orchestration feature: the top-findings list stays capped at 5 rows,
+ *  not the full critical/serious set. groupAppendix already sorts by
+ *  severity then total occurrences descending, so a slice is "top by
+ *  rank" with no separate ranking logic to invent - same principle as
+ *  minorAggregateNote's "count and category shown, full detail withheld"
+ *  pattern, applied here to row count instead of per-row fields. */
+const SCREENING_TOP_FINDINGS_LIMIT = 5;
+
 type ExtendedPassRuleId = (typeof EXTENDED_ACCESSIBILITY_PASS_RULE_IDS)[number];
 
 const EXTENDED_PASS_LABEL_KEY: Record<
@@ -106,7 +115,7 @@ export function renderScreeningFindings(
       (finding.severity === 'critical' || finding.severity === 'serious') &&
       !isExtendedPassRuleId(finding.ruleId),
   );
-  const groups = groupAppendix(topFindings);
+  const groups = groupAppendix(topFindings).slice(0, SCREENING_TOP_FINDINGS_LIMIT);
   const groupBlocks = groups.map((group) => renderTopFindingRow(strings, language, group)).join('');
   const topBody =
     groups.length > 0

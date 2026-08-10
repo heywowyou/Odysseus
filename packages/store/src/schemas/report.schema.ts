@@ -33,7 +33,7 @@ export interface ReportDocumentFields {
    *  (re-runs after a prompt change), so without this there is no way to
    *  trace which one a stored report reflects. */
   analysisGeneratedAt: Date;
-  /** Path relative to the audit directory, e.g. "reports/2026-...-fr-full.pdf". */
+  /** Path relative to the audit directory, e.g. "reports/2026-...-full-fr.pdf". */
   fileRef: string;
   generatedAt: Date;
 }

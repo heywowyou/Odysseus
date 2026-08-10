@@ -15,6 +15,7 @@ export interface DashboardStrings {
     severityLabels: { critical: string; serious: string; moderate: string; minor: string };
     statusLabels: { queued: string; running: string; complete: string; failed: string };
     typeLabels: { fullAudit: string; prospecting: string };
+    tierLabels: { screening: string; full: string };
     downloadReport: string;
     viewDetails: string;
     error: string;

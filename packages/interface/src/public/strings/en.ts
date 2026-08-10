@@ -9,6 +9,7 @@ export const en: DashboardStrings = {
     severityLabels: { critical: 'Critical', serious: 'Serious', moderate: 'Moderate', minor: 'Minor' },
     statusLabels: { queued: 'Queued', running: 'Running', complete: 'Complete', failed: 'Failed' },
     typeLabels: { fullAudit: 'Full audit', prospecting: 'Prospecting' },
+    tierLabels: { screening: 'Screening', full: 'Full audit' },
     downloadReport: 'Download report',
     viewDetails: 'View details',
     error: 'Error',

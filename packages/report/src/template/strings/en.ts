@@ -18,6 +18,7 @@ export const en: ReportStrings = {
     itemsScreening: [
       'The audit in numbers',
       'Executive summary',
+      'Accessibility conformance, WCAG 2.2 level AA',
       'Key findings',
       'Methodology and limitations',
     ],
@@ -88,7 +89,7 @@ export const en: ReportStrings = {
     quickWinsSuffix: 'low effort, immediate effect',
   },
   screeningFindings: {
-    eyebrow: '3 · Key findings',
+    eyebrow: '4 · Key findings',
     heading: 'Critical and serious findings',
     intro:
       'The findings below are the ones with the most direct impact on your visitors, on search engine indexing, or on legal conformance. This screening report names and counts each issue without exact page locations, HTML selectors, or remediation guidance.',

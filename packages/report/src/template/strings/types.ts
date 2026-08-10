@@ -21,7 +21,7 @@ export interface ReportStrings {
      *  a distinct array rather than a slice of `items` above, since
      *  screening's "key findings" section is not the same section as
      *  full audit's "ranked priorities" or "appendix". */
-    itemsScreening: readonly [string, string, string, string];
+    itemsScreening: readonly [string, string, string, string, string];
     note: string;
   };
   statistics: {

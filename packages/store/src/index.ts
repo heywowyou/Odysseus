@@ -41,4 +41,5 @@ export type { CompleteJobPatch, JobProgressPatch, NewJobInput } from './jobs.js'
 export { getSeverityRollup, getSeverityRollups } from './severity-rollup.js';
 export type { SeverityRollup } from './severity-rollup.js';
 export { getAudit, getFindingsForAudit } from './audits.js';
-export { getLatestReport, listReportLanguages } from './reports.js';
+export { getLatestReport, listReportLanguages, listReportCombos } from './reports.js';
+export type { ReportCombo } from './reports.js';

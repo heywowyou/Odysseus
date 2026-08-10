@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { persistReport } from './persist-report.js';
-import { getLatestReport, listReportLanguages } from './reports.js';
+import { getLatestReport, listReportCombos, listReportLanguages } from './reports.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -79,5 +79,48 @@ describe.skipIf(!mongoAvailable)('reports read helpers', () => {
 
     const languages = await listReportLanguages(connection!, 'reports-read-2');
     expect([...languages].sort()).toEqual(['en', 'fr']);
+  });
+
+  it('listReportCombos returns each distinct (language, tier) pair once, even with a re-generated duplicate', async () => {
+    await persistReport(connection!, {
+      auditId: 'reports-read-combos',
+      language: 'fr',
+      tier: 'screening',
+      reportTemplateVersion: 1,
+      analysisGeneratedAt: new Date(),
+      fileRef: 'reports/a-screening-fr.pdf',
+      generatedAt: new Date(),
+    });
+    await persistReport(connection!, {
+      auditId: 'reports-read-combos',
+      language: 'fr',
+      tier: 'full',
+      reportTemplateVersion: 1,
+      analysisGeneratedAt: new Date(),
+      fileRef: 'reports/a-full-fr.pdf',
+      generatedAt: new Date(),
+    });
+    await persistReport(connection!, {
+      auditId: 'reports-read-combos',
+      language: 'fr',
+      tier: 'full',
+      reportTemplateVersion: 2,
+      analysisGeneratedAt: new Date(),
+      fileRef: 'reports/b-full-fr.pdf',
+      generatedAt: new Date(),
+    });
+    await persistReport(connection!, {
+      auditId: 'reports-read-combos',
+      language: 'en',
+      tier: 'full',
+      reportTemplateVersion: 1,
+      analysisGeneratedAt: new Date(),
+      fileRef: 'reports/a-full-en.pdf',
+      generatedAt: new Date(),
+    });
+
+    const combos = await listReportCombos(connection!, 'reports-read-combos');
+    const keys = combos.map((c) => `${c.language}:${c.tier}`).sort();
+    expect(keys).toEqual(['en:full', 'fr:full', 'fr:screening']);
   });
 });

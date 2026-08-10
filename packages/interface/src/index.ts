@@ -6,8 +6,8 @@ export { runAuditStage } from './pipeline/audit-stage.js';
 export type { RunAuditStageOptions, AuditStageResult } from './pipeline/audit-stage.js';
 export { runAnalysisStage } from './pipeline/analysis-stage.js';
 export type { RunAnalysisStageOptions, AnalysisStageResult } from './pipeline/analysis-stage.js';
-export { runReportStage } from './pipeline/report-stage.js';
-export type { ReportStageResult } from './pipeline/report-stage.js';
+export { runReportStage, runAllReportsStage } from './pipeline/report-stage.js';
+export type { ReportStageResult, AllReportsStageResult } from './pipeline/report-stage.js';
 export {
   DEFAULT_INTERFACE_PORT,
   DEFAULT_INTERFACE_HOST,

@@ -56,12 +56,16 @@ export interface RenderHtmlInput {
 
 /** Screening gets a much shorter body: executive summary (without its
  *  full-only "what to do first"/quick-wins, which reference themes this
- *  tier never shows), the screening-findings section in place of
- *  themes/observations/render-diff-evidence/core-web-vitals/full
- *  appendix, and methodology unchanged (the legal citation is core value
+ *  tier never shows), the same aggregate WCAG conformance table the full
+ *  tier shows (criterion/count/occurrence rollup, no selector detail, so
+ *  it doesn't compromise the upsell the way page/selector-level detail
+ *  would), the screening-findings section (capped top findings, in place
+ *  of themes/observations/render-diff-evidence/core-web-vitals/full
+ *  appendix), and methodology unchanged (the legal citation is core value
  *  at every tier, not detail being withheld for the upsell). See
- *  docs/milestone-8-scope-addendum.md section 1.6 for the exact split
- *  and its business reasoning. */
+ *  docs/milestone-8-scope-addendum.md section 1.6 for the original split
+ *  and its business reasoning, extended for the conformance table by the
+ *  2026-08-10 commercial-planning session. */
 function renderBody(
   strings: ReturnType<typeof getStrings>,
   tier: ReportTier,
@@ -76,6 +80,10 @@ function renderBody(
       renderToc(strings, tier),
       renderStatistics(strings, analysis.language, findings, manifest),
       renderExecutiveSummary(strings, analysis, tier),
+      // Aggregate, no selector detail - same reasoning that already kept
+      // this table in-scope for the full tier applies here (commercial
+      // planning addendum, see docs/milestone-8-scope-addendum.md 1.6).
+      renderConformanceSummary(strings, findings, analysis.language, analysis.obligationAssessment),
       renderScreeningFindings(strings, analysis.language, findings),
       renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings),
     ].join('\n');

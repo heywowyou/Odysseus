@@ -95,6 +95,27 @@ describe('renderScreeningFindings', () => {
     expect(htmlFr).not.toContain('undefined');
   });
 
+  it('caps the top-findings list at 5 rule groups even when more qualify', () => {
+    const findings: Finding[] = Array.from({ length: 8 }, (_, i) =>
+      finding({
+        findingId: `f${i}`,
+        ruleId: `rule-${i}`,
+        severity: 'serious',
+        title: `Issue number ${i}`,
+        occurrences: 8 - i,
+      }),
+    );
+
+    const html = renderScreeningFindings(getStrings('en'), 'en', findings);
+
+    for (let i = 0; i < 5; i++) {
+      expect(html).toContain(`Issue number ${i}`);
+    }
+    expect(html).not.toContain('Issue number 5');
+    expect(html).not.toContain('Issue number 6');
+    expect(html).not.toContain('Issue number 7');
+  });
+
   it('renders the none-found note when no critical or serious findings exist', () => {
     const findings: Finding[] = [
       finding({ findingId: 'f1', ruleId: 'layout-shifts', severity: 'moderate', title: 'Layout shifts' }),

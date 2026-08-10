@@ -22,13 +22,13 @@ describe('renderToc, full tier', () => {
 });
 
 describe('renderToc, screening tier', () => {
-  it('numbers only the 4 screening entries, not the full 9', () => {
+  it('numbers only the 5 screening entries, not the full 9', () => {
     const html = renderToc(getStrings('en'), 'screening');
 
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 5; i++) {
       expect(html).toContain(`<span class="n">${i}</span>`);
     }
-    expect(html).not.toContain('<span class="n">5</span>');
+    expect(html).not.toContain('<span class="n">6</span>');
   });
 
   it('renders the screening-specific section list, not the full-tier one', () => {
