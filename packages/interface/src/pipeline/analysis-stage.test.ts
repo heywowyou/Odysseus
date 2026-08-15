@@ -190,7 +190,7 @@ describe('runAnalysisStage', () => {
 
     const result = await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'fr' }, fakeConnection);
 
-    expect(runObligationStage).toHaveBeenCalledWith(manifest, fakeConnection);
+    expect(runObligationStage).toHaveBeenCalledWith(manifest, fakeConnection, undefined, undefined);
     expect(result.analysis.obligationAssessment).toEqual({
       status: 'in_scope',
       basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }],
@@ -221,6 +221,27 @@ describe('runAnalysisStage', () => {
 
     expect(runObligationStage).not.toHaveBeenCalled();
     expect(result.analysis.obligationAssessment).toEqual(obligationAssessment);
+  });
+
+  it('threads manualSiren and siteSignalOverrides through to runObligationStage when obligationAssessment is not supplied', async () => {
+    // Real gap found 2026-08-10 on a live haaitza.com run: the standalone
+    // `odysseus audit --siren ... --override-transactional-flow ...` then
+    // `odysseus analyze` two-step CLI workflow silently dropped both,
+    // producing an incorrect 'undetermined' report despite the operator
+    // having supplied exactly the facts needed to resolve it.
+    const manifest = fakeManifest();
+    vi.mocked(runObligationStage).mockResolvedValue({ status: 'in_scope', basis: [] });
+
+    const siteSignalOverrides = { hasTransactionalFlow: { value: true, reason: 'phone-only booking' } };
+    await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'fr', manualSiren: '498173988', siteSignalOverrides },
+      fakeConnection,
+    );
+
+    expect(runObligationStage).toHaveBeenCalledWith(manifest, fakeConnection, '498173988', siteSignalOverrides);
   });
 
   it('reports usedFallbackContext: false when an explicit siteContext is passed', async () => {

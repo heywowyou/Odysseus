@@ -355,7 +355,7 @@ is still one non-deterministic LLM call: regenerating it (a fresh audit,
 or `--regenerate-structure` on an existing one) can still produce a
 different grouping than a previous run over the same findings.
 
-Milestone 10 compares runs to produce delta reports. Analysis variance
+Milestone 13 compares runs to produce delta reports. Analysis variance
 will appear there alongside real site changes, and the two must be
 distinguishable. The finding layer is deterministic and diffable by
 `dedupeKey`; the analysis layer is not. Monitoring deltas should be
@@ -535,5 +535,58 @@ prompt has it. Output is a draft, never sent automatically. Language
 follows the prospect's own site language, not a French default.
 
 **Thresholds are starting positions**, same status as the render diff
-percentage thresholds already in the codebase, revisit once milestone 9
+percentage thresholds already in the codebase, revisit once milestone 9b
 produces real distribution data across many scanned sites, not before.
+
+---
+
+## 11. Outreach generation, additional constraints
+
+Section 10 governs whether the model is called for a prospect. This
+section governs what it may write once called. `docs/outreach-rules.md`
+is the full doctrine; the constraints binding the prompt are here.
+
+**The model writes no part of the legal content.** The criteria, the
+registry data and the case-law position are produced by
+`assessObligations()` and spliced in as fixed text. The model writes
+around the block. It may not rewrite, paraphrase, shorten or restate it
+in the subject line. Stated in the outreach prompt directly, not
+inherited from the audit prompt.
+
+**Assembly order.** Deterministic evidence selection, deterministic
+facts block, generated connective prose, then a validator confirming the
+block is byte-identical to what was spliced and that sender identity,
+data origin and opt-out are present. A draft failing either check is
+discarded rather than repaired, on the same reasoning as the
+language-compliance guard: a model that altered the block once will do
+it again, and a repaired draft hides that.
+
+**No statistics.** No population, prevalence or percentage claim in
+outreach, including ones the model believes correct. Every number traces
+to that prospect's own scan or to the facts block. Stricter than the
+audit path, deliberately: a report has a methodology section and a
+client who has paid, an email has neither.
+
+**No conclusions and no penalty language.** No statement that the
+recipient is subject to the EAA, no fine amount, no inspection or
+litigation prediction. The EUR 50,000 figure is prohibited outright, as
+it belongs to the article 47 regime.
+
+**No conformity claims about our own output.** The model may not
+describe the offer as an audit RGAA, as producing a taux de conformité,
+or as a basis for a déclaration d'accessibilité.
+
+**Age framing permitted, prevalence is not.** The model may reference an
+ageing customer base where the sector supports it, with no number
+attached.
+
+**Hotels are not a special case.** The facts block treats a hotel
+booking flow the same as any other e-commerce checkout; do not soften
+argument B for hospitality prospects.
+
+**The benchmark study may be model-generated.** Milestone 10 prose is
+not required to be hand-written. Generate it normally and add the
+one-line disclosure specified in `docs/operator-obligations.md` section 3
+to the published page.
+
+**Language follows the prospect's site**, unchanged.

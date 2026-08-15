@@ -130,6 +130,10 @@ describe('renderHtml, screening tier', () => {
     // addendum): included at screening tier too, since it's a
     // criterion/count rollup, not selector-level detail.
     expect(html).toContain('Accessibility conformance');
+    // Section numbering must not skip from 4 straight to 9 in a
+    // 5-section report (2026-08-10 fix, methodology.ts).
+    expect(html).toContain('5 · Methodology and limitations');
+    expect(html).not.toContain('9 · Methodology and limitations');
     expect(html).not.toContain('Appendix: full findings list');
     expect(html).not.toContain('Ranked priorities');
     expect(html).not.toContain('Render evidence');

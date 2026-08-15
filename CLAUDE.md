@@ -9,6 +9,15 @@ proposing any architecture. Normalization behaviour and the reasoning
 behind it: `docs/normalization-rules.md`. What the model may see, must
 return, and how failures are handled: `docs/llm-layer-rules.md`.
 
+Client-facing legal claims are governed by `docs/obligation-basis.md`;
+nothing legal may be stated anywhere in the product unless it appears
+there with status `primary`. Odysseus's own regulatory position (AI Act,
+electronic invoicing, the perimeter of legal advice, prospecting channel
+rules) is `docs/operator-obligations.md`. Prospecting is governed by
+`docs/prospect-qualification.md` (who may be scanned and contacted) and
+`docs/outreach-rules.md` (what may be said). Pricing and offer framing:
+`docs/offer-positioning.md`.
+
 ## Non-negotiable rules
 
 1. **Deterministic scanners detect. The LLM explains, groups, prioritizes,
@@ -27,7 +36,16 @@ return, and how failures are handled: `docs/llm-layer-rules.md`.
    between crawl requests.
 6. Never overstate legal exposure in any generated text. Accessibility
    obligations depend on company size and sector. State the criterion,
-   not a verdict on whether a law applies to a given client.
+   not a verdict on whether a law applies to a given client. This is the
+   "we report, we do not conclude" rule: reproduce the criteria, state
+   the company's own registry data, describe where the case law stands
+   including the current split between courts, and recommend confirming
+   scope with a lawyer. Never state that a specific business is bound,
+   never give a deadline, never state a sanction amount for that client,
+   never present scope as settled. Binds report templates and the
+   outreach LLM prompt equally. Full rule and legal basis:
+   `docs/obligation-basis.md` section 7 and `docs/operator-obligations.md`
+   section 2.
 
 ## Locked contracts, do not modify without asking
 
@@ -197,6 +215,23 @@ needed, say so and stop. Do not change them and continue.
     gone; `scanConcurrency` is recorded on `AuditConfigSnapshot` for the
     same provenance reason other scan config fields are.
 
+11. **Argument B (the legal content) is a deterministic splice, in both
+    the report and outreach, never model prose**, decided 2026-08-15
+    alongside `docs/obligation-basis.md`, `docs/operator-obligations.md`,
+    and `docs/outreach-rules.md`. `assessObligations()` produces the
+    criteria, the company's registry data, and the case-law position as
+    fixed text; the compliance section of the report and milestone 9c's
+    outreach draft both splice that text in unmodified rather than asking
+    the model to write around it carefully. A validator confirms the
+    spliced block is byte-identical to what `assessObligations()`
+    produced before a report renders or a draft is created; a mismatch is
+    discarded, not repaired, on the same reasoning as the
+    language-compliance guard elsewhere in the LLM layer. Do not revert
+    to a prompt instruction telling the model to "be careful" with legal
+    claims instead of withholding the pen entirely; that was tried once
+    already for wrapper-page and noindex findings (trade-off 8) and
+    failed for the same reason it would fail here.
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
@@ -349,7 +384,7 @@ prospect sites. Each call is approved before it runs.
 
 ## Build order
 
-Milestones 0 through 7 are complete. Milestone 8 is next. Work in
+Milestones 0 through 8 are complete. Milestone 9a is next. Work in
 vertical slices, one milestone per session.
 
 1. Render diff only, CLI invocable — done
@@ -359,8 +394,14 @@ vertical slices, one milestone per session.
 5. LLM prioritization layer with schema validation — done
 6. PDF report generation, bilingual — done
 7. Interface: queue and a private single-user dashboard (`odysseus serve`) — done
+8. Custom checks: meta/canonical/JSON-LD/sitemap/hreflang/heading-hierarchy plus the extended accessibility pass (keyboard traps, focus order, form error handling, video captions, alt-text heuristic) — done
 
-Full milestone list, including the phases beyond 6, is in the brief.
+Milestone 9 (originally "prospecting mode") was split 2026-08-15 into
+9a (prospect acquisition and qualification), 9b (prospecting
+throughput), and 9c (outreach generation); milestones 10 through 13
+(benchmark study, regime 2 documentation generator, free scope check,
+monitoring) follow. Full milestone list, including the phases beyond 8,
+is in the brief, section 7.
 
 Do not start a milestone before the previous one has tests passing, and
 do not consider a milestone finished until its output has been checked

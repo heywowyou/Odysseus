@@ -14,7 +14,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
-import type { AuditManifest, Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
+import type { AuditManifest, Finding, ObligationAssessment, ReportLanguage, SiteSignalOverrides } from '@odysseus/core';
 import {
   analyzeStructure,
   analyzeWriting,
@@ -50,6 +50,19 @@ export interface RunAnalysisStageOptions {
    *  itself in that case (the Sirene cache absorbs the repeat lookup
    *  cost), so `analyze <dir>` stays independently runnable. */
   obligationAssessment?: ObligationAssessment;
+  /** Only consulted when obligationAssessment above is not already
+   *  supplied. Fixes a real gap found 2026-08-10 running the standalone
+   *  `odysseus audit --siren ... --override-transactional-flow ...` then
+   *  `odysseus analyze` two-step CLI workflow against haaitza.com: the
+   *  manual SIREN and site-signal override given to `audit` never reached
+   *  this stage's own fallback runObligationStage call (it only had
+   *  manifest.siteSignals' extracted facts to work with), so a site that
+   *  publishes no SIREN of its own silently produced an 'undetermined'
+   *  legal-obligation report even though the operator had supplied
+   *  exactly the fact needed to resolve it. `analyze <dir>` now accepts
+   *  the same two flags `audit` does, for this exact case. */
+  manualSiren?: string;
+  siteSignalOverrides?: SiteSignalOverrides;
 }
 
 export interface AnalysisStageResult {
@@ -194,7 +207,12 @@ export async function runAnalysisStage(
   // `odysseus analyze <dir>` CLI path calls this stage directly - computed
   // lazily here so that path stays independently runnable. The Sirene
   // cache absorbs the cost of a repeat lookup for the same SIREN.
-  const obligationAssessment = options.obligationAssessment ?? (await runObligationStage(manifest, connection));
+  // manualSiren/siteSignalOverrides let that standalone path reproduce
+  // the same manual facts `odysseus audit` was given, instead of always
+  // falling back to extracted-only facts.
+  const obligationAssessment =
+    options.obligationAssessment ??
+    (await runObligationStage(manifest, connection, options.manualSiren, options.siteSignalOverrides));
 
   await fs.mkdir(analysesDir, { recursive: true });
   const analysisPath = path.join(analysesDir, `${timestampForFilename(generatedAt)}-${options.language}.json`);

@@ -28,6 +28,31 @@ describe('renderMethodology against the real sas-fernande.fr manifest', () => {
   });
 });
 
+describe('renderMethodology section-number eyebrow, tier-aware', () => {
+  it('shows "9" for the full tier (default), matching its position in the full 9-section TOC', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const html = renderMethodology(getStrings('fr'), manifest, 'fr');
+    expect(html).toContain('9 · Méthodologie et limites');
+  });
+
+  it('shows "5" for the screening tier, matching its position in the 5-section screening TOC, not "9"', async () => {
+    // Real bug found 2026-08-10 reviewing a live haaitza.com screening
+    // report: this eyebrow hardcoded "9" (the full tier's position) even
+    // in the 5-section screening tier, jumping from section 4 to 9.
+    const manifest = await loadSasFernandeManifest();
+    const html = renderMethodology(getStrings('fr'), manifest, 'fr', undefined, [], 'screening');
+    expect(html).toContain('5 · Méthodologie et limites');
+    expect(html).not.toContain('9 · Méthodologie et limites');
+  });
+
+  it('shows "5" for the screening tier in English too', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const html = renderMethodology(getStrings('en'), manifest, 'en', undefined, [], 'screening');
+    expect(html).toContain('5 · Methodology and limitations');
+    expect(html).not.toContain('9 · Methodology and limitations');
+  });
+});
+
 describe('renderMethodology legal citation branch', () => {
   it('renders the pre-milestone hedge verbatim when obligationAssessment is absent', async () => {
     const manifest = await loadSasFernandeManifest();

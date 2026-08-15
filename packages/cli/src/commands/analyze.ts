@@ -2,10 +2,12 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
-import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
+import type { AuditManifest, Finding, ReportLanguage, SiteSignalOverrides } from '@odysseus/core';
 import { buildFallbackSiteContext, type SiteContextInput } from '@odysseus/llm';
 import { runAnalysisStage } from '@odysseus/interface';
 import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
+import { parseSirenOption } from '../parse-siren-option.js';
+import { parseBooleanOption } from '../parse-boolean-option.js';
 
 function parseLanguage(value: string): ReportLanguage {
   if (value !== 'fr' && value !== 'en') {
@@ -38,10 +40,35 @@ export function registerAnalyzeCommand(program: Command): void {
       '--regenerate-structure',
       'Force a fresh structure pass (grouping and prioritization) even if one already exists for this audit',
     )
+    .option(
+      '--siren <number>',
+      'Manually supplied SIREN, same as `odysseus audit`\'s flag of the same name. Only consulted when this ' +
+        'audit has no obligation determination already computed by `audit` in the same process (i.e. every ' +
+        'standalone `analyze <dir>` call) - reproduces the same manual override `audit --siren` was given, ' +
+        'instead of silently recomputing from extracted facts alone.',
+      parseSirenOption,
+    )
+    .option(
+      '--override-transactional-flow <true|false>',
+      'Manually asserted hasTransactionalFlow override, same as `odysseus audit`\'s flag of the same name and ' +
+        'same "only consulted when no obligation determination already exists" posture as --siren above.',
+      parseBooleanOption,
+    )
+    .option(
+      '--override-transactional-flow-reason <text>',
+      'Optional free-text reason for --override-transactional-flow.',
+    )
     .action(
       async (
         artifactsDir: string,
-        opts: { language: ReportLanguage; context?: string; regenerateStructure?: boolean },
+        opts: {
+          language: ReportLanguage;
+          context?: string;
+          regenerateStructure?: boolean;
+          siren?: string;
+          overrideTransactionalFlow?: boolean;
+          overrideTransactionalFlowReason?: string;
+        },
       ) => {
         const resolvedDir = path.resolve(artifactsDir);
         let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
@@ -55,6 +82,18 @@ export function registerAnalyzeCommand(program: Command): void {
 
           const { siteContext, usedFallback } = await readSiteContext(opts.context);
 
+          const siteSignalOverrides: SiteSignalOverrides | undefined =
+            opts.overrideTransactionalFlow !== undefined
+              ? {
+                  hasTransactionalFlow: {
+                    value: opts.overrideTransactionalFlow,
+                    ...(opts.overrideTransactionalFlowReason !== undefined
+                      ? { reason: opts.overrideTransactionalFlowReason }
+                      : {}),
+                  },
+                }
+              : undefined;
+
           mongoConnection = await connectToMongo();
           const result = await runAnalysisStage(
             resolvedDir,
@@ -64,6 +103,8 @@ export function registerAnalyzeCommand(program: Command): void {
               language: opts.language,
               ...(usedFallback ? {} : { siteContext }),
               ...(opts.regenerateStructure !== undefined ? { regenerateStructure: opts.regenerateStructure } : {}),
+              ...(opts.siren !== undefined ? { manualSiren: opts.siren } : {}),
+              ...(siteSignalOverrides !== undefined ? { siteSignalOverrides } : {}),
             },
             mongoConnection,
           );

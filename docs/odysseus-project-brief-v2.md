@@ -4,6 +4,8 @@
 
 **Purpose of this document.** Full context for a productized web audit service and the custom tool that powers it. A Claude instance reading this cold should understand the offer, the technical architecture, the workflow, and the remaining open work, without further background.
 
+**Companion docs, added 2026-08-15, read alongside this brief for anything client-facing or legal.** `docs/obligation-basis.md` is the canonical source of legal facts about the client's position; nothing legal may be stated anywhere in the product unless it appears there with status `primary`. `docs/operator-obligations.md` covers Odysseus's own regulatory position (AI Act, electronic invoicing, the perimeter of legal advice, prospecting channel rules). `docs/offer-positioning.md` holds pricing and the diagnostic-not-audit-RGAA framing, superseding the pricing subsections of section 3 below where they conflict. `docs/prospect-qualification.md` and `docs/outreach-rules.md` govern milestone 9a to 9c. This brief's section 8 and section 9 point into those files rather than restating their contents, to avoid two sources of truth on legal claims.
+
 ---
 
 ## 1. The concept in one paragraph
@@ -42,6 +44,8 @@ Whether ChatGPT, Perplexity, and Google's AI answers mention the business or rec
 
 **Revised 2026-08-03.** Three tiers, reduced to two. Implementation and monitoring are dropped entirely, not deferred. Reasoning below.
 
+**Revised again 2026-08-15** (`docs/offer-positioning.md`, which is the canonical source for this subsection): prices held at EUR 290 and EUR 1,200 to 1,900 HT, displayed HT everywhere from the first day per `docs/operator-obligations.md` section 6. Raising into the EUR 2,400 to 3,600 band was considered and rejected, since it assumes a buyer comparing quotes and a cold prospect's reference point is zero; revisit only after a case study and the milestone 10 benchmark study exist. The offer is now stated explicitly, on the offer page, in the proposal, and in the report itself, as a diagnostic rather than an audit RGAA: it does not produce an official taux de conformité over the 106 RGAA criteria and cannot serve as the basis for a déclaration d'accessibilité. Naming that limit first is the position, not a hedge; see `docs/offer-positioning.md` section 2 for what the diagnostic offers instead (whole-site crawl versus a sample of gabarits, render diff evidence, combined SEO/AEO and accessibility findings, 48 hour turnaround at the screening tier).
+
 **Revised again 2026-08-07** (commercial planning session, full detail in `docs/milestone-8-scope-addendum.md`): the video walkthrough is dropped from both tiers, and screening versus full audit is now a report-rendering distinction, not a scan-scope distinction, both tiers run the exact same crawl and scanners against `findings.json` (see 6.2 stage 5 and the addendum's section 1.2). The pricing band itself did not change and is not being revisited by this decision.
 
 | Tier       | What it is                                                                                                                               | Price                                                                                                                    |
@@ -57,7 +61,7 @@ Whether ChatGPT, Perplexity, and Google's AI answers mention the business or rec
 
 **Price range published, exact price still not (resolved 2026-08-07).** "1,200 to 1,900 EUR depending on site risk level" is published on the proposal page and any public pricing page, removing the main friction point for a cold prospect deciding whether the service is even in their budget. The specific number within that band is still set from the client's own risk band after the scan runs, preserving its anchoring value. This resolves open question 5 in section 11.
 
-**Implementation and monitoring, dropped.** Both required an ongoing client relationship to deliver well, which competes directly with the operator's primary allocation of time to Aurora. This is a deliberate tradeoff, made with the cost understood: it removes the mechanism that was meant to make revenue compounding rather than purely transactional (see section 10). The accepted alternative is volume, repeated one-off sales across many prospects, on the reasoning that the addressable market of prospect websites is large enough to sustain that. This raises the importance of milestone 9 (prospecting mode) relative to where it sat under the three-tier model, since there is no retained client base to fall back on if outreach volume drops.
+**Implementation and monitoring, dropped.** Both required an ongoing client relationship to deliver well, which competes directly with the operator's primary allocation of time to Aurora. This is a deliberate tradeoff, made with the cost understood: it removes the mechanism that was meant to make revenue compounding rather than purely transactional (see section 10). The accepted alternative is volume, repeated one-off sales across many prospects, on the reasoning that the addressable market of prospect websites is large enough to sustain that. This raises the importance of milestones 9a to 9c (prospect acquisition, prospecting throughput, outreach generation) relative to where prospecting mode sat under the three-tier model, since there is no retained client base to fall back on if outreach volume drops.
 
 Notes on pricing logic, unchanged from the original reasoning:
 
@@ -75,6 +79,8 @@ Notes on pricing logic, unchanged from the original reasoning:
 4. A short "what to do first" summary aimed at a non-technical decision maker.
 5. Full page and selector detail for every finding, including the extended accessibility pass (keyboard traps, focus order, form error handling, video captions, alt text heuristic; see `docs/manual-accessibility-checklist.md` for what remains genuinely outside automated reach). Not marketed as a manual verification layer, see 3.2.
 
+**Resolved 2026-08-16, `docs/offer-positioning.md` sections 1 and 2.** Manual human verification is not part of the product or the offer, in any tier, full stop. The report is fully automated. The full audit tier includes no manual verification step of any kind, not even a narrowed one; the difference between screening and full audit is report depth only (theme grouping, full selector detail, before/after evidence, the non-technical summary). The full audit's position above screening is justified by pre-audit framing instead: it is the automated step a business runs before commissioning a full audit RGAA, priced accordingly. Do not reintroduce any form of "manual checks" as a deliverable here.
+
 **Screening**, a lighter view of the same scan: executive summary, overall risk badge, top findings by severity (critical and serious only, not full detail), and the extended accessibility pass results as counts or categories only (e.g. "3 keyboard navigation issues detected across the site") with no page-level detail, selectors, or remediation guidance. No theme grouping, no before/after render diff evidence, no "what to do first" summary. Positioned as evidence of a problem worth investigating further, not as a compliance-grade deliverable, and specifically not as a free-form todo list a client could hand their own developer without paying for the full audit's detail.
 
 ---
@@ -83,10 +89,13 @@ Notes on pricing logic, unchanged from the original reasoning:
 
 **Primary targets.**
 
-- E-commerce sites and consumer-facing service businesses above the microenterprise exemption threshold (see 8.1), since those are the ones legally exposed under the EAA.
-- Wine estates, hospitality, and tourism businesses, often bilingual, often on modern JavaScript sites built by agencies that neglected rendering and accessibility.
+- E-commerce sites and consumer-facing service businesses above the microenterprise exemption threshold (see 8.1 and `docs/obligation-basis.md` section 3), since those are the ones legally exposed under the EAA.
+- Wine estates, hospitality, and tourism businesses, often bilingual, often on modern JavaScript sites built by agencies that neglected rendering and accessibility. Hotels and other booking businesses are sold on the same two-argument footing as any other e-commerce prospect, not held back to argument A alone; see `docs/obligation-basis.md` section 3 and `docs/outreach-rules.md` section 3.
 - Real estate agencies, clinics, and professional service firms with lead-generation sites.
 - Web agencies as white-label partners, reselling audits to their own client base. Higher volume, lower per-unit price.
+- Accessibility agencies and freelances, as a second, parallel channel: their automated-detection stage is pure cost, and a tool that compresses it has a buyer who already understands the value. Full reasoning in `docs/offer-positioning.md` section 5. Run five conversations from week one to settle whether the channel is real; do not stop the SMB track for it.
+
+**First vertical for outreach: unambiguous electronic commerce**, chosen for volume and clarity of framing, not because other segments are legally weaker. Qualification is domain-first and headcount-only (10 or more salaried persons), which is deliberately conservative: it produces no false positives at the cost of missing the small-headcount, high-turnover segment. Full mechanics in `docs/prospect-qualification.md`.
 
 **Deliberate non-targets.**
 
@@ -344,9 +353,21 @@ Verified live in both languages against the real capture: 11 themes from 17 find
 
 **Scope expanded 2026-08-07** (full detail in `docs/milestone-8-scope-addendum.md` section 1.3): most of `docs/manual-accessibility-checklist.md`'s "to verify" list is folded in here as genuinely automated checks rather than a separate manual milestone. Added: keyboard traps and focus order (tab through every interactive element via Playwright, record focus order, flag traps and bad divergence from visual/DOM order), form error handling (submit required fields empty, check whether the resulting error is programmatically associated with the field versus conveyed by color alone), video captions (`<track kind="captions">` on native `<video>`, embed API query for YouTube/Vimeo where feasible), and an alt text quality heuristic (filename-pattern alt text, generic placeholder strings, empty alt on a non-decorative image, identical alt repeated across visually different images) as a red-flag check only, not a full editorial-quality judgment, since that would require the LLM to judge rather than detect. Every one of these must meet the same real-finding, real-selector, no-invented-content bar as every other check; the alt text heuristic is the only one that stays intentionally partial in what it claims to catch.
 
-**Milestone 9: prospecting mode.** Batch scanning, brokenness scoring, evidence screenshots, prospect database.
+**Milestones 9a to 13, replaced 2026-08-15.** The original two-item plan (prospecting mode, then monitoring) is superseded by the six-milestone sequence below, written up in full in the 2026-08-15 patch that also delivered `docs/obligation-basis.md`, `docs/operator-obligations.md`, `docs/prospect-qualification.md`, `docs/outreach-rules.md`, and `docs/offer-positioning.md`. Monitoring moves from milestone 10 to milestone 13; the renumbering was free because the stale "milestone 10" wording elsewhere in the docs and codebase was already scheduled for cleanup (`docs/milestone-8-scope-addendum.md` section 3).
 
-**Milestone 10: monitoring.** Scheduled re-scans, regression detection, delta reports. Supports future monitoring capability; no monitoring pricing tier exists under the current two-tier model (see 3.2).
+**Milestone 9a: prospect acquisition and qualification.** First task, before any code: resolve whether AFNIC's free open data includes SIREN, NAF, and the real-site-versus-parking classification, or whether those sit only in the paid `.FR Performance` or SQUAW products (`docs/prospect-qualification.md` section 2). That answer determines whether this milestone is large or small. Then: AFNIC Fichier A ingestion, plain-HTTP mentions légales fetch, SIREN extraction reusing the entity layer, local Sirene stock join, deterministic qualification predicate, prospect collection with data origin, suppression collection. Blocking prerequisites, both previously horizon items: the real user agent resolving to `https://odysseusaudit.com/bot`, and 90 day deletion enforced at database level.
+
+**Milestone 9b: prospecting throughput.** `computeBrokennessScore`, `isProspectingWorthy`, and `isAuditFallbackEligible` move into `packages/core` per `docs/llm-layer-rules.md` section 10. Three changes in `runProspectingJob`: a bounded worker pool across distinct origins in place of the serial loop, safe because the per-origin lock already exists and the rate limit is per origin; Lighthouse removed from the prospecting config, since it is the serialisation bottleneck through the `perf_hooks` queue and performance score is the weakest outreach signal; prospecting page cap reduced to three (home, one listing page, one transactional page, the last retained because the flow detector needs it). Deterministic evidence screenshot selection.
+
+**Milestone 9c: outreach generation.** Draft assembly per `docs/outreach-rules.md`: deterministic evidence, deterministic facts block, generated connective prose, validator confirming the block survived unmodified and that identity, data origin, and opt-out are present (`docs/llm-layer-rules.md` section 11). Draft queue, follow-up state machine keyed on reply detection, suppression check at draft time. Drafts created in the mailbox through the Gmail API, never sent. Separate sending domain with SPF, DKIM, DMARC.
+
+**Milestone 10: benchmark study and percentile.** Batch scan of a bounded e-commerce cohort, aggregate percentile over stored findings, percentile surfaced in both report tiers, study published in French on `odysseusaudit.com`. Target: before 22 September 2026, the Créteil hearing in the E.Leclerc matter (`docs/obligation-basis.md` section 5), which will be the third data point in a contested line and will be covered. Generate the study with Mistral as with everything else; add the one-line AI-assistance disclosure from `docs/operator-obligations.md` section 3 near the top of the published page. No other change to authorship or pipeline.
+
+**Milestone 11: regime 2 documentation generator.** Deterministic template fed by entity data and completed audit results, producing the technical documentation a regime 2 entity actually owes per `docs/obligation-basis.md` section 6. This replaces the déclaration d'accessibilité generator previously specified here, which was aimed at an article 47 obligation Odysseus's prospects do not carry. Hard constraint: nothing is emitted that was not measured on that site.
+
+**Milestone 12: free scope check, conditional.** One URL in, criteria and registry data out, on the public site. Does not start until milestone 10 has produced measurable traffic. Revisits the "no free public scanner" decision in section 11 on the condition recorded there. The differentiator is weaker than first thought, since the output states facts rather than a determination; if it degrades into another free violation counter, do not ship it.
+
+**Milestone 13: monitoring.** Was milestone 10. Scheduled re-scans, regression detection, delta reports. Technical capability only; the subscription tier remains dropped (see 3.2).
 
 ### 7.1 Definition of done for the interface
 
@@ -360,7 +381,7 @@ The question to answer: what must the interface do before the first outreach ema
 - A progress indicator with an estimated time to completion. Two segments, since the two phases have different predictability: crawling has a reasonably accurate live estimate from `maxPages` and `effectiveDelayMs`, scanning is looser since Lighthouse's navigation mode adds its own extra page load. One combined number across both phases would be false precision.
 - On completion, a severity roll-up only (counts of critical, serious, moderate, minor), not the full findings list, with a click-through to the detailed view. Already supported by existing fields on the locked `Finding` schema.
 - A history log tab: date, site URL, risk or severity roll-up, status, linking into the full report. A view over the existing `audits` collection, not new data modeling.
-- Two distinct scan types sharing one engine, both feeding the history log but shown distinguishably (a type column, or separate sub-tabs): **full audit scans** (single site, full checks, queued sequentially or a few at a time) and **prospecting scans** (batch of many URLs, lighter checks only, feeding the ranked prospect table from milestone 9 rather than the full findings log).
+- Two distinct scan types sharing one engine, both feeding the history log but shown distinguishably (a type column, or separate sub-tabs): **full audit scans** (single site, full checks, queued sequentially or a few at a time) and **prospecting scans** (batch of many URLs, lighter checks only, feeding the ranked prospect table from milestone 9a rather than the full findings log).
 - Simple FIFO queueing across sites of either type, per-origin rate limiting per the engineering constraints above. No queue-priority system, not needed for a single-user tool yet.
 
 Explicitly not required for the first email: client login, self-serve signup, billing, agency multi-tenancy, in-app remediation tracking, real-time collaboration.
@@ -369,51 +390,54 @@ Explicitly not required for the first email: client login, self-serve signup, bi
 
 ## 8. Regulatory context
 
-**All time-sensitive items in this section must be verified before being used in client-facing material.** The enforcement landscape has been moving, and the claims below were current as of the research behind this brief, not necessarily as of today.
+**Superseded 2026-08-15 by `docs/obligation-basis.md` (client-facing legal facts) and `docs/operator-obligations.md` (Odysseus's own regulatory position).** This section is now a short index into those two files rather than a restatement, because the original version below conflated the two EAA regimes and misattributed the RGAA declaration trio, and having the wrong version live in two places is how that kind of error survives a correction. Read the two linked files before citing anything legal in client-facing material; nothing legal may be stated anywhere in the product unless it appears in `docs/obligation-basis.md` with status `primary`.
 
-### 8.1 European Accessibility Act (EAA)
+### 8.1 European Accessibility Act (EAA), corrected
 
-- Applies to a defined set of products and services offered to consumers, including e-commerce, banking, transport, and electronic communications.
-- Became enforceable on 28 June 2025.
-- References EN 301 549, which in turn references WCAG. Audit against 2.2 level AA.
-- **Microenterprise exemption:** service providers with fewer than 10 employees and annual turnover or balance sheet total not exceeding EUR 2 million are generally exempt from the service obligations. Verify the exact French transposition wording. This materially shapes the target list, since below that threshold the legal urgency argument does not apply.
-- France moved early on enforcement, with formal notices issued to large retailers in 2025 and escalation thereafter. Verify current status before citing specifics in outreach. Never overstate legal risk to a prospect: it is both wrong and counterproductive if they check.
+- Two regimes exist under French law and must never be merged: **article 47 of loi 2005-102** (public bodies and companies above EUR 250M turnover, referential RGAA, the déclaration d'accessibilité trio) and **regime 2, the EAA via art. L412-13 code de la consommation** (consumer-facing sectors above the microenterprise threshold, referential EN 301 549, technical documentation obligations instead of the RGAA trio). Odysseus prospects are almost entirely regime 2. Full detail: `docs/obligation-basis.md` sections 2 and 4.
+- **Microenterprise exemption, regime 2:** fewer than 10 employees AND turnover or balance sheet under EUR 2 million. Failing either prong removes the exemption, so headcount of 10 or more establishes scope on the size prong alone; `docs/prospect-qualification.md` qualifies on headcount only, deliberately conservative. Detail: `docs/obligation-basis.md` section 3.
+- **RGAA is not the regime 2 referential.** Naming RGAA 4.1.2 to a regime 2 client cites the wrong instrument; name EN 301 549. Detail: `docs/obligation-basis.md` section 4.
+- **Enforcement is contested, not settled.** Lille (5 May 2026, Auchan) dismissed an association claim against a sub-EUR 250M e-commerce company; Caen (4 June 2026, Carrefour) went the other way with an injunction and astreinte; Créteil (E.Leclerc) is scheduled for 22 September 2026. An appeal is pending at Douai. Any output stating regime 2 scope as settled is wrong. Full route-by-route detail, including the EUR 50,000 figure that belongs to article 47 and is routinely misquoted for regime 2: `docs/obligation-basis.md` section 5.
+- **Operating rule that binds report templates and outreach: we report, we do not conclude.** No output states that a specific business is legally bound, cites a deadline, or states what a sanction would be for that client. `docs/obligation-basis.md` section 7. Underlying reason this is not just a caution but a constraint: articles 54 and 60 of loi 71-1130 restrict who may give a personalised legal conclusion for remuneration. `docs/operator-obligations.md` section 2.
 
-### 8.2 Related French frameworks
+### 8.2 GDPR
 
-- **RGAA** is the French accessibility framework, primarily binding on public sector bodies and certain large private entities. Distinct from the EAA obligations. Know the difference, because prospects will conflate them.
-- Existing French law (loi du 11 fevrier 2005 and subsequent decrees) already imposed accessibility obligations on parts of the private sector. Check which apply to a given prospect.
-
-### 8.3 GDPR
-
-- Crawling public pages is low risk, but screenshots and stored DOM snapshots can incidentally capture personal data. Retain no more than needed, set a retention policy, and document it.
+- Crawling public pages is low risk, but screenshots and stored DOM snapshots can incidentally capture personal data. Retain no more than needed, set a retention policy, and document it. Prospecting retention is 90 days, published at `odysseusaudit.com/bot`, enforced at database level per `docs/prospect-qualification.md` section 7.
 - If implementation work involves access to client systems containing personal data, the auditor acts as a data processor and an Article 28 data processing agreement is required.
-- The prospect database contains business contact data. Keep it defensible: legitimate interest basis, clear opt-out in every outreach email, honor unsubscribes, do not scrape personal addresses indiscriminately.
-- French rules on B2B prospecting email (CNIL guidance) permit contacting professional addresses about their professional activity, with clear identification and opt-out. Follow that.
+- The prospect database contains business contact data. Keep it defensible: legitimate interest basis, clear opt-out in every outreach email, honor unsubscribes, role addresses only, free-mail domains excluded. RGPD article 14 requires disclosing where the data came from at first contact, stored per record as data origin. Full rules: `docs/prospect-qualification.md` sections 6 to 7 and `docs/outreach-rules.md` section 7.
 
-### 8.4 EU AI Act
+### 8.3 EU AI Act
 
-Relevant if the tool's LLM layer is ever exposed directly to clients as an automated decision system. As designed here, with internal drafting and prioritization plus human review before delivery, exposure is low. Keep the human review step real, not nominal.
+Article 50 transparency obligations became applicable 2 August 2026. Odysseus is a deployer, not a provider (the model is Mistral's). Client audit reports and outreach emails are private, single-recipient documents and are out of scope for article 50(4) by definition, not because of any mitigation added; no change to either pipeline. The milestone 10 benchmark study is the one document actually published to the public and is the only place 50(4) is plausibly engaged; the fix is a one-line AI-assistance disclosure near the top of the published page, not hand-authorship. Full reasoning, including a corrected earlier overcorrection: `docs/operator-obligations.md` section 3.
+
+### 8.4 Other operator obligations with near-term dates
+
+Two items outside the legal-claims-to-clients scope of 8.1 to 8.3, tracked because they have hard dates: choosing a Plateforme Agréée for electronic invoice reception by **1 September 2026** (applies even to a micro-entreprise in franchise en base), and unsolicited telephone prospecting having been prohibited without prior consent since 11 August 2026, which closes phone as a cold-prospecting channel. Full detail: `docs/operator-obligations.md` sections 4 and 5.
 
 ---
 
 ## 9. Outreach system
 
+**Superseded 2026-08-15 by `docs/outreach-rules.md` (messaging doctrine), `docs/prospect-qualification.md` (who may be contacted), and `docs/offer-positioning.md` (what is sold). This section is now an index and a sequence summary, not the source of the doctrine.**
+
+**Two arguments, not three.** An earlier framing had three pillars: legal obligation, customers turned away by impairment, and search/LLM invisibility. The second and third are the same claim with different causes. **Argument A, revenue not being seen:** invisibility to search and LLM answer engines, transactional flows that cannot be completed, interfaces that fail for age-typical eyesight and dexterity. **Argument B, a legal landscape the business does not know about:** the EAA criteria, the company's own registry data, and the state of the case law, stated as facts rather than a determination (`docs/obligation-basis.md` section 7). A leads in outreach, since the loss is already happening and is verifiable today; B leads in the paid report, once the buyer has paid and wants to know where they stand. Full reasoning: `docs/outreach-rules.md` sections 1 to 3.
+
 **Sequence.**
 
-1. Prospecting mode scans a batch of candidate sites and ranks them, and gates which prospects are worth the LLM cost of outreach generation (see 6.2 stage 6 and `docs/llm-layer-rules.md`).
-2. For prospects clearing the gate, generate one piece of evidence, the raw-versus-rendered screenshot or the top accessibility violations with counts, plus a personalized cold email draft built around that evidence.
-3. Cold email drafts wait in a queue for a human send, never sent automatically. Short, specific, evidence-led. Lead with the finding, not with credentials. One clear ask, linking to the screening offer or a short intake form.
-4. Follow-up sequence: two or three emails, spaced, each adding one new piece of information rather than repeating the ask.
-5. Interested prospect either pays for screening directly (published, self-serve) or completes the intake questionnaire for a full audit.
-6. Written proposal for the full audit tier, price set by risk band per 3.2.
-7. Payment, ideally partly up front for first-time full-audit clients.
-8. Audit runs, PDF report delivered (video walkthrough dropped 2026-08-07, see 3.2).
-9. No implementation or monitoring upsell step (dropped 2026-08-03, see 3.2 and 10). The report's closing section instead frames the report as something the client or their own developer can act on directly.
+1. Milestone 9a qualifies domains deterministically (headcount, sector, resolvable SIREN, not on the suppression list) before any Chromium scan runs. `docs/prospect-qualification.md`.
+2. Milestone 9b scans qualified prospects and gates which are worth the LLM cost of outreach generation (`docs/llm-layer-rules.md` section 10).
+3. Milestone 9c assembles a draft: deterministic evidence selection, deterministic argument-B facts block spliced from `assessObligations()`, generated connective prose, then a validator confirming the block is byte-identical to what was spliced and that identity, data origin, and opt-out are present. A draft failing either check is discarded, not repaired. `docs/outreach-rules.md` section 5 and `docs/llm-layer-rules.md` section 11.
+4. Touch sequence, one new piece of information per touch: (1) render diff evidence, (2) one reproducible transactional failure plus age framing where the sector fits, (3) the argument-B facts block. Follow-ups generate only if no reply is detected. `docs/outreach-rules.md` section 6.
+5. Drafts wait in a queue for a human send, never sent automatically. No sequencer tooling (no lemlist, Instantly, Smartlead). Volume ceiling of 20 to 40 sends per day per warmed mailbox, which is the binding constraint on the whole system, not drafting time. Telephone is closed as a prospecting channel since 11 August 2026; it is a follow-up channel only, for people who already replied. `docs/outreach-rules.md` section 8.
+6. Interested prospect either pays for screening directly (published, self-serve) or completes the intake questionnaire for a full audit.
+7. Written proposal for the full audit tier, price set by risk band per 3.2, offer framed explicitly as a diagnostic and not an audit RGAA per `docs/offer-positioning.md` section 2.
+8. Payment, ideally partly up front for first-time full-audit clients.
+9. Audit runs, PDF report delivered (video walkthrough dropped 2026-08-07, see 3.2).
+10. No implementation or monitoring upsell step (dropped 2026-08-03, see 3.2 and 10). The report's closing section instead frames the report as something the client or their own developer can act on directly.
 
-**What to test and measure:** open and reply rates by vertical, which evidence type converts better (SEO invisibility versus accessibility exposure versus AI visibility), which price point closes fastest, and time from first email to payment.
+**What to test and measure:** open and reply rates by vertical, which evidence type converts better, which price point closes fastest, and time from first email to payment.
 
-**Do not do:** fabricate urgency, misrepresent legal exposure, or send high-volume untargeted email. The whole play depends on the evidence being real and checkable.
+**Prohibited in outreach**, full list in `docs/outreach-rules.md` section 9: any statistic on population or prevalence, the EUR 50,000 figure in any EAA-regime context, any claim the recipient will be fined, inspected, or sued, any conclusion about whether the recipient is legally bound, and any finding not present in that prospect's own scan. **Do not do:** fabricate urgency, misrepresent legal exposure, or send high-volume untargeted email. The whole play depends on the evidence being real and checkable.
 
 ---
 
@@ -421,9 +445,9 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 
 - **Report credibility collapse.** One hallucinated or wrong finding in front of a client's developer damages the whole offer. Mitigated by the deterministic-detection rule and schema validation. **Revised 2026-08-07:** this now extends to the marketing claim itself, not just finding accuracy, since most of the accessibility checklist moved from a manual pass to milestone 8's automated extended accessibility pass. Do not claim "manual verification" when the check is automated; see 3.2 and 3.3 for the "extended accessibility pass" replacement language and why it matters here specifically.
 - **Automated-scan commoditization.** Free scanners exist and clients know it. The differentiator must be prioritization, business framing, bilingual delivery, and the extended accessibility pass, not the scan itself. Never let the report look like raw tool output.
-- **Legal overreach in marketing.** Claiming EAA applicability to an exempt microenterprise is wrong and reputationally risky. Check the size threshold before using the legal angle.
+- **Legal overreach in marketing.** Claiming EAA applicability to an exempt microenterprise is wrong and reputationally risky. Check the size threshold before using the legal angle. **Widened 2026-08-15:** the case law is also genuinely contested (Lille dismissed an association claim against a sub-EUR 250M company five weeks before Caen went the other way), so even a correctly-scoped prospect cannot be told they are settled-law bound. The "we report, we do not conclude" operating rule (`docs/obligation-basis.md` section 7) is the mitigation, and it is also the reason the intended "determination" differentiator was rejected in favor of the two-argument framing in section 9.
 - **Scope drift in the build-first approach.** The original brief called overbuilding the predictable failure mode and recommended selling three audits before building the platform. Section 7 revises that deliberately: the tool gets built complete first. The risk does not disappear, it changes shape. It is no longer "building the wrong thing," it is "never declaring the thing finished." The guardrail is section 7.1: interface scope written down before milestone 7 starts, and anything not on that list waits. If the interface milestone runs long past its written scope, that is the signal, not a reason to extend the scope.
-- **One-off revenue, accepted deliberately (2026-08-03).** Implementation and monitoring were dropped rather than deferred (see 3.2), which removes the mechanism that would have made revenue compounding rather than purely transactional. This was a conscious choice to protect time for Aurora, not an oversight, but it means the business now depends entirely on outreach volume with no retained base to fall back on. Milestone 9 (prospecting mode) carries more weight under this model than it did under the three-tier one. Agency white-label partnerships remain a way to add volume without adding retention.
+- **One-off revenue, accepted deliberately (2026-08-03).** Implementation and monitoring were dropped rather than deferred (see 3.2), which removes the mechanism that would have made revenue compounding rather than purely transactional. This was a conscious choice to protect time for Aurora, not an oversight, but it means the business now depends entirely on outreach volume with no retained base to fall back on. Milestones 9a to 9c (prospect acquisition through outreach generation) carry more weight under this model than prospecting mode did under the three-tier one. Agency white-label partnerships remain a way to add volume without adding retention.
 - **Prospect list exhaustion.** A regional market has a finite number of qualifying businesses. Plan for expansion by sector or geography before the list runs dry.
 
 ---
@@ -432,7 +456,7 @@ Relevant if the tool's LLM layer is ever exposed directly to clients as an autom
 
 ### Settled 2026-08-02
 
-- **Both audit types, equal weight.** They share one engine, so this costs nothing in code. The cost is in delivery time: accessibility requires a genuine manual pass, SPA-SEO does not.
+- **Both audit types, equal weight.** They share one engine, so this costs nothing in code. **Stale as of 2026-08-16:** this line originally distinguished the two audit types by delivery time, on the reasoning that accessibility required a genuine manual pass and SPA-SEO did not. Accessibility checking is fully automated in this product; no tier includes manual verification of any kind (`docs/offer-positioning.md` sections 1 and 2). Both audit types now share the same fully automated delivery model.
 - **No free public scanner.** Private prospecting only. A free scanner is a distribution play and there is no traffic yet to distribute to. Revisit if outreach proves the evidence converts.
 - **Vertical choice deferred.** It shapes outreach, not the build. Decide when building the prospect list, informed by which sectors actually scan badly.
 - **Build fully, then sell.** See section 7.
@@ -462,18 +486,38 @@ Full detail in `docs/milestone-8-scope-addendum.md`, which should be read alongs
 - **Price band (1,200 to 1,900 EUR) unchanged.** The band was never justified by labor cost, so automating most of the manual pass doesn't move it. Not to be reopened without a specific trigger already listed in section 12. See 3.2.
 - **Price range published, exact price still risk-banded per client.** Resolves open question 5 below.
 
+### Settled 2026-08-15
+
+Full detail in the five companion docs listed at the top of this brief.
+
+- **Two arguments, not three.** Commercial loss leads in outreach, legal context leads in the report. Prevalence statistics excluded from outreach entirely. See section 9.
+- **We report, we do not conclude.** No output states that a specific business is legally bound. Rejected: the determination framing, which was the intended differentiator, on grounds of contested case law and the article 54/60 perimeter on giving personalised legal opinions for remuneration. See `docs/obligation-basis.md` sections 5 and 7, `docs/operator-obligations.md` section 2.
+- **Prices held at EUR 290 and EUR 1,200 to 1,900, displayed HT.** Rejected: raising into the EUR 2,400 to 3,600 band, since a cold prospect's reference point is zero, not a comparison. Revisit after a case study and the milestone 10 study exist. See 3.2 and `docs/offer-positioning.md`.
+- **Positioned explicitly as a diagnostic, not an audit RGAA.** Stated first, on the offer page, in the proposal, and in the report. See 3.2.
+- **Qualification precedes scanning.** Chromium never runs on an unqualified domain. See `docs/prospect-qualification.md`.
+- **Domain-first list building.** AFNIC open data, SIREN from mentions légales, local Sirene join. Rejected: registry-first with paid website enrichment. See `docs/prospect-qualification.md` section 1.
+- **Headcount-only qualification, accepted as conservative.** No false positives, at the cost of missing the small-headcount high-turnover segment. See section 4 and `docs/prospect-qualification.md` section 3.
+- **Role addresses only, free-mail domains excluded.** See `docs/prospect-qualification.md` section 6.
+- **The send stays manual, and telephone prospecting is closed** by the rules in force since 11 August 2026. No sequencer integration. See `docs/outreach-rules.md` section 8 and `docs/operator-obligations.md` section 5.
+- **First vertical: unambiguous electronic commerce**, chosen for volume and clarity of framing. Hotels are sold on both arguments A and B, not held back to argument A alone; the legal footing for a booking flow that concludes a contract online is not materially weaker than a standard online shop. See section 4 and `docs/obligation-basis.md` section 3.
+- **Second channel opened: accessibility agencies and freelances**, run in parallel from week one, five conversations to settle whether it is real. See section 4 and `docs/offer-positioning.md` section 5.
+- **Free public scanner, still not now.** Milestone 12 is the conditional revisit, gated on milestone 10 producing traffic. See "No free public scanner" under Settled 2026-08-02 above, now qualified by this later decision.
+- **The benchmark study is LLM-generated like everything else**, with a one-line AI-assistance disclosure added for AI Act article 50(4). Client reports and outreach are confirmed out of scope for article 50 entirely, being private single-recipient documents, and need no disclosure and no pipeline change. See `docs/operator-obligations.md` section 3.
+
 ### Blocking, with a named dependency
 
 1. ~~**A real domain with a bot-information page.**~~ Partially resolved 2026-08-07: `odysseusaudit.com` (and `.fr`) purchased, `ODYSSEUS_USER_AGENT` and both `.env` files now point at `https://odysseusaudit.com/bot`, and `packages/site` (a standalone Next.js app, not part of the tsc build graph, deployed separately to Vercel) scaffolds that route. Still blocking until the `/bot` page actually has content (placeholder component only, next turn) and the site is deployed, so a site owner checking their logs still finds nothing live yet.
-2. **The manual accessibility checklist** (`docs/manual-accessibility-checklist.md`). Two confirmed entries so far, both discovered by testing rather than assumed: placeholder-as-only-label passes axe because the placeholder supplies an accessible name, and heading-order is excluded twice over, once by axe's tag set (tagged best-practice rather than WCAG) and again by the milestone 4 decision to emit nothing from Lighthouse's accessibility category. This checklist determines how long an accessibility audit takes, which determines whether the pricing holds. It gates selling accessibility audits, not the build. **Scoped but not resolved, 2026-08-07:** most of this list is now scheduled to become automated milestone 8 checks rather than a manual pass (`docs/milestone-8-scope-addendum.md` section 1.3), which addresses the "how long does this take" concern going forward, but the checks themselves are not yet built or validated against a real site, so this item stays blocking until milestone 8 ships.
+2. ~~**The manual accessibility checklist**~~ Resolved 2026-08-08, and superseded 2026-08-16: milestone 8's original scope and its extended accessibility-pass addendum both shipped and were verified against `fixtures/spa-demo` and a real site (`docs/manual-accessibility-checklist.md`). A handful of items on that checklist (placeholder-as-only-label, reading order versus visual order, visible focus indicators) remain outside automated detection, but per `docs/offer-positioning.md` sections 1 and 2, no manual review of them is sold as part of any tier. Where the automated scanner can flag one as a finding it is reported like any other finding; where it cannot, it is simply not covered, and that gap is not filled by a manual add-on.
 3. ~~**Interface scope**, section 7.1. Gates milestone 7.~~ Resolved: milestone 7 shipped 2026-08-04 against that scope.
+4. **Whether AFNIC's free open data includes SIREN, NAF, and the real-site-versus-parking classification**, or whether those sit only in the paid `.FR Performance` or SQUAW products. Named the first task of milestone 9a, before any code, because the answer determines whether that milestone is large or small. `docs/prospect-qualification.md` section 2.
 
 ### Still open, non-blocking
 
-4. Current EAA enforcement status in France, verified against primary sources.
-5. ~~**Whether to publish the full audit price band.**~~ Resolved 2026-08-07: "1,200 to 1,900 EUR depending on site risk level" is published on the proposal page and any public pricing page. The specific number within that band is still set from the client's own risk band after the scan runs, not quoted freehand. See 3.2.
-6. Which site to use as the first public case study.
-7. **How the report handles analysis variance.** Identical findings produced eight quick wins in French and seven in English on the first live run. Expected, since the model groups and ranks rather than computes, but it means monitoring deltas must be derived from the deterministic findings layer with the analysis regenerated, not diffed. Decide the mechanics in milestone 10, not before.
+5. ~~Current EAA enforcement status in France, verified against primary sources.~~ Resolved 2026-08-15: `docs/obligation-basis.md` section 5 records the contested three-route enforcement picture (Lille, Caen, Créteil) with source status tagged per claim; several sub-items (astreinte and récidive figures, the transitional-provisions 2030 date, the Caen and Lille ordonnances themselves rather than press summaries, the Créteil outcome) remain individually open per that file's section 9, but the section is no longer a blank "verify this" note.
+6. ~~**Whether to publish the full audit price band.**~~ Resolved 2026-08-07: "1,200 to 1,900 EUR depending on site risk level" is published on the proposal page and any public pricing page. The specific number within that band is still set from the client's own risk band after the scan runs, not quoted freehand. See 3.2.
+7. Which site to use as the first public case study.
+8. **How the report handles analysis variance.** Identical findings produced eight quick wins in French and seven in English on the first live run. Expected, since the model groups and ranks rather than computes, but it means monitoring deltas must be derived from the deterministic findings layer with the analysis regenerated, not diffed. Decide the mechanics in milestone 13, not before.
+9. **Professional liability insurance (RC Pro).** Not mandatory as far as is known, worth one conversation with a broker before the first paid delivery. `docs/operator-obligations.md` section 7.
 
 ---
 

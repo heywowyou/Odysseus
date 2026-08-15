@@ -210,6 +210,11 @@ export interface ReportStrings {
   };
   methodology: {
     eyebrow: string;
+    /** Screening's fixed 5-item TOC (toc.ts's itemsScreening) always
+     *  lists methodology last, at position 5 - a different fixed number
+     *  than the full tier's 9, so it needs its own hand-authored string
+     *  rather than reusing eyebrow above. */
+    eyebrowScreening: string;
     heading: string;
     /** Template: {axeVersion}, {lighthouseVersion}, {pages}, {date}. */
     toolingParagraphTemplate: string;

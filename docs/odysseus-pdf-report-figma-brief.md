@@ -130,7 +130,7 @@ States what ran and how, for credibility and for defensibility of the accessibil
 
 ### 9. Limitations statement
 
-States plainly that automated scanning catches a well-documented minority of WCAG issues, commonly cited around 30 to 40 percent, and that keyboard navigation, focus order, alt text quality, form error handling, and media captions require manual checking. If a manual pass was performed for this audit, say so explicitly here. This section is a credibility and liability safeguard, it should read as confident and factual, not as an apology or a hedge.
+States plainly that automated scanning catches a well-documented minority of WCAG issues, commonly cited around 30 to 40 percent, and that keyboard navigation, focus order, alt text quality, form error handling, and media captions require manual checking. This section is a credibility and liability safeguard, it should read as confident and factual, not as an apology or a hedge.
 
 ## House style for all copy in the mockups
 

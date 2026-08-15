@@ -95,7 +95,7 @@ case.
 
 **Do not merge the two passes.** They key on different things for
 different reasons. Cross-run identity for the monitoring tier is
-`dedupeKey`, so which pass produced a given key is a fact milestone 10
+`dedupeKey`, so which pass produced a given key is a fact milestone 13
 will need to handle: a finding can move between fine and coarse keying
 between runs if a page gains a second distinct selector for the same rule.
 
@@ -136,7 +136,7 @@ Those strings end up printed in a client-facing appendix.
 the number of pages for page-scoped findings.
 
 **`firstSeenAt` and `lastSeenAt`** are both the audit's `startedAt`.
-Cross-run population of `firstSeenAt` is milestone 10.
+Cross-run population of `firstSeenAt` is milestone 13.
 
 **`wcagCriteria`** is populated from axe tags for accessibility findings
 and empty otherwise.

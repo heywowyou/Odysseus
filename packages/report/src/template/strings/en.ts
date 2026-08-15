@@ -205,11 +205,12 @@ export const en: ReportStrings = {
   },
   methodology: {
     eyebrow: '9 · Methodology and limitations',
+    eyebrowScreening: '5 · Methodology and limitations',
     heading: 'How this audit was carried out',
     toolingParagraphTemplate:
       'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages crawled on {date} starting from the homepage.',
     automatedCoverageCaveat:
-      'Automated tools detect a well-documented but limited share of accessibility issues, commonly estimated between 30 and 40 percent of criteria. This is a property of any automated audit, not a reservation about this one: it guarantees every finding listed is verifiable. This audit adds an extended accessibility pass covering keyboard navigation, focus order, form error handling, video caption presence, and a heuristic red flag for alt text quality; reading order versus visual order still requires manual verification, delivered as a separate service.',
+      'Automated tools detect a well-documented but limited share of accessibility issues, commonly estimated between 30 and 40 percent of criteria. This is a property of any automated audit, not a reservation about this one: it guarantees every finding listed is verifiable. This audit adds an extended accessibility pass covering keyboard navigation, focus order, form error handling, video caption presence, and a heuristic red flag for alt text quality. This audit is fully automated: some accessibility properties cannot be reliably evaluated by automated tools alone and are not covered by any finding in this report.',
     legalCitationInScopeTemplate:
       'This site falls under the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts}',
     legalCitationLikelyInScopeTemplate:

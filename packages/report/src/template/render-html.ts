@@ -85,7 +85,7 @@ function renderBody(
       // planning addendum, see docs/milestone-8-scope-addendum.md 1.6).
       renderConformanceSummary(strings, findings, analysis.language, analysis.obligationAssessment),
       renderScreeningFindings(strings, analysis.language, findings),
-      renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings),
+      renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings, tier),
     ].join('\n');
   }
 
