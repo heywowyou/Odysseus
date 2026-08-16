@@ -63,6 +63,12 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
     return await page.pdf({
       printBackground: true,
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      // Without this, Chromium ignores the page's own @page { size: A4 }
+      // rule and falls back to its page.pdf() default of Letter, which is
+      // wider and shorter than A4: the extra width showed up as white
+      // bands down both sides of every sheet, and the missing height
+      // clipped the running footer at the bottom of every page.
+      preferCSSPageSize: true,
       tagged: true, // fixes E31: an accessibility audit must not ship an untagged PDF
       outline: true, // fixes D26: a bookmark tree derived from the heading hierarchy
     });

@@ -6,9 +6,18 @@
    here instead: sheet size, edge to edge dark ground, the repeating footer,
    and the running page counter. No page number is ever written into markup. */
 
+/* Top/bottom margin lives on the page box itself, not on .sheet's padding,
+   so it is guaranteed on every physical page Paged.js produces - including
+   a continuation page created when a section's content overflows a single
+   sheet. .sheet padding only wraps its first and last fragment (the
+   fragmentation spec slices block-start/block-end edges at a break), so a
+   mid-section page break used to start flush against the page edge instead
+   of keeping the same top margin a section title gets. Left/right stays on
+   .sheet: fragmentation only cuts in the block direction, so inline
+   padding is unaffected and never had this problem. */
 @page {
   size: A4;
-  margin: 0;
+  margin: 18mm 0;
 
   @top-right {
     content: "Page " counter(page) " / " counter(pages);
@@ -17,7 +26,7 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: color-mix(in srgb, #e9e9ed 40%, transparent);
-    margin: 18mm 18mm 0 0;
+    margin: 0 18mm 0 0;
   }
 
   @bottom-center {
@@ -27,13 +36,29 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: #75798c;
-    margin: 0 0 12mm 0;
+    margin: 0;
   }
 }
 
-/* The cover carries its own gradient ground and no running header. */
+/* The cover carries its own gradient ground and no running header: unlike
+   every other sheet, its top margin is 0 so the gradient bleeds to the
+   physical page edge instead of sitting behind a flat @page-margin band
+   painted in the plain --color-bg (the seam was visible as a hard line
+   between the two). With no top margin band there is nowhere left to lay
+   out a running header, so the page counter is dropped for this page only
+   rather than repositioned over the gradient with its own contrast rules. */
 @page cover {
-  @top-right { content: "Page " counter(page) " / " counter(pages); }
+  /* Must be the `margin` shorthand, not a `margin-top` longhand: Paged.js's
+     @page parser resolves the shorthand into concrete per-side dimension
+     objects (AtPage.getMargins), but a longhand assignment stores the raw
+     AST node for only that one side, unit-less. That value still reaches
+     the --pagedjs-margin-top custom property, but the .pagedjs_pagebox
+     grid-template-rows track that consumes it inexplicably reads back a
+     stale ~9mm on this page instead of 0, confirmed by inspecting Paged.js's
+     own generated stylesheet and getComputedStyle output. The shorthand
+     path doesn't hit that inconsistency. */
+  margin: 0 0 18mm 0;
+  @top-right { content: ""; }
 }
 
 /* Paged.js paints each sheet. The ground is set on the sheet, not on the
@@ -67,7 +92,7 @@ html {
 /* ---- sheets ---- */
 
 .sheet {
-  padding: 18mm;
+  padding: 0 18mm;
   break-after: page;
   box-sizing: border-box;
 }
@@ -88,7 +113,10 @@ html {
 
 .sheet-cover {
   page: cover;
-  min-height: 297mm;
+  /* cover page margin is 18mm bottom only (0 top, see @page cover above),
+     so its content box is 297mm minus that single 18mm, not 261mm like
+     every other sheet */
+  min-height: 279mm;
   display: flex;
   flex-direction: column;
   position: relative;
