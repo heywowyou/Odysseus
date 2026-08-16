@@ -7,7 +7,7 @@
  * hand-rolled approach.
  */
 
-import { isValidSiren, LEGAL_PATH_PATTERN } from '@odysseus/core';
+import { isValidSiren } from '@odysseus/core';
 
 export interface MentionsLegalesExtraction {
   pageUrl: string;
@@ -17,24 +17,41 @@ export interface MentionsLegalesExtraction {
 }
 
 const SIREN_CANDIDATE_PATTERN = /\b(\d{3}\s?\d{3}\s?\d{3})\b/g;
+// A SIRET is a SIREN (9 digits) followed by a 5 digit NIC, usually printed
+// with no separating space (e.g. "RCS/RM/Siret : 95126636000019"), which
+// is why it needs its own 14-digit pattern rather than relying on
+// SIREN_CANDIDATE_PATTERN to find the embedded SIREN: \b word boundaries
+// never fire in the middle of one continuous digit run, so a bare SIREN
+// pattern can never match a SIREN that only appears fused inside a SIRET.
+const SIRET_CANDIDATE_PATTERN = /\b(\d{3}\s?\d{3}\s?\d{3}\s?\d{5})\b/g;
 const RCS_PATTERN = /RCS\s+([A-Za-zÀ-ÿ\-\s]{2,40}?)\s+(\d{3}\s?\d{3}\s?\d{3})/i;
 const TVA_PATTERN = /\bFR\s?[0-9A-Z]{2}\s?\d{9}\b/i;
+// Narrower than LEGAL_PATH_PATTERN on purpose: that pattern also matches
+// cgu/cgv/cookies/etc, which are not the mentions-legales page this check
+// needs to identify. Singular ("mention-legale") is a real variant seen on
+// live sites, not just the plural form.
+const MENTIONS_LEGALES_PATH_PATTERN = /mentions?-legales?/i;
 
 /**
- * URL-pattern heuristic only, no navigation. Reuses core's shared
- * LEGAL_PATH_PATTERN (the same pattern packages/llm's diversion logic
- * uses) narrowed to the mentions-legales alternative specifically, so the
- * page this check treats as the mentions-legales page can never disagree
- * with what diversion.ts treats as a legal-style page.
+ * URL-pattern heuristic only, no navigation. Only considers URLs that
+ * actually resolved (the caller is expected to have already filtered out
+ * non-2xx pages) - a crawled URL can match the path pattern and still be a
+ * dead link (e.g. a malformed href), which must never win over a real page
+ * just because it happens to appear earlier in the list.
  */
 export function findMentionsLegalesUrl(pageUrls: readonly string[]): string | null {
-  const match = pageUrls.find((url) => LEGAL_PATH_PATTERN.test(url) && /mentions/i.test(url));
+  const match = pageUrls.find((url) => MENTIONS_LEGALES_PATH_PATTERN.test(url));
   return match ?? null;
 }
 
 function firstValidSiren(bodyText: string): string | undefined {
   for (const match of bodyText.matchAll(SIREN_CANDIDATE_PATTERN)) {
     const candidate = match[1]?.replace(/\s/g, '');
+    if (candidate && isValidSiren(candidate)) return candidate;
+  }
+  for (const match of bodyText.matchAll(SIRET_CANDIDATE_PATTERN)) {
+    const siret = match[1]?.replace(/\s/g, '');
+    const candidate = siret?.slice(0, 9);
     if (candidate && isValidSiren(candidate)) return candidate;
   }
   return undefined;

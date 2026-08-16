@@ -7,4 +7,4 @@
  * scanner treats as the mentions-legales page.
  */
 export const LEGAL_PATH_PATTERN =
-  /(cgu|cgv|conditions|mentions-legales|cookies|confidentialite|privacy|terms|legal)/i;
+  /(cgu|cgv|conditions|mentions?-legales?|cookies|confidentialite|privacy|terms|legal)/i;

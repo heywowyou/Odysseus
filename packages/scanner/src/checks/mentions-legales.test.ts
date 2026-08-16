@@ -14,6 +14,12 @@ describe('findMentionsLegalesUrl', () => {
   it('does not match a different legal page (cgu, privacy)', () => {
     expect(findMentionsLegalesUrl(['https://example.com/cgu', 'https://example.com/privacy'])).toBeNull();
   });
+
+  it('matches the singular "mention-legale" variant', () => {
+    expect(findMentionsLegalesUrl(['https://example.com/', 'https://example.com/mention-legale/'])).toBe(
+      'https://example.com/mention-legale/',
+    );
+  });
 });
 
 describe('extractMentionsLegales', () => {
@@ -41,6 +47,11 @@ describe('extractMentionsLegales', () => {
   it('rejects a malformed-checksum SIREN', () => {
     const result = extractMentionsLegales(pageUrl, 'SIREN : 732829321');
     expect(result.siren).toBeUndefined();
+  });
+
+  it('derives a valid SIREN from a fused 14-digit SIRET', () => {
+    const result = extractMentionsLegales(pageUrl, 'RCS/RM/Siret : 95126636000019');
+    expect(result.siren).toBe('951266360');
   });
 
   it('finds nothing on a page with none of the three identifiers', () => {

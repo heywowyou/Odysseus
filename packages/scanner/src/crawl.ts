@@ -189,8 +189,13 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     await context.close();
   }
 
-  const visitedUrls = pages.filter((page) => page.status === 'visited').map((page) => page.url);
-  const mentionsLegalesPageUrl = findMentionsLegalesUrl(visitedUrls) ?? undefined;
+  // A broken link (e.g. a malformed href) can still crawl to a 'visited'
+  // page whose path matches the mentions-legales pattern but 404s - that
+  // must never win over an actual 200 page just because it appears first.
+  const resolvedUrls = pages
+    .filter((page) => page.status === 'visited' && (page.httpStatus === undefined || (page.httpStatus >= 200 && page.httpStatus < 300)))
+    .map((page) => page.url);
+  const mentionsLegalesPageUrl = findMentionsLegalesUrl(resolvedUrls) ?? undefined;
 
   const disallowMatchCounts = new Map<string, number>();
   for (const page of pages) {
