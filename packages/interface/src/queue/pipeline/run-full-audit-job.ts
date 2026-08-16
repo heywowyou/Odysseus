@@ -14,7 +14,7 @@ import { completeJob, updateJobProgress, type JobDocument } from '@odysseus/stor
 import type { SiteSignalOverrides } from '@odysseus/core';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
-import { runReportStage } from '../../pipeline/report-stage.js';
+import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import type { PipelineContext } from '../job-queue.js';
 import { createScanProgressReporter } from '../report-progress.js';
 
@@ -74,23 +74,19 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       connection,
     );
 
+    // Renders all four (language, tier) combinations - screening and full,
+    // French and English - from the two analyses already produced above.
+    // See runAllReportsStage's own doc comment: no re-scan, no second LLM
+    // call, tier is purely a report-rendering decision.
     await updateJobProgress(connection, job.jobId, { phase: 'report-fr' });
-    await runReportStage(
+    await runAllReportsStage(
       auditResult.auditDir,
       auditResult.manifest,
       auditResult.findings,
-      frAnalysis.analysis,
+      { fr: frAnalysis.analysis, en: enAnalysis.analysis },
       connection,
     );
-
     await updateJobProgress(connection, job.jobId, { phase: 'report-en' });
-    await runReportStage(
-      auditResult.auditDir,
-      auditResult.manifest,
-      auditResult.findings,
-      enAnalysis.analysis,
-      connection,
-    );
 
     await completeJob(connection, job.jobId, { auditId: auditResult.auditId });
   } finally {

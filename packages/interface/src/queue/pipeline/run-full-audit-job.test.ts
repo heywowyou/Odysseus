@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../pipeline/audit-stage.js', () => ({ runAuditStage: vi.fn() }));
 vi.mock('../../pipeline/analysis-stage.js', () => ({ runAnalysisStage: vi.fn() }));
-vi.mock('../../pipeline/report-stage.js', () => ({ runReportStage: vi.fn() }));
+vi.mock('../../pipeline/report-stage.js', () => ({ runAllReportsStage: vi.fn() }));
 vi.mock('@odysseus/store', () => ({ completeJob: vi.fn(), updateJobProgress: vi.fn() }));
 
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
-import { runReportStage } from '../../pipeline/report-stage.js';
+import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import { completeJob, updateJobProgress } from '@odysseus/store';
 import { runFullAuditJob } from './run-full-audit-job.js';
 import type { PipelineContext } from '../job-queue.js';
@@ -65,13 +65,18 @@ beforeEach(() => {
   vi.mocked(runAnalysisStage).mockImplementation(async (_dir, _manifest, _findings, options) =>
     fakeAnalysisResult((options as { language: 'fr' | 'en' }).language),
   );
-  vi.mocked(runReportStage).mockResolvedValue({ reportPath: '/dir/reports/x.pdf', generatedAt: new Date() });
+  vi.mocked(runAllReportsStage).mockResolvedValue([
+    { language: 'fr', tier: 'screening', reportPath: '/dir/reports/x.pdf', generatedAt: new Date() },
+    { language: 'fr', tier: 'full', reportPath: '/dir/reports/x.pdf', generatedAt: new Date() },
+    { language: 'en', tier: 'screening', reportPath: '/dir/reports/x.pdf', generatedAt: new Date() },
+    { language: 'en', tier: 'full', reportPath: '/dir/reports/x.pdf', generatedAt: new Date() },
+  ]);
   vi.mocked(completeJob).mockResolvedValue(undefined);
   vi.mocked(updateJobProgress).mockResolvedValue(undefined);
 });
 
 describe('runFullAuditJob', () => {
-  it('runs scan -> analyze(fr) -> analyze(en) -> report(fr) -> report(en) -> complete, in order', async () => {
+  it('runs scan -> analyze(fr) -> analyze(en) -> generate all reports -> complete, in order', async () => {
     const job = fakeJob();
     const calls: string[] = [];
     vi.mocked(runAuditStage).mockImplementation(async () => {
@@ -82,9 +87,9 @@ describe('runFullAuditJob', () => {
       calls.push(`analyze-${(options as { language: string }).language}`);
       return fakeAnalysisResult((options as { language: 'fr' | 'en' }).language);
     });
-    vi.mocked(runReportStage).mockImplementation(async (_d, _m, _f, analysis) => {
-      calls.push(`report-${(analysis as { language: string }).language}`);
-      return { reportPath: '/x.pdf', generatedAt: new Date() };
+    vi.mocked(runAllReportsStage).mockImplementation(async () => {
+      calls.push('report-all');
+      return [];
     });
     vi.mocked(completeJob).mockImplementation(async () => {
       calls.push('complete');
@@ -92,7 +97,24 @@ describe('runFullAuditJob', () => {
 
     await runFullAuditJob(job, ctx);
 
-    expect(calls).toEqual(['audit', 'analyze-fr', 'analyze-en', 'report-fr', 'report-en', 'complete']);
+    expect(calls).toEqual(['audit', 'analyze-fr', 'analyze-en', 'report-all', 'complete']);
+  });
+
+  it('generates all four (language, tier) report combinations from the fr and en analyses', async () => {
+    const job = fakeJob();
+    await runFullAuditJob(job, ctx);
+
+    expect(runAllReportsStage).toHaveBeenCalledTimes(1);
+    expect(runAllReportsStage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({
+        fr: expect.objectContaining({ language: 'fr' }),
+        en: expect.objectContaining({ language: 'en' }),
+      }),
+      fakeConnection,
+    );
   });
 
   it('acquires and releases the origin lock for the job siteUrl', async () => {
