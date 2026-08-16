@@ -1,0 +1,6 @@
+siren,denominationUniteLegale,activitePrincipaleUniteLegale,trancheEffectifsUniteLegale,etatAdministratifUniteLegale
+732829320,Example Qualifying SAS,47.91A,12,A
+111111118,Example Too Small SAS,47.91A,00,A
+222222226,Example Wrong Sector SAS,47.19B,11,A
+333333334,Example Blank Effectifs SAS,47.91A,,A
+444444442,Example Inactive SAS,47.91A,12,C

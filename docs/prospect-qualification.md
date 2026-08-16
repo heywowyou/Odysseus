@@ -52,20 +52,36 @@ Personne physique holder data is restricted; address-level fields are
 published only for ORG holders. Convenient, since the personne morale
 subset is exactly the target.
 
-**Open question, resolve before writing any 9a code.** AFNIC's own
-holder-data processing notice describes a richer dataset including
-SIREN for organisations that reported it, enterprise category, NAF rev2
-labels joined from the Sirene database, and domain usage data: HTTP
-status, real-website versus parking-page classification, and
-redirection.
+**Open question, resolved 2026-08-16.** AFNIC's own holder-data
+processing notice describes a richer dataset including SIREN,
+enterprise category, NAF rev2 labels joined from the Sirene database,
+and domain usage data (HTTP status, real-website versus parking-page
+classification, redirection). Verified against AFNIC's own published
+material that this is not purchasable by Odysseus at any price:
 
-If those fields are in the free open data, this milestone shrinks
-enormously: no mentions légales fetch for most domains, no Sirene join
-to build, and a parking-page filter removing a large share of dead
-domains before any scan. If they sit only in the paid `.FR Performance`
-or SQUAW products, price them, because buying may still beat building.
-This single answer is the difference between a large milestone and a
-small one.
+- That richer dataset is AFNIC's **Data Space / `.FR Performance`**
+  tool, and it is restricted to accredited `.fr` registrars, scoped to
+  each registrar's own portfolio. Odysseus is not a registrar, and even
+  an accredited one only sees domains it sold, never the national pool.
+- **SQUAW** (daily bulk WHOIS access) is a dead end on two independent
+  grounds. Eligibility requires a legal entity that has existed at
+  least three years with three years of filed accounts on record.
+  Separately, its licence's "utilisations interdites" clause explicitly
+  forbids using the list to identify future commercial targets or build
+  outreach lists, which is this exact use case. It also does not carry
+  the SIREN/NAF/parking-page enrichment anyway, only WHOIS holder data.
+  (Confirmed against AFNIC's own SQUAW tariff sheet, 10 000 EUR/year
+  flat fee, dated 2015 but the eligibility and prohibited-use terms are
+  structural, not a price that might have moved.)
+
+So the free Fichier A open data is what 9a builds against, and it
+carries none of the enrichment: domain name, registrar geo/name,
+subdomain, holder type, holder geo, IDN flag, creation date, WHOIS
+withdrawal date only, no SIREN, no NAF, no enterprise category, no
+parking-page classification. There is no paid shortcut to weigh against
+building; the fallback plan in section 5 (mentions légales fetch, SIREN
+extraction, local Sirene join, a hand-built parking-page filter) is not
+optional, it is the whole milestone.
 
 **Company data.** Sirene stock file from data.gouv.fr, held locally
 rather than queried through the API. Fields used: `siren`,

@@ -14,10 +14,17 @@ export {
   DEFAULT_QUEUE_CONCURRENCY,
   PROSPECTING_MAX_PAGES,
   PROSPECTING_MAX_DEPTH,
+  DEFAULT_PROSPECT_BATCH_SIZE,
+  DEFAULT_PROSPECT_FETCH_TIMEOUT_MS,
+  PROSPECT_CHECKPOINT_WRITE_INTERVAL,
   getInterfacePort,
   getInterfaceHost,
   getQueueConcurrency,
   getPublicDir,
+  getAfnicFichierAPath,
+  getSireneStockPath,
+  getSireneStockIndexCachePath,
+  getProspectBatchSize,
 } from './config.js';
 export { computeCrawlEtaMs, computeScanEtaMs } from './queue/eta.js';
 export type { CrawlEtaInput, ScanEtaInput } from './queue/eta.js';
@@ -25,6 +32,8 @@ export { JobQueue } from './queue/job-queue.js';
 export type { JobQueueOptions, PipelineContext, PipelineFn } from './queue/job-queue.js';
 export { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
 export { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
+export { runProspectIngestionJob } from './queue/pipeline/run-prospect-ingestion-job.js';
+export { registerProspectingRoutes } from './routes/prospecting.js';
 export { Router } from './router.js';
 export type { RouteContext, RouteHandler } from './router.js';
 export { startInterfaceServer } from './server.js';

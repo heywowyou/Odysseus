@@ -16,6 +16,7 @@ import {
   type JobPhase,
   type JobProgress,
   type JobType,
+  type ProspectIngestionResult,
   type UrlResult,
 } from './schemas/job.schema.js';
 
@@ -62,6 +63,9 @@ export interface JobProgressPatch {
    *  progress during a prospecting job's run, so it travels through this
    *  same patch helper rather than a second single-purpose function. */
   urlResults?: UrlResult[];
+  /** Same reasoning as urlResults above, for prospect-ingestion jobs:
+   *  one entry per candidate in the current batch only. */
+  ingestionResults?: ProspectIngestionResult[];
 }
 
 export async function updateJobProgress(
@@ -74,8 +78,10 @@ export async function updateJobProgress(
   if (patch.phase !== undefined) $set['phase'] = patch.phase;
   if (patch.progress?.crawl !== undefined) $set['progress.crawl'] = patch.progress.crawl;
   if (patch.progress?.scan !== undefined) $set['progress.scan'] = patch.progress.scan;
+  if (patch.progress?.ingestion !== undefined) $set['progress.ingestion'] = patch.progress.ingestion;
   if (patch.progress?.message !== undefined) $set['progress.message'] = patch.progress.message;
   if (patch.urlResults !== undefined) $set['urlResults'] = patch.urlResults;
+  if (patch.ingestionResults !== undefined) $set['ingestionResults'] = patch.ingestionResults;
   if (Object.keys($set).length === 0) return;
   await JobModel.updateOne({ jobId }, { $set });
 }
@@ -84,6 +90,7 @@ export interface CompleteJobPatch {
   auditId?: string;
   auditIds?: string[];
   urlResults?: UrlResult[];
+  ingestionResults?: ProspectIngestionResult[];
 }
 
 export async function completeJob(

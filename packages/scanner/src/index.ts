@@ -14,6 +14,8 @@ export { scanPage } from './scan-page.js';
 export type { PageScanResult, ScanPageOptions } from './scan-page.js';
 export { scanSite } from './scan-site.js';
 export type { SiteScanResult, ScanSiteOptions, ScanProgressEvent } from './scan-site.js';
+export { findMentionsLegalesUrl, extractMentionsLegales } from './checks/mentions-legales.js';
+export type { MentionsLegalesExtraction } from './checks/mentions-legales.js';
 export {
   findWorkspaceRoot,
   ensureEnvLoaded,

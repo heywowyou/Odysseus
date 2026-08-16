@@ -1,0 +1,5 @@
+Nom de domaine;Type du titulaire;Pays titulaire;Departement titulaire;Domaine IDN;Date de création;Date de retrait du WHOIS
+example-org1.fr;ORG;FR;Rhône;0;2010-01-01;
+example-org2.fr;ORG;FR;Paris;0;2011-01-01;2020-05-05
+example-pp.fr;PP;FR;Paris;0;2012-01-01;
+example-org3.fr;ORG;FR;Rhône;1;2013-01-01;

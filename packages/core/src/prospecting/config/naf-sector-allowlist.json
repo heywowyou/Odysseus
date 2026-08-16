@@ -1,0 +1,48 @@
+{
+  "version": "2026-08-16",
+  "sourceNote": "NAF rev2 (INSEE). Odysseus's own targeting inference, not a published EAA/NAF correspondence table, except where flagged 'definitional' because INSEE's own class definition names electronic distance selling explicitly. NEVER cite this list, or 'sector', to a prospect as evidence of anything (docs/prospect-qualification.md section 4). It is a recall filter narrowing which Sirene stock rows get fetched, not the qualification predicate itself - a non-matching NAF code excludes a candidate, but a matching one alone never qualifies one (docs/prospect-qualification.md section 3, six conditions).",
+  "codes": [
+    {
+      "code": "47.91A",
+      "label": "Vente à distance sur catalogue général",
+      "confidence": "definitional",
+      "enabled": true,
+      "rationale": "INSEE's own NAF rev2 definition for class 47.91 explicitly includes sales via 'sites internet, applications mobiles, catalogues imprimés ou téléphone'. Not 100% synonymous with 'has a working online checkout' (catalogue/telemarketing sales also fall under it) - the fetch/scan stage's transactional-flow detector, not this code, actually confirms a checkout."
+    },
+    {
+      "code": "47.91B",
+      "label": "Vente à distance sur catalogue spécialisé",
+      "confidence": "definitional",
+      "enabled": true,
+      "rationale": "Same INSEE class 47.91 definitional text as 47.91A, specialised-catalogue variant."
+    },
+    {
+      "code": "47.19B",
+      "label": "Autres commerces de détail en magasin non spécialisé",
+      "confidence": "inferred",
+      "enabled": false,
+      "rationale": "Illustrative only. Large-format non-specialised retail commonly runs e-commerce alongside physical stores, but NAF alone can't confirm a checkout exists. Not enabled for the first wave; operator to review and expand this list before enabling."
+    },
+    {
+      "code": "47.41Z",
+      "label": "Commerce de détail d'ordinateurs, d'unités périphériques et de logiciels en magasin spécialisé",
+      "confidence": "inferred",
+      "enabled": false,
+      "rationale": "Illustrative only. Electronics retail is high-plausibility omnichannel. Not enabled for the first wave."
+    },
+    {
+      "code": "47.71Z",
+      "label": "Commerce de détail d'habillement en magasin spécialisé",
+      "confidence": "inferred",
+      "enabled": false,
+      "rationale": "Illustrative only. Clothing retail is high-plausibility omnichannel. Not enabled for the first wave."
+    },
+    {
+      "code": "47.65Z",
+      "label": "Commerce de détail de jeux et jouets en magasin spécialisé",
+      "confidence": "inferred",
+      "enabled": false,
+      "rationale": "Illustrative only. Toy retail is high-plausibility omnichannel. Not enabled for the first wave."
+    }
+  ]
+}

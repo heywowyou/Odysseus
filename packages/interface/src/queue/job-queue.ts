@@ -12,7 +12,7 @@
 
 import type { Connection } from 'mongoose';
 import { OriginLock } from '@odysseus/scanner';
-import { claimNextQueuedJob, failJob, resetOrphanedRunningJobs, type JobDocument } from '@odysseus/store';
+import { claimNextQueuedJob, failJob, resetOrphanedRunningJobs, type JobDocument, type JobType } from '@odysseus/store';
 import { DEFAULT_QUEUE_CONCURRENCY } from '../config.js';
 
 export interface PipelineContext {
@@ -28,8 +28,15 @@ export interface JobQueueOptions {
   /** How often the loop checks for new work when nothing has woken it
    *  early via notify(). Milliseconds. */
   pollIntervalMs?: number;
-  runFullAuditJob: PipelineFn;
-  runProspectingJob: PipelineFn;
+  /** One runner per JobType, exhaustively - a Record rather than the
+   *  two-way ternary this replaced (job.type === 'full-audit' ? A : B).
+   *  With two job types that ternary was fine; with three (and counting)
+   *  a hand-maintained conditional risks a silently-wrong fallback: the
+   *  old code, unmodified, would have routed 'prospect-ingestion' jobs
+   *  into runProspectingJob without a compile error. A Record is
+   *  exhaustively checked - if JobType grows and this literal is missing
+   *  a key, tsc rejects it. */
+  runners: Record<JobType, PipelineFn>;
 }
 
 export class JobQueue {
@@ -37,8 +44,7 @@ export class JobQueue {
   private readonly concurrency: number;
   private readonly pollIntervalMs: number;
   private readonly originLock = new OriginLock();
-  private readonly runFullAuditJob: PipelineFn;
-  private readonly runProspectingJob: PipelineFn;
+  private readonly runners: Record<JobType, PipelineFn>;
 
   private activeCount = 0;
   private running = false;
@@ -49,8 +55,7 @@ export class JobQueue {
     this.connection = options.connection;
     this.concurrency = options.concurrency ?? DEFAULT_QUEUE_CONCURRENCY;
     this.pollIntervalMs = options.pollIntervalMs ?? 500;
-    this.runFullAuditJob = options.runFullAuditJob;
-    this.runProspectingJob = options.runProspectingJob;
+    this.runners = options.runners;
   }
 
   /** Resets any job left 'running' by an unclean previous shutdown back
@@ -105,7 +110,7 @@ export class JobQueue {
   }
 
   private async runJob(job: JobDocument): Promise<void> {
-    const runner = job.type === 'full-audit' ? this.runFullAuditJob : this.runProspectingJob;
+    const runner = this.runners[job.type];
     try {
       await runner(job, { connection: this.connection, originLock: this.originLock });
     } catch (error) {

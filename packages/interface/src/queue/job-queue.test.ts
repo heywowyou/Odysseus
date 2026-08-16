@@ -15,7 +15,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function fakeJob(overrides: Partial<{ jobId: string; type: 'full-audit' | 'prospecting' }> = {}) {
+function fakeJob(overrides: Partial<{ jobId: string; type: 'full-audit' | 'prospecting' | 'prospect-ingestion' }> = {}) {
   return {
     jobId: overrides.jobId ?? 'job-1',
     type: overrides.type ?? 'full-audit',
@@ -47,8 +47,11 @@ describe('JobQueue', () => {
     queue = new JobQueue({
       connection: fakeConnection,
       pollIntervalMs: 20,
-      runFullAuditJob: vi.fn().mockResolvedValue(undefined),
-      runProspectingJob: vi.fn().mockResolvedValue(undefined),
+      runners: {
+        'full-audit': vi.fn().mockResolvedValue(undefined),
+        prospecting: vi.fn().mockResolvedValue(undefined),
+        'prospect-ingestion': vi.fn().mockResolvedValue(undefined),
+      },
     });
 
     const orphaned = await queue.start();
@@ -61,8 +64,13 @@ describe('JobQueue', () => {
     vi.mocked(claimNextQueuedJob).mockResolvedValueOnce(job).mockResolvedValue(null);
     const runFullAuditJob = vi.fn().mockResolvedValue(undefined);
     const runProspectingJob = vi.fn().mockResolvedValue(undefined);
+    const runProspectIngestionJob = vi.fn().mockResolvedValue(undefined);
 
-    queue = new JobQueue({ connection: fakeConnection, pollIntervalMs: 20, runFullAuditJob, runProspectingJob });
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: { 'full-audit': runFullAuditJob, prospecting: runProspectingJob, 'prospect-ingestion': runProspectIngestionJob },
+    });
     await queue.start();
     queue.notify();
     await sleep(50);
@@ -70,6 +78,7 @@ describe('JobQueue', () => {
     expect(runFullAuditJob).toHaveBeenCalledTimes(1);
     expect(runFullAuditJob).toHaveBeenCalledWith(job, expect.objectContaining({ connection: fakeConnection }));
     expect(runProspectingJob).not.toHaveBeenCalled();
+    expect(runProspectIngestionJob).not.toHaveBeenCalled();
   });
 
   it('runs a prospecting job with the prospecting runner', async () => {
@@ -77,14 +86,42 @@ describe('JobQueue', () => {
     vi.mocked(claimNextQueuedJob).mockResolvedValueOnce(job).mockResolvedValue(null);
     const runFullAuditJob = vi.fn().mockResolvedValue(undefined);
     const runProspectingJob = vi.fn().mockResolvedValue(undefined);
+    const runProspectIngestionJob = vi.fn().mockResolvedValue(undefined);
 
-    queue = new JobQueue({ connection: fakeConnection, pollIntervalMs: 20, runFullAuditJob, runProspectingJob });
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: { 'full-audit': runFullAuditJob, prospecting: runProspectingJob, 'prospect-ingestion': runProspectIngestionJob },
+    });
     await queue.start();
     queue.notify();
     await sleep(50);
 
     expect(runProspectingJob).toHaveBeenCalledTimes(1);
     expect(runFullAuditJob).not.toHaveBeenCalled();
+    expect(runProspectIngestionJob).not.toHaveBeenCalled();
+  });
+
+  it('routes a prospect-ingestion job to its own runner, not the prospecting runner', async () => {
+    const job = fakeJob({ type: 'prospect-ingestion' });
+    vi.mocked(claimNextQueuedJob).mockResolvedValueOnce(job).mockResolvedValue(null);
+    const runFullAuditJob = vi.fn().mockResolvedValue(undefined);
+    const runProspectingJob = vi.fn().mockResolvedValue(undefined);
+    const runProspectIngestionJob = vi.fn().mockResolvedValue(undefined);
+
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: { 'full-audit': runFullAuditJob, prospecting: runProspectingJob, 'prospect-ingestion': runProspectIngestionJob },
+    });
+    await queue.start();
+    queue.notify();
+    await sleep(50);
+
+    expect(runProspectIngestionJob).toHaveBeenCalledTimes(1);
+    expect(runProspectIngestionJob).toHaveBeenCalledWith(job, expect.objectContaining({ connection: fakeConnection }));
+    expect(runFullAuditJob).not.toHaveBeenCalled();
+    expect(runProspectingJob).not.toHaveBeenCalled();
   });
 
   it('does not claim a second job until a concurrency=1 slot frees up', async () => {
@@ -107,8 +144,7 @@ describe('JobQueue', () => {
       connection: fakeConnection,
       concurrency: 1,
       pollIntervalMs: 20,
-      runFullAuditJob,
-      runProspectingJob: vi.fn(),
+      runners: { 'full-audit': runFullAuditJob, prospecting: vi.fn(), 'prospect-ingestion': vi.fn() },
     });
     await queue.start();
     queue.notify();
@@ -132,8 +168,7 @@ describe('JobQueue', () => {
     queue = new JobQueue({
       connection: fakeConnection,
       pollIntervalMs: 20,
-      runFullAuditJob,
-      runProspectingJob: vi.fn(),
+      runners: { 'full-audit': runFullAuditJob, prospecting: vi.fn(), 'prospect-ingestion': vi.fn() },
     });
     await queue.start();
     queue.notify();
@@ -146,8 +181,7 @@ describe('JobQueue', () => {
     queue = new JobQueue({
       connection: fakeConnection,
       pollIntervalMs: 20,
-      runFullAuditJob: vi.fn(),
-      runProspectingJob: vi.fn(),
+      runners: { 'full-audit': vi.fn(), prospecting: vi.fn(), 'prospect-ingestion': vi.fn() },
     });
     await queue.start();
     await queue.stop();

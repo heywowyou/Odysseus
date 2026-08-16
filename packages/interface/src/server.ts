@@ -3,10 +3,12 @@ import type { Connection } from 'mongoose';
 import { Router } from './router.js';
 import { registerScanRoutes } from './routes/scans.js';
 import { registerAuditRoutes } from './routes/audits.js';
+import { registerProspectingRoutes } from './routes/prospecting.js';
 import { registerStaticFallback } from './routes/static.js';
 import { JobQueue } from './queue/job-queue.js';
 import { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
+import { runProspectIngestionJob } from './queue/pipeline/run-prospect-ingestion-job.js';
 import { getInterfaceHost, getInterfacePort, getQueueConcurrency } from './config.js';
 
 export interface InterfaceServerHandle {
@@ -26,12 +28,16 @@ export async function startInterfaceServer(connection: Connection): Promise<Inte
   const queue = new JobQueue({
     connection,
     concurrency: getQueueConcurrency(),
-    runFullAuditJob,
-    runProspectingJob,
+    runners: {
+      'full-audit': runFullAuditJob,
+      prospecting: runProspectingJob,
+      'prospect-ingestion': runProspectIngestionJob,
+    },
   });
 
   registerScanRoutes(router, connection, queue);
   registerAuditRoutes(router, connection);
+  registerProspectingRoutes(router, connection, queue);
   registerStaticFallback(router);
 
   const server = createServer((req, res) => {

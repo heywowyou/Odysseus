@@ -3,6 +3,7 @@ node_modules/
 dist/
 /artifacts/
 /packages/*/artifacts/
+/data/
 .claude/settings.local.json
 reports/
 *.pdf

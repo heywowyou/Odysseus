@@ -21,9 +21,12 @@ export type {
   JobPhase,
   JobProgress,
   JobProgressCrawl,
+  JobProgressIngestion,
   JobProgressScan,
   JobStatus,
   JobType,
+  ProspectIngestionResult,
+  ProspectIngestionResultStatus,
   UrlResult,
   UrlResultStatus,
 } from './schemas/job.schema.js';
@@ -43,3 +46,21 @@ export type { SeverityRollup } from './severity-rollup.js';
 export { getAudit, getFindingsForAudit } from './audits.js';
 export { getLatestReport, listReportLanguages, listReportCombos } from './reports.js';
 export type { ReportCombo } from './reports.js';
+export { createProspectModel } from './schemas/prospect.schema.js';
+export type {
+  ProspectContactAddress,
+  ProspectDataOrigin,
+  ProspectDocument,
+  ProspectDocumentFields,
+  ProspectQualificationReason,
+} from './schemas/prospect.schema.js';
+export { createProspect, getProspect, listQualifiedProspects } from './prospects.js';
+export type { NewProspectInput } from './prospects.js';
+export { createSuppressionModel } from './schemas/suppression.schema.js';
+export type { SuppressionDocument, SuppressionDocumentFields } from './schemas/suppression.schema.js';
+export { addSuppressionEntry, isSuppressed } from './suppression.js';
+export type { AddSuppressionEntryInput } from './suppression.js';
+export { createProspectIngestionCheckpointModel } from './schemas/prospect-ingestion-checkpoint.schema.js';
+export type { ProspectIngestionCheckpointFields } from './schemas/prospect-ingestion-checkpoint.schema.js';
+export { getCheckpoint, upsertCheckpoint } from './prospect-ingestion-checkpoint.js';
+export type { CheckpointPatch } from './prospect-ingestion-checkpoint.js';

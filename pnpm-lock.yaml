@@ -93,6 +93,9 @@ importers:
       '@odysseus/store':
         specifier: workspace:*
         version: link:../store
+      csv-parse:
+        specifier: ^5.6.0
+        version: 5.6.0
 
   packages/llm:
     dependencies:
@@ -1613,6 +1616,9 @@ packages:
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
+
+  csv-parse@5.6.0:
+    resolution: {integrity: sha512-l3nz3euub2QMg5ouu5U09Ew9Wf6/wQ8I++ch1loQ0ljmzhmfZYrH9fflS22i/PQEvsPvxCwxgz5q7UB8K1JO4Q==}
 
   data-uri-to-buffer@6.0.2:
     resolution: {integrity: sha512-7hvf7/GW8e86rW0ptuwS3OcBGDjIi6SZva7hCyWC0yYry2cOPmLIjXAUHI6DK2HsnwJd9ifmt57i8eV2n4YNpw==}
@@ -3827,6 +3833,8 @@ snapshots:
   csp_evaluator@1.1.5: {}
 
   csstype@3.2.3: {}
+
+  csv-parse@5.6.0: {}
 
   data-uri-to-buffer@6.0.2: {}
 

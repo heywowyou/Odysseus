@@ -13,6 +13,7 @@ import { registerNormalizeCommand } from './commands/normalize.js';
 import { registerAnalyzeCommand } from './commands/analyze.js';
 import { registerReportCommand } from './commands/report.js';
 import { registerServeCommand } from './commands/serve.js';
+import { registerProspectCommand } from './commands/prospect.js';
 
 // Loaded once, unconditionally, here rather than left as a side effect of
 // whichever command happens to import @odysseus/scanner or @odysseus/llm
@@ -35,5 +36,6 @@ registerNormalizeCommand(program);
 registerAnalyzeCommand(program);
 registerReportCommand(program);
 registerServeCommand(program);
+registerProspectCommand(program);
 
 program.parse(process.argv);

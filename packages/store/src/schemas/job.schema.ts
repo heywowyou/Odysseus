@@ -10,8 +10,9 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
+import type { ProspectQualificationReason } from './prospect.schema.js';
 
-export type JobType = 'full-audit' | 'prospecting';
+export type JobType = 'full-audit' | 'prospecting' | 'prospect-ingestion';
 export type JobStatus = 'queued' | 'running' | 'complete' | 'failed';
 export type JobPhase =
   | 'queued'
@@ -23,6 +24,8 @@ export type JobPhase =
   | 'report-fr'
   | 'report-en'
   | 'scanning'
+  | 'afnic-scan'
+  | 'fetch-qualify'
   | 'complete'
   | 'failed';
 
@@ -40,6 +43,9 @@ export interface JobOptionsSnapshot {
    *  false - false must be an explicit operator assertion. */
   transactionalFlow?: boolean;
   transactionalFlowReason?: string;
+  /** prospect-ingestion jobs only: how many AFNIC candidates this batch
+   *  targets. Absent falls back to DEFAULT_PROSPECT_BATCH_SIZE. */
+  batchSize?: number;
 }
 
 export interface JobProgressCrawl {
@@ -55,9 +61,23 @@ export interface JobProgressScan {
   etaMs?: number;
 }
 
+/** prospect-ingestion jobs only: one bounded batch's worth of progress
+ *  counters, never the cumulative total across every batch ever run - see
+ *  ingestionResults below for why the same "one batch, not the whole
+ *  AFNIC file" scoping applies. */
+export interface JobProgressIngestion {
+  afnicRowsScanned: number;
+  candidatesFiltered: number;
+  candidatesFetched: number;
+  candidatesQualified: number;
+  target: number;
+  etaMs?: number;
+}
+
 export interface JobProgress {
   crawl?: JobProgressCrawl;
   scan?: JobProgressScan;
+  ingestion?: JobProgressIngestion;
   message?: string;
 }
 
@@ -67,6 +87,22 @@ export interface UrlResult {
   url: string;
   status: UrlResultStatus;
   auditId?: string;
+  error?: string;
+}
+
+export type ProspectIngestionResultStatus = 'pending' | 'fetching' | 'no-siren' | 'qualified' | 'not-qualified' | 'error';
+
+/** One entry per candidate in the *current batch only* (default 2,000,
+ *  ~100-200 bytes each), never one entry per AFNIC row ever seen - a job
+ *  document only ever represents one bounded batch, the same
+ *  boundedness urlResults already relies on for a prospecting job's URL
+ *  list, so this never risks Mongo's 16MB document limit regardless of
+ *  how many total AFNIC rows exist. */
+export interface ProspectIngestionResult {
+  domain: string;
+  status: ProspectIngestionResultStatus;
+  siren?: string;
+  reasons?: ProspectQualificationReason[];
   error?: string;
 }
 
@@ -84,6 +120,7 @@ export interface JobDocumentFields {
   auditId?: string;
   auditIds?: string[];
   urlResults?: UrlResult[];
+  ingestionResults?: ProspectIngestionResult[];
   progress: JobProgress;
   error?: string;
   orphaned?: boolean;
@@ -99,6 +136,7 @@ const jobOptionsSchema = new Schema(
     siren: { type: String },
     transactionalFlow: { type: Boolean },
     transactionalFlowReason: { type: String },
+    batchSize: { type: Number },
   },
   { _id: false },
 );
@@ -122,10 +160,23 @@ const jobProgressScanSchema = new Schema(
   { _id: false },
 );
 
+const jobProgressIngestionSchema = new Schema(
+  {
+    afnicRowsScanned: { type: Number, required: true },
+    candidatesFiltered: { type: Number, required: true },
+    candidatesFetched: { type: Number, required: true },
+    candidatesQualified: { type: Number, required: true },
+    target: { type: Number, required: true },
+    etaMs: { type: Number },
+  },
+  { _id: false },
+);
+
 const jobProgressSchema = new Schema(
   {
     crawl: { type: jobProgressCrawlSchema },
     scan: { type: jobProgressScanSchema },
+    ingestion: { type: jobProgressIngestionSchema },
     message: { type: String },
   },
   { _id: false },
@@ -145,10 +196,33 @@ const urlResultSchema = new Schema(
   { _id: false },
 );
 
+const jobIngestionResultSchema = new Schema(
+  {
+    domain: { type: String, required: true },
+    status: {
+      type: String,
+      required: true,
+      enum: ['pending', 'fetching', 'no-siren', 'qualified', 'not-qualified', 'error'],
+    },
+    siren: { type: String },
+    reasons: {
+      type: [String],
+      enum: [
+        'no-siren-extracted',
+        'siren-not-in-qualifying-sirene-set',
+        'domain-suppressed',
+        'no-qualifying-contact-address',
+      ],
+    },
+    error: { type: String },
+  },
+  { _id: false },
+);
+
 const jobSchema = new Schema<JobDocument>(
   {
     jobId: { type: String, required: true, unique: true },
-    type: { type: String, required: true, enum: ['full-audit', 'prospecting'] },
+    type: { type: String, required: true, enum: ['full-audit', 'prospecting', 'prospect-ingestion'] },
     status: { type: String, required: true, enum: ['queued', 'running', 'complete', 'failed'] },
     phase: {
       type: String,
@@ -163,6 +237,8 @@ const jobSchema = new Schema<JobDocument>(
         'report-fr',
         'report-en',
         'scanning',
+        'afnic-scan',
+        'fetch-qualify',
         'complete',
         'failed',
       ],
@@ -176,6 +252,7 @@ const jobSchema = new Schema<JobDocument>(
     auditId: { type: String },
     auditIds: { type: [String] },
     urlResults: { type: [urlResultSchema] },
+    ingestionResults: { type: [jobIngestionResultSchema] },
     progress: { type: jobProgressSchema, required: true, default: {} },
     error: { type: String },
     orphaned: { type: Boolean },

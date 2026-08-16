@@ -11,7 +11,7 @@
     "./*": "./dist/*"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && mkdir -p dist/prospecting/config && cp src/prospecting/config/*.json dist/prospecting/config/",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

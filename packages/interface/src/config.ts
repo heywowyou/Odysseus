@@ -20,6 +20,22 @@ export const DEFAULT_QUEUE_CONCURRENCY = 1;
 export const PROSPECTING_MAX_PAGES = 1;
 export const PROSPECTING_MAX_DEPTH = 0;
 
+/** Milestone 9a: one prospect-ingestion job processes one bounded batch
+ *  of AFNIC candidates, resuming from a persisted checkpoint - not one
+ *  unbounded job. See packages/interface/src/queue/pipeline/
+ *  run-prospect-ingestion-job.ts. */
+export const DEFAULT_PROSPECT_BATCH_SIZE = 2_000;
+/** Timeout for each of the prospecting cheap-fetch stage's plain HTTP
+ *  requests (homepage, mentions-legales) - not the scanner's Chromium
+ *  page timeout, which this stage never uses. */
+export const DEFAULT_PROSPECT_FETCH_TIMEOUT_MS = 15_000;
+/** How often (in candidates processed) run-prospect-ingestion-job.ts
+ *  persists its resume checkpoint, plus once more at batch end. A crash
+ *  mid-batch loses at most this many candidates' worth of re-fetching,
+ *  not the whole batch - a deliberate trade-off of extra Mongo writes
+ *  for crash resilience. */
+export const PROSPECT_CHECKPOINT_WRITE_INTERVAL = 100;
+
 export function getInterfacePort(): number {
   ensureEnvLoaded();
   const raw = process.env['ODYSSEUS_INTERFACE_PORT'];
@@ -39,6 +55,36 @@ export function getQueueConcurrency(): number {
   if (!raw) return DEFAULT_QUEUE_CONCURRENCY;
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_QUEUE_CONCURRENCY;
+}
+
+/** Multi-gigabyte, operator-downloaded source files (AFNIC ~0.45GB,
+ *  Sirene stock several GB) - a top-level, gitignored data/ directory,
+ *  kept separate from artifacts/ (already gitignored) since these are
+ *  operator-placed *inputs*, not tool-generated output. */
+export function getAfnicFichierAPath(): string {
+  ensureEnvLoaded();
+  const configured = process.env['ODYSSEUS_AFNIC_FILE_PATH'];
+  if (configured) return path.resolve(findWorkspaceRoot(), configured);
+  return path.join(findWorkspaceRoot(), 'data', 'afnic', 'fichier-a.csv');
+}
+
+export function getSireneStockPath(): string {
+  ensureEnvLoaded();
+  const configured = process.env['ODYSSEUS_SIRENE_STOCK_PATH'];
+  if (configured) return path.resolve(findWorkspaceRoot(), configured);
+  return path.join(findWorkspaceRoot(), 'data', 'sirene', 'stock-unite-legale.csv');
+}
+
+export function getSireneStockIndexCachePath(): string {
+  return path.join(findWorkspaceRoot(), 'data', 'sirene', 'stock-index-cache.jsonl');
+}
+
+export function getProspectBatchSize(): number {
+  ensureEnvLoaded();
+  const raw = process.env['ODYSSEUS_PROSPECT_BATCH_SIZE'];
+  if (!raw) return DEFAULT_PROSPECT_BATCH_SIZE;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_PROSPECT_BATCH_SIZE;
 }
 
 /** Anchored to the workspace root (not to this module's own depth on

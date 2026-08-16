@@ -20,6 +20,7 @@
     "@odysseus/scanner": "workspace:*",
     "@odysseus/store": "workspace:*",
     "@odysseus/llm": "workspace:*",
-    "@odysseus/report": "workspace:*"
+    "@odysseus/report": "workspace:*",
+    "csv-parse": "^5.6.0"
   }
 }
