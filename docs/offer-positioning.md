@@ -4,20 +4,55 @@ What is sold, at what price, and what it explicitly is not. Written
 2026-08-15. Supersedes the pricing subsections of brief section 3.2
 where they conflict.
 
+**Revised 2026-08-16: single-tier commercial model, flat price.** The
+paid EUR 290 screening tier is dropped entirely, not narrowed. The full
+audit is now the only paid deliverable, and its price is a flat,
+published price, not a risk-banded EUR 1,200 to 1,900 range set per
+client after the scan. In its place, a free, pre-purchase **outreach
+preview** document now exists, sent to cold prospects before they buy
+anything. It is not a smaller version of the paid report and is not a
+"tier" of it: it has its own content rules in `docs/outreach-rules.md`,
+and in particular never contains selectors, finding IDs, or exact page
+locations, the way the old screening tier did. Every "two tiers" / "both
+tiers" reference below and in brief section 3.2, and every mention of a
+EUR 1,200 to 1,900 range or a risk band setting the price, is stale and
+describes the pre-2026-08-16 model; read it as history, not as the
+current offer. The risk-banding *reasoning* (why price should track risk
+level rather than a per-finding formula) is kept below for the record,
+but does not currently drive a price, since there is now one flat price.
+
+**Revised again 2026-08-16, same day: flat price raised from EUR 300 HT
+to EUR 1,600 HT.** Pricing decision only; the product and deliverables
+are unchanged (M8.5 will add substance to justify the tier separately).
+Reasoning: EUR 300 HT read as a low-credibility, comparison-shopping
+price rather than a considered one, and undercut every published market
+floor by a wide enough margin to raise doubt about the offer's quality
+rather than remove it. The free outreach preview (section 1, and
+`docs/outreach-rules.md`) now carries the trust-building, low-risk
+first-contact job that the low flat price was originally covering, so
+the paid tier no longer needs to be priced as an entry point. Section
+1's "why the prices are not being raised" argument and section 2's price
+comparison below describe the EUR 300 HT reasoning and are superseded by
+this note; read them as history of how EUR 300 HT was arrived at, not as
+the current position. `docs/odysseus-project-brief-v2.md`'s references
+to EUR 300 HT are likewise superseded here, the canonical source.
+
 ---
 
 ## 1. Prices, held
 
-| Tier | Price | Delivery |
+| Deliverable | Price | Delivery |
 |---|---|---|
-| Screening | EUR 290 HT | automated PDF, published price, Stripe link, no call |
-| Full audit | EUR 1,200 to 1,900 HT | set per client within risk band after scan |
+| Outreach preview | Free | automated, sent to cold prospects before purchase, see `docs/outreach-rules.md` |
+| Full audit | EUR 1,600 HT flat, published | automated PDF, no risk band, no freehand quote |
 
 **Displayed HT everywhere from the first day.** Reasoning and the VAT
 threshold that makes this urgent are in
 `docs/operator-obligations.md` section 6.
 
-**Why the prices are not being raised.** Published market ranges for a
+**Why the price was not being raised (superseded 2026-08-16, see the
+note above; kept as history of the EUR 300 HT reasoning).** Published
+market ranges for a
 French accessibility audit run from EUR 1,400 to EUR 20,000 HT, with
 DINUM's own guidance at EUR 2,000 to 5,000, putting this offer below
 every published floor. The case for raising is real and was rejected,
@@ -29,13 +64,12 @@ fight at any price, so the offer avoids that fight rather than trying to
 win it.
 
 **What is not true:** that a lower price converts a cold prospect
-better. Between EUR 290 and EUR 490 the difference is small, because the
-objection is never "too expensive", it is "I do not believe this
-matters". Price is not the lever. Proof is. Revisit pricing only after a
-case study and a published study exist, when comparison becomes the
-actual sales conversation.
+better. The objection is never "too expensive", it is "I do not believe
+this matters". Price is not the lever. Proof is. Revisit pricing only
+after a case study and a published study exist, when comparison becomes
+the actual sales conversation.
 
-**Pricing decided 2026-08-16.** Auditing the manual-accessibility
+**Pricing decided 2026-08-16, band since replaced by a flat price the same day (see the note above).** Auditing the manual-accessibility
 checklist against what milestone 8 actually shipped found the remaining
 gap outside automated detection was down to three specific items
 (placeholder-as-only-label, reading order versus visual order, visible
@@ -78,7 +112,7 @@ than the one being delivered.
 The artifact the French market treats as having legal value is a taux de
 conformité computed over the 106 RGAA criteria on a representative
 sample of gabarits per the DINUM grid, feeding a declaration. Odysseus
-does not produce that, and a prospect placing a EUR 1,900 Odysseus
+does not produce that, and a prospect placing a EUR 1,600 Odysseus
 report next to a EUR 2,500 audit RGAA will conclude the cheaper one is
 missing something. They will be right, if the comparison is "which one
 is the audit." It is the wrong comparison: Odysseus is priced and built
@@ -100,9 +134,8 @@ accurate one is the position, not an inconvenience.
 crawl rather than a sample of gabarits. Render diff evidence showing
 what a crawler sees versus what a person sees. Search and LLM visibility
 findings alongside accessibility ones. Commercial framing aimed at a
-non-technical decision maker. Delivered in 48 hours at the screening
-tier without a qualification call. Lead with these rather than with what
-is missing.
+non-technical decision maker. Lead with these rather than with what is
+missing.
 
 **This is the primary justification for the price gap, not a side
 note.** The market's own position is that starting with automated
@@ -116,35 +149,26 @@ as a diagnostic, because that is the product.
 
 ---
 
-## 3. What each tier includes
+## 3. What the full audit includes
 
-Both tiers run one identical crawl and one `findings.json`. Differences
-are expressed only at report generation, through template depth and
-section inclusion.
+**Revised 2026-08-16: single deliverable, no tier split.** Executive
+summary and risk badge, ranked priorities with effort and impact
+framing, full selector detail and affected pages, render diff evidence,
+the code-level appendix, the criteria-and-registry-data section per
+`docs/obligation-basis.md` section 7, and a draft accessibility
+statement skeleton. No manual verification step of any kind: the report
+is fully automated, full stop. Still not a conformity rate. No video.
 
-**Screening, EUR 290 HT.** Executive summary, risk badge, top findings
-by severity, counts only for behavioural checks, render diff evidence,
-the criteria-and-registry-data section per
-`docs/obligation-basis.md` section 7. No manual verification pass. No
-conformity rate. No video.
-
-**Full audit, EUR 1,200 to 1,900 HT.** Everything above plus theme
-grouping, effort and impact framing, full selector detail, affected
-pages, code-level appendix, before-and-after render diff. No manual
-step of any kind, on either tier: the report is fully automated, full
-stop, superseding the 2026-08-15 draft of this section which described
-a narrowed set of hand-reviewed checks. Still not a conformity rate. No
-video: dropped from both tiers, and brief section 3.3 item 4 is stale
-and should be removed.
-
-If a screening client upgrades within 30 days, the screening fee is
-deducted.
+The free outreach preview sent before purchase (`docs/outreach-rules.md`)
+is a different, deliberately thinner document, not a lighter tier of
+this one: it never contains selectors, finding IDs, or exact page
+locations, and its content rules are governed separately.
 
 ---
 
 ## 4. The compliance section states facts
 
-Applies to both tiers and binds the report templates. Full rule in
+Binds the report template. Full rule in
 `docs/obligation-basis.md` section 7. In short: reproduce the criteria,
 state this company's registry data, state whether the exemption
 conditions appear met on that data, describe where the case law stands
@@ -202,10 +226,11 @@ specific business, per the report-not-conclude rule. Do not soften this
 one relative to a standard e-commerce prospect; the evidence does not
 support treating hotels as a harder case.
 
-**"Free scanners exist."** They do, and the screening includes what they
-produce. What they do not produce is render diff evidence, the registry
-data section, prioritisation aimed at a non-technical reader, or a
-document that can be handed to a developer as a work order.
+**"Free scanners exist."** They do, and the free outreach preview
+includes what they produce, at no cost. What they do not produce is
+render diff evidence, the registry data section, prioritisation aimed at
+a non-technical reader, or a document that can be handed to a developer
+as a work order, all of which are in the paid full audit.
 
 **"My site is fine, my developer said so."** The report is checkable.
 Every finding names a page and a selector. Invite them to have the

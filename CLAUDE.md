@@ -232,6 +232,50 @@ needed, say so and stop. Do not change them and continue.
     already for wrapper-page and noindex findings (trade-off 8) and
     failed for the same reason it would fail here.
 
+12. **Single-tier commercial model: no paid screening tier, flat full-audit
+    price, free outreach preview instead**, decided 2026-08-16
+    (`docs/offer-positioning.md`). The paid EUR 290 screening tier from
+    milestone 8 is dropped entirely, not narrowed or renamed. The full
+    audit is now the only paid deliverable, at a flat, published price
+    (EUR 1,600 HT as of trade-off 13 below; originally EUR 300 HT on
+    2026-08-16), replacing the risk-banded EUR 1,200 to 1,900 range. `ReportTier`
+    is gone from `packages/report` (`renderHtml`/`generateReportPdf` take
+    no tier argument, there is exactly one report body), from
+    `packages/store` (`ReportDocumentFields` has no `tier` field; historical
+    documents still carry one on disk, simply unread), from
+    `packages/interface` (no `?tier=` query param, no tier-labeled download
+    links), and from `packages/cli` (no `--tier` flag).
+
+    In its place, a free, pre-purchase **outreach preview** document is
+    sent to cold prospects (milestone 9c, `docs/outreach-rules.md`). It is
+    not a lighter tier of the full report and must not be built as one: it
+    has its own content rules, and in particular never contains selectors,
+    finding IDs, or exact page locations, the way the old screening tier
+    did. Give it its own render path rather than a new branch on
+    `renderHtml`. It is also a likely first-contact artifact under RGPD
+    article 14, so it must carry the same identity/data-origin/purpose/
+    opt-out disclosures `docs/outreach-rules.md` section 7 requires of any
+    first-contact message, not assume an accompanying email carries them.
+
+13. **Full audit price raised from EUR 300 HT to EUR 1,600 HT**, decided
+    2026-08-16, same day as trade-off 12 (`docs/offer-positioning.md`,
+    canonical pricing source). Pricing decision only, not a scope change:
+    the product and deliverables are unchanged; milestone 8.5 will add
+    substance to justify the tier separately. Reasoning: EUR 300 HT read
+    as a comparison-shopping price rather than a considered one and
+    undercut every published market floor by enough to raise doubt about
+    quality instead of removing it. The free outreach preview introduced
+    by trade-off 12 now carries the trust-building, low-risk
+    first-contact job the low flat price was originally covering, so the
+    paid tier no longer needs to be priced as an entry point; market-rate
+    credibility is the goal instead. The Stripe payment link amount is
+    updated separately by hand, not by code or by this change. Current-
+    price mentions in `docs/odysseus-project-brief-v2.md` were updated to
+    EUR 1,600 HT along with the canonical source; only the "why the
+    prices are not being raised" reasoning in `docs/offer-positioning.md`
+    section 1 is deliberately left describing the superseded EUR 300 HT
+    figure, kept as history of how that number was reached, not the
+    current price.
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
