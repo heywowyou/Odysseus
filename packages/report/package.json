@@ -18,6 +18,7 @@
     "@odysseus/core": "workspace:*",
     "@odysseus/llm": "workspace:*",
     "@odysseus/scanner": "workspace:*",
+    "pagedjs": "^0.4.3",
     "playwright": "^1.49.0"
   },
   "devDependencies": {

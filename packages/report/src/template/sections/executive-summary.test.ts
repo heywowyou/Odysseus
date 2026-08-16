@@ -4,7 +4,7 @@ import { getStrings } from '../strings/i18n.js';
 import { loadSasFernandeAnalysis } from '../../test-fixtures.js';
 
 describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () => {
-  it('references the top 3 themes by rank and title, without restating businessImpact (B14)', async () => {
+  it('references the top 3 themes by rank and title as jump links, capped at 3 (doc §3 section 01)', async () => {
     const analysis = await loadSasFernandeAnalysis('fr');
     const html = renderExecutiveSummary(getStrings('fr'), analysis);
 
@@ -12,7 +12,7 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
     const top3 = sorted.slice(0, 3);
 
     for (const theme of top3) {
-      expect(html).toContain(`Voir priorité ${theme.priorityRank}.`);
+      expect(html).toContain(`href="#theme-${theme.priorityRank}"`);
     }
     // businessImpact prose must not be duplicated into this block - it
     // already appears once, in the theme card itself.
@@ -21,23 +21,9 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
       const occurrences = html.split(impactSnippet).length - 1;
       expect(occurrences).toBeLessThanOrEqual(0);
     }
-  });
 
-  it('lists only quick-win themes (low effort, non-low impact) in the quick-wins strip', async () => {
-    const analysis = await loadSasFernandeAnalysis('fr');
-    const html = renderExecutiveSummary(getStrings('fr'), analysis);
-
-    const quickWinRanks = analysis.themes
-      .filter((t) => t.effort === 'low' && t.impact !== 'low')
-      .map((t) => t.priorityRank);
-
-    if (quickWinRanks.length > 0) {
-      expect(html).toContain('class="qwin"');
-      for (const rank of quickWinRanks) {
-        expect(html).toContain(String(rank));
-      }
-    } else {
-      expect(html).not.toContain('class="qwin"');
+    if (sorted.length > 3) {
+      expect(html).not.toContain(`href="#theme-${sorted[3]!.priorityRank}"`);
     }
   });
 

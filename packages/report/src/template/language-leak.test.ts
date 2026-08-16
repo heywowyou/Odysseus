@@ -6,8 +6,8 @@
  * "Performance" or "SEO" are legitimately identical in both and must not
  * trip this), and the reverse. The <style> block and every class="..."
  * attribute are stripped first, since neither is subject to fr/en rules
- * and both can coincide with real English chrome words - report.css with
- * short keywords like "high", and kebab-case class names like
+ * and both can coincide with real English chrome words - nocturne.css
+ * with short keywords like "high", and kebab-case class names like
  * "sev-critical" with the severity word "critical" itself.
  */
 import { describe, expect, it } from 'vitest';
@@ -15,13 +15,7 @@ import { renderHtml } from './render-html.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import { en } from './strings/en.js';
 import { fr } from './strings/fr.js';
-import {
-  buildStubBrowser,
-  loadSasFernandeAnalysis,
-  loadSasFernandeFindings,
-  loadSasFernandeManifest,
-  SAS_FERNANDE_AUDIT_DIR,
-} from '../test-fixtures.js';
+import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../test-fixtures.js';
 
 function flattenStrings(value: unknown): string[] {
   if (typeof value === 'string') return [value];
@@ -65,12 +59,7 @@ describe('report chrome strings never leak into the other language', () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
     const analysis = await loadSasFernandeAnalysis('fr');
-    const renderDiffEvidencePages = await resolveRenderDiffEvidence(
-      manifest,
-      SAS_FERNANDE_AUDIT_DIR,
-      findings,
-      buildStubBrowser(),
-    );
+    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
     const html = stripStyleBlock(
       await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages }),
@@ -87,12 +76,7 @@ describe('report chrome strings never leak into the other language', () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
     const analysis = await loadSasFernandeAnalysis('en');
-    const renderDiffEvidencePages = await resolveRenderDiffEvidence(
-      manifest,
-      SAS_FERNANDE_AUDIT_DIR,
-      findings,
-      buildStubBrowser(),
-    );
+    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
     const html = stripStyleBlock(
       await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages }),

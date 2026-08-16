@@ -1,65 +1,53 @@
 import { getCriterionName } from '@odysseus/llm';
-import type { Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
+import type { Finding, ReportLanguage } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, formatNumber, renderSectionHeader } from '../html-utils.js';
+import { escapeHtml, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { buildConformanceRollup } from '../conformance-rollup.js';
+
+function headCell(label: string): string {
+  return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
+}
+
+function cell(html: string, extra = ''): string {
+  return `<div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</div>`;
+}
 
 /** R2: the conformance flag is computed here, in template code, never
  *  asked of the LLM and never added to the locked Theme schema. A WCAG
  *  failure is a different kind of fact from a slow image (C20/C21). */
-export function renderConformanceSummary(
-  strings: ReportStrings,
-  findings: Finding[],
-  language: ReportLanguage,
-  obligationAssessment?: ObligationAssessment,
-): string {
+export function renderConformanceSummary(strings: ReportStrings, findings: Finding[], language: ReportLanguage): string {
   const rows = buildConformanceRollup(findings);
   const c = strings.conformanceSummary;
-  // Section 9's methodology chapter states a specific obligation
-  // determination whenever assessObligations() reached one; this intro's
-  // generic "we don't rule on applicability" hedge must not contradict
-  // that by printing unconditionally. Same status check, no duplicated
-  // logic: undetermined (or no assessment at all, same fallback
-  // methodology.ts uses) is the only case where the hedge still applies.
-  const showHedge = !obligationAssessment || obligationAssessment.status === 'undetermined';
 
   const body = rows.length
     ? `
-      <table>
-        <thead>
-          <tr>
-            <th>${escapeHtml(c.criterionColumnLabel)}</th>
-            <th>${escapeHtml(c.criterionNameColumnLabel)}</th>
-            <th class="num">${escapeHtml(c.findingsColumnLabel)}</th>
-            <th class="num">${escapeHtml(c.occurrencesColumnLabel)}</th>
-            <th class="num">${escapeHtml(c.pagesMaxColumnLabel)}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows
-            .map(
-              (row) => `
-                <tr>
-                  <td class="mono crit">${escapeHtml(row.criterion)}</td>
-                  <td>${escapeHtml(getCriterionName(row.criterion, language) ?? '')}</td>
-                  <td class="num">${formatNumber(row.findingCount, language)}</td>
-                  <td class="num">${formatNumber(row.totalOccurrences, language)}</td>
-                  <td class="num">${formatNumber(row.maxPages, language)}</td>
-                </tr>
-              `,
-            )
-            .join('')}
-        </tbody>
-      </table>
-      <p class="note">${escapeHtml(c.note)}</p>
+      <div style="display:grid;grid-template-columns:100px 1fr 90px 100px 100px;font-size:14px">
+        ${headCell(c.criterionColumnLabel)}
+        ${headCell(c.criterionNameColumnLabel)}
+        ${headCell(c.findingsColumnLabel)}
+        ${headCell(c.occurrencesColumnLabel)}
+        ${headCell(c.pagesMaxColumnLabel)}
+        ${rows
+          .map(
+            (row) => `
+              <div class="row-atomic">
+                ${cell(escapeHtml(row.criterion), 'color:var(--color-accent-300)')}
+                ${cell(escapeHtml(getCriterionName(row.criterion, language) ?? ''))}
+                ${cell(formatNumber(row.findingCount, language))}
+                ${cell(formatNumber(row.totalOccurrences, language))}
+                ${cell(formatNumber(row.maxPages, language))}
+              </div>
+            `,
+          )
+          .join('')}
+      </div>
     `
-    : `<p class="note">${escapeHtml(c.emptyState)}</p>`;
+    : `<p style="font-size:13.5px;opacity:0.85">${escapeHtml(c.emptyState)}</p>`;
 
-  return `
-    <section class="new-page">
-      ${renderSectionHeader(c.eyebrow, c.heading)}
-      ${showHedge ? `<p class="intro">${escapeHtml(c.intro)}</p>` : ''}
-      ${body}
-    </section>
-  `;
+  return sheet(`
+    ${renderSheetHeader(c.eyebrow, c.heading)}
+    <p style="font-size:13.5px;opacity:0.85;max-width:66ch;margin-bottom:var(--space-2)">${escapeHtml(c.bodyIntro)}</p>
+    <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-6)">${escapeHtml(c.scopeNote)}</p>
+    ${body}
+  `);
 }

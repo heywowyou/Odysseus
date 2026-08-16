@@ -9,7 +9,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Browser } from 'playwright';
 import type { AuditManifest, Finding, LlmOutput, ReportLanguage } from '@odysseus/core';
 import type { StoredAnalysis } from './types.js';
 
@@ -33,21 +32,6 @@ export async function loadSasFernandeManifest(): Promise<AuditManifest> {
 export async function loadSasFernandeFindings(): Promise<Finding[]> {
   const raw = await fs.readFile(path.join(SAS_FERNANDE_AUDIT_DIR, 'findings.json'), 'utf-8');
   return JSON.parse(raw) as Finding[];
-}
-
-/** Stubs the Browser resolveRenderDiffEvidence/renderPdfFromHtml use for
- *  canvas-based screenshot downscaling. Fine for any test that isn't
- *  itself checking pixel-level downscale correctness (that one case is
- *  downscale-screenshot.e2e.test.ts, which launches real Chromium) -
- *  launching Chromium for every section/render-html test would make the
- *  whole suite slow for no benefit to what those tests actually check. */
-export function buildStubBrowser(): Browser {
-  return {
-    newPage: async () => ({
-      evaluate: async () => 'data:image/jpeg;base64,ZmFrZQ==',
-      close: async () => undefined,
-    }),
-  } as unknown as Browser;
 }
 
 export async function loadSasFernandeAnalysis(language: ReportLanguage): Promise<StoredAnalysis> {

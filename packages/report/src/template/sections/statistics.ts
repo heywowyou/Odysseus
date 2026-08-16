@@ -1,12 +1,42 @@
 import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatNumber, renderSectionHeader } from '../html-utils.js';
-import { SEVERITY_GLYPH } from '../severity-badge.js';
-import { renderSeverityBadge } from '../severity-badge.js';
+import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
 import { computeStatistics } from '../statistics.js';
 
-function renderTile(value: string, label: string, extraClass = ''): string {
-  return `<div class="tile ${extraClass}"><b>${value}</b><span>${escapeHtml(label)}</span></div>`;
+/** Doc §3 section 03 cap: exactly 4 number tiles, 4 severity tiles, 4
+ *  category tiles - report.reference.html's numberTiles/severityTiles/
+ *  categorySplit. The 4 number tiles are the same first 4 metrics the
+ *  pre-redesign 10-tile layout led with. */
+function renderNumberTile(value: string, label: string): string {
+  return `
+    <div style="padding:var(--space-3);background:var(--color-surface);border-radius:var(--radius-md)">
+      <div style="font-size:28px;font-family:var(--font-heading);font-weight:500">${value}</div>
+      <div style="font-size:11.5px;opacity:0.65;margin-top:4px">${escapeHtml(label)}</div>
+    </div>
+  `;
+}
+
+function renderSeverityTile(label: string, count: string, meaning: string, color: string, bg: string): string {
+  return `
+    <div style="padding:var(--space-3);border-radius:var(--radius-md);background:${bg}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="width:8px;height:8px;border-radius:50%;background:${color}"></span>
+        <span style="font-size:12px;font-weight:500;color:${color}">${escapeHtml(label)}</span>
+      </div>
+      <div style="font-size:24px;font-family:var(--font-heading)">${count}</div>
+      <div style="font-size:11px;opacity:0.65;margin-top:4px">${escapeHtml(meaning)}</div>
+    </div>
+  `;
+}
+
+function renderCategoryTile(label: string, count: string, color: string): string {
+  return `
+    <div style="padding:var(--space-3);border-radius:var(--radius-md);background:var(--color-surface)">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:${color}">${escapeHtml(label)}</div>
+      <div style="font-size:22px;font-family:var(--font-heading);margin-top:6px">${count}</div>
+    </div>
+  `;
 }
 
 export function renderStatistics(
@@ -19,53 +49,60 @@ export function renderStatistics(
   const s = strings.statistics;
   const n = (value: number): string => formatNumber(value, language);
 
-  const tiles = [
-    renderTile(n(stats.pagesScanned), s.pagesTileLabel),
-    renderTile(n(stats.totalFindings), s.findingsTileLabel),
-    renderTile(n(stats.accessibilityOccurrences), s.accessibilityOccurrencesTileLabel),
-    renderTile(`${n(stats.pagesWithCritical)}/${n(stats.pagesScanned)}`, s.pagesWithCriticalTileLabel),
-    renderTile(
-      `<span class="glyph">${SEVERITY_GLYPH.critical}</span>${n(stats.critical)}`,
-      s.criticalTileLabel,
-      't-crit',
-    ),
-    renderTile(
-      `<span class="glyph">${SEVERITY_GLYPH.serious}</span>${n(stats.serious)}`,
-      s.seriousTileLabel,
-      't-maj',
-    ),
-    renderTile(
-      `<span class="glyph">${SEVERITY_GLYPH.moderate}</span>${n(stats.moderate)}`,
-      s.moderateTileLabel,
-      't-mod',
-    ),
-    renderTile(`<span class="glyph">${SEVERITY_GLYPH.minor}</span>${n(stats.minor)}`, s.minorTileLabel, 't-min'),
-    renderTile(
-      n(stats.wcagCriteriaFailingCount),
-      fillTemplate(s.wcagFailingDescriptionTemplate, { pages: n(stats.pagesWithWcagFailure) }),
-      't-law',
-    ),
-    renderTile(n(stats.accessibilityCount), s.accessibilityCategoryTileLabel),
-    renderTile(n(stats.seoRenderingCount), s.seoRenderingCategoryTileLabel),
+  const numberTiles = [
+    renderNumberTile(n(stats.pagesScanned), s.pagesTileLabel),
+    renderNumberTile(n(stats.totalFindings), s.findingsTileLabel),
+    renderNumberTile(n(stats.accessibilityOccurrences), s.accessibilityOccurrencesTileLabel),
+    renderNumberTile(`${n(stats.pagesWithCritical)}/${n(stats.pagesScanned)}`, s.pagesWithCriticalTileLabel),
   ].join('');
 
-  const legend = `
-    <div class="legend">
-      <span>${renderSeverityBadge(strings, 'critical')} ${escapeHtml(s.legendCriticalText)}</span>
-      <span>${renderSeverityBadge(strings, 'serious')} ${escapeHtml(s.legendSeriousText)}</span>
-      <span>${renderSeverityBadge(strings, 'moderate')} ${escapeHtml(s.legendModerateText)}</span>
-      <span>${renderSeverityBadge(strings, 'minor')} ${escapeHtml(s.legendMinorText)}</span>
+  const severityMeanings = {
+    critical: s.legendCriticalText,
+    serious: s.legendSeriousText,
+    moderate: s.legendModerateText,
+    minor: s.legendMinorText,
+  } as const;
+  const severityCounts = {
+    critical: stats.critical,
+    serious: stats.serious,
+    moderate: stats.moderate,
+    minor: stats.minor,
+  } as const;
+  const severityLabels = strings.findingsAppendix.severityLabels;
+  const severityTiles = (['critical', 'serious', 'moderate', 'minor'] as const)
+    .map((severity) =>
+      renderSeverityTile(
+        severityLabels[severity],
+        n(severityCounts[severity]),
+        severityMeanings[severity],
+        SEVERITY[severity].color,
+        SEVERITY[severity].bg,
+      ),
+    )
+    .join('');
+
+  const categoryLabels = strings.findingsAppendix.categoryLabels;
+  const categoryTiles = CATEGORY_ORDER.map((category) =>
+    renderCategoryTile(categoryLabels[category], n(stats.categoryCounts[category]), CATEGORY[category].color),
+  ).join('');
+
+  const wcagFailText = fillTemplate(s.wcagFailingDescriptionTemplate, { pages: n(stats.pagesWithWcagFailure) });
+  const wcagFailCountText = `${n(stats.wcagCriteriaFailingCount)} ${wcagFailText}`;
+
+  return sheet(`
+    ${renderSheetHeader(s.eyebrow, s.heading)}
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
+      ${numberTiles}
     </div>
-  `;
-
-  const intro = fillTemplate(s.introTemplate, { pages: n(stats.pagesScanned), findings: n(stats.totalFindings) });
-
-  return `
-    <section class="new-page">
-      ${renderSectionHeader(s.eyebrow, s.heading)}
-      <p class="intro">${escapeHtml(intro)}</p>
-      <div class="tiles">${tiles}</div>
-      ${legend}
-    </section>
-  `;
+    <h5>${escapeHtml(s.severityBreakdownHeading)}</h5>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
+      ${severityTiles}
+    </div>
+    <h5>${escapeHtml(s.categoryBreakdownHeading)}</h5>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
+      ${categoryTiles}
+    </div>
+    <div class="hr"></div>
+    <p style="font-size:13.5px;opacity:0.85">${escapeHtml(wcagFailCountText)}</p>
+  `);
 }

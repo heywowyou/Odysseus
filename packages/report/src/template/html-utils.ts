@@ -81,12 +81,27 @@ export function formatFindingIdRefs(findingIds: readonly string[]): string {
     .join(', ');
 }
 
-/** Every numbered section (stats through methodology) shares this
- *  two-line header shape, ported verbatim from
- *  docs/report-v2-prototype-haaitza-fr.html: a short numbered eyebrow
- *  ("3 · Conformité accessibilité") above the full descriptive heading.
- *  Cover and the table of contents are unnumbered chrome and do not use
- *  this. */
-export function renderSectionHeader(eyebrow: string, heading: string): string {
-  return `<span class="eyebrow">${escapeHtml(eyebrow)}</span><h2>${escapeHtml(heading)}</h2>`;
+/** Every numbered section (legal exposure through next steps) shares this
+ *  two-line header shape, ported verbatim from report.reference.html: a
+ *  short numbered eyebrow ("07 · Conformité") as an <h6>, then the full
+ *  descriptive <h2> heading. Cover and the table of contents are
+ *  unnumbered chrome and do not use this. */
+export function renderSheetHeader(eyebrow: string, heading: string): string {
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
+      <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(eyebrow)}</h6>
+    </div>
+    <h2 style="margin-bottom:var(--space-4)">${escapeHtml(heading)}</h2>
+  `;
+}
+
+/** Wraps section content in the reference's `.sheet` unit (paged.css:
+ *  `break-after: page`, 18mm padding). A section is allowed to flow onto
+ *  a second sheet by returning more content than fits one page - Paged.js
+ *  handles that by fragmenting the section element itself, not by this
+ *  function emitting two `<section>` tags. `extraClass` is only ever
+ *  `sheet-cover` (cover.ts). */
+export function sheet(innerHtml: string, extraClass = ''): string {
+  const className = extraClass ? `sheet ${extraClass}` : 'sheet';
+  return `<section class="${className}">${innerHtml}</section>`;
 }

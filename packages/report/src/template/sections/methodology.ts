@@ -11,7 +11,7 @@ import {
   type ReportLanguage,
 } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatDate, formatNumber, renderSectionHeader } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatDate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 
 /** Sirene's own effectif-band labels (see packages/interface's
  *  sirene-client.ts) are French-only, since they come from an INSEE
@@ -221,13 +221,13 @@ export function renderMethodology(
 
   const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings);
 
-  return `
-    <section class="new-page">
-      ${renderSectionHeader(eyebrow, m.heading)}
-      <p>${escapeHtml(toolingParagraph)}</p>
-      <p>${escapeHtml(m.automatedCoverageCaveat)}</p>
-      <p>${escapeHtml(renderLegalCitationParagraph(strings, obligationAssessment, language))}</p>
-      ${sirenNote ? `<p>${escapeHtml(sirenNote)}</p>` : ''}
-    </section>
-  `;
+  return sheet(`
+    ${renderSheetHeader(eyebrow, m.heading)}
+    <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
+    <div class="hr"></div>
+    <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.automatedCoverageCaveat)}</p>
+    <div class="hr"></div>
+    <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(renderLegalCitationParagraph(strings, obligationAssessment, language))}</p>
+    ${sirenNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(sirenNote)}</p>` : ''}
+  `);
 }

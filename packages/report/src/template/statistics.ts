@@ -1,5 +1,6 @@
 import type { AuditManifest, Finding } from '@odysseus/core';
 import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rollup.js';
+import { CATEGORY_ORDER } from './design-tokens.js';
 
 /** Deterministic counts for the statistics page (docs/report-v2-refactor.md
  *  B10): nowhere in v1 did the document state pages scanned, finding
@@ -21,6 +22,11 @@ export interface ReportStatistics {
   pagesWithWcagFailure: number;
   accessibilityCount: number;
   seoRenderingCount: number;
+  /** Per-category counts for doc §3 section 03's 4-tile category split
+   *  (accessibility/seo/rendering/performance, CATEGORY_ORDER order) -
+   *  distinct from accessibilityCount/seoRenderingCount above, which
+   *  predate that split and merge seo+rendering into one number. */
+  categoryCounts: Record<(typeof CATEGORY_ORDER)[number], number>;
 }
 
 export function computeStatistics(findings: readonly Finding[], manifest: AuditManifest): ReportStatistics {
@@ -34,6 +40,12 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
   let accessibilityCount = 0;
   let seoRenderingCount = 0;
   const pagesWithCriticalSet = new Set<string>();
+  const categoryCounts: Record<(typeof CATEGORY_ORDER)[number], number> = {
+    accessibility: 0,
+    seo: 0,
+    rendering: 0,
+    performance: 0,
+  };
 
   for (const finding of findings) {
     if (finding.category === 'accessibility') {
@@ -42,6 +54,9 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
     }
     if (finding.category === 'seo' || finding.category === 'rendering') {
       seoRenderingCount += 1;
+    }
+    if (finding.category !== 'geo') {
+      categoryCounts[finding.category] += 1;
     }
     switch (finding.severity) {
       case 'critical':
@@ -73,5 +88,6 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
     pagesWithWcagFailure: pagesWithWcagFailures(findings),
     accessibilityCount,
     seoRenderingCount,
+    categoryCounts,
   };
 }

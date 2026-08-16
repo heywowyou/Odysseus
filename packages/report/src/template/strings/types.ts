@@ -35,8 +35,8 @@ export interface ReportStrings {
     minorTileLabel: string;
     /** Template: {pages}. */
     wcagFailingDescriptionTemplate: string;
-    accessibilityCategoryTileLabel: string;
-    seoRenderingCategoryTileLabel: string;
+    severityBreakdownHeading: string;
+    categoryBreakdownHeading: string;
     legendCriticalText: string;
     legendSeriousText: string;
     legendModerateText: string;
@@ -45,19 +45,24 @@ export interface ReportStrings {
   conformanceSummary: {
     eyebrow: string;
     heading: string;
-    intro: string;
+    /** report.reference.html's first, longer fixed paragraph. */
+    bodyIntro: string;
+    /** report.reference.html's second, small fixed paragraph - restates
+     *  that this criteria list doesn't rule on legal applicability, shown
+     *  unconditionally (CLAUDE.md rule 6: state the criteria, never a
+     *  verdict, regardless of whether section 11 reached a determination
+     *  elsewhere). */
+    scopeNote: string;
     criterionColumnLabel: string;
     criterionNameColumnLabel: string;
     findingsColumnLabel: string;
     occurrencesColumnLabel: string;
     pagesMaxColumnLabel: string;
-    note: string;
     emptyState: string;
   };
   observations: {
     eyebrow: string;
     heading: string;
-    intro: string;
     wrapperTitle: string;
     /** Template: {findingIds}. */
     wrapperBodyTemplate: string;
@@ -82,11 +87,10 @@ export interface ReportStrings {
   executiveSummary: {
     eyebrow: string;
     heading: string;
-    whatToDoFirstHeading: string;
-    /** Template: {rank}. */
-    seeThemeTemplate: string;
-    quickWinsLabel: string;
-    quickWinsSuffix: string;
+    /** Kicker over the "where to start" jump-link box (doc §3 section 01:
+     *  prose + jump links, capped at 3). */
+    startHereKicker: string;
+    jumpLinkLabel: string;
   };
   /** Promotes methodology's own legal-citation paragraph (rendered via
    *  the exported renderLegalCitationParagraph) to its own page for
@@ -136,6 +140,7 @@ export interface ReportStrings {
     headingTemplate: string;
     effortLabel: string;
     impactLabel: string;
+    affectedPagesLabel: string;
     conformityLabel: string;
     conformityNotApplicable: string;
     conformityNonConformant: string;
@@ -146,45 +151,44 @@ export interface ReportStrings {
     pagesOfTotalTemplate: string;
     refsLabel: string;
   };
+  /** Doc §3: bars only, no screenshots - two proportional-width bars
+   *  (raw vs rendered visible-text length) plus a one-line caption, never
+   *  an <img>. Capped at the 3 worst pages by missingPercent. */
   renderDiffEvidence: {
     eyebrow: string;
     heading: string;
     intro: string;
-    rawLabel: string;
-    renderedLabel: string;
-    missingPercentLabel: string;
-    noScreenshotAvailable: string;
-    /** Template: {healthy}, {total}. */
-    healthyPagesSummary: string;
-    /** Template: {raw}, {rendered}. */
-    visibleTextCountsTemplate: string;
-    visibleTextCountsNotAvailable: string;
-    /** Template: {url}, {chars}. */
-    altRawTemplate: string;
-    /** Template: {url}, {chars}. */
-    altRenderedTemplate: string;
-    /** Template: {n}. */
-    altCharsKnownTemplate: string;
-    altCharsUnknown: string;
+    /** Template: {chars}. Bar caption above the raw-HTML bar. */
+    rawBarLabelTemplate: string;
+    /** Template: {chars}. Bar caption above the rendered bar. */
+    renderedBarLabelTemplate: string;
+    /** Template: {percent}, {selector}. */
+    missingCaptionTemplate: string;
+    /** Template: {count}. Shown when more than 3 pages met the inclusion
+     *  threshold, e.g. "5 autres pages presentent le meme ecart, detail
+     *  dans l'export technique." */
+    overflowTextTemplate: string;
   };
+  /** Doc §3 section 09: 5 aggregated medians (LCP, TBT, FCP, Speed Index,
+   *  CLS) across the whole scan, not a per-page table. */
   coreWebVitals: {
     eyebrow: string;
     heading: string;
-    intro: string;
-    inpNote: string;
-    pageColumnLabel: string;
-    lcpColumnLabel: string;
-    clsColumnLabel: string;
-    tbtColumnLabel: string;
+    /** Template: {pages}. */
+    introTemplate: string;
+    metricColumnLabel: string;
+    valueColumnLabel: string;
+    thresholdColumnLabel: string;
+    statusColumnLabel: string;
+    lcpLabel: string;
+    tbtLabel: string;
+    fcpLabel: string;
+    speedIndexLabel: string;
+    clsLabel: string;
     notMeasured: string;
     ratingGoodLabel: string;
     ratingNeedsImprovementLabel: string;
     ratingPoorLabel: string;
-    /** Fixed threshold values, not a template: LCP/CLS/TBT "good" band. */
-    legendGoodTemplate: string;
-    /** Fixed threshold values: LCP/CLS/TBT "needs improvement" band. */
-    legendMidTemplate: string;
-    legendPoorLabel: string;
   };
   /** Per-criterion status is trivially derived, never a legal judgment:
    *  buildConformanceRollup only ever lists a criterion when at least one

@@ -7,17 +7,16 @@ import { resolveRenderDiffEvidence } from './screenshots.js';
 import { renderHtml } from './template/render-html.js';
 import { renderPdfFromHtml } from './pdf.js';
 
-/** One Chromium instance for the whole report: evidence screenshot
- *  downscaling (screenshots.ts) and the final PDF print (pdf.ts) both
- *  reuse it, rather than launching a browser for each. */
+/** Chromium is launched once for the whole report and used solely for the
+ *  final Paged.js print (pdf.ts) - resolveRenderDiffEvidence no longer
+ *  needs a browser at all since section 08 stopped embedding screenshots
+ *  (docs/report-design-system.md section 3). */
 export async function generateReportPdf(input: GenerateReportInput): Promise<Buffer> {
   const { browser } = await launchBrowser();
   try {
-    const renderDiffEvidencePages = await resolveRenderDiffEvidence(
+    const { pages: renderDiffEvidencePages, totalEligible: renderDiffTotalEligible } = resolveRenderDiffEvidence(
       input.manifest,
-      input.auditDir,
       input.findings,
-      browser,
     );
 
     const html = await renderHtml({
@@ -25,10 +24,10 @@ export async function generateReportPdf(input: GenerateReportInput): Promise<Buf
       findings: input.findings,
       analysis: input.analysis,
       renderDiffEvidencePages,
+      renderDiffTotalEligible,
     });
 
-    const siteHost = new URL(input.manifest.siteUrl).host;
-    return await renderPdfFromHtml(html, { siteHost, language: input.analysis.language }, browser);
+    return await renderPdfFromHtml(html, browser);
   } finally {
     await browser.close();
   }

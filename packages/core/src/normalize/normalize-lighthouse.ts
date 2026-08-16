@@ -111,6 +111,8 @@ const CORE_WEB_VITAL_AUDIT_IDS = {
   lcp: 'largest-contentful-paint',
   cls: 'cumulative-layout-shift',
   tbt: 'total-blocking-time',
+  fcp: 'first-contentful-paint',
+  speedIndex: 'speed-index',
 } as const;
 
 function extractCoreWebVitalMeasurement(
@@ -138,6 +140,8 @@ export function extractCoreWebVitals(lhr: LighthouseResultInput): CoreWebVitals 
     lcp: extractCoreWebVitalMeasurement(lhr, CORE_WEB_VITAL_AUDIT_IDS.lcp),
     cls: extractCoreWebVitalMeasurement(lhr, CORE_WEB_VITAL_AUDIT_IDS.cls),
     tbt: extractCoreWebVitalMeasurement(lhr, CORE_WEB_VITAL_AUDIT_IDS.tbt),
+    fcp: extractCoreWebVitalMeasurement(lhr, CORE_WEB_VITAL_AUDIT_IDS.fcp),
+    speedIndex: extractCoreWebVitalMeasurement(lhr, CORE_WEB_VITAL_AUDIT_IDS.speedIndex),
   };
 }
 

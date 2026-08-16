@@ -1,11 +1,14 @@
 /**
  * Composes the full HTML document handed to Chromium via page.setContent().
- * report.css is read from disk and inlined into a <style> tag rather than
- * linked, because setContent() has no base URL to resolve a relative
- * stylesheet against, and the whole document must be a zero-network
- * render: nothing here may reference an external URL, since a missing
- * CDN or font fetch would fail silently and produce an unstyled client
- * deliverable.
+ * nocturne.css and paged.css are read from disk and inlined into <style>
+ * tags rather than linked, because setContent() has no base URL to resolve
+ * a relative stylesheet (or a relative @font-face url()) against - Paged.js's
+ * own CSS parser throws on an unresolved relative url() with no base URL,
+ * confirmed against a real render. The four Inter woff2 files are base64
+ * data-URI-embedded into the inlined CSS text for the same reason: the
+ * whole document must be a zero-network render, since a missing font fetch
+ * would fail silently (or, for Paged.js, not so silently) and produce an
+ * unstyled or broken client deliverable.
  */
 
 import { promises as fs } from 'node:fs';
@@ -31,19 +34,31 @@ import { renderFindingsAppendix } from './sections/findings-appendix.js';
 import { renderMethodology } from './sections/methodology.js';
 import { renderGlossary } from './sections/glossary.js';
 import { renderNextSteps } from './sections/next-steps.js';
+import { escapeHtml } from './html-utils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** report.css is committed only under src/template/ (see the "why the
- *  compiled CSS lives under src" note in the milestone plan), never
- *  duplicated into dist/. This file's own __dirname is
- *  <package-root>/src/template when run via tsx and
- *  <package-root>/dist/template when run from the compiled build; both
- *  are two levels below the package root, so resolving from there reaches
- *  the one committed copy in either case, with no build-time copy step. */
-async function readReportCss(): Promise<string> {
+const FONT_FILES = ['Inter-Regular.woff2', 'Inter-Medium.woff2', 'Inter-SemiBold.woff2', 'Inter-Bold.woff2'];
+
+/** Resolves from this file's own __dirname the same way readReportCss used
+ *  to (two levels below the package root whether run via tsx from src or
+ *  from the compiled dist build), reaching the one committed copy of the
+ *  design system either way, with no build-time copy step. */
+async function readStylesInlined(): Promise<string> {
   const packageRoot = path.resolve(__dirname, '..', '..');
-  return fs.readFile(path.join(packageRoot, 'src', 'template', 'report.css'), 'utf-8');
+  const stylesDir = path.join(packageRoot, 'src', 'styles');
+  const fontsDir = path.join(packageRoot, 'src', 'fonts');
+
+  let nocturne = await fs.readFile(path.join(stylesDir, 'nocturne.css'), 'utf-8');
+  const paged = await fs.readFile(path.join(stylesDir, 'paged.css'), 'utf-8');
+
+  for (const fontFile of FONT_FILES) {
+    const buffer = await fs.readFile(path.join(fontsDir, fontFile));
+    const dataUri = `data:font/woff2;base64,${buffer.toString('base64')}`;
+    nocturne = nocturne.replace(`../fonts/${fontFile}`, dataUri);
+  }
+
+  return `${nocturne}\n${paged}`;
 }
 
 export interface RenderHtmlInput {
@@ -51,6 +66,10 @@ export interface RenderHtmlInput {
   findings: Finding[];
   analysis: StoredAnalysis;
   renderDiffEvidencePages: RenderDiffEvidencePage[];
+  /** Count of pages that met the evidence-inclusion threshold before the
+   *  top-3 cap (screenshots.ts's resolveRenderDiffEvidence), so section 08
+   *  can state how many more pages share the same gap. */
+  renderDiffTotalEligible?: number;
 }
 
 /** Single-tier report body, since the 2026-08-16 commercial model drop of
@@ -59,13 +78,15 @@ export interface RenderHtmlInput {
  *  pre-purchase outreach preview introduced the same day
  *  (docs/outreach-rules.md) is a deliberately separate document kind with
  *  its own render path (see outreach-preview.ts), not a lighter tier of
- *  this function. */
+ *  this function. Section order matches report.reference.html's 14
+ *  numbered sheets plus the cover and table of contents. */
 function renderBody(
   strings: ReturnType<typeof getStrings>,
   manifest: AuditManifest,
   findings: Finding[],
   analysis: StoredAnalysis,
   renderDiffEvidencePages: RenderDiffEvidencePage[],
+  renderDiffTotalEligible: number,
 ): string {
   return [
     renderCover(strings, manifest, analysis),
@@ -76,9 +97,9 @@ function renderBody(
     renderThemes(strings, analysis, findings, manifest),
     renderChecklist(strings, analysis.language, analysis, findings, manifest),
     renderObservations(strings, findings, manifest),
-    renderConformanceSummary(strings, findings, analysis.language, analysis.obligationAssessment),
-    renderRenderDiffEvidence(strings, analysis.language, manifest, renderDiffEvidencePages),
-    renderCoreWebVitalsTable(strings, manifest),
+    renderConformanceSummary(strings, findings, analysis.language),
+    renderRenderDiffEvidence(strings, analysis.language, renderDiffEvidencePages, renderDiffTotalEligible),
+    renderCoreWebVitalsTable(strings, analysis.language, manifest),
     renderAccessibilityStatement(strings, analysis.language, findings),
     renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings),
     renderFindingsAppendix(strings, analysis.language, findings, manifest),
@@ -89,20 +110,21 @@ function renderBody(
 
 export async function renderHtml(input: RenderHtmlInput): Promise<string> {
   const { manifest, findings, analysis, renderDiffEvidencePages } = input;
+  const renderDiffTotalEligible = input.renderDiffTotalEligible ?? renderDiffEvidencePages.length;
   const strings = getStrings(analysis.language);
-  const css = await readReportCss();
+  const inlinedStyles = await readStylesInlined();
 
-  const body = renderBody(strings, manifest, findings, analysis, renderDiffEvidencePages);
+  const body = renderBody(strings, manifest, findings, analysis, renderDiffEvidencePages, renderDiffTotalEligible);
 
   return `<!doctype html>
 <html lang="${analysis.language}">
   <head>
     <meta charset="utf-8" />
-    <title>${strings.cover.reportTitle}</title>
-    <style>${css}</style>
+    <title>${escapeHtml(strings.cover.reportTitle)} - ${escapeHtml(manifest.siteUrl)}</title>
+    <style>${inlinedStyles}</style>
   </head>
   <body>
-    <div class="doc">
+    <div style="font-family:var(--font-body);color:var(--color-text)">
       ${body}
     </div>
   </body>

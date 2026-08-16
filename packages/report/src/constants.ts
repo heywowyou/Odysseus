@@ -14,13 +14,6 @@ export const REPORT_TEMPLATE_VERSION = 1;
  *  docs/report-v2-refactor.md A8/B18. */
 export const EVIDENCE_INCLUSION_THRESHOLD_PERCENT = 5;
 
-/** Evidence screenshots are downscaled to this width before embedding
- *  (A8): 30.7MB to 670KB on the real haaitza scan, with more information
- *  on the page, not less, since fewer bytes buys downscaling the height
- *  of a homepage-length screenshot rather than cropping it away. */
-export const EVIDENCE_MAX_WIDTH_PX = 800;
-export const EVIDENCE_JPEG_QUALITY = 0.8;
-/** A 13,000px full-page strip is not evidence, it is ballast - capped
- *  independently of the width downscale, which alone would still leave a
- *  multi-thousand-pixel-tall image proportionally. */
-export const EVIDENCE_MAX_HEIGHT_PX = 2400;
+/** docs/report-design-system.md section 3: section 08 shows the 3 worst
+ *  pages by missingPercent, bars only, no screenshots. */
+export const EVIDENCE_MAX_RENDER_DIFF_PAGES = 3;

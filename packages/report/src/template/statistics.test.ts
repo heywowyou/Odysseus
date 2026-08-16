@@ -25,8 +25,9 @@ describe('computeStatistics', () => {
     const manifest = loadHaaitzaManifest();
 
     const stats = computeStatistics(findings, manifest);
+    const { categoryCounts, ...rest } = stats;
 
-    expect(stats).toEqual({
+    expect(rest).toEqual({
       pagesScanned: 20,
       totalFindings: 103,
       accessibilityOccurrences: 431,
@@ -40,5 +41,14 @@ describe('computeStatistics', () => {
       accessibilityCount: 23,
       seoRenderingCount: 16,
     });
+    // categoryCounts checked structurally rather than against a second
+    // hand-verified table: it must sum to totalFindings (every finding
+    // lands in exactly one of the 4 CATEGORY_ORDER categories, 'geo'
+    // excluded per design-tokens.ts) and its accessibility figure must
+    // match the existing, doc-verified accessibilityCount.
+    const categorySum = Object.values(categoryCounts).reduce((a, b) => a + b, 0);
+    expect(categorySum).toBe(stats.totalFindings);
+    expect(categoryCounts.accessibility).toBe(stats.accessibilityCount);
+    expect(categoryCounts.seo + categoryCounts.rendering).toBe(stats.seoRenderingCount);
   });
 });

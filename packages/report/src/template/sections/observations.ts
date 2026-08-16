@@ -1,7 +1,7 @@
 import { partitionFindings } from '@odysseus/llm';
 import type { AuditManifest, Finding } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatFindingIdRefs, renderSectionHeader } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatFindingIdRefs, renderSheetHeader, sheet } from '../html-utils.js';
 
 /** Renders the diverted findings (docs/report-v2-refactor.md 4.1) into
  *  fixed, deterministic copy - never LLM prose, since the whole point of
@@ -17,30 +17,28 @@ export function renderObservations(strings: ReportStrings, findings: Finding[], 
   const wrapperIds = diverted.filter((d) => d.reason === 'wrapper').map((d) => d.finding.findingId);
   const legalIds = diverted.filter((d) => d.reason === 'legal').map((d) => d.finding.findingId);
 
-  const boxes = [
+  const wrapperBlock =
     wrapperIds.length > 0
       ? `
-        <div class="obs keep">
-          <h3>${escapeHtml(o.wrapperTitle)}</h3>
-          <p>${escapeHtml(fillTemplate(o.wrapperBodyTemplate, { findingIds: formatFindingIdRefs(wrapperIds) }))}</p>
+        <div style="margin-bottom:var(--space-6)">
+          <h5>${escapeHtml(o.wrapperTitle)}</h5>
+          <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(fillTemplate(o.wrapperBodyTemplate, { findingIds: formatFindingIdRefs(wrapperIds) }))}</p>
         </div>
       `
-      : '',
+      : '';
+  const legalBlock =
     legalIds.length > 0
       ? `
-        <div class="obs keep">
-          <h3>${escapeHtml(o.legalTitle)}</h3>
-          <p>${escapeHtml(fillTemplate(o.legalBodyTemplate, { findingIds: formatFindingIdRefs(legalIds) }))}</p>
+        <div>
+          <h5>${escapeHtml(o.legalTitle)}</h5>
+          <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(fillTemplate(o.legalBodyTemplate, { findingIds: formatFindingIdRefs(legalIds) }))}</p>
         </div>
       `
-      : '',
-  ].join('');
+      : '';
 
-  return `
-    <section class="new-page">
-      ${renderSectionHeader(o.eyebrow, o.heading)}
-      <p class="intro">${escapeHtml(o.intro)}</p>
-      ${boxes}
-    </section>
-  `;
+  return sheet(`
+    ${renderSheetHeader(o.eyebrow, o.heading)}
+    ${wrapperBlock}
+    ${legalBlock}
+  `);
 }

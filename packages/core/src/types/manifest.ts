@@ -66,17 +66,23 @@ export interface CoreWebVitalMeasurement {
   displayValue: string | null;
 }
 
-/** LCP and CLS only, plus TBT as the lab-available proxy for
- *  responsiveness. INP is deliberately not included: Lighthouse in
- *  navigation mode (the only mode this scanner runs) never produces an
- *  INP audit at all, because INP requires an actual user interaction
- *  during the trace and the scanner only loads the page. Decided during
- *  Milestone 6 planning; do not add an inp field populated with null,
- *  and do not label tbt as INP. */
+/** LCP and CLS, TBT as the lab-available proxy for responsiveness, plus
+ *  FCP and Speed Index (added for the report's aggregated performance
+ *  section, docs/report-design-system.md section 3: 5 medians, not 3).
+ *  Both are read from Lighthouse audits ('first-contentful-paint',
+ *  'speed-index') already present in every navigation-mode LHR, the same
+ *  way lcp/cls/tbt are - no new scan-time work. INP is still deliberately
+ *  not included: Lighthouse in navigation mode (the only mode this
+ *  scanner runs) never produces an INP audit at all, because INP requires
+ *  an actual user interaction during the trace and the scanner only loads
+ *  the page. Decided during Milestone 6 planning; do not add an inp field
+ *  populated with null, and do not label tbt as INP. */
 export interface CoreWebVitals {
   lcp: CoreWebVitalMeasurement;
   cls: CoreWebVitalMeasurement;
   tbt: CoreWebVitalMeasurement;
+  fcp: CoreWebVitalMeasurement;
+  speedIndex: CoreWebVitalMeasurement;
 }
 
 export interface ManifestPageEntry {

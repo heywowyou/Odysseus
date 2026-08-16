@@ -197,7 +197,7 @@ describe('extractLighthouseExcludedCategoryScores', () => {
 });
 
 describe('extractCoreWebVitals', () => {
-  it('extracts LCP, CLS, and TBT unconditionally, even when every audit scores above the emission threshold', () => {
+  it('extracts LCP, CLS, TBT, FCP, and Speed Index unconditionally, even when every audit scores above the emission threshold', () => {
     const lhr = buildLighthouseResultInput({
       audits: {
         'largest-contentful-paint': buildLighthouseAudit({
@@ -215,6 +215,16 @@ describe('extractCoreWebVitals', () => {
           numericValue: 10,
           displayValue: '10 ms',
         }),
+        'first-contentful-paint': buildLighthouseAudit({
+          score: 0.95,
+          numericValue: 900,
+          displayValue: '0.9 s',
+        }),
+        'speed-index': buildLighthouseAudit({
+          score: 0.9,
+          numericValue: 1500,
+          displayValue: '1.5 s',
+        }),
       },
     });
 
@@ -223,6 +233,8 @@ describe('extractCoreWebVitals', () => {
     expect(cwv.lcp).toEqual({ score: 0.99, numericValue: 1200, displayValue: '1.2 s' });
     expect(cwv.cls).toEqual({ score: 1, numericValue: 0.02, displayValue: '0.02' });
     expect(cwv.tbt).toEqual({ score: 1, numericValue: 10, displayValue: '10 ms' });
+    expect(cwv.fcp).toEqual({ score: 0.95, numericValue: 900, displayValue: '0.9 s' });
+    expect(cwv.speedIndex).toEqual({ score: 0.9, numericValue: 1500, displayValue: '1.5 s' });
   });
 
   it('extracts a failing metric the same way as a passing one, since this path does not gate on score', () => {
@@ -254,6 +266,8 @@ describe('extractCoreWebVitals', () => {
     expect(cwv.lcp.numericValue).toBe(2000);
     expect(cwv.cls).toEqual({ score: null, numericValue: null, displayValue: null });
     expect(cwv.tbt).toEqual({ score: null, numericValue: null, displayValue: null });
+    expect(cwv.fcp).toEqual({ score: null, numericValue: null, displayValue: null });
+    expect(cwv.speedIndex).toEqual({ score: null, numericValue: null, displayValue: null });
   });
 
   it('never produces an inp field: navigation-mode Lighthouse has no INP audit to read', () => {

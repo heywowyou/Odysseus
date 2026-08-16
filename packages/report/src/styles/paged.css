@@ -1,0 +1,159 @@
+/* Odysseus report - paged media layer.
+   Replaces the Claude Design <doc-page> web component. Rendered by Paged.js,
+   then printed by Playwright with margin 0.
+
+   Everything the design expressed through the doc-page runtime is expressed
+   here instead: sheet size, edge to edge dark ground, the repeating footer,
+   and the running page counter. No page number is ever written into markup. */
+
+@page {
+  size: A4;
+  margin: 0;
+
+  @top-right {
+    content: "Page " counter(page) " / " counter(pages);
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, #e9e9ed 40%, transparent);
+    margin: 18mm 18mm 0 0;
+  }
+
+  @bottom-center {
+    content: string(footer-text);
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #75798c;
+    margin: 0 0 12mm 0;
+  }
+}
+
+/* The cover carries its own gradient ground and no running header. */
+@page cover {
+  @top-right { content: "Page " counter(page) " / " counter(pages); }
+}
+
+/* Paged.js paints each sheet. The ground is set on the sheet, not on the
+   section, so a short section never leaves a light band below it. This is the
+   one deliberate deviation from the artifact, where short sections banded. */
+.pagedjs_page,
+.pagedjs_sheet {
+  background: var(--color-bg);
+}
+.pagedjs_page_content > div {
+  height: 100%;
+}
+
+html {
+  background: var(--color-bg);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* The footer string is declared once, invisibly, and lifted into the margin
+   box by string-set. Changing the client name changes every page. */
+.footer-source {
+  string-set: footer-text content();
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+/* ---- sheets ---- */
+
+.sheet {
+  padding: 18mm;
+  break-after: page;
+  box-sizing: border-box;
+}
+.sheet:last-child { break-after: auto; }
+
+/* break-after alone was observed to miss the boundary between two short
+   adjacent sections in a real render (a section ending well short of a
+   full page, immediately followed by another) - confirmed against
+   packages/report's stress fixture via the paginated-DOM invariant test.
+   break-before forces the same boundary from the other side when
+   break-after doesn't fire on its own. Scoped with :not(.sheet-cover)
+   rather than :first-child: Paged.js's selector matching does not
+   reliably support :first-child in break rules (confirmed against a real
+   render - it produced a blank first page, the cover's content pushed
+   entirely onto page 2), but a plain class-based :not() is a simple
+   attribute check with no DOM-position awareness required. */
+.sheet:not(.sheet-cover) { break-before: page; }
+
+.sheet-cover {
+  page: cover;
+  min-height: 297mm;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: radial-gradient(ellipse 900px 560px at 50% 0%,
+    var(--color-section-glow) 0%,
+    var(--color-section) 45%,
+    var(--color-bg) 85%);
+}
+
+/* ---- break control ----
+   The artifact never needed these because its mock content always fit.
+   Real audits overflow, so every atomic block declares itself atomic. */
+
+.card,
+.appendix-group,
+.render-card,
+.theme-card,
+.glossary-entry {
+  break-inside: avoid;
+}
+
+h2, h4, h5 {
+  break-after: avoid;
+}
+
+.grid-table > .grid-head {
+  break-after: avoid;
+}
+
+/* A CSS grid row built from display:contents cannot be kept together by the
+   engine. Rows that must not split are wrapped in .row-atomic instead. */
+.row-atomic {
+  display: contents;
+  break-inside: avoid;
+}
+
+/* ---- overflow defences ----
+   Long URLs and selectors are the single most common cause of layout damage
+   in a real audit. They are always allowed to break. */
+
+.mono,
+.selector-cell,
+.url-cell {
+  font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Screenshots are never full bleed. If a raster ever re-enters the report it
+   is boxed, and a missing image collapses to nothing rather than to a white
+   slab the height of a page. */
+img {
+  max-width: 100%;
+  max-height: 90mm;
+  object-fit: contain;
+}
+img:not([src]),
+img[src=""] {
+  display: none;
+}
+
+/* ---- screen preview only ----
+   Kept so `pnpm report:preview` looks like the artifact did in the browser,
+   without affecting print. */
+@media screen {
+  body { background: #0e0f18; }
+  .pagedjs_page { margin: 0 auto 28px; box-shadow: 0 6px 18px rgba(0,0,0,0.55); }
+}

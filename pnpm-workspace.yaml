@@ -3,4 +3,6 @@ packages:
   - 'fixtures/*'
 allowBuilds:
   '@parcel/watcher': true
+  core-js: false
+  es5-ext: false
   esbuild: true

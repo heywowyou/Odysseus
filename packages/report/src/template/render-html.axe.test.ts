@@ -12,13 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { launchBrowser } from '@odysseus/scanner';
 import { renderHtml } from './render-html.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
-import {
-  buildStubBrowser,
-  loadSasFernandeAnalysis,
-  loadSasFernandeFindings,
-  loadSasFernandeManifest,
-  SAS_FERNANDE_AUDIT_DIR,
-} from '../test-fixtures.js';
+import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../test-fixtures.js';
 
 /** Same WCAG 2.2 AA tag set packages/scanner/src/axe.ts audits client
  *  sites against - the report should hold itself to the same bar it
@@ -32,12 +26,7 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
       loadSasFernandeFindings(),
       loadSasFernandeAnalysis('fr'),
     ]);
-    const renderDiffEvidencePages = await resolveRenderDiffEvidence(
-      manifest,
-      SAS_FERNANDE_AUDIT_DIR,
-      findings,
-      buildStubBrowser(),
-    );
+    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
 
     const { browser } = await launchBrowser();

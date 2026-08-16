@@ -68,13 +68,13 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
     // f009 (link-in-text-block) is confined entirely to /mentions-legales/,
     // which matches the legal-page pattern - real diversion, not a
     // contrived fixture. Its single-finding rule-group must be tagged.
-    const linkInTextBlockGroup = html.split('mono rule-code">link-in-text-block')[1] ?? '';
+    const linkInTextBlockGroup = html.split('>link-in-text-block</span>')[1] ?? '';
     expect(linkInTextBlockGroup.slice(0, 200)).toContain('class="obs-tag"');
 
     // color-contrast's group mixes f012 (legal-confined) with f010/f011/f015
     // (ordinary pages), so the group as a whole must not be tagged - only
     // a fully-diverted group is.
-    const colorContrastGroup = html.split('mono rule-code">color-contrast')[1] ?? '';
+    const colorContrastGroup = html.split('>color-contrast</span>')[1] ?? '';
     expect(colorContrastGroup.slice(0, 200)).not.toContain('class="obs-tag"');
   });
 

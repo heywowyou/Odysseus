@@ -11,12 +11,13 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     const html = renderStatistics(getStrings('fr'), 'fr', findings, manifest);
 
     // 11 pages, 78 findings, 61 minor (docs/normalization-rules.md section 7).
-    expect(html).toContain('<b>11</b>');
-    expect(html).toContain('<b>78</b>');
-    expect(html).toContain('<b><span class="glyph">&#9675;</span>61</b>');
+    expect(html).toContain('>11</div>');
+    expect(html).toContain('>78</div>');
+    expect(html).toContain('>61</div>');
+    expect(html).toContain('Mineur'); // severity label, doc §3 canonical map
   });
 
-  it('renders the wide WCAG tile description with the real pages-affected count filled in', async () => {
+  it('renders the wide WCAG-fail-count paragraph with the real pages-affected count filled in', async () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
 
@@ -24,5 +25,16 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
 
     expect(html).not.toContain('{pages}');
     expect(html).toMatch(/WCAG 2\.2 AA criteria failing across \d+ pages/);
+  });
+
+  it('renders exactly 4 number tiles, 4 severity tiles, and 4 category tiles (doc §3 section 03 cap)', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+
+    const html = renderStatistics(getStrings('fr'), 'fr', findings, manifest);
+
+    expect((html.match(/font-size:28px/g) ?? []).length).toBe(4);
+    expect((html.match(/font-size:24px/g) ?? []).length).toBe(4);
+    expect((html.match(/font-size:22px/g) ?? []).length).toBe(4);
   });
 });

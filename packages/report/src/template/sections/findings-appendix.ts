@@ -1,8 +1,9 @@
 import type { AuditManifest, Finding, FindingCategory, ReportLanguage } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, formatNumber, renderSectionHeader } from '../html-utils.js';
+import { escapeHtml, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { renderSeverityBadge } from '../severity-badge.js';
+import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
 import {
   aggregateMinorFindings,
   groupAppendix,
@@ -10,11 +11,6 @@ import {
   type MinorFindingSummary,
   type RuleGroup,
 } from '../appendix-grouping.js';
-
-/** Performance last: it is almost entirely the minor, low-visual-weight
- *  findings this refactor exists to de-emphasize (B11). Rendering last,
- *  not skipped: every category still gets its full section. */
-const CATEGORY_ORDER: FindingCategory[] = ['accessibility', 'seo', 'rendering', 'performance'];
 
 function pluralize(count: number, singular: string, plural: string): string {
   return count === 1 ? singular : plural;
@@ -33,15 +29,23 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
   return escapeHtml(parts.join(' · '));
 }
 
+function headCell(label: string): string {
+  return `<div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
+}
+
+function cell(html: string, extra = ''): string {
+  return `<div style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</div>`;
+}
+
 function renderSubTableRow(language: ReportLanguage, finding: Finding): string {
   const selector = finding.elements[0]?.selector ?? '';
   return `
-    <tr>
-      <td class="mono fid">${escapeHtml(finding.findingId)}</td>
-      <td class="num">${formatNumber(finding.pageUrls.length, language)}</td>
-      <td class="num">${formatNumber(finding.occurrences, language)}</td>
-      <td class="mono sel">${escapeHtml(selector)}</td>
-    </tr>
+    <div class="row-atomic">
+      ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:break-word')}
+      ${cell(formatNumber(finding.pageUrls.length, language))}
+      ${cell(formatNumber(finding.occurrences, language))}
+      ${cell(escapeHtml(selector), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:break-word;opacity:0.8')}
+    </div>
   `;
 }
 
@@ -52,34 +56,36 @@ function renderRuleGroup(
   isFullyDiverted: boolean,
 ): string {
   const a = strings.findingsAppendix;
-  const keepClass = group.findings.length <= APPENDIX_GROUP_KEEP_THRESHOLD ? ' keep' : '';
   const representativeTitle = group.findings[0]?.title ?? group.ruleId;
   const sortedFindings = [...group.findings].sort((x, y) => x.findingId.localeCompare(y.findingId));
   const rows = sortedFindings.map((finding) => renderSubTableRow(language, finding)).join('');
   const obsTag = isFullyDiverted
-    ? `<span class="obs-tag">${escapeHtml(a.observationsCrossRefLabel)}</span>`
+    ? `<span class="obs-tag" style="font-size:11px;opacity:0.55">${escapeHtml(a.observationsCrossRefLabel)}</span>`
     : '';
+  // paged.css's .appendix-group class carries an unconditional
+  // break-inside: avoid, correct for a small group but wrong for a large
+  // one (a 40-row group forced atomic would blank most of a page - see
+  // appendix-grouping.ts's own APPENDIX_GROUP_KEEP_THRESHOLD comment).
+  // Only groups at or under that threshold get the class; larger ones use
+  // a plain wrapper and are allowed to flow across the page break.
+  const wrapperClass = group.findings.length <= APPENDIX_GROUP_KEEP_THRESHOLD ? 'appendix-group' : '';
 
   return `
-    <div class="rule-group${keepClass}">
-      <div class="rule-head">
+    <div class="${wrapperClass}" style="margin-bottom:var(--space-4)">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
         ${renderSeverityBadge(strings, group.severity)}
-        <span class="rule-title">${escapeHtml(representativeTitle)}</span>
-        <span class="mono rule-code">${escapeHtml(group.ruleId)}</span>
+        <span style="font-size:14px;font-weight:500">${escapeHtml(representativeTitle)}</span>
+        <span class="mono rule-code" style="font-size:10px;opacity:0.5">${escapeHtml(group.ruleId)}</span>
         ${obsTag}
-        <span class="rule-sum">${renderRuleSum(strings, language, group)}</span>
+        <span style="font-size:11px;opacity:0.6">${renderRuleSum(strings, language, group)}</span>
       </div>
-      <table class="sub">
-        <thead>
-          <tr>
-            <th>${escapeHtml(a.findingIdColumnLabel)}</th>
-            <th class="num">${escapeHtml(a.pagesColumnLabel)}</th>
-            <th class="num">${escapeHtml(a.occurrencesColumnLabel)}</th>
-            <th>${escapeHtml(a.selectorColumnLabel)}</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+      <div style="display:grid;grid-template-columns:80px 90px 100px 1fr;font-size:12.5px">
+        ${headCell(a.findingIdColumnLabel)}
+        ${headCell(a.pagesColumnLabel)}
+        ${headCell(a.occurrencesColumnLabel)}
+        ${headCell(a.selectorColumnLabel)}
+        ${rows}
+      </div>
     </div>
   `;
 }
@@ -96,35 +102,27 @@ function renderMinorAggregateGroup(
   const rows = summaries
     .map(
       (s) => `
-        <tr>
-          <td class="mono">${escapeHtml(s.ruleId)}</td>
-          <td class="num">${formatNumber(s.findingCount, language)}</td>
-          <td class="num">${formatNumber(s.maxPages, language)}</td>
-          <td class="num">${formatNumber(s.totalOccurrences, language)}</td>
-        </tr>
+        <div class="row-atomic">
+          ${cell(escapeHtml(s.ruleId), 'font-family:ui-monospace,monospace')}
+          ${cell(formatNumber(s.findingCount, language))}
+          ${cell(formatNumber(s.maxPages, language))}
+          ${cell(formatNumber(s.totalOccurrences, language))}
+        </div>
       `,
     )
     .join('');
 
   return `
-    <div class="rule-group">
-      <div class="rule-head">
-        ${renderSeverityBadge(strings, 'minor')}
-        <span class="rule-title">${escapeHtml(a.minorAggregateTitle)}</span>
-        <span class="rule-sum">${escapeHtml(`${formatNumber(totalFindings, language)} ${pluralize(totalFindings, a.findingSingular, a.findingPlural)} ${a.minorAggregateGroupedSuffix}`)}</span>
+    <div style="margin-top:var(--space-3)">
+      <div style="font-size:12px;opacity:0.6;margin-bottom:6px">${escapeHtml(`${a.minorAggregateTitle} - ${formatNumber(totalFindings, language)} ${pluralize(totalFindings, a.findingSingular, a.findingPlural)} ${a.minorAggregateGroupedSuffix}`)}</div>
+      <p style="font-size:11px;opacity:0.5">${escapeHtml(a.minorAggregateNote)}</p>
+      <div style="display:grid;grid-template-columns:1fr 90px 90px 110px;font-size:12.5px">
+        ${headCell(a.ruleColumnLabel)}
+        ${headCell(a.findingPlural)}
+        ${headCell(a.pagesMaxColumnLabel)}
+        ${headCell(a.occurrencesColumnLabel)}
+        ${rows}
       </div>
-      <p class="note">${escapeHtml(a.minorAggregateNote)}</p>
-      <table class="sub">
-        <thead>
-          <tr>
-            <th>${escapeHtml(a.ruleColumnLabel)}</th>
-            <th class="num">${escapeHtml(a.findingPlural)}</th>
-            <th class="num">${escapeHtml(a.pagesMaxColumnLabel)}</th>
-            <th class="num">${escapeHtml(a.occurrencesColumnLabel)}</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
     </div>
   `;
 }
@@ -132,10 +130,9 @@ function renderMinorAggregateGroup(
 function renderCategorySection(
   strings: ReportStrings,
   language: ReportLanguage,
-  category: FindingCategory,
+  category: Exclude<FindingCategory, 'geo'>,
   categoryFindings: Finding[],
   missingPercentByUrl: ReadonlyMap<string, number>,
-  isFirstRendered: boolean,
 ): string {
   if (categoryFindings.length === 0) return '';
 
@@ -146,23 +143,18 @@ function renderCategorySection(
 
   const groupBlocks = groups
     .map((group) => {
-      const isFullyDiverted = group.findings.every(
-        (f) => classifyDiversion(f, missingPercentByUrl) !== null,
-      );
+      const isFullyDiverted = group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null);
       return renderRuleGroup(strings, language, group, isFullyDiverted);
     })
     .join('');
   const minorBlock = renderMinorAggregateGroup(strings, language, minorSummaries);
 
-  const a = strings.findingsAppendix;
-  const totalCount = categoryFindings.length;
-  const headingClass = isFirstRendered ? '' : ' class="new-page"';
-  const heading = `${escapeHtml(a.categoryLabels[category])} · ${formatNumber(totalCount, language)} ${escapeHtml(pluralize(totalCount, a.findingSingular, a.findingPlural))}`;
-
   return `
-    <h3${headingClass} style="margin-top:5mm">${heading}</h3>
-    ${groupBlocks}
-    ${minorBlock}
+    <div style="margin-bottom:var(--space-8)">
+      <h4 style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h4>
+      ${groupBlocks}
+      ${minorBlock}
+    </div>
   `;
 }
 
@@ -173,21 +165,15 @@ export function renderFindingsAppendix(
   manifest: AuditManifest,
 ): string {
   const missingPercentByUrl = buildMissingPercentIndex(manifest);
-  let firstRendered = true;
 
   const sections = CATEGORY_ORDER.map((category) => {
     const categoryFindings = findings.filter((finding) => finding.category === category);
-    if (categoryFindings.length === 0) return '';
-    const section = renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, firstRendered);
-    firstRendered = false;
-    return section;
+    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl);
   }).join('');
 
-  return `
-    <section class="new-page">
-      ${renderSectionHeader(strings.findingsAppendix.eyebrow, strings.findingsAppendix.heading)}
-      <p class="intro">${escapeHtml(strings.findingsAppendix.intro)}</p>
-      ${sections}
-    </section>
-  `;
+  return sheet(`
+    ${renderSheetHeader(strings.findingsAppendix.eyebrow, strings.findingsAppendix.heading)}
+    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-6)">${escapeHtml(strings.findingsAppendix.intro)}</p>
+    ${sections}
+  `);
 }

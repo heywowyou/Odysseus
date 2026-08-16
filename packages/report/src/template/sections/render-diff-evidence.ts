@@ -1,81 +1,44 @@
-import type { AuditManifest, ReportLanguage } from '@odysseus/core';
+import type { ReportLanguage } from '@odysseus/core';
 import type { RenderDiffEvidencePage } from '../../screenshots.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatNumber, renderSectionHeader } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 
-/** Alt text built from deterministic facts only (missing-content
- *  character counts), never a description of what the image actually
- *  shows - that would need a human or a vision model, neither of which
- *  this pipeline has. Weaker than a hand-written description, documented
- *  as a known gap rather than faked. See docs/report-v2-refactor.md E32. */
-function renderAltText(
-  strings: ReportStrings,
-  language: ReportLanguage,
-  template: string,
-  pageUrl: string,
-  textLength: number | null,
-): string {
-  const chars =
-    textLength === null
-      ? strings.renderDiffEvidence.altCharsUnknown
-      : fillTemplate(strings.renderDiffEvidence.altCharsKnownTemplate, { n: formatNumber(textLength, language) });
-  return fillTemplate(template, { url: pageUrl, chars });
-}
+/** Doc §3: bars only, no screenshots - two proportional-width bars (raw
+ *  HTML vs rendered visible-text length) and a one-line caption, never an
+ *  <img>. Screenshots stay in the technical export; embedding rasters
+ *  here is what produced 20 pages of paired full-width screenshots and
+ *  the blank slabs/orphaned captions the redesign fixed. The raw bar's
+ *  width is proportional to the rendered bar (which is always drawn
+ *  full-width, 100%): a page missing 80% of its text shows a raw bar at
+ *  roughly a fifth the width of the rendered one. */
+function renderPageCard(strings: ReportStrings, language: ReportLanguage, page: RenderDiffEvidencePage): string {
+  const r = strings.renderDiffEvidence;
+  const rawChars = page.rawTextLength === null ? '?' : formatNumber(page.rawTextLength, language);
+  const renderedChars = page.renderedTextLength === null ? '?' : formatNumber(page.renderedTextLength, language);
+  const rawPct =
+    page.rawTextLength !== null && page.renderedTextLength !== null && page.renderedTextLength > 0
+      ? Math.max(2, Math.round((page.rawTextLength / page.renderedTextLength) * 100))
+      : 100 - Math.round(page.missingPercent);
 
-function renderScreenshotCell(
-  strings: ReportStrings,
-  dataUri: string | null,
-  altText: string,
-  label: string,
-): string {
-  if (!dataUri) {
-    return `<div class="shot" style="display:flex;height:40mm;align-items:center;justify-content:center;color:var(--mute);font-size:8pt;">${escapeHtml(strings.renderDiffEvidence.noScreenshotAvailable)}</div>`;
-  }
-  return `
-    <figure class="shot">
-      <img src="${dataUri}" alt="${escapeHtml(altText)}" />
-      <figcaption>${escapeHtml(label)}</figcaption>
-    </figure>
-  `;
-}
-
-function renderPage(strings: ReportStrings, language: ReportLanguage, page: RenderDiffEvidencePage): string {
-  const missingPercentText = page.missingPercent === undefined ? '' : `${page.missingPercent.toFixed(0)}%`;
-  const countsText =
-    page.rawTextLength === null || page.renderedTextLength === null
-      ? strings.renderDiffEvidence.visibleTextCountsNotAvailable
-      : fillTemplate(strings.renderDiffEvidence.visibleTextCountsTemplate, {
-          raw: formatNumber(page.rawTextLength, language),
-          rendered: formatNumber(page.renderedTextLength, language),
-        });
+  const caption = fillTemplate(r.missingCaptionTemplate, {
+    percent: Math.round(page.missingPercent),
+    selector: page.selector || '-',
+  });
 
   return `
-    <div class="pair keep">
-      <div class="pair-head">
-        <span class="mono url">${escapeHtml(page.pageUrl)}</span>
-        ${missingPercentText ? `<span class="miss">${escapeHtml(strings.renderDiffEvidence.missingPercentLabel)} : ${missingPercentText}</span>` : ''}
+    <div class="card elev-sm render-card" style="margin-bottom:var(--space-4)">
+      <div class="card-kicker">${escapeHtml(page.pageUrl)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-top:6px">
+        <div>
+          <div style="font-size:11px;opacity:0.6;margin-bottom:4px">${escapeHtml(fillTemplate(r.rawBarLabelTemplate, { chars: rawChars }))}</div>
+          <div style="height:10px;border-radius:5px;background:var(--color-neutral-800);overflow:hidden"><div style="height:100%;width:${rawPct}%;background:var(--color-neutral-500)"></div></div>
+        </div>
+        <div>
+          <div style="font-size:11px;opacity:0.6;margin-bottom:4px">${escapeHtml(fillTemplate(r.renderedBarLabelTemplate, { chars: renderedChars }))}</div>
+          <div style="height:10px;border-radius:5px;background:var(--color-neutral-800);overflow:hidden"><div style="height:100%;width:100%;background:var(--color-accent)"></div></div>
+        </div>
       </div>
-      <div class="pair-grid">
-        ${renderScreenshotCell(
-          strings,
-          page.rawDataUri,
-          renderAltText(strings, language, strings.renderDiffEvidence.altRawTemplate, page.pageUrl, page.rawTextLength),
-          strings.renderDiffEvidence.rawLabel,
-        )}
-        ${renderScreenshotCell(
-          strings,
-          page.renderedDataUri,
-          renderAltText(
-            strings,
-            language,
-            strings.renderDiffEvidence.altRenderedTemplate,
-            page.pageUrl,
-            page.renderedTextLength,
-          ),
-          strings.renderDiffEvidence.renderedLabel,
-        )}
-      </div>
-      <p class="counts">${escapeHtml(countsText)}</p>
+      <div class="card-body" style="margin-top:4px">${escapeHtml(caption)}</div>
     </div>
   `;
 }
@@ -83,26 +46,22 @@ function renderPage(strings: ReportStrings, language: ReportLanguage, page: Rend
 export function renderRenderDiffEvidence(
   strings: ReportStrings,
   language: ReportLanguage,
-  manifest: AuditManifest,
-  pages: RenderDiffEvidencePage[],
+  pages: readonly RenderDiffEvidencePage[],
+  totalEligible: number,
 ): string {
   if (pages.length === 0) return '';
 
-  const scannedPages = manifest.pages.filter((page) => page.status === 'visited').length;
-  const healthyCount = Math.max(0, scannedPages - pages.length);
-  const healthySummary =
-    healthyCount > 0
-      ? `<p><b>${escapeHtml(fillTemplate(strings.renderDiffEvidence.healthyPagesSummary, { healthy: healthyCount, total: scannedPages }))}</b></p>`
-      : '';
+  const r = strings.renderDiffEvidence;
+  const overflowCount = totalEligible - pages.length;
+  const overflowText =
+    overflowCount > 0 ? fillTemplate(r.overflowTextTemplate, { count: formatNumber(overflowCount, language) }) : '';
 
-  const pageBlocks = pages.map((page) => renderPage(strings, language, page)).join('');
+  const cards = pages.map((page) => renderPageCard(strings, language, page)).join('');
 
-  return `
-    <section class="new-page">
-      ${renderSectionHeader(strings.renderDiffEvidence.eyebrow, strings.renderDiffEvidence.heading)}
-      <p class="intro">${escapeHtml(strings.renderDiffEvidence.intro)}</p>
-      ${healthySummary}
-      ${pageBlocks}
-    </section>
-  `;
+  return sheet(`
+    ${renderSheetHeader(r.eyebrow, r.heading)}
+    <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">${escapeHtml(r.intro)}</p>
+    ${cards}
+    ${overflowText ? `<p style="font-size:12px;opacity:0.55;margin-top:var(--space-4)">${escapeHtml(overflowText)}</p>` : ''}
+  `);
 }

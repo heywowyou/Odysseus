@@ -74,6 +74,8 @@ describe('computeDominantPerformanceMetric', () => {
           lcp: { score: 1, numericValue: 1500, displayValue: '1.5 s' },
           cls: { score: 1, numericValue: 0.02, displayValue: '0.02' },
           tbt: { score: 1, numericValue: 50, displayValue: '50 ms' },
+          fcp: { score: 1, numericValue: 800, displayValue: '0.8 s' },
+          speedIndex: { score: 1, numericValue: 1200, displayValue: '1.2 s' },
         },
       },
     ]);
@@ -93,6 +95,8 @@ describe('computeDominantPerformanceMetric', () => {
           lcp: { score: 1, numericValue: 1500, displayValue: '1.5 s' },
           cls: { score: 0, numericValue: 0.4, displayValue: '0.4' },
           tbt: { score: 1, numericValue: 50, displayValue: '50 ms' },
+          fcp: { score: 1, numericValue: 800, displayValue: '0.8 s' },
+          speedIndex: { score: 1, numericValue: 1200, displayValue: '1.2 s' },
         },
       },
     ]);
