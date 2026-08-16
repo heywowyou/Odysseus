@@ -48,20 +48,18 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
     expect(html).not.toContain('Résumé');
   });
 
-  it('defaults to the full tier when tier is omitted, unchanged from before the tier split', async () => {
+  it('always renders the single-tier full document (2026-08-16: paid screening tier dropped)', async () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
     const analysis = await loadSasFernandeAnalysis('en');
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
-    expect(html).toContain('Full audit report');
-    // Full-only sections still render.
     expect(html).toContain('Appendix: full findings list');
   });
 });
 
-describe('renderHtml, section 3 and section 9 never disagree on whether a determination was reached', () => {
+describe('renderHtml, the conformance summary, legal exposure, and methodology sections never disagree on whether a determination was reached', () => {
   const resolvedAssessment: ObligationAssessment = {
     status: 'in_scope',
     basis: [
@@ -80,30 +78,37 @@ describe('renderHtml, section 3 and section 9 never disagree on whether a determ
     basis: [{ regimeId: 'eaa-loi-2023-171', facts: [{ kind: 'siren-missing' }] }],
   };
 
-  it('resolved: section 9 names a specific obligation and section 3 does not hedge', async () => {
+  it('resolved: methodology and legal exposure both name a specific obligation, conformance summary does not hedge', async () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
     const analysis = { ...(await loadSasFernandeAnalysis('fr')), obligationAssessment: resolvedAssessment };
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
-    expect(html).toContain('relève de l&#39;obligation suivante');
+    // Once in the legal exposure page's own paragraph, once in
+    // methodology's (both call the same exported renderLegalCitationParagraph).
+    const namedOccurrences = html.split('relève de l&#39;obligation suivante').length - 1;
+    expect(namedOccurrences).toBe(2);
     expect(html).not.toContain("sans se prononcer sur l&#39;applicabilité");
   });
 
-  it('undetermined: section 3 hedges and section 9 gives no specific determination', async () => {
+  it('undetermined: conformance summary hedges, and neither methodology nor legal exposure gives a specific determination', async () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
     const analysis = { ...(await loadSasFernandeAnalysis('fr')), obligationAssessment: undeterminedAssessment };
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
+    // Conformance summary's intro, methodology's paragraph, and legal
+    // exposure's paragraph (which reuses the same exported function) -
+    // three render sites since the 2026-08-16 redesign added the
+    // dedicated legal exposure page.
     const hedgeOccurrences = html.split("sans se prononcer sur l&#39;applicabilité").length - 1;
-    expect(hedgeOccurrences).toBe(2);
+    expect(hedgeOccurrences).toBe(3);
     expect(html).not.toContain('relève de l&#39;obligation suivante');
   });
 
-  it('absent assessment: treated the same as undetermined in both sections', async () => {
+  it('absent assessment: treated the same as undetermined across all three sections', async () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
     const { obligationAssessment: _drop, ...rest } = await loadSasFernandeAnalysis('fr');
@@ -112,31 +117,7 @@ describe('renderHtml, section 3 and section 9 never disagree on whether a determ
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
     const hedgeOccurrences = html.split("sans se prononcer sur l&#39;applicabilité").length - 1;
-    expect(hedgeOccurrences).toBe(2);
+    expect(hedgeOccurrences).toBe(3);
   });
 });
 
-describe('renderHtml, screening tier', () => {
-  it('omits full-audit-only sections and labels the cover as a screening report', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('en');
-
-    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [], tier: 'screening' });
-
-    expect(html).toContain('Screening report');
-    expect(html).toContain('Key findings');
-    // Aggregate WCAG conformance table (2026-08-10 commercial-planning
-    // addendum): included at screening tier too, since it's a
-    // criterion/count rollup, not selector-level detail.
-    expect(html).toContain('Accessibility conformance');
-    // Section numbering must not skip from 4 straight to 9 in a
-    // 5-section report (2026-08-10 fix, methodology.ts).
-    expect(html).toContain('5 · Methodology and limitations');
-    expect(html).not.toContain('9 · Methodology and limitations');
-    expect(html).not.toContain('Appendix: full findings list');
-    expect(html).not.toContain('Ranked priorities');
-    expect(html).not.toContain('Render evidence');
-    expect(html).not.toContain('undefined');
-  });
-});

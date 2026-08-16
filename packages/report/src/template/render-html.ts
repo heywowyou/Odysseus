@@ -12,21 +12,25 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AuditManifest, Finding } from '@odysseus/core';
-import type { ReportTier, StoredAnalysis } from '../types.js';
+import type { StoredAnalysis } from '../types.js';
 import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
 import { renderCover } from './sections/cover.js';
 import { renderToc } from './sections/toc.js';
 import { renderStatistics } from './sections/statistics.js';
 import { renderExecutiveSummary } from './sections/executive-summary.js';
+import { renderLegalExposure } from './sections/legal-exposure.js';
 import { renderConformanceSummary } from './sections/conformance-summary.js';
 import { renderThemes } from './sections/themes.js';
+import { renderChecklist } from './sections/checklist.js';
 import { renderObservations } from './sections/observations.js';
 import { renderRenderDiffEvidence } from './sections/render-diff-evidence.js';
 import { renderCoreWebVitalsTable } from './sections/core-web-vitals-table.js';
+import { renderAccessibilityStatement } from './sections/accessibility-statement.js';
 import { renderFindingsAppendix } from './sections/findings-appendix.js';
-import { renderScreeningFindings } from './sections/screening-findings.js';
 import { renderMethodology } from './sections/methodology.js';
+import { renderGlossary } from './sections/glossary.js';
+import { renderNextSteps } from './sections/next-steps.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -47,70 +51,48 @@ export interface RenderHtmlInput {
   findings: Finding[];
   analysis: StoredAnalysis;
   renderDiffEvidencePages: RenderDiffEvidencePage[];
-  /** Milestone 8 addendum section 1.6. Defaults to 'full', matching this
-   *  template's behavior before the tier split existed - every caller
-   *  that predates this milestone keeps rendering the full audit view
-   *  without needing to change. */
-  tier?: ReportTier;
 }
 
-/** Screening gets a much shorter body: executive summary (without its
- *  full-only "what to do first"/quick-wins, which reference themes this
- *  tier never shows), the same aggregate WCAG conformance table the full
- *  tier shows (criterion/count/occurrence rollup, no selector detail, so
- *  it doesn't compromise the upsell the way page/selector-level detail
- *  would), the screening-findings section (capped top findings, in place
- *  of themes/observations/render-diff-evidence/core-web-vitals/full
- *  appendix), and methodology unchanged (the legal citation is core value
- *  at every tier, not detail being withheld for the upsell). See
- *  docs/milestone-8-scope-addendum.md section 1.6 for the original split
- *  and its business reasoning, extended for the conformance table by the
- *  2026-08-10 commercial-planning session. */
+/** Single-tier report body, since the 2026-08-16 commercial model drop of
+ *  the paid screening tier (docs/offer-positioning.md): the full audit is
+ *  now the only paid deliverable this package renders. The free,
+ *  pre-purchase outreach preview introduced the same day
+ *  (docs/outreach-rules.md) is a deliberately separate document kind with
+ *  its own render path (see outreach-preview.ts), not a lighter tier of
+ *  this function. */
 function renderBody(
   strings: ReturnType<typeof getStrings>,
-  tier: ReportTier,
   manifest: AuditManifest,
   findings: Finding[],
   analysis: StoredAnalysis,
   renderDiffEvidencePages: RenderDiffEvidencePage[],
 ): string {
-  if (tier === 'screening') {
-    return [
-      renderCover(strings, manifest, analysis, tier),
-      renderToc(strings, tier),
-      renderStatistics(strings, analysis.language, findings, manifest),
-      renderExecutiveSummary(strings, analysis, tier),
-      // Aggregate, no selector detail - same reasoning that already kept
-      // this table in-scope for the full tier applies here (commercial
-      // planning addendum, see docs/milestone-8-scope-addendum.md 1.6).
-      renderConformanceSummary(strings, findings, analysis.language, analysis.obligationAssessment),
-      renderScreeningFindings(strings, analysis.language, findings),
-      renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings, tier),
-    ].join('\n');
-  }
-
   return [
-    renderCover(strings, manifest, analysis, tier),
-    renderToc(strings, tier),
+    renderCover(strings, manifest, analysis),
+    renderToc(strings),
+    renderExecutiveSummary(strings, analysis),
+    renderLegalExposure(strings, analysis.language, analysis.obligationAssessment),
     renderStatistics(strings, analysis.language, findings, manifest),
-    renderExecutiveSummary(strings, analysis, tier),
-    renderConformanceSummary(strings, findings, analysis.language, analysis.obligationAssessment),
     renderThemes(strings, analysis, findings, manifest),
+    renderChecklist(strings, analysis.language, analysis, findings, manifest),
     renderObservations(strings, findings, manifest),
+    renderConformanceSummary(strings, findings, analysis.language, analysis.obligationAssessment),
     renderRenderDiffEvidence(strings, analysis.language, manifest, renderDiffEvidencePages),
     renderCoreWebVitalsTable(strings, manifest),
-    renderFindingsAppendix(strings, analysis.language, findings, manifest),
+    renderAccessibilityStatement(strings, analysis.language, findings),
     renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings),
+    renderFindingsAppendix(strings, analysis.language, findings, manifest),
+    renderGlossary(strings),
+    renderNextSteps(strings),
   ].join('\n');
 }
 
 export async function renderHtml(input: RenderHtmlInput): Promise<string> {
   const { manifest, findings, analysis, renderDiffEvidencePages } = input;
-  const tier = input.tier ?? 'full';
   const strings = getStrings(analysis.language);
   const css = await readReportCss();
 
-  const body = renderBody(strings, tier, manifest, findings, analysis, renderDiffEvidencePages);
+  const body = renderBody(strings, manifest, findings, analysis, renderDiffEvidencePages);
 
   return `<!doctype html>
 <html lang="${analysis.language}">

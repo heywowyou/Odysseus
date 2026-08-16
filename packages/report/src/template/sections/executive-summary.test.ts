@@ -6,7 +6,7 @@ import { loadSasFernandeAnalysis } from '../../test-fixtures.js';
 describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () => {
   it('references the top 3 themes by rank and title, without restating businessImpact (B14)', async () => {
     const analysis = await loadSasFernandeAnalysis('fr');
-    const html = renderExecutiveSummary(getStrings('fr'), analysis, 'full');
+    const html = renderExecutiveSummary(getStrings('fr'), analysis);
 
     const sorted = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank);
     const top3 = sorted.slice(0, 3);
@@ -25,7 +25,7 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
 
   it('lists only quick-win themes (low effort, non-low impact) in the quick-wins strip', async () => {
     const analysis = await loadSasFernandeAnalysis('fr');
-    const html = renderExecutiveSummary(getStrings('fr'), analysis, 'full');
+    const html = renderExecutiveSummary(getStrings('fr'), analysis);
 
     const quickWinRanks = analysis.themes
       .filter((t) => t.effort === 'low' && t.impact !== 'low')
@@ -43,20 +43,8 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
 
   it('renders the LLM executive summary prose verbatim (escaped)', async () => {
     const analysis = await loadSasFernandeAnalysis('en');
-    const html = renderExecutiveSummary(getStrings('en'), analysis, 'full');
+    const html = renderExecutiveSummary(getStrings('en'), analysis);
 
-    expect(html).toContain(analysis.executiveSummary.slice(0, 30));
-  });
-});
-
-describe('renderExecutiveSummary, screening tier', () => {
-  it('suppresses "what to do first" and the quick-wins strip, which both reference themes this tier never renders', async () => {
-    const analysis = await loadSasFernandeAnalysis('en');
-    const html = renderExecutiveSummary(getStrings('en'), analysis, 'screening');
-
-    expect(html).not.toContain('See priority');
-    expect(html).not.toContain('class="qwin"');
-    // The prose summary itself still renders.
     expect(html).toContain(analysis.executiveSummary.slice(0, 30));
   });
 });

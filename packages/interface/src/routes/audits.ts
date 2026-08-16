@@ -2,25 +2,13 @@ import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import type { ReportLanguage } from '@odysseus/core';
-import {
-  getAudit,
-  getFindingsForAudit,
-  getLatestReport,
-  getSeverityRollup,
-  listReportCombos,
-  listReportLanguages,
-  type StoredReportTier,
-} from '@odysseus/store';
+import { getAudit, getFindingsForAudit, getLatestReport, getSeverityRollup, listReportLanguages } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { sendError, sendJson } from '../http-utils.js';
 
 function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
-}
-
-function isReportTier(value: string): value is StoredReportTier {
-  return value === 'screening' || value === 'full';
 }
 
 export function registerAuditRoutes(router: Router, connection: Connection): void {
@@ -32,11 +20,10 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const [findings, severityRollup, reportLanguages, reportCombos] = await Promise.all([
+    const [findings, severityRollup, reportLanguages] = await Promise.all([
       getFindingsForAudit(connection, auditId),
       getSeverityRollup(connection, auditId),
       listReportLanguages(connection, auditId),
-      listReportCombos(connection, auditId),
     ]);
 
     sendJson(res, 200, {
@@ -47,25 +34,15 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       pagesVisited: audit.crawl.visitedCount,
       severityRollup,
       findings,
-      // reportLanguages is kept for any pre-tier-split consumer; the
-      // dashboard's per-report tier label uses reportCombos instead.
       reportLanguages,
-      reportCombos,
     });
   });
 
-  router.get('/api/audits/:auditId/report/:language', async ({ res, params, query }) => {
+  router.get('/api/audits/:auditId/report/:language', async ({ res, params }) => {
     const auditId = params['auditId']!;
     const language = params['language']!;
     if (!isReportLanguage(language)) {
       sendError(res, 400, 'language must be "fr" or "en"');
-      return;
-    }
-    // Defaults to 'full', matching this route's behavior before the
-    // milestone 8 tier split - existing links/bookmarks keep working.
-    const tierParam = query.get('tier') ?? 'full';
-    if (!isReportTier(tierParam)) {
-      sendError(res, 400, 'tier must be "screening" or "full"');
       return;
     }
 
@@ -75,9 +52,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const report = await getLatestReport(connection, auditId, language, tierParam);
+    const report = await getLatestReport(connection, auditId, language);
     if (!report) {
-      sendError(res, 404, `no ${language} ${tierParam} report generated yet for this audit`);
+      sendError(res, 404, `no ${language} report generated yet for this audit`);
       return;
     }
 

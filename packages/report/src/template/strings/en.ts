@@ -5,27 +5,25 @@ export const en: ReportStrings = {
     eyebrow: 'Contents',
     heading: "What's in this report",
     items: [
-      'The audit in numbers',
       'Summary and priority actions',
-      'Accessibility conformance, WCAG 2.2 level AA',
+      'Legal exposure',
+      'The audit in numbers',
       'Ranked priorities',
+      'Priority checklist (printable)',
       'Observations outside the ranking',
+      'Accessibility conformance, WCAG 2.2 level AA',
       'Render evidence: what search engines see',
       'Performance measurements',
+      'Draft accessibility statement',
+      'Methodology and limitations',
       'Appendix: full findings list',
-      'Methodology and limitations',
-    ],
-    itemsScreening: [
-      'The audit in numbers',
-      'Executive summary',
-      'Accessibility conformance, WCAG 2.2 level AA',
-      'Key findings',
-      'Methodology and limitations',
+      'Glossary',
+      'Next steps & contact',
     ],
     note: "Page numbers appear in the footer and in the PDF file's bookmarks.",
   },
   statistics: {
-    eyebrow: '1 · The audit in numbers',
+    eyebrow: '3 · The audit in numbers',
     heading: 'What the analysis found',
     introTemplate:
       '{pages} pages analyzed, {findings} distinct findings after collapsing repeats. A finding present on several pages counts once.',
@@ -46,7 +44,7 @@ export const en: ReportStrings = {
     legendMinorText: 'optimization',
   },
   conformanceSummary: {
-    eyebrow: '3 · Accessibility conformance',
+    eyebrow: '7 · Accessibility conformance',
     heading: 'WCAG 2.2 level AA criteria failing',
     intro:
       'The criteria below belong to the WCAG 2.2 level AA standard, which the EN 301 549 European standard references. A failing criterion is a conformance gap, not a design preference. This report cites the relevant criteria without asserting whether a specific legal obligation applies to your business, which depends on its size and sector.',
@@ -59,7 +57,7 @@ export const en: ReportStrings = {
     emptyState: 'No WCAG 2.2 level AA criteria failing were detected on this site.',
   },
   observations: {
-    eyebrow: '5 · Observations',
+    eyebrow: '6 · Observations',
     heading: 'Findings outside the ranking',
     intro: "These findings are real but don't call for a typical fix: the right response is a decision, not a correction.",
     wrapperTitle: 'Third-party content wrapper pages',
@@ -78,42 +76,50 @@ export const en: ReportStrings = {
     wcagReferentialLabel: 'Standard audited',
     riskSmallLabel: 'Overall risk level',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
-    tierLabels: { screening: 'Screening report', full: 'Full audit report' },
   },
   executiveSummary: {
-    eyebrow: '2 · Summary',
+    eyebrow: '1 · Summary',
     heading: 'What to take away',
     whatToDoFirstHeading: 'To address first',
     seeThemeTemplate: 'See priority {rank}.',
     quickWinsLabel: 'Quick wins',
     quickWinsSuffix: 'low effort, immediate effect',
   },
-  screeningFindings: {
-    eyebrow: '4 · Key findings',
-    heading: 'Critical and serious findings',
-    intro:
-      'The findings below are the ones with the most direct impact on your visitors, on search engine indexing, or on legal conformance. This screening report names and counts each issue without exact page locations, HTML selectors, or remediation guidance.',
-    noneFoundNote: 'No critical or serious findings were detected on this site.',
-    upgradeNote:
-      'This screening report shows that these issues exist. The full audit report adds the exact page and element for every finding, plus step by step remediation guidance.',
-    extendedPassHeading: 'Extended accessibility pass',
-    extendedPassIntro:
-      'This audit also includes an extended accessibility pass covering keyboard navigation, focus order, form error handling, video caption presence, and a heuristic red flag for alt text quality. Results below as counts only.',
-    extendedPassNoneFoundNote: 'No extended accessibility pass issues were detected on this site.',
-    extendedPassCountTemplate: '{count} {label} detected across the site',
-    extendedPassRuleLabels: {
-      keyboardTrap: { singular: 'keyboard trap', plural: 'keyboard traps' },
-      focusOrderMismatch: { singular: 'confusing tab order issue', plural: 'confusing tab order issues' },
-      formErrorNotAssociated: {
-        singular: 'form with inaccessible error handling',
-        plural: 'forms with inaccessible error handling',
-      },
-      videoMissingCaptions: { singular: 'video missing captions', plural: 'videos missing captions' },
-      altTextQualityHeuristic: {
-        singular: 'low quality alt text red flag',
-        plural: 'low quality alt text red flags',
-      },
+  legalExposure: {
+    eyebrow: '2 · Legal exposure',
+    heading: 'Legal exposure',
+    eaaDeadlineLabel: 'EAA deadline',
+    eaaDeadlineValue: '28 June 2025',
+    eaaDeadlineNote:
+      'Date the European Accessibility Act obligations enter into application, set by the directive itself.',
+    obligationStatusLabel: 'Obligation status',
+    statusLabels: {
+      in_scope: 'Confirmed',
+      likely_in_scope: 'Likely',
+      out_of_scope: 'Out of scope',
+      undetermined: 'Undetermined',
     },
+    statusShortDescriptions: {
+      in_scope: 'This site falls under a confirmed digital accessibility obligation, based on the available evidence.',
+      likely_in_scope:
+        'The available evidence indicates this site likely falls under a digital accessibility obligation, without full confirmation.',
+      out_of_scope:
+        'Based on the available evidence, this site does not fall under the digital accessibility obligation set by loi n° 2023-171.',
+      undetermined:
+        "The obligation status could not be established with certainty: the site does not publish a business identifier (SIREN/RCS), which prevents confirming which regulatory tier applies.",
+    },
+    disclaimerNote:
+      'Generated from the existing obligation assessment; no additional legal interpretation has been added. A review by qualified legal counsel remains necessary.',
+  },
+  checklist: {
+    eyebrow: '5 · Printable checklist',
+    heading: 'Priority checklist',
+    intro: 'Page designed to be printed or captured on its own, no prose, just the essentials.',
+    rankColumnLabel: '#',
+    priorityColumnLabel: 'Priority',
+    effortColumnLabel: 'Effort',
+    impactColumnLabel: 'Impact',
+    pagesColumnLabel: 'Pages',
   },
   themes: {
     eyebrow: '4 · Priorities',
@@ -130,7 +136,7 @@ export const en: ReportStrings = {
     refsLabel: 'Findings',
   },
   renderDiffEvidence: {
-    eyebrow: '6 · Render evidence',
+    eyebrow: '8 · Render evidence',
     heading: 'What a search engine receives before JavaScript runs',
     intro:
       'Every page is loaded twice: once with no JavaScript, the way a basic indexing crawler does, once in a full browser. The difference measures content invisible to search engines.',
@@ -149,7 +155,7 @@ export const en: ReportStrings = {
     altCharsUnknown: 'character count not measured',
   },
   coreWebVitals: {
-    eyebrow: '7 · Performance measurements',
+    eyebrow: '9 · Performance measurements',
     heading: 'Speed and visual stability, page by page',
     intro:
       'Lab measurements taken with Lighthouse on a simulated mobile profile, with network and CPU throttling. This profile represents an entry-level phone on an average network: on a computer with a good connection, real times are noticeably shorter, but the ranking between pages stays representative. LCP and CLS are Core Web Vitals; TBT is a lab metric that approximates responsiveness.',
@@ -166,14 +172,89 @@ export const en: ReportStrings = {
     legendMidTemplate: 'LCP ≤ 4 s · CLS ≤ 0.25 · TBT ≤ 600 ms',
     legendPoorLabel: 'beyond',
   },
+  accessibilityStatement: {
+    eyebrow: '10 · Statement',
+    heading: 'Draft accessibility statement',
+    intro: 'Skeleton generated from the findings, to be completed by the client before publication.',
+    criterionColumnLabel: 'Criterion',
+    statusColumnLabel: 'Conformance status',
+    nonConformantPartialLabel: 'Non-conformant (partially)',
+    contactHeading: 'Contact',
+    contactBody: '[Client to complete with a contact email address] - reporting process to be defined.',
+    remediationPlanHeading: 'Remediation plan',
+    remediationPlanBody: 'See the "Ranked priorities" section above for the plan and associated timelines.',
+  },
+  glossary: {
+    eyebrow: '13 · Glossary',
+    heading: 'Glossary',
+    terms: [
+      {
+        term: 'WCAG 2.2',
+        definition:
+          'Web Content Accessibility Guidelines, the international standard of digital accessibility criteria, levels A / AA / AAA.',
+      },
+      {
+        term: 'EAA',
+        definition:
+          'European Accessibility Act: the EU directive requiring digital accessibility for many products and services starting 28 June 2025.',
+      },
+      {
+        term: 'RGAA',
+        definition: 'The French official standard operationalizing the WCAG criteria for French public bodies.',
+      },
+      {
+        term: 'EN 301 549',
+        definition: 'European ICT accessibility standard, the technical reference cited by the EAA and public procurement.',
+      },
+      {
+        term: 'Critical',
+        definition: 'Highest severity: blocks an essential task for some users.',
+      },
+      {
+        term: 'Serious',
+        definition: 'Severely hinders use of the site without fully blocking it.',
+      },
+      {
+        term: 'Moderate',
+        definition: 'Complicates use for certain profiles or contexts of use.',
+      },
+      {
+        term: 'Minor',
+        definition: 'Low-impact deviation, non-blocking.',
+      },
+      {
+        term: 'Quick win',
+        definition: 'Low-effort, high-impact fix, worth prioritizing.',
+      },
+    ],
+  },
+  nextSteps: {
+    eyebrow: '14 · Next steps',
+    heading: 'Next steps & contact',
+    questionTitle: 'Questions?',
+    questionBody:
+      'Any request for clarification about a finding or a priority can be sent directly to the Odysseus team, citing the relevant finding ID.',
+    reauditTitle: 'Re-audits',
+    reauditBody:
+      'A re-audit re-runs the same scope and compares results against the previous report, finding by finding, to measure progress.',
+    postFixTitle: 'Post-fix verification',
+    postFixBody:
+      'Once priorities are addressed, a targeted check confirms the fixed findings are genuinely resolved, without re-running a full audit.',
+  },
   findingsAppendix: {
-    eyebrow: '8 · Appendix',
+    eyebrow: '12 · Appendix',
     heading: 'Full findings list',
     intro:
       'Every finding detected by the automated tools, including those judged minor and not carried into the priorities above.',
     categoryLabels: {
       accessibility: 'Accessibility',
       seo: 'Search engine visibility (SEO)',
+      // Milestone 8.5a: 'geo' findings exist as of this milestone but are
+      // not yet in CATEGORY_ORDER (findings-appendix.ts), so this label
+      // is unused today - present only so categoryLabels stays total
+      // over FindingCategory. Milestone 8.5b decides how GEO findings
+      // are actually presented in the report.
+      geo: 'AI answer engine visibility (GEO)',
       performance: 'Performance',
       rendering: 'Rendering',
     },
@@ -204,8 +285,7 @@ export const en: ReportStrings = {
     observationsCrossRefLabel: 'see Observations',
   },
   methodology: {
-    eyebrow: '9 · Methodology and limitations',
-    eyebrowScreening: '5 · Methodology and limitations',
+    eyebrow: '11 · Methodology and limitations',
     heading: 'How this audit was carried out',
     toolingParagraphTemplate:
       'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages crawled on {date} starting from the homepage.',

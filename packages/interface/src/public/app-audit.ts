@@ -23,11 +23,6 @@ interface Finding {
   pageUrls: string[];
 }
 
-interface ReportCombo {
-  language: 'fr' | 'en';
-  tier: 'screening' | 'full';
-}
-
 interface AuditDetail {
   auditId: string;
   siteUrl: string;
@@ -37,7 +32,6 @@ interface AuditDetail {
   severityRollup: SeverityRollup;
   findings: Finding[];
   reportLanguages: ('fr' | 'en')[];
-  reportCombos: ReportCombo[];
 }
 
 const SEVERITY_ORDER: Record<Finding['severity'], number> = { critical: 0, serious: 1, moderate: 2, minor: 3 };
@@ -48,16 +42,15 @@ function render(detail: AuditDetail): void {
   metaPages.textContent = String(detail.pagesVisited);
   rollupEl.innerHTML = severityBadgesHtml(detail.severityRollup, strings);
 
-  if (detail.reportCombos.length === 0) {
+  if (detail.reportLanguages.length === 0) {
     noReports.hidden = false;
     reportLinks.innerHTML = '';
   } else {
     noReports.hidden = true;
-    reportLinks.innerHTML = detail.reportCombos
-      .map(({ language, tier }) => {
-        const href = `/api/audits/${encodeURIComponent(detail.auditId)}/report/${language}?tier=${tier}`;
-        const tierLabel = escapeHtml(strings.common.tierLabels[tier]);
-        return `<p><a href="${href}">${escapeHtml(strings.common.downloadReport)} - ${tierLabel} (${language.toUpperCase()})</a></p>`;
+    reportLinks.innerHTML = detail.reportLanguages
+      .map((language) => {
+        const href = `/api/audits/${encodeURIComponent(detail.auditId)}/report/${language}`;
+        return `<p><a href="${href}">${escapeHtml(strings.common.downloadReport)} (${language.toUpperCase()})</a></p>`;
       })
       .join('');
   }

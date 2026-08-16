@@ -3,20 +3,13 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
 import type { AuditManifest, Finding, LlmOutput, ReportLanguage } from '@odysseus/core';
-import type { ReportTier, StoredAnalysis } from '@odysseus/report';
+import type { StoredAnalysis } from '@odysseus/report';
 import { runAllReportsStage, runReportStage } from '@odysseus/interface';
 import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
 
 function parseLanguage(value: string): ReportLanguage {
   if (value !== 'fr' && value !== 'en') {
     throw new InvalidArgumentError(`must be "fr" or "en", got "${value}"`);
-  }
-  return value;
-}
-
-function parseTier(value: string): ReportTier {
-  if (value !== 'screening' && value !== 'full') {
-    throw new InvalidArgumentError(`must be "screening" or "full", got "${value}"`);
   }
   return value;
 }
@@ -82,30 +75,20 @@ export function registerReportCommand(program: Command): void {
     .option('--language <fr|en>', 'Report language: fr or en', parseLanguage)
     .option('--analysis <file>', 'Path to a specific analysis file; defaults to the latest for --language')
     .option(
-      '--tier <screening|full>',
-      'Report tier: screening (executive summary, risk badge, top critical/serious findings, extended ' +
-        'accessibility pass as counts only) or full (adds theme grouping, full page/selector detail, render ' +
-        'diff evidence, and the "what to do first" summary). Defaults to full.',
-      parseTier,
-    )
-    .option(
       '--all',
-      'Generate all four reports (fr and en, screening and full) from each language\'s existing latest ' +
-        'analysis in one invocation, instead of one report per invocation. Requires both fr and en analyses ' +
-        'to already exist; incompatible with --language, --tier, and --analysis.',
+      'Generate both language reports (fr and en) from each language\'s existing latest analysis in one ' +
+        'invocation, instead of one report per invocation. Requires both fr and en analyses to already ' +
+        'exist; incompatible with --language and --analysis.',
     )
     .action(
-      async (
-        artifactsDir: string,
-        opts: { language?: ReportLanguage; analysis?: string; tier?: ReportTier; all?: boolean },
-      ) => {
+      async (artifactsDir: string, opts: { language?: ReportLanguage; analysis?: string; all?: boolean }) => {
         const resolvedDir = path.resolve(artifactsDir);
         let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
 
         try {
           if (opts.all) {
-            if (opts.language || opts.tier || opts.analysis) {
-              throw new Error('--all cannot be combined with --language, --tier, or --analysis');
+            if (opts.language || opts.analysis) {
+              throw new Error('--all cannot be combined with --language or --analysis');
             }
 
             const { manifest, findings } = await loadManifestAndFindings(resolvedDir);
@@ -123,9 +106,9 @@ export function registerReportCommand(program: Command): void {
               mongoConnection,
             );
 
-            console.log(`Reports for ${manifest.auditId} complete (4 of 4: fr/en x screening/full)`);
+            console.log(`Reports for ${manifest.auditId} complete (2 of 2: fr/en)`);
             for (const result of results) {
-              console.log(`  ${result.tier}/${result.language}: ${result.reportPath}`);
+              console.log(`  ${result.language}: ${result.reportPath}`);
             }
             return;
           }
@@ -147,11 +130,10 @@ export function registerReportCommand(program: Command): void {
           }
           const analysis = await readAnalysis(analysisPath);
 
-          const tier = opts.tier ?? 'full';
           mongoConnection = await connectToMongo();
-          const result = await runReportStage(resolvedDir, manifest, findings, analysis, mongoConnection, tier);
+          const result = await runReportStage(resolvedDir, manifest, findings, analysis, mongoConnection);
 
-          console.log(`Report for ${manifest.auditId} complete (${opts.language}, ${tier})`);
+          console.log(`Report for ${manifest.auditId} complete (${opts.language})`);
           console.log(`  Analysis used: ${path.relative(resolvedDir, analysisPath)}`);
           console.log(`  Written: ${result.reportPath}`);
         } catch (error) {

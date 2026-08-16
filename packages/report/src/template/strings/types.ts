@@ -14,14 +14,10 @@ export interface ReportStrings {
   toc: {
     eyebrow: string;
     heading: string;
-    items: readonly [string, string, string, string, string, string, string, string, string];
-    /** The screening tier's much shorter section list (statistics,
-     *  executive summary, key findings, methodology) - see
-     *  screeningFindings below and render-html.ts's tier branch. Kept as
-     *  a distinct array rather than a slice of `items` above, since
-     *  screening's "key findings" section is not the same section as
-     *  full audit's "ranked priorities" or "appendix". */
-    itemsScreening: readonly [string, string, string, string, string];
+    items: readonly [
+      string, string, string, string, string, string, string,
+      string, string, string, string, string, string, string,
+    ];
     note: string;
   };
   statistics: {
@@ -78,10 +74,6 @@ export interface ReportStrings {
     wcagReferentialLabel: string;
     riskSmallLabel: string;
     riskLevels: { low: string; medium: string; high: string };
-    /** Milestone 8 addendum section 1.6: both tiers render from the same
-     *  findings.json, so the cover must say plainly which view of it this
-     *  particular PDF is. */
-    tierLabels: { screening: string; full: string };
   };
   executiveSummary: {
     eyebrow: string;
@@ -92,30 +84,47 @@ export interface ReportStrings {
     quickWinsLabel: string;
     quickWinsSuffix: string;
   };
-  /** Screening-tier-only section (milestone-8-scope-addendum.md 1.6):
-   *  critical/serious findings named and counted, but without the
-   *  page/selector detail the findingsAppendix table shows in the full
-   *  audit, plus the five extended-accessibility-pass checks reduced to
-   *  a bare per-rule count. Never rendered when tier is 'full' - that
-   *  tier gets themes.ts and findings-appendix.ts's full detail instead. */
-  screeningFindings: {
+  /** Promotes methodology's own legal-citation paragraph (rendered via
+   *  the exported renderLegalCitationParagraph) to its own page for
+   *  visibility, per the 2026-08-16 report redesign. Deliberately does
+   *  not add any new legal wording of its own beyond a status label and
+   *  a one-line restatement already implied by that paragraph - see
+   *  CLAUDE.md rule 6 and trade-off 11: this section must never become a
+   *  second, independent source of legal framing. */
+  legalExposure: {
+    eyebrow: string;
+    heading: string;
+    eaaDeadlineLabel: string;
+    eaaDeadlineValue: string;
+    eaaDeadlineNote: string;
+    obligationStatusLabel: string;
+    statusLabels: {
+      in_scope: string;
+      likely_in_scope: string;
+      out_of_scope: string;
+      undetermined: string;
+    };
+    /** One-line restatement of the status shown in the tile, same hedge
+     *  level as methodology's paragraph - never new legal nuance. */
+    statusShortDescriptions: {
+      in_scope: string;
+      likely_in_scope: string;
+      out_of_scope: string;
+      undetermined: string;
+    };
+    disclaimerNote: string;
+  };
+  /** Pure re-presentation of analysis.themes (rank/title/effort/impact/
+   *  pages) as a dense, printable table - no new data, no new logic. */
+  checklist: {
     eyebrow: string;
     heading: string;
     intro: string;
-    noneFoundNote: string;
-    upgradeNote: string;
-    extendedPassHeading: string;
-    extendedPassIntro: string;
-    extendedPassNoneFoundNote: string;
-    /** Template: {count}, {label}. */
-    extendedPassCountTemplate: string;
-    extendedPassRuleLabels: {
-      keyboardTrap: { singular: string; plural: string };
-      focusOrderMismatch: { singular: string; plural: string };
-      formErrorNotAssociated: { singular: string; plural: string };
-      videoMissingCaptions: { singular: string; plural: string };
-      altTextQualityHeuristic: { singular: string; plural: string };
-    };
+    rankColumnLabel: string;
+    priorityColumnLabel: string;
+    effortColumnLabel: string;
+    impactColumnLabel: string;
+    pagesColumnLabel: string;
   };
   themes: {
     eyebrow: string;
@@ -173,6 +182,38 @@ export interface ReportStrings {
     legendMidTemplate: string;
     legendPoorLabel: string;
   };
+  /** Per-criterion status is trivially derived, never a legal judgment:
+   *  buildConformanceRollup only ever lists a criterion when at least one
+   *  finding failed it, so "non conformant" is a restatement of that
+   *  fact, not a new determination (same reasoning conformance-summary.ts
+   *  already documents for its own rows). */
+  accessibilityStatement: {
+    eyebrow: string;
+    heading: string;
+    intro: string;
+    criterionColumnLabel: string;
+    statusColumnLabel: string;
+    nonConformantPartialLabel: string;
+    contactHeading: string;
+    contactBody: string;
+    remediationPlanHeading: string;
+    remediationPlanBody: string;
+  };
+  glossary: {
+    eyebrow: string;
+    heading: string;
+    terms: readonly { term: string; definition: string }[];
+  };
+  nextSteps: {
+    eyebrow: string;
+    heading: string;
+    questionTitle: string;
+    questionBody: string;
+    reauditTitle: string;
+    reauditBody: string;
+    postFixTitle: string;
+    postFixBody: string;
+  };
   findingsAppendix: {
     eyebrow: string;
     heading: string;
@@ -180,6 +221,7 @@ export interface ReportStrings {
     categoryLabels: {
       accessibility: string;
       seo: string;
+      geo: string;
       performance: string;
       rendering: string;
     };
@@ -210,11 +252,6 @@ export interface ReportStrings {
   };
   methodology: {
     eyebrow: string;
-    /** Screening's fixed 5-item TOC (toc.ts's itemsScreening) always
-     *  lists methodology last, at position 5 - a different fixed number
-     *  than the full tier's 9, so it needs its own hand-authored string
-     *  rather than reusing eyebrow above. */
-    eyebrowScreening: string;
     heading: string;
     /** Template: {axeVersion}, {lighthouseVersion}, {pages}, {date}. */
     toolingParagraphTemplate: string;

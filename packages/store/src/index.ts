@@ -11,7 +11,7 @@ export { createSireneCacheModel } from './schemas/sirene-cache.schema.js';
 export type { SireneCacheDocument, SireneCacheDocumentFields } from './schemas/sirene-cache.schema.js';
 export { upsertSireneCache, getCachedSireneProfile } from './persist-sirene-cache.js';
 export { createReportModel } from './schemas/report.schema.js';
-export type { ReportDocument, ReportDocumentFields, StoredReportTier } from './schemas/report.schema.js';
+export type { ReportDocument, ReportDocumentFields } from './schemas/report.schema.js';
 export { persistReport } from './persist-report.js';
 export { createJobModel } from './schemas/job.schema.js';
 export type {
@@ -44,8 +44,7 @@ export type { CompleteJobPatch, JobProgressPatch, NewJobInput } from './jobs.js'
 export { getSeverityRollup, getSeverityRollups } from './severity-rollup.js';
 export type { SeverityRollup } from './severity-rollup.js';
 export { getAudit, getFindingsForAudit } from './audits.js';
-export { getLatestReport, listReportLanguages, listReportCombos } from './reports.js';
-export type { ReportCombo } from './reports.js';
+export { getLatestReport, listReportLanguages } from './reports.js';
 export { createProspectModel } from './schemas/prospect.schema.js';
 export type {
   ProspectContactAddress,

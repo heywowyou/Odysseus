@@ -327,6 +327,9 @@ section {
   line-height: 1.05;
   color: var(--ink);
 }
+.tiles.tiles-2wide {
+  grid-template-columns: repeat(2, 1fr);
+}
 .tile span {
   font-size: 8pt;
   color: var(--mute);
@@ -714,6 +717,24 @@ table.sub th {
 .gloss {
   color: var(--mute);
   font-size: 8pt;
+}
+.gloss-list {
+  margin-top: 3mm;
+}
+.gloss-item {
+  padding: 2mm 0;
+  border-bottom: 0.5pt dotted var(--line);
+}
+.gloss-item dt {
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 9.5pt;
+}
+.gloss-item dd {
+  color: var(--mute);
+  font-size: 8.5pt;
+  margin-top: 0.5mm;
 }
 .note {
   font-size: 8.5pt;

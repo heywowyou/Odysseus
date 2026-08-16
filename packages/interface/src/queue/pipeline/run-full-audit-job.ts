@@ -74,10 +74,9 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       connection,
     );
 
-    // Renders all four (language, tier) combinations - screening and full,
-    // French and English - from the two analyses already produced above.
-    // See runAllReportsStage's own doc comment: no re-scan, no second LLM
-    // call, tier is purely a report-rendering decision.
+    // Renders both language reports (fr and en) from the two analyses
+    // already produced above. See runAllReportsStage's own doc comment:
+    // no re-scan, no second LLM call.
     await updateJobProgress(connection, job.jobId, { phase: 'report-fr' });
     await runAllReportsStage(
       auditResult.auditDir,

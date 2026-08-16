@@ -1,4 +1,4 @@
-import type { ReportTier, StoredAnalysis } from '../../types.js';
+import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, renderSectionHeader } from '../html-utils.js';
 import { isQuickWinTheme } from './themes.js';
@@ -47,19 +47,13 @@ function renderQuickWinsStrip(strings: ReportStrings, themes: StoredAnalysis['th
   `;
 }
 
-/** whatToDoFirst and the quick-wins strip both reference themes by rank
- *  ("See priority {rank}") - meaningless in the screening tier, which
- *  never renders themes.ts (milestone-8-scope-addendum.md 1.6: "no
- *  theme grouping", "no 'what to do first' summary"), so both are
- *  suppressed there rather than rendered against a section that does
- *  not exist in that tier's report. */
-export function renderExecutiveSummary(strings: ReportStrings, analysis: StoredAnalysis, tier: ReportTier): string {
+export function renderExecutiveSummary(strings: ReportStrings, analysis: StoredAnalysis): string {
   return `
     <section class="new-page">
       ${renderSectionHeader(strings.executiveSummary.eyebrow, strings.executiveSummary.heading)}
       <p>${escapeHtml(analysis.executiveSummary)}</p>
-      ${tier === 'full' ? renderWhatToDoFirst(strings, analysis.themes) : ''}
-      ${tier === 'full' ? renderQuickWinsStrip(strings, analysis.themes) : ''}
+      ${renderWhatToDoFirst(strings, analysis.themes)}
+      ${renderQuickWinsStrip(strings, analysis.themes)}
     </section>
   `;
 }

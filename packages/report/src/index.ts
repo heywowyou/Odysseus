@@ -1,5 +1,5 @@
 export { REPORT_TEMPLATE_VERSION } from './constants.js';
-export type { GenerateReportInput, ReportTier, StoredAnalysis } from './types.js';
+export type { GenerateReportInput, StoredAnalysis } from './types.js';
 
 import { launchBrowser } from '@odysseus/scanner';
 import type { GenerateReportInput } from './types.js';
@@ -25,7 +25,6 @@ export async function generateReportPdf(input: GenerateReportInput): Promise<Buf
       findings: input.findings,
       analysis: input.analysis,
       renderDiffEvidencePages,
-      ...(input.tier !== undefined ? { tier: input.tier } : {}),
     });
 
     const siteHost = new URL(input.manifest.siteUrl).host;

@@ -8,7 +8,6 @@ vi.mock('@odysseus/store', () => ({
   getSeverityRollup: vi.fn(),
   getLatestReport: vi.fn(),
   listReportLanguages: vi.fn(),
-  listReportCombos: vi.fn(),
 }));
 
 vi.mock('@odysseus/scanner', () => ({
@@ -16,7 +15,7 @@ vi.mock('@odysseus/scanner', () => ({
   getArtifactsRoot: vi.fn(() => '/tmp'),
 }));
 
-import { getAudit, getFindingsForAudit, getSeverityRollup, listReportCombos, listReportLanguages } from '@odysseus/store';
+import { getAudit, getFindingsForAudit, getSeverityRollup, listReportLanguages } from '@odysseus/store';
 import { Router } from '../router.js';
 import { registerAuditRoutes } from './audits.js';
 
@@ -56,14 +55,7 @@ beforeEach(() => {
 });
 
 describe('GET /api/audits/:auditId', () => {
-  it('includes reportCombos alongside the existing language-only reportLanguages field', async () => {
-    vi.mocked(listReportCombos).mockResolvedValue([
-      { language: 'fr', tier: 'screening' },
-      { language: 'fr', tier: 'full' },
-      { language: 'en', tier: 'screening' },
-      { language: 'en', tier: 'full' },
-    ]);
-
+  it('includes reportLanguages', async () => {
     const router = new Router();
     registerAuditRoutes(router, fakeConnection);
 
@@ -74,16 +66,10 @@ describe('GET /api/audits/:auditId', () => {
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body ?? '{}');
     expect(body.reportLanguages).toEqual(['fr', 'en']);
-    expect(body.reportCombos).toEqual([
-      { language: 'fr', tier: 'screening' },
-      { language: 'fr', tier: 'full' },
-      { language: 'en', tier: 'screening' },
-      { language: 'en', tier: 'full' },
-    ]);
   });
 
-  it('returns an empty reportCombos array when no report has been generated yet', async () => {
-    vi.mocked(listReportCombos).mockResolvedValue([]);
+  it('returns an empty reportLanguages array when no report has been generated yet', async () => {
+    vi.mocked(listReportLanguages).mockResolvedValue([]);
 
     const router = new Router();
     registerAuditRoutes(router, fakeConnection);
@@ -93,6 +79,6 @@ describe('GET /api/audits/:auditId', () => {
     await router.handle(req, res);
 
     const body = JSON.parse(res.body ?? '{}');
-    expect(body.reportCombos).toEqual([]);
+    expect(body.reportLanguages).toEqual([]);
   });
 });

@@ -10,7 +10,6 @@ import {
   type ObligationBasisFact,
   type ReportLanguage,
 } from '@odysseus/core';
-import type { ReportTier } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatDate, formatNumber, renderSectionHeader } from '../html-utils.js';
 
@@ -110,7 +109,12 @@ function pickPrimaryBasis(
   return article47Basis ?? eaaBasis;
 }
 
-function renderLegalCitationParagraph(
+/** Exported for legal-exposure.ts, which promotes this same deterministic
+ *  splice to its own page (2026-08-16 report redesign) without adding any
+ *  independent legal wording of its own - trade-off 11: one function
+ *  producing the citation text, called from two render sites, never two
+ *  hand-synced copies. */
+export function renderLegalCitationParagraph(
   strings: ReportStrings,
   assessment: ObligationAssessment | undefined,
   language: ReportLanguage,
@@ -201,18 +205,9 @@ export function renderMethodology(
   language: ReportLanguage,
   obligationAssessment?: ObligationAssessment,
   findings: readonly Pick<Finding, 'findingId' | 'ruleId'>[] = [],
-  /** Screening's TOC list (toc.ts's itemsScreening) is a fixed 5 entries,
-   *  methodology always last, so "5" is as safe to hand-fix as every
-   *  other section's eyebrow number already is (none of them are derived
-   *  from the TOC at render time - see toc.ts's own "static, hand-listed"
-   *  comment). Found 2026-08-10 reviewing a real report: this section
-   *  hardcoded "9" (its full-tier position) even in the 5-section
-   *  screening tier, where a client would see the numbering jump from 4
-   *  straight to 9. */
-  tier: ReportTier = 'full',
 ): string {
   const m = strings.methodology;
-  const eyebrow = tier === 'screening' ? m.eyebrowScreening : m.eyebrow;
+  const eyebrow = m.eyebrow;
   const axeVersion = manifest.tool.axeCoreVersion ?? '-';
   const lighthouseVersion = manifest.tool.lighthouseVersion ?? '-';
   const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;

@@ -5,27 +5,25 @@ export const fr: ReportStrings = {
     eyebrow: 'Sommaire',
     heading: 'Contenu du rapport',
     items: [
-      "L'audit en chiffres",
       'Résumé et actions prioritaires',
-      'Conformité accessibilité, WCAG 2.2 niveau AA',
+      'Exposition légale',
+      "L'audit en chiffres",
       'Priorités classées',
+      'Check-list des priorités (imprimable)',
       'Observations hors classement',
+      'Conformité accessibilité, WCAG 2.2 niveau AA',
       'Preuve de rendu : ce que voient les moteurs de recherche',
       'Mesures de performance',
+      "Projet de déclaration d'accessibilité",
+      'Méthodologie et limites',
       'Annexe : liste complète des constats',
-      'Méthodologie et limites',
-    ],
-    itemsScreening: [
-      "L'audit en chiffres",
-      'Résumé',
-      'Conformité accessibilité, WCAG 2.2 niveau AA',
-      'Constats principaux',
-      'Méthodologie et limites',
+      'Glossaire',
+      'Prochaines étapes & contact',
     ],
     note: 'Les numéros de page figurent en pied de page et dans les signets du fichier PDF.',
   },
   statistics: {
-    eyebrow: "1 · L'audit en chiffres",
+    eyebrow: "3 · L'audit en chiffres",
     heading: "Ce que l'analyse a relevé",
     introTemplate:
       '{pages} pages analysées, {findings} constats distincts après regroupement des répétitions. Un constat présent sur plusieurs pages compte une seule fois.',
@@ -46,7 +44,7 @@ export const fr: ReportStrings = {
     legendMinorText: 'optimisation',
   },
   conformanceSummary: {
-    eyebrow: '3 · Conformité accessibilité',
+    eyebrow: '7 · Conformité accessibilité',
     heading: 'Critères WCAG 2.2 niveau AA en échec',
     intro:
       "Les critères ci-dessous relèvent du référentiel WCAG 2.2 niveau AA, auquel renvoie la norme européenne EN 301 549. Un critère en échec est un écart de conformité, pas une préférence de design. Ce rapport cite les critères concernés sans se prononcer sur l'applicabilité d'une obligation légale particulière à votre entreprise, qui dépend de sa taille et de son secteur.",
@@ -59,7 +57,7 @@ export const fr: ReportStrings = {
     emptyState: "Aucun critère WCAG 2.2 niveau AA en échec n'a été détecté sur ce site.",
   },
   observations: {
-    eyebrow: '5 · Observations',
+    eyebrow: '6 · Observations',
     heading: 'Constats hors classement',
     intro:
       'Ces constats sont réels mais n\'appellent pas de correction classique : la bonne réponse est une décision, pas un correctif.',
@@ -79,48 +77,49 @@ export const fr: ReportStrings = {
     wcagReferentialLabel: 'Référentiel audité',
     riskSmallLabel: 'Niveau de risque global',
     riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
-    tierLabels: { screening: 'Rapport de repérage', full: "Rapport d'audit complet" },
   },
   executiveSummary: {
-    eyebrow: '2 · Résumé',
+    eyebrow: '1 · Résumé',
     heading: "Ce qu'il faut retenir",
     whatToDoFirstHeading: 'À traiter en premier',
     seeThemeTemplate: 'Voir priorité {rank}.',
     quickWinsLabel: 'Gains rapides',
     quickWinsSuffix: 'faibles en effort, immédiates en effet',
   },
-  screeningFindings: {
-    eyebrow: '4 · Constats principaux',
-    heading: 'Constats critiques et majeurs',
-    intro:
-      "Les constats ci-dessous sont ceux qui ont l'impact le plus direct sur vos visiteurs, sur l'indexation par les moteurs de recherche, ou sur la conformité légale. Ce rapport de repérage nomme et compte chaque problème sans indiquer la page ou le sélecteur HTML exact, ni de recommandation de correction.",
-    noneFoundNote: "Aucun constat critique ou majeur n'a été détecté sur ce site.",
-    upgradeNote:
-      "Ce rapport de repérage montre que ces problèmes existent. Le rapport d'audit complet ajoute la page et l'élément exacts pour chaque constat, ainsi qu'une recommandation de correction détaillée.",
-    extendedPassHeading: 'Passe d\'accessibilité étendue',
-    extendedPassIntro:
-      "Cet audit inclut aussi une passe d'accessibilité étendue couvrant la navigation au clavier, l'ordre de focus, la gestion des erreurs de formulaire, la présence de sous-titres vidéo, et un signal heuristique sur la qualité des textes alternatifs. Résultats ci-dessous sous forme de comptages uniquement.",
-    extendedPassNoneFoundNote: "Aucun problème de la passe d'accessibilité étendue n'a été détecté sur ce site.",
-    extendedPassCountTemplate: '{count} {label} détecté(s) sur le site',
-    extendedPassRuleLabels: {
-      keyboardTrap: { singular: 'piège au clavier', plural: 'pièges au clavier' },
-      focusOrderMismatch: {
-        singular: "problème d'ordre de tabulation confus",
-        plural: "problèmes d'ordre de tabulation confus",
-      },
-      formErrorNotAssociated: {
-        singular: 'formulaire avec une gestion des erreurs inaccessible',
-        plural: 'formulaires avec une gestion des erreurs inaccessible',
-      },
-      videoMissingCaptions: {
-        singular: 'vidéo sans sous-titres',
-        plural: 'vidéos sans sous-titres',
-      },
-      altTextQualityHeuristic: {
-        singular: 'signal de texte alternatif de faible qualité',
-        plural: 'signaux de texte alternatif de faible qualité',
-      },
+  legalExposure: {
+    eyebrow: '2 · Exposition légale',
+    heading: 'Exposition légale',
+    eaaDeadlineLabel: 'Échéance EAA',
+    eaaDeadlineValue: '28 juin 2025',
+    eaaDeadlineNote: "Date d'entrée en application des obligations de l'EAA, fixée par la directive elle-même.",
+    obligationStatusLabel: "Statut d'obligation",
+    statusLabels: {
+      in_scope: 'Confirmé',
+      likely_in_scope: 'Probable',
+      out_of_scope: 'Hors champ',
+      undetermined: 'Indéterminé',
     },
+    statusShortDescriptions: {
+      in_scope: "Ce site relève d'une obligation d'accessibilité numérique confirmée par les éléments disponibles.",
+      likely_in_scope:
+        "Les éléments disponibles indiquent que ce site relève probablement d'une obligation d'accessibilité numérique, sans confirmation complète.",
+      out_of_scope:
+        "Sur la base des éléments disponibles, ce site ne relève pas de l'obligation d'accessibilité numérique prévue par la loi n° 2023-171.",
+      undetermined:
+        "Le statut d'obligation n'a pas pu être établi avec certitude : l'identifiant d'entreprise (SIREN/RCS) est absent du site, ce qui empêche de confirmer le palier réglementaire applicable.",
+    },
+    disclaimerNote:
+      "Généré à partir de l'évaluation d'obligations existante ; aucune interprétation juridique supplémentaire n'a été ajoutée. Une revue par un conseil juridique reste nécessaire.",
+  },
+  checklist: {
+    eyebrow: '5 · Check-list imprimable',
+    heading: 'Check-list des priorités',
+    intro: "Page pensée pour être imprimée ou capturée seule, sans prose, uniquement l'essentiel.",
+    rankColumnLabel: '#',
+    priorityColumnLabel: 'Priorité',
+    effortColumnLabel: 'Effort',
+    impactColumnLabel: 'Impact',
+    pagesColumnLabel: 'Pages',
   },
   themes: {
     eyebrow: '4 · Priorités',
@@ -137,7 +136,7 @@ export const fr: ReportStrings = {
     refsLabel: 'Constats',
   },
   renderDiffEvidence: {
-    eyebrow: '6 · Preuve de rendu',
+    eyebrow: '8 · Preuve de rendu',
     heading: "Ce que reçoit un moteur de recherche avant JavaScript",
     intro:
       "Chaque page est chargée deux fois : une fois sans JavaScript, comme le fait un robot d'indexation basique, une fois dans un navigateur complet. La différence mesure le contenu invisible pour les moteurs.",
@@ -156,7 +155,7 @@ export const fr: ReportStrings = {
     altCharsUnknown: 'nombre de caractères non mesuré',
   },
   coreWebVitals: {
-    eyebrow: '7 · Mesures de performance',
+    eyebrow: '9 · Mesures de performance',
     heading: "Vitesse et stabilité d'affichage, page par page",
     intro:
       "Mesures de laboratoire réalisées avec Lighthouse sur un profil mobile simulé, avec limitation du réseau et du processeur. Ce profil représente un téléphone d'entrée de gamme sur un réseau moyen : sur un ordinateur avec une bonne connexion, les temps réels sont nettement plus courts, mais le classement des pages entre elles reste représentatif. LCP et CLS sont des Core Web Vitals ; le TBT est un indicateur de laboratoire qui approxime la réactivité.",
@@ -174,14 +173,89 @@ export const fr: ReportStrings = {
     legendMidTemplate: 'LCP ≤ 4 s · CLS ≤ 0,25 · TBT ≤ 600 ms',
     legendPoorLabel: 'au-delà',
   },
+  accessibilityStatement: {
+    eyebrow: "10 · Déclaration",
+    heading: "Projet de déclaration d'accessibilité",
+    intro: "Squelette généré à partir des constats, à compléter par le client avant publication.",
+    criterionColumnLabel: 'Critère',
+    statusColumnLabel: 'Statut de conformité',
+    nonConformantPartialLabel: 'Non conforme (partiellement)',
+    contactHeading: 'Contact',
+    contactBody: '[Adresse e-mail de contact à compléter par le client] - processus de signalement à définir.',
+    remediationPlanHeading: 'Plan de remédiation',
+    remediationPlanBody: 'Voir la section « Priorités classées » ci-dessus pour le plan et les échéances associées.',
+  },
+  glossary: {
+    eyebrow: '13 · Glossaire',
+    heading: 'Glossaire',
+    terms: [
+      {
+        term: 'WCAG 2.2',
+        definition:
+          "Le référentiel international de critères d'accessibilité numérique publié par le W3C, niveaux A / AA / AAA.",
+      },
+      {
+        term: 'EAA',
+        definition:
+          "Directive européenne imposant l'accessibilité numérique à de nombreux produits et services à partir du 28 juin 2025.",
+      },
+      {
+        term: 'RGAA',
+        definition:
+          "Référentiel Général d'Amélioration de l'Accessibilité, la déclinaison française opérationnelle des critères WCAG.",
+      },
+      {
+        term: 'EN 301 549',
+        definition:
+          "Norme européenne d'accessibilité des TIC, référence technique citée par l'EAA et les marchés publics.",
+      },
+      {
+        term: 'Critique',
+        definition: 'Sévérité la plus haute : bloque une tâche essentielle pour une partie des utilisateurs.',
+      },
+      {
+        term: 'Majeur',
+        definition: "Gêne fortement l'usage du site sans l'empêcher totalement.",
+      },
+      {
+        term: 'Modéré',
+        definition: "Complique l'usage pour certains profils ou contextes d'usage.",
+      },
+      {
+        term: 'Mineur',
+        definition: 'Écart de faible impact, non bloquant.',
+      },
+      {
+        term: 'Gain rapide',
+        definition: 'Correctif à faible effort et fort impact, à traiter en priorité.',
+      },
+    ],
+  },
+  nextSteps: {
+    eyebrow: '14 · Suite',
+    heading: 'Prochaines étapes & contact',
+    questionTitle: 'Une question ?',
+    questionBody:
+      "Toute demande de clarification sur un constat ou une priorité peut être adressée directement à l'équipe Odysseus, en citant l'identifiant du constat concerné.",
+    reauditTitle: 'Ré-audits',
+    reauditBody:
+      'Un ré-audit relance le même périmètre et compare les résultats au rapport précédent, constat par constat, pour mesurer la progression.',
+    postFixTitle: 'Vérification post-correctifs',
+    postFixBody:
+      'Une fois les priorités traitées, une vérification ciblée confirme que les constats corrigés le sont bien, sans relancer un audit complet.',
+  },
   findingsAppendix: {
-    eyebrow: '8 · Annexe',
+    eyebrow: '12 · Annexe',
     heading: 'Liste complète des constats',
     intro:
       'Chaque constat détecté par les outils automatisés, y compris ceux jugés mineurs et non repris dans les priorités ci-dessus.',
     categoryLabels: {
       accessibility: 'Accessibilité',
       seo: 'Référencement (SEO)',
+      // Milestone 8.5a: voir la note équivalente dans en.ts - non utilisé
+      // tant que CATEGORY_ORDER (findings-appendix.ts) n'inclut pas
+      // 'geo'.
+      geo: 'Visibilité dans les moteurs d\'IA (GEO)',
       performance: 'Performance',
       rendering: 'Rendu',
     },
@@ -212,8 +286,7 @@ export const fr: ReportStrings = {
     observationsCrossRefLabel: 'voir Observations',
   },
   methodology: {
-    eyebrow: '9 · Méthodologie et limites',
-    eyebrowScreening: '5 · Méthodologie et limites',
+    eyebrow: '11 · Méthodologie et limites',
     heading: 'Comment cet audit a été réalisé',
     toolingParagraphTemplate:
       "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages explorées le {date} à partir de la page d'accueil.",

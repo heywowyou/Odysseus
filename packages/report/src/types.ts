@@ -22,14 +22,14 @@ export interface StoredAnalysis extends LlmOutput {
   obligationAssessment?: ObligationAssessment;
 }
 
-/** Milestone 8 addendum section 1.6: both tiers render from the same
- *  findings.json (section 1.2 - crawl scope is never tier-dependent), so
- *  tier is purely a report-rendering decision made at generation time,
- *  never stored on a Finding or threaded into @odysseus/core. Defaults
- *  to 'full' wherever it is optional, preserving every pre-milestone-8
- *  caller's existing behavior unchanged. */
-export type ReportTier = 'screening' | 'full';
-
+/** Milestone 8 introduced a paid screening tier alongside the full audit,
+ *  both rendered from the same findings.json with tier only affecting
+ *  report depth. Dropped 2026-08-16 (docs/offer-positioning.md): the
+ *  commercial model is now single-tier, the full audit is the only paid
+ *  deliverable, so there is no longer a tier to select at generation
+ *  time. The free, pre-purchase outreach preview introduced the same day
+ *  (docs/outreach-rules.md) is a deliberately separate document kind,
+ *  not a smaller tier of this one - see generateOutreachPreviewPdf. */
 export interface GenerateReportInput {
   /** Used to resolve page screenshot files on disk (manifest.pages[].pageDir
    *  is relative to this directory). Never read for anything else: findings
@@ -40,6 +40,4 @@ export interface GenerateReportInput {
    *  the appendix must include minor findings the model never saw. */
   findings: Finding[];
   analysis: StoredAnalysis;
-  /** Defaults to 'full' when omitted. */
-  tier?: ReportTier;
 }
