@@ -4,9 +4,7 @@
       "Edit(/packages/core/src/types/findings.ts)",
       "Edit(/packages/core/src/types/llm-output.ts)",
       "Edit(/packages/core/src/normalize/severity.ts)",
-      "Edit(/CLAUDE.md)",
-      "mcp__mongodb-readonly",
-      "mcp__playwright"
+      "Edit(/CLAUDE.md)"
     ],
     "deny": [
       "Read(./.env)"
