@@ -66,10 +66,14 @@ export interface ReportStrings {
     legalBodyTemplate: string;
   };
   cover: {
+    kicker: string;
     reportTitle: string;
-    eyebrow: string;
+    subtitle: string;
+    siteLabel: string;
     dateLabel: string;
     pagesScannedLabel: string;
+    /** Template: {count}. */
+    pagesScannedValueTemplate: string;
     languageLabel: string;
     wcagReferentialLabel: string;
     riskSmallLabel: string;

@@ -17,10 +17,13 @@ against haaitza.com on 6 August 2026. 30 pages, 30.7 MB, French, 20 pages scanne
 
 Suggested repo path: `docs/report-v2-refactor.md`.
 
-Companion artifact: `report-v2-prototype-haaitza-fr.html`, a working prototype of the
-target output built from the real haaitza data. It renders to a 20 page, 670 KB, tagged
-PDF. Both the prototype and the numbers below have been verified, not asserted: see
-"Verification performed" at the end.
+Companion artifact (removed 2026-08-16): `report-v2-prototype-haaitza-fr.html`, a working
+prototype of the target output built from the real haaitza data, rendering to a 20 page,
+670 KB, tagged PDF. It was a light-theme design and was deleted once the report's dark,
+GlassWire-inspired reskin (`docs/odysseus-project-brief-v2.md`, "Post-7.1: scan
+concurrency and reskin") superseded it; `packages/report/src/template/report.css` is the
+current design source of truth. The numbers below were verified against that prototype
+at the time, not asserted: see "Verification performed" at the end.
 
 ---
 

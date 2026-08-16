@@ -188,17 +188,29 @@ needed, say so and stop. Do not change them and continue.
    `docs/report-v2-refactor.md`.
 
 9. **`packages/report`'s template is hand-maintained CSS, not Tailwind**,
-   since the same 2026-08-07 refactor. The compiled-Tailwind approach from
+   since the 2026-08-07 refactor. The compiled-Tailwind approach from
    milestone 6 is gone: no `tailwind-input.css`, no `build:css` script, no
    `tailwindcss`/`@tailwindcss/cli` dependency. `report.css` is written
-   directly, ported from a hand-designed, print-verified prototype
-   (`docs/report-v2-prototype-haaitza-fr.html`) rather than derived from
-   utility classes. Do not reintroduce a Tailwind build step for this
-   package without first checking whether the prototype's design system
-   (color tokens, badge/scale/tile components, print rules) still covers
-   the need; it was chosen specifically because re-deriving that design
-   in a utility framework risked drifting from the one version that was
-   actually print-tested.
+   directly. It went through two dark-theme generations: a
+   GlassWire-inspired reskin on 2026-08-07 (`docs/odysseus-project-brief-v2.md`,
+   "Post-7.1: scan concurrency and reskin"), then a full retokening on
+   2026-08-16 to actually match `docs/mockups/Ody Audit Report -
+   Standalone - Final 16082026.html` (full audit) and `... - Preview -
+   Final 16082026.html` (outreach preview) - the design system now has
+   exactly one canonical source, those two mockups, not GlassWire. Both
+   the original light-theme prototype and `docs/GlassWire/` were deleted
+   2026-08-16 as a result; `report.css` is the only design artifact left
+   in the repo, since the mockups themselves are opaque self-decoding
+   bundles, not plain CSS. If the mockups are ever revised, re-derive
+   `report.css`'s tokens the same way this pass did: load the mockup
+   locally and read colors/radii/spacing off computed styles via the
+   `playwright` MCP tools, not off assumption. Do not reintroduce a
+   Tailwind build step for this package without first checking whether
+   `report.css`'s existing design system (color tokens, badge/scale/tile
+   components, print rules) still covers the need; it was chosen
+   specifically because re-deriving that design in a utility
+   framework risked drifting from the one version that was actually
+   print-tested.
 
 10. **Scan-phase concurrency runs pages in lanes, not the crawl.** Shipped
     2026-08-07. The crawl stays sequential; render-diff, axe, and Lighthouse
