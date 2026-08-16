@@ -3,22 +3,34 @@ import {
   extractSitemapCandidates,
   SITEMAP_MISSING_RULE_ID,
   SITEMAP_STALE_RULE_ID,
+  SITEMAP_ORPHAN_PAGE_RULE_ID,
   type SitemapCheckInput,
 } from './normalize-sitemap.js';
 
 const PAGE_URL = 'https://example.com/';
 
+/** discoveredUrls defaults to every entries + crawledUrls URL (from
+ *  whichever overrides supplied them), so no existing test accidentally
+ *  trips the orphan check by omission - tests exercising
+ *  sitemap-orphan-page pass a narrower discoveredUrls explicitly. */
 function baseInput(overrides: Partial<SitemapCheckInput> = {}): SitemapCheckInput {
+  const entries = overrides.entries ?? [
+    { url: 'https://example.com/' },
+    { url: 'https://example.com/about' },
+    { url: 'https://example.com/contact' },
+  ];
+  const crawledUrls = overrides.crawledUrls ?? [
+    'https://example.com/',
+    'https://example.com/about',
+    'https://example.com/contact',
+  ];
   return {
     pageUrl: PAGE_URL,
     found: true,
     isSitemapIndex: false,
-    entries: [
-      { url: 'https://example.com/' },
-      { url: 'https://example.com/about' },
-      { url: 'https://example.com/contact' },
-    ],
-    crawledUrls: ['https://example.com/', 'https://example.com/about', 'https://example.com/contact'],
+    entries,
+    crawledUrls,
+    discoveredUrls: [...crawledUrls, ...entries.map((entry) => entry.url)],
     ...overrides,
   };
 }
@@ -109,5 +121,70 @@ describe('sitemap-stale', () => {
 
   it('does not fire when there are no crawled URLs to compare against', () => {
     expect(extractSitemapCandidates(baseInput({ crawledUrls: [] }))).toEqual([]);
+  });
+});
+
+describe('sitemap-orphan-page', () => {
+  it('fires when a sitemap entry was never discovered through any internal link', () => {
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        entries: [
+          { url: 'https://example.com/' },
+          { url: 'https://example.com/about' },
+          { url: 'https://example.com/contact' },
+          { url: 'https://example.com/orphan-promo' },
+        ],
+        discoveredUrls: ['https://example.com/', 'https://example.com/about', 'https://example.com/contact'],
+      }),
+    );
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.ruleId).toBe(SITEMAP_ORPHAN_PAGE_RULE_ID);
+    expect(candidates[0]?.category).toBe('seo');
+    expect(candidates[0]?.severity).toBe('minor');
+    expect(candidates[0]?.rawEvidenceForPage).toEqual({ orphanUrls: ['https://example.com/orphan-promo'] });
+  });
+
+  it('does not treat a page skipped-but-discovered (e.g. robots-blocked) as an orphan', () => {
+    // discoveredUrls includes every URL the crawl found at all, not only
+    // visited ones - a page found via a real link but skipped for
+    // robots/non-HTML/error reasons is not an orphan.
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        entries: [
+          { url: 'https://example.com/' },
+          { url: 'https://example.com/about' },
+          { url: 'https://example.com/contact' },
+        ],
+        crawledUrls: ['https://example.com/', 'https://example.com/about', 'https://example.com/contact'],
+        discoveredUrls: [
+          'https://example.com/',
+          'https://example.com/about',
+          'https://example.com/contact',
+        ],
+      }),
+    );
+    expect(candidates).toEqual([]);
+  });
+
+  it('can fire alongside sitemap-stale, independently', () => {
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        entries: [{ url: 'https://example.com/old-page-1' }, { url: 'https://example.com/orphan' }],
+        crawledUrls: [
+          'https://example.com/',
+          'https://example.com/about',
+          'https://example.com/contact',
+          'https://example.com/blog',
+        ],
+        discoveredUrls: [
+          'https://example.com/',
+          'https://example.com/about',
+          'https://example.com/contact',
+          'https://example.com/blog',
+          'https://example.com/old-page-1',
+        ],
+      }),
+    );
+    expect(candidates.map((c) => c.ruleId).sort()).toEqual([SITEMAP_ORPHAN_PAGE_RULE_ID, SITEMAP_STALE_RULE_ID].sort());
   });
 });

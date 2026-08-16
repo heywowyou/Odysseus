@@ -16,6 +16,12 @@ export { scanSite } from './scan-site.js';
 export type { SiteScanResult, ScanSiteOptions, ScanProgressEvent } from './scan-site.js';
 export { findMentionsLegalesUrl, extractMentionsLegales } from './checks/mentions-legales.js';
 export type { MentionsLegalesExtraction } from './checks/mentions-legales.js';
+export { checkLlmsTxt } from './checks/llms-txt.js';
+export type { LlmsTxtCheckResult } from './checks/llms-txt.js';
+export { checkCanonicalTarget, extractRobotsMetaContent } from './checks/canonical-target.js';
+export type { CanonicalTargetCheckResult } from './checks/canonical-target.js';
+export { findBlockingPattern, isAllowedByRobots, fetchRobotsRules, parseRobotsTxt } from './robots.js';
+export type { RobotsRules } from './robots.js';
 export {
   findWorkspaceRoot,
   ensureEnvLoaded,

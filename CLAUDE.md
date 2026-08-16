@@ -276,6 +276,42 @@ needed, say so and stop. Do not change them and continue.
     section 1 is deliberately left describing the superseded EUR 300 HT
     figure, kept as history of how that number was reached, not the
     current price.
+
+14. **Milestone 8.5a's SEO/GEO checks add a new `geo` `FindingCategory`
+    value rather than folding those checks under `seo`**, decided
+    2026-08-16 alongside the milestone itself. AI-answer-engine
+    extractability (schema/entity completeness, llms.txt, FAQ markup) is
+    a distinct audience from search-ranking signals, and a future report
+    session should be able to give GEO its own section without first
+    having to split rule IDs back out of `seo` by hand. Purely additive
+    to the locked `findings.ts` contract; nothing existing was removed or
+    renamed. As of this milestone, `geo` findings exist in
+    `findings.json` but are not yet in `packages/report`'s
+    `CATEGORY_ORDER` (`findings-appendix.ts`), so they do not render in
+    the PDF appendix - deliberate for this detection-only milestone, but
+    milestone 8.5b/8.5c must decide how they are actually presented
+    rather than leave them silently unrendered. `categoryLabels.geo`
+    exists in both language string files only so the type stays total
+    over `FindingCategory`; it is unused until `CATEGORY_ORDER` changes.
+
+    "Citability of factual statements" (is a sentence phrased in a way
+    an AI engine would cite) was explicitly scoped out of this milestone
+    rather than approximated with an invented heuristic: judging phrasing
+    is a semantic judgment, not a pattern match, and this milestone's
+    hard rule (deterministic scanners detect, LLM only explains) forbids
+    reaching for an LLM call to decide it. Do not add a "citability
+    score" or similar heuristic without revisiting this; the intended
+    path is 8.5c's LLM layer explaining citability from already-detected
+    facts, not a new scanner check inventing a proxy for it.
+
+    `robots.ts`'s `isAllowedByRobots` was refactored to be built on a new
+    exported `findBlockingPattern`, which returns *which* Disallow
+    pattern wins for a path rather than only whether the path is allowed
+    - needed so `robots-disallow-broad` (packages/scanner/src/crawl.ts)
+    can tally how many discovered pages each pattern actually blocks.
+    Behavior of `isAllowedByRobots` itself is unchanged; the existing
+    test suite for it passes unmodified against the refactor.
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
@@ -428,7 +464,8 @@ prospect sites. Each call is approved before it runs.
 
 ## Build order
 
-Milestones 0 through 8 are complete. Milestone 9a is next. Work in
+Milestones 0 through 8 are complete, as are milestone 8.5a and
+milestone 9a. Milestone 8.5b/8.5c and milestone 9b are next. Work in
 vertical slices, one milestone per session.
 
 1. Render diff only, CLI invocable — done
@@ -439,13 +476,14 @@ vertical slices, one milestone per session.
 6. PDF report generation, bilingual — done
 7. Interface: queue and a private single-user dashboard (`odysseus serve`) — done
 8. Custom checks: meta/canonical/JSON-LD/sitemap/hreflang/heading-hierarchy plus the extended accessibility pass (keyboard traps, focus order, form error handling, video captions, alt-text heuristic) — done
+8.5a. Deterministic SEO and GEO (generative-engine-optimization) detection checks, a new `geo` finding category alongside `seo` — done 2026-08-16. Detection only: no reference data, no report changes, no LLM prose. See the milestone entry in the brief, section 7, and trade-off 14 below.
 
 Milestone 9 (originally "prospecting mode") was split 2026-08-15 into
 9a (prospect acquisition and qualification), 9b (prospecting
 throughput), and 9c (outreach generation); milestones 10 through 13
 (benchmark study, regime 2 documentation generator, free scope check,
-monitoring) follow. Full milestone list, including the phases beyond 8,
-is in the brief, section 7.
+monitoring) follow. 9a is done 2026-08-16. Full milestone list,
+including the phases beyond 8, is in the brief, section 7.
 
 Do not start a milestone before the previous one has tests passing, and
 do not consider a milestone finished until its output has been checked

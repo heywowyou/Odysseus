@@ -150,6 +150,9 @@ export async function runAuditStage(
           ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
           ...(page.discoveredFrom !== undefined ? { discoveredFrom: page.discoveredFrom } : {}),
         })),
+        ...(artifacts.manifest.crawl.robotsDisallowMatches !== undefined
+          ? { robotsDisallowMatches: artifacts.manifest.crawl.robotsDisallowMatches }
+          : {}),
       },
     });
     await writeFindingsFile(artifacts.auditDir, findings);

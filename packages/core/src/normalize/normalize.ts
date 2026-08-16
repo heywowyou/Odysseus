@@ -42,6 +42,17 @@ import {
 } from './normalize-form-error-handling.js';
 import { extractVideoCaptionsCandidates, type VideoCaptionsCheckInput } from './normalize-video-captions.js';
 import { extractAltTextCandidates, type AltTextCheckInput } from './normalize-alt-text.js';
+import {
+  extractCanonicalTargetCandidates,
+  type CanonicalTargetCheckInput,
+} from './normalize-canonical-target.js';
+import { extractLlmsTxtCandidates, type LlmsTxtCheckInput } from './normalize-llms-txt.js';
+import {
+  extractGeoCandidates,
+  readJsonLdTypes,
+  QUESTION_HEADING_PATTERN,
+  type GeoPageInput,
+} from './normalize-geo.js';
 import type { FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
 
@@ -62,9 +73,16 @@ export interface NormalizePageInput {
    *  and headings are all per-page concerns. */
   headMetadata?: HeadMetadataCheckInput;
   headMetadataError?: string;
+  /** Milestone 8.5a. Only set when this page declares exactly one
+   *  canonical URL pointing at a different page - see
+   *  packages/scanner/src/checks/canonical-target.ts. */
+  canonicalTarget?: CanonicalTargetCheckInput;
   /** Only set on the crawl's own start URL (see scan-site.ts) - sitemap
    *  is a site-level concept, not a per-page one. */
   sitemapCheck?: SitemapCheckInput;
+  /** Milestone 8.5a. Only set on the crawl's own start URL, same
+   *  attribution as sitemapCheck above. */
+  llmsTxtCheck?: LlmsTxtCheckInput;
   mixedContent?: MixedContentCheckInput;
   keyboardNavigation?: KeyboardNavigationCheckInput;
   formErrorHandling?: FormErrorHandlingCheckInput;
@@ -95,7 +113,9 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.renderDiff) candidates.push(...extractRenderDiffCandidates(page.renderDiff, page.url));
     if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
     if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));
+    if (page.canonicalTarget) candidates.push(...extractCanonicalTargetCandidates(page.canonicalTarget));
     if (page.sitemapCheck) candidates.push(...extractSitemapCandidates(page.sitemapCheck));
+    if (page.llmsTxtCheck) candidates.push(...extractLlmsTxtCandidates(page.llmsTxtCheck, page.url));
     if (page.mixedContent) candidates.push(...extractMixedContentCandidates(page.mixedContent));
     if (page.keyboardNavigation) candidates.push(...extractKeyboardNavigationCandidates(page.keyboardNavigation));
     if (page.formErrorHandling) candidates.push(...extractFormErrorHandlingCandidates(page.formErrorHandling));
@@ -109,6 +129,28 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     .filter((page) => page.headMetadata && page.headMetadata.hreflangLinks.length > 0)
     .map((page) => ({ url: page.url, hreflangLinks: page.headMetadata!.hreflangLinks }));
   if (pagesWithHreflang.length > 0) candidates.push(...extractHreflangCandidates(pagesWithHreflang));
+
+  const pagesWithHeadMetadata = input.pages.filter((page) => page.headMetadata);
+  if (pagesWithHeadMetadata.length > 0) {
+    // Milestone 8.5a. Reads the same jsonLdBlocks/headings facts
+    // normalize-head-metadata.ts already reads, for a different,
+    // additive judgment - see normalize-geo.ts's own header comment for
+    // why this is not a re-extraction.
+    const geoPages: GeoPageInput[] = pagesWithHeadMetadata.map((page) => {
+      const jsonLdTypes = page.headMetadata!.jsonLdBlocks.flatMap((block) => readJsonLdTypes(block.parsed));
+      return {
+        pageUrl: page.url,
+        jsonLdTypes,
+        jsonLdEntities: page.headMetadata!.jsonLdBlocks.map((block) => ({ parsed: block.parsed })),
+        questionHeadingCount: page.headMetadata!.headings.filter((heading) =>
+          QUESTION_HEADING_PATTERN.test(heading.text.trim()),
+        ).length,
+        hasFaqSchema: jsonLdTypes.some((type) => /^(faqpage|qapage)$/i.test(type)),
+      };
+    });
+    const homepageUrl = input.crawl?.startUrl ?? pagesWithHeadMetadata[0]!.url;
+    candidates.push(...extractGeoCandidates(geoPages, homepageUrl));
+  }
 
   return candidates;
 }

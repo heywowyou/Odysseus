@@ -2,6 +2,7 @@ import type { Browser } from 'playwright';
 import { getPageTimeoutMs, getScanConcurrency } from './config.js';
 import type { RedirectHostCache } from './checks/transactional-flow.js';
 import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
+import { checkLlmsTxt, type LlmsTxtCheckResult } from './checks/llms-txt.js';
 import { type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import { type PageScanResult, scanPage } from './scan-page.js';
 
@@ -66,7 +67,8 @@ async function runScanLane(
   mentionsLegalesUrl: string | undefined,
   redirectHostCache: RedirectHostCache,
   homepageUrl: string | undefined,
-  sitemapCheck: (SitemapCheckResult & { crawledUrls: string[] }) | undefined,
+  sitemapCheck: (SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] }) | undefined,
+  llmsTxtCheck: LlmsTxtCheckResult | undefined,
   onPageDone: (pageResult: PageScanResult) => void,
 ): Promise<void> {
   let nextDelayMs = startDelayMs;
@@ -86,6 +88,7 @@ async function runScanLane(
       ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
       ...(homepageUrl !== undefined ? { homepageUrl } : {}),
       ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
+      ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
     });
     onPageDone(pageResult);
   }
@@ -152,9 +155,28 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
           options.timeoutMs ?? getPageTimeoutMs(),
         )),
         crawledUrls: pagesToScan.map((page) => page.url),
+        // Every URL the crawl discovered at all (visited, robots-skipped,
+        // non-HTML-skipped, or errored), not only the visited subset
+        // crawledUrls above tracks - milestone 8.5a's sitemap-orphan-page
+        // check needs "was this sitemap URL linked from anywhere on the
+        // site", which a skipped-but-discovered page still answers yes
+        // to. crawledUrls stays as-is (visited only) since staleness is
+        // rightly judged against pages that were actually scanned.
+        discoveredUrls: crawl.pages.map((page) => page.url),
       }
     : undefined;
   const homepageUrlForScan = homepageWasVisited ? crawl.startUrl : undefined;
+
+  // llms.txt is a site-level fetch, same shape as sitemap.xml above -
+  // fetched once here regardless of whether the homepage itself was
+  // visited (unlike sitemapCheck, there is no per-page attribution
+  // question blocking it: this is a single unconditional GET at the
+  // site's origin, not something that needs a page to attach staleness
+  // comparisons to), and attached to the homepage's scan.json below only
+  // when the homepage was actually visited, the same attribution pattern
+  // every other site-level check here uses.
+  const llmsTxtCheck = await checkLlmsTxt(new URL(crawl.startUrl).origin, options.timeoutMs ?? getPageTimeoutMs());
+  const llmsTxtCheckForScan = homepageWasVisited ? llmsTxtCheck : undefined;
 
   const concurrency = Math.max(1, Math.min(options.concurrency ?? getScanConcurrency(), pagesToScan.length || 1));
 
@@ -192,6 +214,7 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
           redirectHostCache,
           homepageUrlForScan,
           sitemapCheck,
+          llmsTxtCheckForScan,
           onPageDone,
         ),
       ),

@@ -13,6 +13,7 @@ import { severityFromCustom } from './severity.js';
 
 export const SITEMAP_MISSING_RULE_ID = 'sitemap-missing';
 export const SITEMAP_STALE_RULE_ID = 'sitemap-stale';
+export const SITEMAP_ORPHAN_PAGE_RULE_ID = 'sitemap-orphan-page';
 
 export interface SitemapEntryInput {
   url: string;
@@ -30,6 +31,15 @@ export interface SitemapCheckInput {
    *  by how well the sitemap's own URL list matches what is really
    *  there - not by an arbitrary "how old is too old" date threshold. */
   crawledUrls: string[];
+  /** Milestone 8.5a: every URL the crawl discovered at all - visited,
+   *  robots-skipped, non-HTML-skipped, or errored - not only the visited
+   *  subset crawledUrls tracks. A page skipped for one of those reasons
+   *  was still found via a real internal link, so it is not an orphan;
+   *  crawledUrls alone would over-report orphans for exactly those
+   *  pages. Used only by the sitemap-orphan-page check below; staleness
+   *  above rightly keeps using crawledUrls, since it is judged against
+   *  pages that were actually scanned. */
+  discoveredUrls: string[];
 }
 
 /** Below this fraction of actually-crawled pages appearing in the
@@ -100,30 +110,54 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
     );
   }
 
+  const candidates: FindingCandidate[] = [];
+
   const sitemapUrlSet = new Set(input.entries.map((entry) => normalizeUrl(entry.url, pageUrl)));
   const matchedCount = input.crawledUrls.filter((url) => sitemapUrlSet.has(normalizeUrl(url, pageUrl))).length;
   const matchRatio = matchedCount / input.crawledUrls.length;
 
   if (matchRatio < STALE_MATCH_RATIO_THRESHOLD) {
-    return [
-      {
-        source: 'custom',
-        ruleId: SITEMAP_STALE_RULE_ID,
-        category: 'seo',
-        severity: severityFromCustom(SITEMAP_STALE_RULE_ID),
-        wcagCriteria: [],
-        title: 'Sitemap does not reflect the current site',
-        description: `Only ${matchedCount} of ${input.crawledUrls.length} pages this audit actually found appear in the sitemap (${input.entries.length} URLs listed). A sitemap that has drifted from the real site can mislead search engines about which pages exist.`,
-        pageUrl,
-        element: null,
-        rawEvidenceForPage: {
-          sitemapEntryCount: input.entries.length,
-          crawledPageCount: input.crawledUrls.length,
-          matchedCount,
-        },
+    candidates.push({
+      source: 'custom',
+      ruleId: SITEMAP_STALE_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(SITEMAP_STALE_RULE_ID),
+      wcagCriteria: [],
+      title: 'Sitemap does not reflect the current site',
+      description: `Only ${matchedCount} of ${input.crawledUrls.length} pages this audit actually found appear in the sitemap (${input.entries.length} URLs listed). A sitemap that has drifted from the real site can mislead search engines about which pages exist.`,
+      pageUrl,
+      element: null,
+      rawEvidenceForPage: {
+        sitemapEntryCount: input.entries.length,
+        crawledPageCount: input.crawledUrls.length,
+        matchedCount,
       },
-    ];
+    });
   }
 
-  return [];
+  // Milestone 8.5a: independent of staleness above - a sitemap can be
+  // both a good match for the crawled pages and still list URLs the
+  // crawl never found through any internal link at all.
+  const discoveredSet = new Set(input.discoveredUrls.map((url) => normalizeUrl(url, pageUrl)));
+  const orphanUrls = input.entries
+    .map((entry) => entry.url)
+    .filter((url) => !discoveredSet.has(normalizeUrl(url, pageUrl)));
+
+  if (orphanUrls.length > 0) {
+    const preview = orphanUrls.slice(0, 3);
+    candidates.push({
+      source: 'custom',
+      ruleId: SITEMAP_ORPHAN_PAGE_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(SITEMAP_ORPHAN_PAGE_RULE_ID),
+      wcagCriteria: [],
+      title: 'Sitemap lists pages not reachable through the site itself',
+      description: `${orphanUrls.length} URL(s) in the sitemap were never found through any internal link during this crawl, for example: ${preview.join(', ')}. A page with no internal path to it depends entirely on the sitemap for discovery.`,
+      pageUrl,
+      element: null,
+      rawEvidenceForPage: { orphanUrls },
+    });
+  }
+
+  return candidates;
 }

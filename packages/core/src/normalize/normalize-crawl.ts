@@ -24,6 +24,15 @@ import { severityFromCustom } from './severity.js';
 
 export const ROBOTS_BLOCKS_INDEXING_RULE_ID = 'robots-blocks-indexing';
 export const BROKEN_INTERNAL_LINK_RULE_ID = 'broken-internal-link';
+export const ROBOTS_DISALLOW_BROAD_RULE_ID = 'robots-disallow-broad';
+
+/** At or above this many discovered URLs blocked by one Disallow
+ *  pattern, the pattern is broad enough to flag - conservative on
+ *  purpose (blocking one or two specific pages, like /panier or
+ *  /admin, is ordinary and often deliberate), so this only fires once
+ *  the pattern is clearly excluding a real section of the site rather
+ *  than a couple of targeted paths. */
+const BROAD_DISALLOW_MIN_MATCHED_PAGES = 3;
 
 export type CrawlPageStatus = 'visited' | 'skipped-robots' | 'skipped-non-html' | 'error';
 
@@ -39,6 +48,14 @@ export interface CrawlPageInput {
 export interface NormalizeCrawlInput {
   startUrl: string;
   pages: CrawlPageInput[];
+  /** Milestone 8.5a. For every robots.txt Disallow pattern that was the
+   *  actual winning (blocking) rule for at least one discovered URL, how
+   *  many URLs it blocked - computed by scanner (packages/scanner/src/
+   *  crawl.ts), since judging which pattern wins needs robots.ts's own
+   *  longest-match-wins logic, which core does not and must not depend
+   *  on. Optional so offline re-normalization against a pre-8.5a
+   *  manifest still works, just without robots-disallow-broad. */
+  robotsDisallowMatches?: { pattern: string; matchedPageCount: number }[];
 }
 
 function isBrokenTarget(page: CrawlPageInput): boolean {
@@ -63,6 +80,22 @@ export function extractCrawlCandidates(input: NormalizeCrawlInput): FindingCandi
       pageUrl: input.startUrl,
       element: null,
       rawEvidenceForPage: {},
+    });
+  }
+
+  for (const match of input.robotsDisallowMatches ?? []) {
+    if (match.matchedPageCount < BROAD_DISALLOW_MIN_MATCHED_PAGES) continue;
+    candidates.push({
+      source: 'custom',
+      ruleId: ROBOTS_DISALLOW_BROAD_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(ROBOTS_DISALLOW_BROAD_RULE_ID),
+      wcagCriteria: [],
+      title: 'robots.txt rule blocks a large part of the site',
+      description: `The robots.txt rule "Disallow: ${match.pattern}" blocks at least ${match.matchedPageCount} pages this audit found during the crawl from being indexed. If this is not deliberate, review whether the pattern is broader than intended.`,
+      pageUrl: input.startUrl,
+      element: null,
+      rawEvidenceForPage: { pattern: match.pattern, matchedPageCount: match.matchedPageCount },
     });
   }
 

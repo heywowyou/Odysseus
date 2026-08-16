@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isAllowedByRobots, parseRobotsTxt } from './robots.js';
+import { findBlockingPattern, isAllowedByRobots, parseRobotsTxt } from './robots.js';
 
 describe('parseRobotsTxt', () => {
   it('returns allow-all when the text has no matching group', () => {
@@ -111,5 +111,27 @@ describe('isAllowedByRobots', () => {
     const rules = { found: true, disallow: ['/*.pdf$'], allow: [] , sitemapUrls: [] };
     expect(isAllowedByRobots(rules, '/brochure.pdf')).toBe(false);
     expect(isAllowedByRobots(rules, '/brochure.pdf?download=1')).toBe(true);
+  });
+});
+
+describe('findBlockingPattern', () => {
+  it('returns undefined when the page is allowed', () => {
+    const rules = { found: true, disallow: ['/private'], allow: [], sitemapUrls: [] };
+    expect(findBlockingPattern(rules, '/public')).toBeUndefined();
+  });
+
+  it('returns the winning Disallow pattern text, not just a boolean, when blocked', () => {
+    const rules = { found: true, disallow: ['/private'], allow: [], sitemapUrls: [] };
+    expect(findBlockingPattern(rules, '/private/nested')).toBe('/private');
+  });
+
+  it('returns undefined when a longer Allow overrides the Disallow', () => {
+    const rules = { found: true, disallow: ['/private'], allow: ['/private/public-notice'], sitemapUrls: [] };
+    expect(findBlockingPattern(rules, '/private/public-notice')).toBeUndefined();
+  });
+
+  it('returns the more specific of two matching Disallow patterns', () => {
+    const rules = { found: true, disallow: ['/blog', '/blog/drafts'], allow: [], sitemapUrls: [] };
+    expect(findBlockingPattern(rules, '/blog/drafts/2026')).toBe('/blog/drafts');
   });
 });

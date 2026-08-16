@@ -13,6 +13,7 @@ function buildCrawlResult(overrides: Partial<CrawlResult> = {}): CrawlResult {
     robotsTxtFound: true,
     effectiveDelayMs: 1000,
     robotsSitemapUrls: [],
+    robotsDisallowMatches: [],
     ...overrides,
   };
 }

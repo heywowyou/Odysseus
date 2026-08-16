@@ -58,6 +58,7 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
       maxDepth: input.crawl.maxDepth,
       robotsTxtFound: input.crawl.robotsTxtFound,
       effectiveDelayMs: input.crawl.effectiveDelayMs,
+      robotsDisallowMatches: input.crawl.robotsDisallowMatches,
     },
     pages: input.pages,
     ...(input.siteSignals !== undefined ? { siteSignals: input.siteSignals } : {}),

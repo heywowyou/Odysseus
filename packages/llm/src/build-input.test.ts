@@ -117,7 +117,12 @@ describe('buildWritingInput', () => {
       {
         themeKey: 't1',
         findingIds: [first.findingId],
-        category: first.category,
+        // Cast, not a widened schema: this fixture predates milestone
+        // 8.5a's 'geo' category and never actually contains it - the
+        // structure-pass schema's own category enum is out of scope for
+        // this milestone (see CLAUDE.md trade-off 7 on why it is a
+        // deliberately narrow, hand-maintained mirror).
+        category: first.category as StructureThemeWithKey['category'],
         effort: 'low',
         impact: 'high',
         priorityRank: 1,
@@ -125,7 +130,7 @@ describe('buildWritingInput', () => {
       {
         themeKey: 't2',
         findingIds: [second.findingId, ...rest.slice(0, 1).map((f) => f.findingId)],
-        category: second.category,
+        category: second.category as StructureThemeWithKey['category'],
         effort: 'medium',
         impact: 'medium',
         priorityRank: 2,

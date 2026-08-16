@@ -12,6 +12,9 @@ import {
 } from './checks/transactional-flow.js';
 import { extractHeadMetadata, type HeadMetadataExtraction } from './checks/head-metadata.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
+import type { LlmsTxtCheckResult } from './checks/llms-txt.js';
+import { checkCanonicalTarget, type CanonicalTargetCheckResult } from './checks/canonical-target.js';
+import { getPageTimeoutMs } from './config.js';
 import { extractMixedContentResources, type MixedContentExtraction } from './checks/mixed-content.js';
 import { walkKeyboardNavigation, type KeyboardNavigationExtraction } from './checks/keyboard-navigation.js';
 import { checkFormErrorHandling, type FormErrorHandlingExtraction } from './checks/form-error-handling.js';
@@ -47,7 +50,10 @@ export interface ScanPageOptions {
    *  checkSitemap()'s own return type, since deciding staleness by
    *  comparing the two is core's job, not scanner's - scanner only
    *  reports facts. */
-  sitemapCheck?: SitemapCheckResult & { crawledUrls: string[] };
+  sitemapCheck?: SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] };
+  /** Milestone 8.5a: fetched once per site in scanSite(), same site-level
+   *  attachment pattern as sitemapCheck above. */
+  llmsTxtCheck?: LlmsTxtCheckResult;
 }
 
 /**
@@ -69,7 +75,9 @@ export interface PageScanResult {
   transactionalFlowRedirectChecks?: TransactionalFlowRedirectCheck[];
   headMetadata?: HeadMetadataExtraction;
   headMetadataError?: string;
-  sitemapCheck?: SitemapCheckResult & { crawledUrls: string[]; pageUrl: string };
+  sitemapCheck?: SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[]; pageUrl: string };
+  llmsTxtCheck?: LlmsTxtCheckResult;
+  canonicalTarget?: CanonicalTargetCheckResult;
   mixedContent?: MixedContentExtraction;
   mixedContentError?: string;
   keyboardNavigation?: KeyboardNavigationExtraction;
@@ -127,6 +135,9 @@ export async function scanPage(
   if (options.sitemapCheck !== undefined && url === options.homepageUrl) {
     result.sitemapCheck = { ...options.sitemapCheck, pageUrl: url };
   }
+  if (options.llmsTxtCheck !== undefined && url === options.homepageUrl) {
+    result.llmsTxtCheck = options.llmsTxtCheck;
+  }
   let axeResult: AxeResults | undefined;
   let axeError: string | undefined;
   let mentionsLegalesResult: MentionsLegalesExtraction | undefined;
@@ -135,6 +146,7 @@ export async function scanPage(
   let transactionalFlowRedirectChecks: TransactionalFlowRedirectCheck[] | undefined;
   let headMetadataResult: HeadMetadataExtraction | undefined;
   let headMetadataError: string | undefined;
+  let canonicalTargetResult: CanonicalTargetCheckResult | undefined;
   let mixedContentResult: MixedContentExtraction | undefined;
   let mixedContentError: string | undefined;
   let keyboardNavigationResult: KeyboardNavigationExtraction | undefined;
@@ -214,6 +226,29 @@ export async function scanPage(
           headMetadataError = toErrorMessage(error);
         }
 
+        // Only meaningful once headMetadataResult exists and names
+        // exactly one canonical URL - zero means nothing to check, more
+        // than one is already normalize-head-metadata.ts's
+        // canonical-conflicting check's job, not this one's. A failure
+        // here is folded into "no result" rather than a separate error
+        // field: checkCanonicalTarget already returns fetchError inside
+        // its own result for a failed fetch, and null for "nothing to
+        // check", so there is nothing left for a thrown error to mean
+        // here in practice - kept in a try purely as defensive coding
+        // for an unexpected throw (e.g. a malformed pageUrl).
+        if (headMetadataResult?.canonicalUrls.length === 1) {
+          try {
+            canonicalTargetResult =
+              (await checkCanonicalTarget(
+                url,
+                headMetadataResult.canonicalUrls[0]!,
+                options.timeoutMs ?? getPageTimeoutMs(),
+              )) ?? undefined;
+          } catch {
+            canonicalTargetResult = undefined;
+          }
+        }
+
         try {
           mixedContentResult = await extractMixedContentResources(page, url);
         } catch (error) {
@@ -267,6 +302,7 @@ export async function scanPage(
   if (transactionalFlowRedirectChecks !== undefined) result.transactionalFlowRedirectChecks = transactionalFlowRedirectChecks;
   if (headMetadataResult !== undefined) result.headMetadata = headMetadataResult;
   if (headMetadataError !== undefined) result.headMetadataError = headMetadataError;
+  if (canonicalTargetResult !== undefined) result.canonicalTarget = canonicalTargetResult;
   if (mixedContentResult !== undefined) result.mixedContent = mixedContentResult;
   if (mixedContentError !== undefined) result.mixedContentError = mixedContentError;
   if (keyboardNavigationResult !== undefined) result.keyboardNavigation = keyboardNavigationResult;

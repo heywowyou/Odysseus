@@ -164,4 +164,79 @@ describe('normalizeAudit', () => {
     });
     expect(findings[0]?.elements).toEqual([]);
   });
+
+  describe('milestone 8.5a SEO/GEO checks', () => {
+    it('wires canonicalTarget into the orchestrator', () => {
+      const findings = normalizeAudit({
+        auditId: 'audit-1',
+        startedAt: STARTED_AT,
+        pages: [
+          buildNormalizePageInput({
+            url: 'https://example.com/',
+            canonicalTarget: {
+              pageUrl: 'https://example.com/',
+              canonicalUrl: 'https://example.com/gone',
+              httpStatus: 404,
+              noindex: false,
+            },
+          }),
+        ],
+      });
+      expect(findings).toHaveLength(1);
+      expect(findings[0]?.ruleId).toBe('canonical-target-unreachable');
+      expect(findings[0]?.category).toBe('seo');
+    });
+
+    it('wires llmsTxtCheck into the orchestrator', () => {
+      const findings = normalizeAudit({
+        auditId: 'audit-1',
+        startedAt: STARTED_AT,
+        pages: [buildNormalizePageInput({ url: 'https://example.com/', llmsTxtCheck: { found: false } })],
+      });
+      expect(findings).toHaveLength(1);
+      expect(findings[0]?.ruleId).toBe('llms-txt-missing');
+      expect(findings[0]?.category).toBe('geo');
+    });
+
+    it('wires the site-wide GEO entity check across every page, attributed to the crawl start URL', () => {
+      const findings = normalizeAudit({
+        auditId: 'audit-1',
+        startedAt: STARTED_AT,
+        pages: [
+          buildNormalizePageInput({
+            url: 'https://example.com/about',
+            headMetadata: {
+              pageUrl: 'https://example.com/about',
+              title: null,
+              metaDescription: null,
+              canonicalUrls: [],
+              openGraphTags: {},
+              jsonLdBlocks: [],
+              headings: [],
+              hreflangLinks: [],
+              robotsMeta: null,
+            },
+          }),
+        ],
+        crawl: { startUrl: 'https://example.com/', pages: [] },
+      });
+      const entityMissing = findings.filter((f) => f.ruleId === 'structured-data-entity-missing');
+      expect(entityMissing).toHaveLength(1);
+      expect(entityMissing[0]?.pageUrls).toEqual(['https://example.com/']);
+    });
+
+    it('wires robots-disallow-broad from the crawl input', () => {
+      const findings = normalizeAudit({
+        auditId: 'audit-1',
+        startedAt: STARTED_AT,
+        pages: [buildNormalizePageInput({ url: 'https://example.com/' })],
+        crawl: {
+          startUrl: 'https://example.com/',
+          pages: [{ url: 'https://example.com/', status: 'visited', httpStatus: 200 }],
+          robotsDisallowMatches: [{ pattern: '/blog/', matchedPageCount: 4 }],
+        },
+      });
+      expect(findings.map((f) => f.ruleId)).toContain('robots-disallow-broad');
+    });
+  });
 });

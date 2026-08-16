@@ -145,6 +145,39 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'form-error-not-associated': 'serious',
   'video-missing-captions': 'serious',
   'alt-text-quality-heuristic': 'minor',
+
+  // Milestone 8.5a: SEO checks beyond what milestone 8 and Lighthouse's
+  // own seo/performance categories already cover.
+  // canonical-target-unreachable: the declared definitive URL is broken,
+  // a direct crawlability defect.
+  // canonical-target-noindex: a real but recoverable contradictory
+  // signal (the target is excluded from indexing).
+  // sitemap-orphan-page: hygiene - the page still exists and works, it
+  // just depends entirely on the sitemap for discovery.
+  // robots-disallow-broad: a real, recoverable indexing-scope issue;
+  // capped below robots-blocks-indexing/noindex-on-public-page since it
+  // may be deliberate (excluding a cart or admin section).
+  'canonical-target-unreachable': 'serious',
+  'canonical-target-noindex': 'moderate',
+  'sitemap-orphan-page': 'minor',
+  'robots-disallow-broad': 'moderate',
+
+  // Milestone 8.5a: GEO (generative-engine-optimization) checks - do
+  // real, extractable content exist for an AI answer engine to cite.
+  // llms-txt-missing: an emerging, optional convention, not yet a
+  // settled standard - opportunity, not a defect.
+  // structured-data-entity-missing: no machine-readable statement of who
+  // the business is anywhere on the site, a real gap for entity-based
+  // extraction.
+  // entity-data-incomplete: an entity block exists but is missing basic
+  // identifying fields - a lesser version of the above.
+  // faq-content-without-schema: a structural pattern match only
+  // (questions-shaped headings with no matching schema), not a semantic
+  // judgment about content quality - kept at the lowest tier.
+  'llms-txt-missing': 'minor',
+  'structured-data-entity-missing': 'moderate',
+  'entity-data-incomplete': 'minor',
+  'faq-content-without-schema': 'minor',
 };
 
 export function severityFromCustom(ruleId: string): Severity {

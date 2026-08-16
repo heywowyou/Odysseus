@@ -152,6 +152,10 @@ export interface AuditManifest {
     maxDepth: number;
     robotsTxtFound: boolean;
     effectiveDelayMs: number;
+    /** Milestone 8.5a. Optional so manifests from before this milestone
+     *  still parse; `normalize <dir>` treats an absent value as "no
+     *  disallow-breadth data available", not as zero matches. */
+    robotsDisallowMatches?: { pattern: string; matchedPageCount: number }[];
   };
   pages: ManifestPageEntry[];
   siteSignals?: AuditManifestSiteSignals;

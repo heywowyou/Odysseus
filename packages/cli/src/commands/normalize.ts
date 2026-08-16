@@ -56,6 +56,9 @@ export function registerNormalizeCommand(program: Command): void {
               ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
               ...(page.discoveredFrom !== undefined ? { discoveredFrom: page.discoveredFrom } : {}),
             })),
+            ...(manifest.crawl.robotsDisallowMatches !== undefined
+              ? { robotsDisallowMatches: manifest.crawl.robotsDisallowMatches }
+              : {}),
           },
         });
 

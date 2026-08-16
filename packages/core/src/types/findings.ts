@@ -14,9 +14,18 @@ export const FINDINGS_SCHEMA_VERSION = 1 as const;
 /** Which scanner produced the finding. Never inferred, always recorded. */
 export type FindingSource = 'axe' | 'lighthouse' | 'custom' | 'renderdiff';
 
+/**
+ * 'geo' added milestone 8.5a: generative-engine-optimization findings
+ * (AI-answer-engine extractability - schema/entity completeness, llms.txt,
+ * FAQ markup) are a distinct audience from 'seo' (search-ranking signals),
+ * decided rather than folding GEO rule IDs under 'seo' with no category
+ * split, so a future report section can address them separately. Purely
+ * additive: no existing category was removed or renamed.
+ */
 export type FindingCategory =
   | 'accessibility'
   | 'seo'
+  | 'geo'
   | 'performance'
   | 'rendering';
 

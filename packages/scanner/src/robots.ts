@@ -98,27 +98,41 @@ export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
 
 /**
  * Longest matching pattern wins; a tie between an allow and a disallow
- * of equal length resolves to allow. No match at all means allowed.
+ * of equal length resolves to allow. Returns the winning Disallow
+ * pattern's own text when the page ends up blocked, or undefined when it
+ * is allowed (no match at all, or an allow won) - exported (not just
+ * isAllowedByRobots' boolean) because milestone 8.5a's
+ * robots-disallow-broad check needs to know *which* disallow pattern is
+ * actually responsible for blocking a given page, not just that it is
+ * blocked, so it can tally matches per pattern.
  */
-export function isAllowedByRobots(rules: RobotsRules, pathname: string): boolean {
+export function findBlockingPattern(rules: RobotsRules, pathname: string): string | undefined {
   let bestLength = -1;
-  let bestIsAllow = true;
+  let bestDisallowPattern: string | undefined;
 
   const consider = (pattern: string, isAllow: boolean): void => {
     if (pattern.length < bestLength) return;
     if (!patternToRegExp(pattern).test(pathname)) return;
     if (pattern.length > bestLength) {
       bestLength = pattern.length;
-      bestIsAllow = isAllow;
+      bestDisallowPattern = isAllow ? undefined : pattern;
     } else if (isAllow) {
-      bestIsAllow = true;
+      bestDisallowPattern = undefined;
     }
   };
 
   for (const pattern of rules.disallow) consider(pattern, false);
   for (const pattern of rules.allow) consider(pattern, true);
 
-  return bestLength === -1 ? true : bestIsAllow;
+  return bestDisallowPattern;
+}
+
+/**
+ * Longest matching pattern wins; a tie between an allow and a disallow
+ * of equal length resolves to allow. No match at all means allowed.
+ */
+export function isAllowedByRobots(rules: RobotsRules, pathname: string): boolean {
+  return findBlockingPattern(rules, pathname) === undefined;
 }
 
 /**

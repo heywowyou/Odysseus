@@ -3,6 +3,7 @@ import {
   extractCrawlCandidates,
   ROBOTS_BLOCKS_INDEXING_RULE_ID,
   BROKEN_INTERNAL_LINK_RULE_ID,
+  ROBOTS_DISALLOW_BROAD_RULE_ID,
   type NormalizeCrawlInput,
 } from './normalize-crawl.js';
 
@@ -136,5 +137,49 @@ describe('broken-internal-link', () => {
       }),
     );
     expect(candidates.filter((c) => c.ruleId === BROKEN_INTERNAL_LINK_RULE_ID)).toEqual([]);
+  });
+});
+
+describe('robots-disallow-broad', () => {
+  it('fires when a Disallow pattern blocks 3 or more discovered pages', () => {
+    const candidates = extractCrawlCandidates(
+      baseInput({
+        robotsDisallowMatches: [{ pattern: '/blog/', matchedPageCount: 5 }],
+      }),
+    );
+    const broad = candidates.filter((c) => c.ruleId === ROBOTS_DISALLOW_BROAD_RULE_ID);
+    expect(broad).toHaveLength(1);
+    expect(broad[0]?.category).toBe('seo');
+    expect(broad[0]?.severity).toBe('moderate');
+    expect(broad[0]?.pageUrl).toBe(START_URL);
+    expect(broad[0]?.element).toBeNull();
+    expect(broad[0]?.rawEvidenceForPage).toEqual({ pattern: '/blog/', matchedPageCount: 5 });
+  });
+
+  it('does not fire below the threshold - a couple of targeted pages is ordinary', () => {
+    const candidates = extractCrawlCandidates(
+      baseInput({
+        robotsDisallowMatches: [{ pattern: '/panier', matchedPageCount: 2 }],
+      }),
+    );
+    expect(candidates.filter((c) => c.ruleId === ROBOTS_DISALLOW_BROAD_RULE_ID)).toEqual([]);
+  });
+
+  it('does not fire when there are no disallow matches at all', () => {
+    expect(extractCrawlCandidates(baseInput())).toEqual([]);
+  });
+
+  it('emits one candidate per qualifying pattern', () => {
+    const candidates = extractCrawlCandidates(
+      baseInput({
+        robotsDisallowMatches: [
+          { pattern: '/blog/', matchedPageCount: 5 },
+          { pattern: '/products/', matchedPageCount: 8 },
+          { pattern: '/panier', matchedPageCount: 1 },
+        ],
+      }),
+    );
+    const broad = candidates.filter((c) => c.ruleId === ROBOTS_DISALLOW_BROAD_RULE_ID);
+    expect(broad).toHaveLength(2);
   });
 });

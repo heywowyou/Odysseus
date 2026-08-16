@@ -7,7 +7,7 @@ import {
   getPageTimeoutMs,
 } from './config.js';
 import { normalizeInternalLinks } from './links.js';
-import { fetchRobotsRules, isAllowedByRobots } from './robots.js';
+import { fetchRobotsRules, findBlockingPattern, isAllowedByRobots } from './robots.js';
 import { findMentionsLegalesUrl } from './checks/mentions-legales.js';
 
 /** Progress events for a live ETA display. Purely additive: emitted only
@@ -61,6 +61,17 @@ export interface CrawlResult {
    *  RobotsRules.sitemapUrls), passed through so checks/sitemap.ts never
    *  fetches robots.txt a second time. */
   robotsSitemapUrls: string[];
+  /** Milestone 8.5a: for every Disallow pattern that was actually the
+   *  winning (blocking) rule for at least one URL this crawl discovered
+   *  (visited or not - a page skipped-robots was still found via a real
+   *  link), how many URLs it blocked. Computed here, not left for core to
+   *  re-derive, because judging "which pattern blocked this page" needs
+   *  robots.ts's own longest-match-wins logic (findBlockingPattern) -
+   *  core does not and must not depend on scanner. The moderate/severe
+   *  judgment of what counts as "broad enough to flag" is still core's
+   *  call (see normalize-crawl.ts), same detect/decide split as every
+   *  other custom check. */
+  robotsDisallowMatches: { pattern: string; matchedPageCount: number }[];
 }
 
 interface QueueItem {
@@ -181,6 +192,17 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const visitedUrls = pages.filter((page) => page.status === 'visited').map((page) => page.url);
   const mentionsLegalesPageUrl = findMentionsLegalesUrl(visitedUrls) ?? undefined;
 
+  const disallowMatchCounts = new Map<string, number>();
+  for (const page of pages) {
+    const blockingPattern = findBlockingPattern(robotsRules, new URL(page.url).pathname);
+    if (blockingPattern === undefined) continue;
+    disallowMatchCounts.set(blockingPattern, (disallowMatchCounts.get(blockingPattern) ?? 0) + 1);
+  }
+  const robotsDisallowMatches = [...disallowMatchCounts.entries()].map(([pattern, matchedPageCount]) => ({
+    pattern,
+    matchedPageCount,
+  }));
+
   return {
     startUrl: start.toString(),
     pages,
@@ -191,5 +213,6 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     effectiveDelayMs,
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
     robotsSitemapUrls: robotsRules.sitemapUrls,
+    robotsDisallowMatches,
   };
 }
