@@ -324,6 +324,54 @@ needed, say so and stop. Do not change them and continue.
     Behavior of `isAllowedByRobots` itself is unchanged; the existing
     test suite for it passes unmodified against the refactor.
 
+15. **Milestone 8.5b's business-impact reference-stat table lives in
+    `packages/core/src/reference-stats/` as compiled TS constants
+    (`stats.ts`), not JSON**, decided 2026-08-16. This mirrors
+    `compliance/regimes.ts` (narrative, editor-curated content reviewed
+    in a diff) rather than `prospecting/config/naf-sector-allowlist.json`
+    (operator-editable, versioned config read via `readFileSync` at
+    runtime) - a citation's exact wording is content someone edits
+    deliberately, not a knob an operator flips. The table encodes only
+    the rows `docs/research/Odysseus Business-Impact Statistics
+    Reference Database Accessibility SEO & GEO.md` tags "SAFE TO CITE BY
+    NAME," plus, for GEO only, its "emerging / cite only as early data
+    suggests" tier; every row that doc marks "directionally useful but
+    not citable" or "not citable" is skipped entirely, not encoded
+    behind a flag. "Web Standards Commission" (wsc.us.org) and its
+    $13-18bn figure are excluded by omission - there is no row anywhere
+    in the table referencing it, and `stats.test.ts` asserts no citation
+    or source text contains its name, as a regression trip-wire against
+    a future well-meaning re-add. Princeton's GEO visibility paper
+    (Aggarwal et al., ACM KDD 2024) is tagged `confidence: 'emerging'`
+    here despite the source doc itself calling it "well-established,"
+    because it measures visibility within a controlled benchmark, not
+    revenue, and the doc's own recommendation is to quarantine every
+    GEO-adjacent number as "Emerging Research" until GEO acquires a
+    peer-reviewed revenue study; that is the only condition under which
+    this tag should change. Sector detection for stat selection
+    (`reference-stats/sector.ts`, NAF prefixes `55.`/`56.` to
+    `hospitality`) is a small table deliberately independent from
+    `prospecting/config/naf-sector-allowlist.json`, which
+    `docs/prospect-qualification.md` section 4 forbids citing to a
+    prospect as evidence of anything - conflating the two would let an
+    edit made for prospecting recall silently change what a paid report
+    cites, or vice versa. Several source-doc years are left unset
+    (`year?: number`, not guessed) for sources the doc itself calls
+    archived or undated, such as the W3C-documented Legal & General case
+    study - inventing a year would be exactly the kind of unchecked fact
+    rule 1 forbids.
+
+    This milestone is data and pure functions only: `selectReferenceStats`
+    and `estimateRevenueImpact` are not called from anywhere yet.
+    `packages/llm`'s prompts and `build-input.ts`, `packages/report`'s
+    templates, and `packages/interface`'s pipeline are all untouched;
+    `geo` findings still do not render in the PDF appendix (unchanged
+    from trade-off 14). Wiring this table into the LLM/report layer,
+    including deciding whether the model may select which stats appear
+    per theme or whether selection stays fully deterministic the way
+    `legalRelevance` already is, is milestone 8.5c's job, kept separate
+    on purpose the same way 8.5a stayed detection-only.
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
@@ -476,9 +524,9 @@ prospect sites. Each call is approved before it runs.
 
 ## Build order
 
-Milestones 0 through 8 are complete, as are milestone 8.5a and
-milestone 9a. Milestone 8.5b/8.5c and milestone 9b are next. Work in
-vertical slices, one milestone per session.
+Milestones 0 through 8 are complete, as are milestone 8.5a, milestone
+8.5b, and milestone 9a. Milestone 8.5c and milestone 9b are next. Work
+in vertical slices, one milestone per session.
 
 1. Render diff only, CLI invocable — done
 2. Crawler: internal link discovery, robots.txt, depth and page caps — done
@@ -489,6 +537,8 @@ vertical slices, one milestone per session.
 7. Interface: queue and a private single-user dashboard (`odysseus serve`) — done
 8. Custom checks: meta/canonical/JSON-LD/sitemap/hreflang/heading-hierarchy plus the extended accessibility pass (keyboard traps, focus order, form error handling, video captions, alt-text heuristic) — done
 8.5a. Deterministic SEO and GEO (generative-engine-optimization) detection checks, a new `geo` finding category alongside `seo` — done 2026-08-16. Detection only: no reference data, no report changes, no LLM prose. See the milestone entry in the brief, section 7, and trade-off 14 below.
+
+8.5b. Reference-stat table, sector detection, and per-client revenue calculator (`packages/core/src/reference-stats/`) — done 2026-08-16. Data and pure functions only, no LLM/report wiring yet. See trade-off 15.
 
 Milestone 9 (originally "prospecting mode") was split 2026-08-15 into
 9a (prospect acquisition and qualification), 9b (prospecting
