@@ -19,4 +19,19 @@ describe('renderToc', () => {
     expect(htmlEn).toContain('Legal exposure');
     expect(htmlEn).not.toContain('Exposition légale');
   });
+
+  it('B8: links each of the 14 rows to a distinct section-NN id, with a page-number span for target-counter', () => {
+    const html = renderToc(getStrings('fr'));
+
+    for (let i = 1; i <= 14; i++) {
+      const id = `section-${String(i).padStart(2, '0')}`;
+      expect(html).toContain(`href="#${id}"`);
+    }
+    expect((html.match(/class="toc-page"/g) ?? []).length).toBe(14);
+  });
+
+  it('B8: drops the old "page numbers are in the footer" footnote', () => {
+    const html = renderToc(getStrings('fr'));
+    expect(html).not.toContain('signets du fichier PDF');
+  });
 });

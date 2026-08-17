@@ -40,5 +40,5 @@ export function renderObservations(strings: ReportStrings, findings: Finding[], 
     ${renderSheetHeader(o.eyebrow, o.heading)}
     ${wrapperBlock}
     ${legalBlock}
-  `);
+  `, '', 'section-06');
 }

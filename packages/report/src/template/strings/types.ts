@@ -18,7 +18,6 @@ export interface ReportStrings {
       string, string, string, string, string, string, string,
       string, string, string, string, string, string, string,
     ];
-    note: string;
   };
   statistics: {
     eyebrow: string;
@@ -35,6 +34,10 @@ export interface ReportStrings {
     minorTileLabel: string;
     /** Template: {pages}. */
     wcagFailingDescriptionTemplate: string;
+    /** B9: heading over the WCAG fail-count line, which previously sat
+     *  unlabelled at the bottom of the section, unlike the severity/
+     *  category blocks above it which both have one. */
+    wcagFailingHeading: string;
     severityBreakdownHeading: string;
     categoryBreakdownHeading: string;
     legendCriticalText: string;
@@ -121,6 +124,11 @@ export interface ReportStrings {
       undetermined: string;
     };
     disclaimerNote: string;
+    /** B7: shown only when status is 'undetermined'. Names the single
+     *  action that would resolve the status (publishing or supplying a
+     *  SIREN) without asserting what the answer would be - CLAUDE.md rule
+     *  6, "we report, we do not conclude". */
+    undeterminedActionNote: string;
   };
   /** Pure re-presentation of analysis.themes (rank/title/effort/impact/
    *  pages) as a dense, printable table - no new data, no new logic. */
@@ -168,10 +176,25 @@ export interface ReportStrings {
     renderedBarLabelTemplate: string;
     /** Template: {percent}, {selector}. */
     missingCaptionTemplate: string;
+    /** B2: same sentence with no trailing "sur {selector}" clause, used
+     *  when no selector is known (the 5-20% missingPercent band, where no
+     *  render-diff finding exists to read one from) rather than filling
+     *  the clause with a bare hyphen. Template: {percent}. */
+    missingCaptionNoSelectorTemplate: string;
     /** Template: {count}. Shown when more than 3 pages met the inclusion
      *  threshold, e.g. "5 autres pages presentent le meme ecart, detail
      *  dans l'export technique." */
     overflowTextTemplate: string;
+    /** B6: shown instead of an empty section when no commercial page has
+     *  a meaningful render-diff gap after wrapper/legal pages are
+     *  excluded - an absence of evidence is still evidence, not a blank
+     *  box. */
+    positiveStatementTemplate: string;
+    /** Appended after positiveStatementTemplate only when at least one
+     *  wrapper/legal page was excluded from consideration, naming that
+     *  exception with a pointer to Observations rather than letting it go
+     *  unmentioned. */
+    positiveStatementWrapperNote: string;
   };
   /** Doc §3 section 09: 5 aggregated medians (LCP, TBT, FCP, Speed Index,
    *  CLS) across the whole scan, not a per-page table. */
@@ -318,6 +341,13 @@ export interface ReportStrings {
      *  entity than the one being audited. Template: {manualSiren},
      *  {extractedSiren}. */
     legalCitationSirenMismatchTemplate: string;
+    /** B9: replaces the full legal-citation paragraph (which used to be
+     *  rendered a second time here, verbatim, duplicating legal-exposure's
+     *  own copy of the same paragraph) with a one-line pointer back to
+     *  that section - trade-off 11's "one function, called from two
+     *  render sites" still holds, only the second render site changed
+     *  from a full repeat to a cross-reference. */
+    legalCitationPointerSentence: string;
   };
   footer: {
     confidentialityLabel: string;

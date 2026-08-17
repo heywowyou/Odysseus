@@ -41,5 +41,5 @@ export function renderExecutiveSummary(strings: ReportStrings, analysis: StoredA
     ${renderSheetHeader(e.eyebrow, e.heading)}
     <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(analysis.executiveSummary)}</p>
     ${renderStartHere(strings, analysis.themes)}
-  `);
+  `, '', 'section-01');
 }

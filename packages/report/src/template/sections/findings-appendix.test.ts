@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AuditManifest, Finding } from '@odysseus/core';
+import { selectReferenceStats } from '@odysseus/core';
 import { renderFindingsAppendix } from './findings-appendix.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
@@ -76,6 +77,42 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
     // a fully-diverted group is.
     const colorContrastGroup = html.split('>color-contrast</span>')[1] ?? '';
     expect(colorContrastGroup.slice(0, 200)).not.toContain('class="obs-tag"');
+  });
+
+  it('B1: suppresses the geo citation when its statistic id is already in the shared citedStatIds Set', () => {
+    const geoFinding: Finding = {
+      findingId: 'f001',
+      auditId: 'a',
+      schemaVersion: 1,
+      source: 'custom',
+      ruleId: 'llms-txt-missing',
+      category: 'geo',
+      severity: 'moderate',
+      wcagCriteria: [],
+      title: 'No llms.txt found',
+      description: 'desc',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: 'k',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+
+    const withoutDedupe = renderFindingsAppendix(getStrings('fr'), 'fr', [geoFinding], buildManifest(), 'general');
+    expect(withoutDedupe).toContain('Repère chiffré');
+
+    const allGeoStatIds = new Set(selectReferenceStats('geo', 'general').map((stat) => stat.id));
+    const withDedupe = renderFindingsAppendix(
+      getStrings('fr'),
+      'fr',
+      [geoFinding],
+      buildManifest(),
+      'general',
+      allGeoStatIds,
+    );
+    expect(withDedupe).not.toContain('Repère chiffré');
   });
 
   it('escapes finding titles so injected markup cannot execute', () => {

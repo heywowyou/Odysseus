@@ -148,10 +148,52 @@ export function logContainmentWarnings(
   }
 }
 
-/** Applies all three post-structure-pass ranking rules in order, per
- *  docs/report-v2-refactor.md 4.2. Enforced in code after the structure
- *  pass returns, not asked of the model, since a model cannot be trusted
- *  to remember a numeric threshold rule across every response. */
+/** Mirrors packages/report/src/template/sections/themes.ts's own
+ *  isQuickWinTheme predicate exactly (low effort, non-low impact).
+ *  Duplicated rather than imported: packages/llm depends on @odysseus/core
+ *  only, never on packages/report (CLAUDE.md, Packages), the same
+ *  "duplicate a small table near a boundary, document why" precedent
+ *  packages/report's own EFFECTIF_BAND_LABELS_EN and
+ *  packages/llm's own SEVERITY_VOCABULARY already use for this exact
+ *  package boundary. */
+function isQuickWinTheme(theme: Pick<StructureThemeWithKey, 'effort' | 'impact'>): boolean {
+  return theme.effort === 'low' && theme.impact !== 'low';
+}
+
+/** B9 (report-feedback-haaitza.md): the priorities section is titled
+ *  "classés par effort et par impact", but the model's raw rank could
+ *  still put a low-effort/high-impact quick win below a low-impact theme
+ *  - the real haaitza symptom was a "Gain rapide"-badged theme (faible
+ *  effort, impact élevé) ranked below a theme with impact Faible.
+ *
+ *  Enforces the floor the heading claims: no quick-win theme may rank
+ *  below the first non-quick-win theme with impact 'low' - quick wins at
+ *  or past that boundary are promoted to sit just above it, in their
+ *  existing relative order, mirroring
+ *  enforceSiteWideAccessibilityFloor's own promote-to-the-boundary shape.
+ *  A theme with impact 'low' can never itself be a quick win (the
+ *  predicate requires impact !== 'low'), so the boundary theme is always
+ *  a genuine non-quick-win. */
+export function enforceQuickWinFloor(themes: readonly StructureThemeWithKey[]): StructureThemeWithKey[] {
+  const sorted = [...themes].sort((a, b) => a.priorityRank - b.priorityRank);
+  const lowImpactFloorIndex = sorted.findIndex((theme) => theme.impact === 'low');
+  if (lowImpactFloorIndex === -1) return renumberRanks(sorted);
+
+  const promoted = sorted.filter((theme, index) => index >= lowImpactFloorIndex && isQuickWinTheme(theme));
+  if (promoted.length === 0) return renumberRanks(sorted);
+
+  const remaining = sorted.filter((theme, index) => !(index >= lowImpactFloorIndex && isQuickWinTheme(theme)));
+  const insertAt = Math.max(0, lowImpactFloorIndex - promoted.length);
+  const reordered = [...remaining.slice(0, insertAt), ...promoted, ...remaining.slice(insertAt)];
+
+  return renumberRanks(reordered);
+}
+
+/** Applies all post-structure-pass ranking rules in order, per
+ *  docs/report-v2-refactor.md 4.2 plus B9's quick-win floor. Enforced in
+ *  code after the structure pass returns, not asked of the model, since a
+ *  model cannot be trusted to remember a numeric threshold rule across
+ *  every response. */
 export function applyStructureRankingRules(
   themes: readonly StructureThemeWithKey[],
   findings: readonly Finding[],
@@ -159,6 +201,7 @@ export function applyStructureRankingRules(
 ): StructureThemeWithKey[] {
   const floored = enforceSiteWideAccessibilityFloor(themes, findings, manifest);
   const weighted = applyOccurrenceWeighting(floored, findings);
-  logContainmentWarnings(weighted, findings, manifest);
-  return weighted;
+  const quickWinFloored = enforceQuickWinFloor(weighted);
+  logContainmentWarnings(quickWinFloored, findings, manifest);
+  return quickWinFloored;
 }

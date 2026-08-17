@@ -99,11 +99,27 @@ function renderTheme(
   `;
 }
 
+/** Categories the reference-stat table has rows for. 'rendering' still
+ *  gets no citation: no row in packages/core/src/reference-stats/stats.ts
+ *  is tagged for it, and showing nothing is honest, not a bug. */
+type CitableThemeCategory = 'accessibility' | 'seo' | 'performance';
+function isCitableThemeCategory(category: Theme['category']): category is CitableThemeCategory {
+  return category === 'accessibility' || category === 'seo' || category === 'performance';
+}
+
 export function renderThemes(
   strings: ReportStrings,
   analysis: StoredAnalysis,
   findings: Finding[],
   manifest: AuditManifest,
+  /** B1: shared across every citation render site in the document
+   *  (render-html.ts creates one Set and passes it here and to
+   *  renderFindingsAppendix, in the same order those sections render), so
+   *  a statistic can appear at most once across the whole PDF - not just
+   *  once per section. Mutated in place as citations are picked. Defaults
+   *  to a fresh Set for callers (existing tests) that don't need
+   *  cross-section dedupe. */
+  citedStatIds: Set<string> = new Set(),
 ): string {
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
@@ -114,18 +130,17 @@ export function renderThemes(
   // highest-priority theme (sortedThemes is already priorityRank-order),
   // not repeated on every theme - avoids a report where five
   // accessibility themes each restate the identical Deloitte sentence.
-  // 'performance'/'rendering' themes get no citation at all: the
-  // reference-stat table (packages/core/src/reference-stats) has no rows
-  // for those categories, and showing nothing is honest, not a bug.
   const citedCategories = new Set<string>();
   const citationByRank = new Map<number, ReferenceStat>();
   for (const theme of sortedThemes) {
-    if (theme.category !== 'accessibility' && theme.category !== 'seo') continue;
+    if (!isCitableThemeCategory(theme.category)) continue;
     if (citedCategories.has(theme.category)) continue;
-    const [top] = selectReferenceStats(theme.category, sector);
+    const candidates = selectReferenceStats(theme.category, sector);
+    const top = candidates.find((stat) => !citedStatIds.has(stat.id));
     if (top) {
       citationByRank.set(theme.priorityRank, top);
       citedCategories.add(theme.category);
+      citedStatIds.add(top.id);
     }
   }
 
@@ -138,5 +153,5 @@ export function renderThemes(
   return sheet(`
     ${renderSheetHeader(strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }))}
     ${themeBlocks}
-  `);
+  `, '', 'section-04');
 }

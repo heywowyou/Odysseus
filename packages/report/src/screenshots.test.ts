@@ -12,6 +12,13 @@ function inflateMissingPercent(manifest: AuditManifest, pageDir: string, percent
   };
 }
 
+function overridePageUrl(manifest: AuditManifest, pageDir: string, url: string): AuditManifest {
+  return {
+    ...manifest,
+    pages: manifest.pages.map((page) => (page.pageDir === pageDir ? { ...page, url } : page)),
+  };
+}
+
 function buildRenderDiffFinding(
   pageUrl: string,
   rawTextLength: number,
@@ -116,5 +123,54 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
     expect(pages[0]?.rawTextLength).toBeNull();
     expect(pages[0]?.renderedTextLength).toBeNull();
     expect(pages[0]?.selector).toBe('');
+  });
+
+  it('excludes a wrapper page (>=95% missing) from evidence, unlike an ordinary page below that threshold (B6)', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const inflated = inflateMissingPercent(manifest, 'pages/root-c122da', 96);
+
+    const { pages, totalEligible, wrapperOrLegalExcludedCount } = resolveRenderDiffEvidence(inflated, []);
+
+    expect(pages).toHaveLength(0);
+    expect(totalEligible).toBe(0);
+    expect(wrapperOrLegalExcludedCount).toBe(1);
+  });
+
+  it('excludes a legal-noindex page by URL pattern, regardless of its missingPercent (B6)', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const withLegalUrl = overridePageUrl(manifest, 'pages/root-c122da', 'https://example.com/mentions-legales/');
+    const inflated = inflateMissingPercent(withLegalUrl, 'pages/root-c122da', 40);
+
+    const { pages, wrapperOrLegalExcludedCount } = resolveRenderDiffEvidence(inflated, []);
+
+    expect(pages).toHaveLength(0);
+    expect(wrapperOrLegalExcludedCount).toBe(1);
+  });
+
+  it('ranks by absolute characters missing, not by missingPercent, when both pages have a backing finding (B6)', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const homepagePageDir = manifest.pages.find((p) => p.url === manifest.crawl.startUrl)?.pageDir;
+    const otherPageDir = manifest.pages.find((p) => p.pageDir !== undefined && p.pageDir !== homepagePageDir)?.pageDir;
+
+    // Homepage: higher missingPercent (30%) but a smaller absolute gap.
+    // Other page: lower missingPercent (20%) but a much larger absolute
+    // gap (4,000 chars vs 300). The 4,000-char page must rank first.
+    let manifestWithGaps = inflateMissingPercent(manifest, homepagePageDir!, 30);
+    manifestWithGaps = inflateMissingPercent(manifestWithGaps, otherPageDir!, 20);
+
+    const findings = [
+      buildRenderDiffFinding(manifest.crawl.startUrl, 700, 1000, '.thin'),
+      buildRenderDiffFinding(
+        manifest.pages.find((p) => p.pageDir === otherPageDir)!.url,
+        1000,
+        5000,
+        '.big-gap',
+      ),
+    ];
+
+    const { pages } = resolveRenderDiffEvidence(manifestWithGaps, findings);
+
+    expect(pages[0]?.pageUrl).toBe(manifest.pages.find((p) => p.pageDir === otherPageDir)!.url);
+    expect(pages[0]?.missingPercent).toBe(20);
   });
 });

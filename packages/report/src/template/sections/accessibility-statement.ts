@@ -56,5 +56,5 @@ export function renderAccessibilityStatement(
         <p style="font-size:13px;opacity:0.7">${escapeHtml(a.remediationPlanBody)}</p>
       </div>
     </div>
-  `);
+  `, '', 'section-10');
 }

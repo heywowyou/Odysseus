@@ -221,13 +221,17 @@ export function renderMethodology(
 
   const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings);
 
+  // B9: the full legal-citation paragraph used to be rendered here a
+  // second time, verbatim, duplicating legal-exposure.ts's own copy of
+  // the same paragraph on a different page. Kept once there; this section
+  // only points back to it now.
   return sheet(`
     ${renderSheetHeader(eyebrow, m.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
     <div class="hr"></div>
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.automatedCoverageCaveat)}</p>
     <div class="hr"></div>
-    <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(renderLegalCitationParagraph(strings, obligationAssessment, language))}</p>
+    <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.legalCitationPointerSentence)}</p>
     ${sirenNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(sirenNote)}</p>` : ''}
-  `);
+  `, '', 'section-11');
 }

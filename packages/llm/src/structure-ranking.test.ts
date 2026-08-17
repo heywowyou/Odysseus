@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuditManifest, Finding } from '@odysseus/core';
 import {
   applyOccurrenceWeighting,
+  enforceQuickWinFloor,
   enforceSiteWideAccessibilityFloor,
   logContainmentWarnings,
   SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD,
@@ -123,6 +124,60 @@ describe('applyOccurrenceWeighting', () => {
     const result = applyOccurrenceWeighting(themes, findings);
 
     expect(result).toEqual([{ ...themes[0], priorityRank: 1 }]);
+  });
+});
+
+describe('enforceQuickWinFloor', () => {
+  it('promotes a quick win (low effort, non-low impact) ranked below a low-impact theme, per report-feedback-haaitza.md B9', () => {
+    // The real symptom: priority 6, badged "Gain rapide" (faible effort,
+    // impact élevé), ranked below priority 4 (impact Faible) even though
+    // the section is titled "classés par effort et par impact".
+    const themes: StructureThemeWithKey[] = [
+      theme('t1', ['f002'], { priorityRank: 1, impact: 'high' }),
+      theme('t2', ['f009'], { priorityRank: 2, impact: 'medium' }),
+      theme('t-low-impact', ['f086'], { priorityRank: 3, impact: 'low' }),
+      theme('t-quick-win', ['f039'], { priorityRank: 4, effort: 'low', impact: 'high' }),
+    ];
+
+    const result = enforceQuickWinFloor(themes);
+
+    const quickWinRank = result.find((t) => t.themeKey === 't-quick-win')?.priorityRank;
+    const lowImpactRank = result.find((t) => t.themeKey === 't-low-impact')?.priorityRank;
+    expect(quickWinRank).toBeLessThan(lowImpactRank!);
+    expect(result.map((t) => t.priorityRank).sort((a, b) => a - b)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('leaves order unchanged when no low-impact theme exists', () => {
+    const themes: StructureThemeWithKey[] = [
+      theme('t1', ['f002'], { priorityRank: 1, impact: 'high' }),
+      theme('t-quick-win', ['f039'], { priorityRank: 2, effort: 'low', impact: 'medium' }),
+    ];
+
+    const result = enforceQuickWinFloor(themes);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t1', 't-quick-win']);
+  });
+
+  it('leaves order unchanged when the quick win already ranks above every low-impact theme', () => {
+    const themes: StructureThemeWithKey[] = [
+      theme('t-quick-win', ['f039'], { priorityRank: 1, effort: 'low', impact: 'high' }),
+      theme('t-low-impact', ['f086'], { priorityRank: 2, impact: 'low' }),
+    ];
+
+    const result = enforceQuickWinFloor(themes);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t-quick-win', 't-low-impact']);
+  });
+
+  it('never promotes a non-quick-win low-effort/low-impact theme', () => {
+    const themes: StructureThemeWithKey[] = [
+      theme('t-other-low-impact', ['f002'], { priorityRank: 1, impact: 'low' }),
+      theme('t-low-effort-low-impact', ['f009'], { priorityRank: 2, effort: 'low', impact: 'low' }),
+    ];
+
+    const result = enforceQuickWinFloor(themes);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t-other-low-impact', 't-low-effort-low-impact']);
   });
 });
 

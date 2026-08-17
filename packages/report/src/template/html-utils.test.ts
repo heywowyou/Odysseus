@@ -56,22 +56,20 @@ describe('fillTemplate', () => {
 });
 
 describe('formatFindingIdRefs', () => {
-  it('collapses a run of three or more consecutive IDs into a range', () => {
-    expect(formatFindingIdRefs(['f004', 'f005', 'f006', 'f007', 'f008'])).toBe('f004-f008');
+  // B9 (report-feedback-haaitza.md): always comma-separated, never a range
+  // notation - an earlier version collapsed runs of 3+ consecutive ids
+  // into "f004-f008", which read as inconsistent next to every other
+  // priority's comma-separated list on the same page.
+  it('always comma-separates, even for a long run of consecutive IDs', () => {
+    expect(formatFindingIdRefs(['f004', 'f005', 'f006', 'f007', 'f008'])).toBe('f004, f005, f006, f007, f008');
   });
 
-  it('keeps a run of exactly two as a comma list, not a range', () => {
+  it('keeps a run of exactly two as a comma list', () => {
     expect(formatFindingIdRefs(['f004', 'f005'])).toBe('f004, f005');
   });
 
-  it('mixes ranges and singletons matching the prototype reference style', () => {
-    expect(
-      formatFindingIdRefs(['f001', 'f004', 'f005', 'f006', 'f007', 'f008', 'f010', 'f011', 'f014', 'f015', 'f016', 'f017', 'f018', 'f021', 'f022']),
-    ).toBe('f001, f004-f008, f010, f011, f014-f018, f021, f022');
-  });
-
-  it('sorts unordered input before grouping', () => {
-    expect(formatFindingIdRefs(['f008', 'f004', 'f006', 'f005', 'f007'])).toBe('f004-f008');
+  it('sorts unordered input before joining', () => {
+    expect(formatFindingIdRefs(['f008', 'f004', 'f006', 'f005', 'f007'])).toBe('f004, f005, f006, f007, f008');
   });
 
   it('returns an empty string for no IDs', () => {

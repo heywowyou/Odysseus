@@ -20,7 +20,6 @@ export const en: ReportStrings = {
       'Glossary',
       'Next steps & contact',
     ],
-    note: "Page numbers appear in the footer and in the PDF file's bookmarks.",
   },
   statistics: {
     eyebrow: '03 · The audit in numbers',
@@ -36,6 +35,7 @@ export const en: ReportStrings = {
     moderateTileLabel: 'moderate',
     minorTileLabel: 'minor',
     wcagFailingDescriptionTemplate: 'WCAG 2.2 AA criteria failing across {pages} pages',
+    wcagFailingHeading: 'WCAG conformance',
     severityBreakdownHeading: 'Breakdown by severity',
     categoryBreakdownHeading: 'Breakdown by category',
     legendCriticalText: 'blocks visitors or indexing',
@@ -76,7 +76,7 @@ export const en: ReportStrings = {
     pagesScannedValueTemplate: '{count} pages scanned',
     languageLabel: 'Report language',
     wcagReferentialLabel: 'Standard audited',
-    riskSmallLabel: 'Overall risk level',
+    riskSmallLabel: 'Technical findings severity',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
   },
   executiveSummary: {
@@ -110,6 +110,8 @@ export const en: ReportStrings = {
     },
     disclaimerNote:
       'Generated from the existing obligation assessment; no additional legal interpretation has been added. A review by qualified legal counsel remains necessary.',
+    undeterminedActionNote:
+      "This status would become determinable if the company's SIREN number were published on the site or provided to the Odysseus team.",
   },
   checklist: {
     eyebrow: '05 · Printable checklist',
@@ -145,8 +147,13 @@ export const en: ReportStrings = {
     rawBarLabelTemplate: 'Raw HTML - {chars} characters',
     renderedBarLabelTemplate: 'Rendered page - {chars} characters',
     missingCaptionTemplate: 'Missing: {percent}% of visible text absent from the raw HTML, on {selector}.',
+    missingCaptionNoSelectorTemplate: 'Missing: {percent}% of visible text absent from the raw HTML.',
     overflowTextTemplate:
       '{count} more pages show the same gap, detail in the technical export.',
+    positiveStatementTemplate:
+      "This site's commercial pages keep their text in the raw HTML: no meaningful render gap was measured.",
+    positiveStatementWrapperNote:
+      'The only exception is the third-party content wrapper pages, see the Observations section.',
   },
   coreWebVitals: {
     eyebrow: '09 · Performance',
@@ -176,7 +183,7 @@ export const en: ReportStrings = {
     contactHeading: 'Contact',
     contactBody: '[Client to complete with a contact email address] - reporting process to be defined.',
     remediationPlanHeading: 'Remediation plan',
-    remediationPlanBody: 'See the "Ranked priorities" section above for the plan and associated timelines.',
+    remediationPlanBody: 'See the "Ranked priorities" section above for the plan.',
   },
   glossary: {
     eyebrow: '13 · Glossary',
@@ -303,6 +310,7 @@ export const en: ReportStrings = {
       'The SIREN number used for this determination was provided manually; this site does not publish this number itself.',
     legalCitationSirenMismatchTemplate:
       'The manually supplied SIREN ({manualSiren}) differs from the one published on the site ({extractedSiren}). This determination uses the manually supplied number.',
+    legalCitationPointerSentence: 'See the "Legal exposure" section for the detail of this determination.',
   },
   footer: {
     confidentialityLabel: 'Confidential report',

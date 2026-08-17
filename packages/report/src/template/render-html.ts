@@ -70,6 +70,12 @@ export interface RenderHtmlInput {
    *  top-3 cap (screenshots.ts's resolveRenderDiffEvidence), so section 08
    *  can state how many more pages share the same gap. */
   renderDiffTotalEligible?: number;
+  /** B6: count of pages excluded from evidence consideration entirely
+   *  because they're wrapper/legal-noindex pages (screenshots.ts's
+   *  resolveRenderDiffEvidence). Lets section 08's positive-statement
+   *  fallback name them as a named exception rather than staying silent
+   *  about why the section has nothing else to show. */
+  renderDiffWrapperOrLegalExcludedCount?: number;
 }
 
 /** Single-tier report body, since the 2026-08-16 commercial model drop of
@@ -87,22 +93,42 @@ function renderBody(
   analysis: StoredAnalysis,
   renderDiffEvidencePages: RenderDiffEvidencePage[],
   renderDiffTotalEligible: number,
+  renderDiffWrapperOrLegalExcludedCount: number,
 ): string {
+  // B1: one Set shared by every reference-stat citation render site
+  // (renderThemes, then renderFindingsAppendix's geo section), so the same
+  // statistic can never appear twice across the document - previously
+  // each section deduped only within itself.
+  const citedStatIds = new Set<string>();
+
   return [
     renderCover(strings, manifest, analysis),
     renderToc(strings),
     renderExecutiveSummary(strings, analysis),
     renderLegalExposure(strings, analysis.language, analysis.obligationAssessment),
     renderStatistics(strings, analysis.language, findings, manifest),
-    renderThemes(strings, analysis, findings, manifest),
+    renderThemes(strings, analysis, findings, manifest, citedStatIds),
     renderChecklist(strings, analysis.language, analysis, findings, manifest),
     renderObservations(strings, findings, manifest),
     renderConformanceSummary(strings, findings, analysis.language),
-    renderRenderDiffEvidence(strings, analysis.language, renderDiffEvidencePages, renderDiffTotalEligible),
+    renderRenderDiffEvidence(
+      strings,
+      analysis.language,
+      renderDiffEvidencePages,
+      renderDiffTotalEligible,
+      renderDiffWrapperOrLegalExcludedCount,
+    ),
     renderCoreWebVitalsTable(strings, analysis.language, manifest),
     renderAccessibilityStatement(strings, analysis.language, findings),
     renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings),
-    renderFindingsAppendix(strings, analysis.language, findings, manifest, analysis.obligationAssessment?.sector ?? 'general'),
+    renderFindingsAppendix(
+      strings,
+      analysis.language,
+      findings,
+      manifest,
+      analysis.obligationAssessment?.sector ?? 'general',
+      citedStatIds,
+    ),
     renderGlossary(strings),
     renderNextSteps(strings),
   ].join('\n');
@@ -111,10 +137,19 @@ function renderBody(
 export async function renderHtml(input: RenderHtmlInput): Promise<string> {
   const { manifest, findings, analysis, renderDiffEvidencePages } = input;
   const renderDiffTotalEligible = input.renderDiffTotalEligible ?? renderDiffEvidencePages.length;
+  const renderDiffWrapperOrLegalExcludedCount = input.renderDiffWrapperOrLegalExcludedCount ?? 0;
   const strings = getStrings(analysis.language);
   const inlinedStyles = await readStylesInlined();
 
-  const body = renderBody(strings, manifest, findings, analysis, renderDiffEvidencePages, renderDiffTotalEligible);
+  const body = renderBody(
+    strings,
+    manifest,
+    findings,
+    analysis,
+    renderDiffEvidencePages,
+    renderDiffTotalEligible,
+    renderDiffWrapperOrLegalExcludedCount,
+  );
 
   return `<!doctype html>
 <html lang="${analysis.language}">

@@ -49,36 +49,13 @@ export function fillTemplate(template: string, values: Record<string, string | n
   );
 }
 
-/** Collapses consecutive findingIds ("f004", "f005", "f006") into a
- *  compact range ("f004-f006"), matching
- *  docs/report-v2-prototype-haaitza-fr.html's theme-card reference style.
- *  Plain ASCII hyphen, not an en/em dash (CLAUDE.md style rule), and
- *  locale-neutral so it needs no fr/en translation. Runs of two stay a
- *  comma list ("f004, f005") since a range reads oddly for just a pair. */
+/** Always comma-separates findingIds ("f004, f005, f006"), never a range
+ *  notation. B9 (report-feedback-haaitza.md): an earlier version collapsed
+ *  runs of 3+ consecutive ids into "f004-f006" while every other priority
+ *  used commas, reading as an inconsistency to a client comparing the two
+ *  forms on the same page. */
 export function formatFindingIdRefs(findingIds: readonly string[]): string {
-  const sorted = [...findingIds].sort();
-  if (sorted.length === 0) return '';
-
-  const idNumber = (id: string): number | null => {
-    const match = /^f(\d+)$/.exec(id);
-    return match ? Number(match[1]) : null;
-  };
-
-  const groups: string[][] = [[sorted[0]!]];
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = idNumber(sorted[i - 1]!);
-    const curr = idNumber(sorted[i]!);
-    const lastGroup = groups[groups.length - 1]!;
-    if (prev !== null && curr !== null && curr === prev + 1) {
-      lastGroup.push(sorted[i]!);
-    } else {
-      groups.push([sorted[i]!]);
-    }
-  }
-
-  return groups
-    .map((group) => (group.length >= 3 ? `${group[0]}-${group[group.length - 1]}` : group.join(', ')))
-    .join(', ');
+  return [...findingIds].sort().join(', ');
 }
 
 /** Every numbered section (legal exposure through next steps) shares this
@@ -100,8 +77,11 @@ export function renderSheetHeader(eyebrow: string, heading: string): string {
  *  a second sheet by returning more content than fits one page - Paged.js
  *  handles that by fragmenting the section element itself, not by this
  *  function emitting two `<section>` tags. `extraClass` is only ever
- *  `sheet-cover` (cover.ts). */
-export function sheet(innerHtml: string, extraClass = ''): string {
+ *  `sheet-cover` (cover.ts). `id`, added for B8, gives the TOC a stable
+ *  anchor target for `target-counter(attr(href url), page)`; every
+ *  numbered section passes one, cover and TOC itself do not. */
+export function sheet(innerHtml: string, extraClass = '', id?: string): string {
   const className = extraClass ? `sheet ${extraClass}` : 'sheet';
-  return `<section class="${className}">${innerHtml}</section>`;
+  const idAttr = id ? ` id="${id}"` : '';
+  return `<section class="${className}"${idAttr}>${innerHtml}</section>`;
 }

@@ -81,10 +81,17 @@ export function renderStatistics(
     )
     .join('');
 
+  // B9: category tiles sorted descending by count, not the fixed
+  // CATEGORY_ORDER used elsewhere (appendix, citation eligibility) - the
+  // largest bucket (often performance) was rendering fourth regardless of
+  // its size, reading as an arbitrary layout choice to a client.
   const categoryLabels = strings.findingsAppendix.categoryLabels;
-  const categoryTiles = CATEGORY_ORDER.map((category) =>
-    renderCategoryTile(categoryLabels[category], n(stats.categoryCounts[category]), CATEGORY[category].color),
-  ).join('');
+  const sortedCategories = [...CATEGORY_ORDER].sort(
+    (a, b) => stats.categoryCounts[b] - stats.categoryCounts[a],
+  );
+  const categoryTiles = sortedCategories
+    .map((category) => renderCategoryTile(categoryLabels[category], n(stats.categoryCounts[category]), CATEGORY[category].color))
+    .join('');
 
   const wcagFailText = fillTemplate(s.wcagFailingDescriptionTemplate, { pages: n(stats.pagesWithWcagFailure) });
   const wcagFailCountText = `${n(stats.wcagCriteriaFailingCount)} ${wcagFailText}`;
@@ -103,6 +110,7 @@ export function renderStatistics(
       ${categoryTiles}
     </div>
     <div class="hr"></div>
+    <h5>${escapeHtml(s.wcagFailingHeading)}</h5>
     <p style="font-size:13.5px;opacity:0.85">${escapeHtml(wcagFailCountText)}</p>
-  `);
+  `, '', 'section-03');
 }

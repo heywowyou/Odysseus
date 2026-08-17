@@ -89,6 +89,17 @@ html {
   visibility: hidden;
 }
 
+/* B8: the table of contents' page-number column. target-counter reads the
+   "page" counter of whichever element the anchor's resolved href points
+   at - resolved after Paged.js's own layout pass, in the same single
+   render Paged.js already does for the @page counter(page)/counter(pages)
+   rules above, so this needs no second pass despite the pre-Paged.js
+   note this replaced (docs/report-v2-refactor.md D29) assuming one would
+   be required. */
+.toc-page::after {
+  content: target-counter(attr(href url), page);
+}
+
 /* ---- sheets ---- */
 
 .sheet {

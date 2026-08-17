@@ -50,7 +50,11 @@ function bilingual(fr: string, en: string): { fr: string; en: string } {
 export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   {
     id: 'deloitte-speed-conversion-retail-2020',
-    category: ['accessibility', 'seo'],
+    // B1: retagged from ['accessibility', 'seo'] - this stat is about
+    // page speed and conversion, not accessibility or SEO. It was
+    // originally tagged that way only because those were the two
+    // categories themes.ts could attach a citation to at all.
+    category: ['performance'],
     sector: 'general',
     confidence: 'established',
     scalability: 'scales-down',
@@ -64,7 +68,8 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   },
   {
     id: 'deloitte-speed-conversion-travel-2020',
-    category: ['accessibility', 'seo'],
+    // B1: same retag as deloitte-speed-conversion-retail-2020 above.
+    category: ['performance'],
     sector: 'hospitality',
     confidence: 'established',
     scalability: 'scales-down',
@@ -78,7 +83,8 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
   },
   {
     id: 'deloitte-aov-retail-2020',
-    category: ['accessibility', 'seo'],
+    // B1: same retag as deloitte-speed-conversion-retail-2020 above.
+    category: ['performance'],
     sector: 'general',
     confidence: 'established',
     scalability: 'scales-down',

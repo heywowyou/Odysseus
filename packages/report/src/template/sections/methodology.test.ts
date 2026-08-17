@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ObligationAssessment } from '@odysseus/core';
-import { renderMethodology } from './methodology.js';
+import { renderLegalCitationParagraph, renderMethodology } from './methodology.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSasFernandeManifest } from '../../test-fixtures.js';
 
@@ -42,40 +42,22 @@ describe('renderMethodology section-number eyebrow', () => {
   });
 });
 
-describe('renderMethodology legal citation branch', () => {
-  it('renders the pre-milestone hedge verbatim when obligationAssessment is absent', async () => {
+// B9: methodology used to render the full legal-citation paragraph a
+// second time, verbatim, duplicating legal-exposure.ts's own copy of the
+// same paragraph on a different page. It now renders a one-line pointer
+// back to that section instead - renderLegalCitationParagraph itself, and
+// its per-status branching, stays covered by legal-exposure.test.ts and
+// render-html.test.ts, which exercise the function through its one
+// remaining full-paragraph render site.
+describe('renderMethodology legal citation pointer', () => {
+  it('points back to legal exposure, and never repeats the full paragraph, when obligationAssessment is absent', async () => {
     const manifest = await loadSasFernandeManifest();
     const html = renderMethodology(getStrings('fr'), manifest, 'fr');
-    expect(html).toContain("sans se prononcer sur l&#39;applicabilité");
+    expect(html).toContain('figure dans la section');
+    expect(html).not.toContain("sans se prononcer sur l&#39;applicabilité");
   });
 
-  it('renders the pre-milestone hedge for status undetermined', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const assessment: ObligationAssessment = {
-      status: 'undetermined',
-      basis: [{ regimeId: 'eaa-loi-2023-171', facts: [{ kind: 'siren-missing' }] }],
-    };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
-    expect(html).toContain("sans se prononcer sur l&#39;applicabilité");
-  });
-
-  it('renders the out_of_scope paragraph with no regime name or citation', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const assessment: ObligationAssessment = {
-      status: 'out_of_scope',
-      basis: [
-        {
-          regimeId: 'eaa-loi-2023-171',
-          facts: [{ kind: 'sme-exemption', effectifCode: '02', turnoverEur: 500_000 }],
-        },
-      ],
-    };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
-    expect(html).toContain('ne relève pas de');
-    expect(html).not.toContain('Loi n° 2023-171');
-  });
-
-  it('renders the in_scope paragraph naming the regime, authority, citation, and facts, with the exemption route', async () => {
+  it('points back to legal exposure for every status, in_scope included', async () => {
     const manifest = await loadSasFernandeManifest();
     const assessment: ObligationAssessment = {
       status: 'in_scope',
@@ -90,7 +72,72 @@ describe('renderMethodology legal citation branch', () => {
       ],
     };
     const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
-    expect(html).toContain("Obligation d&#39;accessibilité numérique");
+    expect(html).toContain('figure dans la section');
+    // The full paragraph's regime-specific content must not be duplicated
+    // here now that it renders only in legal-exposure.ts.
+    expect(html).not.toContain("Obligation d&#39;accessibilité numérique");
+    expect(html).not.toContain('DGCCRF');
+  });
+
+  it('renders the pointer sentence in English, not French', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const html = renderMethodology(getStrings('en'), manifest, 'en');
+    expect(html).toContain('Legal exposure');
+    expect(html).not.toContain('figure dans la section');
+  });
+});
+
+// B9: these per-status branch assertions used to run against
+// renderMethodology's output before its duplicate render of this same
+// paragraph was replaced with a pointer sentence above. renderMethodology
+// stays the reference site for their content: they now call
+// renderLegalCitationParagraph directly, the same function
+// legal-exposure.ts's own render site uses.
+describe('renderLegalCitationParagraph', () => {
+  it('renders the pre-milestone hedge verbatim when obligationAssessment is absent', () => {
+    const html = renderLegalCitationParagraph(getStrings('fr'), undefined, 'fr');
+    expect(html).toContain("sans se prononcer sur l'applicabilité");
+  });
+
+  it('renders the pre-milestone hedge for status undetermined', () => {
+    const assessment: ObligationAssessment = {
+      status: 'undetermined',
+      basis: [{ regimeId: 'eaa-loi-2023-171', facts: [{ kind: 'siren-missing' }] }],
+    };
+    const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
+    expect(html).toContain("sans se prononcer sur l'applicabilité");
+  });
+
+  it('renders the out_of_scope paragraph with no regime name or citation', () => {
+    const assessment: ObligationAssessment = {
+      status: 'out_of_scope',
+      basis: [
+        {
+          regimeId: 'eaa-loi-2023-171',
+          facts: [{ kind: 'sme-exemption', effectifCode: '02', turnoverEur: 500_000 }],
+        },
+      ],
+    };
+    const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
+    expect(html).toContain('ne relève pas de');
+    expect(html).not.toContain('Loi n° 2023-171');
+  });
+
+  it('renders the in_scope paragraph naming the regime, authority, citation, and facts, with the exemption route', () => {
+    const assessment: ObligationAssessment = {
+      status: 'in_scope',
+      basis: [
+        {
+          regimeId: 'eaa-loi-2023-171',
+          facts: [
+            { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+            { kind: 'transactional-flow', evidence: [] },
+          ],
+        },
+      ],
+    };
+    const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
+    expect(html).toContain("Obligation d'accessibilité numérique");
     expect(html).toContain('DGCCRF');
     // End-to-end regression: packages/interface's sirene-client.ts used to
     // hand this fact's label in without accents ("100 a 199 salaries"),
@@ -104,8 +151,7 @@ describe('renderMethodology legal citation branch', () => {
     expect(html).not.toContain('50 000');
   });
 
-  it('cites article 47, not the EAA, when article 47 alone drives an in_scope result the EAA gate would not reach on its own', async () => {
-    const manifest = await loadSasFernandeManifest();
+  it('cites article 47, not the EAA, when article 47 alone drives an in_scope result the EAA gate would not reach on its own', () => {
     const assessment: ObligationAssessment = {
       status: 'in_scope',
       basis: [
@@ -122,13 +168,12 @@ describe('renderMethodology legal citation branch', () => {
         },
       ],
     };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
+    const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
     expect(html).toContain('article 47');
     expect(html).not.toContain("l'European Accessibility Act");
   });
 
-  it('renders the likely_in_scope paragraph with softened framing when the transactional flow gate is unconfirmed', async () => {
-    const manifest = await loadSasFernandeManifest();
+  it('renders the likely_in_scope paragraph with softened framing when the transactional flow gate is unconfirmed', () => {
     const assessment: ObligationAssessment = {
       status: 'likely_in_scope',
       basis: [
@@ -141,13 +186,12 @@ describe('renderMethodology legal citation branch', () => {
         },
       ],
     };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
+    const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
     expect(html).toContain('relève probablement de');
-    expect(html).toContain("n&#39;a pas pu être confirmée");
+    expect(html).toContain("n'a pas pu être confirmée");
   });
 
-  it('translates the effectif band label by INSEE code for an English report, not the raw French label', async () => {
-    const manifest = await loadSasFernandeManifest();
+  it('translates the effectif band label by INSEE code for an English report, not the raw French label', () => {
     const assessment: ObligationAssessment = {
       status: 'in_scope',
       basis: [
@@ -160,7 +204,7 @@ describe('renderMethodology legal citation branch', () => {
         },
       ],
     };
-    const html = renderMethodology(getStrings('en'), manifest, 'en', assessment);
+    const html = renderLegalCitationParagraph(getStrings('en'), assessment, 'en');
     expect(html).toContain('100 to 199 employees');
     expect(html).not.toContain('salariés');
   });

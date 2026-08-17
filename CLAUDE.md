@@ -382,12 +382,28 @@ needed, say so and stop. Do not change them and continue.
     schema has no `'geo'` option at all, so LLM-synthesized themes can
     never be geo; a geo citation only ever appears in the findings-
     appendix's geo section (`findings-appendix.ts`), never in the themes
-    section, and `'performance'`/`'rendering'` themes get no citation at
-    all since the stat table has no rows for those categories - an
-    absence, not a bug. Each accessibility/seo citation is shown exactly
-    once per category, attached to that category's highest-priority
-    theme (`themes.ts`'s `citationByRank`), not repeated on every theme
-    of the same category.
+    section. `'rendering'` themes get no citation: the stat table has no
+    rows for that category, an absence, not a bug. Each citation is shown
+    exactly once per category, attached to that category's
+    highest-priority theme (`themes.ts`'s `citationByRank`), not repeated
+    on every theme of the same category.
+
+    **Revised 2026-08-17** (report-feedback-haaitza.md B1, same-day
+    follow-up): this paragraph originally also said `'performance'`
+    themes get no citation, same reasoning. That was true only because
+    three Deloitte page-speed/conversion stats were miscategorised as
+    `['accessibility', 'seo']` in `stats.ts` to give them a category slot
+    to attach to at all - which is exactly why a real report cited a
+    page-speed statistic under a "Vidéos sans sous-titres" priority and
+    a "Liens non explorables" priority, twice, and never under the actual
+    performance priority. Fixed by retagging those three rows to a new
+    `'performance'` `StatCategory` and extending `themes.ts`'s
+    eligibility to match; `'rendering'` remains uncited, genuinely absent
+    from the table. Citation selection also gained a document-wide
+    `citedStatIds` Set (`render-html.ts`, threaded into both `renderThemes`
+    and `renderFindingsAppendix`), since the original per-section dedupe
+    could not catch the same statistic being independently selected by
+    two different sections.
 
     Client sector reaches the report through a new
     `ObligationAssessment.sector?: StatSector` field

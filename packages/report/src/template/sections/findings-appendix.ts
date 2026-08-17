@@ -136,9 +136,18 @@ function renderMinorAggregateGroup(
  *  research doc's Stage 3 recommendation - both curated geo stat rows
  *  are confidence:'emerging' today (8.5b's deliberate Princeton
  *  downgrade), so the badge is driven by that field, not hardcoded here. */
-function renderGeoCitationBlock(strings: ReportStrings, language: ReportLanguage, sector: StatSector): string {
-  const [top] = selectReferenceStats('geo', sector);
+function renderGeoCitationBlock(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  sector: StatSector,
+  /** B1: same shared, mutated-in-place Set themes.ts uses, so a
+   *  statistic already cited on a theme card never repeats here (or vice
+   *  versa) - one citation per statistic across the whole document. */
+  citedStatIds: Set<string>,
+): string {
+  const top = selectReferenceStats('geo', sector).find((stat) => !citedStatIds.has(stat.id));
   if (!top) return '';
+  citedStatIds.add(top.id);
   return renderReferenceStatNote(
     strings.themes.impactCitationLabel,
     top,
@@ -154,6 +163,7 @@ function renderCategorySection(
   categoryFindings: Finding[],
   missingPercentByUrl: ReadonlyMap<string, number>,
   sector: StatSector,
+  citedStatIds: Set<string>,
 ): string {
   if (categoryFindings.length === 0) return '';
 
@@ -169,7 +179,7 @@ function renderCategorySection(
     })
     .join('');
   const minorBlock = renderMinorAggregateGroup(strings, language, minorSummaries);
-  const citationBlock = category === 'geo' ? renderGeoCitationBlock(strings, language, sector) : '';
+  const citationBlock = category === 'geo' ? renderGeoCitationBlock(strings, language, sector, citedStatIds) : '';
 
   return `
     <div style="margin-bottom:var(--space-8)">
@@ -187,17 +197,23 @@ export function renderFindingsAppendix(
   findings: Finding[],
   manifest: AuditManifest,
   sector: StatSector,
+  /** B1: see themes.ts's renderThemes - same shared Set, passed through
+   *  from render-html.ts so a statistic already cited on a theme card
+   *  never repeats in the geo appendix section, and vice versa. Defaults
+   *  to a fresh Set for callers (existing tests) that don't need
+   *  cross-section dedupe. */
+  citedStatIds: Set<string> = new Set(),
 ): string {
   const missingPercentByUrl = buildMissingPercentIndex(manifest);
 
   const sections = CATEGORY_ORDER.map((category) => {
     const categoryFindings = findings.filter((finding) => finding.category === category);
-    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector);
+    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds);
   }).join('');
 
   return sheet(`
     ${renderSheetHeader(strings.findingsAppendix.eyebrow, strings.findingsAppendix.heading)}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-6)">${escapeHtml(strings.findingsAppendix.intro)}</p>
     ${sections}
-  `);
+  `, '', 'section-12');
 }

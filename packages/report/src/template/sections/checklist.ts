@@ -61,5 +61,5 @@ export function renderChecklist(
       ${headCell(c.pagesColumnLabel)}
       ${rows}
     </div>
-  `);
+  `, '', 'section-05');
 }

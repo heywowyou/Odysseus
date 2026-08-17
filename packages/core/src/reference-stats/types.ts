@@ -11,7 +11,14 @@
  * wiring is milestone 8.5c.
  */
 
-export type StatCategory = 'accessibility' | 'seo' | 'geo';
+/** 'performance' added for B1 (report-feedback-haaitza.md, 2026-08-17):
+ *  the three Deloitte page-speed/conversion stats were originally tagged
+ *  accessibility/seo purely because CLAUDE.md trade-off 16 gave
+ *  performance/rendering themes no citation slot at all - a mistagging
+ *  that showed up as the speed stat attaching to an unrelated video-
+ *  captions theme and a broken-links theme, twice, in a real report. See
+ *  themes.ts's citation loop for the corresponding eligibility change. */
+export type StatCategory = 'accessibility' | 'seo' | 'geo' | 'performance';
 
 export type StatSector = 'general' | 'hospitality';
 

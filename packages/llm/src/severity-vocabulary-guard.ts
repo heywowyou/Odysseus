@@ -14,7 +14,7 @@ export const SEVERITY_VOCABULARY: Record<
   ReportLanguage,
   { critical: string; serious: string; moderate: string; minor: string }
 > = {
-  fr: { critical: 'critique', serious: 'majeur', moderate: 'modéré', minor: 'mineur' },
+  fr: { critical: 'critique', serious: 'sérieux', moderate: 'modéré', minor: 'mineur' },
   en: { critical: 'critical', serious: 'serious', moderate: 'moderate', minor: 'minor' },
 };
 
@@ -25,6 +25,13 @@ export const SEVERITY_VOCABULARY: Record<
  * both said "majeurs" for the same count, reading as two different
  * classification systems to a legal reader comparing the two.
  *
+ * report-feedback-haaitza.md B3 (2026-08-17) traced this the rest of the
+ * way: the report's own canonical label (docs/report-design-system.md,
+ * strings/fr.ts) had already been corrected to "Sérieux", so this guard
+ * was banning the correct word and permitting the wrong one - the exact
+ * inverse of what it was built to catch. "Majeur" is now the banned
+ * synonym.
+ *
  * Checked with a plain word-boundary scan, not a second model call: an
  * accessibility/SEO audit report has no legitimate reason to use these
  * words, so a match is treated as a vocabulary violation the same way an
@@ -32,9 +39,10 @@ export const SEVERITY_VOCABULARY: Record<
  */
 const BANNED_SYNONYMS: Record<ReportLanguage, RegExp[]> = {
   fr: [
-    /\bsérieux\b/i,
-    /\bsérieuse\b/i,
-    /\bsérieuses\b/i,
+    /\bmajeur\b/i,
+    /\bmajeurs\b/i,
+    /\bmajeure\b/i,
+    /\bmajeures\b/i,
     /\bgrave\b/i,
     /\bgraves\b/i,
     /\bsévère\b/i,
@@ -67,7 +75,7 @@ function checkField(
 
 /** Mirrors findLanguageComplianceViolations' shape (language-guard.ts):
  *  scans every writing-pass prose field for a severity-word synonym that
- *  would drift from the canonical critique/majeur/modéré/mineur (or
+ *  would drift from the canonical critique/sérieux/modéré/mineur (or
  *  critical/serious/moderate/minor) vocabulary used everywhere else in
  *  the report - the stats box, the annex, and the WCAG criteria table. */
 export function findSeverityVocabularyViolations(

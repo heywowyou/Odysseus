@@ -25,6 +25,7 @@ export {
   SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD,
   enforceSiteWideAccessibilityFloor,
   applyOccurrenceWeighting,
+  enforceQuickWinFloor,
   logContainmentWarnings,
   applyStructureRankingRules,
 } from './structure-ranking.js';

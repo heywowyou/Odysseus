@@ -1,7 +1,54 @@
 import { describe, expect, it } from 'vitest';
+import type { AuditManifest, Finding, FindingCategory } from '@odysseus/core';
 import { renderStatistics } from './statistics.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
+
+function buildCategoryFinding(category: FindingCategory, index: number): Finding {
+  return {
+    findingId: `f-${category}-${index}`,
+    auditId: 'audit-1',
+    schemaVersion: 1,
+    source: 'axe',
+    ruleId: `rule-${category}`,
+    category,
+    severity: 'minor',
+    wcagCriteria: [],
+    title: 'Title',
+    description: 'desc',
+    pageUrls: ['https://example.com/'],
+    occurrences: 1,
+    elements: [{ pageUrl: 'https://example.com/', selector: '.x', snippet: '' }],
+    rawEvidence: {},
+    dedupeKey: `d-${category}-${index}`,
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+  };
+}
+
+/** Only manifest.pages (filtered by status) is read by computeStatistics,
+ *  so every other field is a minimal placeholder, cast rather than fully
+ *  typed out. */
+function buildMinimalManifest(): AuditManifest {
+  return {
+    auditId: 'audit-1',
+    kind: 'audit',
+    siteUrl: 'https://example.com',
+    startedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
+    tool: {} as AuditManifest['tool'],
+    config: {} as AuditManifest['config'],
+    crawl: {
+      startUrl: 'https://example.com/',
+      visitedCount: 1,
+      maxPages: 20,
+      maxDepth: 3,
+      robotsTxtFound: false,
+      effectiveDelayMs: 500,
+    },
+    pages: [{ url: 'https://example.com/', depth: 0, status: 'visited', errors: {} }],
+  };
+}
 
 describe('renderStatistics against the real sas-fernande.fr scan', () => {
   it('renders the real page count, finding count, and severity breakdown', async () => {
@@ -36,5 +83,36 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     expect((html.match(/font-size:28px/g) ?? []).length).toBe(4);
     expect((html.match(/font-size:24px/g) ?? []).length).toBe(4);
     expect((html.match(/font-size:22px/g) ?? []).length).toBe(5);
+  });
+
+  it('B9: category tiles render in descending order by count, not the fixed CATEGORY_ORDER', () => {
+    // CATEGORY_ORDER is accessibility/seo/rendering/performance/geo - give
+    // 'performance' the most findings (the real haaitza symptom: the
+    // largest bucket rendered fourth regardless of size) and confirm it
+    // now renders first.
+    const findings: Finding[] = [
+      buildCategoryFinding('accessibility', 1),
+      buildCategoryFinding('seo', 1),
+      buildCategoryFinding('performance', 1),
+      buildCategoryFinding('performance', 2),
+      buildCategoryFinding('performance', 3),
+    ];
+    const manifest = buildMinimalManifest();
+
+    const html = renderStatistics(getStrings('fr'), 'fr', findings, manifest);
+    const labels = ['Performance', 'Accessibilité', 'Référencement (SEO)', 'Rendu', 'Visibilité dans les moteurs d&#39;IA (GEO)'];
+    const positions = labels.map((label) => html.indexOf(`>${label}<`));
+
+    expect(positions.every((p) => p !== -1)).toBe(true);
+    expect(positions[0]).toBeLessThan(Math.min(...positions.slice(1)));
+  });
+
+  it('B9: the WCAG fail-count line carries a heading, not sitting unlabelled', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+
+    const html = renderStatistics(getStrings('fr'), 'fr', findings, manifest);
+
+    expect(html).toContain('<h5>Conformité WCAG</h5>');
   });
 });

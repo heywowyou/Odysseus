@@ -72,10 +72,12 @@ function buildMismatchedKeyOutput(): WritingPassOutput {
 
 function buildNonCanonicalSeverityWordOutput(): WritingPassOutput {
   // Verbatim from the real observed failure, artifacts/haaitza.com/
-  // 2026-08-08T11-07-43Z/analyses/2026-08-08T11-23-48Z-fr.json: "26
-  // sérieux" where the stats box and annex both said "majeurs".
+  // 2026-08-08T11-07-43Z/analyses/2026-08-08T11-23-48Z-fr.json, except for
+  // the word this asserts against: report-feedback-haaitza.md B3 found the
+  // canonical label is "Sérieux" (docs/report-design-system.md), not
+  // "majeur" - the guard's banned word flipped accordingly.
   const output = buildCleanFrenchOutput();
-  output.executiveSummary = 'Nous avons identifié 130 problèmes, dont 8 critiques, 26 sérieux et 24 modérés.';
+  output.executiveSummary = 'Nous avons identifié 130 problèmes, dont 8 critiques, 26 majeurs et 24 modérés.';
   return output;
 }
 
@@ -134,7 +136,7 @@ describe('analyzeWriting', () => {
 
     const result = await analyzeWriting(input, ['t1'], false);
 
-    expect(result.output.executiveSummary).not.toMatch(/sérieux/i);
+    expect(result.output.executiveSummary).not.toMatch(/majeur/i);
     expect(callMistralForWriting).toHaveBeenCalledTimes(2);
   });
 

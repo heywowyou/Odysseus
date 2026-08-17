@@ -26,5 +26,5 @@ export function renderNextSteps(strings: ReportStrings): string {
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-4)">
       ${cards}
     </div>
-  `);
+  `, '', 'section-14');
 }

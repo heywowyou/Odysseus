@@ -19,23 +19,24 @@ function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOut
 }
 
 describe('findSeverityVocabularyViolations', () => {
-  it('flags the real observed failure: "sérieux" used instead of the canonical "majeur"', () => {
+  it('flags "majeur" used instead of the canonical "sérieux" (report-feedback-haaitza.md B3)', () => {
     // Verbatim from artifacts/haaitza.com/2026-08-08T11-07-43Z/analyses/
     // 2026-08-08T11-23-48Z-fr.json, where the stats box and annex both
-    // said "majeurs" for the same count.
+    // said "majeurs" while docs/report-design-system.md's canonical label
+    // is "Sérieux" - the guard used to ban the correct word instead.
     const output = buildOutput({
-      executiveSummary: 'Nous avons identifié 130 problèmes, dont 8 critiques, 26 sérieux et 24 modérés.',
+      executiveSummary: 'Nous avons identifié 130 problèmes, dont 8 critiques, 26 majeurs et 24 modérés.',
     });
 
     const violations = findSeverityVocabularyViolations(output, 'fr');
 
     expect(violations).toHaveLength(1);
-    expect(violations[0]).toMatchObject({ field: 'executiveSummary', matched: 'sérieux' });
+    expect(violations[0]).toMatchObject({ field: 'executiveSummary', matched: 'majeurs' });
   });
 
   it('finds no violations when the executive summary uses the canonical French words', () => {
     const output = buildOutput({
-      executiveSummary: 'Nous avons identifié 130 problèmes, dont 8 critiques, 26 majeurs et 24 modérés.',
+      executiveSummary: 'Nous avons identifié 130 problèmes, dont 8 critiques, 26 sérieux et 24 modérés.',
     });
 
     expect(findSeverityVocabularyViolations(output, 'fr')).toEqual([]);

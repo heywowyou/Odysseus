@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { selectReferenceStats } from '@odysseus/core';
 import { isQuickWinTheme, MAX_RENDERED_THEMES, renderThemes, selectRenderedThemes } from './themes.js';
 import { getStrings } from '../strings/i18n.js';
 import { escapeHtml } from '../html-utils.js';
@@ -71,6 +72,110 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
     if (nonApplicableTheme) {
       expect(html).toContain('Sans objet');
     }
+  });
+});
+
+describe('B1: reference-stat citation eligibility and cross-document dedupe', () => {
+  it('attaches a citation to a performance theme, not just accessibility/seo', async () => {
+    const [analysis, findings, manifest] = await Promise.all([
+      loadSasFernandeAnalysis('fr'),
+      loadSasFernandeFindings(),
+      loadSasFernandeManifest(),
+    ]);
+    const findingId = findings[0]!.findingId;
+    const performanceOnly = {
+      ...analysis,
+      themes: [
+        {
+          title: 'Vitesse mobile insuffisante',
+          category: 'performance' as const,
+          businessImpact: 'Impact',
+          effort: 'medium' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds: [findingId],
+          recommendedActions: ['Action'],
+        },
+      ],
+    };
+
+    const html = renderThemes(getStrings('fr'), performanceOnly, findings, manifest);
+
+    expect(html).toContain('Repère chiffré');
+    expect(html).toContain('Deloitte');
+  });
+
+  it('never cites the same statistic twice across the document, even across two performance themes', async () => {
+    const [analysis, findings, manifest] = await Promise.all([
+      loadSasFernandeAnalysis('fr'),
+      loadSasFernandeFindings(),
+      loadSasFernandeManifest(),
+    ]);
+    const findingId = findings[0]!.findingId;
+    const twoPerformanceThemes = {
+      ...analysis,
+      themes: [
+        {
+          title: 'Vitesse mobile insuffisante',
+          category: 'performance' as const,
+          businessImpact: 'Impact',
+          effort: 'medium' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds: [findingId],
+          recommendedActions: ['Action'],
+        },
+        {
+          title: 'Temps de blocage élevé',
+          category: 'performance' as const,
+          businessImpact: 'Impact',
+          effort: 'medium' as const,
+          impact: 'medium' as const,
+          priorityRank: 2,
+          findingIds: [findingId],
+          recommendedActions: ['Action'],
+        },
+      ],
+    };
+    const citedStatIds = new Set<string>();
+
+    const html = renderThemes(getStrings('fr'), twoPerformanceThemes, findings, manifest, citedStatIds);
+
+    // Only the first (highest-priority) theme in a category gets a
+    // citation per the existing one-per-category rule, so this also
+    // covers the "at most once" case without needing a second call.
+    expect((html.match(/Repère chiffré/g) ?? []).length).toBe(1);
+    expect(citedStatIds.size).toBe(1);
+  });
+
+  it('a Set already containing the only matching statistic id suppresses the citation entirely (cross-section dedupe)', async () => {
+    const [analysis, findings, manifest] = await Promise.all([
+      loadSasFernandeAnalysis('fr'),
+      loadSasFernandeFindings(),
+      loadSasFernandeManifest(),
+    ]);
+    const findingId = findings[0]!.findingId;
+    const performanceOnly = {
+      ...analysis,
+      themes: [
+        {
+          title: 'Vitesse mobile insuffisante',
+          category: 'performance' as const,
+          businessImpact: 'Impact',
+          effort: 'medium' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds: [findingId],
+          recommendedActions: ['Action'],
+        },
+      ],
+    };
+    const sector = analysis.obligationAssessment?.sector ?? 'general';
+    const citedStatIds = new Set(selectReferenceStats('performance', sector).map((stat) => stat.id));
+
+    const html = renderThemes(getStrings('fr'), performanceOnly, findings, manifest, citedStatIds);
+
+    expect(html).not.toContain('Repère chiffré');
   });
 });
 

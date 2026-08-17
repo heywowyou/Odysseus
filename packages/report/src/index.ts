@@ -14,10 +14,11 @@ import { renderPdfFromHtml } from './pdf.js';
 export async function generateReportPdf(input: GenerateReportInput): Promise<Buffer> {
   const { browser } = await launchBrowser();
   try {
-    const { pages: renderDiffEvidencePages, totalEligible: renderDiffTotalEligible } = resolveRenderDiffEvidence(
-      input.manifest,
-      input.findings,
-    );
+    const {
+      pages: renderDiffEvidencePages,
+      totalEligible: renderDiffTotalEligible,
+      wrapperOrLegalExcludedCount: renderDiffWrapperOrLegalExcludedCount,
+    } = resolveRenderDiffEvidence(input.manifest, input.findings);
 
     const html = await renderHtml({
       manifest: input.manifest,
@@ -25,6 +26,7 @@ export async function generateReportPdf(input: GenerateReportInput): Promise<Buf
       analysis: input.analysis,
       renderDiffEvidencePages,
       renderDiffTotalEligible,
+      renderDiffWrapperOrLegalExcludedCount,
     });
 
     return await renderPdfFromHtml(html, browser);

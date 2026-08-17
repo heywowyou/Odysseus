@@ -20,10 +20,18 @@ function renderPageCard(strings: ReportStrings, language: ReportLanguage, page: 
       ? Math.max(2, Math.round((page.rawTextLength / page.renderedTextLength) * 100))
       : 100 - Math.round(page.missingPercent);
 
-  const caption = fillTemplate(r.missingCaptionTemplate, {
-    percent: Math.round(page.missingPercent),
-    selector: page.selector || '-',
-  });
+  // B2: a missing selector (the 5-20% missingPercent band, where no
+  // render-diff finding exists to read one from) used to fill the "sur
+  // {selector}" clause with a bare hyphen ("sur -."). Drop the clause
+  // instead of filling it with a placeholder.
+  const caption = page.selector
+    ? fillTemplate(r.missingCaptionTemplate, {
+        percent: Math.round(page.missingPercent),
+        selector: page.selector,
+      })
+    : fillTemplate(r.missingCaptionNoSelectorTemplate, {
+        percent: Math.round(page.missingPercent),
+      });
 
   return `
     <div class="card elev-sm render-card" style="margin-bottom:var(--space-4)">
@@ -48,10 +56,27 @@ export function renderRenderDiffEvidence(
   language: ReportLanguage,
   pages: readonly RenderDiffEvidencePage[],
   totalEligible: number,
+  /** B6: count of pages excluded from consideration entirely because
+   *  they're third-party wrapper or noindex-legal pages - not counted in
+   *  totalEligible, since they were never eligible evidence to begin
+   *  with. Used only to decide whether the positive-statement fallback
+   *  names them as a named exception. */
+  wrapperOrLegalExcludedCount = 0,
 ): string {
-  if (pages.length === 0) return '';
-
   const r = strings.renderDiffEvidence;
+
+  if (pages.length === 0) {
+    // B6: an empty section reads as "nothing to show," which is wrong
+    // when the truth is "nothing wrong was found on the pages that
+    // matter." State that positively instead of returning nothing.
+    const wrapperNote = wrapperOrLegalExcludedCount > 0 ? ` ${r.positiveStatementWrapperNote}` : '';
+    return sheet(`
+      ${renderSheetHeader(r.eyebrow, r.heading)}
+      <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">${escapeHtml(r.intro)}</p>
+      <p style="font-size:13.5px;opacity:0.85">${escapeHtml(r.positiveStatementTemplate)}${escapeHtml(wrapperNote)}</p>
+    `, '', 'section-08');
+  }
+
   const overflowCount = totalEligible - pages.length;
   const overflowText =
     overflowCount > 0 ? fillTemplate(r.overflowTextTemplate, { count: formatNumber(overflowCount, language) }) : '';
@@ -63,5 +88,5 @@ export function renderRenderDiffEvidence(
     <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">${escapeHtml(r.intro)}</p>
     ${cards}
     ${overflowText ? `<p style="font-size:12px;opacity:0.55;margin-top:var(--space-4)">${escapeHtml(overflowText)}</p>` : ''}
-  `);
+  `, '', 'section-08');
 }

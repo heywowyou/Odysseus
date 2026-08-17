@@ -22,6 +22,15 @@ export function renderLegalExposure(
 
   const paragraph = renderLegalCitationParagraph(strings, obligationAssessment, language);
 
+  // B7: the cover badge no longer reads as a legal risk score (relabeled
+  // in cover.ts), but an undetermined status on its own still leaves the
+  // client with no next step. State the single resolving action without
+  // asserting what the answer would be.
+  const actionNote =
+    status === 'undetermined'
+      ? `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(l.undeterminedActionNote)}</p>`
+      : '';
+
   return sheet(`
     ${renderSheetHeader(l.eyebrow, l.heading)}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-6)">
@@ -34,9 +43,10 @@ export function renderLegalExposure(
         <div class="card-kicker">${escapeHtml(l.obligationStatusLabel)}</div>
         <div class="card-title">${escapeHtml(l.statusLabels[status])}</div>
         <div class="card-body">${escapeHtml(l.statusShortDescriptions[status])}</div>
+        ${actionNote}
       </div>
     </div>
     <p style="font-size:13.5px;opacity:0.85;max-width:66ch">${escapeHtml(paragraph)}</p>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">${escapeHtml(l.disclaimerNote)}</p>
-  `);
+  `, '', 'section-02');
 }

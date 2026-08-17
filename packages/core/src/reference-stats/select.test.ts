@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { selectReferenceStats } from './select.js';
 
 describe('selectReferenceStats', () => {
+  // B1: deloitte-speed-conversion-* moved from category ['accessibility',
+  // 'seo'] to ['performance'] - they're about page speed and conversion,
+  // not accessibility or SEO. These two tests moved with them.
   it('ranks the hospitality-tagged row before general rows for the same category', () => {
-    const results = selectReferenceStats('accessibility', 'hospitality');
+    const results = selectReferenceStats('performance', 'hospitality');
     const ids = results.map((stat) => stat.id);
     expect(ids).toContain('deloitte-speed-conversion-travel-2020');
     expect(ids).toContain('deloitte-speed-conversion-retail-2020');
@@ -13,8 +16,8 @@ describe('selectReferenceStats', () => {
   });
 
   it('never drops general rows when a hospitality sector is requested', () => {
-    const general = selectReferenceStats('accessibility', 'general').map((stat) => stat.id);
-    const hospitality = selectReferenceStats('accessibility', 'hospitality').map((stat) => stat.id);
+    const general = selectReferenceStats('performance', 'general').map((stat) => stat.id);
+    const hospitality = selectReferenceStats('performance', 'hospitality').map((stat) => stat.id);
     for (const id of general) {
       expect(hospitality).toContain(id);
     }
@@ -30,6 +33,16 @@ describe('selectReferenceStats', () => {
   it('includes the hospitality-only geo row when requested for hospitality', () => {
     const ids = selectReferenceStats('geo', 'hospitality').map((stat) => stat.id);
     expect(ids).toContain('phocuswright-ai-trip-planning-2026');
+  });
+
+  it('B1: never returns the page-speed stats for accessibility or seo', () => {
+    const accessibilityIds = selectReferenceStats('accessibility', 'general').map((stat) => stat.id);
+    const seoIds = selectReferenceStats('seo', 'general').map((stat) => stat.id);
+    const speedStatIds = ['deloitte-speed-conversion-retail-2020', 'deloitte-speed-conversion-travel-2020', 'deloitte-aov-retail-2020'];
+    for (const id of speedStatIds) {
+      expect(accessibilityIds).not.toContain(id);
+      expect(seoIds).not.toContain(id);
+    }
   });
 
   it('only returns rows whose category includes the requested one', () => {
@@ -51,7 +64,7 @@ describe('selectReferenceStats', () => {
   });
 
   it('never throws for any category/sector combination', () => {
-    const categories = ['accessibility', 'seo', 'geo'] as const;
+    const categories = ['accessibility', 'seo', 'geo', 'performance'] as const;
     const sectors = ['general', 'hospitality'] as const;
     for (const category of categories) {
       for (const sector of sectors) {

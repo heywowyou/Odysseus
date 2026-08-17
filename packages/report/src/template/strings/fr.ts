@@ -20,10 +20,9 @@ export const fr: ReportStrings = {
       'Glossaire',
       'Prochaines étapes & contact',
     ],
-    note: 'Les numéros de page figurent en pied de page et dans les signets du fichier PDF.',
   },
   statistics: {
-    eyebrow: "3 · L'audit en chiffres",
+    eyebrow: "03 · L'audit en chiffres",
     heading: "Ce que l'analyse a relevé",
     introTemplate:
       '{pages} pages analysées, {findings} constats distincts après regroupement des répétitions. Un constat présent sur plusieurs pages compte une seule fois.',
@@ -36,6 +35,7 @@ export const fr: ReportStrings = {
     moderateTileLabel: 'modérés',
     minorTileLabel: 'mineurs',
     wcagFailingDescriptionTemplate: 'critères WCAG 2.2 AA en échec sur {pages} pages',
+    wcagFailingHeading: 'Conformité WCAG',
     severityBreakdownHeading: 'Répartition par sévérité',
     categoryBreakdownHeading: 'Répartition par catégorie',
     legendCriticalText: "bloque des visiteurs ou l'indexation",
@@ -76,7 +76,7 @@ export const fr: ReportStrings = {
     pagesScannedValueTemplate: '{count} pages scannées',
     languageLabel: 'Langue du rapport',
     wcagReferentialLabel: 'Référentiel audité',
-    riskSmallLabel: 'Niveau de risque global',
+    riskSmallLabel: 'Niveau de criticité des constats',
     riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
   },
   executiveSummary: {
@@ -109,6 +109,8 @@ export const fr: ReportStrings = {
     },
     disclaimerNote:
       "Généré à partir de l'évaluation d'obligations existante ; aucune interprétation juridique supplémentaire n'a été ajoutée. Une revue par un conseil juridique reste nécessaire.",
+    undeterminedActionNote:
+      "Ce statut se précisera si le numéro SIREN de l'entreprise est publié sur le site ou communiqué à l'équipe Odysseus.",
   },
   checklist: {
     eyebrow: '05 · Check-list imprimable',
@@ -144,8 +146,13 @@ export const fr: ReportStrings = {
     rawBarLabelTemplate: 'HTML brut - {chars} caractères',
     renderedBarLabelTemplate: 'Page rendue - {chars} caractères',
     missingCaptionTemplate: 'Manquant : {percent}% du texte visible absent du HTML brut, sur {selector}.',
+    missingCaptionNoSelectorTemplate: 'Manquant : {percent}% du texte visible absent du HTML brut.',
     overflowTextTemplate:
       '{count} autres pages présentent le même écart, détail dans l\'export technique.',
+    positiveStatementTemplate:
+      'Les pages commerciales de ce site conservent leur texte dans le HTML brut : aucun écart de rendu significatif n\'a été mesuré.',
+    positiveStatementWrapperNote:
+      'Seules les pages d\'intégration de contenu tiers font exception à ce constat, voir la section Observations.',
   },
   coreWebVitals: {
     eyebrow: '09 · Performance',
@@ -175,7 +182,7 @@ export const fr: ReportStrings = {
     contactHeading: 'Contact',
     contactBody: '[Adresse e-mail de contact à compléter par le client] - processus de signalement à définir.',
     remediationPlanHeading: 'Plan de remédiation',
-    remediationPlanBody: 'Voir la section « Priorités classées » ci-dessus pour le plan et les échéances associées.',
+    remediationPlanBody: 'Voir la section « Priorités classées » ci-dessus pour le plan.',
   },
   glossary: {
     eyebrow: '13 · Glossaire',
@@ -304,6 +311,7 @@ export const fr: ReportStrings = {
       "Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne publie pas ce numéro lui-même.",
     legalCitationSirenMismatchTemplate:
       "Le numéro SIREN fourni manuellement ({manualSiren}) diffère de celui publié sur le site ({extractedSiren}). Cette détermination retient le numéro fourni manuellement.",
+    legalCitationPointerSentence: 'Le détail de l\'exposition légale figure dans la section « Exposition légale ».',
   },
   footer: {
     confidentialityLabel: 'Rapport confidentiel',

@@ -49,5 +49,5 @@ export function renderConformanceSummary(strings: ReportStrings, findings: Findi
     <p style="font-size:13.5px;opacity:0.85;max-width:66ch;margin-bottom:var(--space-2)">${escapeHtml(c.bodyIntro)}</p>
     <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-6)">${escapeHtml(c.scopeNote)}</p>
     ${body}
-  `);
+  `, '', 'section-07');
 }

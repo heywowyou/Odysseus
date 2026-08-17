@@ -21,5 +21,5 @@ export function renderGlossary(strings: ReportStrings): string {
   return sheet(`
     ${renderSheetHeader(g.eyebrow, g.heading)}
     ${items}
-  `);
+  `, '', 'section-13');
 }

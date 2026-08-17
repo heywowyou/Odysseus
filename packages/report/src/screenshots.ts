@@ -21,6 +21,7 @@ import {
   type Finding,
   type RenderDiffResult,
 } from '@odysseus/core';
+import { buildMissingPercentIndex, isLegalPage, isWrapperPage } from '@odysseus/llm';
 import { selectPageDirsToKeep, type PrunePageInfo } from '@odysseus/scanner';
 import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT, EVIDENCE_MAX_RENDER_DIFF_PAGES } from './constants.js';
 
@@ -80,29 +81,66 @@ function renderDiffDetailsForPage(
   };
 }
 
-/** Doc §3: "3 worst pages by missingPct" - purely a ranking by
- *  missingPercent descending, no homepage tie-break (unlike the old
- *  screenshot-embedding version, which always led with the homepage: that
- *  made sense when a healthy homepage screenshot was still worth showing
- *  as a baseline, but a bar chart has nothing to show for a 0%-missing
- *  page, so there is no reason to force it to the front here). */
+/** Ranking key for the render-evidence sort (B6): a page with a known
+ *  absolute character gap (renderedTextLength - rawTextLength) outranks
+ *  one known only by missingPercent, so "a commercial page missing 4,000
+ *  characters outranks a thin page missing 300" instead of the reverse.
+ *  Pages in the 5-20% band (missingPercent known, no backing render-diff
+ *  finding, per B17) fall back to missingPercent, ranked below every page
+ *  with a known character count. */
+function evidenceRankKey(
+  missingPercent: number,
+  detail: { rawTextLength: number | null; renderedTextLength: number | null },
+): [number, number] {
+  if (detail.rawTextLength !== null && detail.renderedTextLength !== null) {
+    return [1, detail.renderedTextLength - detail.rawTextLength];
+  }
+  return [0, missingPercent];
+}
+
+/** Doc §3: "3 worst pages by missingPct," now ranked by absolute
+ *  characters missing when known (B6) rather than by raw missingPercent -
+ *  no homepage tie-break (unlike the old screenshot-embedding version,
+ *  which always led with the homepage: that made sense when a healthy
+ *  homepage screenshot was still worth showing as a baseline, but a bar
+ *  chart has nothing to show for a 0%-missing page, so there is no reason
+ *  to force it to the front here).
+ *
+ *  Wrapper and legal-noindex pages are excluded before ranking (B6): the
+ *  render-evidence section used to rank them highest, since a third-party
+ *  embed trivially scores ~100% missing, showing off the two pages the
+ *  report's own Observations section already says don't need fixing.
+ *  Reuses isWrapperPage/isLegalPage from @odysseus/llm - the same
+ *  classification partitionFindings uses for Observations - rather than a
+ *  second, independently-maintained predicate. */
 export function resolveRenderDiffEvidence(
   manifest: AuditManifest,
   findings: readonly Finding[],
-): { pages: RenderDiffEvidencePage[]; totalEligible: number } {
+): { pages: RenderDiffEvidencePage[]; totalEligible: number; wrapperOrLegalExcludedCount: number } {
   const candidates = prunePageInfoFromManifest(manifest);
   const keptDirs = selectPageDirsToKeep(candidates);
+  const missingPercentByUrl = buildMissingPercentIndex(manifest);
 
-  const eligible = candidates
-    .filter((page) => keptDirs.has(page.pageDir))
+  const kept = candidates.filter((page) => keptDirs.has(page.pageDir));
+  const wrapperOrLegalExcludedCount = kept.filter(
+    (page) => isWrapperPage(page.pageUrl, missingPercentByUrl) || isLegalPage(page.pageUrl),
+  ).length;
+
+  const eligible = kept
+    .filter((page) => !isWrapperPage(page.pageUrl, missingPercentByUrl) && !isLegalPage(page.pageUrl))
     .filter((page) => (page.missingPercent ?? 0) >= EVIDENCE_INCLUSION_THRESHOLD_PERCENT)
-    .sort((a, b) => (b.missingPercent ?? 0) - (a.missingPercent ?? 0));
+    .map((page) => ({ page, detail: renderDiffDetailsForPage(findings, page.pageUrl) }))
+    .sort((a, b) => {
+      const [aTier, aValue] = evidenceRankKey(a.page.missingPercent ?? 0, a.detail);
+      const [bTier, bValue] = evidenceRankKey(b.page.missingPercent ?? 0, b.detail);
+      return bTier - aTier || bValue - aValue;
+    });
 
-  const pages = eligible.slice(0, EVIDENCE_MAX_RENDER_DIFF_PAGES).map((page) => ({
+  const pages = eligible.slice(0, EVIDENCE_MAX_RENDER_DIFF_PAGES).map(({ page, detail }) => ({
     pageUrl: page.pageUrl,
     missingPercent: page.missingPercent ?? 0,
-    ...renderDiffDetailsForPage(findings, page.pageUrl),
+    ...detail,
   }));
 
-  return { pages, totalEligible: eligible.length };
+  return { pages, totalEligible: eligible.length, wrapperOrLegalExcludedCount };
 }

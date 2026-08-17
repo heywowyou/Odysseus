@@ -129,5 +129,5 @@ export function renderCoreWebVitalsTable(strings: ReportStrings, language: Repor
       ${headCell(c.statusColumnLabel)}
       ${rows}
     </div>
-  `);
+  `, '', 'section-09');
 }
