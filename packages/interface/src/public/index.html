@@ -70,6 +70,12 @@
           <input type="number" id="maxDepth" name="maxDepth" min="0" />
           <label for="delayMs" data-i18n="newScan.delayLabel">Delay between requests (ms)</label>
           <input type="number" id="delayMs" name="delayMs" min="0" />
+          <label for="seeds" data-i18n="newScan.seedsLabel">Extra seed URLs (one per line)</label>
+          <textarea id="seeds" name="seeds" data-i18n-placeholder="newScan.seedsPlaceholder"></textarea>
+          <label for="exclusions" data-i18n="newScan.exclusionsLabel">Exclusion patterns (one glob per line)</label>
+          <textarea id="exclusions" name="exclusions" data-i18n-placeholder="newScan.exclusionsPlaceholder"></textarea>
+          <label for="bookingEngineUrl" data-i18n="newScan.bookingEngineUrlLabel">Known booking engine URL (optional)</label>
+          <input type="text" id="bookingEngineUrl" name="bookingEngineUrl" data-i18n-placeholder="newScan.bookingEngineUrlPlaceholder" />
         </details>
 
         <button type="submit" id="submit-button" data-i18n="newScan.submitButton">Start scan</button>

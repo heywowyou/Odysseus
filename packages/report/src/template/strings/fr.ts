@@ -78,6 +78,8 @@ export const fr: ReportStrings = {
     wcagReferentialLabel: 'Référentiel audité',
     riskSmallLabel: 'Niveau de criticité des constats',
     riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
+    recipientLabel: 'Préparé pour',
+    legalNameLabel: 'Dénomination sociale',
   },
   executiveSummary: {
     eyebrow: '01 · Résumé',
@@ -312,6 +314,9 @@ export const fr: ReportStrings = {
     legalCitationSirenMismatchTemplate:
       "Le numéro SIREN fourni manuellement ({manualSiren}) diffère de celui publié sur le site ({extractedSiren}). Cette détermination retient le numéro fourni manuellement.",
     legalCitationPointerSentence: 'Le détail de l\'exposition légale figure dans la section « Exposition légale ».',
+    socialExclusionDisclosureTemplate:
+      "{count} page(s) ont été exclues de ce scan car elles redirigent vers un réseau social tiers, selon la liste d'exclusion par défaut d'Odysseus.",
+    sirenSourceResolvedTemplate: 'Le numéro SIREN a été confirmé comme affiché sur cette page du site : {url}.',
   },
   footer: {
     confidentialityLabel: 'Rapport confidentiel',

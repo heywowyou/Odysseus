@@ -27,6 +27,7 @@ export async function generateReportPdf(input: GenerateReportInput): Promise<Buf
       renderDiffEvidencePages,
       renderDiffTotalEligible,
       renderDiffWrapperOrLegalExcludedCount,
+      ...(input.manualFields !== undefined ? { manualFields: input.manualFields } : {}),
     });
 
     return await renderPdfFromHtml(html, browser);

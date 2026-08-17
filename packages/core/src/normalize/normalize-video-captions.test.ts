@@ -4,10 +4,10 @@ import { extractVideoCaptionsCandidates, VIDEO_MISSING_CAPTIONS_RULE_ID } from '
 const PAGE_URL = 'https://example.com/';
 
 describe('video-missing-captions', () => {
-  it('fires for a video with no caption track', () => {
+  it('fires for a video with audio and no caption track', () => {
     const candidates = extractVideoCaptionsCandidates({
       pageUrl: PAGE_URL,
-      videos: [{ selector: 'video:nth-of-type(1)', hasCaptionTrack: false }],
+      videos: [{ selector: 'video:nth-of-type(1)', hasCaptionTrack: false, hasAudio: true }],
     });
     expect(candidates).toHaveLength(1);
     expect(candidates[0]?.ruleId).toBe(VIDEO_MISSING_CAPTIONS_RULE_ID);
@@ -21,7 +21,16 @@ describe('video-missing-captions', () => {
     expect(
       extractVideoCaptionsCandidates({
         pageUrl: PAGE_URL,
-        videos: [{ selector: 'video:nth-of-type(1)', hasCaptionTrack: true }],
+        videos: [{ selector: 'video:nth-of-type(1)', hasCaptionTrack: true, hasAudio: true }],
+      }),
+    ).toEqual([]);
+  });
+
+  it('does not fire for a silent video with no captions track, since 1.2.2 does not apply to it', () => {
+    expect(
+      extractVideoCaptionsCandidates({
+        pageUrl: PAGE_URL,
+        videos: [{ selector: 'video:nth-of-type(1)', hasCaptionTrack: false, hasAudio: false }],
       }),
     ).toEqual([]);
   });
@@ -34,8 +43,9 @@ describe('video-missing-captions', () => {
     const candidates = extractVideoCaptionsCandidates({
       pageUrl: PAGE_URL,
       videos: [
-        { selector: 'video:nth-of-type(1)', hasCaptionTrack: true },
-        { selector: 'video:nth-of-type(2)', hasCaptionTrack: false },
+        { selector: 'video:nth-of-type(1)', hasCaptionTrack: true, hasAudio: true },
+        { selector: 'video:nth-of-type(2)', hasCaptionTrack: false, hasAudio: true },
+        { selector: 'video:nth-of-type(3)', hasCaptionTrack: false, hasAudio: false },
       ],
     });
     expect(candidates).toHaveLength(1);

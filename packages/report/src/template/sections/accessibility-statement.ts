@@ -1,5 +1,5 @@
 import { getCriterionName } from '@odysseus/llm';
-import type { Finding, ReportLanguage } from '@odysseus/core';
+import type { AuditManualFields, Finding, ReportLanguage } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, renderSheetHeader, sheet } from '../html-utils.js';
 import { buildConformanceRollup } from '../conformance-rollup.js';
@@ -23,9 +23,14 @@ export function renderAccessibilityStatement(
   strings: ReportStrings,
   language: ReportLanguage,
   findings: Finding[],
+  manualFields?: AuditManualFields,
 ): string {
   const a = strings.accessibilityStatement;
   const rows = buildConformanceRollup(findings);
+  // Manual-input-layer milestone, rule 5: falls back to the fixed
+  // generic contact copy when declarationContactEmail is unset - no
+  // half-filled contact block.
+  const contactBody = manualFields?.declarationContactEmail?.value ?? a.contactBody;
 
   const tableRows = rows
     .map(
@@ -49,7 +54,7 @@ export function renderAccessibilityStatement(
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6)">
       <div>
         <h5>${escapeHtml(a.contactHeading)}</h5>
-        <p style="font-size:13px;opacity:0.7">${escapeHtml(a.contactBody)}</p>
+        <p style="font-size:13px;opacity:0.7">${escapeHtml(contactBody)}</p>
       </div>
       <div>
         <h5>${escapeHtml(a.remediationPlanHeading)}</h5>

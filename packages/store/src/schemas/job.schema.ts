@@ -46,6 +46,20 @@ export interface JobOptionsSnapshot {
   /** prospect-ingestion jobs only: how many AFNIC candidates this batch
    *  targets. Absent falls back to DEFAULT_PROSPECT_BATCH_SIZE. */
   batchSize?: number;
+  /** Manual-input-layer milestone, pre-scan fields (full-audit jobs only):
+   *  changing any of these invalidates a crawl already run, which is why
+   *  they live here rather than on the audit record - see
+   *  AuditManualFields in @odysseus/core for the pre-report counterpart. */
+  /** Extra absolute URLs force-enqueued at depth 0 alongside the start
+   *  URL, e.g. a page the crawler's own link discovery never reaches. */
+  seeds?: string[];
+  /** Glob patterns; a matching URL is never enqueued. Validated at the
+   *  route boundary (routes/scans.ts), same as siren above. */
+  exclusions?: string[];
+  /** A known off-domain booking destination (see transactional-flow.ts's
+   *  delegated-booking-redirect check) - short-circuits that check to
+   *  'single-property' instead of re-guessing from page content. */
+  bookingEngineUrl?: string;
 }
 
 export interface JobProgressCrawl {
@@ -137,6 +151,9 @@ const jobOptionsSchema = new Schema(
     transactionalFlow: { type: Boolean },
     transactionalFlowReason: { type: String },
     batchSize: { type: Number },
+    seeds: { type: [String] },
+    exclusions: { type: [String] },
+    bookingEngineUrl: { type: String },
   },
   { _id: false },
 );

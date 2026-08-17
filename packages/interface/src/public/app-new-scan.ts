@@ -96,6 +96,16 @@ async function submit(): Promise<void> {
     const rawTransactionalFlow = String(formData.get('transactionalFlow') ?? '');
     const rawTransactionalFlowReason = String(formData.get('transactionalFlowReason') ?? '').trim();
 
+    const seeds = String(formData.get('seeds') ?? '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    const exclusions = String(formData.get('exclusions') ?? '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    const rawBookingEngineUrl = String(formData.get('bookingEngineUrl') ?? '').trim();
+
     const body =
       type === 'full-audit'
         ? {
@@ -110,6 +120,9 @@ async function submit(): Promise<void> {
               ...(rawTransactionalFlow !== '' && rawTransactionalFlowReason !== ''
                 ? { transactionalFlowReason: rawTransactionalFlowReason }
                 : {}),
+              ...(seeds.length > 0 ? { seeds } : {}),
+              ...(exclusions.length > 0 ? { exclusions } : {}),
+              ...(rawBookingEngineUrl !== '' ? { bookingEngineUrl: rawBookingEngineUrl } : {}),
             },
           }
         : {

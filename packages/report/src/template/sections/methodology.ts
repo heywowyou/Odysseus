@@ -171,8 +171,17 @@ function renderSirenProvenanceNote(
   strings: ReportStrings,
   assessment: ObligationAssessment | undefined,
   findings: readonly Pick<Finding, 'findingId' | 'ruleId'>[],
+  /** Manual-input-layer milestone: when set, the operator has confirmed
+   *  where the SIREN/RCS/TVA is displayed and lcen-resolution.ts already
+   *  removed the finding from `findings` - this takes priority over
+   *  every other branch below, since there is no longer a finding to
+   *  reference and no ambiguity left to explain. */
+  resolvedSirenSourceUrl: string | undefined,
 ): string {
   const m = strings.methodology;
+  if (resolvedSirenSourceUrl) {
+    return fillTemplate(m.sirenSourceResolvedTemplate, { url: resolvedSirenSourceUrl });
+  }
   if (!assessment) return '';
 
   if (assessment.sirenMismatch) {
@@ -205,6 +214,7 @@ export function renderMethodology(
   language: ReportLanguage,
   obligationAssessment?: ObligationAssessment,
   findings: readonly Pick<Finding, 'findingId' | 'ruleId'>[] = [],
+  resolvedSirenSourceUrl?: string,
 ): string {
   const m = strings.methodology;
   const eyebrow = m.eyebrow;
@@ -219,7 +229,18 @@ export function renderMethodology(
     date: formatDate(new Date(manifest.startedAt), language),
   });
 
-  const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings);
+  const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings, resolvedSirenSourceUrl);
+
+  // Manual-input-layer milestone: pages excluded as social-platform
+  // redirects are never silently dropped (crawl.ts still records every
+  // one in the manifest with status 'skipped-external-redirect') - this
+  // states the count so the client sees what was skipped and why,
+  // without blowing this section's 1-sheet cap with a per-URL table.
+  const socialExclusionCount = manifest.pages.filter((page) => page.status === 'skipped-external-redirect').length;
+  const socialExclusionNote =
+    socialExclusionCount > 0
+      ? fillTemplate(m.socialExclusionDisclosureTemplate, { count: socialExclusionCount })
+      : undefined;
 
   // B9: the full legal-citation paragraph used to be rendered here a
   // second time, verbatim, duplicating legal-exposure.ts's own copy of
@@ -228,6 +249,7 @@ export function renderMethodology(
   return sheet(`
     ${renderSheetHeader(eyebrow, m.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
+    ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(socialExclusionNote)}</p>` : ''}
     <div class="hr"></div>
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.automatedCoverageCaveat)}</p>
     <div class="hr"></div>

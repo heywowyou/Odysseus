@@ -14,10 +14,11 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { AuditManifest, Finding } from '@odysseus/core';
+import type { AuditManifest, AuditManualFields, Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../types.js';
 import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
+import { resolveLcenFinding } from './lcen-resolution.js';
 import { renderCover } from './sections/cover.js';
 import { renderToc } from './sections/toc.js';
 import { renderStatistics } from './sections/statistics.js';
@@ -76,6 +77,7 @@ export interface RenderHtmlInput {
    *  fallback name them as a named exception rather than staying silent
    *  about why the section has nothing else to show. */
   renderDiffWrapperOrLegalExcludedCount?: number;
+  manualFields?: AuditManualFields;
 }
 
 /** Single-tier report body, since the 2026-08-16 commercial model drop of
@@ -94,6 +96,7 @@ function renderBody(
   renderDiffEvidencePages: RenderDiffEvidencePage[],
   renderDiffTotalEligible: number,
   renderDiffWrapperOrLegalExcludedCount: number,
+  manualFields: AuditManualFields | undefined,
 ): string {
   // B1: one Set shared by every reference-stat citation render site
   // (renderThemes, then renderFindingsAppendix's geo section), so the same
@@ -101,16 +104,26 @@ function renderBody(
   // each section deduped only within itself.
   const citedStatIds = new Set<string>();
 
+  // Manual-input-layer milestone: resolved once here, the same
+  // document-wide assembly point citedStatIds already uses, so
+  // findings-appendix and methodology's siren-provenance note see the
+  // identical resolved/unresolved decision. See lcen-resolution.ts.
+  const { findings: resolvedFindings, resolvedSirenSourceUrl } = resolveLcenFinding(
+    findings,
+    manualFields?.sirenSourceUrl?.value,
+  );
+  const sectorOverride = manualFields?.sector?.value;
+
   return [
-    renderCover(strings, manifest, analysis),
+    renderCover(strings, manifest, analysis, manualFields),
     renderToc(strings),
     renderExecutiveSummary(strings, analysis),
     renderLegalExposure(strings, analysis.language, analysis.obligationAssessment),
-    renderStatistics(strings, analysis.language, findings, manifest),
-    renderThemes(strings, analysis, findings, manifest, citedStatIds),
-    renderChecklist(strings, analysis.language, analysis, findings, manifest),
-    renderObservations(strings, findings, manifest),
-    renderConformanceSummary(strings, findings, analysis.language),
+    renderStatistics(strings, analysis.language, resolvedFindings, manifest),
+    renderThemes(strings, analysis, resolvedFindings, manifest, citedStatIds, sectorOverride),
+    renderChecklist(strings, analysis.language, analysis, resolvedFindings, manifest),
+    renderObservations(strings, resolvedFindings, manifest),
+    renderConformanceSummary(strings, resolvedFindings, analysis.language),
     renderRenderDiffEvidence(
       strings,
       analysis.language,
@@ -119,14 +132,21 @@ function renderBody(
       renderDiffWrapperOrLegalExcludedCount,
     ),
     renderCoreWebVitalsTable(strings, analysis.language, manifest),
-    renderAccessibilityStatement(strings, analysis.language, findings),
-    renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings),
+    renderAccessibilityStatement(strings, analysis.language, resolvedFindings, manualFields),
+    renderMethodology(
+      strings,
+      manifest,
+      analysis.language,
+      analysis.obligationAssessment,
+      resolvedFindings,
+      resolvedSirenSourceUrl,
+    ),
     renderFindingsAppendix(
       strings,
       analysis.language,
-      findings,
+      resolvedFindings,
       manifest,
-      analysis.obligationAssessment?.sector ?? 'general',
+      sectorOverride ?? analysis.obligationAssessment?.sector ?? 'general',
       citedStatIds,
     ),
     renderGlossary(strings),
@@ -135,7 +155,7 @@ function renderBody(
 }
 
 export async function renderHtml(input: RenderHtmlInput): Promise<string> {
-  const { manifest, findings, analysis, renderDiffEvidencePages } = input;
+  const { manifest, findings, analysis, renderDiffEvidencePages, manualFields } = input;
   const renderDiffTotalEligible = input.renderDiffTotalEligible ?? renderDiffEvidencePages.length;
   const renderDiffWrapperOrLegalExcludedCount = input.renderDiffWrapperOrLegalExcludedCount ?? 0;
   const strings = getStrings(analysis.language);
@@ -149,6 +169,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     renderDiffEvidencePages,
     renderDiffTotalEligible,
     renderDiffWrapperOrLegalExcludedCount,
+    manualFields,
   );
 
   return `<!doctype html>

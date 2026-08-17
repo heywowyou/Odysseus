@@ -7,7 +7,10 @@ vi.mock('@odysseus/report', () => ({
   generateReportPdf: vi.fn(),
   REPORT_TEMPLATE_VERSION: 3,
 }));
-vi.mock('@odysseus/store', () => ({ persistReport: vi.fn() }));
+vi.mock('@odysseus/store', () => ({
+  persistReport: vi.fn(),
+  getAuditManualFields: vi.fn().mockResolvedValue(undefined),
+}));
 
 import { generateReportPdf } from '@odysseus/report';
 import { persistReport } from '@odysseus/store';

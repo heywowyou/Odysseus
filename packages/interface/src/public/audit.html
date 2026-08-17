@@ -33,6 +33,50 @@
         <div id="report-links"></div>
       </section>
 
+      <h2 data-i18n="auditDetail.manualFieldsHeading">Enrichment</h2>
+      <section class="card">
+        <p class="hint" data-i18n="auditDetail.manualFieldsHint"></p>
+        <form id="manual-fields-form">
+          <label for="mf-siren" data-i18n="auditDetail.sirenLabel">SIREN</label>
+          <div class="siren-row">
+            <input type="text" id="mf-siren" name="siren" inputmode="numeric" />
+            <button type="button" id="siren-check-button" data-i18n="auditDetail.sirenCheckButton">Check</button>
+          </div>
+          <p id="siren-preview-result" class="hint"></p>
+
+          <label for="mf-sirenSourceUrl" data-i18n="auditDetail.sirenSourceUrlLabel">Page where the SIREN is displayed</label>
+          <input type="text" id="mf-sirenSourceUrl" name="sirenSourceUrl" />
+
+          <label for="mf-raisonSociale" data-i18n="auditDetail.raisonSocialeLabel">Legal name</label>
+          <input type="text" id="mf-raisonSociale" name="raisonSociale" />
+
+          <label for="mf-nomCommercial" data-i18n="auditDetail.nomCommercialLabel">Display name</label>
+          <input type="text" id="mf-nomCommercial" name="nomCommercial" />
+
+          <label for="mf-recipientName" data-i18n="auditDetail.recipientNameLabel">Prepared for</label>
+          <input type="text" id="mf-recipientName" name="recipientName" />
+
+          <label for="mf-sector" data-i18n="auditDetail.sectorLabel">Sector</label>
+          <select id="mf-sector" name="sector">
+            <option value="" data-i18n="auditDetail.sectorAutoOption">Auto-detected</option>
+            <option value="general" data-i18n="auditDetail.sectorGeneralOption">General</option>
+            <option value="hospitality" data-i18n="auditDetail.sectorHospitalityOption">Hospitality</option>
+          </select>
+
+          <label for="mf-revenueBand" data-i18n="auditDetail.revenueBandLabel">Revenue band</label>
+          <input type="text" id="mf-revenueBand" name="revenueBand" />
+
+          <label for="mf-declarationContactEmail" data-i18n="auditDetail.declarationContactEmailLabel">Declaration contact email</label>
+          <input type="text" id="mf-declarationContactEmail" name="declarationContactEmail" />
+
+          <div class="manual-fields-actions">
+            <button type="submit" id="manual-fields-save-button" data-i18n="auditDetail.saveButton">Save</button>
+            <button type="button" id="regenerate-report-button" data-i18n="auditDetail.regenerateButton">Regenerate report</button>
+          </div>
+          <p id="manual-fields-status" class="hint"></p>
+        </form>
+      </section>
+
       <h2 data-i18n="auditDetail.findingsHeading">Findings</h2>
       <section class="card">
         <table>

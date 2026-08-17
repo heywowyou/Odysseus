@@ -86,6 +86,12 @@ export interface ReportStrings {
     wcagReferentialLabel: string;
     riskSmallLabel: string;
     riskLevels: { low: string; medium: string; high: string };
+    /** Manual-input-layer milestone: shown in the field grid only when
+     *  AuditManualFields.recipientName is present. */
+    recipientLabel: string;
+    /** Rendered as a secondary line under the headline company identity
+     *  only when AuditManualFields.raisonSociale is present. */
+    legalNameLabel: string;
   };
   executiveSummary: {
     eyebrow: string;
@@ -348,6 +354,18 @@ export interface ReportStrings {
      *  render sites" still holds, only the second render site changed
      *  from a full repeat to a cross-reference. */
     legalCitationPointerSentence: string;
+    /** Manual-input-layer milestone: states how many pages the crawl
+     *  excluded as third-party social platform links, per the versioned
+     *  default exclusion list (packages/scanner/src/config/
+     *  social-exclusion.json). Only rendered when the count is greater
+     *  than zero. Template: {count}. */
+    socialExclusionDisclosureTemplate: string;
+    /** Manual-input-layer milestone: when the operator has confirmed
+     *  where the SIREN/RCS/TVA is displayed on the site
+     *  (AuditManualFields.sirenSourceUrl), the lcen-mentions-legales-
+     *  missing finding is suppressed and this sentence states where it
+     *  was found instead. Template: {url}. */
+    sirenSourceResolvedTemplate: string;
   };
   footer: {
     confidentialityLabel: string;

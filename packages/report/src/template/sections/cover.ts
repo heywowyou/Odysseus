@@ -1,4 +1,4 @@
-import type { AuditManifest } from '@odysseus/core';
+import type { AuditManifest, AuditManualFields } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatDate, sheet } from '../html-utils.js';
@@ -51,18 +51,33 @@ function field(label: string, valueHtml: string): string {
  *  a hypothetical. Placing it as the cover's own first child keeps it on
  *  the same named page from the start, so no such transition ever
  *  happens. */
-export function renderCover(strings: ReportStrings, manifest: AuditManifest, analysis: StoredAnalysis): string {
+export function renderCover(
+  strings: ReportStrings,
+  manifest: AuditManifest,
+  analysis: StoredAnalysis,
+  manualFields?: AuditManualFields,
+): string {
   const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
   const riskLabel = strings.cover.riskLevels[analysis.overallRisk];
   const risk = RISK_COLOR[analysis.overallRisk];
+
+  // Manual-input-layer milestone, rule 5: every field absent must
+  // produce a correctly rendering report - the headline identity falls
+  // back to the site URL exactly as before when nomCommercial is unset,
+  // and the "Préparé pour" line and legal-name line are omitted
+  // entirely rather than rendered empty.
+  const nomCommercial = manualFields?.nomCommercial?.value;
+  const raisonSociale = manualFields?.raisonSociale?.value;
+  const recipientName = manualFields?.recipientName?.value;
 
   return sheet(
     `
     <div class="footer-source">${escapeHtml(strings.footer.confidentialityLabel)} &middot; ${escapeHtml(manifest.siteUrl)}</div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-4)">
       <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(strings.cover.kicker)}</div>
-      <h1 style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(strings.cover.reportTitle)}</h1>
-      <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(strings.cover.subtitle)}</div>
+      <h1 style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(nomCommercial ?? strings.cover.reportTitle)}</h1>
+      <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(nomCommercial ? strings.cover.reportTitle : strings.cover.subtitle)}</div>
+      ${raisonSociale ? `<div style="font-size:13px;opacity:0.6">${escapeHtml(strings.cover.legalNameLabel)} : ${escapeHtml(raisonSociale)}</div>` : ''}
     </div>
     <div>
       <div style="height:1px;background:linear-gradient(to right,var(--color-accent) 0,var(--color-accent) 120px,transparent 120px);margin-bottom:var(--space-8)"></div>
@@ -76,6 +91,7 @@ export function renderCover(strings: ReportStrings, manifest: AuditManifest, ana
           strings.cover.riskSmallLabel,
           `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:calc(var(--radius-md)*0.75);font-size:14px;font-weight:500;background:${risk.bg};color:${risk.color}">${escapeHtml(riskLabel)}</span>`,
         )}
+        ${recipientName ? field(strings.cover.recipientLabel, escapeHtml(recipientName)) : ''}
       </div>
     </div>
   `,

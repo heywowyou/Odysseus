@@ -38,6 +38,9 @@ export interface ScanPageOptions {
    *  transactional-flow.ts's RedirectHostCache doc comment for why a
    *  per-page cache alone isn't enough. */
   redirectHostCache?: RedirectHostCache;
+  /** Manual-input-layer milestone: forwarded to
+   *  findDelegatedBookingRedirectChecks, see its own doc comment. */
+  bookingEngineUrl?: string;
   /** The crawl's own start URL. Only used to gate sitemapCheck below to
    *  the one page it should attach to. */
   homepageUrl?: string;
@@ -196,6 +199,7 @@ export async function scanPage(
             ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
             ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
             ...(options.redirectHostCache !== undefined ? { hostCache: options.redirectHostCache } : {}),
+            ...(options.bookingEngineUrl !== undefined ? { bookingEngineUrl: options.bookingEngineUrl } : {}),
           });
           // Only a confirmed single-property redirect promotes to
           // transactional-flow evidence (drives hasTransactionalFlow);

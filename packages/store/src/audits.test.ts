@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type Finding } from '@odysseus/core';
 import { persistAudit } from './persist-audit.js';
-import { getAudit, getFindingsForAudit } from './audits.js';
+import { getAudit, getAuditManualFields, getFindingsForAudit, setAuditManualFields } from './audits.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -87,5 +87,33 @@ describe.skipIf(!mongoAvailable)('audits read helpers', () => {
     const found = await getFindingsForAudit(connection!, 'audits-read-2');
     expect(found).toHaveLength(2);
     expect(found.map((f) => f.dedupeKey).sort()).toEqual(['ar2-a', 'ar2-b']);
+  });
+
+  it('getAuditManualFields returns undefined before any field is saved', async () => {
+    await persistAudit(connection!, buildManifest('audits-manual-1'), []);
+    expect(await getAuditManualFields(connection!, 'audits-manual-1')).toBeUndefined();
+  });
+
+  it('setAuditManualFields merges rather than replaces, and rejects an invalid siren', async () => {
+    await persistAudit(connection!, buildManifest('audits-manual-2'), []);
+
+    await setAuditManualFields(connection!, 'audits-manual-2', {
+      nomCommercial: { value: 'Acme', provenance: 'operator' },
+    });
+    const afterFirst = await getAuditManualFields(connection!, 'audits-manual-2');
+    expect(afterFirst?.nomCommercial?.value).toBe('Acme');
+
+    await setAuditManualFields(connection!, 'audits-manual-2', {
+      recipientName: { value: 'Jane Doe', provenance: 'operator' },
+    });
+    const afterSecond = await getAuditManualFields(connection!, 'audits-manual-2');
+    expect(afterSecond?.nomCommercial?.value).toBe('Acme');
+    expect(afterSecond?.recipientName?.value).toBe('Jane Doe');
+
+    await expect(
+      setAuditManualFields(connection!, 'audits-manual-2', {
+        siren: { value: '732829321', provenance: 'operator' },
+      }),
+    ).rejects.toThrow(/valid SIREN/);
   });
 });

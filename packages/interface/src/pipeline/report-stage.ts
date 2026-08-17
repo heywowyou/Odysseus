@@ -10,7 +10,8 @@ import path from 'node:path';
 import type { Connection } from 'mongoose';
 import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
 import { generateReportPdf, REPORT_TEMPLATE_VERSION, type StoredAnalysis } from '@odysseus/report';
-import { persistReport } from '@odysseus/store';
+import { getAuditManualFields, persistReport } from '@odysseus/store';
+import { runObligationStage } from './obligation-stage.js';
 
 export interface ReportStageResult {
   reportPath: string;
@@ -28,7 +29,30 @@ export async function runReportStage(
   analysis: StoredAnalysis,
   connection: Connection,
 ): Promise<ReportStageResult> {
-  const pdf = await generateReportPdf({ auditDir, manifest, findings, analysis });
+  // Manual-input-layer milestone: manual fields are read fresh from the
+  // store here, at render time, rather than trusted from whatever was
+  // baked into `analysis` when it was generated - this is what lets the
+  // operator edit them after the fact with no rescan and no new analysis
+  // document (see AuditManualFields's own doc comment in @odysseus/core
+  // and CLAUDE.md's manual-input-layer milestone). The obligation
+  // assessment specifically is recomputed fresh too: it is not fed to the
+  // LLM (only spliced into the report's legal section), so recomputing it
+  // here costs nothing and picks up a manualFields.siren saved after the
+  // scan - resolveEffectiveSiren's existing extracted-vs-manual precedence
+  // is reused unchanged, "manual" now just means "freshest at render
+  // time" instead of "given at job creation."
+  const manualFields = await getAuditManualFields(connection, manifest.auditId);
+  const obligationAssessment = manualFields?.siren
+    ? await runObligationStage(manifest, connection, manualFields.siren.value)
+    : analysis.obligationAssessment;
+
+  const pdf = await generateReportPdf({
+    auditDir,
+    manifest,
+    findings,
+    analysis: { ...analysis, ...(obligationAssessment !== undefined ? { obligationAssessment } : {}) },
+    ...(manualFields !== undefined ? { manualFields } : {}),
+  });
 
   const generatedAt = new Date();
   const reportsDir = path.join(auditDir, 'reports');

@@ -1,0 +1,66 @@
+{
+  "version": "2026-08-17",
+  "sourceNote": "Domains that host third-party social/messaging platforms, shared by two independent call sites: transactional-flow.ts never follows a link to one of these (a social platform is never a booking engine), and crawl.ts never treats a page whose crawl redirects out to one of these as part of the audited site. Migrated one-for-one from the previous hardcoded SOCIAL_PLATFORM_HOSTS array; every pattern below matched something a real crawl actually hit before being added, per social-hosts.ts's original doc comment.",
+  "patterns": [
+    {
+      "pattern": "(^|\\.)facebook\\.com$",
+      "rationale": "Confirmed on a real haaitza.com crawl: a stub link (e.g. /facebook) redirecting into facebook.com is slow and often errors out under headless conditions, and was previously misreported as a broken internal link.",
+      "confidence": "high",
+      "enabled": true
+    },
+    {
+      "pattern": "(^|\\.)instagram\\.com$",
+      "rationale": "Same social-icon-link pattern as Facebook; SMB sites commonly link an Instagram profile from the header/footer.",
+      "confidence": "high",
+      "enabled": true
+    },
+    {
+      "pattern": "(^|\\.)twitter\\.com$",
+      "rationale": "Legacy Twitter domain, still widely linked from existing site footers alongside x.com.",
+      "confidence": "high",
+      "enabled": true
+    },
+    {
+      "pattern": "(^|\\.)x\\.com$",
+      "rationale": "Current Twitter/X domain.",
+      "confidence": "high",
+      "enabled": true
+    },
+    {
+      "pattern": "(^|\\.)linkedin\\.com$",
+      "rationale": "Common B2B footer link, never a page of the audited site.",
+      "confidence": "high",
+      "enabled": true
+    },
+    {
+      "pattern": "(^|\\.)youtube\\.com$",
+      "rationale": "Channel/profile links, and embedded-video click-through targets.",
+      "confidence": "high",
+      "enabled": true
+    },
+    {
+      "pattern": "(^|\\.)tiktok\\.com$",
+      "rationale": "Increasingly common SMB social-icon link.",
+      "confidence": "high",
+      "enabled": true
+    },
+    {
+      "pattern": "(^|\\.)pinterest\\.[a-z.]+$",
+      "rationale": "Locale-specific TLDs (pinterest.fr, pinterest.co.uk, etc) all resolve to the same profile-page platform.",
+      "confidence": "high",
+      "enabled": true
+    },
+    {
+      "pattern": "(^|\\.)wa\\.me$",
+      "rationale": "WhatsApp click-to-chat short link, never a page of the audited site.",
+      "confidence": "high",
+      "enabled": true
+    },
+    {
+      "pattern": "(^|\\.)whatsapp\\.com$",
+      "rationale": "WhatsApp's own domain, same reasoning as wa.me.",
+      "confidence": "high",
+      "enabled": true
+    }
+  ]
+}

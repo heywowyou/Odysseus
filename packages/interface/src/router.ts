@@ -55,6 +55,10 @@ export class Router {
     this.routes.push({ method: 'POST', segments: splitPath(pattern), handler });
   }
 
+  patch(pattern: string, handler: RouteHandler): void {
+    this.routes.push({ method: 'PATCH', segments: splitPath(pattern), handler });
+  }
+
   /** Handles every request that matches no route above - the static
    *  file server, in practice. */
   setFallback(handler: RouteHandler): void {

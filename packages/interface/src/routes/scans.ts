@@ -15,6 +15,14 @@ function isValidUrl(value: unknown): value is string {
   }
 }
 
+/** Minimal glob shape check, not a compiler: routes/scans.ts's boundary
+ *  only needs to reject garbage early (rule: fail fast at the boundary,
+ *  same as siren), the actual matching happens in links.ts. Rejects
+ *  empty strings and control characters; otherwise permissive. */
+function isPlausibleGlob(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0 && !/[\x00-\x1f]/.test(value);
+}
+
 /** Thrown only for siren: an invalid maxPages/maxDepth/delayMs is
  *  silently ignored (matching this function's existing behavior for
  *  those), but a manually supplied SIREN must fail fast rather than
@@ -45,6 +53,30 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
   }
   if (typeof record['transactionalFlowReason'] === 'string' && record['transactionalFlowReason'].trim() !== '') {
     options.transactionalFlowReason = record['transactionalFlowReason'].trim();
+  }
+
+  const rawSeeds = record['seeds'];
+  if (Array.isArray(rawSeeds) && rawSeeds.length > 0) {
+    if (!rawSeeds.every(isValidUrl)) {
+      throw new OptionsValidationError('seeds must be an array of valid URLs');
+    }
+    options.seeds = rawSeeds;
+  }
+
+  const rawExclusions = record['exclusions'];
+  if (Array.isArray(rawExclusions) && rawExclusions.length > 0) {
+    if (!rawExclusions.every(isPlausibleGlob)) {
+      throw new OptionsValidationError('exclusions must be an array of non-empty glob patterns');
+    }
+    options.exclusions = rawExclusions;
+  }
+
+  const rawBookingEngineUrl = record['bookingEngineUrl'];
+  if (typeof rawBookingEngineUrl === 'string' && rawBookingEngineUrl.trim() !== '') {
+    if (!isValidUrl(rawBookingEngineUrl)) {
+      throw new OptionsValidationError('bookingEngineUrl must be a valid URL');
+    }
+    options.bookingEngineUrl = rawBookingEngineUrl;
   }
 
   return options;

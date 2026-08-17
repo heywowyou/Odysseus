@@ -34,7 +34,12 @@ export const ROBOTS_DISALLOW_BROAD_RULE_ID = 'robots-disallow-broad';
  *  than a couple of targeted paths. */
 const BROAD_DISALLOW_MIN_MATCHED_PAGES = 3;
 
-export type CrawlPageStatus = 'visited' | 'skipped-robots' | 'skipped-non-html' | 'error';
+export type CrawlPageStatus =
+  | 'visited'
+  | 'skipped-robots'
+  | 'skipped-non-html'
+  | 'skipped-external-redirect'
+  | 'error';
 
 export interface CrawlPageInput {
   url: string;

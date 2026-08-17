@@ -11,7 +11,7 @@
     "./*": "./dist/*"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && mkdir -p dist/config && cp src/config/*.json dist/config/",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

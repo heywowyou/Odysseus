@@ -9,6 +9,7 @@ import {
 import { normalizeInternalLinks } from './links.js';
 import { fetchRobotsRules, findBlockingPattern, isAllowedByRobots } from './robots.js';
 import { findMentionsLegalesUrl } from './checks/mentions-legales.js';
+import { isSocialPlatformHost } from './social-hosts.js';
 
 /** Progress events for a live ETA display. Purely additive: emitted only
  *  when a caller supplies onProgress, no behavior change otherwise.
@@ -28,9 +29,23 @@ export interface CrawlOptions {
   timeoutMs?: number;
   userAgent?: string;
   onProgress?: (event: CrawlProgressEvent) => void;
+  /** Manual-input-layer milestone: extra absolute URLs force-enqueued at
+   *  depth 0 alongside startUrl, e.g. a page link discovery never
+   *  reaches. Same-origin filtering still applies - an off-origin seed is
+   *  silently dropped, matching normalizeInternalLinks' own origin rule,
+   *  since this crawler only ever audits one origin. */
+  seeds?: string[];
+  /** Glob patterns; a matching discovered URL is never enqueued. Passed
+   *  straight through to normalizeInternalLinks. */
+  exclusions?: string[];
 }
 
-export type CrawledPageStatus = 'visited' | 'skipped-robots' | 'skipped-non-html' | 'error';
+export type CrawledPageStatus =
+  | 'visited'
+  | 'skipped-robots'
+  | 'skipped-non-html'
+  | 'skipped-external-redirect'
+  | 'error';
 
 export interface CrawledPage {
   url: string;
@@ -91,6 +106,17 @@ export function isNonHtmlContentType(contentType: string | undefined): boolean {
   return contentType !== undefined && !contentType.toLowerCase().includes('text/html');
 }
 
+/** browserPage.url() is "about:blank" before any navigation commits and
+ *  can in principle be any malformed value; never let a URL parse failure
+ *  here throw out of the crawl loop. */
+function safeHostname(url: string): string | null {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Breadth-first crawl from startUrl, following only same-origin links.
  * Reuses one BrowserContext for the whole crawl (a fresh Page per URL,
@@ -124,6 +150,26 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const enqueued = new Set<string>([start.toString()]);
   const queue: QueueItem[] = [{ url: start.toString(), depth: 0 }];
 
+  // Manual-input-layer milestone: extra seed URLs are enqueued at depth 0,
+  // same as the start URL, before the crawl loop begins. Off-origin seeds
+  // are silently dropped (this crawler only ever audits one origin, same
+  // rule normalizeInternalLinks already enforces for discovered links);
+  // an unparsable seed is dropped the same way a malformed href is.
+  for (const seed of options.seeds ?? []) {
+    let resolvedSeed: URL;
+    try {
+      resolvedSeed = new URL(seed);
+    } catch {
+      continue;
+    }
+    if (resolvedSeed.origin !== start.origin) continue;
+    resolvedSeed.hash = '';
+    const normalizedSeed = resolvedSeed.toString();
+    if (enqueued.has(normalizedSeed)) continue;
+    enqueued.add(normalizedSeed);
+    queue.push({ url: normalizedSeed, depth: 0 });
+  }
+
   const context = await options.browser.newContext({ userAgent });
   context.setDefaultTimeout(timeoutMs);
   context.setDefaultNavigationTimeout(timeoutMs);
@@ -154,7 +200,23 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         const httpStatus = response?.status();
         const contentType = response?.headers()['content-type'];
 
-        if (isNonHtmlContentType(contentType)) {
+        // A stub URL like /facebook or /instagram that server-side or
+        // client-side redirects out to a social platform is not a page of
+        // the audited site - it must never reach a detector (broken-link,
+        // render-diff, axe, Lighthouse), which is exactly what happened
+        // before this check existed: navigating a real browser context
+        // into facebook.com under headless conditions is slow and often
+        // errors out, and the resulting 'error' status then got reported
+        // as a broken internal link even though the redirect itself
+        // worked exactly as the site intended.
+        const finalHost = safeHostname(browserPage.url());
+
+        if (finalHost !== null && isSocialPlatformHost(finalHost)) {
+          const skippedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'skipped-external-redirect' };
+          if (httpStatus !== undefined) skippedPage.httpStatus = httpStatus;
+          if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
+          pages.push(skippedPage);
+        } else if (isNonHtmlContentType(contentType)) {
           const skippedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'skipped-non-html' };
           if (httpStatus !== undefined) skippedPage.httpStatus = httpStatus;
           if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
@@ -169,7 +231,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             const hrefs = await browserPage.$$eval('a[href]', (anchors) =>
               anchors.map((a) => a.getAttribute('href')),
             );
-            for (const link of normalizeInternalLinks(hrefs, item.url)) {
+            for (const link of normalizeInternalLinks(hrefs, item.url, options.exclusions ?? [])) {
               if (enqueued.has(link) || enqueued.size >= maxPages) continue;
               enqueued.add(link);
               queue.push({ url: link, depth: item.depth + 1, discoveredFrom: item.url });
@@ -177,10 +239,23 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           }
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        const errorPage: CrawledPage = { url: item.url, depth: item.depth, status: 'error', error: message };
-        if (item.discoveredFrom !== undefined) errorPage.discoveredFrom = item.discoveredFrom;
-        pages.push(errorPage);
+        // Playwright commits browserPage.url() to the in-progress
+        // navigation target even when goto() itself rejects (e.g. a
+        // timeout waiting for facebook.com to fire 'load' under headless
+        // conditions) - the redirect already happened at the network
+        // level before the failure, so this is still a social redirect,
+        // not a broken link on the audited site.
+        const finalHost = safeHostname(browserPage.url());
+        if (finalHost !== null && isSocialPlatformHost(finalHost)) {
+          const skippedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'skipped-external-redirect' };
+          if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
+          pages.push(skippedPage);
+        } else {
+          const message = error instanceof Error ? error.message : String(error);
+          const errorPage: CrawledPage = { url: item.url, depth: item.depth, status: 'error', error: message };
+          if (item.discoveredFrom !== undefined) errorPage.discoveredFrom = item.discoveredFrom;
+          pages.push(errorPage);
+        }
       } finally {
         await browserPage.close();
       }

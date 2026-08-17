@@ -78,6 +78,8 @@ export const en: ReportStrings = {
     wcagReferentialLabel: 'Standard audited',
     riskSmallLabel: 'Technical findings severity',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
+    recipientLabel: 'Prepared for',
+    legalNameLabel: 'Legal name',
   },
   executiveSummary: {
     eyebrow: '01 · Summary',
@@ -311,6 +313,9 @@ export const en: ReportStrings = {
     legalCitationSirenMismatchTemplate:
       'The manually supplied SIREN ({manualSiren}) differs from the one published on the site ({extractedSiren}). This determination uses the manually supplied number.',
     legalCitationPointerSentence: 'See the "Legal exposure" section for the detail of this determination.',
+    socialExclusionDisclosureTemplate:
+      '{count} page(s) were excluded from this scan as links to a third-party social platform, per Odysseus\'s default exclusion list.',
+    sirenSourceResolvedTemplate: 'The SIREN number was confirmed as displayed on this page of the site: {url}.',
   },
   footer: {
     confidentialityLabel: 'Confidential report',

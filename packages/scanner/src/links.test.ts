@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeInternalLinks } from './links.js';
+import { globToRegExp, normalizeInternalLinks } from './links.js';
 
 const BASE = 'https://client.example/current-page';
 
@@ -67,5 +67,32 @@ describe('normalizeInternalLinks', () => {
         BASE,
       ),
     ).toEqual(['https://client.example/about']);
+  });
+
+  it('drops links matching a manual exclusion glob, before dedupe or extension filtering', () => {
+    expect(
+      normalizeInternalLinks(['/blog/post-1', '/blog/post-2', '/about'], BASE, ['https://client.example/blog/*']),
+    ).toEqual(['https://client.example/about']);
+  });
+
+  it('with no exclusions, behaves exactly as before', () => {
+    expect(normalizeInternalLinks(['/about'], BASE, [])).toEqual(['https://client.example/about']);
+  });
+});
+
+describe('globToRegExp', () => {
+  it('matches a leading wildcard', () => {
+    expect(globToRegExp('*.pdf').test('https://client.example/file.pdf')).toBe(true);
+    expect(globToRegExp('*.pdf').test('https://client.example/file.docx')).toBe(false);
+  });
+
+  it('escapes regex metacharacters literally', () => {
+    expect(globToRegExp('https://client.example/a+b').test('https://client.example/a+b')).toBe(true);
+    expect(globToRegExp('https://client.example/a+b').test('https://client.example/aXb')).toBe(false);
+  });
+
+  it('anchors the pattern over the whole string', () => {
+    expect(globToRegExp('/blog').test('/blog/post-1')).toBe(false);
+    expect(globToRegExp('/blog*').test('/blog/post-1')).toBe(true);
   });
 });

@@ -17,6 +17,19 @@ const NON_HTML_EXTENSIONS = new Set([
 ]);
 
 /**
+ * Converts an operator-supplied glob pattern (only `*` is a wildcard,
+ * matching any run of characters including none) into a RegExp anchored
+ * over the full URL string. Every other regex metacharacter is escaped
+ * literally, so a pattern like "*.pdf" or one ending in a wildcard
+ * segment behaves the way an operator typing a glob expects, rather than
+ * as a regex fragment.
+ */
+export function globToRegExp(glob: string): RegExp {
+  const escaped = glob.replace(/[.*+?^${}()|[\]\\]/g, (char) => (char === '*' ? '.*' : `\\${char}`));
+  return new RegExp(`^${escaped}$`);
+}
+
+/**
  * Resolves a page's raw href attributes into absolute, deduped internal
  * URLs. "Internal" means exact origin match (protocol + hostname +
  * port) - a subdomain like blog.client.com is treated as external and
@@ -24,10 +37,18 @@ const NON_HTML_EXTENSIONS = new Set([
  * and unparsable hrefs are dropped. Hash fragments are stripped since
  * they identify a position within a page, not a distinct page. Links to
  * non-HTML resources (images, documents, archives, media, fonts) are
- * dropped by extension.
+ * dropped by extension. exclusionPatterns (manual-input-layer milestone,
+ * JobOptionsSnapshot.exclusions): a URL matching any glob is dropped here,
+ * before it is ever enqueued, so it never consumes a crawl-budget slot -
+ * same drop point as the extension check above.
  */
-export function normalizeInternalLinks(hrefs: (string | null)[], baseUrl: string): string[] {
+export function normalizeInternalLinks(
+  hrefs: (string | null)[],
+  baseUrl: string,
+  exclusionPatterns: readonly string[] = [],
+): string[] {
   const base = new URL(baseUrl);
+  const exclusionRegexes = exclusionPatterns.map(globToRegExp);
   const seen = new Set<string>();
   const result: string[] = [];
 
@@ -44,6 +65,7 @@ export function normalizeInternalLinks(hrefs: (string | null)[], baseUrl: string
     if (NON_HTML_EXTENSIONS.has(path.posix.extname(resolved.pathname).toLowerCase())) continue;
     resolved.hash = '';
     const normalized = resolved.toString();
+    if (exclusionRegexes.some((pattern) => pattern.test(normalized))) continue;
     if (seen.has(normalized)) continue;
     seen.add(normalized);
     result.push(normalized);

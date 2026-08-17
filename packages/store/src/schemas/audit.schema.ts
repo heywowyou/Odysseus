@@ -9,13 +9,18 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { AuditManifest } from '@odysseus/core';
+import type { AuditManifest, AuditManualFields } from '@odysseus/core';
 
 export interface AuditDocumentFields
   extends Omit<AuditManifest, 'startedAt' | 'finishedAt' | 'renormalizedAt'> {
   startedAt: Date;
   finishedAt: Date;
   renormalizedAt?: Date;
+  /** Manual-input-layer milestone: operator-supplied pre-report
+   *  enrichment, DB-only (not part of manifest.json - see
+   *  AuditManualFields's own doc comment in @odysseus/core). Absent for
+   *  every audit until the operator saves at least one field. */
+  manualFields?: AuditManualFields;
 }
 
 export type AuditDocument = AuditDocumentFields;
@@ -91,7 +96,7 @@ const manifestPageEntrySchema = new Schema(
     status: {
       type: String,
       required: true,
-      enum: ['visited', 'skipped-robots', 'skipped-non-html', 'error'],
+      enum: ['visited', 'skipped-robots', 'skipped-non-html', 'skipped-external-redirect', 'error'],
     },
     httpStatus: { type: Number },
     renderDiffMissingPercent: { type: Number },
@@ -113,6 +118,29 @@ const manifestPageEntrySchema = new Schema(
   { _id: false, suppressReservedKeysWarning: true },
 );
 
+const provencedFieldSchema = new Schema(
+  {
+    value: { type: Schema.Types.Mixed, required: true },
+    provenance: { type: String, required: true, enum: ['detected', 'operator'] },
+  },
+  { _id: false },
+);
+
+const manualFieldsSchema = new Schema(
+  {
+    siren: { type: provencedFieldSchema },
+    sirenSourceUrl: { type: provencedFieldSchema },
+    raisonSociale: { type: provencedFieldSchema },
+    nomCommercial: { type: provencedFieldSchema },
+    sector: { type: provencedFieldSchema },
+    revenueBand: { type: provencedFieldSchema },
+    declarationContactEmail: { type: provencedFieldSchema },
+    recipientName: { type: provencedFieldSchema },
+    updatedAt: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
 const auditSchema = new Schema<AuditDocument>(
   {
     auditId: { type: String, required: true, unique: true },
@@ -125,6 +153,7 @@ const auditSchema = new Schema<AuditDocument>(
     config: { type: configSnapshotSchema, required: true },
     crawl: { type: crawlStatsSchema, required: true },
     pages: { type: [manifestPageEntrySchema], default: [] },
+    manualFields: { type: manualFieldsSchema },
   },
   { collection: 'audits' },
 );

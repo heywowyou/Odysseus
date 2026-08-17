@@ -58,6 +58,12 @@ export interface RunAuditStageOptions {
    *  is exposed by the CLI/interface today - see obligation-stage.ts's
    *  resolveSiteSignals for why the mechanism itself stays generic. */
   siteSignalOverrides?: SiteSignalOverrides;
+  /** Manual-input-layer milestone, pre-scan fields - see
+   *  JobOptionsSnapshot in @odysseus/store for why these invalidate a
+   *  crawl and therefore live at this stage rather than at report time. */
+  seeds?: string[];
+  exclusions?: string[];
+  bookingEngineUrl?: string;
 }
 
 export interface AuditStageResult {
@@ -104,6 +110,9 @@ export async function runAuditStage(
       ...(options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}),
       ...(options.delayMs !== undefined ? { delayMs: options.delayMs } : {}),
       ...(options.onProgress !== undefined ? { onProgress: options.onProgress } : {}),
+      ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
+      ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
+      ...(options.bookingEngineUrl !== undefined ? { bookingEngineUrl: options.bookingEngineUrl } : {}),
     });
 
     const finishedAt = new Date();

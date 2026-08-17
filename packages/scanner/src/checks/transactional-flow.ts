@@ -30,6 +30,7 @@ import type { Browser, Page } from 'playwright';
 import type { TransactionalFlowEvidence, TransactionalFlowRedirectCheck } from '@odysseus/core';
 import { DEFAULT_TIMEOUT_MS } from '../browser.js';
 import { getCrawlerUserAgent } from '../config.js';
+import { isSocialPlatformHost } from '../social-hosts.js';
 
 const CHECKOUT_FORM_SELECTOR =
   'form[action*="checkout"], form[action*="panier"], form[action*="cart"], [class*="add-to-cart"], [id*="add-to-cart"]';
@@ -47,17 +48,8 @@ const OUTBOUND_BOOKING_HOSTS = [/(^|\.)booking\.com$/i, /(^|\.)airbnb\.[a-z.]+$/
  *  party page dozens of times over one crawl ran the process out of heap
  *  after 17 minutes). These platforms are never booking engines, so
  *  excluding them costs nothing and bounds a whole class of false
- *  positive, not just this one word. */
-const NEVER_FOLLOWED_HOSTS = [
-  /(^|\.)facebook\.com$/i,
-  /(^|\.)instagram\.com$/i,
-  /(^|\.)twitter\.com$/i,
-  /(^|\.)x\.com$/i,
-  /(^|\.)linkedin\.com$/i,
-  /(^|\.)youtube\.com$/i,
-  /(^|\.)tiktok\.com$/i,
-  /(^|\.)pinterest\.[a-z.]+$/i,
-];
+ *  positive, not just this one word. isSocialPlatformHost is the shared
+ *  list, see social-hosts.ts. */
 
 /** Link text/aria-label/class hinting the link leads to a booking or
  *  reservation flow, in French or English. Deliberately not a provider
@@ -187,7 +179,7 @@ export function findBookingIntentLinks(pageUrl: string, anchors: readonly Anchor
     }
     if (!/^https?:$/.test(resolved.protocol)) continue;
     if (resolved.origin === pageOrigin) continue;
-    if (NEVER_FOLLOWED_HOSTS.some((pattern) => pattern.test(resolved.hostname))) continue;
+    if (isSocialPlatformHost(resolved.hostname)) continue;
     if (seen.has(resolved.href)) continue;
     seen.add(resolved.href);
     candidates.push(resolved.href);
@@ -298,6 +290,12 @@ export interface DelegatedBookingRedirectOptions {
    *  candidate list without requiring a caller to wire one up. scanSite()
    *  passes one shared cache through every page's scanPage() call. */
   hostCache?: RedirectHostCache;
+  /** Manual-input-layer milestone: a known off-domain booking destination
+   *  the operator has already confirmed. A followed redirect landing on
+   *  this origin short-circuits straight to 'single-property' instead of
+   *  re-guessing from the destination page's content - a confirmed fact
+   *  should not be re-guessed, same spirit as SiteSignalOverride. */
+  bookingEngineUrl?: string;
 }
 
 /**
@@ -332,6 +330,14 @@ export async function findDelegatedBookingRedirectChecks(
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
   const hostCache: RedirectHostCache = options.hostCache ?? new Map();
+  const bookingEngineHost = (() => {
+    if (!options.bookingEngineUrl) return undefined;
+    try {
+      return new URL(options.bookingEngineUrl).host;
+    } catch {
+      return undefined;
+    }
+  })();
 
   const checks: TransactionalFlowRedirectCheck[] = [];
   for (const linkUrl of candidates) {
@@ -355,7 +361,14 @@ export async function findDelegatedBookingRedirectChecks(
             resolution: 'marketplace' as const,
             detail: `${hostname} is a known third-party booking marketplace; not followed.`,
           })
-        : inspectDestinationPage(options.browser, linkUrl, originName, timeoutMs, userAgent);
+        : cacheKey === bookingEngineHost
+          ? Promise.resolve({
+              linkUrl,
+              resolution: 'single-property' as const,
+              destinationUrl: linkUrl,
+              detail: 'operator-supplied booking engine URL',
+            })
+          : inspectDestinationPage(options.browser, linkUrl, originName, timeoutMs, userAgent);
       hostCache.set(cacheKey, resultPromise);
     }
 

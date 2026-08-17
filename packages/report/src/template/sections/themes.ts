@@ -1,4 +1,4 @@
-import type { AuditManifest, Finding, ReferenceStat, ReportLanguage, Theme } from '@odysseus/core';
+import type { AuditManifest, Finding, ReferenceStat, ReportLanguage, StatSector, Theme } from '@odysseus/core';
 import { selectReferenceStats } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
@@ -120,11 +120,18 @@ export function renderThemes(
    *  to a fresh Set for callers (existing tests) that don't need
    *  cross-section dedupe. */
   citedStatIds: Set<string> = new Set(),
+  /** Manual-input-layer milestone: AuditManualFields.sector, when the
+   *  operator has confirmed a sector NAF-based auto-detection missed or
+   *  got wrong. Wins over the auto-detected assessment.sector the same
+   *  "manual wins" precedent resolveEffectiveSiren already uses for
+   *  siren - only ever changes which reference-stat citation renders,
+   *  never anything assessObligations decided. */
+  sectorOverride?: StatSector,
 ): string {
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
   const sortedThemes = selectRenderedThemes(analysis.themes);
-  const sector = analysis.obligationAssessment?.sector ?? 'general';
+  const sector = sectorOverride ?? analysis.obligationAssessment?.sector ?? 'general';
 
   // One citation per category, shown once on that category's
   // highest-priority theme (sortedThemes is already priorityRank-order),

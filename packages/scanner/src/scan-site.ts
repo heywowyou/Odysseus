@@ -34,6 +34,12 @@ export interface ScanSiteOptions {
    *  per page. */
   screenshotDir: string;
   onProgress?: (event: ScanProgressEvent) => void;
+  /** Manual-input-layer milestone, forwarded to crawlSite as-is. */
+  seeds?: string[];
+  exclusions?: string[];
+  /** Manual-input-layer milestone, forwarded to every page's
+   *  findDelegatedBookingRedirectChecks call via scanPage. */
+  bookingEngineUrl?: string;
 }
 
 export interface SiteScanResult {
@@ -69,6 +75,7 @@ async function runScanLane(
   homepageUrl: string | undefined,
   sitemapCheck: (SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] }) | undefined,
   llmsTxtCheck: LlmsTxtCheckResult | undefined,
+  bookingEngineUrl: string | undefined,
   onPageDone: (pageResult: PageScanResult) => void,
 ): Promise<void> {
   let nextDelayMs = startDelayMs;
@@ -89,6 +96,7 @@ async function runScanLane(
       ...(homepageUrl !== undefined ? { homepageUrl } : {}),
       ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
       ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
+      ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
     });
     onPageDone(pageResult);
   }
@@ -120,6 +128,8 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
     ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
     ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
     ...(options.onProgress !== undefined ? { onProgress: options.onProgress } : {}),
+    ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
+    ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
   });
 
   const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
@@ -215,6 +225,7 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
           homepageUrlForScan,
           sitemapCheck,
           llmsTxtCheckForScan,
+          options.bookingEngineUrl,
           onPageDone,
         ),
       ),
