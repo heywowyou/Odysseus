@@ -15,6 +15,7 @@
 import type { Connection } from 'mongoose';
 import {
   assessObligations,
+  detectSector,
   isValidSiren,
   type AuditManifest,
   type AuditManifestSiteSignals,
@@ -32,6 +33,14 @@ import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
  *  from) separate from the other fields' provenance (why they could not
  *  be resolved), since a lookup failure says nothing about whether the
  *  SIREN value itself is trustworthy. */
+/** Splices the sector classification onto an assessment, computed from
+ *  whichever OperatorProfile (resolved or unresolved) produced it - the
+ *  same "never set by assessObligations itself" precedent as sirenSource,
+ *  see ObligationAssessment.sector's doc comment in @odysseus/core. */
+function withSector(assessment: ObligationAssessment, profile: OperatorProfile): ObligationAssessment {
+  return { ...assessment, sector: detectSector(profile.naf.value) };
+}
+
 function unresolvedProfile(siren: string, sirenSource: string, lookupFailureSource: string): OperatorProfile {
   const retrievedAt = new Date();
   const field = <T,>(value: T): Provenanced<T> => ({ value, source: lookupFailureSource, retrievedAt });
@@ -156,9 +165,8 @@ export async function runObligationStage(
   const resolved = resolveEffectiveSiren(extractedSiren, validatedManualSiren);
 
   if (!resolved) {
-    return assessObligations(
-      unresolvedProfile('', 'crawl:no-mentions-legales-siren', 'crawl:no-mentions-legales-siren'),
-    );
+    const profile = unresolvedProfile('', 'crawl:no-mentions-legales-siren', 'crawl:no-mentions-legales-siren');
+    return withSector(assessObligations(profile), profile);
   }
 
   const { siren: effectiveSiren, source: sirenSource, mismatch: sirenMismatch } = resolved;
@@ -178,9 +186,8 @@ export async function runObligationStage(
       // failed manual lookup is a fact about the manual SIREN, not a
       // reason to silently re-try with a different one the operator did
       // not ask about.
-      return attachProvenance(
-        assessObligations(unresolvedProfile(effectiveSiren, `siren:${sirenSource}`, `sirene-lookup:${lookup.status}`)),
-      );
+      const profile = unresolvedProfile(effectiveSiren, `siren:${sirenSource}`, `sirene-lookup:${lookup.status}`);
+      return withSector(attachProvenance(assessObligations(profile)), profile);
     }
 
     const profile: OperatorProfile = {
@@ -192,16 +199,18 @@ export async function runObligationStage(
 
     const assessment = siteSignals ? assessObligations(profile, siteSignals) : assessObligations(profile);
 
-    return attachProvenance({
-      ...assessment,
-      ...(Object.keys(resolutions).length > 0 ? { siteSignalResolutions: resolutions } : {}),
-    });
+    return withSector(
+      attachProvenance({
+        ...assessment,
+        ...(Object.keys(resolutions).length > 0 ? { siteSignalResolutions: resolutions } : {}),
+      }),
+      profile,
+    );
   } catch {
     // Any unexpected failure (e.g. Mongo unreachable) must not block the
     // rest of the audit - degrade to undetermined the same as a known
     // Sirene failure mode.
-    return attachProvenance(
-      assessObligations(unresolvedProfile(effectiveSiren, `siren:${sirenSource}`, 'sirene-lookup:api-unreachable')),
-    );
+    const profile = unresolvedProfile(effectiveSiren, `siren:${sirenSource}`, 'sirene-lookup:api-unreachable');
+    return withSector(attachProvenance(assessObligations(profile)), profile);
   }
 }

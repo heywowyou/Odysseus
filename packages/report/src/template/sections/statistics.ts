@@ -99,7 +99,7 @@ export function renderStatistics(
       ${severityTiles}
     </div>
     <h5>${escapeHtml(s.categoryBreakdownHeading)}</h5>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
+    <div style="display:grid;grid-template-columns:repeat(${CATEGORY_ORDER.length},1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
       ${categoryTiles}
     </div>
     <div class="hr"></div>

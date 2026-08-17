@@ -1,9 +1,11 @@
-import type { AuditManifest, Finding, FindingCategory, ReportLanguage } from '@odysseus/core';
+import type { AuditManifest, Finding, FindingCategory, ReportLanguage, StatSector } from '@odysseus/core';
+import { selectReferenceStats } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { renderSeverityBadge } from '../severity-badge.js';
 import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
+import { renderReferenceStatNote } from '../reference-stat-note.js';
 import {
   aggregateMinorFindings,
   groupAppendix,
@@ -127,12 +129,31 @@ function renderMinorAggregateGroup(
   `;
 }
 
+/** Geo findings never reach the curated themes section (Theme.category's
+ *  locked schema has no 'geo' option - see CLAUDE.md trade-off 16), so
+ *  this is the only place a reader sees geo business-impact context. The
+ *  citation is quarantined with an "emerging" badge per the source
+ *  research doc's Stage 3 recommendation - both curated geo stat rows
+ *  are confidence:'emerging' today (8.5b's deliberate Princeton
+ *  downgrade), so the badge is driven by that field, not hardcoded here. */
+function renderGeoCitationBlock(strings: ReportStrings, language: ReportLanguage, sector: StatSector): string {
+  const [top] = selectReferenceStats('geo', sector);
+  if (!top) return '';
+  return renderReferenceStatNote(
+    strings.themes.impactCitationLabel,
+    top,
+    language,
+    strings.findingsAppendix.geoEmergingLabel,
+  );
+}
+
 function renderCategorySection(
   strings: ReportStrings,
   language: ReportLanguage,
-  category: Exclude<FindingCategory, 'geo'>,
+  category: FindingCategory,
   categoryFindings: Finding[],
   missingPercentByUrl: ReadonlyMap<string, number>,
+  sector: StatSector,
 ): string {
   if (categoryFindings.length === 0) return '';
 
@@ -148,10 +169,12 @@ function renderCategorySection(
     })
     .join('');
   const minorBlock = renderMinorAggregateGroup(strings, language, minorSummaries);
+  const citationBlock = category === 'geo' ? renderGeoCitationBlock(strings, language, sector) : '';
 
   return `
     <div style="margin-bottom:var(--space-8)">
       <h4 style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h4>
+      ${citationBlock}
       ${groupBlocks}
       ${minorBlock}
     </div>
@@ -163,12 +186,13 @@ export function renderFindingsAppendix(
   language: ReportLanguage,
   findings: Finding[],
   manifest: AuditManifest,
+  sector: StatSector,
 ): string {
   const missingPercentByUrl = buildMissingPercentIndex(manifest);
 
   const sections = CATEGORY_ORDER.map((category) => {
     const categoryFindings = findings.filter((finding) => finding.category === category);
-    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl);
+    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector);
   }).join('');
 
   return sheet(`

@@ -130,6 +130,7 @@ export const fr: ReportStrings = {
     conformityNotApplicable: 'Sans objet',
     conformityNonConformant: 'Non conforme',
     legalTagLabel: 'Exigence de conformité',
+    impactCitationLabel: 'Repère chiffré',
     quickWinBadgeLabel: 'Gain rapide',
     effortImpactLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
     pagesOfTotalTemplate: '{pages} {pageWord} sur {totalPages}',
@@ -243,13 +244,11 @@ export const fr: ReportStrings = {
     categoryLabels: {
       accessibility: 'Accessibilité',
       seo: 'Référencement (SEO)',
-      // Milestone 8.5a: voir la note équivalente dans en.ts - non utilisé
-      // tant que CATEGORY_ORDER (findings-appendix.ts) n'inclut pas
-      // 'geo'.
       geo: 'Visibilité dans les moteurs d\'IA (GEO)',
       performance: 'Performance',
       rendering: 'Rendu',
     },
+    geoEmergingLabel: 'Recherche émergente',
     severityLabels: {
       critical: 'Critique',
       serious: 'Sérieux',

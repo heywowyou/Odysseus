@@ -145,6 +145,10 @@ export interface ReportStrings {
     conformityNotApplicable: string;
     conformityNonConformant: string;
     legalTagLabel: string;
+    /** Label prefix for a reference-stat citation note, milestone 8.5c -
+     *  shared by themes.ts (accessibility/seo themes) and
+     *  findings-appendix.ts's geo section. */
+    impactCitationLabel: string;
     quickWinBadgeLabel: string;
     effortImpactLevels: { low: string; medium: string; high: string };
     /** Template: {pages}, {pageWord}, {totalPages}. */
@@ -233,6 +237,10 @@ export interface ReportStrings {
       performance: string;
       rendering: string;
     };
+    /** Badge text for a reference-stat whose confidence is 'emerging',
+     *  milestone 8.5c - quarantines GEO citations per the source
+     *  research doc's Stage 3 recommendation. */
+    geoEmergingLabel: string;
     severityLabels: {
       critical: string;
       serious: string;

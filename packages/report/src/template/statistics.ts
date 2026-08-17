@@ -22,10 +22,11 @@ export interface ReportStatistics {
   pagesWithWcagFailure: number;
   accessibilityCount: number;
   seoRenderingCount: number;
-  /** Per-category counts for doc §3 section 03's 4-tile category split
-   *  (accessibility/seo/rendering/performance, CATEGORY_ORDER order) -
-   *  distinct from accessibilityCount/seoRenderingCount above, which
-   *  predate that split and merge seo+rendering into one number. */
+  /** Per-category counts for doc §3 section 03's category-tile split
+   *  (CATEGORY_ORDER order: accessibility/seo/rendering/performance, plus
+   *  geo as of milestone 8.5c) - distinct from accessibilityCount/
+   *  seoRenderingCount above, which predate that split and merge
+   *  seo+rendering into one number. */
   categoryCounts: Record<(typeof CATEGORY_ORDER)[number], number>;
 }
 
@@ -45,6 +46,7 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
     seo: 0,
     rendering: 0,
     performance: 0,
+    geo: 0,
   };
 
   for (const finding of findings) {
@@ -55,9 +57,7 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
     if (finding.category === 'seo' || finding.category === 'rendering') {
       seoRenderingCount += 1;
     }
-    if (finding.category !== 'geo') {
-      categoryCounts[finding.category] += 1;
-    }
+    categoryCounts[finding.category] += 1;
     switch (finding.severity) {
       case 'critical':
         critical += 1;

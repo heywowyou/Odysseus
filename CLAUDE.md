@@ -372,6 +372,53 @@ needed, say so and stop. Do not change them and continue.
     `legalRelevance` already is, is milestone 8.5c's job, kept separate
     on purpose the same way 8.5a stayed detection-only.
 
+16. **Milestone 8.5c wires 8.5b's reference-stat table into the paid audit
+    report with fully deterministic selection**, decided 2026-08-17: the
+    report calls `selectReferenceStats(theme.category, sector)` directly
+    at render time (`packages/report/src/template/sections/themes.ts`),
+    the same way `legalRelevance` is built in code rather than by the
+    model - no change to the locked `llm-output.ts` `Theme` schema, no
+    prompt change, no new invented-reference guard. `Theme.category`'s
+    schema has no `'geo'` option at all, so LLM-synthesized themes can
+    never be geo; a geo citation only ever appears in the findings-
+    appendix's geo section (`findings-appendix.ts`), never in the themes
+    section, and `'performance'`/`'rendering'` themes get no citation at
+    all since the stat table has no rows for those categories - an
+    absence, not a bug. Each accessibility/seo citation is shown exactly
+    once per category, attached to that category's highest-priority
+    theme (`themes.ts`'s `citationByRank`), not repeated on every theme
+    of the same category.
+
+    Client sector reaches the report through a new
+    `ObligationAssessment.sector?: StatSector` field
+    (`packages/core/src/types/compliance.ts`, not a locked contract),
+    spliced on by `packages/interface/src/pipeline/obligation-stage.ts`'s
+    `withSector` from the same `OperatorProfile.naf` it already resolves
+    via Sirene - no second lookup. Storing the derived two-value sector
+    rather than the raw NAF code is a deliberate data-minimisation
+    choice. `geo` was added to `design-tokens.ts`'s `CATEGORY_ORDER`/
+    `CATEGORY` (closing trade-off 14's "not yet rendered in the PDF
+    appendix" gap for the ordinary per-finding listing too, not only
+    citations), using `nocturne.css`'s existing, previously-unused second
+    accent hue scale (`--color-accent-2-*`) rather than an invented hex,
+    since geo postdates the canonical mockups and there is no mockup
+    entry to re-derive a color from; `render-html.axe.test.ts` passing
+    against the real sas-fernande.fr fixture after this change is the
+    same WCAG 1.4.3 confirmation the original accessibility-tag color
+    swap relied on, not an assumption that the parallel scale is
+    automatically compliant.
+
+    The reference-stats module remains report-only. Milestone 9c's
+    outreach generation (not yet built) must never import
+    `@odysseus/core`'s `selectReferenceStats`/`REFERENCE_STAT_TABLE` -
+    `docs/llm-layer-rules.md` section 11's "No statistics" rule for
+    outreach is deliberately stricter than the report path (a report has
+    a methodology section and a paying client, an email has neither).
+    `estimateRevenueImpact` remains unwired in both paths; a numeric
+    client-facing revenue figure was deliberately deferred rather than
+    riding along with citation wiring, since turnover is only
+    inconsistently available from `ObligationAssessment`'s basis facts.
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
@@ -524,9 +571,9 @@ prospect sites. Each call is approved before it runs.
 
 ## Build order
 
-Milestones 0 through 8 are complete, as are milestone 8.5a, milestone
-8.5b, and milestone 9a. Milestone 8.5c and milestone 9b are next. Work
-in vertical slices, one milestone per session.
+Milestones 0 through 8 are complete, as are milestones 8.5a, 8.5b, 8.5c,
+and 9a. Milestone 9b is next. Work in vertical slices, one milestone per
+session.
 
 1. Render diff only, CLI invocable — done
 2. Crawler: internal link discovery, robots.txt, depth and page caps — done
@@ -539,6 +586,8 @@ in vertical slices, one milestone per session.
 8.5a. Deterministic SEO and GEO (generative-engine-optimization) detection checks, a new `geo` finding category alongside `seo` — done 2026-08-16. Detection only: no reference data, no report changes, no LLM prose. See the milestone entry in the brief, section 7, and trade-off 14 below.
 
 8.5b. Reference-stat table, sector detection, and per-client revenue calculator (`packages/core/src/reference-stats/`) — done 2026-08-16. Data and pure functions only, no LLM/report wiring yet. See trade-off 15.
+
+8.5c. Wired the reference-stat table into the paid audit report: `ObligationAssessment.sector`, deterministic per-theme and geo-section citations, `geo` added to `CATEGORY_ORDER` — done 2026-08-17. Report-only; outreach and the numeric revenue calculator remain unwired. See trade-off 16.
 
 Milestone 9 (originally "prospecting mode") was split 2026-08-15 into
 9a (prospect acquisition and qualification), 9b (prospecting

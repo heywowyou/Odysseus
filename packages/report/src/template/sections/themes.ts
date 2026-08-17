@@ -1,8 +1,10 @@
-import type { AuditManifest, Finding, ReportLanguage, Theme } from '@odysseus/core';
+import type { AuditManifest, Finding, ReferenceStat, ReportLanguage, Theme } from '@odysseus/core';
+import { selectReferenceStats } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatFindingIdRefs, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { CATEGORY } from '../design-tokens.js';
+import { renderReferenceStatNote } from '../reference-stat-note.js';
 
 /** F40: a quick win is low effort with medium or high impact, computed
  *  here in template code from the theme's own effort/impact - not from
@@ -44,6 +46,7 @@ function renderTheme(
   theme: Theme,
   findingsById: Map<string, Finding>,
   totalPagesScanned: number,
+  citationStat: ReferenceStat | undefined,
 ): string {
   const t = strings.themes;
   const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
@@ -61,6 +64,8 @@ function renderTheme(
   const legalBox = theme.legalRelevance
     ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(theme.legalRelevance)}</p>`
     : '';
+
+  const citationBox = citationStat ? renderReferenceStatNote(t.impactCitationLabel, citationStat, language) : '';
 
   const pagesText = fillTemplate(t.pagesOfTotalTemplate, {
     pages: formatNumber(uniquePages, language),
@@ -82,6 +87,7 @@ function renderTheme(
       </div>
       <p class="card-body" style="opacity:0.9">${escapeHtml(theme.businessImpact)}</p>
       ${legalBox}
+      ${citationBox}
       <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;font-size:12px;opacity:0.75;margin-top:4px">
         <span>${escapeHtml(t.effortLabel)} : <strong>${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
         <span>${escapeHtml(t.impactLabel)} : <strong>${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
@@ -102,8 +108,31 @@ export function renderThemes(
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
   const sortedThemes = selectRenderedThemes(analysis.themes);
+  const sector = analysis.obligationAssessment?.sector ?? 'general';
+
+  // One citation per category, shown once on that category's
+  // highest-priority theme (sortedThemes is already priorityRank-order),
+  // not repeated on every theme - avoids a report where five
+  // accessibility themes each restate the identical Deloitte sentence.
+  // 'performance'/'rendering' themes get no citation at all: the
+  // reference-stat table (packages/core/src/reference-stats) has no rows
+  // for those categories, and showing nothing is honest, not a bug.
+  const citedCategories = new Set<string>();
+  const citationByRank = new Map<number, ReferenceStat>();
+  for (const theme of sortedThemes) {
+    if (theme.category !== 'accessibility' && theme.category !== 'seo') continue;
+    if (citedCategories.has(theme.category)) continue;
+    const [top] = selectReferenceStats(theme.category, sector);
+    if (top) {
+      citationByRank.set(theme.priorityRank, top);
+      citedCategories.add(theme.category);
+    }
+  }
+
   const themeBlocks = sortedThemes
-    .map((theme) => renderTheme(strings, analysis.language, theme, findingsById, totalPagesScanned))
+    .map((theme) =>
+      renderTheme(strings, analysis.language, theme, findingsById, totalPagesScanned, citationByRank.get(theme.priorityRank)),
+    )
     .join('');
 
   return sheet(`

@@ -102,7 +102,7 @@ function renderBody(
     renderCoreWebVitalsTable(strings, analysis.language, manifest),
     renderAccessibilityStatement(strings, analysis.language, findings),
     renderMethodology(strings, manifest, analysis.language, analysis.obligationAssessment, findings),
-    renderFindingsAppendix(strings, analysis.language, findings, manifest),
+    renderFindingsAppendix(strings, analysis.language, findings, manifest, analysis.obligationAssessment?.sector ?? 'general'),
     renderGlossary(strings),
     renderNextSteps(strings),
   ].join('\n');

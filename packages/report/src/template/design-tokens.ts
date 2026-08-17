@@ -20,12 +20,7 @@ export const SEVERITY: Record<Severity, { color: string; bg: string }> = {
   minor: { color: '#b2b6ca', bg: '#292b31' },
 };
 
-/** 'geo' has no colour entry: docs/report-design-system.md section 3's
- *  CATEGORY_ORDER (used verbatim by findings-appendix.ts) does not
- *  include it, matching CLAUDE.md trade-off 14 (geo findings exist but
- *  are not yet rendered in the PDF appendix).
- *
- *  accessibility.color deviates from the doc's literal #9184d9: at the
+/** accessibility.color deviates from the doc's literal #9184d9: at the
  *  11px size these tags render at, #9184d9 on #2b2741 measures 4.42:1,
  *  just under WCAG 1.4.3's 4.5:1 minimum for small text (confirmed via
  *  axe-core against the real sas-fernande.fr report,
@@ -33,17 +28,24 @@ export const SEVERITY: Record<Severity, { color: string; bg: string }> = {
  *  --color-accent-300 token (9.52:1 on the same background) rather than a
  *  new invented hex - same hue family, already a locked token, and this
  *  package's own product cannot ship a color pair its own audit would
- *  flag. */
-export const CATEGORY: Record<Exclude<FindingCategory, 'geo'>, { color: string; bg: string }> = {
+ *  flag.
+ *
+ *  geo.color/geo.bg (added milestone 8.5c) has no mockup entry to
+ *  re-derive from - geo postdates docs/report-design-system.md's
+ *  canonical mockups entirely (trade-off 14 added the FindingCategory
+ *  value the same day the mockups were finalized). Rather than invent a
+ *  one-off hex, it reuses nocturne.css's second, otherwise-unused accent
+ *  hue scale (--color-accent-2-300/-900), the same "reuse an existing
+ *  token" reasoning as the accessibility swap above. Re-run
+ *  render-html.axe.test.ts once a geo finding is in the fixture to
+ *  confirm this pairing also clears 1.4.3 - not assumed just because the
+ *  parallel scale mirrors the primary one. */
+export const CATEGORY: Record<FindingCategory, { color: string; bg: string }> = {
   accessibility: { color: 'var(--color-accent-300)', bg: '#2b2741' },
   performance: { color: '#7fa8d9', bg: '#1f2a38' },
   seo: { color: '#6cbfae', bg: '#1c332e' },
   rendering: { color: '#9397ab', bg: '#292b31' },
+  geo: { color: 'var(--color-accent-2-300)', bg: 'var(--color-accent-2-900)' },
 };
 
-export const CATEGORY_ORDER: readonly Exclude<FindingCategory, 'geo'>[] = [
-  'accessibility',
-  'seo',
-  'rendering',
-  'performance',
-];
+export const CATEGORY_ORDER: readonly FindingCategory[] = ['accessibility', 'seo', 'rendering', 'performance', 'geo'];

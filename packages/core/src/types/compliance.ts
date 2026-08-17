@@ -9,6 +9,8 @@
  * relevance.ts and attached outside any model-writable schema field.
  */
 
+import type { StatSector } from '../reference-stats/types.js';
+
 export interface Regime {
   id: string;
   name: string;
@@ -137,4 +139,12 @@ export type ObligationAssessment = (
    *  from possibly two candidates (detected, manual). Absent entirely
    *  when siteSignals was never supplied at all. */
   siteSignalResolutions?: Record<string, SiteSignalResolution>;
+  /** Coarse sector classification for report-side reference-stat
+   *  selection (reference-stats/sector.ts's detectSector), spliced on by
+   *  obligation-stage.ts from the same OperatorProfile.naf it already
+   *  resolves - never set by assessObligations itself, same precedent as
+   *  sirenSource. Storing the derived two-value sector rather than the
+   *  raw NAF code is a deliberate data-minimisation choice, not an
+   *  oversight. Absent for analyses generated before milestone 8.5c. */
+  sector?: StatSector;
 };

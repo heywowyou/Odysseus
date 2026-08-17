@@ -131,6 +131,7 @@ export const en: ReportStrings = {
     conformityNotApplicable: 'Not applicable',
     conformityNonConformant: 'Non-conformant',
     legalTagLabel: 'Conformance requirement',
+    impactCitationLabel: 'Reference data point',
     quickWinBadgeLabel: 'Quick win',
     effortImpactLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     pagesOfTotalTemplate: '{pages} {pageWord} of {totalPages}',
@@ -242,15 +243,11 @@ export const en: ReportStrings = {
     categoryLabels: {
       accessibility: 'Accessibility',
       seo: 'Search engine visibility (SEO)',
-      // Milestone 8.5a: 'geo' findings exist as of this milestone but are
-      // not yet in CATEGORY_ORDER (findings-appendix.ts), so this label
-      // is unused today - present only so categoryLabels stays total
-      // over FindingCategory. Milestone 8.5b decides how GEO findings
-      // are actually presented in the report.
       geo: 'AI answer engine visibility (GEO)',
       performance: 'Performance',
       rendering: 'Rendering',
     },
+    geoEmergingLabel: 'Emerging research',
     severityLabels: {
       critical: 'Critical',
       serious: 'Serious',

@@ -27,7 +27,7 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     expect(html).toMatch(/WCAG 2\.2 AA criteria failing across \d+ pages/);
   });
 
-  it('renders exactly 4 number tiles, 4 severity tiles, and 4 category tiles (doc §3 section 03 cap)', async () => {
+  it('renders exactly 4 number tiles, 4 severity tiles, and 5 category tiles (doc §3 section 03 cap, plus geo added milestone 8.5c)', async () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
 
@@ -35,6 +35,6 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
 
     expect((html.match(/font-size:28px/g) ?? []).length).toBe(4);
     expect((html.match(/font-size:24px/g) ?? []).length).toBe(4);
-    expect((html.match(/font-size:22px/g) ?? []).length).toBe(4);
+    expect((html.match(/font-size:22px/g) ?? []).length).toBe(5);
   });
 });

@@ -46,7 +46,7 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
     const manifest = await loadSasFernandeManifest();
     expect(findings.some((f) => f.severity === 'minor')).toBe(true);
 
-    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, manifest);
+    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, manifest, 'general');
     const minorFinding = findings.find((f) => f.severity === 'minor');
     expect(html).toContain(minorFinding?.ruleId ?? '__missing__');
   });
@@ -54,7 +54,7 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
   it('groups findings under their category heading', async () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
-    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, manifest);
+    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, manifest, 'general');
 
     expect(html).toContain('Accessibility');
     expect(html).toContain('Performance');
@@ -63,7 +63,7 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
   it('tags a rule group as diverted only when every one of its findings is confined to diverted pages', async () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
-    const html = renderFindingsAppendix(getStrings('fr'), 'fr', findings, manifest);
+    const html = renderFindingsAppendix(getStrings('fr'), 'fr', findings, manifest, 'general');
 
     // f009 (link-in-text-block) is confined entirely to /mentions-legales/,
     // which matches the legal-page pattern - real diversion, not a
@@ -101,7 +101,7 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
       },
     ];
 
-    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, buildManifest());
+    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, buildManifest(), 'general');
     expect(html).not.toContain('<img src=x onerror=alert(1)>');
     expect(html).toContain('&lt;img');
   });
@@ -135,7 +135,7 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
       },
     ];
 
-    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, buildManifest());
+    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, buildManifest(), 'general');
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
   });

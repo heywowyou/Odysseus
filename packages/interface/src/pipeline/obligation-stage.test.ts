@@ -67,6 +67,7 @@ describe('runObligationStage', () => {
     const result = await runObligationStage(fakeManifest(), fakeConnection);
     expect(result.status).toBe('undetermined');
     expect(lookupOperatorProfile).not.toHaveBeenCalled();
+    expect(result.sector).toBe('general');
   });
 
   it('is undetermined when the Sirene lookup fails, without throwing', async () => {
@@ -77,6 +78,7 @@ describe('runObligationStage', () => {
 
     const result = await runObligationStage(manifest, fakeConnection);
     expect(result.status).toBe('undetermined');
+    expect(result.sector).toBe('general');
   });
 
   it('resolves a found profile with the manifest siteSignals', async () => {
@@ -87,6 +89,20 @@ describe('runObligationStage', () => {
 
     const result = await runObligationStage(manifest, fakeConnection);
     expect(result.status).toBe('in_scope');
+    expect(result.sector).toBe('general');
+  });
+
+  it('resolves sector: hospitality from a hospitality NAF code', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({
+      status: 'found',
+      profile: foundProfile({ naf: { value: '55.10Z', source: 'sirene-api', retrievedAt: new Date() } }),
+    });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection);
+    expect(result.sector).toBe('hospitality');
   });
 
   it('degrades to undetermined rather than throwing when the lookup itself throws', async () => {
@@ -97,6 +113,7 @@ describe('runObligationStage', () => {
 
     const result = await runObligationStage(manifest, fakeConnection);
     expect(result.status).toBe('undetermined');
+    expect(result.sector).toBe('general');
   });
 
   it('tags sirenSource: extracted when only an extracted SIREN is present', async () => {
