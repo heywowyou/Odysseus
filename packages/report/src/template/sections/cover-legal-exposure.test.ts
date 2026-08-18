@@ -142,11 +142,16 @@ describe('item 18: EAA-route exposure facts (fine figure, case law state)', () =
     expect(html).not.toContain('50 000');
   });
 
-  it('states both case-law outcomes (Lille dismissed, Caen injunction), never only one', () => {
+  // Revised 2026-08-18 (B9/item 1.14): the Lille/Caen case-law sentence
+  // was removed from client-facing output. Its source in
+  // docs/obligation-basis.md is tagged Status: secondary ("internal use
+  // only"), sourced from press summaries rather than the ordonnances
+  // themselves, so it was never eligible to reach a client under the
+  // doc's own primary-only rule despite having shipped here.
+  it('never states the Lille/Caen case-law outcome, which is sourced from status-secondary material', () => {
     const html = renderLegalExposure(fr, 2, 'fr', eaaInScope, new Date('2026-08-17'), fakeManifest());
-    expect(html).toContain('Lille');
-    expect(html).toContain('Caen');
-    expect(html).toContain('appel');
+    expect(html).not.toContain('Lille');
+    expect(html).not.toContain('Caen');
   });
 
   it('renders nothing for an out_of_scope status', () => {
@@ -234,7 +239,11 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
             kind: 'delegated-booking-redirect',
             selector: 'a.book-now',
             pageUrl: 'https://example.com/',
-            detail: 'booking.example-engine.com',
+            // item 0.2: `detail` is internal English classification
+            // reasoning, never the domain shown to the client -
+            // providerUrl is what the report derives the hostname from.
+            detail: 'Destination page shares the distinctive term "example" with the origin page.',
+            providerUrl: 'https://booking.example-engine.com/reserver',
           },
         ],
       },

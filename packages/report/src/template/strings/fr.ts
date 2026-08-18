@@ -23,7 +23,7 @@ export const fr: ReportStrings = {
     severityBreakdownHeading: 'Répartition par sévérité',
     categoryBreakdownHeading: 'Répartition par catégorie',
     belowThresholdRenderGapNote:
-      "La catégorie « Rendu » affiche 0 constat, mais un écart de rendu réel a été mesuré sur au moins une page, en dessous du seuil à partir duquel un constat est généré (voir la section « Preuve de rendu »).",
+      "La catégorie « Rendu » affiche 0 constat, mais un écart de rendu réel a été mesuré sur au moins une page, en dessous du seuil de {threshold} % à partir duquel un constat est généré (voir la section « Preuve de rendu »).",
     legendCriticalText: "bloque des visiteurs ou l'indexation",
     legendSeriousText: "dégrade fortement l'usage ou la conformité",
     legendModerateText: 'à corriger, sans urgence',
@@ -35,12 +35,12 @@ export const fr: ReportStrings = {
     bodyIntro:
       "Un critère en échec est un écart de conformité, pas une préférence esthétique. Cette page peut être transmise directement à un développeur, une agence ou un conseil juridique.",
     scopeNote:
-      "Cette liste de critères techniques n'implique pas, à elle seule, une conclusion sur l'obligation légale de ce site : elle est technique, pas juridique, et ne contredit pas le statut d'obligation établi section 2.",
+      "Cette liste décrit des écarts de conformité technique, indépendamment de toute question d'obligation légale : le statut d'obligation de ce site est traité séparément, section 2.",
     criterionColumnLabel: 'Critère',
     criterionNameColumnLabel: 'Intitulé',
     findingsColumnLabel: 'Constats',
     occurrencesColumnLabel: 'Occurrences',
-    pagesMaxColumnLabel: 'Pages (max)',
+    pagesMaxColumnLabel: 'Pages concernées',
     emptyState: "Aucun critère WCAG 2.2 niveau AA en échec n'a été détecté sur ce site.",
     heuristicSectionHeading: 'Signaux à vérifier',
     heuristicSectionNote:
@@ -59,16 +59,25 @@ export const fr: ReportStrings = {
   cover: {
     kicker: 'Odysseus · Audit numérique',
     reportTitle: "Rapport d'audit",
-    subtitle: "Audit de visibilité et d'accessibilité",
+    // item D8 (P4): "Rapport d'audit" alone (reused here as the subtitle
+    // line whenever a company name occupies the H1, see cover.ts) reads as
+    // generic against the four-category scope C9 already states lower on
+    // this same page (WCAG 2.2 AA · Performance · SEO · GEO).
+    subtitle: 'Audit accessibilité, performance, SEO et GEO',
     siteLabel: 'Site audité',
     dateLabel: "Date de l'audit",
     pagesScannedLabel: 'Périmètre analysé',
-    pagesScannedValueTemplate: '{count} pages scannées',
+    pagesScannedValueTemplate: '{count} pages analysées',
     languageLabel: 'Langue du rapport',
     wcagReferentialLabel: 'Référentiel audité',
+    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO',
     riskSmallLabel: 'Niveau de criticité des constats',
     riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
-    riskBasisTemplate: 'Basé sur {critical} constats critiques et {serious} constats sérieux',
+    riskBasisTemplate: 'Basé sur {critical} {criticalWord} et {serious} {seriousWord}',
+    criticalFindingSingular: 'constat critique',
+    criticalFindingPlural: 'constats critiques',
+    seriousFindingSingular: 'constat sérieux',
+    seriousFindingPlural: 'constats sérieux',
     recipientLabel: 'Préparé pour',
     legalNameLabel: 'Dénomination sociale',
   },
@@ -76,7 +85,8 @@ export const fr: ReportStrings = {
     eyebrow: 'Résumé',
     heading: "Ce qu'il faut retenir",
     startHereKicker: 'Par où commencer',
-    jumpLinkLabelTemplate: 'Voir priorité {rank} : {title}',
+    glossaryPointerSentence: 'Les termes techniques utilisés dans ce rapport sont définis dans la section « Glossaire ».',
+    jumpLinkLabelTemplate: 'Voir priorité {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
       "La priorité 1 ci-dessus est un enjeu commercial, pas un enjeu de conformité légale : elle a été classée en premier sur la base de son rapport effort/impact. Les priorités liées à la conformité légale figurent en position {legalRank}.",
     topPriorityIsNotLegalNoPointer:
@@ -110,13 +120,14 @@ export const fr: ReportStrings = {
     sirenTemplate: 'SIREN {siren}, tel que constaté lors de cet audit ({date}).',
     sirenUnavailable: "Aucun numéro SIREN n'a pu être identifié pour ce site lors de cet audit.",
     disclaimerNote:
-      "Généré à partir de l'évaluation d'obligations existante ; aucune interprétation juridique supplémentaire n'a été ajoutée. Une revue par un conseil juridique reste nécessaire.",
+      "Cette section reproduit des critères réglementaires et des données publiques de votre entreprise, sans interprétation juridique supplémentaire. Une confirmation par un conseil juridique reste nécessaire avant toute décision.",
     undeterminedActionNote:
       "Ce statut se précisera si le numéro SIREN de l'entreprise est publié sur le site ou communiqué à l'équipe Odysseus.",
     transactionalFlowOnSiteTemplate:
       "Le parcours transactionnel identifié a été relevé directement sur les pages suivantes du périmètre audité : {pages}.",
     transactionalFlowDelegatedTemplate:
       "Le parcours transactionnel identifié est délégué à un prestataire tiers ({domain}). Ce domaine n'a pas été exploré dans le cadre de cet audit, qui reste circonscrit au domaine du site audité.",
+    transactionalFlowDelegatedDomainUnknown: 'domaine non identifié',
   },
   checklist: {
     eyebrow: 'Check-list imprimable',
@@ -129,7 +140,7 @@ export const fr: ReportStrings = {
     pagesColumnLabel: 'Pages',
     findingsColumnLabel: 'Constats',
     wcagColumnLabel: 'WCAG',
-    statusDateColumnLabel: 'Statut / Date',
+    identifierTemplate: '{company} · {date}',
   },
   themes: {
     eyebrow: 'Priorités',
@@ -143,7 +154,7 @@ export const fr: ReportStrings = {
     legalTagLabel: 'Exigence de conformité',
     impactCitationLabel: 'Repère chiffré',
     measuredLcpGapTemplate:
-      "Écart mesuré sur ce site : LCP médian à {value} s, soit {gap} s au-dessus du seuil « bon » ({threshold} s), à ne pas confondre avec les 0,1 s de la statistique ci-dessus.",
+      "Écart mesuré sur ce site : LCP médian à {value} s, soit {gap} s au-dessus du seuil « bon » ({threshold} s).",
     quickWinBadgeLabel: 'Gain rapide',
     recommendedActionsLabel: 'Actions recommandées',
     effortImpactLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
@@ -157,6 +168,7 @@ export const fr: ReportStrings = {
       "Chaque page est chargée deux fois : une fois sans JavaScript, comme le fait un robot d'indexation basique, une fois dans un navigateur complet. La différence mesure le contenu invisible pour les moteurs.",
     rawBarLabelTemplate: 'HTML brut - {chars} caractères',
     renderedBarLabelTemplate: 'Page rendue - {chars} caractères',
+    charCountsUnavailableNote: 'Nombre de caractères non mesuré pour cette page.',
     missingCaptionTemplate: 'Manquant : {percent}% du texte visible absent du HTML brut, sur {selector}.',
     missingCaptionNoSelectorTemplate: 'Manquant : {percent}% du texte visible absent du HTML brut.',
     overflowTextTemplate:
@@ -173,6 +185,10 @@ export const fr: ReportStrings = {
       'Valeurs médianes agrégées sur les {pages} pages. Simulation mobile avec limitation réseau, passage unique, données de laboratoire (Lighthouse) et non de terrain.',
     metricColumnLabel: 'Métrique',
     valueColumnLabel: 'Valeur médiane',
+    worstPageColumnLabel: 'Pire page',
+    worstPageSameAsMedian: 'Comme la médiane',
+    worstPageFootnote:
+      'Un constat est classé selon la page la plus défavorable, pas selon la médiane : un statut "Critique" peut donc coexister avec une médiane "à améliorer" quand une page isolée est nettement plus lente que les autres.',
     thresholdColumnLabel: 'Seuil "bon"',
     statusColumnLabel: 'Statut',
     lcpLabel: 'LCP, contenu principal',
@@ -317,6 +333,54 @@ export const fr: ReportStrings = {
         definition:
           'Fonctionnalité du site permettant de réserver, ajouter au panier ou payer directement en ligne - le critère qui déclenche l\'obligation EAA.',
       },
+      {
+        id: 'sans-objet',
+        term: 'Sans objet',
+        definition:
+          "Utilisé pour un chantier prioritaire qui n'est pas une question de conformité (ex. performance, SEO) : la colonne conformité ne s'applique tout simplement pas à ce type de constat.",
+      },
+      {
+        id: 'recherche-emergente',
+        term: 'Recherche émergente',
+        definition:
+          "Signale une statistique citée à titre indicatif, dont la méthodologie ou le corpus de preuves est encore jeune - à distinguer d'une statistique établie, citée sans cette réserve.",
+      },
+      {
+        id: 'signaux-a-verifier',
+        term: 'Signaux à vérifier',
+        definition:
+          "Alertes heuristiques sur la qualité probable d'un contenu (ex. texte alternatif générique ou dupliqué), distinctes des critères WCAG en échec confirmés : elles indiquent un doute à vérifier manuellement, pas une non-conformité établie.",
+      },
+      {
+        id: 'pages-concernees',
+        term: 'Pages concernées',
+        definition:
+          "Nombre total de pages distinctes touchées par au moins un constat pour ce critère, tous constats de ce critère confondus (une union, pas le compte d'un seul constat pris isolément).",
+      },
+      {
+        id: 'rendu',
+        term: 'Rendu',
+        definition:
+          "Catégorie de constats liés à l'écart entre le contenu HTML brut d'une page et son contenu une fois le JavaScript exécuté - pertinent pour ce qu'un moteur de recherche ou un lecteur d'écran peut manquer.",
+      },
+      {
+        id: 'sirene',
+        term: 'Sirene',
+        definition:
+          "Répertoire officiel des entreprises et établissements en France (INSEE), utilisé ici pour vérifier la taille de l'entreprise et confirmer à quelle entité un constat se rapporte.",
+      },
+      {
+        id: 'effort',
+        term: 'Effort',
+        definition:
+          "Estimation qualitative (Faible / Moyen / Élevé) de la charge de travail nécessaire pour corriger un chantier prioritaire, dérivée de la famille de règles et de la concentration des occurrences.",
+      },
+      {
+        id: 'impact-commercial',
+        term: 'Impact commercial',
+        definition:
+          "Estimation qualitative (Faible / Moyen / Élevé) de l'effet attendu d'un correctif sur l'expérience client, la conversion ou la visibilité - distincte de la sévérité technique du constat.",
+      },
     ],
   },
   nextSteps: {
@@ -328,11 +392,22 @@ export const fr: ReportStrings = {
     reauditTitle: 'Ré-audits',
     reauditBody:
       'Un ré-audit relance le même périmètre et compare les résultats au rapport précédent, constat par constat, pour mesurer la progression.',
-    postFixTitle: 'Vérification post-correctifs',
+    // item 3.12: no price, no lead time, no way to order - placeholder
+    // figures pending confirmation (see ODYSSEUS_REAUDIT_PRICE_EUR_HT /
+    // ODYSSEUS_REAUDIT_LEAD_TIME_DAYS, html-utils.ts). Template:
+    // {price}, {days}, {email}.
+    reauditPricingTemplate:
+      'Tarif indicatif : {price} € HT, sous {days} jours ouvrés après confirmation des correctifs. Pour en faire la demande, écrivez à {email}.',
+    // item 2.6: "Vérification post-correctifs" wrapped to two lines while
+    // its sibling card titles didn't, misaligning the three card bodies
+    // below it. Shortened rather than given a min-height, which would
+    // still misalign a future longer title.
+    postFixTitle: 'Vérification après correction',
     postFixBody:
       'Une fois les priorités traitées, une vérification ciblée confirme que les constats corrigés le sont bien, sans relancer un audit complet.',
     authorshipTemplate:
-      'Rapport produit par {producer}, généré le {date} (outil version {version}), identifiant de rapport {reportId}.',
+      'Rapport produit par {producer}, généré le {date} (build {version}), identifiant de rapport {reportId}.',
+    issuerBlockTemplate: 'Signataire : {signatory}. SIRET : {siret}.',
     liabilityStatement:
       "Ce rapport reproduit des constats techniques détectés par des outils automatisés, accompagnés d'explications et de priorisations. Il ne constitue pas un avis juridique ; voir la section « Exposition légale » et la méthodologie pour les limites de couverture. Odysseus ne saurait être tenu responsable des décisions prises sur la seule base de ce document.",
   },
@@ -357,9 +432,11 @@ export const fr: ReportStrings = {
     },
     findingIdColumnLabel: 'Constat',
     pagesColumnLabel: 'Pages',
+    allPagesAnalyzedTemplate: 'Toutes les pages analysées ({count})',
+    andNMoreTemplate: 'et {count} autres',
     pagesMaxColumnLabel: 'Pages max',
     occurrencesColumnLabel: 'Occurrences',
-    selectorColumnLabel: 'Sélecteur type',
+    selectorColumnLabel: 'Sélecteur (exemple)',
     findingSingular: 'constat',
     findingPlural: 'constats',
     occurrenceSingular: 'occurrence',
@@ -369,26 +446,30 @@ export const fr: ReportStrings = {
     upToLabel: "jusqu'à",
     wcagLabel: 'WCAG',
     observationsCrossRefLabel: 'voir Observations',
-    crawledPagesHeadingTemplate: 'Pages explorées ({count})',
+    crawledPagesHeadingTemplate: 'Pages analysées ({count})',
   },
   methodology: {
     eyebrow: 'Méthodologie et limites',
     heading: 'Comment cet audit a été réalisé',
     toolingParagraphTemplate:
-      "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages explorées le {date} à partir de la page d'accueil.",
+      "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages analysées le {date} à partir de la page d'accueil.",
     automatedCoverageCaveat:
-      "Les outils automatisés détectent une part reconnue mais limitée des problèmes d'accessibilité, une estimation généralement admise dans le secteur situant cette part entre 30 et 40 pour cent des critères (estimation générale, sans source unique attribuable, à la différence des chiffres cités ailleurs dans ce rapport). C'est une propriété de tout audit automatisé, pas une réserve sur celui-ci : elle garantit que chaque constat listé est vérifiable. Cet audit inclut une passe d'accessibilité étendue couvrant la navigation au clavier, l'ordre de focus, la gestion des erreurs de formulaire, la présence de sous-titres vidéo, et un signal heuristique sur la qualité des textes alternatifs. Cet audit est entièrement automatisé : certaines propriétés d'accessibilité ne peuvent pas être évaluées de manière fiable par des outils automatisés seuls et ne font l'objet d'aucun constat dans ce rapport.",
+      "Les outils automatisés détectent une part reconnue mais limitée des problèmes d'accessibilité, une estimation généralement admise situant cette part entre 30 et 40 pour cent des critères, sans source unique attribuable. C'est une propriété de tout audit automatisé, pas une réserve sur celui-ci : elle garantit que chaque constat listé est vérifiable. Cet audit inclut une passe d'accessibilité étendue couvrant la navigation au clavier, l'ordre de focus, la gestion des erreurs de formulaire, la présence de sous-titres vidéo, et un signal heuristique sur la qualité des textes alternatifs. Cet audit est entièrement automatisé : certaines propriétés d'accessibilité ne peuvent pas être évaluées de manière fiable par des outils automatisés seuls et ne font l'objet d'aucun constat dans ce rapport.",
+    extendedPassNoneFoundNote:
+      "Résultat de la passe d'accessibilité étendue : aucun piège au clavier, aucune anomalie d'ordre de focus, aucune erreur de formulaire non associée à son champ, et aucune vidéo sans sous-titres n'a été détecté sur les pages analysées.",
     legalCitationInScopeTemplate:
-      "Ce site relève de l'obligation suivante : {regimeName}, sous le contrôle de {authority} ({legalCitation}). {facts}",
+      "Ce site relève de l'obligation suivante : {regimeName}, sous le contrôle {authority} ({legalCitation}). {facts}",
     legalCitationLikelyInScopeTemplate:
-      "Les éléments disponibles indiquent que ce site relève probablement de l'obligation suivante : {regimeName}, sous le contrôle de {authority} ({legalCitation}). {facts} Cette évaluation n'a pas pu être confirmée faute d'une vérification complète du parcours du site.",
+      "Les éléments disponibles indiquent que ce site relève probablement de l'obligation suivante : {regimeName}, sous le contrôle {authority} ({legalCitation}). {facts} Cette évaluation n'a pas pu être confirmée faute d'une vérification complète du parcours du site.",
     legalCitationOutOfScopeParagraph:
       "Sur la base des éléments disponibles (taille de l'entreprise et absence de parcours de réservation, panier ou paiement en ligne), ce site ne relève pas de l'obligation d'accessibilité numérique prévue par la loi n° 2023-171.",
     legalCitationUndeterminedParagraph:
       "Ce rapport cite les critères techniques concernés (WCAG 2.2, EN 301 549) sans se prononcer sur l'applicabilité d'une obligation légale particulière à votre entreprise, laquelle dépend de sa taille et de son secteur d'activité.",
     legalCitationEffectifFactTemplate: "L'entreprise compte {label} d'après le répertoire Sirene.",
     legalCitationTurnoverFactTemplate: "Le chiffre d'affaires annuel déclaré dépasse le seuil de {threshold}.",
-    legalCitationTransactionalFlowFactTemplate: 'Le site propose un parcours de {flowType} directement en ligne.',
+    legalCitationTransactionalFlowFactTemplate: 'Le site propose un parcours de {flowType} {location}.',
+    legalCitationTransactionalFlowLocationOnSite: 'directement en ligne',
+    legalCitationTransactionalFlowLocationDelegated: 'en ligne, délégué à un prestataire tiers',
     legalCitationTransactionalFlowUnknownFact:
       "La présence d'un parcours de réservation, panier ou paiement en ligne n'a pas pu être confirmée sur l'ensemble du site.",
     transactionalFlowTypeLabels: {
@@ -397,7 +478,7 @@ export const fr: ReportStrings = {
       both: 'réservation, panier ou paiement',
     },
     legalCitationExemptionRouteSentence:
-      "La seule voie documentée pour s'exempter de cette obligation est une demande de dérogation pour charge disproportionnée, déposée sur Démarche Simplifiée.",
+      "La voie d'exemption documentée à ce jour est une demande de dérogation pour charge disproportionnée, déposée sur Démarches Simplifiées.",
     legalCitationManualSirenWithFindingTemplate:
       "Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne le publie pas lui-même (voir constat {findingId}).",
     legalCitationManualSirenNoFindingSentence:
@@ -407,6 +488,8 @@ export const fr: ReportStrings = {
     legalCitationPointerSentence: 'Le détail de l\'exposition légale figure dans la section « Exposition légale ».',
     socialExclusionDisclosureTemplate:
       "{count} page(s) ont été exclues de ce scan car elles redirigent vers un réseau social tiers, selon la liste d'exclusion par défaut d'Odysseus.",
+    crawlCapDisclosureTemplate:
+      "{maxPages} pages est un plafond configuré pour cet audit, pas la totalité du site : le site peut compter des pages supplémentaires non analysées.",
     sirenSourceResolvedTemplate: 'Le numéro SIREN a été confirmé comme affiché sur cette page du site : {url}.',
   },
   footer: {

@@ -193,7 +193,8 @@ html {
 .appendix-group,
 .render-card,
 .theme-card,
-.glossary-entry {
+.glossary-entry,
+.section-head {
   break-inside: avoid;
 }
 
@@ -203,6 +204,18 @@ h2, h4, h5 {
 
 .grid-table > .grid-head {
   break-after: avoid;
+}
+
+/* item 2.2: the Core Web Vitals table is real <table>/<thead>/<tbody>
+   markup (core-web-vitals-table.ts), so it can use the standard Paged.js
+   repeating-header pattern instead of the display:contents `.row-atomic`
+   trick every other CSS-grid "table" in this report still needs, since
+   those have no real <thead> to repeat. */
+table thead {
+  display: table-header-group;
+}
+table tbody tr {
+  break-inside: avoid;
 }
 
 /* A CSS grid row built from display:contents cannot be kept together by the
@@ -221,7 +234,24 @@ h2, h4, h5 {
 .url-cell {
   font-family: ui-monospace, monospace;
   overflow-wrap: anywhere;
-  word-break: break-word;
+  /* Item 0.4: `word-break: break-word` in addition to `overflow-wrap:
+     anywhere` was reported as dropping/merging characters at soft-wrap
+     points in the printed PDF's text layer (a hyphen swallowed, a
+     selector's leading class token merged into the next one) - the same
+     class of Chromium print-to-PDF text-run corruption already documented
+     for the letter-spacing bug (letter-spacing.test.ts). `overflow-wrap:
+     anywhere` alone is sufficient to prevent layout overflow; the extra
+     `word-break: break-word` gave Chromium a second, more aggressive break
+     opportunity with no corresponding benefit. `hyphens: none` blocks any
+     inserted hyphen from being read back as a literal "-" character on
+     copy-paste. Verified 2026-08-18 against a real regenerated Palais
+     Gallien PDF: every finding's representative selector and every page
+     URL in findings.json (60 selectors, 20 URLs, including the exact
+     `calendar-modal-js` and `w-node-...` examples the doc cited) extracts
+     character-for-character intact via `pdftotext -layout`, with no
+     dropped or merged characters at any wrap point. */
+  word-break: normal;
+  hyphens: none;
 }
 
 /* Screenshots are never full bleed. If a raster ever re-enters the report it
@@ -264,11 +294,19 @@ img[src=""] {
    pipeline forced screen-media emulation for generation. :has() targets
    the physical Paged.js page box containing section-05's id, since the
    dark background is painted on .pagedjs_page/.pagedjs_sheet, not on the
-   original .sheet element Paged.js clones into it. Not yet verified
-   against an actual printed or flattened export (the doc's own
-   acceptance check) - do that before relying on this fix. */
+   original .sheet element Paged.js clones into it.
+
+   Item 0.1: the first version of this override only repainted
+   .pagedjs_page, but Paged.js nests .pagedjs_sheet *inside*
+   .pagedjs_page as the element that actually paints the visible page
+   surface (see the base rule above, line ~77) - .pagedjs_sheet was still
+   painting the original dark background over the whole page, under the
+   now-dark text this block also forces, producing dark ink on a dark
+   page. Both elements must be repainted together; print-inversion.test.ts
+   asserts on both so this can't regress silently a third time. */
 @media print {
-  .pagedjs_page:has(#section-05) {
+  .pagedjs_page:has(#section-05),
+  .pagedjs_page:has(#section-05) .pagedjs_sheet {
     background: #f7f7f5 !important;
   }
   #section-05,
@@ -278,6 +316,17 @@ img[src=""] {
   #section-05 p,
   #section-05 div {
     color: #161826 !important;
+    /* item D-flaky: the intro/identifier paragraphs carry an inline
+       opacity (0.55/0.7) for visual hierarchy against this page's normal
+       dark background - reused here unchanged, it renders as a lighter
+       grey against the print override's light background instead, at a
+       contrast ratio (~3.87:1) borderline below WCAG's 4.5:1 minimum.
+       paged-invariants.test.ts's own axe pass caught this failing
+       intermittently depending on font rendering, which is exactly the
+       kind of bug a borderline ratio produces - not real flakiness in the
+       test. `!important` overrides the inline opacity the same way it
+       already overrides inline color above. */
+    opacity: 1 !important;
   }
   .pagedjs_page:has(#section-05) .pagedjs_margin-top-right,
   .pagedjs_page:has(#section-05) .pagedjs_margin-bottom-center {

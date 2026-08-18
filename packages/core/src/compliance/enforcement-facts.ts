@@ -72,6 +72,14 @@ export function eaaSanctionFigureSentence(language: ReportLanguage): string {
     : `Non-compliance with the obligations documented at article D412-49 et seq. of the consumer code is sanctioned by the fine for a 5th-class contravention, up to ${amount} per confirmed breach for a legal person, cumulable (art. R451-4 of the consumer code).`;
 }
 
+/** Not currently called from packages/report (removed 2026-08-18, B9/item
+ *  1.14): its source, docs/obligation-basis.md's route-3 case-law
+ *  entries, is tagged `Status: secondary`, which that doc's own section 0
+ *  reserves for internal use only, never something that reaches a
+ *  client. Kept here, not deleted, since the underlying fact (the
+ *  contested Lille/Caen split) is real and useful once the ordonnances
+ *  are verified against Légifrance or an official publication and the
+ *  status in obligation-basis.md is upgraded to primary. */
 export function eaaCaseLawStateSentence(language: ReportLanguage): string {
   return CASE_LAW_STATE[language];
 }

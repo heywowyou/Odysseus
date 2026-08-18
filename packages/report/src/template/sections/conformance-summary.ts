@@ -12,16 +12,28 @@ function cell(html: string, extra = ''): string {
   return `<div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</div>`;
 }
 
+/** item 1.9: the heuristic table used to share this exact 5-column grid
+ *  (including a real WCAG criterion number) with the genuine-failure
+ *  table, differing only by a heading and a slight opacity dip - a
+ *  client's agency treated 19 heuristic rows sitting directly under the
+ *  real failures table, with the same WCAG column, as 19 more confirmed
+ *  failures. `showCriterionColumn` drops that column for the heuristic
+ *  call (a heuristic flag is not a confirmed criterion failure, so it
+ *  should not carry a criterion number at all), and a background tint
+ *  (not just opacity) makes the block read as a structurally different
+ *  table, not a lighter copy of the one above it. */
 function renderRollupTable(
   strings: ReportStrings,
   language: ReportLanguage,
   rows: readonly ConformanceRow[],
-  rowExtra = '',
+  options: { rowExtra?: string; showCriterionColumn?: boolean } = {},
 ): string {
+  const { rowExtra = '', showCriterionColumn = true } = options;
   const c = strings.conformanceSummary;
+  const columns = showCriterionColumn ? '100px 1fr 90px 100px 100px' : '1fr 90px 100px 100px';
   return `
-    <div style="display:grid;grid-template-columns:100px 1fr 90px 100px 100px;font-size:14px">
-      ${headCell(c.criterionColumnLabel)}
+    <div style="display:grid;grid-template-columns:${columns};font-size:14px">
+      ${showCriterionColumn ? headCell(c.criterionColumnLabel) : ''}
       ${headCell(c.criterionNameColumnLabel)}
       ${headCell(c.findingsColumnLabel)}
       ${headCell(c.occurrencesColumnLabel)}
@@ -30,11 +42,11 @@ function renderRollupTable(
         .map(
           (row) => `
             <div class="row-atomic" style="${rowExtra}">
-              ${cell(escapeHtml(row.criterion), 'color:var(--color-accent-300)')}
+              ${showCriterionColumn ? cell(escapeHtml(row.criterion), 'color:var(--color-accent-300)') : ''}
               ${cell(escapeHtml(getCriterionName(row.criterion, language) ?? ''))}
               ${cell(formatNumber(row.findingCount, language))}
               ${cell(formatNumber(row.totalOccurrences, language))}
-              ${cell(formatNumber(row.maxPages, language))}
+              ${cell(formatNumber(row.pages, language))}
             </div>
           `,
         )
@@ -72,8 +84,8 @@ export function renderConformanceSummary(
       <div class="hr"></div>
       <h5>${escapeHtml(c.heuristicSectionHeading)}</h5>
       <p style="font-size:12px;opacity:0.6;max-width:66ch;margin-bottom:var(--space-4)">${escapeHtml(c.heuristicSectionNote)}</p>
-      <div style="border-left:2px solid var(--color-accent-300);padding-left:var(--space-3)">
-        ${renderRollupTable(strings, language, heuristicRows, 'opacity:0.85')}
+      <div style="background:color-mix(in srgb, var(--color-accent-300) 6%, transparent);border-left:2px solid var(--color-accent-300);padding:var(--space-3)">
+        ${renderRollupTable(strings, language, heuristicRows, { showCriterionColumn: false })}
       </div>
     `
     : '';

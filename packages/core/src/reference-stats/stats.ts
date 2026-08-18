@@ -124,18 +124,16 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     ),
     ratio: { kind: 'checkout-uplift', value: 0.3526 },
   },
-  {
-    id: 'legal-general-w3c-case-study',
-    category: ['accessibility'],
-    sector: 'general',
-    confidence: 'established',
-    scalability: 'context-only',
-    source: 'W3C Web Accessibility Initiative (Legal & General case study)',
-    citation: bilingual(
-      "À la suite d'une refonte centrée sur l'accessibilité, le nombre de visiteurs du site Legal & General recevant un devis a doublé en 3 mois, avec un retour sur investissement de 100 % en 12 mois, 200 000 £ d'économies annuelles de maintenance et un temps de chargement des pages réduit de 75 % (W3C Web Accessibility Initiative, étude de cas documentée).",
-      "Following an accessibility-driven redesign, Legal & General's site visitors receiving a quotation doubled within 3 months, with a 100% return on investment within 12 months, GBP 200,000 per year in maintenance-cost savings, and page-load times reduced by 75% (W3C Web Accessibility Initiative, documented case study).",
-    ),
-  },
+  // item 1.5: the Legal & General (UK insurance) W3C case study was
+  // removed here 2026-08-18. It carried no year (the underlying case study
+  // is from the early 2000s), and StatSector has no way to mark a citation
+  // "wrong sector, never generalize" - `sector: 'general'` means "applies
+  // to every vertical" by definition, so a French hotel client received a
+  // UK-insurance, GBP-denominated case study as its accessibility-to-
+  // conversion evidence. No sector-matched hospitality replacement exists;
+  // selectReferenceStats already returns no citation for an unmatched
+  // sector/category pair rather than erroring, which is the correct
+  // behaviour here (report, don't fabricate a comparison).
   {
     id: 'pew-ai-overviews-ctr-2025',
     category: ['seo', 'geo'],

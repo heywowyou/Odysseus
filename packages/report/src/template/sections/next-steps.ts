@@ -1,6 +1,19 @@
 import type { AuditManifest } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatDate, renderSheetHeader, sheet, ODYSSEUS_CONTACT_EMAIL } from '../html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  formatDate,
+  formatNumber,
+  renderSheetHeader,
+  sheet,
+  ODYSSEUS_CONTACT_EMAIL,
+  ODYSSEUS_PRODUCER_NAME,
+  ODYSSEUS_REAUDIT_LEAD_TIME_DAYS,
+  ODYSSEUS_REAUDIT_PRICE_EUR_HT,
+  ODYSSEUS_SIGNATORY_NAME,
+  ODYSSEUS_SIRET_PLACEHOLDER,
+} from '../html-utils.js';
 
 /** Static, code-owned copy - no scan data involved. Doc §3 cap: 3 cards,
  *  1 sheet.
@@ -21,15 +34,24 @@ export function renderNextSteps(strings: ReportStrings, ordinal: number, manifes
 
   const questionBody = fillTemplate(n.questionBodyTemplate, { email: ODYSSEUS_CONTACT_EMAIL });
   const authorship = fillTemplate(n.authorshipTemplate, {
-    producer: 'Odysseus',
+    producer: ODYSSEUS_PRODUCER_NAME,
     date: formatDate(new Date(manifest.startedAt), language),
     version: manifest.tool.odysseusVersion,
     reportId: manifest.auditId,
   });
+  const issuerBlock = fillTemplate(n.issuerBlockTemplate, {
+    signatory: ODYSSEUS_SIGNATORY_NAME,
+    siret: ODYSSEUS_SIRET_PLACEHOLDER,
+  });
+  const reauditPricing = fillTemplate(n.reauditPricingTemplate, {
+    price: formatNumber(ODYSSEUS_REAUDIT_PRICE_EUR_HT, language),
+    days: formatNumber(ODYSSEUS_REAUDIT_LEAD_TIME_DAYS, language),
+    email: ODYSSEUS_CONTACT_EMAIL,
+  });
 
   const cards = [
     { title: n.questionTitle, body: questionBody },
-    { title: n.reauditTitle, body: n.reauditBody },
+    { title: n.reauditTitle, body: `${n.reauditBody} ${reauditPricing}` },
     { title: n.postFixTitle, body: n.postFixBody },
   ]
     .map(
@@ -49,6 +71,7 @@ export function renderNextSteps(strings: ReportStrings, ordinal: number, manifes
     </div>
     <div class="hr"></div>
     <p style="font-size:11px;opacity:0.55;margin-top:var(--space-4)">${escapeHtml(authorship)}</p>
+    <p style="font-size:11px;opacity:0.55;margin-top:4px">${escapeHtml(issuerBlock)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:4px;max-width:70ch">${escapeHtml(n.liabilityStatement)}</p>
   `, '', 'section-14');
 }

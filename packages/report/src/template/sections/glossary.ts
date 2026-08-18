@@ -1,4 +1,4 @@
-import type { Finding, ObligationAssessment } from '@odysseus/core';
+import { HEURISTIC_RULE_IDS, type Finding, type ObligationAssessment } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, renderSheetHeader, sheet } from '../html-utils.js';
 import { isArticle47Regime } from './accessibility-statement.js';
@@ -32,15 +32,34 @@ function isGlossaryTermRelevant(id: string, ctx: GlossaryContext): boolean {
       return ctx.findings.some((f) => f.category === 'geo');
     case 'parcours-transactionnel':
       return ctx.transactionalFlowEvaluated;
+    // item 3.5 (v2 pass): 8 terms confirmed missing that a report can
+    // actually use. Two of the eight ('signaux-a-verifier',
+    // 'recherche-emergente') only ever appear alongside a specific kind
+    // of finding, so they get the same scoped-relevance treatment as
+    // rgaa/seo/geo/parcours-transactionnel above rather than always
+    // showing. 'pages-concernees', 'sans-objet', 'rendu', 'sirene',
+    // 'effort', and 'impact-commercial' fall through to the default
+    // (always included) - each is near-universal in a full-tier report
+    // and has no single cheap ctx signal to gate on, the same reasoning
+    // already applied to wcag/eaa/en301549/the severity vocabulary/the
+    // five Core Web Vitals/constat-vs-occurrence/selecteur/dgccrf.
+    case 'signaux-a-verifier':
+      return ctx.findings.some((f) => HEURISTIC_RULE_IDS.has(f.ruleId));
+    case 'recherche-emergente':
+      return ctx.findings.some((f) => f.category === 'geo');
     default:
       return true;
   }
 }
 
-/** Doc §3 cap: 9 entries, 1 sheet in the original static list - now a
- *  data-driven subset of a larger term table (strings.glossary.terms),
- *  scoped per report so it can never drift out of sync with what a given
- *  report actually uses (item 33). */
+/** Doc §3's original cap was 9 entries on a single sheet, from a static
+ *  list - now a data-driven subset of a larger term table
+ *  (strings.glossary.terms, 26 entries as of item 3.5's v2 pass), scoped
+ *  per report so it can never drift out of sync with what a given report
+ *  actually uses (item 33). No hard cap on rendered term count: the
+ *  section is not `.sheet-standalone`, so it flows across as many pages
+ *  as the relevant subset needs, the same "let content flow naturally"
+ *  rule item 34 already established for every non-standalone section. */
 export function renderGlossary(strings: ReportStrings, ordinal: number, ctx: GlossaryContext): string {
   const g = strings.glossary;
   const relevantTerms = g.terms.filter((t) => isGlossaryTermRelevant(t.id, ctx));

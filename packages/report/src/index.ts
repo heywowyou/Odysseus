@@ -5,6 +5,7 @@ import { launchBrowser } from '@odysseus/scanner';
 import type { GenerateReportInput } from './types.js';
 import { resolveRenderDiffEvidence } from './screenshots.js';
 import { renderHtml } from './template/render-html.js';
+import { findRenderLintViolations } from './template/render-lint.js';
 import { renderPdfFromHtml } from './pdf.js';
 
 /** Chromium is launched once for the whole report and used solely for the
@@ -29,6 +30,16 @@ export async function generateReportPdf(input: GenerateReportInput): Promise<Buf
       renderDiffWrapperOrLegalExcludedCount,
       ...(input.manualFields !== undefined ? { manualFields: input.manualFields } : {}),
     });
+
+    const lintViolations = findRenderLintViolations(html);
+    if (lintViolations.length > 0) {
+      const details = lintViolations
+        .map((v) => `  - ${v.label}: "...${v.context}..."`)
+        .join('\n');
+      throw new Error(
+        `Report generation aborted: rendered HTML contains ${lintViolations.length} render-lint violation(s), never shipped to a client:\n${details}`
+      );
+    }
 
     return await renderPdfFromHtml(html, browser);
   } finally {

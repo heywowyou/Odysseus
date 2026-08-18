@@ -45,3 +45,7 @@ export * from './normalize/normalize-renderdiff.js';
 export * from './normalize/normalize-custom.js';
 export * from './normalize/normalize.js';
 export * from './normalize/heuristic-rules.js';
+export * from './normalize/normalize-keyboard-navigation.js';
+export * from './normalize/normalize-form-error-handling.js';
+export * from './normalize/normalize-video-captions.js';
+export * from './normalize/normalize-alt-text.js';

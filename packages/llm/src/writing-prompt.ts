@@ -32,6 +32,14 @@ export function buildWritingSystemPrompt(
   const v = SEVERITY_VOCABULARY[language];
   const severityVocabularyNote = `\n\nWhen referring to a severity level anywhere in your prose (executiveSummary, notes, businessImpact, or recommendedActions), use exactly one of these four words, never a synonym: "${v.critical}", "${v.serious}", "${v.moderate}", "${v.minor}". The stats box and the findings annex use these exact words; a different word for the same level (for example a rough synonym of "${v.serious}") reads as a second, contradictory classification system to a reader comparing the two.`;
 
+  // item D8 (P4): a real report stated "Les lenteurs d'affichage, causées
+  // par des scripts bloquants" - the scanner measured a correlation
+  // between blocking-script findings and slow metrics, on the same page,
+  // not a proven causal mechanism. "liées à"/"linked to" costs nothing and
+  // doesn't overstate what a page-load audit can actually establish.
+  const causationNote =
+    '\n\nThe scanner reports what it measured directly: a finding, a metric, a page. It does not trace causal chains between them. When two things measured on the same page appear related (for example, blocking scripts and a slow load metric), describe them as linked or associated, never as one causing the other, unless the finding data itself states a direct mechanism. In French, prefer "liées à" over "causées par" for this.';
+
   return `You are the writing layer of Odysseus, a web audit tool for French small and mid-size businesses.
 
 A separate structuring pass has already grouped this audit's findings into themes and decided each theme's category, effort, impact, priority rank, quick wins, and overall risk. Those decisions are final: you cannot change groupings, priorities, effort, impact, category, quick wins, or overall risk, and your response schema has no fields for any of them.
@@ -41,12 +49,12 @@ The legal relevance of an accessibility theme (which WCAG criterion applies) is 
 Each theme you are given below has a themeKey (for example "t1"). For every theme you are given, write:
 - title: a short, plain-language theme name.
 - businessImpact: why this matters commercially, in plain language, no jargon, no scanner terminology. At most two sentences - your response is checked against this limit and rejected if it is longer.
-- recommendedActions: at most three concrete next steps. Never list individual page URLs - refer to pages by count only (for example "18 pages" or "the sitemap page"), page-level detail belongs in the report's appendix, not in your prose.
+- recommendedActions: at most three concrete next steps. Never list individual page URLs - refer to pages by count only (for example "18 pages" or "the sitemap page"), page-level detail belongs in the report's appendix, not in your prose. Assume the client is a small or mid-size business with no in-house developer and no one on staff who owns a screen reader or other assistive-technology tool - phrase every action as something to hand to "your agency" or "your technical provider" (or the equivalent phrase in the response language), never as an instruction to the client's own developers or an instruction to personally test with a screen reader. For example, write "ask your agency to add appropriate ARIA roles to X" rather than "train your developers on ARIA" or "test with a screen reader".
 
 You must return exactly one theme object per themeKey shown to you, echoing its themeKey verbatim. Do not invent a themeKey you were not shown, do not omit one you were shown, and do not return more than one object for the same themeKey.
 
 Also write an executiveSummary aimed at a non-technical decision maker, citing the exact siteStats figures you are given (pages scanned, total findings, and the count at each severity) rather than estimating them yourself, and a notes field for anything else worth telling the client. Lead the executiveSummary with the actionable number (critical plus serious findings combined), not the raw total findings count - most findings on a real site are minor, and opening with the full total reads as alarmist relative to what actually needs attention. State the full total too, but not as the headline figure the reader is left with (for example "98 constats au total, dont 7 prioritaires" rather than leading with "98 problèmes").
-${dominantMetricNote}${severityVocabularyNote}
+${dominantMetricNote}${severityVocabularyNote}${causationNote}
 ${LANGUAGE_INSTRUCTION[language]}${fallbackNote}
 
 Respond with structured JSON matching the required schema only. No prose outside the JSON fields, no markdown fences.`;

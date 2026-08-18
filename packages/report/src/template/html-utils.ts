@@ -26,6 +26,30 @@ export function escapeHtml(value: string): string {
  *  swap for a real monitored address before this ships to a client. */
 export const ODYSSEUS_CONTACT_EMAIL = 'contact@odysseusaudit.com';
 
+/** item 3.13/31: no issuer identity (legal entity, signatory, SIRET)
+ *  anywhere in a paid deliverable that may be forwarded to counsel. Code
+ *  constants, same reasoning and same "flag for Jules, never silently
+ *  omit" posture as ODYSSEUS_CONTACT_EMAIL above - not manual-input
+ *  fields or LLM output. ODYSSEUS_SIRET is a genuine placeholder, not a
+ *  real number: rendered so it reads as visibly incomplete
+ *  ("[SIRET à renseigner]") rather than a plausible-looking fake number,
+ *  so nobody mistakes it for real and publishes it. Replace with the
+ *  real SIRET before this next ships. */
+export const ODYSSEUS_PRODUCER_NAME = 'Odysseus Audit';
+export const ODYSSEUS_SIGNATORY_NAME = 'Jules Fontaine';
+export const ODYSSEUS_SIRET_PLACEHOLDER = '[SIRET à renseigner]';
+
+/** item 3.12: "Prochaines étapes" described re-audits and post-fix
+ *  verification with no price, no lead time, and no way to order -
+ *  the one page in the report with commercial upside converted nothing.
+ *  Placeholder pricing (no existing reference point in the codebase or
+ *  docs/offer-positioning.md for a re-audit specifically, only for the
+ *  full audit itself): roughly 28% of the EUR 1,600 HT full-audit price,
+ *  reasoned as a verification pass being narrower in scope than a full
+ *  re-scan. Confirm with Jules and replace before this next ships. */
+export const ODYSSEUS_REAUDIT_PRICE_EUR_HT = 450;
+export const ODYSSEUS_REAUDIT_LEAD_TIME_DAYS = 5;
+
 const DATE_LOCALES = { fr: 'fr-FR', en: 'en-GB' } as const;
 
 export function formatDate(date: Date, language: 'fr' | 'en'): string {
@@ -99,6 +123,24 @@ export function formatFindingIdRefs(findingIds: readonly string[]): string {
   return [...findingIds].sort().join(', ');
 }
 
+/** item 3.3: "Constats : f002, f003, f004, f006" gave the client no page
+ *  number and no link, so finding a referenced id meant scanning 25 annex
+ *  pages by hand. Each id links to `#annexref-{id}`, the anchor
+ *  findings-appendix.ts's renderSubTableRow now sets on every annex row -
+ *  a real PDF internal link (verified by print-inversion-style tests
+ *  extracting the PDF's own /Annots, not just visual inspection), not a
+ *  page number, since Paged.js page numbers for an arbitrary annex row
+ *  are not resolvable without a second layout pass this codebase does not
+ *  otherwise need (unlike the TOC's target-counter, which points at a
+ *  small, fixed set of section starts). Returns raw HTML, not text -
+ *  callers must not escapeHtml() the result a second time. */
+export function formatFindingIdLinks(findingIds: readonly string[]): string {
+  return [...findingIds]
+    .sort()
+    .map((id) => `<a href="#annexref-${escapeHtml(id)}" style="color:inherit;text-decoration:underline">${escapeHtml(id)}</a>`)
+    .join(', ');
+}
+
 /** Every numbered section (legal exposure through next steps) shares this
  *  two-line header shape, ported verbatim from report.reference.html: a
  *  short numbered eyebrow ("07 · Conformité") as an <h6>, then the full
@@ -111,14 +153,25 @@ export function formatFindingIdRefs(findingIds: readonly string[]): string {
  *  every following section's number must shift down to stay contiguous,
  *  which a hardcoded "07 · " prefix per language string could never do.
  *  section-registry.ts computes the live ordinal from which sections
- *  actually rendered. */
+ *  actually rendered.
+ *
+ *  item 2.1: a section header could be orphaned alone at the bottom of a
+ *  page - not because h2 itself broke (h2's own break-after:avoid in
+ *  paged.css already prevented that) but because the eyebrow's wrapping
+ *  <div> and the <h2> below it are two separate sibling elements with no
+ *  break rule between *them*, so Paged.js could legally break right there,
+ *  stranding the "01 · Constats" eyebrow alone with the real heading
+ *  pushed to the next page. Wrapping both in one `.section-head` element
+ *  (break-inside:avoid, paged.css) makes that break location illegal too. */
 export function renderSheetHeader(ordinal: number, eyebrow: string, heading: string): string {
   const numbered = `${String(ordinal).padStart(2, '0')} · ${eyebrow}`;
   return `
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-      <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(numbered)}</h6>
+    <div class="section-head">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
+        <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(numbered)}</h6>
+      </div>
+      <h2 style="margin-bottom:var(--space-4)">${escapeHtml(heading)}</h2>
     </div>
-    <h2 style="margin-bottom:var(--space-4)">${escapeHtml(heading)}</h2>
   `;
 }
 

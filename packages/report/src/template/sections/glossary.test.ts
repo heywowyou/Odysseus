@@ -133,3 +133,48 @@ describe('item 33: the glossary is scoped to the terms a given report actually u
     expect(notEvaluated).not.toContain('Parcours transactionnel');
   });
 });
+
+// item 3.5 (v2 pass): 8 confirmed-missing terms that a report can
+// actually use, added to strings.glossary.terms.
+describe('item 3.5: the 8 previously-missing glossary terms', () => {
+  it('always includes the near-universal terms with no cheap ctx signal to gate on', () => {
+    const html = renderGlossary(getStrings('fr'), 13, {
+      findings: [],
+      obligationAssessment: undefined,
+      transactionalFlowEvaluated: false,
+    });
+    for (const term of ['Sans objet', 'Pages concernées', 'Rendu', 'Sirene', 'Effort', 'Impact commercial']) {
+      expect(html).toContain(term);
+    }
+  });
+
+  it('includes "Signaux à vérifier" only when a heuristic-rule finding exists', () => {
+    const withHeuristic = renderGlossary(getStrings('fr'), 13, {
+      findings: [{ ...buildFinding('accessibility'), ruleId: 'alt-text-quality-heuristic' }],
+      obligationAssessment: undefined,
+      transactionalFlowEvaluated: false,
+    });
+    const withoutHeuristic = renderGlossary(getStrings('fr'), 13, {
+      findings: [buildFinding('accessibility')],
+      obligationAssessment: undefined,
+      transactionalFlowEvaluated: false,
+    });
+    expect(withHeuristic).toContain('Signaux à vérifier');
+    expect(withoutHeuristic).not.toContain('Signaux à vérifier');
+  });
+
+  it('includes "Recherche émergente" only when the report has geo findings', () => {
+    const withGeo = renderGlossary(getStrings('fr'), 13, {
+      findings: [buildFinding('geo')],
+      obligationAssessment: undefined,
+      transactionalFlowEvaluated: false,
+    });
+    const withoutGeo = renderGlossary(getStrings('fr'), 13, {
+      findings: [buildFinding('accessibility')],
+      obligationAssessment: undefined,
+      transactionalFlowEvaluated: false,
+    });
+    expect(withGeo).toContain('Recherche émergente');
+    expect(withoutGeo).not.toContain('Recherche émergente');
+  });
+});

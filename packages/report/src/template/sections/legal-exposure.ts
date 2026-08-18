@@ -1,4 +1,4 @@
-import { EAA_REGIME_ID, eaaCaseLawStateSentence, eaaSanctionFigureSentence } from '@odysseus/core';
+import { EAA_REGIME_ID, eaaSanctionFigureSentence } from '@odysseus/core';
 import type { AuditManifest, AuditManualFields, ObligationAssessment, ReportLanguage } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatDate, formatElapsedDuration, renderSheetHeader, sheet } from '../html-utils.js';
@@ -44,10 +44,27 @@ function renderTransactionalFlowScopeNote(strings: ReportStrings, manifest: Audi
   if (evidence.length === 0) return '';
 
   const delegated = evidence.filter((e) => e.kind === 'delegated-booking-redirect');
+  // item 0.2: `detail` is internal English classification reasoning, never
+  // a client-facing domain - derive the actual hostname from providerUrl
+  // instead. A providerUrl that fails to parse is dropped rather than
+  // shown malformed.
+  const providerDomains = [
+    ...new Set(
+      delegated
+        .map((e) => {
+          try {
+            return e.providerUrl ? new URL(e.providerUrl).hostname : null;
+          } catch {
+            return null;
+          }
+        })
+        .filter((domain): domain is string => domain !== null),
+    ),
+  ];
   const text =
     delegated.length > 0
       ? fillTemplate(l.transactionalFlowDelegatedTemplate, {
-          domain: [...new Set(delegated.map((e) => e.detail))].join(', '),
+          domain: providerDomains.length > 0 ? providerDomains.join(', ') : l.transactionalFlowDelegatedDomainUnknown,
         })
       : fillTemplate(l.transactionalFlowOnSiteTemplate, {
           pages: [...new Set(evidence.map((e) => e.pageUrl))].sort().join(', '),
@@ -57,15 +74,32 @@ function renderTransactionalFlowScopeNote(strings: ReportStrings, manifest: Audi
 }
 
 /** item 18: the section stated which obligation applies but never the
- *  actual exposure (fine amount, case law state) - two deterministic
- *  facts (packages/core's enforcement-facts.ts, sourced from
- *  docs/obligation-basis.md status `primary` content only), rendered
+ *  actual exposure (fine amount, case law state) - originally two
+ *  deterministic facts from packages/core's enforcement-facts.ts, rendered
  *  only when the resolved regime is EAA/SMB (methodology.ts's
  *  pickPrimaryBasis). Article 47's own sanction figure is not stated
  *  here at all this session - a client resolved to article 47 is not
  *  the case this feedback pass exercised, and inventing that copy path
  *  without a reviewed report to check it against would be exactly the
- *  kind of unverified addition rule 1 forbids. */
+ *  kind of unverified addition rule 1 forbids.
+ *
+ *  Revised 2026-08-18 (B9/item 1.14): eaaCaseLawStateSentence() (the
+ *  Lille/Caen paragraph) was removed from this block. Its source,
+ *  docs/obligation-basis.md's route-3 case-law entries, is explicitly
+ *  tagged `Status: secondary` ("internal use only" per the doc's own
+ *  section 0 verification convention), sourced from press summaries, not
+ *  the ordonnances themselves - section 9's own remaining-verification
+ *  list still names "the Caen and Lille ordonnances themselves rather
+ *  than press summaries" as unresolved. obligation-basis.md's governing
+ *  rule ("nothing legal may be stated anywhere in the product unless it
+ *  appears here with status primary... secondary is internal use only")
+ *  makes this content not eligible to reach a client, regardless of how
+ *  neutrally it is phrased. Only the sanction figure remains here, which
+ *  is genuinely primary-sourced (art. R451-4 code de la consommation).
+ *  Re-add the case-law sentence only once the underlying ordonnances are
+ *  verified against Légifrance or an official publication and the status
+ *  in obligation-basis.md itself is upgraded to primary - do not
+ *  re-introduce it by relaxing this check instead. */
 function renderEaaExposureBlock(strings: ReportStrings, language: ReportLanguage, assessment: ObligationAssessment | undefined): string {
   if (!assessment || (assessment.status !== 'in_scope' && assessment.status !== 'likely_in_scope')) return '';
   const basis = pickPrimaryBasis(assessment);
@@ -76,7 +110,6 @@ function renderEaaExposureBlock(strings: ReportStrings, language: ReportLanguage
     <div style="margin-top:var(--space-6)">
       <h5>${escapeHtml(l.exposureHeading)}</h5>
       <p style="font-size:13.5px;opacity:0.85;max-width:66ch">${escapeHtml(eaaSanctionFigureSentence(language))}</p>
-      <p style="font-size:13.5px;opacity:0.85;max-width:66ch;margin-top:var(--space-2)">${escapeHtml(eaaCaseLawStateSentence(language))}</p>
     </div>
   `;
 }

@@ -19,14 +19,19 @@ export function renderReferenceStatNote(
   stat: ReferenceStat,
   language: ReportLanguage,
   emergingBadgeText?: string,
-  /** item 14: a per-0.1s ratio (the Deloitte page-speed stats) invites a
-   *  reader to naively multiply the stated relationship by however many
+  /** item 14/1.6: a per-0.1s ratio (the Deloitte page-speed stats) invites
+   *  a reader to naively multiply the stated relationship by however many
    *  seconds their own site is over threshold - wildly wrong when the
-   *  real gap is 3.4s, not 0.1s. Stating the site's own measured gap next
-   *  to the citation removes the need for that extrapolation. Rendered
-   *  as its own line only when the caller has one to show (themes.ts,
-   *  for a 'conversion-uplift-per-0.1s'/'aov-uplift-per-0.1s' stat on a
-   *  performance theme where a real LCP measurement exists). */
+   *  real gap is 3.4s, not 0.1s. Stating the site's own measured gap
+   *  removes the need for that extrapolation. Rendered first, before the
+   *  citation (item 1.6: the original order put the citation first and a
+   *  "not to be confused with the number above" disclaimer after, which
+   *  read as a warning against the report's own figure; stating the site's
+   *  real gap up front, then the benchmark as context, means the
+   *  disclaimer sentence is no longer needed at all). Shown only when the
+   *  caller has one to give (themes.ts, for a 'conversion-uplift-per-0.1s'/
+   *  'aov-uplift-per-0.1s' stat on a performance theme where a real LCP
+   *  measurement exists). */
   measuredGapNote?: string,
 ): string {
   const badge =
@@ -34,7 +39,8 @@ export function renderReferenceStatNote(
       ? ` <span class="tag" style="background:${SEVERITY.serious.bg};color:${SEVERITY.serious.color}">${escapeHtml(emergingBadgeText)}</span>`
       : '';
   const gapLine = measuredGapNote
-    ? `<p style="font-size:12px;opacity:0.6;margin:2px 0 0">${escapeHtml(measuredGapNote)}</p>`
+    ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(measuredGapNote)}</p>`
     : '';
-  return `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(labelText)} : ${escapeHtml(stat.citation[language])}${badge}</p>${gapLine}`;
+  const citationLine = `<p style="font-size:12px;opacity:0.6;margin:${gapLine ? '2px' : '0'} 0 0">${escapeHtml(labelText)} : ${escapeHtml(stat.citation[language])}${badge}</p>`;
+  return `${gapLine}${citationLine}`;
 }

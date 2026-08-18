@@ -13,7 +13,39 @@ export interface RuleGroup {
   maxPages: number;
   /** Union across the group, numerically sorted. */
   wcagCriteria: string[];
+  /** item 1.3: the actual rule ids folded into this group when it's a
+   *  rule-family cluster (RULE_FAMILIES below) - always includes at least
+   *  `ruleId` itself, sorted, deduplicated. A group with exactly one
+   *  member here is the ordinary, non-clustered case; the renderer uses
+   *  this length to decide whether to show a family title with a list of
+   *  machine codes underneath, or the single rule-code badge it already
+   *  showed before clustering existed. */
+  memberRuleIds: string[];
 }
+
+/** item 1.3: seven separate Lighthouse rules ("your images are heavy",
+ *  report-feedback-palais-gallien-v2.md's own framing) that read as seven
+ *  distinct problems to a client when they are one remediation job -
+ *  confirmed as the correct scope by that feedback pass specifically
+ *  (image-delivery-insight/uses-optimized-images was deliberately left
+ *  OUT of the Lighthouse dedupe list in constants.ts for the opposite
+ *  reason: it is not a clean audit-pair duplicate, it genuinely measures
+ *  something different, so both survive as findings and get clustered
+ *  for *presentation* here instead of one being suppressed at the data
+ *  layer). A small, explicit map, not an inferred pattern match - only
+ *  add a rule id here once it is confirmed to belong to the same
+ *  remediation job as the rest of its family, the same "confirmed against
+ *  real scanner output, not assumed" bar constants.ts's own dedupe list
+ *  documents. */
+const RULE_FAMILIES: Readonly<Record<string, string>> = {
+  'unsized-images': 'image-weight',
+  'modern-image-formats': 'image-weight',
+  'offscreen-images': 'image-weight',
+  'uses-responsive-images': 'image-weight',
+  'uses-optimized-images': 'image-weight',
+  'image-delivery-insight': 'image-weight',
+  'prioritize-lcp-image': 'image-weight',
+};
 
 /** report-feedback-palais-gallien.md item 26: every severity, minor
  *  included, groups and renders through this one function now - the
@@ -29,20 +61,31 @@ export function groupAppendix(findings: readonly Finding[]): RuleGroup[] {
   const map = new Map<string, RuleGroup>();
 
   for (const finding of findings) {
-    const key = `${finding.ruleId}::${finding.severity}`;
+    // item 1.3: a family member groups under its family key, still
+    // separately per severity - a family with both a moderate and a
+    // minor member produces two group rows, not a merged severity, since
+    // deciding how to pick one representative severity across mixed
+    // members is a different, bigger question than clustering the
+    // annex's presentation.
+    const familyKey = RULE_FAMILIES[finding.ruleId] ?? finding.ruleId;
+    const key = `${familyKey}::${finding.severity}`;
     const group = map.get(key) ?? {
-      ruleId: finding.ruleId,
+      ruleId: familyKey,
       severity: finding.severity,
       findings: [],
       totalOccurrences: 0,
       maxPages: 0,
       wcagCriteria: [],
+      memberRuleIds: [],
     };
     group.findings.push(finding);
     group.totalOccurrences += finding.occurrences;
     group.maxPages = Math.max(group.maxPages, finding.pageUrls.length);
     if (finding.wcagCriteria.length > 0) {
       group.wcagCriteria = [...new Set([...group.wcagCriteria, ...finding.wcagCriteria])].sort(compareCriteria);
+    }
+    if (!group.memberRuleIds.includes(finding.ruleId)) {
+      group.memberRuleIds = [...group.memberRuleIds, finding.ruleId].sort();
     }
     map.set(key, group);
   }

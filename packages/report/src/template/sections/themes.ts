@@ -2,7 +2,7 @@ import type { AuditManifest, Finding, ReferenceStat, ReportLanguage, StatSector,
 import { CORE_WEB_VITAL_THRESHOLDS, selectReferenceStats } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatFindingIdRefs, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatFindingIdLinks, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { CATEGORY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 
@@ -87,6 +87,13 @@ function measuredLcpGapNote(
   });
 }
 
+/** item 2.5: the metadata line below a theme card (effort/impact/pages/
+ *  conformity/refs) used flex-wrap with no fixed widths, so a card whose
+ *  finding-reference list happened to be long wrapped at a different point
+ *  than one whose list was short - adjacent cards read as inconsistently
+ *  laid out. Rendered as a fixed-column grid below instead, so every
+ *  card's line wraps at the same positions regardless of content
+ *  length. */
 function renderTheme(
   strings: ReportStrings,
   language: ReportLanguage,
@@ -156,12 +163,12 @@ function renderTheme(
       ${legalBox}
       ${citationBox}
       ${recommendedActionsBox}
-      <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;font-size:12px;opacity:0.75;margin-top:4px">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.4fr);gap:var(--space-3);font-size:12px;opacity:0.75;margin-top:4px">
         <span>${escapeHtml(t.effortLabel)} : <strong>${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
         <span>${escapeHtml(t.impactLabel)} : <strong>${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
         <span>${escapeHtml(t.affectedPagesLabel)} : <strong>${escapeHtml(pagesText)}</strong></span>
         <span>${escapeHtml(t.conformityLabel)} : <strong>${escapeHtml(conformityValue)}</strong></span>
-        <span>${escapeHtml(t.refsLabel)} : ${escapeHtml(formatFindingIdRefs(theme.findingIds))}</span>
+        <span>${escapeHtml(t.refsLabel)} : ${formatFindingIdLinks(theme.findingIds)}</span>
       </div>
     </div>
   `;

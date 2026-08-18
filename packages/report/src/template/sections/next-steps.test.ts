@@ -64,3 +64,26 @@ describe('item 31: authorship and liability block', () => {
     expect(html).toContain('Ce rapport');
   });
 });
+
+// item 3.13: no issuer identity (legal entity, signatory, SIRET) anywhere
+// in the document - a professionalism and liability-exposure gap for a
+// paid French deliverable.
+describe('item 3.13: issuer identity block', () => {
+  it('states a signatory and a visibly-incomplete SIRET placeholder, never a plausible fake number', () => {
+    const html = renderNextSteps(getStrings('fr'), 14, fakeManifest(), 'fr');
+    expect(html).toContain('Jules Fontaine');
+    expect(html).toContain('SIRET');
+    expect(html).toContain('à renseigner');
+  });
+});
+
+// item 3.12: the re-audit card described the offer with no price, no lead
+// time, and no way to order it.
+describe('item 3.12: re-audit pricing and lead time', () => {
+  it('states an indicative price, a lead time, and the contact email to request one', () => {
+    const html = renderNextSteps(getStrings('fr'), 14, fakeManifest(), 'fr');
+    expect(html).toContain('450');
+    expect(html).toContain('5 jours ouvrés');
+    expect(html).toContain(ODYSSEUS_CONTACT_EMAIL);
+  });
+});

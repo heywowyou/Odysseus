@@ -44,7 +44,10 @@ export interface ReportStrings {
     /** item 39: shown only when computeStatistics.hasBelowThresholdRenderGap
      *  is true - "Rendu : 0" otherwise reads as contradicting section
      *  08's own reported gap, when the real explanation is a below-
-     *  threshold measured percentage, not a bug or an absence of gap. */
+     *  threshold measured percentage, not a bug or an absence of gap.
+     *  item 1.12: states the threshold numerically rather than leaving it
+     *  as an unexplained "below the threshold". Template: {threshold}
+     *  (percent, RENDER_DIFF_EMISSION_THRESHOLD_PERCENT). */
     belowThresholdRenderGapNote: string;
     legendCriticalText: string;
     legendSeriousText: string;
@@ -96,14 +99,33 @@ export interface ReportStrings {
     pagesScannedValueTemplate: string;
     languageLabel: string;
     wcagReferentialLabel: string;
+    /** item 3.8: the cover's "RÉFÉRENTIEL AUDITÉ" field used to hardcode
+     *  the literal "WCAG 2.2 AA" regardless of scope, even though 76 of
+     *  98 findings in a real report were performance/SEO/GEO - a client
+     *  reading the cover expected an accessibility-only audit. States all
+     *  four categories this product always audits (CATEGORY_ORDER,
+     *  statistics.ts), not conditioned on whether findings exist in each -
+     *  a clean category is still part of what was checked. */
+    wcagReferentialValue: string;
     riskSmallLabel: string;
     riskLevels: { low: string; medium: string; high: string };
     /** item 42: the badge showed no scale and no stated basis for how it
      *  was derived - the reader had no way to calibrate "Élevé" or verify
-     *  how the tool got there. Template: {critical}, {serious}. */
+     *  how the tool got there. Template: {critical}, {criticalWord},
+     *  {serious}, {seriousWord} - the word params exist because item 0.5
+     *  shipped "1 constats sérieux" with no singular/plural branch. */
     riskBasisTemplate: string;
-    /** Manual-input-layer milestone: shown in the field grid only when
-     *  AuditManualFields.recipientName is present. */
+    criticalFindingSingular: string;
+    criticalFindingPlural: string;
+    seriousFindingSingular: string;
+    seriousFindingPlural: string;
+    /** item 3.9: no longer rendered on the cover (cover.ts no longer
+     *  reads AuditManualFields.recipientName at all) - the "Préparé pour"
+     *  field printed the client's company name a third time next to the
+     *  H1 and "Dénomination sociale", with no distinct contact-person
+     *  field to hold instead. Kept in ReportStrings only because removing
+     *  it would be a locale-file structural change unrelated to this
+     *  fix; unused until a real contact-person input field exists. */
     recipientLabel: string;
     /** Rendered as a secondary line under the headline company identity
      *  only when AuditManualFields.raisonSociale is present. */
@@ -115,10 +137,21 @@ export interface ReportStrings {
     /** Kicker over the "where to start" jump-link box (doc §3 section 01:
      *  prose + jump links, capped at 3). */
     startHereKicker: string;
-    /** Template: {rank}, {title}. report-feedback-palais-gallien.md item
-     *  5: standalone accessible link text ("Voir priorité 1 : lenteur
-     *  d'affichage") instead of a bare "Voir →" repeated three times,
-     *  which read as a decorative arrow with no stated destination. */
+    /** item 3.5: the glossary sat 32 pages later with no pointer to it
+     *  from the front of the report, so a term the client needed on page
+     *  3 (constat, LCP, GEO...) went undefined until the very end.
+     *  References the glossary section by name, not number, matching the
+     *  existing cross-reference pattern (methodology.ts's
+     *  legalCitationPointerSentence) - a hardcoded page/section number
+     *  would drift the next time section ordering changes. */
+    glossaryPointerSentence: string;
+    /** Template: {rank}. report-feedback-palais-gallien.md item 5:
+     *  standalone accessible link text ("Voir priorité 1") instead of a
+     *  bare "Voir →" repeated three times, which read as a decorative
+     *  arrow with no stated destination. item 3.4 (v2 pass): originally
+     *  also carried {title}, duplicating the theme title already shown
+     *  in the adjacent span - dropped, since the rank plus that adjacent
+     *  span already give the link stand-alone text without repeating it. */
     jumpLinkLabelTemplate: string;
     /** item 16: shown only when the #1-ranked theme is not itself a
      *  legal-conformity item (theme.legalRelevance undefined), so the
@@ -200,6 +233,9 @@ export interface ReportStrings {
      *  the redirect check resolved to (never crawled as part of this
      *  audit - a single-origin crawl by design). */
     transactionalFlowDelegatedTemplate: string;
+    /** Fallback for {domain} above on the rare case a delegated
+     *  provider's URL couldn't be parsed into a hostname. */
+    transactionalFlowDelegatedDomainUnknown: string;
   };
   /** Pure re-presentation of analysis.themes (rank/title/effort/impact/
    *  pages) as a dense, printable table - no new data, no new logic. */
@@ -219,7 +255,11 @@ export interface ReportStrings {
      *  page as a working checklist (note status/owner/date by hand). */
     findingsColumnLabel: string;
     wcagColumnLabel: string;
-    statusDateColumnLabel: string;
+    /** item 2.7: no company name or date lives on this page - once printed
+     *  or captured alone (the promise its own intro states) it carried no
+     *  way to tell whose checklist it was or from when. Template:
+     *  {company}, {date}. */
+    identifierTemplate: string;
   };
   themes: {
     eyebrow: string;
@@ -265,6 +305,12 @@ export interface ReportStrings {
     rawBarLabelTemplate: string;
     /** Template: {chars}. Bar caption above the rendered bar. */
     renderedBarLabelTemplate: string;
+    /** Shown in place of the two character-count bars when both
+     *  rawTextLength and renderedTextLength are unmeasured for a page
+     *  (item 0.3: drawing bars from unknown data is worse than drawing
+     *  none, so the pair is suppressed entirely rather than labelled
+     *  with a placeholder). */
+    charCountsUnavailableNote: string;
     /** Template: {percent}, {selector}. */
     missingCaptionTemplate: string;
     /** B2: same sentence with no trailing "sur {selector}" clause, used
@@ -296,6 +342,18 @@ export interface ReportStrings {
     introTemplate: string;
     metricColumnLabel: string;
     valueColumnLabel: string;
+    /** item 1.7/B2: a metric's aggregated finding severity is driven by
+     *  the worst page (severity.ts's maxSeverity dedupe rule), not the
+     *  median this table otherwise shows - showing the worst page's own
+     *  value here lets a "Critique" finding sitting next to a median-based
+     *  "a ameliorer" status make sense without extra prose. */
+    worstPageColumnLabel: string;
+    /** Shown in the worst-page column when the worst page equals the
+     *  median (no outlier). */
+    worstPageSameAsMedian: string;
+    /** One-line footnote under the table explaining what the worst-page
+     *  column is and why it can outrank the median's own status. */
+    worstPageFootnote: string;
     thresholdColumnLabel: string;
     statusColumnLabel: string;
     lcpLabel: string;
@@ -375,12 +433,26 @@ export interface ReportStrings {
     questionBodyTemplate: string;
     reauditTitle: string;
     reauditBody: string;
+    /** item 3.12: the re-audit card described the offer with no price, no
+     *  lead time, and no way to order it - the one page in the report
+     *  with commercial upside converting nothing. Template: {price},
+     *  {days}, {email}. Placeholder figures pending confirmation, see
+     *  ODYSSEUS_REAUDIT_PRICE_EUR_HT / ODYSSEUS_REAUDIT_LEAD_TIME_DAYS in
+     *  html-utils.ts. */
+    reauditPricingTemplate: string;
     postFixTitle: string;
     postFixBody: string;
     /** item 31: no authorship, terms, or liability block anywhere in a
      *  paid deliverable that may be forwarded to counsel. Template:
      *  {producer}, {date}, {version}, {reportId}. */
     authorshipTemplate: string;
+    /** item 3.13: no issuer identity (legal entity, signatory, SIRET)
+     *  anywhere in the document - a professionalism and liability-
+     *  exposure gap for a EUR 1,600 HT French deliverable. Template:
+     *  {signatory}, {siret}. {siret} is a genuine placeholder
+     *  (ODYSSEUS_SIRET_PLACEHOLDER, html-utils.ts), rendered so it reads
+     *  as visibly incomplete rather than a plausible fake number. */
+    issuerBlockTemplate: string;
     liabilityStatement: string;
   };
   findingsAppendix: {
@@ -406,6 +478,15 @@ export interface ReportStrings {
     };
     findingIdColumnLabel: string;
     pagesColumnLabel: string;
+    /** item 3.1: shown in place of the full URL list when a finding's
+     *  pages equal the total crawled - "toutes les pages" reads better
+     *  than reprinting the same N URLs the crawled-pages block above
+     *  already lists. Template: {count}. */
+    allPagesAnalyzedTemplate: string;
+    /** item 3.1: appended after a capped URL list (PAGE_URL_LIST_CAP in
+     *  findings-appendix.ts) when a finding hits more pages than shown.
+     *  Template: {count}, the number NOT shown. */
+    andNMoreTemplate: string;
     pagesMaxColumnLabel: string;
     occurrencesColumnLabel: string;
     selectorColumnLabel: string;
@@ -431,6 +512,12 @@ export interface ReportStrings {
     /** brief section 6.6: the well-documented ~30-40% automated coverage
      *  figure, stated in every report, not only accessibility audits. */
     automatedCoverageCaveat: string;
+    /** item 1.10/B8: shown only when the extended accessibility pass
+     *  (keyboard traps, focus order, form errors, video captions) found
+     *  zero findings across all four checks - a clean result is currently
+     *  invisible to the client despite the pass being named in
+     *  toolingParagraphTemplate/automatedCoverageCaveat's neighbourhood. */
+    extendedPassNoneFoundNote: string;
     /** Entity-layer milestone: replaces the old single legalCitationParagraph
      *  hedge with a status-branched determination, code-rendered from
      *  ObligationAssessment (@odysseus/core's assessObligations), never
@@ -460,16 +547,28 @@ export interface ReportStrings {
      *  with "ou", which read as the tool being unsure which one it
      *  detected. Template: {flowType}. "de premier niveau" (internal
      *  jargon) is dropped from the sentence entirely. */
+    /** Template: {flowType}, {location}. */
     legalCitationTransactionalFlowFactTemplate: string;
+    /** item 0.7: {location} is "directement en ligne" when the flow was
+     *  found on-site, or a delegated qualifier when the only evidence is a
+     *  third-party redirect, so this sentence can't contradict the fuller
+     *  delegated-provider note legal-exposure.ts renders a few paragraphs
+     *  later. */
+    legalCitationTransactionalFlowLocationOnSite: string;
+    legalCitationTransactionalFlowLocationDelegated: string;
     legalCitationTransactionalFlowUnknownFact: string;
     /** Plain-language labels for the specific flow type(s) actually
      *  detected (SiteSignals.transactionalFlowEvidence's own `kind`),
      *  substituted into legalCitationTransactionalFlowFactTemplate's
      *  {flowType}. */
     transactionalFlowTypeLabels: { booking: string; cartOrPayment: string; both: string };
-    /** The only documented exemption route (Demarche Simplifiee), stated
-     *  once per report per the milestone's acceptance criteria, appended
-     *  after legalCitationInScopeTemplate/legalCitationLikelyInScopeTemplate. */
+    /** The exemption route documented to date (via Démarches Simplifiées,
+     *  plural - the platform's real name, item 3.15), stated once per
+     *  report per the milestone's acceptance criteria, appended after
+     *  legalCitationInScopeTemplate/legalCitationLikelyInScopeTemplate.
+     *  item 3.16: "la seule voie documentée" ("the only documented
+     *  route") read as a settled legal conclusion rather than a
+     *  statement of current documentation - softened to "à ce jour". */
     legalCitationExemptionRouteSentence: string;
     /** Manual-SIREN milestone: appended after the main paragraph
      *  (whichever status it is) when the SIREN used came from a manual
@@ -498,6 +597,11 @@ export interface ReportStrings {
      *  social-exclusion.json). Only rendered when the count is greater
      *  than zero. Template: {count}. */
     socialExclusionDisclosureTemplate: string;
+    /** item 3.11: "20 pages" appeared throughout the report with nothing
+     *  stating it is a configured cap, not full site coverage. Only
+     *  rendered when the crawl actually hit the cap (visitedCount >=
+     *  maxPages). Template: {maxPages}. */
+    crawlCapDisclosureTemplate: string;
     /** Manual-input-layer milestone: when the operator has confirmed
      *  where the SIREN/RCS/TVA is displayed on the site
      *  (AuditManualFields.sirenSourceUrl), the lcen-mentions-legales-

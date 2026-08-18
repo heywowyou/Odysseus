@@ -155,7 +155,7 @@ function renderBody(
     ),
     renderStatistics(strings, ord('section-03'), analysis.language, resolvedFindings, manifest),
     renderThemes(strings, ord('section-04'), analysis, resolvedFindings, manifest, citedStatIds, sectorOverride),
-    renderChecklist(strings, ord('section-05'), analysis.language, analysis, resolvedFindings, manifest),
+    renderChecklist(strings, ord('section-05'), analysis.language, analysis, resolvedFindings, manifest, manualFields),
     includedSectionIds.has('section-06') ? renderObservations(strings, ord('section-06'), diverted) : '',
     renderConformanceSummary(strings, ord('section-07'), resolvedFindings, analysis.language),
     renderRenderDiffEvidence(

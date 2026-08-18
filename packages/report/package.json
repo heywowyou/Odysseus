@@ -22,6 +22,11 @@
     "playwright": "^1.49.0"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.12.1"
+    "@axe-core/playwright": "^4.12.1",
+    "@types/pixelmatch": "^5.2.6",
+    "@types/pngjs": "^6.0.5",
+    "pdf-parse": "^2.4.5",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0"
   }
 }

@@ -40,16 +40,32 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
   // instead of a bare "Voir ->"/"See ->" repeated identically 3 times
   // with no stated destination, and carries a visual affordance (an
   // underline) distinguishing it from the plain-text theme title beside it.
-  it('item 5: each jump link names its own priority rank and title, not a bare arrow, and is visually underlined', async () => {
+  it('item 5: each jump link names its own priority rank, not a bare arrow, and is visually underlined', async () => {
     const analysis = await loadSasFernandeAnalysis('fr');
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis);
     const topThemes = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank).slice(0, 3);
 
     for (const theme of topThemes) {
-      expect(html).toContain(`Voir priorité ${theme.priorityRank} : ${escapeHtml(theme.title)}`);
+      expect(html).toContain(`Voir priorité ${theme.priorityRank}`);
     }
     expect(html).not.toContain('>Voir →<');
     expect(html).toContain('text-decoration:underline');
+  });
+
+  // item 3.4: the link used to repeat the full theme title a second time
+  // right next to the title's own span ("Voir priorité 1 : lenteur
+  // d'affichage" beside "lenteur d'affichage"), wrapping the row on a
+  // long title. The rank-only label still gives the link its own
+  // stand-alone accessible text (item 5's requirement) without the
+  // duplication.
+  it('item 3.4: the jump link no longer repeats the theme title a second time next to its own title span', async () => {
+    const analysis = await loadSasFernandeAnalysis('fr');
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis);
+    const topThemes = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank).slice(0, 3);
+
+    for (const theme of topThemes) {
+      expect(html).not.toContain(`Voir priorité ${theme.priorityRank} : ${escapeHtml(theme.title)}`);
+    }
   });
 });
 

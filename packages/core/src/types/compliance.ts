@@ -16,6 +16,18 @@ export interface Regime {
   name: string;
   thresholdDescription: string;
   authority: string;
+  /** item 3.15: `authority` is deliberately kept as a single canonical
+   *  string shared between French and English (regimes.ts's own
+   *  documented convention - official body names are not translated).
+   *  French grammar still needs "de la"/"du" in front of it ("sous le
+   *  contrôle de la Direction générale...", "... du Défenseur des
+   *  droits") - "de le" is not valid French, it contracts to "du" - which
+   *  an undecorated shared string cannot carry without either
+   *  duplicating `authority` per language or leaking a French
+   *  preposition into the English report. Holds the full French
+   *  preposition+article prefix to prepend before `authority`; English
+   *  templates never read this field. */
+  authorityPrefixFr: 'de la' | 'du';
   sanctionCeiling: string;
   legalCitation: string;
 }
@@ -24,9 +36,16 @@ export interface TransactionalFlowEvidence {
   kind: 'booking-engine-script' | 'checkout-form' | 'payment-embed' | 'delegated-booking-redirect';
   selector: string;
   pageUrl: string;
-  /** e.g. the matched script src, form action, or provider domain. Kept
-   *  for the same defensibility reason Finding.rawEvidence is kept. */
+  /** Internal classification reasoning kept for defensibility, the same
+   *  reason Finding.rawEvidence is kept - never render this directly in
+   *  client-facing copy (item 0.2: it is internal English heuristic
+   *  reasoning, not a client-facing fact). Use providerUrl below for the
+   *  delegated booking provider's actual domain. */
   detail: string;
+  /** kind 'delegated-booking-redirect' only: the resolved destination URL
+   *  the redirect followed to. The report derives the provider's hostname
+   *  from this, never from `detail`. */
+  providerUrl?: string;
 }
 
 /**

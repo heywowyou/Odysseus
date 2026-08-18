@@ -213,7 +213,8 @@ export async function scanPage(
                 kind: 'delegated-booking-redirect',
                 selector: 'a[href]',
                 pageUrl: url,
-                detail: `${check.linkUrl} -> ${check.destinationUrl ?? check.linkUrl}: ${check.detail}`,
+                detail: check.detail,
+                providerUrl: check.destinationUrl ?? check.linkUrl,
               });
             }
           }

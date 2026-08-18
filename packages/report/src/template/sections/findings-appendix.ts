@@ -26,8 +26,15 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
   return escapeHtml(parts.join(' · '));
 }
 
+// item 2.4: "Sélecteur type" wrapped onto two lines in a narrow header
+// cell, reading as a merged "SÉLECTEUR / TYPE" two-row header - as if a
+// second, empty "TYPE" column existed, on a majority of rows that carry
+// no selector at all (page-level Lighthouse findings). white-space:nowrap
+// stops any header label from wrapping regardless of column width; the
+// label itself was also reworded (strings/fr.ts) to read unambiguously as
+// one phrase even where it does have room to wrap.
 function headCell(label: string): string {
-  return `<div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.02em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
+  return `<div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.02em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider);white-space:nowrap">${escapeHtml(label)}</div>`;
 }
 
 function cell(html: string, extra = ''): string {
@@ -42,23 +49,52 @@ function cell(html: string, extra = ''): string {
  *  (grid-column spans every column of the 4-column layout above it), a
  *  plain comma-joined list rather than a second sub-table - the selector
  *  cell already carries the .url-cell wrapping rules (paged.css) this
- *  reuses. */
-function renderPageUrlList(strings: ReportStrings, finding: Finding): string {
+ *  reuses.
+ *
+ *  item 3.1: a finding hitting all N crawled pages used to reprint the
+ *  full N-URL list verbatim, and did so again for every other finding
+ *  that also hit every page - roughly 18 of 37 pages in a real report
+ *  were repeated URL lists. When a finding's own pages equal the total
+ *  crawled, collapse to "Toutes les pages analysées (N)" instead of
+ *  listing them; otherwise cap the visible list and name the remainder
+ *  ("et N autres"), never truncating silently. */
+function renderPageUrlList(strings: ReportStrings, language: ReportLanguage, finding: Finding, totalPagesScanned: number): string {
   if (finding.pageUrls.length === 0) return '';
   const a = strings.findingsAppendix;
-  const urls = [...finding.pageUrls].sort().join(', ');
-  return `<div class="url-cell" style="grid-column:1 / -1;padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.pagesColumnLabel)} : ${escapeHtml(urls)}</div>`;
+  const sortedUrls = [...finding.pageUrls].sort();
+
+  let urlsText: string;
+  if (totalPagesScanned > 0 && sortedUrls.length === totalPagesScanned) {
+    urlsText = fillTemplate(a.allPagesAnalyzedTemplate, { count: formatNumber(totalPagesScanned, language) });
+  } else if (sortedUrls.length > PAGE_URL_LIST_CAP) {
+    const shown = sortedUrls.slice(0, PAGE_URL_LIST_CAP);
+    const remaining = sortedUrls.length - PAGE_URL_LIST_CAP;
+    urlsText = `${shown.join(', ')} ${fillTemplate(a.andNMoreTemplate, { count: formatNumber(remaining, language) })}`;
+  } else {
+    urlsText = sortedUrls.join(', ');
+  }
+
+  return `<div class="url-cell" style="grid-column:1 / -1;padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.pagesColumnLabel)} : ${escapeHtml(urlsText)}</div>`;
 }
 
-function renderSubTableRow(strings: ReportStrings, language: ReportLanguage, finding: Finding): string {
+/** item 3.1's own suggested cap. */
+const PAGE_URL_LIST_CAP = 5;
+
+/** item 3.3: the anchor formatFindingIdLinks (html-utils.ts) links to from
+ *  a theme card's "Constats : f002, f003" reference list - every annex
+ *  row gets one, not only rows a theme happens to cite, since a finding
+ *  id can be referenced from more than one place (e.g. a future
+ *  cross-reference) and the annex is generated once, independent of who
+ *  ends up linking to it. */
+function renderSubTableRow(strings: ReportStrings, language: ReportLanguage, finding: Finding, totalPagesScanned: number): string {
   const selector = finding.elements[0]?.selector ?? '';
   return `
-    <div class="row-atomic">
-      ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:break-word')}
+    <div class="row-atomic" id="annexref-${escapeHtml(finding.findingId)}">
+      ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none')}
       ${cell(formatNumber(finding.pageUrls.length, language))}
       ${cell(formatNumber(finding.occurrences, language))}
-      ${cell(escapeHtml(selector), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:break-word;opacity:0.8')}
-      ${renderPageUrlList(strings, finding)}
+      ${cell(escapeHtml(selector), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none;opacity:0.8')}
+      ${renderPageUrlList(strings, language, finding, totalPagesScanned)}
     </div>
   `;
 }
@@ -68,6 +104,7 @@ function renderRuleGroup(
   language: ReportLanguage,
   group: RuleGroup,
   isFullyDiverted: boolean,
+  totalPagesScanned: number,
 ): string {
   const a = strings.findingsAppendix;
   // item 38 [REGRESSION]: rule titles and codes rendered in English inside
@@ -81,8 +118,15 @@ function renderRuleGroup(
   const gloss = translation
     ? `<span style="font-size:10px;opacity:0.5">- ${escapeHtml(translation.gloss)}</span>`
     : '';
+  // item 1.3: a clustered group's `ruleId` is a synthetic family key
+  // (e.g. "image-weight"), not a real scanner rule a developer could grep
+  // for - showing it in the same "machine rule code" badge style as an
+  // ordinary group would misrepresent it as one. List every actual member
+  // rule id instead, comma-separated, same visual weight as the ordinary
+  // single-code badge.
+  const ruleCodeDisplay = group.memberRuleIds.length > 1 ? group.memberRuleIds.join(', ') : group.ruleId;
   const sortedFindings = [...group.findings].sort((x, y) => x.findingId.localeCompare(y.findingId));
-  const rows = sortedFindings.map((finding) => renderSubTableRow(strings, language, finding)).join('');
+  const rows = sortedFindings.map((finding) => renderSubTableRow(strings, language, finding, totalPagesScanned)).join('');
   const obsTag = isFullyDiverted
     ? `<span class="obs-tag" style="font-size:11px;opacity:0.55">${escapeHtml(a.observationsCrossRefLabel)}</span>`
     : '';
@@ -99,7 +143,7 @@ function renderRuleGroup(
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
         ${renderSeverityBadge(strings, group.severity)}
         <span style="font-size:14px;font-weight:500">${escapeHtml(representativeTitle)}</span>
-        <span class="mono rule-code" style="font-size:10px;opacity:0.5">${escapeHtml(group.ruleId)}</span>
+        <span class="mono rule-code" style="font-size:10px;opacity:0.5">${escapeHtml(ruleCodeDisplay)}</span>
         ${gloss}
         ${obsTag}
         <span style="font-size:11px;opacity:0.6">${renderRuleSum(strings, language, group)}</span>
@@ -150,6 +194,7 @@ function renderCategorySection(
   missingPercentByUrl: ReadonlyMap<string, number>,
   sector: StatSector,
   citedStatIds: Set<string>,
+  totalPagesScanned: number,
 ): string {
   if (categoryFindings.length === 0) return '';
 
@@ -160,7 +205,7 @@ function renderCategorySection(
   const groupBlocks = groups
     .map((group) => {
       const isFullyDiverted = group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null);
-      return renderRuleGroup(strings, language, group, isFullyDiverted);
+      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned);
     })
     .join('');
   // item 40: a travel-industry AI-usage statistic (Phocuswright, 56%)
@@ -200,19 +245,42 @@ export function renderFindingsAppendix(
 ): string {
   const missingPercentByUrl = buildMissingPercentIndex(manifest);
 
-  const sections = CATEGORY_ORDER.map((category) => {
-    const categoryFindings = findings.filter((finding) => finding.category === category);
-    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds);
-  }).join('');
-
   // item 29: the list of crawled URLs was never printed anywhere - the
   // client had no way to verify the scope they paid for beyond a bare
   // count on the cover. Belongs here rather than a dedicated page (doc's
   // own acceptance check: "doesn't need its own full page"), and directly
   // supports item 25 (every finding's own page list can be cross-checked
   // against the full crawled set) and item 28 (confirms which pages were
-  // actually explored).
+  // actually explored). Also feeds item 3.1's "toutes les pages
+  // analysées" collapse below: the same total used on the cover and in
+  // methodology.
   const crawledPages = manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url).sort();
+
+  const sections = CATEGORY_ORDER.map((category) => {
+    const categoryFindings = findings.filter((finding) => finding.category === category);
+    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds, crawledPages.length);
+  }).join('');
+
+  // item D8 (P4): each category heading used its own colour with nothing
+  // stating what the four colours mean - a reader had to notice the
+  // pattern by paging through the whole annex. Only categories that
+  // actually have findings appear, same "don't show what's empty"
+  // reasoning as item D7's zero-count stat tiles.
+  const presentCategories = CATEGORY_ORDER.filter((category) => findings.some((f) => f.category === category));
+  const legend =
+    presentCategories.length > 0
+      ? `
+        <div style="display:flex;gap:var(--space-4);flex-wrap:wrap;font-size:11px;opacity:0.7;margin-bottom:var(--space-4)">
+          ${presentCategories
+            .map(
+              (category) =>
+                `<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${CATEGORY[category].color}"></span>${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</span>`,
+            )
+            .join('')}
+        </div>
+      `
+      : '';
+
   const crawledPagesBlock =
     crawledPages.length > 0
       ? `
@@ -225,7 +293,8 @@ export function renderFindingsAppendix(
 
   return sheet(`
     ${renderSheetHeader(ordinal, strings.findingsAppendix.eyebrow, strings.findingsAppendix.heading)}
-    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-6)">${escapeHtml(strings.findingsAppendix.intro)}</p>
+    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(strings.findingsAppendix.intro)}</p>
+    ${legend}
     ${crawledPagesBlock}
     ${sections}
   `, 'sheet-standalone', 'section-12');

@@ -74,17 +74,28 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     expect(html).toMatch(/WCAG 2\.2 AA criteria failing across \d+ pages/);
   });
 
-  it('renders exactly 4 number tiles, 4 severity tiles, and 5 category tiles (doc §3 section 03 cap, plus geo added milestone 8.5c)', async () => {
+  // item D7 (P4): a severity or category with zero findings is no longer
+  // rendered as an empty tile ("Modéré 0", "Rendu 0"), so the sas-fernande
+  // fixture (which has findings in every severity but not necessarily
+  // every category) is checked against however many are actually
+  // non-zero, not a hardcoded cap.
+  it('renders exactly 4 number tiles, one severity tile per non-zero severity, and one category tile per non-zero category', async () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
+
+    const nonZeroSeverityCount = new Set(findings.map((f) => f.severity)).size;
+    const nonZeroCategoryCount = new Set(findings.map((f) => f.category)).size;
 
     const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
     expect((html.match(/font-size:28px/g) ?? []).length).toBe(4);
-    expect((html.match(/font-size:24px/g) ?? []).length).toBe(4);
-    expect((html.match(/font-size:22px/g) ?? []).length).toBe(5);
+    expect((html.match(/font-size:24px/g) ?? []).length).toBe(nonZeroSeverityCount);
+    expect((html.match(/font-size:22px/g) ?? []).length).toBe(nonZeroCategoryCount);
   });
 
+  // item D7 (P4): a category with zero findings renders no tile at all -
+  // every category referenced below must have at least one finding or it
+  // would silently drop out of the ordering check.
   it('B9: category tiles render in descending order by count, not the fixed CATEGORY_ORDER', () => {
     // CATEGORY_ORDER is accessibility/seo/rendering/performance/geo - give
     // 'performance' the most findings (the real haaitza symptom: the
@@ -93,6 +104,8 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     const findings: Finding[] = [
       buildCategoryFinding('accessibility', 1),
       buildCategoryFinding('seo', 1),
+      buildCategoryFinding('rendering', 1),
+      buildCategoryFinding('geo', 1),
       buildCategoryFinding('performance', 1),
       buildCategoryFinding('performance', 2),
       buildCategoryFinding('performance', 3),

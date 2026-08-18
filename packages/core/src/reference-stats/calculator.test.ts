@@ -16,7 +16,11 @@ describe('estimateRevenueImpact', () => {
   });
 
   it('refuses a context-only stat', () => {
-    const stat = findStat('legal-general-w3c-case-study');
+    // legal-general-w3c-case-study (the original fixture for this test)
+    // was removed from stats.ts 2026-08-18 (item 1.5: wrong-sector, undated
+    // UK case study cited to a French hotel client) - any other
+    // 'context-only' row exercises the same behaviour.
+    const stat = findStat('nestle-rich-results-ctr');
     const result = estimateRevenueImpact(stat, 500_000);
     expect(result).toEqual({ error: 'not-scalable' });
   });

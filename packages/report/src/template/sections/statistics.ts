@@ -1,13 +1,17 @@
-import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
+import { RENDER_DIFF_EMISSION_THRESHOLD_PERCENT, type AuditManifest, type Finding, type ReportLanguage } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
 import { computeStatistics } from '../statistics.js';
 
-/** Doc §3 section 03 cap: exactly 4 number tiles, 4 severity tiles, 4
- *  category tiles - report.reference.html's numberTiles/severityTiles/
- *  categorySplit. The 4 number tiles are the same first 4 metrics the
- *  pre-redesign 10-tile layout led with. */
+/** Doc §3 section 03 cap: the 4 number tiles are fixed (report.reference.
+ *  html's numberTiles, the same first 4 metrics the pre-redesign 10-tile
+ *  layout led with) and always render. Severity and category tiles are
+ *  not fixed at 4 any more (item D7, P4): a severity or category with
+ *  zero findings is dropped from render entirely rather than shown as an
+ *  empty tile, so their grids can have anywhere from 1 to 4 (severity) or
+ *  1 to CATEGORY_ORDER.length (category) tiles depending on what the scan
+ *  actually found. */
 function renderNumberTile(value: string, label: string): string {
   return `
     <div style="padding:var(--space-3);background:var(--color-surface);border-radius:var(--radius-md)">
@@ -70,7 +74,15 @@ export function renderStatistics(
     minor: stats.minor,
   } as const;
   const severityLabels = strings.findingsAppendix.severityLabels;
-  const severityTiles = (['critical', 'serious', 'moderate', 'minor'] as const)
+  // item D7 (P4): a severity with zero findings still got a full tile
+  // ("Modéré 0") reading as either a bug or as the tool having nothing to
+  // say, when the honest signal is that severity's simple absence.
+  // Filtered before render rather than hidden with CSS, so the grid
+  // column count below can shrink to match what's actually shown.
+  const nonZeroSeverities = (['critical', 'serious', 'moderate', 'minor'] as const).filter(
+    (severity) => severityCounts[severity] > 0,
+  );
+  const severityTiles = nonZeroSeverities
     .map((severity) =>
       renderSeverityTile(
         severityLabels[severity],
@@ -87,10 +99,14 @@ export function renderStatistics(
   // largest bucket (often performance) was rendering fourth regardless of
   // its size, reading as an arbitrary layout choice to a client.
   const categoryLabels = strings.findingsAppendix.categoryLabels;
-  const sortedCategories = [...CATEGORY_ORDER].sort(
-    (a, b) => stats.categoryCounts[b] - stats.categoryCounts[a],
-  );
-  const categoryTiles = sortedCategories
+  // item D7 (P4): same zero-tile problem as severity above ("Rendu 0"),
+  // and this report's own hasBelowThresholdRenderGap note (below) already
+  // explains the more common reason rendering measures nothing rather
+  // than counting on the tile itself to carry that explanation.
+  const nonZeroCategories = [...CATEGORY_ORDER]
+    .filter((category) => stats.categoryCounts[category] > 0)
+    .sort((a, b) => stats.categoryCounts[b] - stats.categoryCounts[a]);
+  const categoryTiles = nonZeroCategories
     .map((category) => renderCategoryTile(categoryLabels[category], n(stats.categoryCounts[category]), CATEGORY[category].color))
     .join('');
 
@@ -103,14 +119,14 @@ export function renderStatistics(
       ${numberTiles}
     </div>
     <h5>${escapeHtml(s.severityBreakdownHeading)}</h5>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
+    <div style="display:grid;grid-template-columns:repeat(${nonZeroSeverities.length},1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
       ${severityTiles}
     </div>
     <h5>${escapeHtml(s.categoryBreakdownHeading)}</h5>
-    <div style="display:grid;grid-template-columns:repeat(${CATEGORY_ORDER.length},1fr);gap:var(--space-3);margin-bottom:var(--space-3)">
+    <div style="display:grid;grid-template-columns:repeat(${nonZeroCategories.length},1fr);gap:var(--space-3);margin-bottom:var(--space-3)">
       ${categoryTiles}
     </div>
-    ${stats.hasBelowThresholdRenderGap ? `<p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-6)">${escapeHtml(s.belowThresholdRenderGapNote)}</p>` : '<div style="margin-bottom:var(--space-6)"></div>'}
+    ${stats.hasBelowThresholdRenderGap ? `<p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-6)">${escapeHtml(fillTemplate(s.belowThresholdRenderGapNote, { threshold: RENDER_DIFF_EMISSION_THRESHOLD_PERCENT }))}</p>` : '<div style="margin-bottom:var(--space-6)"></div>'}
     <div class="hr"></div>
     <h5>${escapeHtml(s.wcagFailingHeading)}</h5>
     <p style="font-size:13.5px;opacity:0.85">${escapeHtml(wcagFailCountText)}</p>

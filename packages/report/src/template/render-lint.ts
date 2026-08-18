@@ -19,6 +19,15 @@ const FORBIDDEN_PATTERNS: readonly { label: string; pattern: RegExp }[] = [
   // a template clause filled with a placeholder hyphen instead of being
   // omitted when its value was empty.
   { label: 'placeholder hyphen before a sentence-ending period', pattern: / -\s?\.(?!\w)/ },
+  // Item 0.3: a "?" filled in for an unmeasured numeric value ("HTML brut
+  // - ? caractères"), not a real French question mark, which never sits
+  // directly in front of a unit noun like this. Scoped to the specific
+  // units this report renders numbers next to, so it doesn't flag a
+  // genuine "Une question ?".
+  {
+    label: 'placeholder "?" in place of an unmeasured number',
+    pattern: /\?\s*(caractères|occurrences?|constats?|pages?|%)/i,
+  },
 ];
 
 export interface RenderLintViolation {

@@ -101,6 +101,67 @@ describe('renderCoreWebVitalsTable', () => {
     expect(html).toContain('good');
   });
 
+  // item 1.7/B2: a finding's severity is driven by its worst page
+  // (severity.ts's maxSeverity dedupe rule), not the median this table
+  // otherwise shows - a real Palais Gallien report showed a "Critique" TBT
+  // finding sitting next to this table's median-based "a ameliorer"
+  // status, which read as a contradiction. Showing the worst page's own
+  // value resolves it without added prose.
+  it('item 1.7/B2: shows the worst page alongside the median so an outlier page explains a higher finding severity', () => {
+    const page = (tbt: number) => ({
+      url: `https://example.com/${tbt}`,
+      pageDir: `pages/p-${tbt}`,
+      depth: 0,
+      status: 'visited',
+      errors: {},
+      coreWebVitals: {
+        lcp: buildMeasurement(1800, '1.8 s'),
+        cls: buildMeasurement(0, '0'),
+        tbt: buildMeasurement(tbt, `${tbt} ms`),
+        fcp: buildMeasurement(900, '0.9 s'),
+        speedIndex: buildMeasurement(2000, '2.0 s'),
+      },
+    });
+    // Median TBT across these pages is 500ms ("needs improvement" per
+    // CORE_WEB_VITAL_THRESHOLDS: good=200, needsImprovement=600), but one
+    // outlier page is at 3900ms, genuinely "poor" - exactly the shape that
+    // produces a "Critique" finding next to an "a ameliorer" median.
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [page(500), page(480), page(3900)],
+    } as unknown as AuditManifest;
+
+    const html = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
+    expect(html).toContain('500 ms'); // median, in the value column
+    expect(html).toContain('3 900 ms'); // worst page, in its own column (fr narrow no-break space)
+    expect(html).toContain('Pire page');
+  });
+
+  it('item 1.7/B2: shows "same as median" for a metric with no outlier page', () => {
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [
+        {
+          url: 'https://example.com/',
+          pageDir: 'pages/root-aaa',
+          depth: 0,
+          status: 'visited',
+          errors: {},
+          coreWebVitals: {
+            lcp: buildMeasurement(1800, '1.8 s'),
+            cls: buildMeasurement(0, '0'),
+            tbt: buildMeasurement(120, '120 ms'),
+            fcp: buildMeasurement(900, '0.9 s'),
+            speedIndex: buildMeasurement(2000, '2.0 s'),
+          },
+        },
+      ],
+    } as unknown as AuditManifest;
+
+    const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+    expect(html).toContain('Same as median');
+  });
+
   // item 12: a genuinely healthy, non-zero CLS (e.g. the real median 0.0035
   // measured on hotel-palais-gallien-bordeaux.com) used to round to "0" at
   // 2 decimal places, indistinguishable from a capture failure.

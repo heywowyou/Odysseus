@@ -95,8 +95,12 @@ describe('groupAppendix includes minor findings with full detail, sorted last', 
 
     const groups = groupAppendix(minor);
 
-    // 30 distinct minor ruleIds in the real fixture.
-    expect(groups).toHaveLength(30);
+    // 30 distinct minor ruleIds in the real fixture, but item 1.3's
+    // image-weight family clustering (added in the v2 pass) folds several
+    // of them into one group - 26 groups, not 30, is the expected result
+    // now, not a regression. Findings themselves are neither dropped nor
+    // duplicated by clustering, confirmed by the total below.
+    expect(groups).toHaveLength(26);
     expect(groups.reduce((sum, g) => sum + g.findings.length, 0)).toBe(61);
     // Every finding object survives intact in its group - this is the
     // whole point of item 26: full page/selector detail, not a summary.
@@ -116,5 +120,74 @@ describe('groupAppendix includes minor findings with full detail, sorted last', 
     if (lastNonMinorIndex !== -1) {
       expect(minorIndex).toBeGreaterThan(lastNonMinorIndex);
     }
+  });
+});
+
+// item 1.3: seven separate Lighthouse rules ("your images are heavy")
+// read as seven distinct problems to a client when they are one
+// remediation job - confirmed against a real report (~60 findings, ~550
+// occurrences across the seven rules combined).
+describe('item 1.3: the image-weight rule family clusters into one group', () => {
+  const base = {
+    auditId: 'a1',
+    schemaVersion: 1 as const,
+    source: 'lighthouse' as const,
+    category: 'performance' as const,
+    severity: 'moderate' as const,
+    wcagCriteria: [],
+    title: 't',
+    description: 'd',
+    occurrences: 1,
+    elements: [],
+    rawEvidence: {},
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+  };
+  const familyRuleIds = [
+    'unsized-images',
+    'modern-image-formats',
+    'offscreen-images',
+    'uses-responsive-images',
+    'uses-optimized-images',
+    'image-delivery-insight',
+    'prioritize-lcp-image',
+  ];
+
+  it('folds all 7 family members, at the same severity, into a single group', () => {
+    const findings: Finding[] = familyRuleIds.map((ruleId, i) => ({
+      ...base,
+      findingId: `f${i}`,
+      ruleId,
+      dedupeKey: `d${i}`,
+      pageUrls: [`https://example.com/${i}`],
+    }));
+
+    const groups = groupAppendix(findings);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.findings).toHaveLength(7);
+    expect(groups[0]!.ruleId).toBe('image-weight');
+    expect(groups[0]!.memberRuleIds).toEqual([...familyRuleIds].sort());
+  });
+
+  it('keeps a family split into two groups when members have different severities', () => {
+    const findings: Finding[] = [
+      { ...base, findingId: 'f1', ruleId: 'unsized-images', severity: 'moderate', dedupeKey: 'd1', pageUrls: ['https://example.com/a'] },
+      { ...base, findingId: 'f2', ruleId: 'modern-image-formats', severity: 'minor', dedupeKey: 'd2', pageUrls: ['https://example.com/b'] },
+    ];
+
+    const groups = groupAppendix(findings);
+    expect(groups).toHaveLength(2);
+    expect(groups.every((g) => g.ruleId === 'image-weight')).toBe(true);
+  });
+
+  it('leaves a non-family ruleId completely unaffected (memberRuleIds has exactly one entry)', () => {
+    const findings: Finding[] = [
+      { ...base, findingId: 'f1', ruleId: 'color-contrast', severity: 'serious', dedupeKey: 'd1', pageUrls: ['https://example.com/a'] },
+    ];
+
+    const groups = groupAppendix(findings);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.ruleId).toBe('color-contrast');
+    expect(groups[0]!.memberRuleIds).toEqual(['color-contrast']);
   });
 });

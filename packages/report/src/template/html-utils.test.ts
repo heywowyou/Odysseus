@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeHtml, fillTemplate, formatDate, formatFindingIdRefs, formatNumber } from './html-utils.js';
+import { escapeHtml, fillTemplate, formatDate, formatFindingIdLinks, formatFindingIdRefs, formatNumber } from './html-utils.js';
 
 describe('escapeHtml', () => {
   it('escapes tags and quotes so injected markup cannot execute', () => {
@@ -74,5 +74,26 @@ describe('formatFindingIdRefs', () => {
 
   it('returns an empty string for no IDs', () => {
     expect(formatFindingIdRefs([])).toBe('');
+  });
+});
+
+describe('formatFindingIdLinks', () => {
+  // item 3.3: a theme card's "Constats : f002, f003" used to be plain
+  // text with no page number and no link - each id now links to
+  // #annexref-{id}, the anchor findings-appendix.ts sets on every annex row.
+  it('wraps each id in an anchor pointing at #annexref-{id}, sorted and comma-separated', () => {
+    expect(formatFindingIdLinks(['f008', 'f004'])).toBe(
+      '<a href="#annexref-f004" style="color:inherit;text-decoration:underline">f004</a>, ' +
+        '<a href="#annexref-f008" style="color:inherit;text-decoration:underline">f008</a>',
+    );
+  });
+
+  it('escapes a finding id so injected markup cannot execute', () => {
+    const html = formatFindingIdLinks(['"><script>alert(1)</script>']);
+    expect(html).not.toContain('<script>');
+  });
+
+  it('returns an empty string for no IDs', () => {
+    expect(formatFindingIdLinks([])).toBe('');
   });
 });

@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { FINDINGS_SCHEMA_VERSION } from '@odysseus/core';
 import type {
   AuditConfigSnapshot,
@@ -14,11 +13,23 @@ import type { CollectedToolVersions } from './versions.js';
 
 let cachedOdysseusVersion: string | undefined;
 
+/** Item 0.6: this used to read the monorepo root package.json's "version"
+ *  field verbatim ("0.1.0") straight into a paying client's footer, which
+ *  reads as "you are running my pre-release software". A git short SHA
+ *  ties every report to an exact commit for our own debugging without
+ *  exposing a semver number that never gets bumped. Falls back to
+ *  "unknown" outside a git checkout (e.g. a stripped deployment archive)
+ *  rather than throwing. */
 function readOdysseusVersion(): string {
   if (cachedOdysseusVersion !== undefined) return cachedOdysseusVersion;
-  const pkgPath = path.join(findWorkspaceRoot(), 'package.json');
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version: string };
-  cachedOdysseusVersion = pkg.version;
+  try {
+    cachedOdysseusVersion = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
+      cwd: findWorkspaceRoot(),
+      encoding: 'utf-8',
+    }).trim();
+  } catch {
+    cachedOdysseusVersion = 'unknown';
+  }
   return cachedOdysseusVersion;
 }
 

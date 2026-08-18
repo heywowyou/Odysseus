@@ -52,11 +52,29 @@ function median(values: readonly number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
+function metricValues(vitalsList: readonly (CoreWebVitals | undefined)[], key: CoreWebVitalMetricKey): number[] {
+  return vitalsList.map((v) => v?.[key]?.numericValue).filter((v): v is number => v !== null && v !== undefined);
+}
+
 function medianForMetric(vitalsList: readonly (CoreWebVitals | undefined)[], key: CoreWebVitalMetricKey): number | null {
-  const values = vitalsList
-    .map((v) => v?.[key]?.numericValue)
-    .filter((v): v is number => v !== null && v !== undefined);
-  return median(values);
+  return median(metricValues(vitalsList, key));
+}
+
+/** item 1.7/B2: a finding's severity is the worst instance across all
+ *  pages sharing its dedupeKey (severity.ts's maxSeverity, a general,
+ *  deliberate dedupe rule - not specific to Core Web Vitals), while this
+ *  table only ever showed the median. A metric that is genuinely critical
+ *  on one or two outlier pages produced a "Critique" finding sitting next
+ *  to a median-based "a ameliorer" status here, which reads as a
+ *  contradiction even though both numbers are individually correct - they
+ *  are just answering different questions ("typical page" vs "worst
+ *  page"). Showing the worst page's value alongside the median lets the
+ *  reader see why the finding's severity can outrank the median's rating,
+ *  without adding reconciling prose. */
+function worstForMetric(vitalsList: readonly (CoreWebVitals | undefined)[], key: CoreWebVitalMetricKey): number | null {
+  const values = metricValues(vitalsList, key);
+  if (values.length === 0) return null;
+  return Math.max(...values);
 }
 
 function ratingLabel(strings: ReportStrings, rating: CoreWebVitalRating): string {
@@ -64,12 +82,12 @@ function ratingLabel(strings: ReportStrings, rating: CoreWebVitalRating): string
   return rating === 'good' ? c.ratingGoodLabel : rating === 'mid' ? c.ratingNeedsImprovementLabel : c.ratingPoorLabel;
 }
 
-function headCell(label: string): string {
-  return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
+function headCell(label: string, width: string): string {
+  return `<th style="width:${width};padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;text-align:left;font-weight:400;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</th>`;
 }
 
 function cell(html: string, extra = ''): string {
-  return `<div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</div>`;
+  return `<td style="padding:var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</td>`;
 }
 
 /** Doc §3 section 09: 5 aggregated medians (LCP, TBT, FCP, Speed Index,
@@ -98,35 +116,59 @@ export function renderCoreWebVitalsTable(
     const value = medianForMetric(vitalsList, metric.key);
     if (value === null) {
       return `
-        <div class="row-atomic">
+        <tr>
           ${cell(escapeHtml(metricLabels[metric.key]))}
           ${cell(escapeHtml(c.notMeasured))}
+          ${cell('-')}
           ${cell(formatMetricValue(metric.good, unit, language))}
           ${cell('-')}
-        </div>
+        </tr>
       `;
     }
     const rating = rateCoreWebVital(value, metric.good, metric.needsImprovement);
     const ratingColor = rating === 'good' ? GOOD_COLOR : rating === 'mid' ? SEVERITY.moderate.color : SEVERITY.critical.color;
+    const worst = worstForMetric(vitalsList, metric.key);
+    const worstCell =
+      worst !== null && worst > value
+        ? cell(formatMetricValue(worst, unit, language), 'opacity:0.7')
+        : cell(escapeHtml(c.worstPageSameAsMedian), 'opacity:0.55;font-size:12px');
     return `
-      <div class="row-atomic">
+      <tr>
         ${cell(escapeHtml(metricLabels[metric.key]))}
         ${cell(formatMetricValue(value, unit, language))}
+        ${worstCell}
         ${cell(`${'≤'} ${formatMetricValue(metric.good, unit, language)}`)}
         ${cell(escapeHtml(ratingLabel(strings, rating)), `color:${ratingColor}`)}
-      </div>
+      </tr>
     `;
   }).join('');
 
+  // item 2.2: this was a CSS grid of <div>s with no <thead>, so the header
+  // row could never repeat when the table broke across a page - a
+  // continuation page showed bare data with no column labels. Real
+  // <table>/<thead>/<tbody> markup plus `thead { display: table-header-group }`
+  // (paged.css) is the standard Paged.js pattern for a repeating header,
+  // and lets each <tr> be a genuine row Paged.js can keep intact on its
+  // own, replacing the earlier display:contents `.row-atomic` workaround
+  // that only existed because the grid markup had no real rows to begin
+  // with.
   return sheet(`
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.introTemplate, { pages: formatNumber(pagesScanned, language) }))}</p>
-    <div style="display:grid;grid-template-columns:1fr 130px 120px 120px;font-size:14px">
-      ${headCell(c.metricColumnLabel)}
-      ${headCell(c.valueColumnLabel)}
-      ${headCell(c.thresholdColumnLabel)}
-      ${headCell(c.statusColumnLabel)}
-      ${rows}
-    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <thead>
+        <tr>
+          ${headCell(c.metricColumnLabel, 'auto')}
+          ${headCell(c.valueColumnLabel, '110px')}
+          ${headCell(c.worstPageColumnLabel, '110px')}
+          ${headCell(c.thresholdColumnLabel, '120px')}
+          ${headCell(c.statusColumnLabel, '120px')}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+    <p style="font-size:11px;opacity:0.5;margin-top:var(--space-3)">${escapeHtml(c.worstPageFootnote)}</p>
   `, '', 'section-09');
 }

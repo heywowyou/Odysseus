@@ -27,6 +27,25 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
     expect(html).toContain(escapeHtml(analysis.executiveSummary.slice(0, 20)));
   });
 
+  // item 3.3: a theme card's "Constats : f002, f003" link must resolve to
+  // a real annex row, not a dead href - checked end to end against the
+  // one composed document, since themes.ts and findings-appendix.ts each
+  // know only their own half of the id/anchor pair.
+  it('item 3.3: every theme card finding-id link resolves to a matching #annexref-{id} anchor in the annex', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSasFernandeFindings();
+    const analysis = await loadSasFernandeAnalysis('fr');
+    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
+
+    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
+
+    const hrefs = [...html.matchAll(/href="#annexref-([^"]+)"/g)].map((m) => m[1]);
+    expect(hrefs.length).toBeGreaterThan(0);
+    for (const id of hrefs) {
+      expect(html).toContain(`id="annexref-${id}"`);
+    }
+  });
+
   it('B2: passes the render-lint pass (no unfilled placeholders, no stringified undefined/null/NaN)', async () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
@@ -111,7 +130,9 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   // coexist with a confirmed status elsewhere in the report. The OLD
   // phrase is asserted absent below specifically so a future edit
   // reverting to the blanket wording fails this test, not just a new one.
-  const CONFORMANCE_SCOPE_NOTE = "n&#39;implique pas, à elle seule, une conclusion sur l&#39;obligation légale";
+  // item 3.14: rephrased as a positive statement, dropping the old
+  // defensive "n'implique pas... ne contredit pas" framing.
+  const CONFORMANCE_SCOPE_NOTE = "indépendamment de toute question d&#39;obligation légale";
   const OLD_CONTRADICTORY_SCOPE_NOTE = 'sans se prononcer sur leur applicabilité légale précise';
   const LEGAL_HEDGE = "sans se prononcer sur l&#39;applicabilité d&#39;une obligation légale particulière";
   const METHODOLOGY_POINTER = 'figure dans la section';

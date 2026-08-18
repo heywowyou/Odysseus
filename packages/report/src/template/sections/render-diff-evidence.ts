@@ -13,12 +13,6 @@ import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from
  *  roughly a fifth the width of the rendered one. */
 function renderPageCard(strings: ReportStrings, language: ReportLanguage, page: RenderDiffEvidencePage): string {
   const r = strings.renderDiffEvidence;
-  const rawChars = page.rawTextLength === null ? '?' : formatNumber(page.rawTextLength, language);
-  const renderedChars = page.renderedTextLength === null ? '?' : formatNumber(page.renderedTextLength, language);
-  const rawPct =
-    page.rawTextLength !== null && page.renderedTextLength !== null && page.renderedTextLength > 0
-      ? Math.max(2, Math.round((page.rawTextLength / page.renderedTextLength) * 100))
-      : 100 - Math.round(page.missingPercent);
 
   // B2: a missing selector (the 5-20% missingPercent band, where no
   // render-diff finding exists to read one from) used to fill the "sur
@@ -33,19 +27,29 @@ function renderPageCard(strings: ReportStrings, language: ReportLanguage, page: 
         percent: Math.round(page.missingPercent),
       });
 
+  // Item 0.3: rawTextLength/renderedTextLength come from the same source
+  // entry and are always both present or both null (screenshots.ts). When
+  // both are null, drawing two bars from unknown data is worse than
+  // drawing none, so the bar pair is suppressed entirely rather than
+  // labelled with a "?" placeholder.
+  const bars =
+    page.rawTextLength === null || page.renderedTextLength === null
+      ? `<p style="font-size:12px;opacity:0.6;margin-top:6px">${escapeHtml(r.charCountsUnavailableNote)}</p>`
+      : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-top:6px">
+        <div>
+          <div style="font-size:11px;opacity:0.6;margin-bottom:4px">${escapeHtml(fillTemplate(r.rawBarLabelTemplate, { chars: formatNumber(page.rawTextLength, language) }))}</div>
+          <div style="height:10px;border-radius:5px;background:var(--color-neutral-800);overflow:hidden"><div style="height:100%;width:${Math.max(2, Math.round((page.rawTextLength / page.renderedTextLength) * 100))}%;background:var(--color-neutral-500)"></div></div>
+        </div>
+        <div>
+          <div style="font-size:11px;opacity:0.6;margin-bottom:4px">${escapeHtml(fillTemplate(r.renderedBarLabelTemplate, { chars: formatNumber(page.renderedTextLength, language) }))}</div>
+          <div style="height:10px;border-radius:5px;background:var(--color-neutral-800);overflow:hidden"><div style="height:100%;width:100%;background:var(--color-accent)"></div></div>
+        </div>
+      </div>`;
+
   return `
     <div class="card elev-sm render-card" style="margin-bottom:var(--space-4)">
       <div class="card-kicker">${escapeHtml(page.pageUrl)}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-top:6px">
-        <div>
-          <div style="font-size:11px;opacity:0.6;margin-bottom:4px">${escapeHtml(fillTemplate(r.rawBarLabelTemplate, { chars: rawChars }))}</div>
-          <div style="height:10px;border-radius:5px;background:var(--color-neutral-800);overflow:hidden"><div style="height:100%;width:${rawPct}%;background:var(--color-neutral-500)"></div></div>
-        </div>
-        <div>
-          <div style="font-size:11px;opacity:0.6;margin-bottom:4px">${escapeHtml(fillTemplate(r.renderedBarLabelTemplate, { chars: renderedChars }))}</div>
-          <div style="height:10px;border-radius:5px;background:var(--color-neutral-800);overflow:hidden"><div style="height:100%;width:100%;background:var(--color-accent)"></div></div>
-        </div>
-      </div>
+      ${bars}
       <div class="card-body" style="margin-top:4px">${escapeHtml(caption)}</div>
     </div>
   `;

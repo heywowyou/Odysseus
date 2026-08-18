@@ -17,18 +17,32 @@ describe('renderCover with AuditManualFields', () => {
     expect(html).not.toContain(fr.cover.recipientLabel);
   });
 
-  it('renders nomCommercial as the headline and recipientName/raisonSociale when supplied', async () => {
+  it('renders nomCommercial as the headline and raisonSociale when supplied', async () => {
     const manifest = await loadSasFernandeManifest();
     const analysis = await loadSasFernandeAnalysis('fr');
     const html = renderCover(fr, manifest, analysis, [], {
       nomCommercial: { value: 'Acme SAS', provenance: 'operator' },
       raisonSociale: { value: 'Acme Société par Actions Simplifiée', provenance: 'operator' },
-      recipientName: { value: 'Jane Doe', provenance: 'operator' },
       updatedAt: new Date(),
     });
     expect(html).toContain('Acme SAS');
     expect(html).toContain('Acme Société par Actions Simplifiée');
-    expect(html).toContain(fr.cover.recipientLabel);
-    expect(html).toContain('Jane Doe');
+  });
+
+  // item 3.9: the cover used to print the client's name three times (H1,
+  // "Dénomination sociale", "Préparé pour") - recipientName is now never
+  // rendered, even when supplied, since all three legitimately held the
+  // same company name with no distinct contact-person field to repurpose
+  // it as.
+  it('item 3.9: never renders "Préparé pour", even when recipientName is supplied', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const analysis = await loadSasFernandeAnalysis('fr');
+    const html = renderCover(fr, manifest, analysis, [], {
+      nomCommercial: { value: 'Acme SAS', provenance: 'operator' },
+      recipientName: { value: 'Jane Doe', provenance: 'operator' },
+      updatedAt: new Date(),
+    });
+    expect(html).not.toContain(fr.cover.recipientLabel);
+    expect(html).not.toContain('Jane Doe');
   });
 });

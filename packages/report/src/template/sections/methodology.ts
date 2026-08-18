@@ -2,6 +2,10 @@ import {
   ARTICLE_47_REGIME_ID,
   EAA_REGIME_ID,
   LCEN_MENTIONS_LEGALES_RULE_ID,
+  KEYBOARD_TRAP_RULE_ID,
+  FOCUS_ORDER_MISMATCH_RULE_ID,
+  FORM_ERROR_NOT_ASSOCIATED_RULE_ID,
+  VIDEO_MISSING_CAPTIONS_RULE_ID,
   getRegime,
   type AuditManifest,
   type Finding,
@@ -80,7 +84,22 @@ function renderFact(fact: ObligationBasisFact, strings: ReportStrings, language:
             : hasCartOrPayment
               ? m.transactionalFlowTypeLabels.cartOrPayment
               : m.transactionalFlowTypeLabels.both;
-      return fillTemplate(m.legalCitationTransactionalFlowFactTemplate, { flowType });
+      // item 0.7: this used to always say "directement en ligne" even when
+      // the only evidence found was a delegated third-party redirect,
+      // which immediately contradicted legal-exposure.ts's own scope note
+      // a few paragraphs later ("délégué à un prestataire tiers [...] ce
+      // domaine n'a pas été exploré"). Both paragraphs now read the same
+      // on-site/delegated determination off the evidence kinds, so they
+      // can't disagree.
+      const isDelegatedOnly =
+        kinds.has('delegated-booking-redirect') &&
+        !kinds.has('booking-engine-script') &&
+        !kinds.has('checkout-form') &&
+        !kinds.has('payment-embed');
+      const location = isDelegatedOnly
+        ? m.legalCitationTransactionalFlowLocationDelegated
+        : m.legalCitationTransactionalFlowLocationOnSite;
+      return fillTemplate(m.legalCitationTransactionalFlowFactTemplate, { flowType, location });
     }
     case 'transactional-flow-unknown':
       return m.legalCitationTransactionalFlowUnknownFact;
@@ -160,9 +179,20 @@ export function renderLegalCitationParagraph(
   const facts = renderFacts(basis, strings, language);
   const template =
     assessment.status === 'in_scope' ? m.legalCitationInScopeTemplate : m.legalCitationLikelyInScopeTemplate;
+  // item 3.15: "sous le contrôle de {authority}" produced "sous le
+  // contrôle de Direction générale..." (missing "la") because `authority`
+  // is a single canonical string shared with English (regimes.ts's own
+  // documented convention), which cannot carry a French article without
+  // either duplicating it per language or leaking a French word into the
+  // English report. French prepends "de la"/"du" (from
+  // regime.authorityPrefixFr, since "de le" is not valid French - it
+  // contracts to "du") here, at fill time, language-scoped; English's
+  // template has no preposition to prepend at all ("overseen by
+  // {authority}").
+  const authorityDisplay = language === 'fr' ? `${regime.authorityPrefixFr} ${regime.authority}` : regime.authority;
   const paragraph = fillTemplate(template, {
     regimeName: regime.name,
-    authority: regime.authority,
+    authority: authorityDisplay,
     legalCitation: regime.legalCitation,
     facts,
   });
@@ -227,6 +257,33 @@ function renderSirenProvenanceNote(
  *  neither stated the crawl size. Merged into one section
  *  (docs/report-v2-prototype-haaitza-fr.html section 9), with the crawl
  *  size and date folded into the tooling paragraph itself. */
+/** item 1.10/B8: the methodology paragraph claims an extended
+ *  accessibility pass (keyboard traps, focus order, form error handling,
+ *  video captions) but nothing ever rendered its result - a clean pass is
+ *  a selling point and was invisible. The four rule ids below are exactly
+ *  the ones that pass emits (normalize-keyboard-navigation.ts,
+ *  normalize-form-error-handling.ts, normalize-video-captions.ts); the
+ *  alt-text heuristic already has its own "Signaux à vérifier" block
+ *  (conformance-summary.ts) so it is not repeated here. Only rendered when
+ *  every one of the four checks found nothing at all - if any of them
+ *  fired, the resulting findings already appear in the report's normal
+ *  findings flow, and a partial "none found" note here would read as
+ *  contradicting them. */
+const EXTENDED_PASS_RULE_IDS: readonly string[] = [
+  KEYBOARD_TRAP_RULE_ID,
+  FOCUS_ORDER_MISMATCH_RULE_ID,
+  FORM_ERROR_NOT_ASSOCIATED_RULE_ID,
+  VIDEO_MISSING_CAPTIONS_RULE_ID,
+];
+
+function renderExtendedPassNote(
+  strings: ReportStrings,
+  findings: readonly Pick<Finding, 'findingId' | 'ruleId'>[],
+): string | undefined {
+  const anyFound = findings.some((f) => EXTENDED_PASS_RULE_IDS.includes(f.ruleId));
+  return anyFound ? undefined : strings.methodology.extendedPassNoneFoundNote;
+}
+
 export function renderMethodology(
   strings: ReportStrings,
   ordinal: number,
@@ -250,6 +307,7 @@ export function renderMethodology(
   });
 
   const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings, resolvedSirenSourceUrl);
+  const extendedPassNote = renderExtendedPassNote(strings, findings);
 
   // Manual-input-layer milestone: pages excluded as social-platform
   // redirects are never silently dropped (crawl.ts still records every
@@ -262,6 +320,18 @@ export function renderMethodology(
       ? fillTemplate(m.socialExclusionDisclosureTemplate, { count: socialExclusionCount })
       : undefined;
 
+  // item 3.11: "20 pages" appeared everywhere with nothing stating it is
+  // a configured cap, not the whole site - a client could reasonably
+  // believe the entire site was covered. Only stated when the cap
+  // actually bound (visitedCount >= maxPages, meaning the crawl stopped
+  // because of the limit, not because it ran out of pages to find): if
+  // the whole site is smaller than the cap, the cap never constrained
+  // anything and a sentence about it would be a non sequitur.
+  const crawlCapNote =
+    manifest.crawl.visitedCount >= manifest.crawl.maxPages
+      ? fillTemplate(m.crawlCapDisclosureTemplate, { maxPages: manifest.crawl.maxPages })
+      : undefined;
+
   // B9: the full legal-citation paragraph used to be rendered here a
   // second time, verbatim, duplicating legal-exposure.ts's own copy of
   // the same paragraph on a different page. Kept once there; this section
@@ -269,9 +339,11 @@ export function renderMethodology(
   return sheet(`
     ${renderSheetHeader(ordinal, eyebrow, m.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
+    ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(crawlCapNote)}</p>` : ''}
     ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(socialExclusionNote)}</p>` : ''}
     <div class="hr"></div>
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.automatedCoverageCaveat)}</p>
+    ${extendedPassNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(extendedPassNote)}</p>` : ''}
     <div class="hr"></div>
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.legalCitationPointerSentence)}</p>
     ${sirenNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(sirenNote)}</p>` : ''}

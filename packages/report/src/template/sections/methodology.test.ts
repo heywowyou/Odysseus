@@ -9,8 +9,10 @@ describe('renderMethodology against the real sas-fernande.fr manifest', () => {
     const manifest = await loadSasFernandeManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
 
-    // 11 pages, docs/normalization-rules.md section 7.
-    expect(html).toContain('11 pages explorées');
+    // 11 pages, docs/normalization-rules.md section 7. item 3.6: "pages
+    // analysées" is the standardized term everywhere ("scannées" on the
+    // cover and "explorées" here used to disagree with the stats page).
+    expect(html).toContain('11 pages analysées');
     expect(html).toContain(manifest.tool.axeCoreVersion ?? '');
     expect(html).toContain(manifest.tool.lighthouseVersion ?? '');
     // The automated-coverage caveat used to be duplicated across two
@@ -23,7 +25,7 @@ describe('renderMethodology against the real sas-fernande.fr manifest', () => {
     const manifest = await loadSasFernandeManifest();
     const html = renderMethodology(getStrings('en'), 11, manifest, 'en');
 
-    expect(html).toContain('11 pages crawled');
+    expect(html).toContain('11 pages analyzed');
     expect(html).not.toContain('explorées');
   });
 });
@@ -151,7 +153,9 @@ describe('renderLegalCitationParagraph', () => {
     // fixture's evidence array is empty).
     expect(html).toContain('parcours de réservation, panier ou paiement directement en ligne');
     expect(html).not.toContain('premier niveau');
-    expect(html).toContain('Démarche Simplifiée');
+    // item 3.15: "Démarche Simplifiée" (singular) was wrong - the
+    // platform's real name is plural.
+    expect(html).toContain('Démarches Simplifiées');
     expect(html).not.toContain('50 000');
   });
 
@@ -175,6 +179,74 @@ describe('renderLegalCitationParagraph', () => {
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
     expect(html).toContain('article 47');
     expect(html).not.toContain("l'European Accessibility Act");
+  });
+
+  // item 3.15: "sous le contrôle de Direction générale..." was missing
+  // "la" - the authority string is a single canonical value shared with
+  // English (regimes.ts's own convention), so the fix prepends "de la"/
+  // "du" at fill time, per regime, in French only. Two regimes use two
+  // different authorities with different grammatical gender ("de la
+  // Direction générale..." vs "du Défenseur des droits" - "de le" is not
+  // valid French), so both must be checked, not just one.
+  describe('item 3.15: the authority is grammatically correct in French for every regime', () => {
+    it('DGCCRF (EAA route): "sous le contrôle de la Direction générale"', () => {
+      const assessment: ObligationAssessment = {
+        status: 'in_scope',
+        basis: [
+          {
+            regimeId: 'eaa-loi-2023-171',
+            facts: [
+              { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+              { kind: 'transactional-flow', evidence: [] },
+            ],
+          },
+        ],
+      };
+      const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
+      expect(html).toContain('sous le contrôle de la Direction générale');
+      expect(html).not.toContain('sous le contrôle de Direction générale');
+    });
+
+    it('Défenseur des droits (article 47 route): "sous le contrôle du Défenseur des droits"', () => {
+      const assessment: ObligationAssessment = {
+        status: 'in_scope',
+        basis: [
+          {
+            regimeId: 'eaa-loi-2023-171',
+            facts: [
+              { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+              { kind: 'no-transactional-flow' },
+            ],
+          },
+          {
+            regimeId: 'loi-2005-102-article-47',
+            facts: [{ kind: 'turnover', amountEur: 260_000_000, thresholdEur: 250_000_000 }],
+          },
+        ],
+      };
+      const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
+      expect(html).toContain('sous le contrôle du Défenseur des droits');
+      expect(html).not.toContain('sous le contrôle de Défenseur des droits');
+      expect(html).not.toContain('sous le contrôle de le Défenseur');
+    });
+
+    it('never prepends a French article/preposition in an English report', () => {
+      const assessment: ObligationAssessment = {
+        status: 'in_scope',
+        basis: [
+          {
+            regimeId: 'eaa-loi-2023-171',
+            facts: [
+              { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+              { kind: 'transactional-flow', evidence: [] },
+            ],
+          },
+        ],
+      };
+      const html = renderLegalCitationParagraph(getStrings('en'), assessment, 'en');
+      expect(html).toContain('overseen by Direction générale');
+      expect(html).not.toContain('overseen by de la');
+    });
   });
 
   it('renders the likely_in_scope paragraph with softened framing when the transactional flow gate is unconfirmed', () => {
@@ -388,5 +460,48 @@ describe('renderMethodology never discloses manual vs automated resolution of a 
     const htmlDetected = renderMethodology(getStrings('fr'), 11, manifest, 'fr', detected);
     const htmlManual = renderMethodology(getStrings('fr'), 11, manifest, 'fr', manual);
     expect(htmlManual).toBe(htmlDetected);
+  });
+});
+
+describe('item 1.10/B8: the extended accessibility pass states its own result', () => {
+  it('renders the "none found" note when no finding uses any of the four extended-pass rule ids', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, []);
+    expect(html).toContain("Résultat de la passe d&#39;accessibilité étendue");
+  });
+
+  it('omits the note when at least one extended-pass finding exists', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
+      { findingId: 'f1', ruleId: 'keyboard-trap' },
+    ]);
+    expect(html).not.toContain("Résultat de la passe d&#39;accessibilité étendue");
+  });
+
+  it('ignores the alt-text heuristic rule id, which has its own separate block', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
+      { findingId: 'f1', ruleId: 'alt-text-quality-heuristic' },
+    ]);
+    expect(html).toContain("Résultat de la passe d&#39;accessibilité étendue");
+  });
+});
+
+// item 3.11: "20 pages" appeared everywhere with nothing stating it is a
+// configured cap, not the whole site - a client could reasonably believe
+// the entire site was covered.
+describe('item 3.11: the crawl cap is explained when it actually bound', () => {
+  it('states the cap when the crawl visited exactly the configured max', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const capped = { ...manifest, crawl: { ...manifest.crawl, visitedCount: 20, maxPages: 20 } };
+    const html = renderMethodology(getStrings('fr'), 11, capped, 'fr');
+    expect(html).toContain('20 pages est un plafond configuré');
+  });
+
+  it('says nothing about the cap when the whole site is smaller than it', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const uncapped = { ...manifest, crawl: { ...manifest.crawl, visitedCount: 11, maxPages: 20 } };
+    const html = renderMethodology(getStrings('fr'), 11, uncapped, 'fr');
+    expect(html).not.toContain('plafond configuré');
   });
 });

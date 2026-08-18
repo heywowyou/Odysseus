@@ -5,10 +5,9 @@ import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManife
 
 // item 35: the printable checklist was a near-exact restatement of the
 // priorities section with nothing added - same three items, same effort/
-// impact labels, same page counts. Now carries finding IDs, WCAG
-// criteria, and a blank status/date column so it functions as an actual
-// working checklist.
-describe('item 35: the checklist carries finding IDs, WCAG criteria, and a blank status/date column', () => {
+// impact labels, same page counts. Now carries finding IDs and WCAG
+// criteria so it functions as an actual working checklist.
+describe('item 35: the checklist carries finding IDs and WCAG criteria', () => {
   it('renders each rendered theme\'s finding IDs', async () => {
     const [analysis, findings, manifest] = await Promise.all([
       loadSasFernandeAnalysis('fr'),
@@ -23,7 +22,7 @@ describe('item 35: the checklist carries finding IDs, WCAG criteria, and a blank
     }
   });
 
-  it('renders the WCAG criteria column header and a blank status/date column header', async () => {
+  it('renders the WCAG criteria column header', async () => {
     const [analysis, findings, manifest] = await Promise.all([
       loadSasFernandeAnalysis('fr'),
       loadSasFernandeFindings(),
@@ -33,7 +32,6 @@ describe('item 35: the checklist carries finding IDs, WCAG criteria, and a blank
     const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
 
     expect(html).toContain('WCAG');
-    expect(html).toContain('Statut / Date');
   });
 
   it('is no longer identical to a bare rank/title/effort/impact/pages table', async () => {
@@ -47,5 +45,34 @@ describe('item 35: the checklist carries finding IDs, WCAG criteria, and a blank
 
     expect(html).toContain('Constats');
     expect(html).toContain('mono');
+  });
+});
+
+// item 2.7: a trailing "Statut / Date" column rendered as a bare
+// underline with no visible boundary in a narrow cell, reading as a stray
+// dash rather than a writable field - removed rather than restyled.
+describe('item 2.7: the checklist has no stray status/date column, and carries a company/date identifier instead', () => {
+  it('renders no "Statut / Date" column header', async () => {
+    const [analysis, findings, manifest] = await Promise.all([
+      loadSasFernandeAnalysis('fr'),
+      loadSasFernandeFindings(),
+      loadSasFernandeManifest(),
+    ]);
+
+    const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
+
+    expect(html).not.toContain('Statut / Date');
+  });
+
+  it('renders the site as an identifier line, so the page is identifiable once printed alone', async () => {
+    const [analysis, findings, manifest] = await Promise.all([
+      loadSasFernandeAnalysis('fr'),
+      loadSasFernandeFindings(),
+      loadSasFernandeManifest(),
+    ]);
+
+    const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
+
+    expect(html).toContain(manifest.siteUrl);
   });
 });

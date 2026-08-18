@@ -69,10 +69,11 @@ export interface ReferenceStat {
   source: string;
   /** Publication year, when the research doc gives one. Left undefined
    *  rather than guessed for sources the doc itself calls "archived" or
-   *  undated (the W3C-documented Legal & General case study, the
-   *  Google-documented Nestlé/Rotten Tomatoes case studies) - inventing
-   *  a year would be exactly the kind of unchecked fact rule 1
-   *  forbids. */
+   *  undated (the Google-documented Nestlé/Rotten Tomatoes case studies) -
+   *  inventing a year would be exactly the kind of unchecked fact rule 1
+   *  forbids. An undated, wrong-sector case study (the W3C-documented
+   *  Legal & General row) was removed from the table entirely rather than
+   *  kept undated, per item 1.5. */
   year?: number;
   /** Verbatim, checkable citation sentence - not paraphrased. This is
    *  the exact text a report may one day splice in, the same way

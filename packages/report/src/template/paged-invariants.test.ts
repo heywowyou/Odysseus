@@ -99,12 +99,28 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
     expect(domPageCount).toBe(doc.pageCount);
   });
 
-  it('invariant 4: every page carries the footer string and a page-counter rule in its margin boxes', async () => {
+  // item D-flaky (report-feedback-palais-gallien-v2.md follow-up session):
+  // this test was previously reported "flaky"/"environmental" against a
+  // getComputedStyle(el, '::after').content bug that supposedly broke
+  // pseudo-element content resolution in this sandboxed Chromium
+  // regardless of what CSS it read. Direct investigation (querying the
+  // exact same property against a single real page in isolation) showed
+  // the mechanism actually works correctly and deterministically - the
+  // real bug was this test asserting a page-counter rule on *every*
+  // page, including the cover, whose @page cover rule (paged.css)
+  // deliberately sets `@top-right { content: ""; }` (documented right
+  // there: "the page counter is dropped for this page only rather than
+  // repositioned over the gradient with its own contrast rules"). The
+  // cover is already exempted from invariant 2's fill-ratio check for an
+  // unrelated reason; it gets the same exemption here, for its own
+  // documented reason, not carried over from that one.
+  it('invariant 4: every non-cover page carries the footer string and a page-counter rule in its margin boxes', async () => {
     const marginInfo = await doc.page.evaluate(() =>
       Array.from(document.querySelectorAll('.pagedjs_page')).map((p) => {
         const topRight = p.querySelector('.pagedjs_margin-top-right .pagedjs_margin-content');
         const bottomCenter = p.querySelector('.pagedjs_margin-bottom-center .pagedjs_margin-content');
         return {
+          isCover: p.classList.contains('pagedjs_cover_page'),
           counterRule: topRight ? getComputedStyle(topRight, '::after').content : '',
           footerRule: bottomCenter ? getComputedStyle(bottomCenter, '::after').content : '',
         };
@@ -112,29 +128,38 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
     );
 
     expect(marginInfo.length).toBe(doc.pageCount);
-    for (const { counterRule, footerRule } of marginInfo) {
+    for (const { isCover, counterRule, footerRule } of marginInfo) {
+      if (isCover) {
+        // The cover deliberately has no running page counter (see comment
+        // above) - asserting it stays empty, rather than skipping the
+        // page outright, so a future accidental counter on the cover
+        // would also be caught.
+        expect(counterRule).toBe('""');
+        continue;
+      }
       expect(counterRule).toContain('counter(page)');
       expect(counterRule).toContain('counter(pages)');
       // The footer string comes from .footer-source via string-set (never
-      // literal markup per the doc), so every page's rule must resolve to
-      // the same non-empty string() reference, not fall back to "none".
+      // literal markup per the doc), so every non-cover page's rule must
+      // resolve to the same non-empty string() reference, not fall back
+      // to "none".
       expect(footerRule).not.toBe('none');
       expect(footerRule.length).toBeGreaterThan(0);
     }
   });
 
-  // A dynamic getComputedStyle(el, '::after').content check for
-  // target-counter resolution was attempted here and dropped: it depends
-  // on the exact same pseudo-element computed-style mechanism invariant 4
-  // above already fails on (confirmed pre-existing on main, unrelated to
-  // B8 - `git stash` and re-run reproduces it against unmodified code).
-  // That mechanism appears broken in this sandboxed Chromium regardless
-  // of what CSS it's reading, so a target-counter-specific version of the
-  // same check would fail for the same environmental reason, not because
-  // the feature doesn't work. toc.test.ts's static assertions (every row
-  // links to its section's id, one .toc-page span per row) and manual
-  // verification against a real `page.pdf()` render are the actual
-  // coverage for B8 until this environment issue is diagnosed separately.
+  // B8's target-counter(attr(href url), page) resolution (the TOC page
+  // numbers) was tried here as a direct computed-style assertion, the
+  // same shape as invariant 4 above - dropped after confirming it doesn't
+  // actually work that way: Paged.js resolves target-counter through its
+  // own two-stage polyfill (the ::after content resolves to an
+  // intermediate `counter(target-counter-<uuid>)` reference, itself
+  // defined by a second, separately generated stylesheet rule per
+  // element), not a single CSS content value invariant 4's direct
+  // getComputedStyle check can read in one step. toc.test.ts's static
+  // assertions (every row links to its section's id, one .toc-page span
+  // per row) and manual verification against a real `page.pdf()` render
+  // remain the actual coverage for B8.
 
   it('invariant 1: no <img> renders taller than 90mm (vacuously true here: section 08 has no <img> at all, per doc §3)', async () => {
     const imgHeights = await doc.page.evaluate(() =>

@@ -5,28 +5,44 @@ import { compareCriteria, HEURISTIC_RULE_IDS, type Finding } from '@odysseus/cor
  *  image, and this is the page that can be handed to a lawyer or agency
  *  as-is. A finding carrying more than one criterion is counted under
  *  each - the same finding can be evidence for two separate conformance
- *  gaps at once. */
+ *  gaps at once.
+ *
+ *  item 1.11: `pages` used to be the single worst finding's own page
+ *  count ("Pages (max)"), which could and did read as a different, lower
+ *  number than the union-based "en échec sur N pages" headline stat
+ *  elsewhere in the report (a real report showed 9 here against 10 there)
+ *  when two different findings map to the same criterion on overlapping
+ *  but not identical page sets. Tracked as a Set of page URLs per
+ *  criterion instead, so this table's own count is the true union and can
+ *  never disagree with a union-based figure computed anywhere else. */
 export interface ConformanceRow {
   criterion: string;
   findingCount: number;
   totalOccurrences: number;
-  maxPages: number;
+  pages: number;
 }
 
 function rollup(findings: readonly Finding[], includeHeuristic: boolean): ConformanceRow[] {
-  const map = new Map<string, ConformanceRow>();
+  const counts = new Map<string, { findingCount: number; totalOccurrences: number; pages: Set<string> }>();
 
   for (const finding of findings) {
     if (finding.category !== 'accessibility' || finding.wcagCriteria.length === 0) continue;
     if (HEURISTIC_RULE_IDS.has(finding.ruleId) !== includeHeuristic) continue;
     for (const criterion of finding.wcagCriteria) {
-      const row = map.get(criterion) ?? { criterion, findingCount: 0, totalOccurrences: 0, maxPages: 0 };
+      const row = counts.get(criterion) ?? { findingCount: 0, totalOccurrences: 0, pages: new Set<string>() };
       row.findingCount += 1;
       row.totalOccurrences += finding.occurrences;
-      row.maxPages = Math.max(row.maxPages, finding.pageUrls.length);
-      map.set(criterion, row);
+      for (const url of finding.pageUrls) row.pages.add(url);
+      counts.set(criterion, row);
     }
   }
+
+  const map = new Map<string, ConformanceRow>(
+    [...counts.entries()].map(([criterion, row]) => [
+      criterion,
+      { criterion, findingCount: row.findingCount, totalOccurrences: row.totalOccurrences, pages: row.pages.size },
+    ]),
+  );
 
   return [...map.values()].sort((a, b) => compareCriteria(a.criterion, b.criterion));
 }

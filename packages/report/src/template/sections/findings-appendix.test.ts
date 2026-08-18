@@ -41,6 +41,20 @@ function buildManifest(): AuditManifest {
   };
 }
 
+function buildManifestWithPages(count: number): AuditManifest {
+  const base = buildManifest();
+  return {
+    ...base,
+    crawl: { ...base.crawl, visitedCount: count },
+    pages: Array.from({ length: count }, (_, i) => ({
+      url: `https://example.com/page-${i}`,
+      depth: 0,
+      status: 'visited' as const,
+      errors: {},
+    })),
+  };
+}
+
 describe('renderFindingsAppendix against the real sas-fernande.fr findings', () => {
   it('includes minor findings, which never reach the LLM layer', async () => {
     const findings = await loadSasFernandeFindings();
@@ -241,6 +255,78 @@ describe('item 25: every finding lists its actual page URLs, not just a count', 
     expect(html).toContain('https://example.com/a');
     expect(html).toContain('https://example.com/b');
     expect(html).toContain('https://example.com/c');
+  });
+});
+
+// item 3.1: roughly 18 of 37 pages in a real report were the same 20-URL
+// list reprinted verbatim, once per finding that hit every crawled page.
+describe('item 3.1: repeated URL lists collapse instead of reprinting every page', () => {
+  function buildFinding(overrides: Partial<Finding>): Finding {
+    return {
+      findingId: 'f001',
+      auditId: 'a',
+      schemaVersion: 1,
+      source: 'axe',
+      ruleId: 'color-contrast',
+      category: 'accessibility',
+      severity: 'serious',
+      wcagCriteria: ['1.4.3'],
+      title: 'Insufficient contrast',
+      description: 'desc',
+      pageUrls: [],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: 'd1',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  it('collapses to "toutes les pages analysées" when a finding hits every crawled page', () => {
+    const manifest = buildManifestWithPages(8);
+    const finding = buildFinding({
+      pageUrls: manifest.pages.map((p) => p.url),
+      occurrences: 8,
+    });
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [finding], manifest, 'general');
+    // Scoped to "Pages : ..." (the per-finding url-cell prefix), not the
+    // separate "Pages explorées (N)" crawled-pages block above it, which
+    // legitimately lists every page-N URL regardless of this collapse.
+    expect(html).toContain('Pages : Toutes les pages analysées (8)');
+    expect(html).not.toContain('Pages : https://example.com/page-0');
+  });
+
+  it('caps the list and names the remainder when a finding hits many, but not all, pages', () => {
+    const manifest = buildManifestWithPages(10);
+    const finding = buildFinding({
+      pageUrls: manifest.pages.slice(0, 9).map((p) => p.url),
+      occurrences: 9,
+    });
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [finding], manifest, 'general');
+    // The finding's own url-cell line, isolated from the separate crawled-
+    // pages block (which legitimately lists every page-N URL regardless).
+    const urlCellLine = html.split('\n').find((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
+    expect(urlCellLine).toBeDefined();
+    expect(urlCellLine).toContain('et 4 autres');
+    // Capped at 5: shown pages present, the 6th-9th are not spelled out.
+    expect(urlCellLine).toContain('page-0');
+    expect(urlCellLine).toContain('page-4');
+    expect(urlCellLine).not.toContain('page-5');
+  });
+
+  it('lists every URL plainly, no collapse or cap, for a small finding well under the total', () => {
+    const manifest = buildManifestWithPages(20);
+    const finding = buildFinding({ pageUrls: [manifest.pages[0]!.url, manifest.pages[1]!.url], occurrences: 2 });
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [finding], manifest, 'general');
+    expect(html).toContain('page-0');
+    expect(html).toContain('page-1');
+    expect(html).not.toContain('Toutes les pages analysées');
+    expect(html).not.toContain('autres');
   });
 });
 

@@ -53,7 +53,10 @@ function renderRiskBadge(strings: ReportStrings, analysis: StoredAnalysis, findi
   const stats = computeStatistics(findings, manifest);
   const basisNote = fillTemplate(strings.cover.riskBasisTemplate, {
     critical: formatNumber(stats.critical, analysis.language),
+    criticalWord:
+      stats.critical === 1 ? strings.cover.criticalFindingSingular : strings.cover.criticalFindingPlural,
     serious: formatNumber(stats.serious, analysis.language),
+    seriousWord: stats.serious === 1 ? strings.cover.seriousFindingSingular : strings.cover.seriousFindingPlural,
   });
 
   return `
@@ -81,6 +84,11 @@ function renderRiskBadge(strings: ReportStrings, analysis: StoredAnalysis, findi
  *  a hypothetical. Placing it as the cover's own first child keeps it on
  *  the same named page from the start, so no such transition ever
  *  happens. */
+/** item D8 (P4): the subtitle line used to be "Rapport d'audit" (reportTitle)
+ *  whenever a company name occupied the H1 - generic against the product's
+ *  actual four-category scope. strings.cover.subtitle now states that
+ *  scope directly and is used in both cases (with or without a company
+ *  name), not only when there's no company name. */
 export function renderCover(
   strings: ReportStrings,
   manifest: AuditManifest,
@@ -93,11 +101,21 @@ export function renderCover(
   // Manual-input-layer milestone, rule 5: every field absent must
   // produce a correctly rendering report - the headline identity falls
   // back to the site URL exactly as before when nomCommercial is unset,
-  // and the "Préparé pour" line and legal-name line are omitted
-  // entirely rather than rendered empty.
+  // and the legal-name line is omitted entirely rather than rendered
+  // empty.
+  //
+  // item 3.9: the cover used to print the client's name three times (H1
+  // via nomCommercial, "Dénomination sociale" via raisonSociale, and
+  // "Préparé pour" via recipientName - all three legitimately holding the
+  // same company name). "Préparé pour" dropped here rather than
+  // repurposed for a distinct contact-person field, since no such field
+  // exists in AuditManualFields yet and inventing one speculatively for a
+  // copy fix would be exactly the kind of unrequested structure CLAUDE.md
+  // warns against. AuditManualFields.recipientName itself is left in
+  // place (not deleted) for a future session to actually wire to a
+  // contact-person input if that input is ever built.
   const nomCommercial = manualFields?.nomCommercial?.value;
   const raisonSociale = manualFields?.raisonSociale?.value;
-  const recipientName = manualFields?.recipientName?.value;
 
   return sheet(
     `
@@ -105,7 +123,7 @@ export function renderCover(
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-4)">
       <div style="font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(strings.cover.kicker)}</div>
       <h1 style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(nomCommercial ?? strings.cover.reportTitle)}</h1>
-      <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(nomCommercial ? strings.cover.reportTitle : strings.cover.subtitle)}</div>
+      <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(strings.cover.subtitle)}</div>
       ${raisonSociale ? `<div style="font-size:13px;opacity:0.6">${escapeHtml(strings.cover.legalNameLabel)} : ${escapeHtml(raisonSociale)}</div>` : ''}
     </div>
     <div>
@@ -115,9 +133,8 @@ export function renderCover(
         ${field(strings.cover.dateLabel, escapeHtml(formatDate(new Date(manifest.startedAt), analysis.language)))}
         ${field(strings.cover.pagesScannedLabel, escapeHtml(fillTemplate(strings.cover.pagesScannedValueTemplate, { count: pagesScanned })))}
         ${field(strings.cover.languageLabel, escapeHtml(LANGUAGE_SELF_NAME[analysis.language]))}
-        ${field(strings.cover.wcagReferentialLabel, 'WCAG 2.2 AA')}
+        ${field(strings.cover.wcagReferentialLabel, escapeHtml(strings.cover.wcagReferentialValue))}
         ${field(strings.cover.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest))}
-        ${recipientName ? field(strings.cover.recipientLabel, escapeHtml(recipientName)) : ''}
       </div>
     </div>
   `,

@@ -61,21 +61,30 @@ describe('item 36: the printable checklist page inverts to a light background un
 
     const colors = await page.evaluate(() => {
       const checklistPage = document.querySelector('#section-05')?.closest('.pagedjs_page');
+      // item 0.1: .pagedjs_sheet is nested inside .pagedjs_page and is the
+      // element that actually paints the visible page surface - a fix
+      // that only repaints .pagedjs_page but leaves .pagedjs_sheet dark
+      // produces dark ink on a still-dark page while this assertion, if it
+      // only checked .pagedjs_page, would pass anyway. Check both.
+      const checklistSheet = checklistPage?.querySelector('.pagedjs_sheet') ?? null;
       const otherPage = document
         .querySelector('#section-05')
         ?.closest('.pagedjs_page')
         ?.previousElementSibling as Element | null;
       const get = (el: Element | null | undefined) =>
         el ? { bg: getComputedStyle(el).backgroundColor, color: getComputedStyle(el).color } : null;
-      return { checklistPage: get(checklistPage), otherPage: get(otherPage) };
+      return { checklistPage: get(checklistPage), checklistSheet: get(checklistSheet), otherPage: get(otherPage) };
     });
 
     expect(colors.checklistPage).not.toBeNull();
+    expect(colors.checklistSheet).not.toBeNull();
     // Light background: high-ish RGB values, not the dark theme's #161826
     // (rgb(22, 24, 38)).
     expect(colors.checklistPage!.bg).not.toBe('rgb(22, 24, 38)');
+    expect(colors.checklistSheet!.bg).not.toBe('rgb(22, 24, 38)');
     if (colors.otherPage) {
       expect(colors.otherPage.bg).not.toBe(colors.checklistPage!.bg);
+      expect(colors.otherPage.bg).not.toBe(colors.checklistSheet!.bg);
     }
 
     await context.close();

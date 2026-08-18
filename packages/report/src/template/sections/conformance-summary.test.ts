@@ -26,7 +26,64 @@ describe('renderConformanceSummary against the real sas-fernande.fr findings', (
   it('always states this criteria list alone does not conclude legal obligation', async () => {
     const findings = await loadSasFernandeFindings();
     const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
-    expect(html).toContain("n&#39;implique pas, à elle seule, une conclusion sur l&#39;obligation légale");
+    // item 3.14: rephrased as a positive statement of what the table is
+    // ("décrit des écarts... indépendamment de toute question
+    // d'obligation légale") rather than the old defensive "does not
+    // contradict section 2" framing, which read as the report arguing
+    // with itself in front of the client.
+    expect(html).toContain("indépendamment de toute question d&#39;obligation légale");
+  });
+});
+
+describe('item 1.9: the heuristic block is structurally distinct from the real failures table', () => {
+  it('renders the heuristic table with no WCAG criterion column, unlike the real failures table above it', () => {
+    const findings: Finding[] = [
+      {
+        findingId: 'f1',
+        auditId: 'a',
+        schemaVersion: 1,
+        source: 'axe',
+        ruleId: 'color-contrast',
+        category: 'accessibility',
+        severity: 'serious',
+        wcagCriteria: ['1.4.3'],
+        title: 'Elements must meet minimum color contrast ratio thresholds',
+        description: 'desc',
+        pageUrls: ['https://example.com/'],
+        occurrences: 1,
+        elements: [],
+        rawEvidence: {},
+        dedupeKey: 'd1',
+        firstSeenAt: new Date(),
+        lastSeenAt: new Date(),
+      },
+      {
+        findingId: 'f2',
+        auditId: 'a',
+        schemaVersion: 1,
+        source: 'custom',
+        ruleId: 'alt-text-quality-heuristic',
+        category: 'accessibility',
+        severity: 'moderate',
+        wcagCriteria: ['1.1.1'],
+        title: 'Alt text quality heuristic',
+        description: 'desc',
+        pageUrls: ['https://example.com/'],
+        occurrences: 1,
+        elements: [],
+        rawEvidence: {},
+        dedupeKey: 'd2',
+        firstSeenAt: new Date(),
+        lastSeenAt: new Date(),
+      },
+    ];
+
+    const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
+    // The real table (5 columns) still carries its criterion column.
+    expect(html).toContain('grid-template-columns:100px 1fr 90px 100px 100px');
+    // The heuristic table (4 columns) drops the criterion column entirely.
+    expect(html).toContain('grid-template-columns:1fr 90px 100px 100px');
+    expect(html).toContain('Signaux à vérifier');
   });
 });
 

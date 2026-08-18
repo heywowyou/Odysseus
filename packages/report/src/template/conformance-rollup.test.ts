@@ -153,13 +153,13 @@ describe('item 8: heuristic findings never contribute to the conformance rollup'
   it('buildConformanceRollup still includes a genuine axe finding for the same criterion', () => {
     const rows = buildConformanceRollup([heuristicFinding, genuineAxeFinding]);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ criterion: '1.1.1', findingCount: 1, totalOccurrences: 1, maxPages: 1 });
+    expect(rows[0]).toMatchObject({ criterion: '1.1.1', findingCount: 1, totalOccurrences: 1, pages: 1 });
   });
 
   it('buildHeuristicRollup carries the heuristic finding, not the genuine axe one', () => {
     const rows = buildHeuristicRollup([heuristicFinding, genuineAxeFinding]);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ criterion: '1.1.1', findingCount: 1, totalOccurrences: 157, maxPages: 20 });
+    expect(rows[0]).toMatchObject({ criterion: '1.1.1', findingCount: 1, totalOccurrences: 157, pages: 20 });
   });
 
   it('pagesWithWcagFailures does not count pages only reached via the heuristic finding', () => {
@@ -180,5 +180,48 @@ describe('item 8: heuristic findings never contribute to the conformance rollup'
       '4.1.2',
     ]);
     expect(buildHeuristicRollup(findings)).toEqual([]);
+  });
+});
+
+describe('item 1.11: the pages count is the true union across findings sharing a criterion, not one finding\'s own max', () => {
+  const base = {
+    auditId: 'a1',
+    schemaVersion: 1 as const,
+    source: 'axe' as const,
+    category: 'accessibility' as const,
+    severity: 'serious' as const,
+    title: 't',
+    description: 'd',
+    occurrences: 1,
+    elements: [],
+    rawEvidence: {},
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+  };
+
+  it('a real report showed this exact split: two findings on 1.3.1, overlapping but not identical page sets - the union (10) must not equal either finding\'s own count (9 and 2)', () => {
+    const findingA: Finding = {
+      ...base,
+      findingId: 'f1',
+      ruleId: 'aria-required-children',
+      wcagCriteria: ['1.3.1'],
+      dedupeKey: 'd1',
+      pageUrls: Array.from({ length: 9 }, (_, i) => `https://example.com/page-${i}`),
+    };
+    const findingB: Finding = {
+      ...base,
+      findingId: 'f2',
+      ruleId: 'list',
+      wcagCriteria: ['1.3.1'],
+      dedupeKey: 'd2',
+      // Overlaps page-0 and page-1 with findingA, adds one new page.
+      pageUrls: ['https://example.com/page-0', 'https://example.com/page-1', 'https://example.com/page-new'],
+    };
+
+    const rows = buildConformanceRollup([findingA, findingB]);
+    expect(rows).toHaveLength(1);
+    // Union of {page-0..8} and {page-0, page-1, page-new} = 10 distinct URLs,
+    // not 9 (findingA's own count) and not 3 (findingB's own count).
+    expect(rows[0]).toMatchObject({ criterion: '1.3.1', findingCount: 2, pages: 10 });
   });
 });

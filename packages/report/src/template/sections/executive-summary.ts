@@ -43,12 +43,21 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
   const rows = topThemes
     .map((theme) => {
       // item 5: the link's own visible label states its destination
-      // ("Voir priorité 1 : lenteur d'affichage") instead of a bare
-      // "Voir ->" that gave no indication of where it led when read out
-      // of context (a PDF link-extraction pass, a screen reader jumping
-      // link-to-link). Underline + accent colour give it a visual
-      // affordance distinct from the plain-text theme title beside it.
-      const jumpLinkLabel = fillTemplate(e.jumpLinkLabelTemplate, { rank: theme.priorityRank, title: theme.title });
+      // ("Voir priorité 1") instead of a bare "Voir ->" that gave no
+      // indication of where it led when read out of context (a PDF
+      // link-extraction pass, a screen reader jumping link-to-link).
+      // Underline + accent colour give it a visual affordance distinct
+      // from the plain-text theme title beside it.
+      //
+      // item 3.4: this used to also repeat {title} a second time
+      // ("Voir priorité 1 : lenteur d'affichage"), directly next to the
+      // theme title already shown in its own span two lines below - full
+      // title duplication in one row, wrapping across the width on a
+      // long title. Dropped {title} from the template: the rank number
+      // plus the adjacent title span together already give the link
+      // stand-alone accessible text (per item 5's own reasoning), without
+      // repeating it.
+      const jumpLinkLabel = fillTemplate(e.jumpLinkLabelTemplate, { rank: theme.priorityRank });
       return `
         <a href="#theme-${theme.priorityRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:8px 0;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
           <span style="width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:11px;display:flex;align-items:center;justify-content:center">${theme.priorityRank}</span>
@@ -72,6 +81,7 @@ export function renderExecutiveSummary(strings: ReportStrings, ordinal: number, 
   return sheet(`
     ${renderSheetHeader(ordinal, e.eyebrow, e.heading)}
     <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(analysis.executiveSummary)}</p>
+    <p style="font-size:11px;opacity:0.5;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
     ${renderTopPriorityLegalNote(strings, analysis.themes)}
     ${renderStartHere(strings, analysis.themes)}
   `, '', 'section-01');

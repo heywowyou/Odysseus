@@ -64,6 +64,7 @@ const REGIME_DEFINITIONS: Record<string, RegimeDefinition> = {
       'Applies to companies with 10 or more employees, or with annual turnover or balance sheet total above EUR 2,000,000, when the site offers a first party B2C transactional flow (booking, cart, checkout).',
     ),
     authority: 'Direction générale de la concurrence, de la consommation et de la répression des fraudes (DGCCRF)',
+    authorityPrefixFr: 'de la',
     sanctionCeiling: bilingual(
       "Jusqu'à 50 000 € d'amende administrative par manquement constaté (à vérifier contre le décret en vigueur avant toute mention client)",
       'Up to EUR 50,000 in administrative fines per confirmed breach (verify against the current decree before any client facing use)',
@@ -81,6 +82,7 @@ const REGIME_DEFINITIONS: Record<string, RegimeDefinition> = {
       'Applies to private law entities with annual turnover above EUR 250,000,000, independently of any headcount or sector condition.',
     ),
     authority: 'Défenseur des droits',
+    authorityPrefixFr: 'du',
     sanctionCeiling: bilingual(
       'Sanction administrative dont le montant est fixé par décret (à vérifier avant toute mention client)',
       'Administrative sanction with an amount set by decree (verify before any client facing use)',
@@ -98,6 +100,7 @@ const REGIME_DEFINITIONS: Record<string, RegimeDefinition> = {
       'Any person conducting an online professional activity must publish its SIREN or RCS number, independently of its size or sector.',
     ),
     authority: 'Direction générale de la concurrence, de la consommation et de la répression des fraudes (DGCCRF)',
+    authorityPrefixFr: 'de la',
     sanctionCeiling: bilingual(
       "Jusqu'à un an d'emprisonnement et 75 000 € d'amende pour une personne physique, montant porté à cinq fois ce plafond pour une personne morale (à vérifier avant toute mention client)",
       'Up to one year of imprisonment and a EUR 75,000 fine for an individual, up to five times that ceiling for a legal entity (verify before any client facing use)',
@@ -114,6 +117,7 @@ export const REGIME_TABLE: Record<string, Regime> = Object.fromEntries(
       name: def.name.fr,
       thresholdDescription: def.thresholdDescription.fr,
       authority: def.authority,
+      authorityPrefixFr: def.authorityPrefixFr,
       sanctionCeiling: def.sanctionCeiling.fr,
       legalCitation: def.legalCitation,
     },
@@ -131,6 +135,7 @@ export function getRegime(regimeId: string, language: ReportLanguage): Regime | 
     name: def.name[language],
     thresholdDescription: def.thresholdDescription[language],
     authority: def.authority,
+    authorityPrefixFr: def.authorityPrefixFr,
     sanctionCeiling: def.sanctionCeiling[language],
     legalCitation: def.legalCitation,
   };
