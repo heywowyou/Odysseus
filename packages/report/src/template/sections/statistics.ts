@@ -33,7 +33,7 @@ function renderSeverityTile(label: string, count: string, meaning: string, color
 function renderCategoryTile(label: string, count: string, color: string): string {
   return `
     <div style="padding:var(--space-3);border-radius:var(--radius-md);background:var(--color-surface)">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:${color}">${escapeHtml(label)}</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:${color}">${escapeHtml(label)}</div>
       <div style="font-size:22px;font-family:var(--font-heading);margin-top:6px">${count}</div>
     </div>
   `;
@@ -41,6 +41,7 @@ function renderCategoryTile(label: string, count: string, color: string): string
 
 export function renderStatistics(
   strings: ReportStrings,
+  ordinal: number,
   language: ReportLanguage,
   findings: Finding[],
   manifest: AuditManifest,
@@ -97,7 +98,7 @@ export function renderStatistics(
   const wcagFailCountText = `${n(stats.wcagCriteriaFailingCount)} ${wcagFailText}`;
 
   return sheet(`
-    ${renderSheetHeader(s.eyebrow, s.heading)}
+    ${renderSheetHeader(ordinal, s.eyebrow, s.heading)}
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
       ${numberTiles}
     </div>
@@ -106,9 +107,10 @@ export function renderStatistics(
       ${severityTiles}
     </div>
     <h5>${escapeHtml(s.categoryBreakdownHeading)}</h5>
-    <div style="display:grid;grid-template-columns:repeat(${CATEGORY_ORDER.length},1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
+    <div style="display:grid;grid-template-columns:repeat(${CATEGORY_ORDER.length},1fr);gap:var(--space-3);margin-bottom:var(--space-3)">
       ${categoryTiles}
     </div>
+    ${stats.hasBelowThresholdRenderGap ? `<p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-6)">${escapeHtml(s.belowThresholdRenderGapNote)}</p>` : '<div style="margin-bottom:var(--space-6)"></div>'}
     <div class="hr"></div>
     <h5>${escapeHtml(s.wcagFailingHeading)}</h5>
     <p style="font-size:13.5px;opacity:0.85">${escapeHtml(wcagFailCountText)}</p>

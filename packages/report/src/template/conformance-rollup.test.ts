@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { Finding } from '@odysseus/core';
-import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rollup.js';
+import { buildConformanceRollup, buildHeuristicRollup, pagesWithWcagFailures } from './conformance-rollup.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -107,5 +107,78 @@ describe('pagesWithWcagFailures', () => {
   it('counts all 20 real haaitza pages, not the 18 the doc cited from a hand-transcription', () => {
     const findings = loadHaaitzaFindings();
     expect(pagesWithWcagFailures(findings)).toBe(20);
+  });
+});
+
+// item 8: alt-text-quality-heuristic is an explicitly heuristic red-flag
+// check (normalize-alt-text.ts), never a genuine axe-core conformance
+// failure, so it must never contribute a row to buildConformanceRollup -
+// the table a client can hand directly to a lawyer or agency - no matter
+// how many occurrences it has. It belongs in buildHeuristicRollup's
+// separate table instead.
+describe('item 8: heuristic findings never contribute to the conformance rollup', () => {
+  const heuristicFinding: Finding = {
+    findingId: 'f1',
+    auditId: 'a1',
+    schemaVersion: 1,
+    source: 'custom',
+    ruleId: 'alt-text-quality-heuristic',
+    category: 'accessibility',
+    severity: 'minor',
+    wcagCriteria: ['1.1.1'],
+    title: 'Alt text looks like a raw filename',
+    description: 'd',
+    pageUrls: Array.from({ length: 20 }, (_, i) => `https://example.com/${i}`),
+    occurrences: 157,
+    elements: [],
+    rawEvidence: {},
+    dedupeKey: 'd1',
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+  };
+  const genuineAxeFinding: Finding = {
+    ...heuristicFinding,
+    findingId: 'f2',
+    source: 'axe',
+    ruleId: 'image-alt',
+    dedupeKey: 'd2',
+    pageUrls: ['https://example.com/0'],
+    occurrences: 1,
+  };
+
+  it('buildConformanceRollup excludes it entirely, even when it is the only accessibility finding', () => {
+    expect(buildConformanceRollup([heuristicFinding])).toEqual([]);
+  });
+
+  it('buildConformanceRollup still includes a genuine axe finding for the same criterion', () => {
+    const rows = buildConformanceRollup([heuristicFinding, genuineAxeFinding]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ criterion: '1.1.1', findingCount: 1, totalOccurrences: 1, maxPages: 1 });
+  });
+
+  it('buildHeuristicRollup carries the heuristic finding, not the genuine axe one', () => {
+    const rows = buildHeuristicRollup([heuristicFinding, genuineAxeFinding]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ criterion: '1.1.1', findingCount: 1, totalOccurrences: 157, maxPages: 20 });
+  });
+
+  it('pagesWithWcagFailures does not count pages only reached via the heuristic finding', () => {
+    expect(pagesWithWcagFailures([heuristicFinding])).toBe(0);
+    expect(pagesWithWcagFailures([heuristicFinding, genuineAxeFinding])).toBe(1);
+  });
+
+  it('the real haaitza fixture (no heuristic findings in this particular scan) still recomputes the same 7-criteria rollup as before, confirming the exclusion is a no-op when there is nothing to exclude', () => {
+    const findings = loadHaaitzaFindings();
+    expect(findings.some((f) => f.ruleId === 'alt-text-quality-heuristic')).toBe(false);
+    expect(buildConformanceRollup(findings).map((r) => r.criterion)).toEqual([
+      '1.1.1',
+      '1.4.1',
+      '1.4.3',
+      '1.4.4',
+      '2.4.4',
+      '2.5.8',
+      '4.1.2',
+    ]);
+    expect(buildHeuristicRollup(findings)).toEqual([]);
   });
 });

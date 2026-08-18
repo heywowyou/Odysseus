@@ -1,6 +1,8 @@
 import type { AuditManifest, Finding } from '@odysseus/core';
+import { RENDER_DIFF_EMISSION_THRESHOLD_PERCENT } from '@odysseus/core';
 import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rollup.js';
 import { CATEGORY_ORDER } from './design-tokens.js';
+import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
 
 /** Deterministic counts for the statistics page (docs/report-v2-refactor.md
  *  B10): nowhere in v1 did the document state pages scanned, finding
@@ -28,6 +30,14 @@ export interface ReportStatistics {
    *  seoRenderingCount above, which predate that split and merge
    *  seo+rendering into one number. */
   categoryCounts: Record<(typeof CATEGORY_ORDER)[number], number>;
+  /** item 39: "Rendu : 0" contradicted section 08's own reported gap
+   *  (a real, non-zero render-diff percentage that simply sits below
+   *  RENDER_DIFF_EMISSION_THRESHOLD_PERCENT, the point at which a
+   *  render-diff finding is actually emitted). True when at least one
+   *  page has a measured gap in that below-threshold band, so the
+   *  template can add a one-line note explaining the "0" rather than let
+   *  it read as a contradiction or a bug. */
+  hasBelowThresholdRenderGap: boolean;
 }
 
 export function computeStatistics(findings: readonly Finding[], manifest: AuditManifest): ReportStatistics {
@@ -89,5 +99,11 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
     accessibilityCount,
     seoRenderingCount,
     categoryCounts,
+    hasBelowThresholdRenderGap: manifest.pages.some(
+      (page) =>
+        page.renderDiffMissingPercent !== undefined &&
+        page.renderDiffMissingPercent >= EVIDENCE_INCLUSION_THRESHOLD_PERCENT &&
+        page.renderDiffMissingPercent < RENDER_DIFF_EMISSION_THRESHOLD_PERCENT,
+    ),
   };
 }

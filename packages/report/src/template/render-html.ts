@@ -14,11 +14,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partitionFindings } from '@odysseus/llm';
 import type { AuditManifest, AuditManualFields, Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../types.js';
 import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
 import { resolveLcenFinding } from './lcen-resolution.js';
+import { SECTION_IDS, computeSectionNumbers, type SectionId } from './section-registry.js';
 import { renderCover } from './sections/cover.js';
 import { renderToc } from './sections/toc.js';
 import { renderStatistics } from './sections/statistics.js';
@@ -30,7 +32,7 @@ import { renderChecklist } from './sections/checklist.js';
 import { renderObservations } from './sections/observations.js';
 import { renderRenderDiffEvidence } from './sections/render-diff-evidence.js';
 import { renderCoreWebVitalsTable } from './sections/core-web-vitals-table.js';
-import { renderAccessibilityStatement } from './sections/accessibility-statement.js';
+import { isArticle47Regime, renderAccessibilityStatement } from './sections/accessibility-statement.js';
 import { renderFindingsAppendix } from './sections/findings-appendix.js';
 import { renderMethodology } from './sections/methodology.js';
 import { renderGlossary } from './sections/glossary.js';
@@ -114,27 +116,70 @@ function renderBody(
   );
   const sectorOverride = manualFields?.sector?.value;
 
+  // report-feedback-palais-gallien.md items 1/2/4: computed once, here,
+  // so the TOC and every numbered section's own header agree on exactly
+  // which sections exist and what number each one carries. Section 06
+  // (Observations) is the only section that can vanish entirely -
+  // observations.ts returns '' when partitionFindings has nothing to
+  // divert - so it is the only one gated on a real condition; every other
+  // section always renders. Adding a future conditionally-suppressed
+  // section means adding its condition to this Set, not inventing a
+  // second numbering scheme.
+  const { diverted } = partitionFindings(resolvedFindings, manifest);
+  const includedSectionIds = new Set<SectionId>(SECTION_IDS);
+  if (diverted.length === 0) includedSectionIds.delete('section-06');
+  // item 19: the déclaration d'accessibilité (section 10) belongs to
+  // article 47, never to the EAA/SMB route - suppressed the same way
+  // section-06 is when it has nothing to show, so the TOC and every
+  // later section's ordinal stay correct for an EAA-route client.
+  if (!isArticle47Regime(analysis.obligationAssessment)) includedSectionIds.delete('section-10');
+  const n = computeSectionNumbers(includedSectionIds);
+  // Every id in SECTION_IDS besides 'section-06' is unconditionally in
+  // includedSectionIds above, so these lookups are always defined; the
+  // non-null assertion documents that invariant rather than papering
+  // over a real gap.
+  const ord = (id: SectionId): number => n.get(id)!;
+
   return [
-    renderCover(strings, manifest, analysis, manualFields),
-    renderToc(strings),
-    renderExecutiveSummary(strings, analysis),
-    renderLegalExposure(strings, analysis.language, analysis.obligationAssessment),
-    renderStatistics(strings, analysis.language, resolvedFindings, manifest),
-    renderThemes(strings, analysis, resolvedFindings, manifest, citedStatIds, sectorOverride),
-    renderChecklist(strings, analysis.language, analysis, resolvedFindings, manifest),
-    renderObservations(strings, resolvedFindings, manifest),
-    renderConformanceSummary(strings, resolvedFindings, analysis.language),
+    renderCover(strings, manifest, analysis, resolvedFindings, manualFields),
+    renderToc(strings, includedSectionIds),
+    renderExecutiveSummary(strings, ord('section-01'), analysis),
+    renderLegalExposure(
+      strings,
+      ord('section-02'),
+      analysis.language,
+      analysis.obligationAssessment,
+      analysis.generatedAt,
+      manifest,
+      manualFields,
+    ),
+    renderStatistics(strings, ord('section-03'), analysis.language, resolvedFindings, manifest),
+    renderThemes(strings, ord('section-04'), analysis, resolvedFindings, manifest, citedStatIds, sectorOverride),
+    renderChecklist(strings, ord('section-05'), analysis.language, analysis, resolvedFindings, manifest),
+    includedSectionIds.has('section-06') ? renderObservations(strings, ord('section-06'), diverted) : '',
+    renderConformanceSummary(strings, ord('section-07'), resolvedFindings, analysis.language),
     renderRenderDiffEvidence(
       strings,
+      ord('section-08'),
       analysis.language,
       renderDiffEvidencePages,
       renderDiffTotalEligible,
       renderDiffWrapperOrLegalExcludedCount,
     ),
-    renderCoreWebVitalsTable(strings, analysis.language, manifest),
-    renderAccessibilityStatement(strings, analysis.language, resolvedFindings, manualFields),
+    renderCoreWebVitalsTable(strings, ord('section-09'), analysis.language, manifest),
+    includedSectionIds.has('section-10')
+      ? renderAccessibilityStatement(
+          strings,
+          ord('section-10'),
+          analysis.language,
+          resolvedFindings,
+          analysis.obligationAssessment,
+          manualFields,
+        )
+      : '',
     renderMethodology(
       strings,
+      ord('section-11'),
       manifest,
       analysis.language,
       analysis.obligationAssessment,
@@ -143,14 +188,19 @@ function renderBody(
     ),
     renderFindingsAppendix(
       strings,
+      ord('section-12'),
       analysis.language,
       resolvedFindings,
       manifest,
       sectorOverride ?? analysis.obligationAssessment?.sector ?? 'general',
       citedStatIds,
     ),
-    renderGlossary(strings),
-    renderNextSteps(strings),
+    renderGlossary(strings, ord('section-13'), {
+      findings: resolvedFindings,
+      obligationAssessment: analysis.obligationAssessment,
+      transactionalFlowEvaluated: manifest.siteSignals?.hasTransactionalFlow !== undefined,
+    }),
+    renderNextSteps(strings, ord('section-14'), manifest, analysis.language),
   ].join('\n');
 }
 

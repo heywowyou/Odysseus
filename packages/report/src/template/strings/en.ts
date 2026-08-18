@@ -4,25 +4,9 @@ export const en: ReportStrings = {
   toc: {
     eyebrow: 'Contents',
     heading: "What's in this report",
-    items: [
-      'Summary and priority actions',
-      'Legal exposure',
-      'The audit in numbers',
-      'Ranked priorities',
-      'Priority checklist (printable)',
-      'Observations outside the ranking',
-      'Accessibility conformance, WCAG 2.2 level AA',
-      'Render evidence: what search engines see',
-      'Performance measurements',
-      'Draft accessibility statement',
-      'Methodology and limitations',
-      'Appendix: full findings list',
-      'Glossary',
-      'Next steps & contact',
-    ],
   },
   statistics: {
-    eyebrow: '03 · The audit in numbers',
+    eyebrow: 'The audit in numbers',
     heading: 'What the analysis found',
     introTemplate:
       '{pages} pages analyzed, {findings} distinct findings after collapsing repeats. A finding present on several pages counts once.',
@@ -38,26 +22,32 @@ export const en: ReportStrings = {
     wcagFailingHeading: 'WCAG conformance',
     severityBreakdownHeading: 'Breakdown by severity',
     categoryBreakdownHeading: 'Breakdown by category',
+    belowThresholdRenderGapNote:
+      'The "Rendering" category shows 0 findings, but a real render gap was measured on at least one page, below the threshold at which a finding is actually generated (see the "Render evidence" section).',
     legendCriticalText: 'blocks visitors or indexing',
     legendSeriousText: 'severely degrades usability or conformance',
     legendModerateText: 'worth fixing, not urgent',
     legendMinorText: 'optimization',
   },
   conformanceSummary: {
-    eyebrow: '07 · Accessibility conformance',
+    eyebrow: 'Accessibility conformance',
     heading: 'WCAG 2.2 level AA criteria failing',
     bodyIntro:
       'A failing criterion is a conformance gap, not an aesthetic preference. This page can be handed directly to a developer, an agency, or legal counsel.',
-    scopeNote: 'This list cites criteria without asserting their precise legal applicability to this site.',
+    scopeNote:
+      'This list of technical criteria does not, on its own, imply a conclusion about this site\'s legal obligation: it is technical, not legal, and does not contradict the obligation status established in section 2.',
     criterionColumnLabel: 'Criterion',
     criterionNameColumnLabel: 'Name',
     findingsColumnLabel: 'Findings',
     occurrencesColumnLabel: 'Occurrences',
     pagesMaxColumnLabel: 'Pages (max)',
     emptyState: 'No WCAG 2.2 level AA criteria failing were detected on this site.',
+    heuristicSectionHeading: 'Signals to verify',
+    heuristicSectionNote:
+      'These rows come from a heuristic signal on alt-text quality, not a deterministic conformance test: they flag alt text that may be low-value (generic, a raw filename, or duplicated), without asserting a confirmed non-conformance. A manual review is needed before treating these as conformance gaps.',
   },
   observations: {
-    eyebrow: '06 · Observations',
+    eyebrow: 'Observations',
     heading: 'Findings outside the ranking',
     wrapperTitle: 'Third-party content wrapper pages',
     wrapperBodyTemplate:
@@ -78,22 +68,27 @@ export const en: ReportStrings = {
     wcagReferentialLabel: 'Standard audited',
     riskSmallLabel: 'Technical findings severity',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
+    riskBasisTemplate: 'Based on {critical} critical findings and {serious} serious findings',
     recipientLabel: 'Prepared for',
     legalNameLabel: 'Legal name',
   },
   executiveSummary: {
-    eyebrow: '01 · Summary',
+    eyebrow: 'Summary',
     heading: 'What to take away',
     startHereKicker: 'Where to start',
-    jumpLinkLabel: 'See →',
+    jumpLinkLabelTemplate: 'See priority {rank}: {title}',
+    topPriorityIsNotLegalWithPointerTemplate:
+      'Priority 1 above is a commercial issue, not a legal conformance issue: it was ranked first based on its effort-to-impact ratio. The legal conformance priorities rank at position {legalRank}.',
+    topPriorityIsNotLegalNoPointer:
+      "Priority 1 above is a commercial issue, not a legal conformance issue: it was ranked first based on its effort-to-impact ratio. None of the priorities in this report are directly tied to legal conformance; see the \"Legal exposure\" section for the detail.",
   },
   legalExposure: {
-    eyebrow: '02 · Legal exposure',
+    eyebrow: 'Legal exposure',
     heading: 'Legal exposure',
-    eaaDeadlineLabel: 'EAA deadline',
+    eaaDeadlineLabel: 'In application since',
     eaaDeadlineValue: '28 June 2025',
-    eaaDeadlineNote:
-      'Date the European Accessibility Act obligations enter into application, set by the directive itself.',
+    eaaDeadlineNoteTemplate:
+      'Date the European Accessibility Act obligations enter into application, set by the directive itself. The obligations have therefore already been in force for {duration}, not upcoming.',
     obligationStatusLabel: 'Obligation status',
     statusLabels: {
       in_scope: 'Confirmed',
@@ -110,13 +105,21 @@ export const en: ReportStrings = {
       undetermined:
         "The obligation status could not be established with certainty: the site does not publish a business identifier (SIREN/RCS), which prevents confirming which regulatory tier applies.",
     },
+    exposureHeading: 'Exposure if non-compliant',
+    sirenLabel: 'SIREN',
+    sirenTemplate: 'SIREN {siren}, as found during this audit ({date}).',
+    sirenUnavailable: 'No SIREN number could be identified for this site during this audit.',
     disclaimerNote:
       'Generated from the existing obligation assessment; no additional legal interpretation has been added. A review by qualified legal counsel remains necessary.',
     undeterminedActionNote:
       "This status would become determinable if the company's SIREN number were published on the site or provided to the Odysseus team.",
+    transactionalFlowOnSiteTemplate:
+      'The identified transactional flow was found directly on the following pages within the audited scope: {pages}.',
+    transactionalFlowDelegatedTemplate:
+      "The identified transactional flow is delegated to a third-party provider ({domain}). That domain was not crawled as part of this audit, which stays confined to the audited site's own domain.",
   },
   checklist: {
-    eyebrow: '05 · Printable checklist',
+    eyebrow: 'Printable checklist',
     heading: 'Priority checklist',
     intro: 'Page designed to be printed or captured on its own, no prose, just the essentials.',
     rankColumnLabel: '#',
@@ -124,9 +127,12 @@ export const en: ReportStrings = {
     effortColumnLabel: 'Effort',
     impactColumnLabel: 'Impact',
     pagesColumnLabel: 'Pages',
+    findingsColumnLabel: 'Findings',
+    wcagColumnLabel: 'WCAG',
+    statusDateColumnLabel: 'Status / Date',
   },
   themes: {
-    eyebrow: '04 · Priorities',
+    eyebrow: 'Priorities',
     headingTemplate: '{count} priorities, ranked by effort and impact',
     effortLabel: 'Effort',
     impactLabel: 'Business impact',
@@ -136,13 +142,16 @@ export const en: ReportStrings = {
     conformityNonConformant: 'Non-conformant',
     legalTagLabel: 'Conformance requirement',
     impactCitationLabel: 'Reference data point',
+    measuredLcpGapTemplate:
+      'Measured gap on this site: median LCP at {value}s, {gap}s above the "good" threshold ({threshold}s), not to be confused with the 0.1s figure in the statistic above.',
     quickWinBadgeLabel: 'Quick win',
+    recommendedActionsLabel: 'Recommended actions',
     effortImpactLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     pagesOfTotalTemplate: '{pages} {pageWord} of {totalPages}',
     refsLabel: 'Findings',
   },
   renderDiffEvidence: {
-    eyebrow: '08 · Render evidence',
+    eyebrow: 'Render evidence',
     heading: 'What a search engine receives before JavaScript runs',
     intro:
       'Every page is loaded twice: once with no JavaScript, the way a basic indexing crawler does, once in a full browser. The difference measures content invisible to search engines.',
@@ -158,9 +167,10 @@ export const en: ReportStrings = {
       'The only exception is the third-party content wrapper pages, see the Observations section.',
   },
   coreWebVitals: {
-    eyebrow: '09 · Performance',
+    eyebrow: 'Performance',
     heading: 'Performance measurements',
-    introTemplate: 'Median values aggregated across {pages} pages (Lighthouse), for illustration.',
+    introTemplate:
+      'Median values aggregated across {pages} pages. Simulated mobile with network throttling, single run, lab data (Lighthouse) rather than field data.',
     metricColumnLabel: 'Metric',
     valueColumnLabel: 'Median value',
     thresholdColumnLabel: '"Good" threshold',
@@ -176,76 +186,155 @@ export const en: ReportStrings = {
     ratingPoorLabel: 'poor',
   },
   accessibilityStatement: {
-    eyebrow: '10 · Statement',
+    eyebrow: 'Statement',
     heading: 'Draft accessibility statement',
     intro: 'Skeleton generated from the findings, to be completed by the client before publication.',
     criterionColumnLabel: 'Criterion',
     statusColumnLabel: 'Conformance status',
-    nonConformantPartialLabel: 'Non-conformant (partially)',
+    nonConformantLabel: 'Non-conformant',
     contactHeading: 'Contact',
     contactBody: '[Client to complete with a contact email address] - reporting process to be defined.',
+    contactEmailToConfirmTemplate: '{email} (auto-detected, to confirm before publication)',
     remediationPlanHeading: 'Remediation plan',
-    remediationPlanBody: 'See the "Ranked priorities" section above for the plan.',
+    remediationPlanBodyTemplate: 'See the "{section}" section above for the plan.',
+    firstPublicationDateLabel: 'Date of first publication',
+    technologiesLabel: 'Technologies relied upon',
+    testEnvironmentLabel: 'Test environment',
+    nonAccessibleContentLabel: 'Known non-accessible content',
+    feedbackProcedureLabel: 'Feedback procedure',
+    recoursePathLabel: 'Recourse path (Défenseur des droits)',
+    toCompletePlaceholder: 'To be completed by the client',
   },
   glossary: {
-    eyebrow: '13 · Glossary',
+    eyebrow: 'Glossary',
     heading: 'Glossary',
     terms: [
       {
+        id: 'wcag',
         term: 'WCAG 2.2',
         definition:
           'Web Content Accessibility Guidelines, the international standard of digital accessibility criteria, levels A / AA / AAA.',
       },
       {
+        id: 'eaa',
         term: 'EAA',
         definition:
           'European Accessibility Act: the EU directive requiring digital accessibility for many products and services starting 28 June 2025.',
       },
       {
+        id: 'rgaa',
         term: 'RGAA',
         definition: 'The French official standard operationalizing the WCAG criteria for French public bodies.',
       },
       {
+        id: 'en301549',
         term: 'EN 301 549',
         definition: 'European ICT accessibility standard, the technical reference cited by the EAA and public procurement.',
       },
       {
+        id: 'critical',
         term: 'Critical',
         definition: 'Highest severity: blocks an essential task for some users.',
       },
       {
+        id: 'serious',
         term: 'Serious',
         definition: 'Severely hinders use of the site without fully blocking it.',
       },
       {
+        id: 'moderate',
         term: 'Moderate',
         definition: 'Complicates use for certain profiles or contexts of use.',
       },
       {
+        id: 'minor',
         term: 'Minor',
         definition: 'Low-impact deviation, non-blocking.',
       },
       {
+        id: 'quick-win',
         term: 'Quick win',
         definition: 'Low-effort, high-impact fix, worth prioritizing.',
+      },
+      {
+        id: 'lcp',
+        term: 'LCP (Largest Contentful Paint)',
+        definition: 'Load time of the largest visible element on the page, an indicator of perceived speed.',
+      },
+      {
+        id: 'fcp',
+        term: 'FCP (First Contentful Paint)',
+        definition: 'Time before the first content appears on screen.',
+      },
+      {
+        id: 'tbt',
+        term: 'TBT (Total Blocking Time)',
+        definition: "Total blocking time: how long the page is unresponsive to a user's interactions.",
+      },
+      {
+        id: 'cls',
+        term: 'CLS (Cumulative Layout Shift)',
+        definition: 'Visual stability: measures unexpected element movement while the page is loading.',
+      },
+      {
+        id: 'speed-index',
+        term: 'Speed Index',
+        definition: "How quickly a page's visible content fills in while it loads.",
+      },
+      {
+        id: 'seo',
+        term: 'SEO',
+        definition: 'Search engine optimization: improving visibility in search engine results.',
+      },
+      {
+        id: 'geo',
+        term: 'GEO',
+        definition:
+          'Generative engine optimization: visibility in AI answer engines, distinct from classic search visibility.',
+      },
+      {
+        id: 'constat-vs-occurrence',
+        term: 'Finding / Occurrence',
+        definition:
+          'A finding is one distinct problem after grouping; an occurrence is each individual appearance of it on the site. One finding can carry several occurrences.',
+      },
+      {
+        id: 'selecteur',
+        term: 'Selector',
+        definition: "A technical expression pinpointing the element concerned in the page's code.",
+      },
+      {
+        id: 'dgccrf',
+        term: 'DGCCRF',
+        definition:
+          "The French consumer protection authority (Direction générale de la concurrence, de la consommation et de la répression des fraudes), the market surveillance authority named in this report.",
+      },
+      {
+        id: 'parcours-transactionnel',
+        term: 'Transactional flow',
+        definition:
+          'A site feature allowing a booking, cart, or payment directly online - the criterion that triggers the EAA obligation.',
       },
     ],
   },
   nextSteps: {
-    eyebrow: '14 · Next steps',
+    eyebrow: 'Next steps',
     heading: 'Next steps & contact',
     questionTitle: 'Questions?',
-    questionBody:
-      'Any request for clarification about a finding or a priority can be sent directly to the Odysseus team, citing the relevant finding ID.',
+    questionBodyTemplate:
+      'Any request for clarification about a finding or a priority can be sent to the Odysseus team at {email}, citing the relevant finding ID.',
     reauditTitle: 'Re-audits',
     reauditBody:
       'A re-audit re-runs the same scope and compares results against the previous report, finding by finding, to measure progress.',
     postFixTitle: 'Post-fix verification',
     postFixBody:
       'Once priorities are addressed, a targeted check confirms the fixed findings are genuinely resolved, without re-running a full audit.',
+    authorshipTemplate: 'Report produced by {producer}, generated on {date} (tool version {version}), report ID {reportId}.',
+    liabilityStatement:
+      'This report reproduces technical findings detected by automated tools, together with explanations and prioritization. It does not constitute legal advice; see the "Legal exposure" section and the methodology for coverage limits. Odysseus cannot be held liable for decisions made on the sole basis of this document.',
   },
   findingsAppendix: {
-    eyebrow: '12 · Appendix',
+    eyebrow: 'Appendix',
     heading: 'Full findings list',
     intro:
       'Every finding detected by the automated tools, including those judged minor and not carried into the priorities above.',
@@ -268,7 +357,6 @@ export const en: ReportStrings = {
     pagesMaxColumnLabel: 'Max pages',
     occurrencesColumnLabel: 'Occurrences',
     selectorColumnLabel: 'Sample selector',
-    ruleColumnLabel: 'Rule',
     findingSingular: 'finding',
     findingPlural: 'findings',
     occurrenceSingular: 'occurrence',
@@ -277,33 +365,34 @@ export const en: ReportStrings = {
     pagePlural: 'pages',
     upToLabel: 'up to',
     wcagLabel: 'WCAG',
-    minorAggregateTitle: 'Minor optimizations, condensed view',
-    minorAggregateGroupedSuffix: 'grouped by rule',
-    minorAggregateNote:
-      'These findings are real but secondary relative to the priorities above. Full page and selector detail is available on request in the technical export.',
     observationsCrossRefLabel: 'see Observations',
+    crawledPagesHeadingTemplate: 'Pages crawled ({count})',
   },
   methodology: {
-    eyebrow: '11 · Methodology and limitations',
+    eyebrow: 'Methodology and limitations',
     heading: 'How this audit was carried out',
     toolingParagraphTemplate:
       'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages crawled on {date} starting from the homepage.',
     automatedCoverageCaveat:
-      'Automated tools detect a well-documented but limited share of accessibility issues, commonly estimated between 30 and 40 percent of criteria. This is a property of any automated audit, not a reservation about this one: it guarantees every finding listed is verifiable. This audit adds an extended accessibility pass covering keyboard navigation, focus order, form error handling, video caption presence, and a heuristic red flag for alt text quality. This audit is fully automated: some accessibility properties cannot be reliably evaluated by automated tools alone and are not covered by any finding in this report.',
+      'Automated tools detect a well-documented but limited share of accessibility issues, a commonly cited industry estimate placing that share between 30 and 40 percent of criteria (a general estimate with no single attributable source, unlike the figures cited elsewhere in this report). This is a property of any automated audit, not a reservation about this one: it guarantees every finding listed is verifiable. This audit adds an extended accessibility pass covering keyboard navigation, focus order, form error handling, video caption presence, and a heuristic red flag for alt text quality. This audit is fully automated: some accessibility properties cannot be reliably evaluated by automated tools alone and are not covered by any finding in this report.',
     legalCitationInScopeTemplate:
       'This site falls under the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts}',
     legalCitationLikelyInScopeTemplate:
       "The available evidence indicates this site likely falls under the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts} This assessment could not be fully confirmed without a complete review of the site's transactional flow.",
     legalCitationOutOfScopeParagraph:
-      'Based on the available evidence (company size and the absence of a first party transactional flow), this site does not fall under the digital accessibility obligation set by loi n° 2023-171.',
+      'Based on the available evidence (company size and the absence of a booking, cart, or checkout flow directly online), this site does not fall under the digital accessibility obligation set by loi n° 2023-171.',
     legalCitationUndeterminedParagraph:
       'This report cites the relevant technical criteria (WCAG 2.2, EN 301 549) without asserting whether a specific legal obligation applies to your business, which depends on its size and sector.',
     legalCitationEffectifFactTemplate: 'The company has {label} according to the Sirene registry.',
     legalCitationTurnoverFactTemplate: 'Declared annual turnover exceeds the {threshold} threshold.',
-    legalCitationTransactionalFlowFact:
-      'The site offers a first party transactional flow (booking, cart, or checkout).',
+    legalCitationTransactionalFlowFactTemplate: 'The site offers a {flowType} directly online.',
     legalCitationTransactionalFlowUnknownFact:
-      'Whether the site offers a first party transactional flow could not be confirmed across the whole site.',
+      'Whether the site offers a booking, cart, or checkout flow directly online could not be confirmed across the whole site.',
+    transactionalFlowTypeLabels: {
+      booking: 'booking flow',
+      cartOrPayment: 'cart or checkout flow',
+      both: 'booking, cart, or checkout flow',
+    },
     legalCitationExemptionRouteSentence:
       'The only documented route to exemption from this obligation is a disproportionate burden waiver request filed via Demarche Simplifiee.',
     legalCitationManualSirenWithFindingTemplate:

@@ -1,5 +1,5 @@
 import type { AuditManifest, Finding, ReferenceStat, ReportLanguage, StatSector, Theme } from '@odysseus/core';
-import { selectReferenceStats } from '@odysseus/core';
+import { CORE_WEB_VITAL_THRESHOLDS, selectReferenceStats } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatFindingIdRefs, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
@@ -40,6 +40,53 @@ function pageWord(strings: ReportStrings, count: number): string {
   return count === 1 ? strings.findingsAppendix.pageSingular : strings.findingsAppendix.pagePlural;
 }
 
+const RATIO_KINDS_PER_TENTH_SECOND: ReadonlySet<string> = new Set(['conversion-uplift-per-0.1s', 'aov-uplift-per-0.1s']);
+
+function median(values: readonly number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
+}
+
+function toSeconds(ms: number, language: ReportLanguage): string {
+  return formatNumber(Math.round((ms / 1000) * 10) / 10, language);
+}
+
+/** item 14: a Deloitte "0.1 second = X% conversion" stat invites a reader
+ *  to naively multiply that relationship by however many seconds they
+ *  assume their site is over threshold. States the theme's own measured
+ *  LCP gap instead of leaving that extrapolation to the reader - only for
+ *  the two ratio kinds actually expressed per 0.1s, and only when this
+ *  site's own median LCP (across the theme's affected pages) is
+ *  genuinely above the "good" threshold, so a site that is actually fine
+ *  never gets a manufactured gap sentence. */
+function measuredLcpGapNote(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  stat: ReferenceStat,
+  themeFindings: readonly Finding[],
+  manifest: AuditManifest,
+): string | undefined {
+  if (!stat.ratio || !RATIO_KINDS_PER_TENTH_SECOND.has(stat.ratio.kind)) return undefined;
+
+  const themePageUrls = new Set(themeFindings.flatMap((f) => f.pageUrls));
+  const lcpValues = manifest.pages
+    .filter((page) => themePageUrls.has(page.url))
+    .map((page) => page.coreWebVitals?.lcp?.numericValue)
+    .filter((value): value is number => value !== null && value !== undefined);
+
+  const medianLcp = median(lcpValues);
+  const lcpThreshold = CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'lcp');
+  if (medianLcp === null || !lcpThreshold || medianLcp <= lcpThreshold.good) return undefined;
+
+  return fillTemplate(strings.themes.measuredLcpGapTemplate, {
+    value: toSeconds(medianLcp, language),
+    gap: toSeconds(medianLcp - lcpThreshold.good, language),
+    threshold: toSeconds(lcpThreshold.good, language),
+  });
+}
+
 function renderTheme(
   strings: ReportStrings,
   language: ReportLanguage,
@@ -47,6 +94,7 @@ function renderTheme(
   findingsById: Map<string, Finding>,
   totalPagesScanned: number,
   citationStat: ReferenceStat | undefined,
+  manifest: AuditManifest,
 ): string {
   const t = strings.themes;
   const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
@@ -65,7 +113,26 @@ function renderTheme(
     ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(theme.legalRelevance)}</p>`
     : '';
 
-  const citationBox = citationStat ? renderReferenceStatNote(t.impactCitationLabel, citationStat, language) : '';
+  const gapNote = citationStat ? measuredLcpGapNote(strings, language, citationStat, themeFindings, manifest) : undefined;
+  const citationBox = citationStat
+    ? renderReferenceStatNote(t.impactCitationLabel, citationStat, language, undefined, gapNote)
+    : '';
+
+  // item 27: a diagnosis without a prescription - the LLM already writes
+  // recommendedActions on every theme (writing-schema.ts, capped at 3,
+  // language/severity-vocabulary validated), it was simply never
+  // rendered.
+  const recommendedActionsBox =
+    theme.recommendedActions.length > 0
+      ? `
+        <div style="margin-top:4px">
+          <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.recommendedActionsLabel)}</div>
+          <ul style="margin:0;padding-left:1.2em;font-size:12.5px;opacity:0.9">
+            ${theme.recommendedActions.map((action) => `<li>${escapeHtml(action)}</li>`).join('')}
+          </ul>
+        </div>
+      `
+      : '';
 
   const pagesText = fillTemplate(t.pagesOfTotalTemplate, {
     pages: formatNumber(uniquePages, language),
@@ -88,6 +155,7 @@ function renderTheme(
       <p class="card-body" style="opacity:0.9">${escapeHtml(theme.businessImpact)}</p>
       ${legalBox}
       ${citationBox}
+      ${recommendedActionsBox}
       <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;font-size:12px;opacity:0.75;margin-top:4px">
         <span>${escapeHtml(t.effortLabel)} : <strong>${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
         <span>${escapeHtml(t.impactLabel)} : <strong>${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
@@ -107,8 +175,50 @@ function isCitableThemeCategory(category: Theme['category']): category is Citabl
   return category === 'accessibility' || category === 'seo' || category === 'performance';
 }
 
+/** item 13: the Baymard cart-abandonment/checkout-uplift stats are tagged
+ *  ['accessibility', 'seo'] (stats.ts) so they can anchor either kind of
+ *  theme, but their whole relevance is commercial checkout/cart context -
+ *  a real report cited the 70.22% cart-abandonment figure on an ARIA
+ *  structure finding for `.collection__list`, a generic listing element
+ *  with no stated link to checkout at all. These two ratio kinds are the
+ *  only ones in the table whose citation only makes sense when the
+ *  specific theme actually touches a page the scan found transactional-
+ *  flow evidence on, not merely "the site has a transactional flow
+ *  somewhere". */
+const RATIO_KINDS_REQUIRING_TRANSACTIONAL_CONTEXT: ReadonlySet<string> = new Set([
+  'cart-abandonment-rate',
+  'checkout-uplift',
+]);
+
+/** Pages the scan found direct transactional-flow evidence on (a checkout
+ *  form, a payment or booking-engine script) - assessObligations() only
+ *  ever attaches a 'transactional-flow' fact when SiteSignals.
+ *  hasTransactionalFlow is confirmed true, and that fact carries the
+ *  exact TransactionalFlowEvidence[] (each with its own pageUrl) the
+ *  detector recorded, per packages/scanner's checks/transactional-flow.ts. */
+function transactionalFlowPageUrls(analysis: StoredAnalysis): ReadonlySet<string> {
+  const urls = new Set<string>();
+  for (const basis of analysis.obligationAssessment?.basis ?? []) {
+    for (const fact of basis.facts) {
+      if (fact.kind !== 'transactional-flow') continue;
+      for (const evidence of fact.evidence) urls.add(evidence.pageUrl);
+    }
+  }
+  return urls;
+}
+
+function isStatEligibleForTheme(
+  stat: ReferenceStat,
+  themeFindings: readonly Finding[],
+  transactionalPageUrls: ReadonlySet<string>,
+): boolean {
+  if (!stat.ratio || !RATIO_KINDS_REQUIRING_TRANSACTIONAL_CONTEXT.has(stat.ratio.kind)) return true;
+  return themeFindings.some((finding) => finding.pageUrls.some((url) => transactionalPageUrls.has(url)));
+}
+
 export function renderThemes(
   strings: ReportStrings,
+  ordinal: number,
   analysis: StoredAnalysis,
   findings: Finding[],
   manifest: AuditManifest,
@@ -139,11 +249,15 @@ export function renderThemes(
   // accessibility themes each restate the identical Deloitte sentence.
   const citedCategories = new Set<string>();
   const citationByRank = new Map<number, ReferenceStat>();
+  const transactionalPageUrls = transactionalFlowPageUrls(analysis);
   for (const theme of sortedThemes) {
     if (!isCitableThemeCategory(theme.category)) continue;
     if (citedCategories.has(theme.category)) continue;
+    const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
     const candidates = selectReferenceStats(theme.category, sector);
-    const top = candidates.find((stat) => !citedStatIds.has(stat.id));
+    const top = candidates.find(
+      (stat) => !citedStatIds.has(stat.id) && isStatEligibleForTheme(stat, themeFindings, transactionalPageUrls),
+    );
     if (top) {
       citationByRank.set(theme.priorityRank, top);
       citedCategories.add(theme.category);
@@ -153,12 +267,20 @@ export function renderThemes(
 
   const themeBlocks = sortedThemes
     .map((theme) =>
-      renderTheme(strings, analysis.language, theme, findingsById, totalPagesScanned, citationByRank.get(theme.priorityRank)),
+      renderTheme(
+        strings,
+        analysis.language,
+        theme,
+        findingsById,
+        totalPagesScanned,
+        citationByRank.get(theme.priorityRank),
+        manifest,
+      ),
     )
     .join('');
 
   return sheet(`
-    ${renderSheetHeader(strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }))}
+    ${renderSheetHeader(ordinal, strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }))}
     ${themeBlocks}
   `, '', 'section-04');
 }

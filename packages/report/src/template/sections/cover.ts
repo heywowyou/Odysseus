@@ -1,8 +1,9 @@
-import type { AuditManifest, AuditManualFields } from '@odysseus/core';
+import type { AuditManifest, AuditManualFields, Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatDate, sheet } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatDate, formatNumber, sheet } from '../html-utils.js';
 import { SEVERITY } from '../design-tokens.js';
+import { computeStatistics } from '../statistics.js';
 
 /** The report always states its own language in that same language - a
  *  French report says "Français" regardless of what other languages are
@@ -28,8 +29,37 @@ const RISK_COLOR: Record<StoredAnalysis['overallRisk'], { color: string; bg: str
 function field(label: string, valueHtml: string): string {
   return `
     <div>
-      <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">${escapeHtml(label)}</div>
+      <div style="text-transform:uppercase;letter-spacing:0.02em;font-size:10px;opacity:0.5;margin-bottom:8px">${escapeHtml(label)}</div>
       <div style="font-size:18px">${valueHtml}</div>
+    </div>
+  `;
+}
+
+const RISK_LEVEL_ORDER: readonly StoredAnalysis['overallRisk'][] = ['low', 'medium', 'high'];
+
+/** item 42: the badge showed "Élevé" with no scale and no stated basis -
+ *  the reader had no way to calibrate the word or verify how the tool
+ *  got there. Shows the full three-point scale with the current level
+ *  highlighted, plus a one-line note on the underlying critical/serious
+ *  counts (computeStatistics, the same live-computed source item 10's
+ *  stats-page tile already uses). */
+function renderRiskBadge(strings: ReportStrings, analysis: StoredAnalysis, findings: readonly Finding[], manifest: AuditManifest): string {
+  const scale = RISK_LEVEL_ORDER.map((level) => {
+    const isCurrent = level === analysis.overallRisk;
+    const levelColor = RISK_COLOR[level];
+    return `<span style="padding:4px 10px;border-radius:calc(var(--radius-md)*0.75);font-size:${isCurrent ? '14px' : '11px'};font-weight:${isCurrent ? '500' : '400'};background:${isCurrent ? levelColor.bg : 'transparent'};color:${isCurrent ? levelColor.color : 'color-mix(in srgb, var(--color-text) 50%, transparent)'};opacity:${isCurrent ? '1' : '0.7'}">${escapeHtml(strings.cover.riskLevels[level])}</span>`;
+  }).join('');
+
+  const stats = computeStatistics(findings, manifest);
+  const basisNote = fillTemplate(strings.cover.riskBasisTemplate, {
+    critical: formatNumber(stats.critical, analysis.language),
+    serious: formatNumber(stats.serious, analysis.language),
+  });
+
+  return `
+    <div>
+      <div style="display:inline-flex;align-items:center;gap:4px">${scale}</div>
+      <div style="font-size:11px;opacity:0.55;margin-top:6px">${escapeHtml(basisNote)}</div>
     </div>
   `;
 }
@@ -55,11 +85,10 @@ export function renderCover(
   strings: ReportStrings,
   manifest: AuditManifest,
   analysis: StoredAnalysis,
+  findings: readonly Finding[] = [],
   manualFields?: AuditManualFields,
 ): string {
   const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
-  const riskLabel = strings.cover.riskLevels[analysis.overallRisk];
-  const risk = RISK_COLOR[analysis.overallRisk];
 
   // Manual-input-layer milestone, rule 5: every field absent must
   // produce a correctly rendering report - the headline identity falls
@@ -74,7 +103,7 @@ export function renderCover(
     `
     <div class="footer-source">${escapeHtml(strings.footer.confidentialityLabel)} &middot; ${escapeHtml(manifest.siteUrl)}</div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-4)">
-      <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(strings.cover.kicker)}</div>
+      <div style="font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(strings.cover.kicker)}</div>
       <h1 style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(nomCommercial ?? strings.cover.reportTitle)}</h1>
       <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(nomCommercial ? strings.cover.reportTitle : strings.cover.subtitle)}</div>
       ${raisonSociale ? `<div style="font-size:13px;opacity:0.6">${escapeHtml(strings.cover.legalNameLabel)} : ${escapeHtml(raisonSociale)}</div>` : ''}
@@ -87,10 +116,7 @@ export function renderCover(
         ${field(strings.cover.pagesScannedLabel, escapeHtml(fillTemplate(strings.cover.pagesScannedValueTemplate, { count: pagesScanned })))}
         ${field(strings.cover.languageLabel, escapeHtml(LANGUAGE_SELF_NAME[analysis.language]))}
         ${field(strings.cover.wcagReferentialLabel, 'WCAG 2.2 AA')}
-        ${field(
-          strings.cover.riskSmallLabel,
-          `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:calc(var(--radius-md)*0.75);font-size:14px;font-weight:500;background:${risk.bg};color:${risk.color}">${escapeHtml(riskLabel)}</span>`,
-        )}
+        ${field(strings.cover.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest))}
         ${recipientName ? field(strings.cover.recipientLabel, escapeHtml(recipientName)) : ''}
       </div>
     </div>

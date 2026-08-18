@@ -11,7 +11,9 @@
  * "sev-critical" with the severity word "critical" itself.
  */
 import { describe, expect, it } from 'vitest';
+import { REFERENCE_STAT_TABLE } from '@odysseus/core';
 import { renderHtml } from './render-html.js';
+import { escapeHtml } from './html-utils.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import { en } from './strings/en.js';
 import { fr } from './strings/fr.js';
@@ -27,6 +29,28 @@ function flattenStrings(value: unknown): string[] {
 
 function stripStyleBlock(html: string): string {
   return html.replace(/<style>[\s\S]*?<\/style>/, '').replace(/\sclass="[^"]*"/g, '');
+}
+
+/** report-feedback-palais-gallien.md item 13: a reference-stat citation
+ *  (packages/core/src/reference-stats/stats.ts) can name an
+ *  organization in a proper noun that is deliberately identical in both
+ *  the French and English citation sentence (e.g. "W3C Web Accessibility
+ *  Initiative") - real, intentional bilingual content, not a template-
+ *  chrome leak. Once item 13's transactional-flow eligibility gate
+ *  started excluding some citations, a different, previously-unselected
+ *  citation carrying this exact collision surfaced in the sas-fernande
+ *  fixture: the English chrome word "Accessibility" (categoryLabels.
+ *  accessibility) matched as a substring of that citation's proper noun.
+ *  Citation sentences are code-owned content, not template chrome (the
+ *  class of bug this test actually guards), so they are stripped from
+ *  the haystack before the chrome-leak check runs, the same way
+ *  stripStyleBlock removes a different known-irrelevant region. */
+function stripReferenceStatCitations(html: string): string {
+  let stripped = html;
+  for (const stat of REFERENCE_STAT_TABLE) {
+    stripped = stripped.split(escapeHtml(stat.citation.fr)).join('').split(escapeHtml(stat.citation.en)).join('');
+  }
+  return stripped;
 }
 
 /**
@@ -61,8 +85,8 @@ describe('report chrome strings never leak into the other language', () => {
     const analysis = await loadSasFernandeAnalysis('fr');
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
-    const html = stripStyleBlock(
-      await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages }),
+    const html = stripReferenceStatCitations(
+      stripStyleBlock(await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages })),
     );
 
     for (const value of enOnlyValues) {
@@ -78,8 +102,8 @@ describe('report chrome strings never leak into the other language', () => {
     const analysis = await loadSasFernandeAnalysis('en');
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
-    const html = stripStyleBlock(
-      await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages }),
+    const html = stripReferenceStatCitations(
+      stripStyleBlock(await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages })),
     );
 
     for (const value of frOnlyValues) {

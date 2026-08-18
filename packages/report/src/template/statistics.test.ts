@@ -40,6 +40,10 @@ describe('computeStatistics', () => {
       pagesWithWcagFailure: 20,
       accessibilityCount: 23,
       seoRenderingCount: 16,
+      // item 39: the real haaitza manifest predates renderDiffMissingPercent
+      // being recorded per page, so this is false here, not a claim that
+      // no below-threshold gap exists on that site.
+      hasBelowThresholdRenderGap: false,
     });
     // categoryCounts checked structurally rather than against a second
     // hand-verified table: it must sum to totalFindings (every finding
@@ -50,5 +54,57 @@ describe('computeStatistics', () => {
     expect(categorySum).toBe(stats.totalFindings);
     expect(categoryCounts.accessibility).toBe(stats.accessibilityCount);
     expect(categoryCounts.seo + categoryCounts.rendering).toBe(stats.seoRenderingCount);
+  });
+});
+
+// item 39: "Rendu : 0" contradicted section 08's own reported gap when
+// that gap sits below the render-diff finding-emission threshold - a
+// real, below-threshold percentage, not a bug or a genuine absence.
+describe('item 39: hasBelowThresholdRenderGap', () => {
+  function buildManifest(missingPercents: (number | undefined)[]): AuditManifest {
+    return {
+      auditId: 'a1',
+      kind: 'audit',
+      siteUrl: 'https://example.com',
+      startedAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+      tool: {} as AuditManifest['tool'],
+      config: {} as AuditManifest['config'],
+      crawl: {
+        startUrl: 'https://example.com/',
+        visitedCount: missingPercents.length,
+        maxPages: 20,
+        maxDepth: 3,
+        robotsTxtFound: false,
+        effectiveDelayMs: 500,
+      },
+      pages: missingPercents.map((p, i) => ({
+        url: `https://example.com/${i}`,
+        depth: 0,
+        status: 'visited' as const,
+        errors: {},
+        ...(p !== undefined ? { renderDiffMissingPercent: p } : {}),
+      })),
+    };
+  }
+
+  it('is true when a page has a real gap below the 20% emission threshold (the reported 13% case)', () => {
+    const stats = computeStatistics([], buildManifest([13]));
+    expect(stats.hasBelowThresholdRenderGap).toBe(true);
+  });
+
+  it('is false when no page has any measured gap', () => {
+    const stats = computeStatistics([], buildManifest([undefined]));
+    expect(stats.hasBelowThresholdRenderGap).toBe(false);
+  });
+
+  it('is false when the only gap is at or above the emission threshold (a real finding already covers it)', () => {
+    const stats = computeStatistics([], buildManifest([25]));
+    expect(stats.hasBelowThresholdRenderGap).toBe(false);
+  });
+
+  it('is false when the only gap is below the evidence-inclusion threshold (genuinely negligible)', () => {
+    const stats = computeStatistics([], buildManifest([2]));
+    expect(stats.hasBelowThresholdRenderGap).toBe(false);
   });
 });

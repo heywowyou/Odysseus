@@ -47,7 +47,7 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
     const manifest = await loadSasFernandeManifest();
     expect(findings.some((f) => f.severity === 'minor')).toBe(true);
 
-    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, manifest, 'general');
+    const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, manifest, 'general');
     const minorFinding = findings.find((f) => f.severity === 'minor');
     expect(html).toContain(minorFinding?.ruleId ?? '__missing__');
   });
@@ -55,7 +55,7 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
   it('groups findings under their category heading', async () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
-    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, manifest, 'general');
+    const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, manifest, 'general');
 
     expect(html).toContain('Accessibility');
     expect(html).toContain('Performance');
@@ -64,7 +64,7 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
   it('tags a rule group as diverted only when every one of its findings is confined to diverted pages', async () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
-    const html = renderFindingsAppendix(getStrings('fr'), 'fr', findings, manifest, 'general');
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
 
     // f009 (link-in-text-block) is confined entirely to /mentions-legales/,
     // which matches the legal-page pattern - real diversion, not a
@@ -100,12 +100,13 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
       lastSeenAt: new Date(),
     };
 
-    const withoutDedupe = renderFindingsAppendix(getStrings('fr'), 'fr', [geoFinding], buildManifest(), 'general');
+    const withoutDedupe = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [geoFinding], buildManifest(), 'general');
     expect(withoutDedupe).toContain('Repère chiffré');
 
     const allGeoStatIds = new Set(selectReferenceStats('geo', 'general').map((stat) => stat.id));
     const withDedupe = renderFindingsAppendix(
       getStrings('fr'),
+      12,
       'fr',
       [geoFinding],
       buildManifest(),
@@ -138,7 +139,7 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
       },
     ];
 
-    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, buildManifest(), 'general');
+    const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, buildManifest(), 'general');
     expect(html).not.toContain('<img src=x onerror=alert(1)>');
     expect(html).toContain('&lt;img');
   });
@@ -172,8 +173,149 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
       },
     ];
 
-    const html = renderFindingsAppendix(getStrings('en'), 'en', findings, buildManifest(), 'general');
+    const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, buildManifest(), 'general');
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
+  });
+});
+
+// item 38 [REGRESSION]: rule titles and codes rendered in English inside
+// a French report.
+describe('item 38: rule titles and codes render in French with a gloss', () => {
+  it('renders the French translation, not the English title, for a known rule', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+
+    expect(html).toContain('Le contraste des couleurs est insuffisant');
+    expect(html).not.toContain('Elements must meet minimum color contrast ratio thresholds');
+  });
+
+  it('renders a plain-language gloss under the machine rule code', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+
+    expect(html).toContain('color-contrast');
+    expect(html).toContain('en dessous du seuil minimal requis');
+  });
+
+  it('leaves the English title untranslated for an English report', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+    const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, manifest, 'general');
+
+    expect(html).toContain('Elements must meet minimum color contrast ratio thresholds');
+  });
+});
+
+// item 25: every finding stated a page count ("9 pages") and never the
+// actual URLs - the largest gap between the paid full-audit spec ("Full
+// page and selector detail for every finding") and what the appendix
+// delivered.
+describe('item 25: every finding lists its actual page URLs, not just a count', () => {
+  it('lists all page URLs for a finding present on multiple pages', () => {
+    const findings: Finding[] = [
+      {
+        findingId: 'f001',
+        auditId: 'a',
+        schemaVersion: 1,
+        source: 'axe',
+        ruleId: 'color-contrast',
+        category: 'accessibility',
+        severity: 'serious',
+        wcagCriteria: ['1.4.3'],
+        title: 'Insufficient contrast',
+        description: 'desc',
+        pageUrls: ['https://example.com/a', 'https://example.com/b', 'https://example.com/c'],
+        occurrences: 3,
+        elements: [],
+        rawEvidence: {},
+        dedupeKey: 'd1',
+        firstSeenAt: new Date(),
+        lastSeenAt: new Date(),
+      },
+    ];
+
+    const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, buildManifest(), 'general');
+    expect(html).toContain('https://example.com/a');
+    expect(html).toContain('https://example.com/b');
+    expect(html).toContain('https://example.com/c');
+  });
+});
+
+// item 29: the client had no way to verify the crawl scope they paid for
+// beyond a bare count on the cover.
+describe('item 29: the list of crawled URLs is printed', () => {
+  it('lists every visited page URL from the real sas-fernande.fr manifest', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+
+    const visitedUrls = manifest.pages.filter((p) => p.status === 'visited').map((p) => p.url);
+    expect(visitedUrls.length).toBeGreaterThan(0);
+    for (const url of visitedUrls) {
+      expect(html).toContain(url);
+    }
+  });
+});
+
+// item 40: the GEO citation (Phocuswright, 56%) visually outweighed the
+// single minor finding it was attached to - it rendered right under the
+// section heading, ahead of every finding row, reading as a headline stat
+// rather than context for one finding.
+describe('item 40: the GEO citation renders after the finding rows, not as a section lead-in', () => {
+  it('the geo finding row appears before the citation note in the rendered HTML', () => {
+    const geoFinding: Finding = {
+      findingId: 'f001',
+      auditId: 'a',
+      schemaVersion: 1,
+      source: 'custom',
+      ruleId: 'entity-data-incomplete',
+      category: 'geo',
+      severity: 'minor',
+      wcagCriteria: [],
+      title: 'Incomplete entity data',
+      description: 'desc',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: 'k',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [geoFinding], buildManifest(), 'general');
+
+    const findingIndex = html.indexOf('entity-data-incomplete');
+    const citationIndex = html.indexOf('Repère chiffré');
+    expect(findingIndex).toBeGreaterThan(-1);
+    expect(citationIndex).toBeGreaterThan(-1);
+    expect(findingIndex).toBeLessThan(citationIndex);
+  });
+});
+
+// item 26: the appendix used to gate minor-finding detail behind
+// "available on request in the technical export," a mechanism that never
+// existed anywhere in the codebase, inside a section titled "complete
+// list of findings" for the single paid tier this product now has.
+describe('item 26: minor findings get the same full page/selector detail as every other severity', () => {
+  it('never renders the old "on request" gating copy', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+    expect(html).not.toContain('disponible sur demande');
+  });
+
+  it('a minor finding renders its own findingId and page URLs, not a condensed per-rule summary', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+    const minorFinding = findings.find((f) => f.severity === 'minor');
+    expect(minorFinding).toBeDefined();
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+    expect(html).toContain(minorFinding!.findingId);
+    expect(html).toContain(minorFinding!.pageUrls[0]!);
   });
 });

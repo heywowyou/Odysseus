@@ -11,6 +11,7 @@ describe('renderRenderDiffEvidence', () => {
   it('drops the "sur {selector}" clause instead of rendering "sur -." when no selector is known (B2)', () => {
     const html = renderRenderDiffEvidence(
       fr,
+      8,
       'fr',
       [{ pageUrl: 'https://example.com/', missingPercent: 12, rawTextLength: null, renderedTextLength: null, selector: '' }],
       1,
@@ -23,6 +24,7 @@ describe('renderRenderDiffEvidence', () => {
   it('still renders the full sentence when a selector is known', () => {
     const html = renderRenderDiffEvidence(
       fr,
+      8,
       'fr',
       [{ pageUrl: 'https://example.com/', missingPercent: 40, rawTextLength: 10, renderedTextLength: 100, selector: '.hero' }],
       1,
@@ -32,14 +34,14 @@ describe('renderRenderDiffEvidence', () => {
   });
 
   it('renders a positive statement, not an empty section, when there is nothing to show (B6)', () => {
-    const html = renderRenderDiffEvidence(fr, 'fr', [], 0, 0);
+    const html = renderRenderDiffEvidence(fr, 8, 'fr', [], 0, 0);
 
     expect(html).toContain('conservent leur texte dans le HTML brut');
     expect(html).not.toContain("d&#39;intégration de contenu tiers font exception");
   });
 
   it('names wrapper/legal pages as the exception when some were excluded (B6)', () => {
-    const html = renderRenderDiffEvidence(fr, 'fr', [], 0, 2);
+    const html = renderRenderDiffEvidence(fr, 8, 'fr', [], 0, 2);
 
     expect(html).toContain('conservent leur texte dans le HTML brut');
     expect(html).toContain("d&#39;intégration de contenu tiers font exception");

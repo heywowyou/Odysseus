@@ -13,7 +13,7 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
       loadSasFernandeManifest(),
     ]);
 
-    const html = renderThemes(getStrings('fr'), analysis, findings, manifest);
+    const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
     const rendered = selectRenderedThemes(analysis.themes);
 
     for (const theme of rendered) {
@@ -37,7 +37,7 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
       loadSasFernandeManifest(),
     ]);
 
-    const html = renderThemes(getStrings('fr'), analysis, findings, manifest);
+    const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
     const rendered = selectRenderedThemes(analysis.themes);
     const quickWinThemes = rendered.filter(isQuickWinTheme);
     const nonQuickWinThemes = rendered.filter((t) => !isQuickWinTheme(t));
@@ -60,7 +60,7 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
       loadSasFernandeManifest(),
     ]);
 
-    const html = renderThemes(getStrings('fr'), analysis, findings, manifest);
+    const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
     const rendered = selectRenderedThemes(analysis.themes);
 
     const conformantTheme = rendered.find((t) => t.legalRelevance !== undefined);
@@ -99,7 +99,7 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
       ],
     };
 
-    const html = renderThemes(getStrings('fr'), performanceOnly, findings, manifest);
+    const html = renderThemes(getStrings('fr'), 4, performanceOnly, findings, manifest);
 
     expect(html).toContain('Repère chiffré');
     expect(html).toContain('Deloitte');
@@ -139,7 +139,7 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
     };
     const citedStatIds = new Set<string>();
 
-    const html = renderThemes(getStrings('fr'), twoPerformanceThemes, findings, manifest, citedStatIds);
+    const html = renderThemes(getStrings('fr'), 4, twoPerformanceThemes, findings, manifest, citedStatIds);
 
     // Only the first (highest-priority) theme in a category gets a
     // citation per the existing one-per-category rule, so this also
@@ -173,9 +173,231 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
     const sector = analysis.obligationAssessment?.sector ?? 'general';
     const citedStatIds = new Set(selectReferenceStats('performance', sector).map((stat) => stat.id));
 
-    const html = renderThemes(getStrings('fr'), performanceOnly, findings, manifest, citedStatIds);
+    const html = renderThemes(getStrings('fr'), 4, performanceOnly, findings, manifest, citedStatIds);
 
     expect(html).not.toContain('Repère chiffré');
+  });
+});
+
+// item 13: a real report cited the Baymard 70.22% cart-abandonment
+// statistic on an ARIA structure finding for `.collection__list`, a
+// generic listing element with no stated relationship to checkout at
+// all. selectReferenceStats('accessibility', 'general') ranks that stat
+// first for a plain accessibility theme, so without an eligibility check
+// it wins the citation slot regardless of what the theme's findings
+// actually are.
+describe('item 13: transactional-context-only citations (cart-abandonment, checkout-uplift) only attach on a page with real transactional-flow evidence', () => {
+  const ariaFinding = {
+    findingId: 'f001',
+    auditId: 'a1',
+    schemaVersion: 1 as const,
+    source: 'axe' as const,
+    ruleId: 'aria-required-children',
+    category: 'accessibility' as const,
+    severity: 'serious' as const,
+    wcagCriteria: ['1.3.1'],
+    title: 'Certain ARIA roles must contain particular children',
+    description: 'd',
+    pageUrls: ['https://example.com/products'],
+    occurrences: 3,
+    elements: [{ pageUrl: 'https://example.com/products', selector: '.collection__list', snippet: '' }],
+    rawEvidence: {},
+    dedupeKey: 'd1',
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+  };
+
+  function buildAnalysis(overrides: Partial<Parameters<typeof renderThemes>[2]> = {}) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title: 'Structure ARIA incorrecte',
+          category: 'accessibility' as const,
+          businessImpact: 'Impact',
+          effort: 'medium' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds: ['f001'],
+          recommendedActions: ['Action'],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+      ...overrides,
+    };
+  }
+
+  it('does not cite a cart-abandonment/checkout-uplift stat on a finding whose page has no transactional-flow evidence at all', () => {
+    const analysis = buildAnalysis();
+    const manifest = { pages: [{ url: 'https://example.com/products', status: 'visited' }] } as never;
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, [ariaFinding], manifest);
+
+    expect(html).not.toContain('70,22');
+    expect(html).not.toContain('35,26');
+  });
+
+  it('does not cite it even when the site has transactional-flow evidence elsewhere, if not on this finding\'s own page', () => {
+    const analysis = buildAnalysis({
+      obligationAssessment: {
+        status: 'in_scope',
+        basis: [
+          {
+            regimeId: 'eaa-loi-2023-171',
+            facts: [
+              {
+                kind: 'transactional-flow',
+                evidence: [
+                  { kind: 'checkout-form', selector: 'form', pageUrl: 'https://example.com/checkout', detail: '' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const manifest = { pages: [{ url: 'https://example.com/products', status: 'visited' }] } as never;
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, [ariaFinding], manifest);
+
+    expect(html).not.toContain('70,22');
+  });
+
+  it('does cite it when the finding\'s own page carries real transactional-flow evidence', () => {
+    const analysis = buildAnalysis({
+      obligationAssessment: {
+        status: 'in_scope',
+        basis: [
+          {
+            regimeId: 'eaa-loi-2023-171',
+            facts: [
+              {
+                kind: 'transactional-flow',
+                evidence: [
+                  {
+                    kind: 'checkout-form',
+                    selector: 'form',
+                    pageUrl: 'https://example.com/products',
+                    detail: '',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+    const manifest = { pages: [{ url: 'https://example.com/products', status: 'visited' }] } as never;
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, [ariaFinding], manifest);
+
+    expect(html).toContain('70,22');
+  });
+});
+
+// item 14: the Deloitte per-0.1s citations invite a reader to naively
+// multiply the stated relationship by however many seconds they assume
+// their site is over threshold - the real gap on a real report was 3.4s
+// above the "good" LCP threshold, not 0.1s.
+describe('item 14: a per-0.1s performance citation states the site\'s own measured LCP gap', () => {
+  const perfFinding = {
+    findingId: 'f001',
+    auditId: 'a1',
+    schemaVersion: 1 as const,
+    source: 'lighthouse' as const,
+    ruleId: 'largest-contentful-paint',
+    category: 'performance' as const,
+    severity: 'serious' as const,
+    wcagCriteria: [],
+    title: 'Largest Contentful Paint',
+    description: 'd',
+    pageUrls: ['https://example.com/'],
+    occurrences: 1,
+    elements: [],
+    rawEvidence: {},
+    dedupeKey: 'd1',
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+  };
+
+  const performanceAnalysis = {
+    auditId: 'a1',
+    language: 'fr' as const,
+    model: 'test-model',
+    temperature: 0,
+    generatedAt: new Date(),
+    overallRisk: 'medium' as const,
+    executiveSummary: 'summary',
+    themes: [
+      {
+        title: 'Vitesse mobile insuffisante',
+        category: 'performance' as const,
+        businessImpact: 'Impact',
+        effort: 'medium' as const,
+        impact: 'high' as const,
+        priorityRank: 1,
+        findingIds: ['f001'],
+        recommendedActions: ['Action'],
+      },
+    ],
+    quickWins: [],
+    notes: '',
+  };
+
+  it('states the measured gap when this site\'s LCP is genuinely above the "good" threshold (5900ms, matching the reported 5.9s vs 2.5s case)', () => {
+    const manifest = {
+      pages: [
+        { url: 'https://example.com/', status: 'visited', coreWebVitals: { lcp: { score: 0.1, numericValue: 5900, displayValue: '5.9 s' } } },
+      ],
+    } as never;
+
+    const html = renderThemes(getStrings('fr'), 4, performanceAnalysis, [perfFinding], manifest);
+
+    expect(html).toContain('Écart mesuré sur ce site');
+    expect(html).toContain('5,9 s');
+    expect(html).toContain('3,4 s'); // 5.9s - 2.5s good threshold
+  });
+
+  it('states nothing extra when this site\'s LCP is already at or under the "good" threshold', () => {
+    const manifest = {
+      pages: [
+        { url: 'https://example.com/', status: 'visited', coreWebVitals: { lcp: { score: 0.95, numericValue: 1800, displayValue: '1.8 s' } } },
+      ],
+    } as never;
+
+    const html = renderThemes(getStrings('fr'), 4, performanceAnalysis, [perfFinding], manifest);
+
+    expect(html).not.toContain('Écart mesuré sur ce site');
+  });
+});
+
+// item 27: theme.recommendedActions is generated by the LLM writing pass
+// on every analysis (language/severity-vocabulary validated) but was
+// never rendered - a theme card stated the problem and its business
+// impact without ever stating what to do about it.
+describe('item 27: theme cards render recommendedActions', () => {
+  it('renders every recommended action for the real sas-fernande.fr themes', async () => {
+    const [analysis, findings, manifest] = await Promise.all([
+      loadSasFernandeAnalysis('fr'),
+      loadSasFernandeFindings(),
+      loadSasFernandeManifest(),
+    ]);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
+    const rendered = selectRenderedThemes(analysis.themes);
+
+    for (const theme of rendered) {
+      for (const action of theme.recommendedActions) {
+        expect(html).toContain(escapeHtml(action));
+      }
+    }
   });
 });
 

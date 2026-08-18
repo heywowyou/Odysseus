@@ -61,8 +61,27 @@ function renderFact(fact: ObligationBasisFact, strings: ReportStrings, language:
       return fillTemplate(m.legalCitationTurnoverFactTemplate, {
         threshold: formatEur(fact.thresholdEur, language),
       });
-    case 'transactional-flow':
-      return m.legalCitationTransactionalFlowFact;
+    // item 41: names the specific flow type(s) actually detected instead
+    // of listing all three possibilities with "ou", which read as the
+    // tool being unsure which one it found. 'booking-engine-script' and
+    // 'delegated-booking-redirect' are booking-specific; 'checkout-form'
+    // and 'payment-embed' are cart/payment-specific. Both classes present
+    // falls back to the combined label, matching the doc's own fallback
+    // when detection genuinely can't narrow it down further.
+    case 'transactional-flow': {
+      const kinds = new Set(fact.evidence.map((e) => e.kind));
+      const hasBooking = kinds.has('booking-engine-script') || kinds.has('delegated-booking-redirect');
+      const hasCartOrPayment = kinds.has('checkout-form') || kinds.has('payment-embed');
+      const flowType =
+        hasBooking && hasCartOrPayment
+          ? m.transactionalFlowTypeLabels.both
+          : hasBooking
+            ? m.transactionalFlowTypeLabels.booking
+            : hasCartOrPayment
+              ? m.transactionalFlowTypeLabels.cartOrPayment
+              : m.transactionalFlowTypeLabels.both;
+      return fillTemplate(m.legalCitationTransactionalFlowFactTemplate, { flowType });
+    }
     case 'transactional-flow-unknown':
       return m.legalCitationTransactionalFlowUnknownFact;
     // sme-exemption, no-transactional-flow, siren-missing, and
@@ -91,7 +110,7 @@ function renderFacts(basis: ObligationBasis, strings: ReportStrings, language: R
  *  picked as primary precisely when EAA's own status does not already
  *  explain the merged 'in_scope' - citing EAA in that case would
  *  overstate what the EAA gate itself determined. */
-function pickPrimaryBasis(
+export function pickPrimaryBasis(
   assessment: Extract<ObligationAssessment, { status: 'in_scope' | 'likely_in_scope' }>,
 ): ObligationBasis | undefined {
   const eaaBasis = assessment.basis.find((b) => b.regimeId === EAA_REGIME_ID);
@@ -210,6 +229,7 @@ function renderSirenProvenanceNote(
  *  size and date folded into the tooling paragraph itself. */
 export function renderMethodology(
   strings: ReportStrings,
+  ordinal: number,
   manifest: AuditManifest,
   language: ReportLanguage,
   obligationAssessment?: ObligationAssessment,
@@ -247,7 +267,7 @@ export function renderMethodology(
   // the same paragraph on a different page. Kept once there; this section
   // only points back to it now.
   return sheet(`
-    ${renderSheetHeader(eyebrow, m.heading)}
+    ${renderSheetHeader(ordinal, eyebrow, m.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
     ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(socialExclusionNote)}</p>` : ''}
     <div class="hr"></div>

@@ -81,9 +81,17 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
     await browser.close();
   });
 
-  it('invariant 7: total page count for the stress fixture stays within 18 to 26', () => {
+  // report-feedback-palais-gallien.md item 26: minor findings now render
+  // with the same full page/selector detail as every other severity
+  // (appendix-grouping.ts's groupAppendix, no more condensed per-rule
+  // summary), which genuinely grows the appendix - the stress fixture
+  // moved from 18-26 pages to 29. This is the expected cost of shipping
+  // what the full-audit tier's own spec already promised, not a
+  // regression to compensate for; the ceiling was raised rather than the
+  // content trimmed back to fit the old range.
+  it('invariant 7: total page count for the stress fixture stays within 18 to 32', () => {
     expect(doc.pageCount).toBeGreaterThanOrEqual(18);
-    expect(doc.pageCount).toBeLessThanOrEqual(26);
+    expect(doc.pageCount).toBeLessThanOrEqual(32);
   });
 
   it('invariant 5: the DOM page count matches what Paged.js itself resolved counter(pages) to', async () => {
@@ -149,13 +157,22 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
     expect(overflowing).toBe(0);
   });
 
-  it('invariant 3: no sheet mixes content from two different numbered sections', async () => {
-    // Every numbered section's <h6> eyebrow is unique text; a page
-    // containing more than one distinct eyebrow means Paged.js fragmented
-    // two different <section class="sheet"> elements onto the same
-    // printed page, which the design forbids (each section always starts
-    // its own sheet - "a section may overflow onto a second sheet; it may
-    // never share a sheet with the next section").
+  // item 34 revised this invariant: sections used to force a hard page
+  // break on both sides unconditionally, which is exactly what produced
+  // pages more than half empty (a three-row table or a couple of short
+  // paragraphs, alone, under a break on both sides). Sections now flow
+  // freely by default and may share a physical page with their
+  // neighbours; only .sheet-standalone sections (TOC, checklist, findings
+  // appendix) still force their own boundaries. The stress fixture's
+  // shortest run of sections (a real combination: observations with
+  // nothing diverted, the render-diff evidence positive-statement
+  // fallback, and a short core-web-vitals table) packs 3 section starts
+  // onto one physical page - genuinely short content flowing as
+  // intended, not a pagination bug, so the cap is 3, not the original
+  // 1 (or a stricter 2 that would still fail here). A page holding 4 or
+  // more distinct sections would be a real red flag worth investigating,
+  // which this still catches.
+  it('invariant 3: no more than 3 distinct sections ever share one physical page', async () => {
     const eyebrowsPerPage = await doc.page.evaluate(() =>
       Array.from(document.querySelectorAll('.pagedjs_page')).map((p) =>
         Array.from(p.querySelectorAll('h6')).map((h) => h.textContent?.trim()),
@@ -163,7 +180,30 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
     );
     for (const eyebrows of eyebrowsPerPage) {
       const distinct = new Set(eyebrows.filter((e): e is string => !!e));
-      expect(distinct.size).toBeLessThanOrEqual(1);
+      expect(distinct.size).toBeLessThanOrEqual(3);
+    }
+  });
+
+  // The .sheet-standalone sections (TOC, checklist, findings appendix)
+  // must still never share their own opening page with anything else -
+  // the part of the old invariant item 34 did not relax.
+  it('invariant 3b: the standalone sections (TOC, checklist, findings appendix) never share a page with another section', async () => {
+    const standaloneEyebrows = await doc.page.evaluate(() => {
+      const result: string[][] = [];
+      for (const p of Array.from(document.querySelectorAll('.pagedjs_page'))) {
+        const standalone = p.querySelector('#section-05 h6, #section-12 h6');
+        if (!standalone) continue;
+        result.push(
+          Array.from(p.querySelectorAll('h6'))
+            .map((h) => h.textContent?.trim())
+            .filter((t): t is string => !!t),
+        );
+      }
+      return result;
+    });
+    for (const eyebrows of standaloneEyebrows) {
+      const distinct = new Set(eyebrows);
+      expect(distinct.size).toBe(1);
     }
   });
 

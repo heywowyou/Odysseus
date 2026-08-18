@@ -155,9 +155,44 @@ export function logContainmentWarnings(
  *  "duplicate a small table near a boundary, document why" precedent
  *  packages/report's own EFFECTIF_BAND_LABELS_EN and
  *  packages/llm's own SEVERITY_VOCABULARY already use for this exact
- *  package boundary. */
-function isQuickWinTheme(theme: Pick<StructureThemeWithKey, 'effort' | 'impact'>): boolean {
+ *  package boundary. Exported: enforceImpactEffortOrdering below reuses
+ *  it directly rather than a third copy of the same two lines. */
+export function isQuickWinTheme(theme: Pick<StructureThemeWithKey, 'effort' | 'impact'>): boolean {
   return theme.effort === 'low' && theme.impact !== 'low';
+}
+
+const EFFORT_IMPACT_WEIGHT: Record<'low' | 'medium' | 'high', number> = { low: 1, medium: 2, high: 3 };
+
+/** report-feedback-palais-gallien.md item 15: enforceQuickWinFloor above
+ *  only promotes a quick win that falls *behind* the first impact-'low'
+ *  theme - it does nothing when every theme in the set carries medium or
+ *  high impact, which was exactly the reported failure: three themes, all
+ *  "Impact commercial : Élevé", ranked by descending effort (Élevé,
+ *  Moyen, Faible) instead of by the section's own promised "classés par
+ *  effort et par impact". No impact-'low' theme existed for the floor
+ *  rule to anchor against, so it never fired.
+ *
+ *  This is the general case the floor rule is a special case of: a full
+ *  re-sort by quick-win-first, then descending impact-to-effort ratio,
+ *  with the model's own priorityRank kept only as the final tiebreaker so
+ *  themes the ratio can't distinguish keep the model's relative order
+ *  rather than an arbitrary one. Run last in applyStructureRankingRules
+ *  so it is the definitive order, superseding (not fighting) the more
+ *  narrowly-scoped floor rules that ran before it. */
+export function enforceImpactEffortOrdering(themes: readonly StructureThemeWithKey[]): StructureThemeWithKey[] {
+  const sorted = [...themes].sort((a, b) => {
+    const aQuickWin = isQuickWinTheme(a) ? 0 : 1;
+    const bQuickWin = isQuickWinTheme(b) ? 0 : 1;
+    if (aQuickWin !== bQuickWin) return aQuickWin - bQuickWin;
+
+    const aRatio = EFFORT_IMPACT_WEIGHT[a.impact] / EFFORT_IMPACT_WEIGHT[a.effort];
+    const bRatio = EFFORT_IMPACT_WEIGHT[b.impact] / EFFORT_IMPACT_WEIGHT[b.effort];
+    if (aRatio !== bRatio) return bRatio - aRatio;
+
+    return a.priorityRank - b.priorityRank;
+  });
+
+  return renumberRanks(sorted);
 }
 
 /** B9 (report-feedback-haaitza.md): the priorities section is titled
@@ -202,6 +237,7 @@ export function applyStructureRankingRules(
   const floored = enforceSiteWideAccessibilityFloor(themes, findings, manifest);
   const weighted = applyOccurrenceWeighting(floored, findings);
   const quickWinFloored = enforceQuickWinFloor(weighted);
-  logContainmentWarnings(quickWinFloored, findings, manifest);
-  return quickWinFloored;
+  const ordered = enforceImpactEffortOrdering(quickWinFloored);
+  logContainmentWarnings(ordered, findings, manifest);
+  return ordered;
 }

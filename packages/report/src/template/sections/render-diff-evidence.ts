@@ -53,6 +53,7 @@ function renderPageCard(strings: ReportStrings, language: ReportLanguage, page: 
 
 export function renderRenderDiffEvidence(
   strings: ReportStrings,
+  ordinal: number,
   language: ReportLanguage,
   pages: readonly RenderDiffEvidencePage[],
   totalEligible: number,
@@ -71,7 +72,7 @@ export function renderRenderDiffEvidence(
     // matter." State that positively instead of returning nothing.
     const wrapperNote = wrapperOrLegalExcludedCount > 0 ? ` ${r.positiveStatementWrapperNote}` : '';
     return sheet(`
-      ${renderSheetHeader(r.eyebrow, r.heading)}
+      ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
       <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">${escapeHtml(r.intro)}</p>
       <p style="font-size:13.5px;opacity:0.85">${escapeHtml(r.positiveStatementTemplate)}${escapeHtml(wrapperNote)}</p>
     `, '', 'section-08');
@@ -84,7 +85,7 @@ export function renderRenderDiffEvidence(
   const cards = pages.map((page) => renderPageCard(strings, language, page)).join('');
 
   return sheet(`
-    ${renderSheetHeader(r.eyebrow, r.heading)}
+    ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
     <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">${escapeHtml(r.intro)}</p>
     ${cards}
     ${overflowText ? `<p style="font-size:12px;opacity:0.55;margin-top:var(--space-4)">${escapeHtml(overflowText)}</p>` : ''}

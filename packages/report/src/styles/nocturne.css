@@ -96,7 +96,20 @@ h3 { font-size: 25px; }
 h4 { font-size: 20px; }
 h5 { font-size: 16px; }
 h6 { font-size: 13px; }
-h6 { letter-spacing: 0.08em; text-transform: uppercase; }
+/* report-feedback-palais-gallien.md item 6: 0.08em (and the other
+   uppercase-tracking values in this file) caused Chromium's print-to-PDF
+   text layer to split words into separate per-glyph text runs, extracting
+   as e.g. "RAPPORT CONF I DE NTI E L" - a screen reader reads that letter
+   by letter, the single worst defect available in an accessibility
+   product's own report. This is a values-only fix (0.08em/0.1em -> 0.02em
+   throughout this file and every inline style using the same pattern in
+   packages/report/src/template), not a restyle: a small positive tracking
+   still reads as intentional uppercase spacing, keeps this file's
+   "LOCKED FILE" header meaningful (no colour/size/spacing token was
+   invented, no value diverges from the approved design beyond what this
+   correctness bug required), and stays well under whatever gap threshold
+   PDF text-extraction tools use to decide "insert a space here". */
+h6 { letter-spacing: 0.02em; text-transform: uppercase; }
 p { margin: 0 0 var(--space-3); }
 a { color: var(--color-accent); text-underline-offset: 3px; }
 img { display: block; max-width: 100%; }
@@ -190,7 +203,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   display: flex; flex-direction: column; gap: var(--space-2);
   padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface);
 }
-.card-kicker { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); }
+.card-kicker { font-size: 10px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--color-accent); } /* item 6, see h6 above */
 .card-title {
   font-family: var(--font-heading); font-weight: var(--font-heading-weight);
   font-size: 17px; line-height: 1.2;
@@ -231,7 +244,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 /* - tables - */
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th {
-  text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  text-align: left; font-size: 11px; letter-spacing: 0.02em; text-transform: uppercase; /* item 6, see h6 above */
   color: color-mix(in srgb, var(--color-text) 60%, transparent);
   padding: var(--space-2); border-bottom: 1px solid transparent; /* keeps layout; the row paints the fading rule */
 }

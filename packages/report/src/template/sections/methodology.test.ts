@@ -7,7 +7,7 @@ import { loadSasFernandeManifest } from '../../test-fixtures.js';
 describe('renderMethodology against the real sas-fernande.fr manifest', () => {
   it('states the crawl size (B16) and tool versions in one merged section, no separate limitations section', async () => {
     const manifest = await loadSasFernandeManifest();
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr');
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
 
     // 11 pages, docs/normalization-rules.md section 7.
     expect(html).toContain('11 pages explorées');
@@ -21,7 +21,7 @@ describe('renderMethodology against the real sas-fernande.fr manifest', () => {
 
   it('renders in English without leaking French', async () => {
     const manifest = await loadSasFernandeManifest();
-    const html = renderMethodology(getStrings('en'), manifest, 'en');
+    const html = renderMethodology(getStrings('en'), 11, manifest, 'en');
 
     expect(html).toContain('11 pages crawled');
     expect(html).not.toContain('explorées');
@@ -31,13 +31,13 @@ describe('renderMethodology against the real sas-fernande.fr manifest', () => {
 describe('renderMethodology section-number eyebrow', () => {
   it('shows "11", matching its position in the single-tier 14-section TOC (2026-08-16 redesign)', async () => {
     const manifest = await loadSasFernandeManifest();
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr');
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
     expect(html).toContain('11 · Méthodologie et limites');
   });
 
   it('shows "11" in English too', async () => {
     const manifest = await loadSasFernandeManifest();
-    const html = renderMethodology(getStrings('en'), manifest, 'en');
+    const html = renderMethodology(getStrings('en'), 11, manifest, 'en');
     expect(html).toContain('11 · Methodology and limitations');
   });
 });
@@ -52,7 +52,7 @@ describe('renderMethodology section-number eyebrow', () => {
 describe('renderMethodology legal citation pointer', () => {
   it('points back to legal exposure, and never repeats the full paragraph, when obligationAssessment is absent', async () => {
     const manifest = await loadSasFernandeManifest();
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr');
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
     expect(html).toContain('figure dans la section');
     expect(html).not.toContain("sans se prononcer sur l&#39;applicabilité");
   });
@@ -71,7 +71,7 @@ describe('renderMethodology legal citation pointer', () => {
         },
       ],
     };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', assessment);
     expect(html).toContain('figure dans la section');
     // The full paragraph's regime-specific content must not be duplicated
     // here now that it renders only in legal-exposure.ts.
@@ -81,7 +81,7 @@ describe('renderMethodology legal citation pointer', () => {
 
   it('renders the pointer sentence in English, not French', async () => {
     const manifest = await loadSasFernandeManifest();
-    const html = renderMethodology(getStrings('en'), manifest, 'en');
+    const html = renderMethodology(getStrings('en'), 11, manifest, 'en');
     expect(html).toContain('Legal exposure');
     expect(html).not.toContain('figure dans la section');
   });
@@ -146,7 +146,11 @@ describe('renderLegalCitationParagraph', () => {
     // both: the correct string is present, and the mangled one is not.
     expect(html).toContain('100 à 199 salariés');
     expect(html).not.toContain('100 a 199 salaries');
-    expect(html).toContain('parcours transactionnel de premier niveau');
+    // item 41: no more "de premier niveau" jargon, and no "ou" listing
+    // all three flow types when detection can't narrow it further (this
+    // fixture's evidence array is empty).
+    expect(html).toContain('parcours de réservation, panier ou paiement directement en ligne');
+    expect(html).not.toContain('premier niveau');
     expect(html).toContain('Démarche Simplifiée');
     expect(html).not.toContain('50 000');
   });
@@ -208,6 +212,49 @@ describe('renderLegalCitationParagraph', () => {
     expect(html).toContain('100 to 199 employees');
     expect(html).not.toContain('salariés');
   });
+
+  // item 41: names the specific detected flow type instead of listing all
+  // three possibilities with "ou".
+  it('names "réservation" specifically when only booking evidence was found', () => {
+    const assessment: ObligationAssessment = {
+      status: 'in_scope',
+      basis: [
+        {
+          regimeId: 'eaa-loi-2023-171',
+          facts: [
+            { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+            {
+              kind: 'transactional-flow',
+              evidence: [{ kind: 'booking-engine-script', selector: 'script', pageUrl: 'https://example.com/', detail: 'simplebooking' }],
+            },
+          ],
+        },
+      ],
+    };
+    const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
+    expect(html).toContain('parcours de réservation directement en ligne');
+    expect(html).not.toContain(' ou ');
+  });
+
+  it('names "panier ou de paiement" specifically when only checkout evidence was found', () => {
+    const assessment: ObligationAssessment = {
+      status: 'in_scope',
+      basis: [
+        {
+          regimeId: 'eaa-loi-2023-171',
+          facts: [
+            { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+            {
+              kind: 'transactional-flow',
+              evidence: [{ kind: 'checkout-form', selector: 'form', pageUrl: 'https://example.com/', detail: 'action=/panier' }],
+            },
+          ],
+        },
+      ],
+    };
+    const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
+    expect(html).toContain('parcours de panier ou de paiement directement en ligne');
+  });
 });
 
 describe('renderMethodology siren provenance note (manual-SIREN milestone)', () => {
@@ -220,20 +267,20 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
   it('renders no note when sirenSource is extracted', async () => {
     const manifest = await loadSasFernandeManifest();
     const assessment: ObligationAssessment = { ...undeterminedAssessment, sirenSource: 'extracted' };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment, [lcenFinding]);
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', assessment, [lcenFinding]);
     expect(html).not.toContain('fourni manuellement');
   });
 
   it('renders no note when no assessment is present at all', async () => {
     const manifest = await loadSasFernandeManifest();
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', undefined, [lcenFinding]);
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [lcenFinding]);
     expect(html).not.toContain('fourni manuellement');
   });
 
   it('links to the LCEN finding when sirenSource is manual and a matching finding exists', async () => {
     const manifest = await loadSasFernandeManifest();
     const assessment: ObligationAssessment = { ...undeterminedAssessment, sirenSource: 'manual' };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment, [lcenFinding]);
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', assessment, [lcenFinding]);
     expect(html).toContain('fourni manuellement');
     expect(html).toContain('f023');
   });
@@ -241,7 +288,7 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
   it('falls back to a finding-less sentence when sirenSource is manual but no LCEN finding exists', async () => {
     const manifest = await loadSasFernandeManifest();
     const assessment: ObligationAssessment = { ...undeterminedAssessment, sirenSource: 'manual' };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment, []);
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', assessment, []);
     expect(html).toContain('fourni manuellement');
     expect(html).not.toContain('voir constat');
   });
@@ -253,7 +300,7 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
       sirenSource: 'manual',
       sirenMismatch: { extractedSiren: '732829320', manualSiren: '552032534' },
     };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment, [lcenFinding]);
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', assessment, [lcenFinding]);
     expect(html).toContain('552032534');
     expect(html).toContain('732829320');
     // Mismatch note takes precedence over the manual-only note - they
@@ -268,7 +315,7 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
       sirenSource: 'manual',
       sirenMismatch: { extractedSiren: '732829320', manualSiren: '552032534' },
     };
-    const html = renderMethodology(getStrings('en'), manifest, 'en', assessment, [lcenFinding]);
+    const html = renderMethodology(getStrings('en'), 11, manifest, 'en', assessment, [lcenFinding]);
     expect(html).toContain('552032534');
     expect(html).toContain('732829320');
     expect(html).toContain('differs from');
@@ -310,7 +357,7 @@ describe('renderMethodology never discloses manual vs automated resolution of a 
         },
       },
     };
-    const html = renderMethodology(getStrings('fr'), manifest, 'fr', assessment);
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', assessment);
     for (const phrase of bannedPhrases) {
       expect(html).not.toContain(phrase);
     }
@@ -322,7 +369,7 @@ describe('renderMethodology never discloses manual vs automated resolution of a 
       ...inScopeAssessment,
       siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'manual' } },
     };
-    const html = renderMethodology(getStrings('en'), manifest, 'en', assessment);
+    const html = renderMethodology(getStrings('en'), 11, manifest, 'en', assessment);
     for (const phrase of bannedPhrases) {
       expect(html).not.toContain(phrase);
     }
@@ -338,8 +385,8 @@ describe('renderMethodology never discloses manual vs automated resolution of a 
       ...inScopeAssessment,
       siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'manual' } },
     };
-    const htmlDetected = renderMethodology(getStrings('fr'), manifest, 'fr', detected);
-    const htmlManual = renderMethodology(getStrings('fr'), manifest, 'fr', manual);
+    const htmlDetected = renderMethodology(getStrings('fr'), 11, manifest, 'fr', detected);
+    const htmlManual = renderMethodology(getStrings('fr'), 11, manifest, 'fr', manual);
     expect(htmlManual).toBe(htmlDetected);
   });
 });

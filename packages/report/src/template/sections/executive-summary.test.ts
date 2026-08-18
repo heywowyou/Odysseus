@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import type { Theme } from '@odysseus/core';
 import { renderExecutiveSummary } from './executive-summary.js';
 import { getStrings } from '../strings/i18n.js';
+import { escapeHtml } from '../html-utils.js';
 import { loadSasFernandeAnalysis } from '../../test-fixtures.js';
 
 describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () => {
   it('references the top 3 themes by rank and title as jump links, capped at 3 (doc §3 section 01)', async () => {
     const analysis = await loadSasFernandeAnalysis('fr');
-    const html = renderExecutiveSummary(getStrings('fr'), analysis);
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis);
 
     const sorted = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank);
     const top3 = sorted.slice(0, 3);
@@ -29,8 +31,92 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
 
   it('renders the LLM executive summary prose verbatim (escaped)', async () => {
     const analysis = await loadSasFernandeAnalysis('en');
-    const html = renderExecutiveSummary(getStrings('en'), analysis);
+    const html = renderExecutiveSummary(getStrings('en'), 1, analysis);
 
     expect(html).toContain(analysis.executiveSummary.slice(0, 30));
+  });
+
+  // item 5: the jump-link's own visible label states its destination
+  // instead of a bare "Voir ->"/"See ->" repeated identically 3 times
+  // with no stated destination, and carries a visual affordance (an
+  // underline) distinguishing it from the plain-text theme title beside it.
+  it('item 5: each jump link names its own priority rank and title, not a bare arrow, and is visually underlined', async () => {
+    const analysis = await loadSasFernandeAnalysis('fr');
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis);
+    const topThemes = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank).slice(0, 3);
+
+    for (const theme of topThemes) {
+      expect(html).toContain(`Voir priorité ${theme.priorityRank} : ${escapeHtml(theme.title)}`);
+    }
+    expect(html).not.toContain('>Voir →<');
+    expect(html).toContain('text-decoration:underline');
+  });
+});
+
+// item 16: the document's first, most prominent recommendation carrying
+// "Conformité : Sans objet" should not be something the reader has to
+// notice on their own after four pages of legal framing (cover, section
+// 02, section 07).
+describe('item 16: a non-legal top priority is acknowledged in the executive summary', () => {
+  const nonLegalTheme = {
+    title: 'Vitesse mobile insuffisante',
+    category: 'performance' as const,
+    businessImpact: 'Impact',
+    effort: 'medium' as const,
+    impact: 'high' as const,
+    priorityRank: 1,
+    findingIds: ['f001'],
+    recommendedActions: ['Action'],
+  };
+  const legalTheme = {
+    title: 'Contraste insuffisant',
+    category: 'accessibility' as const,
+    businessImpact: 'Impact',
+    legalRelevance: 'Critère 1.4.3 (Contraste minimum), WCAG 2.2 niveau AA',
+    effort: 'low' as const,
+    impact: 'medium' as const,
+    priorityRank: 2,
+    findingIds: ['f002'],
+    recommendedActions: ['Action'],
+  };
+
+  function buildAnalysis(themes: Theme[]) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes,
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  it('states the top priority is commercial and points to the legal-priority rank, when one is rendered', () => {
+    const analysis = buildAnalysis([nonLegalTheme, legalTheme]);
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis);
+
+    expect(html).toContain('La priorité 1 ci-dessus est un enjeu commercial');
+    expect(html).toContain('position 2');
+  });
+
+  it('states the top priority is commercial with no pointer when no legal-relevant theme is rendered at all', () => {
+    const analysis = buildAnalysis([nonLegalTheme]);
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis);
+
+    expect(html).toContain('La priorité 1 ci-dessus est un enjeu commercial');
+    expect(html).toContain("Aucune des priorités");
+  });
+
+  it('renders nothing extra when the top priority is itself legal-relevant', () => {
+    const legalThemeRankedFirst = { ...legalTheme, priorityRank: 1 };
+    const nonLegalThemeRankedSecond = { ...nonLegalTheme, priorityRank: 2 };
+    const analysis = buildAnalysis([legalThemeRankedFirst, nonLegalThemeRankedSecond]);
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis);
+
+    expect(html).not.toContain('enjeu commercial');
   });
 });

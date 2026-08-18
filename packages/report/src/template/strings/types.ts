@@ -11,13 +11,14 @@
  * an English label inside a French report.
  */
 export interface ReportStrings {
+  /** TOC row labels are no longer a separate hand-typed array (report-
+   *  feedback-palais-gallien.md item 3): section-registry.ts's
+   *  sectionTitle() reads each row's label from that section's own
+   *  `eyebrow` field below, so introducing a fourth independent copy of a
+   *  section's name is impossible, not just discouraged. */
   toc: {
     eyebrow: string;
     heading: string;
-    items: readonly [
-      string, string, string, string, string, string, string,
-      string, string, string, string, string, string, string,
-    ];
   };
   statistics: {
     eyebrow: string;
@@ -40,6 +41,11 @@ export interface ReportStrings {
     wcagFailingHeading: string;
     severityBreakdownHeading: string;
     categoryBreakdownHeading: string;
+    /** item 39: shown only when computeStatistics.hasBelowThresholdRenderGap
+     *  is true - "Rendu : 0" otherwise reads as contradicting section
+     *  08's own reported gap, when the real explanation is a below-
+     *  threshold measured percentage, not a bug or an absence of gap. */
+    belowThresholdRenderGapNote: string;
     legendCriticalText: string;
     legendSeriousText: string;
     legendModerateText: string;
@@ -62,6 +68,12 @@ export interface ReportStrings {
     occurrencesColumnLabel: string;
     pagesMaxColumnLabel: string;
     emptyState: string;
+    /** item 8: heuristic-sourced findings (alt-text-quality-heuristic)
+     *  never contribute to the criterion table above - they render here
+     *  instead, in their own visually distinct block, so a heuristic red
+     *  flag can never read as a confirmed WCAG criterion failure. */
+    heuristicSectionHeading: string;
+    heuristicSectionNote: string;
   };
   observations: {
     eyebrow: string;
@@ -86,6 +98,10 @@ export interface ReportStrings {
     wcagReferentialLabel: string;
     riskSmallLabel: string;
     riskLevels: { low: string; medium: string; high: string };
+    /** item 42: the badge showed no scale and no stated basis for how it
+     *  was derived - the reader had no way to calibrate "Élevé" or verify
+     *  how the tool got there. Template: {critical}, {serious}. */
+    riskBasisTemplate: string;
     /** Manual-input-layer milestone: shown in the field grid only when
      *  AuditManualFields.recipientName is present. */
     recipientLabel: string;
@@ -99,7 +115,22 @@ export interface ReportStrings {
     /** Kicker over the "where to start" jump-link box (doc §3 section 01:
      *  prose + jump links, capped at 3). */
     startHereKicker: string;
-    jumpLinkLabel: string;
+    /** Template: {rank}, {title}. report-feedback-palais-gallien.md item
+     *  5: standalone accessible link text ("Voir priorité 1 : lenteur
+     *  d'affichage") instead of a bare "Voir →" repeated three times,
+     *  which read as a decorative arrow with no stated destination. */
+    jumpLinkLabelTemplate: string;
+    /** item 16: shown only when the #1-ranked theme is not itself a
+     *  legal-conformity item (theme.legalRelevance undefined), so the
+     *  four pages of legal framing preceding the executive summary don't
+     *  leave the reader to notice on their own that the lead
+     *  recommendation is commercial, not legal. Template: {legalRank},
+     *  the rank of the first theme (among those rendered) that does
+     *  carry legalRelevance. */
+    topPriorityIsNotLegalWithPointerTemplate: string;
+    /** Same case, but no legal-relevant theme is among those rendered at
+     *  all (no {legalRank} to point to). */
+    topPriorityIsNotLegalNoPointer: string;
   };
   /** Promotes methodology's own legal-citation paragraph (rendered via
    *  the exported renderLegalCitationParagraph) to its own page for
@@ -111,9 +142,15 @@ export interface ReportStrings {
   legalExposure: {
     eyebrow: string;
     heading: string;
+    /** item 17: relabeled from "Échéance EAA" (deadline, implying
+     *  upcoming) - the obligation has been in force since this date, not
+     *  approaching it. */
     eaaDeadlineLabel: string;
     eaaDeadlineValue: string;
-    eaaDeadlineNote: string;
+    /** Template: {duration}, computed at render time from the fixed EAA
+     *  date to the report's own generation date (never hardcoded, so it
+     *  stays accurate as reports keep being generated after this date). */
+    eaaDeadlineNoteTemplate: string;
     obligationStatusLabel: string;
     statusLabels: {
       in_scope: string;
@@ -129,12 +166,40 @@ export interface ReportStrings {
       out_of_scope: string;
       undetermined: string;
     };
+    /** item 18: heading over the deterministic EAA-route enforcement
+     *  facts (fine figure + neutral case-law state), rendered only when
+     *  the resolved regime is EAA (methodology.ts's pickPrimaryBasis). */
+    exposureHeading: string;
+    /** item 24: prints the SIREN the headcount band's Sirene lookup was
+     *  based on, so a lawyer or auditor can independently verify which
+     *  entity the determination concerns. Template: {siren}, {date} (the
+     *  audit date, the closest available proxy for when the Sirene-
+     *  derived headcount band was current - no separate Sirene-lookup
+     *  timestamp is stored). */
+    sirenTemplate: string;
+    sirenLabel: string;
+    /** Shown instead of sirenTemplate when no SIREN was ever resolved for
+     *  this scan (neither extracted nor manually supplied) - stated
+     *  explicitly rather than omitting the field silently. */
+    sirenUnavailable: string;
     disclaimerNote: string;
     /** B7: shown only when status is 'undetermined'. Names the single
      *  action that would resolve the status (publishing or supplying a
      *  SIREN) without asserting what the answer would be - CLAUDE.md rule
      *  6, "we report, we do not conclude". */
     undeterminedActionNote: string;
+    /** item 28: the transactional/booking flow is the entire legal hook
+     *  for the EAA obligation, but nothing stated whether the actual
+     *  flow was in-scope for the crawl - a delegated off-domain booking
+     *  engine (the common case for hotels, per project memory) sits
+     *  outside a single-origin crawl entirely. Template: {pages}, a
+     *  comma-joined list of crawled page URLs where the flow itself was
+     *  found. */
+    transactionalFlowOnSiteTemplate: string;
+    /** Template: {domain}, the delegated booking-engine provider domain
+     *  the redirect check resolved to (never crawled as part of this
+     *  audit - a single-origin crawl by design). */
+    transactionalFlowDelegatedTemplate: string;
   };
   /** Pure re-presentation of analysis.themes (rank/title/effort/impact/
    *  pages) as a dense, printable table - no new data, no new logic. */
@@ -147,6 +212,14 @@ export interface ReportStrings {
     effortColumnLabel: string;
     impactColumnLabel: string;
     pagesColumnLabel: string;
+    /** item 35: the printable checklist was a near-exact restatement of
+     *  the priorities section with nothing added - these three columns
+     *  give it something the priorities cards don't: finding IDs and
+     *  WCAG criteria to look up, and blank space to actually use the
+     *  page as a working checklist (note status/owner/date by hand). */
+    findingsColumnLabel: string;
+    wcagColumnLabel: string;
+    statusDateColumnLabel: string;
   };
   themes: {
     eyebrow: string;
@@ -163,7 +236,19 @@ export interface ReportStrings {
      *  shared by themes.ts (accessibility/seo themes) and
      *  findings-appendix.ts's geo section. */
     impactCitationLabel: string;
+    /** item 14: Template: {value}, {gap}, {threshold} (all in seconds).
+     *  Rendered under a per-0.1s performance citation only when this
+     *  site's own measured LCP is above the "good" threshold, so the
+     *  reader has the real gap next to the stat instead of being left to
+     *  multiply the citation's 0.1s figure by an assumed gap themselves. */
+    measuredLcpGapTemplate: string;
     quickWinBadgeLabel: string;
+    /** item 27: theme.recommendedActions (llm-output.ts, LLM-writable,
+     *  already validated for language and severity vocabulary) was
+     *  generated on every analysis but never rendered - a theme card
+     *  stated the problem and its impact without ever stating what to do
+     *  about it. */
+    recommendedActionsLabel: string;
     effortImpactLevels: { low: string; medium: string; high: string };
     /** Template: {pages}, {pageWord}, {totalPages}. */
     pagesOfTotalTemplate: string;
@@ -234,26 +319,69 @@ export interface ReportStrings {
     intro: string;
     criterionColumnLabel: string;
     statusColumnLabel: string;
-    nonConformantPartialLabel: string;
+    /** item 20: binary conforme/non-conforme per criterion - RGAA and
+     *  EN 301 549 have no three-value status at the per-criterion level,
+     *  only at the whole-document level. Replaces the old
+     *  nonConformantPartialLabel, which blended the two vocabularies
+     *  into a string that exists in neither. */
+    nonConformantLabel: string;
     contactHeading: string;
     contactBody: string;
+    /** Template: {email}. item 21: a scraped (provenance 'detected')
+     *  contact email must never render as a finished value in a
+     *  document the client might publish as-is. */
+    contactEmailToConfirmTemplate: string;
     remediationPlanHeading: string;
-    remediationPlanBody: string;
+    /** Template: {section}, the live canonical title of the priorities
+     *  section (section-registry.ts's sectionTitle for 'section-04'),
+     *  interpolated at render time rather than quoted as a fixed string -
+     *  report-feedback-palais-gallien.md item 4: the previous fixed
+     *  quote ("Priorités classées") matched neither the TOC label nor
+     *  the section's own eyebrow, a broken cross-reference. */
+    remediationPlanBodyTemplate: string;
+    /** item 22: the six fields a real déclaration d'accessibilité needs
+     *  beyond the per-criterion table and contact/remediation blocks,
+     *  rendered as labeled "to complete" placeholders (this section was
+     *  already described as a skeleton the client completes before
+     *  publishing; these are visible gaps in that skeleton, not new
+     *  data collection this session). */
+    firstPublicationDateLabel: string;
+    technologiesLabel: string;
+    testEnvironmentLabel: string;
+    nonAccessibleContentLabel: string;
+    feedbackProcedureLabel: string;
+    recoursePathLabel: string;
+    toCompletePlaceholder: string;
   };
   glossary: {
     eyebrow: string;
     heading: string;
-    terms: readonly { term: string; definition: string }[];
+    /** item 33: `id` lets glossary.ts scope this list to the terms that
+     *  actually appear in a given report (glossary.ts's
+     *  GLOSSARY_TERM_CONDITIONS) rather than a static list that includes
+     *  RGAA on an EAA-route report (which never mentions it, per item 19)
+     *  and omits every performance-metric abbreviation and GEO/SEO term
+     *  the report does use. `id` values are language-neutral and must
+     *  match 1:1 between fr.ts and en.ts. */
+    terms: readonly { id: string; term: string; definition: string }[];
   };
   nextSteps: {
     eyebrow: string;
     heading: string;
     questionTitle: string;
-    questionBody: string;
+    /** Template: {email}. item 30 [REGRESSION]: previously said requests
+     *  could go "directly to the Odysseus team" with no stated address -
+     *  flagged once already, recurred once. */
+    questionBodyTemplate: string;
     reauditTitle: string;
     reauditBody: string;
     postFixTitle: string;
     postFixBody: string;
+    /** item 31: no authorship, terms, or liability block anywhere in a
+     *  paid deliverable that may be forwarded to counsel. Template:
+     *  {producer}, {date}, {version}, {reportId}. */
+    authorshipTemplate: string;
+    liabilityStatement: string;
   };
   findingsAppendix: {
     eyebrow: string;
@@ -281,7 +409,6 @@ export interface ReportStrings {
     pagesMaxColumnLabel: string;
     occurrencesColumnLabel: string;
     selectorColumnLabel: string;
-    ruleColumnLabel: string;
     findingSingular: string;
     findingPlural: string;
     occurrenceSingular: string;
@@ -290,10 +417,11 @@ export interface ReportStrings {
     pagePlural: string;
     upToLabel: string;
     wcagLabel: string;
-    minorAggregateTitle: string;
-    minorAggregateGroupedSuffix: string;
-    minorAggregateNote: string;
     observationsCrossRefLabel: string;
+    /** item 29: the list of crawled URLs was not printed anywhere - the
+     *  client had no way to verify the scope they paid for beyond a bare
+     *  count on the cover. Template: {count}. */
+    crawledPagesHeadingTemplate: string;
   };
   methodology: {
     eyebrow: string;
@@ -327,8 +455,18 @@ export interface ReportStrings {
     legalCitationEffectifFactTemplate: string;
     /** Template: {threshold}, a formatted currency amount. */
     legalCitationTurnoverFactTemplate: string;
-    legalCitationTransactionalFlowFact: string;
+    /** item 41: names the specific detected flow type (e.g. "réservation
+     *  en ligne") instead of listing "réservation, panier ou paiement"
+     *  with "ou", which read as the tool being unsure which one it
+     *  detected. Template: {flowType}. "de premier niveau" (internal
+     *  jargon) is dropped from the sentence entirely. */
+    legalCitationTransactionalFlowFactTemplate: string;
     legalCitationTransactionalFlowUnknownFact: string;
+    /** Plain-language labels for the specific flow type(s) actually
+     *  detected (SiteSignals.transactionalFlowEvidence's own `kind`),
+     *  substituted into legalCitationTransactionalFlowFactTemplate's
+     *  {flowType}. */
+    transactionalFlowTypeLabels: { booking: string; cartOrPayment: string; both: string };
     /** The only documented exemption route (Demarche Simplifiee), stated
      *  once per report per the milestone's acceptance criteria, appended
      *  after legalCitationInScopeTemplate/legalCitationLikelyInScopeTemplate. */

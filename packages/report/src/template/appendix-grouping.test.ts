@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Finding } from '@odysseus/core';
-import { aggregateMinorFindings, groupAppendix } from './appendix-grouping.js';
+import { groupAppendix } from './appendix-grouping.js';
 import { loadSasFernandeFindings } from '../test-fixtures.js';
 
 describe('groupAppendix', () => {
@@ -84,23 +84,37 @@ describe('groupAppendix', () => {
   });
 });
 
-describe('aggregateMinorFindings', () => {
-  it('collapses the 61 real minor findings to one row per rule, sorted by occurrences descending', async () => {
+// item 26: minor findings no longer get a separate condensed pass - they
+// group through groupAppendix like every other severity, and sort to the
+// bottom by SEVERITY_ORDER rather than having their own detail withheld.
+describe('groupAppendix includes minor findings with full detail, sorted last', () => {
+  it('groups the 61 real minor findings into per-rule RuleGroups, not a condensed summary', async () => {
     const findings = await loadSasFernandeFindings();
     const minor = findings.filter((f) => f.severity === 'minor');
     expect(minor).toHaveLength(61);
 
-    const summaries = aggregateMinorFindings(minor);
+    const groups = groupAppendix(minor);
 
     // 30 distinct minor ruleIds in the real fixture.
-    expect(summaries).toHaveLength(30);
-    expect(summaries.reduce((sum, s) => sum + s.findingCount, 0)).toBe(61);
+    expect(groups).toHaveLength(30);
+    expect(groups.reduce((sum, g) => sum + g.findings.length, 0)).toBe(61);
+    // Every finding object survives intact in its group - this is the
+    // whole point of item 26: full page/selector detail, not a summary.
+    for (const group of groups) {
+      for (const finding of group.findings) {
+        expect(finding.pageUrls.length).toBeGreaterThan(0);
+      }
+    }
+  });
 
-    expect(summaries[0]).toMatchObject({ ruleId: 'layout-shifts', totalOccurrences: 115 });
-    expect(summaries[1]).toMatchObject({ ruleId: 'modern-image-formats', totalOccurrences: 90 });
-
-    for (let i = 1; i < summaries.length; i++) {
-      expect(summaries[i - 1]!.totalOccurrences >= summaries[i]!.totalOccurrences).toBe(true);
+  it('sorts minor-severity groups after every other severity when mixed', async () => {
+    const findings = await loadSasFernandeFindings();
+    const groups = groupAppendix(findings);
+    const minorIndex = groups.findIndex((g) => g.severity === 'minor');
+    const lastNonMinorIndex = groups.map((g) => g.severity).lastIndexOf('serious');
+    expect(minorIndex).toBeGreaterThan(-1);
+    if (lastNonMinorIndex !== -1) {
+      expect(minorIndex).toBeGreaterThan(lastNonMinorIndex);
     }
   });
 });

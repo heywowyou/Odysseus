@@ -112,6 +112,62 @@ describe('extractLighthouseCandidates', () => {
     expect(candidates[0]?.severity).toBe('minor');
   });
 
+  // item 9: severityFromLighthouse's score-based severity used to be the
+  // only input to a Core Web Vital finding's severity, completely
+  // disconnected from the bon/à améliorer/insuffisant status the report's
+  // Core Web Vitals table separately computes from the same metric's raw
+  // ms value (packages/report's core-web-vitals-table.ts). A real report
+  // showed exactly this: TBT 560ms graded "à améliorer" (mid) by that
+  // table while the underlying finding carried "Critique" (critical).
+  describe('item 9: Core Web Vital severity is capped by the metric\'s own raw-value rating', () => {
+    it('caps a "critical" TBT finding down to "serious" when the raw value is only "mid" (560ms, matching the reported case)', () => {
+      const lhr = buildLighthouseResultInput({
+        categories: { performance: { score: 0.3, auditRefs: [{ id: 'total-blocking-time', weight: 25 }] } },
+        audits: { 'total-blocking-time': buildLighthouseAudit({ score: 0.3, numericValue: 560 }) },
+      });
+      const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
+      expect(candidates[0]?.severity).toBe('serious');
+    });
+
+    it('leaves a "critical" TBT finding uncapped when the raw value is genuinely "poor" (700ms)', () => {
+      const lhr = buildLighthouseResultInput({
+        categories: { performance: { score: 0.3, auditRefs: [{ id: 'total-blocking-time', weight: 25 }] } },
+        audits: { 'total-blocking-time': buildLighthouseAudit({ score: 0.3, numericValue: 700 }) },
+      });
+      const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
+      expect(candidates[0]?.severity).toBe('critical');
+    });
+
+    it('caps a "critical" LCP finding down to "serious" when the raw value is only "good" (2000ms)', () => {
+      const lhr = buildLighthouseResultInput({
+        categories: { performance: { score: 0.2, auditRefs: [{ id: 'largest-contentful-paint', weight: 25 }] } },
+        audits: { 'largest-contentful-paint': buildLighthouseAudit({ score: 0.2, numericValue: 2000 }) },
+      });
+      const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
+      expect(candidates[0]?.severity).toBe('serious');
+    });
+
+    it('does not cap non-Core-Web-Vital audits, even at the same score/weight', () => {
+      const lhr = buildLighthouseResultInput({
+        categories: { performance: { score: 0.2, auditRefs: [{ id: 'render-blocking-resources', weight: 25 }] } },
+        audits: { 'render-blocking-resources': buildLighthouseAudit({ score: 0.2, numericValue: 560 }) },
+      });
+      const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
+      expect(candidates[0]?.severity).toBe('critical');
+    });
+
+    it('does not cap a Core Web Vital finding whose severity was already at or below "serious"', () => {
+      const lhr = buildLighthouseResultInput({
+        categories: { performance: { score: 0.4, auditRefs: [{ id: 'total-blocking-time', weight: 5 }] } },
+        audits: { 'total-blocking-time': buildLighthouseAudit({ score: 0.4, numericValue: 560 }) },
+      });
+      const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
+      // weight 5 already caps severityFromLighthouse's own output at
+      // 'serious' before this fix's rating-based cap even applies.
+      expect(candidates[0]?.severity).toBe('serious');
+    });
+  });
+
   it('emits one element-scoped candidate per item carrying a node value', () => {
     const lhr = buildLighthouseResultInput({
       categories: { seo: { score: 0.3, auditRefs: [{ id: 'tap-targets', weight: 10 }] } },

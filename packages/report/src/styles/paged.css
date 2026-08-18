@@ -19,11 +19,20 @@
   size: A4;
   margin: 18mm 0;
 
+  /* item 6: 0.1em on this synthetic, Paged.js-generated margin-box text
+     is the exact match for the reported corruption ("PAG E 2 / 17",
+     "RAPPORT CONF I DE NTI E L") - CSS Paged Media margin-box content is
+     more prone to Chromium's print-to-PDF text layer emitting one text
+     run per glyph than ordinary DOM text is, and a run gap that size gets
+     read back as a space by text-extraction tools. Reduced the same way
+     as nocturne.css's uppercase tracking values (see that file's h6
+     comment), not removed, so the visual uppercase spacing is still
+     legible. */
   @top-right {
     content: "Page " counter(page) " / " counter(pages);
     font-family: "Inter", system-ui, sans-serif;
     font-size: 10px;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
     color: color-mix(in srgb, #e9e9ed 40%, transparent);
     margin: 0 18mm 0 0;
@@ -33,7 +42,7 @@
     content: string(footer-text);
     font-family: "Inter", system-ui, sans-serif;
     font-size: 9px;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
     color: #75798c;
     margin: 0;
@@ -89,38 +98,77 @@ html {
   visibility: hidden;
 }
 
-/* B8: the table of contents' page-number column. target-counter reads the
-   "page" counter of whichever element the anchor's resolved href points
-   at - resolved after Paged.js's own layout pass, in the same single
-   render Paged.js already does for the @page counter(page)/counter(pages)
-   rules above, so this needs no second pass despite the pre-Paged.js
-   note this replaced (docs/report-v2-refactor.md D29) assuming one would
-   be required. */
-.toc-page::after {
+/* B8, fixed by report-feedback-palais-gallien.md item 1: the table of
+   contents' page-number column. target-counter reads the "page" counter
+   of whichever element the resolved `url` attribute points at - resolved
+   after Paged.js's own layout pass, in the same single render Paged.js
+   already does for the @page counter(page)/counter(pages) rules above, so
+   this needs no second pass despite the pre-Paged.js note this replaced
+   (docs/report-v2-refactor.md D29) assuming one would be required.
+
+   The original version put this ::after (and its attr(href url) read) on
+   a `.toc-page` <span> that was a *sibling* of the <a href="...">, not
+   the anchor itself - attr() reads attributes off the element it is
+   declared on, so the span (which carries no href) resolved nothing and
+   every row's page number fell back to 0. Moved onto `.toc-row`, the
+   anchor element that actually carries the href, and reads its own
+   attribute correctly. */
+.toc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.toc-row::after {
   content: target-counter(attr(href url), page);
+  color: var(--color-accent-300);
+  font-size: 12px;
+  flex: none;
 }
 
 /* ---- sheets ---- */
 
 .sheet {
   padding: 0 18mm;
-  break-after: page;
   box-sizing: border-box;
 }
-.sheet:last-child { break-after: auto; }
 
-/* break-after alone was observed to miss the boundary between two short
-   adjacent sections in a real render (a section ending well short of a
-   full page, immediately followed by another) - confirmed against
-   packages/report's stress fixture via the paginated-DOM invariant test.
-   break-before forces the same boundary from the other side when
-   break-after doesn't fire on its own. Scoped with :not(.sheet-cover)
-   rather than :first-child: Paged.js's selector matching does not
-   reliably support :first-child in break rules (confirmed against a real
-   render - it produced a blank first page, the cover's content pushed
-   entirely onto page 2), but a plain class-based :not() is a simple
-   attribute check with no DOM-position awareness required. */
-.sheet:not(.sheet-cover) { break-before: page; }
+/* item 34: every section used to force a hard page break both before and
+   after itself (belt-and-suspenders, see the removed rule this comment
+   used to sit under), which is exactly what produced pages that were
+   more than half empty - a three-row table or a couple of short
+   paragraphs, alone, under a hard break on both sides. Sections now flow
+   naturally by default (no break forced either side) and only
+   .sheet-standalone sections force their own page boundaries on both
+   sides: the cover (via its own `page: cover` context switch, which
+   forces an implicit break on its own - see .sheet-cover below,
+   unaffected by this class), the TOC, the printable checklist
+   (section-05, which item 36 also specifically inverts for printing and
+   needs to stand alone on its own page for that to read correctly), and
+   the findings appendix (section-12, the start of a many-page block that
+   should never share its opening page with whatever precedes it).
+   Every other section is free to end mid-page with the next section's
+   heading continuing right below it. h2/h4/h5's existing break-after:
+   avoid (below) keeps a section's own heading from being orphaned alone
+   at the bottom of a page when this happens. */
+.sheet-standalone {
+  break-before: page;
+  break-after: page;
+}
+.sheet-standalone:last-child { break-after: auto; }
+
+/* Scoped with :not(.sheet-cover) rather than :first-child: Paged.js's
+   selector matching does not reliably support :first-child in break
+   rules (confirmed against a real render - it produced a blank first
+   page, the cover's content pushed entirely onto page 2), but a plain
+   class-based :not() is a simple attribute check with no DOM-position
+   awareness required. Stated explicitly rather than left as the
+   (identical) default, so the intent reads directly from this rule
+   rather than from the absence of one. */
+.sheet:not(.sheet-cover):not(.sheet-standalone) {
+  break-before: auto;
+  break-after: auto;
+}
 
 .sheet-cover {
   page: cover;
@@ -195,4 +243,44 @@ img[src=""] {
 @media screen {
   body { background: #0e0f18; }
   .pagedjs_page { margin: 0 auto 28px; box-shadow: 0 6px 18px rgba(0,0,0,0.55); }
+}
+
+/* item 36: section 05 (the printable checklist) is explicitly labeled
+   "Page pensée pour être imprimée ou capturée seule" but rendered as
+   light text on the same near-black background (#161826) as every other
+   sheet - printed as-is this either consumes a full page of toner as a
+   solid dark block, or (if a printer driver strips backgrounds despite
+   the -webkit-print-color-adjust: exact hint above, which only binds
+   Chromium's own PDF generation, not a downstream printer driver reading
+   the finished file) produces invisible white-on-white text. Inverted
+   specifically for this one page rather than the whole document, since
+   the rest of the report is not the page carrying a standalone-printable
+   promise, and trade-off 9's dark design system is otherwise locked to
+   the approved mockups.
+
+   playwright's page.pdf() applies print-media CSS by default (no
+   page.emulateMedia({media:'screen'}) call anywhere in pdf.ts), so this
+   is not dead code the way an @media print block would be if this
+   pipeline forced screen-media emulation for generation. :has() targets
+   the physical Paged.js page box containing section-05's id, since the
+   dark background is painted on .pagedjs_page/.pagedjs_sheet, not on the
+   original .sheet element Paged.js clones into it. Not yet verified
+   against an actual printed or flattened export (the doc's own
+   acceptance check) - do that before relying on this fix. */
+@media print {
+  .pagedjs_page:has(#section-05) {
+    background: #f7f7f5 !important;
+  }
+  #section-05,
+  #section-05 h2,
+  #section-05 h5,
+  #section-05 h6,
+  #section-05 p,
+  #section-05 div {
+    color: #161826 !important;
+  }
+  .pagedjs_page:has(#section-05) .pagedjs_margin-top-right,
+  .pagedjs_page:has(#section-05) .pagedjs_margin-bottom-center {
+    color: #161826 !important;
+  }
 }

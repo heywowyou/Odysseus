@@ -15,6 +15,16 @@ export interface RuleGroup {
   wcagCriteria: string[];
 }
 
+/** report-feedback-palais-gallien.md item 26: every severity, minor
+ *  included, groups and renders through this one function now - the
+ *  separate minor-findings condensation pass (aggregateMinorFindings,
+ *  removed) gated full page/selector detail behind "available on request
+ *  in the technical export," a mechanism that never existed anywhere in
+ *  the codebase, inside a section titled "Liste complète des constats"
+ *  for the single paid tier this product now has (CLAUDE.md trade-off
+ *  12). Severity ordering already sorts minor groups to the bottom
+ *  (SEVERITY_ORDER below), so they still read as secondary without
+ *  having their own detail withheld. */
 export function groupAppendix(findings: readonly Finding[]): RuleGroup[] {
   const map = new Map<string, RuleGroup>();
 
@@ -40,36 +50,6 @@ export function groupAppendix(findings: readonly Finding[]): RuleGroup[] {
   return [...map.values()].sort(
     (a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] || b.totalOccurrences - a.totalOccurrences,
   );
-}
-
-/** Second reduction, minor findings only: 60 rows collapse to a handful
- *  aggregated by ruleId, sorted by occurrences descending, moving them
- *  below the findings that matter rather than dominating the appendix by
- *  row count. See docs/report-v2-refactor.md 3.3 / B11. */
-export interface MinorFindingSummary {
-  ruleId: string;
-  findingCount: number;
-  maxPages: number;
-  totalOccurrences: number;
-}
-
-export function aggregateMinorFindings(minorFindings: readonly Finding[]): MinorFindingSummary[] {
-  const map = new Map<string, MinorFindingSummary>();
-
-  for (const finding of minorFindings) {
-    const summary = map.get(finding.ruleId) ?? {
-      ruleId: finding.ruleId,
-      findingCount: 0,
-      maxPages: 0,
-      totalOccurrences: 0,
-    };
-    summary.findingCount += 1;
-    summary.maxPages = Math.max(summary.maxPages, finding.pageUrls.length);
-    summary.totalOccurrences += finding.occurrences;
-    map.set(finding.ruleId, summary);
-  }
-
-  return [...map.values()].sort((a, b) => b.totalOccurrences - a.totalOccurrences);
 }
 
 /** group.findings.length <= 6 keeps a rule-group on one page (`.keep`);

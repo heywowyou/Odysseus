@@ -55,7 +55,7 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
 
-    const html = renderStatistics(getStrings('fr'), 'fr', findings, manifest);
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
     // 11 pages, 78 findings, 61 minor (docs/normalization-rules.md section 7).
     expect(html).toContain('>11</div>');
@@ -68,7 +68,7 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
 
-    const html = renderStatistics(getStrings('en'), 'en', findings, manifest);
+    const html = renderStatistics(getStrings('en'), 3, 'en', findings, manifest);
 
     expect(html).not.toContain('{pages}');
     expect(html).toMatch(/WCAG 2\.2 AA criteria failing across \d+ pages/);
@@ -78,7 +78,7 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
 
-    const html = renderStatistics(getStrings('fr'), 'fr', findings, manifest);
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
     expect((html.match(/font-size:28px/g) ?? []).length).toBe(4);
     expect((html.match(/font-size:24px/g) ?? []).length).toBe(4);
@@ -99,7 +99,7 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     ];
     const manifest = buildMinimalManifest();
 
-    const html = renderStatistics(getStrings('fr'), 'fr', findings, manifest);
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
     const labels = ['Performance', 'Accessibilité', 'Référencement (SEO)', 'Rendu', 'Visibilité dans les moteurs d&#39;IA (GEO)'];
     const positions = labels.map((label) => html.indexOf(`>${label}<`));
 
@@ -111,8 +111,29 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
 
-    const html = renderStatistics(getStrings('fr'), 'fr', findings, manifest);
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
     expect(html).toContain('<h5>Conformité WCAG</h5>');
+  });
+
+  // item 10: "pages avec au moins un constat critique" is already computed
+  // live from Finding[] (computeStatistics), so once item 9's severity cap
+  // ships, a performance finding whose raw metric only rates "à améliorer"
+  // (mid) can no longer inflate this count by contributing a spurious
+  // "critical" on every page it appears on.
+  it('item 10: a performance finding capped below critical by item 9 does not inflate pagesWithCritical', () => {
+    const cappedPerfFinding = buildCategoryFinding('performance', 1);
+    const cappedFinding: Finding = { ...cappedPerfFinding, severity: 'serious', pageUrls: ['https://example.com/'] };
+    const genuineAccessibilityCritical: Finding = {
+      ...buildCategoryFinding('accessibility', 1),
+      severity: 'critical',
+      pageUrls: ['https://example.com/'],
+    };
+    const manifest = buildMinimalManifest();
+
+    const html = renderStatistics(getStrings('en'), 3, 'en', [cappedFinding, genuineAccessibilityCritical], manifest);
+
+    // Exactly 1 page has an (uncapped) critical finding, out of 1 scanned.
+    expect(html).toContain('>1/1</div>');
   });
 });

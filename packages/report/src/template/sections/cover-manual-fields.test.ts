@@ -20,7 +20,7 @@ describe('renderCover with AuditManualFields', () => {
   it('renders nomCommercial as the headline and recipientName/raisonSociale when supplied', async () => {
     const manifest = await loadSasFernandeManifest();
     const analysis = await loadSasFernandeAnalysis('fr');
-    const html = renderCover(fr, manifest, analysis, {
+    const html = renderCover(fr, manifest, analysis, [], {
       nomCommercial: { value: 'Acme SAS', provenance: 'operator' },
       raisonSociale: { value: 'Acme Société par Actions Simplifiée', provenance: 'operator' },
       recipientName: { value: 'Jane Doe', provenance: 'operator' },

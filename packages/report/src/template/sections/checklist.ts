@@ -1,11 +1,12 @@
+import { compareCriteria } from '@odysseus/core';
 import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { escapeHtml, formatFindingIdRefs, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { selectRenderedThemes } from './themes.js';
 
 function headCell(label: string): string {
-  return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
+  return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
 }
 
 function cell(html: string): string {
@@ -20,6 +21,7 @@ function cell(html: string): string {
  *  across a page break (paged.css). */
 export function renderChecklist(
   strings: ReportStrings,
+  ordinal: number,
   language: ReportLanguage,
   analysis: StoredAnalysis,
   findings: Finding[],
@@ -31,12 +33,19 @@ export function renderChecklist(
   const sortedThemes = selectRenderedThemes(analysis.themes);
   const levels = strings.themes.effortImpactLevels;
 
+  // item 35: the checklist was a near-exact restatement of the priorities
+  // section with nothing added - finding IDs and WCAG criteria give it
+  // something to actually look up, and a blank status/date column gives
+  // it something to write in, so it functions as a working checklist
+  // rather than a duplicate. Same underlying theme/finding data as
+  // themes.ts, no new computation, so it can never drift out of sync.
   const rows = sortedThemes
     .map((theme) => {
       const themeFindings = theme.findingIds
         .map((id) => findingsById.get(id))
         .filter((f): f is Finding => f !== undefined);
       const uniquePages = new Set(themeFindings.flatMap((f) => f.pageUrls)).size;
+      const wcagCriteria = [...new Set(themeFindings.flatMap((f) => f.wcagCriteria))].sort(compareCriteria);
 
       return `
         <div class="row-atomic">
@@ -45,21 +54,27 @@ export function renderChecklist(
           ${cell(escapeHtml(levels[theme.effort]))}
           ${cell(escapeHtml(levels[theme.impact]))}
           ${cell(`${formatNumber(uniquePages, language)}/${formatNumber(totalPagesScanned, language)}`)}
+          ${cell(`<span class="mono" style="font-size:11px">${escapeHtml(formatFindingIdRefs(theme.findingIds))}</span>`)}
+          ${cell(wcagCriteria.length > 0 ? escapeHtml(wcagCriteria.join(', ')) : '-')}
+          ${cell('<span style="display:inline-block;width:100%;height:1em;border-bottom:1px solid var(--color-divider)"></span>')}
         </div>
       `;
     })
     .join('');
 
   return sheet(`
-    ${renderSheetHeader(c.eyebrow, c.heading)}
+    ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(c.intro)}</p>
-    <div style="display:grid;grid-template-columns:40px 1fr 90px 90px 110px;font-size:14px">
+    <div style="display:grid;grid-template-columns:30px 1fr 70px 70px 60px 110px 80px 100px;font-size:12.5px">
       ${headCell(c.rankColumnLabel)}
       ${headCell(c.priorityColumnLabel)}
       ${headCell(c.effortColumnLabel)}
       ${headCell(c.impactColumnLabel)}
       ${headCell(c.pagesColumnLabel)}
+      ${headCell(c.findingsColumnLabel)}
+      ${headCell(c.wcagColumnLabel)}
+      ${headCell(c.statusDateColumnLabel)}
       ${rows}
     </div>
-  `, '', 'section-05');
+  `, 'sheet-standalone', 'section-05');
 }

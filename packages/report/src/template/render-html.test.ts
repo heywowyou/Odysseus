@@ -65,7 +65,11 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
-    expect(html).toContain('Appendix: full findings list');
+    // "Appendix: full findings list" was the old, independently hand-typed
+    // TOC row wording (report-feedback-palais-gallien.md item 3 removed
+    // that duplication) - the section's own heading is the canonical
+    // assertion now that the TOC row reads the section's own eyebrow.
+    expect(html).toContain('Full findings list');
   });
 });
 
@@ -88,8 +92,7 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
     basis: [{ regimeId: 'eaa-loi-2023-171', facts: [{ kind: 'siren-missing' }] }],
   };
 
-  // Doc §3: the conformance summary's own scope note ("sans se prononcer
-  // sur leur applicabilité légale précise à ce site") is unconditional
+  // Doc §3: the conformance summary's own scope note is unconditional
   // fixed copy, independent of whether an obligation determination was
   // reached elsewhere - only the legal-exposure hedge (rendered by the
   // exported renderLegalCitationParagraph) varies with status. The two use
@@ -97,7 +100,19 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   // check. B9: methodology used to render the same paragraph a second
   // time; it now points back to legal-exposure instead, so each of the
   // legal-citation assertions below changed from 2 occurrences to 1.
-  const CONFORMANCE_SCOPE_NOTE = 'sans se prononcer sur leur applicabilité légale précise';
+  //
+  // item 23 [REGRESSION]: the scope note used to read "sans se prononcer
+  // sur leur applicabilité légale précise à ce site" (we don't know if
+  // this applies to you), which flatly contradicts a page-4 "Confirmé"
+  // status on the very same document - a repeat of a defect already
+  // flagged once on the haaitza pass. Narrowed to scope the hedge to the
+  // criteria list itself ("this list alone doesn't conclude legal
+  // obligation"), never a blanket "we don't know" statement, so it can
+  // coexist with a confirmed status elsewhere in the report. The OLD
+  // phrase is asserted absent below specifically so a future edit
+  // reverting to the blanket wording fails this test, not just a new one.
+  const CONFORMANCE_SCOPE_NOTE = "n&#39;implique pas, à elle seule, une conclusion sur l&#39;obligation légale";
+  const OLD_CONTRADICTORY_SCOPE_NOTE = 'sans se prononcer sur leur applicabilité légale précise';
   const LEGAL_HEDGE = "sans se prononcer sur l&#39;applicabilité d&#39;une obligation légale particulière";
   const METHODOLOGY_POINTER = 'figure dans la section';
 
@@ -113,6 +128,9 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
     expect(html).not.toContain(LEGAL_HEDGE);
     expect(html).toContain(METHODOLOGY_POINTER);
     expect(html.split(CONFORMANCE_SCOPE_NOTE).length - 1).toBe(1);
+    // item 23: a confirmed status must never coexist with the old
+    // blanket "we don't know if this applies to you" phrasing.
+    expect(html).not.toContain(OLD_CONTRADICTORY_SCOPE_NOTE);
   });
 
   it('undetermined: legal exposure hedges once, methodology points back to it, conformance summary carries the same fixed scope note regardless', async () => {

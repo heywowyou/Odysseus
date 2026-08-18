@@ -11,7 +11,7 @@ function buildMeasurement(numericValue: number, displayValue: string) {
 describe('renderCoreWebVitalsTable', () => {
   it('renders the "not measured" fallback for the sas-fernande.fr capture, which predates coreWebVitals', async () => {
     const manifest = await loadSasFernandeManifest();
-    const html = renderCoreWebVitalsTable(getStrings('en'), 'en', manifest);
+    const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
 
     expect(html).toContain('Not measured');
     expect(html).not.toContain('undefined');
@@ -38,7 +38,7 @@ describe('renderCoreWebVitalsTable', () => {
       ],
     } as unknown as AuditManifest;
 
-    const html = renderCoreWebVitalsTable(getStrings('en'), 'en', manifest);
+    const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
     expect(html).toContain('1.8 s');
     expect(html).toContain('120 ms');
     expect(html).toContain('0.9 s');
@@ -66,7 +66,7 @@ describe('renderCoreWebVitalsTable', () => {
       pages: [page(1000), page(2000), page(46000)],
     } as unknown as AuditManifest;
 
-    const html = renderCoreWebVitalsTable(getStrings('en'), 'en', manifest);
+    const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
     // Median LCP is 2000ms = 2.0s, not the mean (~16.3s).
     expect(html).toContain('2 s');
     expect(html).not.toContain('16.3 s');
@@ -95,9 +95,38 @@ describe('renderCoreWebVitalsTable', () => {
       ],
     } as unknown as AuditManifest;
 
-    const html = renderCoreWebVitalsTable(getStrings('en'), 'en', manifest);
+    const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
 
     expect(html).toContain('poor');
     expect(html).toContain('good');
+  });
+
+  // item 12: a genuinely healthy, non-zero CLS (e.g. the real median 0.0035
+  // measured on hotel-palais-gallien-bordeaux.com) used to round to "0" at
+  // 2 decimal places, indistinguishable from a capture failure.
+  it('item 12: a small non-zero CLS median renders distinguishably from a literal 0, not rounded away', () => {
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [
+        {
+          url: 'https://example.com/',
+          pageDir: 'pages/root-aaa',
+          depth: 0,
+          status: 'visited',
+          errors: {},
+          coreWebVitals: {
+            lcp: buildMeasurement(1800, '1.8 s'),
+            cls: buildMeasurement(0.0035, '0.004'),
+            tbt: buildMeasurement(120, '120 ms'),
+            fcp: buildMeasurement(900, '0.9 s'),
+            speedIndex: buildMeasurement(2000, '2.0 s'),
+          },
+        },
+      ],
+    } as unknown as AuditManifest;
+
+    const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+    expect(html).toContain('0.004');
+    expect(html).not.toMatch(/>0<\/div>/);
   });
 });

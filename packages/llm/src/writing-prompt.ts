@@ -45,7 +45,7 @@ Each theme you are given below has a themeKey (for example "t1"). For every them
 
 You must return exactly one theme object per themeKey shown to you, echoing its themeKey verbatim. Do not invent a themeKey you were not shown, do not omit one you were shown, and do not return more than one object for the same themeKey.
 
-Also write an executiveSummary aimed at a non-technical decision maker, citing the exact siteStats figures you are given (pages scanned, total findings, and the count at each severity) rather than estimating them yourself, and a notes field for anything else worth telling the client.
+Also write an executiveSummary aimed at a non-technical decision maker, citing the exact siteStats figures you are given (pages scanned, total findings, and the count at each severity) rather than estimating them yourself, and a notes field for anything else worth telling the client. Lead the executiveSummary with the actionable number (critical plus serious findings combined), not the raw total findings count - most findings on a real site are minor, and opening with the full total reads as alarmist relative to what actually needs attention. State the full total too, but not as the headline figure the reader is left with (for example "98 constats au total, dont 7 prioritaires" rather than leading with "98 problèmes").
 ${dominantMetricNote}${severityVocabularyNote}
 ${LANGUAGE_INSTRUCTION[language]}${fallbackNote}
 

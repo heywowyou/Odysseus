@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuditManifest, Finding } from '@odysseus/core';
 import {
   applyOccurrenceWeighting,
+  enforceImpactEffortOrdering,
   enforceQuickWinFloor,
   enforceSiteWideAccessibilityFloor,
   logContainmentWarnings,
@@ -178,6 +179,69 @@ describe('enforceQuickWinFloor', () => {
     const result = enforceQuickWinFloor(themes);
 
     expect(result.map((t) => t.themeKey)).toEqual(['t-other-low-impact', 't-low-effort-low-impact']);
+  });
+});
+
+// item 15: enforceQuickWinFloor only fires when a low-impact theme exists
+// to anchor the promotion against - the real reported symptom had three
+// themes, all impact 'high', ranked by descending effort (high, medium,
+// low/quick-win last), which enforceQuickWinFloor does nothing about
+// (verified above: "leaves order unchanged when no low-impact theme
+// exists"). enforceImpactEffortOrdering is the general-case fix.
+describe('enforceImpactEffortOrdering', () => {
+  it('ranks the quick win first even when every theme carries the same (non-low) impact, matching the reported symptom', () => {
+    const themes: StructureThemeWithKey[] = [
+      theme('t-high-effort', ['f002'], { priorityRank: 1, effort: 'high', impact: 'high' }),
+      theme('t-medium-effort', ['f009'], { priorityRank: 2, effort: 'medium', impact: 'high' }),
+      theme('t-quick-win', ['f039'], { priorityRank: 3, effort: 'low', impact: 'high' }),
+    ];
+
+    const result = enforceImpactEffortOrdering(themes);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t-quick-win', 't-medium-effort', 't-high-effort']);
+    expect(result.map((t) => t.priorityRank)).toEqual([1, 2, 3]);
+  });
+
+  it('orders non-quick-win themes by descending impact-to-effort ratio', () => {
+    const themes: StructureThemeWithKey[] = [
+      theme('t-medium-medium', ['f002'], { priorityRank: 1, effort: 'medium', impact: 'medium' }), // ratio 1
+      theme('t-high-low', ['f009'], { priorityRank: 2, effort: 'high', impact: 'low' }), // ratio 1/3
+      theme('t-low-high', ['f086'], { priorityRank: 3, effort: 'low', impact: 'high' }), // quick win, ratio 3
+      theme('t-medium-high', ['f039'], { priorityRank: 4, effort: 'medium', impact: 'high' }), // ratio 1.5
+    ];
+
+    const result = enforceImpactEffortOrdering(themes);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t-low-high', 't-medium-high', 't-medium-medium', 't-high-low']);
+    expect(result.map((t) => t.priorityRank)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('keeps the model\'s own relative order as a tiebreak when the ratio is equal', () => {
+    const themes: StructureThemeWithKey[] = [
+      theme('t-a', ['f002'], { priorityRank: 1, effort: 'medium', impact: 'medium' }),
+      theme('t-b', ['f009'], { priorityRank: 2, effort: 'low', impact: 'low' }), // not a quick win (impact 'low')
+      theme('t-c', ['f086'], { priorityRank: 3, effort: 'high', impact: 'high' }), // same ratio as t-a
+    ];
+
+    const result = enforceImpactEffortOrdering(themes);
+
+    // t-a and t-c share ratio 1: t-a (model rank 1) stays ahead of t-c
+    // (model rank 3). t-b (ratio 1 too, since low/low = 1) keeps its
+    // model rank 2 among the tied group as well.
+    expect(result.map((t) => t.themeKey)).toEqual(['t-a', 't-b', 't-c']);
+  });
+
+  it('is idempotent: running it twice produces the same order', () => {
+    const themes: StructureThemeWithKey[] = [
+      theme('t1', ['f002'], { priorityRank: 1, effort: 'high', impact: 'medium' }),
+      theme('t2', ['f009'], { priorityRank: 2, effort: 'low', impact: 'high' }),
+      theme('t3', ['f086'], { priorityRank: 3, effort: 'medium', impact: 'low' }),
+    ];
+
+    const once = enforceImpactEffortOrdering(themes);
+    const twice = enforceImpactEffortOrdering(once);
+
+    expect(twice.map((t) => t.themeKey)).toEqual(once.map((t) => t.themeKey));
   });
 });
 

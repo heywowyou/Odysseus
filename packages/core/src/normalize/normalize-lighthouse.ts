@@ -19,12 +19,13 @@ import type {
   CoreWebVitals,
   LighthouseExcludedCategoryScores,
 } from '../types/manifest.js';
-import { severityFromLighthouse } from './severity.js';
+import { capAt, severityFromLighthouse } from './severity.js';
 import {
   LIGHTHOUSE_EMISSION_SCORE_THRESHOLD,
   LIGHTHOUSE_EXCLUDED_AUDITS,
   MAX_LIGHTHOUSE_DETAILS_ITEMS,
 } from './constants.js';
+import { CORE_WEB_VITAL_THRESHOLDS, rateCoreWebVital } from './cwv-thresholds.js';
 import type { FindingCandidate } from './candidate.js';
 
 export interface LighthouseAuditRefInput {
@@ -115,6 +116,47 @@ const CORE_WEB_VITAL_AUDIT_IDS = {
   speedIndex: 'speed-index',
 } as const;
 
+/** item 9: the reverse of CORE_WEB_VITAL_AUDIT_IDS, so a Lighthouse audit
+ *  id encountered in extractLighthouseCandidates can be matched back to
+ *  its raw-value threshold row in CORE_WEB_VITAL_THRESHOLDS. */
+const AUDIT_ID_TO_CWV_KEY = new Map<string, keyof typeof CORE_WEB_VITAL_AUDIT_IDS>(
+  Object.entries(CORE_WEB_VITAL_AUDIT_IDS).map(([key, auditId]) => [auditId, key as keyof typeof CORE_WEB_VITAL_AUDIT_IDS]),
+);
+
+/** item 9: severityFromLighthouse (locked severity.ts) grades a finding
+ *  from Lighthouse's own nonlinear 0-1 score, which the report's Core Web
+ *  Vitals table never consults - that table independently rates the same
+ *  metric's raw measurement against CORE_WEB_VITAL_THRESHOLDS' fixed ms
+ *  values into a bon/à améliorer/insuffisant status. The two disagreeing
+ *  is not a hypothetical: a real report showed TBT 560ms graded "à
+ *  améliorer" by the table while the underlying finding carried
+ *  "Critique", the highest severity tier in the document.
+ *
+ *  This does not replace severityFromLighthouse's score-based severity
+ *  (a locked, general-purpose mapping used for every Lighthouse audit,
+ *  not just the five Core Web Vitals) - it caps the result for the five
+ *  audits that have a raw-value threshold row, so a metric this report
+ *  will separately display as "good" or "needs improvement" can never
+ *  simultaneously back a "Critique" finding. Only 'critical' is capped
+ *  (down to 'serious'); 'serious'/'moderate'/'minor' pass through
+ *  unchanged, since the doc's complaint was specifically about the
+ *  contradiction with the highest tier. */
+function capSeverityByCoreWebVitalRating(
+  severity: ReturnType<typeof severityFromLighthouse>,
+  auditId: string,
+  numericValue: number | undefined,
+): ReturnType<typeof severityFromLighthouse> {
+  if (numericValue === undefined) return severity;
+  const key = AUDIT_ID_TO_CWV_KEY.get(auditId);
+  if (!key) return severity;
+  const threshold = CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === key);
+  if (!threshold) return severity;
+
+  const rating = rateCoreWebVital(numericValue, threshold.good, threshold.needsImprovement);
+  if (rating === 'poor') return severity;
+  return capAt(severity, 'serious');
+}
+
 function extractCoreWebVitalMeasurement(
   lhr: LighthouseResultInput,
   auditId: string,
@@ -169,7 +211,11 @@ export function extractLighthouseCandidates(
       // severityFromLighthouse's separate weight===0 early return, for
       // diagnostic-only audits. Both are intentional; do not "fix" this
       // as dead code.
-      const severity = severityFromLighthouse(audit.score, auditRef.weight);
+      const severity = capSeverityByCoreWebVitalRating(
+        severityFromLighthouse(audit.score, auditRef.weight),
+        auditRef.id,
+        audit.numericValue,
+      );
 
       const rawItems = audit.details?.items;
       const items: Array<Record<string, unknown>> = Array.isArray(rawItems) ? rawItems : [];
