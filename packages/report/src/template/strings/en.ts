@@ -13,6 +13,9 @@ export const en: ReportStrings = {
     pagesTileLabel: 'pages analyzed',
     findingsTileLabel: 'distinct findings',
     accessibilityOccurrencesTileLabel: 'accessibility occurrences',
+    heuristicOccurrencesExcludedNoteTemplate:
+      "This figure excludes {count} further occurrences from a heuristic signal on alt-text quality, which is not a deterministic conformance test (see the \"Signals to verify\" section).",
+    criticalDriverNoteTemplate: 'These critical findings come only from: {rules}.',
     pagesWithCriticalTileLabel: 'pages with at least one critical finding',
     criticalTileLabel: 'critical',
     seriousTileLabel: 'serious',
@@ -45,6 +48,8 @@ export const en: ReportStrings = {
     heuristicSectionHeading: 'Signals to verify',
     heuristicSectionNote:
       'These rows come from a heuristic signal on alt-text quality, not a deterministic conformance test: they flag alt text that may be low-value (generic, a raw filename, or duplicated), without asserting a confirmed non-conformance. A manual review is needed before treating these as conformance gaps.',
+    multiCriterionNote:
+      "A finding mapped to more than one WCAG criterion is counted under each row: the Occurrences column's total can therefore exceed the accessibility-occurrences count stated elsewhere in this report.",
   },
   observations: {
     eyebrow: 'Observations',
@@ -447,7 +452,6 @@ export const en: ReportStrings = {
     occurrencePlural: 'occurrences',
     pageSingular: 'page',
     pagePlural: 'pages',
-    upToLabel: 'up to',
     wcagLabel: 'WCAG',
     observationsCrossRefLabel: 'see Observations',
     crawledPagesHeadingTemplate: 'Pages analyzed ({count})',
@@ -456,11 +460,19 @@ export const en: ReportStrings = {
     eyebrow: 'Methodology and limitations',
     heading: 'How this audit was carried out',
     toolingParagraphTemplate:
-      'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages analyzed on {date} starting from the homepage.',
+      'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages analyzed on {date} starting from the homepage. A translated homepage at the root of a language prefix (for example /en/) is not counted as a distinct page: only pages with their own content are crawled.',
     automatedCoverageCaveat:
       'Automated tools detect a well-documented but limited share of accessibility issues, a commonly cited industry estimate placing that share between 30 and 40 percent of criteria (a general estimate with no single attributable source, unlike the figures cited elsewhere in this report). This is a property of any automated audit, not a reservation about this one: it guarantees every finding listed is verifiable. This audit adds an extended accessibility pass covering keyboard navigation, focus order, form error handling, video caption presence, and a heuristic red flag for alt text quality. This audit is fully automated: some accessibility properties cannot be reliably evaluated by automated tools alone and are not covered by any finding in this report.',
     extendedPassNoneFoundNote:
       'Extended accessibility pass result: no keyboard trap, no focus-order mismatch, no form error left unassociated with its field, and no video missing captions was detected on the pages analyzed.',
+    extendedPassResultTemplate: 'Extended accessibility pass result: {checks}.',
+    extendedPassCheckKeyboardTrapsLabel: 'keyboard traps',
+    extendedPassCheckFocusOrderLabel: 'focus order',
+    extendedPassCheckFormErrorsLabel: 'form errors left unassociated with their field',
+    extendedPassCheckVideoCaptionsLabel: 'video captions',
+    extendedPassCheckCleanLabel: 'no issue detected',
+    extendedPassCheckFoundSingular: 'finding detected',
+    extendedPassCheckFoundPlural: 'findings detected',
     legalCitationInScopeTemplate:
       'This site falls under the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts}',
     legalCitationLikelyInScopeTemplate:

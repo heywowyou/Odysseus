@@ -150,3 +150,93 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     expect(html).toContain('>1/1</div>');
   });
 });
+
+// item 1.8 (La Corniche pass): the accessibility-occurrences tile used to
+// include alt-text-quality-heuristic occurrences with no caveat, sitting
+// beside three genuinely hard counts.
+describe('item 1.8: the accessibility-occurrences tile excludes heuristic occurrences, with a footnote when it does', () => {
+  it('renders the exclusion footnote and the excluded count when a heuristic finding is present', () => {
+    const findings: Finding[] = [
+      { ...buildCategoryFinding('accessibility', 1), ruleId: 'image-alt', occurrences: 10 },
+      { ...buildCategoryFinding('accessibility', 2), ruleId: 'alt-text-quality-heuristic', occurrences: 74 },
+    ];
+    const manifest = buildMinimalManifest();
+
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
+
+    expect(html).toContain('>10</div>');
+    expect(html).not.toContain('>84</div>');
+    expect(html).toContain('exclut 74 occurrences');
+  });
+
+  it('renders no footnote when there is no heuristic occurrence to exclude', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
+
+    expect(html).not.toContain('exclut');
+  });
+});
+
+// item 1.10 (La Corniche pass): a real report's cover badge read "Élevé"
+// off "18/18 pages avec au moins un constat critique", but all 33
+// Critique findings reduced to exactly 2 rules (image-alt, button-name)
+// that both happen to fire on every page - the "N/N" figure was
+// mechanically guaranteed by those two rules alone, not by broad risk.
+describe('item 1.10: the critical-findings driver is named when concentrated in a handful of rules', () => {
+  function criticalFinding(ruleId: string, index: number): Finding {
+    return {
+      findingId: `f-${ruleId}-${index}`,
+      auditId: 'a1',
+      schemaVersion: 1,
+      source: 'axe',
+      ruleId,
+      category: 'accessibility',
+      severity: 'critical',
+      wcagCriteria: [],
+      title: ruleId === 'image-alt' ? 'Images must have alternate text' : 'Buttons must have discernible text',
+      description: 'd',
+      pageUrls: [`https://example.com/${index}`],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: `d-${ruleId}-${index}`,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  it('names the driving rules when every critical finding reduces to 2 rules', () => {
+    const findings = [criticalFinding('image-alt', 1), criticalFinding('button-name', 2)];
+    const manifest = buildMinimalManifest();
+
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
+
+    expect(html).toContain('proviennent uniquement de');
+    expect(html).toContain('Les images doivent avoir un texte alternatif');
+    expect(html).toContain('Les boutons doivent avoir un texte identifiable');
+  });
+
+  it('renders no driver note when critical findings span more than the concentration threshold', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
+
+    // sas-fernande's own critical findings span more than 3 distinct
+    // rules (docs/normalization-rules.md section 7); the fixture is used
+    // rather than hand-asserting a specific count, so this test does not
+    // silently drift if the fixture is ever regenerated with fewer.
+    const criticalRuleCount = new Set(findings.filter((f) => f.severity === 'critical').map((f) => f.ruleId)).size;
+    if (criticalRuleCount > 3) {
+      expect(html).not.toContain('proviennent uniquement de');
+    }
+  });
+
+  it('renders no driver note when there are no critical findings at all', () => {
+    const manifest = buildMinimalManifest();
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', [], manifest);
+    expect(html).not.toContain('proviennent uniquement de');
+  });
+});

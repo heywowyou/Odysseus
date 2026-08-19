@@ -1,5 +1,5 @@
 import type { AuditManifest, Finding } from '@odysseus/core';
-import { RENDER_DIFF_EMISSION_THRESHOLD_PERCENT } from '@odysseus/core';
+import { HEURISTIC_RULE_IDS, RENDER_DIFF_EMISSION_THRESHOLD_PERCENT } from '@odysseus/core';
 import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rollup.js';
 import { CATEGORY_ORDER } from './design-tokens.js';
 import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
@@ -14,7 +14,19 @@ import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
 export interface ReportStatistics {
   pagesScanned: number;
   totalFindings: number;
+  /** item 1.8 (La Corniche pass): excludes HEURISTIC_RULE_IDS findings
+   *  (alt-text-quality-heuristic), same convention buildConformanceRollup
+   *  and pagesWithWcagFailures already apply elsewhere - a heuristic red
+   *  flag is not a confirmed conformance failure, so it must not inflate
+   *  the one tile a client reads as a hard, deterministic count. A real
+   *  report had 74 of 703 occurrences (10 percent) come from the
+   *  heuristic alone, with no caveat next to three genuinely hard counts
+   *  beside it. */
   accessibilityOccurrences: number;
+  /** The heuristic-only occurrence count excluded from the figure above,
+   *  kept separately so a future section can state it explicitly rather
+   *  than silently dropping it. */
+  accessibilityHeuristicOccurrences: number;
   pagesWithCritical: number;
   critical: number;
   serious: number;
@@ -52,6 +64,7 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
   const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
 
   let accessibilityOccurrences = 0;
+  let accessibilityHeuristicOccurrences = 0;
   let critical = 0;
   let serious = 0;
   let moderate = 0;
@@ -69,7 +82,11 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
 
   for (const finding of findings) {
     if (finding.category === 'accessibility') {
-      accessibilityOccurrences += finding.occurrences;
+      if (HEURISTIC_RULE_IDS.has(finding.ruleId)) {
+        accessibilityHeuristicOccurrences += finding.occurrences;
+      } else {
+        accessibilityOccurrences += finding.occurrences;
+      }
       accessibilityCount += 1;
     }
     if (finding.category === 'seo' || finding.category === 'rendering') {
@@ -97,6 +114,7 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
     pagesScanned,
     totalFindings: findings.length,
     accessibilityOccurrences,
+    accessibilityHeuristicOccurrences,
     pagesWithCritical: pagesWithCriticalSet.size,
     critical,
     serious,

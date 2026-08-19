@@ -87,6 +87,59 @@ describe('item 1.9: the heuristic block is structurally distinct from the real f
   });
 });
 
+// item 1.2 (La Corniche pass): the criteria table's occurrence column
+// summed to 911 while the accessibility-occurrences tile elsewhere said
+// 703, a 208-occurrence gap (exactly the link-name occurrence count,
+// double-counted across two criterion rows by design) an agency had to
+// puzzle out unaided.
+describe('item 1.2: a footnote explains when the occurrence column double-counts a finding', () => {
+  function buildFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'wcagCriteria'>): Finding {
+    return {
+      auditId: 'a',
+      schemaVersion: 1,
+      source: 'axe',
+      category: 'accessibility',
+      severity: 'serious',
+      title: 't',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: overrides.findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  it('renders the note when a finding maps to more than one WCAG criterion', () => {
+    const findings = [buildFinding({ findingId: 'f1', ruleId: 'link-name', wcagCriteria: ['2.4.4', '4.1.2'] })];
+    const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
+    expect(html).toContain('compté dans chaque ligne concernée');
+  });
+
+  it('does not render the note when every finding maps to exactly one criterion', () => {
+    const findings = [buildFinding({ findingId: 'f1', ruleId: 'color-contrast', wcagCriteria: ['1.4.3'] })];
+    const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
+    expect(html).not.toContain('compté dans chaque ligne concernée');
+  });
+
+  it('does not render the note for a multi-criterion heuristic finding (only real failures count)', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f1',
+        ruleId: 'alt-text-quality-heuristic',
+        wcagCriteria: ['1.1.1', '1.4.5'],
+        source: 'custom',
+        severity: 'moderate',
+      }),
+    ];
+    const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
+    expect(html).not.toContain('compté dans chaque ligne concernée');
+  });
+});
+
 describe('renderConformanceSummary with no WCAG failures', () => {
   it('renders the empty state rather than a blank grid', () => {
     const findings: Finding[] = [

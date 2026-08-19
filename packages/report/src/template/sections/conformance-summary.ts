@@ -2,7 +2,7 @@ import { getCriterionName } from '@odysseus/llm';
 import type { Finding, ReportLanguage } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
-import { buildConformanceRollup, buildHeuristicRollup, type ConformanceRow } from '../conformance-rollup.js';
+import { buildConformanceRollup, buildHeuristicRollup, hasMultiCriterionFinding, type ConformanceRow } from '../conformance-rollup.js';
 
 function headCell(label: string): string {
   return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
@@ -75,8 +75,12 @@ export function renderConformanceSummary(
   const heuristicRows = buildHeuristicRollup(findings);
   const c = strings.conformanceSummary;
 
+  const multiCriterionNote = hasMultiCriterionFinding(findings)
+    ? `<p style="font-size:11px;opacity:0.5;margin-top:var(--space-2)">${escapeHtml(c.multiCriterionNote)}</p>`
+    : '';
+
   const body = rows.length
-    ? renderRollupTable(strings, language, rows)
+    ? `${renderRollupTable(strings, language, rows)}${multiCriterionNote}`
     : `<p style="font-size:13.5px;opacity:0.85">${escapeHtml(c.emptyState)}</p>`;
 
   const heuristicBlock = heuristicRows.length

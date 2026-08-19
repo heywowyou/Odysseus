@@ -13,6 +13,9 @@ export const fr: ReportStrings = {
     pagesTileLabel: 'pages analysées',
     findingsTileLabel: 'constats distincts',
     accessibilityOccurrencesTileLabel: "occurrences d'accessibilité",
+    heuristicOccurrencesExcludedNoteTemplate:
+      "Ce chiffre exclut {count} occurrences supplémentaires provenant d'un signal heuristique sur la qualité des textes alternatifs, qui n'est pas un test de conformité déterministe (voir la section « Signaux à vérifier »).",
+    criticalDriverNoteTemplate: 'Ces constats critiques proviennent uniquement de : {rules}.',
     pagesWithCriticalTileLabel: 'pages avec au moins un constat critique',
     criticalTileLabel: 'critiques',
     seriousTileLabel: 'sérieux',
@@ -45,6 +48,11 @@ export const fr: ReportStrings = {
     heuristicSectionHeading: 'Signaux à vérifier',
     heuristicSectionNote:
       "Ces lignes proviennent d'un signal heuristique sur la qualité des textes alternatifs, pas d'un test de conformité déterministe : elles indiquent un texte alternatif potentiellement peu utile (générique, nom de fichier brut, ou dupliqué), sans se prononcer sur une non-conformité confirmée. Une vérification manuelle est nécessaire avant de les traiter comme des écarts de conformité.",
+    // item 1.2: rendered only when at least one finding maps to more than
+    // one WCAG criterion, so the occurrence column's total legitimately
+    // exceeds the accessibility-occurrences tile elsewhere in the report.
+    multiCriterionNote:
+      "Un constat associé à plusieurs critères WCAG est compté dans chaque ligne concernée : la somme de la colonne « Occurrences » peut donc dépasser le nombre total d'occurrences d'accessibilité indiqué ailleurs dans ce rapport.",
   },
   observations: {
     eyebrow: 'Observations',
@@ -474,7 +482,6 @@ export const fr: ReportStrings = {
     occurrencePlural: 'occurrences',
     pageSingular: 'page',
     pagePlural: 'pages',
-    upToLabel: "jusqu'à",
     wcagLabel: 'WCAG',
     observationsCrossRefLabel: 'voir Observations',
     crawledPagesHeadingTemplate: 'Pages analysées ({count})',
@@ -483,11 +490,26 @@ export const fr: ReportStrings = {
     eyebrow: 'Méthodologie et limites',
     heading: 'Comment cet audit a été réalisé',
     toolingParagraphTemplate:
-      "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages analysées le {date} à partir de la page d'accueil.",
+      "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages analysées le {date} à partir de la page d'accueil. Une page d'accueil traduite, accessible à la racine d'un préfixe de langue (par exemple /en/), n'est pas comptée comme une page distincte : seules les pages de contenu propre sont explorées.",
     automatedCoverageCaveat:
       "Les outils automatisés détectent une part reconnue mais limitée des problèmes d'accessibilité, une estimation généralement admise situant cette part entre 30 et 40 pour cent des critères, sans source unique attribuable. C'est une propriété de tout audit automatisé, pas une réserve sur celui-ci : elle garantit que chaque constat listé est vérifiable. Cet audit inclut une passe d'accessibilité étendue couvrant la navigation au clavier, l'ordre de focus, la gestion des erreurs de formulaire, la présence de sous-titres vidéo, et un signal heuristique sur la qualité des textes alternatifs. Cet audit est entièrement automatisé : certaines propriétés d'accessibilité ne peuvent pas être évaluées de manière fiable par des outils automatisés seuls et ne font l'objet d'aucun constat dans ce rapport.",
     extendedPassNoneFoundNote:
       "Résultat de la passe d'accessibilité étendue : aucun piège au clavier, aucune anomalie d'ordre de focus, aucune erreur de formulaire non associée à son champ, et aucune vidéo sans sous-titres n'a été détecté sur les pages analysées.",
+    // item 1.7 (La Corniche pass): extendedPassNoneFoundNote above only
+    // ever rendered when all four checks found nothing at all - one
+    // finding on any single check (e.g. a video without captions)
+    // silently suppressed the whole note, so the other three checks,
+    // which genuinely found nothing, went unstated. Per-check status is
+    // rendered instead whenever at least one check found something, so a
+    // clean result is always stated rather than only implied by silence.
+    extendedPassResultTemplate: "Résultat de la passe d'accessibilité étendue : {checks}.",
+    extendedPassCheckKeyboardTrapsLabel: 'pièges au clavier',
+    extendedPassCheckFocusOrderLabel: "ordre de focus",
+    extendedPassCheckFormErrorsLabel: 'erreurs de formulaire non associées à leur champ',
+    extendedPassCheckVideoCaptionsLabel: 'sous-titres vidéo',
+    extendedPassCheckCleanLabel: 'aucune anomalie détectée',
+    extendedPassCheckFoundSingular: 'constat détecté',
+    extendedPassCheckFoundPlural: 'constats détectés',
     legalCitationInScopeTemplate:
       "Ce site relève de l'obligation suivante : {regimeName}, sous le contrôle {authority} ({legalCitation}). {facts}",
     legalCitationLikelyInScopeTemplate:

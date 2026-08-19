@@ -28,6 +28,21 @@ export interface ReportStrings {
     pagesTileLabel: string;
     findingsTileLabel: string;
     accessibilityOccurrencesTileLabel: string;
+    /** item 1.8 (La Corniche pass): rendered only when
+     *  stats.accessibilityHeuristicOccurrences > 0 - the tile above it
+     *  excludes heuristic occurrences (a real report had 74 of 703, 10
+     *  percent, come from alt-text-quality-heuristic alone with no
+     *  caveat next to three genuinely hard counts). Template: {count}. */
+    heuristicOccurrencesExcludedNoteTemplate: string;
+    /** item 1.10 (La Corniche pass): rendered only when every Critique
+     *  finding reduces to a small handful of rules (CRITICAL_DRIVER_MAX_
+     *  RULES in statistics.ts, currently 3) - a real report had all 33
+     *  Critique findings reduce to exactly 2 rules (image-alt, button-
+     *  name) that both fire on every page, mechanically guaranteeing the
+     *  "N/N pages" tile above without the reader knowing why until they
+     *  reach the annex. Template: {rules}, a comma-joined list of
+     *  translated rule titles. */
+    criticalDriverNoteTemplate: string;
     pagesWithCriticalTileLabel: string;
     criticalTileLabel: string;
     seriousTileLabel: string;
@@ -77,6 +92,12 @@ export interface ReportStrings {
      *  flag can never read as a confirmed WCAG criterion failure. */
     heuristicSectionHeading: string;
     heuristicSectionNote: string;
+    /** item 1.2: rendered under the criterion table only when at least
+     *  one finding maps to more than one WCAG criterion (hasMultiCriterion
+     *  Finding in conformance-rollup.ts), so the occurrence column's total
+     *  legitimately exceeding the accessibility-occurrences tile is
+     *  explained rather than left for an agency to puzzle out. */
+    multiCriterionNote: string;
   };
   observations: {
     eyebrow: string;
@@ -561,7 +582,6 @@ export interface ReportStrings {
     occurrencePlural: string;
     pageSingular: string;
     pagePlural: string;
-    upToLabel: string;
     wcagLabel: string;
     observationsCrossRefLabel: string;
     /** item 29: the list of crawled URLs was not printed anywhere - the
@@ -583,6 +603,24 @@ export interface ReportStrings {
      *  invisible to the client despite the pass being named in
      *  toolingParagraphTemplate/automatedCoverageCaveat's neighbourhood. */
     extendedPassNoneFoundNote: string;
+    /** item 1.7 (La Corniche pass): extendedPassNoneFoundNote above only
+     *  ever rendered when all four checks found nothing - one finding on
+     *  any single check silently suppressed the whole note, so the other
+     *  three checks, which genuinely found nothing, went unstated on a
+     *  real report. Rendered instead of extendedPassNoneFoundNote
+     *  whenever at least one check found something. Template: {checks},
+     *  a comma-joined list of "{label} ({status})" built from the four
+     *  extendedPassCheck*Label strings below and either
+     *  extendedPassCheckCleanLabel or a count using extendedPassCheckFound
+     *  Singular/Plural. */
+    extendedPassResultTemplate: string;
+    extendedPassCheckKeyboardTrapsLabel: string;
+    extendedPassCheckFocusOrderLabel: string;
+    extendedPassCheckFormErrorsLabel: string;
+    extendedPassCheckVideoCaptionsLabel: string;
+    extendedPassCheckCleanLabel: string;
+    extendedPassCheckFoundSingular: string;
+    extendedPassCheckFoundPlural: string;
     /** Entity-layer milestone: replaces the old single legalCitationParagraph
      *  hedge with a status-branched determination, code-rendered from
      *  ObligationAssessment (@odysseus/core's assessObligations), never

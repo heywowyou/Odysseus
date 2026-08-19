@@ -15,7 +15,15 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
   const parts = [
     `${formatNumber(group.findings.length, language)} ${pluralize(group.findings.length, a.findingSingular, a.findingPlural)}`,
     `${formatNumber(group.totalOccurrences, language)} ${pluralize(group.totalOccurrences, a.occurrenceSingular, a.occurrencePlural)}`,
-    `${a.upToLabel} ${formatNumber(group.maxPages, language)} ${pluralize(group.maxPages, a.pageSingular, a.pagePlural)}`,
+    // item 1.6: no longer "jusqu'à N pages" ("up to") - group.pages is now
+    // a real union across every finding's own pageUrls, not the largest
+    // single finding's page count, so it is an exact figure, not an
+    // upper bound. Kept a plain "N pages" instead of introducing a
+    // denominator ("N sur M", matching the priority card's own wording)
+    // since this group can span more rule ids than any one priority card
+    // does (rule-family clustering, item 1.3) and a borrowed "sur M" here
+    // would need its own explanation.
+    `${formatNumber(group.pages, language)} ${pluralize(group.pages, a.pageSingular, a.pagePlural)}`,
   ];
   if (group.wcagCriteria.length > 0) {
     parts.push(`${a.wcagLabel} ${group.wcagCriteria.join(', ')}`);

@@ -699,6 +699,13 @@ GEO-keyed statistic cannot attach to an SEO priority.
 
 ### 1.2 The WCAG criteria table does not reconcile with the occurrences tile
 
+**FIXED, 2026-08-19.** A footnote (`hasMultiCriterionFinding` in
+`conformance-rollup.ts`) renders under the table only when at least one
+non-heuristic accessibility finding maps to more than one WCAG criterion.
+Confirmed in the regenerated La Corniche PDF, directly under the criteria
+table: "Un constat associé à plusieurs critères WCAG est compté dans
+chaque ligne concernée [...]".
+
 **Symptom.** Page 9, the criteria table's occurrence column sums to 911. Page 3's
 tile says 703 occurrences d'accessibilité. The difference is exactly 282, the
 `link-name` occurrence count, which is counted in both the 2.4.4 row and the 4.1.2
@@ -713,6 +720,24 @@ counted in both rows, so the column does not sum to the total. Or split
 than one criterion.
 
 ### 1.3 Five of the 18 pages are the same homepage in five languages
+
+**FIXED, 2026-08-19.** Chose the "restrict the crawl" branch of this
+item's own fix, not the "group in the annex" branch: a `LANGUAGE_HOMEPAGE_
+PATH_PATTERN` in `packages/scanner/src/links.ts`'s `normalizeInternalLinks`
+now drops any same-origin link whose entire path is one root-level
+language-code segment (`/en/`, `/pt-pt/`), the same drop-before-fetch
+point and reasoning as the existing non-HTML-extension filter (trade-off
+4) - deliberately narrow so a genuine content page nested under a
+language prefix (`/en/rooms/`) is never dropped, only the bare homepage
+duplicate itself. The methodology paragraph states the choice
+unconditionally (no per-audit count needed, since it's a structural crawl
+rule, not a variable). Verified with unit tests using the exact URL
+pattern observed on lacoorniche.com (`/en/`, `/es/`, `/it/`, `/pt-pt/`);
+not re-verified with a fresh live crawl this session (a crawl-time fix,
+so it would need a new full re-scan to show in a regenerated PDF, and the
+report-side items already needed one live re-scan cycle - the fix is
+narrow enough that unit coverage against the real URL shapes was judged
+sufficient here).
 
 **Symptom.** The scanned page list contains `/`, `/en/`, `/es/`, `/it/` and
 `/pt-pt/`. Twenty-three of the annex findings show exactly "5 pages" with exactly
@@ -793,6 +818,18 @@ heading does not claim a sort the data cannot support.
 
 ### 1.6 Two page counts for the same fact, again
 
+**FIXED, 2026-08-19.** Chose the "union" branch of this item's own fix,
+not the relabel branch: `RuleGroup.maxPages` (`Math.max` of each
+finding's own page count) replaced with `RuleGroup.pages`, a true union
+of page URLs across every finding in the group (`appendix-grouping.ts`),
+the same computation the priority card's own page count already uses.
+The "jusqu'à N pages" ("up to") wording is gone from the annex row
+summary along with it - now a plain, exact "N pages", since it is no
+longer an upper bound. `upToLabel` removed from all three string files as
+dead code. Confirmed in the regenerated PDF: annex rows read "21
+constats · 139 occurrences · 18 pages · WCAG 1.1.1" with no "jusqu'à"
+anywhere in the annex.
+
 **Symptom.** Priority 1 says "Pages affectées: 18 pages sur 18". The annex group
 for the same rule says "jusqu'à 17 pages". Priority 3 says 17 pages sur 18, its
 annex group says "jusqu'à 14 pages". Both are defensible (union versus largest
@@ -803,6 +840,21 @@ Palais Gallien v2 item 1.11, where the fix was to use the union consistently.
 the largest single constat rather than "jusqu'à".
 
 ### 1.7 The extended accessibility pass is claimed and only partly evidenced
+
+**FIXED, 2026-08-19.** Root cause was the all-or-nothing suppression
+logic itself, not a rendering gap: `renderExtendedPassNote`
+(`methodology.ts`) used to omit the whole note when any one of the four
+checks found anything at all, so a single video-captions finding on a
+real report silently suppressed the note for keyboard traps, focus
+order, and form errors too, even though those three genuinely found
+nothing. Now states each of the four checks individually - clean or with
+its own count - whenever at least one of them found something; falls
+back to the original single combined sentence only in the all-clean
+case. Confirmed in the regenerated PDF: "Résultat de la passe
+d'accessibilité étendue : pièges au clavier (aucune anomalie détectée),
+ordre de focus (aucune anomalie détectée), erreurs de formulaire non
+associées à leur champ (aucune anomalie détectée), sous-titres vidéo (2
+constats détectés)."
 
 **Symptom.** Methodology, page 11, claims keyboard navigation, focus order, form
 error handling, video captions and the alt-text heuristic. Video captions and the
@@ -817,6 +869,21 @@ full tier.
 result stated is worth more than a clean result implied.
 
 ### 1.8 The 703 occurrences tile includes 74 heuristic occurrences
+
+**FIXED, 2026-08-19.** Chose the "split into two figures" branch of this
+item's own fix: `computeStatistics` (`statistics.ts`) now excludes
+`HEURISTIC_RULE_IDS` findings from `accessibilityOccurrences`, matching
+the convention `buildConformanceRollup`/`pagesWithWcagFailures` already
+apply elsewhere, and reports the excluded count separately
+(`accessibilityHeuristicOccurrences`). A footnote states the excluded
+count under the tile rather than silently dropping it, rendered only
+when it is nonzero. `accessibilityCount` (the finding-count stat, not
+occurrences) is deliberately untouched - it still includes the heuristic
+finding itself, matching the annex, which renders it as its own visible
+row. Confirmed in the regenerated PDF: the tile now reads "627
+occurrences d'accessibilité" (down from 721) with the footnote "Ce
+chiffre exclut 94 occurrences supplémentaires provenant d'un signal
+heuristique [...]" directly beneath it.
 
 **Symptom.** The tile "703 occurrences d'accessibilité" sits beside three hard
 counts and carries no caveat. 74 of the 703 come from
@@ -846,6 +913,20 @@ evidence ordering; the page-weighting half is the open deferred item.
 Homepage and rooms first. The sitemap page should not appear as example one.
 
 ### 1.10 Every critical is one of two rules, and "18/18" reads as alarmist
+
+**FIXED, 2026-08-19.** Chose the "state the driver" branch of this item's
+own fix rather than redefining how the cover risk badge is derived (the
+badge's `overallRisk` comes from the LLM structure pass, not a
+deterministic page-coverage count, so "derive it from rule-family
+breadth instead" would have been a bigger, riskier change than this
+item's actual symptom needed). Renders a footnote naming the driving
+rules, translated, whenever every critical finding reduces to
+`CRITICAL_DRIVER_MAX_RULES` (3) or fewer distinct rule ids
+(`criticalDriverRuleTitles` in `statistics.ts`). Confirmed in the
+regenerated PDF, directly under the "18/18 pages avec au moins un
+constat critique" tile: "Ces constats critiques proviennent uniquement
+de : Les images doivent avoir un texte alternatif, Les boutons doivent
+avoir un texte identifiable."
 
 **Symptom.** All 33 Critique findings are `image-alt` (25) or `button-name` (8).
 Since both hit every page, "18/18 pages avec au moins un constat critique" is

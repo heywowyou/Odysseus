@@ -69,6 +69,20 @@ export function buildHeuristicRollup(findings: readonly Finding[]): ConformanceR
   return rollup(findings, true);
 }
 
+/** item 1.2 (La Corniche pass): the table's own occurrence column
+ *  legitimately does not sum to the accessibility-occurrences tile
+ *  elsewhere in the report - a finding mapped to two criteria is counted
+ *  under both rows by design (see the module doc comment above) - but
+ *  nothing said so, and a real report showed a 208-occurrence gap an
+ *  agency had to puzzle out unaided. Used to render a footnote only when
+ *  it would actually apply, not unconditionally. */
+export function hasMultiCriterionFinding(findings: readonly Finding[]): boolean {
+  return findings.some(
+    (finding) =>
+      finding.category === 'accessibility' && !HEURISTIC_RULE_IDS.has(finding.ruleId) && finding.wcagCriteria.length > 1,
+  );
+}
+
 /** Distinct pages carrying at least one accessibility finding with a WCAG
  *  criterion - the "sur M pages" half of the stats page's wide tile and
  *  the conformance summary's framing. item 8: excludes HEURISTIC_RULE_IDS

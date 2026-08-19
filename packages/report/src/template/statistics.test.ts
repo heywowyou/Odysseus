@@ -31,6 +31,11 @@ describe('computeStatistics', () => {
       pagesScanned: 20,
       totalFindings: 103,
       accessibilityOccurrences: 431,
+      // item 1.8: this real fixture predates alt-text-quality-heuristic
+      // findings, so this is 0 here, not a claim that no site ever
+      // triggers the heuristic - see the dedicated describe block below
+      // for the exclusion behaviour itself.
+      accessibilityHeuristicOccurrences: 0,
       pagesWithCritical: 20,
       critical: 8,
       serious: 20,
@@ -54,6 +59,65 @@ describe('computeStatistics', () => {
     expect(categorySum).toBe(stats.totalFindings);
     expect(categoryCounts.accessibility).toBe(stats.accessibilityCount);
     expect(categoryCounts.seo + categoryCounts.rendering).toBe(stats.seoRenderingCount);
+  });
+});
+
+// item 1.8 (La Corniche pass): the accessibility-occurrences tile used to
+// include alt-text-quality-heuristic occurrences with no caveat next to
+// three genuinely hard counts - a real report had 74 of 703 (10 percent)
+// come from the heuristic alone.
+describe('item 1.8: heuristic occurrences are excluded from accessibilityOccurrences', () => {
+  function buildFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'occurrences'>): Finding {
+    return {
+      auditId: 'a1',
+      schemaVersion: 1,
+      source: 'custom',
+      category: 'accessibility',
+      severity: 'moderate',
+      wcagCriteria: [],
+      title: 't',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: overrides.findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  const manifest: AuditManifest = {
+    auditId: 'a1',
+    kind: 'audit',
+    siteUrl: 'https://example.com',
+    startedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
+    tool: {} as AuditManifest['tool'],
+    config: {} as AuditManifest['config'],
+    crawl: {} as AuditManifest['crawl'],
+    pages: [{ url: 'https://example.com/', status: 'visited' } as AuditManifest['pages'][number]],
+  };
+
+  it('splits real conformance occurrences from heuristic occurrences into two figures', () => {
+    const findings = [
+      buildFinding({ findingId: 'f1', ruleId: 'image-alt', occurrences: 10 }),
+      buildFinding({ findingId: 'f2', ruleId: 'alt-text-quality-heuristic', occurrences: 74 }),
+    ];
+
+    const stats = computeStatistics(findings, manifest);
+    expect(stats.accessibilityOccurrences).toBe(10);
+    expect(stats.accessibilityHeuristicOccurrences).toBe(74);
+  });
+
+  it('does not affect accessibilityCount, which still includes the heuristic finding itself', () => {
+    const findings = [
+      buildFinding({ findingId: 'f1', ruleId: 'image-alt', occurrences: 10 }),
+      buildFinding({ findingId: 'f2', ruleId: 'alt-text-quality-heuristic', occurrences: 74 }),
+    ];
+
+    const stats = computeStatistics(findings, manifest);
+    expect(stats.accessibilityCount).toBe(2);
   });
 });
 

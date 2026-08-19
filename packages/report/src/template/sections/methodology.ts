@@ -15,7 +15,7 @@ import {
   type ReportLanguage,
 } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatDate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatDate, formatNumber, pluralize, renderSheetHeader, sheet } from '../html-utils.js';
 
 /** Sirene's own effectif-band labels (see packages/interface's
  *  sirene-client.ts) are French-only, since they come from an INSEE
@@ -270,11 +270,16 @@ function renderSirenProvenanceNote(
  *  the ones that pass emits (normalize-keyboard-navigation.ts,
  *  normalize-form-error-handling.ts, normalize-video-captions.ts); the
  *  alt-text heuristic already has its own "Signaux à vérifier" block
- *  (conformance-summary.ts) so it is not repeated here. Only rendered when
- *  every one of the four checks found nothing at all - if any of them
- *  fired, the resulting findings already appear in the report's normal
- *  findings flow, and a partial "none found" note here would read as
- *  contradicting them. */
+ *  (conformance-summary.ts) so it is not repeated here.
+ *
+ *  Revised for item 1.7 (La Corniche pass): originally rendered only when
+ *  every one of the four checks found nothing at all, on the reasoning
+ *  that a fired check's findings already appear in the report's normal
+ *  findings flow. In practice this meant one check finding anything (a
+ *  single video without captions, on a real report) silently suppressed
+ *  the whole note, so the other three checks - which genuinely found
+ *  nothing - went unstated. renderExtendedPassNote below now states each
+ *  check individually whenever at least one of them found something. */
 const EXTENDED_PASS_RULE_IDS: readonly string[] = [
   KEYBOARD_TRAP_RULE_ID,
   FOCUS_ORDER_MISMATCH_RULE_ID,
@@ -282,12 +287,42 @@ const EXTENDED_PASS_RULE_IDS: readonly string[] = [
   VIDEO_MISSING_CAPTIONS_RULE_ID,
 ];
 
+/** item 1.7 (La Corniche pass): a real report had a video-captions
+ *  finding, which silently suppressed the whole note under the old
+ *  all-or-nothing logic - so nothing said the other three checks
+ *  (keyboard traps, focus order, form errors) genuinely found nothing.
+ *  Falls back to the single combined sentence only in the all-clean case
+ *  (kept for its own existing test coverage); otherwise states each of
+ *  the four checks individually, clean or with its own count, so a real
+ *  clean result is never hidden behind one other check's finding. */
 function renderExtendedPassNote(
   strings: ReportStrings,
+  language: ReportLanguage,
   findings: readonly Pick<Finding, 'findingId' | 'ruleId'>[],
-): string | undefined {
+): string {
+  const m = strings.methodology;
   const anyFound = findings.some((f) => EXTENDED_PASS_RULE_IDS.includes(f.ruleId));
-  return anyFound ? undefined : strings.methodology.extendedPassNoneFoundNote;
+  if (!anyFound) return m.extendedPassNoneFoundNote;
+
+  const checks: [string, string][] = [
+    [m.extendedPassCheckKeyboardTrapsLabel, KEYBOARD_TRAP_RULE_ID],
+    [m.extendedPassCheckFocusOrderLabel, FOCUS_ORDER_MISMATCH_RULE_ID],
+    [m.extendedPassCheckFormErrorsLabel, FORM_ERROR_NOT_ASSOCIATED_RULE_ID],
+    [m.extendedPassCheckVideoCaptionsLabel, VIDEO_MISSING_CAPTIONS_RULE_ID],
+  ];
+
+  const checkList = checks
+    .map(([label, ruleId]) => {
+      const count = findings.filter((f) => f.ruleId === ruleId).length;
+      const status =
+        count === 0
+          ? m.extendedPassCheckCleanLabel
+          : `${formatNumber(count, language)} ${pluralize(count, m.extendedPassCheckFoundSingular, m.extendedPassCheckFoundPlural)}`;
+      return `${label} (${status})`;
+    })
+    .join(', ');
+
+  return fillTemplate(m.extendedPassResultTemplate, { checks: checkList });
 }
 
 export function renderMethodology(
@@ -313,7 +348,7 @@ export function renderMethodology(
   });
 
   const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings, resolvedSirenSourceUrl);
-  const extendedPassNote = renderExtendedPassNote(strings, findings);
+  const extendedPassNote = renderExtendedPassNote(strings, language, findings);
 
   // Manual-input-layer milestone: pages excluded as social-platform
   // redirects are never silently dropped (crawl.ts still records every

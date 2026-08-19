@@ -3,6 +3,30 @@ import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
 import { computeStatistics } from '../statistics.js';
+import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
+
+/** item 1.10 (La Corniche pass): "N/N pages avec au moins un constat
+ *  critique" reads as an alarming, broad finding, but on a real report
+ *  all 33 Critique findings reduced to exactly 2 rules (image-alt,
+ *  button-name) that both happen to fire on every page - the "N/N" is
+ *  then mechanically guaranteed by those two rules alone, not by broad
+ *  distinct risk. Named here, next to the tile, only when the driver is
+ *  actually concentrated (a handful of rules), so a reader isn't left to
+ *  discover the concentration only after reading the full annex. */
+const CRITICAL_DRIVER_MAX_RULES = 3;
+
+function criticalDriverRuleTitles(findings: readonly Finding[], language: ReportLanguage): string[] {
+  const criticalRuleIds = [...new Set(findings.filter((f) => f.severity === 'critical').map((f) => f.ruleId))];
+  if (criticalRuleIds.length === 0 || criticalRuleIds.length > CRITICAL_DRIVER_MAX_RULES) return [];
+
+  return criticalRuleIds.map((ruleId) => {
+    if (language === 'fr') {
+      const translation = RULE_TRANSLATIONS_FR[ruleId];
+      if (translation) return translation.label;
+    }
+    return findings.find((f) => f.ruleId === ruleId)?.title ?? ruleId;
+  });
+}
 
 /** Doc §3 section 03 cap: the 4 number tiles are fixed (report.reference.
  *  html's numberTiles, the same first 4 metrics the pre-redesign 10-tile
@@ -113,11 +137,40 @@ export function renderStatistics(
   const wcagFailText = fillTemplate(s.wcagFailingDescriptionTemplate, { pages: n(stats.pagesWithWcagFailure) });
   const wcagFailCountText = `${n(stats.wcagCriteriaFailingCount)} ${wcagFailText}`;
 
+  // item 1.8 (La Corniche pass): the tile above now excludes heuristic
+  // occurrences (statistics.ts's computeStatistics), so it sits beside
+  // three genuinely hard counts without inflation - but silently
+  // dropping a real 74-occurrence signal is its own kind of omission.
+  // Stated explicitly, once, only when it actually excluded something.
+  // Same fixed-spacer-when-absent pattern the render-diff footnote below
+  // already uses (hasBelowThresholdRenderGap), so the gap before the next
+  // heading stays constant whether or not the note renders.
+  const heuristicOccurrencesNote =
+    stats.accessibilityHeuristicOccurrences > 0
+      ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
+          fillTemplate(s.heuristicOccurrencesExcludedNoteTemplate, { count: n(stats.accessibilityHeuristicOccurrences) }),
+        )}</p>`
+      : '';
+
+  const driverTitles = criticalDriverRuleTitles(findings, language);
+  const criticalDriverNote =
+    driverTitles.length > 0
+      ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
+          fillTemplate(s.criticalDriverNoteTemplate, { rules: driverTitles.join(', ') }),
+        )}</p>`
+      : '';
+
+  const footnotes =
+    heuristicOccurrencesNote || criticalDriverNote
+      ? `<div style="margin-bottom:var(--space-3)">${heuristicOccurrencesNote}${criticalDriverNote}</div>`
+      : '<div style="margin-bottom:var(--space-3)"></div>';
+
   return sheet(`
     ${renderSheetHeader(ordinal, s.eyebrow, s.heading)}
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-3)">
       ${numberTiles}
     </div>
+    ${footnotes}
     <h5>${escapeHtml(s.severityBreakdownHeading)}</h5>
     <div style="display:grid;grid-template-columns:repeat(${nonZeroSeverities.length},1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
       ${severityTiles}

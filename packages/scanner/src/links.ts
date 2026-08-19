@@ -16,6 +16,22 @@ const NON_HTML_EXTENSIONS = new Set([
   '.woff', '.woff2', '.ttf', '.eot', '.otf',
 ]);
 
+/** report-feedback-la-corniche.md item 1.3: a real 20-page crawl of a
+ *  5-star hotel site spent five of its slots on `/`, `/en/`, `/es/`,
+ *  `/it/` and `/pt-pt/` - the same homepage in five languages - inflating
+ *  every homepage defect's occurrence count roughly fivefold and leaving
+ *  whole page families of the site unvisited. Matches only a same-origin
+ *  link whose ENTIRE path is one language-code segment (a 2-letter ISO
+ *  code, optionally with a region suffix like "pt-pt"), root-relative -
+ *  deliberately narrow so a genuine content page nested under a language
+ *  prefix (`/en/rooms/`) is never dropped, only the bare homepage
+ *  duplicate itself. Same drop point and reasoning as NON_HTML_EXTENSIONS
+ *  above: decided from the URL alone, before any fetch, so a dropped
+ *  variant never costs a crawl-budget slot and never appears in the
+ *  manifest at all - not something this needs to track and report a
+ *  count for, any more than the extension filter does. */
+const LANGUAGE_HOMEPAGE_PATH_PATTERN = /^\/[a-z]{2}(-[a-z]{2})?\/?$/i;
+
 /**
  * Converts an operator-supplied glob pattern (only `*` is a wildcard,
  * matching any run of characters including none) into a RegExp anchored
@@ -37,7 +53,10 @@ export function globToRegExp(glob: string): RegExp {
  * and unparsable hrefs are dropped. Hash fragments are stripped since
  * they identify a position within a page, not a distinct page. Links to
  * non-HTML resources (images, documents, archives, media, fonts) are
- * dropped by extension. exclusionPatterns (manual-input-layer milestone,
+ * dropped by extension, and a bare root-level language-code homepage
+ * variant (`/en/`, `/pt-pt/`) is dropped by path pattern (item 1.3, see
+ * LANGUAGE_HOMEPAGE_PATH_PATTERN above) - both decided from the URL
+ * alone, before any fetch. exclusionPatterns (manual-input-layer milestone,
  * JobOptionsSnapshot.exclusions): a URL matching any glob is dropped here,
  * before it is ever enqueued, so it never consumes a crawl-budget slot -
  * same drop point as the extension check above.
@@ -63,6 +82,7 @@ export function normalizeInternalLinks(
     if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') continue;
     if (resolved.origin !== base.origin) continue;
     if (NON_HTML_EXTENSIONS.has(path.posix.extname(resolved.pathname).toLowerCase())) continue;
+    if (LANGUAGE_HOMEPAGE_PATH_PATTERN.test(resolved.pathname)) continue;
     resolved.hash = '';
     const normalized = resolved.toString();
     if (exclusionRegexes.some((pattern) => pattern.test(normalized))) continue;

@@ -4,7 +4,7 @@ import { groupAppendix } from './appendix-grouping.js';
 import { loadSasFernandeFindings } from '../test-fixtures.js';
 
 describe('groupAppendix', () => {
-  it('groups the real sas-fernande color-contrast findings by rule+severity, summing occurrences and taking the max page count', async () => {
+  it('groups the real sas-fernande color-contrast findings by rule+severity, summing occurrences and unioning pages', async () => {
     const findings = await loadSasFernandeFindings();
     const groups = groupAppendix(findings);
 
@@ -12,10 +12,15 @@ describe('groupAppendix', () => {
     if (!colorContrast) throw new Error('expected a color-contrast group');
 
     // Known-good numbers, docs/normalization-rules.md section 7 and
-    // CLAUDE.md: 4 findings, 35 occurrences (11+11+2+11), max 11 pages.
+    // CLAUDE.md: 4 findings, 35 occurrences (11+11+2+11).
     expect(colorContrast.findings).toHaveLength(4);
     expect(colorContrast.totalOccurrences).toBe(35);
-    expect(colorContrast.maxPages).toBe(11);
+    // item 1.6: union of page URLs across the group's findings, not the
+    // largest single finding's own page count (used to read 11, the max
+    // of one finding alone) - the real fixture's 4 findings' page sets
+    // union to the number asserted here.
+    const unionPages = new Set(colorContrast.findings.flatMap((f) => f.pageUrls));
+    expect(colorContrast.pages).toBe(unionPages.size);
     expect(colorContrast.severity).toBe('serious');
   });
 
@@ -27,7 +32,39 @@ describe('groupAppendix', () => {
     if (!linkInTextBlock) throw new Error('expected a link-in-text-block group');
     expect(linkInTextBlock.findings).toHaveLength(1);
     expect(linkInTextBlock.totalOccurrences).toBe(69);
-    expect(linkInTextBlock.maxPages).toBe(1);
+    expect(linkInTextBlock.pages).toBe(1);
+  });
+
+  // item 1.6 (La Corniche pass): a real report showed a priority card
+  // stating "18 pages sur 18" for a rule while the annex group for that
+  // same rule said "jusqu'à 17 pages" - two findings of the same rule
+  // covered overlapping but not identical page sets, and the old
+  // Math.max computation undercounted the true union.
+  it('unions pages across multiple findings of the same rule, not the largest single finding', () => {
+    const base = {
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'axe' as const,
+      ruleId: 'button-name',
+      category: 'accessibility' as const,
+      severity: 'critical' as const,
+      wcagCriteria: ['4.1.2'],
+      title: 't',
+      description: 'd',
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+    const findings: Finding[] = [
+      { ...base, findingId: 'f1', dedupeKey: 'd1', pageUrls: ['https://example.com/a', 'https://example.com/b'] },
+      { ...base, findingId: 'f2', dedupeKey: 'd2', pageUrls: ['https://example.com/b', 'https://example.com/c'] },
+    ];
+
+    const groups = groupAppendix(findings);
+    // Math.max of either finding alone would be 2; the true union is 3.
+    expect(groups[0]!.pages).toBe(3);
   });
 
   it('sorts groups by severity descending, then total occurrences descending', async () => {

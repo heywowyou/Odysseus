@@ -78,6 +78,32 @@ describe('normalizeInternalLinks', () => {
   it('with no exclusions, behaves exactly as before', () => {
     expect(normalizeInternalLinks(['/about'], BASE, [])).toEqual(['https://client.example/about']);
   });
+
+  // item 1.3 (La Corniche pass): a real 20-page crawl spent five slots on
+  // /, /en/, /es/, /it/ and /pt-pt/ - the same homepage in five languages -
+  // inflating every homepage defect's occurrence count roughly fivefold.
+  it('drops a bare root-level language-code homepage variant (2-letter code)', () => {
+    expect(normalizeInternalLinks(['/en/', '/es', '/it/', '/about'], BASE)).toEqual([
+      'https://client.example/about',
+    ]);
+  });
+
+  it('drops a bare root-level language-region homepage variant (e.g. pt-pt)', () => {
+    expect(normalizeInternalLinks(['/pt-pt/', '/en-us', '/about'], BASE)).toEqual([
+      'https://client.example/about',
+    ]);
+  });
+
+  it('does not drop a genuine content page nested under a language prefix', () => {
+    expect(normalizeInternalLinks(['/en/rooms', '/en/rooms/'], BASE)).toEqual([
+      'https://client.example/en/rooms',
+      'https://client.example/en/rooms/',
+    ]);
+  });
+
+  it('does not drop a two-letter path segment that is not at the root (not a homepage variant)', () => {
+    expect(normalizeInternalLinks(['/blog/en'], BASE)).toEqual(['https://client.example/blog/en']);
+  });
 });
 
 describe('globToRegExp', () => {

@@ -10,7 +10,15 @@ export interface RuleGroup {
   severity: Severity;
   findings: Finding[];
   totalOccurrences: number;
-  maxPages: number;
+  /** item 1.6 (La Corniche pass): union of page URLs across every finding
+   *  in the group, not the largest single finding's own page count. Used
+   *  to read `Math.max(...finding.pageUrls.length)`, rendered as "jusqu'à
+   *  N pages" ("up to") - defensible in isolation, but a priority card
+   *  for the same rule states "N pages sur M", itself a union across the
+   *  theme's findings, so a real report showed two different page counts
+   *  for the same rule (18 vs. "jusqu'à 17"). Both now read from the same
+   *  union-of-pageUrls computation, so they can no longer disagree. */
+  pages: number;
   /** Union across the group, numerically sorted. */
   wcagCriteria: string[];
   /** item 1.3: the actual rule ids folded into this group when it's a
@@ -59,6 +67,7 @@ const RULE_FAMILIES: Readonly<Record<string, string>> = {
  *  having their own detail withheld. */
 export function groupAppendix(findings: readonly Finding[]): RuleGroup[] {
   const map = new Map<string, RuleGroup>();
+  const pageSets = new Map<string, Set<string>>();
 
   for (const finding of findings) {
     // item 1.3: a family member groups under its family key, still
@@ -74,13 +83,16 @@ export function groupAppendix(findings: readonly Finding[]): RuleGroup[] {
       severity: finding.severity,
       findings: [],
       totalOccurrences: 0,
-      maxPages: 0,
+      pages: 0,
       wcagCriteria: [],
       memberRuleIds: [],
     };
     group.findings.push(finding);
     group.totalOccurrences += finding.occurrences;
-    group.maxPages = Math.max(group.maxPages, finding.pageUrls.length);
+    const pageSet = pageSets.get(key) ?? new Set<string>();
+    for (const url of finding.pageUrls) pageSet.add(url);
+    pageSets.set(key, pageSet);
+    group.pages = pageSet.size;
     if (finding.wcagCriteria.length > 0) {
       group.wcagCriteria = [...new Set([...group.wcagCriteria, ...finding.wcagCriteria])].sort(compareCriteria);
     }

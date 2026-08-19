@@ -503,12 +503,22 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
     expect(html).toContain("Résultat de la passe d&#39;accessibilité étendue");
   });
 
-  it('omits the note when at least one extended-pass finding exists', async () => {
+  // item 1.7 (La Corniche pass): the note used to be entirely suppressed
+  // when any one of the four checks found something, so a real report
+  // with only a video-captions finding said nothing at all about the
+  // other three checks (keyboard traps, focus order, form errors), which
+  // had genuinely found nothing. States each check individually instead.
+  it('states each check individually, clean or with its own count, once at least one check found something', async () => {
     const manifest = await loadSasFernandeManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
-      { findingId: 'f1', ruleId: 'keyboard-trap' },
+      { findingId: 'f1', ruleId: 'video-missing-captions' },
+      { findingId: 'f2', ruleId: 'video-missing-captions' },
     ]);
-    expect(html).not.toContain("Résultat de la passe d&#39;accessibilité étendue");
+    expect(html).toContain('Résultat de la passe d&#39;accessibilité étendue');
+    expect(html).toContain('pièges au clavier (aucune anomalie détectée)');
+    expect(html).toContain('ordre de focus (aucune anomalie détectée)');
+    expect(html).toContain('erreurs de formulaire non associées à leur champ (aucune anomalie détectée)');
+    expect(html).toContain('sous-titres vidéo (2 constats détectés)');
   });
 
   it('ignores the alt-text heuristic rule id, which has its own separate block', async () => {
