@@ -8,6 +8,7 @@ import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { groupAppendix, APPENDIX_GROUP_KEEP_THRESHOLD, type RuleGroup } from '../appendix-grouping.js';
 import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
+import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 
 function pluralize(count: number, singular: string, plural: string): string {
   return count === 1 ? singular : plural;
@@ -124,8 +125,16 @@ function renderRuleGroup(
   group: RuleGroup,
   isFullyDiverted: boolean,
   totalPagesScanned: number,
+  /** item 1.4: shown only in the third-party block below - the vendor
+   *  name when detectFindingVendor found one consistently across the
+   *  group, or a generic "unidentified vendor" label for a frame-
+   *  crossing selector matching none of the known prefixes. */
+  vendorLabel?: string,
 ): string {
   const a = strings.findingsAppendix;
+  const vendorTag = vendorLabel
+    ? `<span class="tag" style="background:var(--color-surface);opacity:0.75;font-size:10.5px">${escapeHtml(vendorLabel)}</span>`
+    : '';
   // item 38 [REGRESSION]: rule titles and codes rendered in English inside
   // a French report - translated here for fr, left as the scanner's own
   // English title for en (already correct in that language). The gloss
@@ -165,6 +174,7 @@ function renderRuleGroup(
         <span class="mono rule-code" style="font-size:10px;opacity:0.5">${escapeHtml(ruleCodeDisplay)}</span>
         ${gloss}
         ${obsTag}
+        ${vendorTag}
         <span style="font-size:11px;opacity:0.6">${renderRuleSum(strings, language, group)}</span>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
@@ -209,6 +219,41 @@ function renderGeoCitationBlock(
     language,
     strings.findingsAppendix.geoEmergingLabel,
   );
+}
+
+/** item 1.4: groups every third-party finding (any category) under one
+ *  block, vendor-labelled where a group's findings all resolve to the
+ *  same known vendor - a group whose findings disagree on vendor (rare;
+ *  groupAppendix keys on ruleId+severity, and a given rule id's third-
+ *  party instances are consistently the same embed in practice) or match
+ *  no known prefix falls back to the generic "unidentified" label,
+ *  never silently to nothing. */
+function renderThirdPartySection(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  thirdPartyFindings: Finding[],
+  missingPercentByUrl: ReadonlyMap<string, number>,
+  totalPagesScanned: number,
+): string {
+  if (thirdPartyFindings.length === 0) return '';
+
+  const groups = groupAppendix(thirdPartyFindings);
+  const groupBlocks = groups
+    .map((group) => {
+      const isFullyDiverted = group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null);
+      const vendors = new Set(group.findings.map((f) => detectFindingVendor(f) ?? strings.findingsAppendix.unknownVendorLabel));
+      const vendorLabel = vendors.size === 1 ? [...vendors][0] : strings.findingsAppendix.unknownVendorLabel;
+      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned, vendorLabel);
+    })
+    .join('');
+
+  return `
+    <div style="margin-bottom:var(--space-8)">
+      <h4>${escapeHtml(strings.findingsAppendix.thirdPartyHeading)}</h4>
+      <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4);max-width:70ch">${escapeHtml(strings.findingsAppendix.thirdPartyIntro)}</p>
+      ${groupBlocks}
+    </div>
+  `;
 }
 
 function renderCategorySection(
@@ -290,17 +335,25 @@ export function renderFindingsAppendix(
   // methodology.
   const crawledPages = manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url).sort();
 
+  // item 1.4: split once, up front, so every downstream section (the
+  // four category listings plus the new third-party block) reads from
+  // one consistent partition - a finding renders in exactly one place
+  // either way, so the annex-row-count invariant (item 0.7) still holds.
+  const thirdPartyFindings = findings.filter((finding) => isThirdPartyFinding(finding));
+  const firstPartyFindings = findings.filter((finding) => !isThirdPartyFinding(finding));
+
   const sections = CATEGORY_ORDER.map((category) => {
-    const categoryFindings = findings.filter((finding) => finding.category === category);
+    const categoryFindings = firstPartyFindings.filter((finding) => finding.category === category);
     return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds, crawledPages.length);
   }).join('');
+  const thirdPartySection = renderThirdPartySection(strings, language, thirdPartyFindings, missingPercentByUrl, crawledPages.length);
 
   // item D8 (P4): each category heading used its own colour with nothing
   // stating what the four colours mean - a reader had to notice the
   // pattern by paging through the whole annex. Only categories that
   // actually have findings appear, same "don't show what's empty"
   // reasoning as item D7's zero-count stat tiles.
-  const presentCategories = CATEGORY_ORDER.filter((category) => findings.some((f) => f.category === category));
+  const presentCategories = CATEGORY_ORDER.filter((category) => firstPartyFindings.some((f) => f.category === category));
   const legend =
     presentCategories.length > 0
       ? `
@@ -331,5 +384,6 @@ export function renderFindingsAppendix(
     ${legend}
     ${crawledPagesBlock}
     ${sections}
+    ${thirdPartySection}
   `, 'sheet-standalone', 'section-12');
 }

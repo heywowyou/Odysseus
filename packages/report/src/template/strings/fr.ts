@@ -428,6 +428,10 @@ export const fr: ReportStrings = {
       rendering: 'Rendu',
     },
     geoEmergingLabel: 'Recherche émergente',
+    thirdPartyHeading: 'À traiter avec vos prestataires tiers',
+    thirdPartyIntro:
+      "Ces constats concernent du code appartenant à un plugin, un widget ou un cadre tiers (moteur de réservation, bannière de cookies, aperçu, formulaire). Votre agence ne peut pas modifier ce code directement : la correction passe par le prestataire ou l'éditeur concerné.",
+    unknownVendorLabel: 'Prestataire tiers non identifié',
     severityLabels: {
       critical: 'Critique',
       serious: 'Sérieux',

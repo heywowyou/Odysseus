@@ -500,6 +500,18 @@ export interface ReportStrings {
      *  milestone 8.5c - quarantines GEO citations per the source
      *  research doc's Stage 3 recommendation. */
     geoEmergingLabel: string;
+    /** report-feedback-la-corniche.md item 1.4: markup owned by a
+     *  third-party plugin, embed, or nested iframe (Popup Maker, Gravity
+     *  Forms, a preview widget, a booking engine's own consent/captcha
+     *  frame) - the client's agency cannot edit this code, so these
+     *  findings render in their own block, named with the vendor when
+     *  known, rather than mixed with the client's own defects. */
+    thirdPartyHeading: string;
+    thirdPartyIntro: string;
+    /** Shown for a frame-crossing selector (Playwright's `>>>`
+     *  combinator) matching none of the known vendor prefixes - still
+     *  third-party code, just not attributable to a named product. */
+    unknownVendorLabel: string;
     severityLabels: {
       critical: string;
       serious: string;

@@ -413,6 +413,10 @@ export const en: ReportStrings = {
       rendering: 'Rendering',
     },
     geoEmergingLabel: 'Emerging research',
+    thirdPartyHeading: 'To resolve with your third-party providers',
+    thirdPartyIntro:
+      "These findings are in code belonging to a third-party plugin, widget, or embedded frame (booking engine, cookie banner, preview panel, form). Your agency cannot edit this code directly: the fix goes through the vendor or provider concerned.",
+    unknownVendorLabel: 'Unidentified third-party provider',
     severityLabels: {
       critical: 'Critical',
       serious: 'Serious',

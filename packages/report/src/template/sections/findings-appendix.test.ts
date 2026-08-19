@@ -405,3 +405,106 @@ describe('item 26: minor findings get the same full page/selector detail as ever
     expect(html).toContain(minorFinding!.pageUrls[0]!);
   });
 });
+
+// report-feedback-la-corniche.md item 1.4: a real report presented
+// findings on Popup Maker, Gravity Forms, a preview widget, and a
+// booking engine's own nested-iframe captcha as if they were the
+// client's own defects. The client's agency cannot edit any of that
+// code, and treating it identically to a first-party defect invites the
+// objection that the whole report doesn't understand how the site is
+// built.
+describe('item 1.4: third-party embed findings render in their own attributed block', () => {
+  function buildFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'category' | 'severity'>): Finding {
+    const pageUrl = 'https://example.com/';
+    return {
+      auditId: 'a1',
+      schemaVersion: 1,
+      source: 'axe',
+      wcagCriteria: [],
+      title: 't',
+      description: 'd',
+      pageUrls: [pageUrl],
+      occurrences: 1,
+      elements: [{ pageUrl, selector: '.default', snippet: '' }],
+      rawEvidence: {},
+      dedupeKey: `dk-${overrides.findingId}`,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  it('groups a Popup Maker / Gravity Forms finding under the third-party heading, named by vendor, not under its own category', async () => {
+    const manifest = buildManifest();
+    const popupFinding = buildFinding({
+      findingId: 'f001',
+      ruleId: 'nested-interactive',
+      category: 'accessibility',
+      severity: 'serious',
+      elements: [
+        { pageUrl: 'https://example.com/', selector: '#popmake-1398 > .pum-content.popmake-content > iframe', snippet: '' },
+      ],
+    });
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [popupFinding], manifest, 'general');
+
+    expect(html).toContain('À traiter avec vos prestataires tiers');
+    expect(html).toContain('Popup Maker');
+    expect(html).toContain('id="annexref-f001"');
+  });
+
+  it('attributes a nested-iframe (shadow-piercing selector) finding to the unidentified-vendor label when no known prefix matches', async () => {
+    const manifest = buildManifest();
+    const iframeFinding = buildFinding({
+      findingId: 'f002',
+      ruleId: 'color-contrast',
+      category: 'accessibility',
+      severity: 'moderate',
+      elements: [
+        {
+          pageUrl: 'https://example.com/',
+          selector: '.bloc-resa[align="center"] > iframe >>> iframe >>> .captcha__header__logo',
+          snippet: '',
+        },
+      ],
+    });
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [iframeFinding], manifest, 'general');
+
+    expect(html).toContain('À traiter avec vos prestataires tiers');
+    expect(html).toContain('Prestataire tiers non identifié');
+  });
+
+  it('does not put an ordinary first-party finding in the third-party block', async () => {
+    const manifest = buildManifest();
+    const ordinaryFinding = buildFinding({
+      findingId: 'f003',
+      ruleId: 'image-alt',
+      category: 'accessibility',
+      severity: 'critical',
+    });
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [ordinaryFinding], manifest, 'general');
+
+    expect(html).not.toContain('À traiter avec vos prestataires tiers');
+    expect(html).toContain('id="annexref-f003"');
+  });
+
+  it('still counts every third-party finding toward the annex row total (item 0.7 invariant, unaffected)', async () => {
+    const manifest = buildManifest();
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'nested-interactive',
+        category: 'accessibility',
+        severity: 'serious',
+        elements: [{ pageUrl: 'https://example.com/', selector: '#gform_submit_button_1', snippet: '' }],
+      }),
+      buildFinding({ findingId: 'f003', ruleId: 'image-alt', category: 'accessibility', severity: 'critical' }),
+    ];
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+
+    expect((html.match(/id="annexref-/g) ?? []).length).toBe(2);
+  });
+});
