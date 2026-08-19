@@ -19,6 +19,14 @@ export async function runLighthouse(
 ): Promise<Result> {
   const maxWaitForLoadedMs = options.timeoutMs ?? getLighthouseTimeoutMs();
 
+  // blockedUrlPatterns was tried here to stop Lighthouse's SourceMaps
+  // gatherer from fetching third-party .map files (see lighthouse-worker.ts
+  // for why that gatherer can't just be skipped). It does nothing: the
+  // gatherer fetches via the CDP `Network.loadNetworkResource` command,
+  // which is documented to bypass `Network.setBlockedURLs` by design (it
+  // exists so DevTools can always load a source map regardless of
+  // page-level blocking). Confirmed against a real crash before removing.
+  // Isolation, not blocking, is the actual fix - see runLighthouseIsolated.
   const runnerResult = await lighthouse(url, {
     port: debugPort,
     logLevel: 'error',

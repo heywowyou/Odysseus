@@ -2,7 +2,7 @@ import type { Browser } from 'playwright';
 import type { Result as LighthouseResult } from 'lighthouse';
 import type { RenderDiffResult, TransactionalFlowEvidence, TransactionalFlowRedirectCheck } from '@odysseus/core';
 import { type AxeResults, runAxe } from './axe.js';
-import { runLighthouse } from './lighthouse.js';
+import { runLighthouseIsolated } from './lighthouse-isolated.js';
 import { renderDiff } from './render-diff.js';
 import { extractMentionsLegales, type MentionsLegalesExtraction } from './checks/mentions-legales.js';
 import {
@@ -111,11 +111,20 @@ async function sleep(ms: number): Promise<void> {
  * render-diff/axe work (plain Playwright, no shared Node-global state) is
  * unaffected, so only the Lighthouse call itself is serialized here, across
  * every lane in a scanSite() run.
+ *
+ * runLighthouseIsolated (lighthouse-isolated.ts) now runs each call in its
+ * own forked child process rather than in this one, which incidentally
+ * means the perf_hooks collision this queue exists for can no longer
+ * happen either (each fork gets its own fresh globals) - but the queue
+ * stays. Removing it would mean N Lighthouse children (each holding a
+ * Chromium page load's worth of memory) running at once instead of one,
+ * and that tradeoff hasn't been evaluated; per the project's trade-off
+ * log, don't remove this without confirming that separately.
  */
 let lighthouseQueue: Promise<unknown> = Promise.resolve();
 
 async function runLighthouseSerialized(url: string, debugPort: number): Promise<LighthouseResult> {
-  const run = lighthouseQueue.then(() => runLighthouse(url, debugPort));
+  const run = lighthouseQueue.then(() => runLighthouseIsolated(url, debugPort));
   lighthouseQueue = run.catch(() => undefined);
   return run;
 }
