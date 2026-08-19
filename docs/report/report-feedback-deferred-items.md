@@ -83,20 +83,19 @@ into the fix plan.
 
 ## Placeholder values awaiting a real answer, not a code fix
 
-These aren't broken - they render clearly-marked-as-placeholder, per
-CLAUDE.md's rule against ever showing a plausible fake number - but they
-need a real decision (from Jules) before the report can ship to a client
+This isn't broken - it renders clearly-marked-as-placeholder, per
+CLAUDE.md's rule against ever showing a plausible fake number - but it
+needs a real decision (from Jules) before the report can ship to a client
 outside internal testing:
 
 - `ODYSSEUS_SIRET_PLACEHOLDER` (`packages/report/src/template/html-utils.ts`):
   literal `[SIRET à renseigner]`, needs the real SIRET.
-- `ODYSSEUS_REAUDIT_PRICE_EUR_HT` / `ODYSSEUS_REAUDIT_LEAD_TIME_DAYS`
-  (same file): EUR 450 HT / 5 business days, reasoned as ~28% of the
-  EUR 1,600 HT full-audit price but with no existing reference point in
-  `docs/offer-positioning.md` - needs Jules to confirm or replace.
-- `ODYSSEUS_CONTACT_EMAIL` (same file): `contact@odysseusaudit.com`,
-  flagged in its own code comment as "confirm this mailbox is actually
-  monitored before this ships."
+
+**Confirmed 2026-08-19, no longer open:** `ODYSSEUS_REAUDIT_PRICE_EUR_HT`
+/ `ODYSSEUS_REAUDIT_LEAD_TIME_DAYS` (EUR 450 HT / 5 business days,
+now documented in `docs/offer-positioning.md` section 1) and
+`ODYSSEUS_CONTACT_EMAIL` (`contact@odysseusaudit.com`, confirmed
+monitored) are both canonical values now, not placeholders.
 
 ## Checked, no longer reproduces
 

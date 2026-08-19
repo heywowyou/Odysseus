@@ -21,9 +21,8 @@ export function escapeHtml(value: string): string {
  *  output, so it can never again disappear by omission the way a
  *  manually-entered or model-written value could. odysseusaudit.com is
  *  the confirmed, live-owned business domain (CLAUDE.md, ODYSSEUS_USER_
- *  AGENT); this is a product decision (which mailbox actually receives
- *  this) rather than a verified fact, flagged for Jules to confirm or
- *  swap for a real monitored address before this ships to a client. */
+ *  AGENT). Confirmed by Jules 2026-08-19 as the real, monitored mailbox -
+ *  no longer a placeholder awaiting an answer. */
 export const ODYSSEUS_CONTACT_EMAIL = 'contact@odysseusaudit.com';
 
 /** item 3.13/31: no issuer identity (legal entity, signatory, SIRET)
@@ -42,11 +41,11 @@ export const ODYSSEUS_SIRET_PLACEHOLDER = '[SIRET à renseigner]';
 /** item 3.12: "Prochaines étapes" described re-audits and post-fix
  *  verification with no price, no lead time, and no way to order -
  *  the one page in the report with commercial upside converted nothing.
- *  Placeholder pricing (no existing reference point in the codebase or
- *  docs/offer-positioning.md for a re-audit specifically, only for the
- *  full audit itself): roughly 28% of the EUR 1,600 HT full-audit price,
- *  reasoned as a verification pass being narrower in scope than a full
- *  re-scan. Confirm with Jules and replace before this next ships. */
+ *  Reasoned originally as roughly 28% of the EUR 1,600 HT full-audit
+ *  price, a verification pass being narrower in scope than a full
+ *  re-scan. Confirmed by Jules 2026-08-19 as the canonical re-audit
+ *  price and lead time; documented alongside the full-audit price in
+ *  docs/offer-positioning.md section 1. No longer a placeholder. */
 export const ODYSSEUS_REAUDIT_PRICE_EUR_HT = 450;
 export const ODYSSEUS_REAUDIT_LEAD_TIME_DAYS = 5;
 

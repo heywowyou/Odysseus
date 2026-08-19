@@ -863,10 +863,11 @@ Paged.js truncation stopped cutting it off.
 ### 3.5 No next steps, no price, no contact, no issuer identity
 
 **FIXED, 2026-08-19** (consequence of 0.2, resolved by that fix - see above).
-The next-steps section renders fully now. The placeholder values
-themselves (real SIRET, re-audit price/lead time, contact mailbox) still
-need Jules's real answers before this ships outside internal testing -
-see `report-feedback-deferred-items.md`, not a code fix.
+The next-steps section renders fully now. Re-audit price/lead time and
+the contact mailbox were confirmed by Jules the same day (see
+`docs/offer-positioning.md` section 1) and are no longer placeholders.
+The real SIRET remains an open placeholder pending Jules's answer - see
+`report-feedback-deferred-items.md`, not a code fix.
 
 ### 3.6 Addressee drift
 
@@ -928,9 +929,11 @@ unless it has more content in other runs.
 Per `report-feedback-deferred-items.md`: remediation cost and effort-in-days,
 page-commercial-relevance weighting, the "reste à traiter" grouped guidance block
 and its `packages/reference` prerequisite, screenshots and visual evidence, image
-filename instead of positional selectors, and the three placeholder values
-awaiting Jules's answer. Items 1.9 and 0.8 above touch the same territory and are
-scoped deliberately narrowly to stay inside deterministic data.
+filename instead of positional selectors, and the SIRET placeholder awaiting
+Jules's answer (the re-audit price/lead time and contact mailbox placeholders
+were confirmed 2026-08-19, no longer deferred). Items 1.9 and 0.8 above touch the
+same territory and are scoped deliberately narrowly to stay inside deterministic
+data.
 
 ---
 
