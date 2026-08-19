@@ -198,7 +198,37 @@ html {
   break-inside: avoid;
 }
 
+/* Sections flow freely and share a page when short (item 34 above), which
+   is deliberate - but nothing separated the end of one section's content
+   from the next section's heading when that happened, so a heading could
+   land directly against the previous section's last line with no
+   breathing room, a cramped result a printed document should never have.
+   Applied to every .section-head, including one that starts at the top
+   of a fresh page: the extra top space there reads as intentional margin,
+   not a bug, the same way a printed page never starts its first heading
+   flush against the paper edge. */
+.section-head {
+  margin-top: var(--space-8);
+}
+
 h2, h4, h5 {
+  break-after: avoid;
+}
+
+/* item 2.1 (La Corniche pass), REGRESSION of Palais Gallien v2 item 2.1:
+   .section-head's own break-inside: avoid already keeps the eyebrow (h6)
+   and heading (h2) together as one atomic unit, but did nothing to stop
+   a break happening right after the intro paragraph that follows
+   .section-head in most sections - a real report showed "08 · PREUVE DE
+   RENDU" plus its intro paragraph stranded alone at the bottom of a
+   page, with the section's actual content (evidence cards) starting on
+   the next one. Forces the immediately-following paragraph to stay
+   attached to whatever comes after it, the same "keep a header attached
+   to its body" reasoning .grid-table > .grid-head already applies below.
+   Scoped to a direct-sibling paragraph only, not every paragraph in the
+   section, so it can't accidentally glue an entire long section together
+   and defeat natural flowing. */
+.section-head + p {
   break-after: avoid;
 }
 

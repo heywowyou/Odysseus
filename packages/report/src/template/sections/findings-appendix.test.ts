@@ -406,6 +406,71 @@ describe('item 26: minor findings get the same full page/selector detail as ever
   });
 });
 
+// item 2.6 (La Corniche pass): a shadow-piercing selector
+// (iframe >>> iframe >>> .captcha__header__logo) wrapped across 3 lines
+// and visually dominated its row. A line-clamp/ellipsis truncation was
+// tried first and reverted - it removed the clamped text from the PDF's
+// own text layer, breaking pdf-text-integrity.test.ts's item 0.4
+// invariant that the PDF text layer never drops characters. Renders at a
+// smaller font size instead: full text always present, never truncated.
+describe('item 2.6: a long selector renders smaller instead of being truncated', () => {
+  function buildFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'category' | 'severity'>): Finding {
+    const pageUrl = 'https://example.com/';
+    return {
+      auditId: 'a1',
+      schemaVersion: 1,
+      source: 'axe',
+      wcagCriteria: [],
+      title: 't',
+      description: 'd',
+      pageUrls: [pageUrl],
+      occurrences: 1,
+      elements: [{ pageUrl, selector: '.default', snippet: '' }],
+      rawEvidence: {},
+      dedupeKey: `dk-${overrides.findingId}`,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  it('renders a long shadow-piercing selector at a smaller font size, in full, never truncated', async () => {
+    const manifest = buildManifest();
+    const longSelector = 'iframe >>> iframe >>> .captcha__header__logo.some-long-descendant-chain-class-name';
+    const finding = buildFinding({
+      findingId: 'f001',
+      ruleId: 'color-contrast',
+      category: 'accessibility',
+      severity: 'serious',
+      elements: [{ pageUrl: 'https://example.com/', selector: longSelector, snippet: '' }],
+    });
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [finding], manifest, 'general');
+
+    // escapeHtml turns ">" into "&gt;" - the selector's own ">>>"
+    // combinators are still fully present, just HTML-escaped.
+    expect(html).toContain('iframe &gt;&gt;&gt; iframe &gt;&gt;&gt; .captcha__header__logo.some-long-descendant-chain-class-name');
+    expect(html).toContain('font-size:10px');
+    expect(html).not.toContain('-webkit-line-clamp');
+  });
+
+  it('renders a short selector at the normal font size', async () => {
+    const manifest = buildManifest();
+    const finding = buildFinding({
+      findingId: 'f002',
+      ruleId: 'color-contrast',
+      category: 'accessibility',
+      severity: 'serious',
+      elements: [{ pageUrl: 'https://example.com/', selector: '.short', snippet: '' }],
+    });
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [finding], manifest, 'general');
+
+    expect(html).toContain('.short');
+    expect(html).toContain('font-size:12.5px');
+  });
+});
+
 // report-feedback-la-corniche.md item 1.4: a real report presented
 // findings on Popup Maker, Gravity Forms, a preview widget, and a
 // booking engine's own nested-iframe captcha as if they were the

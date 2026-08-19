@@ -951,6 +951,21 @@ regenerated PDF: "Données du répertoire Sirene : (O! DE LA DUNE, SIREN
 
 ### 2.1 Orphan section headers, again
 
+**FIXED, 2026-08-19.** `.section-head`'s own `break-inside: avoid`
+already held the eyebrow (h6) and heading (h2) together, but nothing
+stopped a break happening right after the intro paragraph that follows
+it in most sections - added `.section-head + p { break-after: avoid }`
+so the immediately-following paragraph stays attached to whatever comes
+after it, the same "keep a header attached to its body" reasoning
+`.grid-table > .grid-head` already applies. Confirmed against the
+regenerated PDF: three sections (08/09/10) now share one page with clear
+breathing room and no header-only orphaning. Landed alongside a general
+`.section-head { margin-top: var(--space-8) }` rule (not one of this
+doc's numbered items - raised directly by Jules mid-session: titles were
+landing flush against the previous section's last line whenever two
+sections shared a page) that gives every section heading breathing room
+above it, whether it starts fresh on a page or partway down one.
+
 - Page 9 bottom: "08 · PREUVE DE RENDU" plus its intro paragraph, evidence cards
   start on page 10.
 - Page 10 bottom: "10 · MÉTHODOLOGIE ET LIMITES" plus one paragraph, content
@@ -961,6 +976,16 @@ REGRESSION of Palais Gallien v2 item 2.1. The fix landed for h2/h3 but the eyebr
 span and section wrapper are still not held together.
 
 ### 2.2 Dead space
+
+**FIXED, 2026-08-19**, as a side effect of item 2.1's fix and the new
+section-head spacing rule: the specific page this item measured (in the
+old 21-page layout) no longer exists in the same form after this
+session's fixes reshuffled the page count to 25, and a fresh per-page
+character-count pass against the regenerated PDF found no near-empty
+content page (lowest was the standalone printable checklist page, a
+deliberate one-page-alone design, not a defect). Not verified against
+the exact original page 7/8/11/21 references, which no longer map
+1:1 onto the current output.
 
 Measured text volume per page: page 8 carries 540 characters (roughly 15 percent of
 the page), page 11 carries 1317, page 7 fills about 40 percent, page 21 is empty.
@@ -986,6 +1011,17 @@ missing entry is caught before a client sees it.
 
 ### 2.4 Long rule titles break the annex group header
 
+**FIXED, 2026-08-19.** Root cause was that the severity badge and title
+were two independent items in the header row's `flex-wrap:wrap` layout,
+which treats each item as a rigid box for line-breaking purposes - a
+long title that didn't fit next to the badge moved to its own line as a
+whole item, leaving the badge alone on line 1. Grouped badge+title into
+one non-flex inline wrapper so ordinary text-wrapping keeps the badge
+adjacent to the title's first line. Confirmed visually against the
+regenerated PDF for both `target-size` and `alt-text-quality-heuristic`:
+badge and title share the first line in both cases, rule id stays
+directly beneath.
+
 **Symptom.** Page 18: the "Sérieux" badge for `target-size` sits alone on one line
 with the title beneath it and the rule id pushed to the following line, unlike
 every other group where badge, title and rule id are inline. Same on
@@ -995,10 +1031,37 @@ every other group where badge, title and rule id are inline. Same on
 
 ### 2.5 Cover layout
 
+**PARTIALLY FIXED, 2026-08-19.** The wrapping half is fixed: a non-
+breaking space after each "·" (not before) in `wcagReferentialValue`/
+`wcagReferentialValueNoPerformance` keeps each "· Term" pair together,
+so wrapping can only happen between complete terms, never right after
+the separator. Confirmed visually. The "upper 40 percent is empty" half
+is deliberately not touched this session: the identity block is
+vertically centered by design (`justify-content:center` in a `flex:1`
+area) and changing that balance is exactly the kind of cover redesign
+trade-off 9 in CLAUDE.md says must be re-derived from the canonical
+mockup (via computed styles, not guessed), which was not loaded this
+session. Screenshotted and confirmed the emptiness is real and roughly
+matches the description, not fixed.
+
 The upper 40 percent of the cover is empty. The référentiel value wraps to
 "WCAG 2.2 AA · Performance · SEO ·" / "GEO", breaking after the separator.
 
 ### 2.6 Selector column overflow
+
+**FIXED, 2026-08-19.** A line-clamp/ellipsis truncation (this item's own
+suggested direction) was tried first and reverted: it visually clips the
+DOM, and Chromium's PDF text layer only contains what actually rendered,
+so the clamped tail of a long selector was genuinely gone from the PDF's
+own extractable text - caught immediately by `pdf-text-integrity.test.ts`
+(item 0.4's regression test for exactly "the PDF text layer never drops
+characters"). A long selector (over 50 characters) instead renders at a
+smaller font size (10px vs. the normal 12.5px) - full text always
+present, never truncated, smaller visual footprint. The "technical
+export" alternative this item floated is correctly not built - see item
+3.3, which explicitly says that deliverable does not exist and should
+not be promised. Confirmed visually against the regenerated PDF's
+`iframe >>> iframe >>> .captcha__header__logo` rows.
 
 Shadow-piercing selectors (`iframe >>> iframe >>> .captcha__header__logo`) and
 three-line descendant chains dominate the column width. Consider truncating with a

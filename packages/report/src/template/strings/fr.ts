@@ -78,8 +78,14 @@ export const fr: ReportStrings = {
     pagesScannedValueTemplate: '{count} pages analysées',
     languageLabel: 'Langue du rapport',
     wcagReferentialLabel: 'Référentiel audité',
-    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO',
-    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO',
+    // item 2.5 (La Corniche pass): a plain space after "·" let the cover's
+    // narrow value column wrap right after the separator, leaving it
+    // dangling alone at the end of a line with the next term starting a
+    // new one ("WCAG 2.2 AA · Performance · SEO ·" / "GEO"). A non-
+    // breaking space after "·" (not before) keeps each "· Term" pair
+    // together, so wrapping can only happen between complete terms.
+    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO',
+    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO',
     riskSmallLabel: 'Niveau de criticité des constats',
     riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
     riskBasisTemplate: 'Basé sur {critical} {criticalWord} et {serious} {seriousWord}',

@@ -110,6 +110,29 @@ const PAGE_URL_LIST_CAP = 5;
  *  id can be referenced from more than one place (e.g. a future
  *  cross-reference) and the annex is generated once, independent of who
  *  ends up linking to it. */
+// item 2.6 (La Corniche pass): a shadow-piercing selector
+// (`iframe >>> iframe >>> .captcha__header__logo`) or a long descendant
+// chain wrapped across 3 lines and visually dominated its row next to
+// every other row's single line.
+//
+// A line-clamp/ellipsis truncation was tried first and reverted: it
+// visually clips the DOM content, and Chromium's PDF text layer only
+// contains what actually rendered, so a clamped selector's tail is
+// genuinely gone from the PDF's own text - confirmed by running it
+// against pdf-text-integrity.test.ts (item 0.4's regression test for
+// exactly this: "the PDF text layer never drops... characters"), which
+// failed immediately with the clamped selectors missing from extracted
+// text. That invariant is deliberate and pre-existing; this fix must not
+// trade it away. A long selector instead renders at a smaller font size
+// so more of it fits per line without losing any character - full text,
+// smaller footprint, not truncated content.
+const LONG_SELECTOR_LENGTH_THRESHOLD = 50;
+
+function selectorCellStyle(selector: string): string {
+  const fontSize = selector.length > LONG_SELECTOR_LENGTH_THRESHOLD ? '10px' : '12.5px';
+  return `font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none;opacity:0.8;font-size:${fontSize}`;
+}
+
 function renderSubTableRow(strings: ReportStrings, language: ReportLanguage, finding: Finding, totalPagesScanned: number): string {
   const selector = finding.elements[0]?.selector ?? '';
   return `
@@ -117,7 +140,7 @@ function renderSubTableRow(strings: ReportStrings, language: ReportLanguage, fin
       ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none')}
       ${cell(formatNumber(finding.pageUrls.length, language))}
       ${cell(formatNumber(finding.occurrences, language))}
-      ${cell(escapeHtml(selector), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none;opacity:0.8')}
+      ${cell(escapeHtml(selector), selectorCellStyle(selector))}
     </tr>
     ${renderPageUrlList(strings, language, finding, totalPagesScanned)}
   `;
@@ -170,11 +193,22 @@ function renderRuleGroup(
   // a plain wrapper and are allowed to flow across the page break.
   const wrapperClass = group.findings.length <= APPENDIX_GROUP_KEEP_THRESHOLD ? 'appendix-group' : '';
 
+  // item 2.4 (La Corniche pass): the severity badge and title used to be
+  // two independent flex items in this row's flex-wrap:wrap layout, which
+  // treats each item as a rigid box for line-breaking purposes - a long
+  // title (target-size, alt-text-quality-heuristic) that didn't fit next
+  // to the badge moved to its own line as a whole item, leaving the badge
+  // alone on line 1 and pushing the rule-code badge to a third line.
+  // Grouping badge+title into one non-flex inline wrapper lets ordinary
+  // text-wrapping keep the badge adjacent to the title's first line -
+  // only the title's own overflow text wraps, not the badge.
   return `
     <div class="${wrapperClass}" style="margin-bottom:var(--space-4)">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
-        ${renderSeverityBadge(strings, group.severity)}
-        <span style="font-size:14px;font-weight:500">${escapeHtml(representativeTitle)}</span>
+        <span style="display:inline">
+          ${renderSeverityBadge(strings, group.severity)}
+          <span style="font-size:14px;font-weight:500">${escapeHtml(representativeTitle)}</span>
+        </span>
         <span class="mono rule-code" style="font-size:10px;opacity:0.5">${escapeHtml(ruleCodeDisplay)}</span>
         ${gloss}
         ${obsTag}

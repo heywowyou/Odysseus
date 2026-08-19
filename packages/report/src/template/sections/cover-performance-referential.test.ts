@@ -24,8 +24,13 @@ describe('renderCover référentiel line reacts to whether performance was measu
     const analysis = await loadSasFernandeAnalysis('fr');
     const html = renderCover(fr, manifest, analysis);
 
-    expect(html).toContain('WCAG 2.2 AA · SEO · GEO');
-    expect(html).not.toContain('WCAG 2.2 AA · Performance · SEO · GEO');
+    // item 2.5: compared against the real strings constants, not a
+    // hardcoded literal - wcagReferentialValue uses a non-breaking space
+    // after each "·" (see fr.ts's own comment) to stop the cover's narrow
+    // value column wrapping right after the separator, so a literal
+    // retyped here would silently mismatch on the invisible NBSP.
+    expect(html).toContain(fr.cover.wcagReferentialValueNoPerformance);
+    expect(html).not.toContain(fr.cover.wcagReferentialValue);
   });
 
   it('includes Performance when at least one page has real Core Web Vitals data', async () => {
@@ -50,6 +55,6 @@ describe('renderCover référentiel line reacts to whether performance was measu
     };
     const html = renderCover(fr, withVitals, analysis);
 
-    expect(html).toContain('WCAG 2.2 AA · Performance · SEO · GEO');
+    expect(html).toContain(fr.cover.wcagReferentialValue);
   });
 });

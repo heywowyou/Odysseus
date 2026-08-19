@@ -62,7 +62,7 @@ export const en: ReportStrings = {
       "These pages (terms and conditions, cookie policy, privacy policy, or similar) are of a kind usually excluded from indexing (noindex). This is a common and often deliberate setup for this kind of page: no corrective action is recommended by default, just confirm the choice is intentional and that a noindex directive is actually in place. Findings involved: {findingIds}.",
   },
   cover: {
-    kicker: 'Odysseus · Digital audit',
+    kicker: 'Odysseus · Digital audit',
     reportTitle: 'Audit report',
     subtitle: 'Accessibility, performance, SEO and GEO audit',
     siteLabel: 'Site audited',
@@ -71,8 +71,8 @@ export const en: ReportStrings = {
     pagesScannedValueTemplate: '{count} pages analyzed',
     languageLabel: 'Report language',
     wcagReferentialLabel: 'Standard audited',
-    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO',
-    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO',
+    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO',
+    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO',
     riskSmallLabel: 'Technical findings severity',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     riskBasisTemplate: 'Based on {critical} {criticalWord} and {serious} {seriousWord}',
@@ -152,7 +152,7 @@ export const en: ReportStrings = {
     pagesColumnLabel: 'Pages',
     findingsColumnLabel: 'Findings',
     wcagColumnLabel: 'WCAG',
-    identifierTemplate: '{company} · {date}',
+    identifierTemplate: '{company} · {date}',
   },
   themes: {
     eyebrow: 'Priorities',
