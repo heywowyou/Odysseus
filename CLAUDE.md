@@ -530,9 +530,13 @@ is worse than pausing.
 ## Testing
 
 Run against `fixtures/spa-demo`, a local client-rendered React app with
-deliberately seeded faults. Never run development scans against live
-third-party sites. Vitest for unit tests, with scanner output fixtures
-committed so tests do not require a browser.
+deliberately seeded faults. Do not run a development scan against a live
+third-party site on your own initiative. A scan against a specific live
+site is allowed only when the user has explicitly given the go-ahead for
+that site in the current conversation; that authorization covers the
+site named, not sites in general, and does not carry over to a future
+session. Vitest for unit tests, with scanner output fixtures committed
+so tests do not require a browser.
 
 The fixture is two pages and cannot exercise everything. Both bugs found
 after Milestone 4 (attachment URLs crawled as pages, positional selectors
