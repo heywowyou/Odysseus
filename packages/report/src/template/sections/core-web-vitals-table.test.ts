@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AuditManifest } from '@odysseus/core';
-import { renderCoreWebVitalsTable } from './core-web-vitals-table.js';
+import { hasMeasuredCoreWebVitals, renderCoreWebVitalsTable } from './core-web-vitals-table.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSasFernandeManifest } from '../../test-fixtures.js';
 
@@ -9,12 +9,25 @@ function buildMeasurement(numericValue: number, displayValue: string) {
 }
 
 describe('renderCoreWebVitalsTable', () => {
-  it('renders the "not measured" fallback for the sas-fernande.fr capture, which predates coreWebVitals', async () => {
+  // report-feedback-la-corniche.md item 0.3 [REGRESSION of this test's own
+  // prior expectation]: a table of 5 "Non mesuré" rows, thresholds, and a
+  // worst-page footnote that has nothing to explain reads as real data to
+  // a client - a real report shipped exactly this table (Lighthouse
+  // failed on all 18 pages) with the cover still claiming Performance was
+  // audited. Whether nothing was ever recorded (sas-fernande.fr's older
+  // capture, before coreWebVitals existed) or Lighthouse genuinely failed
+  // on every page of a fresh scan, the section now states plainly that
+  // measurement did not complete instead of rendering the unmeasured
+  // table at all.
+  it('states plainly that measurement did not complete, instead of a table of "Non mesuré" rows, for the sas-fernande.fr capture (predates coreWebVitals)', async () => {
     const manifest = await loadSasFernandeManifest();
+    expect(hasMeasuredCoreWebVitals(manifest)).toBe(false);
+
     const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
 
-    expect(html).toContain('Not measured');
-    expect(html).not.toContain('undefined');
+    expect(html).not.toContain('Not measured');
+    expect(html).not.toContain('<table');
+    expect(html).toContain('did not complete');
   });
 
   it('renders all 5 aggregated medians (doc §3 section 09), not a per-page table', () => {
@@ -189,5 +202,39 @@ describe('renderCoreWebVitalsTable', () => {
     const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
     expect(html).toContain('0.004');
     expect(html).not.toMatch(/>0<\/div>/);
+  });
+
+  it('item 0.3: still renders the real table when at least one page has real data, even if others do not', () => {
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [
+        {
+          url: 'https://example.com/a',
+          pageDir: 'pages/a',
+          depth: 0,
+          status: 'visited',
+          errors: {},
+          coreWebVitals: {
+            lcp: buildMeasurement(1800, '1.8 s'),
+            cls: buildMeasurement(0, '0'),
+            tbt: buildMeasurement(120, '120 ms'),
+            fcp: buildMeasurement(900, '0.9 s'),
+            speedIndex: buildMeasurement(2000, '2.0 s'),
+          },
+        },
+        {
+          url: 'https://example.com/b',
+          pageDir: 'pages/b',
+          depth: 0,
+          status: 'visited',
+          errors: { lighthouse: 'runLighthouseIsolated: worker exited' },
+        },
+      ],
+    } as unknown as AuditManifest;
+
+    expect(hasMeasuredCoreWebVitals(manifest)).toBe(true);
+    const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+    expect(html).toContain('1.8 s');
+    expect(html).not.toContain('did not complete');
   });
 });

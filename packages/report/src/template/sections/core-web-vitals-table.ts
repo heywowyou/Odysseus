@@ -90,6 +90,18 @@ function cell(html: string, extra = ''): string {
   return `<td style="padding:var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</td>`;
 }
 
+/** report-feedback-la-corniche.md item 0.3: whether any page has any
+ *  measured Core Web Vital at all - false for a real report where
+ *  Lighthouse failed on every page (lighthouseError on all 18 pages,
+ *  confirmed against the actual manifest), which is the case this
+ *  function exists to let both this section and the cover (cover.ts)
+ *  react to consistently. True the moment a single metric on a single
+ *  page resolved; a report never needs every metric on every page to
+ *  state that Performance measurement broadly succeeded. */
+export function hasMeasuredCoreWebVitals(manifest: AuditManifest): boolean {
+  return manifest.pages.some((page) => page.coreWebVitals !== undefined);
+}
+
 /** Doc §3 section 09: 5 aggregated medians (LCP, TBT, FCP, Speed Index,
  *  CLS) across the whole scan - the 20-row-per-page table with full URLs
  *  is removed from the PDF (that table broke words mid-token in a 130px
@@ -110,6 +122,20 @@ export function renderCoreWebVitalsTable(
     speedIndex: c.speedIndexLabel,
     cls: c.clsLabel,
   };
+
+  // item 0.3: when nothing at all was measured, the table used to print
+  // as if it were real data (5 rows of "Non mesuré", thresholds and a
+  // worst-page footnote that has nothing to explain), and the cover
+  // still listed Performance among the audited categories. Reported
+  // instead of concealed, per rule 1: state plainly that measurement did
+  // not complete for this run, name where the reasoning is (methodology),
+  // and stop there.
+  if (!hasMeasuredCoreWebVitals(manifest)) {
+    return sheet(`
+      ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
+      <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(c.allUnmeasuredNote)}</p>
+    `, '', 'section-09');
+  }
 
   const rows = CORE_WEB_VITAL_THRESHOLDS.map((metric) => {
     const unit = METRIC_UNITS[metric.key];

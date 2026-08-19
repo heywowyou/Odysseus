@@ -4,6 +4,7 @@ import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatDate, formatNumber, sheet } from '../html-utils.js';
 import { SEVERITY } from '../design-tokens.js';
 import { computeStatistics } from '../statistics.js';
+import { hasMeasuredCoreWebVitals } from './core-web-vitals-table.js';
 
 /** The report always states its own language in that same language - a
  *  French report says "Français" regardless of what other languages are
@@ -133,7 +134,14 @@ export function renderCover(
         ${field(strings.cover.dateLabel, escapeHtml(formatDate(new Date(manifest.startedAt), analysis.language)))}
         ${field(strings.cover.pagesScannedLabel, escapeHtml(fillTemplate(strings.cover.pagesScannedValueTemplate, { count: pagesScanned })))}
         ${field(strings.cover.languageLabel, escapeHtml(LANGUAGE_SELF_NAME[analysis.language]))}
-        ${field(strings.cover.wcagReferentialLabel, escapeHtml(strings.cover.wcagReferentialValue))}
+        ${field(
+          strings.cover.wcagReferentialLabel,
+          escapeHtml(
+            hasMeasuredCoreWebVitals(manifest)
+              ? strings.cover.wcagReferentialValue
+              : strings.cover.wcagReferentialValueNoPerformance,
+          ),
+        )}
         ${field(strings.cover.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest))}
       </div>
     </div>

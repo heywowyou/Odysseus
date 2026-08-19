@@ -67,6 +67,7 @@ export const en: ReportStrings = {
     languageLabel: 'Report language',
     wcagReferentialLabel: 'Standard audited',
     wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO',
+    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO',
     riskSmallLabel: 'Technical findings severity',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     riskBasisTemplate: 'Based on {critical} {criticalWord} and {serious} {seriousWord}',
@@ -197,6 +198,8 @@ export const en: ReportStrings = {
     ratingGoodLabel: 'good',
     ratingNeedsImprovementLabel: 'needs improvement',
     ratingPoorLabel: 'poor',
+    allUnmeasuredNote:
+      'Performance measurement (Lighthouse) did not complete for this site on this audit, so no performance finding is reported here. See the "Methodology and limitations" section for detail.',
   },
   accessibilityStatement: {
     eyebrow: 'Statement',

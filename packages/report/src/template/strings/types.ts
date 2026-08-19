@@ -105,8 +105,21 @@ export interface ReportStrings {
      *  reading the cover expected an accessibility-only audit. States all
      *  four categories this product always audits (CATEGORY_ORDER,
      *  statistics.ts), not conditioned on whether findings exist in each -
-     *  a clean category is still part of what was checked. */
+     *  a clean category is still part of what was checked.
+     *
+     *  report-feedback-la-corniche.md item 0.3: "always audits" stopped
+     *  being true for Performance the moment a real site made Lighthouse
+     *  fail on every page - the cover still claimed Performance while
+     *  section 09 printed nothing but "Non mesuré" rows. Performance is
+     *  the only one of the four categories a scanner-level failure can
+     *  remove entirely for a whole run (accessibility/SEO/GEO come from
+     *  axe and custom checks, which don't share Lighthouse's failure
+     *  mode), so this is the one category with its own drop variant
+     *  rather than a general N-of-4 combinator. */
     wcagReferentialValue: string;
+    /** Same value with "Performance" removed, shown instead when
+     *  core-web-vitals-table.ts's hasMeasuredCoreWebVitals is false. */
+    wcagReferentialValueNoPerformance: string;
     riskSmallLabel: string;
     riskLevels: { low: string; medium: string; high: string };
     /** item 42: the badge showed no scale and no stated basis for how it
@@ -375,6 +388,13 @@ export interface ReportStrings {
     ratingGoodLabel: string;
     ratingNeedsImprovementLabel: string;
     ratingPoorLabel: string;
+    /** report-feedback-la-corniche.md item 0.3: shown instead of the
+     *  whole table (thresholds and worst-page footnote included) when
+     *  hasMeasuredCoreWebVitals is false - a real report had Lighthouse
+     *  fail on every single page and still printed a 5-row table of
+     *  "Non mesuré" as though it were data, with the cover claiming
+     *  Performance among the audited categories. */
+    allUnmeasuredNote: string;
   };
   /** Per-criterion status is trivially derived, never a legal judgment:
    *  buildConformanceRollup only ever lists a criterion when at least one
