@@ -102,6 +102,14 @@ function renderTheme(
   totalPagesScanned: number,
   citationStat: ReferenceStat | undefined,
   manifest: AuditManifest,
+  /** report-feedback-la-corniche.md item 1.5: when every rendered theme
+   *  is a quick win, the badge distinguishes nothing and the heading's
+   *  claim to be sorted "par effort et par impact" reads as vacuous (a
+   *  real report showed 6 of 6 cards carrying it, all "Effort : Faible").
+   *  Rendered only when at least one rendered theme is not a quick win,
+   *  same "don't show a signal that carries no information" reasoning as
+   *  item D7's zero-count stat tiles. */
+  showQuickWinBadge: boolean,
 ): string {
   const t = strings.themes;
   const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
@@ -109,7 +117,7 @@ function renderTheme(
 
   const category = CATEGORY[theme.category];
   const categoryTag = `<span class="tag" style="background:${category.bg};color:${category.color}">${escapeHtml(strings.findingsAppendix.categoryLabels[theme.category])}</span>`;
-  const quickWinBadge = isQuickWinTheme(theme)
+  const quickWinBadge = showQuickWinBadge && isQuickWinTheme(theme)
     ? `<span class="tag qw" style="display:inline-flex;align-items:center;gap:4px;background:#1c3a2c;color:#7cd9a0">${QUICK_WIN_ICON}${escapeHtml(t.quickWinBadgeLabel)}</span>`
     : '';
 
@@ -310,6 +318,7 @@ export function renderThemes(
     }
   }
 
+  const showQuickWinBadge = !sortedThemes.every(isQuickWinTheme);
   const themeBlocks = sortedThemes
     .map((theme) =>
       renderTheme(
@@ -320,6 +329,7 @@ export function renderThemes(
         totalPagesScanned,
         citationByRank.get(theme.priorityRank),
         manifest,
+        showQuickWinBadge,
       ),
     )
     .join('');

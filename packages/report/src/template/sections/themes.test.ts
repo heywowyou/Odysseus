@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Theme } from '@odysseus/core';
 import { selectReferenceStats } from '@odysseus/core';
 import { isQuickWinTheme, MAX_RENDERED_THEMES, renderThemes, selectRenderedThemes } from './themes.js';
 import { getStrings } from '../strings/i18n.js';
@@ -555,5 +556,92 @@ describe('isQuickWinTheme', () => {
     expect(isQuickWinTheme({ effort: 'low', impact: 'low' })).toBe(false);
     expect(isQuickWinTheme({ effort: 'medium', impact: 'high' })).toBe(false);
     expect(isQuickWinTheme({ effort: 'high', impact: 'high' })).toBe(false);
+  });
+});
+
+// report-feedback-la-corniche.md item 1.5: a real report had all 6
+// rendered theme cards carrying the "Gain rapide" badge and "Effort :
+// Faible", under a heading claiming a two-axis sort ("classés par effort
+// et par impact") the data gave no evidence of - the badge distinguished
+// nothing. Rendered only when not every rendered theme is a quick win.
+describe('item 1.5: the quick-win badge does not render when every rendered theme would carry it', () => {
+  function quickWinTheme(rank: number, findingId: string): Theme {
+    return {
+      title: `Chantier ${rank}`,
+      category: 'accessibility' as const,
+      businessImpact: 'Impact',
+      effort: 'low' as const,
+      impact: 'high' as const,
+      priorityRank: rank,
+      findingIds: [findingId],
+      recommendedActions: ['Action'],
+    };
+  }
+
+  function buildAnalysis(themes: Theme[]) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes,
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const manifest = { pages: [{ url: 'https://example.com/', status: 'visited' }] } as never;
+  const findings = [1, 2, 3, 4, 5, 6].map((i) => ({
+    findingId: `f00${i}`,
+    auditId: 'a1',
+    schemaVersion: 1 as const,
+    source: 'axe' as const,
+    ruleId: `rule-${i}`,
+    category: 'accessibility' as const,
+    severity: 'moderate' as const,
+    wcagCriteria: [],
+    title: 't',
+    description: 'd',
+    pageUrls: ['https://example.com/'],
+    occurrences: 1,
+    elements: [],
+    rawEvidence: {},
+    dedupeKey: `dk-${i}`,
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+  }));
+
+  it('renders no "Gain rapide" badge when all 6 rendered themes are quick wins', () => {
+    const themes = [1, 2, 3, 4, 5, 6].map((i) => quickWinTheme(i, `f00${i}`));
+    const analysis = buildAnalysis(themes);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
+
+    expect(html).not.toContain('Gain rapide');
+  });
+
+  it('still renders the badge on the themes that qualify when at least one rendered theme is not a quick win', () => {
+    const themes = [
+      quickWinTheme(1, 'f001'),
+      quickWinTheme(2, 'f002'),
+      {
+        title: 'Chantier non quick-win',
+        category: 'accessibility' as const,
+        businessImpact: 'Impact',
+        effort: 'medium' as const,
+        impact: 'high' as const,
+        priorityRank: 3,
+        findingIds: ['f003'],
+        recommendedActions: ['Action'],
+      },
+    ];
+    const analysis = buildAnalysis(themes);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
+
+    expect((html.match(/Gain rapide/g) ?? []).length).toBe(2);
   });
 });
