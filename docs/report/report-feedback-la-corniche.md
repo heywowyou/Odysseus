@@ -19,8 +19,8 @@ Suggested session split:
 | Session | Scope | Tier | Status (2026-08-19 fix session) |
 |---|---|---|---|
 | A | Aggregate binding and annex completeness, template only, no contract change | P0 items 0.2, 0.4, 0.5, 0.7, 0.9 | **Done** - all 5 items fixed and committed |
-| B | Obligation assessment: booking-flow detection and Sirene evidence | P0 items 0.1, 0.6, plus 1.11. Needs Jules approval before any edit | **Not started** - still needs Jules approval before any edit |
-| C | Performance pipeline: why Lighthouse produced nothing, and what the section does when it does | P0 item 0.3 | **Partially done**: report-side fix done and committed (section 09 states plainly when measurement didn't complete; cover drops "Performance"). Scanner-side isolation fix (prevents an OOM crash from taking the whole daemon down) was already sitting uncommitted from an earlier session, verified and committed this session. What's still open: nobody has confirmed the isolation fix actually restores real Lighthouse data on lacoorniche.com specifically (it crashed on all 18 pages even with the fix in place) - that needs a live re-scan, out of scope without the site owner's explicit go-ahead for that specific site (see CLAUDE.md's testing section, updated this session to allow it per-site on request) |
+| B | Obligation assessment: booking-flow detection and Sirene evidence | P0 items 0.1, 0.6, plus 1.11. Needs Jules approval before any edit | **Done** - Jules approved the concrete diff plan (2026-08-19), all 3 items fixed, committed, and confirmed against two further live re-scans (one exposed a second real bug, SIREN disambiguation, also fixed) |
+| C | Performance pipeline: why Lighthouse produced nothing, and what the section does when it does | P0 item 0.3 | **Done for this session's scope**: report-side fix done and committed. Scanner-side isolation fix verified and committed. The open confirmation question is answered: a live re-scan (2026-08-19) confirms the isolation fix contains the crash (no daemon-wide failure, per-page error captured) but does not restore real Lighthouse data - lacoorniche.com still fails Lighthouse on all 20 pages. Root-causing the underlying Lighthouse failure itself is separate, deeper scanner work, not attempted this session |
 | D | Prioritisation, benchmark attachment, third-party attribution | P0 item 0.8, P1 items 1.1, 1.4, 1.5, 1.9 | **Done** - all 5 items fixed and committed |
 | E | Annex, layout, copy | P2, P3, P4 | **Partially done**: items 2.3 and 3.2 fixed and committed (see their sections below). Everything else in P2/P3/P4 not started |
 
@@ -157,7 +157,57 @@ defensible but invisible to the reader.
 
 ### 0.1 The legal section declares the hotel out of scope, on a basis the scan itself contradicts
 
-**Symptom.** Page 3, section 2, "STATUT D'OBLIGATION: Hors champ", then:
+**FIXED, 2026-08-19 (Session B).** Root cause was not cross-origin iframe
+booking widgets as this item's own "Probable cause" guessed - live
+inspection of lacoorniche.com (Playwright, this session) found the
+"Réserver" button is `href="javascript:void(0)"` at load time; the real
+delegated booking engine (`secure-hotel-booking.com`, D-EDGE) is only
+referenced inside the widget's own inline JSON config, never as a
+crawlable link or script src. Fixed by adding two new
+`TransactionalFlowEvidence` kinds (`packages/core/src/types/
+compliance.ts`): `booking-engine-domain-reference` (scans inline
+`<script>` contents for known delegated-booking-engine domains,
+`packages/scanner/src/checks/transactional-flow.ts`'s
+`findBookingEngineDomainReferences`) and `booking-iframe` (matches a
+booking/reservation widget embedded directly as a third-party iframe -
+confirmed against the site's real TheFork/LaFourchette restaurant-table
+widget, `findBookingIframes`). `assessObligations()` itself needed no
+change: it already refused "Hors champ" whenever `hasTransactionalFlow`
+was true, the gap was purely in what fed that boolean. Re-scanned live
+twice this session; the second, fixed report shows "STATUT
+D'OBLIGATION: Confirmé", not "Hors champ".
+
+Sirene inputs are now printed verbatim (denomination, SIREN, effectifs
+bracket, retrieval date, source) via a new `ObligationAssessment.
+registrySnapshot` field spliced on by `packages/interface/src/pipeline/
+obligation-stage.ts`. The duplicated sentence is fixed by shortening the
+card's `statusShortDescriptions.out_of_scope` to a plain label instead of
+restating the full citation paragraph (`fr.ts`/`en.ts`).
+
+The "signals conflict, emit an explicit à confirmer state" ask is
+implemented as a report-side note (`renderTransactionalFlowConflictNote`)
+reading the existing `siteSignalResolutions.hasTransactionalFlow.
+detectedValue` conflict record, not as a new status inside
+`assessObligations()` - consistent with how `sirenMismatch` already
+states a conflict without assessObligations() itself ever seeing two
+candidate values.
+
+**Real bug found beyond this item's original scope, fixed same session:**
+the live re-scan initially surfaced a *second*, more serious defect -
+`mentions-legales.ts`'s SIREN extractor found two different, both
+Luhn-valid 9-digit numbers on the corrected legal-notice page and printed
+the wrong one (`443748397`, from web-agency boilerplate naming a
+different company in a different city, Montpellier) instead of the
+hotel's own (`790852578`, embedded in its own SIRET next to its own
+address). Fixed by preferring a SIRET-embedded SIREN over a bare
+9-digit match (`firstValidSiren` in `mentions-legales.ts`) - a number
+embedded in a full SIRET is a stronger, more specific claim of "this is
+our own registration" than a bare match that could be quoting any
+company mentioned on the page. Confirmed against a third live re-scan.
+See item 0.6 below for the underlying MongoDB test-data correction this
+also required.
+
+**Symptom (original).** Page 3, section 2, "STATUT D'OBLIGATION: Hors champ", then:
 
 > Sur la base des éléments disponibles (taille de l'entreprise et absence de
 > parcours de réservation, panier ou paiement en ligne), ce site ne relève pas de
@@ -273,10 +323,24 @@ presenting failure as a measurement". Scanner-side Lighthouse isolation
 (prevents an OOM crash from taking the whole daemon down) was already
 sitting uncommitted from an earlier session; verified and committed this
 session too ("Isolate Lighthouse runs in a forked child process to
-survive OOM crashes"). Still open: confirming the isolation fix actually
-restores real Lighthouse data on lacoorniche.com (it crashed on all 18
-pages even with the fix), which needs a live re-scan of that specific
-site.
+survive OOM crashes").
+
+**Confirmed via a live re-scan, 2026-08-19 (same session as the Session B
+fixes above).** The isolation fix works as designed: no daemon crash, and
+each page's failure is captured individually
+(`page.lighthouseError = "runLighthouseIsolated: worker for <url> exited
+before returning a result (code 1, signal null)"`). But it does not
+restore real data - Lighthouse still fails on all 20 pages of
+lacoorniche.com specifically, same as before the isolation fix, just
+contained now instead of taking the process down. The report-side fix
+already handles this correctly (states plainly that measurement did not
+complete, drops "Performance" from the cover's référentiel line - see
+"Fix" below, already shipped). Exit code 1 with no captured stderr is as
+far as this session went; root-causing why Lighthouse itself crashes on
+this specific site (the booking widget's popup modals, the D-EDGE/TheFork
+iframes, or something else) is separate, deeper scanner-package work, not
+attempted here - this was a confirmation step, not a mandate to fix the
+underlying Lighthouse failure.
 
 **Symptom.** Page 10, section 9, five rows, all identical:
 
@@ -394,7 +458,46 @@ not render.
 
 ### 0.6 Priority 2 says the SIREN is missing. Two other sections say it was found.
 
-**Symptom.** Page 5, priority 2, "Mentions légales incomplètes":
+**FIXED, 2026-08-19 (Session B).** Root cause was narrower than this
+item's own diagnosis: there was no second automated detector, and no
+`sirenSource`-style boolean signal to gate on (checked the codebase
+directly - it did not exist under that name). The real bug was purely in
+route detection: `MENTIONS_LEGALES_PATH_PATTERN` in
+`packages/scanner/src/checks/mentions-legales.ts` matched only
+`/mentions-legales/`, so `findMentionsLegalesUrl` never even considered
+`/conditions-generales-dutilisation/` and the SIREN extractor never ran
+against the page that actually carries it. Broadened to also match CGU,
+CGV, and conditions-générales page families (still narrower than the
+shared `LEGAL_PATH_PATTERN`, which also matches cookies/privacy pages
+almost never carrying a SIREN). Once the correct page was found, the
+existing `resolveEffectiveSiren`/`sirenMismatch` machinery in
+`packages/interface/src/pipeline/obligation-stage.ts` (already built,
+unused until this fix gave it real data to compare) needed no changes at
+all to reconcile manual vs. extracted values.
+
+A live re-scan then surfaced a second, real bug the extraction fix
+exposed: the corrected page carries two different Luhn-valid SIREN-shaped
+numbers (the hotel's own, embedded in its SIRET, and a web agency's, from
+boilerplate CGU text naming a different company in Montpellier).
+`firstValidSiren` was changed to prefer a SIRET-embedded match over a
+bare one - see item 0.1's write-up above for the full story. The
+session's own MongoDB test fixture also had a wrong manually-entered
+SIREN (`381749191`, matching neither number found on the real site);
+corrected to the real value (`790852578`) via the dashboard's manual-
+fields API before the final confirming re-scan, since a stale manual
+override would have kept masking the extraction fix.
+
+The zero-pages-affected priority filter is now enforced in
+`selectRenderedThemes` (`packages/report/src/template/sections/
+themes.ts`), which filters out any theme with no resolved findings
+before ranking - not as a special case, so it also covers any other
+dangling-theme cause, not just this one. Confirmed against the final
+regenerated report: the priorities list is `Boutons sans texte
+identifiable`, `Données structurées invalides`, `Cadres sans titre
+accessible` - "Mentions légales incomplètes" no longer appears, and no
+priority anywhere states "0 pages sur X".
+
+**Symptom (original).** Page 5, priority 2, "Mentions légales incomplètes":
 
 > L'absence de numéro SIREN ou RCS expose le site à des risques juridiques
 
@@ -754,9 +857,12 @@ rule-family breadth rather than page coverage.
 
 ### 1.11 The Sirene evidence is not printed
 
-Covered in 0.1. Listed here so it is not lost if 0.1 is split: whatever the
-obligation outcome, the report must print the registry inputs it used, with dates
-and source, per "report, don't conclude".
+**FIXED, 2026-08-19 (Session B), via item 0.1.** The new
+`ObligationAssessment.registrySnapshot` field prints denomination, SIREN,
+effectifs bracket, retrieval date, and source together. Confirmed in the
+regenerated PDF: "Données du répertoire Sirene : (O! DE LA DUNE, SIREN
+790852578, 100 à 199 salariés, consultées le 19 août 2026
+(siren:extracted)."
 
 ---
 
@@ -976,14 +1082,12 @@ data.
 
 ## Paste-ready Claude Code prompt
 
-**Session A is done (2026-08-19) - the prompt below is kept for record, not
-for re-use.** For a future session, the remaining work is: Session B
-(needs Jules's explicit approval first - see item 0.1/0.6/1.11), the
-open half of Session C (confirming the Lighthouse isolation fix actually
-restores data on lacoorniche.com, needs a live re-scan with the site
-owner's go-ahead), and the untouched P2/P3/P4 items in Session E (2.1,
-2.2, 2.4, 2.5, 2.6, 3.3, 3.6, 3.7, 3.9, 3.10, and the P4 list) - none of
-those have a paste-ready prompt written yet.
+**Sessions A, B, and C are done (2026-08-19) - the prompt below is kept for
+record, not for re-use.** For a future session, the remaining work is the
+untouched P1 items (1.2, 1.3, 1.6, 1.7, 1.8, 1.10) and the untouched
+P2/P3/P4 items in Session E (2.1, 2.2, 2.4, 2.5, 2.6, 3.3, 3.6, 3.7, 3.9,
+3.10, and the P4 list) - none of those have a paste-ready prompt written
+yet.
 
 ```
 Read report-feedback-la-corniche.md, CLAUDE.md, docs/report-design-system.md and

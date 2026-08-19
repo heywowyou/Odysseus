@@ -38,6 +38,42 @@ const CHECKOUT_FORM_SELECTOR =
 const PAYMENT_SCRIPT_SUBSTRINGS = ['js.stripe.com', 'checkout.stripe.com', 'paypal.com/sdk', 'paypalobjects.com'];
 const BOOKING_SCRIPT_SUBSTRINGS = ['simplebooking', 'resharmonics', 'thinkreservations'];
 
+/** item 0.1 (La Corniche pass, confirmed live against lacoorniche.com): a
+ *  same-origin JS booking widget (here, Diadao's "HSC" widget SDK) can
+ *  reference its delegated booking engine's domain only inside an inline
+ *  script/JSON config, with no crawlable script[src] or a[href] at all -
+ *  the "Réserver" button was `href="javascript:void(0)"` until a date was
+ *  picked. Checked against the page's full rendered HTML (inline scripts
+ *  included), not just script[src], for exactly that reason. Same
+ *  starting-position-not-measured-result caveat as BOOKING_SCRIPT_
+ *  SUBSTRINGS above: the delegated engines named in this module's own
+ *  doc comment (Availpro, D-EDGE, SiteMinder, Cloudbeds, Mews), plus the
+ *  one domain actually observed (secure-hotel-booking.com, D-EDGE's
+ *  booking domain). Revisit once more real-site scans surface others. */
+const BOOKING_ENGINE_DOMAIN_SUBSTRINGS = [
+  'secure-hotel-booking.com',
+  'availpro.com',
+  'siteminder.com',
+  'cloudbeds.com',
+  'mews.com',
+];
+
+/** item 0.1: a booking or reservation widget embedded directly as a
+ *  third-party iframe is at least as strong a transactional-flow signal
+ *  as an on-site script, and was previously never checked at all - no
+ *  iframe detection existed anywhere in this file. Confirmed live against
+ *  lacoorniche.com: its restaurant-table booking widget (TheFork/
+ *  LaFourchette) is embedded this way inside a popup modal. Kept as its
+ *  own list rather than reusing BOOKING_ENGINE_DOMAIN_SUBSTRINGS because a
+ *  reservation iframe provider (a table-booking widget) is a distinct
+ *  vendor family from a room/stay booking engine, even though both count
+ *  as a transactional flow for obligation-scope purposes. */
+const BOOKING_IFRAME_DOMAIN_SUBSTRINGS = [
+  ...BOOKING_ENGINE_DOMAIN_SUBSTRINGS,
+  'widget.thefork.com',
+  'module.lafourchette.com',
+];
+
 const OUTBOUND_BOOKING_HOSTS = [/(^|\.)booking\.com$/i, /(^|\.)airbnb\.[a-z.]+$/i, /(^|\.)expedia\.[a-z.]+$/i];
 
 /** Never followed regardless of link text, defense in depth alongside the
@@ -94,6 +130,34 @@ const COMMON_HOSPITALITY_WORDS = new Set([
 
 const MAX_REDIRECT_FOLLOWS = 3;
 
+/** Pure candidate-selection for the two evidence kinds added in item 0.1,
+ *  kept separate from the Playwright $$eval calls so they are
+ *  unit-testable without a browser, same pattern findBookingIntentLinks
+ *  already established. */
+export function findBookingEngineDomainReferences(inlineScriptTexts: readonly string[]): string[] {
+  const matched = new Set<string>();
+  for (const text of inlineScriptTexts) {
+    for (const domain of BOOKING_ENGINE_DOMAIN_SUBSTRINGS) {
+      if (text.includes(domain)) matched.add(domain);
+    }
+  }
+  return [...matched];
+}
+
+export interface BookingIframeMatch {
+  src: string;
+  domain: string;
+}
+
+export function findBookingIframes(iframeSrcs: readonly string[]): BookingIframeMatch[] {
+  const matches: BookingIframeMatch[] = [];
+  for (const src of iframeSrcs) {
+    const domain = BOOKING_IFRAME_DOMAIN_SUBSTRINGS.find((candidate) => src.includes(candidate));
+    if (domain) matches.push({ src, domain });
+  }
+  return matches;
+}
+
 export async function detectTransactionalFlow(page: Page, pageUrl: string): Promise<TransactionalFlowEvidence[]> {
   const evidence: TransactionalFlowEvidence[] = [];
 
@@ -129,6 +193,39 @@ export async function detectTransactionalFlow(page: Page, pageUrl: string): Prom
         detail: src,
       });
     }
+  }
+
+  // item 0.1: catches a delegated booking engine's domain referenced only
+  // inside an inline script/JSON config (see BOOKING_ENGINE_DOMAIN_
+  // SUBSTRINGS above for why script[src] alone misses this). Scans inline
+  // script contents specifically, not the whole page HTML, so an unrelated
+  // mention of a provider name in visible marketing copy or a blog post
+  // can't produce a false positive.
+  const inlineScriptTexts = await page.$$eval('script:not([src])', (elements) =>
+    elements.map((el) => el.textContent ?? ''),
+  );
+  for (const domain of findBookingEngineDomainReferences(inlineScriptTexts)) {
+    evidence.push({
+      kind: 'booking-engine-domain-reference',
+      selector: 'script:not([src])',
+      pageUrl,
+      detail: `Inline script references delegated booking engine domain ${domain}`,
+      providerUrl: `https://${domain}`,
+    });
+  }
+
+  // item 0.1: a booking/reservation widget embedded directly as a
+  // third-party iframe, never checked before this fix (see
+  // BOOKING_IFRAME_DOMAIN_SUBSTRINGS above).
+  const iframeSrcs = await page.$$eval('iframe[src]', (elements) => elements.map((el) => el.getAttribute('src') ?? ''));
+  for (const { src, domain } of findBookingIframes(iframeSrcs)) {
+    evidence.push({
+      kind: 'booking-iframe',
+      selector: 'iframe[src]',
+      pageUrl,
+      detail: `Booking/reservation widget embedded as an iframe from ${domain}`,
+      providerUrl: src,
+    });
   }
 
   return evidence;

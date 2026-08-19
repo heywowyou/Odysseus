@@ -258,3 +258,77 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
     expect(html).not.toContain('parcours transactionnel identifié');
   });
 });
+
+// item 0.1/1.11 (La Corniche pass): "report, don't conclude" requires
+// printing every registry input relied on (denomination, effectifs
+// bracket, retrieval date, source), not just the SIREN.
+describe('item 0.1/1.11: the full registry snapshot is printed when a Sirene lookup succeeded', () => {
+  it('prints denomination, SIREN, effectifs bracket, date and source together', () => {
+    const manifest = fakeManifest({ siteSignals: { hasTransactionalFlow: true, transactionalFlowEvidence: [], siren: '790852578' } });
+    const assessment = {
+      status: 'in_scope' as const,
+      basis: [],
+      registrySnapshot: {
+        denomination: 'O DE LA DUNE',
+        effectifBandLabel: '20 à 49 salariés',
+        retrievedAt: new Date('2026-08-19'),
+        source: 'siren:extracted',
+      },
+    };
+    const html = renderLegalExposure(fr, 2, 'fr', assessment, new Date('2026-08-19'), manifest);
+    expect(html).toContain('O DE LA DUNE');
+    expect(html).toContain('790852578');
+    expect(html).toContain('20 à 49 salariés');
+    expect(html).toContain('siren:extracted');
+  });
+
+  it('falls back to the SIREN-only note when no registry snapshot exists (no successful Sirene lookup)', () => {
+    const manifest = fakeManifest({ siteSignals: { hasTransactionalFlow: true, transactionalFlowEvidence: [], siren: '552032534' } });
+    const html = renderLegalExposure(fr, 2, 'fr', { status: 'undetermined', basis: [] }, new Date('2026-08-17'), manifest);
+    expect(html).toContain('552032534');
+    expect(html).not.toContain('Données du répertoire Sirene');
+  });
+});
+
+// item 0.1: the card body and the paragraph below it used to print the
+// same "Hors champ" sentence twice.
+describe('item 0.1: the out-of-scope explanation is not printed twice', () => {
+  it('the short status description and the full paragraph are not the same sentence', () => {
+    const html = renderLegalExposure(fr, 2, 'fr', { status: 'out_of_scope', basis: [] }, new Date('2026-08-17'), fakeManifest());
+    const paragraphOccurrences = html.split('ne relève pas de l&#39;obligation d&#39;accessibilité numérique prévue par la loi').length - 1;
+    expect(paragraphOccurrences).toBe(1);
+  });
+});
+
+// item 0.1: a manual hasTransactionalFlow override disagreeing with the
+// detector must be visible, not silently trusted.
+describe('item 0.1: a transactional-flow signal conflict is stated explicitly', () => {
+  it('states the conflict when a manual override contradicts the detector', () => {
+    const assessment = {
+      status: 'out_of_scope' as const,
+      basis: [],
+      siteSignalResolutions: {
+        hasTransactionalFlow: { value: false, source: 'manual' as const, detectedValue: true },
+      },
+    };
+    const html = renderLegalExposure(fr, 2, 'fr', assessment, new Date('2026-08-17'), fakeManifest());
+    expect(html).toContain('Signal contradictoire');
+  });
+
+  it('renders nothing when the manual value agrees with the detector', () => {
+    const assessment = {
+      status: 'in_scope' as const,
+      basis: [],
+      siteSignalResolutions: {
+        hasTransactionalFlow: { value: true, source: 'manual' as const, detectedValue: true },
+      },
+    };
+    const html = renderLegalExposure(fr, 2, 'fr', assessment, new Date('2026-08-17'), fakeManifest());
+    expect(html).not.toContain('Signal contradictoire');
+  });
+
+  it('renders nothing when there is no resolution recorded at all', () => {
+    const html = renderLegalExposure(fr, 2, 'fr', { status: 'in_scope', basis: [] }, new Date('2026-08-17'), fakeManifest());
+    expect(html).not.toContain('Signal contradictoire');
+  });
+});

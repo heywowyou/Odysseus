@@ -259,6 +259,24 @@ export interface ReportStrings {
     /** Fallback for {domain} above on the rare case a delegated
      *  provider's URL couldn't be parsed into a hostname. */
     transactionalFlowDelegatedDomainUnknown: string;
+    /** item 0.1/1.11: printed instead of sirenTemplate whenever a real
+     *  Sirene lookup succeeded (ObligationAssessment.registrySnapshot is
+     *  set) - "report, don't conclude" requires every registry input
+     *  stated, not just the SIREN. Template: {denomination}, {siren},
+     *  {effectifs}, {date}, {source}. */
+    registrySnapshotTemplate: string;
+    /** Fallback for {effectifs} above when the headcount band is null
+     *  (Sirene's field unreliable for this entity, or the lookup never
+     *  resolved one). */
+    registrySnapshotEffectifsUnavailable: string;
+    /** item 0.1: shown when a manual hasTransactionalFlow override
+     *  disagrees with the detector (ObligationAssessment.
+     *  siteSignalResolutions.hasTransactionalFlow.detectedValue set).
+     *  Template: {manualValue}, one of transactionalFlowConflictManual
+     *  Absent/Present below. */
+    transactionalFlowConflictTemplate: string;
+    transactionalFlowConflictManualAbsent: string;
+    transactionalFlowConflictManualPresent: string;
   };
   /** Pure re-presentation of analysis.themes (rank/title/effort/impact/
    *  pages) as a dense, printable table - no new data, no new logic. */

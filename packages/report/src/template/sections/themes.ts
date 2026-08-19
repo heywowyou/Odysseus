@@ -24,9 +24,20 @@ export function isQuickWinTheme(theme: Pick<Theme, 'effort' | 'impact'>): boolea
 export const MAX_RENDERED_THEMES = 6;
 
 /** Same top-N-by-rank selection shared by themes.ts and checklist.ts, so
- *  the two sections can never disagree on which themes made the cut. */
-export function selectRenderedThemes(themes: readonly Theme[]): Theme[] {
-  return [...themes].sort((a, b) => a.priorityRank - b.priorityRank).slice(0, MAX_RENDERED_THEMES);
+ *  the two sections can never disagree on which themes made the cut.
+ *
+ *  item 0.6 (La Corniche pass): a theme can end up with zero resolved
+ *  findings - e.g. the LCEN mentions-légales finding it was built from
+ *  gets stripped later by lcen-resolution.ts's resolveLcenFinding once an
+ *  operator confirms where the SIREN is displayed - and a dangling theme
+ *  like that was still winning a top-6 slot and rendering "0 pages sur
+ *  18" as if it were a real priority. Filtered out before ranking, not
+ *  after, so it can never occupy a slot a real priority should have had.
+ *  findingsById must be the same map the caller already builds for
+ *  rendering, not a second lookup. */
+export function selectRenderedThemes(themes: readonly Theme[], findingsById: ReadonlyMap<string, Finding>): Theme[] {
+  const withResolvedFindings = themes.filter((theme) => theme.findingIds.some((id) => findingsById.has(id)));
+  return [...withResolvedFindings].sort((a, b) => a.priorityRank - b.priorityRank).slice(0, MAX_RENDERED_THEMES);
 }
 
 /** Quick-win star icon, ported verbatim from report.reference.html's
@@ -249,11 +260,14 @@ function isStatEligibleForRuleIds(stat: ReferenceStat, themeFindings: readonly F
  *  manualFields resolved the underlying lcen-mentions-legales-missing
  *  finding out of resolvedFindings entirely (lcen-resolution.ts), but
  *  the theme itself still rendered with the finding it referenced simply
- *  gone (the theme still dangling is item 0.6, a separate, Session-B-
- *  scoped fix) - `themeFindings.every(...)` is vacuously true over an
- *  empty array, so without this an orphaned theme would pass the rule-id
- *  check trivially and still take whichever unrestricted stat came
- *  first, same defect as the non-empty case above. */
+ *  gone - `themeFindings.every(...)` is vacuously true over an empty
+ *  array, so without this an orphaned theme would pass the rule-id check
+ *  trivially and still take whichever unrestricted stat came first, same
+ *  defect as the non-empty case above. The theme itself no longer even
+ *  reaches this function in the dangling case (item 0.6, fixed in
+ *  selectRenderedThemes above), but this guard stays as defense in depth
+ *  for a theme that has some real findings plus one already-resolved one,
+ *  which selectRenderedThemes's filter does not touch. */
 function isCitationIneligibleTheme(themeFindings: readonly Finding[]): boolean {
   return themeFindings.length === 0 || themeFindings.every((finding) => finding.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID);
 }
@@ -292,7 +306,7 @@ export function renderThemes(
 ): string {
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
-  const sortedThemes = selectRenderedThemes(analysis.themes);
+  const sortedThemes = selectRenderedThemes(analysis.themes, findingsById);
   const sector = sectorOverride ?? analysis.obligationAssessment?.sector ?? 'general';
 
   // One citation per category, shown once on that category's

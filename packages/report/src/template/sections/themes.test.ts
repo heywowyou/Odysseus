@@ -15,7 +15,8 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
     ]);
 
     const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
-    const rendered = selectRenderedThemes(analysis.themes);
+    const findingsById = new Map(findings.map((f) => [f.findingId, f]));
+    const rendered = selectRenderedThemes(analysis.themes, findingsById);
 
     for (const theme of rendered) {
       expect(html).toContain(`id="theme-${theme.priorityRank}"`);
@@ -26,7 +27,6 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
       expect(html).not.toContain(`id="theme-${dropped.priorityRank}"`);
     }
     // No raw page URL anywhere in a theme card - only counts and refs.
-    const findingsById = new Map(findings.map((f) => [f.findingId, f]));
     const somePageUrl = findingsById.get(rendered[0]!.findingIds[0]!)?.pageUrls[0];
     if (somePageUrl) expect(html).not.toContain(somePageUrl);
   });
@@ -39,7 +39,8 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
     ]);
 
     const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
-    const rendered = selectRenderedThemes(analysis.themes);
+    const findingsById = new Map(findings.map((f) => [f.findingId, f]));
+    const rendered = selectRenderedThemes(analysis.themes, findingsById);
     const quickWinThemes = rendered.filter(isQuickWinTheme);
     const nonQuickWinThemes = rendered.filter((t) => !isQuickWinTheme(t));
 
@@ -62,7 +63,8 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
     ]);
 
     const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
-    const rendered = selectRenderedThemes(analysis.themes);
+    const findingsById = new Map(findings.map((f) => [f.findingId, f]));
+    const rendered = selectRenderedThemes(analysis.themes, findingsById);
 
     const conformantTheme = rendered.find((t) => t.legalRelevance !== undefined);
     if (conformantTheme?.legalRelevance) {
@@ -539,7 +541,8 @@ describe('item 27: theme cards render recommendedActions', () => {
     ]);
 
     const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
-    const rendered = selectRenderedThemes(analysis.themes);
+    const findingsById = new Map(findings.map((f) => [f.findingId, f]));
+    const rendered = selectRenderedThemes(analysis.themes, findingsById);
 
     for (const theme of rendered) {
       for (const action of theme.recommendedActions) {
@@ -643,5 +646,70 @@ describe('item 1.5: the quick-win badge does not render when every rendered them
     const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
 
     expect((html.match(/Gain rapide/g) ?? []).length).toBe(2);
+  });
+});
+
+// report-feedback-la-corniche.md item 0.6: a real report rendered a
+// priority ("Mentions légales incomplètes") with "Pages affectées: 0
+// pages sur 18" - its only finding had been stripped by
+// lcen-resolution.ts's resolveLcenFinding after a manual SIREN
+// confirmation, leaving a dangling theme that still won a top-6 slot.
+describe('item 0.6: a theme with no resolved findings is never selected as a rendered priority', () => {
+  function themeWithFindingIds(rank: number, findingIds: string[]): Theme {
+    return {
+      title: `Chantier ${rank}`,
+      category: 'seo' as const,
+      businessImpact: 'Impact',
+      effort: 'low' as const,
+      impact: 'high' as const,
+      priorityRank: rank,
+      findingIds,
+      recommendedActions: ['Action'],
+    };
+  }
+
+  function buildFinding(findingId: string) {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'custom' as const,
+      ruleId: 'rule',
+      category: 'seo' as const,
+      severity: 'serious' as const,
+      wcagCriteria: [],
+      title: 't',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  it('excludes a theme whose only findingId no longer resolves to any finding', () => {
+    const dangling = themeWithFindingIds(1, ['f-removed']);
+    const real = themeWithFindingIds(2, ['f001']);
+
+    const rendered = selectRenderedThemes([dangling, real], new Map([['f001', buildFinding('f001') as never]]));
+
+    expect(rendered).toEqual([real]);
+  });
+
+  it('never lets a dangling theme occupy a top-6 slot ahead of a real one', () => {
+    const themes = [
+      themeWithFindingIds(1, ['f-removed']),
+      ...[2, 3, 4, 5, 6, 7].map((rank) => themeWithFindingIds(rank, [`f00${rank}`])),
+    ];
+    const findingsById = new Map(
+      [2, 3, 4, 5, 6, 7].map((rank) => [`f00${rank}`, buildFinding(`f00${rank}`) as never] as const),
+    );
+
+    const rendered = selectRenderedThemes(themes, findingsById);
+
+    expect(rendered.map((t) => t.priorityRank)).toEqual([2, 3, 4, 5, 6, 7]);
   });
 });

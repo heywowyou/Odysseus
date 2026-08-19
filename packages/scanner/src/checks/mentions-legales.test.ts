@@ -11,8 +11,23 @@ describe('findMentionsLegalesUrl', () => {
     expect(findMentionsLegalesUrl(['https://example.com/', 'https://example.com/contact'])).toBeNull();
   });
 
-  it('does not match a different legal page (cgu, privacy)', () => {
-    expect(findMentionsLegalesUrl(['https://example.com/cgu', 'https://example.com/privacy'])).toBeNull();
+  // item 0.6 (La Corniche pass): a live site put its SIREN on
+  // /conditions-generales-dutilisation/, which the plural/singular
+  // mentions-legales pattern alone never found - broadened to the other
+  // page families that commonly carry the LCEN block. Still deliberately
+  // narrower than the shared LEGAL_PATH_PATTERN: a cookie-consent or
+  // privacy page almost never carries a SIREN, and matching one risks
+  // findMentionsLegalesUrl locking onto the wrong page.
+  it('matches the CGU, CGV, and conditions-generales page families', () => {
+    expect(findMentionsLegalesUrl(['https://example.com/', 'https://example.com/cgu'])).toBe('https://example.com/cgu');
+    expect(findMentionsLegalesUrl(['https://example.com/', 'https://example.com/cgv/'])).toBe('https://example.com/cgv/');
+    expect(
+      findMentionsLegalesUrl(['https://example.com/', 'https://example.com/conditions-generales-dutilisation/']),
+    ).toBe('https://example.com/conditions-generales-dutilisation/');
+  });
+
+  it('does not match an unrelated legal page (privacy, cookies)', () => {
+    expect(findMentionsLegalesUrl(['https://example.com/privacy', 'https://example.com/cookies'])).toBeNull();
   });
 
   it('matches the singular "mention-legale" variant', () => {
@@ -59,5 +74,27 @@ describe('extractMentionsLegales', () => {
     expect(result.siren).toBeUndefined();
     expect(result.rcs).toBeUndefined();
     expect(result.tva).toBeUndefined();
+  });
+
+  // item 0.1/0.6 (La Corniche pass): a real CGU page stated the
+  // operator's own SIRET next to its own address, but also carried a web
+  // agency's RCS/SIREN elsewhere as boilerplate (a different city, a
+  // different address) - both 9-digit and Luhn-valid. The bare SIREN
+  // pattern matched the agency's number first, before this fix, because
+  // it appeared earlier in body-text order and with no fused digits to
+  // disqualify it as a simple SIREN_CANDIDATE_PATTERN match.
+  it('prefers a SIRET-embedded SIREN over a bare SIREN appearing earlier in the text (real La Corniche case)', () => {
+    const bodyText = `
+      Cette prestation est fournie par notre agence, inscrite au registre
+      du commerce et des sociétés de Montpellier sous le numéro 443 748 397
+      00041, dont le siège social est situé Zone Ecoparc, 34130 Saint-Aunès.
+
+      Buch - France
+      SIRET : 79085257800018
+      N° de TVA Intracommunautaire : FR20790852578
+    `;
+    const result = extractMentionsLegales(pageUrl, bodyText);
+    expect(result.siren).toBe('790852578');
+    expect(result.siren).not.toBe('443748397');
   });
 });

@@ -3,28 +3,71 @@ import type { AuditManifest, AuditManualFields, ObligationAssessment, ReportLang
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatDate, formatElapsedDuration, renderSheetHeader, sheet } from '../html-utils.js';
 import { pickPrimaryBasis, renderLegalCitationParagraph } from './methodology.js';
+import { SEVERITY } from '../design-tokens.js';
 
-/** item 24: no lawyer or auditor receiving this document could
+/** item 24/0.1/1.11: no lawyer or auditor receiving this document could
  *  independently verify which entity the determination concerns without
  *  the SIREN itself - the report stated the headcount band the Sirene
  *  lookup produced but never the SIREN that lookup was for. Manual
  *  ("operator") wins over the extracted value, the same precedent
  *  lcen-resolution.ts and resolveEffectiveSiren already use elsewhere.
- *  "date" is the audit date, the closest available proxy for when the
- *  Sirene-derived headcount band was current - no separate Sirene-lookup
- *  timestamp is stored anywhere this section can read. */
+ *
+ *  Revised for item 0.1/1.11 (La Corniche pass): "report, don't conclude"
+ *  requires printing every registry input relied on, not just the SIREN.
+ *  When a real Sirene lookup succeeded (registrySnapshot present, spliced
+ *  on by obligation-stage.ts), print denomination, effectifs bracket,
+ *  retrieval date and source verbatim. Falls back to the SIREN-only note
+ *  when no lookup ever succeeded (undetermined status, failed lookup),
+ *  same as before this revision. */
 function renderSirenNote(
   strings: ReportStrings,
   language: ReportLanguage,
   manifest: AuditManifest,
   manualFields: AuditManualFields | undefined,
+  obligationAssessment: ObligationAssessment | undefined,
 ): string {
   const l = strings.legalExposure;
   const siren = manualFields?.siren?.value ?? manifest.siteSignals?.siren;
-  const text = siren
-    ? fillTemplate(l.sirenTemplate, { siren, date: formatDate(new Date(manifest.startedAt), language) })
-    : l.sirenUnavailable;
+  const snapshot = obligationAssessment?.registrySnapshot;
+
+  const text = snapshot
+    ? fillTemplate(l.registrySnapshotTemplate, {
+        denomination: snapshot.denomination,
+        siren: siren ?? '-',
+        effectifs: snapshot.effectifBandLabel ?? l.registrySnapshotEffectifsUnavailable,
+        // registrySnapshot.retrievedAt is typed as a real Date, but this
+        // value is loaded from a persisted analysis JSON file with no
+        // reviver (same as every other date field in this pipeline -
+        // manifest.startedAt above gets the same new Date() wrap), so it
+        // arrives as a string at runtime. Confirmed by a real "Invalid
+        // time value" crash against a live La Corniche regeneration
+        // before this wrap was added.
+        date: formatDate(new Date(snapshot.retrievedAt), language),
+        source: snapshot.source,
+      })
+    : siren
+      ? fillTemplate(l.sirenTemplate, { siren, date: formatDate(new Date(manifest.startedAt), language) })
+      : l.sirenUnavailable;
   return `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(text)}</p>`;
+}
+
+/** item 0.1: a manual hasTransactionalFlow override that disagrees with
+ *  what the scanner actually detected must be visible, not silently
+ *  trusted - assessObligations() still only ever sees one resolved
+ *  boolean (obligation-stage.ts's resolveSiteSignals), so this reads the
+ *  conflict record that resolution already keeps (siteSignalResolutions),
+ *  the same "state the conflict, don't resolve it silently" precedent
+ *  sirenMismatch already established for SIREN. */
+function renderTransactionalFlowConflictNote(strings: ReportStrings, obligationAssessment: ObligationAssessment | undefined): string {
+  const resolution = obligationAssessment?.siteSignalResolutions?.hasTransactionalFlow;
+  if (!resolution || resolution.detectedValue === undefined || resolution.detectedValue === resolution.value) return '';
+
+  const l = strings.legalExposure;
+  const manualValue = resolution.value
+    ? l.transactionalFlowConflictManualPresent
+    : l.transactionalFlowConflictManualAbsent;
+  const text = fillTemplate(l.transactionalFlowConflictTemplate, { manualValue });
+  return `<p style="font-size:12.5px;opacity:0.85;margin-top:var(--space-2);color:${SEVERITY.serious.color}">${escapeHtml(text)}</p>`;
 }
 
 /** item 28: the transactional/booking flow is the entire legal hook for
@@ -172,8 +215,9 @@ export function renderLegalExposure(
     </div>
     <p style="font-size:13.5px;opacity:0.85;max-width:66ch">${escapeHtml(paragraph)}</p>
     ${renderTransactionalFlowScopeNote(strings, manifest)}
+    ${renderTransactionalFlowConflictNote(strings, obligationAssessment)}
     ${renderEaaExposureBlock(strings, language, obligationAssessment)}
-    ${renderSirenNote(strings, language, manifest, manualFields)}
+    ${renderSirenNote(strings, language, manifest, manualFields, obligationAssessment)}
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">${escapeHtml(l.disclaimerNote)}</p>
   `, '', 'section-02');
 }

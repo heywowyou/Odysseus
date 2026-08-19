@@ -72,6 +72,30 @@ describe('assessObligations', () => {
     expect(result.basis[0]?.facts).toContainEqual({ kind: 'no-transactional-flow' });
   });
 
+  // item 0.1 (La Corniche pass, real bug: a report declared a 5-star
+  // hotel with a live booking widget "Hors champ" on the basis of "absence
+  // de parcours de réservation"). Confirms the acceptance check stated in
+  // report-feedback-la-corniche.md: a non-exempt profile can never come
+  // out out_of_scope while any transactional-path evidence is present,
+  // regardless of which detector produced it.
+  it('is never out_of_scope for a non-exempt profile when transactional-flow evidence is present, whatever its kind', () => {
+    const profile = buildProfile({ effectifCode: '22', turnover: null });
+    const withBookingIframe: SiteSignals = {
+      hasTransactionalFlow: true,
+      transactionalFlowEvidence: [
+        {
+          kind: 'booking-iframe',
+          selector: 'iframe[src]',
+          pageUrl: 'https://lacoorniche.com/',
+          detail: 'Booking/reservation widget embedded as an iframe from widget.thefork.com',
+          providerUrl: 'https://widget.thefork.com/4c1aa87c-f07e-43b7-9710-77b72a83b66a',
+        },
+      ],
+    };
+    const result = assessObligations(profile, withBookingIframe);
+    expect(result.status).not.toBe('out_of_scope');
+  });
+
   it('is undetermined when no SIREN was ever found', () => {
     const profile = buildProfile({ siren: '' });
     const result = assessObligations(profile, withFlow);

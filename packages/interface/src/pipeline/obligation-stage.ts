@@ -41,6 +41,23 @@ function withSector(assessment: ObligationAssessment, profile: OperatorProfile):
   return { ...assessment, sector: detectSector(profile.naf.value) };
 }
 
+/** item 0.1/1.11: only meaningful once a real Sirene lookup has actually
+ *  populated the profile - unresolvedProfile's placeholder denomination
+ *  ('') would otherwise print as an empty registry input, which is worse
+ *  than omitting the snapshot entirely. */
+function withRegistrySnapshot(assessment: ObligationAssessment, profile: OperatorProfile): ObligationAssessment {
+  if (!profile.denomination.value) return assessment;
+  return {
+    ...assessment,
+    registrySnapshot: {
+      denomination: profile.denomination.value,
+      effectifBandLabel: profile.effectifBand.value?.label ?? null,
+      retrievedAt: profile.siren.retrievedAt,
+      source: profile.siren.source,
+    },
+  };
+}
+
 function unresolvedProfile(siren: string, sirenSource: string, lookupFailureSource: string): OperatorProfile {
   const retrievedAt = new Date();
   const field = <T,>(value: T): Provenanced<T> => ({ value, source: lookupFailureSource, retrievedAt });
@@ -199,11 +216,14 @@ export async function runObligationStage(
 
     const assessment = siteSignals ? assessObligations(profile, siteSignals) : assessObligations(profile);
 
-    return withSector(
-      attachProvenance({
-        ...assessment,
-        ...(Object.keys(resolutions).length > 0 ? { siteSignalResolutions: resolutions } : {}),
-      }),
+    return withRegistrySnapshot(
+      withSector(
+        attachProvenance({
+          ...assessment,
+          ...(Object.keys(resolutions).length > 0 ? { siteSignalResolutions: resolutions } : {}),
+        }),
+        profile,
+      ),
       profile,
     );
   } catch {

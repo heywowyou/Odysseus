@@ -17,8 +17,12 @@ const TOP_THEME_COUNT = 3;
  *  does rank, if one is rendered at all - the four pages of legal framing
  *  preceding this section otherwise leave the reader to notice the
  *  mismatch unaided. */
-function renderTopPriorityLegalNote(strings: ReportStrings, themes: StoredAnalysis['themes']): string {
-  const rendered = selectRenderedThemes(themes);
+function renderTopPriorityLegalNote(
+  strings: ReportStrings,
+  themes: StoredAnalysis['themes'],
+  findingsById: ReadonlyMap<string, Finding>,
+): string {
+  const rendered = selectRenderedThemes(themes, findingsById);
   const topTheme = rendered[0];
   if (!topTheme || topTheme.legalRelevance !== undefined) return '';
 
@@ -101,11 +105,12 @@ export function renderExecutiveSummary(
     serious: formatNumber(stats.serious, analysis.language),
     total: formatNumber(stats.totalFindings, analysis.language),
   });
+  const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   return sheet(`
     ${renderSheetHeader(ordinal, e.eyebrow, e.heading)}
     <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(countsSentence)} ${escapeHtml(analysis.executiveSummary)}</p>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
-    ${renderTopPriorityLegalNote(strings, analysis.themes)}
+    ${renderTopPriorityLegalNote(strings, analysis.themes, findingsById)}
     ${renderStartHere(strings, analysis.themes)}
   `, '', 'section-01');
 }

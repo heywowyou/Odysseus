@@ -33,7 +33,24 @@ export interface Regime {
 }
 
 export interface TransactionalFlowEvidence {
-  kind: 'booking-engine-script' | 'checkout-form' | 'payment-embed' | 'delegated-booking-redirect';
+  /** 'booking-engine-domain-reference' and 'booking-iframe' (item 0.1,
+   *  La Corniche pass): a same-origin JS booking widget can reference its
+   *  delegated engine's domain only inside an inline script/JSON config,
+   *  never as a crawlable script[src] or a[href] - confirmed live against
+   *  lacoorniche.com's Diadao HSC widget, whose "Réserver" button is
+   *  `href="javascript:void(0)"` at load time. 'booking-iframe' covers the
+   *  same gap for a booking/reservation widget embedded directly as a
+   *  third-party iframe (confirmed against the same site's TheFork/
+   *  LaFourchette restaurant-reservation modal iframes), which the
+   *  detector previously never looked at. Both are on-site evidence, same
+   *  as 'booking-engine-script', not delegated-redirect evidence. */
+  kind:
+    | 'booking-engine-script'
+    | 'checkout-form'
+    | 'payment-embed'
+    | 'delegated-booking-redirect'
+    | 'booking-engine-domain-reference'
+    | 'booking-iframe';
   selector: string;
   pageUrl: string;
   /** Internal classification reasoning kept for defensibility, the same
@@ -166,4 +183,19 @@ export type ObligationAssessment = (
    *  raw NAF code is a deliberate data-minimisation choice, not an
    *  oversight. Absent for analyses generated before milestone 8.5c. */
   sector?: StatSector;
+  /** item 0.1/1.11 (La Corniche pass): "report, don't conclude" requires
+   *  printing every registry input the assessment relied on, not just
+   *  the SIREN - denomination, effectifs bracket, when the record was
+   *  retrieved, and its source. Spliced on by obligation-stage.ts from
+   *  the same OperatorProfile a successful Sirene lookup already
+   *  produced - never set by assessObligations itself, same precedent as
+   *  sector/sirenMismatch. Absent when no Sirene lookup succeeded (no
+   *  SIREN, or the lookup failed), matching sirenSource/sirenMismatch's
+   *  own absence in that case. */
+  registrySnapshot?: {
+    denomination: string;
+    effectifBandLabel: string | null;
+    retrievedAt: Date;
+    source: string;
+  };
 };

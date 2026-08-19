@@ -1,5 +1,50 @@
 import { describe, expect, it } from 'vitest';
-import { classifyDestinationPage, detectOutboundBookingLinks, findBookingIntentLinks } from './transactional-flow.js';
+import {
+  classifyDestinationPage,
+  detectOutboundBookingLinks,
+  findBookingEngineDomainReferences,
+  findBookingIframes,
+  findBookingIntentLinks,
+} from './transactional-flow.js';
+
+// item 0.1 (La Corniche pass): confirmed live against lacoorniche.com. The
+// "Réserver" button is `href="javascript:void(0)"` at load time - the real
+// booking destination only appears inside the widget's own inline JSON
+// config, and the restaurant-reservation widget is a genuine third-party
+// iframe. See transactional-flow.ts's module doc comment for the full
+// story; this fixture uses the exact domains observed.
+describe('findBookingEngineDomainReferences', () => {
+  it('finds a delegated booking engine domain referenced only inside an inline script', () => {
+    const inlineScript = `{"book":{"content":"<a href='https://www.secure-hotel-booking.com/d-edge/hotel-la-coorniche/2YQG/17908/fr/'>Réserver</a>"}}`;
+    expect(findBookingEngineDomainReferences([inlineScript])).toEqual(['secure-hotel-booking.com']);
+  });
+
+  it('finds nothing when no known booking engine domain is referenced', () => {
+    expect(findBookingEngineDomainReferences(['window.dataLayer = window.dataLayer || [];'])).toEqual([]);
+  });
+
+  it('deduplicates repeated domain matches across multiple scripts', () => {
+    const scripts = [
+      'href: "https://www.secure-hotel-booking.com/a"',
+      'href: "https://www.secure-hotel-booking.com/b"',
+    ];
+    expect(findBookingEngineDomainReferences(scripts)).toEqual(['secure-hotel-booking.com']);
+  });
+});
+
+describe('findBookingIframes', () => {
+  it('matches a restaurant-reservation widget embedded as a third-party iframe', () => {
+    const srcs = ['https://widget.thefork.com/4c1aa87c-f07e-43b7-9710-77b72a83b66a', 'about:blank'];
+    expect(findBookingIframes(srcs)).toEqual([
+      { src: 'https://widget.thefork.com/4c1aa87c-f07e-43b7-9710-77b72a83b66a', domain: 'widget.thefork.com' },
+    ]);
+  });
+
+  it('does not match an unrelated iframe (a photo gallery widget, a webcam)', () => {
+    const srcs = ['//lightwidget.com/widgets/d1dcbeed497d51d1811c53264925a96d.html', 'https://g0.ipcamlive.com/player/player.php'];
+    expect(findBookingIframes(srcs)).toEqual([]);
+  });
+});
 
 describe('detectOutboundBookingLinks', () => {
   it('matches a known third-party booking platform', () => {

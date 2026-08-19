@@ -108,8 +108,10 @@ export const en: ReportStrings = {
       in_scope: 'This site falls under a confirmed digital accessibility obligation, based on the available evidence.',
       likely_in_scope:
         'The available evidence indicates this site likely falls under a digital accessibility obligation, without full confirmation.',
-      out_of_scope:
-        'Based on the available evidence, this site does not fall under the digital accessibility obligation set by loi n° 2023-171.',
+      // item 0.1 (La Corniche pass): see the matching fr.ts comment - this
+      // used to restate legalCitationOutOfScopeParagraph below almost
+      // word for word.
+      out_of_scope: 'This site does not currently fall under the digital accessibility obligation.',
       undetermined:
         "The obligation status could not be established with certainty: the site does not publish a business identifier (SIREN/RCS), which prevents confirming which regulatory tier applies.",
     },
@@ -117,6 +119,13 @@ export const en: ReportStrings = {
     sirenLabel: 'SIREN',
     sirenTemplate: 'SIREN {siren}, as found during this audit ({date}).',
     sirenUnavailable: 'No SIREN number could be identified for this site during this audit.',
+    registrySnapshotTemplate:
+      'Sirene registry data: {denomination}, SIREN {siren}, {effectifs}, retrieved on {date} ({source}).',
+    registrySnapshotEffectifsUnavailable: 'headcount band unavailable',
+    transactionalFlowConflictTemplate:
+      'Conflicting signal: automated detection found a transactional flow on this site, but a manual confirmation states {manualValue}. Verify before relying on this status.',
+    transactionalFlowConflictManualAbsent: 'no such flow exists',
+    transactionalFlowConflictManualPresent: 'it does exist',
     disclaimerNote:
       'Generated from the existing obligation assessment; no additional legal interpretation has been added. A review by qualified legal counsel remains necessary.',
     undeterminedActionNote:

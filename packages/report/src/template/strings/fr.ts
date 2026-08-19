@@ -112,8 +112,13 @@ export const fr: ReportStrings = {
       in_scope: "Ce site relève d'une obligation d'accessibilité numérique confirmée par les éléments disponibles.",
       likely_in_scope:
         "Les éléments disponibles indiquent que ce site relève probablement d'une obligation d'accessibilité numérique, sans confirmation complète.",
-      out_of_scope:
-        "Sur la base des éléments disponibles, ce site ne relève pas de l'obligation d'accessibilité numérique prévue par la loi n° 2023-171.",
+      // item 0.1 (La Corniche pass): this used to restate
+      // legalCitationOutOfScopeParagraph below almost word for word, so
+      // the card and the paragraph printed the same sentence twice on the
+      // same page. Shortened to a plain status label; the full basis
+      // (which elements, which law) stays the paragraph's job, stated
+      // once.
+      out_of_scope: "Ce site ne relève pas, à ce stade, de l'obligation d'accessibilité numérique.",
       undetermined:
         "Le statut d'obligation n'a pas pu être établi avec certitude : l'identifiant d'entreprise (SIREN/RCS) est absent du site, ce qui empêche de confirmer le palier réglementaire applicable.",
     },
@@ -121,6 +126,22 @@ export const fr: ReportStrings = {
     sirenLabel: 'SIREN',
     sirenTemplate: 'SIREN {siren}, tel que constaté lors de cet audit ({date}).',
     sirenUnavailable: "Aucun numéro SIREN n'a pu être identifié pour ce site lors de cet audit.",
+    // item 0.1/1.11 (La Corniche pass): "report, don't conclude" requires
+    // printing every registry input relied on, not just the SIREN -
+    // effectifsBand is the label already, may be absent when Sirene's
+    // headcount field itself is unreliable for this entity's band.
+    registrySnapshotTemplate:
+      'Données du répertoire Sirene : {denomination}, SIREN {siren}, {effectifs}, consultées le {date} ({source}).',
+    registrySnapshotEffectifsUnavailable: 'effectif non disponible',
+    // item 0.1: when a manual hasTransactionalFlow override disagrees
+    // with what the scanner detected, the report must say so plainly
+    // rather than silently trusting the override - a confirmed fact from
+    // a person still deserves a visible caveat when it contradicts
+    // machine evidence, since it can mean either is wrong.
+    transactionalFlowConflictTemplate:
+      "Signal contradictoire : la détection automatisée a identifié un parcours transactionnel sur ce site, mais une confirmation manuelle indique {manualValue}. À vérifier avant toute décision fondée sur ce statut.",
+    transactionalFlowConflictManualAbsent: "l'absence d'un tel parcours",
+    transactionalFlowConflictManualPresent: 'sa présence',
     disclaimerNote:
       "Cette section reproduit des critères réglementaires et des données publiques de votre entreprise, sans interprétation juridique supplémentaire. Une confirmation par un conseil juridique reste nécessaire avant toute décision.",
     undeterminedActionNote:

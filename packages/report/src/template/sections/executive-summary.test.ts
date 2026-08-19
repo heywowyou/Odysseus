@@ -1,9 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import type { AuditManifest, Theme } from '@odysseus/core';
+import type { AuditManifest, Finding, Theme } from '@odysseus/core';
 import { renderExecutiveSummary } from './executive-summary.js';
 import { getStrings } from '../strings/i18n.js';
 import { escapeHtml } from '../html-utils.js';
 import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
+
+function buildFinding(findingId: string): Finding {
+  return {
+    findingId,
+    auditId: 'a1',
+    schemaVersion: 1,
+    source: 'axe',
+    ruleId: 'rule',
+    category: 'accessibility',
+    severity: 'moderate',
+    wcagCriteria: [],
+    title: 't',
+    description: 'd',
+    pageUrls: ['https://example.com/'],
+    occurrences: 1,
+    elements: [],
+    rawEvidence: {},
+    dedupeKey: findingId,
+    firstSeenAt: new Date(),
+    lastSeenAt: new Date(),
+  };
+}
 
 describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () => {
   it('references the top 3 themes by rank and title as jump links, capped at 3 (doc §3 section 01)', async () => {
@@ -155,7 +177,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
 
   it('states the top priority is commercial and points to the legal-priority rank, when one is rendered', () => {
     const analysis = buildAnalysis([nonLegalTheme, legalTheme]);
-    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [], emptyManifest);
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001'), buildFinding('f002')], emptyManifest);
 
     expect(html).toContain('La priorité 1 ci-dessus est un enjeu commercial');
     expect(html).toContain('position 2');
@@ -163,7 +185,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
 
   it('states the top priority is commercial with no pointer when no legal-relevant theme is rendered at all', () => {
     const analysis = buildAnalysis([nonLegalTheme]);
-    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [], emptyManifest);
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001')], emptyManifest);
 
     expect(html).toContain('La priorité 1 ci-dessus est un enjeu commercial');
     expect(html).toContain("Aucune des priorités");
@@ -173,7 +195,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     const legalThemeRankedFirst = { ...legalTheme, priorityRank: 1 };
     const nonLegalThemeRankedSecond = { ...nonLegalTheme, priorityRank: 2 };
     const analysis = buildAnalysis([legalThemeRankedFirst, nonLegalThemeRankedSecond]);
-    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [], emptyManifest);
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001'), buildFinding('f002')], emptyManifest);
 
     expect(html).not.toContain('enjeu commercial');
   });

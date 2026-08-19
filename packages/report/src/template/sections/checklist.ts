@@ -31,7 +31,7 @@ export function renderChecklist(
   const c = strings.checklist;
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
-  const sortedThemes = selectRenderedThemes(analysis.themes);
+  const sortedThemes = selectRenderedThemes(analysis.themes, findingsById);
   const levels = strings.themes.effortImpactLevels;
 
   // item 2.7: standing on its own once printed or captured, this page had

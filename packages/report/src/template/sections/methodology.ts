@@ -74,7 +74,11 @@ function renderFact(fact: ObligationBasisFact, strings: ReportStrings, language:
     // when detection genuinely can't narrow it down further.
     case 'transactional-flow': {
       const kinds = new Set(fact.evidence.map((e) => e.kind));
-      const hasBooking = kinds.has('booking-engine-script') || kinds.has('delegated-booking-redirect');
+      const hasBooking =
+        kinds.has('booking-engine-script') ||
+        kinds.has('delegated-booking-redirect') ||
+        kinds.has('booking-engine-domain-reference') ||
+        kinds.has('booking-iframe');
       const hasCartOrPayment = kinds.has('checkout-form') || kinds.has('payment-embed');
       const flowType =
         hasBooking && hasCartOrPayment
@@ -95,7 +99,9 @@ function renderFact(fact: ObligationBasisFact, strings: ReportStrings, language:
         kinds.has('delegated-booking-redirect') &&
         !kinds.has('booking-engine-script') &&
         !kinds.has('checkout-form') &&
-        !kinds.has('payment-embed');
+        !kinds.has('payment-embed') &&
+        !kinds.has('booking-engine-domain-reference') &&
+        !kinds.has('booking-iframe');
       const location = isDelegatedOnly
         ? m.legalCitationTransactionalFlowLocationDelegated
         : m.legalCitationTransactionalFlowLocationOnSite;
