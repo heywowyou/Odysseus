@@ -56,10 +56,23 @@ function isGlossaryTermRelevant(id: string, ctx: GlossaryContext): boolean {
  *  list - now a data-driven subset of a larger term table
  *  (strings.glossary.terms, 26 entries as of item 3.5's v2 pass), scoped
  *  per report so it can never drift out of sync with what a given report
- *  actually uses (item 33). No hard cap on rendered term count: the
- *  section is not `.sheet-standalone`, so it flows across as many pages
- *  as the relevant subset needs, the same "let content flow naturally"
- *  rule item 34 already established for every non-standalone section. */
+ *  actually uses (item 33). No hard cap on rendered term count: `.sheet-
+ *  standalone` only forces this section to start on its own fresh page
+ *  (paged.css), it does not confine it to a single page - the section
+ *  still flows across as many pages as the relevant subset needs, the
+ *  same "let content flow naturally" rule item 34 already established.
+ *
+ *  `.sheet-standalone` itself is new (report-feedback-la-corniche-v2.md):
+ *  without it, a real 105-finding La Corniche report duplicated this
+ *  section's first ~14 entries onto a second page fragment with a blank
+ *  page in between - Paged.js's own layout engine cloning already-placed
+ *  DOM nodes while reflowing the boundary between the annex's last page
+ *  and this section's first, confirmed via a debug DOM diff (not fixable
+ *  from this package's markup once triggered, no console error surfaced
+ *  either). Starting the section on a guaranteed fresh page removes the
+ *  specific fractional-leftover-space condition that triggered it for
+ *  this document; kept narrow to this section rather than applied
+ *  report-wide since every other section already flows correctly. */
 export function renderGlossary(strings: ReportStrings, ordinal: number, ctx: GlossaryContext): string {
   const g = strings.glossary;
   const relevantTerms = g.terms.filter((t) => isGlossaryTermRelevant(t.id, ctx));
@@ -78,5 +91,5 @@ export function renderGlossary(strings: ReportStrings, ordinal: number, ctx: Glo
   return sheet(`
     ${renderSheetHeader(ordinal, g.eyebrow, g.heading)}
     ${items}
-  `, '', 'section-13');
+  `, 'sheet-standalone', 'section-13');
 }

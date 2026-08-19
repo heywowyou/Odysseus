@@ -80,9 +80,9 @@ describe('item 1.9: the heuristic block is structurally distinct from the real f
 
     const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
     // The real table (5 columns) still carries its criterion column.
-    expect(html).toContain('grid-template-columns:100px 1fr 90px 100px 100px');
-    // The heuristic table (4 columns) drops the criterion column entirely.
-    expect(html).toContain('grid-template-columns:1fr 90px 100px 100px');
+    expect(html).toContain('>Critère<');
+    // Both tables (real-failure and heuristic) are real <table> markup now.
+    expect(html.match(/<thead>/g)?.length).toBe(2);
     expect(html).toContain('Signaux à vérifier');
   });
 });

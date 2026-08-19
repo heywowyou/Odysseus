@@ -15,7 +15,7 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
-import type { Browser } from 'playwright';
+import type { Browser, Page } from 'playwright';
 
 const require = createRequire(import.meta.url);
 
@@ -52,6 +52,68 @@ async function readPagedjsSource(): Promise<string> {
  *  document shape. */
 const PAGEDJS_LAYOUT_REPEATED_MARKER = 'Layout repeated';
 
+/** A second, silent variant of the same Paged.js fragility the marker
+ *  above catches, found against a real La Corniche re-scan
+ *  (report-feedback-la-corniche-v2.md): the layout engine cloned the
+ *  glossary's first ~14 entries onto a second page fragment with a
+ *  fully blank page in between, and logged nothing to the console at
+ *  all - no "Layout repeated" message, no error, no warning. The
+ *  console-based guard above cannot catch this variant by definition.
+ *  Checked structurally instead, against the real post-pagination DOM:
+ *  every interior page (the cover is allowed to be visually sparse,
+ *  same exemption invariant 2 in paged-invariants.test.ts already
+ *  grants it) must carry some text, and no block from this report's own
+ *  set of "atomic, never-split" classes (paged.css's `.card,
+ *  .render-card, .theme-card, .glossary-entry, .section-head`) may
+ *  have identical text content appearing on two different pages - a
+ *  legitimate report never repeats a card or a glossary term verbatim,
+ *  so any match is Paged.js duplicating a fragment, not real content.
+ *  Scoped to those classes rather than every element on the page so a
+ *  deliberately repeated short string (a rule id like "f001" appearing
+ *  in both a priority card and the annex, for instance) never false-
+ *  positives. */
+const ATOMIC_BLOCK_SELECTOR = '.card, .render-card, .theme-card, .glossary-entry, .section-head';
+
+async function detectPagedjsStructuralFailure(page: Page): Promise<string | undefined> {
+  const result = await page.evaluate((selector) => {
+    const pages = Array.from(document.querySelectorAll('.pagedjs_page'));
+    const blankPageIndex = pages.findIndex((p, i) => i > 0 && (p.textContent ?? '').trim().length === 0);
+
+    const seenOnPage = new Map<string, number>();
+    let duplicateText: string | undefined;
+    pages.forEach((p, pageIndex) => {
+      const blocks = Array.from(p.querySelectorAll(selector));
+      for (const block of blocks) {
+        const text = block.textContent?.trim();
+        if (!text) continue;
+        const previousPage = seenOnPage.get(text);
+        if (previousPage !== undefined && previousPage !== pageIndex) {
+          duplicateText = text;
+          break;
+        }
+        seenOnPage.set(text, pageIndex);
+      }
+      if (duplicateText) return;
+    });
+
+    return { blankPageIndex, duplicateText, pageCount: pages.length };
+  }, ATOMIC_BLOCK_SELECTOR);
+
+  if (result.blankPageIndex !== -1) {
+    return (
+      `Paged.js produced a blank interior page (page ${result.blankPageIndex + 1} of ${result.pageCount}), ` +
+      `the signature of a layout fragment silently duplicating elsewhere in the document.`
+    );
+  }
+  if (result.duplicateText !== undefined) {
+    return (
+      `Paged.js rendered the same block twice on separate pages ("${result.duplicateText.slice(0, 80)}..."), ` +
+      `which never happens for legitimate report content - a layout fragment was duplicated.`
+    );
+  }
+  return undefined;
+}
+
 export async function renderPdfFromHtml(html: string, browser: Browser): Promise<Buffer> {
   const pagedjsSource = await readPagedjsSource();
   const context = await browser.newContext();
@@ -72,6 +134,10 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
       if (msg.type() === 'error' && msg.text().includes(PAGEDJS_LAYOUT_REPEATED_MARKER)) {
         pagedjsLayoutFailure = msg.text();
       }
+      if (process.env['ODYSSEUS_DEBUG_PAGEDJS']) {
+        // eslint-disable-next-line no-console
+        console.error(`[pagedjs:${msg.type()}] ${msg.text()}`);
+      }
     });
 
     await page.addScriptTag({ content: pagedjsSource });
@@ -88,6 +154,11 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
           `laying out the document early, which silently drops every page after that point. ` +
           `Never shipped to a client. Paged.js message: "${pagedjsLayoutFailure}"`,
       );
+    }
+
+    const structuralFailure = await detectPagedjsStructuralFailure(page);
+    if (structuralFailure !== undefined) {
+      throw new Error(`Report generation aborted: ${structuralFailure} Never shipped to a client.`);
     }
 
     return await page.pdf({
