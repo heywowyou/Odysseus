@@ -135,9 +135,21 @@ function renderTheme(
   const isNonConformant = theme.legalRelevance !== undefined;
   const conformityValue = isNonConformant ? t.conformityNonConformant : t.conformityNotApplicable;
 
+  // item 3.9 (La Corniche pass): legalRelevance is deterministically
+  // accessibility-only (trade-off 16 in CLAUDE.md - a WCAG criterion
+  // reference has no SEO/performance/rendering/GEO equivalent), so this
+  // box used to render only for accessibility themes, leaving SEO
+  // priority cards one row shorter and visibly different-shaped next to
+  // them in the same "6 priorities" grid. Fabricating a fake standard
+  // reference for SEO would violate rule 6 (never overstate a
+  // requirement that does not exist), so every non-accessibility theme
+  // instead gets the same box stating plainly that no such requirement
+  // applies - the honest converse of the accessibility case, not an
+  // invented one, using the same "Sans objet" wording item 3.8's
+  // glossary entry already defines for the reader.
   const legalBox = theme.legalRelevance
     ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(theme.legalRelevance)}</p>`
-    : '';
+    : `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(t.conformityNotApplicable)}</p>`;
 
   const gapNote = citationStat ? measuredLcpGapNote(strings, language, citationStat, themeFindings, manifest) : undefined;
   const citationBox = citationStat

@@ -78,6 +78,69 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
   });
 });
 
+// report-feedback-la-corniche.md item 3.9: SEO priority cards had no
+// "Exigence de conformité" box at all (legalRelevance is deterministically
+// accessibility-only, trade-off 16), making them one row shorter and
+// visibly different-shaped next to accessibility cards in the same "6
+// priorities" grid. Every non-accessibility theme now gets the same box,
+// stating plainly that no such requirement applies rather than a fake one.
+describe('item 3.9: every theme card gets the "Exigence de conformité" box, accessibility or not', () => {
+  function seoTheme(): Theme {
+    return {
+      title: 'Données structurées invalides',
+      category: 'seo' as const,
+      businessImpact: 'Impact',
+      effort: 'low' as const,
+      impact: 'medium' as const,
+      priorityRank: 1,
+      findingIds: ['f001'],
+      recommendedActions: ['Action'],
+    };
+  }
+
+  function buildFinding(findingId: string) {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'custom' as const,
+      ruleId: 'jsonld-invalid',
+      category: 'seo' as const,
+      severity: 'moderate' as const,
+      wcagCriteria: [],
+      title: 't',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  it('renders "Exigence de conformité : Sans objet" for an SEO theme, same box shape as an accessibility theme', () => {
+    const analysis = {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: [seoTheme()],
+      quickWins: [],
+      notes: '',
+    };
+    const manifest = { pages: [{ url: 'https://example.com/', status: 'visited' }] } as never;
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, [buildFinding('f001')], manifest);
+
+    expect(html).toContain('Exigence de conformité : Sans objet');
+  });
+});
+
 describe('B1: reference-stat citation eligibility and cross-document dedupe', () => {
   it('attaches a citation to a performance theme, not just accessibility/seo', async () => {
     const [analysis, findings, manifest] = await Promise.all([

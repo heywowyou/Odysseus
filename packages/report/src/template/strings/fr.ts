@@ -208,10 +208,14 @@ export const fr: ReportStrings = {
     charCountsUnavailableNote: 'Nombre de caractères non mesuré pour cette page.',
     missingCaptionTemplate: 'Manquant : {percent}% du texte visible absent du HTML brut, sur {selector}.',
     missingCaptionNoSelectorTemplate: 'Manquant : {percent}% du texte visible absent du HTML brut.',
-    overflowTextTemplate:
-      '{count} autres pages présentent le même écart, détail dans l\'export technique.',
-    overflowTextSingularTemplate:
-      '1 autre page présente le même écart, détail dans l\'export technique.',
+    // item 3.3 (La Corniche pass): "détail dans l'export technique"
+    // promised a deliverable that does not exist in this product (see
+    // item 3.3's own doc entry and offer-positioning.md - the full audit
+    // has no separate technical-export artifact). Stated as a plain
+    // fact instead, with no pointer to something the client cannot
+    // actually receive.
+    overflowTextTemplate: '{count} autres pages présentent le même écart.',
+    overflowTextSingularTemplate: '1 autre page présente le même écart.',
     positiveStatementTemplate:
       'Les pages commerciales de ce site conservent leur texte dans le HTML brut : aucun écart de rendu significatif n\'a été mesuré.',
     positiveStatementWrapperNote:

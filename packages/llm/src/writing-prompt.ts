@@ -1,5 +1,5 @@
 import type { ReportLanguage } from '@odysseus/core';
-import { SEVERITY_VOCABULARY } from './severity-vocabulary-guard.js';
+import { FINDING_NOUN_VOCABULARY, SEVERITY_VOCABULARY } from './severity-vocabulary-guard.js';
 import type { WritingInput } from './writing-schema.js';
 
 const LANGUAGE_INSTRUCTION: Record<ReportLanguage, string> = {
@@ -32,6 +32,13 @@ export function buildWritingSystemPrompt(
   const v = SEVERITY_VOCABULARY[language];
   const severityVocabularyNote = `\n\nWhen referring to a severity level anywhere in your prose (executiveSummary, notes, businessImpact, or recommendedActions), use exactly one of these four words, never a synonym: "${v.critical}", "${v.serious}", "${v.moderate}", "${v.minor}". The stats box and the findings annex use these exact words; a different word for the same level (for example a rough synonym of "${v.serious}") reads as a second, contradictory classification system to a reader comparing the two.`;
 
+  // item 3.7 (La Corniche pass): a real report's template-bound sentence
+  // said "constats" while the model's own executiveSummary prose right
+  // next to it said "problèmes" for the same thing - a client reading
+  // both in the same paragraph has to work out they're the same noun.
+  const fn = FINDING_NOUN_VOCABULARY[language];
+  const findingNounNote = `\n\nWhen referring to what the audit detected anywhere in your prose (executiveSummary, notes, businessImpact, or recommendedActions), use "${fn.singular}"/"${fn.plural}" (or its exact grammatical inflections), never a synonym like "${language === 'fr' ? 'problème(s)' : 'problem(s)'}" or "issue(s)". The stats box, the findings annex, and the sentence immediately before your executiveSummary text all use this exact word.`;
+
   // item D8 (P4): a real report stated "Les lenteurs d'affichage, causées
   // par des scripts bloquants" - the scanner measured a correlation
   // between blocking-script findings and slow metrics, on the same page,
@@ -49,12 +56,12 @@ The legal relevance of an accessibility theme (which WCAG criterion applies) is 
 Each theme you are given below has a themeKey (for example "t1"). For every theme you are given, write:
 - title: a short, plain-language theme name.
 - businessImpact: why this matters commercially, in plain language, no jargon, no scanner terminology. At most two sentences - your response is checked against this limit and rejected if it is longer.
-- recommendedActions: at most three concrete next steps. Never list individual page URLs - refer to pages by count only (for example "18 pages" or "the sitemap page"), page-level detail belongs in the report's appendix, not in your prose. Assume the client is a small or mid-size business with no in-house developer and no one on staff who owns a screen reader or other assistive-technology tool - phrase every action as something to hand to "your agency" or "your technical provider" (or the equivalent phrase in the response language), never as an instruction to the client's own developers or an instruction to personally test with a screen reader. For example, write "ask your agency to add appropriate ARIA roles to X" rather than "train your developers on ARIA" or "test with a screen reader".
+- recommendedActions: at most three concrete next steps. Never list individual page URLs - refer to pages by count only (for example "18 pages" or "the sitemap page"), page-level detail belongs in the report's appendix, not in your prose. Assume the client is a small or mid-size business with no in-house developer and no one on staff who owns a screen reader or other assistive-technology tool - phrase every action as something to hand to "your technical provider" (or the exact equivalent phrase in the response language, e.g. "votre prestataire technique" in French). Use this exact same phrase every time, in every recommendedActions entry across every theme - never switch to "your agency"/"votre agence" or any other synonym partway through: a report where one priority says "ask your technical provider" and another says "ask your agency" reads as two different parties, not one. Never phrase an action as an instruction to the client's own developers, or as an instruction for the client to personally test something themselves - not with a screen reader, not by testing keyboard navigation, not any other manual check - this audit is fully automated and asking the client to personally perform a manual test contradicts that. For example, write "ask your technical provider to add appropriate ARIA roles to X" rather than "train your developers on ARIA" or "test with a screen reader" or "test keyboard navigation yourself".
 
 You must return exactly one theme object per themeKey shown to you, echoing its themeKey verbatim. Do not invent a themeKey you were not shown, do not omit one you were shown, and do not return more than one object for the same themeKey.
 
 Also write an executiveSummary aimed at a non-technical decision maker, and a notes field for anything else worth telling the client. The report template states the exact counts (pages scanned, total findings, findings by severity) in a sentence placed immediately before your executiveSummary text, so do not restate, estimate, or reference any of those figures yourself: never write a number of findings, pages, or occurrences anywhere in executiveSummary, not even a rough or rounded one. Your response is checked for this after every attempt; a response containing a digit in executiveSummary is rejected and you are asked again. Write only the qualitative framing and connecting prose that goes with the counts already stated: what kind of problems dominate, why they matter for the business, and what the overall picture is.
-${dominantMetricNote}${severityVocabularyNote}${causationNote}
+${dominantMetricNote}${severityVocabularyNote}${findingNounNote}${causationNote}
 ${LANGUAGE_INSTRUCTION[language]}${fallbackNote}
 
 Respond with structured JSON matching the required schema only. No prose outside the JSON fields, no markdown fences.`;

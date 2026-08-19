@@ -1100,6 +1100,14 @@ pluralisation helper and a test that greps the rendered HTML for `(s)`.
 
 ### 3.3 "détail dans l'export technique" promises a deliverable that is not in the package
 
+**FIXED, 2026-08-19.** Chose the "change the copy" branch of this item's
+own fix, since no technical export exists in the offer
+(`docs/offer-positioning.md`) and building one was never in scope.
+`overflowTextTemplate`/`overflowTextSingularTemplate`
+(`render-diff-evidence.ts`'s strings) now state the plain fact with no
+dangling promise. Confirmed in the regenerated PDF: "1 autre page
+présente le même écart." with nothing about a technical export.
+
 Page 10. Nothing in the offer or the delivery includes a technical export. Either
 ship one or change the copy. Same class as the previously flagged "available on
 request" inside a section titled "complete list".
@@ -1121,12 +1129,48 @@ The real SIRET remains an open placeholder pending Jules's answer - see
 
 ### 3.6 Addressee drift
 
+**FIXED, 2026-08-19, at the prompt level.** Root cause: the writing-pass
+system prompt itself explicitly offered "your agency" and "your technical
+provider" as interchangeable phrasing
+(`packages/llm/src/writing-prompt.ts`), which is exactly what let the
+model drift between them per theme. Now instructs the model to use one
+fixed phrase ("votre prestataire technique" / "your technical provider")
+every time, never switching, and separately forbids instructing the
+client to personally test keyboard navigation (previously only screen-
+reader testing was named). Verified via prompt-content unit tests
+(`writing-prompt.test.ts`), not against a fresh LLM call - re-running the
+real analysis costs a live Mistral API call and the stored analysis this
+session's regenerated PDF reads from predates this prompt change, so the
+already-generated report text still shows the old drift; the fix only
+takes effect on the next `analyze` run for this or any other audit.
+
 "Confier à votre prestataire technique" (priorities 1, 3), "Demander à votre
 agence" (priorities 5, 6). Pick one and use it. Related: priority 1 asks the client
 to "Tester la navigation avec un clavier", which is exactly the manual testing the
 methodology says is out of scope.
 
 ### 3.7 Vocabulary and scale drift
+
+**PARTIALLY FIXED, 2026-08-19.** The "problèmes"/"constats" noun-drift
+half is fixed the same way item 3.6 was, at the prompt level: a new
+`findingNounNote` (mirroring the existing `severityVocabularyNote`
+pattern exactly) instructs the model to use "constat"/"constats" (or
+"finding"/"findings" in English) consistently in all its own prose,
+never "problème(s)"/"issue(s)" as a synonym - a new `FINDING_NOUN_
+VOCABULARY` table in `severity-vocabulary-guard.ts` gives it a
+self-contained word list, same duplication precedent as
+`SEVERITY_VOCABULARY`. Same re-verification caveat as 3.6: unit-tested
+against the prompt text, not a fresh LLM call.
+
+The "three scales share labels" half (cover criticité, severity, and
+effort/impact all using Faible/Moyen/Élevé) was reviewed and left
+unchanged: every occurrence is already axis-labeled at the point of use
+("Effort :", "Impact commercial :", "NIVEAU DE CRITICITÉ DES CONSTATS"),
+so there is no literal ambiguity about which scale a given value belongs
+to, only surface-level label reuse. Renaming one of the three scales'
+values is a real design decision (which scale gets new words, and what
+they should be) this session did not have grounds to make unilaterally -
+left for a session with actual design sign-off rather than invented here.
 
 - "problèmes" (section 1) versus "constats" (everywhere else).
 - Three scales, two of them sharing labels: cover criticité Faible / Moyen / Élevé,
@@ -1145,11 +1189,33 @@ it means compliant, not applicable, or not assessed.
 
 ### 3.9 SEO priority cards have a different shape
 
+**FIXED, 2026-08-19.** Root cause: `legalRelevance` is deterministically
+accessibility-only (CLAUDE.md trade-off 16 - no SEO/performance/
+rendering/GEO equivalent exists), so the "Exigence de conformité" box
+rendered only for accessibility themes, leaving SEO cards one row
+shorter. Fabricating a fake standard reference for SEO would violate
+rule 6, so every non-accessibility theme now gets the same box stating
+plainly that no such requirement applies (`t.conformityNotApplicable`,
+"Sans objet" - the same word item 3.8's glossary entry already defines),
+the honest converse of the accessibility case rather than an invented
+one. Confirmed in the regenerated PDF: "Données structurées invalides"
+now shows "Exigence de conformité : Sans objet", same box shape as the
+accessibility cards above it.
+
 Priorities 2 and 6 carry no "Exigence de conformité" line, so they look truncated
 next to the accessibility cards. Give SEO items an equivalent line (the applicable
 rule or standard) or restructure so the absence is not visible as a missing row.
 
 ### 3.10 Section 6 is a section header for one note
+
+**FIXED, 2026-08-19, as a side effect** of item 0.2's Paged.js fix and
+this session's `.section-head` spacing rule (see the general spacing fix
+noted under item 2.1): sections already flow freely and share a page
+when short (`.sheet:not(.sheet-cover):not(.sheet-standalone)`, section-06
+was never forced standalone). Confirmed directly against the regenerated
+PDF: section 06 · OBSERVATIONS now shares page 9 with section 07 ·
+CONFORMITÉ ACCESSIBILITÉ, with normal breathing room between them, not a
+page to itself. No separate code change was needed or made.
 
 "06 · OBSERVATIONS / Constats hors classement" occupies a full page to carry four
 lines about noindex on legal pages. Merge it into the annex or into section 7

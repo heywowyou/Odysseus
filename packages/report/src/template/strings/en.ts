@@ -183,10 +183,8 @@ export const en: ReportStrings = {
     charCountsUnavailableNote: 'Character count not measured for this page.',
     missingCaptionTemplate: 'Missing: {percent}% of visible text absent from the raw HTML, on {selector}.',
     missingCaptionNoSelectorTemplate: 'Missing: {percent}% of visible text absent from the raw HTML.',
-    overflowTextTemplate:
-      '{count} more pages show the same gap, detail in the technical export.',
-    overflowTextSingularTemplate:
-      '1 more page shows the same gap, detail in the technical export.',
+    overflowTextTemplate: '{count} more pages show the same gap.',
+    overflowTextSingularTemplate: '1 more page shows the same gap.',
     positiveStatementTemplate:
       "This site's commercial pages keep their text in the raw HTML: no meaningful render gap was measured.",
     positiveStatementWrapperNote:

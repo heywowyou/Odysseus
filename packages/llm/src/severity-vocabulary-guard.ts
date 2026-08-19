@@ -18,6 +18,16 @@ export const SEVERITY_VOCABULARY: Record<
   en: { critical: 'critical', serious: 'serious', moderate: 'moderate', minor: 'minor' },
 };
 
+/** item 3.7 (La Corniche pass): same duplication precedent as
+ *  SEVERITY_VOCABULARY above (packages/report/src/template/strings/
+ *  {fr,en}.ts's findingSingular/findingPlural), for the noun the model
+ *  must use consistently rather than reaching for a synonym like
+ *  "problème"/"problem" or "issue". */
+export const FINDING_NOUN_VOCABULARY: Record<ReportLanguage, { singular: string; plural: string }> = {
+  fr: { singular: 'constat', plural: 'constats' },
+  en: { singular: 'finding', plural: 'findings' },
+};
+
 /**
  * Known synonyms the model reaches for instead of the canonical word,
  * confirmed against a real response (haaitza.com, 2026-08-08 full audit):
