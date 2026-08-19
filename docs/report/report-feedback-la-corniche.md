@@ -16,13 +16,71 @@ in priority order. Do not attempt all tiers in a single session.
 
 Suggested session split:
 
-| Session | Scope | Tier |
-|---|---|---|
-| A | Aggregate binding and annex completeness, template only, no contract change | P0 items 0.2, 0.4, 0.5, 0.7, 0.9 |
-| B | Obligation assessment: booking-flow detection and Sirene evidence | P0 items 0.1, 0.6, plus 1.11. Needs Jules approval before any edit |
-| C | Performance pipeline: why Lighthouse produced nothing, and what the section does when it does | P0 item 0.3 |
-| D | Prioritisation, benchmark attachment, third-party attribution | P0 item 0.8, P1 items 1.1, 1.4, 1.5, 1.9 |
-| E | Annex, layout, copy | P2, P3, P4 |
+| Session | Scope | Tier | Status (2026-08-19 fix session) |
+|---|---|---|---|
+| A | Aggregate binding and annex completeness, template only, no contract change | P0 items 0.2, 0.4, 0.5, 0.7, 0.9 | **Done** - all 5 items fixed and committed |
+| B | Obligation assessment: booking-flow detection and Sirene evidence | P0 items 0.1, 0.6, plus 1.11. Needs Jules approval before any edit | **Not started** - still needs Jules approval before any edit |
+| C | Performance pipeline: why Lighthouse produced nothing, and what the section does when it does | P0 item 0.3 | **Partially done**: report-side fix done and committed (section 09 states plainly when measurement didn't complete; cover drops "Performance"). Scanner-side isolation fix (prevents an OOM crash from taking the whole daemon down) was already sitting uncommitted from an earlier session, verified and committed this session. What's still open: nobody has confirmed the isolation fix actually restores real Lighthouse data on lacoorniche.com specifically (it crashed on all 18 pages even with the fix in place) - that needs a live re-scan, out of scope without the site owner's explicit go-ahead for that specific site (see CLAUDE.md's testing section, updated this session to allow it per-site on request) |
+| D | Prioritisation, benchmark attachment, third-party attribution | P0 item 0.8, P1 items 1.1, 1.4, 1.5, 1.9 | **Done** - all 5 items fixed and committed |
+| E | Annex, layout, copy | P2, P3, P4 | **Partially done**: items 2.3 and 3.2 fixed and committed (see their sections below). Everything else in P2/P3/P4 not started |
+
+### Status update (2026-08-19, same-day fix session)
+
+11 commits landed this session, in this order: Lighthouse child-process
+isolation (scanner side of 0.3, already-uncommitted work from an earlier
+session, verified and committed), the Paged.js truncation fix (0.2/0.7),
+the CLAUDE.md live-scan authorization change, three more Session A items
+(0.4/0.5/0.9), the report-side performance-honesty fix (0.3), the
+priority-ranking fix (0.8), the reference-stat attribution fix (1.1), the
+third-party attribution feature (1.4), the quick-win badge fix (1.5), the
+render-diff evidence homepage tie-break (1.9), and a small batch (2.3,
+3.2).
+
+**Read this before re-triaging any item below as still broken.** Several
+items in this document turned out to have a different root cause than
+diagnosed, confirmed by direct reproduction against the real La Corniche
+artifacts (`artifacts/lacoorniche.com/2026-08-19T00-54-32Z/`) plus the
+real MongoDB `manualFields`, not assumed from the symptom alone:
+
+- **0.2 and 0.7 were the same bug**, not two independent ones: Paged.js's
+  own "Layout repeated" infinite-loop guard was silently truncating the
+  PDF partway through the findings appendix, with no error surfaced
+  anywhere. The annex-renderer/TOC-projection diagnosis this doc
+  originally gave for both items does not match current code and should
+  not be re-attempted; see the commit "Fix Paged.js silently truncating
+  the PDF near the findings appendix" for the real mechanism and fix.
+- **0.8's real cause was in `structure-ranking.ts`**, not the model's
+  theme selection: `image-alt`/`link-name` were correctly grouped into
+  themes by the model, but a quick-win sort bucket and a pipeline-
+  ordering bug both buried them regardless of severity. See "Fix priority
+  ranking burying the two largest rule families" - do not re-add a
+  deterministic "no LLM input into theme selection" layer without first
+  checking whether this fix already covers the symptom you're seeing.
+- **1.1 needed two fixes, not one**: blocking only the reported Pew
+  statistic let the next unfiltered SEO stat (Nestlé) fall through onto
+  the same mentions-légales theme. If a future run shows yet another
+  irrelevant citation on a theme confined to `lcen-mentions-legales-missing`,
+  that's a new stat needing its own `eligibleRuleIds`, not a reopening of
+  this item.
+- **1.9**: only the homepage now gets a tie-break in render-diff evidence
+  selection (a generic, already-available signal). Full page-commercial-
+  relevance weighting (ranking every page, "rooms" included) is still the
+  open deferred item in `report-feedback-deferred-items.md` - do not
+  conflate the two.
+- **3.8** ("Sans objet" never defined) resolved itself as a side effect
+  of the 0.2/0.7 pagination fix restoring the glossary section, which
+  already had a `sans-objet` entry. Verified directly against the
+  regenerated PDF; no separate fix was needed or made.
+- **3.1** (unbalanced parenthesis in the legal denomination) was checked
+  and is **not a code bug**: `raisonSociale: "(O! DE LA DUNE"` is
+  operator-entered data (`provenance: "operator"` in the real MongoDB
+  document), not something the scanner or normalization layer produced.
+  If this needs fixing, it's a data-entry correction, not a code change.
+
+Every fix above shipped with its own regression test and was verified
+against a full regeneration of the real La Corniche report (not just
+unit tests) before committing. Full workspace typecheck and test suite
+passed at each commit.
 
 Each item has the same shape: **Symptom**, **Probable cause**, **Fix**,
 **Acceptance check**. The symptom is what the client sees, quoted or measured from
@@ -162,6 +220,11 @@ booking iframe case using the La Corniche `.bloc-resa > iframe` markup as fixtur
 
 ### 0.2 Sections 12 and 13 do not exist. Page 21 is blank.
 
+**FIXED, 2026-08-19.** Root cause was not the TOC/annex-renderer logic
+this item's own "Probable cause" describes - see the "Status update"
+note at the top of this document. Commit: "Fix Paged.js silently
+truncating the PDF near the findings appendix".
+
 **Symptom.** The table of contents lists:
 
 ```
@@ -201,6 +264,19 @@ page. The TOC contains no zero page number. A `paged-invariants.test.ts` case
 asserts both, and fails if a section is added to the manifest without content.
 
 ### 0.3 The performance section delivers nothing, and the cover sells it
+
+**PARTIALLY FIXED, 2026-08-19.** Report side done: section 09 states
+plainly when measurement didn't complete instead of a fake "Non mesuré"
+table, and the cover drops "Performance" from the audited-categories
+line in that case. Commit: "Stop the performance section from
+presenting failure as a measurement". Scanner-side Lighthouse isolation
+(prevents an OOM crash from taking the whole daemon down) was already
+sitting uncommitted from an earlier session; verified and committed this
+session too ("Isolate Lighthouse runs in a forked child process to
+survive OOM crashes"). Still open: confirming the isolation fix actually
+restores real Lighthouse data on lacoorniche.com (it crashed on all 18
+pages even with the fix), which needs a live re-scan of that specific
+site.
 
 **Symptom.** Page 10, section 9, five rows, all identical:
 
@@ -242,6 +318,12 @@ every row is the unmeasured fallback.
 
 ### 0.4 The summary prose contradicts every count in the document
 
+**FIXED, 2026-08-19.** Commit: "Fix three more P0 report defects from
+the La Corniche feedback pass". Counts now bound in
+`executive-summary.ts`'s `summaryCountsTemplate`; the writing pass is
+forbidden from writing any digit in `executiveSummary`, enforced by a
+new guard.
+
 **Symptom.** Page 3, section 1:
 
 > L'audit a identifié 66 problèmes prioritaires (33 critiques et 33 sérieux) sur un
@@ -271,6 +353,10 @@ the severity chart. A unit test renders the summary from a fixture and asserts t
 rendered counts equal the fixture counts.
 
 ### 0.5 The "Rendu" category says 1, its own footnote says 0, and section 8 shows 75 percent
+
+**FIXED, 2026-08-19.** Commit: "Fix three more P0 report defects from
+the La Corniche feedback pass". `hasBelowThresholdRenderGap` now also
+requires `categoryCounts.rendering === 0`.
 
 **Symptom.** Page 4, three statements within 40 mm of each other and a fourth six
 pages later:
@@ -343,6 +429,12 @@ asserts the mentions-légales rule does not fire when `sirenConfirmed` is true.
 
 ### 0.7 Four counted findings never appear in the "liste complète des constats"
 
+**FIXED, 2026-08-19.** Same root cause as 0.2 (Paged.js truncation, not
+the annex-renderer skipping GEO/Rendu group templates this item's own
+"Probable cause" describes) - see the "Status update" note at the top of
+this document. Commit: "Fix Paged.js silently truncating the PDF near
+the findings appendix".
+
 **Symptom.** The annex is titled "Liste complète des constats" and subtitled
 "Chaque constat détecté par les outils automatisés, y compris ceux jugés mineurs".
 It contains 89 findings. Every aggregate in the report says 93. Missing: `f035`,
@@ -378,6 +470,12 @@ Every id cited anywhere in the document resolves to an annex row. A test asserts
 `annexRowCount === distinctFindingCount` and fails the build otherwise.
 
 ### 0.8 The two largest rule families are missing from the priorities, and section 1 names one of them as the most urgent
+
+**FIXED, 2026-08-19.** Root cause was in `structure-ranking.ts`'s
+post-processing rules, not theme selection/grouping - see the "Status
+update" note at the top of this document before proposing a
+deterministic-selection redesign. Commit: "Fix priority ranking burying
+the two largest rule families (item 0.8)".
 
 **Symptom.** Section 1 says:
 
@@ -418,6 +516,16 @@ rendered priority titles.
 
 ### 0.9 Dead and mismatched cross references in Observations
 
+**FIXED, 2026-08-19.** The "f088 does not exist" half was actually the
+same Paged.js truncation bug as 0.2/0.7 (already fixed there once
+regenerated). The "wrong topic" half (f039 cited for a noindex claim
+unrelated to its actual rule) was a real, separate bug: the "legal"
+diversion reason is a URL-pattern heuristic (`LEGAL_PATH_PATTERN`),
+never a verified per-page noindex check, and the Observations copy
+overstated it as a confirmed fact. Commit: "Fix three more P0 report
+defects from the La Corniche feedback pass" (softened the copy in both
+languages).
+
 **Symptom.** Page 8, section 6, the whole content of the page:
 
 > Ces pages [...] portent une directive noindex. [...] Constats concernés: f039,
@@ -453,6 +561,11 @@ finding of a different rule than the one it describes.
 ## P1. Credibility with a technical or skeptical reader
 
 ### 1.1 The Pew statistic is attached to the mentions-légales priority
+
+**FIXED, 2026-08-19.** Needed two fixes, not one - see the "Status
+update" note at the top of this document before re-triaging a similar
+symptom as unresolved. Commit: "Stop irrelevant reference-stat citations
+from attaching to a legal theme".
 
 **Symptom.** Page 5, priority 2 ("Mentions légales incomplètes", i.e. a missing
 SIREN):
@@ -516,6 +629,14 @@ duplicates, or the annex groups them and the methodology explains it.
 
 ### 1.4 Third-party embed markup is reported as the client's own defects
 
+**FIXED, 2026-08-19.** Commit: "Attribute third-party embed findings
+instead of presenting them as the client's own". New
+`third-party-attribution.ts`; findings whose selector matches a known
+vendor prefix or crosses a frame boundary now render in their own
+attributed block, split per finding (not per rule family - some
+image-alt/link-name instances are the client's own images, others are
+inside the SmartPreview widget).
+
 **Symptom.** A large share of the annex is not the client's code:
 
 - `#popmake-*`, `.pum-content` (Popup Maker plugin)
@@ -545,6 +666,13 @@ attributed to a third-party frame. A test asserts frame-crossing selectors are
 never grouped with first-party findings.
 
 ### 1.5 "Classés par effort et par impact" against six identical efforts
+
+**FIXED, 2026-08-19.** Item 0.8's ranking fix already resolves the root
+cause for this report (only 4 of 6 cards are quick wins now, not 6).
+Also added the defensive fix per this item's own suggestion, for any
+future audit whose top 6 legitimately are all quick wins: the badge
+never renders when it would appear on every rendered card. Commit: "Stop
+the quick-win badge from rendering when it distinguishes nothing".
 
 **Symptom.** Page 4 heading: "6 chantiers, classés par effort et par impact". All
 six cards read "Effort: Faible". All six carry the green "Gain rapide" badge.
@@ -597,6 +725,13 @@ but the same defect.
 
 ### 1.9 The booking path is never distinguished from the sitemap page
 
+**FIXED (evidence-ordering half only), 2026-08-19.** Commit: "Restore a
+homepage tie-break in render-diff evidence selection (item 1.9)". The
+homepage now always leads section 08's evidence when eligible. The
+page-weighting half (ranking every page by commercial relevance, "rooms"
+included) is still the open item in `report-feedback-deferred-items.md`
+- not touched, needs a real model per that doc.
+
 **Symptom.** `f001` and `f011`, on all 18 pages, are the reservation elements. They
 sit in the annex between a footer image and a gallery image with no indication that
 they are on the revenue path. Section 8 leads its render-diff evidence with
@@ -647,6 +782,12 @@ header plus one four-line paragraph on an otherwise blank sheet.
 
 ### 2.3 `frame-title` renders its English axe-core title
 
+**FIXED, 2026-08-19.** Commit: "Add missing frame-title translation and
+fix two plural-agreement bugs". The enforcement mechanism this item's
+own fix suggests already existed (`rule-translations.test.ts`) - it just
+didn't cover the La Corniche fixture yet, now added alongside the
+missing translation entry itself.
+
 **Symptom.** Page 16: "Frames must have an accessible name". It is the only
 untranslated rule title in the annex, and the same rule appears in the priorities
 section correctly translated as "Cadres sans titre accessible". REGRESSION of
@@ -683,12 +824,22 @@ export exists (see 3.3).
 
 ### 3.1 The legal denomination prints an unbalanced parenthesis
 
+**CHECKED, not a code bug, 2026-08-19.** `raisonSociale: "(O! DE LA DUNE"`
+is operator-entered data (`provenance: "operator"` in the real MongoDB
+document), not something the scanner or normalization layer produced. If
+this needs fixing, it's a data-entry correction, not a code change.
+
 Cover: "Dénomination sociale: (O! DE LA DUNE". Raw Sirene string passed through
 without normalisation. The client's first visual impression is a broken field.
 Strip or balance leading punctuation, or print the registry string in a way that
 makes clear it is verbatim.
 
 ### 3.2 Plural agreement bugs
+
+**FIXED, 2026-08-19.** Commit: "Add missing frame-title translation and
+fix two plural-agreement bugs". New shared `pluralize()` helper in
+`html-utils.ts`; `render-lint.ts` also gained a pattern catching a bare
+"(s)" so a third instance can't ship unnoticed.
 
 - Page 10: "1 autres pages présentent le même écart" should be "1 autre page
   présente".
@@ -705,16 +856,17 @@ request" inside a section titled "complete list".
 
 ### 3.4 No glossary, though the report points at one
 
-Consequence of 0.2. Terms actually used and undefined: constat, occurrence,
-Critique, Sérieux, Modéré, Mineur, Sans objet, Signaux à vérifier, Rendu, GEO,
-Effort, Impact commercial, Sirene, EN 301 549.
+**FIXED, 2026-08-19** (consequence of 0.2, resolved by that fix - see above).
+The glossary renders fully now, including a `sans-objet` entry, once the
+Paged.js truncation stopped cutting it off.
 
 ### 3.5 No next steps, no price, no contact, no issuer identity
 
-Consequence of 0.2. For a EUR 1 600 HT French deliverable there is no SIRET, no
-legal entity, no signatory and no way to order the re-audit. The placeholders
-listed in the deferred-items doc still need Jules's real values before this ships
-outside internal testing.
+**FIXED, 2026-08-19** (consequence of 0.2, resolved by that fix - see above).
+The next-steps section renders fully now. The placeholder values
+themselves (real SIRET, re-audit price/lead time, contact mailbox) still
+need Jules's real answers before this ships outside internal testing -
+see `report-feedback-deferred-items.md`, not a code fix.
 
 ### 3.6 Addressee drift
 
@@ -732,6 +884,10 @@ methodology says is out of scope.
   "Élevé" has to work out these are unrelated axes.
 
 ### 3.8 "Conformité: Sans objet" is never defined
+
+**FIXED, 2026-08-19**, incidentally, by the 0.2 pagination fix restoring
+the glossary section, which already had a `sans-objet` entry. Verified
+directly against the regenerated PDF; no separate fix was needed.
 
 Appears on two priority cards and in the checklist. The client cannot tell whether
 it means compliant, not applicable, or not assessed.
@@ -817,7 +973,14 @@ scoped deliberately narrowly to stay inside deterministic data.
 
 ## Paste-ready Claude Code prompt
 
-Session A only. Run the others as separate sessions.
+**Session A is done (2026-08-19) - the prompt below is kept for record, not
+for re-use.** For a future session, the remaining work is: Session B
+(needs Jules's explicit approval first - see item 0.1/0.6/1.11), the
+open half of Session C (confirming the Lighthouse isolation fix actually
+restores data on lacoorniche.com, needs a live re-scan with the site
+owner's go-ahead), and the untouched P2/P3/P4 items in Session E (2.1,
+2.2, 2.4, 2.5, 2.6, 3.3, 3.6, 3.7, 3.9, 3.10, and the P4 list) - none of
+those have a paste-ready prompt written yet.
 
 ```
 Read report-feedback-la-corniche.md, CLAUDE.md, docs/report-design-system.md and
