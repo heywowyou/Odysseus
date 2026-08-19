@@ -83,4 +83,20 @@ export interface ReferenceStat {
   /** Present only when scalability === 'scales-down'. Stored as a
    *  decimal fraction, e.g. 0.101 for 10.1%. */
   ratio?: { kind: RatioKind; value: number };
+  /** report-feedback-la-corniche.md item 1.1: category alone is too
+   *  coarse a match for a stat whose real topic is narrower than the
+   *  whole category it's tagged into - a real report cited the Pew
+   *  AI-overview click-through-rate stat (category includes 'seo') on a
+   *  "mentions légales manquantes" (missing SIREN) priority, because
+   *  that theme happened to be the highest-ranked 'seo' theme and
+   *  selectReferenceStats has no way to know the stat is about search
+   *  click behavior, not legal notices. Present only on stats whose
+   *  relevance is confirmed narrower than their category tag; absent
+   *  (the common case) means category match alone is trusted, as
+   *  before. Checked only by packages/report's theme-citation path
+   *  (themes.ts's isStatEligibleForTheme) against the rule IDs of the
+   *  specific theme's own findings - the geo findings-appendix section
+   *  (findings-appendix.ts's renderGeoCitationBlock) anchors to a whole
+   *  category section rather than one narrow theme and is unaffected. */
+  eligibleRuleIds?: readonly string[];
 }

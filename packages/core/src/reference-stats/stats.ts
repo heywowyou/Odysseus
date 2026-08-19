@@ -147,6 +147,15 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
       'Google users who encountered an AI summary clicked a traditional search result link in 8% of visits, versus nearly twice as often (15%) for those who did not (Pew Research Center, July 2025, based on 68,879 Google searches by 900 US adults).',
     ),
     ratio: { kind: 'ctr-with-ai-summary', value: 0.08 },
+    // item 1.1: this stat is about how a result competes for a click in a
+    // search results page - relevant to the SERP-appearance rule
+    // families (a page's title/description snippet, its rich-result
+    // eligibility), never to a legal-notice or registry defect that has
+    // nothing to do with how the page shows up in search. A real report
+    // attached it to "mentions légales manquantes" (a missing SIREN)
+    // purely because that theme happened to be the top-ranked 'seo'
+    // theme with no topical check at all.
+    eligibleRuleIds: ['meta-title-length', 'meta-description-length', 'jsonld-invalid', 'jsonld-missing'],
   },
   {
     id: 'pew-ai-overviews-zero-click-2025',
@@ -160,6 +169,8 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
       "La part des sessions se terminant sans aucun clic (« zero-click ») est passée à 26 % lorsqu'un résumé IA apparaissait, contre 16 % en son absence (Pew Research Center, juillet 2025).",
       "Sessions ending without any click ('zero-click') rose to 26% when an AI summary appeared, versus 16% when it did not (Pew Research Center, July 2025).",
     ),
+    // item 1.1, same reasoning as the CTR stat above.
+    eligibleRuleIds: ['meta-title-length', 'meta-description-length', 'jsonld-invalid', 'jsonld-missing'],
   },
   {
     id: 'nestle-rich-results-ctr',

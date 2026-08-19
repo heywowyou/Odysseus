@@ -1,5 +1,5 @@
 import type { AuditManifest, Finding, ReferenceStat, ReportLanguage, StatSector, Theme } from '@odysseus/core';
-import { CORE_WEB_VITAL_THRESHOLDS, selectReferenceStats } from '@odysseus/core';
+import { CORE_WEB_VITAL_THRESHOLDS, LCEN_MENTIONS_LEGALES_RULE_ID, selectReferenceStats } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatFindingIdLinks, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
@@ -214,11 +214,48 @@ function transactionalFlowPageUrls(analysis: StoredAnalysis): ReadonlySet<string
   return urls;
 }
 
+/** item 1.1: a stat's `category` tag can be broader than its real topic
+ *  (the Pew AI-overview stats are tagged 'seo' for a slot to attach to,
+ *  but are really only about search-result click behavior) -
+ *  `eligibleRuleIds`, when present, narrows attachment to themes whose
+ *  own findings are actually about that topic, checked here rather than
+ *  in selectReferenceStats (core has no notion of a "theme" to check
+ *  against). */
+function isStatEligibleForRuleIds(stat: ReferenceStat, themeFindings: readonly Finding[]): boolean {
+  if (!stat.eligibleRuleIds) return true;
+  return themeFindings.some((finding) => stat.eligibleRuleIds!.includes(finding.ruleId));
+}
+
+/** item 1.1: no statistic in REFERENCE_STAT_TABLE is about legal-notice
+ *  or business-registry compliance - blocking the one confirmed
+ *  mismatch (the Pew AI-overview stats, via eligibleRuleIds above) still
+ *  let the next unfiltered SEO stat (Nestlé rich-results CTR) fall
+ *  through onto the same "mentions légales incomplètes" (missing SIREN)
+ *  theme, an equally topical mismatch a click-through-rate case study
+ *  cannot speak to. A theme confined entirely to this one rule id gets
+ *  no citation at all rather than whichever SEO stat happens to rank
+ *  first with no topical check - "report, don't fabricate a comparison"
+ *  applies to relevance, not only to sourcing.
+ *
+ *  Also true for a theme with zero resolvable findings at all: real
+ *  manualFields resolved the underlying lcen-mentions-legales-missing
+ *  finding out of resolvedFindings entirely (lcen-resolution.ts), but
+ *  the theme itself still rendered with the finding it referenced simply
+ *  gone (the theme still dangling is item 0.6, a separate, Session-B-
+ *  scoped fix) - `themeFindings.every(...)` is vacuously true over an
+ *  empty array, so without this an orphaned theme would pass the rule-id
+ *  check trivially and still take whichever unrestricted stat came
+ *  first, same defect as the non-empty case above. */
+function isCitationIneligibleTheme(themeFindings: readonly Finding[]): boolean {
+  return themeFindings.length === 0 || themeFindings.every((finding) => finding.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID);
+}
+
 function isStatEligibleForTheme(
   stat: ReferenceStat,
   themeFindings: readonly Finding[],
   transactionalPageUrls: ReadonlySet<string>,
 ): boolean {
+  if (!isStatEligibleForRuleIds(stat, themeFindings)) return false;
   if (!stat.ratio || !RATIO_KINDS_REQUIRING_TRANSACTIONAL_CONTEXT.has(stat.ratio.kind)) return true;
   return themeFindings.some((finding) => finding.pageUrls.some((url) => transactionalPageUrls.has(url)));
 }
@@ -261,6 +298,7 @@ export function renderThemes(
     if (!isCitableThemeCategory(theme.category)) continue;
     if (citedCategories.has(theme.category)) continue;
     const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
+    if (isCitationIneligibleTheme(themeFindings)) continue;
     const candidates = selectReferenceStats(theme.category, sector);
     const top = candidates.find(
       (stat) => !citedStatIds.has(stat.id) && isStatEligibleForTheme(stat, themeFindings, transactionalPageUrls),

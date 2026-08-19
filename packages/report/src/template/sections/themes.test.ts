@@ -179,6 +179,153 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
   });
 });
 
+// report-feedback-la-corniche.md item 1.1: a real report cited the Pew
+// AI-overview click-through-rate statistic (category includes 'seo') on
+// "Mentions légales incomplètes" (a missing SIREN), because that theme
+// happened to be the highest-ranked 'seo' theme with no topical check at
+// all - the statistic is about search-result click behavior, wholly
+// unrelated to a company registration number.
+describe('item 1.1: a stat with eligibleRuleIds only attaches to a theme whose findings actually match', () => {
+  function buildFinding(ruleId: string) {
+    return {
+      findingId: 'f001',
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'custom' as const,
+      ruleId,
+      category: 'seo' as const,
+      severity: 'serious' as const,
+      wcagCriteria: [],
+      title: 't',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: 'd1',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  function buildAnalysis() {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title: 'Mentions légales incomplètes',
+          category: 'seo' as const,
+          businessImpact: 'Impact',
+          effort: 'low' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds: ['f001'],
+          recommendedActions: ['Action'],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const manifest = { pages: [{ url: 'https://example.com/', status: 'visited' }] } as never;
+
+  it('does not cite the Pew AI-overview statistic on a mentions-légales (SIREN) finding', () => {
+    const analysis = buildAnalysis();
+    const finding = buildFinding('lcen-mentions-legales-missing');
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, [finding], manifest);
+
+    expect(html).not.toContain('Pew Research');
+    expect(html).not.toContain('résumé généré par IA');
+  });
+
+  it('still cites the Pew AI-overview statistic on a finding it is actually eligible for (meta-title-length)', () => {
+    const analysis = buildAnalysis();
+    const finding = buildFinding('meta-title-length');
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, [finding], manifest);
+
+    expect(html).toContain('Pew Research');
+  });
+
+  // Blocking only the Pew stat was not enough on its own: with Pew
+  // ineligible, the next unfiltered SEO stat in the candidate list
+  // (Nestlé rich-results CTR, no eligibleRuleIds) fell through onto the
+  // same mentions-légales theme in a real regeneration - an equally
+  // irrelevant citation for a missing SIREN. No reference-stat citation
+  // at all is the correct output for this theme, not merely "not Pew".
+  it('cites nothing at all on a theme confined entirely to the mentions-légales finding, not just not-Pew', () => {
+    const analysis = buildAnalysis();
+    const finding = buildFinding('lcen-mentions-legales-missing');
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, [finding], manifest);
+
+    expect(html).not.toContain('Repère chiffré');
+  });
+
+  it('does cite a stat on a second seo theme when the first is the citation-ineligible mentions-légales one', () => {
+    const analysis = {
+      ...buildAnalysis(),
+      themes: [
+        {
+          title: 'Mentions légales incomplètes',
+          category: 'seo' as const,
+          businessImpact: 'Impact',
+          effort: 'low' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds: ['f001'],
+          recommendedActions: ['Action'],
+        },
+        {
+          title: 'Données structurées invalides',
+          category: 'seo' as const,
+          businessImpact: 'Impact',
+          effort: 'low' as const,
+          impact: 'medium' as const,
+          priorityRank: 2,
+          findingIds: ['f002'],
+          recommendedActions: ['Action'],
+        },
+      ],
+    };
+    const legalFinding = buildFinding('lcen-mentions-legales-missing');
+    const jsonldFinding = { ...buildFinding('jsonld-invalid'), findingId: 'f002' };
+
+    const html = renderThemes(getStrings('fr'), 4, analysis, [legalFinding, jsonldFinding], manifest);
+
+    // The citation must land on card 2 (theme-2, jsonld-invalid), never
+    // on card 1 (theme-1, the citation-ineligible mentions-légales one).
+    const theme1End = html.indexOf('id="theme-2"');
+    expect(html.slice(0, theme1End)).not.toContain('Repère chiffré');
+    expect(html.slice(theme1End)).toContain('Repère chiffré');
+  });
+
+  // The actual real-world trigger: lcen-resolution.ts removes the
+  // mentions-légales finding from resolvedFindings entirely once the
+  // operator confirms a sirenSourceUrl, but the theme referencing it
+  // (built by the writing pass before that resolution ran) still
+  // renders, now with zero resolvable findings - `.every()` over an
+  // empty array is vacuously true, so this is a distinct code path from
+  // the "all findings are the LCEN rule id" case above and needs its own
+  // coverage.
+  it('cites nothing on a theme whose only finding was resolved away entirely (findingIds references nothing in the findings array)', () => {
+    const analysis = buildAnalysis();
+    // f001 is referenced by the theme but never appears in the findings
+    // array passed to renderThemes, matching resolveLcenFinding's effect.
+    const html = renderThemes(getStrings('fr'), 4, analysis, [], manifest);
+
+    expect(html).not.toContain('Repère chiffré');
+  });
+});
+
 // item 13: a real report cited the Baymard 70.22% cart-abandonment
 // statistic on an ARIA structure finding for `.collection__list`, a
 // generic listing element with no stated relationship to checkout at
