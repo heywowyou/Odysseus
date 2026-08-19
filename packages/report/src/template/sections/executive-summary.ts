@@ -1,6 +1,8 @@
+import type { AuditManifest, Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, renderSheetHeader, sheet } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { computeStatistics } from '../statistics.js';
 import { selectRenderedThemes } from './themes.js';
 
 const TOP_THEME_COUNT = 3;
@@ -76,11 +78,32 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
   `;
 }
 
-export function renderExecutiveSummary(strings: ReportStrings, ordinal: number, analysis: StoredAnalysis): string {
+export function renderExecutiveSummary(
+  strings: ReportStrings,
+  ordinal: number,
+  analysis: StoredAnalysis,
+  findings: readonly Finding[],
+  manifest: AuditManifest,
+): string {
   const e = strings.executiveSummary;
+  // item 0.4: counts are bound here, from the same resolvedFindings the
+  // stats tile (section 03) and every other count in the report reads,
+  // never from the writing pass's own prose - see this template's own
+  // doc comment. The writing pass ran before render-time finding
+  // resolution (lcen-resolution.ts's manual SIREN-source-url removal,
+  // concretely) could still change the finding count, which is exactly
+  // how a real report ended up stating "94 constats" in this sentence
+  // while the cover, stats tile, and severity chart all said 93.
+  const stats = computeStatistics(findings, manifest);
+  const countsSentence = fillTemplate(e.summaryCountsTemplate, {
+    actionable: formatNumber(stats.critical + stats.serious, analysis.language),
+    critical: formatNumber(stats.critical, analysis.language),
+    serious: formatNumber(stats.serious, analysis.language),
+    total: formatNumber(stats.totalFindings, analysis.language),
+  });
   return sheet(`
     ${renderSheetHeader(ordinal, e.eyebrow, e.heading)}
-    <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(analysis.executiveSummary)}</p>
+    <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(countsSentence)} ${escapeHtml(analysis.executiveSummary)}</p>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
     ${renderTopPriorityLegalNote(strings, analysis.themes)}
     ${renderStartHere(strings, analysis.themes)}

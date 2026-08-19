@@ -1,5 +1,6 @@
 import { callMistralForWriting } from './client.js';
 import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
+import { findExecutiveSummaryDigitViolations } from './executive-summary-digit-guard.js';
 import { findLanguageComplianceViolations } from './language-guard.js';
 import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js';
 import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
@@ -63,6 +64,15 @@ export async function analyzeWriting(
     const severityViolations = findSeverityVocabularyViolations(result.output, input.language);
     if (severityViolations.length > 0) {
       lastFailureReason = `severity vocabulary violations in field(s): ${severityViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    const digitViolations = findExecutiveSummaryDigitViolations(result.output);
+    if (digitViolations.length > 0) {
+      lastFailureReason = `executiveSummary contains a digit, which the report template now owns: "${digitViolations[0]!.text}"`;
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );

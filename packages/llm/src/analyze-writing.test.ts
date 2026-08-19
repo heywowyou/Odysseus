@@ -70,6 +70,16 @@ function buildMismatchedKeyOutput(): WritingPassOutput {
   return output;
 }
 
+function buildDigitInSummaryOutput(): WritingPassOutput {
+  // report-feedback-la-corniche.md item 0.4: the writing pass used to be
+  // asked to cite exact counts, which drifted from the report's own
+  // bound counts once render-time finding resolution ran after this pass
+  // already had.
+  const output = buildCleanFrenchOutput();
+  output.executiveSummary = "L'audit a identifié 66 problèmes prioritaires sur un total de 94 constats.";
+  return output;
+}
+
 function buildNonCanonicalSeverityWordOutput(): WritingPassOutput {
   // Verbatim from the real observed failure, artifacts/haaitza.com/
   // 2026-08-08T11-07-43Z/analyses/2026-08-08T11-23-48Z-fr.json, except for
@@ -144,6 +154,27 @@ describe('analyzeWriting', () => {
     vi.mocked(callMistralForWriting)
       .mockReset()
       .mockResolvedValue({ output: buildNonCanonicalSeverityWordOutput() });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+  });
+
+  it('retries once when executiveSummary contains a digit, then succeeds', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildDigitInSummaryOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(result.output.executiveSummary).not.toMatch(/\d/);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws after exhausting retries when every attempt puts a digit in executiveSummary', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValue({ output: buildDigitInSummaryOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
     expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);

@@ -54,7 +54,7 @@ export const en: ReportStrings = {
       "These pages are wrappers displaying a third-party platform's content: their content is almost entirely absent from the raw HTML. Typical fixes don't apply to third-party content. The useful decision is choosing between a direct link to the platform, a deliberate noindex, or removing these pages. Findings involved: {findingIds}.",
     legalTitle: 'Legal pages excluded from indexing',
     legalBodyTemplate:
-      "These pages (terms and conditions, cookie policy, privacy policy, or similar) carry a noindex directive. This is a common and often deliberate setup for this kind of page: no corrective action is recommended by default, just confirm the choice is intentional. Findings involved: {findingIds}.",
+      "These pages (terms and conditions, cookie policy, privacy policy, or similar) are of a kind usually excluded from indexing (noindex). This is a common and often deliberate setup for this kind of page: no corrective action is recommended by default, just confirm the choice is intentional and that a noindex directive is actually in place. Findings involved: {findingIds}.",
   },
   cover: {
     kicker: 'Odysseus · Digital audit',
@@ -87,6 +87,7 @@ export const en: ReportStrings = {
       'Priority 1 above is a commercial issue, not a legal conformance issue: it was ranked first based on its effort-to-impact ratio. The legal conformance priorities rank at position {legalRank}.',
     topPriorityIsNotLegalNoPointer:
       "Priority 1 above is a commercial issue, not a legal conformance issue: it was ranked first based on its effort-to-impact ratio. None of the priorities in this report are directly tied to legal conformance; see the \"Legal exposure\" section for the detail.",
+    summaryCountsTemplate: 'The audit identified {actionable} priority findings ({critical} critical and {serious} serious) out of {total} findings in total.',
   },
   legalExposure: {
     eyebrow: 'Legal exposure',

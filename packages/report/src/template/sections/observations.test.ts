@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { DivertedFinding } from '@odysseus/llm';
 import { partitionFindings } from '@odysseus/llm';
+import type { Finding } from '@odysseus/core';
 import { renderObservations } from './observations.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
@@ -23,5 +25,42 @@ describe('renderObservations against the real sas-fernande.fr scan', () => {
     const html = renderObservations(getStrings('fr'), 6, []);
 
     expect(html).toBe('');
+  });
+
+  // report-feedback-la-corniche.md item 0.9: the "legal" diversion reason
+  // is a URL-pattern match (LEGAL_PATH_PATTERN, @odysseus/core), never a
+  // verified per-page noindex check - a real report diverted an
+  // accessibility finding (nested-interactive, WCAG 4.1.2, confined to
+  // /cookies/) into this box, whose copy stated as fact that the page
+  // "portent une directive noindex", overclaiming a fact the diversion
+  // signal never actually confirmed. The copy no longer asserts it as a
+  // given.
+  it('item 0.9: does not state noindex as a confirmed fact, only as the usual configuration for this page type', async () => {
+    const finding: Finding = {
+      auditId: 'a1',
+      schemaVersion: 1,
+      source: 'axe',
+      findingId: 'f1',
+      ruleId: 'nested-interactive',
+      category: 'accessibility',
+      severity: 'serious',
+      wcagCriteria: ['4.1.2'],
+      title: 'Nested interactive controls',
+      description: 'description',
+      pageUrls: ['https://example.com/cookies/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: 'dk-1',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+    const diverted: DivertedFinding[] = [{ finding, reason: 'legal' }];
+
+    const html = renderObservations(getStrings('fr'), 6, diverted);
+
+    expect(html).toContain('f1');
+    expect(html).not.toContain('portent une directive noindex');
+    expect(html).toContain("généralement exclu de l&#39;indexation");
   });
 });

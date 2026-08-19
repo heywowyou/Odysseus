@@ -33,10 +33,18 @@ export interface ReportStatistics {
   /** item 39: "Rendu : 0" contradicted section 08's own reported gap
    *  (a real, non-zero render-diff percentage that simply sits below
    *  RENDER_DIFF_EMISSION_THRESHOLD_PERCENT, the point at which a
-   *  render-diff finding is actually emitted). True when at least one
-   *  page has a measured gap in that below-threshold band, so the
-   *  template can add a one-line note explaining the "0" rather than let
-   *  it read as a contradiction or a bug. */
+   *  render-diff finding is actually emitted). True only when the Rendu
+   *  category tile is actually 0 (categoryCounts.rendering === 0) AND at
+   *  least one page has a measured gap in that below-threshold band, so
+   *  the template can add a one-line note explaining the "0" rather than
+   *  let it read as a contradiction or a bug.
+   *
+   *  report-feedback-la-corniche.md item 0.5 [REGRESSION]: this used to
+   *  check only the below-threshold-page condition, so it fired even when
+   *  categoryCounts.rendering was genuinely non-zero (a page whose gap did
+   *  cross the emission threshold, alongside a different page whose gap
+   *  did not) - a real report showed "Rendu: 1" on the tile directly
+   *  above a footnote insisting "la catégorie Rendu affiche 0 constat". */
   hasBelowThresholdRenderGap: boolean;
 }
 
@@ -99,11 +107,13 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
     accessibilityCount,
     seoRenderingCount,
     categoryCounts,
-    hasBelowThresholdRenderGap: manifest.pages.some(
-      (page) =>
-        page.renderDiffMissingPercent !== undefined &&
-        page.renderDiffMissingPercent >= EVIDENCE_INCLUSION_THRESHOLD_PERCENT &&
-        page.renderDiffMissingPercent < RENDER_DIFF_EMISSION_THRESHOLD_PERCENT,
-    ),
+    hasBelowThresholdRenderGap:
+      categoryCounts.rendering === 0 &&
+      manifest.pages.some(
+        (page) =>
+          page.renderDiffMissingPercent !== undefined &&
+          page.renderDiffMissingPercent >= EVIDENCE_INCLUSION_THRESHOLD_PERCENT &&
+          page.renderDiffMissingPercent < RENDER_DIFF_EMISSION_THRESHOLD_PERCENT,
+      ),
   };
 }

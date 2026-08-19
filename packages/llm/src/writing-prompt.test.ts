@@ -3,13 +3,22 @@ import { buildWritingSystemPrompt } from './writing-prompt.js';
 
 // item 43: the executive summary led with the raw total findings count
 // ("98 problèmes"), of which most were minor - rhetorically inflated
-// relative to what actually matters. The prompt now instructs the model
-// to lead with the actionable (critical + serious) count instead.
-describe('item 43: the writing prompt instructs leading with the actionable count', () => {
-  it('instructs the model not to lead the executive summary with the raw total', () => {
+// relative to what actually matters. Originally fixed by having the
+// prompt instruct the model to lead with the actionable (critical +
+// serious) count itself; report-feedback-la-corniche.md item 0.4
+// superseded that: the model's own restated counts drifted from the
+// report's actual bound counts whenever render-time finding resolution
+// changed the finding set after the writing pass had already run (a real
+// report stated "94 constats" while the cover/tile/chart all said 93).
+// The counts, including which one leads, now live entirely in the report
+// template (executive-summary.ts's summaryCountsTemplate, which leads
+// with the actionable count) - the prompt's job is only to make sure the
+// model never writes a competing number of its own.
+describe('item 0.4: the writing prompt forbids the model from writing any count itself', () => {
+  it('instructs the model never to write a digit in executiveSummary, since the template now states every count', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
-    expect(prompt).toContain('Lead the executiveSummary with the actionable number');
-    expect(prompt).toContain('not the raw total findings count');
+    expect(prompt).toContain('do not restate, estimate, or reference any of those figures yourself');
+    expect(prompt).toContain('never write a number of findings, pages, or occurrences anywhere in executiveSummary');
   });
 });
 

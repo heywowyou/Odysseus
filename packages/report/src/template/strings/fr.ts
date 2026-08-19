@@ -54,7 +54,7 @@ export const fr: ReportStrings = {
       "Ces pages sont des enveloppes qui affichent du contenu d'une plateforme tierce : leur contenu est quasiment absent du HTML brut. Les corrections classiques ne s'appliquent pas à du contenu tiers. La décision utile est de choisir entre un lien direct vers la plateforme, un noindex assumé, ou la suppression de ces pages. Constats concernés : {findingIds}.",
     legalTitle: "Pages légales exclues de l'indexation",
     legalBodyTemplate:
-      "Ces pages (conditions générales, politique de cookies, politique de confidentialité, ou similaire) portent une directive noindex. C'est une configuration fréquente et souvent volontaire pour ce type de page : aucune action corrective n'est recommandée par défaut, vérifiez simplement que ce choix est assumé. Constats concernés : {findingIds}.",
+      "Ces pages (conditions générales, politique de cookies, politique de confidentialité, ou similaire) sont d'un type généralement exclu de l'indexation (noindex). C'est une configuration fréquente et souvent volontaire pour ce type de page : aucune action corrective n'est recommandée par défaut, vérifiez simplement que ce choix est assumé et que la directive noindex est bien en place. Constats concernés : {findingIds}.",
   },
   cover: {
     kicker: 'Odysseus · Audit numérique',
@@ -91,6 +91,7 @@ export const fr: ReportStrings = {
       "La priorité 1 ci-dessus est un enjeu commercial, pas un enjeu de conformité légale : elle a été classée en premier sur la base de son rapport effort/impact. Les priorités liées à la conformité légale figurent en position {legalRank}.",
     topPriorityIsNotLegalNoPointer:
       "La priorité 1 ci-dessus est un enjeu commercial, pas un enjeu de conformité légale : elle a été classée en premier sur la base de son rapport effort/impact. Aucune des priorités retenues dans ce rapport n'est directement liée à la conformité légale ; voir la section « Exposition légale » pour le détail.",
+    summaryCountsTemplate: "L'audit a identifié {actionable} constats prioritaires ({critical} critiques et {serious} sérieux) sur un total de {total} constats.",
   },
   legalExposure: {
     eyebrow: 'Exposition légale',

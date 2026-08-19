@@ -143,7 +143,7 @@ function renderBody(
   return [
     renderCover(strings, manifest, analysis, resolvedFindings, manualFields),
     renderToc(strings, includedSectionIds),
-    renderExecutiveSummary(strings, ord('section-01'), analysis),
+    renderExecutiveSummary(strings, ord('section-01'), analysis, resolvedFindings, manifest),
     renderLegalExposure(
       strings,
       ord('section-02'),

@@ -164,6 +164,16 @@ export interface ReportStrings {
     /** Same case, but no legal-relevant theme is among those rendered at
      *  all (no {legalRank} to point to). */
     topPriorityIsNotLegalNoPointer: string;
+    /** report-feedback-la-corniche.md item 0.4: template-bound, not
+     *  written by the LLM - the writing pass used to be asked to cite
+     *  siteStats figures verbatim in executiveSummary, which drifted from
+     *  the report's actual bound counts whenever something at render time
+     *  (the LCEN manual-resolution removal, most concretely) changed the
+     *  finding set after the writing pass had already run. Template:
+     *  {actionable} (critical + serious count), {critical}, {serious},
+     *  {total} (distinct findings). Rendered before the model's now
+     *  purely qualitative executiveSummary prose. */
+    summaryCountsTemplate: string;
   };
   /** Promotes methodology's own legal-citation paragraph (rendered via
    *  the exported renderLegalCitationParagraph) to its own page for

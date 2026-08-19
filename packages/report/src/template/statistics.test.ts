@@ -107,4 +107,34 @@ describe('item 39: hasBelowThresholdRenderGap', () => {
     const stats = computeStatistics([], buildManifest([2]));
     expect(stats.hasBelowThresholdRenderGap).toBe(false);
   });
+
+  // report-feedback-la-corniche.md item 0.5 [REGRESSION]: a real report
+  // measured a 62% gap on one page (well above the emission threshold,
+  // so a genuine rendering-category finding exists) and a below-threshold
+  // gap on another page, and the footnote still fired, printing "la
+  // catégorie Rendu affiche 0 constat" directly under a tile reading "1".
+  it('is false when a rendering finding already exists, even if a different page also has a below-threshold gap', () => {
+    const renderingFinding: Finding = {
+      auditId: 'a1',
+      schemaVersion: 1,
+      source: 'renderdiff',
+      findingId: 'f1',
+      ruleId: 'text-missing-from-raw-html',
+      category: 'rendering',
+      severity: 'serious',
+      wcagCriteria: [],
+      title: 'Content invisible to a non-JavaScript crawler',
+      description: 'description',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: 'dk-1',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+    const stats = computeStatistics([renderingFinding], buildManifest([62, 13]));
+    expect(stats.categoryCounts.rendering).toBe(1);
+    expect(stats.hasBelowThresholdRenderGap).toBe(false);
+  });
 });
