@@ -38,12 +38,17 @@
     margin: 0 18mm 0 0;
   }
 
+  /* item P4 (La Corniche pass): text-transform: uppercase used to apply
+     to this whole margin-box string, which is "{label} · {siteUrl}" -
+     uppercasing a URL reads oddly and is typographically wrong for a
+     URL. Removed here; the label half is pre-uppercased in the source
+     string instead (cover.ts), so only that part is ever shouted, not
+     the URL that follows it. */
   @bottom-center {
     content: string(footer-text);
     font-family: "Inter", system-ui, sans-serif;
     font-size: 9px;
     letter-spacing: 0.02em;
-    text-transform: uppercase;
     color: #75798c;
     margin: 0;
   }
@@ -190,7 +195,6 @@ html {
    Real audits overflow, so every atomic block declares itself atomic. */
 
 .card,
-.appendix-group,
 .render-card,
 .theme-card,
 .glossary-entry,
@@ -206,8 +210,18 @@ html {
    Applied to every .section-head, including one that starts at the top
    of a fresh page: the extra top space there reads as intentional margin,
    not a bug, the same way a printed page never starts its first heading
-   flush against the paper edge. */
-.section-head {
+   flush against the paper edge.
+
+   Excluded for .sheet-standalone (the TOC, the printable checklist, the
+   findings appendix): those sections already force break-before: page
+   (see .sheet-standalone above), so they never share a page with a
+   previous section's tail and never needed this cushion in the first
+   place - confirmed the hard way against a real report
+   (sas-fernande.fr): applying it there put the findings appendix's own
+   .section-head on the losing side of Paged.js's "Layout repeated"
+   infinite-loop guard (pdf.ts's own detection caught it, no broken PDF
+   shipped, but generation failed outright). */
+.sheet:not(.sheet-standalone) .section-head {
   margin-top: var(--space-8);
 }
 

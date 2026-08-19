@@ -106,9 +106,3 @@ export function groupAppendix(findings: readonly Finding[]): RuleGroup[] {
     (a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] || b.totalOccurrences - a.totalOccurrences,
   );
 }
-
-/** group.findings.length <= 6 keeps a rule-group on one page (`.keep`);
- *  above that, letting it break across pages with the header row
- *  repeating is the better outcome - a `.keep` group with fourteen rows
- *  blanks half a page instead. See docs/report-v2-refactor.md 3.2. */
-export const APPENDIX_GROUP_KEEP_THRESHOLD = 6;

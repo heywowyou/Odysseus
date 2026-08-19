@@ -149,6 +149,12 @@ export interface ReportStrings {
      *  {serious}, {seriousWord} - the word params exist because item 0.5
      *  shipped "1 constats sérieux" with no singular/plural branch. */
     riskBasisTemplate: string;
+    /** item P4 (La Corniche pass, raised across three feedback passes):
+     *  states plainly that overallRisk is a holistic judgment (severity
+     *  mix and reach), not a numeric cutoff - there is no fixed threshold
+     *  to print, since none exists in how the level is actually decided
+     *  (the structure pass's own model judgment, structure-prompt.ts). */
+    riskScaleBasisNote: string;
     criticalFindingSingular: string;
     criticalFindingPlural: string;
     seriousFindingSingular: string;

@@ -538,7 +538,8 @@ describe('item 3.11: the crawl cap is explained when it actually bound', () => {
     const manifest = await loadSasFernandeManifest();
     const capped = { ...manifest, crawl: { ...manifest.crawl, visitedCount: 20, maxPages: 20 } };
     const html = renderMethodology(getStrings('fr'), 11, capped, 'fr');
-    expect(html).toContain('20 pages est un plafond configuré');
+    // item P4: rephrased so the sentence no longer starts with a numeral.
+    expect(html).toContain('Le plafond configuré pour cet audit est de 20 pages');
   });
 
   it('says nothing about the cap when the whole site is smaller than it', async () => {

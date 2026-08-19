@@ -830,6 +830,16 @@ dead code. Confirmed in the regenerated PDF: annex rows read "21
 constats · 139 occurrences · 18 pages · WCAG 1.1.1" with no "jusqu'à"
 anywhere in the annex.
 
+**Follow-up regression, found and fixed the same session (P4 pass):**
+this fix's more accurate page counts made one small rule group tall
+enough to break `.appendix-group`'s `break-inside: avoid` CSS rule,
+which had no valid break point for a fragment taller than a page -
+Paged.js's own infinite-loop guard caught it and refused to generate
+sas-fernande.fr's French report rather than shipping a truncated one.
+See the P4 section's own write-up for the full root cause; fixed by
+removing `.appendix-group`/`APPENDIX_GROUP_KEEP_THRESHOLD` entirely,
+not by touching this item's actual fix.
+
 **Symptom.** Priority 1 says "Pages affectées: 18 pages sur 18". The annex group
 for the same rule says "jusqu'à 17 pages". Priority 3 says 17 pages sur 18, its
 annex group says "jusqu'à 14 pages". Both are defensible (union versus largest
@@ -1225,18 +1235,79 @@ unless it has more content in other runs.
 
 ## P4. Minor
 
+All items below **FIXED or checked, 2026-08-19**, except the positional-
+selector item (already deferred, not re-triaged, per the item's own
+note).
+
+**Real regression found and fixed during this same P4 pass, not one of
+this doc's numbered items**: the final "Verification before commit" pass
+(regenerating sas-fernande.fr and haaitza.com, per this doc's own
+checklist) found that item 1.6's fix (Session P1, union-of-pages instead
+of `Math.max`) had silently broken sas-fernande.fr's French report -
+`pdf.ts`'s existing Paged.js "Layout repeated" guard (added for items
+0.2/0.7 earlier this session) caught it and refused to generate rather
+than shipping a truncated PDF, exactly as that guard is designed to do.
+Root-caused via bisection (checking out each session commit in turn
+against the real fixture) to `.appendix-group`'s unconditional
+`break-inside: avoid` (paged.css): item 1.6's new, more accurate page
+counts happened to make one small rule group (`heading-hierarchy-skip`,
+7 findings, in-threshold) tall enough that it no longer fit any single
+page's remaining space, and `break-inside: avoid` on a fragment taller
+than a page gives Paged.js's layout algorithm no valid break point -
+this was always a latent risk in that CSS rule (the `.appendix-group`
+class only ever checked *finding count*, never *rendered height*), item
+1.6 just happened to be what tipped a real dataset over the line.
+Fixed by removing `.appendix-group` and `APPENDIX_GROUP_KEEP_THRESHOLD`
+entirely rather than patching around the specific trigger: every annex
+group now flows freely across pages regardless of size, the same way
+large groups already did, relying only on the per-row `table tbody tr {
+break-inside: avoid }` rule (safe, since one row is always small) to
+keep a single finding's own row from splitting mid-row. Confirmed
+against all three reference sites (`lacoorniche.com`, `haaitza.com`,
+`sas-fernande.fr`) regenerating cleanly, Tagged: yes on all three. The
+printable-checklist visual-regression baseline
+(`checklist-print-baseline.png`) was also re-captured a second time
+this session for an unrelated, correctly-scoped reason: the
+`.section-head` margin-top rule (item 2.1's spacing fix) was narrowed to
+exclude `.sheet-standalone` sections (the checklist page is one) once
+that turned out to *not* be the cause of this regression but was still
+worth excluding on its own merits - a standalone section always starts
+on a forced fresh page and never needed the "cushion against the
+previous section's tail" that margin exists for.
+
 - Methodology sentence starts with a numeral: "20 pages est un plafond configuré
-  pour cet audit".
-- Footer prints the URL uppercased: "HTTPS://LACOORNICHE.COM/".
+  pour cet audit". **FIXED**: `crawlCapDisclosureTemplate` rephrased to
+  "Le plafond configuré pour cet audit est de {maxPages} pages, [...]".
+- Footer prints the URL uppercased: "HTTPS://LACOORNICHE.COM/". **FIXED**:
+  root cause was `@bottom-center { text-transform: uppercase }` in
+  paged.css applying to the whole footer string ("{label} · {siteUrl}"),
+  not just the label. Removed the CSS transform; the label is now
+  pre-uppercased in the source string (`cover.ts`) instead, so only the
+  label is ever shouted, never the URL.
 - The cover risk scale Faible / Moyen / Élevé still has no stated thresholds.
-  Third pass this has been raised.
+  Third pass this has been raised. **FIXED**: `overallRisk` is a holistic
+  LLM judgment (structure pass, `structure-prompt.ts`), not a numeric
+  cutoff, so there was never a real threshold to print - stating an
+  invented one would have been worse than the original gap. A new
+  `riskScaleBasisNote` says this plainly instead: "Ce niveau reflète une
+  évaluation d'ensemble de la gravité et de la portée des constats sur le
+  site, pas un seuil numérique unique."
 - `f042`: 1 page, 77 occurrences, on the photo gallery. `f084`: 1 page, 22
   occurrences, same page. Plausible for a gallery, but these two dominate the
   `link-name` and heuristic totals and are worth a spot check against the DOM.
+  **CHECKED, confirmed accurate, no bug**: live-inspected the real gallery
+  page (`la-galerie-photos-hotel-luxe-dune-du-pilat`) via Playwright.
+  Confirmed 77 real `<a data-caption="...">` gallery-thumbnail links,
+  every one with `href="javascript:void(0)"`, empty text content, no
+  aria-label, and no child image alt text - genuinely zero accessible
+  name each, not an overcounting bug. The `data-caption` attribute holds
+  a real per-photo caption that is never exposed to assistive tech. 77
+  occurrences on one gallery page is real, not inflated.
 - Positional selectors (`img:nth-of-type(163)`) remain unactionable. Already logged
   as deferred; not re-triaged here.
 - Section 13 is titled "Suite", which is vague even before it goes missing.
-  "Prochaines étapes" reads better.
+  "Prochaines étapes" reads better. **FIXED**: `nextSteps.eyebrow` changed
+  to "Prochaines étapes" (English was already "Next steps", unaffected).
 
 ---
 

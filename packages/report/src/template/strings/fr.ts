@@ -89,6 +89,15 @@ export const fr: ReportStrings = {
     riskSmallLabel: 'Niveau de criticité des constats',
     riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
     riskBasisTemplate: 'Basé sur {critical} {criticalWord} et {serious} {seriousWord}',
+    // item P4 (La Corniche pass, raised across three passes without a
+    // fix): the scale had no stated basis for what separates one level
+    // from the next. overallRisk is a holistic judgment from the
+    // structure pass (severity mix and reach across the site), not a
+    // single numeric cutoff - stated honestly as that, rather than
+    // inventing specific thresholds that don't actually exist in how the
+    // level is decided.
+    riskScaleBasisNote:
+      "Ce niveau reflète une évaluation d'ensemble de la gravité et de la portée des constats sur le site, pas un seuil numérique unique.",
     criticalFindingSingular: 'constat critique',
     criticalFindingPlural: 'constats critiques',
     seriousFindingSingular: 'constat sérieux',
@@ -429,7 +438,10 @@ export const fr: ReportStrings = {
     ],
   },
   nextSteps: {
-    eyebrow: 'Suite',
+    // item P4 (La Corniche pass): "Suite" as the section eyebrow read as
+    // vague even before the section briefly went missing (item 0.2) -
+    // matches the section's own heading below now.
+    eyebrow: 'Prochaines étapes',
     heading: 'Prochaines étapes & contact',
     questionTitle: 'Une question ?',
     questionBodyTemplate:
@@ -553,8 +565,10 @@ export const fr: ReportStrings = {
       "{count} pages ont été exclues de ce scan car elles redirigent vers un réseau social tiers, selon la liste d'exclusion par défaut d'Odysseus.",
     socialExclusionDisclosureSingularTemplate:
       "1 page a été exclue de ce scan car elle redirige vers un réseau social tiers, selon la liste d'exclusion par défaut d'Odysseus.",
+    // item P4 (La Corniche pass): rephrased so the sentence doesn't start
+    // with a numeral, plain French style.
     crawlCapDisclosureTemplate:
-      "{maxPages} pages est un plafond configuré pour cet audit, pas la totalité du site : le site peut compter des pages supplémentaires non analysées.",
+      "Le plafond configuré pour cet audit est de {maxPages} pages, pas la totalité du site : le site peut compter des pages supplémentaires non analysées.",
     sirenSourceResolvedTemplate: 'Le numéro SIREN a été confirmé comme affiché sur cette page du site : {url}.',
   },
   footer: {

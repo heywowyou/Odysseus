@@ -76,6 +76,8 @@ export const en: ReportStrings = {
     riskSmallLabel: 'Technical findings severity',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     riskBasisTemplate: 'Based on {critical} {criticalWord} and {serious} {seriousWord}',
+    riskScaleBasisNote:
+      'This level reflects a holistic assessment of the severity and reach of findings across the site, not a single numeric threshold.',
     criticalFindingSingular: 'critical finding',
     criticalFindingPlural: 'critical findings',
     seriousFindingSingular: 'serious finding',

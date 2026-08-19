@@ -6,7 +6,7 @@ import { escapeHtml, fillTemplate, formatNumber, pluralize, renderSheetHeader, s
 import { renderSeverityBadge } from '../severity-badge.js';
 import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
-import { groupAppendix, APPENDIX_GROUP_KEEP_THRESHOLD, type RuleGroup } from '../appendix-grouping.js';
+import { groupAppendix, type RuleGroup } from '../appendix-grouping.js';
 import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 
@@ -185,13 +185,25 @@ function renderRuleGroup(
   const obsTag = isFullyDiverted
     ? `<span class="obs-tag" style="font-size:11px;opacity:0.55">${escapeHtml(a.observationsCrossRefLabel)}</span>`
     : '';
-  // paged.css's .appendix-group class carries an unconditional
-  // break-inside: avoid, correct for a small group but wrong for a large
-  // one (a 40-row group forced atomic would blank most of a page - see
-  // appendix-grouping.ts's own APPENDIX_GROUP_KEEP_THRESHOLD comment).
-  // Only groups at or under that threshold get the class; larger ones use
-  // a plain wrapper and are allowed to flow across the page break.
-  const wrapperClass = group.findings.length <= APPENDIX_GROUP_KEEP_THRESHOLD ? 'appendix-group' : '';
+  // item 1.6 follow-up (La Corniche pass): a group here used to get the
+  // `.appendix-group` class (paged.css, break-inside: avoid) whenever it
+  // was at or under 6 findings (the removed APPENDIX_GROUP_KEEP_THRESHOLD
+  // constant), on the reasoning that forcing a *large* group atomic would
+  // blank most of a page. That reasoning didn't cover the actual failure
+  // mode: a *small* group (well under the threshold) can still be taller
+  // than one full
+  // page's remaining space once long selectors and multi-page URL lists
+  // are accounted for, and break-inside: avoid on a fragment taller than
+  // a page gives Paged.js's layout algorithm no valid break point at all
+  // - confirmed directly against a real report (sas-fernande.fr): it hit
+  // Paged.js's own "Layout repeated" infinite-loop guard and failed
+  // generation outright once item 1.6's page-count text change made one
+  // small group just tall enough to cross that line. Every group now
+  // flows freely, same as large groups already did (the class and its
+  // CSS rule are removed, not just conditionally withheld); the per-row
+  // `table tbody tr { break-inside: avoid }` rule (paged.css) still keeps
+  // any single finding's own row from splitting mid-row, which is the
+  // only atomicity guarantee that was ever actually safe to make.
 
   // item 2.4 (La Corniche pass): the severity badge and title used to be
   // two independent flex items in this row's flex-wrap:wrap layout, which
@@ -203,7 +215,7 @@ function renderRuleGroup(
   // text-wrapping keep the badge adjacent to the title's first line -
   // only the title's own overflow text wraps, not the badge.
   return `
-    <div class="${wrapperClass}" style="margin-bottom:var(--space-4)">
+    <div style="margin-bottom:var(--space-4)">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
         <span style="display:inline">
           ${renderSeverityBadge(strings, group.severity)}

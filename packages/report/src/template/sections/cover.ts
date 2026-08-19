@@ -64,6 +64,7 @@ function renderRiskBadge(strings: ReportStrings, analysis: StoredAnalysis, findi
     <div>
       <div style="display:inline-flex;align-items:center;gap:4px">${scale}</div>
       <div style="font-size:11px;opacity:0.55;margin-top:6px">${escapeHtml(basisNote)}</div>
+      <div style="font-size:10px;opacity:0.4;margin-top:2px">${escapeHtml(strings.cover.riskScaleBasisNote)}</div>
     </div>
   `;
 }
@@ -120,7 +121,7 @@ export function renderCover(
 
   return sheet(
     `
-    <div class="footer-source">${escapeHtml(strings.footer.confidentialityLabel)} &middot; ${escapeHtml(manifest.siteUrl)}</div>
+    <div class="footer-source">${escapeHtml(strings.footer.confidentialityLabel.toUpperCase())} &middot; ${escapeHtml(manifest.siteUrl)}</div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-4)">
       <div style="font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(strings.cover.kicker)}</div>
       <h1 style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(nomCommercial ?? strings.cover.reportTitle)}</h1>
