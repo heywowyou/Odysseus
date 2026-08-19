@@ -97,8 +97,34 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
 
     expect(totalEligible).toBe(4);
     expect(pages).toHaveLength(3);
-    // Sorted by missingPercent descending, no homepage tie-break.
-    expect(pages.map((p) => p.missingPercent)).toEqual([35, 30, 25]);
+    // item 1.9: the homepage leads (its 20% ranks it last by gap size
+    // alone, but the homepage tie-break below puts it first regardless),
+    // then the remaining two slots go to the next-worst pages by gap
+    // (35, 30), dropping the third (25).
+    expect(pages.map((p) => p.missingPercent)).toEqual([20, 35, 30]);
+    expect(pages[0]?.pageUrl).toBe(manifest.crawl.startUrl);
+  });
+
+  // report-feedback-la-corniche.md item 1.9: a real report led this
+  // section with the site's own /plan-de-site-*/ page - the least
+  // commercially relevant page it visited - above the homepage, purely
+  // because its gap happened to be a few points wider. Full page-
+  // commercial-value weighting is deferred; promoting the homepage
+  // specifically is the one generic, already-available signal (no new
+  // heuristic) that directly fixes "the sitemap page is never allowed to
+  // outrank the homepage as the lead example".
+  it('item 1.9: the homepage leads even when a non-homepage page has a strictly larger gap', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const homepagePageDir = manifest.pages.find((p) => p.url === manifest.crawl.startUrl)?.pageDir;
+    const otherPageDir = manifest.pages.find((p) => p.pageDir !== undefined && p.pageDir !== homepagePageDir)?.pageDir;
+
+    let inflated = inflateMissingPercent(manifest, homepagePageDir!, 25);
+    inflated = inflateMissingPercent(inflated, otherPageDir!, 75);
+
+    const { pages } = resolveRenderDiffEvidence(inflated, []);
+
+    expect(pages[0]?.pageUrl).toBe(manifest.crawl.startUrl);
+    expect(pages[0]?.missingPercent).toBe(25);
   });
 
   it('reads rawTextLength/renderedTextLength/selector from the matching text-missing-from-raw-html finding (B17)', async () => {
@@ -149,28 +175,29 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
 
   it('ranks by absolute characters missing, not by missingPercent, when both pages have a backing finding (B6)', async () => {
     const manifest = await loadSasFernandeManifest();
+    // item 1.9 added a homepage tie-break ahead of this ranking (its own
+    // test above), so this case now deliberately uses two non-homepage
+    // pages to keep isolating the B6 char-ranking rule on its own.
     const homepagePageDir = manifest.pages.find((p) => p.url === manifest.crawl.startUrl)?.pageDir;
-    const otherPageDir = manifest.pages.find((p) => p.pageDir !== undefined && p.pageDir !== homepagePageDir)?.pageDir;
+    const nonHomepageDirs = manifest.pages.filter((p) => p.pageDir !== undefined && p.pageDir !== homepagePageDir);
+    const smallGapPageDir = nonHomepageDirs[0]!.pageDir!;
+    const bigGapPageDir = nonHomepageDirs[1]!.pageDir!;
 
-    // Homepage: higher missingPercent (30%) but a smaller absolute gap.
-    // Other page: lower missingPercent (20%) but a much larger absolute
-    // gap (4,000 chars vs 300). The 4,000-char page must rank first.
-    let manifestWithGaps = inflateMissingPercent(manifest, homepagePageDir!, 30);
-    manifestWithGaps = inflateMissingPercent(manifestWithGaps, otherPageDir!, 20);
+    // Small-gap page: higher missingPercent (30%) but a smaller absolute
+    // gap. Big-gap page: lower missingPercent (20%) but a much larger
+    // absolute gap (4,000 chars vs 300). The 4,000-char page must rank
+    // first.
+    let manifestWithGaps = inflateMissingPercent(manifest, smallGapPageDir, 30);
+    manifestWithGaps = inflateMissingPercent(manifestWithGaps, bigGapPageDir, 20);
 
     const findings = [
-      buildRenderDiffFinding(manifest.crawl.startUrl, 700, 1000, '.thin'),
-      buildRenderDiffFinding(
-        manifest.pages.find((p) => p.pageDir === otherPageDir)!.url,
-        1000,
-        5000,
-        '.big-gap',
-      ),
+      buildRenderDiffFinding(manifest.pages.find((p) => p.pageDir === smallGapPageDir)!.url, 700, 1000, '.thin'),
+      buildRenderDiffFinding(manifest.pages.find((p) => p.pageDir === bigGapPageDir)!.url, 1000, 5000, '.big-gap'),
     ];
 
     const { pages } = resolveRenderDiffEvidence(manifestWithGaps, findings);
 
-    expect(pages[0]?.pageUrl).toBe(manifest.pages.find((p) => p.pageDir === otherPageDir)!.url);
+    expect(pages[0]?.pageUrl).toBe(manifest.pages.find((p) => p.pageDir === bigGapPageDir)!.url);
     expect(pages[0]?.missingPercent).toBe(20);
   });
 });

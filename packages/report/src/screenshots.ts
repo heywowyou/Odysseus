@@ -99,12 +99,19 @@ function evidenceRankKey(
 }
 
 /** Doc §3: "3 worst pages by missingPct," now ranked by absolute
- *  characters missing when known (B6) rather than by raw missingPercent -
- *  no homepage tie-break (unlike the old screenshot-embedding version,
- *  which always led with the homepage: that made sense when a healthy
- *  homepage screenshot was still worth showing as a baseline, but a bar
- *  chart has nothing to show for a 0%-missing page, so there is no reason
- *  to force it to the front here).
+ *  characters missing when known (B6) rather than by raw missingPercent.
+ *
+ *  item 1.9 [REGRESSION reasoning revised]: the old screenshot-embedding
+ *  version always led with the homepage (a healthy homepage screenshot
+ *  was worth showing as a baseline); B6 dropped that tie-break on the
+ *  reasoning that a bar chart has nothing to show for a 0%-missing page.
+ *  That reasoning does not hold once a page is eligible at all (gap
+ *  above the inclusion threshold, per definition): a real report led
+ *  this section with its own sitemap-listing page, the least
+ *  commercially relevant page it visited, ahead of a homepage with a
+ *  genuine 62% gap, purely because the sitemap page's gap was a few
+ *  points wider. The homepage tie-break is back, scoped to only fire
+ *  when the homepage actually clears the eligibility threshold below.
  *
  *  Wrapper and legal-noindex pages are excluded before ranking (B6): the
  *  render-evidence section used to rank them highest, since a third-party
@@ -131,6 +138,22 @@ export function resolveRenderDiffEvidence(
     .filter((page) => (page.missingPercent ?? 0) >= EVIDENCE_INCLUSION_THRESHOLD_PERCENT)
     .map((page) => ({ page, detail: renderDiffDetailsForPage(findings, page.pageUrl) }))
     .sort((a, b) => {
+      // item 1.9: a real report led this section with the site's own
+      // /plan-de-site-*/ (sitemap-listing) page - the least commercially
+      // relevant page it visited - above the homepage and the rooms
+      // pages, purely because its gap happened to be a few points wider.
+      // Full page-commercial-value weighting is deferred (needs a real
+      // model, tracked separately); promoting the homepage specifically
+      // is not a guess - manifest.crawl.startUrl is the one page this
+      // tool can identify as commercially central for every audit,
+      // regardless of business type, with no new heuristic. This does
+      // not generally solve "rank by relevance," only "the homepage
+      // itself, when eligible, is never bumped behind a lower-relevance
+      // page by gap size alone."
+      const aHomepage = a.page.isHomepage ? 1 : 0;
+      const bHomepage = b.page.isHomepage ? 1 : 0;
+      if (aHomepage !== bHomepage) return bHomepage - aHomepage;
+
       const [aTier, aValue] = evidenceRankKey(a.page.missingPercent ?? 0, a.detail);
       const [bTier, bValue] = evidenceRankKey(b.page.missingPercent ?? 0, b.detail);
       return bTier - aTier || bValue - aValue;
