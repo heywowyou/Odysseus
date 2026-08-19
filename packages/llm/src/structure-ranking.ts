@@ -173,18 +173,36 @@ const EFFORT_IMPACT_WEIGHT: Record<'low' | 'medium' | 'high', number> = { low: 1
  *  rule to anchor against, so it never fired.
  *
  *  This is the general case the floor rule is a special case of: a full
- *  re-sort by quick-win-first, then descending impact-to-effort ratio,
- *  with the model's own priorityRank kept only as the final tiebreaker so
- *  themes the ratio can't distinguish keep the model's relative order
- *  rather than an arbitrary one. Run last in applyStructureRankingRules
- *  so it is the definitive order, superseding (not fighting) the more
- *  narrowly-scoped floor rules that ran before it. */
+ *  re-sort by descending impact-to-effort ratio, with the model's own
+ *  priorityRank kept only as the final tiebreaker so themes the ratio
+ *  can't distinguish keep the model's relative order rather than an
+ *  arbitrary one. Run last in applyStructureRankingRules so it is the
+ *  definitive order, superseding (not fighting) the more narrowly-scoped
+ *  floor rules that ran before it.
+ *
+ *  report-feedback-la-corniche.md item 0.8 [REGRESSION]: this used to
+ *  bucket every quick-win theme (isQuickWinTheme, low effort + non-low
+ *  impact) ahead of every non-quick-win theme as an absolute first sort
+ *  key, before ever looking at the ratio - not merely a tiebreak among
+ *  close calls, a hard partition. A real report had `image-alt` (25
+ *  Critique findings, 166 occurrences, all 18 pages, impact 'high',
+ *  effort 'medium', ratio 1.5) and `link-name` (Sérieux, 282
+ *  occurrences, all 18 pages, same shape) sorted below every trivial
+ *  low-effort fix in the audit, including a single-occurrence one,
+ *  purely because they were not quick wins - contradicting the
+ *  occurrence-weighting promotion applyStructureRankingRules had already
+ *  given them earlier in the same pipeline. The bucket turns out to have
+ *  been redundant for its own original purpose the whole time: both
+ *  existing tests below (the "ranks the quick win first" and "orders
+ *  non-quick-win themes by ratio" cases) already pass from the ratio
+ *  computation alone - a low-effort, non-low-impact theme's ratio is
+ *  always at least 2 (impact >= 'medium' over effort 'low'), which
+ *  already outranks a 'medium'-impact/'medium'-effort theme's ratio of 1
+ *  without needing a separate absolute veto. Deleted the bucket rather
+ *  than tune it; nothing in this file's own test suite depended on it
+ *  doing anything the ratio didn't already do. */
 export function enforceImpactEffortOrdering(themes: readonly StructureThemeWithKey[]): StructureThemeWithKey[] {
   const sorted = [...themes].sort((a, b) => {
-    const aQuickWin = isQuickWinTheme(a) ? 0 : 1;
-    const bQuickWin = isQuickWinTheme(b) ? 0 : 1;
-    if (aQuickWin !== bQuickWin) return aQuickWin - bQuickWin;
-
     const aRatio = EFFORT_IMPACT_WEIGHT[a.impact] / EFFORT_IMPACT_WEIGHT[a.effort];
     const bRatio = EFFORT_IMPACT_WEIGHT[b.impact] / EFFORT_IMPACT_WEIGHT[b.effort];
     if (aRatio !== bRatio) return bRatio - aRatio;
@@ -228,16 +246,35 @@ export function enforceQuickWinFloor(themes: readonly StructureThemeWithKey[]): 
  *  docs/report-v2-refactor.md 4.2 plus B9's quick-win floor. Enforced in
  *  code after the structure pass returns, not asked of the model, since a
  *  model cannot be trusted to remember a numeric threshold rule across
- *  every response. */
+ *  every response.
+ *
+ *  report-feedback-la-corniche.md item 0.8 [REGRESSION]: applyOccurrenceWeighting
+ *  used to run before enforceImpactEffortOrdering, which is documented as
+ *  (and is) a full re-sort - it uses each theme's priorityRank only as a
+ *  tiebreak for an *exactly equal* impact/effort ratio, so any promotion
+ *  applyOccurrenceWeighting made was discarded the instant the promoted
+ *  theme's ratio differed at all from its new neighbours', which is the
+ *  common case (ratios are quantized to a handful of values from
+ *  EFFORT_IMPACT_WEIGHT). A real report's `image-alt` theme (25 Critique
+ *  findings, 166 occurrences, all 18 pages) got promoted into the top
+ *  half by occurrence, then immediately sorted back down to rank 8 of 12
+ *  by enforceImpactEffortOrdering, because its 'medium' effort gives it a
+ *  ratio of 1.5 against a run of trivial 'low'-effort fixes at ratio 2.0
+ *  or better - a large, severe, site-wide finding family losing to a
+ *  single-occurrence fix purely because "effort" is a coarse three-value
+ *  label with no reach signal in it at all. Occurrence weighting now runs
+ *  last, so a theme whose reach the ratio-based sort cannot see still
+ *  gets its floor enforced on the sort's actual final output rather than
+ *  on an intermediate order that gets thrown away. */
 export function applyStructureRankingRules(
   themes: readonly StructureThemeWithKey[],
   findings: readonly Finding[],
   manifest: AuditManifest,
 ): StructureThemeWithKey[] {
   const floored = enforceSiteWideAccessibilityFloor(themes, findings, manifest);
-  const weighted = applyOccurrenceWeighting(floored, findings);
-  const quickWinFloored = enforceQuickWinFloor(weighted);
-  const ordered = enforceImpactEffortOrdering(quickWinFloored);
-  logContainmentWarnings(ordered, findings, manifest);
-  return ordered;
+  const ordered = enforceImpactEffortOrdering(floored);
+  const quickWinFloored = enforceQuickWinFloor(ordered);
+  const weighted = applyOccurrenceWeighting(quickWinFloored, findings);
+  logContainmentWarnings(weighted, findings, manifest);
+  return weighted;
 }

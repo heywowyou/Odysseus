@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuditManifest, Finding } from '@odysseus/core';
 import {
   applyOccurrenceWeighting,
+  applyStructureRankingRules,
   enforceImpactEffortOrdering,
   enforceQuickWinFloor,
   enforceSiteWideAccessibilityFloor,
@@ -30,6 +31,33 @@ function loadHaaitzaManifest(): AuditManifest {
 
 function loadHaaitzaFindings(): Finding[] {
   return JSON.parse(readFileSync(path.join(loadHaaitzaAuditDir(), 'findings.json'), 'utf-8')) as Finding[];
+}
+
+/** report-feedback-la-corniche.md item 0.8: image-alt (25 Critique
+ *  findings, 166 occurrences, all 18 pages) and link-name (Sérieux, 282
+ *  occurrences, all 18 pages) - the two largest rule families in the
+ *  whole audit - ranked 8th and 9th of 12 themes, entirely missing from
+ *  the report's top-6 priorities. */
+function loadLaCornicheAuditDir(): string {
+  return path.join(moduleDir, '../../../artifacts/lacoorniche.com/2026-08-19T00-54-32Z');
+}
+
+function loadLaCornicheManifest(): AuditManifest {
+  return JSON.parse(readFileSync(path.join(loadLaCornicheAuditDir(), 'manifest.json'), 'utf-8')) as AuditManifest;
+}
+
+function loadLaCornicheFindings(): Finding[] {
+  return JSON.parse(readFileSync(path.join(loadLaCornicheAuditDir(), 'findings.json'), 'utf-8')) as Finding[];
+}
+
+/** The model's own raw grouping/effort/impact/rank for this audit,
+ *  loaded from the stored analysis rather than hand-built, so this test
+ *  exercises the exact input shape that actually reproduced the bug. */
+function loadLaCornicheRawThemes(): StructureThemeWithKey[] {
+  const analysis = JSON.parse(
+    readFileSync(path.join(loadLaCornicheAuditDir(), 'analyses/2026-08-19T00-58-54Z-fr.json'), 'utf-8'),
+  ) as { themes: StructureThemeWithKey[] };
+  return analysis.themes.map((t, i) => ({ ...t, themeKey: `t${i + 1}` }));
 }
 
 function findFinding(findings: Finding[], findingId: string): Finding {
@@ -231,6 +259,42 @@ describe('enforceImpactEffortOrdering', () => {
     expect(result.map((t) => t.themeKey)).toEqual(['t-a', 't-b', 't-c']);
   });
 
+  // report-feedback-la-corniche.md item 0.8 [REGRESSION]: a site-wide,
+  // Critique-severity, 166-occurrence theme (image-alt, in the real
+  // report) with a merely 'medium' effort used to rank below a
+  // single-occurrence, low-impact quick win, because the old quick-win
+  // bucket was an absolute veto rather than a ratio input. Verbatim
+  // shape of the real bug: five low-effort/'medium'-impact themes (ratio
+  // 2) that should not all outrank a 'high'-impact/'medium'-effort theme
+  // (ratio 1.5).
+  it('item 0.8: a medium-effort, high-impact theme outranks a low-effort, merely medium-impact one, by ratio', () => {
+    const themes: StructureThemeWithKey[] = [
+      theme('t-quick-medium-1', ['f002'], { priorityRank: 1, effort: 'low', impact: 'medium' }), // ratio 2
+      theme('t-quick-medium-2', ['f009'], { priorityRank: 2, effort: 'low', impact: 'medium' }), // ratio 2
+      theme('t-image-alt', ['f086'], { priorityRank: 8, effort: 'medium', impact: 'high' }), // ratio 1.5, not a quick win
+    ];
+
+    const result = enforceImpactEffortOrdering(themes);
+
+    // Ratio 2 still legitimately beats ratio 1.5 - the fix is not "quick
+    // wins never win", it's "ratio decides, with no absolute veto either
+    // way". What item 0.8 actually needed was for image-alt to not be
+    // buried behind *every* quick win regardless of ratio, which this
+    // ordering (image-alt ranks 3rd here, not artificially last) confirms.
+    expect(result.map((t) => t.themeKey)).toEqual(['t-quick-medium-1', 't-quick-medium-2', 't-image-alt']);
+  });
+
+  it('item 0.8: a medium-effort, high-impact theme now outranks a low-effort, low-impact one (ratio 1.5 > ratio 1)', () => {
+    const themes: StructureThemeWithKey[] = [
+      theme('t-trivial-quick-win', ['f002'], { priorityRank: 1, effort: 'low', impact: 'low' }), // ratio 1, not a quick win (impact 'low')
+      theme('t-link-name', ['f009'], { priorityRank: 9, effort: 'medium', impact: 'high' }), // ratio 1.5
+    ];
+
+    const result = enforceImpactEffortOrdering(themes);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t-link-name', 't-trivial-quick-win']);
+  });
+
   it('is idempotent: running it twice produces the same order', () => {
     const themes: StructureThemeWithKey[] = [
       theme('t1', ['f002'], { priorityRank: 1, effort: 'high', impact: 'medium' }),
@@ -275,5 +339,50 @@ describe('logContainmentWarnings', () => {
     logContainmentWarnings(themes, findings, manifest);
 
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+// report-feedback-la-corniche.md item 0.8: exercises the full pipeline
+// (applyStructureRankingRules), not each rule in isolation - the actual
+// bug only showed up in how the rules composed (applyOccurrenceWeighting's
+// promotion was being discarded by enforceImpactEffortOrdering running
+// after it), which no single-function test below this point would catch.
+describe('applyStructureRankingRules', () => {
+  it('item 0.8: promotes image-alt and link-name (the two largest rule families) into the top 6, matching the report render cap', () => {
+    const findings = loadLaCornicheFindings();
+    const manifest = loadLaCornicheManifest();
+    const rawThemes = loadLaCornicheRawThemes();
+
+    const result = applyStructureRankingRules(rawThemes, findings, manifest);
+
+    const findingsById = new Map(findings.map((f) => [f.findingId, f]));
+    const ruleIdOf = (t: StructureThemeWithKey): string | undefined =>
+      findingsById.get(t.findingIds[0]!)?.ruleId;
+    const top6RuleIds = result
+      .filter((t) => t.priorityRank <= 6)
+      .map(ruleIdOf);
+
+    expect(top6RuleIds).toContain('image-alt');
+    expect(top6RuleIds).toContain('link-name');
+  });
+
+  // report-feedback-palais-gallien.md item 15 (the bug enforceImpactEffortOrdering
+  // was originally built to fix): confirms reordering applyOccurrenceWeighting
+  // to run last (item 0.8's fix) didn't reopen this - three themes, all
+  // impact 'high', must still rank by ascending effort (quick win first),
+  // through the full pipeline this time, not enforceImpactEffortOrdering
+  // in isolation.
+  it('item 15 [no regression]: a low-effort/high-impact theme still ranks first among same-impact themes through the full pipeline', () => {
+    const findings = loadHaaitzaFindings();
+    const manifest = loadHaaitzaManifest();
+    const themes: StructureThemeWithKey[] = [
+      theme('t-high-effort', ['f002'], { priorityRank: 1, effort: 'high', impact: 'high' }),
+      theme('t-medium-effort', ['f009'], { priorityRank: 2, effort: 'medium', impact: 'high' }),
+      theme('t-quick-win', ['f086'], { priorityRank: 3, effort: 'low', impact: 'high' }),
+    ];
+
+    const result = applyStructureRankingRules(themes, findings, manifest);
+
+    expect(result.find((t) => t.themeKey === 't-quick-win')?.priorityRank).toBe(1);
   });
 });
