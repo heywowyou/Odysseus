@@ -33,12 +33,26 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
 // stops any header label from wrapping regardless of column width; the
 // label itself was also reworded (strings/fr.ts) to read unambiguously as
 // one phrase even where it does have room to wrap.
-function headCell(label: string): string {
-  return `<div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.02em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider);white-space:nowrap">${escapeHtml(label)}</div>`;
+//
+// Real <table>/<thead>/<tbody> markup, not a CSS grid of divs - same
+// pagedjs-fragility fix core-web-vitals-table.ts already applied (see its
+// own item 2.2 comment). This section's rows used to be `.row-atomic`
+// divs (`display: contents; break-inside: avoid`), and Paged.js's own
+// fragmentation engine does not reliably handle `display: contents`
+// content: a real La Corniche report (report-feedback-la-corniche.md
+// items 0.2/0.7) hit Paged.js's "Layout repeated" infinite-loop guard
+// pointed directly at this section once the surrounding page-break math
+// shifted, silently truncating the PDF's last several pages (the GEO/
+// Rendu annex groups, the glossary, and the next-steps section all
+// vanished with no error). Real `<tr>` elements are Paged.js's
+// well-supported, standard fragmentation unit and do not carry this
+// risk.
+function headCell(label: string, width: string): string {
+  return `<th style="width:${width};padding:6px var(--space-2);font-size:10px;letter-spacing:0.02em;text-transform:uppercase;text-align:left;font-weight:400;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider);white-space:nowrap">${escapeHtml(label)}</th>`;
 }
 
 function cell(html: string, extra = ''): string {
-  return `<div style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</div>`;
+  return `<td style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</td>`;
 }
 
 /** item 25: every finding row states a page count ("9 pages") and never
@@ -74,7 +88,12 @@ function renderPageUrlList(strings: ReportStrings, language: ReportLanguage, fin
     urlsText = sortedUrls.join(', ');
   }
 
-  return `<div class="url-cell" style="grid-column:1 / -1;padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.pagesColumnLabel)} : ${escapeHtml(urlsText)}</div>`;
+  // paged.css's `.appendix-url-row { break-before: avoid }` keeps this row
+  // attached to the finding row directly above it - real <tr> siblings,
+  // unlike the old display:contents `.row-atomic` wrapper, are two
+  // independently breakable fragments by default, so this replaces that
+  // wrapper's atomicity for the one pair of rows that actually needs it.
+  return `<tr class="appendix-url-row"><td class="url-cell" colspan="4" style="padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.pagesColumnLabel)} : ${escapeHtml(urlsText)}</td></tr>`;
 }
 
 /** item 3.1's own suggested cap. */
@@ -89,13 +108,13 @@ const PAGE_URL_LIST_CAP = 5;
 function renderSubTableRow(strings: ReportStrings, language: ReportLanguage, finding: Finding, totalPagesScanned: number): string {
   const selector = finding.elements[0]?.selector ?? '';
   return `
-    <div class="row-atomic" id="annexref-${escapeHtml(finding.findingId)}">
+    <tr id="annexref-${escapeHtml(finding.findingId)}">
       ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none')}
       ${cell(formatNumber(finding.pageUrls.length, language))}
       ${cell(formatNumber(finding.occurrences, language))}
       ${cell(escapeHtml(selector), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none;opacity:0.8')}
-      ${renderPageUrlList(strings, language, finding, totalPagesScanned)}
-    </div>
+    </tr>
+    ${renderPageUrlList(strings, language, finding, totalPagesScanned)}
   `;
 }
 
@@ -148,13 +167,19 @@ function renderRuleGroup(
         ${obsTag}
         <span style="font-size:11px;opacity:0.6">${renderRuleSum(strings, language, group)}</span>
       </div>
-      <div style="display:grid;grid-template-columns:80px 90px 100px 1fr;font-size:12.5px">
-        ${headCell(a.findingIdColumnLabel)}
-        ${headCell(a.pagesColumnLabel)}
-        ${headCell(a.occurrencesColumnLabel)}
-        ${headCell(a.selectorColumnLabel)}
-        ${rows}
-      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead>
+          <tr>
+            ${headCell(a.findingIdColumnLabel, '80px')}
+            ${headCell(a.pagesColumnLabel, '90px')}
+            ${headCell(a.occurrencesColumnLabel, '100px')}
+            ${headCell(a.selectorColumnLabel, 'auto')}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
     </div>
   `;
 }
@@ -212,12 +237,21 @@ function renderCategorySection(
   // used to render right under the section h4, ahead of every finding
   // row - reading as a section-wide headline stat rather than context
   // for the one minor finding it actually supports. Rendered after the
-  // finding rows instead, at reduced size/opacity, so it reads as a
-  // footnote to what it's citing rather than a lead-in the reader hits
-  // before any actual finding.
+  // finding rows instead, so it reads as a footnote to what it's citing
+  // rather than a lead-in the reader hits before any actual finding.
+  // No wrapping opacity here: renderGeoCitationBlock's own
+  // renderReferenceStatNote output already carries opacity:0.6 (matching
+  // themes.ts's identically-styled legalRelevance note exactly, per that
+  // function's own doc comment) - an outer opacity here used to compound
+  // with it multiplicatively (0.8 * 0.6 = 0.48 effective), dropping the
+  // text below WCAG 1.4.3's 4.5:1 minimum (measured 4.25:1). Caught by
+  // paged-invariants.test.ts's axe pass once the stress fixture actually
+  // exercised a geo finding, per the standing note in CLAUDE.md trade-off
+  // 16 that this exact pairing had not been confirmed outside the real
+  // sas-fernande.fr fixture, which never took this code path.
   const citationBlock =
     category === 'geo'
-      ? `<div style="font-size:11px;opacity:0.8;margin-top:var(--space-2)">${renderGeoCitationBlock(strings, language, sector, citedStatIds)}</div>`
+      ? `<div style="margin-top:var(--space-2)">${renderGeoCitationBlock(strings, language, sector, citedStatIds)}</div>`
       : '';
 
   return `

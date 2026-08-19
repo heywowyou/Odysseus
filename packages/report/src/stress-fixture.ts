@@ -181,7 +181,7 @@ function buildRenderDiffFindings(pages: readonly ManifestPageEntry[]): Finding[]
 
 function buildOtherNonMinorFindings(count: number): Finding[] {
   const severities: Severity[] = ['critical', 'serious', 'moderate'];
-  const categories: FindingCategory[] = ['accessibility', 'seo', 'performance'];
+  const categories: FindingCategory[] = ['accessibility', 'seo', 'performance', 'geo'];
   const findings: Finding[] = [];
 
   for (let i = 0; i < count; i++) {
@@ -205,7 +205,7 @@ function buildOtherNonMinorFindings(count: number): Finding[] {
 }
 
 function buildMinorFindings(count: number): Finding[] {
-  const categories: FindingCategory[] = ['accessibility', 'seo', 'performance', 'rendering'];
+  const categories: FindingCategory[] = ['accessibility', 'seo', 'performance', 'rendering', 'geo'];
   const ruleCount = 15;
   const findings: Finding[] = [];
 

@@ -37,6 +37,23 @@ async function readPagedjsSource(): Promise<string> {
 interface PaginatedDocument {
   page: Page;
   pageCount: number;
+  /** Console error-level messages Paged.js itself logged while laying
+   *  out the document, most importantly its own "Layout repeated"
+   *  infinite-loop guard (pdf.ts's PAGEDJS_LAYOUT_REPEATED_MARKER):
+   *  when it detects it would reprocess the same fragment boundary
+   *  without making progress, it aborts and silently drops every page
+   *  after that point rather than hanging. A real client report (La
+   *  Corniche, report-feedback-la-corniche.md items 0.2/0.7) shipped
+   *  with its last several pages missing this way, with no error
+   *  surfaced anywhere - the PDF byte stream was completely well-formed,
+   *  just truncated. Neither variant of the stress fixture happened to
+   *  trigger it (confirmed: it is sensitive to a specific document
+   *  shape this generator's 29-page run does not reproduce), so this is
+   *  asserted generically against every pagination test in this file
+   *  instead of chasing one narrow synthetic repro - the same
+   *  console-error detection pdf.ts's renderPdfFromHtml now performs
+   *  before ever returning a PDF to a caller. */
+  consoleErrors: string[];
 }
 
 /** Loads html, runs the real Paged.js pipeline (same steps as pdf.ts),
@@ -47,6 +64,10 @@ interface PaginatedDocument {
 async function paginate(browser: Browser, html: string, pagedjsSource: string): Promise<PaginatedDocument> {
   const context = await browser.newContext();
   const page = await context.newPage();
+  const consoleErrors: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') consoleErrors.push(msg.text());
+  });
   await page.setContent(html, { waitUntil: 'load' });
   await page.evaluate(() => document.fonts.ready);
   await page.addScriptTag({ content: pagedjsSource });
@@ -57,7 +78,7 @@ async function paginate(browser: Browser, html: string, pagedjsSource: string): 
     const flow = await previewer.preview();
     return flow.pages.length;
   });
-  return { page, pageCount };
+  return { page, pageCount, consoleErrors };
 }
 
 async function buildStressHtml(): Promise<string> {
@@ -89,6 +110,10 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
   // what the full-audit tier's own spec already promised, not a
   // regression to compensate for; the ceiling was raised rather than the
   // content trimmed back to fit the old range.
+  it('Paged.js never hits its own layout-repeated bailout while paginating the stress fixture', () => {
+    expect(doc.consoleErrors).toEqual([]);
+  });
+
   it('invariant 7: total page count for the stress fixture stays within 18 to 32', () => {
     expect(doc.pageCount).toBeGreaterThanOrEqual(18);
     expect(doc.pageCount).toBeLessThanOrEqual(32);
@@ -314,6 +339,7 @@ describe('Paged.js invariants against doc §5\'s two empty-branch variants', () 
     });
     const doc = await paginate(browser, html, pagedjsSource);
     expect(doc.pageCount).toBeGreaterThan(0);
+    expect(doc.consoleErrors).toEqual([]);
     await doc.page.context().close();
   }, 30_000);
 
@@ -329,6 +355,7 @@ describe('Paged.js invariants against doc §5\'s two empty-branch variants', () 
     });
     const doc = await paginate(browser, html, pagedjsSource);
     expect(doc.pageCount).toBeGreaterThan(0);
+    expect(doc.consoleErrors).toEqual([]);
     await doc.page.context().close();
   }, 30_000);
 });

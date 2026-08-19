@@ -218,6 +218,18 @@ table tbody tr {
   break-inside: avoid;
 }
 
+/* findings-appendix.ts: a finding's own data row and its page-URL
+   continuation row are two separate <tr> siblings (not one atomic
+   display:contents block, see that file's own comment on why), so
+   nothing above keeps them together on the same page by default. This
+   is the replacement: never break immediately before the continuation
+   row, which in practice keeps the pair on one page without forcing the
+   whole finding to be preceded by a break the way break-inside: avoid on
+   a combined block would. */
+.appendix-url-row {
+  break-before: avoid;
+}
+
 /* A CSS grid row built from display:contents cannot be kept together by the
    engine. Rows that must not split are wrapped in .row-atomic instead. */
 .row-atomic {

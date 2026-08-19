@@ -37,6 +37,21 @@ async function readPagedjsSource(): Promise<string> {
   return cachedPagedjsSource;
 }
 
+/** Paged.js's own infinite-loop guard: when its layout algorithm detects
+ *  it is about to reprocess the same fragment boundary without making
+ *  progress, it logs this and aborts, silently dropping everything after
+ *  that point in the document rather than hanging. Confirmed against a
+ *  real client report (La Corniche, report-feedback-la-corniche.md items
+ *  0.2/0.7): the shipped PDF was missing its final ~3 pages of content
+ *  (two whole sections, plus two annex category groups) with no error
+ *  surfaced anywhere - the PDF byte stream is completely well-formed,
+ *  just truncated. Detected here rather than trusted to disappear: this
+ *  is a real Paged.js limitation (github.com/pagedjs/pagedjs's own
+ *  "Layout repeated" failure class), not something this package's own
+ *  markup/CSS can guarantee never triggers again for every future
+ *  document shape. */
+const PAGEDJS_LAYOUT_REPEATED_MARKER = 'Layout repeated';
+
 export async function renderPdfFromHtml(html: string, browser: Browser): Promise<Buffer> {
   const pagedjsSource = await readPagedjsSource();
   const context = await browser.newContext();
@@ -52,6 +67,13 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
     await page.setContent(html, { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
 
+    let pagedjsLayoutFailure: string | undefined;
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' && msg.text().includes(PAGEDJS_LAYOUT_REPEATED_MARKER)) {
+        pagedjsLayoutFailure = msg.text();
+      }
+    });
+
     await page.addScriptTag({ content: pagedjsSource });
     await page.evaluate(async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,6 +81,14 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
       const previewer = new Paged.Previewer();
       await previewer.preview();
     });
+
+    if (pagedjsLayoutFailure !== undefined) {
+      throw new Error(
+        `Report generation aborted: Paged.js hit its own layout-repeated guard and stopped ` +
+          `laying out the document early, which silently drops every page after that point. ` +
+          `Never shipped to a client. Paged.js message: "${pagedjsLayoutFailure}"`,
+      );
+    }
 
     return await page.pdf({
       printBackground: true,
