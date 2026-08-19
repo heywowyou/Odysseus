@@ -2,17 +2,13 @@ import type { AuditManifest, Finding, FindingCategory, ReportLanguage, StatSecto
 import { selectReferenceStats } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatNumber, pluralize, renderSheetHeader, sheet } from '../html-utils.js';
 import { renderSeverityBadge } from '../severity-badge.js';
 import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { groupAppendix, APPENDIX_GROUP_KEEP_THRESHOLD, type RuleGroup } from '../appendix-grouping.js';
 import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
-
-function pluralize(count: number, singular: string, plural: string): string {
-  return count === 1 ? singular : plural;
-}
 
 function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: RuleGroup): string {
   const a = strings.findingsAppendix;

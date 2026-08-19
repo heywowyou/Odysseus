@@ -46,4 +46,34 @@ describe('renderRenderDiffEvidence', () => {
     expect(html).toContain('conservent leur texte dans le HTML brut');
     expect(html).toContain("d&#39;intégration de contenu tiers font exception");
   });
+
+  // report-feedback-la-corniche.md item 3.2: the plural overflow sentence
+  // used to be reused verbatim for a count of 1 ("1 autres pages
+  // présentent"), a plural noun and verb agreeing with a singular count.
+  it('item 3.2: uses the singular overflow sentence when exactly one page overflows the 3-card cap', () => {
+    const threeCards = [12, 40, 60].map((missingPercent) => ({
+      pageUrl: `https://example.com/${missingPercent}`,
+      missingPercent,
+      rawTextLength: null,
+      renderedTextLength: null,
+      selector: '',
+    }));
+    const html = renderRenderDiffEvidence(fr, 8, 'fr', threeCards, 4);
+
+    expect(html).toContain('1 autre page présente le même écart');
+    expect(html).not.toContain('1 autres pages présentent');
+  });
+
+  it('still uses the plural overflow sentence when more than one page overflows the cap', () => {
+    const threeCards = [12, 40, 60].map((missingPercent) => ({
+      pageUrl: `https://example.com/${missingPercent}`,
+      missingPercent,
+      rawTextLength: null,
+      renderedTextLength: null,
+      selector: '',
+    }));
+    const html = renderRenderDiffEvidence(fr, 8, 'fr', threeCards, 6);
+
+    expect(html).toContain('3 autres pages présentent le même écart');
+  });
 });

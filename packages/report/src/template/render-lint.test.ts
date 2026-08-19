@@ -20,6 +20,14 @@ describe('findRenderLintViolations', () => {
     expect(findRenderLintViolations('<p>[object Object]</p>').length).toBeGreaterThan(0);
   });
 
+  // report-feedback-la-corniche.md item 3.2: a real report shipped
+  // "1 page(s) ont été exclues", a pluralisation placeholder left
+  // unresolved rather than picking a real singular/plural form.
+  it('flags an unresolved "(s)" pluralisation placeholder', () => {
+    const violations = findRenderLintViolations('<p>1 page(s) ont été exclues de ce scan.</p>');
+    expect(violations.map((v) => v.label)).toContain('unresolved pluralisation placeholder "(s)"');
+  });
+
   it('finds nothing wrong with clean, complete French copy', () => {
     expect(
       findRenderLintViolations('<p>Manquant : 12% du texte visible absent du HTML brut, sur .hero-copy.</p>'),

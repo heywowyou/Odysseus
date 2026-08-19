@@ -28,6 +28,13 @@ const FORBIDDEN_PATTERNS: readonly { label: string; pattern: RegExp }[] = [
     label: 'placeholder "?" in place of an unmeasured number',
     pattern: /\?\s*(caractères|occurrences?|constats?|pages?|%)/i,
   },
+  // item 3.2: a real report shipped "1 page(s) ont été exclues" - a
+  // pluralisation placeholder left unresolved (a French/English word
+  // followed by a literal "(s)") rather than a real singular/plural
+  // choice. A genuine English "(s)" abbreviation has no legitimate use
+  // in this report's copy, so a bare match is enough, no word-boundary
+  // allowlist needed.
+  { label: 'unresolved pluralisation placeholder "(s)"', pattern: /\(s\)/ },
 ];
 
 export interface RenderLintViolation {

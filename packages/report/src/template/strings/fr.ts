@@ -175,6 +175,8 @@ export const fr: ReportStrings = {
     missingCaptionNoSelectorTemplate: 'Manquant : {percent}% du texte visible absent du HTML brut.',
     overflowTextTemplate:
       '{count} autres pages présentent le même écart, détail dans l\'export technique.',
+    overflowTextSingularTemplate:
+      '1 autre page présente le même écart, détail dans l\'export technique.',
     positiveStatementTemplate:
       'Les pages commerciales de ce site conservent leur texte dans le HTML brut : aucun écart de rendu significatif n\'a été mesuré.',
     positiveStatementWrapperNote:
@@ -495,7 +497,9 @@ export const fr: ReportStrings = {
       "Le numéro SIREN fourni manuellement ({manualSiren}) diffère de celui publié sur le site ({extractedSiren}). Cette détermination retient le numéro fourni manuellement.",
     legalCitationPointerSentence: 'Le détail de l\'exposition légale figure dans la section « Exposition légale ».',
     socialExclusionDisclosureTemplate:
-      "{count} page(s) ont été exclues de ce scan car elles redirigent vers un réseau social tiers, selon la liste d'exclusion par défaut d'Odysseus.",
+      "{count} pages ont été exclues de ce scan car elles redirigent vers un réseau social tiers, selon la liste d'exclusion par défaut d'Odysseus.",
+    socialExclusionDisclosureSingularTemplate:
+      "1 page a été exclue de ce scan car elle redirige vers un réseau social tiers, selon la liste d'exclusion par défaut d'Odysseus.",
     crawlCapDisclosureTemplate:
       "{maxPages} pages est un plafond configuré pour cet audit, pas la totalité du site : le site peut compter des pages supplémentaires non analysées.",
     sirenSourceResolvedTemplate: 'Le numéro SIREN a été confirmé comme affiché sur cette page du site : {url}.',

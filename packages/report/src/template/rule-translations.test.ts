@@ -42,6 +42,16 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
+  // item 2.3 [REGRESSION]: frame-title rendered as raw English
+  // ("Frames must have an accessible name") in a real La Corniche
+  // report - this fixture is exactly what would have caught it, had it
+  // been added when the site was first scanned.
+  it('every ruleId in the real La Corniche fixture is covered', () => {
+    const findings = loadFindings('../../../../artifacts/lacoorniche.com/2026-08-19T00-54-32Z');
+    const missing = [...new Set(findings.map((f) => f.ruleId))].filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
+  });
+
   it('every entry has both a non-empty label and a non-empty gloss', () => {
     for (const [ruleId, translation] of Object.entries(RULE_TRANSLATIONS_FR)) {
       expect(translation.label.length, `${ruleId} has an empty label`).toBeGreaterThan(0);

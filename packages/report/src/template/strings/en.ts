@@ -171,6 +171,8 @@ export const en: ReportStrings = {
     missingCaptionNoSelectorTemplate: 'Missing: {percent}% of visible text absent from the raw HTML.',
     overflowTextTemplate:
       '{count} more pages show the same gap, detail in the technical export.',
+    overflowTextSingularTemplate:
+      '1 more page shows the same gap, detail in the technical export.',
     positiveStatementTemplate:
       "This site's commercial pages keep their text in the raw HTML: no meaningful render gap was measured.",
     positiveStatementWrapperNote:
@@ -480,7 +482,9 @@ export const en: ReportStrings = {
       'The manually supplied SIREN ({manualSiren}) differs from the one published on the site ({extractedSiren}). This determination uses the manually supplied number.',
     legalCitationPointerSentence: 'See the "Legal exposure" section for the detail of this determination.',
     socialExclusionDisclosureTemplate:
-      '{count} page(s) were excluded from this scan as links to a third-party social platform, per Odysseus\'s default exclusion list.',
+      '{count} pages were excluded from this scan as links to a third-party social platform, per Odysseus\'s default exclusion list.',
+    socialExclusionDisclosureSingularTemplate:
+      '1 page was excluded from this scan as a link to a third-party social platform, per Odysseus\'s default exclusion list.',
     crawlCapDisclosureTemplate:
       '{maxPages} pages is a configured cap for this audit, not the whole site: the site may have additional pages that were not analyzed.',
     sirenSourceResolvedTemplate: 'The SIREN number was confirmed as displayed on this page of the site: {url}.',

@@ -316,9 +316,11 @@ export function renderMethodology(
   // without blowing this section's 1-sheet cap with a per-URL table.
   const socialExclusionCount = manifest.pages.filter((page) => page.status === 'skipped-external-redirect').length;
   const socialExclusionNote =
-    socialExclusionCount > 0
-      ? fillTemplate(m.socialExclusionDisclosureTemplate, { count: socialExclusionCount })
-      : undefined;
+    socialExclusionCount === 1
+      ? m.socialExclusionDisclosureSingularTemplate
+      : socialExclusionCount > 1
+        ? fillTemplate(m.socialExclusionDisclosureTemplate, { count: socialExclusionCount })
+        : undefined;
 
   // item 3.11: "20 pages" appeared everywhere with nothing stating it is
   // a configured cap, not the whole site - a client could reasonably

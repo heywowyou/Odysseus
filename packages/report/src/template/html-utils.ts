@@ -101,6 +101,17 @@ export function formatNumber(value: number, language: 'fr' | 'en'): string {
   return new Intl.NumberFormat(NUMBER_LOCALES[language]).format(value);
 }
 
+/** report-feedback-la-corniche.md item 3.2 [REGRESSION of report-
+ *  feedback-palais-gallien-v2.md item 0.5 in a different template]:
+ *  every plural-count sentence in the report picked its own ad hoc
+ *  fix (or none at all - "2 page(s) ont été exclues" leaked the
+ *  pluralisation placeholder verbatim into a real report). One shared
+ *  helper closes both instances at once and stops a third one from
+ *  needing its own bespoke fix later. */
+export function pluralize(count: number, singular: string, plural: string): string {
+  return count === 1 ? singular : plural;
+}
+
 /** Fills `{key}` placeholders in a static ReportStrings template with
  *  values already known safe (numbers, or strings escaped by the caller
  *  before being passed in) - used wherever a sentence's word order

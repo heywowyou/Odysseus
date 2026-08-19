@@ -84,7 +84,11 @@ export function renderRenderDiffEvidence(
 
   const overflowCount = totalEligible - pages.length;
   const overflowText =
-    overflowCount > 0 ? fillTemplate(r.overflowTextTemplate, { count: formatNumber(overflowCount, language) }) : '';
+    overflowCount === 1
+      ? r.overflowTextSingularTemplate
+      : overflowCount > 1
+        ? fillTemplate(r.overflowTextTemplate, { count: formatNumber(overflowCount, language) })
+        : '';
 
   const cards = pages.map((page) => renderPageCard(strings, language, page)).join('');
 

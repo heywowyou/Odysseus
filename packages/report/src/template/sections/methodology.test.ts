@@ -30,6 +30,39 @@ describe('renderMethodology against the real sas-fernande.fr manifest', () => {
   });
 });
 
+// report-feedback-la-corniche.md item 3.2: the social-exclusion count
+// used to render "1 page(s) ont été exclues" verbatim for a count of 1 -
+// a literal, unresolved pluralisation placeholder shipped to a client.
+describe('item 3.2: the social-exclusion disclosure agrees with a singular count', () => {
+  it('uses the singular sentence for exactly one excluded page', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const withOneExcluded = {
+      ...manifest,
+      pages: [...manifest.pages, { url: 'https://example.com/social/facebook/', depth: 1, status: 'skipped-external-redirect' as const, errors: {} }],
+    };
+    const html = renderMethodology(getStrings('fr'), 11, withOneExcluded, 'fr');
+
+    expect(html).toContain('1 page a été exclue de ce scan');
+    expect(html).not.toContain('page(s)');
+  });
+
+  it('uses the plural sentence for more than one excluded page', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const withTwoExcluded = {
+      ...manifest,
+      pages: [
+        ...manifest.pages,
+        { url: 'https://example.com/social/facebook/', depth: 1, status: 'skipped-external-redirect' as const, errors: {} },
+        { url: 'https://example.com/social/instagram/', depth: 1, status: 'skipped-external-redirect' as const, errors: {} },
+      ],
+    };
+    const html = renderMethodology(getStrings('fr'), 11, withTwoExcluded, 'fr');
+
+    expect(html).toContain('2 pages ont été exclues de ce scan');
+    expect(html).not.toContain('page(s)');
+  });
+});
+
 describe('renderMethodology section-number eyebrow', () => {
   it('shows "11", matching its position in the single-tier 14-section TOC (2026-08-16 redesign)', async () => {
     const manifest = await loadSasFernandeManifest();

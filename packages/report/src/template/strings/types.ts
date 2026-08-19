@@ -343,8 +343,13 @@ export interface ReportStrings {
     missingCaptionNoSelectorTemplate: string;
     /** Template: {count}. Shown when more than 3 pages met the inclusion
      *  threshold, e.g. "5 autres pages presentent le meme ecart, detail
-     *  dans l'export technique." */
+     *  dans l'export technique." Plural form; count is always > 1 to
+     *  reach this template (see overflowTextSingularTemplate). */
     overflowTextTemplate: string;
+    /** item 3.2: count === 1 case ("1 autre page présente..."), which the
+     *  plural template above got wrong when used for every count
+     *  ("1 autres pages présentent..."). */
+    overflowTextSingularTemplate: string;
     /** B6: shown instead of an empty section when no commercial page has
      *  a meaningful render-diff gap after wrapper/legal pages are
      *  excluded - an absence of evidence is still evidence, not a blank
@@ -637,8 +642,15 @@ export interface ReportStrings {
      *  excluded as third-party social platform links, per the versioned
      *  default exclusion list (packages/scanner/src/config/
      *  social-exclusion.json). Only rendered when the count is greater
-     *  than zero. Template: {count}. */
+     *  than zero. Template: {count}, count always > 1 (see the singular
+     *  variant below for count === 1). */
     socialExclusionDisclosureTemplate: string;
+    /** item 3.2 [REGRESSION]: the plural template above used to be
+     *  reused for every count via a literal "page(s)"/"ont été
+     *  exclues" placeholder that leaked into a real report verbatim
+     *  ("1 page(s) ont été exclues") instead of agreeing with a
+     *  singular count. */
+    socialExclusionDisclosureSingularTemplate: string;
     /** item 3.11: "20 pages" appeared throughout the report with nothing
      *  stating it is a configured cap, not full site coverage. Only
      *  rendered when the crawl actually hit the cap (visitedCount >=

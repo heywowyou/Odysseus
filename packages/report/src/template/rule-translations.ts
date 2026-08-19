@@ -96,6 +96,18 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
     label: "L'ordre de tabulation ne suit pas la structure de la page",
     gloss: 'La navigation au clavier saute des éléments dans un ordre illogique par rapport à la mise en page visuelle.',
   },
+  // item 2.3 [REGRESSION of report-feedback-haaitza.md item C7 for this
+  // one rule]: rendered as the raw axe-core English title ("Frames must
+  // have an accessible name") in the annex of a French report, while the
+  // same rule appeared correctly translated as "Cadres sans titre
+  // accessible" in the priorities section a few pages earlier - the two
+  // sections read titles from different sources (this map here for the
+  // annex, the writing pass's own theme title for priorities), so a rule
+  // id missing from this map only ever surfaces in the annex.
+  'frame-title': {
+    label: 'Les cadres (iframe) doivent avoir un titre accessible',
+    gloss: "Un iframe sans attribut title n'est pas identifiable par les lecteurs d'écran.",
+  },
   'font-display': {
     label: 'Garantir la visibilité du texte pendant le chargement des polices',
     gloss: 'Le texte peut être invisible pendant le chargement des polices personnalisées.',
