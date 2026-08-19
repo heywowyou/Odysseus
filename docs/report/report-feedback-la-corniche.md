@@ -22,7 +22,8 @@ Suggested session split:
 | B | Obligation assessment: booking-flow detection and Sirene evidence | P0 items 0.1, 0.6, plus 1.11. Needs Jules approval before any edit | **Done** - Jules approved the concrete diff plan (2026-08-19), all 3 items fixed, committed, and confirmed against two further live re-scans (one exposed a second real bug, SIREN disambiguation, also fixed) |
 | C | Performance pipeline: why Lighthouse produced nothing, and what the section does when it does | P0 item 0.3 | **Done for this session's scope**: report-side fix done and committed. Scanner-side isolation fix verified and committed. The open confirmation question is answered: a live re-scan (2026-08-19) confirms the isolation fix contains the crash (no daemon-wide failure, per-page error captured) but does not restore real Lighthouse data - lacoorniche.com still fails Lighthouse on all 20 pages. Root-causing the underlying Lighthouse failure itself is separate, deeper scanner work, not attempted this session |
 | D | Prioritisation, benchmark attachment, third-party attribution | P0 item 0.8, P1 items 1.1, 1.4, 1.5, 1.9 | **Done** - all 5 items fixed and committed |
-| E | Annex, layout, copy | P2, P3, P4 | **Partially done**: items 2.3 and 3.2 fixed and committed (see their sections below). Everything else in P2/P3/P4 not started |
+| E | Annex, layout, copy | P2, P3, P4 | **Done** - all of P2 (2.1, 2.4, 2.5's wrapping half, 2.6), P3 (3.3, 3.6, 3.7's vocabulary half, 3.9, 3.10), and P4 fixed and committed; 2.3/3.2 were already done from an earlier partial pass. Not fixed by design: 2.5's cover-emptiness half (needs mockup re-derivation, trade-off 9) and 3.7's three-scales half (a design decision this session had no grounds to make unilaterally) |
+| - | Unassigned P1 items (no earlier session claimed them) | 1.2, 1.3, 1.6, 1.7, 1.8, 1.10 | **Done** - all 6 fixed and committed |
 
 ### Status update (2026-08-19, same-day fix session)
 
@@ -1359,16 +1360,63 @@ data.
 8. axe-core against the post-pagination DOM.
 9. `pgrep -af vite`, kill orphans.
 
+**All 9 steps completed 2026-08-19 for the full P0-P4 pass**: typecheck
+and the full test suite passed with no exclusions at every commit;
+`lacoorniche.com`, `haaitza.com`, `sas-fernande.fr`, and
+`www.hotel-palais-gallien-bordeaux.com` all regenerated cleanly
+(`Tagged: yes` on every one); `axe-core` (`paged-invariants.test.ts`'s
+invariant 8a) passed against the post-pagination DOM; no orphan `vite`
+or `odysseus serve` process was left running at any point. Step 6's own
+Paged.js-fragility class of bug is exactly what step 6 caught this
+session (see item 1.6's "Follow-up regression" note) - it exists in
+this checklist for a reason, do not skip it on a future report-layer
+change.
+
 ---
 
-## Paste-ready Claude Code prompt
+## Document status: closed out 2026-08-19
 
-**Sessions A, B, and C are done (2026-08-19) - the prompt below is kept for
-record, not for re-use.** For a future session, the remaining work is the
-untouched P1 items (1.2, 1.3, 1.6, 1.7, 1.8, 1.10) and the untouched
-P2/P3/P4 items in Session E (2.1, 2.2, 2.4, 2.5, 2.6, 3.3, 3.6, 3.7, 3.9,
-3.10, and the P4 list) - none of those have a paste-ready prompt written
-yet.
+Every item in this document is now fixed, checked, or explicitly and
+deliberately left open, as of the same-day session that closed Sessions
+B and C and then worked through the rest of the backlog in order (P1,
+P2, P3, P4). Nothing in this document is "not started" any more. What
+remains genuinely open, and where to look instead of re-reading this
+whole file:
+
+- **The real SIRET placeholder** (`ODYSSEUS_SIRET_PLACEHOLDER`) - needs
+  Jules's real value. Tracked in `report-feedback-deferred-items.md`,
+  not here.
+- **The four architecture-level deferred items** (remediation-cost
+  model, the `packages/reference` "reste à traiter" block, screenshots
+  in the report body, image filename instead of positional selectors) -
+  all in `report-feedback-deferred-items.md`, unchanged this session by
+  design (see "Already deferred, do not re-triage" below).
+- **Item 0.3's underlying Lighthouse failure on lacoorniche.com
+  specifically** - confirmed still failing (exit code 1, no captured
+  stderr) after the scanner-side isolation fix contained the crash. Real
+  root-cause work, not a report-layer fix; see item 0.3's own write-up.
+- **Item 2.5's cover-emptiness half** - needs the canonical mockup
+  re-derived via computed styles (CLAUDE.md trade-off 9), not guessed.
+- **Item 3.7's three-scales-share-labels half** - a design decision, not
+  made unilaterally this session.
+- **Item 3.1** (unbalanced parenthesis in the legal denomination) -
+  confirmed operator-entered Sirene data, a data-entry correction if
+  wanted, not a code fix.
+
+If a future pass reopens any item marked FIXED above expecting it to
+still be broken, read that item's own write-up first - several turned
+out to have a different root cause than originally diagnosed, and
+re-diagnosing from the symptom alone risks re-doing already-done work or
+missing a regression this session's own follow-up caught (see item
+1.6's "Follow-up regression" note for a concrete example: its own fix
+broke `sas-fernande.fr` in an unrelated way, caught and fixed the same
+session, documented in the P4 section).
+
+**Paste-ready Claude Code prompt below is kept for record only, from
+Session A - not for re-use.** Every session after A worked directly from
+this document's own item list in plan mode rather than a fresh
+paste-ready prompt; none of the later sessions needed one written in
+advance.
 
 ```
 Read report-feedback-la-corniche.md, CLAUDE.md, docs/report-design-system.md and

@@ -435,6 +435,40 @@ needed, say so and stop. Do not change them and continue.
     riding along with citation wiring, since turnover is only
     inconsistently available from `ObligationAssessment`'s basis facts.
 
+17. **No annex group in the PDF report is ever forced onto one page with
+    `break-inside: avoid`, regardless of how few findings it has**,
+    decided 2026-08-19 during the La Corniche feedback-fix session
+    (`docs/report/report-feedback-la-corniche.md` item 1.6's follow-up
+    write-up). `packages/report/src/template/sections/findings-
+    appendix.ts` used to apply the `.appendix-group` CSS class (paged.css,
+    `break-inside: avoid`) to any rule group at or under
+    `APPENDIX_GROUP_KEEP_THRESHOLD` (6) findings, on the reasoning that
+    forcing a *large* group atomic would blank most of a page - true, but
+    it never checked *rendered height*, only finding count. A small group
+    can still be taller than a full page's remaining space once long
+    selectors and multi-page URL lists are accounted for, and
+    `break-inside: avoid` on a fragment taller than a page gives Paged.js's
+    layout algorithm no valid break point at all. Confirmed the hard way:
+    item 1.6's own fix (more accurate page-union counts) made one real
+    rule group (`heading-hierarchy-skip`, sas-fernande.fr) just tall
+    enough to cross that line, and `pdf.ts`'s existing Paged.js
+    "Layout repeated" guard (added earlier the same session for items
+    0.2/0.7, see the `packages/report` entry below) correctly refused to
+    generate rather than silently shipping a truncated PDF. Root-caused by
+    bisecting each session commit against the real fixture, not guessed.
+    Fixed by removing `.appendix-group` and `APPENDIX_GROUP_KEEP_THRESHOLD`
+    entirely: every annex group now flows freely across a page break,
+    exactly like large groups already did. The per-row
+    `table tbody tr { break-inside: avoid }` rule (paged.css) is the only
+    atomicity guarantee left for the annex, and it is safe because a
+    single finding's own row is always small. Do not reintroduce
+    group-level `break-inside: avoid` in the annex, keyed on finding count
+    or otherwise, without a real mechanism for bounding rendered height
+    first - CLAUDE.md's own testing section already requires regenerating
+    all three reference sites before considering a report-layer change
+    done, specifically because this class of bug does not show up against
+    the two-page `fixtures/spa-demo` fixture.
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
