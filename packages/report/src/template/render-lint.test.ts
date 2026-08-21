@@ -28,9 +28,22 @@ describe('findRenderLintViolations', () => {
     expect(violations.map((v) => v.label)).toContain('unresolved pluralisation placeholder "(s)"');
   });
 
+  // P0.4 (2026-08-21 La Corniche feedback pass): "[SIRET à renseigner]"
+  // (ODYSSEUS_SIRET_PLACEHOLDER) reached a real client-facing PDF.
+  it('flags the "[SIRET à renseigner]" placeholder', () => {
+    const violations = findRenderLintViolations('<p>Signataire : Jules Fontaine. SIRET : [SIRET à renseigner].</p>');
+    expect(violations.map((v) => v.label)).toContain('unfilled "[... à renseigner]" placeholder');
+  });
+
+  it('flags any other field using the same "[... à renseigner]" placeholder convention', () => {
+    const violations = findRenderLintViolations('<p>[TVA à renseigner]</p>');
+    expect(violations.map((v) => v.label)).toContain('unfilled "[... à renseigner]" placeholder');
+  });
+
   it('finds nothing wrong with clean, complete French copy', () => {
     expect(
       findRenderLintViolations('<p>Manquant : 12% du texte visible absent du HTML brut, sur .hero-copy.</p>'),
     ).toEqual([]);
+    expect(findRenderLintViolations('<p>Signataire : Jules Fontaine. SIRET : 552032534.</p>')).toEqual([]);
   });
 });

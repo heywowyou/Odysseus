@@ -35,6 +35,14 @@ const FORBIDDEN_PATTERNS: readonly { label: string; pattern: RegExp }[] = [
   // in this report's copy, so a bare match is enough, no word-boundary
   // allowlist needed.
   { label: 'unresolved pluralisation placeholder "(s)"', pattern: /\(s\)/ },
+  // P0.4 (2026-08-21 La Corniche feedback pass): ODYSSEUS_SIRET_PLACEHOLDER
+  // ("[SIRET à renseigner]") reached a real client-facing PDF. Matches the
+  // general "[... à renseigner]" bracket convention (html-utils.ts's own
+  // doc comment names this as the deliberate placeholder shape, chosen
+  // specifically so it never looks like a plausible real value) so any
+  // future placeholder using the same convention is caught the same way,
+  // not just this one field.
+  { label: 'unfilled "[... à renseigner]" placeholder', pattern: /\[[^[\]]*à renseigner\]/ },
 ];
 
 export interface RenderLintViolation {
