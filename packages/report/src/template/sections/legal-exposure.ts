@@ -4,6 +4,12 @@ import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatDate, formatElapsedDuration, renderSheetHeader, sheet } from '../html-utils.js';
 import { pickPrimaryBasis, renderLegalCitationParagraph } from './methodology.js';
 import { SEVERITY } from '../design-tokens.js';
+import { detectVendor } from '../third-party-attribution.js';
+
+/** P0.3 (2026-08-21 La Corniche feedback pass): how many example pages to
+ *  name when the transactional-flow component was found on-site. A short
+ *  illustrative sample, not the exhaustive page dump this replaced. */
+const TRANSACTIONAL_FLOW_EXAMPLE_PAGE_COUNT = 3;
 
 /** item 24/0.1/1.11: no lawyer or auditor receiving this document could
  *  independently verify which entity the determination concerns without
@@ -48,7 +54,15 @@ function renderSirenNote(
     : siren
       ? fillTemplate(l.sirenTemplate, { siren, date: formatDate(new Date(manifest.startedAt), language) })
       : l.sirenUnavailable;
-  return `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(text)}</p>`;
+  // P2.1: a one-line trust note, only when a real registry snapshot
+  // renders - explains that the denomination is reproduced verbatim from
+  // Sirene rather than derived from the domain, since it can carry
+  // formatting artifacts (an unbalanced parenthesis, seen on a real
+  // report) that read as a scraping error at first glance.
+  const verbatimNote = snapshot
+    ? `<p style="font-size:11px;opacity:0.5;margin-top:2px">${escapeHtml(l.registrySnapshotVerbatimNote)}</p>`
+    : '';
+  return `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(text)}</p>${verbatimNote}`;
 }
 
 /** item 0.1: a manual hasTransactionalFlow override that disagrees with
@@ -104,14 +118,24 @@ function renderTransactionalFlowScopeNote(strings: ReportStrings, manifest: Audi
         .filter((domain): domain is string => domain !== null),
     ),
   ];
+  // P0.3: name the actual detected component(s) rather than dumping every
+  // page the mechanism happens to appear on - it's a site-wide layout
+  // component (e.g. a booking widget's own iframe or embedded script), not
+  // something confined to the pages it was captured on. Reuses the same
+  // vendor-prefix table third-party-attribution.ts already applies to
+  // findings, since evidence[].selector is the same shape.
+  const onSite = evidence.filter((e) => e.kind !== 'delegated-booking-redirect');
+  const vendors = [...new Set(onSite.map((e) => detectVendor(e.selector)).filter((v): v is string => v !== undefined))];
+  const examplePages = [...new Set(onSite.map((e) => e.pageUrl))].sort().slice(0, TRANSACTIONAL_FLOW_EXAMPLE_PAGE_COUNT).join(', ');
+
   const text =
     delegated.length > 0
       ? fillTemplate(l.transactionalFlowDelegatedTemplate, {
           domain: providerDomains.length > 0 ? providerDomains.join(', ') : l.transactionalFlowDelegatedDomainUnknown,
         })
-      : fillTemplate(l.transactionalFlowOnSiteTemplate, {
-          pages: [...new Set(evidence.map((e) => e.pageUrl))].sort().join(', '),
-        });
+      : vendors.length > 0
+        ? fillTemplate(l.transactionalFlowOnSiteTemplate, { vendors: vendors.join(', '), examplePages })
+        : fillTemplate(l.transactionalFlowOnSiteNoVendorTemplate, { examplePages });
 
   return `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(text)}</p>`;
 }

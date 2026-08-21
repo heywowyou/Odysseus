@@ -34,7 +34,11 @@ function crossesFrameBoundary(selector: string): boolean {
   return selector.includes('>>>');
 }
 
-function detectVendor(selector: string): string | undefined {
+/** Exported so any other caller with a raw selector but no Finding (e.g.
+ *  legal-exposure.ts's TransactionalFlowEvidence, which carries the same
+ *  kind of selector string) can reuse the same vendor table instead of
+ *  re-deriving vendor names from scratch. */
+export function detectVendor(selector: string): string | undefined {
   for (const { pattern, vendor } of VENDOR_SELECTOR_PATTERNS) {
     if (pattern.test(selector)) return vendor;
   }

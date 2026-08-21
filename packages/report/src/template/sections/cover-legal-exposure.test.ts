@@ -230,6 +230,42 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
     expect(html).toContain('https://example.com/reserver');
   });
 
+  // P0.3 (2026-08-21 La Corniche feedback pass): a real report listed all
+  // 17 non-homepage URLs, including legal-notice pages like /cookies/ and
+  // /politique-de-confidentialite/, implying the booking funnel lived on
+  // those pages - it's a site-wide layout component, not a page-specific
+  // one. This asserts the vendor name renders and legal-notice pages that
+  // never appear in the evidence never leak in either.
+  it('names the detected component instead of dumping every page it appears on', () => {
+    const manifest = fakeManifest({
+      siteSignals: {
+        hasTransactionalFlow: true,
+        transactionalFlowEvidence: [
+          { kind: 'booking-iframe', selector: '#diadao-widget', pageUrl: 'https://example.com/', detail: 'diadao iframe' },
+          { kind: 'booking-iframe', selector: '#diadao-widget', pageUrl: 'https://example.com/chambres', detail: 'diadao iframe' },
+        ],
+      },
+    });
+    const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), manifest);
+    expect(html).toContain('Diadao');
+    expect(html).toContain('https://example.com/');
+    expect(html).not.toContain('/cookies/');
+    expect(html).not.toContain('/politique-de-confidentialite/');
+  });
+
+  it('falls back to a generic component sentence when no known vendor prefix matches', () => {
+    const manifest = fakeManifest({
+      siteSignals: {
+        hasTransactionalFlow: true,
+        transactionalFlowEvidence: [
+          { kind: 'checkout-form', selector: 'form#booking', pageUrl: 'https://example.com/reserver', detail: 'action=/reserver' },
+        ],
+      },
+    });
+    const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), manifest);
+    expect(html).toContain('composant présent sur plusieurs pages');
+  });
+
   it('names the delegated provider domain and states it was not crawled', () => {
     const manifest = fakeManifest({
       siteSignals: {
@@ -280,6 +316,11 @@ describe('item 0.1/1.11: the full registry snapshot is printed when a Sirene loo
     expect(html).toContain('790852578');
     expect(html).toContain('20 à 49 salariés');
     expect(html).toContain('siren:extracted');
+    // P2.1 (2026-08-21 La Corniche feedback pass): a real report showed
+    // "(O! DE LA DUNE", an unbalanced parenthesis reproduced verbatim
+    // from the Sirene registry - this note explains why rather than
+    // reading as a scraping error.
+    expect(html).toContain('reproduite telle qu');
   });
 
   it('falls back to the SIREN-only note when no registry snapshot exists (no successful Sirene lookup)', () => {
