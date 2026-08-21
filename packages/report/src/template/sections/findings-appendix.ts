@@ -260,7 +260,10 @@ function renderGeoCitationBlock(
    *  versa) - one citation per statistic across the whole document. */
   citedStatIds: Set<string>,
 ): string {
-  const top = selectReferenceStats('geo', sector).find((stat) => !citedStatIds.has(stat.id));
+  // P0.2 (2026-08-21 La Corniche feedback pass): same strictSector rule
+  // as themes.ts's citation selection - omit rather than fall back to a
+  // cross-sector geo stat.
+  const top = selectReferenceStats('geo', sector, { strictSector: true }).find((stat) => !citedStatIds.has(stat.id));
   if (!top) return '';
   citedStatIds.add(top.id);
   return renderReferenceStatNote(
@@ -300,7 +303,8 @@ function renderThirdPartySection(
   return `
     <div style="margin-bottom:var(--space-8)">
       <h4>${escapeHtml(strings.findingsAppendix.thirdPartyHeading)}</h4>
-      <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4);max-width:70ch">${escapeHtml(strings.findingsAppendix.thirdPartyIntro)}</p>
+      <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-2);max-width:70ch">${escapeHtml(strings.findingsAppendix.thirdPartyIntro)}</p>
+      <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-4);max-width:70ch">${escapeHtml(strings.findingsAppendix.thirdPartyCountedInTotalsNote)}</p>
       ${groupBlocks}
     </div>
   `;

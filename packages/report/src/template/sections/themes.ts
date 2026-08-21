@@ -1,10 +1,11 @@
 import type { AuditManifest, Finding, ReferenceStat, ReportLanguage, StatSector, Theme } from '@odysseus/core';
-import { CORE_WEB_VITAL_THRESHOLDS, LCEN_MENTIONS_LEGALES_RULE_ID, selectReferenceStats } from '@odysseus/core';
+import { CORE_WEB_VITAL_THRESHOLDS, LCEN_MENTIONS_LEGALES_RULE_ID, estimateAggregateEffortDays, selectReferenceStats } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatFindingIdLinks, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { CATEGORY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
+import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 
 /** F40: a quick win is low effort with medium or high impact, computed
  *  here in template code from the theme's own effort/impact - not from
@@ -105,6 +106,38 @@ function measuredLcpGapNote(
  *  laid out. Rendered as a fixed-column grid below instead, so every
  *  card's line wraps at the same positions regardless of content
  *  length. */
+/** P1.2 (2026-08-21 La Corniche feedback pass): a priority card's own
+ *  recommendedActions (LLM-written prose) told the client to ask their
+ *  agency to fix a defect that lived inside a third-party plugin (e.g.
+ *  Gravity Forms) their agency structurally cannot patch, since the
+ *  model has no way to know page-level vendor ownership. Rewriting the
+ *  model's own bullets would need a new LLM pass; instead, a deterministic
+ *  sentence beneath them splits the ask, reusing the same vendor
+ *  detection third-party-attribution.ts already applies to findings.
+ *  Rendered only when a theme's findings genuinely span both first- and
+ *  third-party pages - a theme confined to one or the other needs no
+ *  split, the existing prose already applies cleanly to all of it. */
+function renderOwnershipSplitNote(strings: ReportStrings, language: ReportLanguage, themeFindings: readonly Finding[]): string {
+  const thirdPartyFindings = themeFindings.filter((f) => isThirdPartyFinding(f));
+  const firstPartyFindings = themeFindings.filter((f) => !isThirdPartyFinding(f));
+  if (thirdPartyFindings.length === 0 || firstPartyFindings.length === 0) return '';
+
+  const t = strings.themes;
+  const firstPartyPages = new Set(firstPartyFindings.flatMap((f) => f.pageUrls)).size;
+  const thirdPartyPages = new Set(thirdPartyFindings.flatMap((f) => f.pageUrls)).size;
+  const vendors = [...new Set(thirdPartyFindings.map((f) => detectFindingVendor(f)).filter((v): v is string => v !== undefined))];
+  const vendorLabel = vendors.length > 0 ? vendors.join(', ') : t.ownershipSplitUnknownVendorLabel;
+
+  const text = fillTemplate(t.ownershipSplitTemplate, {
+    firstPartyPages: formatNumber(firstPartyPages, language),
+    firstPartyPageWord: pageWord(strings, firstPartyPages),
+    thirdPartyPages: formatNumber(thirdPartyPages, language),
+    thirdPartyPageWord: pageWord(strings, thirdPartyPages),
+    vendor: vendorLabel,
+  });
+  return `<p style="font-size:11.5px;opacity:0.6;margin-top:4px">${escapeHtml(text)}</p>`;
+}
+
 function renderTheme(
   strings: ReportStrings,
   language: ReportLanguage,
@@ -121,6 +154,13 @@ function renderTheme(
    *  same "don't show a signal that carries no information" reasoning as
    *  item D7's zero-count stat tiles. */
   showQuickWinBadge: boolean,
+  /** P2.2 (2026-08-21 La Corniche feedback pass): "Sans objet" in the
+   *  Conformité column read as "unknown" at the point a reader hits it -
+   *  the explanation only existed in the glossary, 20 pages later. True
+   *  for exactly the first rendered card whose conformity is "Sans
+   *  objet", so the gloss appears once, right where it's first needed,
+   *  not repeated on every card that shares the value. */
+  showConformityGloss: boolean,
 ): string {
   const t = strings.themes;
   const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
@@ -194,11 +234,12 @@ function renderTheme(
       ${legalBox}
       ${citationBox}
       ${recommendedActionsBox}
+      ${renderOwnershipSplitNote(strings, language, themeFindings)}
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.4fr);gap:var(--space-3);font-size:12px;opacity:0.75;margin-top:4px">
         <span>${escapeHtml(t.effortLabel)} : <strong>${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
         <span>${escapeHtml(t.impactLabel)} : <strong>${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
         <span>${escapeHtml(t.affectedPagesLabel)} : <strong>${escapeHtml(pagesText)}</strong></span>
-        <span>${escapeHtml(t.conformityLabel)} : <strong>${escapeHtml(conformityValue)}</strong></span>
+        <span>${escapeHtml(t.conformityLabel)} : <strong>${escapeHtml(conformityValue)}</strong>${!isNonConformant && showConformityGloss ? ` <span style="opacity:0.85;font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</span>
         <span>${escapeHtml(t.refsLabel)} : ${formatFindingIdLinks(theme.findingIds)}</span>
       </div>
     </div>
@@ -333,7 +374,11 @@ export function renderThemes(
     if (citedCategories.has(theme.category)) continue;
     const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
     if (isCitationIneligibleTheme(themeFindings)) continue;
-    const candidates = selectReferenceStats(theme.category, sector);
+    // P0.2 (2026-08-21 La Corniche feedback pass): strictSector so a
+    // hospitality report never falls back to a generic/cross-sector stat
+    // (e.g. Baymard e-commerce cart-abandonment on a labeling defect) -
+    // omit the citation entirely rather than approximate.
+    const candidates = selectReferenceStats(theme.category, sector, { strictSector: true });
     const top = candidates.find(
       (stat) => !citedStatIds.has(stat.id) && isStatEligibleForTheme(stat, themeFindings, transactionalPageUrls),
     );
@@ -345,6 +390,9 @@ export function renderThemes(
   }
 
   const showQuickWinBadge = !sortedThemes.every(isQuickWinTheme);
+  // P2.2: the first rendered theme with no legalRelevance (i.e. whose
+  // Conformité column reads "Sans objet") carries the inline gloss.
+  const firstNotApplicableRank = sortedThemes.find((theme) => theme.legalRelevance === undefined)?.priorityRank;
   const themeBlocks = sortedThemes
     .map((theme) =>
       renderTheme(
@@ -356,12 +404,38 @@ export function renderThemes(
         citationByRank.get(theme.priorityRank),
         manifest,
         showQuickWinBadge,
+        theme.priorityRank === firstNotApplicableRank,
       ),
     )
     .join('');
 
+  // P1.5 (2026-08-21 La Corniche feedback pass): every priority card gave
+  // a qualitative effort label with no aggregate translation a director
+  // could put in a budget line. Deterministic band-computation off the
+  // rendered cards' own effort labels (packages/core's
+  // estimateAggregateEffortDays), not a new LLM claim. Half-day
+  // granularity: the underlying bands are already coarse, and a bare
+  // integer would imply more precision than either range actually has.
+  const effortEstimate = estimateAggregateEffortDays(sortedThemes.map((theme) => theme.effort));
+  const roundToHalfDay = (days: number): number => Math.max(0.5, Math.round(days * 2) / 2);
+  const aggregateEstimateNote =
+    sortedThemes.length > 0
+      ? `<p style="font-size:12px;opacity:0.6;margin-bottom:var(--space-4);max-width:66ch">${escapeHtml(
+          fillTemplate(strings.themes.aggregateEffortEstimateTemplate, {
+            min: formatNumber(roundToHalfDay(effortEstimate.minDays), analysis.language),
+            max: formatNumber(roundToHalfDay(effortEstimate.maxDays), analysis.language),
+            count: sortedThemes.length,
+          }),
+        )}</p>`
+      : '';
+
+  // P4.1 (2026-08-21 La Corniche feedback pass): Priorités is a heavy
+  // section - accept the resulting white space rather than a section
+  // header starting two lines above a page break, same reasoning already
+  // applied to the checklist/annexe/glossaire sections.
   return sheet(`
     ${renderSheetHeader(ordinal, strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }))}
+    ${aggregateEstimateNote}
     ${themeBlocks}
-  `, '', 'section-04');
+  `, 'sheet-standalone', 'section-04');
 }

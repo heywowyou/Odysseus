@@ -72,4 +72,34 @@ describe('selectReferenceStats', () => {
       }
     }
   });
+
+  // P0.2 (2026-08-21 La Corniche feedback pass): strictSector excludes
+  // 'general' rows entirely instead of only ranking them second - a
+  // deliberate move away from cross-sector benchmarks, not a re-matching
+  // fix. The table has no hospitality-tagged accessibility or seo rows,
+  // so a hospitality report must get no citation at all for those
+  // categories rather than falling back to a mismatched one.
+  describe('strictSector', () => {
+    it('excludes general rows entirely for a sector with no matching row in that category', () => {
+      const results = selectReferenceStats('accessibility', 'hospitality', { strictSector: true });
+      expect(results).toEqual([]);
+    });
+
+    it('still returns the sector-matched row when one exists', () => {
+      const results = selectReferenceStats('performance', 'hospitality', { strictSector: true });
+      const ids = results.map((stat) => stat.id);
+      expect(ids).toEqual(['deloitte-speed-conversion-travel-2020']);
+    });
+
+    it('a general-sector request with strictSector excludes hospitality-only rows too', () => {
+      const strict = selectReferenceStats('performance', 'general', { strictSector: true }).map((s) => s.id);
+      expect(strict).not.toContain('deloitte-speed-conversion-travel-2020');
+      expect(strict).toEqual(expect.arrayContaining(['deloitte-speed-conversion-retail-2020', 'deloitte-aov-retail-2020']));
+    });
+
+    it('default (no options) keeps the original permissive rank-with-fallback behavior', () => {
+      const results = selectReferenceStats('accessibility', 'hospitality');
+      expect(results.length).toBeGreaterThan(0);
+    });
+  });
 });
