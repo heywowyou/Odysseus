@@ -36,6 +36,12 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
     label: "Texte alternatif vide sur une image qui n'est peut-être pas décorative",
     gloss: 'Signal heuristique sur la qualité des textes alternatifs, pas un test de conformité déterministe.',
   },
+  // P1.1 (2026-08-21 La Corniche feedback pass, regression): "ARIA
+  // commands must have an accessible name" leaked into a French report.
+  'aria-command-name': {
+    label: 'Les commandes ARIA doivent avoir un nom accessible',
+    gloss: "Un élément interactif avec un rôle ARIA de commande (bouton, lien, etc.) n'a pas de nom qu'un lecteur d'écran peut annoncer.",
+  },
   'aria-required-children': {
     label: "Certains rôles ARIA doivent contenir des enfants spécifiques",
     gloss: "Un élément avec un rôle ARIA (ex. liste, menu) n'a pas la structure enfant que ce rôle exige.",
@@ -255,6 +261,12 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
   'offscreen-images': {
     label: "Différer les images hors écran",
     gloss: "Des images non visibles au chargement retardent l'affichage du contenu utile.",
+  },
+  // P1.1 (2026-08-21 La Corniche feedback pass, regression): "No Open
+  // Graph tags found" leaked into a French report.
+  'opengraph-missing': {
+    label: 'Aucune balise Open Graph détectée',
+    gloss: "Les balises Open Graph (og:title, og:image, etc.) contrôlent l'aperçu de la page quand elle est partagée sur les réseaux sociaux ; aucune n'a été trouvée.",
   },
   'prioritize-lcp-image': {
     label: "Précharger l'image du plus grand affichage de contenu",

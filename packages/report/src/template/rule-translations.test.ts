@@ -52,6 +52,16 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
+  // P1.1 (2026-08-21 La Corniche feedback pass, regression): the
+  // 00-54-32Z fixture above doesn't contain 'aria-command-name' or
+  // 'opengraph-missing' - this later same-day scan does, and is exactly
+  // what would have caught both leaking untranslated into a real report.
+  it('every ruleId in the 2026-08-19T11-15-01Z La Corniche fixture is covered (aria-command-name, opengraph-missing)', () => {
+    const findings = loadFindings('../../../../artifacts/lacoorniche.com/2026-08-19T11-15-01Z');
+    const missing = [...new Set(findings.map((f) => f.ruleId))].filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
+  });
+
   it('every entry has both a non-empty label and a non-empty gloss', () => {
     for (const [ruleId, translation] of Object.entries(RULE_TRANSLATIONS_FR)) {
       expect(translation.label.length, `${ruleId} has an empty label`).toBeGreaterThan(0);
