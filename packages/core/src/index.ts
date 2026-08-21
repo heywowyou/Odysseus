@@ -25,6 +25,7 @@ export * from './reference-stats/select.js';
 export * from './reference-stats/calculator.js';
 export * from './reference-stats/benchmarks.js';
 export * from './reference-stats/recommendation-templates.js';
+export * from './reference-stats/effort-estimate.js';
 export * from './types/prospecting.js';
 export * from './prospecting/qualify-prospect.js';
 export * from './prospecting/effectif-threshold.js';
