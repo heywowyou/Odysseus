@@ -5,6 +5,33 @@ export const fr: ReportStrings = {
     eyebrow: 'Sommaire',
     heading: 'Contenu du rapport',
   },
+  reportIntro: {
+    eyebrow: 'À propos de ce rapport',
+    heading: "Comment lire ce rapport",
+    audienceHeading: "À qui s'adresse chaque partie du rapport",
+    audienceYouLabel: 'Vous (dirigeant)',
+    audienceAgencyLabel: 'Votre prestataire / agence web',
+    audienceCounselLabel: 'Votre conseil juridique',
+    measuresHeading: 'Ce que cet audit mesure',
+    measuresAccessibility:
+      'Accessibilité : vos clients en situation de handicap peuvent-ils réserver et naviguer sur votre site ?',
+    measuresSeo: 'Référencement (SEO) : Google comprend-il correctement vos pages ?',
+    measuresGeo:
+      "Visibilité IA (GEO) : les assistants IA (ChatGPT et équivalents) peuvent-ils comprendre et recommander votre établissement ?",
+    measuresRendering:
+      "Rendu : votre contenu existe-t-il même sans JavaScript, pour les robots et lecteurs d'écran les plus basiques ?",
+    consequencesHeading: 'Ce que ça change concrètement pour vous',
+    consequenceBooking: 'Des clients qui ne peuvent pas terminer une réservation.',
+    consequenceRegulatory: 'Une exposition réglementaire déjà documentée (voir la section « Exposition légale »).',
+    consequenceVisibility: 'Une visibilité réduite dans les résultats de recherche et les assistants IA.',
+    notALegalOpinionNote:
+      "Ce que ce rapport n'est pas : un avis juridique (voir la section « Exposition légale ») ; un audit automatisé couvrant environ 30 à 40 % des critères d'accessibilité (voir « Méthodologie et limites »).",
+    nextActionsHeading: 'Vos trois prochaines actions',
+    nextActionItemTemplate: '{title}, à transmettre à : {contact} (effort : {effort}).',
+    contactAgency: 'votre agence',
+    contactAgencyAndVendor: 'votre agence et l\'éditeur du composant tiers concerné',
+    contactUnknownVendor: "l'éditeur du composant tiers concerné",
+  },
   statistics: {
     eyebrow: "L'audit en chiffres",
     heading: "Ce que l'analyse a relevé",
@@ -16,6 +43,13 @@ export const fr: ReportStrings = {
     heuristicOccurrencesExcludedNoteTemplate:
       "Ce chiffre exclut {count} occurrences supplémentaires provenant d'un signal heuristique sur la qualité des textes alternatifs, qui n'est pas un test de conformité déterministe (voir la section « Signaux à vérifier »).",
     criticalDriverNoteTemplate: 'Ces constats critiques proviennent uniquement de : {rules}.',
+    // P1.2 (2026-08-21 La Corniche feedback pass): this fact determines
+    // who the client calls tomorrow morning - it used to be buried on
+    // page 21 of 27. Template: {percent}, the share of
+    // accessibilityOccurrences (already heuristic-excluded) traceable to
+    // a third-party component.
+    thirdPartyOccurrencesNoteTemplate:
+      "{percent} % de ces occurrences proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation) - voir la section « À traiter avec vos prestataires tiers ».",
     pagesWithCriticalTileLabel: 'pages avec au moins un constat critique',
     criticalTileLabel: 'critiques',
     seriousTileLabel: 'sérieux',
@@ -72,6 +106,7 @@ export const fr: ReportStrings = {
     // generic against the four-category scope C9 already states lower on
     // this same page (WCAG 2.2 AA · Performance · SEO · GEO).
     subtitle: 'Audit accessibilité, performance, SEO et GEO',
+    subtitleNoPerformance: 'Audit accessibilité, SEO et GEO',
     siteLabel: 'Site audité',
     dateLabel: "Date de l'audit",
     pagesScannedLabel: 'Périmètre analysé',
@@ -110,6 +145,14 @@ export const fr: ReportStrings = {
     heading: "Ce qu'il faut retenir",
     startHereKicker: 'Par où commencer',
     glossaryPointerSentence: 'Les termes techniques utilisés dans ce rapport sont définis dans la section « Glossaire ».',
+    thirdPartySplitSentenceTemplate:
+      "{percent} % des occurrences d'accessibilité proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation), et non du site lui-même.",
+    // P2.4 (2026-08-21 La Corniche feedback pass): sets the expectation
+    // up front rather than letting the reader discover, 20 pages in,
+    // that the SEO/GEO pillars have little to say relative to
+    // accessibility.
+    categoryImbalanceNote:
+      "Ce site présente peu de constats SEO et GEO significatifs par rapport à l'accessibilité : l'essentiel des priorités ci-dessous concerne l'accessibilité.",
     jumpLinkLabelTemplate: 'Voir priorité {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
       "La priorité 1 ci-dessus est un enjeu commercial, pas un enjeu de conformité légale : elle a été classée en premier sur la base de son rapport effort/impact. Les priorités liées à la conformité légale figurent en position {legalRank}.",
@@ -156,6 +199,16 @@ export const fr: ReportStrings = {
     registrySnapshotTemplate:
       'Données du répertoire Sirene : {denomination}, SIREN {siren}, {effectifs}, consultées le {date} ({source}).',
     registrySnapshotEffectifsUnavailable: 'effectif non disponible',
+    // P2.1 (2026-08-21 La Corniche feedback pass): a real registry
+    // denomination rendered with an unbalanced parenthesis ("(O! DE LA
+    // DUNE"), read at first glance as a parsing error - checked directly
+    // against sirene-client.ts, which passes the Sirene API's own
+    // nom_complet field through unmodified, no truncation or regex
+    // involved. Reproduced verbatim rather than corrected, since altering
+    // a company's own registry name would misstate a fact the report is
+    // supposed to only reproduce - this note explains why instead.
+    registrySnapshotVerbatimNote:
+      "Cette dénomination est reproduite telle qu'elle figure au répertoire Sirene, associée au SIREN ci-dessus, pas déduite du nom de domaine.",
     // item 0.1: when a manual hasTransactionalFlow override disagrees
     // with what the scanner detected, the report must say so plainly
     // rather than silently trusting the override - a confirmed fact from
@@ -169,8 +222,16 @@ export const fr: ReportStrings = {
       "Cette section reproduit des critères réglementaires et des données publiques de votre entreprise, sans interprétation juridique supplémentaire. Une confirmation par un conseil juridique reste nécessaire avant toute décision.",
     undeterminedActionNote:
       "Ce statut se précisera si le numéro SIREN de l'entreprise est publié sur le site ou communiqué à l'équipe Odysseus.",
+    // P0.3 (2026-08-21 La Corniche feedback pass): this used to list every
+    // non-homepage URL in the crawl, including legal-notice pages like
+    // /cookies/ or /politique-de-confidentialite/, implying the booking
+    // funnel itself lived on those pages - it doesn't; the booking widget
+    // is a site-wide layout component. States the mechanism and names the
+    // actual detected component instead of dumping the whole page list.
     transactionalFlowOnSiteTemplate:
-      "Le parcours transactionnel identifié a été relevé directement sur les pages suivantes du périmètre audité : {pages}.",
+      "Un moteur de réservation est intégré via un composant présent sur l'ensemble du périmètre analysé ({vendors}). Exemples de pages où il a été relevé : {examplePages}.",
+    transactionalFlowOnSiteNoVendorTemplate:
+      "Le parcours transactionnel identifié est intégré directement sur le site, via un composant présent sur plusieurs pages du périmètre analysé. Exemples de pages où il a été relevé : {examplePages}.",
     transactionalFlowDelegatedTemplate:
       "Le parcours transactionnel identifié est délégué à un prestataire tiers ({domain}). Ce domaine n'a pas été exploré dans le cadre de cet audit, qui reste circonscrit au domaine du site audité.",
     transactionalFlowDelegatedDomainUnknown: 'domaine non identifié',
@@ -178,7 +239,12 @@ export const fr: ReportStrings = {
   checklist: {
     eyebrow: 'Check-list imprimable',
     heading: 'Check-list des priorités',
-    intro: "Page pensée pour être imprimée ou capturée seule, sans prose, uniquement l'essentiel.",
+    // P2.5 (2026-08-21 La Corniche feedback pass): 13 of the report's
+    // pages are CSS-selector tables meant for a developer, not the
+    // director reading the report - labeled explicitly rather than left
+    // to be inferred from content alone.
+    intro:
+      "Page pensée pour être imprimée ou capturée seule, sans prose, uniquement l'essentiel. À transmettre à votre prestataire technique.",
     rankColumnLabel: '#',
     priorityColumnLabel: 'Priorité',
     effortColumnLabel: 'Effort',
@@ -191,11 +257,20 @@ export const fr: ReportStrings = {
   themes: {
     eyebrow: 'Priorités',
     headingTemplate: '{count} chantiers, classés par effort et par impact',
+    // P1.5 (2026-08-21 La Corniche feedback pass): a coarse, deterministic
+    // band, not a precise quote - stated as such rather than implying
+    // false precision. Template: {min}, {max}, {count}.
+    aggregateEffortEstimateTemplate:
+      "Estimation globale : {min} à {max} jours de développement pour l'ensemble des {count} chantiers ci-dessous (estimation large, non contractuelle). Un chantier relevant d'un composant tiers dépend en outre du délai de son éditeur.",
     effortLabel: 'Effort',
     impactLabel: 'Impact commercial',
     affectedPagesLabel: 'Pages affectées',
     conformityLabel: 'Conformité',
     conformityNotApplicable: 'Sans objet',
+    // P2.2 (2026-08-21 La Corniche feedback pass): "Sans objet" read as
+    // "unknown" at the point it's first encountered - the explanation
+    // only lived in the glossary, 20 pages later.
+    conformityNotApplicableGloss: "ce chantier ne relève pas de l'accessibilité",
     conformityNonConformant: 'Non conforme',
     legalTagLabel: 'Exigence de conformité',
     impactCitationLabel: 'Repère chiffré',
@@ -206,6 +281,15 @@ export const fr: ReportStrings = {
     effortImpactLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
     pagesOfTotalTemplate: '{pages} {pageWord} sur {totalPages}',
     refsLabel: 'Constats',
+    // P1.2 (2026-08-21 La Corniche feedback pass): splits a priority
+    // card's own recommended-action ask when it spans both first- and
+    // third-party pages, since the model's own prose can't know which
+    // pages the client's agency can actually touch. Template:
+    // {firstPartyPages}, {firstPartyPageWord}, {thirdPartyPages},
+    // {thirdPartyPageWord}, {vendor}.
+    ownershipSplitTemplate:
+      '{firstPartyPages} {firstPartyPageWord} relèvent de votre site (votre agence peut corriger), {thirdPartyPages} {thirdPartyPageWord} relèvent de {vendor} (à transmettre à son éditeur).',
+    ownershipSplitUnknownVendorLabel: "un composant tiers",
   },
   renderDiffEvidence: {
     eyebrow: 'Preuve de rendu',
@@ -223,8 +307,15 @@ export const fr: ReportStrings = {
     // has no separate technical-export artifact). Stated as a plain
     // fact instead, with no pointer to something the client cannot
     // actually receive.
-    overflowTextTemplate: '{count} autres pages présentent le même écart.',
-    overflowTextSingularTemplate: '1 autre page présente le même écart.',
+    // P1.4 (2026-08-21 La Corniche feedback pass): "présentent le même
+    // écart" read as if this section enumerated one specific annexe
+    // finding's complete page list - it doesn't. This gallery samples the
+    // site's most render-affected pages generally (missingPercent
+    // threshold across all pages), independent of any single rule's own
+    // page list in the annexe. Reworded so the two sections no longer
+    // read as contradicting each other's counts.
+    overflowTextTemplate: "{count} autres pages du site présentent un écart de rendu comparable.",
+    overflowTextSingularTemplate: "1 autre page du site présente un écart de rendu comparable.",
     positiveStatementTemplate:
       'Les pages commerciales de ce site conservent leur texte dans le HTML brut : aucun écart de rendu significatif n\'a été mesuré.',
     positiveStatementWrapperNote:
@@ -469,10 +560,12 @@ export const fr: ReportStrings = {
       "Ce rapport reproduit des constats techniques détectés par des outils automatisés, accompagnés d'explications et de priorisations. Il ne constitue pas un avis juridique ; voir la section « Exposition légale » et la méthodologie pour les limites de couverture. Odysseus ne saurait être tenu responsable des décisions prises sur la seule base de ce document.",
   },
   findingsAppendix: {
-    eyebrow: 'Annexe',
+    eyebrow: 'Annexe technique',
     heading: 'Liste complète des constats',
+    // P2.5: labeled explicitly for the developer/agency audience, same
+    // reasoning as the checklist page above.
     intro:
-      'Chaque constat détecté par les outils automatisés, y compris ceux jugés mineurs et non repris dans les priorités ci-dessus.',
+      'Chaque constat détecté par les outils automatisés, y compris ceux jugés mineurs et non repris dans les priorités ci-dessus. À transmettre à votre prestataire technique.',
     categoryLabels: {
       accessibility: 'Accessibilité',
       seo: 'Référencement (SEO)',
@@ -484,7 +577,15 @@ export const fr: ReportStrings = {
     thirdPartyHeading: 'À traiter avec vos prestataires tiers',
     thirdPartyIntro:
       "Ces constats concernent du code appartenant à un plugin, un widget ou un cadre tiers (moteur de réservation, bannière de cookies, aperçu, formulaire). Votre agence ne peut pas modifier ce code directement : la correction passe par le prestataire ou l'éditeur concerné.",
-    unknownVendorLabel: 'Prestataire tiers non identifié',
+    // P2.3 (2026-08-21 La Corniche feedback pass): a real report counted
+    // a Complianz cookie-consent finding among the "sérieux" total on the
+    // cover while this section noted the current implementation needs no
+    // action - both true at once (a valid conformity gap in the general
+    // case, already compliant in this specific implementation), but
+    // nothing said so, reading as an unexplained contradiction.
+    thirdPartyCountedInTotalsNote:
+      "Ces constats restent comptabilisés dans les totaux de sévérité en tête de rapport : il s'agit d'un écart de conformité réel au sens du référentiel, même lorsque l'implémentation actuellement observée s'avère déjà correcte dans ce cas précis.",
+    unknownVendorLabel: 'Composant tiers, éditeur non identifié',
     severityLabels: {
       critical: 'Critique',
       serious: 'Sérieux',
@@ -552,8 +653,13 @@ export const fr: ReportStrings = {
       cartOrPayment: 'panier ou de paiement',
       both: 'réservation, panier ou paiement',
     },
+    // P1.3 (2026-08-21 La Corniche feedback pass): "déposée" read as a
+    // past participle agreeing with "une demande" - "a request... filed"
+    // - implying a derogation request had already been submitted. This
+    // describes an available path, not a completed action; "à déposer"
+    // states the request is something to be filed, not something filed.
     legalCitationExemptionRouteSentence:
-      "La voie d'exemption documentée à ce jour est une demande de dérogation pour charge disproportionnée, déposée sur Démarches Simplifiées.",
+      "La voie d'exemption documentée à ce jour est une demande de dérogation pour charge disproportionnée, à déposer sur Démarches Simplifiées.",
     legalCitationManualSirenWithFindingTemplate:
       "Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne le publie pas lui-même (voir constat {findingId}).",
     legalCitationManualSirenNoFindingSentence:
@@ -570,6 +676,14 @@ export const fr: ReportStrings = {
     crawlCapDisclosureTemplate:
       "Le plafond configuré pour cet audit est de {maxPages} pages, pas la totalité du site : le site peut compter des pages supplémentaires non analysées.",
     sirenSourceResolvedTemplate: 'Le numéro SIREN a été confirmé comme affiché sur cette page du site : {url}.',
+    // P0.1 (2026-08-21 La Corniche feedback pass): the generic "n'a pas
+    // abouti... voir Méthodologie" pointer in the performance section used
+    // to lead here and find nothing further. This states the real,
+    // per-reason failure counts captured from the scan itself, never a
+    // guessed or generic explanation.
+    lighthouseFailureIntroSentence:
+      "La mesure de performance (Lighthouse) n'a pas abouti sur ce site pour cet audit. Détail des échecs constatés :",
+    lighthouseFailureReasonTemplate: '{count}/{total} pages : {reason}',
   },
   footer: {
     confidentialityLabel: 'Rapport confidentiel',

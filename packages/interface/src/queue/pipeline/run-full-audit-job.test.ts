@@ -30,7 +30,16 @@ function fakeJob(overrides: Partial<{ jobId: string; siteUrl: string; options: R
 function fakeAuditResult() {
   return {
     auditId: 'audit-1',
-    manifest: { auditId: 'audit-1' } as never,
+    manifest: {
+      auditId: 'audit-1',
+      pages: [
+        {
+          url: 'https://example.com/',
+          errors: {},
+          coreWebVitals: { lcp: { score: 0.9, numericValue: 1800, displayValue: '1.8 s' } },
+        },
+      ],
+    } as never,
     findings: [] as never,
     auditDir: '/artifacts/example.com/dir',
     visitedCount: 2,
@@ -135,6 +144,31 @@ describe('runFullAuditJob', () => {
   });
 
   it('completes the job with the produced auditId', async () => {
+    const job = fakeJob();
+    await runFullAuditJob(job, ctx);
+
+    expect(completeJob).toHaveBeenCalledWith(fakeConnection, 'job-1', { auditId: 'audit-1' });
+  });
+
+  // P0.1 (2026-08-21 La Corniche feedback pass): a completed job whose
+  // report has zero Core Web Vitals data used to look identical, in the
+  // dashboard, to a genuinely complete one.
+  it('flags needsReview when no page has any measured Core Web Vital', async () => {
+    vi.mocked(runAuditStage).mockResolvedValue({
+      ...fakeAuditResult(),
+      manifest: { auditId: 'audit-1', pages: [{ url: 'https://example.com/', errors: {} }] } as never,
+    });
+    const job = fakeJob();
+    await runFullAuditJob(job, ctx);
+
+    expect(completeJob).toHaveBeenCalledWith(
+      fakeConnection,
+      'job-1',
+      expect.objectContaining({ needsReview: expect.stringContaining('Lighthouse') }),
+    );
+  });
+
+  it('does not flag needsReview when at least one page has measured Core Web Vitals', async () => {
     const job = fakeJob();
     await runFullAuditJob(job, ctx);
 

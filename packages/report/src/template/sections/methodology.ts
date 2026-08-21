@@ -325,6 +325,42 @@ function renderExtendedPassNote(
   return fillTemplate(m.extendedPassResultTemplate, { checks: checkList });
 }
 
+/** P0.1 (2026-08-21 La Corniche feedback pass): the generic "n'a pas
+ *  abouti... voir Méthodologie" pointer used to lead here and find no
+ *  further detail, even though the real per-page reason was already
+ *  captured in the manifest (page.errors.lighthouse) and simply never
+ *  read by the report. Groups by the failure message with each page's own
+ *  URL stripped out, so the same underlying failure repeated across many
+ *  pages collapses to one reason line instead of one near-identical line
+ *  per page. Returns undefined when every page that was scanned at all
+ *  had a successful Lighthouse pass. */
+function summarizeLighthouseFailures(strings: ReportStrings, manifest: AuditManifest, language: ReportLanguage): string | undefined {
+  const m = strings.methodology;
+  const failures = manifest.pages
+    .map((page) => page.errors.lighthouse)
+    .filter((message): message is string => message !== undefined);
+  if (failures.length === 0) return undefined;
+
+  const totalPages = manifest.pages.filter((page) => page.status === 'visited').length;
+  const counts = new Map<string, number>();
+  for (const message of failures) {
+    const normalized = message.replace(/https?:\/\/\S+/g, '<url>');
+    counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+  }
+
+  const reasonLines = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([reason, count]) =>
+      fillTemplate(m.lighthouseFailureReasonTemplate, {
+        count: formatNumber(count, language),
+        total: formatNumber(totalPages, language),
+        reason,
+      }),
+    );
+
+  return `${m.lighthouseFailureIntroSentence} ${reasonLines.join(' ')}`;
+}
+
 export function renderMethodology(
   strings: ReportStrings,
   ordinal: number,
@@ -349,6 +385,7 @@ export function renderMethodology(
 
   const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings, resolvedSirenSourceUrl);
   const extendedPassNote = renderExtendedPassNote(strings, language, findings);
+  const lighthouseFailureNote = summarizeLighthouseFailures(strings, manifest, language);
 
   // Manual-input-layer milestone: pages excluded as social-platform
   // redirects are never silently dropped (crawl.ts still records every
@@ -384,6 +421,7 @@ export function renderMethodology(
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
     ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(crawlCapNote)}</p>` : ''}
     ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(socialExclusionNote)}</p>` : ''}
+    ${lighthouseFailureNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(lighthouseFailureNote)}</p>` : ''}
     <div class="hr"></div>
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.automatedCoverageCaveat)}</p>
     ${extendedPassNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(extendedPassNote)}</p>` : ''}

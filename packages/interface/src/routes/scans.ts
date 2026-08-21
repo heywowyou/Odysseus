@@ -160,6 +160,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       auditId: job.auditId,
       auditIds: job.auditIds,
       severityRollup: job.auditId ? rollups.get(job.auditId) : undefined,
+      needsReview: job.needsReview,
     }));
 
     sendJson(res, 200, summaries);

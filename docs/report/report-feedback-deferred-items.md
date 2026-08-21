@@ -11,10 +11,20 @@ found it, and what would actually be needed to close it. When one of
 these ships, move it out of this file (into the relevant `CLAUDE.md`
 trade-off or a commit message) rather than leaving it here marked done.
 
+**Lifecycle rule (confirmed 2026-08-21):** once every item in a dated
+feedback doc (`docs/report/<date>-<client>-feedback.md`) is either fixed
+or explicitly captured here as a deferred item, move that feedback doc
+itself into `docs/report/archive/` (`git mv`, never delete). Do this as
+the last step of the session that closes it out, not a separate cleanup
+pass later - a feedback doc left in the working folder after everything
+in it has been resolved or deferred is indistinguishable at a glance from
+one that still has open work. This file and whichever feedback doc is
+currently active stay out of the archive until their own turn comes.
+
 ## Needs a new estimation model, not a content fix
 
 ### Remediation cost / effort-in-days / page-value weighting
-Source: `report-feedback-palais-gallien-v2.md` item 3.10 (Session C, "C11"
+Source: `archive/report-feedback-palais-gallien-v2.md` item 3.10 (Session C, "C11"
 in the fix plan); the same idea appeared earlier, never built, as
 haaitza's item C1 (effort-band idea).
 
@@ -32,7 +42,7 @@ for a feedback-fix session that's otherwise deterministic-data-only.
 ## Needs infrastructure that doesn't exist yet
 
 ### "Reste à traiter" grouped guidance for unaddressed findings
-Source: `report-feedback-palais-gallien-v2.md` item 3.2 (Session C, "C3"
+Source: `archive/report-feedback-palais-gallien-v2.md` item 3.2 (Session C, "C3"
 in the fix plan).
 
 > The priorities section covers f001 to f007. The other 91 appear only as
@@ -53,7 +63,7 @@ package, what its authoring/review process is, and who writes ~90 short
 remediation blurbs.
 
 ### Visual evidence / screenshots in the report
-Source: `report-feedback-palais-gallien-v2.md` item 1.15 (flagged, not
+Source: `archive/report-feedback-palais-gallien-v2.md` item 1.15 (flagged, not
 built, during Session B planning).
 
 The report currently states render-diff and other evidence in text only.
@@ -64,8 +74,29 @@ retention carefully), and print-size/contrast implications - not a
 one-session addition. Noted as a follow-up candidate for a dedicated
 milestone.
 
+### P4.2 - section-opener containment (heading + intro + first content unit as one atomic block)
+Source: `archive/2026-08-21-lacoorniche-feedback.md` P4.2, deferred during the
+2026-08-22 fix session.
+
+The existing `.section-head { break-inside: avoid }` plus
+`.section-head + p { break-after: avoid }` pair (`paged.css`) already keeps
+a section's heading, kicker, and immediately-following intro paragraph
+glued to what comes after them - the concretely-reported symptom (a header
+stranded alone at a page bottom) is already fixed by this pair. What it
+does not cover is the narrower gap: nothing guarantees the *first real
+content unit after the intro paragraph* (a card, a table row) stays
+attached too, so a pathological case could still strand heading+intro
+alone with the first content item pushed to the next page. Fixing that
+properly means wrapping heading+kicker+intro+first-content-unit in one
+container per section template - a per-file structural change across most
+of `packages/report/src/template/sections/*.ts`, not a CSS-only fix, and
+risky to do broadly without a real-scan regression to target. Needs: a
+real report that actually exhibits the narrower gap (not yet observed
+against the stress fixture or any committed real-site artifact), so the
+fix can be verified against the actual failure mode instead of guessed at.
+
 ### Image filename/src instead of positional selectors
-Source: `report-feedback-palais-gallien-v2.md` P4 item ("`img:nth-of-type(32)`
+Source: `archive/report-feedback-palais-gallien-v2.md` P4 item ("`img:nth-of-type(32)`
 [...] is not actionable [...] the image filename or src would be far more
 useful"), evaluated during Session D.
 
@@ -89,7 +120,12 @@ needs a real decision (from Jules) before the report can ship to a client
 outside internal testing:
 
 - `ODYSSEUS_SIRET_PLACEHOLDER` (`packages/report/src/template/html-utils.ts`):
-  literal `[SIRET à renseigner]`, needs the real SIRET.
+  literal `[SIRET à renseigner]`, needs the real SIRET. **Updated
+  2026-08-22:** a pre-flight guard now exists (`render-lint.ts`'s
+  `FORBIDDEN_PATTERNS`, matching the general `[... à renseigner]` bracket
+  convention) - PDF generation throws a clear local error rather than
+  shipping the placeholder silently, per the 2026-08-21 La Corniche
+  feedback pass, P0.4. The real value itself is still the open item here.
 
 **Confirmed 2026-08-19, no longer open:** `ODYSSEUS_REAUDIT_PRICE_EUR_HT`
 / `ODYSSEUS_REAUDIT_LEAD_TIME_DAYS` (EUR 450 HT / 5 business days,
@@ -100,7 +136,7 @@ monitored) are both canonical values now, not placeholders.
 ## Checked, no longer reproduces
 
 ### f087 (1 page, 20 occurrences) vs f036 (1 page, 2 occurrences) occurrence-count check
-Source: `report-feedback-palais-gallien-v2.md` P4 item, "worth verifying the
+Source: `archive/report-feedback-palais-gallien-v2.md` P4 item, "worth verifying the
 occurrence counter on that rule."
 
 Checked directly against a fresh Palais Gallien regeneration (Session D,
@@ -151,3 +187,50 @@ turned out to be real, fixable bugs, not flakiness:
 Both fixes are covered by the (no-longer-excluded) tests themselves; no
 separate regression test was needed since the tests that caught the bugs
 now assert the fixed behaviour.
+
+## Checked, not a bug: the 7 500 euro per-manquement figure
+
+2026-08-19. Raised as a possible omission when asking to regenerate the
+La Corniche report (`artifacts/lacoorniche.com/2026-08-19T11-15-01Z`,
+manual fields copied over from the earlier same-day audit
+`83bc6711-ea32-4005-b176-9c3c6ed09f2c` via `setAuditManualFields` and
+re-rendered as `reports/2026-08-19T12-39-41Z-fr.pdf`). Checked directly:
+the figure is present, page 4, "Exposition en cas de manquement" -
+"soit jusqu'a 7 500 EUR par manquement constate pour une personne
+morale, cumulable (art. R451-4 du code de la consommation)." Confirmed
+both via `pdftotext` and a rendered screenshot of the page. Not an open
+item; noted here only so a future session does not re-investigate the
+same non-bug.
+
+## Open: visible letter-spacing/tracking defect across body text
+
+**Re-checked 2026-08-22:** no `letter-spacing`/`word-spacing`/`justify`/
+`hyphens` rule anywhere in `nocturne.css` or `paged.css` can produce this -
+confirmed by direct grep, not assumption. There is also no `report.css` file
+in the repo at all (the original note below names one; that's stale - the
+actual files are `packages/report/src/styles/nocturne.css` and `paged.css`).
+Leading hypothesis is now a Chromium print-to-PDF text-run-splitting
+artifact (font/kerning-related), not a stylesheet bug - `pdf-text-integrity
+.test.ts` already documents an unresolved limitation in this area. Needs a
+fresh real-site PDF (not just `pdftotext`, a rendered screenshot) to confirm
+whether it still reproduces before investigating further; not re-tested this
+session since no report was generated all the way to PDF bytes (the SIRET
+guard, working as intended, blocks that step until a real SIRET exists -
+see the placeholder-values section above).
+
+2026-08-19, same session as above, spotted while confirming the 7 500
+euro figure. The rendered PDF (same file:
+`2026-08-19T12-39-41Z-fr.pdf`, and visible on prior same-day reports
+too, so not new to this regeneration) shows uneven word/letter spacing
+inside ordinary body paragraphs - visible mid-word gaps such as
+"sanct ionné", "cont ravent ion", "const at é", "cumulable (art .)", and
+section headers like "03 · L'AUDIT EN CHIFFRES" rendering with extra
+tracking. This is a real rendered-page defect (confirmed on a 150dpi
+screenshot of page 4, not just a `pdftotext` extraction artifact), most
+likely a CSS `letter-spacing`/`word-spacing` or justified-text
+(`text-align: justify`) rule in `report.css` being applied too broadly,
+or a Paged.js text-justification interaction. Not investigated further
+this session per the standing instruction to defer formatting fixes;
+next session should locate the source rule in
+`packages/report/src/template` / `report.css` and confirm the fix
+against a fresh real-site render, not just the fixture.

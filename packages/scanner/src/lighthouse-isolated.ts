@@ -3,7 +3,27 @@ import { fileURLToPath } from 'node:url';
 import type { Result } from 'lighthouse';
 import { getLighthouseTimeoutMs } from './config.js';
 
-const WORKER_PATH = fileURLToPath(new URL('./lighthouse-worker.ts', import.meta.url));
+// The fork target must match whichever extension this module itself was
+// actually loaded with: '.ts' in dev (tsx runs source directly - see the
+// root "serve" script) but only '.js' exists once this package is built
+// to dist/ (the compiled tree `@odysseus/scanner` actually exports, which
+// every real consumer - odysseus serve, the CLI's workspace resolution -
+// uses). Hardcoding '.ts' worked in every dev-mode manual test and in the
+// dev server, and failed identically and silently on every single page of
+// every single scan run through the built package, which is why this
+// looked like a per-site Lighthouse problem instead of the build-vs-source
+// path mismatch it actually was.
+/** Exported only so lighthouse-isolated.test.ts can assert the
+ *  extension-matching logic directly (a regression guard for the exact
+ *  class of bug this replaced - a hardcoded extension that only worked
+ *  under tsx and broke identically on every page of every real, built-
+ *  package scan) without needing an actual dist/ build in the test run. */
+export function resolveWorkerPath(selfUrl: string): string {
+  const extension = selfUrl.endsWith('.ts') ? '.ts' : '.js';
+  return fileURLToPath(new URL(`./lighthouse-worker${extension}`, selfUrl));
+}
+
+const WORKER_PATH = resolveWorkerPath(import.meta.url);
 
 /** Extra headroom past Lighthouse's own internal timeout, for fork/IPC
  *  overhead, before the parent gives up on an unresponsive worker. */
@@ -57,7 +77,18 @@ export async function runLighthouseIsolated(
       // root "serve" script); the child needs the same loader to execute a
       // .ts file directly.
       execArgv: ['--import', 'tsx', `--max-old-space-size=${WORKER_MAX_OLD_SPACE_MB}`],
-      stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+      // stderr is piped, not ignored: a crash before the worker's own
+      // try/catch can send a message (a module-load failure, an uncaught
+      // exception thrown outside the awaited call) exits the process with
+      // no IPC message at all, and previously took its stack trace down
+      // with it - every failure looked like the same generic "exited
+      // before returning a result", indistinguishable from a clean crash.
+      stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
+    });
+
+    let stderrOutput = '';
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderrOutput += chunk.toString('utf8');
     });
 
     let settled = false;
@@ -93,13 +124,14 @@ export async function runLighthouseIsolated(
     });
 
     child.on('exit', (code, signal) => {
-      finish(() =>
+      finish(() => {
+        const stderrSuffix = stderrOutput.trim() ? ` - stderr: ${stderrOutput.trim()}` : '';
         reject(
           new Error(
-            `runLighthouseIsolated: worker for ${url} exited before returning a result (code ${code}, signal ${signal})`,
+            `runLighthouseIsolated: worker for ${url} exited before returning a result (code ${code}, signal ${signal})${stderrSuffix}`,
           ),
-        ),
-      );
+        );
+      });
     });
 
     child.send({ url, debugPort, timeoutMs });

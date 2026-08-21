@@ -44,8 +44,15 @@ export const DEFAULT_CRAWL_DELAY_MS = 1000;
 export const DEFAULT_PAGE_TIMEOUT_MS = 30_000;
 /** Lighthouse's own navigation-mode run routinely runs well past a single
  *  page's load timeout, since it collects a full trace across throttled
- *  network/CPU simulation on top of the audits themselves. */
-export const DEFAULT_LIGHTHOUSE_TIMEOUT_MS = 60_000;
+ *  network/CPU simulation on top of the audits themselves. Raised from
+ *  60s during the P0.1 investigation (2026-08-21 La Corniche feedback
+ *  pass): a real lacoorniche.com page (booking widget, Popup Maker modal,
+ *  Complianz cookie consent, all loading under Lighthouse's own simulated
+ *  mobile/throttled network) took ~106s end to end, confirmed by running
+ *  it standalone with a raised timeout - not a hang, genuinely that slow
+ *  under throttled conditions. 60s was cutting off legitimate real-site
+ *  runs, not just broken ones. */
+export const DEFAULT_LIGHTHOUSE_TIMEOUT_MS = 120_000;
 /** Number of pages the scan phase (render-diff + axe + Lighthouse) processes
  *  at once. Each lane keeps the same CRAWL_DELAY_MS pacing it always had;
  *  this only adds lanes, it never shortens the delay between requests. The

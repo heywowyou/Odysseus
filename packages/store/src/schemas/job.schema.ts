@@ -138,6 +138,15 @@ export interface JobDocumentFields {
   progress: JobProgress;
   error?: string;
   orphaned?: boolean;
+  /** P0.1 (2026-08-21 La Corniche feedback pass): a completed full-audit
+   *  job whose report advertises a pillar (performance) it has zero data
+   *  for must not look identical to a genuinely complete one in the
+   *  dashboard. Set when hasMeasuredCoreWebVitals(manifest) is false at
+   *  completion; absent (not a boolean) so a normal complete job's JSON
+   *  shape is unchanged. Status stays 'complete' - the audit and its
+   *  report did generate - this only flags that one advertised section
+   *  came back empty and the report itself explains why. */
+  needsReview?: string;
 }
 
 export type JobDocument = JobDocumentFields;
@@ -273,6 +282,7 @@ const jobSchema = new Schema<JobDocument>(
     progress: { type: jobProgressSchema, required: true, default: {} },
     error: { type: String },
     orphaned: { type: Boolean },
+    needsReview: { type: String },
   },
   { collection: 'jobs' },
 );

@@ -59,15 +59,33 @@ const article47Assessment: ObligationAssessment = {
 // ones that never mention it, per item 19) and omitted every performance-
 // metric abbreviation and GEO/SEO term the report does use.
 describe('item 33: the glossary is scoped to the terms a given report actually uses', () => {
-  it('always includes the severity vocabulary and Core Web Vitals abbreviations', () => {
+  it('always includes the severity vocabulary, and Core Web Vitals abbreviations when performance was measured', () => {
     const html = renderGlossary(getStrings('fr'), 13, {
       findings: [],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     for (const term of ['Critique', 'Sérieux', 'Modéré', 'Mineur', 'LCP', 'FCP', 'TBT', 'CLS', 'Speed Index']) {
       expect(html).toContain(term);
     }
+  });
+
+  // P0.1 (2026-08-21 La Corniche feedback pass): the five Core Web Vitals
+  // terms used to be always-included, defining LCP/FCP/TBT/CLS/Speed Index
+  // for a performance section that had zero content whenever Lighthouse
+  // failed on every page.
+  it('omits Core Web Vitals abbreviations when performance was not measured', () => {
+    const html = renderGlossary(getStrings('fr'), 13, {
+      findings: [],
+      obligationAssessment: undefined,
+      transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: false,
+    });
+    for (const term of ['LCP', 'FCP', 'TBT', 'CLS', 'Speed Index']) {
+      expect(html).not.toContain(term);
+    }
+    expect(html).toContain('Critique');
   });
 
   it('omits RGAA for an EAA-route client', () => {
@@ -75,6 +93,7 @@ describe('item 33: the glossary is scoped to the terms a given report actually u
       findings: [],
       obligationAssessment: eaaAssessment,
       transactionalFlowEvaluated: true,
+      hasMeasuredCoreWebVitals: true,
     });
     expect(html).not.toContain('RGAA');
   });
@@ -84,6 +103,7 @@ describe('item 33: the glossary is scoped to the terms a given report actually u
       findings: [],
       obligationAssessment: article47Assessment,
       transactionalFlowEvaluated: true,
+      hasMeasuredCoreWebVitals: true,
     });
     expect(html).toContain('RGAA');
   });
@@ -93,11 +113,13 @@ describe('item 33: the glossary is scoped to the terms a given report actually u
       findings: [buildFinding('seo')],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     const withoutSeo = renderGlossary(getStrings('fr'), 13, {
       findings: [buildFinding('accessibility')],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     expect(withSeo).toContain('>SEO<');
     expect(withoutSeo).not.toContain('>SEO<');
@@ -108,11 +130,13 @@ describe('item 33: the glossary is scoped to the terms a given report actually u
       findings: [buildFinding('geo')],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     const withoutGeo = renderGlossary(getStrings('fr'), 13, {
       findings: [buildFinding('accessibility')],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     expect(withGeo).toContain('>GEO<');
     expect(withoutGeo).not.toContain('>GEO<');
@@ -123,11 +147,13 @@ describe('item 33: the glossary is scoped to the terms a given report actually u
       findings: [],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: true,
+      hasMeasuredCoreWebVitals: true,
     });
     const notEvaluated = renderGlossary(getStrings('fr'), 13, {
       findings: [],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     expect(evaluated).toContain('Parcours transactionnel');
     expect(notEvaluated).not.toContain('Parcours transactionnel');
@@ -142,6 +168,7 @@ describe('item 3.5: the 8 previously-missing glossary terms', () => {
       findings: [],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     for (const term of ['Sans objet', 'Pages concernées', 'Rendu', 'Sirene', 'Effort', 'Impact commercial']) {
       expect(html).toContain(term);
@@ -153,11 +180,13 @@ describe('item 3.5: the 8 previously-missing glossary terms', () => {
       findings: [{ ...buildFinding('accessibility'), ruleId: 'alt-text-quality-heuristic' }],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     const withoutHeuristic = renderGlossary(getStrings('fr'), 13, {
       findings: [buildFinding('accessibility')],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     expect(withHeuristic).toContain('Signaux à vérifier');
     expect(withoutHeuristic).not.toContain('Signaux à vérifier');
@@ -168,11 +197,13 @@ describe('item 3.5: the 8 previously-missing glossary terms', () => {
       findings: [buildFinding('geo')],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     const withoutGeo = renderGlossary(getStrings('fr'), 13, {
       findings: [buildFinding('accessibility')],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
+      hasMeasuredCoreWebVitals: true,
     });
     expect(withGeo).toContain('Recherche émergente');
     expect(withoutGeo).not.toContain('Recherche émergente');

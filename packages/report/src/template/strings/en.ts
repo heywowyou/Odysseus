@@ -5,6 +5,30 @@ export const en: ReportStrings = {
     eyebrow: 'Contents',
     heading: "What's in this report",
   },
+  reportIntro: {
+    eyebrow: 'About this report',
+    heading: 'How to read this report',
+    audienceHeading: 'Who each part of this report is for',
+    audienceYouLabel: 'You (director)',
+    audienceAgencyLabel: 'Your provider / web agency',
+    audienceCounselLabel: 'Your legal counsel',
+    measuresHeading: 'What this audit measures',
+    measuresAccessibility: 'Accessibility: can customers with disabilities book and navigate your site?',
+    measuresSeo: 'SEO: does Google correctly understand your pages?',
+    measuresGeo: 'AI visibility (GEO): can AI assistants (ChatGPT and equivalents) understand and recommend your business?',
+    measuresRendering: 'Rendering: does your content exist even without JavaScript, for the most basic crawlers and screen readers?',
+    consequencesHeading: 'What this concretely changes for you',
+    consequenceBooking: 'Customers who cannot complete a booking.',
+    consequenceRegulatory: 'A regulatory exposure already documented (see the "Legal exposure" section).',
+    consequenceVisibility: 'Reduced visibility in search results and AI assistants.',
+    notALegalOpinionNote:
+      'What this report is not: legal advice (see the "Legal exposure" section); an automated audit covering roughly 30 to 40 percent of accessibility criteria (see "Methodology and limits").',
+    nextActionsHeading: 'Your three next actions',
+    nextActionItemTemplate: '{title}, pass on to: {contact} (effort: {effort}).',
+    contactAgency: 'your agency',
+    contactAgencyAndVendor: 'your agency and the relevant third-party provider',
+    contactUnknownVendor: 'the relevant third-party provider',
+  },
   statistics: {
     eyebrow: 'The audit in numbers',
     heading: 'What the analysis found',
@@ -16,6 +40,8 @@ export const en: ReportStrings = {
     heuristicOccurrencesExcludedNoteTemplate:
       "This figure excludes {count} further occurrences from a heuristic signal on alt-text quality, which is not a deterministic conformance test (see the \"Signals to verify\" section).",
     criticalDriverNoteTemplate: 'These critical findings come only from: {rules}.',
+    thirdPartyOccurrencesNoteTemplate:
+      '{percent}% of these occurrences come from third-party components (forms, popups, booking widget) - see the "To address with your third-party providers" section.',
     pagesWithCriticalTileLabel: 'pages with at least one critical finding',
     criticalTileLabel: 'critical',
     seriousTileLabel: 'serious',
@@ -65,6 +91,7 @@ export const en: ReportStrings = {
     kicker: 'Odysseus · Digital audit',
     reportTitle: 'Audit report',
     subtitle: 'Accessibility, performance, SEO and GEO audit',
+    subtitleNoPerformance: 'Accessibility, SEO and GEO audit',
     siteLabel: 'Site audited',
     dateLabel: 'Audit date',
     pagesScannedLabel: 'Scope analyzed',
@@ -90,6 +117,10 @@ export const en: ReportStrings = {
     heading: 'What to take away',
     startHereKicker: 'Where to start',
     glossaryPointerSentence: 'Technical terms used in this report are defined in the "Glossary" section.',
+    thirdPartySplitSentenceTemplate:
+      '{percent}% of accessibility occurrences come from third-party components (forms, popups, booking widget), not the site itself.',
+    categoryImbalanceNote:
+      'This site has few significant SEO and GEO findings relative to accessibility: most of the priorities below concern accessibility.',
     jumpLinkLabelTemplate: 'See priority {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
       'Priority 1 above is a commercial issue, not a legal conformance issue: it was ranked first based on its effort-to-impact ratio. The legal conformance priorities rank at position {legalRank}.',
@@ -129,6 +160,8 @@ export const en: ReportStrings = {
     registrySnapshotTemplate:
       'Sirene registry data: {denomination}, SIREN {siren}, {effectifs}, retrieved on {date} ({source}).',
     registrySnapshotEffectifsUnavailable: 'headcount band unavailable',
+    registrySnapshotVerbatimNote:
+      "This denomination is reproduced exactly as it appears in the Sirene registry, associated with the SIREN above, not derived from the domain name.",
     transactionalFlowConflictTemplate:
       'Conflicting signal: automated detection found a transactional flow on this site, but a manual confirmation states {manualValue}. Verify before relying on this status.',
     transactionalFlowConflictManualAbsent: 'no such flow exists',
@@ -138,7 +171,9 @@ export const en: ReportStrings = {
     undeterminedActionNote:
       "This status would become determinable if the company's SIREN number were published on the site or provided to the Odysseus team.",
     transactionalFlowOnSiteTemplate:
-      'The identified transactional flow was found directly on the following pages within the audited scope: {pages}.',
+      'A booking widget is integrated via a component present across the audited scope ({vendors}). Example pages where it was found: {examplePages}.',
+    transactionalFlowOnSiteNoVendorTemplate:
+      'The identified transactional flow is integrated directly on the site, via a component present on several pages of the audited scope. Example pages where it was found: {examplePages}.',
     transactionalFlowDelegatedTemplate:
       "The identified transactional flow is delegated to a third-party provider ({domain}). That domain was not crawled as part of this audit, which stays confined to the audited site's own domain.",
     transactionalFlowDelegatedDomainUnknown: 'domain not identified',
@@ -146,7 +181,7 @@ export const en: ReportStrings = {
   checklist: {
     eyebrow: 'Printable checklist',
     heading: 'Priority checklist',
-    intro: 'Page designed to be printed or captured on its own, no prose, just the essentials.',
+    intro: 'Page designed to be printed or captured on its own, no prose, just the essentials. Pass this on to your technical provider.',
     rankColumnLabel: '#',
     priorityColumnLabel: 'Priority',
     effortColumnLabel: 'Effort',
@@ -159,11 +194,14 @@ export const en: ReportStrings = {
   themes: {
     eyebrow: 'Priorities',
     headingTemplate: '{count} priorities, ranked by effort and impact',
+    aggregateEffortEstimateTemplate:
+      "Overall estimate: {min} to {max} development days for all {count} priorities below (a broad, non-contractual estimate). A priority involving a third-party component additionally depends on its provider's own timeline.",
     effortLabel: 'Effort',
     impactLabel: 'Business impact',
     affectedPagesLabel: 'Affected pages',
     conformityLabel: 'Conformance',
     conformityNotApplicable: 'Not applicable',
+    conformityNotApplicableGloss: 'this priority is not an accessibility matter',
     conformityNonConformant: 'Non-conformant',
     legalTagLabel: 'Conformance requirement',
     impactCitationLabel: 'Reference data point',
@@ -174,6 +212,9 @@ export const en: ReportStrings = {
     effortImpactLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     pagesOfTotalTemplate: '{pages} {pageWord} of {totalPages}',
     refsLabel: 'Findings',
+    ownershipSplitTemplate:
+      '{firstPartyPages} {firstPartyPageWord} belong to your site (your agency can fix these), {thirdPartyPages} {thirdPartyPageWord} belong to {vendor} (pass on to its provider).',
+    ownershipSplitUnknownVendorLabel: 'a third-party component',
   },
   renderDiffEvidence: {
     eyebrow: 'Render evidence',
@@ -185,8 +226,8 @@ export const en: ReportStrings = {
     charCountsUnavailableNote: 'Character count not measured for this page.',
     missingCaptionTemplate: 'Missing: {percent}% of visible text absent from the raw HTML, on {selector}.',
     missingCaptionNoSelectorTemplate: 'Missing: {percent}% of visible text absent from the raw HTML.',
-    overflowTextTemplate: '{count} more pages show the same gap.',
-    overflowTextSingularTemplate: '1 more page shows the same gap.',
+    overflowTextTemplate: '{count} more pages across the site show a comparable rendering gap.',
+    overflowTextSingularTemplate: '1 more page across the site shows a comparable rendering gap.',
     positiveStatementTemplate:
       "This site's commercial pages keep their text in the raw HTML: no meaningful render gap was measured.",
     positiveStatementWrapperNote:
@@ -417,10 +458,10 @@ export const en: ReportStrings = {
       'This report reproduces technical findings detected by automated tools, together with explanations and prioritization. It does not constitute legal advice; see the "Legal exposure" section and the methodology for coverage limits. Odysseus cannot be held liable for decisions made on the sole basis of this document.',
   },
   findingsAppendix: {
-    eyebrow: 'Appendix',
+    eyebrow: 'Technical appendix',
     heading: 'Full findings list',
     intro:
-      'Every finding detected by the automated tools, including those judged minor and not carried into the priorities above.',
+      'Every finding detected by the automated tools, including those judged minor and not carried into the priorities above. Pass this on to your technical provider.',
     categoryLabels: {
       accessibility: 'Accessibility',
       seo: 'Search engine visibility (SEO)',
@@ -432,7 +473,9 @@ export const en: ReportStrings = {
     thirdPartyHeading: 'To resolve with your third-party providers',
     thirdPartyIntro:
       "These findings are in code belonging to a third-party plugin, widget, or embedded frame (booking engine, cookie banner, preview panel, form). Your agency cannot edit this code directly: the fix goes through the vendor or provider concerned.",
-    unknownVendorLabel: 'Unidentified third-party provider',
+    thirdPartyCountedInTotalsNote:
+      'These findings still count toward the severity totals at the top of the report: it is a real conformance gap under the standard, even when the specific implementation observed here already turns out to be correct.',
+    unknownVendorLabel: 'Third-party component, provider not identified',
     severityLabels: {
       critical: 'Critical',
       serious: 'Serious',
@@ -493,8 +536,10 @@ export const en: ReportStrings = {
       cartOrPayment: 'cart or checkout flow',
       both: 'booking, cart, or checkout flow',
     },
+    // P1.3 (2026-08-21 La Corniche feedback pass): "filed via" read as an
+    // already-completed action rather than an available path.
     legalCitationExemptionRouteSentence:
-      'The exemption route documented to date is a disproportionate burden waiver request filed via Démarches Simplifiées.',
+      'The exemption route documented to date is a disproportionate burden waiver request, to be filed via Démarches Simplifiées.',
     legalCitationManualSirenWithFindingTemplate:
       'The SIREN number used for this determination was provided manually; this site does not publish it itself (see finding {findingId}).',
     legalCitationManualSirenNoFindingSentence:
@@ -509,6 +554,9 @@ export const en: ReportStrings = {
     crawlCapDisclosureTemplate:
       '{maxPages} pages is a configured cap for this audit, not the whole site: the site may have additional pages that were not analyzed.',
     sirenSourceResolvedTemplate: 'The SIREN number was confirmed as displayed on this page of the site: {url}.',
+    lighthouseFailureIntroSentence:
+      'Performance measurement (Lighthouse) did not complete on this site for this audit. Failure detail:',
+    lighthouseFailureReasonTemplate: '{count}/{total} pages: {reason}',
   },
   footer: {
     confidentialityLabel: 'Confidential report',

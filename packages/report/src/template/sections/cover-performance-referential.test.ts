@@ -31,6 +31,11 @@ describe('renderCover référentiel line reacts to whether performance was measu
     // retyped here would silently mismatch on the invisible NBSP.
     expect(html).toContain(fr.cover.wcagReferentialValueNoPerformance);
     expect(html).not.toContain(fr.cover.wcagReferentialValue);
+    // P0.1 (2026-08-21 La Corniche feedback pass): the subtitle line
+    // ("Audit accessibilité, performance, SEO et GEO") was hardcoded and
+    // unconditional, unlike wcagReferentialValue above.
+    expect(html).toContain(fr.cover.subtitleNoPerformance);
+    expect(html).not.toContain(fr.cover.subtitle);
   });
 
   it('includes Performance when at least one page has real Core Web Vitals data', async () => {
@@ -56,5 +61,6 @@ describe('renderCover référentiel line reacts to whether performance was measu
     const html = renderCover(fr, withVitals, analysis);
 
     expect(html).toContain(fr.cover.wcagReferentialValue);
+    expect(html).toContain(fr.cover.subtitle);
   });
 });

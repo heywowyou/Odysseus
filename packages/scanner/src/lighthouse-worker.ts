@@ -17,6 +17,23 @@ interface WorkerRequest {
 
 type WorkerResponse = { ok: true; result: unknown } | { ok: false; error: string };
 
+// A throw or rejection outside the awaited runLighthouse() call (e.g. from
+// an internal Lighthouse/Puppeteer event handler) bypasses the try/catch
+// below entirely and used to fall through to Node's default handler, which
+// prints to stderr and exits - previously invisible since stderr was
+// discarded by the parent (see lighthouse-isolated.ts). Report it the same
+// way a caught error is reported instead of exiting silently.
+function reportFatal(error: unknown): void {
+  const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
+  if (process.send) {
+    process.send({ ok: false, error: message } satisfies WorkerResponse, () => process.exit(1));
+  } else {
+    process.exit(1);
+  }
+}
+process.on('uncaughtException', reportFatal);
+process.on('unhandledRejection', reportFatal);
+
 process.on('message', (message: WorkerRequest) => {
   void (async () => {
     let response: WorkerResponse;

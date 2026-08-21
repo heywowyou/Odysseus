@@ -3,6 +3,8 @@ import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, renderSheetHeader, sheet } from '../html-utils.js';
 import { isArticle47Regime } from './accessibility-statement.js';
 
+const CORE_WEB_VITALS_TERM_IDS = new Set(['lcp', 'fcp', 'tbt', 'cls', 'speed-index']);
+
 export interface GlossaryContext {
   findings: readonly Finding[];
   obligationAssessment: ObligationAssessment | undefined;
@@ -11,6 +13,11 @@ export interface GlossaryContext {
    *  regardless of the answer, so the term used to state that (section
    *  02) is relevant either way. */
   transactionalFlowEvaluated: boolean;
+  /** hasMeasuredCoreWebVitals(manifest) - the five Core Web Vitals terms
+   *  used to be always-included, defining LCP/FCP/TBT/CLS/Speed Index for
+   *  a performance section that has zero content when Lighthouse failed
+   *  on every page (P0.1, 2026-08-21 La Corniche feedback pass). */
+  hasMeasuredCoreWebVitals: boolean;
 }
 
 /** item 33: whether each conditional glossary term id is relevant to a
@@ -19,9 +26,10 @@ export interface GlossaryContext {
  *  section from rendering at all) and omitted every performance-metric
  *  abbreviation and GEO/SEO term the report does use. Terms not listed
  *  here are always included (the severity vocabulary, WCAG/EAA/EN 301 549,
- *  the five Core Web Vitals, and the constat/occurrence/sélecteur/DGCCRF
- *  terms every report's stats, appendix, and legal sections reference
- *  unconditionally). */
+ *  and the constat/occurrence/sélecteur/DGCCRF terms every report's
+ *  stats, appendix, and legal sections reference unconditionally). The
+ *  five Core Web Vitals terms are handled below, gated on
+ *  hasMeasuredCoreWebVitals rather than falling through to the default. */
 function isGlossaryTermRelevant(id: string, ctx: GlossaryContext): boolean {
   switch (id) {
     case 'rgaa':
@@ -48,6 +56,9 @@ function isGlossaryTermRelevant(id: string, ctx: GlossaryContext): boolean {
     case 'recherche-emergente':
       return ctx.findings.some((f) => f.category === 'geo');
     default:
+      if (CORE_WEB_VITALS_TERM_IDS.has(id)) {
+        return ctx.hasMeasuredCoreWebVitals;
+      }
       return true;
   }
 }

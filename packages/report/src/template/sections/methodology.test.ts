@@ -63,6 +63,45 @@ describe('item 3.2: the social-exclusion disclosure agrees with a singular count
   });
 });
 
+// P0.1 (2026-08-21 La Corniche feedback pass): the generic "n'a pas
+// abouti... voir Méthodologie" pointer used to lead here and find no
+// further detail. This asserts the real per-reason failure counts render
+// instead, grouped by normalized message (URL stripped) rather than one
+// line per page.
+describe('renderMethodology surfaces the real Lighthouse failure reason', () => {
+  it('renders nothing extra when every visited page had a successful Lighthouse pass', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
+
+    expect(html).not.toContain('Détail des échecs constatés');
+  });
+
+  it('groups identical failure reasons across pages into one summarized line', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const withFailures = {
+      ...manifest,
+      pages: manifest.pages.map((page, i) =>
+        i < 2
+          ? {
+              ...page,
+              errors: {
+                ...page.errors,
+                lighthouse: `runLighthouseIsolated: worker for ${page.url} exited before returning a result (code 1, signal null)`,
+              },
+            }
+          : page,
+      ),
+    };
+    const html = renderMethodology(getStrings('fr'), 11, withFailures, 'fr');
+
+    expect(html).toContain("mesure de performance (Lighthouse)");
+    expect(html).toContain('exited before returning a result (code 1, signal null)');
+    // Grouped, not one line per page: the per-page URL is stripped before
+    // counting, so both failures collapse into a single "2/N pages" line.
+    expect(html.match(/exited before returning a result/g)?.length).toBe(1);
+  });
+});
+
 describe('renderMethodology section-number eyebrow', () => {
   it('shows "11", matching its position in the single-tier 14-section TOC (2026-08-16 redesign)', async () => {
     const manifest = await loadSasFernandeManifest();

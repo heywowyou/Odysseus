@@ -20,6 +20,33 @@ export interface ReportStrings {
     eyebrow: string;
     heading: string;
   };
+  /** P3 (2026-08-21 La Corniche feedback pass): section-00, a new
+   *  non-technical intro page before the résumé. Structural/navigational,
+   *  not analytical - template-driven, no new LLM pass. */
+  reportIntro: {
+    eyebrow: string;
+    heading: string;
+    audienceHeading: string;
+    audienceYouLabel: string;
+    audienceAgencyLabel: string;
+    audienceCounselLabel: string;
+    measuresHeading: string;
+    measuresAccessibility: string;
+    measuresSeo: string;
+    measuresGeo: string;
+    measuresRendering: string;
+    consequencesHeading: string;
+    consequenceBooking: string;
+    consequenceRegulatory: string;
+    consequenceVisibility: string;
+    notALegalOpinionNote: string;
+    nextActionsHeading: string;
+    /** Template: {title}, {contact}, {effort}. */
+    nextActionItemTemplate: string;
+    contactAgency: string;
+    contactAgencyAndVendor: string;
+    contactUnknownVendor: string;
+  };
   statistics: {
     eyebrow: string;
     heading: string;
@@ -43,6 +70,12 @@ export interface ReportStrings {
      *  reach the annex. Template: {rules}, a comma-joined list of
      *  translated rule titles. */
     criticalDriverNoteTemplate: string;
+    /** P1.2 (2026-08-21 La Corniche feedback pass): rendered only when
+     *  stats.thirdPartyAccessibilityOccurrences > 0 - surfaces the
+     *  first-party/third-party split as a headline number instead of
+     *  only in the annex's "À traiter avec vos prestataires tiers"
+     *  section. Template: {percent}. */
+    thirdPartyOccurrencesNoteTemplate: string;
     pagesWithCriticalTileLabel: string;
     criticalTileLabel: string;
     seriousTileLabel: string;
@@ -113,6 +146,10 @@ export interface ReportStrings {
     kicker: string;
     reportTitle: string;
     subtitle: string;
+    /** Used instead of subtitle when hasMeasuredCoreWebVitals(manifest) is
+     *  false, so the cover never advertises a performance pillar the
+     *  report has no data for. */
+    subtitleNoPerformance: string;
     siteLabel: string;
     dateLabel: string;
     pagesScannedLabel: string;
@@ -185,6 +222,17 @@ export interface ReportStrings {
      *  legalCitationPointerSentence) - a hardcoded page/section number
      *  would drift the next time section ordering changes. */
     glossaryPointerSentence: string;
+    /** P1.2 (2026-08-21 La Corniche feedback pass): rendered only when
+     *  stats.thirdPartyAccessibilityOccurrences > 0, restating
+     *  statistics.ts's own footnote in the résumé since it's the section
+     *  most likely to be read in full by a non-technical director.
+     *  Template: {percent}. */
+    thirdPartySplitSentenceTemplate: string;
+    /** P2.4 (2026-08-21 La Corniche feedback pass): rendered only when
+     *  accessibility findings dominate (>= 80% of total) and SEO+GEO
+     *  together contributed at least one finding - see
+     *  ACCESSIBILITY_DOMINANCE_THRESHOLD in executive-summary.ts. */
+    categoryImbalanceNote: string;
     /** Template: {rank}. report-feedback-palais-gallien.md item 5:
      *  standalone accessible link text ("Voir priorité 1") instead of a
      *  bare "Voir →" repeated three times, which read as a decorative
@@ -275,10 +323,20 @@ export interface ReportStrings {
      *  for the EAA obligation, but nothing stated whether the actual
      *  flow was in-scope for the crawl - a delegated off-domain booking
      *  engine (the common case for hotels, per project memory) sits
-     *  outside a single-origin crawl entirely. Template: {pages}, a
-     *  comma-joined list of crawled page URLs where the flow itself was
-     *  found. */
+     *  outside a single-origin crawl entirely.
+     *
+     *  P0.3 (2026-08-21 La Corniche feedback pass): rewritten from a raw
+     *  comma-joined dump of every page the mechanism appeared on (which
+     *  included legal-notice pages like /cookies/, implying the booking
+     *  funnel itself lived there) to a mechanism statement naming the
+     *  actual detected component(s). Template: {vendors} (comma-joined
+     *  detected vendor names), {examplePages} (a short comma-joined
+     *  sample, not the exhaustive list). */
     transactionalFlowOnSiteTemplate: string;
+    /** Fallback for transactionalFlowOnSiteTemplate when no known vendor
+     *  prefix matched any evidence selector - still a component, just not
+     *  attributable to a named product. Template: {examplePages}. */
+    transactionalFlowOnSiteNoVendorTemplate: string;
     /** Template: {domain}, the delegated booking-engine provider domain
      *  the redirect check resolved to (never crawled as part of this
      *  audit - a single-origin crawl by design). */
@@ -296,6 +354,12 @@ export interface ReportStrings {
      *  (Sirene's field unreliable for this entity, or the lookup never
      *  resolved one). */
     registrySnapshotEffectifsUnavailable: string;
+    /** P2.1 (2026-08-21 La Corniche feedback pass): rendered under
+     *  registrySnapshotTemplate whenever a real snapshot exists - a
+     *  registry denomination can carry formatting artifacts (an
+     *  unbalanced parenthesis, seen on a real report) that read as a
+     *  scraping error without this note. */
+    registrySnapshotVerbatimNote: string;
     /** item 0.1: shown when a manual hasTransactionalFlow override
      *  disagrees with the detector (ObligationAssessment.
      *  siteSignalResolutions.hasTransactionalFlow.detectedValue set).
@@ -333,11 +397,22 @@ export interface ReportStrings {
     eyebrow: string;
     /** Template: {count}. */
     headingTemplate: string;
+    /** P1.5 (2026-08-21 La Corniche feedback pass): a coarse, deterministic
+     *  aggregate developer-day band computed off the rendered priority
+     *  cards' own effort labels (packages/core's
+     *  estimateAggregateEffortDays) - not an LLM-generated claim.
+     *  Template: {min}, {max}, {count}. */
+    aggregateEffortEstimateTemplate: string;
     effortLabel: string;
     impactLabel: string;
     affectedPagesLabel: string;
     conformityLabel: string;
     conformityNotApplicable: string;
+    /** P2.2 (2026-08-21 La Corniche feedback pass): shown inline,
+     *  parenthetically, next to the first rendered card whose
+     *  conformityValue is conformityNotApplicable - not repeated on
+     *  every card that shares the value. */
+    conformityNotApplicableGloss: string;
     conformityNonConformant: string;
     legalTagLabel: string;
     /** Label prefix for a reference-stat citation note, milestone 8.5c -
@@ -361,6 +436,14 @@ export interface ReportStrings {
     /** Template: {pages}, {pageWord}, {totalPages}. */
     pagesOfTotalTemplate: string;
     refsLabel: string;
+    /** P1.2 (2026-08-21 La Corniche feedback pass): rendered only when a
+     *  theme's findings span both first- and third-party pages. Template:
+     *  {firstPartyPages}, {firstPartyPageWord}, {thirdPartyPages},
+     *  {thirdPartyPageWord}, {vendor}. */
+    ownershipSplitTemplate: string;
+    /** Fallback for {vendor} above when no known vendor prefix matched
+     *  any third-party finding's selector. */
+    ownershipSplitUnknownVendorLabel: string;
   };
   /** Doc §3: bars only, no screenshots - two proportional-width bars
    *  (raw vs rendered visible-text length) plus a one-line caption, never
@@ -558,6 +641,12 @@ export interface ReportStrings {
      *  known, rather than mixed with the client's own defects. */
     thirdPartyHeading: string;
     thirdPartyIntro: string;
+    /** P2.3 (2026-08-21 La Corniche feedback pass): explains why a
+     *  third-party finding can be counted among the headline "sérieux"
+     *  total while this section separately notes the observed
+     *  implementation needs no action - both true, but unexplained
+     *  before this note existed. */
+    thirdPartyCountedInTotalsNote: string;
     /** Shown for a frame-crossing selector (Playwright's `>>>`
      *  combinator) matching none of the known vendor prefixes - still
      *  third-party code, just not attributable to a named product. */
@@ -724,6 +813,13 @@ export interface ReportStrings {
      *  missing finding is suppressed and this sentence states where it
      *  was found instead. Template: {url}. */
     sirenSourceResolvedTemplate: string;
+    /** P0.1 (2026-08-21 La Corniche feedback pass): renders when Lighthouse
+     *  failed on at least one page, giving the real per-reason failure
+     *  counts instead of a dead-end pointer with no follow-through. */
+    lighthouseFailureIntroSentence: string;
+    /** Template: {count}, {total}, {reason}. One line per distinct
+     *  normalized failure reason across the scan. */
+    lighthouseFailureReasonTemplate: string;
   };
   footer: {
     confidentialityLabel: string;

@@ -12,6 +12,7 @@
 
 import { completeJob, updateJobProgress, type JobDocument } from '@odysseus/store';
 import type { SiteSignalOverrides } from '@odysseus/core';
+import { hasMeasuredCoreWebVitals } from '@odysseus/report';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
@@ -90,7 +91,21 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     );
     await updateJobProgress(connection, job.jobId, { phase: 'report-en' });
 
-    await completeJob(connection, job.jobId, { auditId: auditResult.auditId });
+    // P0.1 (2026-08-21 La Corniche feedback pass): a completed job whose
+    // report advertises a pillar (performance) it has zero data for used
+    // to look identical, in the dashboard, to a genuinely complete one -
+    // the only place that fact was visible was 27 pages into the PDF
+    // itself. Status stays 'complete' (the audit and report did generate);
+    // needsReview flags the gap for the dashboard without inventing a new
+    // status value every other status check would need to learn about.
+    const needsReview = hasMeasuredCoreWebVitals(auditResult.manifest)
+      ? undefined
+      : 'Performance measurement (Lighthouse) failed on every scanned page: the report has no Core Web Vitals data.';
+
+    await completeJob(connection, job.jobId, {
+      auditId: auditResult.auditId,
+      ...(needsReview !== undefined ? { needsReview } : {}),
+    });
   } finally {
     release();
   }

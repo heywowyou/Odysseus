@@ -1,5 +1,10 @@
 export { REPORT_TEMPLATE_VERSION } from './constants.js';
 export type { GenerateReportInput, StoredAnalysis } from './types.js';
+/** Re-exported so packages/interface's job-completion gate (P0.1, 2026-08-21
+ *  La Corniche feedback pass) can ask the same question the report itself
+ *  asks, rather than re-deriving "was performance measured" from the
+ *  manifest a second time in a different package. */
+export { hasMeasuredCoreWebVitals } from './template/sections/core-web-vitals-table.js';
 
 import { launchBrowser } from '@odysseus/scanner';
 import type { GenerateReportInput } from './types.js';

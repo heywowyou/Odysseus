@@ -91,6 +91,7 @@ export interface CompleteJobPatch {
   auditIds?: string[];
   urlResults?: UrlResult[];
   ingestionResults?: ProspectIngestionResult[];
+  needsReview?: string;
 }
 
 export async function completeJob(

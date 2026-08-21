@@ -125,7 +125,7 @@ export function renderCover(
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-4)">
       <div style="font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(strings.cover.kicker)}</div>
       <h1 style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(nomCommercial ?? strings.cover.reportTitle)}</h1>
-      <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(strings.cover.subtitle)}</div>
+      <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(hasMeasuredCoreWebVitals(manifest) ? strings.cover.subtitle : strings.cover.subtitleNoPerformance)}</div>
       ${raisonSociale ? `<div style="font-size:13px;opacity:0.6">${escapeHtml(strings.cover.legalNameLabel)} : ${escapeHtml(raisonSociale)}</div>` : ''}
     </div>
     <div>
