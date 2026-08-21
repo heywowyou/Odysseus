@@ -6,10 +6,10 @@ import { SECTION_IDS, type SectionId } from '../section-registry.js';
 const ALL_SECTIONS = new Set<SectionId>(SECTION_IDS);
 
 describe('renderToc', () => {
-  it('numbers all 14 entries in order, starting at 1, when every section is included', () => {
+  it('numbers all 15 entries in order, starting at 1, when every section is included', () => {
     const html = renderToc(getStrings('fr'), ALL_SECTIONS);
 
-    for (let i = 1; i <= 14; i++) {
+    for (let i = 1; i <= 15; i++) {
       expect(html).toContain(`class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">${i}</span>`);
     }
   });
@@ -26,14 +26,14 @@ describe('renderToc', () => {
   it('B8: links each included row to its own section-NN id, via an anchor that itself carries the href target-counter reads (item 1)', () => {
     const html = renderToc(getStrings('fr'), ALL_SECTIONS);
 
-    for (let i = 1; i <= 14; i++) {
+    for (let i = 0; i <= 14; i++) {
       const id = `section-${String(i).padStart(2, '0')}`;
       expect(html).toContain(`href="#${id}"`);
     }
     // The page-number pseudo-element now lives on the anchor itself
     // (class="toc-row"), not on a separate sibling span that never
     // carried the href attr() reads from - see paged.css.
-    expect((html.match(/class="toc-row"/g) ?? []).length).toBe(14);
+    expect((html.match(/class="toc-row"/g) ?? []).length).toBe(15);
   });
 
   it('B8: drops the old "page numbers are in the footer" footnote', () => {
@@ -55,22 +55,22 @@ describe('renderToc', () => {
       expect(html).not.toContain('Observations');
     });
 
-    it('renumbers every section after the gap so the sequence stays contiguous 1..13', () => {
+    it('renumbers every section after the gap so the sequence stays contiguous 1..14', () => {
       const html = renderToc(getStrings('fr'), withoutObservations);
-      for (let i = 1; i <= 13; i++) {
+      for (let i = 1; i <= 14; i++) {
         expect(html).toContain(`class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">${i}</span>`);
       }
       expect(html).not.toContain(
-        'class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">14</span>',
+        'class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">15</span>',
       );
     });
 
-    it('the row after the gap (section-07) is now the 6th row, not the 7th', () => {
+    it('the row after the gap (section-07) is now the 7th row, not the 8th', () => {
       const html = renderToc(getStrings('fr'), withoutObservations);
       const section07Index = html.indexOf('href="#section-07"');
       const rowStart = html.lastIndexOf('<div style="display:flex;align-items:baseline', section07Index);
       const row = html.slice(rowStart, section07Index);
-      expect(row).toContain('>6</span>');
+      expect(row).toContain('>7</span>');
     });
   });
 });

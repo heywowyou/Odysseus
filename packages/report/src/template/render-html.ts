@@ -25,13 +25,14 @@ import { renderCover } from './sections/cover.js';
 import { renderToc } from './sections/toc.js';
 import { renderStatistics } from './sections/statistics.js';
 import { renderExecutiveSummary } from './sections/executive-summary.js';
+import { renderReportIntro } from './sections/report-intro.js';
 import { renderLegalExposure } from './sections/legal-exposure.js';
 import { renderConformanceSummary } from './sections/conformance-summary.js';
 import { renderThemes } from './sections/themes.js';
 import { renderChecklist } from './sections/checklist.js';
 import { renderObservations } from './sections/observations.js';
 import { renderRenderDiffEvidence } from './sections/render-diff-evidence.js';
-import { renderCoreWebVitalsTable } from './sections/core-web-vitals-table.js';
+import { hasMeasuredCoreWebVitals, renderCoreWebVitalsTable } from './sections/core-web-vitals-table.js';
 import { isArticle47Regime, renderAccessibilityStatement } from './sections/accessibility-statement.js';
 import { renderFindingsAppendix } from './sections/findings-appendix.js';
 import { renderMethodology } from './sections/methodology.js';
@@ -143,6 +144,7 @@ function renderBody(
   return [
     renderCover(strings, manifest, analysis, resolvedFindings, manualFields),
     renderToc(strings, includedSectionIds),
+    renderReportIntro(strings, ord('section-00'), analysis, resolvedFindings),
     renderExecutiveSummary(strings, ord('section-01'), analysis, resolvedFindings, manifest),
     renderLegalExposure(
       strings,
@@ -199,6 +201,7 @@ function renderBody(
       findings: resolvedFindings,
       obligationAssessment: analysis.obligationAssessment,
       transactionalFlowEvaluated: manifest.siteSignals?.hasTransactionalFlow !== undefined,
+      hasMeasuredCoreWebVitals: hasMeasuredCoreWebVitals(manifest),
     }),
     renderNextSteps(strings, ord('section-14'), manifest, analysis.language),
   ].join('\n');

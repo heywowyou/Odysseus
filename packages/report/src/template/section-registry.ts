@@ -6,8 +6,9 @@ import type { ReportStrings } from './strings/i18n.js';
  *  sections actually end up included in a given report - see
  *  computeSectionNumbers below for the live, renumbered ordinal. */
 export const SECTION_IDS = [
-  'section-01', 'section-02', 'section-03', 'section-04', 'section-05', 'section-06', 'section-07',
-  'section-08', 'section-09', 'section-10', 'section-11', 'section-12', 'section-13', 'section-14',
+  'section-00', 'section-01', 'section-02', 'section-03', 'section-04', 'section-05', 'section-06',
+  'section-07', 'section-08', 'section-09', 'section-10', 'section-11', 'section-12', 'section-13',
+  'section-14',
 ] as const;
 
 export type SectionId = (typeof SECTION_IDS)[number];
@@ -27,6 +28,8 @@ export type SectionId = (typeof SECTION_IDS)[number];
  *  than a silent drift risk. */
 export function sectionTitle(id: SectionId, strings: ReportStrings): string {
   switch (id) {
+    case 'section-00':
+      return strings.reportIntro.eyebrow;
     case 'section-01':
       return strings.executiveSummary.eyebrow;
     case 'section-02':
