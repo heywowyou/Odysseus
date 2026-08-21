@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Theme } from '@odysseus/core';
+import type { Finding, Theme } from '@odysseus/core';
 import { selectReferenceStats } from '@odysseus/core';
 import { isQuickWinTheme, MAX_RENDERED_THEMES, renderThemes, selectRenderedThemes } from './themes.js';
 import { getStrings } from '../strings/i18n.js';
@@ -774,5 +774,267 @@ describe('item 0.6: a theme with no resolved findings is never selected as a ren
     const rendered = selectRenderedThemes(themes, findingsById);
 
     expect(rendered.map((t) => t.priorityRank)).toEqual([2, 3, 4, 5, 6, 7]);
+  });
+});
+
+// P1.2 (2026-08-21 La Corniche feedback pass): a priority card's own
+// recommended-action prose told the client to ask their agency to fix a
+// defect living inside a third-party plugin (e.g. Gravity Forms) their
+// agency structurally cannot patch. A deterministic sentence beneath the
+// prose splits the ask when a theme's findings span both first- and
+// third-party pages.
+describe('P1.2: the first-party/third-party ownership split note', () => {
+  function buildFinding(overrides: Record<string, unknown>) {
+    return {
+      findingId: overrides['findingId'] ?? 'f001',
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'axe' as const,
+      ruleId: 'button-name',
+      category: 'accessibility' as const,
+      severity: 'serious' as const,
+      wcagCriteria: ['4.1.2'],
+      title: 'Buttons must have discernible text',
+      description: 'd',
+      pageUrls: [],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: overrides['findingId'] ?? 'f001',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  function buildAnalysis(findingIds: string[]) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title: 'Boutons sans texte accessible',
+          category: 'accessibility' as const,
+          businessImpact: 'Impact',
+          effort: 'low' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds,
+          recommendedActions: ['Demandez à votre prestataire technique d\'ajouter un texte visible.'],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const manifest = { pages: [] } as never;
+
+  it('renders the split sentence naming the vendor when the theme spans first- and third-party pages', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        pageUrls: ['https://example.com/'],
+        elements: [{ pageUrl: 'https://example.com/', selector: 'header form', snippet: '' }],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        pageUrls: ['https://example.com/contact'],
+        elements: [{ pageUrl: 'https://example.com/contact', selector: '.gform_wrapper button', snippet: '' }],
+      }),
+    ];
+    const analysis = buildAnalysis(['f001', 'f002']);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
+
+    expect(html).toContain('relèvent de votre site');
+    expect(html).toContain('Gravity Forms');
+    expect(html).toContain('à transmettre à son éditeur');
+  });
+
+  it('renders nothing when every finding in the theme is first-party', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        pageUrls: ['https://example.com/'],
+        elements: [{ pageUrl: 'https://example.com/', selector: 'header nav a', snippet: '' }],
+      }),
+    ];
+    const analysis = buildAnalysis(['f001']);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
+
+    expect(html).not.toContain('à transmettre à son éditeur');
+  });
+
+  it('falls back to a generic label when no known vendor prefix matches the third-party selector', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        pageUrls: ['https://example.com/'],
+        elements: [{ pageUrl: 'https://example.com/', selector: 'header form', snippet: '' }],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        pageUrls: ['https://example.com/contact'],
+        elements: [{ pageUrl: 'https://example.com/contact', selector: '.some-widget >>> button', snippet: '' }],
+      }),
+    ];
+    const analysis = buildAnalysis(['f001', 'f002']);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
+
+    expect(html).toContain('un composant tiers');
+  });
+});
+
+// P1.5 (2026-08-21 La Corniche feedback pass): a director's first
+// question is "what will this cost me" - "Faible/Moyen/Élevé" alone
+// doesn't answer it.
+describe('P1.5: the aggregate effort estimate sentence', () => {
+  function buildFinding(findingId: string): Finding {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'axe' as const,
+      ruleId: 'button-name',
+      category: 'accessibility' as const,
+      severity: 'serious' as const,
+      wcagCriteria: ['4.1.2'],
+      title: 'Buttons must have discernible text',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    } as never;
+  }
+
+  function buildAnalysis(efforts: Array<'low' | 'medium' | 'high'>) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: efforts.map((effort, i) => ({
+        title: `Theme ${i + 1}`,
+        category: 'accessibility' as const,
+        businessImpact: 'Impact',
+        effort,
+        impact: 'high' as const,
+        priorityRank: i + 1,
+        findingIds: [`f00${i + 1}`],
+        recommendedActions: [],
+      })),
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const manifest = { pages: [] } as never;
+
+  it('renders a global day-range estimate computed from the rendered cards\' effort labels', () => {
+    const efforts: Array<'low' | 'medium' | 'high'> = ['low', 'medium'];
+    const findings = efforts.map((_, i) => buildFinding(`f00${i + 1}`));
+    const analysis = buildAnalysis(efforts);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
+
+    expect(html).toContain('Estimation globale');
+    expect(html).toContain('jours de développement');
+  });
+
+  it('renders nothing when there are no rendered themes at all', () => {
+    const analysis = buildAnalysis([]);
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, [], manifest);
+
+    expect(html).not.toContain('Estimation globale');
+  });
+});
+
+// P2.2 (2026-08-21 La Corniche feedback pass): "Sans objet" read as
+// "unknown" at the point it's first encountered - the explanation only
+// lived in the glossary, 20 pages later.
+describe('P2.2: the inline "Sans objet" gloss', () => {
+  function buildFinding(findingId: string, category: 'accessibility' | 'seo' = 'seo'): Finding {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'custom' as const,
+      ruleId: 'meta-description',
+      category,
+      severity: 'moderate' as const,
+      wcagCriteria: [],
+      title: 'Missing meta description',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    } as never;
+  }
+
+  function buildAnalysis() {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title: 'SEO issue one',
+          category: 'seo' as const,
+          businessImpact: 'Impact',
+          effort: 'low' as const,
+          impact: 'medium' as const,
+          priorityRank: 1,
+          findingIds: ['f001'],
+          recommendedActions: [],
+        },
+        {
+          title: 'SEO issue two',
+          category: 'seo' as const,
+          businessImpact: 'Impact',
+          effort: 'low' as const,
+          impact: 'medium' as const,
+          priorityRank: 2,
+          findingIds: ['f002'],
+          recommendedActions: [],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const manifest = { pages: [] } as never;
+
+  it('shows the gloss once, on the first card whose conformity is "Sans objet"', () => {
+    const findings = [buildFinding('f001'), buildFinding('f002')];
+    const analysis = buildAnalysis();
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
+    const occurrences = html.split('ce chantier ne relève pas de').length - 1;
+
+    expect(occurrences).toBe(1);
   });
 });

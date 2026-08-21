@@ -160,9 +160,21 @@ export function renderStatistics(
         )}</p>`
       : '';
 
+  // P1.2: this is the fact that determines who the client calls first -
+  // computed off the already heuristic-excluded accessibilityOccurrences
+  // total, same denominator the tile above shows.
+  const thirdPartyOccurrencesNote =
+    stats.thirdPartyAccessibilityOccurrences > 0 && stats.accessibilityOccurrences > 0
+      ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
+          fillTemplate(s.thirdPartyOccurrencesNoteTemplate, {
+            percent: Math.round((stats.thirdPartyAccessibilityOccurrences / stats.accessibilityOccurrences) * 100),
+          }),
+        )}</p>`
+      : '';
+
   const footnotes =
-    heuristicOccurrencesNote || criticalDriverNote
-      ? `<div style="margin-bottom:var(--space-3)">${heuristicOccurrencesNote}${criticalDriverNote}</div>`
+    heuristicOccurrencesNote || criticalDriverNote || thirdPartyOccurrencesNote
+      ? `<div style="margin-bottom:var(--space-3)">${heuristicOccurrencesNote}${criticalDriverNote}${thirdPartyOccurrencesNote}</div>`
       : '<div style="margin-bottom:var(--space-3)"></div>';
 
   return sheet(`

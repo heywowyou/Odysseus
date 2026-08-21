@@ -240,3 +240,29 @@ describe('item 1.10: the critical-findings driver is named when concentrated in 
     expect(html).not.toContain('proviennent uniquement de');
   });
 });
+
+// P1.2 (2026-08-21 La Corniche feedback pass): the third-party share of
+// accessibility occurrences is the fact that determines who the client
+// calls first - it used to be buried on page 21 of 27.
+describe('P1.2: the third-party occurrences footnote', () => {
+  function buildThirdPartyFinding(index: number): Finding {
+    const f = buildCategoryFinding('accessibility', index);
+    return { ...f, elements: [{ pageUrl: 'https://example.com/', selector: '.gform_wrapper button', snippet: '' }] };
+  }
+
+  it('renders the percentage when some accessibility occurrences are third-party', () => {
+    const manifest = buildMinimalManifest();
+    const findings = [buildThirdPartyFinding(1), buildCategoryFinding('accessibility', 2)];
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
+
+    expect(html).toContain('50 % de ces occurrences proviennent de composants tiers');
+  });
+
+  it('renders nothing when no accessibility finding is third-party', () => {
+    const manifest = buildMinimalManifest();
+    const findings = [buildCategoryFinding('accessibility', 1)];
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
+
+    expect(html).not.toContain('composants tiers');
+  });
+});

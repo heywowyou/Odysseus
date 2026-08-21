@@ -64,8 +64,15 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
       // stand-alone accessible text (per item 5's own reasoning), without
       // repeating it.
       const jumpLinkLabel = fillTemplate(e.jumpLinkLabelTemplate, { rank: theme.priorityRank });
+      // P3 (2026-08-21 La Corniche feedback pass): adding the new
+      // section-00 intro page shifted this row across a page boundary in
+      // the stress fixture, and Paged.js's DOM fragmentation split the
+      // <a> itself, leaving a page-boundary fragment with no text content
+      // - axe-core's post-pagination audit (paged-invariants.test.ts
+      // invariant 8a) caught it as a link-name violation. break-inside:
+      // avoid keeps the whole link on one page instead.
       return `
-        <a href="#theme-${theme.priorityRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:8px 0;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
+        <a href="#theme-${theme.priorityRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:8px 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
           <span style="width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:11px;display:flex;align-items:center;justify-content:center">${theme.priorityRank}</span>
           <span style="font-size:14px;flex:1">${escapeHtml(theme.title)}</span>
           <span style="font-size:11px;color:var(--color-accent-300);text-decoration:underline">${escapeHtml(jumpLinkLabel)}</span>
@@ -80,6 +87,41 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
       ${rows}
     </div>
   `;
+}
+
+/** P1.2 (2026-08-21 La Corniche feedback pass): same headline fact as
+ *  statistics.ts's footnote, restated here since the résumé is the
+ *  section most likely to be the only one a director actually reads in
+ *  full. Rendered only when the percentage is meaningful (there is at
+ *  least one non-heuristic accessibility occurrence to take a share of). */
+function renderThirdPartySplitNote(strings: ReportStrings, stats: ReturnType<typeof computeStatistics>): string {
+  if (stats.thirdPartyAccessibilityOccurrences === 0 || stats.accessibilityOccurrences === 0) return '';
+
+  const e = strings.executiveSummary;
+  const percent = Math.round((stats.thirdPartyAccessibilityOccurrences / stats.accessibilityOccurrences) * 100);
+  return `<p style="font-size:12px;opacity:0.65;margin-top:var(--space-2);max-width:66ch">${escapeHtml(
+    fillTemplate(e.thirdPartySplitSentenceTemplate, { percent }),
+  )}</p>`;
+}
+
+/** P2.4 (2026-08-21 La Corniche feedback pass): the cover promises four
+ *  pillars (accessibilité, performance, SEO, GEO), but a real report had
+ *  ~90% of substantive findings concentrated in accessibility - not a
+ *  bug, but worth setting the expectation up front rather than letting a
+ *  reader discover the imbalance 20 pages in. Threshold is deliberately
+ *  simple and stated in the comment, not tuned: accessibility findings
+ *  make up at least 80% of the total, and SEO+GEO together contributed
+ *  at least one finding (an actual imbalance to note, not just "this
+ *  site has no SEO/GEO findings at all", which needs no framing). */
+const ACCESSIBILITY_DOMINANCE_THRESHOLD = 0.8;
+
+function renderCategoryImbalanceNote(strings: ReportStrings, stats: ReturnType<typeof computeStatistics>): string {
+  const seoGeoCount = stats.categoryCounts.seo + stats.categoryCounts.geo;
+  if (seoGeoCount === 0 || stats.totalFindings === 0) return '';
+  if (stats.accessibilityCount / stats.totalFindings < ACCESSIBILITY_DOMINANCE_THRESHOLD) return '';
+
+  const e = strings.executiveSummary;
+  return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.categoryImbalanceNote)}</p>`;
 }
 
 export function renderExecutiveSummary(
@@ -110,6 +152,8 @@ export function renderExecutiveSummary(
     ${renderSheetHeader(ordinal, e.eyebrow, e.heading)}
     <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(countsSentence)} ${escapeHtml(analysis.executiveSummary)}</p>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
+    ${renderThirdPartySplitNote(strings, stats)}
+    ${renderCategoryImbalanceNote(strings, stats)}
     ${renderTopPriorityLegalNote(strings, analysis.themes, findingsById)}
     ${renderStartHere(strings, analysis.themes)}
   `, '', 'section-01');

@@ -231,3 +231,63 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     expect(html).toContain('3 constats prioritaires (2 critiques et 1 sérieux) sur un total de 4 constats');
   });
 });
+
+// P2.4 (2026-08-21 La Corniche feedback pass): sets the expectation up
+// front rather than letting the reader discover, 20 pages in, that the
+// SEO/GEO pillars have little to say relative to accessibility.
+describe('P2.4: the category-imbalance note', () => {
+  const analysis = {
+    auditId: 'a1',
+    language: 'fr' as const,
+    model: 'test-model',
+    temperature: 0,
+    generatedAt: new Date(),
+    overallRisk: 'medium' as const,
+    executiveSummary: 'summary',
+    themes: [] as Theme[],
+    quickWins: [],
+    notes: '',
+  };
+  const emptyManifest: AuditManifest = {
+    auditId: 'a1',
+    kind: 'audit',
+    siteUrl: 'https://example.com/',
+    startedAt: new Date(),
+    finishedAt: new Date(),
+    pages: [],
+    crawl: { maxPages: 20, maxDepth: 5, visitedCount: 0 },
+    tool: {},
+  } as never;
+
+  function findingWithCategory(id: string, category: 'accessibility' | 'seo' | 'geo'): Finding {
+    return { ...buildFinding(id), category };
+  }
+
+  it('renders when accessibility dominates and SEO/GEO contributed at least one finding', () => {
+    const findings = [
+      ...['f1', 'f2', 'f3', 'f4'].map((id) => findingWithCategory(id, 'accessibility')),
+      findingWithCategory('f5', 'seo'),
+    ];
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).toContain('peu de constats SEO et GEO significatifs');
+  });
+
+  it('renders nothing when there are no SEO/GEO findings at all', () => {
+    const findings = ['f1', 'f2'].map((id) => findingWithCategory(id, 'accessibility'));
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).not.toContain('peu de constats SEO et GEO significatifs');
+  });
+
+  it('renders nothing when accessibility does not dominate', () => {
+    const findings = [
+      findingWithCategory('f1', 'accessibility'),
+      findingWithCategory('f2', 'seo'),
+      findingWithCategory('f3', 'geo'),
+    ];
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).not.toContain('peu de constats SEO et GEO significatifs');
+  });
+});

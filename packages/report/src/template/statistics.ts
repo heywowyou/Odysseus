@@ -3,6 +3,7 @@ import { HEURISTIC_RULE_IDS, RENDER_DIFF_EMISSION_THRESHOLD_PERCENT } from '@ody
 import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rollup.js';
 import { CATEGORY_ORDER } from './design-tokens.js';
 import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
+import { isThirdPartyFinding } from './third-party-attribution.js';
 
 /** Deterministic counts for the statistics page (docs/report-v2-refactor.md
  *  B10): nowhere in v1 did the document state pages scanned, finding
@@ -27,6 +28,16 @@ export interface ReportStatistics {
    *  kept separately so a future section can state it explicitly rather
    *  than silently dropping it. */
   accessibilityHeuristicOccurrences: number;
+  /** P1.2 (2026-08-21 La Corniche feedback pass): how many of
+   *  accessibilityOccurrences above come from findings tagged
+   *  third-party (isThirdPartyFinding) - a real report had 37% of its
+   *  accessibility occurrences trace to third-party components (Gravity
+   *  Forms, Popup Maker, a booking widget), a fact that determines who
+   *  the client actually needs to call, buried on page 21 of 27 with
+   *  nothing in the résumé or the stats page pointing at it. Same
+   *  heuristic-exclusion convention as accessibilityOccurrences: a
+   *  heuristic finding's occurrences never enter this count either. */
+  thirdPartyAccessibilityOccurrences: number;
   pagesWithCritical: number;
   critical: number;
   serious: number;
@@ -65,6 +76,7 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
 
   let accessibilityOccurrences = 0;
   let accessibilityHeuristicOccurrences = 0;
+  let thirdPartyAccessibilityOccurrences = 0;
   let critical = 0;
   let serious = 0;
   let moderate = 0;
@@ -86,6 +98,9 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
         accessibilityHeuristicOccurrences += finding.occurrences;
       } else {
         accessibilityOccurrences += finding.occurrences;
+        if (isThirdPartyFinding(finding)) {
+          thirdPartyAccessibilityOccurrences += finding.occurrences;
+        }
       }
       accessibilityCount += 1;
     }
@@ -115,6 +130,7 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
     totalFindings: findings.length,
     accessibilityOccurrences,
     accessibilityHeuristicOccurrences,
+    thirdPartyAccessibilityOccurrences,
     pagesWithCritical: pagesWithCriticalSet.size,
     critical,
     serious,

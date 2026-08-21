@@ -36,6 +36,11 @@ describe('computeStatistics', () => {
       // triggers the heuristic - see the dedicated describe block below
       // for the exclusion behaviour itself.
       accessibilityHeuristicOccurrences: 0,
+      // P1.2 (2026-08-21 La Corniche feedback pass): the real haaitza
+      // fixture's own third-party occurrence count, confirmed against
+      // third-party-attribution.ts's vendor table applied to this scan's
+      // actual findings, not a guessed number.
+      thirdPartyAccessibilityOccurrences: 165,
       pagesWithCritical: 20,
       critical: 8,
       serious: 20,
