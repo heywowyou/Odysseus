@@ -537,7 +537,10 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [iframeFinding], manifest, 'general');
 
     expect(html).toContain('À traiter avec vos prestataires tiers');
-    expect(html).toContain('Prestataire tiers non identifié');
+    // P2.6 (2026-08-21 La Corniche feedback pass): "Prestataire tiers non
+    // identifié" read as the tool not knowing something, reframed as a
+    // finding about the component itself.
+    expect(html).toContain('Composant tiers, éditeur non identifié');
   });
 
   it('does not put an ordinary first-party finding in the third-party block', async () => {
