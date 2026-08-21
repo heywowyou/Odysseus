@@ -438,7 +438,7 @@ needed, say so and stop. Do not change them and continue.
 17. **No annex group in the PDF report is ever forced onto one page with
     `break-inside: avoid`, regardless of how few findings it has**,
     decided 2026-08-19 during the La Corniche feedback-fix session
-    (`docs/report/report-feedback-la-corniche.md` item 1.6's follow-up
+    (`docs/report/archive/report-feedback-la-corniche.md` item 1.6's follow-up
     write-up). `packages/report/src/template/sections/findings-
     appendix.ts` used to apply the `.appendix-group` CSS class (paged.css,
     `break-inside: avoid`) to any rule group at or under
