@@ -60,7 +60,7 @@ describe('renderRenderDiffEvidence', () => {
     }));
     const html = renderRenderDiffEvidence(fr, 8, 'fr', threeCards, 4);
 
-    expect(html).toContain('1 autre page présente le même écart');
+    expect(html).toContain('1 autre page du site présente un écart de rendu comparable');
     expect(html).not.toContain('1 autres pages présentent');
   });
 
@@ -74,6 +74,6 @@ describe('renderRenderDiffEvidence', () => {
     }));
     const html = renderRenderDiffEvidence(fr, 8, 'fr', threeCards, 6);
 
-    expect(html).toContain('3 autres pages présentent le même écart');
+    expect(html).toContain('3 autres pages du site présentent un écart de rendu comparable');
   });
 });
