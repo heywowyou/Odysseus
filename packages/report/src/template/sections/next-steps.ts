@@ -64,6 +64,8 @@ export function renderNextSteps(strings: ReportStrings, ordinal: number, manifes
     )
     .join('');
 
+  // P4.1 (2026-08-21 La Corniche feedback pass): Prochaines étapes always
+  // starts on its own fresh page, same reasoning as Priorités above.
   return sheet(`
     ${renderSheetHeader(ordinal, n.eyebrow, n.heading)}
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-6)">
@@ -73,5 +75,5 @@ export function renderNextSteps(strings: ReportStrings, ordinal: number, manifes
     <p style="font-size:11px;opacity:0.55;margin-top:var(--space-4)">${escapeHtml(authorship)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:4px">${escapeHtml(issuerBlock)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:4px;max-width:70ch">${escapeHtml(n.liabilityStatement)}</p>
-  `, '', 'section-14');
+  `, 'sheet-standalone', 'section-14');
 }

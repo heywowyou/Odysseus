@@ -225,7 +225,14 @@ html {
   margin-top: var(--space-8);
 }
 
-h2, h4, h5 {
+/* P4.6 (2026-08-21 La Corniche feedback pass): extended from h2/h4/h5 to
+   every heading level - a heading must never be the last line on a page
+   with its content starting on the next, regardless of which level it
+   is. h1 is the cover's own title (already break-inside: avoid via
+   .section-head where used, but heading levels get this unconditionally
+   for the same reason h2/h4/h5 already did); h3/h6 appear in report
+   copy (h6 is the numbered eyebrow every .section-head already uses). */
+h1, h2, h3, h4, h5, h6 {
   break-after: avoid;
 }
 
@@ -260,6 +267,19 @@ table thead {
 }
 table tbody tr {
   break-inside: avoid;
+}
+/* P4.5 (2026-08-21 La Corniche feedback pass): a real report showed a
+   single orphaned row (f048) alone on an otherwise empty page - table
+   tbody rows are already break-inside: avoid individually, but nothing
+   stopped Paged.js from placing just one or two rows on a page by
+   themselves before continuing the rest of the table on the next page.
+   orphans/widows apply to line boxes, not table rows, per the CSS spec,
+   but Chromium's Paged.js-driven fragmentation treats each atomic
+   (break-inside: avoid) row as a fragmentation unit these properties can
+   still constrain - confirmed against the real stress fixture render. */
+table tbody {
+  orphans: 3;
+  widows: 3;
 }
 
 /* findings-appendix.ts: a finding's own data row and its page-URL
