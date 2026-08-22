@@ -15,9 +15,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@odysseus/core": "workspace:*",
     "@axe-core/playwright": "^4.12.1",
+    "@odysseus/core": "workspace:*",
+    "crux-api": "^4.1.0",
     "lighthouse": "^12.8.2",
-    "playwright": "^1.49.0"
+    "playwright": "^1.49.0",
+    "structured-data-testing-tool": "^4.5.0"
   }
 }

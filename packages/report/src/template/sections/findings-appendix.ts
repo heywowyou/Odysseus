@@ -77,20 +77,45 @@ function cell(html: string, extra = ''): string {
  *  crawled, collapse to "Toutes les pages analysées (N)" instead of
  *  listing them; otherwise cap the visible list and name the remainder
  *  ("et N autres"), never truncating silently. */
-function renderPageUrlList(strings: ReportStrings, language: ReportLanguage, finding: Finding, totalPagesScanned: number): string {
+/** 2026-08-22, La Corniche report review: computes the same sorted-URL
+ *  signature renderPageUrlList itself sorts by, so a caller can detect
+ *  "this finding's page set is byte-identical to an earlier finding's in
+ *  the same rule group" before ever building the list text. Length-1 sets
+ *  are excluded - there is nothing to save by deduping a single URL. */
+function pageUrlSetSignature(finding: Finding): string | undefined {
+  if (finding.pageUrls.length <= 1) return undefined;
+  return [...finding.pageUrls].sort().join('\u0000');
+}
+
+function renderPageUrlList(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  finding: Finding,
+  totalPagesScanned: number,
+  /** The earlier finding in this rule group whose page-URL set is
+   *  byte-identical to this one's, if any - set by renderRuleGroup after
+   *  it has seen every finding in the group in id order. Undefined for
+   *  the first finding to have a given set, or when this finding's set is
+   *  unique within the group. */
+  samePagesAsFindingId: string | undefined,
+): string {
   if (finding.pageUrls.length === 0) return '';
   const a = strings.findingsAppendix;
-  const sortedUrls = [...finding.pageUrls].sort();
 
   let urlsText: string;
-  if (totalPagesScanned > 0 && sortedUrls.length === totalPagesScanned) {
-    urlsText = fillTemplate(a.allPagesAnalyzedTemplate, { count: formatNumber(totalPagesScanned, language) });
-  } else if (sortedUrls.length > PAGE_URL_LIST_CAP) {
-    const shown = sortedUrls.slice(0, PAGE_URL_LIST_CAP);
-    const remaining = sortedUrls.length - PAGE_URL_LIST_CAP;
-    urlsText = `${shown.join(', ')} ${fillTemplate(a.andNMoreTemplate, { count: formatNumber(remaining, language) })}`;
+  if (samePagesAsFindingId !== undefined) {
+    urlsText = fillTemplate(a.samePagesAsTemplate, { findingId: samePagesAsFindingId });
   } else {
-    urlsText = sortedUrls.join(', ');
+    const sortedUrls = [...finding.pageUrls].sort();
+    if (totalPagesScanned > 0 && sortedUrls.length === totalPagesScanned) {
+      urlsText = fillTemplate(a.allPagesAnalyzedTemplate, { count: formatNumber(totalPagesScanned, language) });
+    } else if (sortedUrls.length > PAGE_URL_LIST_CAP) {
+      const shown = sortedUrls.slice(0, PAGE_URL_LIST_CAP);
+      const remaining = sortedUrls.length - PAGE_URL_LIST_CAP;
+      urlsText = `${shown.join(', ')} ${fillTemplate(a.andNMoreTemplate, { count: formatNumber(remaining, language) })}`;
+    } else {
+      urlsText = sortedUrls.join(', ');
+    }
   }
 
   // paged.css's `.appendix-url-row { break-before: avoid }` keeps this row
@@ -133,7 +158,13 @@ function selectorCellStyle(selector: string): string {
   return `font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none;opacity:0.8;font-size:${fontSize}`;
 }
 
-function renderSubTableRow(strings: ReportStrings, language: ReportLanguage, finding: Finding, totalPagesScanned: number): string {
+function renderSubTableRow(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  finding: Finding,
+  totalPagesScanned: number,
+  samePagesAsFindingId: string | undefined,
+): string {
   const selector = finding.elements[0]?.selector ?? '';
   return `
     <tr id="annexref-${escapeHtml(finding.findingId)}">
@@ -142,7 +173,7 @@ function renderSubTableRow(strings: ReportStrings, language: ReportLanguage, fin
       ${cell(formatNumber(finding.occurrences, language))}
       ${cell(escapeHtml(selector), selectorCellStyle(selector))}
     </tr>
-    ${renderPageUrlList(strings, language, finding, totalPagesScanned)}
+    ${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId)}
   `;
 }
 
@@ -181,7 +212,21 @@ function renderRuleGroup(
   // single-code badge.
   const ruleCodeDisplay = group.memberRuleIds.length > 1 ? group.memberRuleIds.join(', ') : group.ruleId;
   const sortedFindings = [...group.findings].sort((x, y) => x.findingId.localeCompare(y.findingId));
-  const rows = sortedFindings.map((finding) => renderSubTableRow(strings, language, finding, totalPagesScanned)).join('');
+  // 2026-08-22, La Corniche report review: findings are already visited
+  // in findingId order, so the first finding to carry a given page-URL
+  // signature is always the earliest id - exactly what samePagesAsTemplate
+  // should point a reader back to.
+  const seenPageUrlSignatures = new Map<string, string>();
+  const rows = sortedFindings
+    .map((finding) => {
+      const signature = pageUrlSetSignature(finding);
+      const samePagesAsFindingId = signature !== undefined ? seenPageUrlSignatures.get(signature) : undefined;
+      if (signature !== undefined && samePagesAsFindingId === undefined) {
+        seenPageUrlSignatures.set(signature, finding.findingId);
+      }
+      return renderSubTableRow(strings, language, finding, totalPagesScanned, samePagesAsFindingId);
+    })
+    .join('');
   const obsTag = isFullyDiverted
     ? `<span class="obs-tag" style="font-size:11px;opacity:0.55">${escapeHtml(a.observationsCrossRefLabel)}</span>`
     : '';

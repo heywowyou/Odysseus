@@ -4,6 +4,7 @@ import {
   ROBOTS_BLOCKS_INDEXING_RULE_ID,
   BROKEN_INTERNAL_LINK_RULE_ID,
   ROBOTS_DISALLOW_BROAD_RULE_ID,
+  AI_CRAWLER_BLOCKED_RULE_ID,
   type NormalizeCrawlInput,
 } from './normalize-crawl.js';
 
@@ -181,5 +182,27 @@ describe('robots-disallow-broad', () => {
     );
     const broad = candidates.filter((c) => c.ruleId === ROBOTS_DISALLOW_BROAD_RULE_ID);
     expect(broad).toHaveLength(2);
+  });
+});
+
+describe('ai-crawler-blocked', () => {
+  it('fires one candidate per blocked agent', () => {
+    const candidates = extractCrawlCandidates(
+      baseInput({
+        aiCrawlerBlocks: [
+          { agent: 'GPTBot', disallowPattern: '/' },
+          { agent: 'ClaudeBot', disallowPattern: '/' },
+        ],
+      }),
+    );
+    const blocked = candidates.filter((c) => c.ruleId === AI_CRAWLER_BLOCKED_RULE_ID);
+    expect(blocked).toHaveLength(2);
+    expect(blocked[0]?.category).toBe('geo');
+    expect(blocked[0]?.pageUrl).toBe(START_URL);
+    expect(blocked[0]?.element?.selector).not.toBe(blocked[1]?.element?.selector);
+  });
+
+  it('does not fire when there are no blocked agents', () => {
+    expect(extractCrawlCandidates(baseInput())).toEqual([]);
   });
 });

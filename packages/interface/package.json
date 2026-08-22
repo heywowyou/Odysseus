@@ -12,7 +12,7 @@
   },
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc -b && tsc -p tsconfig.public.json && mkdir -p dist/public && cp src/public/*.html src/public/*.css dist/public/",
+    "build": "tsc -b && tsc -p tsconfig.public.json && mkdir -p dist/public/styles dist/public/fonts && cp src/public/*.html src/public/*.css dist/public/ && cp ../report/src/styles/nocturne.css dist/public/styles/nocturne.css && cp ../report/src/fonts/*.woff2 dist/public/fonts/",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.public.json --noEmit"
   },
   "dependencies": {

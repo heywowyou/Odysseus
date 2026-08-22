@@ -58,6 +58,50 @@ export async function setAuditManualFields(
   return updated.manualFields;
 }
 
+/** 2026-08-22, La Corniche report review: unlike `setAuditManualFields`,
+ *  which always overwrites whichever keys are present in `partial` (the
+ *  right behaviour for an operator explicitly editing a field), this
+ *  fills in a value only when the audit's stored `manualFields` does not
+ *  already have that key set - so a detected value can never clobber an
+ *  operator's own entry, no matter which one is written second. Reads the
+ *  current document first for that reason, rather than trying to express
+ *  "set only if absent" as a single Mongo update operator (the field path
+ *  is only known at call time, so `$setOnInsert` does not apply here -
+ *  this is a field-level default within an existing document, not a
+ *  document-level upsert).
+ *
+ *  Every written field gets `provenance: 'detected'`, the report's own
+ *  existing signal (accessibility-statement.ts already branches on it
+ *  for `declarationContactEmail`) for "the tool found this, not a human" -
+ *  never `'operator'`, which is reserved for a value a person actually
+ *  typed into the dashboard form. Returns the fields that were actually
+ *  written (a subset of `candidates`, possibly empty), not the whole
+ *  document, so a caller can log or test exactly what changed. */
+export async function prefillAuditManualFields(
+  connection: Connection,
+  auditId: string,
+  candidates: Partial<Record<keyof Omit<AuditManualFields, 'updatedAt'>, string>>,
+): Promise<Partial<Record<keyof Omit<AuditManualFields, 'updatedAt'>, string>>> {
+  const existing = await getAuditManualFields(connection, auditId);
+  const toWrite: Partial<Record<keyof Omit<AuditManualFields, 'updatedAt'>, string>> = {};
+
+  for (const [key, value] of Object.entries(candidates)) {
+    if (value === undefined) continue;
+    const fieldKey = key as keyof Omit<AuditManualFields, 'updatedAt'>;
+    if (existing?.[fieldKey] !== undefined) continue; // never overwrite an already-set field, detected or operator
+    toWrite[fieldKey] = value;
+  }
+
+  if (Object.keys(toWrite).length === 0) return toWrite;
+
+  const provenancedPartial = Object.fromEntries(
+    Object.entries(toWrite).map(([key, value]) => [key, { value, provenance: 'detected' as const }]),
+  ) as Omit<AuditManualFields, 'updatedAt'>;
+
+  await setAuditManualFields(connection, auditId, provenancedPartial);
+  return toWrite;
+}
+
 export async function getFindingsForAudit(connection: Connection, auditId: string): Promise<FindingDocument[]> {
   const FindingModel = createFindingModel(connection);
   return FindingModel.find({ auditId }).lean<FindingDocument[]>();

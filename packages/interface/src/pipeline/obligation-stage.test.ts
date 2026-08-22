@@ -116,6 +116,33 @@ describe('runObligationStage', () => {
     expect(result.sector).toBe('general');
   });
 
+  it('2026-08-22 revenue-impact wiring: carries turnoverEur onto registrySnapshot when Sirene marked it reliable', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({
+      status: 'found',
+      profile: foundProfile({ turnover: { value: 500_000, source: 'sirene-api', retrievedAt: new Date() } }),
+    });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection);
+    expect(result.registrySnapshot?.turnoverEur).toBe(500_000);
+  });
+
+  it('2026-08-22: omits turnoverEur entirely when Sirene marked the effectif band unreliable for turnover', async () => {
+    // foundProfile()'s default turnover is { value: null, source:
+    // 'sirene-api:turnover-unreliable-for-band' } - the common case for
+    // most of Odysseus's SMB client base.
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile() });
+    const manifest = fakeManifest({
+      siteSignals: { siren: '732829320', hasTransactionalFlow: true, transactionalFlowEvidence: [] },
+    });
+
+    const result = await runObligationStage(manifest, fakeConnection);
+    expect(result.registrySnapshot).toBeDefined();
+    expect(result.registrySnapshot?.turnoverEur).toBeUndefined();
+  });
+
   it('tags sirenSource: extracted when only an extracted SIREN is present', async () => {
     vi.mocked(lookupOperatorProfile).mockResolvedValue({ status: 'found', profile: foundProfile() });
     const manifest = fakeManifest({

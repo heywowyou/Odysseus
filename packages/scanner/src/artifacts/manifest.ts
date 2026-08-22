@@ -4,6 +4,7 @@ import type {
   AuditConfigSnapshot,
   AuditManifest,
   AuditManifestSiteSignals,
+  CruxFieldDataResult,
   ManifestKind,
   ManifestPageEntry,
 } from '@odysseus/core';
@@ -44,6 +45,7 @@ export interface BuildManifestInput {
   crawl: CrawlResult;
   pages: ManifestPageEntry[];
   siteSignals?: AuditManifestSiteSignals;
+  cruxFieldData?: CruxFieldDataResult;
 }
 
 export function buildManifest(input: BuildManifestInput): AuditManifest {
@@ -70,8 +72,10 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
       robotsTxtFound: input.crawl.robotsTxtFound,
       effectiveDelayMs: input.crawl.effectiveDelayMs,
       robotsDisallowMatches: input.crawl.robotsDisallowMatches,
+      aiCrawlerBlocks: input.crawl.aiCrawlerBlocks,
     },
     pages: input.pages,
     ...(input.siteSignals !== undefined ? { siteSignals: input.siteSignals } : {}),
+    ...(input.cruxFieldData !== undefined ? { cruxFieldData: input.cruxFieldData } : {}),
   };
 }

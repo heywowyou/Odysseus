@@ -118,6 +118,7 @@ export interface DashboardStrings {
     sirenSourceUrlLabel: string;
     raisonSocialeLabel: string;
     nomCommercialLabel: string;
+    detectedFieldHint: string;
     recipientNameLabel: string;
     sectorLabel: string;
     sectorAutoOption: string;

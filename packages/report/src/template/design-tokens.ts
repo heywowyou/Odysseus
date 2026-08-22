@@ -49,3 +49,23 @@ export const CATEGORY: Record<FindingCategory, { color: string; bg: string }> = 
 };
 
 export const CATEGORY_ORDER: readonly FindingCategory[] = ['accessibility', 'seo', 'rendering', 'performance', 'geo'];
+
+/** Shared three-point ramp for any Faible/Moyen/Élevé (or Low/Medium/
+ *  High) value that means "how urgent", not only the cover's own
+ *  overall-risk badge. Promoted out of cover.ts (2026-08-22, La Corniche
+ *  report review) so themes.ts's "Impact commercial" column reuses the
+ *  exact same mapping instead of a second, drifting copy - both read the
+ *  identical three French words (strings/fr.ts's effortImpactLevels.low/
+ *  medium/high and cover.riskLevels.low/medium/high). References SEVERITY
+ *  directly rather than repeating its hex values, so the two can never
+ *  drift out of sync.
+ *
+ *  Effort deliberately does NOT use this map: high effort means
+ *  expensive, not urgent, so painting it on the same red/amber/green ramp
+ *  would tell a reader the opposite of the truth - effort stays plain
+ *  text in every template that renders it. */
+export const LEVEL_COLOR: Record<'low' | 'medium' | 'high', { color: string; bg: string }> = {
+  low: SEVERITY.moderate,
+  medium: SEVERITY.serious,
+  high: SEVERITY.critical,
+};

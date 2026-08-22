@@ -13,12 +13,30 @@ export const DEFAULT_INTERFACE_HOST = '127.0.0.1';
  *  machine can host" guidance. 2 is offered, not recommended, for a
  *  machine known to have the memory to spare. */
 export const DEFAULT_QUEUE_CONCURRENCY = 1;
-/** Prospecting is bounded to a homepage-only pass in milestone 7 (no
- *  brokenness scoring or ranked table yet - see docs/llm-layer-rules.md
- *  section 10, not implemented). This ceiling is enforced server-side
+/** Milestone 9b: raised from the milestone-7 homepage-only pass (1 page,
+ *  depth 0) to 3 pages at depth 1, per docs/odysseus-project-brief-v2.md's
+ *  9b description ("home, one listing page, one transactional page, the
+ *  last retained because the flow detector needs it"). This is a page
+ *  *count* ceiling, not a page-role classifier: the crawl still discovers
+ *  pages in ordinary link order, so "the second and third page scanned"
+ *  are whichever the crawl reaches first at depth 1, not a guaranteed
+ *  listing/transactional pair. Building an actual page-role classifier
+ *  (matching link text/URL patterns for a menu, room list, or booking
+ *  page) is a real gap, not solved here - flagged rather than
+ *  quietly assumed solved. This ceiling is enforced server-side
  *  regardless of what a request asks for. */
-export const PROSPECTING_MAX_PAGES = 1;
-export const PROSPECTING_MAX_DEPTH = 0;
+export const PROSPECTING_MAX_PAGES = 3;
+export const PROSPECTING_MAX_DEPTH = 1;
+
+/** Milestone 9b: bounded worker pool size for runProspectingJob - how
+ *  many distinct origins are scanned concurrently within one batch. Safe
+ *  because the per-origin lock (originLock) already serializes requests
+ *  within one origin and the crawl-delay politeness budget is per origin,
+ *  not global - concurrent origins never contend for the same rate
+ *  limit. Kept separate from DEFAULT_QUEUE_CONCURRENCY (which governs how
+ *  many *jobs* run at once): this is concurrency *within* one prospecting
+ *  job's own URL list. */
+export const PROSPECTING_JOB_CONCURRENCY = 3;
 
 /** Milestone 9a: one prospect-ingestion job processes one bounded batch
  *  of AFNIC candidates, resuming from a persisted checkpoint - not one

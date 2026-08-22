@@ -33,6 +33,15 @@ export function renderReferenceStatNote(
    *  'aov-uplift-per-0.1s' stat on a performance theme where a real LCP
    *  measurement exists). */
   measuredGapNote?: string,
+  /** 2026-08-22 revenue-impact wiring: a hedged, client-specific euro
+   *  estimate (themes.ts's renderRevenueImpactNote), present only when
+   *  the stat is 'scales-down' and the client's own Sirene turnover is
+   *  known. Rendered last, after the citation itself, so the reader sees
+   *  the sourced fact before the derived number built from it - the
+   *  reverse order from measuredGapNote, which is deliberately the site's
+   *  own measurement shown first, before the benchmark it's compared
+   *  against. */
+  revenueImpactNote?: string,
 ): string {
   const badge =
     stat.confidence === 'emerging' && emergingBadgeText
@@ -42,5 +51,8 @@ export function renderReferenceStatNote(
     ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(measuredGapNote)}</p>`
     : '';
   const citationLine = `<p style="font-size:12px;opacity:0.6;margin:${gapLine ? '2px' : '0'} 0 0">${escapeHtml(labelText)} : ${escapeHtml(stat.citation[language])}${badge}</p>`;
-  return `${gapLine}${citationLine}`;
+  const revenueLine = revenueImpactNote
+    ? `<p style="font-size:12px;opacity:0.6;margin:2px 0 0">${escapeHtml(revenueImpactNote)}</p>`
+    : '';
+  return `${gapLine}${citationLine}${revenueLine}`;
 }

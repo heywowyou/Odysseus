@@ -7,18 +7,22 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <header class="app-header">
-      <span class="brand">Odysseus</span>
-      <nav>
-        <a href="/index.html" data-i18n="nav.newScan">New scan</a>
-        <a href="/history.html" data-i18n="nav.history">History</a>
-      </nav>
-    </header>
+    <nav class="nav">
+      <span class="nav-brand">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 3v18M3 12h18"></path>
+        </svg>
+        Odysseus
+      </span>
+      <a href="/index.html" data-i18n="nav.newScan">New scan</a>
+      <a href="/history.html" data-i18n="nav.history">History</a>
+    </nav>
     <main>
       <h1 data-i18n="auditDetail.heading">Audit detail</h1>
       <div class="error-banner" id="error-banner"></div>
 
-      <section class="card">
+      <section class="card elev-sm">
         <div class="meta-row">
           <span><strong data-i18n="auditDetail.siteLabel">Site</strong>: <span id="meta-site"></span></span>
           <span><strong data-i18n="auditDetail.dateLabel">Date</strong>: <span id="meta-date"></span></span>
@@ -28,58 +32,77 @@
       </section>
 
       <h2 data-i18n="auditDetail.reportsHeading">Reports</h2>
-      <section class="card" id="reports-card">
+      <section class="card elev-sm" id="reports-card">
         <p class="empty-state" id="no-reports" data-i18n="auditDetail.noReportsYet" hidden>No report generated yet.</p>
         <div id="report-links"></div>
       </section>
 
       <h2 data-i18n="auditDetail.manualFieldsHeading">Enrichment</h2>
-      <section class="card">
+      <section class="card elev-sm">
         <p class="hint" data-i18n="auditDetail.manualFieldsHint"></p>
         <form id="manual-fields-form">
-          <label for="mf-siren" data-i18n="auditDetail.sirenLabel">SIREN</label>
-          <div class="siren-row">
-            <input type="text" id="mf-siren" name="siren" inputmode="numeric" />
-            <button type="button" id="siren-check-button" data-i18n="auditDetail.sirenCheckButton">Check</button>
+          <div class="field">
+            <label for="mf-siren" data-i18n="auditDetail.sirenLabel">SIREN</label>
+            <div class="siren-row">
+              <input class="input" type="text" id="mf-siren" name="siren" inputmode="numeric" />
+              <button type="button" class="btn btn-secondary" id="siren-check-button" data-i18n="auditDetail.sirenCheckButton">Check</button>
+            </div>
+            <p id="siren-preview-result" class="hint"></p>
+            <p id="mf-siren-hint" class="hint detected-hint" data-i18n="auditDetail.detectedFieldHint" hidden></p>
           </div>
-          <p id="siren-preview-result" class="hint"></p>
 
-          <label for="mf-sirenSourceUrl" data-i18n="auditDetail.sirenSourceUrlLabel">Page where the SIREN is displayed</label>
-          <input type="text" id="mf-sirenSourceUrl" name="sirenSourceUrl" />
+          <div class="field">
+            <label for="mf-sirenSourceUrl" data-i18n="auditDetail.sirenSourceUrlLabel">Page where the SIREN is displayed</label>
+            <input class="input" type="text" id="mf-sirenSourceUrl" name="sirenSourceUrl" />
+          </div>
 
-          <label for="mf-raisonSociale" data-i18n="auditDetail.raisonSocialeLabel">Legal name</label>
-          <input type="text" id="mf-raisonSociale" name="raisonSociale" />
+          <div class="field">
+            <label for="mf-raisonSociale" data-i18n="auditDetail.raisonSocialeLabel">Legal name</label>
+            <input class="input" type="text" id="mf-raisonSociale" name="raisonSociale" />
+            <p id="mf-raisonSociale-hint" class="hint detected-hint" data-i18n="auditDetail.detectedFieldHint" hidden></p>
+          </div>
 
-          <label for="mf-nomCommercial" data-i18n="auditDetail.nomCommercialLabel">Display name</label>
-          <input type="text" id="mf-nomCommercial" name="nomCommercial" />
+          <div class="field">
+            <label for="mf-nomCommercial" data-i18n="auditDetail.nomCommercialLabel">Display name</label>
+            <input class="input" type="text" id="mf-nomCommercial" name="nomCommercial" />
+            <p id="mf-nomCommercial-hint" class="hint detected-hint" data-i18n="auditDetail.detectedFieldHint" hidden></p>
+          </div>
 
-          <label for="mf-recipientName" data-i18n="auditDetail.recipientNameLabel">Prepared for</label>
-          <input type="text" id="mf-recipientName" name="recipientName" />
+          <div class="field">
+            <label for="mf-recipientName" data-i18n="auditDetail.recipientNameLabel">Prepared for</label>
+            <input class="input" type="text" id="mf-recipientName" name="recipientName" />
+          </div>
 
-          <label for="mf-sector" data-i18n="auditDetail.sectorLabel">Sector</label>
-          <select id="mf-sector" name="sector">
-            <option value="" data-i18n="auditDetail.sectorAutoOption">Auto-detected</option>
-            <option value="general" data-i18n="auditDetail.sectorGeneralOption">General</option>
-            <option value="hospitality" data-i18n="auditDetail.sectorHospitalityOption">Hospitality</option>
-          </select>
+          <div class="field">
+            <label for="mf-sector" data-i18n="auditDetail.sectorLabel">Sector</label>
+            <select class="input" id="mf-sector" name="sector">
+              <option value="" data-i18n="auditDetail.sectorAutoOption">Auto-detected</option>
+              <option value="general" data-i18n="auditDetail.sectorGeneralOption">General</option>
+              <option value="hospitality" data-i18n="auditDetail.sectorHospitalityOption">Hospitality</option>
+            </select>
+          </div>
 
-          <label for="mf-revenueBand" data-i18n="auditDetail.revenueBandLabel">Revenue band</label>
-          <input type="text" id="mf-revenueBand" name="revenueBand" />
+          <div class="field">
+            <label for="mf-revenueBand" data-i18n="auditDetail.revenueBandLabel">Revenue band</label>
+            <input class="input" type="text" id="mf-revenueBand" name="revenueBand" />
+          </div>
 
-          <label for="mf-declarationContactEmail" data-i18n="auditDetail.declarationContactEmailLabel">Declaration contact email</label>
-          <input type="text" id="mf-declarationContactEmail" name="declarationContactEmail" />
+          <div class="field">
+            <label for="mf-declarationContactEmail" data-i18n="auditDetail.declarationContactEmailLabel">Declaration contact email</label>
+            <input class="input" type="text" id="mf-declarationContactEmail" name="declarationContactEmail" />
+          </div>
 
           <div class="manual-fields-actions">
-            <button type="submit" id="manual-fields-save-button" data-i18n="auditDetail.saveButton">Save</button>
-            <button type="button" id="regenerate-report-button" data-i18n="auditDetail.regenerateButton">Regenerate report</button>
+            <button type="submit" class="btn btn-primary" id="manual-fields-save-button" data-i18n="auditDetail.saveButton">Save</button>
+            <button type="button" class="btn btn-secondary" id="regenerate-report-button" data-i18n="auditDetail.regenerateButton">Regenerate report</button>
           </div>
           <p id="manual-fields-status" class="hint"></p>
         </form>
       </section>
 
       <h2 data-i18n="auditDetail.findingsHeading">Findings</h2>
-      <section class="card">
-        <table>
+      <section class="card elev-sm">
+        <table class="table">
           <thead>
             <tr>
               <th data-i18n="auditDetail.severityColumn">Severity</th>

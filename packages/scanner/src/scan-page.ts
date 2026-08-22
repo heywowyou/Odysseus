@@ -20,12 +20,23 @@ import { walkKeyboardNavigation, type KeyboardNavigationExtraction } from './che
 import { checkFormErrorHandling, type FormErrorHandlingExtraction } from './checks/form-error-handling.js';
 import { checkVideoCaptions, type VideoCaptionsExtraction } from './checks/video-captions.js';
 import { extractAltTextFacts, type AltTextExtraction } from './checks/alt-text.js';
+import type { SecurityHeadersCheckResult } from './checks/security-headers.js';
+import { checkStructuredData, type StructuredDataCheckResult } from './checks/structured-data.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
   delayMs?: number;
   timeoutMs?: number;
   userAgent?: string;
+  /** Milestone 9b: skips the Lighthouse pass (and the pre-Lighthouse
+   *  politeness delay, since there is then nothing to space out from
+   *  what follows). Lighthouse is the prospecting pipeline's
+   *  serialisation bottleneck (the perf_hooks queue, trade-off 10) and
+   *  Core Web Vitals are the weakest cold-outreach signal - a prospect
+   *  is judged on accessibility/SEO defects, not lab performance
+   *  numbers. Full audits never set this; the paid report needs the real
+   *  Core Web Vitals table. */
+  skipLighthouse?: boolean;
   /** Forwarded to renderDiff's own screenshotDir option (the `pages/`
    *  parent directory for this run). */
   screenshotDir: string;
@@ -57,6 +68,9 @@ export interface ScanPageOptions {
   /** Milestone 8.5a: fetched once per site in scanSite(), same site-level
    *  attachment pattern as sitemapCheck above. */
   llmsTxtCheck?: LlmsTxtCheckResult;
+  /** Milestone 8.6: fetched once per site in scanSite(), same site-level
+   *  attachment pattern as sitemapCheck/llmsTxtCheck above. */
+  securityHeadersCheck?: SecurityHeadersCheckResult;
 }
 
 /**
@@ -91,6 +105,9 @@ export interface PageScanResult {
   videoCaptionsError?: string;
   altText?: AltTextExtraction;
   altTextError?: string;
+  securityHeaders?: SecurityHeadersCheckResult;
+  structuredData?: StructuredDataCheckResult;
+  structuredDataError?: string;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -150,6 +167,9 @@ export async function scanPage(
   if (options.llmsTxtCheck !== undefined && url === options.homepageUrl) {
     result.llmsTxtCheck = options.llmsTxtCheck;
   }
+  if (options.securityHeadersCheck !== undefined && url === options.homepageUrl) {
+    result.securityHeaders = options.securityHeadersCheck;
+  }
   let axeResult: AxeResults | undefined;
   let axeError: string | undefined;
   let mentionsLegalesResult: MentionsLegalesExtraction | undefined;
@@ -169,6 +189,8 @@ export async function scanPage(
   let videoCaptionsError: string | undefined;
   let altTextResult: AltTextExtraction | undefined;
   let altTextError: string | undefined;
+  let structuredDataResult: StructuredDataCheckResult | undefined;
+  let structuredDataError: string | undefined;
 
   try {
     result.renderDiff = await renderDiff(browser, url, {
@@ -281,6 +303,12 @@ export async function scanPage(
           altTextError = toErrorMessage(error);
         }
 
+        try {
+          structuredDataResult = await checkStructuredData(page, url);
+        } catch (error) {
+          structuredDataError = toErrorMessage(error);
+        }
+
         // Runs after every read-only DOM check above: this is the only
         // other check on the page that sends real input events, so it
         // goes late purely so a future check added here never has to
@@ -327,15 +355,19 @@ export async function scanPage(
   if (videoCaptionsError !== undefined) result.videoCaptionsError = videoCaptionsError;
   if (altTextResult !== undefined) result.altText = altTextResult;
   if (altTextError !== undefined) result.altTextError = altTextError;
+  if (structuredDataResult !== undefined) result.structuredData = structuredDataResult;
+  if (structuredDataError !== undefined) result.structuredDataError = structuredDataError;
 
-  if (options.delayMs) {
-    await sleep(options.delayMs);
-  }
+  if (!options.skipLighthouse) {
+    if (options.delayMs) {
+      await sleep(options.delayMs);
+    }
 
-  try {
-    result.lighthouse = await runLighthouseSerialized(url, debugPort);
-  } catch (error) {
-    result.lighthouseError = toErrorMessage(error);
+    try {
+      result.lighthouse = await runLighthouseSerialized(url, debugPort);
+    } catch (error) {
+      result.lighthouseError = toErrorMessage(error);
+    }
   }
 
   return result;

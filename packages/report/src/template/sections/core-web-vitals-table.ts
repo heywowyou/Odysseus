@@ -1,4 +1,11 @@
-import type { AuditManifest, CoreWebVitalMetricKey, CoreWebVitals, CoreWebVitalRating, ReportLanguage } from '@odysseus/core';
+import type {
+  AuditManifest,
+  CoreWebVitalMetricKey,
+  CoreWebVitals,
+  CoreWebVitalRating,
+  CruxFieldDataResult,
+  ReportLanguage,
+} from '@odysseus/core';
 import { CORE_WEB_VITAL_THRESHOLDS, rateCoreWebVital } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
@@ -77,6 +84,96 @@ function worstForMetric(vitalsList: readonly (CoreWebVitals | undefined)[], key:
   return Math.max(...values);
 }
 
+/** INP has no lab equivalent (TBT is Lighthouse's lab-only proxy for it),
+ *  so it is not in @odysseus/core's shared CoreWebVitalMetricKey /
+ *  CORE_WEB_VITAL_THRESHOLDS - those are consumed by both this table and
+ *  normalize-lighthouse.ts's severity capping, neither of which ever
+ *  handles INP. Kept local rather than extending that shared union for a
+ *  metric the lab side can never produce. Same official web.dev
+ *  thresholds scanner/src/crux.ts's CRUX_POOR_THRESHOLDS.inp already
+ *  cites for the "poor" cutoff. */
+const INP_GOOD_MS = 200;
+const INP_NEEDS_IMPROVEMENT_MS = 500;
+
+/** Milestone 8.6: real-user Chrome UX Report data, shown as a second
+ *  block under the existing lab table rather than a new section - see
+ *  manifest.ts's CruxFieldDataResult doc comment for why "no public
+ *  record" and "CRUX_API_KEY not configured" render identically here:
+ *  the distinction is internal, and this note must never read as a
+ *  pass. */
+function renderRealUserDataBlock(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  cruxFieldData: CruxFieldDataResult | undefined,
+  /** 2026-08-22, La Corniche report review: true only when the lab table
+   *  above this block actually rendered real medians - the gap note
+   *  exists to explain a difference between two numbers, so it has
+   *  nothing to explain when there is no lab number on the page at all
+   *  (the all-unmeasured branch). */
+  labDataWasMeasured: boolean,
+): string {
+  const c = strings.coreWebVitals;
+  const header = `<h3 style="font-size:14px;margin-top:var(--space-6);margin-bottom:var(--space-2)">${escapeHtml(c.realUserHeading)}</h3>`;
+
+  if (!cruxFieldData || !cruxFieldData.available) {
+    return `
+      ${header}
+      <p style="font-size:12px;opacity:0.6;max-width:64ch">${escapeHtml(c.realUserNoDataNote)}</p>
+    `;
+  }
+
+  const rows = [
+    cruxFieldData.lcp
+      ? { key: 'lcp' as const, label: c.lcpLabel, unit: 'ms-to-s' as Unit, value: cruxFieldData.lcp.p75, good: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'lcp')!.good, needsImprovement: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'lcp')!.needsImprovement }
+      : null,
+    cruxFieldData.inp
+      ? { key: 'inp' as const, label: c.inpLabel, unit: 'ms' as Unit, value: cruxFieldData.inp.p75, good: INP_GOOD_MS, needsImprovement: INP_NEEDS_IMPROVEMENT_MS }
+      : null,
+    cruxFieldData.cls
+      ? { key: 'cls' as const, label: c.clsLabel, unit: 'unitless' as Unit, value: cruxFieldData.cls.p75, good: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'cls')!.good, needsImprovement: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'cls')!.needsImprovement }
+      : null,
+  ].filter((row): row is NonNullable<typeof row> => row !== null);
+
+  if (rows.length === 0) {
+    return `
+      ${header}
+      <p style="font-size:12px;opacity:0.6;max-width:64ch">${escapeHtml(c.realUserNoDataNote)}</p>
+    `;
+  }
+
+  const tableRows = rows
+    .map((row) => {
+      const rating = rateCoreWebVital(row.value, row.good, row.needsImprovement);
+      const ratingColor = rating === 'good' ? GOOD_COLOR : rating === 'mid' ? SEVERITY.moderate.color : SEVERITY.critical.color;
+      return `
+        <tr>
+          ${cell(escapeHtml(row.label))}
+          ${cell(formatMetricValue(row.value, row.unit, language))}
+          ${cell(escapeHtml(ratingLabel(strings, rating)), `color:${ratingColor}`)}
+        </tr>
+      `;
+    })
+    .join('');
+
+  return `
+    ${header}
+    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-3);max-width:64ch">${escapeHtml(c.realUserIntro)}</p>
+    ${labDataWasMeasured ? `<p style="font-size:12px;opacity:0.7;margin-bottom:var(--space-3);max-width:64ch">${escapeHtml(c.realUserGapNote)}</p>` : ''}
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <thead>
+        <tr>
+          ${headCell(c.metricColumnLabel, 'auto')}
+          ${headCell(c.valueColumnLabel, '110px')}
+          ${headCell(c.statusColumnLabel, '120px')}
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRows}
+      </tbody>
+    </table>
+  `;
+}
+
 function ratingLabel(strings: ReportStrings, rating: CoreWebVitalRating): string {
   const c = strings.coreWebVitals;
   return rating === 'good' ? c.ratingGoodLabel : rating === 'mid' ? c.ratingNeedsImprovementLabel : c.ratingPoorLabel;
@@ -113,7 +210,16 @@ export function renderCoreWebVitalsTable(
   manifest: AuditManifest,
 ): string {
   const vitalsList = manifest.pages.map((page) => page.coreWebVitals);
-  const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
+  // 2026-08-22, La Corniche report review: this used to count every
+  // *visited* page, but medianForMetric/metricValues only average pages
+  // that actually returned a numeric value - a page whose Lighthouse pass
+  // timed out is visited but contributes no data point. A real report
+  // stated "agregees sur les 27 pages" while only 25 of them had any
+  // measurement, an inconsistency between this sentence and section 11's
+  // own disclosed failure count. Counts pages with at least one measured
+  // Core Web Vital instead, matching what the medians below actually
+  // aggregate over.
+  const pagesScanned = manifest.pages.filter((page) => page.coreWebVitals !== undefined).length;
   const c = strings.coreWebVitals;
   const metricLabels: Record<CoreWebVitalMetricKey, string> = {
     lcp: c.lcpLabel,
@@ -134,6 +240,7 @@ export function renderCoreWebVitalsTable(
     return sheet(`
       ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
       <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(c.allUnmeasuredNote)}</p>
+      ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, false)}
     `, '', 'section-09');
   }
 
@@ -196,5 +303,6 @@ export function renderCoreWebVitalsTable(
       </tbody>
     </table>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-3)">${escapeHtml(c.worstPageFootnote)}</p>
+    ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, true)}
   `, '', 'section-09');
 }

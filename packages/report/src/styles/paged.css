@@ -408,4 +408,18 @@ img[src=""] {
   .pagedjs_page:has(#section-05) .pagedjs_margin-bottom-center {
     color: #161826 !important;
   }
+  /* 2026-08-22, La Corniche report review: the checklist's Impact column
+     (checklist.ts) colours its value with a `<span data-level="...">`,
+     not a `div` - deliberately, since `span` is not in the selector list
+     three rules up, so its own inline colour (design-tokens.ts's
+     LEVEL_COLOR, tuned for the dark background) would otherwise survive
+     into this section's light-background print override untouched,
+     producing light-on-light text. Each level gets its own print-safe
+     dark pairing here instead, confirmed against #f7f7f5 at 4.5:1+
+     (high 6.56:1, medium 5.5:1, low 5.23:1) - not the same hex as
+     LEVEL_COLOR's dark-mode values, which would fail contrast on this
+     light background. */
+  #section-05 [data-level="high"] { color: #a52a37 !important; }
+  #section-05 [data-level="medium"] { color: #8a5a1e !important; }
+  #section-05 [data-level="low"] { color: #6e6a1f !important; }
 }

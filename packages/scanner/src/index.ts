@@ -20,8 +20,21 @@ export { checkLlmsTxt } from './checks/llms-txt.js';
 export type { LlmsTxtCheckResult } from './checks/llms-txt.js';
 export { checkCanonicalTarget, extractRobotsMetaContent } from './checks/canonical-target.js';
 export type { CanonicalTargetCheckResult } from './checks/canonical-target.js';
-export { findBlockingPattern, isAllowedByRobots, fetchRobotsRules, parseRobotsTxt } from './robots.js';
-export type { RobotsRules } from './robots.js';
+export {
+  findBlockingPattern,
+  isAllowedByRobots,
+  fetchRobotsRules,
+  fetchRobotsText,
+  parseRobotsTxt,
+  checkAiCrawlerAccess,
+  AI_CRAWLER_USER_AGENTS,
+} from './robots.js';
+export type { RobotsRules, AiCrawlerAccessResult } from './robots.js';
+export { checkSecurityHeaders } from './checks/security-headers.js';
+export type { SecurityHeadersCheckResult } from './checks/security-headers.js';
+export { checkStructuredData } from './checks/structured-data.js';
+export type { StructuredDataCheckResult, StructuredDataFailedTest } from './checks/structured-data.js';
+export { fetchCruxFieldData, CRUX_POOR_THRESHOLDS } from './crux.js';
 export {
   findWorkspaceRoot,
   ensureEnvLoaded,
@@ -33,6 +46,7 @@ export {
   getLighthouseTimeoutMs,
   getScanConcurrency,
   getCrawlerUserAgent,
+  getCruxApiKey,
   DEFAULT_ARTIFACTS_DIR_NAME,
   DEFAULT_MAX_PAGES,
   DEFAULT_MAX_CRAWL_DEPTH,

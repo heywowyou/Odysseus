@@ -14,6 +14,7 @@ function buildCrawlResult(overrides: Partial<CrawlResult> = {}): CrawlResult {
     effectiveDelayMs: 1000,
     robotsSitemapUrls: [],
     robotsDisallowMatches: [],
+    aiCrawlerBlocks: [],
     ...overrides,
   };
 }

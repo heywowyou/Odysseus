@@ -76,3 +76,25 @@ describe('item 2.7: the checklist has no stray status/date column, and carries a
     expect(html).toContain(manifest.siteUrl);
   });
 });
+
+// 2026-08-22, La Corniche report review: the checklist's Impact column
+// used to render as plain text, identical in weight to Effort. The
+// coloured value must survive as a <span data-level="..."> rather than
+// on the row's own <div> cell, since paged.css's #section-05 print
+// override forces every div's color to a light-mode value with
+// !important - only an element outside that selector list (a span) can
+// carry its own colour through to the printed PDF.
+describe('2026-08-22: the checklist Impact column is colour-coded via a data-level span, Effort is not', () => {
+  it('wraps each row\'s Impact value in a data-level span with LEVEL_COLOR, distinct from the plain Effort cell', async () => {
+    const [analysis, findings, manifest] = await Promise.all([
+      loadSasFernandeAnalysis('fr'),
+      loadSasFernandeFindings(),
+      loadSasFernandeManifest(),
+    ]);
+
+    const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
+
+    const firstTheme = analysis.themes.slice(0, 6).find((t) => t.impact) ?? analysis.themes[0]!;
+    expect(html).toMatch(new RegExp(`data-level="${firstTheme.impact}" style="color:#[0-9a-f]{6}"`));
+  });
+});

@@ -30,6 +30,7 @@ export * from './types/prospecting.js';
 export * from './prospecting/qualify-prospect.js';
 export * from './prospecting/effectif-threshold.js';
 export * from './prospecting/naf-allowlist.js';
+export * from './cost-gating/brokenness.js';
 export * from './prospecting/free-mail-domains.js';
 export * from './prospecting/role-address.js';
 export * from './prospecting/suppression-hash.js';

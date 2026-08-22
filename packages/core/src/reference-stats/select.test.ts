@@ -76,19 +76,32 @@ describe('selectReferenceStats', () => {
   // P0.2 (2026-08-21 La Corniche feedback pass): strictSector excludes
   // 'general' rows entirely instead of only ranking them second - a
   // deliberate move away from cross-sector benchmarks, not a re-matching
-  // fix. The table has no hospitality-tagged accessibility or seo rows,
-  // so a hospitality report must get no citation at all for those
-  // categories rather than falling back to a mismatched one.
+  // fix. At the time, the table had no hospitality-tagged accessibility
+  // or seo rows, so a hospitality report got no citation at all for
+  // those categories rather than falling back to a mismatched one.
+  //
+  // 2026-08-22: the hospitality-tagged accessibility gap was closed by a
+  // sector-targeted research pass (docs/research/sector-reference-stats/
+  // hospitality.md) - a hospitality report now gets real, sourced,
+  // context-only citations for accessibility rather than none. The
+  // "exclude general rows, never fall back to a mismatch" behavior this
+  // describe block guards is unchanged; only the fixture data grew.
   describe('strictSector', () => {
-    it('excludes general rows entirely for a sector with no matching row in that category', () => {
+    it('excludes general rows entirely, keeping only sector-matched accessibility rows', () => {
       const results = selectReferenceStats('accessibility', 'hospitality', { strictSector: true });
-      expect(results).toEqual([]);
+      expect(results.length).toBeGreaterThan(0);
+      for (const stat of results) {
+        expect(stat.sector).toBe('hospitality');
+      }
     });
 
     it('still returns the sector-matched row when one exists', () => {
       const results = selectReferenceStats('performance', 'hospitality', { strictSector: true });
       const ids = results.map((stat) => stat.id);
-      expect(ids).toEqual(['deloitte-speed-conversion-travel-2020']);
+      expect(ids).toContain('deloitte-speed-conversion-travel-2020');
+      for (const stat of results) {
+        expect(stat.sector).toBe('hospitality');
+      }
     });
 
     it('a general-sector request with strictSector excludes hospitality-only rows too', () => {

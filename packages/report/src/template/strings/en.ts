@@ -207,6 +207,8 @@ export const en: ReportStrings = {
     impactCitationLabel: 'Reference data point',
     measuredLcpGapTemplate:
       'Measured gap on this site: median LCP at {value}s, {gap}s above the "good" threshold ({threshold}s).',
+    revenueImpactTemplate:
+      'Based on your reported turnover ({turnover} EUR), and if this association held for your business, the order of magnitude would be up to {impact} EUR per year. This is an indicative estimate based on a single study, not a guaranteed forecast.',
     quickWinBadgeLabel: 'Quick win',
     recommendedActionsLabel: 'Recommended actions',
     effortImpactLevels: { low: 'Low', medium: 'Medium', high: 'High' },
@@ -257,6 +259,14 @@ export const en: ReportStrings = {
     ratingPoorLabel: 'poor',
     allUnmeasuredNote:
       'Performance measurement (Lighthouse) did not complete for this site on this audit, so no performance finding is reported here. See the "Methodology and limitations" section for detail.',
+    realUserHeading: 'Real-user data (Chrome UX Report)',
+    realUserIntro:
+      'Field data from real Chrome visitors to this site over the last 28 days, where public data exists, complementing the simulated lab measurements above.',
+    realUserNoDataNote:
+      'No public Chrome UX Report data exists for this site, most often because it does not yet receive enough Chrome traffic to meet Google\'s reporting threshold. This is not a pass or a fail, it simply means no real-user comparison is available for this audit.',
+    realUserGapNote:
+      'A large gap between the values above and below is expected: the lab measurement deliberately simulates harsh conditions (CPU and network throttling, a single run), while real-user data reflects visitors on a variety of devices and connections. The two measure different questions, they do not contradict each other.',
+    inpLabel: 'INP, responsiveness',
   },
   accessibilityStatement: {
     eyebrow: 'Statement',
@@ -486,6 +496,7 @@ export const en: ReportStrings = {
     pagesColumnLabel: 'Pages',
     allPagesAnalyzedTemplate: 'All pages analysed ({count})',
     andNMoreTemplate: 'and {count} more',
+    samePagesAsTemplate: 'Same pages as {findingId}',
     pagesMaxColumnLabel: 'Max pages',
     occurrencesColumnLabel: 'Occurrences',
     selectorColumnLabel: 'Sample selector',

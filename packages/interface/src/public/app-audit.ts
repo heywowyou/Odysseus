@@ -69,12 +69,27 @@ const sectorSelect = document.getElementById('mf-sector') as HTMLSelectElement;
 const manualFieldsStatus = document.getElementById('manual-fields-status')!;
 const regenerateReportButton = document.getElementById('regenerate-report-button') as HTMLButtonElement;
 
+/** 2026-08-22, La Corniche report review: a prefilled value carries
+ *  provenance:'detected' (packages/store's prefillAuditManualFields) -
+ *  the operator should not mistake a scanner-derived guess for something
+ *  they or a colleague already confirmed. Only wired for the three
+ *  fields that can actually be auto-filled today (siren, raisonSociale,
+ *  nomCommercial); every other field's hint element simply does not
+ *  exist in the DOM, so the lookup is a no-op for them. */
+function toggleDetectedHint(fieldId: string, provenance: 'detected' | 'operator' | undefined): void {
+  const hint = document.getElementById(`mf-${fieldId}-hint`) as HTMLElement | null;
+  if (!hint) return;
+  hint.hidden = provenance !== 'detected';
+}
+
 function prefillManualFields(manualFields: AuditManualFields | undefined): void {
   if (!manualFields) return;
   if (manualFields.siren) sirenInput.value = manualFields.siren.value;
+  toggleDetectedHint('siren', manualFields.siren?.provenance);
   if (manualFields.sector) sectorSelect.value = manualFields.sector.value;
   for (const id of MANUAL_TEXT_FIELD_IDS) {
     const field = manualFields[id];
+    toggleDetectedHint(id, field?.provenance);
     if (!field) continue;
     const input = document.getElementById(`mf-${id}`) as HTMLInputElement | null;
     if (input) input.value = field.value;

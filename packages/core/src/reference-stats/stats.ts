@@ -38,6 +38,19 @@
  * report-only: milestone 9c's outreach generation, not yet built, must
  * never import this table or selectReferenceStats/estimateRevenueImpact.
  * docs/llm-layer-rules.md section 11's "No statistics" rule for outreach
+ *
+ * 2026-08-22: the hospitality-tagged rows below `phocuswright-ai-trip-
+ * planning-2026` come from a second, sector-targeted research pass,
+ * `docs/research/sector-reference-stats/hospitality.md` (see that file's
+ * own promotion table for what was and wasn't wired in, and why).
+ * `docs/research/sector-reference-stats/README.md` is the template for
+ * adding more sectors the same way. That research pass confirmed, after
+ * checking six countries, that no study anywhere ties a WCAG fix to a
+ * measured booking-conversion delta for a hotel or restaurant - every
+ * new hospitality accessibility row below is therefore `context-only`,
+ * never `scales-down`. Do not add a scalable accessibility ratio for
+ * hospitality without a real source; the honest gap is documented, not
+ * a placeholder waiting to be filled in.
  * is deliberately stricter than the paid report path.
  */
 
@@ -221,6 +234,107 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     citation: bilingual(
       "56 % des voyageurs ont utilisé l'IA pour planifier, réserver ou obtenir une assistance sur place au cours des 12 derniers mois, contre 43 % au second semestre 2025 et 33 % au premier semestre 2025 (Phocuswright, The AI Surge, 2026).",
       '56% of travelers used AI for planning, booking, or in-destination assistance in the past 12 months, up from 43% in H2 2025 and 33% in H1 2025 (Phocuswright, The AI Surge, 2026).',
+    ),
+  },
+  // 2026-08-22 sector research pass, hospitality.md entry 1. Self-selected
+  // survey sample (MEDIUM credibility in the source doc) -> 'emerging',
+  // not 'established'.
+  {
+    id: 'accessable-avoidance-2023',
+    category: ['accessibility'],
+    sector: 'hospitality',
+    confidence: 'emerging',
+    scalability: 'context-only',
+    source: 'AccessAble, Accessibility and You Survey 2023/24',
+    year: 2024,
+    citation: bilingual(
+      "77 % des personnes en situation de handicap déclarent avoir déjà évité un établissement faute d'y trouver l'information d'accessibilité recherchée, et 87 % attendent que cette information figure directement sur le site de l'établissement plutôt que sur une plateforme tierce (AccessAble, Accessibility and You Survey 2023/24, enquête en ligne auprès de sa communauté d'utilisateurs en situation de handicap, échantillon non représentatif, repris comme source de référence par VisitEngland).",
+      "77% of disabled respondents report having avoided a venue because they could not find the accessibility information they were looking for, and 87% expect that information to appear directly on the venue's own website rather than on a third-party platform (AccessAble, Accessibility and You Survey 2023/24, an online survey of its own disabled user community, non-representative sample, used as a reference source by VisitEngland).",
+    ),
+  },
+  // hospitality.md entry 3. National statistics, disclosed comparison
+  // group -> 'established' despite being a UK rather than French source;
+  // no comparable French hospitality-specific figure exists (see
+  // hospitality.md entry 6 for why DREES's figure was not used instead).
+  {
+    id: 'dcms-holiday-participation-gap-2024',
+    category: ['accessibility'],
+    sector: 'hospitality',
+    confidence: 'established',
+    scalability: 'context-only',
+    source: 'UK Department for Culture, Media and Sport, Participation Survey 2024/25',
+    year: 2024,
+    citation: bilingual(
+      "45 % des adultes en situation de handicap en Angleterre n'ont pris aucune nuitée touristique au cours des 12 derniers mois, contre 34 % des adultes sans situation de handicap (UK Department for Culture, Media and Sport, Participation Survey 2024/25, statistiques nationales).",
+      "45% of disabled adults in England took no overnight domestic holiday in the past 12 months, versus 34% of non-disabled adults (UK Department for Culture, Media and Sport, Participation Survey 2024/25, national statistics).",
+    ),
+  },
+  // hospitality.md entry 5. French, exact client segment (5th-category
+  // hotels/restaurants). Sample size undisclosed in the volume reviewed
+  // -> 'emerging'. The secondhand TRAVELSAT 78%/67% figure from the same
+  // source document was deliberately dropped, not encoded here.
+  {
+    id: 'dge-accesmetrie-booking-rare-2019',
+    category: ['accessibility'],
+    sector: 'hospitality',
+    confidence: 'emerging',
+    scalability: 'context-only',
+    source: 'DGE / Accesmetrie, Retombées économiques de la mise aux normes accessibilité des ERP de 5e catégorie',
+    year: 2019,
+    citation: bilingual(
+      "La possibilité de réserver une chambre adaptée directement sur le site de l'hôtel reste rare, la gestion du site étant le plus souvent confiée à un tiers (DGE / Accesmetrie, étude commandée par la Direction générale des entreprises, 2019, portant spécifiquement sur les hôtels et restaurants de 5e catégorie).",
+      "The ability to book an adapted room directly on the hotel's own website remains rare, since the site is usually operated by a third party (DGE / Accesmetrie, a study commissioned by the French Direction générale des entreprises, 2019, scoped specifically to 5th-category hotels and restaurants).",
+    ),
+  },
+  // hospitality.md entry 8. Peer-reviewed, disclosed sample/tools, EU
+  // hotel population -> 'established'.
+  {
+    id: 'teixeira-hotel-accessibility-portugal-2022',
+    category: ['accessibility'],
+    sector: 'hospitality',
+    confidence: 'established',
+    scalability: 'context-only',
+    source: 'Teixeira, Eusébio and Teixeira, Tourism and Hospitality Research',
+    year: 2022,
+    citation: bilingual(
+      "Une étude portant sur 306 sites d'hôtels et de Pousadas de la région centrale du Portugal a mesuré un niveau d'accessibilité web globalement faible au regard des WCAG 2.0, les hôtels les plus haut de gamme obtenant, contre toute attente, les moins bons résultats (Teixeira, Eusébio et Teixeira, Tourism and Hospitality Research, étude évaluée par les pairs, 2022).",
+      "A study of 306 hotel and Pousada websites in central Portugal measured broadly low web accessibility against WCAG 2.0, with higher-category hotels scoring worse than expected (Teixeira, Eusébio and Teixeira, Tourism and Hospitality Research, peer-reviewed, 2022).",
+    ),
+  },
+  // hospitality.md entry 9. Peer-reviewed venue, but single automated
+  // tool and an undefined sample frame -> 'emerging', corroborating
+  // teixeira-hotel-accessibility-portugal-2022 above rather than
+  // standing alone.
+  {
+    id: 'singh-hotel-accessibility-top100-2025',
+    category: ['accessibility'],
+    sector: 'hospitality',
+    confidence: 'emerging',
+    scalability: 'context-only',
+    source: 'Singh, Sibi and Bashir, Tourism and Hospitality Research',
+    year: 2025,
+    citation: bilingual(
+      "Une évaluation des 100 principaux sites d'hôtels selon les WCAG 2.0 niveau AA a mis en évidence des obstacles récurrents concernant les alternatives textuelles, la navigation et la compatibilité avec les technologies d'assistance (Singh, Sibi et Bashir, Tourism and Hospitality Research, étude évaluée par les pairs, 2025).",
+      "An evaluation of the top 100 hotel websites against WCAG 2.0 level AA found recurring barriers around text alternatives, navigability, and assistive-technology compatibility (Singh, Sibi and Bashir, Tourism and Hospitality Research, peer-reviewed, 2025).",
+    ),
+  },
+  // hospitality.md's "confirmed no citable data" section: the only
+  // hospitality booking-abandonment figure anywhere with disclosed
+  // methodology, explicitly self-reported recall rather than a measured
+  // funnel rate - stated as such in the citation text itself, tagged
+  // 'performance' rather than 'accessibility' since it is not tied to any
+  // specific defect type.
+  {
+    id: 'siteminder-digital-experience-abandonment-2025',
+    category: ['performance'],
+    sector: 'hospitality',
+    confidence: 'established',
+    scalability: 'context-only',
+    source: 'SiteMinder, Changing Traveller Report 2025',
+    year: 2025,
+    citation: bilingual(
+      "52 % des voyageurs déclarent avoir déjà abandonné une réservation en raison d'une mauvaise expérience numérique, d'après une enquête déclarative menée auprès de plus de 12 000 répondants dans 14 pays (SiteMinder, Changing Traveller Report, 2025). Il s'agit d'un souvenir déclaré, non d'un taux d'abandon mesuré sur un tunnel de réservation réel.",
+      '52% of travelers report having abandoned a booking due to a bad digital experience, based on a self-reported survey of over 12,000 respondents across 14 countries (SiteMinder, Changing Traveller Report, 2025). This is self-reported recall, not a measured booking-funnel abandonment rate.',
     ),
   },
 ];

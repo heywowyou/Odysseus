@@ -1,398 +1,257 @@
-:root {
-  --bg: #12151f;
-  --surface: #1a1f2e;
-  --surface-alt: #232a3d;
-  --surface-raised: #2a3248;
-  --border: #2a3145;
-  --text: #eef1f8;
-  --text-muted: #8b93a8;
-  --text-faint: #5f6779;
-  --accent: #5b8def;
-  --accent-bg: rgba(91, 141, 239, 0.14);
-  --accent-green: #57b955;
-  --accent-green-text: #7ad978;
-  --accent-green-bg: rgba(87, 185, 85, 0.16);
-  --critical: #e5484d;
-  --serious: #f2994a;
-  --moderate: #eab308;
-  --minor: #8791a8;
-  --success: #57b955;
-  --radius-pill: 999px;
-  --radius-card: 16px;
-  --radius-input: 10px;
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: var(--font);
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.5;
-}
-
-header.app-header {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  padding: 0.9rem 1.75rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-
-header.app-header .brand {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-weight: 700;
-  font-size: 1.02rem;
-  letter-spacing: 0.01em;
-}
-
-header.app-header .brand::before {
-  content: '';
-  display: block;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-green));
-}
-
-header.app-header nav {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-header.app-header nav a {
-  color: var(--text-muted);
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 0.5rem 0.95rem;
-  border-radius: var(--radius-pill);
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-header.app-header nav a:hover {
-  color: var(--text);
-  background: var(--surface-alt);
-}
-
-header.app-header nav a[aria-current='page'] {
-  color: var(--accent-green-text);
-  background: var(--accent-green-bg);
-}
+/* Odysseus dashboard - built on the Nocturne design system that already
+   styles the PDF report. nocturne.css is copied here at build time from
+   packages/report/src/styles/nocturne.css (its canonical, locked source)
+   so the report and the dashboard never drift onto two token sets - see
+   the interface package.json build script. Everything below is this
+   page's own layer: layout, and the handful of classes the dashboard's
+   TS files generate (badges, progress bars) that nocturne has no
+   equivalent for. */
+@import url('./styles/nocturne.css');
 
 main {
-  max-width: 960px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 2.25rem 1.75rem 4rem;
+  padding: var(--space-8) var(--space-8) 96px;
 }
 
-h1 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin: 0 0 1.5rem;
+/* — nav — */
+.nav {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-divider);
+  padding: var(--space-3) var(--space-8);
+  gap: var(--space-6);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-right: var(--space-8);
+}
+.nav-brand svg {
+  flex: none;
 }
 
-h2 {
-  font-size: 1.02rem;
-  font-weight: 700;
-  margin: 2.25rem 0 0.85rem;
+/* — page headings — */
+main > h1 {
+  font-size: 22px;
+  margin: 0 0 var(--space-6);
+}
+main > h2 {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin: var(--space-8) 0 var(--space-3);
+}
+#result-heading {
+  font-size: 17px;
+  margin: 0 0 var(--space-2);
 }
 
-form.card,
-section.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: 1.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+/* — cards as page sections — nocturne's default .card padding/gap is
+   tuned for compact component previews; a full-page form or table needs
+   more room to breathe. */
+main .card {
+  padding: var(--space-6);
+  gap: var(--space-4);
+}
+main section.card + h2,
+main form.card + h2 {
+  margin-top: var(--space-8);
+}
+main section.card {
+  margin-bottom: 0;
 }
 
-label {
-  display: block;
-  font-size: 0.87rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  margin-bottom: 0.4rem;
+/* — form fields — nocturne's .field carries no vertical rhythm of its
+   own (a deck slide or a single-field form doesn't need one); the
+   dashboard's multi-field forms do. */
+.field {
+  margin-bottom: var(--space-4);
+}
+.field:last-child {
+  margin-bottom: 0;
 }
 
 .hint {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  margin-top: -0.8rem;
-  margin-bottom: 1.1rem;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  margin: 4px 0 0;
 }
 
-input[type='text'],
-input[type='url'],
-input[type='number'],
-textarea,
-select {
-  width: 100%;
-  padding: 0.6rem 0.85rem;
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-input);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 0.95rem;
-  margin-bottom: 1.1rem;
+/* 2026-08-22, La Corniche report review: a prefilled manual field
+   (siren/raisonSociale/nomCommercial) carries provenance:'detected' -
+   this needs to read as "please check this", not blend into the same
+   muted grey every other static hint uses. */
+.detected-hint {
+  color: var(--color-accent);
 }
 
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: var(--accent);
+.seg {
+  margin-bottom: var(--space-2);
 }
 
-textarea {
-  min-height: 6rem;
-  resize: vertical;
-}
-
-fieldset {
-  border: none;
-  padding: 0;
-  margin: 0 0 1rem;
-}
-
-.type-toggle {
-  display: flex;
-  gap: 0.2rem;
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  padding: 0.25rem;
-  margin-bottom: 1.4rem;
-}
-
-.type-toggle label {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.5rem;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  margin: 0;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.type-toggle label:has(input:checked) {
-  background: var(--accent-green-bg);
-  color: var(--accent-green-text);
-}
-
-.type-toggle input {
-  margin: 0;
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-details.advanced {
-  margin-bottom: 1.4rem;
-}
-
+/* — advanced options — */
 details.advanced summary {
   cursor: pointer;
-  color: var(--text-muted);
-  font-size: 0.88rem;
-  font-weight: 600;
-  margin-bottom: 0.85rem;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  list-style: none;
 }
-
-button {
-  background: var(--accent);
-  color: #f4f8ff;
-  border: none;
-  border-radius: var(--radius-pill);
-  padding: 0.65rem 1.4rem;
-  font-size: 0.92rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-button:hover:not(:disabled) {
-  background: #4a7bdb;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.error-banner {
-  background: rgba(229, 72, 77, 0.12);
-  border: 1px solid var(--critical);
-  color: #ff8a8d;
-  border-radius: var(--radius-input);
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
+details.advanced summary::-webkit-details-marker {
   display: none;
 }
+details.advanced[open] summary {
+  margin-bottom: var(--space-4);
+}
 
+/* — error banner — */
+.error-banner {
+  display: none;
+  background: color-mix(in srgb, var(--sev-critical) 14%, transparent);
+  border: 1px solid var(--sev-critical);
+  color: var(--sev-critical-fg);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-6);
+  font-size: 14px;
+}
 .error-banner.visible {
   display: block;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
+/* — severity / status badges — the same colour language as the PDF
+   report's findings appendix, so "critical" reads as the same shade in
+   both places, generated by app-shared.ts's severityBadgesHtml /
+   statusBadgeHtml rather than nocturne's generic .tag palette. */
+:root {
+  --sev-critical: #f2555f;
+  --sev-critical-bg: #4b1c22;
+  --sev-critical-fg: #ffb3b7;
+  --sev-serious: #f08b3c;
+  --sev-serious-bg: #472a15;
+  --sev-serious-fg: #ffcb98;
+  --sev-moderate: #e5b93c;
+  --sev-moderate-bg: #423415;
+  --sev-moderate-fg: #ffe4a0;
+  --sev-minor: #4cc98a;
+  --sev-minor-bg: #173a2b;
+  --sev-minor-fg: #9be7c1;
 }
-
-th,
-td {
-  text-align: left;
-  padding: 0.85rem 0.9rem;
-  border-bottom: 1px solid var(--border);
-}
-
-th {
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: 0.82rem;
-}
-
-tbody tr:last-child td {
-  border-bottom: none;
-}
-
-tbody tr:hover {
-  background: var(--surface-alt);
-}
-
-a {
-  color: var(--accent);
-}
-
 .badge {
-  display: inline-block;
-  padding: 0.2rem 0.6rem;
-  border-radius: var(--radius-pill);
-  font-size: 0.75rem;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 3px 10px;
+  border-radius: calc(var(--radius-md) * 0.75);
 }
-
 .badge-critical {
-  background: rgba(229, 72, 77, 0.16);
-  color: var(--critical);
+  background: var(--sev-critical-bg);
+  color: var(--sev-critical-fg);
 }
-
 .badge-serious {
-  background: rgba(242, 153, 74, 0.16);
-  color: var(--serious);
+  background: var(--sev-serious-bg);
+  color: var(--sev-serious-fg);
 }
-
 .badge-moderate {
-  background: rgba(234, 179, 8, 0.16);
-  color: var(--moderate);
+  background: var(--sev-moderate-bg);
+  color: var(--sev-moderate-fg);
 }
-
 .badge-minor {
-  background: rgba(139, 147, 168, 0.16);
-  color: var(--minor);
+  background: var(--sev-minor-bg);
+  color: var(--sev-minor-fg);
 }
-
-.badge-queued,
+.badge-queued {
+  background: color-mix(in srgb, var(--color-neutral-500) 26%, transparent);
+  color: var(--color-neutral-300);
+}
 .badge-running {
-  background: var(--accent-bg);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  color: var(--color-accent-300);
 }
-
 .badge-complete {
-  background: var(--accent-green-bg);
-  color: var(--accent-green-text);
+  background: var(--sev-minor-bg);
+  color: var(--sev-minor-fg);
 }
-
 .badge-failed {
-  background: rgba(229, 72, 77, 0.16);
-  color: var(--critical);
+  background: var(--sev-critical-bg);
+  color: var(--sev-critical-fg);
 }
 
 .rollup {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin: 1rem 0;
+  margin: var(--space-3) 0 0;
+}
+.rollup:first-child {
+  margin-top: 0;
 }
 
+/* — progress — */
 .progress-phase {
-  margin-bottom: 1.6rem;
+  margin-bottom: var(--space-6);
 }
-
+.progress-phase:last-child {
+  margin-bottom: 0;
+}
 .progress-phase .label {
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.progress-phase .eta {
-  color: var(--text-muted);
+  font-size: 14px;
   font-weight: 500;
+  margin-bottom: var(--space-2);
 }
-
+.progress-phase .eta {
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  font-weight: 400;
+  font-size: 13px;
+}
 .progress-bar-track {
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 9%, transparent);
   overflow: hidden;
 }
-
 .progress-bar-fill {
   height: 100%;
-  background: var(--accent-green);
-  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  border-radius: 999px;
   transition: width 0.3s ease;
 }
-
-.status-line {
-  padding: 0.5rem 0;
-  color: var(--text-muted);
-  font-size: 0.9rem;
+#phase-status {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
 }
-
-.status-line.current {
-  color: var(--text);
-  font-weight: 600;
+#phase-status:not(:empty) {
+  margin-top: var(--space-2);
 }
 
 .meta-row {
   display: flex;
-  gap: 2rem;
+  gap: var(--space-6);
   flex-wrap: wrap;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
 }
-
 .meta-row strong {
-  color: var(--text);
-  font-weight: 600;
+  color: var(--color-text);
+  font-weight: 500;
 }
 
 .empty-state {
-  color: var(--text-muted);
-  padding: 2rem 0;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  padding: var(--space-6) 0;
   text-align: center;
+  font-size: 14px;
+  margin: 0;
 }
 
 .url-result-list {
@@ -400,16 +259,28 @@ a {
   padding: 0;
   margin: 0;
 }
-
 .url-result-list li {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  font-size: 14px;
+}
+.url-result-list li + li {
+  border-top: 1px solid var(--color-divider);
 }
 
-.url-result-list li:last-child {
-  border-bottom: none;
+.siren-row {
+  display: flex;
+  gap: var(--space-2);
+}
+.siren-row .input {
+  flex: 1;
+}
+
+.manual-fields-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
 }

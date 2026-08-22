@@ -17,8 +17,27 @@ import { renderPdfFromHtml } from './pdf.js';
  *  final Paged.js print (pdf.ts) - resolveRenderDiffEvidence no longer
  *  needs a browser at all since section 08 stopped embedding screenshots
  *  (docs/report-design-system.md section 3). */
+/** `--font-render-hinting=none`: a real La Corniche PDF (this session,
+ *  2026-08-22) showed glyph-run splitting in the extracted text layer at
+ *  font-weight 500+ combined with certain fractional sizes (e.g.
+ *  "Vot re prest at aire", "conf ormit e"), the same class of defect
+ *  letter-spacing.test.ts's docblock already names but could not pin
+ *  down. Isolated with a standalone probe varying weight (400-700) and
+ *  size (11-20px) independently through the real renderPdfFromHtml
+ *  path: the defect was NOT a clean weight or size threshold (it hit
+ *  weight 400 at some sizes too, inconsistently), which is why the
+ *  earlier letter-spacing fix's approach (pick a safe numeric value)
+ *  does not apply here. Disabling Chromium's font hinting for the PDF
+ *  render eliminated it across all 18 tested weight/size combinations,
+ *  with zero misses - a Chromium glyph-hinting/positioning artifact in
+ *  its print-to-PDF text layer, not a CSS value to tune. Scoped to this
+ *  one launch (see LaunchBrowserOptions in packages/scanner/src/
+ *  browser.ts) rather than scanner's own crawl/axe/Lighthouse browser,
+ *  which never renders to PDF and has no reason to change. */
+export const REPORT_PDF_CHROMIUM_ARGS = ['--font-render-hinting=none'];
+
 export async function generateReportPdf(input: GenerateReportInput): Promise<Buffer> {
-  const { browser } = await launchBrowser();
+  const { browser } = await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS });
   try {
     const {
       pages: renderDiffEvidencePages,

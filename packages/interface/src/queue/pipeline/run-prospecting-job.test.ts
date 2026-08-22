@@ -63,13 +63,13 @@ describe('runProspectingJob', () => {
     expect(runAuditStage).toHaveBeenNthCalledWith(
       1,
       'https://a.example/',
-      { maxPages: PROSPECTING_MAX_PAGES, maxDepth: PROSPECTING_MAX_DEPTH },
+      { maxPages: PROSPECTING_MAX_PAGES, maxDepth: PROSPECTING_MAX_DEPTH, skipLighthouse: true },
       fakeConnection,
     );
     expect(runAuditStage).toHaveBeenNthCalledWith(
       2,
       'https://b.example/',
-      { maxPages: PROSPECTING_MAX_PAGES, maxDepth: PROSPECTING_MAX_DEPTH },
+      { maxPages: PROSPECTING_MAX_PAGES, maxDepth: PROSPECTING_MAX_DEPTH, skipLighthouse: true },
       fakeConnection,
     );
   });
@@ -127,5 +127,66 @@ describe('runProspectingJob', () => {
 
   it('throws if the job has no urls', async () => {
     await expect(runProspectingJob(fakeJob([]), ctx)).rejects.toThrow(/no urls/);
+  });
+
+  describe('2026-08-22 milestone 9b: bounded worker pool', () => {
+    it('runs distinct origins concurrently rather than one at a time', async () => {
+      // Each runAuditStage call blocks until every expected call has been
+      // made - only possible if PROSPECTING_JOB_CONCURRENCY workers are
+      // genuinely in flight at once, not a serial loop awaiting one call
+      // before starting the next.
+      const urls = ['https://a.example/', 'https://b.example/', 'https://c.example/'];
+      let inFlight = 0;
+      let maxInFlight = 0;
+      vi.mocked(runAuditStage).mockImplementation(async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        inFlight -= 1;
+        return {
+          auditId: 'audit-x',
+          manifest: {} as never,
+          findings: [] as never,
+          auditDir: '/dir',
+          visitedCount: 1,
+          prunedPageDirCount: 0,
+          obligationAssessment: { status: 'undetermined', basis: [] } as never,
+        };
+      });
+
+      await runProspectingJob(fakeJob(urls), ctx);
+
+      expect(runAuditStage).toHaveBeenCalledTimes(3);
+      expect(maxInFlight).toBeGreaterThan(1);
+    });
+
+    it('a worker that finishes early picks up remaining work rather than sitting idle', async () => {
+      // 4 URLs against a 3-worker pool: the fast URL's worker must pick up
+      // the 4th once done, not leave it for whichever worker "owns" it in
+      // a fixed-slice scheme.
+      const urls = ['https://fast.example/', 'https://b.example/', 'https://c.example/', 'https://d.example/'];
+      vi.mocked(runAuditStage).mockImplementation(async (url) => {
+        const delay = url === 'https://fast.example/' ? 0 : 20;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return {
+          auditId: `audit-${url}`,
+          manifest: {} as never,
+          findings: [] as never,
+          auditDir: '/dir',
+          visitedCount: 1,
+          prunedPageDirCount: 0,
+          obligationAssessment: { status: 'undetermined', basis: [] } as never,
+        };
+      });
+
+      await runProspectingJob(fakeJob(urls), ctx);
+
+      expect(runAuditStage).toHaveBeenCalledTimes(4);
+      expect(completeJob).toHaveBeenCalledWith(
+        fakeConnection,
+        'job-1',
+        expect.objectContaining({ auditIds: expect.arrayContaining([expect.stringContaining('audit-')]) }),
+      );
+    });
   });
 });

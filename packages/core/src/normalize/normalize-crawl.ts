@@ -25,6 +25,7 @@ import { severityFromCustom } from './severity.js';
 export const ROBOTS_BLOCKS_INDEXING_RULE_ID = 'robots-blocks-indexing';
 export const BROKEN_INTERNAL_LINK_RULE_ID = 'broken-internal-link';
 export const ROBOTS_DISALLOW_BROAD_RULE_ID = 'robots-disallow-broad';
+export const AI_CRAWLER_BLOCKED_RULE_ID = 'ai-crawler-blocked';
 
 /** At or above this many discovered URLs blocked by one Disallow
  *  pattern, the pattern is broad enough to flag - conservative on
@@ -61,6 +62,12 @@ export interface NormalizeCrawlInput {
    *  on. Optional so offline re-normalization against a pre-8.5a
    *  manifest still works, just without robots-disallow-broad. */
   robotsDisallowMatches?: { pattern: string; matchedPageCount: number }[];
+  /** Milestone 8.6. Computed by scanner (robots.ts's checkAiCrawlerAccess)
+   *  from the same already-fetched robots.txt text used for
+   *  robotsDisallowMatches above - only agents actually blocked from the
+   *  site root are included. Optional so a manifest from before this
+   *  milestone still parses, with no ai-crawler-blocked findings. */
+  aiCrawlerBlocks?: { agent: string; disallowPattern: string }[];
 }
 
 function isBrokenTarget(page: CrawlPageInput): boolean {
@@ -101,6 +108,31 @@ export function extractCrawlCandidates(input: NormalizeCrawlInput): FindingCandi
       pageUrl: input.startUrl,
       element: null,
       rawEvidenceForPage: { pattern: match.pattern, matchedPageCount: match.matchedPageCount },
+    });
+  }
+
+  for (const block of input.aiCrawlerBlocks ?? []) {
+    candidates.push({
+      source: 'custom',
+      ruleId: AI_CRAWLER_BLOCKED_RULE_ID,
+      category: 'geo',
+      severity: severityFromCustom(AI_CRAWLER_BLOCKED_RULE_ID),
+      wcagCriteria: [],
+      title: `robots.txt blocks ${block.agent} from crawling this site`,
+      description: `This site's robots.txt disallows ${block.agent} (matched by the rule "Disallow: ${block.disallowPattern}") from the site root. If this is deliberate, no action is needed; if not, this agent cannot read the site at all, which means it cannot cite or reference it in AI-generated answers.`,
+      pageUrl: input.startUrl,
+      element: {
+        pageUrl: input.startUrl,
+        // Synthetic, not a DOM selector - same "a real, derived
+        // identifier, never a sentinel" reasoning broken-internal-link's
+        // own element comment gives, needed here so distinct agents stay
+        // distinct fine groups (dedupeKey includes selector) before
+        // aggregateSamePageOccurrences collapses same-page occurrences
+        // of this rule back into one finding with per-agent evidence.
+        selector: `robots.txt: User-agent: ${block.agent}`,
+        snippet: `Disallow: ${block.disallowPattern}`,
+      },
+      rawEvidenceForPage: { agent: block.agent, disallowPattern: block.disallowPattern },
     });
   }
 

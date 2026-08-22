@@ -1,6 +1,6 @@
 {
-  "version": "2026-08-16",
-  "sourceNote": "NAF rev2 (INSEE). Odysseus's own targeting inference, not a published EAA/NAF correspondence table, except where flagged 'definitional' because INSEE's own class definition names electronic distance selling explicitly. NEVER cite this list, or 'sector', to a prospect as evidence of anything (docs/prospect-qualification.md section 4). It is a recall filter narrowing which Sirene stock rows get fetched, not the qualification predicate itself - a non-matching NAF code excludes a candidate, but a matching one alone never qualifies one (docs/prospect-qualification.md section 3, six conditions).",
+  "version": "2026-08-22",
+  "sourceNote": "NAF rev2 (INSEE). Odysseus's own targeting inference, not a published EAA/NAF correspondence table, except where flagged 'definitional' because INSEE's own class definition names electronic distance selling explicitly, or (2026-08-22) because docs/obligation-basis.md's 'Hotels and accommodation' entry upgraded that reading to 'secondary' for accommodation booking specifically. NEVER cite this list, or 'sector', to a prospect as evidence of anything (docs/prospect-qualification.md section 4). It is a recall filter narrowing which Sirene stock rows get fetched, not the qualification predicate itself - a non-matching NAF code excludes a candidate, but a matching one alone never qualifies one (docs/prospect-qualification.md section 3, six conditions).",
   "codes": [
     {
       "code": "47.91A",
@@ -43,6 +43,27 @@
       "confidence": "inferred",
       "enabled": false,
       "rationale": "Illustrative only. Toy retail is high-plausibility omnichannel. Not enabled for the first wave."
+    },
+    {
+      "code": "55.10Z",
+      "label": "Hôtels et hébergement similaire",
+      "confidence": "definitional",
+      "enabled": true,
+      "rationale": "2026-08-22 wave: docs/obligation-basis.md's 'Hotels and accommodation' entry (upgraded disputed -> secondary) states a booking flow concluding a consumer contract online is generally treated as electronic commerce, several independent sources apply this to tourism/hotels specifically, and hotels are now treated as on comparable legal footing to a standard online shop for outreach purposes. Held back from the first wave for volume/framing-sequencing reasons only, not legal weakness, per docs/prospect-qualification.md section 4's own note - now enabled. The fetch/scan stage's transactional-flow detector, not this code, confirms an actual booking engine exists."
+    },
+    {
+      "code": "55.20Z",
+      "label": "Hébergement touristique et autre hébergement de courte durée",
+      "confidence": "definitional",
+      "enabled": true,
+      "rationale": "Same INSEE hébergement class family and same obligation-basis.md reading as 55.10Z, covering chambres d'hôtes and short-stay tourist accommodation - explicitly part of Odysseus's named hospitality segment alongside hotels (docs/research/sector-reference-stats/hospitality.md)."
+    },
+    {
+      "code": "56.10A",
+      "label": "Restauration traditionnelle",
+      "confidence": "inferred",
+      "enabled": false,
+      "rationale": "Not enabled. docs/obligation-basis.md's hotel upgrade is specific to accommodation booking (a contract concluded online); a restaurant table reservation is not generally the same kind of transaction and has not received the same legal-reading review. Enable only after that reading is checked the way hotels were, not by analogy to 55.10Z/55.20Z."
     }
   ]
 }

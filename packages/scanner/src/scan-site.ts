@@ -1,8 +1,11 @@
 import type { Browser } from 'playwright';
-import { getPageTimeoutMs, getScanConcurrency } from './config.js';
+import type { CruxFieldDataResult } from '@odysseus/core';
+import { getCruxApiKey, getPageTimeoutMs, getScanConcurrency } from './config.js';
 import type { RedirectHostCache } from './checks/transactional-flow.js';
 import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
 import { checkLlmsTxt, type LlmsTxtCheckResult } from './checks/llms-txt.js';
+import { checkSecurityHeaders, type SecurityHeadersCheckResult } from './checks/security-headers.js';
+import { fetchCruxFieldData } from './crux.js';
 import { type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import { type PageScanResult, scanPage } from './scan-page.js';
 
@@ -40,11 +43,19 @@ export interface ScanSiteOptions {
   /** Manual-input-layer milestone, forwarded to every page's
    *  findDelegatedBookingRedirectChecks call via scanPage. */
   bookingEngineUrl?: string;
+  /** Milestone 9b: forwarded to every page's scanPage call. See
+   *  ScanPageOptions.skipLighthouse for the full reasoning. */
+  skipLighthouse?: boolean;
 }
 
 export interface SiteScanResult {
   crawl: CrawlResult;
   pages: PageScanResult[];
+  /** Milestone 8.6: origin-level, fetched once here (not per page) - see
+   *  CruxFieldDataResult's own doc comment for why. Absent (not merely
+   *  `available: false`) when CRUX_API_KEY was never configured, so this
+   *  fetch was never attempted at all. */
+  cruxFieldData?: CruxFieldDataResult;
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -75,7 +86,9 @@ async function runScanLane(
   homepageUrl: string | undefined,
   sitemapCheck: (SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] }) | undefined,
   llmsTxtCheck: LlmsTxtCheckResult | undefined,
+  securityHeadersCheck: SecurityHeadersCheckResult | undefined,
   bookingEngineUrl: string | undefined,
+  skipLighthouse: boolean,
   onPageDone: (pageResult: PageScanResult) => void,
 ): Promise<void> {
   let nextDelayMs = startDelayMs;
@@ -96,7 +109,9 @@ async function runScanLane(
       ...(homepageUrl !== undefined ? { homepageUrl } : {}),
       ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
       ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
+      ...(securityHeadersCheck !== undefined ? { securityHeadersCheck } : {}),
       ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
+      ...(skipLighthouse ? { skipLighthouse } : {}),
     });
     onPageDone(pageResult);
   }
@@ -188,6 +203,25 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
   const llmsTxtCheck = await checkLlmsTxt(new URL(crawl.startUrl).origin, options.timeoutMs ?? getPageTimeoutMs());
   const llmsTxtCheckForScan = homepageWasVisited ? llmsTxtCheck : undefined;
 
+  // Security response headers are a site-level fetch, same shape as
+  // llms.txt/sitemap above: near-always identical across every page on a
+  // site, so one request here (attached only to the homepage's scan.json
+  // when it was visited) rather than repeating the same answer per page.
+  const securityHeadersCheck = await checkSecurityHeaders(
+    new URL(crawl.startUrl).origin,
+    options.timeoutMs ?? getPageTimeoutMs(),
+  );
+  const securityHeadersCheckForScan = homepageWasVisited ? securityHeadersCheck : undefined;
+
+  // CrUX is origin-level, not per-page, and only ever queried once per
+  // audit regardless of page count - skipped entirely (not attempted and
+  // failed) when no API key is configured, so a site without one never
+  // pays a doomed auth-error round trip.
+  const cruxApiKey = getCruxApiKey();
+  const cruxFieldData = cruxApiKey
+    ? await fetchCruxFieldData(new URL(crawl.startUrl).origin, cruxApiKey)
+    : undefined;
+
   const concurrency = Math.max(1, Math.min(options.concurrency ?? getScanConcurrency(), pagesToScan.length || 1));
 
   const lanes: string[][] = Array.from({ length: concurrency }, () => []);
@@ -225,11 +259,13 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
           homepageUrlForScan,
           sitemapCheck,
           llmsTxtCheckForScan,
+          securityHeadersCheckForScan,
           options.bookingEngineUrl,
+          options.skipLighthouse ?? false,
           onPageDone,
         ),
       ),
   );
 
-  return { crawl, pages };
+  return { crawl, pages, ...(cruxFieldData !== undefined ? { cruxFieldData } : {}) };
 }

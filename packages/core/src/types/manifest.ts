@@ -90,6 +90,38 @@ export interface CoreWebVitals {
   speedIndex: CoreWebVitalMeasurement;
 }
 
+/** A single CrUX (Chrome UX Report) metric's real-user p75 value, in the
+ *  API's own native unit (ms for LCP/INP, unitless for CLS). */
+export interface CruxMetricResult {
+  p75: number;
+}
+
+/** Milestone 8.6: Chrome UX Report field data for the audited origin -
+ *  real Chrome users, not Lighthouse's lab simulation. Origin-level, not
+ *  per-page (CrUX's own granularity), fetched once per audit, hence a
+ *  top-level AuditManifest field rather than something on
+ *  ManifestPageEntry. `available: false` means CrUX has no public record
+ *  for this origin (most audited sites, given CrUX's own minimum-traffic
+ *  threshold) - this is the expected, common case, not an error, and
+ *  report generation must render it as "insufficient real-user traffic
+ *  for public data available", never silently omit the section or imply
+ *  a pass. Recorded here rather than invented as a Finding for the same
+ *  reason lighthouseExcludedCategoryScores lives in the manifest and not
+ *  in findings.json: it is a fact worth keeping regardless of whether it
+ *  crosses any severity threshold. Poor field-data values (per Google's
+ *  published Core Web Vitals thresholds) still produce real findings -
+ *  see normalize-crux.ts - this field is the underlying data those
+ *  findings are derived from, kept independently so a healthy site's
+ *  numbers are not lost the same way coreWebVitals' own doc comment
+ *  explains. */
+export interface CruxFieldDataResult {
+  available: boolean;
+  lcp?: CruxMetricResult;
+  cls?: CruxMetricResult;
+  inp?: CruxMetricResult;
+  fetchError?: string;
+}
+
 export interface ManifestPageEntry {
   url: string;
   /** Path relative to the audit directory, e.g. "pages/contact-d4e5f6".
@@ -142,6 +174,19 @@ export interface AuditManifestSiteSignals extends SiteSignals {
    *  identified or no valid SIREN was found on it. */
   siren?: string;
   mentionsLegalesPageUrl?: string;
+  /** 2026-08-22, La Corniche report review: the commercial/brand name a
+   *  site calls itself, read from the homepage's own head metadata
+   *  (`og:site_name`, falling back to the `<title>` tag up to its first
+   *  "|" or em dash separator) - not from Sirene, which frequently has no
+   *  brand name on file at all (confirmed against the live Sirene API for
+   *  a real client: `siege.nom_commercial`, `enseigne_1/2/3` and
+   *  `liste_enseignes` were all null for a site whose own `og:site_name`
+   *  was exactly right). Feeds `AuditManualFields.nomCommercial` as a
+   *  fill-if-absent prefill (packages/store/src/audits.ts's
+   *  `prefillAuditManualFields`), never overwriting an operator-entered
+   *  value. Absent when the homepage was not visited or carried neither
+   *  signal. */
+  siteName?: string;
 }
 
 export interface AuditManifest {
@@ -167,7 +212,20 @@ export interface AuditManifest {
      *  still parse; `normalize <dir>` treats an absent value as "no
      *  disallow-breadth data available", not as zero matches. */
     robotsDisallowMatches?: { pattern: string; matchedPageCount: number }[];
+    /** Milestone 8.6. Optional so manifests from before this milestone
+     *  still parse; only blocked agents are listed, since an allowed
+     *  agent has nothing for normalize-crawl.ts's ai-crawler-blocked
+     *  check to report. */
+    aiCrawlerBlocks?: { agent: string; disallowPattern: string }[];
   };
   pages: ManifestPageEntry[];
   siteSignals?: AuditManifestSiteSignals;
+  /** Milestone 8.6. Optional so manifests from before this milestone,
+   *  and audits where CRUX_API_KEY was not configured, still parse -
+   *  absence here means "not queried at all" (no API key configured),
+   *  distinct from `available: false` inside the object itself, which
+   *  means "queried, but CrUX has no public record for this origin".
+   *  Both must render the same way in a report (no real-user data
+   *  shown); the distinction only matters for our own debugging. */
+  cruxFieldData?: CruxFieldDataResult;
 }

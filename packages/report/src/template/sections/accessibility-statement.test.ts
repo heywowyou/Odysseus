@@ -88,6 +88,19 @@ describe('item 20: per-criterion status is binary conforme/non-conforme', () => 
   });
 });
 
+// 2026-08-22, La Corniche report review: "Non conforme" rendered in the
+// neutral lavender accent colour, the same tone as ordinary emphasis
+// text - not the red used everywhere else a critical/urgent state is
+// shown (themes.ts's Conformité column, the severity ramp). Aligned to
+// the same SEVERITY.critical red so the two sections agree.
+describe('2026-08-22: "Non conforme" is coloured with the critical/red tone, not the neutral accent', () => {
+  it('colours the Non conforme cell with #d97b82 (SEVERITY.critical)', () => {
+    const html = renderAccessibilityStatement(getStrings('fr'), 10, 'fr', [wcagFinding], article47Assessment);
+    expect(html).toMatch(/Non conforme<\/div>/);
+    expect(html).toContain('color:#d97b82');
+  });
+});
+
 describe('item 21: a scraped contact email never renders as a finished value', () => {
   it('renders a detected email with an explicit "to confirm" qualifier', () => {
     const manualFields: AuditManualFields = {

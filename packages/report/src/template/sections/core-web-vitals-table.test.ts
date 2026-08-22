@@ -59,6 +59,48 @@ describe('renderCoreWebVitalsTable', () => {
     expect(html).not.toContain('example.com/'); // no per-page URL column
   });
 
+  // 2026-08-22, La Corniche report review: a real report stated medians
+  // were "aggregated across 27 pages" (every *visited* page) while only
+  // 25 pages actually returned a Core Web Vitals measurement - the other
+  // 2 timed out, correctly disclosed elsewhere in the report (section
+  // 11's methodology) but silently contradicted here.
+  it('states the count of pages with an actual measurement, not every visited page, in the intro sentence', () => {
+    const measuredPage = (n: number) => ({
+      url: `https://example.com/${n}`,
+      pageDir: `pages/p-${n}`,
+      depth: 0,
+      status: 'visited',
+      errors: {},
+      coreWebVitals: {
+        lcp: buildMeasurement(1000, '1.0 s'),
+        cls: buildMeasurement(0, '0'),
+        tbt: buildMeasurement(0, '0 ms'),
+        fcp: buildMeasurement(0, '0 s'),
+        speedIndex: buildMeasurement(0, '0 s'),
+      },
+    });
+    const visitedButUnmeasuredPage = (n: number) => ({
+      url: `https://example.com/timeout-${n}`,
+      pageDir: `pages/p-timeout-${n}`,
+      depth: 0,
+      status: 'visited',
+      errors: {},
+      // No coreWebVitals key at all - the page loaded but Lighthouse
+      // timed out on it, same shape as a real runLighthouseIsolated
+      // timeout.
+    });
+
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [measuredPage(1), measuredPage(2), visitedButUnmeasuredPage(3), visitedButUnmeasuredPage(4)],
+    } as unknown as AuditManifest;
+
+    const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+
+    expect(html).toContain('Median values aggregated across 2 pages');
+    expect(html).not.toContain('aggregated across 4 pages');
+  });
+
   it('computes the median across pages, not the mean, so one outlier page cannot drag the aggregate', () => {
     const page = (lcp: number) => ({
       url: `https://example.com/${lcp}`,
@@ -236,5 +278,97 @@ describe('renderCoreWebVitalsTable', () => {
     const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
     expect(html).toContain('1.8 s');
     expect(html).not.toContain('did not complete');
+  });
+
+  // Milestone 8.6: CrUX real-user field data, rendered as a second block
+  // under the lab table rather than a new section.
+  describe('real-user data (CrUX)', () => {
+    const measuredManifestWith = (cruxFieldData: AuditManifest['cruxFieldData']) =>
+      ({
+        siteUrl: 'https://example.com/',
+        cruxFieldData,
+        pages: [
+          {
+            url: 'https://example.com/',
+            pageDir: 'pages/root-aaa',
+            depth: 0,
+            status: 'visited',
+            errors: {},
+            coreWebVitals: {
+              lcp: buildMeasurement(1800, '1.8 s'),
+              cls: buildMeasurement(0, '0'),
+              tbt: buildMeasurement(120, '120 ms'),
+              fcp: buildMeasurement(900, '0.9 s'),
+              speedIndex: buildMeasurement(2000, '2.0 s'),
+            },
+          },
+        ],
+      }) as unknown as AuditManifest;
+
+    it('shows the no-data note, never as a pass, when CrUX has no public record for this origin', () => {
+      const manifest = measuredManifestWith({ available: false });
+      const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+      expect(html).toContain('No public Chrome UX Report data');
+      expect(html).not.toContain('INP, responsiveness');
+    });
+
+    it('shows the same no-data note when CrUX was never queried (no manifest field at all, e.g. CRUX_API_KEY unset)', () => {
+      const manifest = measuredManifestWith(undefined);
+      const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+      expect(html).toContain('No public Chrome UX Report data');
+    });
+
+    it('renders real-user LCP, INP, and CLS with their own ratings when CrUX data is available', () => {
+      const manifest = measuredManifestWith({
+        available: true,
+        lcp: { p75: 1200 },
+        inp: { p75: 550 },
+        cls: { p75: 0.3 },
+      });
+      const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+      expect(html).toContain('1.2 s'); // LCP good
+      expect(html).toContain('550 ms'); // INP poor
+      expect(html).toContain('0.3'); // CLS poor
+      expect(html).toContain('Real-user data');
+    });
+
+    // 2026-08-22, La Corniche report review: a real report showed lab
+    // LCP at 33.2s directly above real-user LCP at 4.1s with no
+    // explanation, reading as a self-contradiction rather than two
+    // deliberately different measurements.
+    it('explains the lab-vs-real-user gap only when both a lab number and a real CrUX table actually render', () => {
+      const manifest = measuredManifestWith({
+        available: true,
+        lcp: { p75: 1200 },
+        inp: { p75: 550 },
+        cls: { p75: 0.3 },
+      });
+      const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+      expect(html).toContain('A large gap between the values above and below is expected');
+    });
+
+    it('never shows the gap-explanation note when CrUX has no data to compare against', () => {
+      const manifest = measuredManifestWith({ available: false });
+      const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+      expect(html).not.toContain('A large gap between the values above and below is expected');
+    });
+
+    it('never shows the gap-explanation note when lab measurement did not complete at all, even if CrUX has data', async () => {
+      const manifest = await loadSasFernandeManifest();
+      const withCrux = {
+        ...manifest,
+        cruxFieldData: { available: true, lcp: { p75: 1200 }, inp: { p75: 550 }, cls: { p75: 0.3 } },
+      } as AuditManifest;
+      const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', withCrux);
+      expect(html).not.toContain('A large gap between the values above and below is expected');
+    });
+
+    it('still renders the real-user block even when lab measurement did not complete at all', async () => {
+      const manifest = await loadSasFernandeManifest();
+      const withCrux = { ...manifest, cruxFieldData: { available: false } } as AuditManifest;
+      const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', withCrux);
+      expect(html).toContain('did not complete');
+      expect(html).toContain('No public Chrome UX Report data');
+    });
   });
 });

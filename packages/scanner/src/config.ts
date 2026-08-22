@@ -113,3 +113,12 @@ export function getCrawlerUserAgent(): string {
   ensureEnvLoaded();
   return process.env.CRAWLER_USER_AGENT || ODYSSEUS_USER_AGENT;
 }
+
+/** Milestone 8.6. Returns undefined (not empty string) when unset, so
+ *  callers can gate the CrUX fetch on presence with a plain truthiness
+ *  check rather than comparing against ''. Generate a key at
+ *  https://goo.gle/crux-api-key. */
+export function getCruxApiKey(): string | undefined {
+  ensureEnvLoaded();
+  return process.env.CRUX_API_KEY || undefined;
+}

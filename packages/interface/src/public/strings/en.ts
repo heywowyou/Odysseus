@@ -102,6 +102,7 @@ export const en: DashboardStrings = {
     sirenNotResolvedMessage: 'This SIREN could not be confirmed against the Sirene registry.',
     sirenSourceUrlLabel: 'Page where the SIREN is displayed',
     raisonSocialeLabel: 'Legal name',
+    detectedFieldHint: 'Auto-detected, please confirm.',
     nomCommercialLabel: 'Display name',
     recipientNameLabel: 'Prepared for',
     sectorLabel: 'Sector',

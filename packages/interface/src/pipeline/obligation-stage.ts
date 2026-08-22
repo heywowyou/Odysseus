@@ -54,6 +54,9 @@ function withRegistrySnapshot(assessment: ObligationAssessment, profile: Operato
       effectifBandLabel: profile.effectifBand.value?.label ?? null,
       retrievedAt: profile.siren.retrievedAt,
       source: profile.siren.source,
+      ...(profile.turnover.value !== null && profile.turnover.value > 0
+        ? { turnoverEur: profile.turnover.value }
+        : {}),
     },
   };
 }

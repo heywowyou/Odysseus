@@ -55,13 +55,22 @@ async function getFreePort(): Promise<number> {
  * probed just before launch, so retry with a fresh port if another process
  * wins the narrow race and grabs it first.
  */
-export async function launchBrowser(): Promise<LaunchedBrowser> {
+export interface LaunchBrowserOptions {
+  /** Extra Chromium CLI args appended after the debug-port arg. Additive
+   *  only - scanner's own crawl/axe/Lighthouse callers never pass this,
+   *  so their launch is unchanged. Introduced for the report package's
+   *  print-to-PDF path, which needs `--font-render-hinting=none` (see
+   *  the call site in packages/report/src/index.ts for why). */
+  extraArgs?: readonly string[];
+}
+
+export async function launchBrowser(options: LaunchBrowserOptions = {}): Promise<LaunchedBrowser> {
   let lastError: unknown;
   for (let attempt = 0; attempt < LAUNCH_PORT_ATTEMPTS; attempt++) {
     const debugPort = await getFreePort();
     try {
       const browser = await chromium.launch({
-        args: [`--remote-debugging-port=${debugPort}`],
+        args: [`--remote-debugging-port=${debugPort}`, ...(options.extraArgs ?? [])],
       });
       return { browser, debugPort };
     } catch (error) {

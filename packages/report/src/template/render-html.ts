@@ -48,7 +48,7 @@ const FONT_FILES = ['Inter-Regular.woff2', 'Inter-Medium.woff2', 'Inter-SemiBold
  *  to (two levels below the package root whether run via tsx from src or
  *  from the compiled dist build), reaching the one committed copy of the
  *  design system either way, with no build-time copy step. */
-async function readStylesInlined(): Promise<string> {
+export async function readStylesInlined(): Promise<string> {
   const packageRoot = path.resolve(__dirname, '..', '..');
   const stylesDir = path.join(packageRoot, 'src', 'styles');
   const fontsDir = path.join(packageRoot, 'src', 'fonts');

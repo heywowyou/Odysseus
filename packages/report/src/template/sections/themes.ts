@@ -1,9 +1,15 @@
 import type { AuditManifest, Finding, ReferenceStat, ReportLanguage, StatSector, Theme } from '@odysseus/core';
-import { CORE_WEB_VITAL_THRESHOLDS, LCEN_MENTIONS_LEGALES_RULE_ID, estimateAggregateEffortDays, selectReferenceStats } from '@odysseus/core';
+import {
+  CORE_WEB_VITAL_THRESHOLDS,
+  LCEN_MENTIONS_LEGALES_RULE_ID,
+  estimateAggregateEffortDays,
+  estimateRevenueImpact,
+  selectReferenceStats,
+} from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatFindingIdLinks, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
-import { CATEGORY } from '../design-tokens.js';
+import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 
@@ -99,6 +105,46 @@ function measuredLcpGapNote(
   });
 }
 
+/** 2026-08-22 revenue-impact wiring: floors to 2 significant figures so
+ *  a single-study ratio applied to a client's own turnover
+ *  (estimateRevenueImpact's `annualRevenue x ratio` approximation) never
+ *  reads as more precise than it is - "jusqu'à 4 200 EUR" is honest
+ *  about being an order of magnitude, "jusqu'à 4 237 EUR" reads as a
+ *  measurement. Floors, never rounds to nearest and never up, so the
+ *  displayed figure is never larger than what the calculation actually
+ *  produced - the same "never overstate" posture as the legal-exposure
+ *  rule, extended to money. */
+function roundConservativeEurEstimate(value: number): number {
+  if (value <= 0) return 0;
+  const magnitude = 10 ** (Math.floor(Math.log10(value)) - 1);
+  return Math.floor(value / magnitude) * magnitude;
+}
+
+/** Present only when the theme's citation is a scalable stat (never a
+ *  context-only case study or aggregate - estimateRevenueImpact itself
+ *  refuses those) and the client's own Sirene-sourced turnover is known.
+ *  Applies the stat's ratio exactly once against the client's full
+ *  reported turnover, the same single, non-compounding application
+ *  estimateRevenueImpact always does - never scaled by a measured gap or
+ *  a page/finding count, which is what would turn a small real effect
+ *  into an implausible one. */
+function renderRevenueImpactNote(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  stat: ReferenceStat,
+  turnoverEur: number | undefined,
+): string | undefined {
+  if (turnoverEur === undefined || stat.scalability !== 'scales-down' || !stat.ratio) return undefined;
+  const result = estimateRevenueImpact(stat, turnoverEur);
+  if ('error' in result) return undefined;
+  const impact = roundConservativeEurEstimate(result.revenueGainEur);
+  if (impact <= 0) return undefined;
+  return fillTemplate(strings.themes.revenueImpactTemplate, {
+    turnover: formatNumber(Math.round(turnoverEur), language),
+    impact: formatNumber(impact, language),
+  });
+}
+
 /** item 2.5: the metadata line below a theme card (effort/impact/pages/
  *  conformity/refs) used flex-wrap with no fixed widths, so a card whose
  *  finding-reference list happened to be long wrapped at a different point
@@ -161,6 +207,13 @@ function renderTheme(
    *  objet", so the gloss appears once, right where it's first needed,
    *  not repeated on every card that shares the value. */
   showConformityGloss: boolean,
+  /** 2026-08-22 revenue-impact wiring:
+   *  ObligationAssessment.registrySnapshot.turnoverEur, threaded down
+   *  from renderThemes. undefined whenever no Sirene lookup succeeded or
+   *  the turnover figure specifically was marked unreliable for this
+   *  client's effectif band - renderRevenueImpactNote already no-ops on
+   *  undefined, this is just where it enters the call chain. */
+  turnoverEur: number | undefined,
 ): string {
   const t = strings.themes;
   const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
@@ -192,8 +245,9 @@ function renderTheme(
     : `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(t.conformityNotApplicable)}</p>`;
 
   const gapNote = citationStat ? measuredLcpGapNote(strings, language, citationStat, themeFindings, manifest) : undefined;
+  const revenueImpactNote = citationStat ? renderRevenueImpactNote(strings, language, citationStat, turnoverEur) : undefined;
   const citationBox = citationStat
-    ? renderReferenceStatNote(t.impactCitationLabel, citationStat, language, undefined, gapNote)
+    ? renderReferenceStatNote(t.impactCitationLabel, citationStat, language, undefined, gapNote, revenueImpactNote)
     : '';
 
   // item 27: a diagnosis without a prescription - the LLM already writes
@@ -235,12 +289,12 @@ function renderTheme(
       ${citationBox}
       ${recommendedActionsBox}
       ${renderOwnershipSplitNote(strings, language, themeFindings)}
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.4fr);gap:var(--space-3);font-size:12px;opacity:0.75;margin-top:4px">
-        <span>${escapeHtml(t.effortLabel)} : <strong>${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
-        <span>${escapeHtml(t.impactLabel)} : <strong>${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
-        <span>${escapeHtml(t.affectedPagesLabel)} : <strong>${escapeHtml(pagesText)}</strong></span>
-        <span>${escapeHtml(t.conformityLabel)} : <strong>${escapeHtml(conformityValue)}</strong>${!isNonConformant && showConformityGloss ? ` <span style="opacity:0.85;font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</span>
-        <span>${escapeHtml(t.refsLabel)} : ${formatFindingIdLinks(theme.findingIds)}</span>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.4fr);gap:var(--space-3);font-size:12px;margin-top:4px">
+        <span class="text-muted">${escapeHtml(t.effortLabel)} : <strong style="color:var(--color-text)">${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
+        <span class="text-muted">${escapeHtml(t.impactLabel)} : <strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
+        <span class="text-muted">${escapeHtml(t.affectedPagesLabel)} : <strong style="color:var(--color-text)">${escapeHtml(pagesText)}</strong></span>
+        <span class="text-muted">${escapeHtml(t.conformityLabel)} : <strong style="color:${isNonConformant ? SEVERITY.critical.color : 'var(--color-neutral-500)'}">${escapeHtml(conformityValue)}</strong>${!isNonConformant && showConformityGloss ? ` <span style="font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</span>
+        <span class="text-muted">${escapeHtml(t.refsLabel)} : ${formatFindingIdLinks(theme.findingIds)}</span>
       </div>
     </div>
   `;
@@ -393,6 +447,7 @@ export function renderThemes(
   // P2.2: the first rendered theme with no legalRelevance (i.e. whose
   // Conformité column reads "Sans objet") carries the inline gloss.
   const firstNotApplicableRank = sortedThemes.find((theme) => theme.legalRelevance === undefined)?.priorityRank;
+  const turnoverEur = analysis.obligationAssessment?.registrySnapshot?.turnoverEur;
   const themeBlocks = sortedThemes
     .map((theme) =>
       renderTheme(
@@ -405,6 +460,7 @@ export function renderThemes(
         manifest,
         showQuickWinBadge,
         theme.priorityRank === firstNotApplicableRank,
+        turnoverEur,
       ),
     )
     .join('');

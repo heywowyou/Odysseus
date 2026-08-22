@@ -53,6 +53,15 @@ import {
   QUESTION_HEADING_PATTERN,
   type GeoPageInput,
 } from './normalize-geo.js';
+import {
+  extractSecurityHeadersCandidates,
+  type SecurityHeadersCheckInput,
+} from './normalize-security-headers.js';
+import {
+  extractStructuredDataCandidates,
+  type StructuredDataCheckInput,
+} from './normalize-structured-data.js';
+import { extractCruxCandidates, type CruxFieldDataCheckInput } from './normalize-crux.js';
 import type { FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
 
@@ -88,6 +97,14 @@ export interface NormalizePageInput {
   formErrorHandling?: FormErrorHandlingCheckInput;
   videoCaptions?: VideoCaptionsCheckInput;
   altText?: AltTextCheckInput;
+  /** Milestone 8.6. Site-level, only set on the crawl's own start URL -
+   *  same attribution pattern sitemapCheck/llmsTxtCheck already
+   *  established, since response headers are near-always identical
+   *  across a site's pages. */
+  securityHeaders?: SecurityHeadersCheckInput;
+  /** Milestone 8.6. Runs on every page (JSON-LD/microdata/RDFa are a
+   *  per-page concern, same as headMetadata). */
+  structuredData?: StructuredDataCheckInput;
 }
 
 export interface NormalizeAuditInput {
@@ -102,6 +119,10 @@ export interface NormalizeAuditInput {
    *  results (a blocked homepage, a broken link target), not any one
    *  page's content, so it is collected once here rather than per page. */
   crawl?: NormalizeCrawlInput;
+  /** Milestone 8.6. Origin-level, not per-page - see
+   *  CruxFieldDataResult's doc comment (types/manifest.ts) for why this
+   *  lives at the audit level rather than attached to any one page. */
+  cruxFieldData?: CruxFieldDataCheckInput;
 }
 
 function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
@@ -121,9 +142,16 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.formErrorHandling) candidates.push(...extractFormErrorHandlingCandidates(page.formErrorHandling));
     if (page.videoCaptions) candidates.push(...extractVideoCaptionsCandidates(page.videoCaptions));
     if (page.altText) candidates.push(...extractAltTextCandidates(page.altText));
+    if (page.securityHeaders) candidates.push(...extractSecurityHeadersCandidates(page.securityHeaders, page.url));
+    if (page.structuredData) candidates.push(...extractStructuredDataCandidates(page.structuredData));
   }
 
   if (input.crawl) candidates.push(...extractCrawlCandidates(input.crawl));
+
+  if (input.cruxFieldData) {
+    const homepageUrl = input.crawl?.startUrl ?? input.pages[0]?.url;
+    if (homepageUrl) candidates.push(...extractCruxCandidates(input.cruxFieldData, homepageUrl));
+  }
 
   const pagesWithHreflang = input.pages
     .filter((page) => page.headMetadata && page.headMetadata.hreflangLinks.length > 0)

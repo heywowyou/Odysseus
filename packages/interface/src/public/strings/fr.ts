@@ -102,6 +102,7 @@ export const fr: DashboardStrings = {
     sirenNotResolvedMessage: 'Ce SIREN n’a pas pu être confirmé auprès du répertoire Sirene.',
     sirenSourceUrlLabel: 'Page où le SIREN est affiché',
     raisonSocialeLabel: 'Dénomination sociale',
+    detectedFieldHint: 'Détecté automatiquement, à confirmer.',
     nomCommercialLabel: 'Nom commercial',
     recipientNameLabel: 'Préparé pour',
     sectorLabel: 'Secteur',

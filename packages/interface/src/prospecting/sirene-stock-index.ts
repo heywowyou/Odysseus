@@ -11,7 +11,9 @@
  * without loading it naively": the expensive full scan happens once per
  * stock-file version, applying the NAF-allowlist + effectifs-threshold +
  * active filter per row, caching only the (expected low-thousands to
- * tens-of-thousands, given the first wave enables only two NAF codes)
+ * tens-of-thousands, given only a handful of NAF codes are enabled -
+ * two e-commerce codes from the first wave plus two hospitality codes
+ * added 2026-08-22, see naf-sector-allowlist.json)
  * matching rows to disk as JSON Lines. Every subsequent call reads the
  * small cache instead, unless the stock file's own fingerprint (mtime +
  * size) has changed, in which case the cache is rebuilt.

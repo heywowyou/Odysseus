@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type Finding } from '@odysseus/core';
 import { persistAudit } from './persist-audit.js';
-import { getAudit, getAuditManualFields, getFindingsForAudit, setAuditManualFields } from './audits.js';
+import { getAudit, getAuditManualFields, getFindingsForAudit, prefillAuditManualFields, setAuditManualFields } from './audits.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -115,5 +115,43 @@ describe.skipIf(!mongoAvailable)('audits read helpers', () => {
         siren: { value: '732829321', provenance: 'operator' },
       }),
     ).rejects.toThrow(/valid SIREN/);
+  });
+
+  // 2026-08-22, La Corniche report review: unlike setAuditManualFields
+  // (always overwrites), prefillAuditManualFields must never clobber a
+  // field an operator already entered - the whole reason it exists
+  // separately, per its own doc comment in audits.ts.
+  it('prefillAuditManualFields fills only absent fields, with provenance "detected", and never overwrites an operator value', async () => {
+    await persistAudit(connection!, buildManifest('audits-prefill-1'), []);
+
+    await setAuditManualFields(connection!, 'audits-prefill-1', {
+      nomCommercial: { value: 'Operator-typed name', provenance: 'operator' },
+    });
+
+    const written = await prefillAuditManualFields(connection!, 'audits-prefill-1', {
+      nomCommercial: 'Detected name (should be ignored)',
+      raisonSociale: 'DETECTED RAISON SOCIALE',
+    });
+
+    expect(written).toEqual({ raisonSociale: 'DETECTED RAISON SOCIALE' });
+
+    const after = await getAuditManualFields(connection!, 'audits-prefill-1');
+    expect(after?.nomCommercial?.value).toBe('Operator-typed name');
+    expect(after?.nomCommercial?.provenance).toBe('operator');
+    expect(after?.raisonSociale?.value).toBe('DETECTED RAISON SOCIALE');
+    expect(after?.raisonSociale?.provenance).toBe('detected');
+  });
+
+  it('prefillAuditManualFields writes nothing and returns an empty object when every candidate field is already set', async () => {
+    await persistAudit(connection!, buildManifest('audits-prefill-2'), []);
+    await setAuditManualFields(connection!, 'audits-prefill-2', {
+      nomCommercial: { value: 'Already set', provenance: 'operator' },
+    });
+
+    const written = await prefillAuditManualFields(connection!, 'audits-prefill-2', {
+      nomCommercial: 'Detected name',
+    });
+
+    expect(written).toEqual({});
   });
 });

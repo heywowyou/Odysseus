@@ -23,6 +23,7 @@ import {
   type AuditConfigSnapshot,
   type AuditManifest,
   type AuditManifestSiteSignals,
+  type CruxFieldDataResult,
   type ManifestKind,
   type ManifestPageEntry,
 } from '@odysseus/core';
@@ -37,7 +38,7 @@ import { buildManifest } from './manifest.js';
 
 export interface WriteAuditArtifactsInput {
   kind: ManifestKind;
-  siteResult: { crawl: CrawlResult; pages: PageScanResult[] };
+  siteResult: { crawl: CrawlResult; pages: PageScanResult[]; cruxFieldData?: CruxFieldDataResult };
   browser: Browser;
   startedAt: Date;
   finishedAt: Date;
@@ -94,6 +95,9 @@ function buildScanJson(
     ...(scanResult.videoCaptionsError !== undefined ? { videoCaptionsError: scanResult.videoCaptionsError } : {}),
     ...(scanResult.altText !== undefined ? { altText: scanResult.altText } : {}),
     ...(scanResult.altTextError !== undefined ? { altTextError: scanResult.altTextError } : {}),
+    ...(scanResult.securityHeaders !== undefined ? { securityHeaders: scanResult.securityHeaders } : {}),
+    ...(scanResult.structuredData !== undefined ? { structuredData: scanResult.structuredData } : {}),
+    ...(scanResult.structuredDataError !== undefined ? { structuredDataError: scanResult.structuredDataError } : {}),
   };
 }
 
@@ -103,6 +107,43 @@ function buildScanJson(
  *  first-party transactional flow. Always populated for an audit run
  *  under this milestone's code - AuditManifestSiteSignals is optional on
  *  AuditManifest only for backward compatibility with older manifests. */
+/** Separators a title tag commonly uses to append the site name after a
+ *  page-specific headline (e.g. "Chambre Deluxe | La Co(o)rniche") - the
+ *  brand name is conventionally the *last* segment, not the first, since
+ *  the page-specific part is what search engines truncate first. Tried
+ *  in order; the first one found in the title wins. Only "|" and an em
+ *  dash are tried - a plain hyphen or middle dot appears too often
+ *  inside a real title or company name itself (a hyphenated surname,
+ *  "·" as Odysseus's own report title uses it) to safely treat as a
+ *  separator. */
+const TITLE_SITE_NAME_SEPARATORS = ['|', '—'];
+
+/** 2026-08-22, La Corniche report review: `og:site_name` is the
+ *  deliberate, hand-authored signal a site sets specifically to name
+ *  itself (unlike the page `<title>`, which is often page-specific
+ *  headline text). Falls back to the title tag's last separator-delimited
+ *  segment only when `og:site_name` is absent, since most sites that skip
+ *  Open Graph metadata still put the brand name at the end of the title. */
+/** A homepage title with no separator at all is usually already just the
+ *  business name for a small site (fixtures/spa-demo's own homepage title
+ *  is exactly "Domaine des Trois Chenes", no punctuation) - but only
+ *  short enough to plausibly be a name, not a descriptive sentence a
+ *  longer, separator-free title is more likely to be. */
+const BARE_TITLE_MAX_LENGTH = 60;
+
+export function deriveSiteName(headMetadata: WriteAuditArtifactsInput['siteResult']['pages'][number]['headMetadata']): string | undefined {
+  const ogSiteName = headMetadata?.openGraphTags?.['og:site_name']?.trim();
+  if (ogSiteName) return ogSiteName;
+
+  const title = headMetadata?.title?.trim();
+  if (!title) return undefined;
+  for (const separator of TITLE_SITE_NAME_SEPARATORS) {
+    const segments = title.split(separator).map((segment) => segment.trim()).filter(Boolean);
+    if (segments.length > 1) return segments[segments.length - 1];
+  }
+  return title.length <= BARE_TITLE_MAX_LENGTH ? title : undefined;
+}
+
 function buildSiteSignals(siteResult: WriteAuditArtifactsInput['siteResult']): AuditManifestSiteSignals {
   const transactionalFlowEvidence = siteResult.pages.flatMap((page) => page.transactionalFlowEvidence ?? []);
   const transactionalFlowRedirectChecks = siteResult.pages.flatMap(
@@ -114,12 +155,16 @@ function buildSiteSignals(siteResult: WriteAuditArtifactsInput['siteResult']): A
     : undefined;
   const siren = mentionsLegalesPage?.mentionsLegales?.siren;
 
+  const homepage = siteResult.pages.find((page) => page.url === siteResult.crawl.startUrl);
+  const siteName = deriveSiteName(homepage?.headMetadata);
+
   return {
     hasTransactionalFlow: transactionalFlowEvidence.length > 0,
     transactionalFlowEvidence,
     ...(transactionalFlowRedirectChecks.length > 0 ? { transactionalFlowRedirectChecks } : {}),
     ...(siren !== undefined ? { siren } : {}),
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
+    ...(siteName !== undefined ? { siteName } : {}),
   };
 }
 
@@ -204,6 +249,7 @@ export async function writeAuditArtifacts(
     crawl: input.siteResult.crawl,
     pages: manifestPages,
     siteSignals: buildSiteSignals(input.siteResult),
+    ...(input.siteResult.cruxFieldData !== undefined ? { cruxFieldData: input.siteResult.cruxFieldData } : {}),
   });
 
   await fs.writeFile(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest, null, 2));

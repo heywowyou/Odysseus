@@ -53,6 +53,7 @@ export function registerRenderDiffCommand(program: Command): void {
           effectiveDelayMs: 0,
           robotsSitemapUrls: [],
           robotsDisallowMatches: [],
+          aiCrawlerBlocks: [],
         };
 
         const artifacts = await writeAuditArtifacts({

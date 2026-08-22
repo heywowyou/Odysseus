@@ -35,7 +35,7 @@ import {
   type ObligationAssessment,
   type SiteSignalOverrides,
 } from '@odysseus/core';
-import { persistAudit } from '@odysseus/store';
+import { persistAudit, prefillAuditManualFields } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 
 export interface RunAuditStageOptions {
@@ -64,6 +64,10 @@ export interface RunAuditStageOptions {
   seeds?: string[];
   exclusions?: string[];
   bookingEngineUrl?: string;
+  /** Milestone 9b: forwarded to scanSite. Full audits never set this -
+   *  see ScanPageOptions.skipLighthouse's doc comment for why the
+   *  prospecting pipeline does. */
+  skipLighthouse?: boolean;
 }
 
 export interface AuditStageResult {
@@ -113,6 +117,7 @@ export async function runAuditStage(
       ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
       ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
       ...(options.bookingEngineUrl !== undefined ? { bookingEngineUrl: options.bookingEngineUrl } : {}),
+      ...(options.skipLighthouse ? { skipLighthouse: options.skipLighthouse } : {}),
     });
 
     const finishedAt = new Date();
@@ -162,7 +167,13 @@ export async function runAuditStage(
         ...(artifacts.manifest.crawl.robotsDisallowMatches !== undefined
           ? { robotsDisallowMatches: artifacts.manifest.crawl.robotsDisallowMatches }
           : {}),
+        ...(artifacts.manifest.crawl.aiCrawlerBlocks !== undefined
+          ? { aiCrawlerBlocks: artifacts.manifest.crawl.aiCrawlerBlocks }
+          : {}),
       },
+      ...(artifacts.manifest.cruxFieldData !== undefined
+        ? { cruxFieldData: artifacts.manifest.cruxFieldData }
+        : {}),
     });
     await writeFindingsFile(artifacts.auditDir, findings);
 
@@ -172,6 +183,27 @@ export async function runAuditStage(
     );
 
     await persistAudit(connection, artifacts.manifest, findings);
+
+    // 2026-08-22, La Corniche report review: the audit doc must exist
+    // before this (persistAudit upserts by auditId above), and
+    // fill-if-absent never overwrites a manual field an operator already
+    // entered - see prefillAuditManualFields's own doc comment. Reuses
+    // obligationAssessment's already-resolved registrySnapshot rather
+    // than a second Sirene lookup; siteSignals.siteName is populated by
+    // writeAuditArtifacts (write-audit.ts's deriveSiteName) from the
+    // homepage's own head metadata, since Sirene frequently has no
+    // commercial/brand name on file at all.
+    await prefillAuditManualFields(connection, artifacts.auditId, {
+      ...(artifacts.manifest.siteSignals?.siteName !== undefined
+        ? { nomCommercial: artifacts.manifest.siteSignals.siteName }
+        : {}),
+      ...(obligationAssessment.registrySnapshot?.denomination !== undefined
+        ? { raisonSociale: obligationAssessment.registrySnapshot.denomination }
+        : {}),
+      ...(artifacts.manifest.siteSignals?.siren !== undefined
+        ? { siren: artifacts.manifest.siteSignals.siren }
+        : {}),
+    });
 
     return {
       auditId: artifacts.auditId,

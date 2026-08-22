@@ -43,7 +43,7 @@ export {
 export type { CompleteJobPatch, JobProgressPatch, NewJobInput } from './jobs.js';
 export { getSeverityRollup, getSeverityRollups } from './severity-rollup.js';
 export type { SeverityRollup } from './severity-rollup.js';
-export { getAudit, getFindingsForAudit, getAuditManualFields, setAuditManualFields } from './audits.js';
+export { getAudit, getFindingsForAudit, getAuditManualFields, setAuditManualFields, prefillAuditManualFields } from './audits.js';
 export { getLatestReport, listReportLanguages } from './reports.js';
 export { createProspectModel } from './schemas/prospect.schema.js';
 export type {

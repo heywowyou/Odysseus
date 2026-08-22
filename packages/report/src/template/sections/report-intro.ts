@@ -63,12 +63,12 @@ export function renderReportIntro(
   return sheet(`
     ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
     <h5>${escapeHtml(r.audienceHeading)}</h5>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:var(--space-5)"><tbody>${audienceRows}</tbody></table>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:var(--space-6)"><tbody>${audienceRows}</tbody></table>
     <h5>${escapeHtml(r.measuresHeading)}</h5>
-    <ul style="margin:0 0 var(--space-5);padding-left:1.2em;font-size:12.5px;opacity:0.9">${measuresList}</ul>
+    <ul style="margin:0 0 var(--space-6);padding-left:1.2em;font-size:12.5px;opacity:0.9">${measuresList}</ul>
     <h5>${escapeHtml(r.consequencesHeading)}</h5>
-    <ul style="margin:0 0 var(--space-5);padding-left:1.2em;font-size:12.5px;opacity:0.9">${consequencesList}</ul>
-    <p style="font-size:11.5px;opacity:0.6;margin-bottom:var(--space-5)">${escapeHtml(r.notALegalOpinionNote)}</p>
+    <ul style="margin:0 0 var(--space-6);padding-left:1.2em;font-size:12.5px;opacity:0.9">${consequencesList}</ul>
+    <p style="font-size:11.5px;opacity:0.6;margin-bottom:var(--space-6)">${escapeHtml(r.notALegalOpinionNote)}</p>
     ${
       actionsList
         ? `<h5>${escapeHtml(r.nextActionsHeading)}</h5><ol style="margin:0;padding-left:1.2em;font-size:12.5px;opacity:0.9">${actionsList}</ol>`

@@ -425,6 +425,17 @@ export interface ReportStrings {
      *  reader has the real gap next to the stat instead of being left to
      *  multiply the citation's 0.1s figure by an assumed gap themselves. */
     measuredLcpGapTemplate: string;
+    /** 2026-08-22 revenue-impact wiring. Template: {turnover}, {impact}
+     *  (both pre-formatted euro amounts via formatNumber; the currency
+     *  marker is baked into the template text itself, same convention as
+     *  next-steps.ts's reauditPricingTemplate). Rendered only when the
+     *  cited stat is 'scales-down' and the client's own Sirene-sourced
+     *  turnover is known (ObligationAssessment.registrySnapshot.
+     *  turnoverEur) - never a guessed revenue figure. Deliberately hedged
+     *  language ("up to", "a single-study estimate") rather than a bare
+     *  number: see CLAUDE.md's reference-stats trade-offs for why an
+     *  unhedged euro figure was rejected as overclaiming. */
+    revenueImpactTemplate: string;
     quickWinBadgeLabel: string;
     /** item 27: theme.recommendedActions (llm-output.ts, LLM-writable,
      *  already validated for language and severity vocabulary) was
@@ -528,6 +539,32 @@ export interface ReportStrings {
      *  "Non mesuré" as though it were data, with the cover claiming
      *  Performance among the audited categories. */
     allUnmeasuredNote: string;
+    /** Milestone 8.6: Chrome UX Report (CrUX) real-user field data,
+     *  rendered as a second block under the existing lab-data table
+     *  (same section, not a new one - see manifest.ts's own doc comment
+     *  on why lab and field data are kept as two blocks of one story
+     *  rather than two competing sections). */
+    realUserHeading: string;
+    realUserIntro: string;
+    /** Shown when CrUX has no public record for this origin (most
+     *  audited sites, given CrUX's own minimum-traffic threshold) or
+     *  CRUX_API_KEY was not configured for this audit. Both cases render
+     *  identically on purpose (manifest.ts's own doc comment): the
+     *  distinction only matters for internal debugging, never to the
+     *  client, and this note must never read as a pass. */
+    realUserNoDataNote: string;
+    /** 2026-08-22, La Corniche report review: lab data (above) measures
+     *  a deliberately harsh worst-case simulation (4x CPU throttling,
+     *  simulated slow mobile network, single cold run), while CrUX
+     *  measures real visitors on real devices and real connections - a
+     *  large gap between the two (a real report showed lab LCP over 8x
+     *  CrUX's) is expected, not a data error, but read unexplained on
+     *  facing tables it looks like the report contradicts itself. Shown
+     *  only when both blocks actually render (lab data was measured AND
+     *  CrUX has a public record) - the gap only exists to explain once
+     *  both numbers are on the page together. */
+    realUserGapNote: string;
+    inpLabel: string;
   };
   /** Per-criterion status is trivially derived, never a legal judgment:
    *  buildConformanceRollup only ever lists a criterion when at least one
@@ -668,6 +705,17 @@ export interface ReportStrings {
      *  findings-appendix.ts) when a finding hits more pages than shown.
      *  Template: {count}, the number NOT shown. */
     andNMoreTemplate: string;
+    /** 2026-08-22, La Corniche report review: two or more findings in the
+     *  same rule group frequently share the exact same page-URL set (the
+     *  same booking widget missing an alt attribute on every page it
+     *  appears on, say) - a real report repeated the identical 5 URLs +
+     *  "et 21 autres" under nearly every finding in some groups, the bulk
+     *  of the annex's length for no new information. Shown for every
+     *  finding after the first whose page-URL set exactly matches an
+     *  earlier finding's in the same rule group, in place of repeating
+     *  the list. Template: {findingId}, the earlier finding whose list to
+     *  look at. */
+    samePagesAsTemplate: string;
     pagesMaxColumnLabel: string;
     occurrencesColumnLabel: string;
     selectorColumnLabel: string;

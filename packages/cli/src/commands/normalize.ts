@@ -59,7 +59,11 @@ export function registerNormalizeCommand(program: Command): void {
             ...(manifest.crawl.robotsDisallowMatches !== undefined
               ? { robotsDisallowMatches: manifest.crawl.robotsDisallowMatches }
               : {}),
+            ...(manifest.crawl.aiCrawlerBlocks !== undefined
+              ? { aiCrawlerBlocks: manifest.crawl.aiCrawlerBlocks }
+              : {}),
           },
+          ...(manifest.cruxFieldData !== undefined ? { cruxFieldData: manifest.cruxFieldData } : {}),
         });
 
         await fs.writeFile(

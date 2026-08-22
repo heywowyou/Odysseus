@@ -4,6 +4,7 @@ import type { AuditManualFields, Finding, ObligationAssessment, ReportLanguage }
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, renderSheetHeader, sheet } from '../html-utils.js';
 import { buildConformanceRollup } from '../conformance-rollup.js';
+import { SEVERITY } from '../design-tokens.js';
 import { sectionTitle } from '../section-registry.js';
 import { pickPrimaryBasis } from './methodology.js';
 
@@ -90,7 +91,7 @@ export function renderAccessibilityStatement(
       (row) => `
         <div class="row-atomic">
           ${cell(`${escapeHtml(row.criterion)} - ${escapeHtml(getCriterionName(row.criterion, language) ?? '')}`)}
-          ${cell(escapeHtml(a.nonConformantLabel), 'color:var(--color-accent-300)')}
+          ${cell(escapeHtml(a.nonConformantLabel), `color:${SEVERITY.critical.color}`)}
         </div>
       `,
     )

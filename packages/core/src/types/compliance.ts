@@ -197,5 +197,15 @@ export type ObligationAssessment = (
     effectifBandLabel: string | null;
     retrievedAt: Date;
     source: string;
+    /** 2026-08-22 revenue-impact wiring: the same OperatorProfile.turnover
+     *  value the registry lookup already resolved, carried through only
+     *  when Sirene's own reliable-effectif-band gate
+     *  (SIRENE_TURNOVER_RELIABLE_EFFECTIF_CODES) let it through. Used by
+     *  packages/report's themes.ts to turn a scalable reference-stat
+     *  ratio into a euro estimate for this specific client - never
+     *  guessed, never present when the source lookup itself marked the
+     *  figure unreliable. Absent whenever registrySnapshot's other fields
+     *  are (no Sirene lookup) or when turnover specifically was null. */
+    turnoverEur?: number;
   };
 };

@@ -17,7 +17,7 @@ vi.mock('@odysseus/scanner', () => ({
   getScanConcurrency: vi.fn(() => 3),
 }));
 vi.mock('@odysseus/core', () => ({ normalizeAudit: vi.fn() }));
-vi.mock('@odysseus/store', () => ({ persistAudit: vi.fn() }));
+vi.mock('@odysseus/store', () => ({ persistAudit: vi.fn(), prefillAuditManualFields: vi.fn() }));
 vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 
 import {
@@ -29,7 +29,7 @@ import {
   writeFindingsFile,
 } from '@odysseus/scanner';
 import { normalizeAudit } from '@odysseus/core';
-import { persistAudit } from '@odysseus/store';
+import { persistAudit, prefillAuditManualFields } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 import { runAuditStage } from './audit-stage.js';
 
@@ -186,6 +186,46 @@ describe('runAuditStage', () => {
       prunedPageDirCount: 1,
       obligationAssessment: { status: 'undetermined', basis: [] },
     });
+  });
+
+  // 2026-08-22, La Corniche report review: nomCommercial/raisonSociale/
+  // siren feed prefillAuditManualFields from manifest.siteSignals and
+  // the already-resolved obligationAssessment.registrySnapshot - no
+  // second Sirene lookup, and only the fields actually present are sent.
+  it('calls prefillAuditManualFields with siteName/registrySnapshot-derived candidates after persistAudit', async () => {
+    vi.mocked(writeAuditArtifacts).mockResolvedValue({
+      auditId: 'audit-123',
+      auditDir: '/artifacts/example.com/2026-08-04T00-00-00Z',
+      manifest: {
+        ...fakeManifest(),
+        siteSignals: { hasTransactionalFlow: false, transactionalFlowEvidence: [], siren: '732829320', siteName: 'La Co(o)rniche' },
+      },
+      pages: [],
+    } as never);
+    vi.mocked(runObligationStage).mockResolvedValue({
+      status: 'in_scope',
+      basis: [],
+      registrySnapshot: {
+        denomination: '(O! DE LA DUNE',
+        effectifBandLabel: '100 à 199 salariés',
+        retrievedAt: new Date('2026-08-22T00:00:00.000Z'),
+        source: 'sirene-api',
+      },
+    } as never);
+
+    await runAuditStage('https://example.com/', {}, fakeConnection);
+
+    expect(prefillAuditManualFields).toHaveBeenCalledWith(fakeConnection, 'audit-123', {
+      nomCommercial: 'La Co(o)rniche',
+      raisonSociale: '(O! DE LA DUNE',
+      siren: '732829320',
+    });
+  });
+
+  it('omits a candidate field entirely when its source is absent, rather than passing undefined', async () => {
+    await runAuditStage('https://example.com/', {}, fakeConnection);
+
+    expect(prefillAuditManualFields).toHaveBeenCalledWith(fakeConnection, 'audit-123', {});
   });
 
   it('closes the browser even if scanSite throws', async () => {

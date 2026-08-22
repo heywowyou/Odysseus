@@ -276,6 +276,8 @@ export const fr: ReportStrings = {
     impactCitationLabel: 'Repère chiffré',
     measuredLcpGapTemplate:
       "Écart mesuré sur ce site : LCP médian à {value} s, soit {gap} s au-dessus du seuil « bon » ({threshold} s).",
+    revenueImpactTemplate:
+      "Sur la base de votre chiffre d'affaires déclaré ({turnover} €), et si cette association se vérifiait pour votre activité, l'ordre de grandeur serait de jusqu'à {impact} € par an. Il s'agit d'une estimation indicative fondée sur une seule étude, pas d'une prévision garantie.",
     quickWinBadgeLabel: 'Gain rapide',
     recommendedActionsLabel: 'Actions recommandées',
     effortImpactLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
@@ -345,6 +347,14 @@ export const fr: ReportStrings = {
     ratingPoorLabel: 'insuffisant',
     allUnmeasuredNote:
       "La mesure de performance (Lighthouse) n'a pas abouti sur ce site pour cet audit et aucun constat de performance n'est donc rapporté ici. Voir la section « Méthodologie et limites » pour le détail.",
+    realUserHeading: 'Données réelles (Chrome UX Report)',
+    realUserIntro:
+      "Données de terrain issues des visiteurs Chrome réels de ce site sur les 28 derniers jours, lorsque des données publiques existent, en complément des mesures de laboratoire ci-dessus.",
+    realUserNoDataNote:
+      "Aucune donnée Chrome UX Report publique n'existe pour ce site, le plus souvent parce qu'il ne reçoit pas encore assez de trafic Chrome pour atteindre le seuil de publication de Google. Ce n'est ni un succès ni un échec, cela signifie simplement qu'aucune comparaison avec des utilisateurs réels n'est disponible pour cet audit.",
+    realUserGapNote:
+      "Un écart important entre les valeurs ci-dessus et ci-dessous est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau, un seul passage), tandis que les données réelles reflètent des visiteurs sur des appareils et connexions variés. Les deux mesures répondent à des questions différentes, elles ne se contredisent pas.",
+    inpLabel: 'INP, réactivité',
   },
   accessibilityStatement: {
     eyebrow: "Déclaration",
@@ -596,6 +606,7 @@ export const fr: ReportStrings = {
     pagesColumnLabel: 'Pages',
     allPagesAnalyzedTemplate: 'Toutes les pages analysées ({count})',
     andNMoreTemplate: 'et {count} autres',
+    samePagesAsTemplate: 'Mêmes pages que {findingId}',
     pagesMaxColumnLabel: 'Pages max',
     occurrencesColumnLabel: 'Occurrences',
     selectorColumnLabel: 'Sélecteur (exemple)',

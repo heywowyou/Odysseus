@@ -2,7 +2,7 @@ import type { AuditManifest, AuditManualFields, Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatDate, formatNumber, sheet } from '../html-utils.js';
-import { SEVERITY } from '../design-tokens.js';
+import { LEVEL_COLOR } from '../design-tokens.js';
 import { computeStatistics } from '../statistics.js';
 import { hasMeasuredCoreWebVitals } from './core-web-vitals-table.js';
 
@@ -14,17 +14,6 @@ import { hasMeasuredCoreWebVitals } from './core-web-vitals-table.js';
 const LANGUAGE_SELF_NAME: Record<StoredAnalysis['language'], string> = {
   fr: 'Français',
   en: 'English',
-};
-
-/** report.reference.html's own cover doesn't carry a severity badge
- *  (that colour scale is per-finding), so the risk badge borrows the
- *  closest of the 3 overall-risk levels onto the same critical/serious/
- *  moderate colour ramp rather than inventing a 4th scale: low -> the
- *  calmest tone (moderate's), medium -> serious's, high -> critical's. */
-const RISK_COLOR: Record<StoredAnalysis['overallRisk'], { color: string; bg: string }> = {
-  low: SEVERITY.moderate,
-  medium: SEVERITY.serious,
-  high: SEVERITY.critical,
 };
 
 function field(label: string, valueHtml: string): string {
@@ -47,7 +36,7 @@ const RISK_LEVEL_ORDER: readonly StoredAnalysis['overallRisk'][] = ['low', 'medi
 function renderRiskBadge(strings: ReportStrings, analysis: StoredAnalysis, findings: readonly Finding[], manifest: AuditManifest): string {
   const scale = RISK_LEVEL_ORDER.map((level) => {
     const isCurrent = level === analysis.overallRisk;
-    const levelColor = RISK_COLOR[level];
+    const levelColor = LEVEL_COLOR[level];
     return `<span style="padding:4px 10px;border-radius:calc(var(--radius-md)*0.75);font-size:${isCurrent ? '14px' : '11px'};font-weight:${isCurrent ? '500' : '400'};background:${isCurrent ? levelColor.bg : 'transparent'};color:${isCurrent ? levelColor.color : 'color-mix(in srgb, var(--color-text) 50%, transparent)'};opacity:${isCurrent ? '1' : '0.7'}">${escapeHtml(strings.cover.riskLevels[level])}</span>`;
   }).join('');
 

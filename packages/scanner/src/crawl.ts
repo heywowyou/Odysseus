@@ -7,7 +7,15 @@ import {
   getPageTimeoutMs,
 } from './config.js';
 import { normalizeInternalLinks } from './links.js';
-import { fetchRobotsRules, findBlockingPattern, isAllowedByRobots } from './robots.js';
+import {
+  AI_CRAWLER_USER_AGENTS,
+  checkAiCrawlerAccess,
+  fetchRobotsText,
+  findBlockingPattern,
+  isAllowedByRobots,
+  parseRobotsTxt,
+  type RobotsRules,
+} from './robots.js';
 import { findMentionsLegalesUrl } from './checks/mentions-legales.js';
 import { isSocialPlatformHost } from './social-hosts.js';
 
@@ -87,6 +95,12 @@ export interface CrawlResult {
    *  call (see normalize-crawl.ts), same detect/decide split as every
    *  other custom check. */
   robotsDisallowMatches: { pattern: string; matchedPageCount: number }[];
+  /** Milestone 8.6: which named AI crawlers (robots.ts's
+   *  AI_CRAWLER_USER_AGENTS) are blocked from the site root by the same
+   *  already-fetched robots.txt text, so this costs no extra network
+   *  call. Only blocked agents are included - an agent that is allowed
+   *  has nothing for normalize-crawl.ts to report. */
+  aiCrawlerBlocks: { agent: string; disallowPattern: string }[];
 }
 
 interface QueueItem {
@@ -135,7 +149,12 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
 
   const start = new URL(startUrl);
-  const robotsRules = await fetchRobotsRules(start.origin, userAgent, timeoutMs);
+  // Fetched once as raw text (not via fetchRobotsRules) so the same
+  // response can also be parsed against each AI_CRAWLER_USER_AGENTS
+  // token below, without a second request to robots.txt.
+  const robotsText = await fetchRobotsText(start.origin, timeoutMs);
+  const robotsRules: RobotsRules =
+    robotsText === null ? { found: false, disallow: [], allow: [], sitemapUrls: [] } : parseRobotsTxt(robotsText, userAgent);
   const effectiveDelayMs = Math.max(delayMs, robotsRules.crawlDelayMs ?? 0);
 
   options.onProgress?.({
@@ -283,6 +302,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     matchedPageCount,
   }));
 
+  const aiCrawlerBlocks = checkAiCrawlerAccess(robotsText, AI_CRAWLER_USER_AGENTS)
+    .filter((result): result is { agent: string; blocked: true; disallowPattern: string } => result.blocked)
+    .map(({ agent, disallowPattern }) => ({ agent, disallowPattern }));
+
   return {
     startUrl: start.toString(),
     pages,
@@ -294,5 +317,6 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
     robotsSitemapUrls: robotsRules.sitemapUrls,
     robotsDisallowMatches,
+    aiCrawlerBlocks,
   };
 }

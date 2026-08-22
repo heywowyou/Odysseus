@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findBlockingPattern, isAllowedByRobots, parseRobotsTxt } from './robots.js';
+import { checkAiCrawlerAccess, findBlockingPattern, isAllowedByRobots, parseRobotsTxt } from './robots.js';
 
 describe('parseRobotsTxt', () => {
   it('returns allow-all when the text has no matching group', () => {
@@ -133,5 +133,36 @@ describe('findBlockingPattern', () => {
   it('returns the more specific of two matching Disallow patterns', () => {
     const rules = { found: true, disallow: ['/blog', '/blog/drafts'], allow: [], sitemapUrls: [] };
     expect(findBlockingPattern(rules, '/blog/drafts/2026')).toBe('/blog/drafts');
+  });
+});
+
+describe('checkAiCrawlerAccess', () => {
+  it('reports every agent as allowed when there is no robots.txt at all', () => {
+    const results = checkAiCrawlerAccess(null, ['GPTBot', 'ClaudeBot']);
+    expect(results).toEqual([
+      { agent: 'GPTBot', blocked: false },
+      { agent: 'ClaudeBot', blocked: false },
+    ]);
+  });
+
+  it('flags a named agent blocked at the site root', () => {
+    const text = 'User-agent: GPTBot\nDisallow: /\n';
+    const results = checkAiCrawlerAccess(text, ['GPTBot', 'ClaudeBot']);
+    expect(results).toEqual([
+      { agent: 'GPTBot', blocked: true, disallowPattern: '/' },
+      { agent: 'ClaudeBot', blocked: false },
+    ]);
+  });
+
+  it('does not flag an agent only blocked from an unrelated path', () => {
+    const text = 'User-agent: GPTBot\nDisallow: /admin\n';
+    const results = checkAiCrawlerAccess(text, ['GPTBot']);
+    expect(results).toEqual([{ agent: 'GPTBot', blocked: false }]);
+  });
+
+  it('falls back to the wildcard group for an agent with no named group', () => {
+    const text = 'User-agent: *\nDisallow: /\n';
+    const results = checkAiCrawlerAccess(text, ['PerplexityBot']);
+    expect(results).toEqual([{ agent: 'PerplexityBot', blocked: true, disallowPattern: '/' }]);
   });
 });

@@ -330,6 +330,103 @@ describe('item 3.1: repeated URL lists collapse instead of reprinting every page
   });
 });
 
+// 2026-08-22, La Corniche report review: a real report repeated the
+// identical 5-URL-plus-"et 21 autres" list under nearly every finding in
+// a rule group whose findings shared the same underlying page set (e.g.
+// a booking widget missing an alt attribute, present on the same pages
+// every time it appears) - the bulk of the annex's length for no new
+// information.
+describe('2026-08-22: findings sharing an identical page-URL set within one rule group reference the first one instead of repeating the list', () => {
+  function buildFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId'>): Finding {
+    return {
+      auditId: 'a',
+      schemaVersion: 1,
+      source: 'axe',
+      ruleId: 'image-alt',
+      category: 'accessibility',
+      severity: 'critical',
+      wcagCriteria: ['1.1.1'],
+      title: 'Missing alt text',
+      description: 'desc',
+      pageUrls: [],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: overrides.findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  it('prints the URL list once and refers every later finding with the identical set back to the first', () => {
+    const manifest = buildManifestWithPages(10);
+    const sharedUrls = manifest.pages.slice(0, 3).map((p) => p.url);
+    const findings = [
+      buildFinding({ findingId: 'f001', pageUrls: sharedUrls }),
+      buildFinding({ findingId: 'f002', pageUrls: sharedUrls, dedupeKey: 'd2' }),
+      buildFinding({ findingId: 'f003', pageUrls: sharedUrls, dedupeKey: 'd3' }),
+    ];
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+
+    // f001 (the first in id order) prints the real list.
+    expect(html).toContain(`Pages : ${sharedUrls.join(', ')}`);
+    // f002 and f003 reference f001 instead of repeating it.
+    const referenceCount = html.split('Mêmes pages que f001').length - 1;
+    expect(referenceCount).toBe(2);
+    // Scoped to the url-cell rows (each finding's own "Pages : ..." line),
+    // not the whole document - the separate "Pages analysées (N)" crawled-
+    // pages block above the appendix legitimately lists every page URL
+    // too, and sharedUrls is a subset of that longer joined string.
+    const urlCellLines = html.split('\n').filter((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
+    const linesWithFullList = urlCellLines.filter((line) => line.includes(sharedUrls.join(', ')));
+    expect(linesWithFullList.length).toBe(1);
+  });
+
+  it('keeps every finding\'s own page count in the compact numeric column, even when its URL list is deduped away', () => {
+    const manifest = buildManifestWithPages(10);
+    const sharedUrls = manifest.pages.slice(0, 3).map((p) => p.url);
+    const findings = [
+      buildFinding({ findingId: 'f001', pageUrls: sharedUrls, occurrences: 3 }),
+      buildFinding({ findingId: 'f002', pageUrls: sharedUrls, occurrences: 5, dedupeKey: 'd2' }),
+    ];
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+    // Both rows still show their own real occurrence count.
+    expect(html).toContain('>3</td>');
+    expect(html).toContain('>5</td>');
+  });
+
+  it('does not dedupe across different rule groups, only within the same one', () => {
+    const manifest = buildManifestWithPages(10);
+    const sharedUrls = manifest.pages.slice(0, 3).map((p) => p.url);
+    const findings = [
+      buildFinding({ findingId: 'f001', ruleId: 'image-alt', pageUrls: sharedUrls }),
+      buildFinding({ findingId: 'f002', ruleId: 'link-name', category: 'accessibility', pageUrls: sharedUrls, dedupeKey: 'd2' }),
+    ];
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+    expect(html).not.toContain('Mêmes pages que f001');
+    const urlCellLines = html.split('\n').filter((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
+    const linesWithFullList = urlCellLines.filter((line) => line.includes(sharedUrls.join(', ')));
+    expect(linesWithFullList.length).toBe(2);
+  });
+
+  it('never dedupes a single-page finding, since there is nothing to save', () => {
+    const manifest = buildManifestWithPages(10);
+    const onePage = [manifest.pages[0]!.url];
+    const findings = [
+      buildFinding({ findingId: 'f001', pageUrls: onePage }),
+      buildFinding({ findingId: 'f002', pageUrls: onePage, dedupeKey: 'd2' }),
+    ];
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+    expect(html).not.toContain('Mêmes pages que f001');
+    expect(html.split(`Pages : ${onePage[0]}`).length - 1).toBe(2);
+  });
+});
+
 // item 29: the client had no way to verify the crawl scope they paid for
 // beyond a bare count on the cover.
 describe('item 29: the list of crawled URLs is printed', () => {

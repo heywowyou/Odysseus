@@ -136,27 +136,75 @@ export function isAllowedByRobots(rules: RobotsRules, pathname: string): boolean
 }
 
 /**
+ * Fetches the raw robots.txt text, or null if it is missing or
+ * unreachable. Exported separately from fetchRobotsRules (milestone 8.6)
+ * so a caller that needs to parse the same file against more than one
+ * user-agent - milestone 8.6's AI-crawler-access check parses it once
+ * per named AI bot, on top of the crawler's own user-agent - can do so
+ * from one fetch instead of one per agent. A network error (as opposed
+ * to a clean 404) is logged, since that's a real problem rather than an
+ * expected absence.
+ */
+export async function fetchRobotsText(origin: string, timeoutMs: number): Promise<string | null> {
+  try {
+    const response = await fetch(new URL('/robots.txt', origin), {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!response.ok) return null;
+    return await response.text();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`odysseus: failed to fetch robots.txt for ${origin}: ${message}`);
+    return null;
+  }
+}
+
+/**
  * A missing or unreachable robots.txt is allow-all: found: false, no
- * rules. A network error (as opposed to a clean 404) is logged, since
- * that's a real problem rather than an expected absence.
+ * rules.
  */
 export async function fetchRobotsRules(
   origin: string,
   userAgent: string,
   timeoutMs: number,
 ): Promise<RobotsRules> {
-  try {
-    const response = await fetch(new URL('/robots.txt', origin), {
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!response.ok) {
-      return { found: false, disallow: [], allow: [], sitemapUrls: [] };
-    }
-    const text = await response.text();
-    return parseRobotsTxt(text, userAgent);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`odysseus: failed to fetch robots.txt for ${origin}: ${message}`);
-    return { found: false, disallow: [], allow: [], sitemapUrls: [] };
-  }
+  const text = await fetchRobotsText(origin, timeoutMs);
+  if (text === null) return { found: false, disallow: [], allow: [], sitemapUrls: [] };
+  return parseRobotsTxt(text, userAgent);
+}
+
+/**
+ * Milestone 8.6: the named user-agent tokens AI answer/training crawlers
+ * identify themselves with. Sourced from each vendor's own published bot
+ * documentation at the time this check was written - GPTBot and
+ * ChatGPT-User (OpenAI), ClaudeBot (Anthropic), Google-Extended (Google's
+ * opt-out token for Gemini/AI features, distinct from Googlebot itself),
+ * PerplexityBot (Perplexity). A vendor renaming or adding a token later
+ * is a real, expected way this list goes stale - it is not meant to be
+ * exhaustive forever.
+ */
+export const AI_CRAWLER_USER_AGENTS = ['GPTBot', 'ChatGPT-User', 'ClaudeBot', 'Google-Extended', 'PerplexityBot'];
+
+export interface AiCrawlerAccessResult {
+  agent: string;
+  blocked: boolean;
+  disallowPattern?: string;
+}
+
+/**
+ * Pure: given already-fetched robots.txt text (or null for "no robots.txt
+ * at all", which is allow-all for every agent), reports whether each
+ * named AI crawler is blocked from the site root. Checked against '/'
+ * specifically - this answers "can the crawler get in the door at all",
+ * the cheapest and most upstream GEO signal there is, not a full-site
+ * breadth analysis the way robots-disallow-broad already does for the
+ * primary crawler.
+ */
+export function checkAiCrawlerAccess(robotsText: string | null, userAgents: string[]): AiCrawlerAccessResult[] {
+  return userAgents.map((agent) => {
+    if (robotsText === null) return { agent, blocked: false };
+    const rules = parseRobotsTxt(robotsText, agent);
+    const disallowPattern = findBlockingPattern(rules, '/');
+    return disallowPattern === undefined ? { agent, blocked: false } : { agent, blocked: true, disallowPattern };
+  });
 }

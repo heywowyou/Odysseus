@@ -132,10 +132,30 @@ correspondence table. It is a targeting heuristic and may never be shown
 to a prospect as the basis of anything.
 
 First wave targets unambiguous electronic commerce: consumer retail with
-an online checkout. Chosen over hotels because accommodation booking is
-a reading rather than a settled position
-(`docs/obligation-basis.md` section 3), and the legal context should be
-proven where it is firmest before being tested where it is not.
+an online checkout. Chosen over hotels because accommodation booking was,
+at the time, a reading rather than a settled position, and the legal
+context should be proven where it is firmest before being tested where
+it is not.
+
+**Wave 2, 2026-08-22.** `docs/obligation-basis.md`'s "Hotels and
+accommodation" entry was upgraded from `disputed` to `secondary`: a
+booking flow concluding a consumer contract online is now read as
+generally treated as electronic commerce, corroborated across
+independent sources rather than resting on one, and that doc states
+hotels are "on comparable legal footing to a standard online shop" for
+outreach purposes - the first-wave exclusion was about volume and
+framing clarity, not legal weakness (see that doc's "Hotels and
+accommodation" entry for the full reasoning). `naf-sector-allowlist.json`
+now enables 55.10Z (hôtels) and 55.20Z (hébergement touristique de
+courte durée, covering chambres d'hôtes) at `definitional` confidence on
+that basis.
+
+Restaurants (56.10A) are listed in the same config but deliberately left
+disabled: the accommodation-specific legal reading does not
+automatically transfer to a table reservation, which is not generally
+the same kind of "contract concluded online" a hotel booking or
+e-commerce purchase is. Enable only after that reading gets the same
+kind of review hotels received, not by analogy.
 
 ---
 

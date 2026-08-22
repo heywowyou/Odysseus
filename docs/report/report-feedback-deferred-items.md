@@ -201,36 +201,3 @@ morale, cumulable (art. R451-4 du code de la consommation)." Confirmed
 both via `pdftotext` and a rendered screenshot of the page. Not an open
 item; noted here only so a future session does not re-investigate the
 same non-bug.
-
-## Open: visible letter-spacing/tracking defect across body text
-
-**Re-checked 2026-08-22:** no `letter-spacing`/`word-spacing`/`justify`/
-`hyphens` rule anywhere in `nocturne.css` or `paged.css` can produce this -
-confirmed by direct grep, not assumption. There is also no `report.css` file
-in the repo at all (the original note below names one; that's stale - the
-actual files are `packages/report/src/styles/nocturne.css` and `paged.css`).
-Leading hypothesis is now a Chromium print-to-PDF text-run-splitting
-artifact (font/kerning-related), not a stylesheet bug - `pdf-text-integrity
-.test.ts` already documents an unresolved limitation in this area. Needs a
-fresh real-site PDF (not just `pdftotext`, a rendered screenshot) to confirm
-whether it still reproduces before investigating further; not re-tested this
-session since no report was generated all the way to PDF bytes (the SIRET
-guard, working as intended, blocks that step until a real SIRET exists -
-see the placeholder-values section above).
-
-2026-08-19, same session as above, spotted while confirming the 7 500
-euro figure. The rendered PDF (same file:
-`2026-08-19T12-39-41Z-fr.pdf`, and visible on prior same-day reports
-too, so not new to this regeneration) shows uneven word/letter spacing
-inside ordinary body paragraphs - visible mid-word gaps such as
-"sanct ionné", "cont ravent ion", "const at é", "cumulable (art .)", and
-section headers like "03 · L'AUDIT EN CHIFFRES" rendering with extra
-tracking. This is a real rendered-page defect (confirmed on a 150dpi
-screenshot of page 4, not just a `pdftotext` extraction artifact), most
-likely a CSS `letter-spacing`/`word-spacing` or justified-text
-(`text-align: justify`) rule in `report.css` being applied too broadly,
-or a Paged.js text-justification interaction. Not investigated further
-this session per the standing instruction to defer formatting fixes;
-next session should locate the source rule in
-`packages/report/src/template` / `report.css` and confirm the fix
-against a fresh real-site render, not just the fixture.

@@ -1,21 +1,31 @@
 /**
  * Batch scan for prospecting: same engine as a full audit (runAuditStage
- * is the identical function full-audit jobs call), but bounded per the
- * milestone-7 scope guardrail. computeBrokennessScore, a ranked prospect
- * table, and outreach email drafts are milestone 9 - not built here.
- * This job only needs to: scan each URL with a hard-capped light config,
- * skip the LLM/PDF stages entirely, and tag results (via Job.type, set
- * at creation) so milestone 9 can query them later.
+ * is the identical function full-audit jobs call), but bounded to a
+ * light config. computeBrokennessScore and the two LLM cost gates
+ * (@odysseus/core, milestone 9b) are available for a caller that wants to
+ * score these results; the LLM/PDF stages themselves are still skipped
+ * entirely here, and outreach email drafts remain milestone 9c.
  *
- * Per-origin lock is acquired and released per URL, not held for the
+ * Milestone 9b: the serial for-loop became a bounded worker pool
+ * (PROSPECTING_JOB_CONCURRENCY workers pulling from a shared cursor)
+ * across the job's full URL list, not grouped by origin - safe without
+ * origin grouping because the per-origin lock below already serializes
+ * same-origin URLs regardless of which worker reaches them, so the
+ * pool's concurrency gain comes from distinct origins running in
+ * parallel, same-origin URLs contend on the lock exactly as before. Per-
+ * origin lock is still acquired and released per URL, not held for the
  * whole batch, so a large prospecting job doesn't block a same-origin
  * full-audit job for its entire runtime, only for the one page it is
  * currently scanning within it.
+ *
+ * skipLighthouse: true (ScanPageOptions's own doc comment has the full
+ * reasoning) - Lighthouse is this pipeline's serialisation bottleneck
+ * and the weakest cold-outreach signal.
  */
 
 import { completeJob, updateJobProgress, type JobDocument, type UrlResult } from '@odysseus/store';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
-import { PROSPECTING_MAX_DEPTH, PROSPECTING_MAX_PAGES } from '../../config.js';
+import { PROSPECTING_JOB_CONCURRENCY, PROSPECTING_MAX_DEPTH, PROSPECTING_MAX_PAGES } from '../../config.js';
 import type { PipelineContext } from '../job-queue.js';
 
 export async function runProspectingJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
@@ -33,44 +43,65 @@ export async function runProspectingJob(job: JobDocument, ctx: PipelineContext):
   });
 
   const auditIds: string[] = [];
+  let completedCount = 0;
 
-  for (let i = 0; i < urls.length; i++) {
-    const url = urls[i]!;
-    urlResults[i] = { url, status: 'scanning' };
+  async function reportProgress(): Promise<void> {
     await updateJobProgress(connection, job.jobId, {
-      progress: { message: `${i} of ${urls.length} URLs scanned` },
+      progress: { message: `${completedCount} of ${urls.length} URLs scanned` },
       urlResults,
     });
+  }
+
+  async function scanOne(index: number): Promise<void> {
+    const url = urls[index]!;
+    urlResults[index] = { url, status: 'scanning' };
+    await reportProgress();
 
     let origin: string;
     try {
       origin = new URL(url).origin;
     } catch {
-      urlResults[i] = { url, status: 'error', error: 'not a valid URL' };
-      continue;
+      urlResults[index] = { url, status: 'error', error: 'not a valid URL' };
+      completedCount += 1;
+      await reportProgress();
+      return;
     }
 
     const release = await originLock.acquire(origin);
     try {
       const result = await runAuditStage(
         url,
-        { maxPages: PROSPECTING_MAX_PAGES, maxDepth: PROSPECTING_MAX_DEPTH },
+        { maxPages: PROSPECTING_MAX_PAGES, maxDepth: PROSPECTING_MAX_DEPTH, skipLighthouse: true },
         connection,
       );
-      urlResults[i] = { url, status: 'complete', auditId: result.auditId };
+      urlResults[index] = { url, status: 'complete', auditId: result.auditId };
       auditIds.push(result.auditId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      urlResults[i] = { url, status: 'error', error: message };
+      urlResults[index] = { url, status: 'error', error: message };
     } finally {
       release();
     }
 
-    await updateJobProgress(connection, job.jobId, {
-      progress: { message: `${i + 1} of ${urls.length} URLs scanned` },
-      urlResults,
-    });
+    completedCount += 1;
+    await reportProgress();
   }
+
+  // Shared cursor: each worker claims the next unclaimed index rather
+  // than owning a fixed slice, so a worker that finishes an early URL
+  // quickly (or a failed one) immediately picks up more work instead of
+  // sitting idle while a slower worker's slice still has entries left.
+  let nextIndex = 0;
+  async function worker(): Promise<void> {
+    while (nextIndex < urls.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      await scanOne(index);
+    }
+  }
+
+  const workerCount = Math.min(PROSPECTING_JOB_CONCURRENCY, urls.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
   await completeJob(connection, job.jobId, { auditIds, urlResults });
 }

@@ -4,6 +4,7 @@ import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatDate, formatFindingIdRefs, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { selectRenderedThemes } from './themes.js';
+import { LEVEL_COLOR } from '../design-tokens.js';
 
 function headCell(label: string): string {
   return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
@@ -65,7 +66,7 @@ export function renderChecklist(
           ${cell(String(theme.priorityRank))}
           ${cell(escapeHtml(theme.title))}
           ${cell(escapeHtml(levels[theme.effort]))}
-          ${cell(escapeHtml(levels[theme.impact]))}
+          ${cell(`<span data-level="${theme.impact}" style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(levels[theme.impact])}</span>`)}
           ${cell(`${formatNumber(uniquePages, language)}/${formatNumber(totalPagesScanned, language)}`)}
           ${cell(`<span class="mono" style="font-size:11px">${escapeHtml(formatFindingIdRefs(theme.findingIds))}</span>`)}
           ${cell(wcagCriteria.length > 0 ? escapeHtml(wcagCriteria.join(', ')) : '-')}

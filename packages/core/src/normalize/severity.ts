@@ -178,6 +178,42 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'structured-data-entity-missing': 'moderate',
   'entity-data-incomplete': 'minor',
   'faq-content-without-schema': 'minor',
+
+  // Milestone 8.6: response-header hardening. Capped at 'moderate' even
+  // for CSP (arguably the most consequential of the five) since none of
+  // these are the site being actively exploited today - they are missing
+  // defenses, not confirmed breaches, and 'serious'/'critical' are
+  // reserved elsewhere for direct reachability/indexability loss.
+  'security-header-missing-csp': 'moderate',
+  'security-header-missing-hsts': 'moderate',
+  'security-header-missing-x-frame-options': 'moderate',
+  'security-header-missing-referrer-policy': 'minor',
+  'security-header-missing-permissions-policy': 'minor',
+
+  // Milestone 8.6: robots.txt blocking a named AI crawler. Capped below
+  // robots-disallow-broad's own 'moderate': unlike a broad Disallow that
+  // accidentally excludes a real content section, blocking a named
+  // AI-training or AI-answer bot by its own explicit user-agent token is
+  // very often a deliberate site-owner choice, so this is reported as an
+  // opportunity-cost fact, not treated as a probable mistake.
+  'ai-crawler-blocked': 'minor',
+
+  // Milestone 8.6: structured-data-testing-tool's Google preset failed a
+  // non-optional field for a schema type this page itself declares (the
+  // preset's own conditional only runs against schemas actually found),
+  // so this is a real gap in what Google's rich-results pipeline can read
+  // back out, not a speculative one.
+  'structured-data-invalid': 'moderate',
+
+  // Milestone 8.6: CrUX field data crossing Google's own "poor" Core Web
+  // Vitals threshold. Real visitors, not a lab simulation - matches
+  // Lighthouse's own severityFromLighthouse posture (a genuine, measured
+  // failure) but capped at 'serious' rather than reaching 'critical',
+  // since this is one signal among several performance already provides,
+  // not a structural reachability failure.
+  'crux-lcp-poor': 'serious',
+  'crux-cls-poor': 'serious',
+  'crux-inp-poor': 'serious',
 };
 
 export function severityFromCustom(ruleId: string): Severity {

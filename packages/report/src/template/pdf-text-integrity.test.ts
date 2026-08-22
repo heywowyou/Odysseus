@@ -34,6 +34,7 @@ import type { Finding } from '@odysseus/core';
 import { launchBrowser } from '@odysseus/scanner';
 import { renderHtml } from './render-html.js';
 import { renderPdfFromHtml } from '../pdf.js';
+import { REPORT_PDF_CHROMIUM_ARGS } from '../index.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../test-fixtures.js';
 
@@ -65,7 +66,7 @@ describe('item 0.4: the generated PDF text layer never drops or merges character
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
 
-    const { browser } = await launchBrowser();
+    const { browser } = await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS });
     let pdfBuffer: Buffer;
     try {
       pdfBuffer = await renderPdfFromHtml(html, browser);
