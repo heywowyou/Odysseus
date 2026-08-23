@@ -81,6 +81,20 @@ export function normalizeInternalLinks(
     }
     if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') continue;
     if (resolved.origin !== base.origin) continue;
+    // A real haaitza.com crawl linked the same GDPR-form page as both
+    // /formulaire-rgpd and /formulaire-rgpd/ from different pages on the
+    // site - two hrefs, one page, but hashUrl() (paths.ts) hashes the full
+    // URL string, so they landed in distinct page directories and each
+    // cost its own crawl slot, render-diff, axe pass, and Lighthouse pass.
+    // Servers overwhelmingly treat the two forms as the same resource (one
+    // typically redirects to the other), so collapsing them here is safe
+    // in a way collapsing arbitrary query strings would not be - unlike
+    // LANGUAGE_HOMEPAGE_PATH_PATTERN above, this is not narrowed to one
+    // specific pattern because there is no comparable risk of dropping
+    // distinct content by stripping a trailing slash.
+    if (resolved.pathname.length > 1 && resolved.pathname.endsWith('/')) {
+      resolved.pathname = resolved.pathname.slice(0, -1);
+    }
     if (NON_HTML_EXTENSIONS.has(path.posix.extname(resolved.pathname).toLowerCase())) continue;
     if (LANGUAGE_HOMEPAGE_PATH_PATTERN.test(resolved.pathname)) continue;
     resolved.hash = '';

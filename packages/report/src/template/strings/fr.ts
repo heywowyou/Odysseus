@@ -169,13 +169,20 @@ export const fr: ReportStrings = {
       "Date d'entrée en application des obligations de l'EAA, fixée par la directive elle-même. Les obligations sont donc déjà en vigueur, depuis {duration}, pas à venir.",
     obligationStatusLabel: "Statut d'obligation",
     statusLabels: {
-      in_scope: 'Confirmé',
+      // "Confirmé" read as a settled legal conclusion ("you are subject
+      // to this obligation"), which docs/obligation-basis.md section 7
+      // explicitly forbids ("any scope statement presented as settled").
+      // "Critères réunis" states that the criteria appear met on the
+      // available data - permitted under the same section - without
+      // asserting the conclusion itself.
+      in_scope: 'Critères réunis',
       likely_in_scope: 'Probable',
       out_of_scope: 'Hors champ',
       undetermined: 'Indéterminé',
     },
     statusShortDescriptions: {
-      in_scope: "Ce site relève d'une obligation d'accessibilité numérique confirmée par les éléments disponibles.",
+      in_scope:
+        "Sur la base des éléments disponibles, ce site remplit les critères d'une obligation d'accessibilité numérique.",
       likely_in_scope:
         "Les éléments disponibles indiquent que ce site relève probablement d'une obligation d'accessibilité numérique, sans confirmation complète.",
       // item 0.1 (La Corniche pass): this used to restate
@@ -645,7 +652,7 @@ export const fr: ReportStrings = {
     extendedPassCheckFoundSingular: 'constat détecté',
     extendedPassCheckFoundPlural: 'constats détectés',
     legalCitationInScopeTemplate:
-      "Ce site relève de l'obligation suivante : {regimeName}, sous le contrôle {authority} ({legalCitation}). {facts}",
+      "Sur la base des éléments disponibles, ce site remplit les critères fixés pour l'obligation suivante : {regimeName}, sous le contrôle {authority} ({legalCitation}). {facts} Cette lecture ne constitue pas une qualification juridique définitive ; une confirmation par un conseil juridique reste recommandée.",
     legalCitationLikelyInScopeTemplate:
       "Les éléments disponibles indiquent que ce site relève probablement de l'obligation suivante : {regimeName}, sous le contrôle {authority} ({legalCitation}). {facts} Cette évaluation n'a pas pu être confirmée faute d'une vérification complète du parcours du site.",
     legalCitationOutOfScopeParagraph:

@@ -98,3 +98,88 @@ describe('2026-08-22: the checklist Impact column is colour-coded via a data-lev
     expect(html).toMatch(new RegExp(`data-level="${firstTheme.impact}" style="color:#[0-9a-f]{6}"`));
   });
 });
+
+// 2026-08-22/23, haaitza/la corniche report review: a theme with 100+
+// findingIds turned this column into an unbounded wall of text that,
+// combined with .row-atomic's break-inside: avoid, gave Paged.js no
+// valid break point and collapsed a real PDF into several pages of
+// one-character-per-line garbage. Capped at CHECKLIST_FINDING_ID_CAP
+// the same way findings-appendix.ts caps a page-URL list.
+describe('2026-08-22/23: the Constats cell caps a long findingIds list rather than rendering it unbounded', () => {
+  function buildAnalysisWithFindingIds(findingIds: string[]) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'high' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title: 'Chantier avec de nombreux constats',
+          category: 'accessibility' as const,
+          businessImpact: 'Impact',
+          effort: 'low' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds,
+          recommendedActions: ['Action'],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const manifest = { pages: [], siteUrl: 'https://client.example', startedAt: new Date().toISOString() } as never;
+
+  // selectRenderedThemes (themes.ts) drops any theme none of whose
+  // findingIds resolve against the findings array, so the synthetic ids
+  // below each need a matching minimal Finding or the whole row vanishes
+  // rather than exercising the cap.
+  function buildFinding(findingId: string) {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'custom' as const,
+      ruleId: 'rule',
+      category: 'accessibility' as const,
+      severity: 'serious' as const,
+      wcagCriteria: [],
+      title: 't',
+      description: 'd',
+      pageUrls: ['https://client.example/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  it('shows only the first 10 IDs plus an "et N autres" suffix for a theme with 15 findings', () => {
+    const manyIds = Array.from({ length: 15 }, (_, i) => `z${String(i + 1).padStart(3, '0')}`);
+    const analysis = buildAnalysisWithFindingIds(manyIds);
+    const findings = manyIds.map(buildFinding);
+
+    const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis as never, findings as never, manifest);
+
+    for (const id of manyIds.slice(0, 10)) expect(html).toContain(id);
+    for (const id of manyIds.slice(10)) expect(html).not.toContain(id);
+    expect(html).toContain('et 5 autres');
+  });
+
+  it('renders every id, uncapped, for a theme at or under the cap', () => {
+    const fewIds = Array.from({ length: 10 }, (_, i) => `z${String(i + 1).padStart(3, '0')}`);
+    const analysis = buildAnalysisWithFindingIds(fewIds);
+    const findings = fewIds.map(buildFinding);
+
+    const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis as never, findings as never, manifest);
+
+    for (const id of fewIds) expect(html).toContain(id);
+    expect(html).not.toContain('autres');
+  });
+});

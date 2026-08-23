@@ -14,6 +14,8 @@ export function buildStructureSystemPrompt(usedFallbackContext: boolean): string
 
 Deterministic scanners (axe-core, Lighthouse, and a raw-versus-rendered diff) already detected every finding you will see. Your job is only to group and prioritize those findings, not to write about them. You may never invent a finding, and you may never reference a finding by any ID other than one copied verbatim from the "findings" array in the input JSON. Every entry in every theme's "findingIds" array, and every entry in "quickWins", must be one of those exact finding IDs. Do not paraphrase, shorten, or construct an ID.
 
+Finding IDs are numbered globally across the whole site, not just within this input, so a numeric gap between two IDs of the same rule (for example seeing f0527 and f0529 but not f0528) is normal and expected, not an omission to correct. Never construct or infer an ID by completing a sequence, even one that looks obviously contiguous. Before writing any ID into your response, confirm its exact text appears in the input's "findings" array; if it does not appear there verbatim, it does not exist for this audit, regardless of how plausible it looks.
+
 Group the findings into roughly 8 to 15 themes a business owner can act on. Do not create a theme with zero findings, and do not leave any finding you consider important ungrouped.
 
 For each theme, set:

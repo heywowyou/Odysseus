@@ -9,6 +9,7 @@ import {
   buildWritingInput,
   computeSiteStats,
   filterFindingsForLlm,
+  MAX_PAGE_URLS_FOR_LLM,
 } from './build-input.js';
 import type { StructureThemeWithKey } from './structure-schema.js';
 
@@ -83,7 +84,7 @@ describe('buildStructureInput', () => {
       wcagCriteria: source.wcagCriteria,
       title: source.title,
       description: source.description,
-      pageUrls: source.pageUrls,
+      pageUrls: source.pageUrls.slice(0, MAX_PAGE_URLS_FOR_LLM),
       occurrences: source.occurrences,
     });
 
@@ -103,6 +104,20 @@ describe('buildStructureInput', () => {
         'occurrences',
       ].sort(),
     );
+  });
+
+  it('caps pageUrls at MAX_PAGE_URLS_FOR_LLM, even when a finding has far more', () => {
+    const filtered = filterFindingsForLlm(loadSasFernandeFindings());
+    const siteContext = buildFallbackSiteContext();
+    const manyUrls = Array.from({ length: 200 }, (_, i) => `https://client.example/page-${i}`);
+    const findingWithManyUrls: Finding = { ...filtered[0]!, pageUrls: manyUrls };
+
+    const input = buildStructureInput([findingWithManyUrls, ...filtered.slice(1)], siteContext);
+
+    expect(input.findings[0]!.pageUrls).toHaveLength(MAX_PAGE_URLS_FOR_LLM);
+    expect(input.findings[0]!.pageUrls).toEqual(manyUrls.slice(0, MAX_PAGE_URLS_FOR_LLM));
+    // occurrences (the model's actual "how widespread" signal) is untouched.
+    expect(input.findings[0]!.occurrences).toBe(findingWithManyUrls.occurrences);
   });
 });
 
@@ -156,7 +171,7 @@ describe('buildWritingInput', () => {
           wcagCriteria: first.wcagCriteria,
           title: first.title,
           description: first.description,
-          pageUrls: first.pageUrls,
+          pageUrls: first.pageUrls.slice(0, MAX_PAGE_URLS_FOR_LLM),
           occurrences: first.occurrences,
         },
       ],

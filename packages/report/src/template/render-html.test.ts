@@ -145,6 +145,11 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   const OLD_CONTRADICTORY_SCOPE_NOTE = 'sans se prononcer sur leur applicabilité légale précise';
   const LEGAL_HEDGE = "sans se prononcer sur l&#39;applicabilité d&#39;une obligation légale particulière";
   const METHODOLOGY_POINTER = 'figure dans la section';
+  // "Confirmé" / "relève de l'obligation suivante" (a settled conclusion)
+  // was reworded to this hedged, criteria-based phrasing after a real
+  // report review found it violated docs/obligation-basis.md section 7
+  // ("any scope statement presented as settled" is not permitted).
+  const IN_SCOPE_CRITERIA_PHRASE = 'remplit les critères fixés pour l&#39;obligation suivante';
 
   it('resolved: legal exposure names a specific obligation once, methodology points back to it, conformance summary still carries its own fixed scope note', async () => {
     const manifest = await loadSasFernandeManifest();
@@ -153,7 +158,7 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
-    const namedOccurrences = html.split('relève de l&#39;obligation suivante').length - 1;
+    const namedOccurrences = html.split(IN_SCOPE_CRITERIA_PHRASE).length - 1;
     expect(namedOccurrences).toBe(1);
     expect(html).not.toContain(LEGAL_HEDGE);
     expect(html).toContain(METHODOLOGY_POINTER);
@@ -173,7 +178,7 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
     expect(html.split(LEGAL_HEDGE).length - 1).toBe(1);
     expect(html).toContain(METHODOLOGY_POINTER);
     expect(html.split(CONFORMANCE_SCOPE_NOTE).length - 1).toBe(1);
-    expect(html).not.toContain('relève de l&#39;obligation suivante');
+    expect(html).not.toContain(IN_SCOPE_CRITERIA_PHRASE);
   });
 
   it('absent assessment: treated the same as undetermined', async () => {

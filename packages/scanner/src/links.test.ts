@@ -97,12 +97,21 @@ describe('normalizeInternalLinks', () => {
   it('does not drop a genuine content page nested under a language prefix', () => {
     expect(normalizeInternalLinks(['/en/rooms', '/en/rooms/'], BASE)).toEqual([
       'https://client.example/en/rooms',
-      'https://client.example/en/rooms/',
     ]);
   });
 
   it('does not drop a two-letter path segment that is not at the root (not a homepage variant)', () => {
     expect(normalizeInternalLinks(['/blog/en'], BASE)).toEqual(['https://client.example/blog/en']);
+  });
+
+  it('treats a trailing slash as the same page as no trailing slash', () => {
+    expect(normalizeInternalLinks(['/formulaire-rgpd', '/formulaire-rgpd/'], BASE)).toEqual([
+      'https://client.example/formulaire-rgpd',
+    ]);
+  });
+
+  it('does not strip the root path itself down to an empty pathname', () => {
+    expect(normalizeInternalLinks(['/'], BASE)).toEqual(['https://client.example/']);
   });
 });
 

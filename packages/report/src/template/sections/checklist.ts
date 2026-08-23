@@ -2,7 +2,7 @@ import { compareCriteria } from '@odysseus/core';
 import type { AuditManifest, AuditManualFields, Finding, ReportLanguage } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatDate, formatFindingIdRefs, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatDate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { selectRenderedThemes } from './themes.js';
 import { LEVEL_COLOR } from '../design-tokens.js';
 
@@ -12,6 +12,37 @@ function headCell(label: string): string {
 
 function cell(html: string): string {
   return `<div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">${html}</div>`;
+}
+
+/** A theme with many findings (a real La Corniche/Haaitza audit produced
+ *  themes with 100+ findingIds) turned this cell into an unbounded
+ *  comma-separated wall of IDs in a 110px grid column. Combined with
+ *  .row-atomic's break-inside: avoid (paged.css), a cell taller than a
+ *  full page's remaining space left Paged.js with no valid break point,
+ *  degrading into the same one-or-two-character-per-line collapse
+ *  CLAUDE.md trade-off 17 already root-caused and fixed once for the
+ *  findings appendix's .appendix-group - same underlying mechanism
+ *  (an atomic fragment taller than a page), a different section this
+ *  session found it recurring in. Capped the same way the appendix
+ *  already caps a finding's page-URL list (PAGE_URL_LIST_CAP,
+ *  findings-appendix.ts, reusing its "et N autres" wording rather than
+ *  inventing a second one): the full list was never actually useful to
+ *  read here anyway, per item 35's own reasoning that findingIds exist
+ *  so the reader has "something to actually look up," not to enumerate
+ *  every one - the annex is already the complete, correct place for
+ *  that. */
+const CHECKLIST_FINDING_ID_CAP = 10;
+
+function formatCappedFindingIdRefs(
+  findingIds: readonly string[],
+  language: ReportLanguage,
+  andNMoreTemplate: string,
+): string {
+  const sorted = [...findingIds].sort();
+  if (sorted.length <= CHECKLIST_FINDING_ID_CAP) return sorted.join(', ');
+  const shown = sorted.slice(0, CHECKLIST_FINDING_ID_CAP);
+  const remaining = sorted.length - CHECKLIST_FINDING_ID_CAP;
+  return `${shown.join(', ')} ${fillTemplate(andNMoreTemplate, { count: formatNumber(remaining, language) })}`;
 }
 
 /** Pure re-presentation of analysis.themes as a dense, printable grid -
@@ -68,7 +99,7 @@ export function renderChecklist(
           ${cell(escapeHtml(levels[theme.effort]))}
           ${cell(`<span data-level="${theme.impact}" style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(levels[theme.impact])}</span>`)}
           ${cell(`${formatNumber(uniquePages, language)}/${formatNumber(totalPagesScanned, language)}`)}
-          ${cell(`<span class="mono" style="font-size:11px">${escapeHtml(formatFindingIdRefs(theme.findingIds))}</span>`)}
+          ${cell(`<span class="mono" style="font-size:11px">${escapeHtml(formatCappedFindingIdRefs(theme.findingIds, language, strings.findingsAppendix.andNMoreTemplate))}</span>`)}
           ${cell(wcagCriteria.length > 0 ? escapeHtml(wcagCriteria.join(', ')) : '-')}
         </div>
       `;

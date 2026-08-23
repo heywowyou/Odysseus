@@ -14,6 +14,27 @@ export function filterFindingsForLlm(findings: readonly Finding[]): Finding[] {
   return findings.filter((finding) => LLM_SEVERITY_FLOOR.includes(finding.severity));
 }
 
+/** A real lacoorniche.com audit (223 pages) had one site-wide finding
+ *  with 200 pageUrls, and its structure-pass prompt blew past the
+ *  model's 262144-token context limit on every retry - confirmed by
+ *  measuring the built input directly: pageUrls arrays alone were ~86%
+ *  of the prompt's character count across the 639 findings that pass
+ *  LLM_SEVERITY_FLOOR. Neither structure-prompt.ts nor writing-prompt.ts
+ *  ever instructs the model to read or reason about individual page
+ *  URLs (grouping/prioritizing/writing is by severity, category, and
+ *  occurrences, not by which pages a defect appears on), and
+ *  writing-prompt.ts explicitly forbids the model from citing any
+ *  count derived from this data at all. occurrences (already a small
+ *  integer, unaffected here) is the "how widespread" signal the model
+ *  actually uses. A small capped sample is kept, not zero, only so a
+ *  future prompt change has something to reference without a second
+ *  wiring pass - it must stay capped, never grow back to the full list,
+ *  or this bug recurs on the next large real site. The report's own
+ *  page-URL rendering (findings-appendix.ts) is unaffected: it reads
+ *  finding.pageUrls from findings.json directly, never this LLM-facing
+ *  copy. */
+export const MAX_PAGE_URLS_FOR_LLM = 3;
+
 function toLlmFindingShape(finding: Finding): StructureInput['findings'][number] {
   return {
     findingId: finding.findingId,
@@ -24,7 +45,7 @@ function toLlmFindingShape(finding: Finding): StructureInput['findings'][number]
     wcagCriteria: finding.wcagCriteria,
     title: finding.title,
     description: finding.description,
-    pageUrls: finding.pageUrls,
+    pageUrls: finding.pageUrls.slice(0, MAX_PAGE_URLS_FOR_LLM),
     occurrences: finding.occurrences,
   };
 }

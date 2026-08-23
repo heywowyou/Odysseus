@@ -137,13 +137,17 @@ export const en: ReportStrings = {
       'Date the European Accessibility Act obligations enter into application, set by the directive itself. The obligations have therefore already been in force for {duration}, not upcoming.',
     obligationStatusLabel: 'Obligation status',
     statusLabels: {
-      in_scope: 'Confirmed',
+      // See the matching fr.ts comment: "Confirmed" read as a settled
+      // legal conclusion, which docs/obligation-basis.md section 7
+      // forbids. "Criteria met" states what the available data shows
+      // without asserting the conclusion itself.
+      in_scope: 'Criteria met',
       likely_in_scope: 'Likely',
       out_of_scope: 'Out of scope',
       undetermined: 'Undetermined',
     },
     statusShortDescriptions: {
-      in_scope: 'This site falls under a confirmed digital accessibility obligation, based on the available evidence.',
+      in_scope: 'Based on the available evidence, this site meets the criteria for a digital accessibility obligation.',
       likely_in_scope:
         'The available evidence indicates this site likely falls under a digital accessibility obligation, without full confirmation.',
       // item 0.1 (La Corniche pass): see the matching fr.ts comment - this
@@ -528,7 +532,7 @@ export const en: ReportStrings = {
     extendedPassCheckFoundSingular: 'finding detected',
     extendedPassCheckFoundPlural: 'findings detected',
     legalCitationInScopeTemplate:
-      'This site falls under the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts}',
+      'Based on the available evidence, this site meets the criteria set for the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts} This reading is not a definitive legal qualification; confirmation by legal counsel is still recommended.',
     legalCitationLikelyInScopeTemplate:
       "The available evidence indicates this site likely falls under the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts} This assessment could not be fully confirmed without a complete review of the site's transactional flow.",
     legalCitationOutOfScopeParagraph:

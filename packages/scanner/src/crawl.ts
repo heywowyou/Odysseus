@@ -131,6 +131,29 @@ function safeHostname(url: string): string | null {
   }
 }
 
+/** True when `landedHostname` is safe to treat as the same site as
+ *  `requestedHostname` for the purpose of following its links and
+ *  scanning it as the requested page - either an exact match, or one is
+ *  the other with a leading "www." label added or removed (the only
+ *  redirect-driven cross-hostname pattern confirmed in the wild:
+ *  www.lacoorniche.com 301s to lacoorniche.com). Deliberately narrow:
+ *  a real haaitza.com crawl showed /carte-cadeaux forwarding (via a
+ *  same-origin page whose content then points off-site) into
+ *  haaitza-lacoorniche.diadabox.fr, a third-party booking platform
+ *  shared with another client. Before this check existed, the crawler's
+ *  own redirect-following fix (landedUrl below) treated that foreign
+ *  domain as safe to crawl deeper into, since it only checked whether
+ *  the navigation succeeded, not whether it stayed on the audited
+ *  business's own site - 58 of that one audit's pages, and 16 of its 18
+ *  "critical" findings, turned out to belong to the vendor's platform,
+ *  not the client's. Anything other than an exact or www-prefix match
+ *  must be treated the same as a social-platform redirect: not
+ *  followed, not scanned, never attributed to the audited site. */
+export function isSameSiteHostname(requestedHostname: string, landedHostname: string): boolean {
+  if (requestedHostname === landedHostname) return true;
+  return requestedHostname === `www.${landedHostname}` || landedHostname === `www.${requestedHostname}`;
+}
+
 /**
  * Breadth-first crawl from startUrl, following only same-origin links.
  * Reuses one BrowserContext for the whole crawl (a fresh Page per URL,
@@ -229,8 +252,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         // as a broken internal link even though the redirect itself
         // worked exactly as the site intended.
         const finalHost = safeHostname(browserPage.url());
+        const requestedHost = new URL(item.url).hostname;
+        const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
 
-        if (finalHost !== null && isSocialPlatformHost(finalHost)) {
+        if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
           const skippedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'skipped-external-redirect' };
           if (httpStatus !== undefined) skippedPage.httpStatus = httpStatus;
           if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
@@ -250,7 +275,18 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             const hrefs = await browserPage.$$eval('a[href]', (anchors) =>
               anchors.map((a) => a.getAttribute('href')),
             );
-            for (const link of normalizeInternalLinks(hrefs, item.url, options.exclusions ?? [])) {
+            // Resolved against browserPage.url() (where the navigation actually
+            // landed), not item.url (what was requested). A same-origin request
+            // can still land on a different origin after a server redirect - a
+            // www-to-apex 301 is the common case - and every link on the landed
+            // page is naturally absolute against that landed origin. Using
+            // item.url as the base made those links look cross-origin and got
+            // them all dropped, which silently reduced a real site's crawl to
+            // just the one redirect-landing page (confirmed against
+            // lacoorniche.com: www.lacoorniche.com 301s to lacoorniche.com,
+            // visitedCount was 1 before this fix).
+            const landedUrl = browserPage.url();
+            for (const link of normalizeInternalLinks(hrefs, landedUrl, options.exclusions ?? [])) {
               if (enqueued.has(link) || enqueued.size >= maxPages) continue;
               enqueued.add(link);
               queue.push({ url: link, depth: item.depth + 1, discoveredFrom: item.url });
@@ -265,7 +301,9 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         // level before the failure, so this is still a social redirect,
         // not a broken link on the audited site.
         const finalHost = safeHostname(browserPage.url());
-        if (finalHost !== null && isSocialPlatformHost(finalHost)) {
+        const requestedHost = new URL(item.url).hostname;
+        const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
+        if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
           const skippedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'skipped-external-redirect' };
           if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
           pages.push(skippedPage);
