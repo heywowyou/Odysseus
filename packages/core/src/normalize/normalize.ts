@@ -14,6 +14,7 @@
  */
 
 import { buildCanonicalPageUrlMap, type TranslationCluster } from './translation-clusters.js';
+import { normalizeCookieConsent, type CookieConsentCheckInput } from './normalize-cookie-consent.js';
 import {
   FINDINGS_SCHEMA_VERSION,
   MAX_ELEMENTS_PER_FINDING,
@@ -103,6 +104,8 @@ export interface NormalizePageInput {
    *  established, since response headers are near-always identical
    *  across a site's pages. */
   securityHeaders?: SecurityHeadersCheckInput;
+  /** C1 (2026-08-24). Site-level, present only on the homepage's scan. */
+  cookieConsent?: CookieConsentCheckInput;
   /** Milestone 8.6. Runs on every page (JSON-LD/microdata/RDFa are a
    *  per-page concern, same as headMetadata). */
   structuredData?: StructuredDataCheckInput;
@@ -152,6 +155,7 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.videoCaptions) candidates.push(...extractVideoCaptionsCandidates(page.videoCaptions));
     if (page.altText) candidates.push(...extractAltTextCandidates(page.altText));
     if (page.securityHeaders) candidates.push(...extractSecurityHeadersCandidates(page.securityHeaders, page.url));
+    if (page.cookieConsent) candidates.push(...normalizeCookieConsent(page.cookieConsent, page.url));
     if (page.structuredData) candidates.push(...extractStructuredDataCandidates(page.structuredData));
   }
 

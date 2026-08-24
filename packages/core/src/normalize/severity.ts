@@ -190,6 +190,25 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'security-header-missing-referrer-policy': 'minor',
   'security-header-missing-permissions-policy': 'minor',
 
+  // C1 (2026-08-24): cookie/consent. Rated above the security headers
+  // above, deliberately. A missing response header is a defense that is
+  // not in place; a tracking cookie written before consent is a thing
+  // the site is doing right now, on every visit, and it is the one
+  // obligation in this product whose scope is not disputed (CNIL
+  // enforcement does not turn on company size the way the EAA reading
+  // does). Not 'critical': that tier is reserved for a visitor being
+  // blocked or a page being unindexable, and this blocks nobody.
+  'cookie-non-essential-before-consent': 'serious',
+  'tracker-request-before-consent': 'serious',
+  // Moderate, not serious: absence of a *recognised* consent platform is
+  // weaker evidence than the presence of a named tracking cookie, since
+  // a hand-rolled banner would look identical to none at all. The two
+  // rules above already carry the concrete, certain fact.
+  'consent-mechanism-absent': 'moderate',
+  // Moderate: a real defect with a documented one-line fix
+  // (youtube-nocookie.com), but narrower than site-wide tracking.
+  'youtube-tracking-embed': 'moderate',
+
   // Milestone 8.6: robots.txt blocking a named AI crawler. Capped below
   // robots-disallow-broad's own 'moderate': unlike a broad Disallow that
   // accidentally excludes a real content section, blocking a named

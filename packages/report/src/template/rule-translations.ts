@@ -32,6 +32,27 @@ export interface RuleTranslation {
 }
 
 export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
+  // C1 (2026-08-24): cookie/consent detection. Wording states what was
+  // observed on one load with no interaction, never that the client is in
+  // breach - CLAUDE.md rule 6 governs this section the same way it
+  // governs the accessibility one, even though cookie scope (unlike the
+  // EAA reading) is not itself disputed.
+  'cookie-non-essential-before-consent': {
+    label: 'Des cookies non essentiels sont déposés avant tout consentement',
+    gloss: "Des cookies de mesure d'audience ou de publicité sont écrits dès l'arrivée du visiteur, avant qu'il ait pu accepter quoi que ce soit.",
+  },
+  'tracker-request-before-consent': {
+    label: 'Des traceurs tiers sont contactés avant tout consentement',
+    gloss: "Des requêtes partent vers des prestataires de mesure ou de publicité dès l'ouverture de la page, ce qui leur transmet l'adresse IP du visiteur même sans cookie.",
+  },
+  'consent-mechanism-absent': {
+    label: 'Aucun mécanisme de consentement reconnu',
+    gloss: "Des composants de mesure ou de publicité sont actifs et aucune plateforme de consentement connue n'a été détectée sur la page.",
+  },
+  'youtube-tracking-embed': {
+    label: 'Une vidéo YouTube utilise le domaine avec traceurs',
+    gloss: "La vidéo est intégrée depuis youtube.com, qui dépose des cookies publicitaires au chargement ; youtube-nocookie.com sert la même vidéo sans ces cookies.",
+  },
   // A5 (2026-08-24 three-site review): milestone 8.6's four detection
   // additions and three later rules shipped with no French entry, so a
   // real Palais Gallien report printed "No X-Frame-Options header" and

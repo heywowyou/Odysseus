@@ -5,6 +5,7 @@ import type { RedirectHostCache } from './checks/transactional-flow.js';
 import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
 import { checkLlmsTxt, type LlmsTxtCheckResult } from './checks/llms-txt.js';
 import { checkSecurityHeaders, type SecurityHeadersCheckResult } from './checks/security-headers.js';
+import { checkCookieConsent, type CookieConsentCheckResult } from './checks/cookie-consent.js';
 import { fetchCruxFieldData } from './crux.js';
 import { type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import { type PageScanResult, scanPage } from './scan-page.js';
@@ -87,6 +88,7 @@ async function runScanLane(
   sitemapCheck: (SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] }) | undefined,
   llmsTxtCheck: LlmsTxtCheckResult | undefined,
   securityHeadersCheck: SecurityHeadersCheckResult | undefined,
+  cookieConsentCheck: CookieConsentCheckResult | undefined,
   bookingEngineUrl: string | undefined,
   skipLighthouse: boolean,
   onPageDone: (pageResult: PageScanResult) => void,
@@ -110,6 +112,7 @@ async function runScanLane(
       ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
       ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
       ...(securityHeadersCheck !== undefined ? { securityHeadersCheck } : {}),
+      ...(cookieConsentCheck !== undefined ? { cookieConsentCheck } : {}),
       ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
       ...(skipLighthouse ? { skipLighthouse } : {}),
     });
@@ -213,6 +216,20 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
   );
   const securityHeadersCheckForScan = homepageWasVisited ? securityHeadersCheck : undefined;
 
+  // C1: cookies and trackers active before consent. One extra navigation
+  // per audit, in a brand-new context so nothing from the crawl's own
+  // passes can be mistaken for the visitor having consented - which is
+  // why this cannot reuse a page the lanes already loaded. Same
+  // site-level, attributed-to-the-homepage shape as the checks above,
+  // and skipped entirely when the homepage was never visited, since
+  // there would be no page to attribute the finding to.
+  const cookieConsentCheck = homepageWasVisited
+    ? await checkCookieConsent(options.browser, crawl.startUrl, {
+        timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
+        ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
+      })
+    : undefined;
+
   // CrUX is origin-level, not per-page, and only ever queried once per
   // audit regardless of page count - skipped entirely (not attempted and
   // failed) when no API key is configured, so a site without one never
@@ -260,6 +277,7 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
           sitemapCheck,
           llmsTxtCheckForScan,
           securityHeadersCheckForScan,
+          cookieConsentCheck,
           options.bookingEngineUrl,
           options.skipLighthouse ?? false,
           onPageDone,

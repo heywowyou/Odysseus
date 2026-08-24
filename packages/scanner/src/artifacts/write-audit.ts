@@ -97,6 +97,7 @@ function buildScanJson(
     ...(scanResult.altText !== undefined ? { altText: scanResult.altText } : {}),
     ...(scanResult.altTextError !== undefined ? { altTextError: scanResult.altTextError } : {}),
     ...(scanResult.securityHeaders !== undefined ? { securityHeaders: scanResult.securityHeaders } : {}),
+    ...(scanResult.cookieConsent !== undefined ? { cookieConsent: scanResult.cookieConsent } : {}),
     ...(scanResult.structuredData !== undefined ? { structuredData: scanResult.structuredData } : {}),
     ...(scanResult.structuredDataError !== undefined ? { structuredDataError: scanResult.structuredDataError } : {}),
   };

@@ -20,6 +20,7 @@ import { walkKeyboardNavigation, type KeyboardNavigationExtraction } from './che
 import { checkFormErrorHandling, type FormErrorHandlingExtraction } from './checks/form-error-handling.js';
 import { checkVideoCaptions, type VideoCaptionsExtraction } from './checks/video-captions.js';
 import { extractAltTextFacts, type AltTextExtraction } from './checks/alt-text.js';
+import type { CookieConsentCheckResult } from './checks/cookie-consent.js';
 import type { SecurityHeadersCheckResult } from './checks/security-headers.js';
 import { checkStructuredData, type StructuredDataCheckResult } from './checks/structured-data.js';
 
@@ -71,6 +72,7 @@ export interface ScanPageOptions {
   /** Milestone 8.6: fetched once per site in scanSite(), same site-level
    *  attachment pattern as sitemapCheck/llmsTxtCheck above. */
   securityHeadersCheck?: SecurityHeadersCheckResult;
+  cookieConsentCheck?: CookieConsentCheckResult;
 }
 
 /**
@@ -106,6 +108,7 @@ export interface PageScanResult {
   altText?: AltTextExtraction;
   altTextError?: string;
   securityHeaders?: SecurityHeadersCheckResult;
+  cookieConsent?: CookieConsentCheckResult;
   structuredData?: StructuredDataCheckResult;
   structuredDataError?: string;
 }
@@ -167,6 +170,10 @@ export async function scanPage(
   if (options.llmsTxtCheck !== undefined && url === options.homepageUrl) {
     result.llmsTxtCheck = options.llmsTxtCheck;
   }
+  if (options.cookieConsentCheck !== undefined && url === options.homepageUrl) {
+    result.cookieConsent = options.cookieConsentCheck;
+  }
+
   if (options.securityHeadersCheck !== undefined && url === options.homepageUrl) {
     result.securityHeaders = options.securityHeadersCheck;
   }
