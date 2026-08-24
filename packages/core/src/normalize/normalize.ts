@@ -245,6 +245,21 @@ function mergeGroup(
     perPage[candidate.pageUrl] = candidate.rawEvidenceForPage;
   }
 
+  // B4 (2026-08-24): the affected files, lifted out of the per-page evidence
+  // so they survive the last-write-wins collapse above. A site-wide resource
+  // finding (normalize-lighthouse.ts's RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS)
+  // has many candidates per page, so perPage keeps exactly one of them -
+  // which is acceptable for a page's score but would throw away the list of
+  // files the client actually has to fix. Sorted for a stable diff, deduped
+  // because one file referenced from several pages is one thing to fix.
+  const resourceUrls = [
+    ...new Set(
+      group
+        .map((c) => c.rawEvidenceForPage['resourceUrl'])
+        .filter((url): url is string => typeof url === 'string' && url.length > 0),
+    ),
+  ].sort();
+
   return {
     auditId,
     schemaVersion: FINDINGS_SCHEMA_VERSION,
@@ -263,8 +278,9 @@ function mergeGroup(
       dedupeComponents: {
         source: first.source,
         ruleId: first.ruleId,
-        selector: first.element?.selector ?? '',
+        selector: first.dedupeIdentity ?? first.element?.selector ?? '',
       },
+      ...(resourceUrls.length > 0 ? { resourceUrls } : {}),
       perPage,
     },
     dedupeKey,
@@ -367,7 +383,10 @@ export function normalizeAudit(input: NormalizeAuditInput): Finding[] {
 
   const fineGroups = new Map<string, FindingCandidate[]>();
   for (const candidate of candidates) {
-    const key = computeDedupeKey(candidate.source, candidate.ruleId, candidate.element?.selector ?? '');
+    // dedupeIdentity wins when an extractor has declared that this rule's
+    // identity is not its element (see FindingCandidate.dedupeIdentity).
+    const identity = candidate.dedupeIdentity ?? candidate.element?.selector ?? '';
+    const key = computeDedupeKey(candidate.source, candidate.ruleId, identity);
     const group = fineGroups.get(key);
     if (group) {
       group.push(candidate);

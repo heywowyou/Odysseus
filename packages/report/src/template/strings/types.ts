@@ -715,6 +715,12 @@ export interface ReportStrings {
      *  findings-appendix.ts) when a finding hits more pages than shown.
      *  Template: {count}, the number NOT shown. */
     andNMoreTemplate: string;
+    /** B4: a site-wide resource finding (Lighthouse's image/asset audits)
+     *  collapses every affected file into one row, so the selector column
+     *  states a file count and a sub-row lists the files. Template:
+     *  {count}. */
+    affectedFilesCountTemplate: string;
+    affectedFilesLabel: string;
     /** 2026-08-22, La Corniche report review: two or more findings in the
      *  same rule group frequently share the exact same page-URL set (the
      *  same booking widget missing an alt attribute on every page it

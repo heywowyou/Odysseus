@@ -70,6 +70,64 @@ const SCANNED_CATEGORIES: Array<{ id: string; category: FindingCategory }> = [
   { id: 'seo', category: 'seo' },
 ];
 
+/** B4 (2026-08-24): audits that report one defect about a whole class of
+ *  files, not a defect at a place in a page. For these the DOM node is
+ *  incidental - it is merely wherever one affected file happens to be
+ *  rendered - so all of an audit's items collapse into a single site-wide
+ *  finding whose evidence is the list of affected file URLs.
+ *
+ *  Without this, one image referenced from twenty pages became twenty
+ *  findings, because the fine dedupe pass keys on the selector and the
+ *  selector differs per page. Worse on sites whose slider generates its
+ *  wrapper id at runtime (swiper-wrapper-3bd6608a838df14e): the same image
+ *  on the same page produced a different key on every scan. A real
+ *  haaitza.com audit had 102 of 305 findings in exactly this shape, a third
+ *  of the annex, all restating one instruction about a handful of images.
+ *
+ *  Keying on the file URL instead was tried first and measured on all three
+ *  reference audits. It made things worse, not better: 99 findings became
+ *  127, 305 became 381, 650 became 871, because splitting one container
+ *  selector into its several distinct images outweighed merging one image
+ *  across pages. That is the right identity for a *defect* and the wrong
+ *  granularity for a *report* - "serve your images in a modern format" is
+ *  one instruction a client carries out once, and printing it sixty five
+ *  times with a different filename each time is what made the annex read as
+ *  padding. The file list is evidence for the one finding, not sixty five
+ *  findings.
+ *
+ *  Every entry here was confirmed against real Lighthouse output to carry a
+ *  populated item-level `url`, and to be an audit whose remediation is one
+ *  action over a set of files. Do not add an audit whose items describe
+ *  genuinely independent problems needing separate decisions; collapsing
+ *  those would hide real findings, which is a worse failure than a long
+ *  annex. */
+export const RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS: ReadonlySet<string> = new Set([
+  'modern-image-formats',
+  'uses-optimized-images',
+  'uses-responsive-images',
+  'offscreen-images',
+  'unsized-images',
+  'efficient-animated-content',
+  'uses-text-compression',
+  'render-blocking-resources',
+  'unused-css-rules',
+  'unused-javascript',
+  'legacy-javascript',
+  'duplicated-javascript',
+  'uses-long-cache-ttl',
+]);
+
+/** The resource URL an item is about, when this audit is resource-identified
+ *  and the item actually carries one. Returns undefined otherwise, so the
+ *  caller falls back to selector identity rather than collapsing on a
+ *  missing value (every item with no url would otherwise share the identity
+ *  '' and merge into a single finding). */
+function resourceIdentityForItem(auditId: string, item: Record<string, unknown>): string | undefined {
+  if (!RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS.has(auditId)) return undefined;
+  const url = item['url'];
+  return typeof url === 'string' && url.length > 0 ? url : undefined;
+}
+
 const SKIPPED_DISPLAY_MODES = new Set(['informative', 'notApplicable', 'manual', 'error']);
 
 const EXCLUDED_AUDITS = new Set<string>(LIGHTHOUSE_EXCLUDED_AUDITS);
@@ -226,8 +284,11 @@ export function extractLighthouseCandidates(
         )
         .slice(0, MAX_ELEMENTS_PER_FINDING);
 
+      const isResourceAudit = RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS.has(auditRef.id);
+
       if (nodeItems.length > 0) {
-        for (const { node } of nodeItems) {
+        for (const { item, node } of nodeItems) {
+          const resourceUrl = resourceIdentityForItem(auditRef.id, item);
           candidates.push({
             source: 'lighthouse',
             ruleId: auditRef.id,
@@ -242,6 +303,10 @@ export function extractLighthouseCandidates(
               selector: node.selector ?? '',
               snippet: node.snippet ?? '',
             },
+            // Empty identity, so every item of this audit lands in one group
+            // for the whole site (ruleId is already part of the key). The
+            // file URLs travel as evidence below, not as separate findings.
+            ...(isResourceAudit ? { dedupeIdentity: '' } : {}),
             rawEvidenceForPage: {
               score: audit.score,
               scoreDisplayMode: audit.scoreDisplayMode,
@@ -249,6 +314,11 @@ export function extractLighthouseCandidates(
               displayValue: audit.displayValue ?? null,
               title: audit.title,
               node,
+              // The affected file. mergeGroup lifts these into
+              // rawEvidence.resourceUrls so the report can list what to fix,
+              // which is the whole point of collapsing these into one
+              // finding rather than dropping the detail.
+              ...(resourceUrl === undefined ? {} : { resourceUrl }),
             },
           });
         }

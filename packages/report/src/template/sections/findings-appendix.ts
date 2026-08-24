@@ -153,6 +153,50 @@ function renderPageUrlList(
 /** item 3.1's own suggested cap. */
 const PAGE_URL_LIST_CAP = 5;
 
+/** B4 (2026-08-24): the affected files for a site-wide resource finding
+ *  (normalize-lighthouse.ts's RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS), read
+ *  off rawEvidence.resourceUrls. Those findings collapse every item of one
+ *  audit into a single row, so elements[0].selector is whichever DOM node
+ *  happened to sort first - true of one occurrence, misleading as the row's
+ *  only detail. The file list is what the client acts on. */
+const RESOURCE_URL_LIST_CAP = 8;
+
+function findingResourceUrls(finding: Finding): string[] {
+  const raw = (finding.rawEvidence as { resourceUrls?: unknown }).resourceUrls;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((url): url is string => typeof url === 'string');
+}
+
+/** Path and filename only. A column of forty absolute URLs sharing one
+ *  origin is unreadable, and the origin is already on the cover. */
+function shortenResourceUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return url;
+  }
+}
+
+function renderResourceUrlList(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  finding: Finding,
+): string {
+  const urls = findingResourceUrls(finding);
+  if (urls.length === 0) return '';
+  const a = strings.findingsAppendix;
+
+  const shown = urls.slice(0, RESOURCE_URL_LIST_CAP).map(shortenResourceUrl);
+  const remaining = urls.length - shown.length;
+  const text =
+    remaining > 0
+      ? `${shown.join(', ')} ${fillTemplate(a.andNMoreTemplate, { count: formatNumber(remaining, language) })}`
+      : shown.join(', ');
+
+  return `<tr class="appendix-url-row"><td class="url-cell" colspan="4" style="padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.affectedFilesLabel)} : ${escapeHtml(text)}</td></tr>`;
+}
+
 /** item 3.3: the anchor formatFindingIdLinks (html-utils.ts) links to from
  *  a theme card's "Constats : f002, f003" reference list - every annex
  *  row gets one, not only rows a theme happens to cite, since a finding
@@ -190,7 +234,16 @@ function renderSubTableRow(
   samePagesAsFindingId: string | undefined,
   clusterLookup: ClusterLookup,
 ): string {
-  const selector = finding.elements[0]?.selector ?? '';
+  // B4: a site-wide resource finding has no meaningful single selector -
+  // its detail is the file list rendered below, so the column states how
+  // many files rather than naming an arbitrary one of their DOM nodes.
+  const resourceUrls = findingResourceUrls(finding);
+  const selector =
+    resourceUrls.length > 0
+      ? fillTemplate(strings.findingsAppendix.affectedFilesCountTemplate, {
+          count: formatNumber(resourceUrls.length, language),
+        })
+      : (finding.elements[0]?.selector ?? '');
   return `
     <tr id="annexref-${escapeHtml(finding.findingId)}">
       ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;white-space:nowrap')}
@@ -198,6 +251,7 @@ function renderSubTableRow(
       ${cell(formatNumber(finding.occurrences, language))}
       ${cell(escapeHtml(selector), selectorCellStyle(selector))}
     </tr>
+    ${renderResourceUrlList(strings, language, finding)}
     ${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup)}
   `;
 }

@@ -1147,6 +1147,70 @@ needed, say so and stop. Do not change them and continue.
     started.
 
 
+30. **Lighthouse's resource audits collapse to one site-wide finding each,
+    with the affected files as evidence**, 2026-08-24 (B4). A real
+    haaitza.com report printed "Serve images in next-gen formats" 65 times
+    and "Efficiently encode images" 49 times: 102 of 305 findings, a third
+    of the annex, every row restating one instruction with a different
+    filename. The governing rule, stated by the operator: every finding in
+    the report must be unique and relevant to the client, and a duplicate is
+    a bug that costs the report its credibility, exactly as trade-off 24
+    already established for language variants of one page.
+
+    Cause: the fine dedupe pass keys on `source|ruleId|selector`, and a DOM
+    selector is the wrong identity for a defect that belongs to a file. The
+    same image referenced from twenty pages got twenty selectors. Sites whose
+    slider generates its wrapper id at runtime
+    (`swiper-wrapper-3bd6608a838df14e`) were worse still: the same image on
+    the same page keyed differently on every scan, which also defeated
+    trade-off 24's translation clustering, since the five language variants
+    landed in five separate groups instead of one.
+
+    **Selector normalization stays rejected**, and trade-off 3's warning was
+    confirmed rather than overturned. Real counter-examples: a naive "strip
+    hex-looking ids" rule would merge `#popmake-12288` with `#popmake-13138`
+    (two different WordPress popups) and distinct Webflow `w-node-*` ids
+    (build-stable, one per element). The fix gives these rules a better
+    identity instead of a damaged version of the wrong one.
+
+    **Keying on the file URL was tried first and measured, then rejected on
+    the numbers**: 99 findings became 127, 305 became 381, 650 became 871,
+    because splitting one container selector into its several images
+    outweighed merging one image across pages. That is the right identity for
+    a defect and the wrong granularity for a report. "Serve your images in a
+    modern format" is one instruction a client carries out once. The file
+    list is evidence for one finding, not sixty five findings.
+
+    Shipped shape: `FindingCandidate.dedupeIdentity` (new, optional)
+    overrides `element.selector` in the fine key without changing what is
+    displayed; `normalize-lighthouse.ts`'s
+    `RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS` allowlist sets it to `''` so an
+    audit's items collapse into one site-wide finding (`ruleId` is already
+    part of the key); `mergeGroup` lifts each item's file URL into
+    `rawEvidence.resourceUrls`, because `perPage` is last-write-wins and
+    would otherwise discard the list; the annex prints a file count in the
+    selector column and the files in a sub-row, since `elements[0].selector`
+    for such a finding is whichever DOM node sorted first and is misleading
+    as the row's only detail. An allowlisted audit whose items carry no
+    `url` falls back to selector identity rather than collapsing everything
+    onto the identity `''`, so a merge is never made on the strength of
+    absent data.
+
+    Measured on all three reference audits, offline via `normalize <dir>`:
+    99 to 61 findings, 305 to 177, 650 to 525. Total occurrences were
+    byte-identical before and after on all three (1192, 10415, 20921) and no
+    rule id disappeared, which is the check that the collapse regrouped
+    rather than dropped.
+
+    Only add an audit to the allowlist when its items genuinely describe one
+    action over a set of files. Collapsing an audit whose items are
+    independent problems needing separate decisions would hide real findings,
+    which is a worse failure than a long annex. Note also that `dedupeKey`
+    changes for these rules, and cross-run identity for the monitoring tier
+    (milestone 13, not built) is `dedupeKey`, so stored audits predating this
+    need `normalize <dir>` before they can be diffed against new ones.
+
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.

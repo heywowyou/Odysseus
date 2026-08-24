@@ -509,6 +509,8 @@ export const en: ReportStrings = {
     pagesColumnLabel: 'Pages',
     allPagesAnalyzedTemplate: 'All pages analysed ({count})',
     andNMoreTemplate: 'and {count} more',
+    affectedFilesCountTemplate: '{count} files affected',
+    affectedFilesLabel: 'Files',
     samePagesAsTemplate: 'Same pages as {findingId}',
     pagesMaxColumnLabel: 'Max pages',
     occurrencesColumnLabel: 'Occurrences',
