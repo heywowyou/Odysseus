@@ -26,6 +26,7 @@ import {
   type CruxFieldDataResult,
   type ManifestKind,
   type ManifestPageEntry,
+  buildTranslationClusters,
 } from '@odysseus/core';
 import { getArtifactsRoot } from '../config.js';
 import type { CrawlResult } from '../crawl.js';
@@ -131,6 +132,61 @@ const TITLE_SITE_NAME_SEPARATORS = ['|', '—'];
  *  longer, separator-free title is more likely to be. */
 const BARE_TITLE_MAX_LENGTH = 60;
 
+/** A1 (2026-08-24 three-site review): a real Palais Gallien report put
+ *  "Hôtel Le Palais Gallien 5***** - Bordeaux - Site Officiel" on the
+ *  cover of a paid audit as the client's own name. The title was 56
+ *  characters, so the BARE_TITLE_MAX_LENGTH path returned it whole,
+ *  marketing furniture included.
+ *
+ *  Hyphen is deliberately still not a TITLE_SITE_NAME_SEPARATORS entry -
+ *  the brand-is-last convention that holds for "|" is wrong for hyphens
+ *  ("... - Bordeaux - Site Officiel" would yield "Site Officiel", worse
+ *  than doing nothing). Instead the hyphen is used only to find trailing
+ *  segments that are pure boilerplate, which are dropped from the end
+ *  while any segment carrying real information is kept. A city is not
+ *  boilerplate and is kept on purpose: guessing which words are place
+ *  names would be inventing a fact, and this value is a *prefill* the
+ *  operator confirms (provenance 'detected'), not a final answer. */
+const TITLE_BOILERPLATE_SEGMENTS = [
+  'site officiel',
+  'site web officiel',
+  'official site',
+  'official website',
+  'accueil',
+  'home',
+  'homepage',
+  'page d accueil',
+  "page d'accueil",
+  'reservation en ligne',
+  'réservation en ligne',
+  'book online',
+];
+
+/** Star ratings ("5*****", "4 étoiles", "5 stars") are a marketing token,
+ *  not part of a registered or commercial name. Removed before the
+ *  boilerplate split so "Gallien 5***** - Bordeaux" splits the same way
+ *  "Gallien - Bordeaux" would. */
+// The trailing \b lives inside the word alternatives only: "*" is not a
+// word character, so a \b after "5*****" never matches.
+const TITLE_STAR_RATING = /\s*\b[1-5]\s*(?:\*{1,5}|(?:étoiles?|etoiles?|stars?)\b)/giu;
+
+function stripTitleMarketing(title: string): string {
+  const withoutRating = title.replace(TITLE_STAR_RATING, ' ').replace(/\s{2,}/gu, ' ').trim();
+  const segments = withoutRating.split(/\s+[-–]\s+/u).map((segment) => segment.trim()).filter(Boolean);
+  while (segments.length > 1) {
+    const last = segments[segments.length - 1]!
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/gu, '');
+    const isBoilerplate = TITLE_BOILERPLATE_SEGMENTS.some(
+      (entry) => entry.normalize('NFD').replace(/[\u0300-\u036f]/gu, '') === last,
+    );
+    if (!isBoilerplate) break;
+    segments.pop();
+  }
+  return segments.join(' - ').replace(/\s{2,}/gu, ' ').trim();
+}
+
 export function deriveSiteName(headMetadata: WriteAuditArtifactsInput['siteResult']['pages'][number]['headMetadata']): string | undefined {
   const ogSiteName = headMetadata?.openGraphTags?.['og:site_name']?.trim();
   if (ogSiteName) return ogSiteName;
@@ -139,9 +195,62 @@ export function deriveSiteName(headMetadata: WriteAuditArtifactsInput['siteResul
   if (!title) return undefined;
   for (const separator of TITLE_SITE_NAME_SEPARATORS) {
     const segments = title.split(separator).map((segment) => segment.trim()).filter(Boolean);
-    if (segments.length > 1) return segments[segments.length - 1];
+    if (segments.length > 1) return stripTitleMarketing(segments[segments.length - 1]!) || undefined;
   }
-  return title.length <= BARE_TITLE_MAX_LENGTH ? title : undefined;
+  const cleaned = stripTitleMarketing(title);
+  if (!cleaned) return undefined;
+  return cleaned.length <= BARE_TITLE_MAX_LENGTH ? cleaned : undefined;
+}
+
+/** A1 (2026-08-24 three-site review): the La Corniche cover printed the
+ *  generic "Rapport d'audit" instead of the client's name. Root cause was
+ *  not deriveSiteName at all - the scan started at
+ *  https://www.lacoorniche.com/, that navigation timed out at 30s
+ *  (renderDiffError, "waiting until networkidle"), and so the one page
+ *  this lookup consulted carried no headMetadata whatsoever. The apex
+ *  https://lacoorniche.com/ was crawled seconds later and does carry
+ *  og:site_name "La Co(o)rniche".
+ *
+ *  So the homepage is preferred but no longer required: the www/apex
+ *  counterpart of the start URL is tried next (same site, one redirect
+ *  apart), then the shallowest remaining page that actually returned head
+ *  metadata. Ordering by depth keeps this close to "the homepage or the
+ *  next thing to it" rather than picking an arbitrary deep page whose
+ *  title is page-specific. Returns undefined when nothing on the site
+ *  produced head metadata, which still yields no siteName - an absent
+ *  prefill, never a guessed one. */
+function toggleWwwPrefix(url: string): string | undefined {
+  try {
+    const parsed = new URL(url);
+    parsed.hostname = parsed.hostname.startsWith('www.')
+      ? parsed.hostname.slice(4)
+      : `www.${parsed.hostname}`;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function findSiteNameSource(
+  siteResult: WriteAuditArtifactsInput['siteResult'],
+): WriteAuditArtifactsInput['siteResult']['pages'][number] | undefined {
+  const hasMetadata = (page: WriteAuditArtifactsInput['siteResult']['pages'][number]): boolean =>
+    deriveSiteName(page.headMetadata) !== undefined;
+
+  const byUrl = (url: string | undefined) =>
+    url === undefined ? undefined : siteResult.pages.find((page) => page.url === url && hasMetadata(page));
+
+  const homepage = byUrl(siteResult.crawl.startUrl);
+  if (homepage) return homepage;
+
+  const counterpart = byUrl(toggleWwwPrefix(siteResult.crawl.startUrl));
+  if (counterpart) return counterpart;
+
+  const depthByUrl = new Map(siteResult.crawl.pages.map((page) => [page.url, page.depth]));
+  return siteResult.pages
+    .filter(hasMetadata)
+    .sort((a, b) => (depthByUrl.get(a.url) ?? Number.MAX_SAFE_INTEGER) - (depthByUrl.get(b.url) ?? Number.MAX_SAFE_INTEGER))
+    .at(0);
 }
 
 function buildSiteSignals(siteResult: WriteAuditArtifactsInput['siteResult']): AuditManifestSiteSignals {
@@ -155,8 +264,7 @@ function buildSiteSignals(siteResult: WriteAuditArtifactsInput['siteResult']): A
     : undefined;
   const siren = mentionsLegalesPage?.mentionsLegales?.siren;
 
-  const homepage = siteResult.pages.find((page) => page.url === siteResult.crawl.startUrl);
-  const siteName = deriveSiteName(homepage?.headMetadata);
+  const siteName = deriveSiteName(findSiteNameSource(siteResult)?.headMetadata);
 
   return {
     hasTransactionalFlow: transactionalFlowEvidence.length > 0,
@@ -249,6 +357,15 @@ export async function writeAuditArtifacts(
     crawl: input.siteResult.crawl,
     pages: manifestPages,
     siteSignals: buildSiteSignals(input.siteResult),
+    // B2 (2026-08-24): recorded on the manifest rather than recomputed by
+    // each consumer, so `normalize <dir>` reaches the same grouping
+    // offline without re-reading every page's head metadata.
+    translationClusters: buildTranslationClusters(
+      input.siteResult.pages.map((page) => ({
+        pageUrl: page.url,
+        hreflangLinks: page.headMetadata?.hreflangLinks ?? [],
+      })),
+    ),
     ...(input.siteResult.cruxFieldData !== undefined ? { cruxFieldData: input.siteResult.cruxFieldData } : {}),
   });
 

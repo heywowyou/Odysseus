@@ -76,7 +76,7 @@ function renderRollupTable(
             (row) => `
               <tr style="${rowExtra}">
                 ${showCriterionColumn ? cell(escapeHtml(row.criterion), 'color:var(--color-accent-300)') : ''}
-                ${cell(escapeHtml(getCriterionName(row.criterion, language) ?? ''))}
+                ${cell(escapeHtml(getCriterionName(row.criterion, language) ?? row.criterion))}
                 ${cell(formatNumber(row.findingCount, language))}
                 ${cell(formatNumber(row.totalOccurrences, language))}
                 ${cell(formatNumber(row.pages, language))}

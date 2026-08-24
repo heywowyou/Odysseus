@@ -41,7 +41,9 @@ export const en: ReportStrings = {
       "This figure excludes {count} further occurrences from a heuristic signal on alt-text quality, which is not a deterministic conformance test (see the \"Signals to verify\" section).",
     criticalDriverNoteTemplate: 'These critical findings come only from: {rules}.',
     thirdPartyOccurrencesNoteTemplate:
-      '{percent}% of these occurrences come from third-party components (forms, popups, booking widget) - see the "To address with your third-party providers" section.',
+      // B6: see the French entry for why this names the containing
+      // numbered section rather than the sub-heading alone.
+      '{percent}% of these occurrences come from third-party components (forms, popups, booking widget) - see "To address with your third-party providers", in the technical appendix.',
     pagesWithCriticalTileLabel: 'pages with at least one critical finding',
     criticalTileLabel: 'critical',
     seriousTileLabel: 'serious',
@@ -467,7 +469,7 @@ export const en: ReportStrings = {
     postFixBody:
       'Once priorities are addressed, a targeted check confirms the fixed findings are genuinely resolved, without re-running a full audit.',
     authorshipTemplate: 'Report produced by {producer}, generated on {date} (build {version}), report ID {reportId}.',
-    issuerBlockTemplate: 'Signatory: {signatory}. SIRET: {siret}.',
+    issuerBlockTemplate: 'Signatory: {signatory}. SIREN: {registrationNumber}.',
     liabilityStatement:
       'This report reproduces technical findings detected by automated tools, together with explanations and prioritization. It does not constitute legal advice; see the "Legal exposure" section and the methodology for coverage limits. Odysseus cannot be held liable for decisions made on the sole basis of this document.',
   },

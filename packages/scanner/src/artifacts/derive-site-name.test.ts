@@ -68,3 +68,40 @@ describe('deriveSiteName', () => {
     expect(deriveSiteName(undefined)).toBeUndefined();
   });
 });
+
+/**
+ * A1 (2026-08-24 three-site review): a real Palais Gallien report put
+ * "Hôtel Le Palais Gallien 5***** - Bordeaux - Site Officiel" on the
+ * cover as the client's own name, and a real La Corniche report printed
+ * the generic fallback because the only page consulted for a name had
+ * timed out. These lock both halves.
+ */
+describe('deriveSiteName marketing-noise stripping', () => {
+  it('drops a star rating and a trailing "Site Officiel" from the real Palais Gallien title', () => {
+    expect(deriveSiteName(metadata({ title: 'Hôtel Le Palais Gallien 5***** - Bordeaux - Site Officiel' }))).toBe(
+      'Hôtel Le Palais Gallien - Bordeaux',
+    );
+  });
+
+  it('keeps a segment that carries real information, even trailing', () => {
+    expect(deriveSiteName(metadata({ title: 'Hôtel du Port - Arcachon' }))).toBe('Hôtel du Port - Arcachon');
+  });
+
+  it('drops several stacked boilerplate segments', () => {
+    expect(deriveSiteName(metadata({ title: 'Domaine des Trois Chenes - Réservation en ligne - Accueil' }))).toBe(
+      'Domaine des Trois Chenes',
+    );
+  });
+
+  it('strips a spelled-out star rating too', () => {
+    expect(deriveSiteName(metadata({ title: 'Villa Marine 4 étoiles - Site officiel' }))).toBe('Villa Marine');
+  });
+
+  it('still applies the cleanup to a separator-delimited brand segment', () => {
+    expect(deriveSiteName(metadata({ title: 'Chambre Deluxe | Villa Marine 5 étoiles' }))).toBe('Villa Marine');
+  });
+
+  it('leaves an already-clean bare title untouched', () => {
+    expect(deriveSiteName(metadata({ title: 'Domaine des Trois Chenes' }))).toBe('Domaine des Trois Chenes');
+  });
+});

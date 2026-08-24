@@ -1,4 +1,4 @@
-import { compareCriteria, HEURISTIC_RULE_IDS, type Finding } from '@odysseus/core';
+import { compareCriteria, HEURISTIC_RULE_IDS, isAuditedConformanceLevel, type Finding } from '@odysseus/core';
 
 /** Per-criterion rollup for the conformance summary (docs/report-v2-refactor.md
  *  C20/C21): a WCAG failure is a different kind of fact from a slow
@@ -29,6 +29,12 @@ function rollup(findings: readonly Finding[], includeHeuristic: boolean): Confor
     if (finding.category !== 'accessibility' || finding.wcagCriteria.length === 0) continue;
     if (HEURISTIC_RULE_IDS.has(finding.ruleId) !== includeHeuristic) continue;
     for (const criterion of finding.wcagCriteria) {
+      // A8: this table's own heading says "niveau AA", and the cover
+      // states the audited referential is WCAG 2.2 AA. A AAA criterion
+      // axe happens to also tag a rule with (2.1.3 on scrollable-region-
+      // focusable, in the report that surfaced this) is out of scope for
+      // both, and rendered with a blank name besides.
+      if (!isAuditedConformanceLevel(criterion)) continue;
       const row = counts.get(criterion) ?? { findingCount: 0, totalOccurrences: 0, pages: new Set<string>() };
       row.findingCount += 1;
       row.totalOccurrences += finding.occurrences;

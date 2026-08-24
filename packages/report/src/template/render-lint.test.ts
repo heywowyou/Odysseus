@@ -47,3 +47,47 @@ describe('findRenderLintViolations', () => {
     expect(findRenderLintViolations('<p>Signataire : Jules Fontaine. SIRET : 552032534.</p>')).toEqual([]);
   });
 });
+
+// A6 (2026-08-24 three-site review): both strings are verbatim from real
+// client reports.
+describe('A6: leaked markdown emphasis', () => {
+  it('flags the real La Corniche and Haaitza strings', () => {
+    expect(
+      findRenderLintViolations('<p>des liens *hreflang* non réciproques</p>').map((v) => v.label),
+    ).toContain('leaked markdown emphasis in rendered prose');
+    expect(
+      findRenderLintViolations("<p>ajouter un attribut *aria-label* à chaque bouton</p>").map((v) => v.label),
+    ).toContain('leaked markdown emphasis in rendered prose');
+  });
+
+  it('flags bold and underscore emphasis too', () => {
+    expect(findRenderLintViolations('<p>un point **important** ici</p>').length).toBeGreaterThan(0);
+    expect(findRenderLintViolations('<p>un point __important__ ici</p>').length).toBeGreaterThan(0);
+  });
+
+  it('does not flag a lone asterisk, a star rating, or ordinary prose', () => {
+    const clean = (html: string) =>
+      findRenderLintViolations(html).filter((v) => v.label === 'leaked markdown emphasis in rendered prose');
+    expect(clean('<p>Hôtel Le Palais Gallien 5***** - Bordeaux</p>')).toEqual([]);
+    expect(clean('<p>Les temps de chargement sont trop longs sur 23 pages.</p>')).toEqual([]);
+    expect(clean('<p>Contactez-nous à contact@odysseusaudit.com.</p>')).toEqual([]);
+  });
+});
+
+describe('A6: prose rules never scan style or script bodies', () => {
+  it('ignores a snake_case class name in a stylesheet', () => {
+    const html = '<style>.pagedjs_page_content > div { height: 100%; }</style><p>Rien à signaler.</p>';
+    expect(findRenderLintViolations(html)).toEqual([]);
+  });
+
+  it('ignores an asterisk inside a script', () => {
+    expect(findRenderLintViolations('<script>const a = b * c * d;</script><p>Bonjour.</p>')).toEqual([]);
+  });
+
+  it('still flags emphasis in the prose next to them', () => {
+    const html = '<style>.pagedjs_page_content{}</style><p>des liens *hreflang* non réciproques</p>';
+    expect(findRenderLintViolations(html).map((v) => v.label)).toContain(
+      'leaked markdown emphasis in rendered prose',
+    );
+  });
+});

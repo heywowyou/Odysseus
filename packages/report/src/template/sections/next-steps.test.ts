@@ -65,15 +65,24 @@ describe('item 31: authorship and liability block', () => {
   });
 });
 
-// item 3.13: no issuer identity (legal entity, signatory, SIRET) anywhere
-// in the document - a professionalism and liability-exposure gap for a
-// paid French deliverable.
+// item 3.13: no issuer identity (legal entity, signatory, registration
+// number) anywhere in the document - a professionalism and liability-
+// exposure gap for a paid French deliverable.
+//
+// A3 (2026-08-24): the placeholder is filled with the real number, which
+// is nine digits and therefore a SIREN. This asserts the label matches
+// the number's actual length, so a future edit cannot relabel it "SIRET"
+// without either supplying the five-digit NIC or failing here.
 describe('item 3.13: issuer identity block', () => {
-  it('states a signatory and a visibly-incomplete SIRET placeholder, never a plausible fake number', () => {
+  it('states a signatory and a real registration number, correctly labelled for its length', () => {
     const html = renderNextSteps(getStrings('fr'), 14, fakeManifest(), 'fr');
     expect(html).toContain('Jules Fontaine');
-    expect(html).toContain('SIRET');
-    expect(html).toContain('à renseigner');
+    expect(html).not.toContain('à renseigner');
+
+    const match = html.match(/(SIREN|SIRET)\s*:\s*(\d+)/u);
+    expect(match, 'no registration number rendered on the issuer line').not.toBeNull();
+    const [, label, digits] = match!;
+    expect(digits).toHaveLength(label === 'SIRET' ? 14 : 9);
   });
 });
 

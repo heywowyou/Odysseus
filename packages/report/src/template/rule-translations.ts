@@ -32,6 +32,62 @@ export interface RuleTranslation {
 }
 
 export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
+  // A5 (2026-08-24 three-site review): milestone 8.6's four detection
+  // additions and three later rules shipped with no French entry, so a
+  // real Palais Gallien report printed "No X-Frame-Options header" and
+  // "No Content-Security-Policy header" as annex titles in a French
+  // document. rule-translations.test.ts did not catch it because every
+  // fixture it pins predates 8.6 - the guard was real, its inputs were
+  // stale. New fixtures for the three 2026-08-22 scans are added
+  // alongside these entries so the guard actually covers them.
+  'security-header-missing-csp': {
+    label: 'Politique de sécurité du contenu (CSP) absente',
+    gloss: "Le site n'envoie pas d'en-tête Content-Security-Policy, qui limite les scripts autorisés à s'exécuter sur vos pages.",
+  },
+  'security-header-missing-hsts': {
+    label: 'En-tête HSTS absent',
+    gloss: "Le site n'impose pas le HTTPS aux navigateurs pour les visites suivantes, ce qui laisse une première connexion possible en clair.",
+  },
+  'security-header-missing-x-frame-options': {
+    label: 'En-tête X-Frame-Options absent',
+    gloss: "Sans cet en-tête, le site peut être affiché dans un cadre invisible sur un autre site pour tromper un visiteur sur ce qu'il clique.",
+  },
+  'security-header-missing-referrer-policy': {
+    label: 'En-tête Referrer-Policy absent',
+    gloss: "Le site ne limite pas l'adresse de la page d'origine transmise aux sites tiers lors d'un clic sortant.",
+  },
+  'security-header-missing-permissions-policy': {
+    label: 'En-tête Permissions-Policy absent',
+    gloss: "Le site ne restreint pas l'accès des composants tiers aux fonctions du navigateur (caméra, micro, géolocalisation).",
+  },
+  'structured-data-invalid': {
+    label: 'Données structurées invalides',
+    gloss: "Le balisage schema.org de la page contient des erreurs qui empêchent les moteurs de l'exploiter.",
+  },
+  'canonical-target-noindex': {
+    label: "L'URL canonique déclarée pointe vers une page exclue de l'indexation",
+    gloss: "La page désigne comme version de référence une page que les moteurs ont pour consigne de ne pas indexer.",
+  },
+  'crux-lcp-poor': {
+    label: 'Chargement du contenu principal jugé insuffisant par les visiteurs réels',
+    gloss: "Les données de terrain Chrome placent le LCP de ce site au-dessus du seuil « insuffisant » publié par Google.",
+  },
+  'crux-cls-poor': {
+    label: 'Stabilité visuelle jugée insuffisante par les visiteurs réels',
+    gloss: "Les données de terrain Chrome placent le CLS de ce site au-dessus du seuil « insuffisant » publié par Google.",
+  },
+  'crux-inp-poor': {
+    label: 'Réactivité jugée insuffisante par les visiteurs réels',
+    gloss: "Les données de terrain Chrome placent l'INP de ce site au-dessus du seuil « insuffisant » publié par Google.",
+  },
+  'link-text': {
+    label: "Le texte des liens n'est pas descriptif",
+    gloss: "Des liens utilisent un libellé générique (« cliquez ici », « en savoir plus ») qui n'indique pas leur destination.",
+  },
+  'scrollable-region-focusable': {
+    label: 'Une zone défilante ne peut pas recevoir le focus clavier',
+    gloss: "Un bloc à défilement ne peut pas être parcouru au clavier, ce qui en rend le contenu inatteignable sans souris.",
+  },
   'alt-text-quality-heuristic': {
     label: "Texte alternatif vide sur une image qui n'est peut-être pas décorative",
     gloss: 'Signal heuristique sur la qualité des textes alternatifs, pas un test de conformité déterministe.',

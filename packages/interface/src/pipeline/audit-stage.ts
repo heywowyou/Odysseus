@@ -34,6 +34,7 @@ import {
   type Finding,
   type ObligationAssessment,
   type SiteSignalOverrides,
+  normalizeRegistryDisplayName,
 } from '@odysseus/core';
 import { persistAudit, prefillAuditManualFields } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
@@ -153,6 +154,12 @@ export async function runAuditStage(
     );
 
     const findings = normalizeAudit({
+      // B2 (2026-08-24): collapses language-variant duplicates. Absent
+      // on manifests predating the field, which simply yields no
+      // collapsing - the behaviour before this existed.
+      ...(artifacts.manifest.translationClusters !== undefined
+        ? { translationClusters: artifacts.manifest.translationClusters }
+        : {}),
       auditId: artifacts.auditId,
       startedAt,
       pages: artifacts.pages,
@@ -193,13 +200,21 @@ export async function runAuditStage(
     // writeAuditArtifacts (write-audit.ts's deriveSiteName) from the
     // homepage's own head metadata, since Sirene frequently has no
     // commercial/brand name on file at all.
+    const normalisedRaisonSociale =
+      obligationAssessment.registrySnapshot?.denomination !== undefined
+        ? normalizeRegistryDisplayName(obligationAssessment.registrySnapshot.denomination)
+        : undefined;
+
     await prefillAuditManualFields(connection, artifacts.auditId, {
       ...(artifacts.manifest.siteSignals?.siteName !== undefined
         ? { nomCommercial: artifacts.manifest.siteSignals.siteName }
         : {}),
-      ...(obligationAssessment.registrySnapshot?.denomination !== undefined
-        ? { raisonSociale: obligationAssessment.registrySnapshot.denomination }
-        : {}),
+      // A2 (2026-08-24): normalised for display only. The legal-exposure
+      // section keeps reading registrySnapshot.denomination byte-exact,
+      // because its own copy claims the name is reproduced as Sirene
+      // holds it - see normalizeRegistryDisplayName's doc comment for
+      // why the two surfaces deliberately differ.
+      ...(normalisedRaisonSociale !== undefined ? { raisonSociale: normalisedRaisonSociale } : {}),
       ...(artifacts.manifest.siteSignals?.siren !== undefined
         ? { siren: artifacts.manifest.siteSignals.siren }
         : {}),

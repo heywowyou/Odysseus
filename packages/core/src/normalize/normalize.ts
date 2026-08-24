@@ -13,6 +13,7 @@
  * interfaces with zero adapter code.
  */
 
+import { buildCanonicalPageUrlMap, type TranslationCluster } from './translation-clusters.js';
 import {
   FINDINGS_SCHEMA_VERSION,
   MAX_ELEMENTS_PER_FINDING,
@@ -123,6 +124,14 @@ export interface NormalizeAuditInput {
    *  CruxFieldDataResult's doc comment (types/manifest.ts) for why this
    *  lives at the audit level rather than attached to any one page. */
   cruxFieldData?: CruxFieldDataCheckInput;
+  /** B2 (2026-08-24). Language-variant groups, built from the site's own
+   *  hreflang declarations (translation-clusters.ts). Optional so
+   *  offline re-normalization against a manifest predating this field
+   *  still works - it simply gets no collapsing, exactly the behaviour
+   *  before this change. Never affects what was scanned or what was
+   *  detected: purely which pages count as the same place when
+   *  collapsing duplicate findings. */
+  translationClusters?: readonly TranslationCluster[];
 }
 
 function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
@@ -258,9 +267,27 @@ function mergeGroup(
  * A fine group that is the only occupant of its coarse bucket (the common
  * case: one selector, one occurrence) or that already spans multiple
  * pages passes through with its original dedupeKey, unchanged.
+ *
+ * B2 (2026-08-24): "the same single page" is now judged after mapping
+ * each page onto its translation cluster's canonical URL. A real Haaitza
+ * audit had 182 of its 265 link-name findings each spanning exactly five
+ * pages, and those five were always the fr/en/it/es/pt-pt variants of one
+ * gallery page - one defect in one shared template, reported five times,
+ * which alone drove a 265-entry finding-id list and most of an 81-page
+ * report. Those groups are one page once the variants are recognised as
+ * one place, so this existing pass handles them with no second mechanism
+ * and no selector rewriting (which CLAUDE.md trade-off 3 rejected, for
+ * reasons that still hold - nothing here touches a selector).
+ *
+ * The merged Finding still carries every real page URL it was seen on:
+ * canonicalization decides grouping only, never what is recorded. On a
+ * monolingual site the map is empty and every page maps to itself, so the
+ * behaviour is byte-identical to before - confirmed against the real
+ * 23-page Palais Gallien scan, which produces the same 97 findings.
  */
 function aggregateSamePageOccurrences(
   fineGroups: Map<string, FindingCandidate[]>,
+  canonicalPageUrl: (pageUrl: string) => string,
 ): Map<string, FindingCandidate[]> {
   const coarseKeyByFineKey = new Map<string, string>();
   const fineKeysByCoarseKey = new Map<string, string[]>();
@@ -269,7 +296,7 @@ function aggregateSamePageOccurrences(
     const first = group[0];
     if (!first) continue;
 
-    const pageUrls = new Set(group.map((c) => c.pageUrl));
+    const pageUrls = new Set(group.map((c) => canonicalPageUrl(c.pageUrl)));
     if (pageUrls.size !== 1) continue;
 
     const coarseKey = `${first.source}|${first.ruleId}|${[...pageUrls][0]}`;
@@ -296,7 +323,11 @@ function aggregateSamePageOccurrences(
 
     const first = combined[0];
     if (!first) continue;
-    const pageUrl = [...new Set(combined.map((c) => c.pageUrl))][0] ?? '';
+    // The canonical URL, not an arbitrary variant, so the dedupeKey is
+    // stable across runs even if the crawl reaches the variants in a
+    // different order - cross-run identity for the monitoring tier is
+    // dedupeKey (CLAUDE.md trade-off 3).
+    const pageUrl = [...new Set(combined.map((c) => canonicalPageUrl(c.pageUrl)))][0] ?? '';
     const dedupeKey = computeDedupeKey(first.source, first.ruleId, pageUrl);
     result.set(dedupeKey, combined);
   }
@@ -323,7 +354,8 @@ export function normalizeAudit(input: NormalizeAuditInput): Finding[] {
     }
   }
 
-  const groups = aggregateSamePageOccurrences(fineGroups);
+  const canonicalByPageUrl = buildCanonicalPageUrlMap(input.translationClusters ?? []);
+  const groups = aggregateSamePageOccurrences(fineGroups, (pageUrl) => canonicalByPageUrl.get(pageUrl) ?? pageUrl);
 
   const merged = [...groups.entries()].map(([dedupeKey, group]) =>
     mergeGroup(input.auditId, dedupeKey, group, input.startedAt),

@@ -49,7 +49,15 @@ export const fr: ReportStrings = {
     // accessibilityOccurrences (already heuristic-excluded) traceable to
     // a third-party component.
     thirdPartyOccurrencesNoteTemplate:
-      "{percent} % de ces occurrences proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation) - voir la section « À traiter avec vos prestataires tiers ».",
+      // B6 (2026-08-24 three-site review): this used to say "voir la
+      // section « À traiter avec vos prestataires tiers »". That block is
+      // real, but it is a sub-heading inside the technical annex, not a
+      // numbered section, so it has no table-of-contents entry and no
+      // page number - in a real La Corniche report the reader was sent
+      // looking for a section that appeared nowhere in the contents, 55
+      // pages further on. Naming the numbered section that contains it is
+      // the difference between a reference and a dead end.
+      "{percent} % de ces occurrences proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation) - voir « À traiter avec vos prestataires tiers », dans l'annexe technique.",
     pagesWithCriticalTileLabel: 'pages avec au moins un constat critique',
     criticalTileLabel: 'critiques',
     seriousTileLabel: 'sérieux',
@@ -572,7 +580,7 @@ export const fr: ReportStrings = {
       'Une fois les priorités traitées, une vérification ciblée confirme que les constats corrigés le sont bien, sans relancer un audit complet.',
     authorshipTemplate:
       'Rapport produit par {producer}, généré le {date} (build {version}), identifiant de rapport {reportId}.',
-    issuerBlockTemplate: 'Signataire : {signatory}. SIRET : {siret}.',
+    issuerBlockTemplate: 'Signataire : {signatory}. SIREN : {registrationNumber}.',
     liabilityStatement:
       "Ce rapport reproduit des constats techniques détectés par des outils automatisés, accompagnés d'explications et de priorisations. Il ne constitue pas un avis juridique ; voir la section « Exposition légale » et la méthodologie pour les limites de couverture. Odysseus ne saurait être tenu responsable des décisions prises sur la seule base de ce document.",
   },

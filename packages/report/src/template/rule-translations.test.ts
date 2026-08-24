@@ -62,6 +62,24 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
+  // A5 (2026-08-24 three-site review): every fixture pinned above
+  // predates milestone 8.6, so all five security-header rules plus
+  // structured-data-invalid, canonical-target-noindex, crux-lcp-poor,
+  // link-text and scrollable-region-focusable leaked untranslated into
+  // three real client reports while this suite stayed green. These three
+  // 2026-08-22 scans are the ones that would have caught it. Pin a fresh
+  // scan here whenever a detection milestone adds rules, or this guard
+  // silently stops covering the newest half of the scanner.
+  it.each([
+    ['Palais Gallien 2026-08-22', '../../../../artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-22T16-31-02Z'],
+    ['haaitza.com 2026-08-22', '../../../../artifacts/haaitza.com/2026-08-22T22-07-44Z'],
+    ['La Corniche 2026-08-22', '../../../../artifacts/www.lacoorniche.com/2026-08-22T22-07-45Z'],
+  ])('every ruleId in the real %s fixture is covered', (_name, dir) => {
+    const findings = loadFindings(dir);
+    const missing = [...new Set(findings.map((f) => f.ruleId))].filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
+  });
+
   it('every entry has both a non-empty label and a non-empty gloss', () => {
     for (const [ruleId, translation] of Object.entries(RULE_TRANSLATIONS_FR)) {
       expect(translation.label.length, `${ruleId} has an empty label`).toBeGreaterThan(0);

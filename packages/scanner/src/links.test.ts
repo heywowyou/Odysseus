@@ -131,3 +131,33 @@ describe('globToRegExp', () => {
     expect(globToRegExp('/blog*').test('/blog/post-1')).toBe(true);
   });
 });
+
+/**
+ * B3 (2026-08-24 three-site review): verbatim from a real haaitza.com
+ * crawl, which spent eight slots on Popup Maker theme objects and then
+ * printed three of them to the client as example pages.
+ */
+describe('B3: non-public WordPress objects', () => {
+  it('drops a popup_theme query URL', () => {
+    expect(
+      normalizeInternalLinks(['/?post_type=popup_theme&p=1317'], 'https://haaitza.com/'),
+    ).toEqual([]);
+  });
+
+  it('drops the other confirmed internal post types', () => {
+    const hrefs = ['/?post_type=wp_block', '/?post_type=nav_menu_item&p=2', '/?post_type=revision'];
+    expect(normalizeInternalLinks(hrefs, 'https://haaitza.com/')).toEqual([]);
+  });
+
+  it('keeps an ordinary query URL, which is a real navigable page', () => {
+    expect(normalizeInternalLinks(['/blog?page=2'], 'https://haaitza.com/')).toEqual([
+      'https://haaitza.com/blog?page=2',
+    ]);
+  });
+
+  it('keeps a public custom post type', () => {
+    expect(normalizeInternalLinks(['/?post_type=chambre&p=12'], 'https://haaitza.com/')).toEqual([
+      'https://haaitza.com/?post_type=chambre&p=12',
+    ]);
+  });
+});

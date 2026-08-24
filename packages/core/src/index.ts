@@ -18,6 +18,8 @@ export * from './compliance/siren.js';
 export * from './compliance/regimes.js';
 export * from './compliance/assessObligations.js';
 export * from './compliance/enforcement-facts.js';
+export * from './compliance/registry-name.js';
+export * from './normalize/translation-clusters.js';
 export * from './reference-stats/types.js';
 export * from './reference-stats/stats.js';
 export * from './reference-stats/sector.js';

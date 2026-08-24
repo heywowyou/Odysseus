@@ -8,7 +8,7 @@ import {
 } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatFindingIdLinks, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { escapeHtml, escapeProse, fillTemplate, formatCappedFindingIdLinks, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
@@ -260,7 +260,7 @@ function renderTheme(
         <div style="margin-top:4px">
           <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.recommendedActionsLabel)}</div>
           <ul style="margin:0;padding-left:1.2em;font-size:12.5px;opacity:0.9">
-            ${theme.recommendedActions.map((action) => `<li>${escapeHtml(action)}</li>`).join('')}
+            ${theme.recommendedActions.map((action) => `<li>${escapeProse(action)}</li>`).join('')}
           </ul>
         </div>
       `
@@ -281,10 +281,10 @@ function renderTheme(
             ${categoryTag}
             ${quickWinBadge}
           </div>
-          <div class="card-title">${escapeHtml(theme.title)}</div>
+          <div class="card-title">${escapeProse(theme.title)}</div>
         </div>
       </div>
-      <p class="card-body" style="opacity:0.9">${escapeHtml(theme.businessImpact)}</p>
+      <p class="card-body" style="opacity:0.9">${escapeProse(theme.businessImpact)}</p>
       ${legalBox}
       ${citationBox}
       ${recommendedActionsBox}
@@ -294,7 +294,7 @@ function renderTheme(
         <span class="text-muted">${escapeHtml(t.impactLabel)} : <strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
         <span class="text-muted">${escapeHtml(t.affectedPagesLabel)} : <strong style="color:var(--color-text)">${escapeHtml(pagesText)}</strong></span>
         <span class="text-muted">${escapeHtml(t.conformityLabel)} : <strong style="color:${isNonConformant ? SEVERITY.critical.color : 'var(--color-neutral-500)'}">${escapeHtml(conformityValue)}</strong>${!isNonConformant && showConformityGloss ? ` <span style="font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</span>
-        <span class="text-muted">${escapeHtml(t.refsLabel)} : ${formatFindingIdLinks(theme.findingIds)}</span>
+        <span class="text-muted">${escapeHtml(t.refsLabel)} : ${formatCappedFindingIdLinks(theme.findingIds, language, strings.findingsAppendix.andNMoreTemplate)}</span>
       </div>
     </div>
   `;

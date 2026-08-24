@@ -1,3 +1,4 @@
+import { buildClusterLookup, groupPageUrlsByTranslation, type ClusterLookup } from '../page-url-groups.js';
 import type { AuditManifest, Finding, FindingCategory, ReportLanguage, StatSector } from '@odysseus/core';
 import { selectReferenceStats } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
@@ -98,6 +99,10 @@ function renderPageUrlList(
    *  the first finding to have a given set, or when this finding's set is
    *  unique within the group. */
   samePagesAsFindingId: string | undefined,
+  /** B2: translation clusters read off the manifest, so five language
+   *  variants of one page print as one URL plus its language list rather
+   *  than five near-identical URLs that consume the whole cap. */
+  clusterLookup: ClusterLookup,
 ): string {
   if (finding.pageUrls.length === 0) return '';
   const a = strings.findingsAppendix;
@@ -106,15 +111,22 @@ function renderPageUrlList(
   if (samePagesAsFindingId !== undefined) {
     urlsText = fillTemplate(a.samePagesAsTemplate, { findingId: samePagesAsFindingId });
   } else {
-    const sortedUrls = [...finding.pageUrls].sort();
-    if (totalPagesScanned > 0 && sortedUrls.length === totalPagesScanned) {
+    const groups = groupPageUrlsByTranslation(finding.pageUrls, clusterLookup);
+    const entries = groups.map((group) =>
+      group.languages.length > 0
+        ? `${group.pageUrl} (${group.languages.join(', ')})`
+        : group.pageUrl,
+    );
+    // The "all pages" collapse still compares raw page counts: the claim
+    // is about the crawl's own scope, which is counted in real pages.
+    if (totalPagesScanned > 0 && finding.pageUrls.length === totalPagesScanned) {
       urlsText = fillTemplate(a.allPagesAnalyzedTemplate, { count: formatNumber(totalPagesScanned, language) });
-    } else if (sortedUrls.length > PAGE_URL_LIST_CAP) {
-      const shown = sortedUrls.slice(0, PAGE_URL_LIST_CAP);
-      const remaining = sortedUrls.length - PAGE_URL_LIST_CAP;
+    } else if (entries.length > PAGE_URL_LIST_CAP) {
+      const shown = entries.slice(0, PAGE_URL_LIST_CAP);
+      const remaining = entries.length - PAGE_URL_LIST_CAP;
       urlsText = `${shown.join(', ')} ${fillTemplate(a.andNMoreTemplate, { count: formatNumber(remaining, language) })}`;
     } else {
-      urlsText = sortedUrls.join(', ');
+      urlsText = entries.join(', ');
     }
   }
 
@@ -164,6 +176,7 @@ function renderSubTableRow(
   finding: Finding,
   totalPagesScanned: number,
   samePagesAsFindingId: string | undefined,
+  clusterLookup: ClusterLookup,
 ): string {
   const selector = finding.elements[0]?.selector ?? '';
   return `
@@ -173,7 +186,7 @@ function renderSubTableRow(
       ${cell(formatNumber(finding.occurrences, language))}
       ${cell(escapeHtml(selector), selectorCellStyle(selector))}
     </tr>
-    ${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId)}
+    ${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup)}
   `;
 }
 
@@ -187,6 +200,7 @@ function renderRuleGroup(
    *  name when detectFindingVendor found one consistently across the
    *  group, or a generic "unidentified vendor" label for a frame-
    *  crossing selector matching none of the known prefixes. */
+  clusterLookup: ClusterLookup,
   vendorLabel?: string,
 ): string {
   const a = strings.findingsAppendix;
@@ -224,7 +238,7 @@ function renderRuleGroup(
       if (signature !== undefined && samePagesAsFindingId === undefined) {
         seenPageUrlSignatures.set(signature, finding.findingId);
       }
-      return renderSubTableRow(strings, language, finding, totalPagesScanned, samePagesAsFindingId);
+      return renderSubTableRow(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup);
     })
     .join('');
   const obsTag = isFullyDiverted
@@ -332,6 +346,7 @@ function renderThirdPartySection(
   thirdPartyFindings: Finding[],
   missingPercentByUrl: ReadonlyMap<string, number>,
   totalPagesScanned: number,
+  clusterLookup: ClusterLookup,
 ): string {
   if (thirdPartyFindings.length === 0) return '';
 
@@ -341,7 +356,7 @@ function renderThirdPartySection(
       const isFullyDiverted = group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null);
       const vendors = new Set(group.findings.map((f) => detectFindingVendor(f) ?? strings.findingsAppendix.unknownVendorLabel));
       const vendorLabel = vendors.size === 1 ? [...vendors][0] : strings.findingsAppendix.unknownVendorLabel;
-      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned, vendorLabel);
+      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned, clusterLookup, vendorLabel);
     })
     .join('');
 
@@ -364,6 +379,7 @@ function renderCategorySection(
   sector: StatSector,
   citedStatIds: Set<string>,
   totalPagesScanned: number,
+  clusterLookup: ClusterLookup,
 ): string {
   if (categoryFindings.length === 0) return '';
 
@@ -374,7 +390,7 @@ function renderCategorySection(
   const groupBlocks = groups
     .map((group) => {
       const isFullyDiverted = group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null);
-      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned);
+      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned, clusterLookup);
     })
     .join('');
   // item 40: a travel-industry AI-usage statistic (Phocuswright, 56%)
@@ -422,6 +438,7 @@ export function renderFindingsAppendix(
   citedStatIds: Set<string> = new Set(),
 ): string {
   const missingPercentByUrl = buildMissingPercentIndex(manifest);
+  const clusterLookup = buildClusterLookup(manifest);
 
   // item 29: the list of crawled URLs was never printed anywhere - the
   // client had no way to verify the scope they paid for beyond a bare
@@ -443,9 +460,9 @@ export function renderFindingsAppendix(
 
   const sections = CATEGORY_ORDER.map((category) => {
     const categoryFindings = firstPartyFindings.filter((finding) => finding.category === category);
-    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds, crawledPages.length);
+    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds, crawledPages.length, clusterLookup);
   }).join('');
-  const thirdPartySection = renderThirdPartySection(strings, language, thirdPartyFindings, missingPercentByUrl, crawledPages.length);
+  const thirdPartySection = renderThirdPartySection(strings, language, thirdPartyFindings, missingPercentByUrl, crawledPages.length, clusterLookup);
 
   // item D8 (P4): each category heading used its own colour with nothing
   // stating what the four colours mean - a reader had to notice the

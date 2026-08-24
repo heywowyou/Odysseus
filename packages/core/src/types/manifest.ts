@@ -11,6 +11,7 @@
 
 import { FINDINGS_SCHEMA_VERSION } from './findings.js';
 import type { SiteSignals } from './compliance.js';
+import type { TranslationCluster } from '../normalize/translation-clusters.js';
 
 export type ManifestKind = 'audit' | 'render-diff';
 
@@ -228,4 +229,13 @@ export interface AuditManifest {
    *  Both must render the same way in a report (no real-user data
    *  shown); the distinction only matters for our own debugging. */
   cruxFieldData?: CruxFieldDataResult;
+  /** B2 (2026-08-24). Language-variant groups derived from the pages'
+   *  own hreflang declarations at scan time, so `normalize <dir>` can
+   *  re-run offline against a stored artifacts folder and reach the same
+   *  grouping without re-reading every page's head metadata. Optional:
+   *  absent on manifests predating this field, and empty on a site that
+   *  declares no alternates - both mean "no page is a translation of any
+   *  other", which is the correct answer for a monolingual site and the
+   *  behaviour that shipped before this existed. */
+  translationClusters?: TranslationCluster[];
 }

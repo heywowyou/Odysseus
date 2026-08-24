@@ -45,6 +45,12 @@ export function registerNormalizeCommand(program: Command): void {
         const pages = await readPageInputs(resolvedDir);
 
         const findings = normalizeAudit({
+          // B2 (2026-08-24): collapses language-variant duplicates. Absent
+          // on manifests predating the field, which simply yields no
+          // collapsing - the behaviour before this existed.
+          ...(manifest.translationClusters !== undefined
+            ? { translationClusters: manifest.translationClusters }
+            : {}),
           auditId: manifest.auditId,
           startedAt: new Date(manifest.startedAt),
           pages,

@@ -1,7 +1,7 @@
 import type { AuditManifest, Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { escapeHtml, escapeProse, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { computeStatistics } from '../statistics.js';
 import { selectRenderedThemes } from './themes.js';
 
@@ -74,7 +74,7 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
       return `
         <a href="#theme-${theme.priorityRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:8px 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
           <span style="width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:11px;display:flex;align-items:center;justify-content:center">${theme.priorityRank}</span>
-          <span style="font-size:14px;flex:1">${escapeHtml(theme.title)}</span>
+          <span style="font-size:14px;flex:1">${escapeProse(theme.title)}</span>
           <span style="font-size:11px;color:var(--color-accent-300);text-decoration:underline">${escapeHtml(jumpLinkLabel)}</span>
         </a>
       `;
@@ -150,7 +150,7 @@ export function renderExecutiveSummary(
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   return sheet(`
     ${renderSheetHeader(ordinal, e.eyebrow, e.heading)}
-    <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(countsSentence)} ${escapeHtml(analysis.executiveSummary)}</p>
+    <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(countsSentence)} ${escapeProse(analysis.executiveSummary)}</p>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
     ${renderThirdPartySplitNote(strings, stats)}
     ${renderCategoryImbalanceNote(strings, stats)}

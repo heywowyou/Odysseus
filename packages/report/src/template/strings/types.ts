@@ -646,12 +646,13 @@ export interface ReportStrings {
      *  paid deliverable that may be forwarded to counsel. Template:
      *  {producer}, {date}, {version}, {reportId}. */
     authorshipTemplate: string;
-    /** item 3.13: no issuer identity (legal entity, signatory, SIRET)
-     *  anywhere in the document - a professionalism and liability-
-     *  exposure gap for a EUR 1,600 HT French deliverable. Template:
-     *  {signatory}, {siret}. {siret} is a genuine placeholder
-     *  (ODYSSEUS_SIRET_PLACEHOLDER, html-utils.ts), rendered so it reads
-     *  as visibly incomplete rather than a plausible fake number. */
+    /** item 3.13: no issuer identity (legal entity, signatory,
+     *  registration number) anywhere in the document - a professionalism
+     *  and liability-exposure gap for a EUR 1,600 HT French deliverable.
+     *  Template: {signatory}, {registrationNumber}. A3 (2026-08-24): the
+     *  placeholder is filled and the label says SIREN, because the real
+     *  number is nine digits - see ODYSSEUS_REGISTRATION_NUMBER
+     *  (html-utils.ts) for why the label moved rather than the number. */
     issuerBlockTemplate: string;
     liabilityStatement: string;
   };
