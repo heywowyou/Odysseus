@@ -16,7 +16,14 @@ vi.mock('@odysseus/scanner', () => ({
   getPageTimeoutMs: vi.fn(() => 30_000),
   getScanConcurrency: vi.fn(() => 3),
 }));
-vi.mock('@odysseus/core', () => ({ normalizeAudit: vi.fn() }));
+// normalizeRegistryDisplayName is a pure string function with its own
+// unit tests; stubbing it would only let this test pass against a
+// display name the real cover would never render. importOriginal keeps
+// the real one while normalizeAudit stays a spy.
+vi.mock('@odysseus/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@odysseus/core')>()),
+  normalizeAudit: vi.fn(),
+}));
 vi.mock('@odysseus/store', () => ({ persistAudit: vi.fn(), prefillAuditManualFields: vi.fn() }));
 vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 
@@ -215,9 +222,15 @@ describe('runAuditStage', () => {
 
     await runAuditStage('https://example.com/', {}, fakeConnection);
 
+    // A2 (2026-08-24): Sirene returns "(O! DE LA DUNE" with an unbalanced
+    // opening parenthesis, which reached a real report cover verbatim.
+    // The prefilled display name is normalised; the legal-exposure
+    // section keeps reading registrySnapshot.denomination byte-exact,
+    // because its own copy claims the name is reproduced as the registry
+    // holds it.
     expect(prefillAuditManualFields).toHaveBeenCalledWith(fakeConnection, 'audit-123', {
       nomCommercial: 'La Co(o)rniche',
-      raisonSociale: '(O! DE LA DUNE',
+      raisonSociale: 'O! DE LA DUNE',
       siren: '732829320',
     });
   });

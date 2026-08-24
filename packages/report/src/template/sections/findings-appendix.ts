@@ -53,6 +53,18 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
 // vanished with no error). Real `<tr>` elements are Paged.js's
 // well-supported, standard fragmentation unit and do not carry this
 // risk.
+/** 2026-08-24: table-layout:fixed is load-bearing, not cosmetic. With the
+ *  default auto layout the headCell widths below are only hints, and
+ *  Paged.js recomputes them per fragment: a rule group split across a page
+ *  break got a narrower first column on the continuation page, squeezed by
+ *  that fragment's own longest selector, and that cell's
+ *  overflow-wrap:anywhere then broke "f052" across two lines as "f05" /
+ *  "2" from page 20 of a real 29-page PDF onwards. Fixed layout makes every
+ *  fragment lay out identically; the first cell is additionally nowrap so
+ *  an id can never break mid-token even if a future change squeezes it
+ *  again. */
+const APPENDIX_TABLE_STYLE = 'width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px';
+
 function headCell(label: string, width: string): string {
   return `<th style="width:${width};padding:6px var(--space-2);font-size:10px;letter-spacing:0.02em;text-transform:uppercase;text-align:left;font-weight:400;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider);white-space:nowrap">${escapeHtml(label)}</th>`;
 }
@@ -181,7 +193,7 @@ function renderSubTableRow(
   const selector = finding.elements[0]?.selector ?? '';
   return `
     <tr id="annexref-${escapeHtml(finding.findingId)}">
-      ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none')}
+      ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;white-space:nowrap')}
       ${cell(formatNumber(finding.pageUrls.length, language))}
       ${cell(formatNumber(finding.occurrences, language))}
       ${cell(escapeHtml(selector), selectorCellStyle(selector))}
@@ -286,7 +298,7 @@ function renderRuleGroup(
         ${vendorTag}
         <span style="font-size:11px;opacity:0.6">${renderRuleSum(strings, language, group)}</span>
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <table style="${APPENDIX_TABLE_STYLE}">
         <thead>
           <tr>
             ${headCell(a.findingIdColumnLabel, '80px')}
