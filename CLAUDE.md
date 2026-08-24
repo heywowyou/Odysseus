@@ -934,6 +934,111 @@ needed, say so and stop. Do not change them and continue.
     screenshot becomes an outreach email's hero image is a 9c decision,
     not this milestone's.
 
+24. **Language variants of one page are collapsed into a single finding,
+    using the site's own hreflang declarations and nothing else**, added
+    2026-08-24 during a three-site client-eye report review. A real
+    haaitza.com audit reported the same missing gallery link text five
+    times, once per language variant of one page; 182 of its 265
+    `link-name` findings had exactly that shape, and the reader had no way
+    to tell one defect on one template from five separate defects.
+    `packages/core/src/normalize/translation-clusters.ts` builds clusters
+    with a disjoint set over each page's `hreflangLinks`, and
+    `aggregateSamePageOccurrences` (trade-off 3's second pass) then takes
+    a `canonicalPageUrl` mapper so the existing same-page collapse does
+    the actual work. No selector rewriting, no third dedupe pass, no
+    change to `computeDedupeKey`: trade-off 3's two passes stay two
+    passes, and cross-run identity for the monitoring tier is unaffected.
+
+    Two gates exist because the naive transitive union was catastrophically
+    wrong on real data, not theoretically wrong. The first implementation
+    produced one 55-member La Corniche "cluster" holding ten genuinely
+    different room pages. Root cause, found by reading raw `scan.json`
+    rather than by reasoning about it: every `/en/room/*` page on that site
+    copies the rooms *listing* page's hreflang block verbatim, so each room
+    declares that its English version is some other room's URL. Gate one
+    (self-inclusion) only counts a declaration when one of its own
+    hreflang hrefs resolves back to the declaring page; gate two (one URL
+    per language) rejects an entire declared set that claims two URLs for
+    one language. Cluster sizes then capped at exactly 5, the real number
+    of languages the site publishes. URL-prefix guessing (`/en/x` matches
+    `/x`) was considered as a fallback for sites with no hreflang at all
+    and deliberately rejected: it invents a relationship the site never
+    declared, which is the same class of unchecked claim rule 1 forbids.
+    A site with no hreflang simply gets no clustering, and every page
+    stays its own singleton cluster - a no-op, proven by a real
+    monolingual scan (Palais Gallien) whose findings came back
+    byte-identical.
+
+    Clusters are computed once in `write-audit.ts` and recorded on the
+    manifest rather than recomputed by each consumer, since `packages/
+    report` needs the same grouping to print
+    `url (fr, en, es, it, pt-pt)` instead of five near-identical URLs.
+    `normalize <dir>` rebuilds them from stored head metadata when a
+    manifest predates the field and writes them back, so a stored audit
+    gets today's rules offline without being re-scanned - the whole
+    promise of that command. Measured effect on the three review scans:
+    haaitza 572 to 305 findings and 81 to 60 report pages, La Corniche
+    929 to 650, Palais Gallien unchanged.
+
+25. **`FindingCategory` gained a `privacy` value**, 2026-08-24, an
+    explicitly approved change to the locked `findings.ts` contract, not
+    a silent one. Milestone 8.6's security response headers had been
+    filed under `seo` for want of a better home (trade-off 18), which
+    mislabels them to a client reading the report by section. The new
+    cookie/tracker consent checks below needed the same home. One value
+    covers both rather than separate `security` and `privacy` values: to
+    the SMB reading the report they are one concern ("what leaves my site
+    and who sees it"), and splitting them would put a missing
+    `Referrer-Policy` in a different section from a tracker firing before
+    consent when they are the same story. Purely additive; nothing was
+    removed or renamed. `design-tokens.ts` gained a matching
+    `CATEGORY.privacy` and a `CATEGORY_ORDER` slot, so it renders rather
+    than repeating trade-off 14's "detected but silently unrendered" gap.
+
+    The new axe fixture this added immediately surfaced a real,
+    pre-existing WCAG 1.4.3 failure at 3.2:1 in
+    `reference-stat-note.ts`: an "emerging research" badge nested inside
+    a `opacity:0.6` wrapper, which composites the whole subtree including
+    the badge's own background, so no child rule can undo it. Same defect
+    class as trade-off 20's nested-opacity contrast bug. Fixed by
+    replacing the wrapper opacity with the existing `.text-muted` idiom on
+    label text only; the rest of the template was swept for the same
+    pattern and every other site clears 4.5:1.
+
+26. **Six detection checks added from the same three-site review (C1,
+    C3-C7), 2026-08-24.** Cookie and tracker consent
+    (`checks/cookie-consent.ts`, a fresh `browser.newContext()` so no
+    stored state carries over), WCAG 1.4.10 reflow at a 320 CSS px
+    viewport (`checks/reflow.ts`), accessibility-statement presence
+    (`checks/accessibility-statement.ts`), a third-party origin inventory
+    (folded into the cookie check's own network recording rather than a
+    second page load), NAP consistency between JSON-LD and visible text
+    (`checks/nap-consistency.ts`), and HTML structural validity
+    (`checks/html-validity.ts`, the newly approved `html-validate`
+    dependency). All six use `source: 'custom'` and the existing
+    dedupe/severity machinery, same posture as trade-off 18.
+
+    Three scoping decisions worth not re-litigating. `html-validate` runs
+    an explicit `ALLOWED_RULES` allowlist (structural rules only: dup ids,
+    close order, permitted content/parent/occurrences, void content) and
+    excludes every `wcag/*` rule, because axe already scans those against
+    the same page and enabling both would recreate exactly the duplicate-
+    finding problem trade-off 1 documents for Lighthouse. NAP consistency
+    deliberately compares only phone numbers and postal codes, never
+    street names: street-name variation ("av." vs "avenue") is a
+    formatting difference, not an inconsistency, and reporting it would
+    train a client to ignore the check. The accessibility-statement path
+    pattern was narrowed after a real match on `/chambres-accessibles/` -
+    a hotel's accessible-rooms page is not a WCAG conformance statement.
+
+    Verified against a live authorized re-scan (Palais Gallien, 20 pages)
+    rather than the fixture alone, per this file's own build-order rule.
+    The most useful result was a negative one: the site runs a real CMP
+    and the check correctly found zero non-essential cookies and zero
+    tracker requests before consent, with Cloudflare's `_cfuvid`
+    correctly classed as essential. A consent check that fires on every
+    site is worthless; that true negative is the evidence it does not.
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
