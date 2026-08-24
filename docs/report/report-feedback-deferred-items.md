@@ -201,3 +201,53 @@ morale, cumulable (art. R451-4 du code de la consommation)." Confirmed
 both via `pdftotext` and a rendered screenshot of the page. Not an open
 item; noted here only so a future session does not re-investigate the
 same non-bug.
+
+
+## Closed: SCAN_CONCURRENCY does not inflate Lighthouse's lab LCP
+
+2026-08-24 (A11). Trade-off 20 left this genuinely open: a real La
+Corniche report showed lab-measured LCP median 33.2s directly above
+real-user CrUX LCP 4.1s, and one hypothesis was that running Lighthouse
+across `SCAN_CONCURRENCY` lanes still contends for host CPU against the
+throttled simulation, despite the serialization queue trade-off 10
+describes. That session could not test it, because confirming it on a
+live site would have needed two authorized scans of `lacoorniche.com`
+and only one was authorized. Re-scanning a live third-party site for a
+diagnostic nobody asked for is exactly what the politeness rule exists to
+prevent.
+
+The *mechanism* needs no live site at all. Tested against
+`fixtures/spa-demo` served by `vite preview`, six full scans, three at
+`SCAN_CONCURRENCY=1` and three at `SCAN_CONCURRENCY=3`, four pages each,
+comparing Lighthouse's own `largest-contentful-paint` numericValue.
+
+| | n (page measurements) | LCP median | LCP mean | min | max |
+|---|---|---|---|---|---|
+| `SCAN_CONCURRENCY=1` | 9 | 1402 ms | 1405 ms | 1353 | 1465 |
+| `SCAN_CONCURRENCY=3` | 9 | 1403 ms | 1393 ms | 1353 | 1443 |
+
+Per-URL medians: 0.95, 1.04, 1.00 (c3/c1). The two arms are
+indistinguishable, and the spread within each arm is larger than the
+difference between them. TBT was 0 ms throughout.
+
+**Conclusion: not supported.** Lane concurrency is not what produced the
+33.2s figure, and the existing Lighthouse serialization queue is doing
+its job. Do not remove that queue on the strength of this result - the
+collision it guards against is a `perf_hooks` mark collision, a different
+failure entirely (trade-off 10), and this experiment says nothing about
+it.
+
+**What this does not rule out.** The fixture is three trivial local pages
+with no real CPU work, so LCP here is dominated by Lighthouse's simulated
+throttling rather than by host contention. A heavy real site doing real
+main-thread work could still contend in a way this cannot show. What the
+result does establish is that lane concurrency has no *inherent*
+inflating effect, which was the specific claim on the table. The
+remaining explanation for a 33.2s lab figure is the ordinary one already
+disclosed to the client: a deliberately harsh single-run mobile
+simulation against a heavy site, which is what
+`core-web-vitals-table.ts`'s reconciliation note (trade-off 20) exists to
+say.
+
+Raw logs and the analysis script are session-scratch only, not committed;
+the numbers above are the result.
