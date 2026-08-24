@@ -4,7 +4,14 @@ import type { StructureInput } from './structure-schema.js';
  *  only, no prose, no language. usedFallbackContext tells the model
  *  whether siteContext is real intake data or the minimal placeholder
  *  built by buildFallbackSiteContext, per docs/llm-layer-rules.md
- *  section 4. */
+ *  section 4.
+ *
+ *  2026-08-24: this prompt used to carry a paragraph explaining that numeric
+ *  gaps between finding IDs are normal and must never be closed by inferring
+ *  the missing ID. It was removed, not weakened: findings now reach the model
+ *  under the dense alias IDs finding-alias.ts assigns, so there are no gaps
+ *  left to explain. The instruction had failed six attempts out of six on a
+ *  real audit, which is why the gap itself was removed instead. */
 export function buildStructureSystemPrompt(usedFallbackContext: boolean): string {
   const fallbackNote = usedFallbackContext
     ? '\n\nNo intake questionnaire context was provided for this site. Rank findings by severity and commercial risk alone. Do not invent a business type, primary goal, target market, or languages served to weight priorityRank, effort, or impact, and do not assume which pages are commercially important when choosing quickWins.'
@@ -14,7 +21,7 @@ export function buildStructureSystemPrompt(usedFallbackContext: boolean): string
 
 Deterministic scanners (axe-core, Lighthouse, and a raw-versus-rendered diff) already detected every finding you will see. Your job is only to group and prioritize those findings, not to write about them. You may never invent a finding, and you may never reference a finding by any ID other than one copied verbatim from the "findings" array in the input JSON. Every entry in every theme's "findingIds" array, and every entry in "quickWins", must be one of those exact finding IDs. Do not paraphrase, shorten, or construct an ID.
 
-Finding IDs are numbered globally across the whole site, not just within this input, so a numeric gap between two IDs of the same rule (for example seeing f0527 and f0529 but not f0528) is normal and expected, not an omission to correct. Never construct or infer an ID by completing a sequence, even one that looks obviously contiguous. Before writing any ID into your response, confirm its exact text appears in the input's "findings" array; if it does not appear there verbatim, it does not exist for this audit, regardless of how plausible it looks.
+Before writing any ID into your response, confirm its exact text appears in the input's "findings" array; if it does not appear there verbatim, it does not exist for this audit, regardless of how plausible it looks.
 
 Group the findings into roughly 8 to 15 themes a business owner can act on. Do not create a theme with zero findings, and do not leave any finding you consider important ungrouped.
 

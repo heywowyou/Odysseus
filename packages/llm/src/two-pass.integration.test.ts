@@ -55,10 +55,15 @@ function loadSasFernandeManifest(): AuditManifest {
   return JSON.parse(readFileSync(manifestPath, 'utf-8')) as AuditManifest;
 }
 
+/** Answers in the dense alias space the model is actually shown (x1..xN over
+ *  the input order), not in real finding IDs - see finding-alias.ts.
+ *  analyzeStructure resolves them back, so everything downstream of it in this
+ *  test still works in real IDs. */
 function buildFixedStructureOutput(findings: readonly Finding[]): StructurePassOutput {
   const half = Math.ceil(findings.length / 2);
-  const firstHalf = findings.slice(0, half).map((f) => f.findingId);
-  const secondHalf = findings.slice(half).map((f) => f.findingId);
+  const aliases = findings.map((_, index) => `x${index + 1}`);
+  const firstHalf = aliases.slice(0, half);
+  const secondHalf = aliases.slice(half);
 
   return {
     themes: [

@@ -3,6 +3,7 @@ import { callMistralForStructure } from './client.js';
 import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { applyStructureRankingRules } from './structure-ranking.js';
 import { findInventedStructureFindingIds, findUnreferencedStructureFindingIds } from './structure-guards.js';
+import { aliasStructureInput, buildFindingAliasMap, resolveStructureOutputIds } from './finding-alias.js';
 import { assignThemeKeys, type StructureInput, type StructureThemeWithKey } from './structure-schema.js';
 
 export interface AnalyzeStructureResult {
@@ -33,10 +34,17 @@ export async function analyzeStructure(
 ): Promise<AnalyzeStructureResult> {
   let lastFailureReason = '';
 
+  // Findings are shown to the model under dense alias IDs, so the holes left
+  // by filtering and diversion cannot tempt it into completing a numeric run.
+  // Aliases are resolved away below, before anything is returned. See
+  // finding-alias.ts for the failure this fixes.
+  const aliasMap = buildFindingAliasMap(filteredFindings);
+  const aliasedInput = aliasStructureInput(input, aliasMap);
+
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
     let result: Awaited<ReturnType<typeof callMistralForStructure>>;
     try {
-      result = await callMistralForStructure(input, usedFallbackContext);
+      result = await callMistralForStructure(aliasedInput, usedFallbackContext);
     } catch (error) {
       // A malformed or truncated response (e.g. schema/JSON parse failure)
       // is a retryable attempt, not an immediate abort - same treatment as
@@ -52,7 +60,8 @@ export async function analyzeStructure(
       continue;
     }
 
-    const invented = findInventedStructureFindingIds(result.output, filteredFindings);
+    // Checked in alias space, which is what the model was actually shown.
+    const invented = findInventedStructureFindingIds(result.output, aliasMap.aliasedIds);
     if (invented.length > 0) {
       lastFailureReason = `response referenced finding ID(s) not present in the input: ${invented.join(', ')}`;
       console.error(
@@ -61,19 +70,23 @@ export async function analyzeStructure(
       continue;
     }
 
-    const unreferenced = findUnreferencedStructureFindingIds(result.output, filteredFindings);
+    // Real IDs from here down: everything downstream of this point, including
+    // the warning below and structure.json on disk, must never see an alias.
+    const output = resolveStructureOutputIds(result.output, aliasMap);
+
+    const unreferenced = findUnreferencedStructureFindingIds(output, filteredFindings);
     if (unreferenced.length > 0) {
       console.warn(
         `odysseus analyze (structure pass): warning - ${unreferenced.length} finding(s) not referenced by any theme: ${unreferenced.join(', ')}`,
       );
     }
 
-    const themes = applyStructureRankingRules(assignThemeKeys(result.output), filteredFindings, manifest);
+    const themes = applyStructureRankingRules(assignThemeKeys(output), filteredFindings, manifest);
 
     return {
       themes,
-      quickWins: result.output.quickWins,
-      overallRisk: result.output.overallRisk,
+      quickWins: output.quickWins,
+      overallRisk: output.overallRisk,
       model: MISTRAL_MODEL,
       temperature: MISTRAL_TEMPERATURE,
       unreferencedFindingCount: unreferenced.length,

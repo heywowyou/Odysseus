@@ -103,6 +103,11 @@ const input: StructureInput = {
   })),
 };
 
+/** The model answers in the dense alias space finding-alias.ts puts in front
+ *  of it (x1..xN over the input order), not in real finding IDs - a response
+ *  quoting f1 would be an ID it was never shown. analyzeStructure resolves
+ *  those aliases back before returning, which is what the assertions below
+ *  check. */
 function buildCleanOutput(): StructurePassOutput {
   return {
     themes: [
@@ -111,10 +116,10 @@ function buildCleanOutput(): StructurePassOutput {
         effort: 'low',
         impact: 'high',
         priorityRank: 1,
-        findingIds: ['f1', 'f2'],
+        findingIds: ['x1', 'x2'],
       },
     ],
-    quickWins: ['f1'],
+    quickWins: ['x1'],
     overallRisk: 'medium',
   };
 }
@@ -140,6 +145,30 @@ describe('analyzeStructure', () => {
     expect(result.temperature).toBe(MISTRAL_TEMPERATURE);
     expect(result.unreferencedFindingCount).toBe(0);
     expect(callMistralForStructure).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the model aliases, never the real finding IDs', async () => {
+    vi.mocked(callMistralForStructure).mockReset().mockResolvedValueOnce({ output: buildCleanOutput() });
+
+    await analyzeStructure(input, filteredFindings, false, manifest);
+
+    const sent = vi.mocked(callMistralForStructure).mock.calls[0]?.[0];
+    expect(sent?.findings.map((f) => f.findingId)).toEqual(['x1', 'x2']);
+    expect(JSON.stringify(sent)).not.toContain('"f1"');
+  });
+
+  it('rejects a real finding ID in the response, because the model was never shown one', async () => {
+    const realIdOutput = buildCleanOutput();
+    realIdOutput.themes[0]!.findingIds = ['f1', 'f2'];
+    vi.mocked(callMistralForStructure)
+      .mockReset()
+      .mockResolvedValueOnce({ output: realIdOutput })
+      .mockResolvedValueOnce({ output: buildCleanOutput() });
+
+    const result = await analyzeStructure(input, filteredFindings, false, manifest);
+
+    expect(result.themes[0]!.findingIds).toEqual(['f1', 'f2']);
+    expect(callMistralForStructure).toHaveBeenCalledTimes(2);
   });
 
   it('retries once when the first response invents a finding ID, then succeeds', async () => {
