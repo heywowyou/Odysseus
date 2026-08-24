@@ -32,7 +32,7 @@ function candidate(ruleId: string, title: string, description: string, pageUrl: 
   return {
     source: 'custom',
     ruleId,
-    category: 'seo',
+    category: 'privacy',
     severity: severityFromCustom(ruleId),
     wcagCriteria: [],
     title,

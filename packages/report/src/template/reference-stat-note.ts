@@ -13,6 +13,18 @@ import { SEVERITY } from './design-tokens.js';
  * The "emerging" badge reuses SEVERITY.serious's warm-tone color pair
  * from design-tokens.ts rather than inventing a new one, same "reuse an
  * existing token" reasoning as design-tokens.ts's own geo entry.
+ *
+ * 2026-08-24: these three lines used `opacity:0.6`, which composites the
+ * whole subtree - so the badge's background was dimmed along with the
+ * paragraph's text and #dba36c on #362a1c fell from 6.29:1 to a real
+ * 3.2:1 axe contrast failure. Opacity cannot be undone by a child, so
+ * the fix is not to brighten the badge but to stop using opacity here:
+ * `.text-muted` (nocturne.css) fades the text colour alone via
+ * color-mix, leaving the badge at full strength. Same defect and same
+ * fix as CLAUDE.md trade-off 20's nested-opacity contrast failure on the
+ * conformity gloss. Caught by render-html.axe.test.ts's second fixture,
+ * added the same day - the original sas-fernande fixture contains no
+ * 'emerging' citation, so this had no way to surface before.
  */
 export function renderReferenceStatNote(
   labelText: string,
@@ -48,11 +60,11 @@ export function renderReferenceStatNote(
       ? ` <span class="tag" style="background:${SEVERITY.serious.bg};color:${SEVERITY.serious.color}">${escapeHtml(emergingBadgeText)}</span>`
       : '';
   const gapLine = measuredGapNote
-    ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(measuredGapNote)}</p>`
+    ? `<p class="text-muted" style="font-size:12px;margin:0">${escapeHtml(measuredGapNote)}</p>`
     : '';
-  const citationLine = `<p style="font-size:12px;opacity:0.6;margin:${gapLine ? '2px' : '0'} 0 0">${escapeHtml(labelText)} : ${escapeHtml(stat.citation[language])}${badge}</p>`;
+  const citationLine = `<p class="text-muted" style="font-size:12px;margin:${gapLine ? '2px' : '0'} 0 0">${escapeHtml(labelText)} : ${escapeHtml(stat.citation[language])}${badge}</p>`;
   const revenueLine = revenueImpactNote
-    ? `<p style="font-size:12px;opacity:0.6;margin:2px 0 0">${escapeHtml(revenueImpactNote)}</p>`
+    ? `<p class="text-muted" style="font-size:12px;margin:2px 0 0">${escapeHtml(revenueImpactNote)}</p>`
     : '';
   return `${gapLine}${citationLine}${revenueLine}`;
 }

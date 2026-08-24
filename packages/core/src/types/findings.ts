@@ -22,12 +22,33 @@ export type FindingSource = 'axe' | 'lighthouse' | 'custom' | 'renderdiff';
  * split, so a future report section can address them separately. Purely
  * additive: no existing category was removed or renamed.
  */
+/**
+ * 'privacy' added 2026-08-24, on the same purely-additive terms as 'geo'
+ * (CLAUDE.md trade-off 14) and with Jules's explicit approval, since this
+ * file is a locked contract. Nothing was removed or renamed.
+ *
+ * Prompted by a real Palais Gallien report whose fourth priority card
+ * read "Référencement (SEO) - En-têtes de sécurité manquants" and then
+ * discussed clickjacking and Content-Security-Policy. Milestone 8.6's
+ * five security-header rules had been filed under 'seo' because no
+ * better value existed; four of the five have nothing to do with search
+ * ranking, and a client who sees one category label contradict its own
+ * contents has no reason to trust the rest of the categorisation.
+ *
+ * One value rather than separate 'security' and 'privacy': response
+ * headers, cookies set before consent, and third-party data transfer are
+ * one story to the buyer this product sells to (a French SMB, whose real
+ * enforcement exposure here is the CNIL), they are read by the same
+ * person, and eight categories would need eight report sections, colours
+ * and label pairs to keep a type total.
+ */
 export type FindingCategory =
   | 'accessibility'
   | 'seo'
   | 'geo'
   | 'performance'
-  | 'rendering';
+  | 'rendering'
+  | 'privacy';
 
 /**
  * One unified severity scale across all scanners. See severity.ts for the

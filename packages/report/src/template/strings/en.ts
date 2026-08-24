@@ -484,6 +484,7 @@ export const en: ReportStrings = {
       geo: 'AI answer engine visibility (GEO)',
       performance: 'Performance',
       rendering: 'Rendering',
+      privacy: 'Privacy and security',
     },
     geoEmergingLabel: 'Emerging research',
     thirdPartyHeading: 'To resolve with your third-party providers',

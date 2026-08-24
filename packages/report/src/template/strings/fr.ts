@@ -597,6 +597,10 @@ export const fr: ReportStrings = {
       geo: 'Visibilité dans les moteurs d\'IA (GEO)',
       performance: 'Performance',
       rendering: 'Rendu',
+      // 'Confidentialité et sécurité' rather than a single word: the
+      // category holds both cookie/consent findings and response-header
+      // ones, and a French SMB reader recognises the pair together.
+      privacy: 'Confidentialité et sécurité',
     },
     geoEmergingLabel: 'Recherche émergente',
     thirdPartyHeading: 'À traiter avec vos prestataires tiers',

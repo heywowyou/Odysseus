@@ -1,3 +1,5 @@
+import type { FindingCategory } from '@odysseus/core';
+
 /**
  * Static report chrome: section headings, table labels, and the fixed
  * methodology/limitations boilerplate. The analysis prose itself
@@ -660,13 +662,12 @@ export interface ReportStrings {
     eyebrow: string;
     heading: string;
     intro: string;
-    categoryLabels: {
-      accessibility: string;
-      seo: string;
-      geo: string;
-      performance: string;
-      rendering: string;
-    };
+    /** Keyed by FindingCategory rather than spelled out, so adding a
+     *  category to the locked contract fails here in both language files
+     *  until both are given a label - which is how the 'privacy'
+     *  addition (2026-08-24) was caught, rather than rendering an
+     *  undefined label in a client's report. */
+    categoryLabels: Record<FindingCategory, string>;
     /** Badge text for a reference-stat whose confidence is 'emerging',
      *  milestone 8.5c - quarantines GEO citations per the source
      *  research doc's Stage 3 recommendation. */
