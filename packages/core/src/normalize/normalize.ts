@@ -265,11 +265,18 @@ function mergeGroup(
   // which is acceptable for a page's score but would throw away the list of
   // files the client actually has to fix. Sorted for a stable diff, deduped
   // because one file referenced from several pages is one thing to fix.
+  // D12 (2026-08-25): two shapes reach here. Node-carrying audits push one
+  // candidate per element with a singular `resourceUrl`; url-only audits push
+  // one candidate per page with the page's whole `resourceUrls` list, so that
+  // their occurrence count stays one-per-page rather than one-per-file.
   const resourceUrls = [
     ...new Set(
-      group
-        .map((c) => c.rawEvidenceForPage['resourceUrl'])
-        .filter((url): url is string => typeof url === 'string' && url.length > 0),
+      group.flatMap((c) => {
+        const single = c.rawEvidenceForPage['resourceUrl'];
+        const many = c.rawEvidenceForPage['resourceUrls'];
+        const values = Array.isArray(many) ? many : [single];
+        return values.filter((url): url is string => typeof url === 'string' && url.length > 0);
+      }),
     ),
   ].sort();
 

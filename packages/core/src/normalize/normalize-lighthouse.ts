@@ -325,6 +325,59 @@ export function extractLighthouseCandidates(
         continue;
       }
 
+      // 2026-08-25 Lagnonu review, D12. Trade-off 30's resource collapse
+      // only ever fired for audits whose items carry a `node`, because the
+      // branch above is the only one that reads resourceIdentityForItem.
+      // Measured against a real scan: of the thirteen allowlisted audits,
+      // only modern-image-formats carries node items. The six that fired on
+      // this site (uses-text-compression, unused-css-rules,
+      // render-blocking-resources, legacy-javascript, unused-javascript,
+      // uses-long-cache-ttl) carry a url and no node, so they fell through
+      // here and rendered as annex rows with an empty selector column and
+      // no file list - a finding reported on 65 pages with nothing on it to
+      // act on.
+      //
+      // One candidate per page carrying the whole page's file list, NOT one
+      // candidate per file: `occurrences` is `group.length` (normalize.ts),
+      // so a candidate per file would multiply a client-facing number by the
+      // file count. Measured on the three reference audits before settling
+      // on this shape - per-file candidates moved total occurrences 3671 to
+      // 6772 on Lagnonu alone, breaking the invariant trade-off 30 relies on
+      // to prove a regrouping neither dropped nor invented anything.
+      if (isResourceAudit) {
+        const resourceUrls = [
+          ...new Set(
+            items
+              .map((item) => resourceIdentityForItem(auditRef.id, item))
+              .filter((url): url is string => url !== undefined),
+          ),
+        ].slice(0, MAX_LIGHTHOUSE_DETAILS_ITEMS);
+
+        if (resourceUrls.length > 0) {
+          candidates.push({
+            source: 'lighthouse',
+            ruleId: auditRef.id,
+            category,
+            severity,
+            wcagCriteria: [],
+            title: audit.title,
+            description: audit.description,
+            pageUrl,
+            element: null,
+            dedupeIdentity: '',
+            rawEvidenceForPage: {
+              score: audit.score,
+              scoreDisplayMode: audit.scoreDisplayMode,
+              numericValue: audit.numericValue ?? null,
+              displayValue: audit.displayValue ?? null,
+              title: audit.title,
+              resourceUrls,
+            },
+          });
+          continue;
+        }
+      }
+
       const truncatedItems = items.slice(0, MAX_LIGHTHOUSE_DETAILS_ITEMS);
       candidates.push({
         source: 'lighthouse',

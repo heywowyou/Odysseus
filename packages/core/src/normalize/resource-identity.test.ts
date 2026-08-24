@@ -187,3 +187,79 @@ describe('extractLighthouseCandidates sets dedupeIdentity only where intended', 
     expect(other[0]?.dedupeIdentity).toBeUndefined();
   });
 });
+
+/**
+ * D12 (2026-08-25, Lagnonu review). B4's collapse above only ever fired for
+ * audits whose items carry a `node`, since that is the only branch reading
+ * resourceIdentityForItem. Measured against a real scan: of the thirteen
+ * allowlisted audits only modern-image-formats carries node items. Six that
+ * fired on the review site (uses-text-compression, unused-css-rules,
+ * render-blocking-resources, legacy-javascript, unused-javascript,
+ * uses-long-cache-ttl) carry a url and no node, so they never collapsed and
+ * rendered as annex rows with an empty selector column and no file list -
+ * a finding reported across every page with nothing on it to act on.
+ */
+describe('D12: url-only resource audits collapse and keep their file list', () => {
+  /** Deliberately no `node` key, unlike lighthouseReport above. This is the
+   *  shape Lighthouse actually returns for the six audits in question,
+   *  confirmed by reading raw scan output rather than assumed. */
+  function urlOnlyReport(auditId: string, urls: readonly string[]): unknown {
+    return {
+      categories: {
+        performance: { auditRefs: [{ id: auditId, weight: 3, group: 'diagnostics' }] },
+      },
+      audits: {
+        [auditId]: {
+          id: auditId,
+          title: 'Enable text compression',
+          description: 'Text-based resources should be served with compression.',
+          score: 0.5,
+          scoreDisplayMode: 'metricSavings',
+          details: { items: urls.map((url) => ({ url, totalBytes: 1000, wastedBytes: 500 })) },
+        },
+      },
+    };
+  }
+
+  const URL_ONLY_AUDIT = 'uses-text-compression';
+
+  it('is a real case: the audit under test is allowlisted', () => {
+    expect(RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS.has(URL_ONLY_AUDIT)).toBe(true);
+  });
+
+  it('collapses to one finding carrying every affected file', () => {
+    const findings = normalize([
+      page('https://example.com/', urlOnlyReport(URL_ONLY_AUDIT, ['https://example.com/b.js', 'https://example.com/a.css'])),
+      page('https://example.com/about', urlOnlyReport(URL_ONLY_AUDIT, ['https://example.com/a.css', 'https://example.com/c.js'])),
+    ]).filter((f) => f.ruleId === URL_ONLY_AUDIT);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.rawEvidence).toMatchObject({
+      resourceUrls: ['https://example.com/a.css', 'https://example.com/b.js', 'https://example.com/c.js'],
+    });
+  });
+
+  /** The reason this emits one candidate per page rather than one per file.
+   *  `occurrences` is the candidate count (normalize.ts), and a per-file
+   *  candidate multiplied a client-facing number by the file count - total
+   *  occurrences moved 3671 to 6772 on the real Lagnonu audit, which would
+   *  have broken the invariant B4 relies on to show a regrouping neither
+   *  dropped nor invented anything. */
+  it('counts one occurrence per page, not one per file', () => {
+    const findings = normalize([
+      page('https://example.com/', urlOnlyReport(URL_ONLY_AUDIT, ['https://example.com/a.css', 'https://example.com/b.js', 'https://example.com/c.js'])),
+      page('https://example.com/about', urlOnlyReport(URL_ONLY_AUDIT, ['https://example.com/a.css', 'https://example.com/b.js', 'https://example.com/c.js'])),
+    ]).filter((f) => f.ruleId === URL_ONLY_AUDIT);
+
+    expect(findings[0]?.occurrences).toBe(2);
+    expect(findings[0]?.pageUrls).toHaveLength(2);
+  });
+
+  it('leaves a url-only audit that is not allowlisted uncollapsed', () => {
+    const findings = normalize([
+      page('https://example.com/', urlOnlyReport('total-byte-weight', ['https://example.com/a.css'])),
+    ]).filter((f) => f.ruleId === 'total-byte-weight');
+
+    expect(findings[0]?.rawEvidence).not.toHaveProperty('resourceUrls');
+  });
+});
