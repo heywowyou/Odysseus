@@ -163,9 +163,9 @@ export const fr: ReportStrings = {
       "Ce site présente peu de constats SEO et GEO significatifs par rapport à l'accessibilité : l'essentiel des priorités ci-dessous concerne l'accessibilité.",
     jumpLinkLabelTemplate: 'Voir priorité {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
-      "La priorité 1 ci-dessus est un enjeu commercial, pas un enjeu de conformité légale : elle a été classée en premier sur la base de son rapport effort/impact. Les priorités liées à la conformité légale figurent en position {legalRank}.",
+      "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport effort/impact. Les priorités rattachées à un critère d'accessibilité figurent en position {legalRank}. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale ».",
     topPriorityIsNotLegalNoPointer:
-      "La priorité 1 ci-dessus est un enjeu commercial, pas un enjeu de conformité légale : elle a été classée en premier sur la base de son rapport effort/impact. Aucune des priorités retenues dans ce rapport n'est directement liée à la conformité légale ; voir la section « Exposition légale » pour le détail.",
+      "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport effort/impact. Aucune des priorités retenues dans ce rapport n'est rattachée à un critère d'accessibilité. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale » pour le détail.",
     summaryCountsTemplate: "L'audit a identifié {actionable} constats prioritaires ({critical} critiques et {serious} sérieux) sur un total de {total} constats.",
   },
   legalExposure: {
