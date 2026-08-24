@@ -31,9 +31,28 @@ rules) is `docs/operator-obligations.md`. Prospecting is governed by
 4. The LLM never receives raw HTML or full page content. Normalized
    findings plus site context only.
 5. Crawling is polite: respect robots.txt, identifiable user agent,
-   delay between requests, hard page cap, hard per-page timeout. The
+   delay between requests, hard per-page timeout. The
    delay is enforced between scanner passes on a page as well, not only
    between crawl requests.
+
+   **Amended 2026-08-24, explicit operator decision.** This rule used to
+   also require a hard page cap, and `DEFAULT_MAX_PAGES` was 20. A real
+   Domaine Lagnonu audit showed the cost: a 65-page site was reported as
+   a 43-page one, with the entire English and Spanish sites missing and
+   nothing in the report disclosing it, on a deliverable sold as covering
+   the client's site. A page limit is now opt-in (`--max-pages`,
+   `MAX_PAGES`) and off by default.
+
+   Politeness is unchanged and is carried where it always actually was:
+   the per-request delay, the per-origin pacing in every scan lane, the
+   robots.txt `Crawl-delay` that still wins when stricter, and the
+   per-page timeout. A page cap limited total work, not request rate.
+
+   The risk this knowingly accepts is an effectively unbounded URL space
+   (calendars, faceted filters, session ids), which nothing currently
+   detects. Crawl a site of unknown shape with an explicit `--max-pages`
+   until a trap detector exists. Do not silently reintroduce a default
+   cap instead; that decision is the operator's.
 6. Never overstate legal exposure in any generated text. Accessibility
    obligations depend on company size and sector. State the criterion,
    not a verdict on whether a law applies to a given client. This is the
@@ -52,6 +71,8 @@ rules) is `docs/operator-obligations.md`. Prospecting is governed by
 - `packages/core/src/types/findings.ts` — findings model v1
 - `packages/core/src/normalize/severity.ts` — severity mapping
 - `packages/core/src/types/llm-output.ts` — LLM schema and guards
+  (`themeSchema.category` gained `'privacy'` on 2026-08-24, an approved
+  change; see trade-off 31)
 
 Every downstream layer reads these shapes. Changing them invalidates
 stored audits and breaks monitoring diffs. If a change is genuinely
@@ -1211,6 +1232,96 @@ needed, say so and stop. Do not change them and continue.
     need `normalize <dir>` before they can be diffed against new ones.
 
 
+31. **A fourth review site (Domaine Lagnonu, lagnonu.fr) found a P0 the
+    1345-test suite passed over, plus nine report defects**, 2026-08-24.
+    Recorded because the finding pattern matters more than any one fix:
+    the three reference sites were being re-scanned repeatedly, and
+    rotating in a site nobody had scanned before immediately produced a
+    defect none of them could express.
+
+    **The P0.** `render-diff.ts` navigated the rendered pass with
+    `waitUntil: 'networkidle'`. On lagnonu.fr that condition is not slow,
+    it is unreachable: measured directly, idle never arrived in 120s,
+    while the page's visible text was complete and byte-identical in
+    length at 4.3s under `load`. Because axe and every `onRenderedPage`
+    custom check hang off that single navigation, one unreachable
+    condition failed three scanners at once. The first scan produced zero
+    axe findings and one accessibility finding across 20 pages; the fixed
+    scan produced 44 and 95 across 43. A report would have gone to a
+    client titled "audit accessibilite" containing one accessibility
+    finding. Raising `PAGE_TIMEOUT_MS` would not have helped, which is
+    worth knowing because it is the intuitive first guess.
+
+    Fixed with `load` plus a bounded, best-effort
+    `waitForLoadState('networkidle')` whose timeout is a normal outcome,
+    not a page error - a page that never falls idle is still fully
+    rendered and worth scanning. `DEFAULT_RENDER_SETTLE_TIMEOUT_MS`
+    (8000, `RENDER_SETTLE_TIMEOUT_MS` overridable), recorded on
+    `AuditConfigSnapshot.renderSettleTimeoutMs` for the same provenance
+    reason as the other scan config fields.
+
+    **Language subtrees were being severed by the fix for a different
+    bug.** `links.ts`'s `LANGUAGE_HOMEPAGE_PATH_PATTERN` dropped any URL
+    whose entire path is a language code, added for La Corniche where
+    five language homepages inflated every homepage defect fivefold. On
+    lagnonu.fr `/en` and `/es` are the only links from the French
+    homepage into those subtrees, so dropping them left 22 declared pages
+    unvisited - the exact outcome the rule was written to prevent. The
+    URL is no longer dropped; `crawl.ts` records it
+    `discovered-not-scanned` (new `ManifestPageStatus`), crawled for its
+    links and never scanned, so neither site loses. The general lesson:
+    a filter justified by one site's shape can invert on another's, and
+    "narrow enough to be safe" was argued rather than tested against a
+    second multilingual site.
+
+    **The cover named the client "Mariages et evenements prives".** The
+    business is Domaine Lagnonu, and both halves were in one string:
+    `deriveSiteName` took the last `|`-delimited segment of "Domaine
+    Lagnonu | Mariages et evenements prives". The `Page | Site`
+    convention is real, so is its mirror, and one title cannot say which
+    a site follows - but the rest of the site can, since a brand repeats
+    across pages and a page topic does not. `deriveSiteNameFromTitleFrequency`
+    picks the segment recurring in the most titles (measured: "Domaine
+    Lagnonu" in 6, every topic in 1), requires at least two titles to
+    agree, and returns undefined otherwise so an absent prefill is still
+    never a guessed one. `og:site_name` still wins outright.
+
+    **`hreflang-missing` had a severity mapping and remediation copy and
+    no emitter**, so a trilingual site publishing zero hreflang got no
+    finding. Same class as trade-off 28's unread LCEN regime and
+    trade-off 23's never-implemented gates: a rule id can be fully
+    dressed and entirely dead. Now emitted from `normalize-hreflang.ts`
+    on total absence across a site whose own URL structure shows two or
+    more language prefixes - never inferred from content, and never by
+    guessing that `/en/x` translates `/x`, which trade-off 24 already
+    rejected for clustering. Worth a periodic sweep for other rule ids
+    with a severity and no emitter.
+
+    **The model wrote legal consequences into a client report.**
+    "L'absence de numero SIREN ou RCS expose a une amende" rendered on
+    page 8, plus two "risques juridiques" claims. Checked rather than
+    assumed: `writing-prompt.ts` had never forbidden this, so it was a
+    missing control, not an ignored instruction. Both added -
+    `legal-consequence-guard.ts` rejects and retries (discard, never
+    repair, per trade-off 11), and the prompt now says so explicitly.
+
+    **Four further guards and template fixes**, all from the same read:
+    reference-stat citations are now keyed off the findings' own category
+    rather than the model's label (a security-headers theme was labelled
+    `performance`, which is trade-off 16's B1 defect arriving through the
+    other input); `themeSchema.category` gained `'privacy'` so that theme
+    has a correct answer available at all (approved locked-contract
+    change, `'geo'` deliberately still excluded per trade-off 16);
+    typography is normalized on model output rather than only on source
+    strings, closing the door trade-off 29 left open; page counts in
+    model prose are rejected outright, since `build-input.ts` shows the
+    model at most 3 page URLs per finding and the template renders the
+    real count beside its text; and a category holding critical findings
+    is guaranteed a rendered priority, after a report told the director
+    "43/43 pages with a critical finding" while none of its six
+    priorities was performance, which held four of the five criticals.
+
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
@@ -1302,6 +1413,35 @@ without asking first. Prefer standard library and existing dependencies.
 
 When a task is ambiguous, ask rather than assuming. Inventing structure
 is worse than pausing.
+
+## Session log
+
+Keep `docs/session/current-session.md` current for the whole of every
+session. It is gitignored and deliberately ephemeral.
+
+Read it first, before anything else, at the start of a session. If it
+exists, a previous session did not finish: reconstruct from it rather
+than from the working tree alone.
+
+Write to it continuously, not at the end:
+
+- the session's plan and a checklist, before starting work;
+- tick each item the moment it is actually done, not when it is planned;
+- any finding worth keeping, at the moment it is found, including
+  negative results and things checked and ruled out;
+- for anything reconstructed after a crash, record what the evidence for
+  it was, so the next reader can tell a verified state from a guessed one.
+
+At the end of a session, fold what is durable into CLAUDE.md, the brief,
+or the relevant `docs/` file, then delete the session file. Nothing
+should survive only there. A session that ends with the file still
+present is an unfinished session, which is exactly what the next one
+needs to know.
+
+The reason is recovery, not bookkeeping: a crashed session leaves a large
+uncommitted working tree and no account of which items in it are finished,
+which are half-done, and which were deliberately deferred. That state is
+expensive to re-derive and easy to re-derive wrongly.
 
 ## Testing
 

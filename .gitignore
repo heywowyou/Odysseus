@@ -14,3 +14,7 @@ coverage/
 *.tsbuildinfo
 .playwright-mcp/
 /docs/GlassWire/
+
+# Crash-recovery session log. Ephemeral by design: written continuously
+# during a session, folded into CLAUDE.md / docs on completion, then deleted.
+/docs/session/current-session.md
