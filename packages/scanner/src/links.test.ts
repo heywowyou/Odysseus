@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { globToRegExp, normalizeInternalLinks } from './links.js';
+import { globToRegExp, isLanguageHomepagePath, normalizeInternalLinks } from './links.js';
 
 const BASE = 'https://client.example/current-page';
 
@@ -79,19 +79,41 @@ describe('normalizeInternalLinks', () => {
     expect(normalizeInternalLinks(['/about'], BASE, [])).toEqual(['https://client.example/about']);
   });
 
-  // item 1.3 (La Corniche pass): a real 20-page crawl spent five slots on
-  // /, /en/, /es/, /it/ and /pt-pt/ - the same homepage in five languages -
-  // inflating every homepage defect's occurrence count roughly fivefold.
-  it('drops a bare root-level language-code homepage variant (2-letter code)', () => {
+  // item 1.3 (La Corniche pass) originally DROPPED these: a 20-page crawl
+  // spent five slots on /, /en/, /es/, /it/ and /pt-pt/, inflating every
+  // homepage defect's occurrence count roughly fivefold.
+  //
+  // Revised 2026-08-24 (Domaine Lagnonu): dropping them here severed whole
+  // language subtrees on a site where /en is the only link into /en/*.
+  // They are now returned, and crawl.ts records them
+  // 'discovered-not-scanned' so they are crawled for links but never
+  // scanned - which keeps La Corniche's duplicate findings away without
+  // costing Lagnonu 22 pages.
+  it('returns a bare root-level language-code homepage variant so its subtree stays reachable', () => {
     expect(normalizeInternalLinks(['/en/', '/es', '/it/', '/about'], BASE)).toEqual([
+      'https://client.example/en',
+      'https://client.example/es',
+      'https://client.example/it',
       'https://client.example/about',
     ]);
   });
 
-  it('drops a bare root-level language-region homepage variant (e.g. pt-pt)', () => {
+  it('returns a bare root-level language-region homepage variant (e.g. pt-pt)', () => {
     expect(normalizeInternalLinks(['/pt-pt/', '/en-us', '/about'], BASE)).toEqual([
+      'https://client.example/pt-pt',
+      'https://client.example/en-us',
       'https://client.example/about',
     ]);
+  });
+
+  it('identifies exactly the bare language homepages as discover-only', () => {
+    expect(isLanguageHomepagePath('/en')).toBe(true);
+    expect(isLanguageHomepagePath('/en/')).toBe(true);
+    expect(isLanguageHomepagePath('/pt-pt/')).toBe(true);
+    // Genuine content, never discover-only.
+    expect(isLanguageHomepagePath('/en/rooms')).toBe(false);
+    expect(isLanguageHomepagePath('/blog/en')).toBe(false);
+    expect(isLanguageHomepagePath('/')).toBe(false);
   });
 
   it('does not drop a genuine content page nested under a language prefix', () => {

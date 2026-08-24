@@ -238,6 +238,59 @@ function toggleWwwPrefix(url: string): string | undefined {
   }
 }
 
+/**
+ * B1.1 (2026-08-24, Domaine Lagnonu). The cover of a paid report named the
+ * client "Mariages et evenements prives". The business is "Domaine
+ * Lagnonu", and both halves were in the same string: the weddings page's
+ * title is "Domaine Lagnonu | Mariages et evenements prives", and
+ * deriveSiteName takes the LAST separator-delimited segment.
+ *
+ * That convention ("Page | Site") is real, but so is its mirror ("Site |
+ * Page"), and nothing in one title says which one a site follows. What
+ * does say so is the rest of the site: a brand repeats across pages, a
+ * page topic does not. Measured on the real 43-page scan, "Domaine
+ * Lagnonu" appeared in 6 titles while every page-specific segment
+ * appeared exactly once.
+ *
+ * Requires at least two titles to agree, so a small site that genuinely
+ * has nothing recurring falls through to the per-page chain below rather
+ * than promoting a single page's topic. Ties break toward the shorter
+ * segment, then lexicographically, so the result is deterministic across
+ * runs - the manifest records it and monitoring diffs read it.
+ */
+export function deriveSiteNameFromTitleFrequency(titles: readonly string[]): string | undefined {
+  const countsBySegment = new Map<string, number>();
+
+  for (const title of titles) {
+    const trimmed = title.trim();
+    if (!trimmed) continue;
+
+    const seenInThisTitle = new Set<string>();
+    for (const separator of TITLE_SITE_NAME_SEPARATORS) {
+      if (!trimmed.includes(separator)) continue;
+      for (const rawSegment of trimmed.split(separator)) {
+        const segment = stripTitleMarketing(rawSegment.trim());
+        // Same length ceiling the bare-title path uses: a segment longer
+        // than this is a descriptive sentence, not a name.
+        if (!segment || segment.length > BARE_TITLE_MAX_LENGTH) continue;
+        if (seenInThisTitle.has(segment)) continue;
+        seenInThisTitle.add(segment);
+        countsBySegment.set(segment, (countsBySegment.get(segment) ?? 0) + 1);
+      }
+    }
+  }
+
+  const ranked = [...countsBySegment.entries()]
+    .filter(([, count]) => count >= 2)
+    .sort(([aSegment, aCount], [bSegment, bCount]) => {
+      if (aCount !== bCount) return bCount - aCount;
+      if (aSegment.length !== bSegment.length) return aSegment.length - bSegment.length;
+      return aSegment.localeCompare(bSegment);
+    });
+
+  return ranked.at(0)?.[0];
+}
+
 function findSiteNameSource(
   siteResult: WriteAuditArtifactsInput['siteResult'],
 ): WriteAuditArtifactsInput['siteResult']['pages'][number] | undefined {
@@ -271,7 +324,18 @@ function buildSiteSignals(siteResult: WriteAuditArtifactsInput['siteResult']): A
     : undefined;
   const siren = mentionsLegalesPage?.mentionsLegales?.siren;
 
-  const siteName = deriveSiteName(findSiteNameSource(siteResult)?.headMetadata);
+  // og:site_name is the hand-authored signal a site sets to name itself, so
+  // it still wins outright where it exists. Only when no page publishes one
+  // does the title-frequency pass run, ahead of the single-page title
+  // heuristic that produced the Lagnonu cover defect.
+  const explicitSiteName = siteResult.pages
+    .map((page) => page.headMetadata?.openGraphTags?.['og:site_name']?.trim())
+    .find((name): name is string => Boolean(name));
+  const recurringSiteName = deriveSiteNameFromTitleFrequency(
+    siteResult.pages.map((page) => page.headMetadata?.title ?? ''),
+  );
+  const siteName =
+    explicitSiteName ?? recurringSiteName ?? deriveSiteName(findSiteNameSource(siteResult)?.headMetadata);
 
   return {
     hasTransactionalFlow: transactionalFlowEvidence.length > 0,

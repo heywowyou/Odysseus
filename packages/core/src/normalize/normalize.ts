@@ -184,10 +184,23 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (homepageUrl) candidates.push(...extractCruxCandidates(input.cruxFieldData, homepageUrl));
   }
 
-  const pagesWithHreflang = input.pages
-    .filter((page) => page.headMetadata && page.headMetadata.hreflangLinks.length > 0)
+  // Every crawled page with head metadata is passed, including pages
+  // declaring no hreflang at all. Filtering to pages that already have
+  // hreflang made `hreflang-missing` unreachable by construction, since it
+  // fires precisely when no page has any - the emitter existed, its unit
+  // tests passed against a direct call, and a real trilingual site
+  // (lagnonu.fr, 65 pages, zero hreflang) still produced no finding.
+  // Passing every page also lets the reciprocity check above distinguish a
+  // crawled target that genuinely fails to link back from one it cannot
+  // see; it previously treated both as "outside crawl scope".
+  const hreflangPages = input.pages
+    .filter((page) => page.headMetadata)
     .map((page) => ({ url: page.url, hreflangLinks: page.headMetadata!.hreflangLinks }));
-  if (pagesWithHreflang.length > 0) candidates.push(...extractHreflangCandidates(pagesWithHreflang));
+  if (hreflangPages.length > 0) {
+    candidates.push(
+      ...extractHreflangCandidates(hreflangPages, input.crawl?.startUrl ?? input.pages[0]?.url),
+    );
+  }
 
   const pagesWithHeadMetadata = input.pages.filter((page) => page.headMetadata);
   if (pagesWithHeadMetadata.length > 0) {

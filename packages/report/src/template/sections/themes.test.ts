@@ -966,7 +966,7 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
 
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
 
-    expect(html).toContain('relèvent de votre site');
+    expect(html).toContain('relevant de votre site');
     expect(html).toContain('Gravity Forms');
     expect(html).toContain('à transmettre à son éditeur');
   });
@@ -1244,5 +1244,174 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
 
     expect(html).toMatch(/Conformité : <strong style="color:var\(--color-neutral-500\)">Sans objet<\/strong>/);
     expect(html).not.toMatch(/Conformité : <strong style="color:#d97b82">Sans objet/);
+  });
+});
+
+describe('B2.2: theme category and reference-stat citations', () => {
+  function privacyFinding(findingId: string, ruleId: string): Finding {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'custom' as const,
+      ruleId,
+      category: 'privacy' as const,
+      severity: 'moderate' as const,
+      wcagCriteria: [],
+      title: ruleId,
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  const findings = [
+    privacyFinding('f1', 'security-header-missing-csp'),
+    privacyFinding('f2', 'security-header-missing-hsts'),
+  ];
+
+  async function analysisWithCategory(category: Theme['category']) {
+    const analysis = await loadSasFernandeAnalysis('fr');
+    return {
+      ...analysis,
+      themes: [
+        {
+          title: 'En-têtes de sécurité manquants',
+          category,
+          businessImpact: 'Impact commercial.',
+          effort: 'low' as const,
+          impact: 'medium' as const,
+          priorityRank: 1,
+          findingIds: ['f1', 'f2'],
+          recommendedActions: ['Demander a votre prestataire de configurer ces en-tetes.'],
+        },
+      ],
+    };
+  }
+
+  // The real Domaine Lagnonu analysis (2026-08-24) labelled exactly this
+  // theme 'performance' while all its findings were 'privacy', making it
+  // eligible for a page-speed conversion statistic - trade-off 16's B1
+  // defect arriving through the category rather than the stats table.
+  it('renders a mislabelled theme but attaches no citation to it', async () => {
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      await analysisWithCategory('performance'),
+      findings,
+      await loadSasFernandeManifest(),
+    );
+
+    expect(html).toContain('En-têtes de sécurité manquants');
+    expect(html).not.toContain('Deloitte');
+  });
+
+  // 'privacy' became a valid Theme category on 2026-08-24 (approved change
+  // to the locked llm-output.ts contract), so the model now has a correct
+  // answer available for exactly this theme.
+  it('accepts privacy as a theme category and renders it', async () => {
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      await analysisWithCategory('privacy'),
+      findings,
+      await loadSasFernandeManifest(),
+    );
+
+    expect(html).toContain('En-têtes de sécurité manquants');
+    // No privacy rows exist in the reference-stat table, so no citation.
+    expect(html).not.toContain('Deloitte');
+  });
+});
+
+describe('B2.1: a category with critical findings always gets a rendered priority', () => {
+  function finding(findingId: string, category: Finding['category'], severity: Finding['severity']): Finding {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'lighthouse' as const,
+      ruleId: `rule-${findingId}`,
+      category,
+      severity,
+      wcagCriteria: [],
+      title: 't',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  function theme(priorityRank: number, category: Theme['category'], findingIds: string[]): Theme {
+    return {
+      title: `Theme ${priorityRank}`,
+      category,
+      businessImpact: 'Impact.',
+      effort: 'low',
+      impact: 'medium',
+      priorityRank,
+      findingIds,
+      recommendedActions: ['Action.'],
+    };
+  }
+
+  // Mirrors the real Domaine Lagnonu shape: six accessibility/seo themes
+  // ranked above a performance theme that holds four of the five critical
+  // findings, so no performance priority rendered at all.
+  it('promotes the performance theme holding critical findings above the render cut', () => {
+    const findings = [
+      ...Array.from({ length: MAX_RENDERED_THEMES }, (_, i) =>
+        finding(`a${i}`, 'accessibility', i === 0 ? 'critical' : 'serious'),
+      ),
+      finding('p1', 'performance', 'critical'),
+    ];
+    const themes = [
+      ...Array.from({ length: MAX_RENDERED_THEMES }, (_, i) => theme(i + 1, 'accessibility', [`a${i}`])),
+      theme(MAX_RENDERED_THEMES + 6, 'performance', ['p1']),
+    ];
+    const findingsById = new Map(findings.map((f) => [f.findingId, f]));
+
+    const rendered = selectRenderedThemes(themes, findingsById);
+
+    expect(rendered).toHaveLength(MAX_RENDERED_THEMES);
+    expect(rendered.some((t) => t.category === 'performance')).toBe(true);
+    // Still ascending, so the numbering a reader sees stays in order.
+    expect(rendered.map((t) => t.priorityRank)).toEqual([...rendered.map((t) => t.priorityRank)].sort((a, b) => a - b));
+  });
+
+  it('keeps the accessibility critical theme while promoting performance', () => {
+    const findings = [
+      finding('a0', 'accessibility', 'critical'),
+      ...Array.from({ length: MAX_RENDERED_THEMES - 1 }, (_, i) => finding(`a${i + 1}`, 'accessibility', 'serious')),
+      finding('p1', 'performance', 'critical'),
+    ];
+    const themes = [
+      ...Array.from({ length: MAX_RENDERED_THEMES }, (_, i) => theme(i + 1, 'accessibility', [`a${i}`])),
+      theme(MAX_RENDERED_THEMES + 6, 'performance', ['p1']),
+    ];
+
+    const rendered = selectRenderedThemes(themes, new Map(findings.map((f) => [f.findingId, f])));
+
+    expect(rendered.some((t) => t.findingIds.includes('a0'))).toBe(true);
+    expect(rendered.some((t) => t.findingIds.includes('p1'))).toBe(true);
+  });
+
+  it('changes nothing when every theme already fits', () => {
+    const findings = [finding('a0', 'accessibility', 'critical'), finding('p1', 'performance', 'critical')];
+    const themes = [theme(1, 'accessibility', ['a0']), theme(2, 'performance', ['p1'])];
+
+    const rendered = selectRenderedThemes(themes, new Map(findings.map((f) => [f.findingId, f])));
+
+    expect(rendered.map((t) => t.priorityRank)).toEqual([1, 2]);
   });
 });

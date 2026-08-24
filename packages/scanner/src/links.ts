@@ -32,6 +32,24 @@ const NON_HTML_EXTENSIONS = new Set([
  *  count for, any more than the extension filter does. */
 const LANGUAGE_HOMEPAGE_PATH_PATTERN = /^\/[a-z]{2}(-[a-z]{2})?\/?$/i;
 
+/**
+ * Revised 2026-08-24 (Domaine Lagnonu). The rule above was right about
+ * the duplicate and wrong about the drop. On La Corniche the language
+ * homepages were reachable content that also duplicated the homepage; on
+ * lagnonu.fr `/en` and `/es` are the ONLY links from the French homepage
+ * into their subtrees, so dropping them severed both entirely and left 22
+ * declared pages unvisited - the exact "whole page families of the site
+ * unvisited" outcome the original rule was written to prevent.
+ *
+ * The URL is therefore no longer dropped here. crawl.ts enqueues it,
+ * extracts its links, and records it `discovered-not-scanned`, so no
+ * scanner ever runs against it and it emits no findings. Both sites get
+ * what they need: no duplicated homepage defects, no severed subtree.
+ */
+export function isLanguageHomepagePath(pathname: string): boolean {
+  return LANGUAGE_HOMEPAGE_PATH_PATTERN.test(pathname);
+}
+
 /** B3 (2026-08-24 three-site review): a real haaitza.com crawl spent
  *  eight of its slots on URLs of the form
  *  `/?post_type=popup_theme&p=1317` - WordPress Popup Maker's internal
@@ -136,7 +154,6 @@ export function normalizeInternalLinks(
       resolved.pathname = resolved.pathname.slice(0, -1);
     }
     if (NON_HTML_EXTENSIONS.has(path.posix.extname(resolved.pathname).toLowerCase())) continue;
-    if (LANGUAGE_HOMEPAGE_PATH_PATTERN.test(resolved.pathname)) continue;
     if (isNonPublicWordPressObject(resolved)) continue;
     resolved.hash = '';
     const normalized = resolved.toString();

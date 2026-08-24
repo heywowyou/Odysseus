@@ -16,7 +16,7 @@ export type StructureInput = Pick<LlmInput, 'siteContext' | 'findings'>;
 export const structureThemeSchema = z
   .object({
     findingIds: z.array(z.string()).min(1),
-    category: z.enum(['accessibility', 'seo', 'performance', 'rendering']),
+    category: z.enum(['accessibility', 'seo', 'performance', 'rendering', 'privacy']),
     effort: effortSchema,
     impact: impactSchema,
     priorityRank: z.number().int().positive(),

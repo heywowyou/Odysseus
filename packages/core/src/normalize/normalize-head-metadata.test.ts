@@ -4,6 +4,7 @@ import {
   META_TITLE_LENGTH_RULE_ID,
   META_DESCRIPTION_LENGTH_RULE_ID,
   CANONICAL_CONFLICTING_RULE_ID,
+  CANONICAL_MISSING_RULE_ID,
   JSONLD_MISSING_RULE_ID,
   JSONLD_INVALID_RULE_ID,
   HEADING_HIERARCHY_SKIP_RULE_ID,
@@ -44,9 +45,18 @@ describe('extractHeadMetadataCandidates - clean page regression', () => {
     expect(extractHeadMetadataCandidates(baseInput())).toEqual([]);
   });
 
-  it('emits nothing for missing title/description/canonical (Lighthouse already covers those)', () => {
+  // Narrowed 2026-08-24. This case used to include canonicalUrls: [] and
+  // assert nothing was emitted, on the stated reasoning that Lighthouse
+  // covers a missing canonical too. Checked against Lighthouse 12.8.2's own
+  // source rather than assumed: core/audits/seo/canonical.js returns
+  // `notApplicable: true` when canonicalURLs.length === 0, so it reports an
+  // invalid canonical and stays silent on an absent one. Title and
+  // description genuinely are covered - `document-title` and
+  // `meta-description` both appear in real audit output - so those two stay
+  // asserted here and deliberately have no emitter of ours.
+  it('emits nothing for missing title/description (Lighthouse already covers those)', () => {
     const candidates = extractHeadMetadataCandidates(
-      baseInput({ title: null, metaDescription: null, canonicalUrls: [] }),
+      baseInput({ title: null, metaDescription: null }),
     );
     expect(candidates).toEqual([]);
   });
@@ -248,5 +258,46 @@ describe('noindex-on-public-page', () => {
       baseInput({ pageUrl: 'https://example.com/mentions-legales', robotsMeta: 'noindex' }),
     );
     expect(candidates).toEqual([]);
+  });
+});
+
+/**
+ * 2026-08-24 dead-rule sweep. `canonical-missing` carried a severity
+ * mapping and remediation copy from milestone 8 with no emitter anywhere,
+ * the same shape as trade-off 28's unread LCEN regime and trade-off 31's
+ * `hreflang-missing`. The two neighbouring canonical checks both need a
+ * canonical to already exist, so zero was the uncovered case.
+ */
+describe('canonical-missing', () => {
+  function headInput(canonicalUrls: string[]) {
+    return {
+      pageUrl: 'https://example.com/',
+      title: 'Example',
+      metaDescription: null,
+      canonicalUrls,
+      openGraphTags: {},
+      jsonLdBlocks: [],
+      headings: [],
+      hreflangLinks: [],
+      robotsMeta: null,
+    };
+  }
+
+  it('fires when a page declares no canonical URL', () => {
+    const ids = extractHeadMetadataCandidates(headInput([])).map((c) => c.ruleId);
+    expect(ids).toContain(CANONICAL_MISSING_RULE_ID);
+  });
+
+  it('stays silent when a canonical is declared', () => {
+    const ids = extractHeadMetadataCandidates(headInput(['https://example.com/'])).map((c) => c.ruleId);
+    expect(ids).not.toContain(CANONICAL_MISSING_RULE_ID);
+  });
+
+  it('does not also fire when several conflicting canonicals are declared', () => {
+    const ids = extractHeadMetadataCandidates(
+      headInput(['https://example.com/a', 'https://example.com/b']),
+    ).map((c) => c.ruleId);
+    expect(ids).not.toContain(CANONICAL_MISSING_RULE_ID);
+    expect(ids).toContain(CANONICAL_CONFLICTING_RULE_ID);
   });
 });

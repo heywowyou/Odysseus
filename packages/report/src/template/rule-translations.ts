@@ -163,6 +163,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
     label: 'Les boutons doivent avoir un texte identifiable',
     gloss: "Un bouton n'a pas de texte ou de libellé qu'un lecteur d'écran peut annoncer.",
   },
+  bypass: {
+    label: 'Aucun moyen de sauter directement au contenu',
+    gloss:
+      "La page n'offre aucun raccourci (lien d'évitement, repères de structure, titre de niveau 1) permettant de passer le menu de navigation. Une personne qui navigue au clavier ou au lecteur d'écran doit donc retraverser tout le menu sur chaque page avant d'atteindre le contenu.",
+  },
   'cache-insight': {
     label: 'Utiliser des durées de cache efficaces',
     gloss: 'Des fichiers statiques (images, scripts) sont retéléchargés inutilement faute de mise en cache.',
@@ -484,6 +489,420 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
   'video-missing-captions': {
     label: 'La vidéo n\'a pas de piste de sous-titres',
     gloss: "Une vidéo n'a pas de sous-titres, la rendant inaccessible aux personnes sourdes ou malentendantes.",
+  },
+  // Pre-emptive coverage pass (2026-08-24). Until now this table was filled
+  // reactively: a rule got a French label only after some committed scan
+  // emitted it, which meant four separate occasions where English reached a
+  // real client-facing French report (item 38, item 2.3, P1.1, and
+  // document-title/sitemap-stale/hreflang-missing in the Domaine Lagnonu
+  // report). Operator decision: translate the whole reachable set instead of
+  // waiting for the next leak.
+  //
+  // "Reachable" is computed, not guessed. axe is run with WCAG22AA_TAGS
+  // (axe.ts), which narrows axe-core 4.12.1's 105 rules to the 70 that can
+  // actually fire; Lighthouse contributes its performance and seo audits
+  // minus LIGHTHOUSE_EXCLUDED_AUDITS and its informative-only audits. The 76
+  // entries below are exactly the members of that set that had no French
+  // label. rule-translations.test.ts asserts the custom-rule half of the
+  // same property from source rather than from fixtures.
+  // --- axe-core rules reachable under WCAG22AA_TAGS ---
+  "area-alt": {
+    label: "Zone cliquable d'image sans texte alternatif",
+    gloss: "Une zone cliquable définie sur une image n'a pas de description textuelle, donc un lecteur d'écran ne peut pas annoncer où elle mène.",
+  },
+  "aria-allowed-attr": {
+    label: "Attribut ARIA non autorisé pour ce rôle",
+    gloss: "Un attribut ARIA est utilisé sur un élément dont le rôle ne l'accepte pas ; les technologies d'assistance peuvent alors l'ignorer ou mal l'interpréter.",
+  },
+  "aria-braille-equivalent": {
+    label: "Étiquette braille sans équivalent texte",
+    gloss: "Une étiquette destinée aux afficheurs braille n'a pas d'équivalent en texte, ce qui la rend inutilisable par les autres technologies d'assistance.",
+  },
+  "aria-conditional-attr": {
+    label: "Attribut ARIA utilisé hors des conditions prévues",
+    gloss: "Un attribut ARIA n'est valide que dans certaines situations pour ce rôle, et il est utilisé en dehors de celles-ci.",
+  },
+  "aria-deprecated-role": {
+    label: "Rôle ARIA obsolète",
+    gloss: "Ce rôle ARIA n'est plus recommandé et son comportement n'est plus garanti dans les technologies d'assistance.",
+  },
+  "aria-hidden-body": {
+    label: "Le corps de la page est masqué aux technologies d'assistance",
+    gloss: "L'attribut aria-hidden est posé sur tout le contenu de la page, qui devient entièrement invisible pour un lecteur d'écran.",
+  },
+  "aria-hidden-focus": {
+    label: "Élément masqué mais toujours atteignable au clavier",
+    gloss: "Un élément est masqué aux lecteurs d'écran tout en restant accessible au clavier : la personne y arrive sans qu'on lui annonce où elle est.",
+  },
+  "aria-input-field-name": {
+    label: "Champ de saisie ARIA sans nom accessible",
+    gloss: "Un champ de saisie n'a pas de nom, donc un lecteur d'écran ne peut pas dire à quoi il sert.",
+  },
+  "aria-meter-name": {
+    label: "Indicateur de mesure sans nom accessible",
+    gloss: "Un élément affichant une mesure n'a pas de nom, donc sa valeur est annoncée sans indiquer de quoi il s'agit.",
+  },
+  "aria-progressbar-name": {
+    label: "Barre de progression sans nom accessible",
+    gloss: "Une barre de progression n'a pas de nom, donc un lecteur d'écran annonce un pourcentage sans dire de quoi.",
+  },
+  "aria-prohibited-attr": {
+    label: "Attribut ARIA interdit pour ce rôle",
+    gloss: "Un attribut ARIA est explicitement interdit sur ce type d'élément et sera ignoré ou provoquera une annonce incorrecte.",
+  },
+  "aria-required-attr": {
+    label: "Attribut ARIA obligatoire manquant",
+    gloss: "Un rôle ARIA exige certains attributs pour fonctionner ; l'un d'eux est absent, donc le composant est annoncé de façon incomplète.",
+  },
+  "aria-required-parent": {
+    label: "Élément ARIA hors de son conteneur obligatoire",
+    gloss: "Ce rôle doit être placé dans un conteneur précis (par exemple une option dans une liste) ; hors de ce conteneur, la structure n'est pas comprise.",
+  },
+  "aria-roledescription": {
+    label: "Description de rôle sur un élément sans rôle",
+    gloss: "Une description de rôle personnalisée est posée sur un élément qui n'a pas de rôle, donc elle ne sera pas annoncée.",
+  },
+  "aria-roles": {
+    label: "Valeur de rôle ARIA invalide",
+    gloss: "Le rôle indiqué n'existe pas dans la spécification ARIA, donc il est ignoré et l'élément est annoncé comme du texte ordinaire.",
+  },
+  "aria-tab-name": {
+    label: "Onglet sans nom accessible",
+    gloss: "Un onglet n'a pas de nom, donc un lecteur d'écran ne peut pas dire vers quel contenu il mène.",
+  },
+  "aria-toggle-field-name": {
+    label: "Interrupteur ou case à cocher sans nom accessible",
+    gloss: "Un contrôle à deux états n'a pas de nom, donc la personne entend son état sans savoir ce qu'il commande.",
+  },
+  "aria-tooltip-name": {
+    label: "Infobulle sans nom accessible",
+    gloss: "Une infobulle n'a pas de contenu textuel accessible, donc son information n'est pas transmise aux lecteurs d'écran.",
+  },
+  "aria-valid-attr": {
+    label: "Attribut ARIA inexistant",
+    gloss: "Un attribut commençant par aria- n'existe pas dans la spécification, en général une faute de frappe, et il est donc ignoré.",
+  },
+  "aria-valid-attr-value": {
+    label: "Valeur d'attribut ARIA invalide",
+    gloss: "Un attribut ARIA contient une valeur que la spécification n'autorise pas, souvent une référence vers un élément qui n'existe pas.",
+  },
+  "audio-caption": {
+    label: "Contenu audio sans transcription",
+    gloss: "Un fichier audio n'a pas de transcription ni de sous-titres, donc son contenu est inaccessible aux personnes sourdes ou malentendantes.",
+  },
+  "autocomplete-valid": {
+    label: "Valeur de remplissage automatique incorrecte",
+    gloss: "L'indication de remplissage automatique du champ n'est pas une valeur reconnue, donc le navigateur ne peut pas pré-remplir correctement.",
+  },
+  "avoid-inline-spacing": {
+    label: "Espacement du texte imposé en dur",
+    gloss: "L'espacement des lettres ou des lignes est fixé directement sur l'élément, ce qui empêche une personne dyslexique d'appliquer son propre espacement.",
+  },
+  "blink": {
+    label: "Texte clignotant",
+    gloss: "Le contenu clignote, ce qui est interdit par les critères d'accessibilité et peut déclencher des troubles chez certaines personnes.",
+  },
+    "css-orientation-lock": {
+    label: "Contenu bloqué dans une seule orientation",
+    gloss: "L'affichage est verrouillé en portrait ou en paysage, ce qui exclut les personnes dont l'appareil est fixé sur un support.",
+  },
+  "definition-list": {
+    label: "Liste de définitions mal structurée",
+    gloss: "Une liste de définitions contient des éléments qui n'y ont pas leur place, donc sa structure n'est pas annoncée correctement.",
+  },
+  "dlitem": {
+    label: "Terme ou définition hors d'une liste de définitions",
+    gloss: "Un terme ou sa définition se trouve hors du conteneur prévu, donc le lien entre les deux est perdu pour un lecteur d'écran.",
+  },
+  "duplicate-id-aria": {
+    label: "Identifiant utilisé deux fois",
+    gloss: "Deux éléments portent le même identifiant alors qu'une étiquette ou un attribut ARIA y fait référence : la référence devient ambiguë.",
+  },
+  "form-field-multiple-labels": {
+    label: "Champ de formulaire avec plusieurs étiquettes",
+    gloss: "Un champ a plusieurs étiquettes, et les lecteurs d'écran ne les annoncent pas toutes de la même façon, ce qui rend l'intitulé imprévisible.",
+  },
+  "frame-focusable-content": {
+    label: "Cadre retiré de la navigation clavier alors qu'il contient des éléments interactifs",
+    gloss: "Le cadre est exclu du parcours clavier mais contient des éléments sur lesquels on peut se placer, ce qui piège ou perd la navigation.",
+  },
+  "frame-title-unique": {
+    label: "Plusieurs cadres portent le même titre",
+    gloss: "Deux cadres ont un titre identique, donc une personne utilisant un lecteur d'écran ne peut pas les distinguer.",
+  },
+  "html-lang-valid": {
+    label: "Code de langue de la page invalide",
+    gloss: "La langue déclarée de la page n'est pas un code reconnu, donc la synthèse vocale peut lire le texte avec la mauvaise prononciation.",
+  },
+  "html-xml-lang-mismatch": {
+    label: "Deux déclarations de langue contradictoires",
+    gloss: "La page déclare sa langue deux fois avec des valeurs différentes, donc la synthèse vocale peut choisir la mauvaise.",
+  },
+  "input-button-name": {
+    label: "Bouton de formulaire sans texte",
+    gloss: "Un bouton n'a aucun intitulé, donc un lecteur d'écran annonce seulement qu'il y a un bouton, sans dire ce qu'il fait.",
+  },
+  "input-image-alt": {
+    label: "Bouton image sans texte alternatif",
+    gloss: "Un bouton représenté par une image n'a pas de description, donc son rôle est invisible pour un lecteur d'écran.",
+  },
+  "label-content-name-mismatch": {
+    label: "Le nom accessible ne reprend pas le texte visible",
+    gloss: "Le nom lu par un lecteur d'écran ne contient pas le texte affiché à l'écran, ce qui empêche la commande vocale de fonctionner sur le libellé visible.",
+  },
+  "list": {
+    label: "Liste mal structurée",
+    gloss: "Une liste contient des éléments qui ne sont pas des entrées de liste, donc son nombre d'éléments est annoncé de façon incorrecte.",
+  },
+  "listitem": {
+    label: "Entrée de liste hors d'une liste",
+    gloss: "Un élément de liste n'est pas contenu dans une liste, donc il perd le contexte qui lui donne son sens.",
+  },
+  "marquee": {
+    label: "Texte défilant",
+    gloss: "Le contenu défile automatiquement, ce qui le rend illisible pour de nombreuses personnes et ne peut pas être arrêté.",
+  },
+  "meta-refresh": {
+    label: "Rechargement automatique de la page",
+    gloss: "La page se recharge ou redirige toute seule après un délai, ce qui interrompt la lecture sans que la personne puisse l'empêcher.",
+  },
+  "no-autoplay-audio": {
+    label: "Son joué automatiquement",
+    gloss: "Un son démarre seul et dure plus de trois secondes sans bouton d'arrêt, ce qui couvre la voix des lecteurs d'écran.",
+  },
+  "object-alt": {
+    label: "Contenu embarqué sans texte alternatif",
+    gloss: "Un contenu embarqué n'a pas de description textuelle, donc son information est perdue pour un lecteur d'écran.",
+  },
+  "p-as-heading": {
+    label: "Paragraphe mis en forme comme un titre",
+    gloss: "Du texte est grossi ou mis en gras pour ressembler à un titre sans en être un, donc il n'apparaît pas dans la liste des titres d'un lecteur d'écran.",
+  },
+  "role-img-alt": {
+    label: "Élément déclaré comme image sans texte alternatif",
+    gloss: "Un élément joue le rôle d'une image mais n'a pas de description, donc son contenu n'est pas transmis.",
+  },
+  "server-side-image-map": {
+    label: "Image cliquable traitée côté serveur",
+    gloss: "Ce type d'image cliquable ne peut pas être utilisé au clavier, donc ses liens sont inatteignables sans souris.",
+  },
+  "summary-name": {
+    label: "Résumé de bloc dépliable sans texte",
+    gloss: "L'intitulé d'un bloc dépliable est vide, donc la personne ne sait pas ce qu'elle va ouvrir.",
+  },
+  "svg-img-alt": {
+    label: "Image vectorielle sans texte alternatif",
+    gloss: "Une image vectorielle déclarée comme image n'a pas de description accessible, donc son contenu est perdu.",
+  },
+  "table-fake-caption": {
+    label: "Titre de tableau simulé au lieu d'un vrai titre",
+    gloss: "Le titre du tableau est une ligne ordinaire au lieu de l'élément prévu, donc il n'est pas rattaché au tableau.",
+  },
+  "td-has-header": {
+    label: "Cellule de tableau sans en-tête",
+    gloss: "Une cellule d'un grand tableau n'est rattachée à aucun en-tête, donc sa valeur est annoncée sans indiquer de quelle colonne ou ligne elle vient.",
+  },
+  "td-headers-attr": {
+    label: "Référence d'en-tête de tableau incorrecte",
+    gloss: "Une cellule renvoie vers un en-tête qui n'existe pas ou qui n'est pas un en-tête, donc le rattachement échoue.",
+  },
+  "th-has-data-cells": {
+    label: "En-tête de tableau sans cellules associées",
+    gloss: "Un en-tête ne décrit aucune cellule, en général le signe que le tableau sert à la mise en page plutôt qu'à des données.",
+  },
+  "valid-lang": {
+    label: "Code de langue invalide sur un passage de texte",
+    gloss: "Un changement de langue signalé dans le texte utilise un code non reconnu, donc la prononciation ne changera pas.",
+  },
+  "video-caption": {
+    label: "Vidéo sans sous-titres",
+    gloss: "Une vidéo n'a pas de sous-titres, donc son contenu parlé est inaccessible aux personnes sourdes ou malentendantes.",
+  },
+  // --- Lighthouse performance and seo audits that can emit findings ---
+  "bf-cache": {
+    label: "Retour arrière non instantané",
+    gloss: "La page ne peut pas être restaurée instantanément lors d'un retour arrière, ce qui oblige à la recharger entièrement.",
+  },
+  "canonical": {
+    label: "Balise canonique invalide",
+    gloss: "L'adresse de référence déclarée par la page n'est pas valide ou pointe au mauvais endroit, ce qui peut envoyer les signaux de référencement vers la mauvaise adresse.",
+  },
+  "dom-size-insight": {
+    label: "Page trop lourde en éléments",
+    gloss: "La page contient un très grand nombre d'éléments, ce qui ralentit son affichage et sa réaction aux interactions.",
+  },
+  "duplicated-javascript": {
+    label: "Code JavaScript envoyé en double",
+    gloss: "Le même code est présent plusieurs fois dans les fichiers téléchargés, ce qui alourdit inutilement la page.",
+  },
+  "duplicated-javascript-insight": {
+    label: "Code JavaScript envoyé en double",
+    gloss: "Le même code est téléchargé plusieurs fois, ce qui gaspille de la bande passante et du temps de chargement.",
+  },
+  "efficient-animated-content": {
+    label: "Animations dans un format inadapté",
+    gloss: "Une animation est servie sous forme d'image animée alors qu'une vidéo serait bien plus légère.",
+  },
+  "first-meaningful-paint": {
+    label: "Premier affichage significatif",
+    gloss: "Mesure le moment où l'essentiel du contenu de la page devient visible.",
+  },
+  "hreflang": {
+    label: "Annotation hreflang invalide",
+    gloss: "Une annotation de langue déclarée par la page n'est pas valide, donc les moteurs de recherche ne peuvent pas relier les versions linguistiques.",
+  },
+  "http-status-code": {
+    label: "Code de réponse HTTP non indexable",
+    gloss: "Le serveur renvoie un code d'erreur pour cette page, donc les moteurs de recherche ne l'indexeront pas.",
+  },
+  "inp-breakdown-insight": {
+    label: "Détail du délai de réaction aux interactions",
+    gloss: "Décompose le temps de réaction de la page pour montrer quelle étape retarde le plus la réponse à un clic.",
+  },
+  "interaction-to-next-paint": {
+    label: "Délai de réaction aux interactions (INP)",
+    gloss: "Le temps entre le clic d'un visiteur et la réaction visible de la page est trop long, ce qui donne une impression de lenteur.",
+  },
+  "lcp-breakdown-insight": {
+    label: "Détail du temps d'affichage principal",
+    gloss: "Décompose le temps mis pour afficher le plus grand élément de la page, afin de montrer quelle étape domine.",
+  },
+  "long-tasks": {
+    label: "Traitements longs bloquant la page",
+    gloss: "Des calculs longs monopolisent le navigateur, pendant lesquels la page ne répond plus aux clics.",
+  },
+  "no-document-write": {
+    label: "Écriture de contenu bloquant l'affichage",
+    gloss: "La page utilise une méthode d'insertion de contenu qui interrompt l'affichage, particulièrement pénalisante sur mobile.",
+  },
+  "non-composited-animations": {
+    label: "Animations coûteuses à afficher",
+    gloss: "Des animations obligent le navigateur à redessiner la page à chaque image, ce qui provoque des saccades.",
+  },
+  "structured-data": {
+    label: "Données structurées à vérifier",
+    gloss: "Les données structurées de la page doivent être validées avec un outil dédié ; Lighthouse ne les vérifie pas lui-même.",
+  },
+  "third-parties-insight": {
+    label: "Poids des services tiers",
+    gloss: "Des scripts extérieurs au site (mesure d'audience, widgets, publicité) occupent une part importante du temps de chargement.",
+  },
+  "uses-passive-event-listeners": {
+    label: "Écouteurs de défilement bloquants",
+    gloss: "Le code peut retarder le défilement de la page parce qu'il n'indique pas au navigateur qu'il ne le bloquera pas.",
+  },
+  "uses-responsive-images-snapshot": {
+    label: "Images non adaptées à la taille d'écran",
+    gloss: "Des images sont téléchargées dans une taille supérieure à celle réellement affichée.",
+  },
+  "viewport": {
+    label: "Déclaration d'affichage mobile absente ou incorrecte",
+    gloss: "Sans cette déclaration, un téléphone affiche la page comme sur un écran d'ordinateur, en tout petit.",
+  },
+  "viewport-insight": {
+    label: "Configuration d'affichage mobile",
+    gloss: "La déclaration d'affichage mobile de la page n'est pas optimale, ce qui peut retarder la réaction au premier contact tactile.",
+  },
+  "work-during-interaction": {
+    label: "Traitements pendant une interaction",
+    gloss: "Du travail effectué au moment d'un clic retarde la réponse visible pour le visiteur.",
+  },
+  // Domaine Lagnonu, 2026-08-24: the first audited site whose pages were
+  // actually missing a <title>, so this axe rule had never appeared in any
+  // committed fixture and leaked twice into a real French report (axe's own
+  // row and Lighthouse's, which share this ruleId).
+  'document-title': {
+    label: 'La page n\'a pas de balise titre',
+    gloss: "Le titre est le libellé affiché dans l'onglet du navigateur et lu en premier par un lecteur d'écran ; sans lui, la page est difficile à identifier parmi plusieurs onglets ou résultats de recherche.",
+  },
+  // Coverage sweep (2026-08-24, Domaine Lagnonu). The fixture-driven test
+  // below can only see a ruleId some committed scan happened to emit, so
+  // this table has been extended reactively four times after English
+  // leaked into a real French report (item 38, item 2.3, P1.1, and
+  // `hreflang-missing`/`sitemap-stale` in the Lagnonu report itself).
+  // Comparing CUSTOM_CHECK_SEVERITY against this table found 20 custom
+  // rules with a severity mapping and no French label. All 20 are entered
+  // here, including the eight that currently have no emitter, so that
+  // implementing an emitter later cannot reintroduce the leak.
+  'robots-blocks-indexing': {
+    label: "Le fichier robots.txt bloque la page d'accueil du site",
+    gloss: "Le fichier robots.txt interdit aux moteurs de recherche de lire la page d'accueil, ce qui peut retirer le site des résultats de recherche.",
+  },
+  'robots-disallow-broad': {
+    label: "Une règle du fichier robots.txt bloque une grande partie du site",
+    gloss: "Une seule règle d'interdiction couvre de nombreuses pages du site, qui deviennent invisibles pour les moteurs de recherche.",
+  },
+  'ai-crawler-blocked': {
+    label: "Le fichier robots.txt bloque un robot d'intelligence artificielle",
+    gloss: "Le site interdit l'accès à un robot d'assistant IA nommé, ce qui réduit les chances d'être cité dans ses réponses.",
+  },
+  'mixed-content': {
+    label: 'La page charge des ressources non sécurisées',
+    gloss: "Une page servie en HTTPS charge des fichiers en HTTP simple ; les navigateurs peuvent les bloquer ou afficher un avertissement de sécurité.",
+  },
+  'sitemap-missing': {
+    label: 'Aucun fichier sitemap.xml trouvé',
+    gloss: "Le sitemap est la liste des pages que le site déclare aux moteurs de recherche ; sans lui, la découverte des pages repose uniquement sur les liens internes.",
+  },
+  'sitemap-stale': {
+    label: "Le sitemap ne reflète pas le site actuel",
+    gloss: "Le sitemap déclare des pages qui n'existent plus, ou omet des pages réelles ; les moteurs de recherche suivent alors une carte périmée du site.",
+  },
+  'llms-txt-missing': {
+    label: 'Aucun fichier llms.txt trouvé',
+    gloss: "Le fichier llms.txt résume le contenu du site à destination des assistants IA ; il est facultatif et encore récent, mais son absence prive le site d'un résumé qu'il contrôle lui-même.",
+  },
+  'hreflang-missing': {
+    label: "Aucune annotation hreflang sur un site multilingue",
+    gloss: "Le site publie plusieurs versions linguistiques sans déclarer le lien entre elles ; les moteurs de recherche peuvent alors montrer la mauvaise langue à un visiteur, ou traiter les versions comme des doublons concurrents.",
+  },
+  'hreflang-invalid': {
+    label: 'Annotation hreflang invalide',
+    gloss: "Un code de langue ou de région déclaré dans une annotation hreflang n'est pas reconnu, ce qui rend l'annotation inexploitable.",
+  },
+  'canonical-conflicting': {
+    label: 'Plusieurs balises canoniques contradictoires',
+    gloss: "La page déclare plusieurs URL canoniques différentes ; les moteurs de recherche en choisissent une arbitrairement, ce qui peut envoyer les signaux de référencement vers la mauvaise adresse.",
+  },
+  'canonical-missing': {
+    label: 'Balise canonique absente',
+    gloss: "La page ne déclare pas son adresse de référence, ce qui peut faire traiter plusieurs adresses menant au même contenu comme des pages distinctes.",
+  },
+  'canonical-target-unreachable': {
+    label: 'La balise canonique pointe vers une page inaccessible',
+    gloss: "L'adresse de référence déclarée par la page ne répond pas, ce qui envoie les moteurs de recherche vers une page inexistante.",
+  },
+  'keyboard-trap': {
+    label: 'Le focus clavier est bloqué sur un élément',
+    gloss: "Un visiteur naviguant au clavier ne peut plus quitter cet élément, ce qui bloque la suite de la page pour toute personne n'utilisant pas de souris.",
+  },
+  'form-error-not-associated': {
+    label: "Un message d'erreur de formulaire n'est signalé que visuellement",
+    gloss: "L'erreur est affichée sans être rattachée au champ concerné, donc un lecteur d'écran ne l'annonce pas et la personne ne sait pas quoi corriger.",
+  },
+  'meta-title-missing': {
+    label: 'Balise titre absente',
+    gloss: "La page n'a pas de titre, qui est le libellé affiché dans l'onglet du navigateur et en tête du résultat de recherche.",
+  },
+  'meta-description-missing': {
+    label: 'Méta description absente',
+    gloss: "La page ne fournit pas de résumé court ; les moteurs de recherche en fabriquent alors un à partir du contenu, sans contrôle du site.",
+  },
+  'redirect-chain-excessive': {
+    label: 'Chaîne de redirections trop longue',
+    gloss: "L'adresse passe par plusieurs redirections successives avant d'arriver à destination, ce qui ralentit le chargement.",
+  },
+  'http-error-status': {
+    label: 'La page renvoie une erreur HTTP',
+    gloss: "Le serveur répond par un code d'erreur au lieu de la page attendue.",
+  },
+  'image-oversized': {
+    label: 'Image servie dans une taille supérieure à son affichage',
+    gloss: "L'image téléchargée est nettement plus grande que la zone où elle est affichée, ce qui gaspille de la bande passante.",
+  },
+  'image-legacy-format': {
+    label: 'Image dans un format ancien',
+    gloss: "L'image utilise un format plus lourd que les formats modernes équivalents, à qualité visuelle comparable.",
   },
   // item 1.3: not a real scanner ruleId - the synthetic family key
   // appendix-grouping.ts's RULE_FAMILIES assigns to 7 separate Lighthouse

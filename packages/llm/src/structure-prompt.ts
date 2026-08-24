@@ -26,7 +26,7 @@ Before writing any ID into your response, confirm its exact text appears in the 
 Group the findings into roughly 8 to 15 themes a business owner can act on. Do not create a theme with zero findings, and do not leave any finding you consider important ungrouped.
 
 For each theme, set:
-- category: accessibility, seo, performance, or rendering.
+- category: accessibility, seo, performance, rendering, or privacy. Use the category the theme's own findings carry. Use privacy for findings about security response headers, cookies, trackers, or what third parties can observe about visitors. Findings whose own category is geo have no theme category of their own: group them under seo.
 - effort (low/medium/high) and impact (low/medium/high) for fixing the theme.
 - priorityRank as a dense ranking starting at 1, no gaps, no ties, most urgent first.
 

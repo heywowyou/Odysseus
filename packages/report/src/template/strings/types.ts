@@ -660,9 +660,10 @@ export interface ReportStrings {
      *  registration number) anywhere in the document - a professionalism
      *  and liability-exposure gap for a EUR 1,600 HT French deliverable.
      *  Template: {signatory}, {registrationNumber}. A3 (2026-08-24): the
-     *  placeholder is filled and the label says SIREN, because the real
-     *  number is nine digits - see ODYSSEUS_REGISTRATION_NUMBER
-     *  (html-utils.ts) for why the label moved rather than the number. */
+     *  placeholder is filled; the label says SIRET now that the full
+     *  fourteen-digit number is known - see ODYSSEUS_REGISTRATION_NUMBER
+     *  (html-utils.ts), where label and number are documented as moving
+     *  together so the two can never disagree. */
     issuerBlockTemplate: string;
     liabilityStatement: string;
   };

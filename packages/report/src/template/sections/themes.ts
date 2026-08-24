@@ -42,9 +42,75 @@ export const MAX_RENDERED_THEMES = 6;
  *  after, so it can never occupy a slot a real priority should have had.
  *  findingsById must be the same map the caller already builds for
  *  rendering, not a second lookup. */
+/**
+ * B2.1 (2026-08-24, Domaine Lagnonu). Section 04 told the director "43/43
+ * pages with a critical finding" while the Priorites section contained six
+ * chantiers and not one of them was performance - yet four of that site's
+ * five critical findings were performance (LCP, TBT, FCP, Speed Index, all
+ * 43 pages, median TBT 3 936 ms against a 200 ms threshold). The model had
+ * ranked those themes 12, 15 and 17, below the render cut, so the single
+ * number on the cover was driven by a problem the priorities never named.
+ *
+ * Every category holding at least one critical finding is therefore
+ * guaranteed its highest-ranked theme in the rendered list. Deterministic,
+ * and it leaves the model's ordering otherwise untouched: promoted themes
+ * take the place of the lowest-ranked themes that would have rendered,
+ * and the final list stays in priorityRank order so the numbering a reader
+ * sees is still ascending.
+ */
 export function selectRenderedThemes(themes: readonly Theme[], findingsById: ReadonlyMap<string, Finding>): Theme[] {
   const withResolvedFindings = themes.filter((theme) => theme.findingIds.some((id) => findingsById.has(id)));
-  return [...withResolvedFindings].sort((a, b) => a.priorityRank - b.priorityRank).slice(0, MAX_RENDERED_THEMES);
+  const byRank = [...withResolvedFindings].sort((a, b) => a.priorityRank - b.priorityRank);
+  const selected = byRank.slice(0, MAX_RENDERED_THEMES);
+  if (selected.length < MAX_RENDERED_THEMES) return selected;
+
+  const themeFindings = (theme: Theme): Finding[] =>
+    theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
+
+  const criticalCategories = new Set<string>();
+  for (const theme of byRank) {
+    for (const finding of themeFindings(theme)) {
+      if (finding.severity === 'critical') criticalCategories.add(finding.category);
+    }
+  }
+
+  const selectedKeys = new Set(selected.map((theme) => theme.priorityRank));
+  for (const category of criticalCategories) {
+    const alreadyShown = selected.some((theme) =>
+      themeFindings(theme).some((f) => f.category === category && f.severity === 'critical'),
+    );
+    if (alreadyShown) continue;
+
+    const promoted = byRank.find(
+      (theme) =>
+        !selectedKeys.has(theme.priorityRank) &&
+        themeFindings(theme).some((f) => f.category === category && f.severity === 'critical'),
+    );
+    if (!promoted) continue;
+
+    // Drop the lowest-ranked currently-selected theme that is not itself
+    // the only representative of some critical category.
+    for (let i = selected.length - 1; i >= 0; i--) {
+      const candidate = selected[i]!;
+      const covers = [...criticalCategories].filter((c) =>
+        themeFindings(candidate).some((f) => f.category === c && f.severity === 'critical'),
+      );
+      const isSoleRepresentative = covers.some(
+        (c) =>
+          selected.filter((t) => themeFindings(t).some((f) => f.category === c && f.severity === 'critical'))
+            .length === 1,
+      );
+      if (isSoleRepresentative) continue;
+      selectedKeys.delete(candidate.priorityRank);
+      selected.splice(i, 1);
+      break;
+    }
+
+    selected.push(promoted);
+    selectedKeys.add(promoted.priorityRank);
+  }
+
+  return selected.sort((a, b) => a.priorityRank - b.priorityRank);
 }
 
 /** Quick-win star icon, ported verbatim from report.reference.html's
@@ -163,6 +229,18 @@ function renderRevenueImpactNote(
  *  Rendered only when a theme's findings genuinely span both first- and
  *  third-party pages - a theme confined to one or the other needs no
  *  split, the existing prose already applies cleanly to all of it. */
+/** True when every finding under a theme carries the theme's own
+ *  category. A theme whose findings are all `privacy` or `geo` returns
+ *  false for any label the locked schema allows, which is the intended
+ *  outcome: no citation rather than a misattributed one. */
+function themeFindingsAgreeWithCategory(
+  theme: { category: string },
+  themeFindings: readonly Finding[],
+): boolean {
+  if (themeFindings.length === 0) return false;
+  return themeFindings.every((finding) => finding.category === theme.category);
+}
+
 function renderOwnershipSplitNote(strings: ReportStrings, language: ReportLanguage, themeFindings: readonly Finding[]): string {
   const thirdPartyFindings = themeFindings.filter((f) => isThirdPartyFinding(f));
   const firstPartyFindings = themeFindings.filter((f) => !isThirdPartyFinding(f));
@@ -424,9 +502,24 @@ export function renderThemes(
   const citationByRank = new Map<number, ReferenceStat>();
   const transactionalPageUrls = transactionalFlowPageUrls(analysis);
   for (const theme of sortedThemes) {
+    const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
+    // B2.2 (2026-08-24, Domaine Lagnonu). theme.category is chosen by the
+    // model, and a real run labelled a security-headers theme
+    // ('privacy' findings, per trade-off 25) as 'performance' - which would
+    // attach a page-speed conversion statistic to a security priority.
+    // That is trade-off 16's B1 defect arriving through the other input:
+    // B1 fixed the stats table, nothing checked the category it is keyed on.
+    //
+    // The locked themeSchema (llm-output.ts) offers only accessibility |
+    // seo | performance | rendering, so a privacy or geo theme has no
+    // correct value available and the model's answer cannot be "fixed" by
+    // rejecting it. Citations are therefore keyed off what the findings
+    // actually are, and suppressed entirely when the theme's own findings
+    // do not agree with its label - omitting a citation is always safe,
+    // attaching the wrong one is not.
+    if (!themeFindingsAgreeWithCategory(theme, themeFindings)) continue;
     if (!isCitableThemeCategory(theme.category)) continue;
     if (citedCategories.has(theme.category)) continue;
-    const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
     if (isCitationIneligibleTheme(themeFindings)) continue;
     // P0.2 (2026-08-21 La Corniche feedback pass): strictSector so a
     // hospitality report never falls back to a generic/cross-sector stat

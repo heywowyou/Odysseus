@@ -310,9 +310,20 @@ export const fr: ReportStrings = {
     // pages the client's agency can actually touch. Template:
     // {firstPartyPages}, {firstPartyPageWord}, {thirdPartyPages},
     // {thirdPartyPageWord}, {vendor}.
+    // B2.3/B2.4 (2026-08-24): the two page counts are unions over
+    // overlapping sets, not a partition of the site, and the old wording
+    // ("37 pages ... 36 pages ...") invited a reader to add them to 73 on a
+    // 43-page site. Reworded to say which side each concerns without
+    // implying the two sum. {vendor} now carries its own preposition so
+    // elision is correct for a vowel-initial label ("d'un composant tiers"),
+    // which the hardcoded "de {vendor}" got wrong.
     ownershipSplitTemplate:
-      '{firstPartyPages} {firstPartyPageWord} relèvent de votre site (votre agence peut corriger), {thirdPartyPages} {thirdPartyPageWord} relèvent de {vendor} (à transmettre à son éditeur).',
-    ownershipSplitUnknownVendorLabel: "un composant tiers",
+      'Ce chantier concerne {firstPartyPages} {firstPartyPageWord} relevant de votre site (votre agence peut corriger) et {thirdPartyPages} {thirdPartyPageWord} relevant de {vendor} (à transmettre à son éditeur) ; une même page peut relever des deux.',
+    // "ce composant tiers" rather than "un composant tiers": the template
+    // renders "relevant de {vendor}", and "de un" is ungrammatical while
+    // "de ce" is not - which removes the elision problem instead of
+    // special-casing it.
+    ownershipSplitUnknownVendorLabel: 'ce composant tiers',
   },
   renderDiffEvidence: {
     eyebrow: 'Preuve de rendu',
@@ -586,7 +597,7 @@ export const fr: ReportStrings = {
       'Une fois les priorités traitées, une vérification ciblée confirme que les constats corrigés le sont bien, sans relancer un audit complet.',
     authorshipTemplate:
       'Rapport produit par {producer}, généré le {date} (build {version}), identifiant de rapport {reportId}.',
-    issuerBlockTemplate: 'Signataire : {signatory}. SIREN : {registrationNumber}.',
+    issuerBlockTemplate: 'Signataire : {signatory}. SIRET : {registrationNumber}.',
     liabilityStatement:
       "Ce rapport reproduit des constats techniques détectés par des outils automatisés, accompagnés d'explications et de priorisations. Il ne constitue pas un avis juridique ; voir la section « Exposition légale » et la méthodologie pour les limites de couverture. Odysseus ne saurait être tenu responsable des décisions prises sur la seule base de ce document.",
   },

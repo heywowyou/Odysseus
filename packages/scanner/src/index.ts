@@ -43,6 +43,8 @@ export {
   getMaxCrawlDepth,
   getCrawlDelayMs,
   getPageTimeoutMs,
+  UNLIMITED_MAX_PAGES,
+  getRenderSettleTimeoutMs,
   getLighthouseTimeoutMs,
   getScanConcurrency,
   getCrawlerUserAgent,

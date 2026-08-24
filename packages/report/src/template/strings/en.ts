@@ -227,7 +227,7 @@ export const en: ReportStrings = {
     pagesOfTotalTemplate: '{pages} {pageWord} of {totalPages}',
     refsLabel: 'Findings',
     ownershipSplitTemplate:
-      '{firstPartyPages} {firstPartyPageWord} belong to your site (your agency can fix these), {thirdPartyPages} {thirdPartyPageWord} belong to {vendor} (pass on to its provider).',
+      'This priority covers {firstPartyPages} {firstPartyPageWord} on your own site (your agency can fix these) and {thirdPartyPages} {thirdPartyPageWord} belonging to {vendor} (pass on to its provider); a page can fall into both.',
     ownershipSplitUnknownVendorLabel: 'a third-party component',
   },
   renderDiffEvidence: {
@@ -475,7 +475,7 @@ export const en: ReportStrings = {
     postFixBody:
       'Once priorities are addressed, a targeted check confirms the fixed findings are genuinely resolved, without re-running a full audit.',
     authorshipTemplate: 'Report produced by {producer}, generated on {date} (build {version}), report ID {reportId}.',
-    issuerBlockTemplate: 'Signatory: {signatory}. SIREN: {registrationNumber}.',
+    issuerBlockTemplate: 'Signatory: {signatory}. SIRET: {registrationNumber}.',
     liabilityStatement:
       'This report reproduces technical findings detected by automated tools, together with explanations and prioritization. It does not constitute legal advice; see the "Legal exposure" section and the methodology for coverage limits. Odysseus cannot be held liable for decisions made on the sole basis of this document.',
   },

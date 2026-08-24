@@ -73,20 +73,27 @@ export const ODYSSEUS_CONTACT_EMAIL = 'contact@odysseusaudit.com';
  *  omit" posture as ODYSSEUS_CONTACT_EMAIL above - not manual-input
  *  fields or LLM output.
  *
- *  A3 (2026-08-24): the placeholder is gone, replaced by the real
- *  registration number Jules supplied. It is nine digits, so it is a
- *  SIREN, not a SIRET - a SIRET is a SIREN followed by a five-digit NIC
- *  identifying one establishment (the same distinction
- *  packages/scanner/src/checks/mentions-legales.ts already encodes when
- *  reading a client's own legal notice). The label was changed to match
- *  the number rather than the number padded to fit the label: printing a
- *  nine-digit value under "SIRET" on the signature line of a document
- *  that may be forwarded to counsel is exactly the kind of small
- *  inaccuracy this report's whole posture forbids. Swap both constants
- *  together if the NIC is ever added. */
+ *  A3 (2026-08-24): the placeholder was replaced by the nine-digit SIREN
+ *  Jules supplied, and the label was moved from SIRET to SIREN to match
+ *  the number rather than padding the number to fit the label.
+ *
+ *  Updated later the same day: Jules supplied the full fourteen-digit
+ *  SIRET (the same SIREN followed by NIC 00023), so the number and the
+ *  label move back together, exactly as the note above said they must.
+ *  A SIRET identifies one establishment where a SIREN identifies the
+ *  legal entity, which is the more precise thing to print on the
+ *  signature line of a document that may be forwarded to counsel - it is
+ *  the same distinction packages/scanner/src/checks/mentions-legales.ts
+ *  already encodes when reading a client's own legal notice.
+ *
+ *  Overridable via ODYSSEUS_SIRET so the value can be set per machine
+ *  without a code change; the literal stays as the canonical default so
+ *  an unset environment can never silently produce a report with no
+ *  issuer identity, which is the failure this constant exists to
+ *  prevent. */
 export const ODYSSEUS_PRODUCER_NAME = 'Odysseus Audit';
 export const ODYSSEUS_SIGNATORY_NAME = 'Jules Fontaine';
-export const ODYSSEUS_REGISTRATION_NUMBER = '980766463';
+export const ODYSSEUS_REGISTRATION_NUMBER = process.env['ODYSSEUS_SIRET'] ?? '98076646300023';
 
 /** item 3.12: "Prochaines étapes" described re-audits and post-fix
  *  verification with no price, no lead time, and no way to order -

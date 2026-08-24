@@ -8,11 +8,36 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { Finding } from '@odysseus/core';
+import type { Finding, FindingCategory } from '@odysseus/core';
 
 export interface FindingDocument extends Finding {
   siteUrl: string;
 }
+
+/**
+ * Mirrors @odysseus/core's FindingCategory. Kept as a literal rather than
+ * imported at runtime because findings.ts is a locked contract exporting a
+ * type, not a value. `assertExhaustive` below fails the build if a category
+ * is ever added to the union without being added here - which is exactly
+ * what happened to `geo` (trade-off 14) and `privacy` (trade-off 25), both
+ * of which sat unlisted for months. They persisted anyway only because
+ * persist-audit.ts writes through bulkWrite, which does not run update
+ * validators; confirmed against the live collection, which holds 39 geo and
+ * 24 privacy findings. The analyses collection has no such reprieve - it
+ * writes through full document validation and rejected `privacy` outright.
+ */
+const FINDING_CATEGORY_VALUES = [
+  'accessibility',
+  'seo',
+  'geo',
+  'performance',
+  'rendering',
+  'privacy',
+] as const satisfies readonly FindingCategory[];
+
+type UnlistedFindingCategory = Exclude<FindingCategory, (typeof FINDING_CATEGORY_VALUES)[number]>;
+const _findingCategoriesAreExhaustive: UnlistedFindingCategory extends never ? true : never = true;
+void _findingCategoriesAreExhaustive;
 
 const findingElementSchema = new Schema(
   {
@@ -35,7 +60,7 @@ const findingSchema = new Schema<FindingDocument>(
     category: {
       type: String,
       required: true,
-      enum: ['accessibility', 'seo', 'performance', 'rendering'],
+      enum: FINDING_CATEGORY_VALUES,
     },
     severity: {
       type: String,

@@ -14,6 +14,7 @@ vi.mock('@odysseus/scanner', () => ({
   getMaxCrawlDepth: vi.fn(() => 5),
   getMaxPages: vi.fn(() => 20),
   getPageTimeoutMs: vi.fn(() => 30_000),
+  getRenderSettleTimeoutMs: vi.fn(() => 8_000),
   getScanConcurrency: vi.fn(() => 3),
 }));
 // normalizeRegistryDisplayName is a pure string function with its own

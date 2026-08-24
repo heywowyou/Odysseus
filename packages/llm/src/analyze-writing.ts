@@ -2,7 +2,10 @@ import { callMistralForWriting } from './client.js';
 import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { findExecutiveSummaryDigitViolations } from './executive-summary-digit-guard.js';
 import { findLanguageComplianceViolations } from './language-guard.js';
+import { findLegalConsequenceViolations } from './legal-consequence-guard.js';
+import { findPageCountViolations } from './page-count-guard.js';
 import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js';
+import { normalizeWritingOutputTypography } from './typography.js';
 import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 
@@ -70,6 +73,27 @@ export async function analyzeWriting(
       continue;
     }
 
+    // Ahead of the digit guard deliberately: a sanction claim is a rule 6
+    // breach, not a style drift, so it should be the reason recorded when a
+    // response trips both.
+    const legalViolations = findLegalConsequenceViolations(result.output, input.language);
+    if (legalViolations.length > 0) {
+      lastFailureReason = `legal-consequence claim in field(s): ${legalViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    const pageCountViolations = findPageCountViolations(result.output, input.language);
+    if (pageCountViolations.length > 0) {
+      lastFailureReason = `invented page count in field(s): ${pageCountViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
     const digitViolations = findExecutiveSummaryDigitViolations(result.output);
     if (digitViolations.length > 0) {
       lastFailureReason = `executiveSummary contains a digit, which the report template now owns: "${digitViolations[0]!.text}"`;
@@ -79,7 +103,13 @@ export async function analyzeWriting(
       continue;
     }
 
-    return { output: result.output, model: MISTRAL_MODEL, temperature: MISTRAL_TEMPERATURE };
+    // Normalization, not validation: applied after every rejecting guard
+    // has passed, so a guard never inspects text this rewrote.
+    return {
+      output: normalizeWritingOutputTypography(result.output, input.language),
+      model: MISTRAL_MODEL,
+      temperature: MISTRAL_TEMPERATURE,
+    };
   }
 
   throw new Error(

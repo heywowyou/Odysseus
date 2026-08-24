@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { Finding } from '@odysseus/core';
+import { CUSTOM_CHECK_SEVERITY, type Finding } from '@odysseus/core';
 import { RULE_TRANSLATIONS_FR } from './rule-translations.js';
 import { loadSasFernandeFindings } from '../test-fixtures.js';
 
@@ -85,5 +85,66 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
       expect(translation.label.length, `${ruleId} has an empty label`).toBeGreaterThan(0);
       expect(translation.gloss.length, `${ruleId} has an empty gloss`).toBeGreaterThan(0);
     }
+  });
+});
+
+
+/**
+ * Source-derived coverage, added 2026-08-24 after `hreflang-missing` and
+ * `sitemap-stale` both rendered in English inside a real French report
+ * (Domaine Lagnonu).
+ *
+ * The fixture-driven tests above can only see a ruleId that some committed
+ * scan happened to emit, so this table was extended reactively four times,
+ * each time after a client-facing report had already leaked English. This
+ * check does not wait for a scan: every custom rule that has a severity
+ * mapping is a rule the system can emit, so every one of them needs a
+ * French label before it can ever reach a report.
+ *
+ * Scoped to CUSTOM_CHECK_SEVERITY rather than all of axe and Lighthouse
+ * deliberately - those two have far larger rule universes that this repo
+ * does not own, and the fixture tests above remain the right mechanism for
+ * them. Custom rules are ours, enumerable, and the ones this table has
+ * repeatedly missed.
+ */
+describe('every custom rule that can be emitted has a French translation', () => {
+  it('covers every ruleId in CUSTOM_CHECK_SEVERITY', () => {
+    const missing = Object.keys(CUSTOM_CHECK_SEVERITY).filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    expect(
+      missing,
+      `custom rules with a severity mapping but no French label: ${missing.join(', ')}`,
+    ).toEqual([]);
+  });
+});
+
+
+/**
+ * Full reachable-set coverage, 2026-08-24 (operator decision: translate
+ * everything rather than wait for the next leak).
+ *
+ * reachable-rule-ids.json lists every axe rule our WCAG tag filter can reach
+ * and every Lighthouse performance/seo audit that can emit a finding. It is
+ * committed data because this package depends on neither scanner, and adding
+ * them here would mean new dependencies for a test;
+ * packages/scanner/src/reachable-rule-ids.test.ts recomputes the same list
+ * from the installed packages and fails if the committed copy has drifted, so
+ * an axe or Lighthouse upgrade cannot quietly introduce an untranslated rule.
+ *
+ * Together with the CUSTOM_CHECK_SEVERITY check above, this covers all three
+ * sources a finding can come from.
+ */
+describe('every rule the scanners can emit has a French translation', () => {
+  const reachable = JSON.parse(
+    readFileSync(path.join(moduleDir, 'reachable-rule-ids.json'), 'utf-8'),
+  ) as { axe: string[]; lighthouse: string[] };
+
+  it('covers every reachable axe rule', () => {
+    const missing = reachable.axe.filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    expect(missing, `axe rules with no French label: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('covers every reachable Lighthouse audit', () => {
+    const missing = reachable.lighthouse.filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    expect(missing, `Lighthouse audits with no French label: ${missing.join(', ')}`).toEqual([]);
   });
 });

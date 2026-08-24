@@ -54,7 +54,11 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
     } finally {
       await browser.close();
     }
-  }, 30_000);
+  // Measured at ~28s on an idle machine, so a 30s budget left a 7 percent
+  // margin and this test failed as a timeout, not a violation, whenever
+  // anything else was using the CPU (a concurrent scan, a full suite run).
+  // Matched to the 60s the second case in this file already uses.
+  }, 60_000);
 
   /**
    * The sas-fernande fixture predates milestone 8.6 and contains no

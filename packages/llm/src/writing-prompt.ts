@@ -53,6 +53,10 @@ A separate structuring pass has already grouped this audit's findings into theme
 
 The legal relevance of an accessibility theme (which WCAG criterion applies) is also decided outside this pass, from the underlying finding data, not written by you - your response schema has no field for it.
 
+Never state how many pages a problem affects. You are shown at most three example pages per finding, never the full list, so any page count you write is a guess - and the report renders the real count next to your text, where a reader will see the two disagree. Write "les pages concernees" / "the affected pages", never "les 18 pages concernees" / "18 pages". Responses containing a page count are rejected.
+
+Never state a legal consequence for this business. Do not write that it risks or is exposed to a fine, a sanction, a penalty, prosecution, litigation, or "legal risk", and do not write that anything is illegal or legally required for it. Whether a law binds this particular company depends on its size and sector and is stated elsewhere in the report, from registry data, not by you. Write the commercial consequence instead: lost customers, lost bookings, lost trust. Responses that state a legal consequence are rejected.
+
 Each theme you are given below has a themeKey (for example "t1"). For every theme you are given, write:
 - title: a short, plain-language theme name.
 - businessImpact: why this matters commercially, in plain language, no jargon, no scanner terminology. At most two sentences - your response is checked against this limit and rejected if it is longer.

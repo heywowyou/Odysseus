@@ -19,7 +19,20 @@ export const impactSchema = z.enum(['low', 'medium', 'high']);
 
 export const themeSchema = z.object({
   title: z.string().min(1),
-  category: z.enum(['accessibility', 'seo', 'performance', 'rendering']),
+  /** 'privacy' added 2026-08-24, an explicitly approved change to this
+   *  locked contract, for the same reason trade-off 25 added it to
+   *  FindingCategory: security-header and cookie/tracker findings had no
+   *  correct home, so a real Domaine Lagnonu run labelled a
+   *  security-headers theme 'performance' - which keys reference-stat
+   *  selection (trade-off 16) off the wrong category and can attach a
+   *  page-speed statistic to a security priority.
+   *
+   *  'geo' is deliberately still absent. Trade-off 16 excluded it so an
+   *  LLM-synthesized theme can never be geo and a geo citation only ever
+   *  appears in the findings appendix; nothing in this change disturbs
+   *  that reasoning. Widening an enum is backward compatible: analyses
+   *  stored before this date still parse. */
+  category: z.enum(['accessibility', 'seo', 'performance', 'rendering', 'privacy']),
   /** Why this matters commercially, in plain language, no jargon. */
   businessImpact: z.string().min(1),
   /** Populated for accessibility themes only. States the relevant

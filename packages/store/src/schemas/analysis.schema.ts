@@ -37,13 +37,34 @@ export interface AnalysisDocumentFields {
 
 export type AnalysisDocument = AnalysisDocumentFields;
 
+/**
+ * Mirrors llm-output.ts's themeSchema.category, which is a narrower set
+ * than FindingCategory: 'geo' is deliberately excluded so a model-written
+ * theme can never be geo (trade-off 16), while 'privacy' was added
+ * 2026-08-24 (trade-off 31). The Exclude below fails the build if the Zod
+ * enum gains a value this list does not have - the drift that made a real
+ * analysis unpersistable after 'privacy' was added to the Zod schema and
+ * its hand-mirror but not here.
+ */
+const THEME_CATEGORY_VALUES = [
+  'accessibility',
+  'seo',
+  'performance',
+  'rendering',
+  'privacy',
+] as const satisfies readonly Theme['category'][];
+
+type UnlistedThemeCategory = Exclude<Theme['category'], (typeof THEME_CATEGORY_VALUES)[number]>;
+const _themeCategoriesAreExhaustive: UnlistedThemeCategory extends never ? true : never = true;
+void _themeCategoriesAreExhaustive;
+
 const themeSchemaMongo = new Schema(
   {
     title: { type: String, required: true },
     category: {
       type: String,
       required: true,
-      enum: ['accessibility', 'seo', 'performance', 'rendering'],
+      enum: THEME_CATEGORY_VALUES,
     },
     businessImpact: { type: String, required: true },
     legalRelevance: { type: String },

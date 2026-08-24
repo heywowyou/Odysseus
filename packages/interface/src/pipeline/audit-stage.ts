@@ -15,6 +15,7 @@ import {
   getCrawlDelayMs,
   getCrawlerUserAgent,
   getLighthouseTimeoutMs,
+  getRenderSettleTimeoutMs,
   getMaxCrawlDepth,
   getMaxPages,
   getPageTimeoutMs,
@@ -129,6 +130,7 @@ export async function runAuditStage(
       crawlDelayMs: options.delayMs ?? getCrawlDelayMs(),
       pageTimeoutMs: getPageTimeoutMs(),
       lighthouseTimeoutMs: getLighthouseTimeoutMs(),
+      renderSettleTimeoutMs: getRenderSettleTimeoutMs(),
       userAgent: getCrawlerUserAgent(),
       scanConcurrency: getScanConcurrency(),
     };
