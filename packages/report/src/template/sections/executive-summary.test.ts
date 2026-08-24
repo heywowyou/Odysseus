@@ -103,6 +103,14 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
 // "Conformité : Sans objet" should not be something the reader has to
 // notice on their own after four pages of legal framing (cover, section
 // 02, section 07).
+//
+// A7b (2026-08-24): the note used to say the top priority was "un enjeu
+// commercial, pas un enjeu de conformité légale". legalRelevance is built
+// only for accessibility themes with WCAG criteria, so that claimed no legal
+// weight for privacy, LCEN and security themes it knows nothing about - on a
+// real report whose section 03 now carries an LCEN breach. The assertions
+// below follow the narrowed claim; top-priority-legal-note.test.ts pins the
+// copy itself.
 describe('item 16: a non-legal top priority is acknowledged in the executive summary', () => {
   const nonLegalTheme = {
     title: 'Vitesse mobile insuffisante',
@@ -179,7 +187,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     const analysis = buildAnalysis([nonLegalTheme, legalTheme]);
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001'), buildFinding('f002')], emptyManifest);
 
-    expect(html).toContain('La priorité 1 ci-dessus est un enjeu commercial');
+    expect(html).toContain("La priorité 1 ci-dessus n&#39;est rattachée à aucun critère d&#39;accessibilité");
     expect(html).toContain('position 2');
   });
 
@@ -187,7 +195,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     const analysis = buildAnalysis([nonLegalTheme]);
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001')], emptyManifest);
 
-    expect(html).toContain('La priorité 1 ci-dessus est un enjeu commercial');
+    expect(html).toContain("La priorité 1 ci-dessus n&#39;est rattachée à aucun critère d&#39;accessibilité");
     expect(html).toContain("Aucune des priorités");
   });
 
@@ -197,7 +205,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     const analysis = buildAnalysis([legalThemeRankedFirst, nonLegalThemeRankedSecond]);
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001'), buildFinding('f002')], emptyManifest);
 
-    expect(html).not.toContain('enjeu commercial');
+    expect(html).not.toContain("rattachée à aucun critère");
   });
 
   it('item 0.4: the counts sentence is bound from the findings passed in, never from the model prose', () => {
