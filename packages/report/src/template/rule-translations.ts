@@ -119,19 +119,19 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
   },
   'crux-lcp-poor': {
     label: 'Chargement du contenu principal jugé insuffisant par les visiteurs réels',
-    gloss: "Les données de terrain Chrome placent le LCP de ce site au-dessus du seuil « insuffisant » publié par Google.",
+    gloss: "Les données de terrain Chrome placent le LCP de ce site au-dessus du seuil « insuffisant » publié par Google.",
   },
   'crux-cls-poor': {
     label: 'Stabilité visuelle jugée insuffisante par les visiteurs réels',
-    gloss: "Les données de terrain Chrome placent le CLS de ce site au-dessus du seuil « insuffisant » publié par Google.",
+    gloss: "Les données de terrain Chrome placent le CLS de ce site au-dessus du seuil « insuffisant » publié par Google.",
   },
   'crux-inp-poor': {
     label: 'Réactivité jugée insuffisante par les visiteurs réels',
-    gloss: "Les données de terrain Chrome placent l'INP de ce site au-dessus du seuil « insuffisant » publié par Google.",
+    gloss: "Les données de terrain Chrome placent l'INP de ce site au-dessus du seuil « insuffisant » publié par Google.",
   },
   'link-text': {
     label: "Le texte des liens n'est pas descriptif",
-    gloss: "Des liens utilisent un libellé générique (« cliquez ici », « en savoir plus ») qui n'indique pas leur destination.",
+    gloss: "Des liens utilisent un libellé générique (« cliquez ici », « en savoir plus ») qui n'indique pas leur destination.",
   },
   'scrollable-region-focusable': {
     label: 'Une zone défilante ne peut pas recevoir le focus clavier',
@@ -309,7 +309,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
   },
   'link-name': {
     label: 'Les liens doivent avoir un texte identifiable',
-    gloss: "Un lien n'a pas de texte ou a un texte non descriptif (ex. « cliquez ici »).",
+    gloss: "Un lien n'a pas de texte ou a un texte non descriptif (ex. « cliquez ici »).",
   },
   'mainthread-work-breakdown': {
     label: 'Réduire le travail du thread principal',

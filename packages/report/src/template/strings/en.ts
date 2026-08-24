@@ -125,9 +125,9 @@ export const en: ReportStrings = {
       'This site has few significant SEO and GEO findings relative to accessibility: most of the priorities below concern accessibility.',
     jumpLinkLabelTemplate: 'See priority {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
-      'Priority 1 above is a commercial issue, not a legal conformance issue: it was ranked first based on its effort-to-impact ratio. The legal conformance priorities rank at position {legalRank}.',
+      'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its effort-to-impact ratio. The priorities tied to an accessibility criterion rank at position {legalRank}. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section.',
     topPriorityIsNotLegalNoPointer:
-      "Priority 1 above is a commercial issue, not a legal conformance issue: it was ranked first based on its effort-to-impact ratio. None of the priorities in this report are directly tied to legal conformance; see the \"Legal exposure\" section for the detail.",
+      'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its effort-to-impact ratio. None of the priorities in this report are tied to an accessibility criterion. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section for the detail.',
     summaryCountsTemplate: 'The audit identified {actionable} priority findings ({critical} critical and {serious} serious) out of {total} findings in total.',
   },
   legalExposure: {
@@ -166,6 +166,12 @@ export const en: ReportStrings = {
     registrySnapshotTemplate:
       'Sirene registry data: {denomination}, SIREN {siren}, {effectifs}, retrieved on {date} ({source}).',
     registrySnapshotEffectifsUnavailable: 'headcount band unavailable',
+    lcenKicker: 'Another applicable obligation',
+    lcenObserved:
+      'The scan found no SIREN, RCS or VAT number published on the pages of this site it visited.',
+    lcenSourceTemplate: 'Source: {citation}. Competent authority: {authority}.',
+    lcenScanLimitNote:
+      'A scan visits a limited number of pages and can miss one where this information appears. This obligation does not depend on the outcome of the accessibility analysis above. Have your situation confirmed by a legal adviser.',
     registrySnapshotVerbatimNote:
       "This denomination is reproduced exactly as it appears in the Sirene registry, associated with the SIREN above, not derived from the domain name.",
     transactionalFlowConflictTemplate:

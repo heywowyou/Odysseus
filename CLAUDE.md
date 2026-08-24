@@ -1039,6 +1039,114 @@ needed, say so and stop. Do not change them and continue.
     correctly classed as essential. A consent check that fires on every
     site is worthless; that true negative is the evidence it does not.
 
+27. **The structure pass sees dense alias finding IDs, not real ones**,
+    2026-08-24. A real La Corniche audit failed all six structure attempts
+    by inventing exactly `f320`. That finding exists, but `partitionFindings`
+    (trade-off 8) had diverted it, and every neighbour the model was shown -
+    f316 to f319 and f321 to f324 - was the same rule, so the model closed
+    the run. `structure-prompt.ts` already carried an explicit paragraph
+    telling it that numeric gaps are normal and never to complete a
+    sequence; that instruction failed six times out of six, which is the
+    argument for removing the gap rather than restating the rule louder.
+
+    `packages/llm/src/finding-alias.ts` assigns a gapless `x1..xN` alias over
+    exactly the findings the model is shown, `analyzeStructure` runs the
+    invented-ID guard in alias space, and resolves back to real IDs before
+    it returns. Nothing outside that function ever sees an alias:
+    `structure.json` on disk, the staleness check that reads it, and
+    `buildWritingInput` are untouched. The prefix is deliberately not `f` so
+    a leaked alias would be obvious in a stored artifact rather than
+    plausible.
+
+    The safety property is unchanged in substance and worth stating exactly.
+    Rule 1 forbids the model introducing a finding absent from its input.
+    Under dense aliases every ID in range denotes a finding it genuinely saw,
+    so completing a run can no longer surface a withheld finding - at worst
+    it pulls in a neighbour it did see, which is a grouping-quality question,
+    not a rule-1 breach. Out-of-range IDs are still a hard rejection, and a
+    real finding ID appearing in a response is now itself rejected, since the
+    model was never shown one. The superseded prompt paragraph was deleted,
+    not weakened. Do not reintroduce a prompt instruction about ID gaps: there
+    are no gaps left to explain, and the instruction is what already failed.
+
+28. **The LCEN identification obligation is stated to the client, and its
+    citation was wrong**, 2026-08-24. Two separate defects, found together.
+
+    First, governance. `packages/core/src/compliance/regimes.ts` has held a
+    complete, client-facing-quality LCEN regime since it was written, and
+    nothing anywhere read it - `grep` for `LCEN_MENTIONS_LEGALES_REGIME_ID`
+    returned the definition site and nothing else. `assessObligations()`
+    emits only EAA and article 47. Meanwhile `docs/obligation-basis.md`, the
+    file that governs every legal claim in the product, had no LCEN entry at
+    all, so the regime was simultaneously unauthorised to state and unread.
+    The scanner has detected the breach since milestone 8
+    (`lcen-mentions-legales-missing`), but it surfaced only as one annex row
+    under `seo`, while section 03 "Exposition légale" - the page a client or
+    their lawyer reads for what the law asks of them - was entirely EAA, and
+    mentioned the missing SIREN only as an obstacle to determining EAA scope.
+
+    Second, the citation. Checked against Légifrance rather than trusted:
+    loi n. 2024-449 du 21 mai 2024 (SREN) restructured the LCEN and moved the
+    identification obligation to **article 1-1, I, 2**, in force since
+    23 May 2024. `regimes.ts` cited the pre-SREN `article 6-III et 6-VI-2`,
+    as most commercial sources online still do. It was saved from reaching a
+    client only by never having had a render path. Both the citation and the
+    criterion text are now the verbatim Légifrance wording.
+
+    Why this may be stated where EAA scope may not: rule 6 exists because EAA
+    scope turns on headcount, turnover and sector and the courts are split.
+    LCEN has no size threshold, no sector list and no contested case law, so
+    stating the criterion and what the scan observed is a report, not a
+    conclusion. `docs/obligation-basis.md` section 8bis carries the verified
+    text and this reasoning at status `primary`.
+
+    Implementation follows trade-off 11: `renderLcenBlock`
+    (`packages/report/src/template/sections/legal-exposure.ts`) splices the
+    name, criterion, authority and citation straight from `regimes.ts` and
+    otherwise renders fixed strings; no model prose, no new LLM field.
+    Deliberately **not** routed through `assessObligations()` - that function
+    resolves a scope question from registry facts and LCEN has no scope test,
+    so folding it in would mean inventing a status for a regime that has none
+    and would move `status`, which drives the cover badge. It renders only
+    when the finding is present, reading the post-`resolveLcenFinding` array
+    so an operator's manual confirmation still suppresses it through the one
+    existing decision point; a compliant client gets silence, never a passing
+    grade, because a bounded scan cannot certify an absence of breach.
+    **No sanction amount is rendered**, guarded by a test: rule 6 forbids it
+    for a specific client, and where the pre-SREN 75 000 EUR penalty now sits
+    was not verified, so `sanctionCeiling` for this regime is explicitly
+    marked uncitable and has no render path.
+
+29. **Three client-visible report defects from the same review, fixed
+    2026-08-24.** The executive summary's note under priority 1 asserted the
+    top priority "est un enjeu commercial, pas un enjeu de conformité légale"
+    whenever the theme had no `legalRelevance`. But `legalRelevance` is built
+    only for accessibility themes with WCAG criteria
+    (`packages/llm/src/legal-relevance.ts`), so the note was claiming no legal
+    weight for privacy, LCEN and security themes it knows nothing about - and
+    in a real report it said exactly that on the same page a section-03 LCEN
+    breach now appears. Reworded in both languages to say what the code
+    actually knows: the priority is not tied to an accessibility criterion,
+    and other obligations may apply separately.
+
+    Every French guillemet pair in the report enclosed an ordinary U+0020,
+    which is both wrong in French and a real layout defect, since an ordinary
+    space is a legal line-break opportunity. Replaced with U+00A0 across 23
+    pairs in three files, and `guillemet-spacing.test.ts` scans every source
+    file so it cannot regress. U+00A0 rather than the finer U+202F
+    deliberately: U+202F is not in every fallback font Chromium may reach for
+    during print-to-PDF, and a missing glyph in the PDF text layer is worse
+    than a slightly wide space - the same caution that produced
+    `REPORT_PDF_CHROMIUM_ARGS` (trade-off 19).
+
+    `render-diff-evidence.ts`'s docblock said screenshots "stay in the
+    technical export". There is no export route and no section renders them;
+    they are simply not shown to the client, which is the intended behaviour
+    on trade-off 2's data-minimisation reasoning. The comment was corrected
+    rather than the behaviour, per the decision recorded before the work
+    started.
+
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
