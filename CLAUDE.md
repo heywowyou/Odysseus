@@ -1443,6 +1443,29 @@ uncommitted working tree and no account of which items in it are finished,
 which are half-done, and which were deliberately deferred. That state is
 expensive to re-derive and easy to re-derive wrongly.
 
+## Pausing before the usage limit
+
+When usage approaches its limit (around 99 percent), stop and park the work
+deliberately rather than being cut off mid-change. Being interrupted at an
+arbitrary point is what produced the crashed session this file's session-log
+rule already exists to recover from, and a large half-applied refactor is the
+most expensive thing to hand to the next session.
+
+On approaching the limit:
+
+- do not start anything new: no new milestone, no multi-file refactor, no
+  fresh scan, no long measurement run;
+- bring the working tree to a state that builds and typechecks, even if that
+  means finishing one edit or reverting one;
+- update `docs/session/current-session.md` so it states exactly what is done,
+  what is in flight, and what the next concrete step is;
+- commit what is coherent, and say plainly in the session log what is left
+  uncommitted and why;
+- then stop and report, rather than beginning another unit of work.
+
+Resume from the session log after the usage resets, not from the working tree
+alone. The point is that the stopping point is chosen, not accidental.
+
 ## Testing
 
 Run against `fixtures/spa-demo`, a local client-rendered React app with

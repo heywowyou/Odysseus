@@ -30,7 +30,11 @@ import { computeDedupeKey } from './dedupe.js';
 import { assignFindingIds } from './finding-id.js';
 import { compareCriteria } from './wcag-tags.js';
 import { extractAxeCandidates, type AxeResultsInput } from './normalize-axe.js';
-import { extractLighthouseCandidates, type LighthouseResultInput } from './normalize-lighthouse.js';
+import {
+  computeSupersededAudits,
+  extractLighthouseCandidates,
+  type LighthouseResultInput,
+} from './normalize-lighthouse.js';
 import { extractRenderDiffCandidates } from './normalize-renderdiff.js';
 import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
 import { extractHeadMetadataCandidates, type HeadMetadataCheckInput } from './normalize-head-metadata.js';
@@ -152,10 +156,17 @@ export interface NormalizeAuditInput {
 
 function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
+  // D13: resolved over every page before any page is normalized, so a
+  // successor emitting on one page suppresses its legacy audits everywhere.
+  const supersededAudits = computeSupersededAudits(
+    input.pages.map((page) => page.lighthouse).filter((lhr): lhr is LighthouseResultInput => lhr !== undefined),
+  );
 
   for (const page of input.pages) {
     if (page.axe) candidates.push(...extractAxeCandidates(page.axe, page.url));
-    if (page.lighthouse) candidates.push(...extractLighthouseCandidates(page.lighthouse, page.url));
+    if (page.lighthouse) {
+      candidates.push(...extractLighthouseCandidates(page.lighthouse, page.url, supersededAudits));
+    }
     if (page.renderDiff) candidates.push(...extractRenderDiffCandidates(page.renderDiff, page.url));
     if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
     if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));

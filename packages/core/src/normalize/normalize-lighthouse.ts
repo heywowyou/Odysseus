@@ -58,6 +58,11 @@ export interface LighthouseAuditInput {
     type?: string;
     items?: unknown;
   };
+  /** Lighthouse's own declaration that this audit supersedes older ones.
+   *  Present on the "insight" audits, which ship alongside the legacy
+   *  audits they replace rather than removing them. See
+   *  SUPERSEDED_AUDIT_IDS below for why we read it. */
+  replacesAudits?: string[];
 }
 
 export interface LighthouseResultInput {
@@ -115,6 +120,17 @@ export const RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS: ReadonlySet<string> = new Se
   'legacy-javascript',
   'duplicated-javascript',
   'uses-long-cache-ttl',
+  // D13: the successor to modern-image-formats / uses-optimized-images /
+  // efficient-animated-content / uses-responsive-images, all four of which
+  // it suppresses via replacesAudits. Its items carry a url and no node,
+  // which is why it needs the url-only path added for D12. Confirmed
+  // against real scan output before allowlisting, per the rule above.
+  'image-delivery-insight',
+  'render-blocking-insight',
+  'cache-insight',
+  'duplicated-javascript-insight',
+  'legacy-javascript-insight',
+  'font-display-insight',
 ]);
 
 /** The resource URL an item is about, when this audit is resource-identified
@@ -245,11 +261,106 @@ export function extractCoreWebVitals(lhr: LighthouseResultInput): CoreWebVitals 
   };
 }
 
+/** The exact gate the candidate loop applies, extracted so the supersession
+ *  set below cannot drift from it. An audit that would not itself produce a
+ *  finding must not suppress anything. */
+function auditEmitsFinding(audit: LighthouseAuditInput, auditId: string): boolean {
+  if (SKIPPED_DISPLAY_MODES.has(audit.scoreDisplayMode)) return false;
+  if (EXCLUDED_AUDITS.has(auditId)) return false;
+  return audit.score !== null && audit.score < LIGHTHOUSE_EMISSION_SCORE_THRESHOLD;
+}
+
+/** Every distinct file an audit's items name, capped the same way the
+ *  candidate paths cap theirs. Ignores whether the audit is allowlisted: the
+ *  absorb path needs a replaced audit's files even when only its successor
+ *  is allowlisted. */
+function resourceUrlsForAudit(auditId: string, audit: LighthouseAuditInput): string[] {
+  const rawItems = audit.details?.items;
+  if (!Array.isArray(rawItems)) return [];
+  const urls = (rawItems as Array<Record<string, unknown>>)
+    .map((item) => item['url'])
+    .filter((url): url is string => typeof url === 'string' && url.length > 0);
+  return [...new Set(urls)].slice(0, MAX_LIGHTHOUSE_DETAILS_ITEMS);
+}
+
+/** Whether an audit carries detail a reader could act on: at least one item
+ *  naming a DOM node or a file. Insights that report through a nested table,
+ *  a checklist, or a network tree have neither at item level, so they render
+ *  as a row with an empty selector column and no file list.
+ *
+ *  Used to decide whether a successor may suppress what it replaces. On the
+ *  review site cls-culprits-insight, document-latency-insight,
+ *  lcp-discovery-insight and network-dependency-tree-insight all emit but
+ *  carry no actionable item, while the legacy audits they replace carry real
+ *  ones - layout-shifts had 15 items and uses-text-compression 8 files. A
+ *  successor that renders as a bare row cannot stand in for those. */
+function auditHasActionableDetail(audit: LighthouseAuditInput): boolean {
+  const rawItems = audit.details?.items;
+  if (!Array.isArray(rawItems)) return false;
+  return (rawItems as Array<Record<string, unknown>>).some((item) => {
+    if (findNodeValueInItem(item) !== undefined) return true;
+    const url = item['url'];
+    return typeof url === 'string' && url.length > 0;
+  });
+}
+
+/** D13 (2026-08-25, Lagnonu review): Lighthouse ships its newer "insight"
+ *  audits *alongside* the legacy audits they supersede, and each insight
+ *  names them in `replacesAudits`. Emitting both put the same defect in the
+ *  report twice under two names - image-delivery-insight next to
+ *  modern-image-formats and uses-responsive-images, render-blocking-insight
+ *  next to render-blocking-resources, cache-insight next to
+ *  uses-long-cache-ttl - all confirmed against real scan output.
+ *
+ *  Suppression is deliberately conditional on the insight *itself emitting*,
+ *  because the two sides genuinely disagree and a blanket rule would lose
+ *  real findings: on the review site document-latency-insight scored 1 while
+ *  the uses-text-compression it replaces scored 0.5 with eight real files,
+ *  and font-display-insight scored 0 while font-display passed. Under this
+ *  rule a legacy audit is dropped only when its successor is already
+ *  reporting the same problem, so nothing can ever go unreported.
+ *
+ *  Resolved across the whole audit rather than per page: a successor that
+ *  emits on some pages and not others would otherwise leave the legacy audit
+ *  standing as its own finding, and the client would read the same image
+ *  problem under four rule names. Measured on haaitza.com, where
+ *  image-delivery-insight does not emit on every page: per-page supersession
+ *  left modern-image-formats, uses-responsive-images and uses-optimized-images
+ *  all still present alongside it. Maps each replaced
+ *  audit to the successor absorbing it, because the replaced audit's own file
+ *  list still has to be carried over: measured on the reference audits, the
+ *  successor's file set is not a superset of what it replaces. Suppressing
+ *  outright silently dropped 14 image URLs on sas-fernande.fr and 6 on
+ *  lagnonu.fr, which is losing evidence, not removing a duplicate. */
+export function computeSupersededAudits(
+  reports: readonly LighthouseResultInput[],
+): ReadonlyMap<string, string> {
+  const superseded = new Map<string, string>();
+  for (const lhr of reports) {
+    for (const [auditId, audit] of Object.entries(lhr.audits)) {
+      if (!audit.replacesAudits?.length) continue;
+      if (!auditEmitsFinding(audit, auditId)) continue;
+    // A successor with no actionable item of its own would replace a file
+    // list with a blank row. Measured, not assumed: see
+    // auditHasActionableDetail above for the four insights this excludes.
+      if (!auditHasActionableDetail(audit)) continue;
+      for (const replaced of audit.replacesAudits) superseded.set(replaced, auditId);
+    }
+  }
+  return superseded;
+}
+
 export function extractLighthouseCandidates(
   lhr: LighthouseResultInput,
   pageUrl: string,
+  /** Audit-wide supersession map, from computeSupersededAudits over every
+   *  page's report. Defaults to this page alone, which is correct for a
+   *  single-page caller and for tests, but collapses less across a real
+   *  multi-page audit. */
+  supersededAudits?: ReadonlyMap<string, string>,
 ): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
+  const superseded = supersededAudits ?? computeSupersededAudits([lhr]);
 
   for (const { id: categoryId, category } of SCANNED_CATEGORIES) {
     const lhCategory = lhr.categories[categoryId];
@@ -258,9 +369,46 @@ export function extractLighthouseCandidates(
     for (const auditRef of lhCategory.auditRefs) {
       const audit = lhr.audits[auditRef.id];
       if (!audit) continue;
-      if (SKIPPED_DISPLAY_MODES.has(audit.scoreDisplayMode)) continue;
-      if (EXCLUDED_AUDITS.has(auditRef.id)) continue;
-      if (audit.score === null || audit.score >= LIGHTHOUSE_EMISSION_SCORE_THRESHOLD) continue;
+      if (!auditEmitsFinding(audit, auditRef.id)) continue;
+
+      // D13: this audit's successor is already reporting the same defect, so
+      // it must not become a second finding. Its file list is still carried
+      // across under the successor's rule id, so the client ends up with one
+      // finding naming every affected file rather than two findings each
+      // naming some of them.
+      const successorId = superseded.get(auditRef.id);
+      if (successorId !== undefined) {
+        const successor = lhr.audits[successorId];
+        const absorbedUrls = successor === undefined ? [] : resourceUrlsForAudit(auditRef.id, audit);
+        if (successor !== undefined && absorbedUrls.length > 0) {
+          candidates.push({
+            source: 'lighthouse',
+            ruleId: successorId,
+            category,
+            severity: capSeverityByCoreWebVitalRating(
+              severityFromLighthouse(successor.score, auditRef.weight),
+              successorId,
+              successor.numericValue,
+            ),
+            wcagCriteria: [],
+            title: successor.title,
+            description: successor.description,
+            pageUrl,
+            element: null,
+            dedupeIdentity: '',
+            rawEvidenceForPage: {
+              score: successor.score,
+              scoreDisplayMode: successor.scoreDisplayMode,
+              numericValue: successor.numericValue ?? null,
+              displayValue: successor.displayValue ?? null,
+              title: successor.title,
+              resourceUrls: absorbedUrls,
+              absorbedFrom: auditRef.id,
+            },
+          });
+        }
+        continue;
+      }
 
       // The score<0.9 gate above means severityFromLighthouse's own
       // score<0.9?'serious':'minor' branch can never return 'minor' via
