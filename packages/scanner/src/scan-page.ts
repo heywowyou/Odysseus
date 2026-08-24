@@ -21,6 +21,10 @@ import { checkFormErrorHandling, type FormErrorHandlingExtraction } from './chec
 import { checkVideoCaptions, type VideoCaptionsExtraction } from './checks/video-captions.js';
 import { extractAltTextFacts, type AltTextExtraction } from './checks/alt-text.js';
 import type { CookieConsentCheckResult } from './checks/cookie-consent.js';
+import type { AccessibilityStatementCheckResult } from './checks/accessibility-statement.js';
+import { checkNapConsistency, type NapConsistencyCheckResult } from './checks/nap-consistency.js';
+import { checkReflow, type ReflowCheckResult } from './checks/reflow.js';
+import { checkHtmlValidity, type HtmlValidityCheckResult } from './checks/html-validity.js';
 import type { SecurityHeadersCheckResult } from './checks/security-headers.js';
 import { checkStructuredData, type StructuredDataCheckResult } from './checks/structured-data.js';
 
@@ -73,6 +77,7 @@ export interface ScanPageOptions {
    *  attachment pattern as sitemapCheck/llmsTxtCheck above. */
   securityHeadersCheck?: SecurityHeadersCheckResult;
   cookieConsentCheck?: CookieConsentCheckResult;
+  accessibilityStatementCheck?: AccessibilityStatementCheckResult;
 }
 
 /**
@@ -109,6 +114,10 @@ export interface PageScanResult {
   altTextError?: string;
   securityHeaders?: SecurityHeadersCheckResult;
   cookieConsent?: CookieConsentCheckResult;
+  accessibilityStatement?: AccessibilityStatementCheckResult;
+  napConsistency?: NapConsistencyCheckResult;
+  reflow?: ReflowCheckResult;
+  htmlValidity?: HtmlValidityCheckResult;
   structuredData?: StructuredDataCheckResult;
   structuredDataError?: string;
 }
@@ -174,6 +183,10 @@ export async function scanPage(
     result.cookieConsent = options.cookieConsentCheck;
   }
 
+  if (options.accessibilityStatementCheck !== undefined && url === options.homepageUrl) {
+    result.accessibilityStatement = options.accessibilityStatementCheck;
+  }
+
   if (options.securityHeadersCheck !== undefined && url === options.homepageUrl) {
     result.securityHeaders = options.securityHeadersCheck;
   }
@@ -197,6 +210,9 @@ export async function scanPage(
   let altTextResult: AltTextExtraction | undefined;
   let altTextError: string | undefined;
   let structuredDataResult: StructuredDataCheckResult | undefined;
+  let napConsistencyResult: NapConsistencyCheckResult | undefined;
+  let reflowResult: ReflowCheckResult | undefined;
+  let htmlValidityResult: HtmlValidityCheckResult | undefined;
   let structuredDataError: string | undefined;
 
   try {
@@ -316,6 +332,27 @@ export async function scanPage(
           structuredDataError = toErrorMessage(error);
         }
 
+        // C7: reads page.content() only, no DOM mutation, so it sits with
+        // the other read-only checks rather than late with the ones that
+        // send input events.
+        try {
+          htmlValidityResult = await checkHtmlValidity(page, url);
+        } catch {
+          htmlValidityResult = undefined;
+        }
+
+        // C6: needs headMetadataResult's parsed JSON-LD, so it runs after
+        // the extraction above rather than alongside it. Best-effort, like
+        // transactional-flow detection: a failure here is the absence of a
+        // comparison, not a page error worth surfacing to the client.
+        if (headMetadataResult !== undefined) {
+          try {
+            napConsistencyResult = await checkNapConsistency(page, url, headMetadataResult.jsonLdBlocks);
+          } catch {
+            napConsistencyResult = undefined;
+          }
+        }
+
         // Runs after every read-only DOM check above: this is the only
         // other check on the page that sends real input events, so it
         // goes late purely so a future check added here never has to
@@ -336,6 +373,18 @@ export async function scanPage(
           formErrorHandlingResult = await checkFormErrorHandling(page, url);
         } catch (error) {
           formErrorHandlingError = toErrorMessage(error);
+        }
+
+        // C3: genuinely last. This is the only check that changes the
+        // viewport, which re-runs every media query and any resize
+        // listener on the page - far more disruptive to a later check
+        // than the Tab walk or the form-validation trigger above. It
+        // restores the original viewport in its own finally block, but
+        // ordering it last means nothing depends on that having worked.
+        try {
+          reflowResult = await checkReflow(page, url);
+        } catch {
+          reflowResult = undefined;
         }
       },
     });
@@ -363,6 +412,9 @@ export async function scanPage(
   if (altTextResult !== undefined) result.altText = altTextResult;
   if (altTextError !== undefined) result.altTextError = altTextError;
   if (structuredDataResult !== undefined) result.structuredData = structuredDataResult;
+  if (napConsistencyResult !== undefined) result.napConsistency = napConsistencyResult;
+  if (reflowResult !== undefined) result.reflow = reflowResult;
+  if (htmlValidityResult !== undefined) result.htmlValidity = htmlValidityResult;
   if (structuredDataError !== undefined) result.structuredDataError = structuredDataError;
 
   if (!options.skipLighthouse) {

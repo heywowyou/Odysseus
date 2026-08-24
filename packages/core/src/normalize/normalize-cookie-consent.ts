@@ -42,11 +42,13 @@ export const COOKIE_NON_ESSENTIAL_BEFORE_CONSENT_RULE_ID = 'cookie-non-essential
 export const TRACKER_REQUEST_BEFORE_CONSENT_RULE_ID = 'tracker-request-before-consent';
 export const CONSENT_MECHANISM_ABSENT_RULE_ID = 'consent-mechanism-absent';
 export const YOUTUBE_TRACKING_EMBED_RULE_ID = 'youtube-tracking-embed';
+export const THIRD_PARTY_DATA_TRANSFER_RULE_ID = 'third-party-data-transfer';
 
 export interface CookieConsentCheckInput {
   checked: boolean;
   nonEssentialCookies: { name: string; domain: string; vendor?: string; isThirdParty: boolean }[];
   trackerRequests: { host: string; vendor: string }[];
+  thirdPartyOrigins?: { origin: string; requestCount: number }[];
   consentPlatforms: string[];
   usesTrackingYouTubeEmbed: boolean;
 }
@@ -138,5 +140,32 @@ export function normalizeCookieConsent(
     );
   }
 
+  // C5 (2026-08-24): the inventory, not a judgment. Every third-party
+  // origin the homepage contacted receives the visitor's IP address and
+  // the page they are on. A DPO needs that list; a scanner cannot decide
+  // which of those transfers is lawful, and this finding does not try -
+  // hence 'minor', which is this table's tier for "worth knowing, nothing
+  // is broken". Emitted only when the list is non-trivially long, since
+  // one font host is not an inventory worth a finding.
+  const thirdPartyOrigins = input.thirdPartyOrigins ?? [];
+  if (thirdPartyOrigins.length >= THIRD_PARTY_ORIGIN_REPORTING_THRESHOLD) {
+    candidates.push(
+      candidate(
+        THIRD_PARTY_DATA_TRANSFER_RULE_ID,
+        'The homepage contacts several third-party providers',
+        `Loading the homepage sends requests to ${thirdPartyOrigins.length} external providers: ${thirdPartyOrigins
+          .map((entry) => new URL(entry.origin).hostname)
+          .join(', ')}. Each receives the visitor's IP address and the page being viewed. This is an inventory, not a judgment: some of these are necessary to deliver the page, and whether a given transfer needs to be disclosed or consented to depends on what the provider does with it.`,
+        homepageUrl,
+        { thirdPartyOrigins },
+      ),
+    );
+  }
+
   return candidates;
 }
+
+/** One font host or one CDN is not an inventory worth a finding; a page
+ *  reaching this many distinct external providers is a list the client's
+ *  DPO has to hold, and almost certainly does not have. */
+const THIRD_PARTY_ORIGIN_REPORTING_THRESHOLD = 5;

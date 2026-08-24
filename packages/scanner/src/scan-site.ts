@@ -6,6 +6,7 @@ import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
 import { checkLlmsTxt, type LlmsTxtCheckResult } from './checks/llms-txt.js';
 import { checkSecurityHeaders, type SecurityHeadersCheckResult } from './checks/security-headers.js';
 import { checkCookieConsent, type CookieConsentCheckResult } from './checks/cookie-consent.js';
+import { checkAccessibilityStatement, type AccessibilityStatementCheckResult } from './checks/accessibility-statement.js';
 import { fetchCruxFieldData } from './crux.js';
 import { type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import { type PageScanResult, scanPage } from './scan-page.js';
@@ -89,6 +90,7 @@ async function runScanLane(
   llmsTxtCheck: LlmsTxtCheckResult | undefined,
   securityHeadersCheck: SecurityHeadersCheckResult | undefined,
   cookieConsentCheck: CookieConsentCheckResult | undefined,
+  accessibilityStatementCheck: AccessibilityStatementCheckResult | undefined,
   bookingEngineUrl: string | undefined,
   skipLighthouse: boolean,
   onPageDone: (pageResult: PageScanResult) => void,
@@ -113,6 +115,7 @@ async function runScanLane(
       ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
       ...(securityHeadersCheck !== undefined ? { securityHeadersCheck } : {}),
       ...(cookieConsentCheck !== undefined ? { cookieConsentCheck } : {}),
+      ...(accessibilityStatementCheck !== undefined ? { accessibilityStatementCheck } : {}),
       ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
       ...(skipLighthouse ? { skipLighthouse } : {}),
     });
@@ -230,6 +233,13 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
       })
     : undefined;
 
+  // C4: URL-pattern only, over the pages this crawl actually reached, so
+  // it costs no request at all. Skipped when the homepage was not
+  // visited, for the same reason as the checks above.
+  const accessibilityStatementCheck = homepageWasVisited
+    ? checkAccessibilityStatement(pagesToScan.map((page) => page.url))
+    : undefined;
+
   // CrUX is origin-level, not per-page, and only ever queried once per
   // audit regardless of page count - skipped entirely (not attempted and
   // failed) when no API key is configured, so a site without one never
@@ -278,6 +288,7 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
           llmsTxtCheckForScan,
           securityHeadersCheckForScan,
           cookieConsentCheck,
+          accessibilityStatementCheck,
           options.bookingEngineUrl,
           options.skipLighthouse ?? false,
           onPageDone,

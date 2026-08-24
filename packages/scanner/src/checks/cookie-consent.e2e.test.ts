@@ -122,3 +122,36 @@ describe('checkCookieConsent against a real page', () => {
     expect(second.cookies.map((c) => c.name)).not.toContain('_ga');
   }, 45_000);
 });
+
+describe('C5: third-party origin inventory', () => {
+  let browser: Browser;
+
+  beforeAll(async () => {
+    ({ browser } = await launchBrowser());
+  }, 30_000);
+
+  afterAll(async () => {
+    await browser?.close();
+  });
+
+  it('records every distinct third-party origin, and no first-party one', async () => {
+    const { server, origin } = await startServer(
+      `<img src="https://fonts.gstatic.com/a.woff2" alt="">
+       <img src="https://cdn.example-provider.com/x.png" alt="">
+       <img src="https://cdn.example-provider.com/y.png" alt="">
+       <img src="/local.png" alt="">`,
+      [],
+    );
+    try {
+      const result = await checkCookieConsent(browser, origin, { timeoutMs: 15_000 });
+      const hosts = result.thirdPartyOrigins.map((entry) => new URL(entry.origin).hostname);
+      expect(hosts).toContain('fonts.gstatic.com');
+      expect(hosts).toContain('cdn.example-provider.com');
+      expect(hosts).not.toContain('127.0.0.1');
+      // Two requests to one origin is one entry, counted.
+      expect(result.thirdPartyOrigins.find((e) => e.origin.includes('example-provider'))?.requestCount).toBe(2);
+    } finally {
+      server.close();
+    }
+  }, 30_000);
+});

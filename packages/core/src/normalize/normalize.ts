@@ -15,6 +15,10 @@
 
 import { buildCanonicalPageUrlMap, type TranslationCluster } from './translation-clusters.js';
 import { normalizeCookieConsent, type CookieConsentCheckInput } from './normalize-cookie-consent.js';
+import { normalizeAccessibilityStatement, type AccessibilityStatementCheckInput } from './normalize-accessibility-statement.js';
+import { normalizeNapConsistency, type NapConsistencyCheckInput } from './normalize-nap-consistency.js';
+import { normalizeReflow, type ReflowCheckInput } from './normalize-reflow.js';
+import { normalizeHtmlValidity, type HtmlValidityCheckInput } from './normalize-html-validity.js';
 import {
   FINDINGS_SCHEMA_VERSION,
   MAX_ELEMENTS_PER_FINDING,
@@ -106,6 +110,15 @@ export interface NormalizePageInput {
   securityHeaders?: SecurityHeadersCheckInput;
   /** C1 (2026-08-24). Site-level, present only on the homepage's scan. */
   cookieConsent?: CookieConsentCheckInput;
+  /** C4 (2026-08-24). Site-level, present only on the homepage's scan. */
+  accessibilityStatement?: AccessibilityStatementCheckInput;
+  /** C6 (2026-08-24). Per-page: contact details can legitimately differ
+   *  between a contact page and a property page. */
+  napConsistency?: NapConsistencyCheckInput;
+  /** C3 (2026-08-24). Per-page WCAG 1.4.10 measurement. */
+  reflow?: ReflowCheckInput;
+  /** C7 (2026-08-24). Per-page structural markup validity. */
+  htmlValidity?: HtmlValidityCheckInput;
   /** Milestone 8.6. Runs on every page (JSON-LD/microdata/RDFa are a
    *  per-page concern, same as headMetadata). */
   structuredData?: StructuredDataCheckInput;
@@ -156,6 +169,11 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.altText) candidates.push(...extractAltTextCandidates(page.altText));
     if (page.securityHeaders) candidates.push(...extractSecurityHeadersCandidates(page.securityHeaders, page.url));
     if (page.cookieConsent) candidates.push(...normalizeCookieConsent(page.cookieConsent, page.url));
+    if (page.accessibilityStatement)
+      candidates.push(...normalizeAccessibilityStatement(page.accessibilityStatement, page.url));
+    if (page.napConsistency) candidates.push(...normalizeNapConsistency(page.napConsistency, page.url));
+    if (page.reflow) candidates.push(...normalizeReflow(page.reflow, page.url));
+    if (page.htmlValidity) candidates.push(...normalizeHtmlValidity(page.htmlValidity, page.url));
     if (page.structuredData) candidates.push(...extractStructuredDataCandidates(page.structuredData));
   }
 

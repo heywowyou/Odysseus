@@ -98,6 +98,12 @@ function buildScanJson(
     ...(scanResult.altTextError !== undefined ? { altTextError: scanResult.altTextError } : {}),
     ...(scanResult.securityHeaders !== undefined ? { securityHeaders: scanResult.securityHeaders } : {}),
     ...(scanResult.cookieConsent !== undefined ? { cookieConsent: scanResult.cookieConsent } : {}),
+    ...(scanResult.accessibilityStatement !== undefined
+      ? { accessibilityStatement: scanResult.accessibilityStatement }
+      : {}),
+    ...(scanResult.napConsistency !== undefined ? { napConsistency: scanResult.napConsistency } : {}),
+    ...(scanResult.reflow !== undefined ? { reflow: scanResult.reflow } : {}),
+    ...(scanResult.htmlValidity !== undefined ? { htmlValidity: scanResult.htmlValidity } : {}),
     ...(scanResult.structuredData !== undefined ? { structuredData: scanResult.structuredData } : {}),
     ...(scanResult.structuredDataError !== undefined ? { structuredDataError: scanResult.structuredDataError } : {}),
   };

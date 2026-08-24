@@ -112,3 +112,41 @@ describe('normalizeCookieConsent', () => {
     expect(reverse).toBe(forward);
   });
 });
+
+/**
+ * C5 (2026-08-24): the third-party inventory rides on the same single
+ * load as the cookie check rather than costing a second navigation.
+ */
+describe('C5: third-party data transfer inventory', () => {
+  const origins = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ origin: `https://provider${i}.com`, requestCount: 1 }));
+
+  it('emits nothing below the reporting threshold', () => {
+    expect(ruleIds(input({ thirdPartyOrigins: origins(4) }))).not.toContain('third-party-data-transfer');
+  });
+
+  it('emits an inventory at or above the threshold', () => {
+    expect(ruleIds(input({ thirdPartyOrigins: origins(5) }))).toContain('third-party-data-transfer');
+  });
+
+  it('emits nothing when the field is absent, so an older scan still normalizes', () => {
+    expect(ruleIds(input())).toEqual([]);
+  });
+
+  it('names every provider, since a partial list is not an inventory', () => {
+    const description = normalizeCookieConsent(input({ thirdPartyOrigins: origins(7) }), HOMEPAGE).find(
+      (c) => c.ruleId === 'third-party-data-transfer',
+    )!.description;
+    for (let i = 0; i < 7; i += 1) expect(description).toContain(`provider${i}.com`);
+  });
+
+  it('states it is an inventory, never that a transfer is unlawful', () => {
+    const description = normalizeCookieConsent(input({ thirdPartyOrigins: origins(6) }), HOMEPAGE).find(
+      (c) => c.ruleId === 'third-party-data-transfer',
+    )!.description;
+    expect(description).toContain('inventory, not a judgment');
+    for (const forbidden of ['unlawful', 'illegal', 'in breach', 'you must']) {
+      expect(description.toLowerCase()).not.toContain(forbidden);
+    }
+  });
+});

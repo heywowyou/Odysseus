@@ -32,6 +32,34 @@ export interface RuleTranslation {
 }
 
 export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
+  // C3/C4/C5/C6/C7 (2026-08-24): the five detection additions from the
+  // three-site review. Added with the rules themselves rather than after
+  // a real report leaked English titles, which is how the milestone 8.6
+  // rules got here (A5).
+  'reflow-horizontal-scroll': {
+    label: "La page impose un défilement horizontal sur écran étroit",
+    gloss: "À la largeur de 320 pixels prévue par le critère WCAG 1.4.10, le contenu déborde et oblige à faire défiler la page dans les deux sens.",
+  },
+  'accessibility-statement-missing': {
+    label: "Aucune déclaration d'accessibilité n'a été trouvée",
+    gloss: "Aucune des pages analysées ne publie de déclaration d'accessibilité, document distinct de la conformité technique mesurée par ailleurs.",
+  },
+  'nap-phone-mismatch': {
+    label: "Le numéro de téléphone des données structurées ne figure pas sur la page",
+    gloss: "La version lisible par les machines et celle lue par le visiteur ne concordent pas, ce qui empêche généralement un assistant IA de répondre.",
+  },
+  'nap-postal-code-mismatch': {
+    label: "Le code postal des données structurées ne figure pas sur la page",
+    gloss: "L'adresse déclarée aux moteurs et aux assistants IA diffère de celle affichée au visiteur.",
+  },
+  'third-party-data-transfer': {
+    label: "La page d'accueil sollicite plusieurs prestataires tiers",
+    gloss: "Chaque prestataire externe contacté au chargement reçoit l'adresse IP du visiteur et la page consultée. Il s'agit d'un inventaire, pas d'un jugement.",
+  },
+  'html-structural-validity': {
+    label: "Le code HTML de la page n'est pas bien formé",
+    gloss: "Des identifiants dupliqués ou des balises mal imbriquées font que navigateur, moteur de recherche et lecteur d'écran ne reconstruisent pas tout à fait le même document.",
+  },
   // C1 (2026-08-24): cookie/consent detection. Wording states what was
   // observed on one load with no interaction, never that the client is in
   // breach - CLAUDE.md rule 6 governs this section the same way it

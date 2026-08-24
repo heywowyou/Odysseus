@@ -150,6 +150,18 @@ export interface ObservedTrackerRequest {
   vendor: string;
 }
 
+/** C5 (2026-08-24): every distinct third-party origin the page contacted
+ *  on first load, tracker or not. A font host, a map, a booking widget
+ *  and a CDN are all recipients of the visitor's IP address and referring
+ *  page, and a client's DPO needs the list, not just the subset this
+ *  audit recognises as advertising. Recorded flat, with no judgment
+ *  attached: naming a host is a fact, deciding whether a given transfer
+ *  is lawful is not something a scanner can do. */
+export interface ObservedThirdPartyOrigin {
+  origin: string;
+  requestCount: number;
+}
+
 export interface CookieConsentCheckResult {
   checked: boolean;
   /** Every cookie present after one navigation with no interaction. */
@@ -158,6 +170,8 @@ export interface CookieConsentCheckResult {
   nonEssentialCookies: ObservedCookie[];
   /** Distinct tracker hosts contacted before any interaction. */
   trackerRequests: ObservedTrackerRequest[];
+  /** C5: every distinct third-party origin contacted, tracker or not. */
+  thirdPartyOrigins: ObservedThirdPartyOrigin[];
   /** Names of consent platforms whose own published marker was found. */
   consentPlatforms: string[];
   /** True when a youtube.com embed was loaded where the privacy-enhanced
@@ -172,6 +186,7 @@ function emptyResult(): CookieConsentCheckResult {
     cookies: [],
     nonEssentialCookies: [],
     trackerRequests: [],
+    thirdPartyOrigins: [],
     consentPlatforms: [],
     usesTrackingYouTubeEmbed: false,
   };
@@ -237,13 +252,23 @@ export async function checkCookieConsent(
   );
   try {
     const trackerRequests = new Map<string, ObservedTrackerRequest>();
+    const thirdPartyOrigins = new Map<string, number>();
     let usesTrackingYouTubeEmbed = false;
+    const siteRegistrable = registrableDomain(new URL(homepageUrl).hostname);
 
     context.on('request', (request) => {
       const url = request.url();
       const tracker = classifyTrackerUrl(url);
       if (tracker && !trackerRequests.has(tracker.host)) trackerRequests.set(tracker.host, tracker);
       if (/(^|\.)youtube\.com$/u.test(safeHostname(url))) usesTrackingYouTubeEmbed = true;
+
+      // C5. data: and blob: URLs have no host and transfer nothing;
+      // anything on the site's own registrable domain is first-party.
+      const hostname = safeHostname(url);
+      if (hostname && registrableDomain(hostname) !== siteRegistrable) {
+        const origin = new URL(url).origin;
+        thirdPartyOrigins.set(origin, (thirdPartyOrigins.get(origin) ?? 0) + 1);
+      }
     });
 
     const page = await context.newPage();
@@ -277,6 +302,9 @@ export async function checkCookieConsent(
       cookies,
       nonEssentialCookies: cookies.filter((cookie) => cookie.vendor !== undefined),
       trackerRequests: [...trackerRequests.values()].sort((a, b) => a.host.localeCompare(b.host)),
+      thirdPartyOrigins: [...thirdPartyOrigins.entries()]
+        .map(([origin, requestCount]) => ({ origin, requestCount }))
+        .sort((a, b) => a.origin.localeCompare(b.origin)),
       consentPlatforms,
       usesTrackingYouTubeEmbed,
     };
