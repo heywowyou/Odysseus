@@ -361,6 +361,14 @@ export interface ReportStrings {
      *  registry denomination can carry formatting artifacts (an
      *  unbalanced parenthesis, seen on a real report) that read as a
      *  scraping error without this note. */
+    /** A7b: the LCEN identification obligation block. Renders only when the
+     *  lcen-mentions-legales-missing finding is present. Every legal word in
+     *  it is spliced from regimes.ts; these strings carry only the framing
+     *  and the scan-limitation caveat. docs/obligation-basis.md section 8bis. */
+    lcenKicker: string;
+    lcenObserved: string;
+    lcenSourceTemplate: string;
+    lcenScanLimitNote: string;
     registrySnapshotVerbatimNote: string;
     /** item 0.1: shown when a manual hasTransactionalFlow override
      *  disagrees with the detector (ObligationAssessment.

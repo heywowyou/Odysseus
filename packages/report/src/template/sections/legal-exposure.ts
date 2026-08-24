@@ -1,5 +1,11 @@
-import { EAA_REGIME_ID, eaaSanctionFigureSentence } from '@odysseus/core';
-import type { AuditManifest, AuditManualFields, ObligationAssessment, ReportLanguage } from '@odysseus/core';
+import {
+  EAA_REGIME_ID,
+  eaaSanctionFigureSentence,
+  getRegime,
+  LCEN_MENTIONS_LEGALES_REGIME_ID,
+  LCEN_MENTIONS_LEGALES_RULE_ID,
+} from '@odysseus/core';
+import type { AuditManifest, AuditManualFields, Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatDate, formatElapsedDuration, renderSheetHeader, sheet } from '../html-utils.js';
 import { pickPrimaryBasis, renderLegalCitationParagraph } from './methodology.js';
@@ -196,6 +202,70 @@ const EAA_APPLICATION_DATE = new Date('2025-06-28');
  *  law itself, not about this client, and the status label/short
  *  description are a plain restatement of assessObligations()'s own
  *  status enum. */
+/** A7b (2026-08-24): the LCEN identification obligation, surfaced to the
+ *  client for the first time. The scanner has detected it since milestone 8
+ *  (lcen-mentions-legales-missing), but it only ever appeared as one row in
+ *  the annex under an unrelated category, while section 03 - the page a
+ *  client or their lawyer reads for "what does the law require of me" - was
+ *  entirely about the EAA. A regime the scanner tests for and the report
+ *  stays silent about is worse than not testing for it.
+ *
+ *  Deliberately not routed through assessObligations(). That function
+ *  resolves a scope question (in_scope / likely_in_scope / out_of_scope)
+ *  from registry facts, and LCEN has no scope test at all - it attaches to
+ *  editing a professional online service, with no size or sector threshold.
+ *  Folding it in would mean inventing a status for a regime that has none,
+ *  and would move `status`, which drives the cover badge and several other
+ *  strings. It is its own block, from its own trigger.
+ *
+ *  Trade-off 11 holds: every legal word here is spliced from regimes.ts
+ *  (name, threshold text, authority, citation, all verified against
+ *  Legifrance) or from a fixed string, never written by the model. The
+ *  criterion may be stated where EAA scope may not, because it is not
+ *  size-dependent, sector-dependent or contested - see
+ *  docs/obligation-basis.md section 8bis. No sanction amount is stated,
+ *  which CLAUDE.md rule 6 forbids for a specific client and which section
+ *  8bis independently marks unverified after the SREN restructuring.
+ *
+ *  Renders only when the finding is actually present. A client who does
+ *  publish the identifier gets silence, not a passing grade: the scan
+ *  visits a bounded number of pages and cannot certify an absence of
+ *  breach anywhere on a site. `findings` is the post-resolveLcenFinding
+ *  array, so an operator who confirmed by hand where the identifier lives
+ *  suppresses this block through the same single decision point every
+ *  other consumer reads. */
+function renderLcenBlock(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  findings: readonly Finding[],
+): string {
+  const hasLcenFinding = findings.some((finding) => finding.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID);
+  if (!hasLcenFinding) return '';
+
+  const regime = getRegime(LCEN_MENTIONS_LEGALES_REGIME_ID, language);
+  if (!regime) return '';
+
+  const l = strings.legalExposure;
+  // regime.authorityPrefixFr exists for methodology.ts's "sous le contrôle
+  // {prefix} {authority}" construction. This label is a nominative
+  // ("Autorité compétente : ..."), which takes no preposition - prepending
+  // it here produced "Autorité compétente : de la Direction générale".
+  const authorityDisplay = regime.authority;
+
+  return `
+    <div class="card elev-sm" style="margin-top:var(--space-4)">
+      <div class="card-kicker">${escapeHtml(l.lcenKicker)}</div>
+      <div class="card-title">${escapeHtml(regime.name)}</div>
+      <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(regime.thresholdDescription)}</p>
+      <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(l.lcenObserved)}</p>
+      <p style="font-size:11.5px;margin-top:var(--space-2);max-width:66ch" class="text-muted">${escapeHtml(
+        fillTemplate(l.lcenSourceTemplate, { citation: regime.legalCitation, authority: authorityDisplay }),
+      )}</p>
+      <p style="font-size:11.5px;margin-top:2px;max-width:66ch" class="text-muted">${escapeHtml(l.lcenScanLimitNote)}</p>
+    </div>
+  `;
+}
+
 export function renderLegalExposure(
   strings: ReportStrings,
   ordinal: number,
@@ -203,6 +273,7 @@ export function renderLegalExposure(
   obligationAssessment: ObligationAssessment | undefined,
   generatedAt: Date,
   manifest: AuditManifest,
+  findings: readonly Finding[],
   manualFields?: AuditManualFields,
 ): string {
   const l = strings.legalExposure;
@@ -241,6 +312,7 @@ export function renderLegalExposure(
     ${renderTransactionalFlowScopeNote(strings, manifest)}
     ${renderTransactionalFlowConflictNote(strings, obligationAssessment)}
     ${renderEaaExposureBlock(strings, language, obligationAssessment)}
+    ${renderLcenBlock(strings, language, findings)}
     ${renderSirenNote(strings, language, manifest, manualFields, obligationAssessment)}
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">${escapeHtml(l.disclaimerNote)}</p>
   `, '', 'section-02');

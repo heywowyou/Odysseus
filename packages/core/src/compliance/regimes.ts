@@ -89,23 +89,37 @@ const REGIME_DEFINITIONS: Record<string, RegimeDefinition> = {
     ),
     legalCitation: 'Loi n° 2005-102 du 11 février 2005, article 47',
   },
+  /** 2026-08-24: the citation here read "article 6-III et 6-VI-2" from the
+   *  day this entry was written until it was first checked against
+   *  Legifrance. Loi n. 2024-449 du 21 mai 2024 (SREN) restructured the LCEN
+   *  and moved the identification obligation to article 1-1, I, 2. Most
+   *  commercial sources online still give the old number. Nothing had ever
+   *  rendered this regime, which is the only reason the wrong citation never
+   *  reached a client. Full verified text and reasoning:
+   *  docs/obligation-basis.md section 8bis.
+   *
+   *  sanctionCeiling stays deliberately unverified and has no render path.
+   *  The pre-SREN penalty sat in article 6-VI-2 and this pass did not
+   *  confirm where it now sits; docs/obligation-basis.md section 9 tracks
+   *  that. Stating a sanction amount for a specific client is separately
+   *  forbidden by CLAUDE.md rule 6 regardless, so nothing is blocked on it. */
   [LCEN_MENTIONS_LEGALES_REGIME_ID]: {
     id: LCEN_MENTIONS_LEGALES_REGIME_ID,
     name: bilingual(
-      'Obligation de mentions légales (LCEN, article 6-III)',
-      'Legal notice disclosure obligation (LCEN, article 6-III)',
+      'Obligation d\'identification de l\'éditeur (LCEN, article 1-1)',
+      'Publisher identification obligation (LCEN, article 1-1)',
     ),
     thresholdDescription: bilingual(
-      'Toute personne exerçant une activité professionnelle en ligne doit publier son numéro SIREN ou RCS, indépendamment de sa taille ou de son secteur.',
-      'Any person conducting an online professional activity must publish its SIREN or RCS number, independently of its size or sector.',
+      "Toute personne dont l'activité est d'éditer un service de communication au public en ligne met à la disposition du public sa dénomination ou sa raison sociale, son siège social, son numéro de téléphone et, si elle est inscrite au registre du commerce et des sociétés ou au registre national des entreprises, son numéro d'inscription. Cette obligation ne dépend ni de la taille ni du secteur de l'entreprise.",
+      'Any person whose activity is to publish an online public communication service must make available to the public its company name, registered office, telephone number and, if it is entered in the trade and companies register or the national business register, its registration number. This obligation depends on neither the size nor the sector of the business.',
     ),
     authority: 'Direction générale de la concurrence, de la consommation et de la répression des fraudes (DGCCRF)',
     authorityPrefixFr: 'de la',
     sanctionCeiling: bilingual(
-      "Jusqu'à un an d'emprisonnement et 75 000 € d'amende pour une personne physique, montant porté à cinq fois ce plafond pour une personne morale (à vérifier avant toute mention client)",
-      'Up to one year of imprisonment and a EUR 75,000 fine for an individual, up to five times that ceiling for a legal entity (verify before any client facing use)',
+      'Non vérifié après la restructuration de la LCEN par la loi n. 2024-449 (ne pas citer)',
+      'Not verified following the restructuring of the LCEN by loi n. 2024-449 (do not cite)',
     ),
-    legalCitation: 'Loi n° 2004-575 du 21 juin 2004, article 6-III et 6-VI-2',
+    legalCitation: 'Loi n° 2004-575 du 21 juin 2004, article 1-1, I, 2° (version en vigueur depuis le 23 mai 2024)',
   },
 };
 

@@ -153,6 +153,7 @@ function renderBody(
       analysis.obligationAssessment,
       analysis.generatedAt,
       manifest,
+      resolvedFindings,
       manualFields,
     ),
     renderStatistics(strings, ord('section-03'), analysis.language, resolvedFindings, manifest),
