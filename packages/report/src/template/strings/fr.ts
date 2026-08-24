@@ -25,7 +25,7 @@ export const fr: ReportStrings = {
     consequenceRegulatory: 'Une exposition réglementaire déjà documentée (voir la section « Exposition légale »).',
     consequenceVisibility: 'Une visibilité réduite dans les résultats de recherche et les assistants IA.',
     notALegalOpinionNote:
-      "Ce que ce rapport n'est pas : un avis juridique (voir la section « Exposition légale ») ; un audit automatisé couvrant environ 30 à 40 % des critères d'accessibilité (voir « Méthodologie et limites »).",
+      "Ce que ce rapport n'est pas : un avis juridique (voir la section « Exposition légale ») ; un audit exhaustif, la détection automatique couvrant environ 30 à 40 % des critères d'accessibilité (voir « Méthodologie et limites »).",
     nextActionsHeading: 'Vos trois prochaines actions',
     nextActionItemTemplate: '{title}, à transmettre à : {contact} (effort : {effort}).',
     contactAgency: 'votre agence',
@@ -80,7 +80,7 @@ export const fr: ReportStrings = {
     bodyIntro:
       "Un critère en échec est un écart de conformité, pas une préférence esthétique. Cette page peut être transmise directement à un développeur, une agence ou un conseil juridique.",
     scopeNote:
-      "Cette liste décrit des écarts de conformité technique, indépendamment de toute question d'obligation légale : le statut d'obligation de ce site est traité séparément, section 2.",
+      "Cette liste décrit des écarts de conformité technique, indépendamment de toute question d'obligation légale : le statut d'obligation de ce site est traité séparément, section « {section} ».",
     criterionColumnLabel: 'Critère',
     criterionNameColumnLabel: 'Intitulé',
     findingsColumnLabel: 'Constats',
@@ -642,7 +642,9 @@ export const fr: ReportStrings = {
     pagesColumnLabel: 'Pages',
     allPagesAnalyzedTemplate: 'Toutes les pages analysées ({count})',
     andNMoreTemplate: 'et {count} autres',
+    andNMoreSingularTemplate: 'et {count} autre',
     affectedFilesCountTemplate: '{count} fichiers concernés',
+    affectedFilesCountSingularTemplate: '{count} fichier concerné',
     affectedFilesLabel: 'Fichiers',
     samePagesAsTemplate: 'Mêmes pages que {findingId}',
     pagesMaxColumnLabel: 'Pages max',
@@ -662,7 +664,7 @@ export const fr: ReportStrings = {
     eyebrow: 'Méthodologie et limites',
     heading: 'Comment cet audit a été réalisé',
     toolingParagraphTemplate:
-      "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages analysées le {date} à partir de la page d'accueil. Une page d'accueil traduite, accessible à la racine d'un préfixe de langue (par exemple /en/), n'est pas comptée comme une page distincte : seules les pages de contenu propre sont explorées.",
+      "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages analysées le {date} à partir de la page d'accueil. Une URL qui ne fait que mener à l'accueil d'une langue (par exemple /en) n'est pas comptée comme une page analysée, car elle ne porte pas de contenu propre ; les pages de cette langue sont explorées normalement.",
     automatedCoverageCaveat:
       "Les outils automatisés détectent une part reconnue mais limitée des problèmes d'accessibilité, une estimation généralement admise situant cette part entre 30 et 40 pour cent des critères, sans source unique attribuable. C'est une propriété de tout audit automatisé, pas une réserve sur celui-ci : elle garantit que chaque constat listé est vérifiable. Cet audit inclut une passe d'accessibilité étendue couvrant la navigation au clavier, l'ordre de focus, la gestion des erreurs de formulaire, la présence de sous-titres vidéo, et un signal heuristique sur la qualité des textes alternatifs. Cet audit est entièrement automatisé : certaines propriétés d'accessibilité ne peuvent pas être évaluées de manière fiable par des outils automatisés seuls et ne font l'objet d'aucun constat dans ce rapport.",
     extendedPassNoneFoundNote:

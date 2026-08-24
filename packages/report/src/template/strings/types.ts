@@ -114,6 +114,13 @@ export interface ReportStrings {
      *  unconditionally (CLAUDE.md rule 6: state the criteria, never a
      *  verdict, regardless of whether section 11 reached a determination
      *  elsewhere). */
+    /** Points the reader at the section that does treat obligation status.
+     *  Template: {section}, the referenced section's own canonical title.
+     *  It used to hardcode "section 2", which named the wrong section: the
+     *  registry id `section-02` renders as ordinal 3, so the note pointed
+     *  at "Resume". Referencing by title, the way accessibility-statement.ts
+     *  already does, cannot drift when a section is suppressed and the
+     *  ordinals shift. */
     scopeNote: string;
     criterionColumnLabel: string;
     criterionNameColumnLabel: string;
@@ -716,11 +723,19 @@ export interface ReportStrings {
      *  findings-appendix.ts) when a finding hits more pages than shown.
      *  Template: {count}, the number NOT shown. */
     andNMoreTemplate: string;
+    /** Singular form of the above. A remaining count of exactly one is
+     *  common (a capped list one item over its cap), and French "et 1
+     *  autres" is simply wrong. Template: {count}. */
+    andNMoreSingularTemplate: string;
     /** B4: a site-wide resource finding (Lighthouse's image/asset audits)
      *  collapses every affected file into one row, so the selector column
      *  states a file count and a sub-row lists the files. Template:
      *  {count}. */
     affectedFilesCountTemplate: string;
+    /** Singular form of the above. Real reports hit this: an audit whose
+     *  collapsed row covers exactly one file rendered "1 fichiers
+     *  concernes". Template: {count}. */
+    affectedFilesCountSingularTemplate: string;
     affectedFilesLabel: string;
     /** 2026-08-22, La Corniche report review: two or more findings in the
      *  same rule group frequently share the exact same page-URL set (the

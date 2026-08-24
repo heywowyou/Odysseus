@@ -3,7 +3,15 @@ import type { AuditManifest, Finding, FindingCategory, ReportLanguage, StatSecto
 import { selectReferenceStats } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatNumber, pluralize, renderSheetHeader, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  formatAndNMore,
+  formatNumber,
+  pluralize,
+  renderSheetHeader,
+  sheet,
+} from '../html-utils.js';
 import { renderSeverityBadge } from '../severity-badge.js';
 import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
@@ -136,7 +144,7 @@ function renderPageUrlList(
     } else if (entries.length > PAGE_URL_LIST_CAP) {
       const shown = entries.slice(0, PAGE_URL_LIST_CAP);
       const remaining = entries.length - PAGE_URL_LIST_CAP;
-      urlsText = `${shown.join(', ')} ${fillTemplate(a.andNMoreTemplate, { count: formatNumber(remaining, language) })}`;
+      urlsText = `${shown.join(', ')} ${formatAndNMore(remaining, language, a)}`;
     } else {
       urlsText = entries.join(', ');
     }
@@ -191,7 +199,7 @@ function renderResourceUrlList(
   const remaining = urls.length - shown.length;
   const text =
     remaining > 0
-      ? `${shown.join(', ')} ${fillTemplate(a.andNMoreTemplate, { count: formatNumber(remaining, language) })}`
+      ? `${shown.join(', ')} ${formatAndNMore(remaining, language, a)}`
       : shown.join(', ');
 
   return `<tr class="appendix-url-row"><td class="url-cell" colspan="4" style="padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.affectedFilesLabel)} : ${escapeHtml(text)}</td></tr>`;
@@ -240,9 +248,14 @@ function renderSubTableRow(
   const resourceUrls = findingResourceUrls(finding);
   const selector =
     resourceUrls.length > 0
-      ? fillTemplate(strings.findingsAppendix.affectedFilesCountTemplate, {
-          count: formatNumber(resourceUrls.length, language),
-        })
+      ? fillTemplate(
+          pluralize(
+            resourceUrls.length,
+            strings.findingsAppendix.affectedFilesCountSingularTemplate,
+            strings.findingsAppendix.affectedFilesCountTemplate,
+          ),
+          { count: formatNumber(resourceUrls.length, language) },
+        )
       : (finding.elements[0]?.selector ?? '');
   return `
     <tr id="annexref-${escapeHtml(finding.findingId)}">

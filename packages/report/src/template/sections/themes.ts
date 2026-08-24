@@ -372,7 +372,7 @@ function renderTheme(
         <span class="text-muted">${escapeHtml(t.impactLabel)} : <strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
         <span class="text-muted">${escapeHtml(t.affectedPagesLabel)} : <strong style="color:var(--color-text)">${escapeHtml(pagesText)}</strong></span>
         <span class="text-muted">${escapeHtml(t.conformityLabel)} : <strong style="color:${isNonConformant ? SEVERITY.critical.color : 'var(--color-neutral-500)'}">${escapeHtml(conformityValue)}</strong>${!isNonConformant && showConformityGloss ? ` <span style="font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</span>
-        <span class="text-muted">${escapeHtml(t.refsLabel)} : ${formatCappedFindingIdLinks(theme.findingIds, language, strings.findingsAppendix.andNMoreTemplate)}</span>
+        <span class="text-muted">${escapeHtml(t.refsLabel)} : ${formatCappedFindingIdLinks(theme.findingIds, language, strings.findingsAppendix)}</span>
       </div>
     </div>
   `;

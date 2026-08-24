@@ -22,7 +22,7 @@ export const en: ReportStrings = {
     consequenceRegulatory: 'A regulatory exposure already documented (see the "Legal exposure" section).',
     consequenceVisibility: 'Reduced visibility in search results and AI assistants.',
     notALegalOpinionNote:
-      'What this report is not: legal advice (see the "Legal exposure" section); an automated audit covering roughly 30 to 40 percent of accessibility criteria (see "Methodology and limits").',
+      'What this report is not: legal advice (see the "Legal exposure" section); an exhaustive audit, since automated detection covers roughly 30 to 40 percent of accessibility criteria (see "Methodology and limits").',
     nextActionsHeading: 'Your three next actions',
     nextActionItemTemplate: '{title}, pass on to: {contact} (effort: {effort}).',
     contactAgency: 'your agency',
@@ -66,7 +66,7 @@ export const en: ReportStrings = {
     bodyIntro:
       'A failing criterion is a conformance gap, not an aesthetic preference. This page can be handed directly to a developer, an agency, or legal counsel.',
     scopeNote:
-      'This list of technical criteria does not, on its own, imply a conclusion about this site\'s legal obligation: it is technical, not legal, and does not contradict the obligation status established in section 2.',
+      'This list of technical criteria does not, on its own, imply a conclusion about this site\'s legal obligation: it is technical, not legal, and does not contradict the obligation status established in the "{section}" section.',
     criterionColumnLabel: 'Criterion',
     criterionNameColumnLabel: 'Name',
     findingsColumnLabel: 'Findings',
@@ -509,7 +509,9 @@ export const en: ReportStrings = {
     pagesColumnLabel: 'Pages',
     allPagesAnalyzedTemplate: 'All pages analysed ({count})',
     andNMoreTemplate: 'and {count} more',
+    andNMoreSingularTemplate: 'and {count} more',
     affectedFilesCountTemplate: '{count} files affected',
+    affectedFilesCountSingularTemplate: '{count} file affected',
     affectedFilesLabel: 'Files',
     samePagesAsTemplate: 'Same pages as {findingId}',
     pagesMaxColumnLabel: 'Max pages',
@@ -529,7 +531,7 @@ export const en: ReportStrings = {
     eyebrow: 'Methodology and limitations',
     heading: 'How this audit was carried out',
     toolingParagraphTemplate:
-      'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages analyzed on {date} starting from the homepage. A translated homepage at the root of a language prefix (for example /en/) is not counted as a distinct page: only pages with their own content are crawled.',
+      'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages analyzed on {date} starting from the homepage. A URL that merely leads to the homepage for a language (for example /en) is not counted as an analyzed page, because it carries no content of its own; the pages in that language are crawled normally.',
     automatedCoverageCaveat:
       'Automated tools detect a well-documented but limited share of accessibility issues, a commonly cited industry estimate placing that share between 30 and 40 percent of criteria (a general estimate with no single attributable source, unlike the figures cited elsewhere in this report). This is a property of any automated audit, not a reservation about this one: it guarantees every finding listed is verifiable. This audit adds an extended accessibility pass covering keyboard navigation, focus order, form error handling, video caption presence, and a heuristic red flag for alt text quality. This audit is fully automated: some accessibility properties cannot be reliably evaluated by automated tools alone and are not covered by any finding in this report.',
     extendedPassNoneFoundNote:

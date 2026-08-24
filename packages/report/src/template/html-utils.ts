@@ -284,14 +284,30 @@ function capFindingIds(findingIds: readonly string[]): { shown: string[]; remain
 }
 
 /** Plain-text capped variant, for cells that cannot carry links. */
+/** Resolves the "and N more" tail for a capped list, picking the singular
+ *  form at exactly one. Every capped-list helper below takes the whole
+ *  strings object rather than one template, so a caller cannot pass the
+ *  plural form alone and silently reintroduce "et 1 autres" - which is
+ *  what a real report printed before this existed. */
+export interface AndNMoreStrings {
+  readonly andNMoreTemplate: string;
+  readonly andNMoreSingularTemplate: string;
+}
+
+export function formatAndNMore(remaining: number, language: 'fr' | 'en', strings: AndNMoreStrings): string {
+  return fillTemplate(pluralize(remaining, strings.andNMoreSingularTemplate, strings.andNMoreTemplate), {
+    count: formatNumber(remaining, language),
+  });
+}
+
 export function formatCappedFindingIdRefs(
   findingIds: readonly string[],
   language: 'fr' | 'en',
-  andNMoreTemplate: string,
+  strings: AndNMoreStrings,
 ): string {
   const { shown, remaining } = capFindingIds(findingIds);
   if (remaining === 0) return shown.join(', ');
-  return `${shown.join(', ')} ${fillTemplate(andNMoreTemplate, { count: formatNumber(remaining, language) })}`;
+  return `${shown.join(', ')} ${formatAndNMore(remaining, language, strings)}`;
 }
 
 /** Generic capped join, for any short-token list rendered inside a
@@ -306,11 +322,11 @@ export function formatCappedList(
   values: readonly string[],
   cap: number,
   language: 'fr' | 'en',
-  andNMoreTemplate: string,
+  strings: AndNMoreStrings,
 ): string {
   if (values.length <= cap) return values.join(', ');
   const remaining = values.length - cap;
-  return `${values.slice(0, cap).join(', ')} ${fillTemplate(andNMoreTemplate, { count: formatNumber(remaining, language) })}`;
+  return `${values.slice(0, cap).join(', ')} ${formatAndNMore(remaining, language, strings)}`;
 }
 
 /** Linked capped variant. Returns raw HTML - do not escapeHtml() again.
@@ -319,11 +335,11 @@ export function formatCappedList(
 export function formatCappedFindingIdLinks(
   findingIds: readonly string[],
   language: 'fr' | 'en',
-  andNMoreTemplate: string,
+  strings: AndNMoreStrings,
 ): string {
   const { shown, remaining } = capFindingIds(findingIds);
   const links = formatFindingIdLinks(shown);
   if (remaining === 0) return links;
-  const tail = fillTemplate(andNMoreTemplate, { count: formatNumber(remaining, language) });
+  const tail = formatAndNMore(remaining, language, strings);
   return `${links} <span class="text-muted">${escapeHtml(tail)}</span>`;
 }

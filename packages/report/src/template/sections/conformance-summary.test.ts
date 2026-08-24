@@ -170,3 +170,35 @@ describe('renderConformanceSummary with no WCAG failures', () => {
     expect(html).not.toContain('row-atomic');
   });
 });
+
+/** 2026-08-25 Lagnonu review, D5. The scope note pointed the reader at
+ *  "section 2" for obligation status. Obligation status is section 03;
+ *  section 02 is the executive summary. The bug was an id/ordinal
+ *  confusion - registry id `section-02` renders as ordinal 3 - and a
+ *  hardcoded ordinal cannot survive a suppressed section anyway, since
+ *  computeSectionNumbers renumbers live. Referencing by title instead. */
+describe('D5: the scope note names the legal-exposure section, not an ordinal', () => {
+  it('renders the section title rather than a hardcoded number', async () => {
+    const findings = await loadSasFernandeFindings();
+    const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
+
+    expect(html).toContain('Exposition légale');
+    expect(html).not.toMatch(/trait[ée] s[ée]par[ée]ment, section \d/);
+  });
+
+  it('does the same in English', async () => {
+    const findings = await loadSasFernandeFindings();
+    const html = renderConformanceSummary(getStrings('en'), 7, findings, 'en');
+
+    expect(html).toContain('Legal exposure');
+    expect(html).not.toMatch(/in section \d/);
+  });
+
+  it('leaves no {section} placeholder unresolved', async () => {
+    const findings = await loadSasFernandeFindings();
+    for (const language of ['fr', 'en'] as const) {
+      const html = renderConformanceSummary(getStrings(language), 7, findings, language);
+      expect(html).not.toContain('{section}');
+    }
+  });
+});

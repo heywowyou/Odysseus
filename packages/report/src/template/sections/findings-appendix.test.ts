@@ -673,3 +673,84 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
     expect((html.match(/id="annexref-/g) ?? []).length).toBe(2);
   });
 });
+
+/** 2026-08-25 Lagnonu review, D11. Trade-off 30 added the collapsed
+ *  resource row's file-count column and its "et N autres" tail, but not a
+ *  singular form for either. A real report printed "1 fichiers concernes"
+ *  twice, and "et 1 autres" - both simply wrong in French, on a row whose
+ *  whole purpose is to look authoritative to a developer. */
+describe('D11: file counts and overflow tails agree in number', () => {
+  function resourceFinding(resourceUrls: readonly string[]): Finding {
+    return {
+      findingId: 'f001',
+      auditId: 'a',
+      schemaVersion: 1,
+      source: 'lighthouse',
+      ruleId: 'modern-image-formats',
+      category: 'performance',
+      severity: 'minor',
+      wcagCriteria: [],
+      title: 'Serve images in modern formats',
+      description: 'desc',
+      pageUrls: ['https://example.com/'],
+      occurrences: resourceUrls.length,
+      elements: [],
+      rawEvidence: { resourceUrls: [...resourceUrls] },
+      dedupeKey: 'k',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  it('uses the singular for exactly one affected file', () => {
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [resourceFinding(['https://example.com/img/logo.png'])],
+      buildManifest(),
+      'general',
+    );
+
+    expect(html).toContain('1 fichier concerné');
+    expect(html).not.toContain('1 fichiers concernés');
+  });
+
+  it('uses the plural for more than one', () => {
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [resourceFinding(['https://example.com/a.png', 'https://example.com/b.png'])],
+      buildManifest(),
+      'general',
+    );
+
+    expect(html).toContain('2 fichiers concernés');
+  });
+
+  it('does the same in English', () => {
+    const html = renderFindingsAppendix(
+      getStrings('en'),
+      12,
+      'en',
+      [resourceFinding(['https://example.com/img/logo.png'])],
+      buildManifest(),
+      'general',
+    );
+
+    expect(html).toContain('1 file affected');
+    expect(html).not.toContain('1 files affected');
+  });
+
+  /** Guards the whole family rather than the one row that was reported:
+   *  the "and N more" tail is shared by the annex, the themes section and
+   *  the checklist, and every one of them could print "et 1 autres". */
+  it('never prints a plural overflow tail for a remainder of one', async () => {
+    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSasFernandeManifest();
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+
+    expect(html).not.toContain('et 1 autres');
+  });
+});

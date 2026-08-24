@@ -134,3 +134,33 @@ describe('the LCEN identification obligation in section 03', () => {
     expect(html).not.toContain('Autre obligation applicable');
   });
 });
+
+/** 2026-08-25 Lagnonu review, D9. With no SIREN and an LCEN finding
+ *  present, section 03 said the same thing twice, two lines apart: the
+ *  LCEN block's "le scan n'a trouve aucun numero SIREN, RCS ou TVA publie
+ *  sur les pages visitees", immediately followed by the standalone "aucun
+ *  numero SIREN n'a pu etre identifie pour ce site". The LCEN wording is
+ *  the better of the two, so the standalone fallback yields to it. */
+describe('D9: the missing-SIREN fact is stated once, not twice', () => {
+  it('suppresses the standalone fallback when the LCEN block already says it', () => {
+    const html = render('fr', [lcenFinding()]);
+
+    expect(html).toContain(escapeHtml(fr.legalExposure.lcenObserved));
+    expect(html).not.toContain(escapeHtml(fr.legalExposure.sirenUnavailable));
+  });
+
+  it('still states it when there is no LCEN block to carry the fact', () => {
+    const html = render('fr', [otherFinding()]);
+
+    expect(html).not.toContain(escapeHtml(fr.legalExposure.lcenObserved));
+    expect(html).toContain(escapeHtml(fr.legalExposure.sirenUnavailable));
+  });
+
+  it('does the same in English', () => {
+    const withLcen = render('en', [lcenFinding()]);
+    const withoutLcen = render('en', [otherFinding()]);
+
+    expect(withLcen).not.toContain(escapeHtml(en.legalExposure.sirenUnavailable));
+    expect(withoutLcen).toContain(escapeHtml(en.legalExposure.sirenUnavailable));
+  });
+});

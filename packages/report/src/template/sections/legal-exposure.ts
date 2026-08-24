@@ -37,10 +37,20 @@ function renderSirenNote(
   manifest: AuditManifest,
   manualFields: AuditManualFields | undefined,
   obligationAssessment: ObligationAssessment | undefined,
+  lcenBlockRendered: boolean,
 ): string {
   const l = strings.legalExposure;
   const siren = manualFields?.siren?.value ?? manifest.siteSignals?.siren;
   const snapshot = obligationAssessment?.registrySnapshot;
+
+  // 2026-08-25 Lagnonu review, D9: with no SIREN and an LCEN finding, this
+  // fallback line and the LCEN block above it said the same thing two
+  // lines apart. The LCEN wording is the better of the two - it names RCS
+  // and TVA as well, and scopes the claim to the pages actually visited -
+  // so this one yields rather than restating it. Only the fallback is
+  // suppressed: a real registry snapshot or a known SIREN is different
+  // information and still renders.
+  if (lcenBlockRendered && !snapshot && !siren) return '';
 
   const text = snapshot
     ? fillTemplate(l.registrySnapshotTemplate, {
@@ -293,6 +303,8 @@ export function renderLegalExposure(
       ? `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(l.undeterminedActionNote)}</p>`
       : '';
 
+  const lcenBlock = renderLcenBlock(strings, language, findings);
+
   return sheet(`
     ${renderSheetHeader(ordinal, l.eyebrow, l.heading)}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-6)">
@@ -312,8 +324,8 @@ export function renderLegalExposure(
     ${renderTransactionalFlowScopeNote(strings, manifest)}
     ${renderTransactionalFlowConflictNote(strings, obligationAssessment)}
     ${renderEaaExposureBlock(strings, language, obligationAssessment)}
-    ${renderLcenBlock(strings, language, findings)}
-    ${renderSirenNote(strings, language, manifest, manualFields, obligationAssessment)}
+    ${lcenBlock}
+    ${renderSirenNote(strings, language, manifest, manualFields, obligationAssessment, lcenBlock !== '')}
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">${escapeHtml(l.disclaimerNote)}</p>
   `, '', 'section-02');
 }

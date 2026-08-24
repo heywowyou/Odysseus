@@ -1,7 +1,8 @@
 import { getCriterionName } from '@odysseus/llm';
 import type { Finding, ReportLanguage } from '@odysseus/core';
+import { sectionTitle } from '../section-registry.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { buildConformanceRollup, buildHeuristicRollup, hasMultiCriterionFinding, type ConformanceRow } from '../conformance-rollup.js';
 
 // Real <table>/<thead>/<tbody> markup, not a CSS grid of divs - same
@@ -131,7 +132,7 @@ export function renderConformanceSummary(
   return sheet(`
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:66ch;margin-bottom:var(--space-2)">${escapeHtml(c.bodyIntro)}</p>
-    <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-6)">${escapeHtml(c.scopeNote)}</p>
+    <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-6)">${escapeHtml(fillTemplate(c.scopeNote, { section: sectionTitle('section-02', strings) }))}</p>
     ${body}
     ${heuristicBlock}
   `, '', 'section-07');
