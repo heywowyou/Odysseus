@@ -663,6 +663,10 @@ export const fr: ReportStrings = {
   methodology: {
     eyebrow: 'Méthodologie et limites',
     heading: 'Comment cet audit a été réalisé',
+    languageCoverageTemplate:
+      'Langues couvertes par cette analyse : {languages}.',
+    languageNotScannedTemplate:
+      'Aucune page n\'a été analysée pour les langues suivantes, bien que le site en publie : {languages}.',
     toolingParagraphTemplate:
       "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages analysées le {date} à partir de la page d'accueil. Une URL qui ne fait que mener à l'accueil d'une langue (par exemple /en) n'est pas comptée comme une page analysée, car elle ne porte pas de contenu propre ; les pages de cette langue sont explorées normalement.",
     automatedCoverageCaveat:

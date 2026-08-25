@@ -774,6 +774,15 @@ export interface ReportStrings {
     heading: string;
     /** Template: {axeVersion}, {lighthouseVersion}, {pages}, {date}. */
     toolingParagraphTemplate: string;
+    /** 2026-08-25: states which languages the crawl actually reached, on a
+     *  site that publishes more than one. A real report said "65 pages
+     *  analysees" for a trilingual site having visited only the French one.
+     *  Templates: {languages}. */
+    languageCoverageTemplate: string;
+    /** Appended when a language was discovered but no page of it scanned -
+     *  the case the sentence above exists to make impossible to miss.
+     *  Templates: {languages}. */
+    languageNotScannedTemplate: string;
     /** brief section 6.6: the well-documented ~30-40% automated coverage
      *  figure, stated in every report, not only accessibility audits. */
     automatedCoverageCaveat: string;

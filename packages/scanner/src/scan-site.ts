@@ -141,6 +141,25 @@ async function runScanLane(
  * (writeAuditArtifacts builds its own url-keyed map), so this is safe.
  */
 export async function scanSite(startUrl: string, options: ScanSiteOptions): Promise<SiteScanResult> {
+  // 2026-08-25 Lagnonu review: the crawl discovers by link-following only,
+  // so a page the sitemap declares but nothing links to was never visited -
+  // and the report still said "65 pages analysees" without qualification.
+  // The sitemap is fetched once here, before the crawl, and its URLs are
+  // force-enqueued as seeds; the same result is reused for the post-crawl
+  // sitemap check below rather than fetched twice, so this costs the
+  // politeness budget nothing on the common path.
+  //
+  // Only the conventional /sitemap.xml is tried at this point, because
+  // robots.txt has not been read yet (crawlSite reads it) and a robots-
+  // declared sitemap at a non-conventional URL is not known until after.
+  // That case is handled below by re-checking, not by guessing here.
+  const preCrawlSitemap = await checkSitemap(
+    new URL(startUrl).origin,
+    [],
+    options.timeoutMs ?? getPageTimeoutMs(),
+  );
+  const sitemapSeeds = preCrawlSitemap.entries.map((entry) => entry.url);
+
   const crawl = await crawlSite(startUrl, {
     browser: options.browser,
     ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
@@ -149,7 +168,9 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
     ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
     ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
     ...(options.onProgress !== undefined ? { onProgress: options.onProgress } : {}),
-    ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
+    // Same-origin filtering and the exclusion globs still apply to these
+    // inside crawlSite, exactly as they do to an operator's own seeds.
+    seeds: [...(options.seeds ?? []), ...sitemapSeeds],
     ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
   });
 
@@ -178,13 +199,21 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
   // itself was never visited (e.g. disallowed by its own robots.txt),
   // since there is no page to attribute the finding to.
   const homepageWasVisited = pagesToScan.some((page) => page.url === crawl.startUrl);
-  const sitemapCheck = homepageWasVisited
-    ? {
-        ...(await checkSitemap(
+  // Reuses the pre-crawl fetch unless robots.txt declared a sitemap we had
+  // no way of knowing about before reading it, which is the only case where
+  // the conventional URL tried above could have been the wrong one.
+  const robotsDeclaredUnfetched = crawl.robotsSitemapUrls.some((url) => url !== preCrawlSitemap.sitemapUrl);
+  const sitemapResult =
+    preCrawlSitemap.found && !robotsDeclaredUnfetched
+      ? preCrawlSitemap
+      : await checkSitemap(
           new URL(crawl.startUrl).origin,
           crawl.robotsSitemapUrls,
           options.timeoutMs ?? getPageTimeoutMs(),
-        )),
+        );
+  const sitemapCheck = homepageWasVisited
+    ? {
+        ...sitemapResult,
         crawledUrls: pagesToScan.map((page) => page.url),
         // Every URL the crawl discovered at all (visited, robots-skipped,
         // non-HTML-skipped, or errored), not only the visited subset

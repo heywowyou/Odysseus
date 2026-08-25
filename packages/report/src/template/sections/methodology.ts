@@ -15,6 +15,7 @@ import {
   type ReportLanguage,
 } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
+import { computeLanguageCoverage } from '../language-coverage.js';
 import { escapeHtml, fillTemplate, formatDate, formatNumber, pluralize, renderSheetHeader, sheet } from '../html-utils.js';
 
 /** Sirene's own effectif-band labels (see packages/interface's
@@ -383,6 +384,21 @@ export function renderMethodology(
     date: formatDate(new Date(manifest.startedAt), language),
   });
 
+  // 2026-08-25 Lagnonu review, item 1.3's remaining half: state the language
+  // coverage actually achieved, so "65 pages analysees" can never again be
+  // read as covering a language the crawl never reached.
+  const coverage = computeLanguageCoverage(manifest);
+  const languageCoverageNote =
+    coverage === undefined
+      ? ''
+      : `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(
+          fillTemplate(m.languageCoverageTemplate, { languages: coverage.scanned.join(', ') }),
+        )}${
+          coverage.discoveredOnly.length === 0
+            ? ''
+            : ` ${escapeHtml(fillTemplate(m.languageNotScannedTemplate, { languages: coverage.discoveredOnly.join(', ') }))}`
+        }</p>`;
+
   const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings, resolvedSirenSourceUrl);
   const extendedPassNote = renderExtendedPassNote(strings, language, findings);
   const lighthouseFailureNote = summarizeLighthouseFailures(strings, manifest, language);
@@ -419,6 +435,7 @@ export function renderMethodology(
   return sheet(`
     ${renderSheetHeader(ordinal, eyebrow, m.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
+    ${languageCoverageNote}
     ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(crawlCapNote)}</p>` : ''}
     ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(socialExclusionNote)}</p>` : ''}
     ${lighthouseFailureNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(lighthouseFailureNote)}</p>` : ''}

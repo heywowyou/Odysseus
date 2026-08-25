@@ -32,7 +32,7 @@ export const HREFLANG_MISSING_RULE_ID = 'hreflang-missing';
  *  reason manifest.ts duplicates CrawledPageStatus. */
 const LANGUAGE_PATH_PREFIX = /^\/([a-z]{2}(?:-[a-z]{2})?)(?:\/|$)/i;
 
-function languagePrefixOf(url: string): string | undefined {
+export function languagePrefixOf(url: string): string | undefined {
   try {
     return new URL(url).pathname.match(LANGUAGE_PATH_PREFIX)?.[1]?.toLowerCase();
   } catch {
