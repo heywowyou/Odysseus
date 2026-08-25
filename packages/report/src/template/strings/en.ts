@@ -89,6 +89,23 @@ export const en: ReportStrings = {
     legalBodyTemplate:
       "These pages (terms and conditions, cookie policy, privacy policy, or similar) are of a kind usually excluded from indexing (noindex). This is a common and often deliberate setup for this kind of page: no corrective action is recommended by default, just confirm the choice is intentional and that a noindex directive is actually in place. Findings involved: {findingIds}.",
   },
+  remainingWork: {
+    eyebrow: 'Still to address',
+    heading: 'The remaining findings, grouped by theme',
+    introTemplate:
+      'The ranked priorities in section {prioritiesSection} cover what to fix first. The remaining {count} findings are grouped below by area and by rule, each with the corresponding action. Every line points back to the finding numbers in the annex.',
+    nothingRemaining:
+      'Every finding in this audit is covered by the ranked priorities. This section has nothing to add.',
+    findingSingular: 'finding',
+    findingPlural: 'findings',
+    occurrenceSingular: 'occurrence',
+    occurrencePlural: 'occurrences',
+    pageSingular: 'page',
+    pagePlural: 'pages',
+    findingRefsTemplate: 'Findings: {findingIds}',
+    scopeNote:
+      'The actions given describe the correction the detected rule calls for. They do not replace the judgment of whoever will work on the site.',
+  },
   cover: {
     kicker: 'Odysseus · Digital audit',
     reportTitle: 'Audit report',

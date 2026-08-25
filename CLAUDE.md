@@ -1494,6 +1494,58 @@ Any fixture dev server started during a session must be stopped before the
 session ends. Verify it is stopped with `pgrep` before reporting
 completion.
 
+### Real-scan fixtures go stale silently. Refresh them and let a test catch it.
+
+Discovered 2026-08-25: the whole suite was green while
+`artifacts/sas-fernande.fr/2026-08-02T17-31-56Z` still reported 78 findings,
+months after normalization changes had taken it to 42. `artifacts/` is
+gitignored, so nothing versioned these directories, and nothing checked
+whether the code that produced them was still the code in the tree. Every
+test asserting "78 findings, 61 minor" was describing a pipeline that no
+longer existed, and would have handed the next person eight unexplained
+failures with no way to tell a real regression from accumulated staleness.
+
+`fixtures/audits.json` is now the single curated list of real-scan
+directories the test suite depends on, each with a one-line reason it is
+kept - curated, not accumulated, since the list had grown to thirteen
+directories with three timestamps for one site and no record of why. Run
+`pnpm fixtures:refresh` after any change under `packages/core/src/normalize`
+to re-derive every one of them with `normalize <dir>` and stamp each with a
+fingerprint of the normalization source that produced it
+(`scripts/fixture-fingerprint.mjs`). `fixture-freshness.test.ts` fails the
+build the moment a listed fixture's stamp does not match the code in the
+tree, so staleness is a red test, not a silent fact discovered by reading
+`git log` months later.
+
+Two more tests turn "the report is accurate" from a stated goal into a
+measured one, and are worth keeping distinct (`rule-coverage.test.ts`'s own
+header comment states this in full): **recall** - the scanner finding a real
+issue at all - is bounded by what automated detection can reach, documented
+at roughly 30 to 40 percent of WCAG criteria, and no fixture work moves that
+number. **Precision** - every finding the report prints being real, correctly
+described, and singly counted - is the property actually holding a client
+relationship, and is the one held to a near-perfect bar.
+
+- `rule-coverage.test.ts`'s recall ratchet fails when fewer of the tool's
+  emittable rules are exercised by any curated fixture than were measured
+  last time. A rule with a severity mapping, remediation copy, and report
+  wiring but no fixture behind it has never been observed firing - which is
+  exactly how `hreflang-missing` (trade-off 31), the LCEN regime
+  (trade-off 28), and both cost gates (trade-off 23) went unnoticed for
+  months. Raise the floor when coverage improves; never lower it to make a
+  red build green.
+- The same file's single-rule concentration check is a precision smell: no
+  rule may account for more than 30 percent of one audit's findings. It has
+  now caught the same underlying defect three times under three different
+  names - trade-off 31 (219 of 282 Lagnonu findings in five rules),
+  trade-off 30 (102 of 305 haaitza findings in two Lighthouse image audits),
+  trade-off 24 (182 of 265 language variants of one page) - and each time
+  the cause was the same: the wrong identity chosen for a defect, so one
+  instruction printed dozens of times. A rule can legitimately sit above the
+  line (`image-alt` on a picture-heavy site, where each image is genuinely a
+  separate editorial decision); the threshold exists to make crossing it a
+  question asked, not a pattern that ships unnoticed a fourth time.
+
 ## MCP servers
 
 Start Claude Code sessions in this repo with `codysseus` (alias for

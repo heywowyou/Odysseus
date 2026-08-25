@@ -31,6 +31,7 @@ import { renderConformanceSummary } from './sections/conformance-summary.js';
 import { renderThemes } from './sections/themes.js';
 import { renderChecklist } from './sections/checklist.js';
 import { renderObservations } from './sections/observations.js';
+import { renderRemainingWork } from './sections/remaining-work.js';
 import { renderRenderDiffEvidence } from './sections/render-diff-evidence.js';
 import { hasMeasuredCoreWebVitals, renderCoreWebVitalsTable } from './sections/core-web-vitals-table.js';
 import { isArticle47Regime, renderAccessibilityStatement } from './sections/accessibility-statement.js';
@@ -159,6 +160,7 @@ function renderBody(
     renderStatistics(strings, ord('section-03'), analysis.language, resolvedFindings, manifest),
     renderThemes(strings, ord('section-04'), analysis, resolvedFindings, manifest, citedStatIds, sectorOverride),
     renderChecklist(strings, ord('section-05'), analysis.language, analysis, resolvedFindings, manifest, manualFields),
+    renderRemainingWork(strings, ord('section-05b'), analysis.language, analysis, resolvedFindings),
     includedSectionIds.has('section-06') ? renderObservations(strings, ord('section-06'), diverted) : '',
     renderConformanceSummary(strings, ord('section-07'), resolvedFindings, analysis.language),
     renderRenderDiffEvidence(

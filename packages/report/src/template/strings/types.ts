@@ -151,6 +151,25 @@ export interface ReportStrings {
     /** Template: {findingIds}. */
     legalBodyTemplate: string;
   };
+  remainingWork: {
+    eyebrow: string;
+    heading: string;
+    /** Template: {count}, {prioritiesSection}. */
+    introTemplate: string;
+    /** Shown instead of the whole section body when the ranked priorities
+     *  already account for every finding. */
+    nothingRemaining: string;
+    findingSingular: string;
+    findingPlural: string;
+    occurrenceSingular: string;
+    occurrencePlural: string;
+    pageSingular: string;
+    pagePlural: string;
+    /** Template: {findingIds}. */
+    findingRefsTemplate: string;
+    /** Fixed note under the heading, stating what this section is not. */
+    scopeNote: string;
+  };
   cover: {
     kicker: string;
     reportTitle: string;

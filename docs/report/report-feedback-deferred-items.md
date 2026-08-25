@@ -95,6 +95,28 @@ real report that actually exhibits the narrower gap (not yet observed
 against the stress fixture or any committed real-site artifact), so the
 fix can be verified against the actual failure mode instead of guessed at.
 
+## Noted, below the duplication alarm threshold
+
+### `crawlable-anchors` (Lighthouse) shows the same template-shape pattern as `link-name`
+Source: 2026-08-25, while building the single-rule concentration guard
+(`packages/core/src/normalize/rule-coverage.test.ts`). A real
+www.lacoorniche.com audit has `crawlable-anchors` at 23% of findings (71 of
+309) - under the 30% alarm threshold, so the guard does not fire, but the
+shape is identical to what `shapeIdentity` (D4b, CLAUDE.md this session)
+already fixes for axe: the same `a.thumb-url` inside
+`div.inner` repeated once per room card, wrapped in a runtime-generated
+container id (`div#rooms-6a887606ba744`) that also changes per page load,
+the exact unstable-identity problem trade-off 30 documents.
+
+Not fixed this session: `shapeIdentity` is axe-only right now, and
+`crawlable-anchors` is a Lighthouse rule with no equivalent identity path.
+Extending it to Lighthouse's element-scoped (non-resource) rules is real
+scope, needs its own measurement the way D4b's axe version got, and the
+smell is currently below the threshold that would force the question. Watch
+the concentration guard: if a future site pushes this or a similar rule over
+30%, that is the trigger to build it rather than waiting for another report
+review to notice by hand.
+
 ## Paged.js limitations in fragmented tables
 
 ### Annex table headers do not repeat on continuation pages

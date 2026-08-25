@@ -106,6 +106,23 @@ export const fr: ReportStrings = {
     legalBodyTemplate:
       "Ces pages (conditions générales, politique de cookies, politique de confidentialité, ou similaire) sont d'un type généralement exclu de l'indexation (noindex). C'est une configuration fréquente et souvent volontaire pour ce type de page : aucune action corrective n'est recommandée par défaut, vérifiez simplement que ce choix est assumé et que la directive noindex est bien en place. Constats concernés : {findingIds}.",
   },
+  remainingWork: {
+    eyebrow: 'Reste \u00e0 traiter',
+    heading: 'Les autres constats, group\u00e9s par th\u00e8me',
+    introTemplate:
+      "Les priorit\u00e9s class\u00e9es de la section {prioritiesSection} couvrent les corrections \u00e0 mener en premier. Les {count} constats restants sont regroup\u00e9s ci-dessous par domaine et par r\u00e8gle, avec l'action correspondante. Chaque ligne renvoie aux num\u00e9ros de constats de l'annexe.",
+    nothingRemaining:
+      "Tous les constats de cet audit sont couverts par les priorit\u00e9s class\u00e9es. Cette section n'a rien \u00e0 ajouter.",
+    findingSingular: 'constat',
+    findingPlural: 'constats',
+    occurrenceSingular: 'occurrence',
+    occurrencePlural: 'occurrences',
+    pageSingular: 'page',
+    pagePlural: 'pages',
+    findingRefsTemplate: 'Constats : {findingIds}',
+    scopeNote:
+      "Les actions indiqu\u00e9es d\u00e9crivent la correction attendue par la r\u00e8gle d\u00e9tect\u00e9e. Elles ne remplacent pas l'appr\u00e9ciation de la personne qui interviendra sur le site.",
+  },
   cover: {
     kicker: 'Odysseus · Audit numérique',
     reportTitle: "Rapport d'audit",
