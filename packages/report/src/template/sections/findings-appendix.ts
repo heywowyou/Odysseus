@@ -71,14 +71,36 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
  *  fragment lay out identically; the first cell is additionally nowrap so
  *  an id can never break mid-token even if a future change squeezes it
  *  again. */
-const APPENDIX_TABLE_STYLE = 'width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px';
+const APPENDIX_TABLE_STYLE = 'width:100%;table-layout:auto;border-collapse:collapse;font-size:12.5px';
+
+/** D2 (2026-08-25, Lagnonu review): the four column widths, declared on
+ *  every row rather than only on the header.
+ *
+ *  table-layout:fixed takes its widths from the first row of whatever it is
+ *  laying out, and Paged.js gives a continuation fragment the tbody rows
+ *  without the thead - so every page after the first lost the declarations
+ *  entirely and fell back to distributing the width equally. Measured on a
+ *  real report: the selector column began at x~325 on the page carrying the
+ *  header and x~530 on every page after it, and selectors then wrapped
+ *  mid-token, `.link[href$="contact` / `o"]`. Carrying the widths on the
+ *  cells makes every fragment lay out identically whether or not it happens
+ *  to contain the header - but not on its own: table-layout:fixed reads the
+ *  first row of the fragment, and a page can open on a full-width
+ *  colspan="4" page-URL row, which declares no column widths at all. The
+ *  colgroup below is what actually pins the columns, since it applies to the
+ *  table regardless of which row leads the fragment. Both are kept: the
+ *  colgroup is the guarantee, the per-cell widths make each row
+ *  self-describing if a future change ever splits these into separate
+ *  tables. */
+const APPENDIX_COLUMN_WIDTHS = ['80px', '90px', '100px', 'auto'] as const;
 
 function headCell(label: string, width: string): string {
   return `<th style="width:${width};padding:6px var(--space-2);font-size:10px;letter-spacing:0.02em;text-transform:uppercase;text-align:left;font-weight:400;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider);white-space:nowrap">${escapeHtml(label)}</th>`;
 }
 
-function cell(html: string, extra = ''): string {
-  return `<td style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</td>`;
+function cell(html: string, extra = '', width?: string): string {
+  const widthRule = width === undefined ? '' : `width:${width};`;
+  return `<td style="${widthRule}padding:6px var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</td>`;
 }
 
 /** item 25: every finding row states a page count ("9 pages") and never
@@ -259,10 +281,10 @@ function renderSubTableRow(
       : (finding.elements[0]?.selector ?? '');
   return `
     <tr id="annexref-${escapeHtml(finding.findingId)}">
-      ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;white-space:nowrap')}
-      ${cell(formatNumber(finding.pageUrls.length, language))}
-      ${cell(formatNumber(finding.occurrences, language))}
-      ${cell(escapeHtml(selector), selectorCellStyle(selector))}
+      ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;white-space:nowrap', APPENDIX_COLUMN_WIDTHS[0])}
+      ${cell(formatNumber(finding.pageUrls.length, language), '', APPENDIX_COLUMN_WIDTHS[1])}
+      ${cell(formatNumber(finding.occurrences, language), '', APPENDIX_COLUMN_WIDTHS[2])}
+      ${cell(escapeHtml(selector), selectorCellStyle(selector), APPENDIX_COLUMN_WIDTHS[3])}
     </tr>
     ${renderResourceUrlList(strings, language, finding)}
     ${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup)}
@@ -366,12 +388,13 @@ function renderRuleGroup(
         <span style="font-size:11px;opacity:0.6">${renderRuleSum(strings, language, group)}</span>
       </div>
       <table style="${APPENDIX_TABLE_STYLE}">
+        <colgroup>${APPENDIX_COLUMN_WIDTHS.map((w) => `<col style="width:${w}">`).join('')}</colgroup>
         <thead>
           <tr>
-            ${headCell(a.findingIdColumnLabel, '80px')}
-            ${headCell(a.pagesColumnLabel, '90px')}
-            ${headCell(a.occurrencesColumnLabel, '100px')}
-            ${headCell(a.selectorColumnLabel, 'auto')}
+            ${headCell(a.findingIdColumnLabel, APPENDIX_COLUMN_WIDTHS[0])}
+            ${headCell(a.pagesColumnLabel, APPENDIX_COLUMN_WIDTHS[1])}
+            ${headCell(a.occurrencesColumnLabel, APPENDIX_COLUMN_WIDTHS[2])}
+            ${headCell(a.selectorColumnLabel, APPENDIX_COLUMN_WIDTHS[3])}
           </tr>
         </thead>
         <tbody>

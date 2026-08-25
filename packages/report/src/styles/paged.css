@@ -257,11 +257,19 @@ h1, h2, h3, h4, h5, h6 {
   break-after: avoid;
 }
 
-/* item 2.2: the Core Web Vitals table is real <table>/<thead>/<tbody>
-   markup (core-web-vitals-table.ts), so it can use the standard Paged.js
-   repeating-header pattern instead of the display:contents `.row-atomic`
-   trick every other CSS-grid "table" in this report still needs, since
-   those have no real <thead> to repeat. */
+/* item 2.2: the Core Web Vitals table and the findings appendix are real
+   <table>/<thead>/<tbody> markup, not the display:contents `.row-atomic`
+   trick the CSS-grid "tables" elsewhere in this report still need.
+
+   D3 (2026-08-25, Lagnonu review): this rule is kept because it is correct
+   and costs nothing, but it does NOT currently repeat anything. Paged.js
+   0.4.3 does not implement table-header-group repetition, so an appendix
+   table spanning six pages prints its header once and every page after it
+   opens with four unlabelled columns. Confirmed by reading a real 38-page
+   report, not assumed from the spec. The previous comment here claimed this
+   pattern worked; it never did, and nothing exercised it because the Core
+   Web Vitals table always fits on one page. Repeating the header needs an
+   engine change, not a CSS change. */
 table thead {
   display: table-header-group;
 }
@@ -292,6 +300,26 @@ table tbody {
    a combined block would. */
 .appendix-url-row {
   break-before: avoid;
+}
+
+/* D1 (2026-08-25, Lagnonu review): a real report broke the "Repartition par
+   categorie" row mid-tile - the ACCESSIBILITE label sat alone in an empty box
+   at the foot of one page while its value, 228, appeared in an unlabelled box
+   at the top of the next, and that next page was then 85% blank. A number
+   severed from its own label is the worst possible failure on the page a
+   director reads first.
+
+   Safe under trade-off 17, which forbids break-inside: avoid only where the
+   fragment can exceed a page: a stat tile is two short lines and a tile row is
+   one band of them, both bounded by construction. The heading is glued to its
+   row for the same reason - a heading alone at a page foot is the same defect
+   one step earlier. */
+.stat-tile,
+.stat-tile-row {
+  break-inside: avoid;
+}
+h5 {
+  break-after: avoid;
 }
 
 /* A CSS grid row built from display:contents cannot be kept together by the
