@@ -45,6 +45,9 @@ const findingElementSchema = new Schema(
     selector: { type: String, required: true },
     snippet: { type: String, required: true },
     screenshotRef: { type: String },
+    // Optional and additive (findings.ts, 2026-08-25). Stored documents
+    // written before it simply do not carry it, which is a valid element.
+    resourceUrl: { type: String },
   },
   { _id: false },
 );

@@ -49,8 +49,16 @@ function collectLongStringsToVerify(findings: readonly Finding[]): { selectors: 
   const selectors = new Set<string>();
   const urls = new Set<string>();
   for (const finding of findings) {
+    // A finding collapsed onto a file identity (trade-off 30) renders a file
+    // count in the selector column, not elements[0].selector - so its
+    // selector is legitimately absent from the PDF and asserting on it tests
+    // the wrong thing. Found 2026-08-25, when re-normalizing this fixture
+    // brought it up to date with a collapse that had shipped weeks earlier:
+    // the test had been passing only because the fixture predated it.
+    const resourceUrls = (finding.rawEvidence as { resourceUrls?: unknown }).resourceUrls;
+    const rendersFileCountInstead = Array.isArray(resourceUrls) && resourceUrls.length > 0;
     const selector = finding.elements[0]?.selector;
-    if (selector && selector.length > 15) selectors.add(selector);
+    if (!rendersFileCountInstead && selector && selector.length > 15) selectors.add(selector);
     for (const url of finding.pageUrls) urls.add(url);
   }
   return { selectors: [...selectors], urls: [...urls] };

@@ -646,6 +646,7 @@ export const fr: ReportStrings = {
     affectedFilesCountTemplate: '{count} fichiers concernés',
     affectedFilesCountSingularTemplate: '{count} fichier concerné',
     affectedFilesLabel: 'Fichiers',
+    affectedFilesSampleLabel: 'Fichiers (exemples)',
     samePagesAsTemplate: 'Mêmes pages que {findingId}',
     pagesMaxColumnLabel: 'Pages max',
     occurrencesColumnLabel: 'Occurrences',

@@ -742,6 +742,9 @@ export interface ReportStrings {
      *  concernes". Template: {count}. */
     affectedFilesCountSingularTemplate: string;
     affectedFilesLabel: string;
+    /** Used instead of affectedFilesLabel when the stored occurrences were
+     *  capped, so the list below is a sample and not the whole set. */
+    affectedFilesSampleLabel: string;
     /** 2026-08-22, La Corniche report review: two or more findings in the
      *  same rule group frequently share the exact same page-URL set (the
      *  same booking widget missing an alt attribute on every page it

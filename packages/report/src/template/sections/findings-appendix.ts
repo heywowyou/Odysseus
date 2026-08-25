@@ -197,6 +197,25 @@ function findingResourceUrls(finding: Finding): string[] {
   return raw.filter((url): url is string => typeof url === 'string');
 }
 
+/** 2026-08-25: the files named by the finding's own occurrences, for
+ *  element-scoped rules that were never collapsed onto a file identity.
+ *
+ *  Different from findingResourceUrls above, and deliberately not merged
+ *  with it. A collapsed resource finding IS its file list, so that list
+ *  replaces the selector column. An element-scoped finding is about a place
+ *  in a page that happens to be an image, so it keeps its selector and gains
+ *  the filename underneath: the developer needs both halves, "which element"
+ *  and "which file", and neither answers the other. */
+function elementResourceUrls(finding: Finding): string[] {
+  return [
+    ...new Set(
+      finding.elements
+        .map((element) => element.resourceUrl)
+        .filter((url): url is string => typeof url === 'string' && url.length > 0),
+    ),
+  ].sort();
+}
+
 /** Path and filename only. A column of forty absolute URLs sharing one
  *  origin is unreadable, and the origin is already on the cover. */
 function shortenResourceUrl(url: string): string {
@@ -213,18 +232,29 @@ function renderResourceUrlList(
   language: ReportLanguage,
   finding: Finding,
 ): string {
-  const urls = findingResourceUrls(finding);
+  const collapsed = findingResourceUrls(finding);
+  const fromElements = collapsed.length === 0;
+  const urls = collapsed.length > 0 ? collapsed : elementResourceUrls(finding);
   if (urls.length === 0) return '';
   const a = strings.findingsAppendix;
+
+  // mergeGroup stores at most MAX_ELEMENTS_PER_FINDING occurrences, so an
+  // element-derived list on a finding with more occurrences than that is a
+  // sample and the true number of distinct files is genuinely unknown. Say
+  // "examples" and print no remainder rather than compute an "et N autres"
+  // against a set we know is truncated - a wrong count is worse than no
+  // count, the same reasoning the cover uses for an unconfirmed name.
+  const truncated = fromElements && finding.elements.length < finding.occurrences;
 
   const shown = urls.slice(0, RESOURCE_URL_LIST_CAP).map(shortenResourceUrl);
   const remaining = urls.length - shown.length;
   const text =
-    remaining > 0
+    remaining > 0 && !truncated
       ? `${shown.join(', ')} ${formatAndNMore(remaining, language, a)}`
       : shown.join(', ');
+  const label = truncated ? a.affectedFilesSampleLabel : a.affectedFilesLabel;
 
-  return `<tr class="appendix-url-row"><td class="url-cell" colspan="4" style="padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.affectedFilesLabel)} : ${escapeHtml(text)}</td></tr>`;
+  return `<tr class="appendix-url-row"><td class="url-cell" colspan="4" style="padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(label)} : ${escapeHtml(text)}</td></tr>`;
 }
 
 /** item 3.3: the anchor formatFindingIdLinks (html-utils.ts) links to from

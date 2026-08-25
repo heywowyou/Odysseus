@@ -67,6 +67,29 @@ export interface FindingElement {
   snippet: string;
   /** Reference to a stored screenshot, if one was captured. */
   screenshotRef?: string;
+  /**
+   * Absolute URL of the file this occurrence is actually about - an image
+   * src, most commonly - when the scanner recorded one. Undefined whenever
+   * the scanner did not, which is the normal case: a contrast failure or a
+   * heading-order failure is about a place in a page, not about a file.
+   *
+   * Added 2026-08-25 with Jules's explicit approval, since this file is a
+   * locked contract. Purely additive and optional, on the same terms as
+   * 'geo' and 'privacy' on FindingCategory: no stored audit becomes
+   * invalid, no reader has to change, and nothing was removed or renamed,
+   * so FINDINGS_SCHEMA_VERSION is deliberately not bumped. Bumping it
+   * would invalidate every stored audit to describe a field they are all
+   * still perfectly valid without.
+   *
+   * Why it exists: a report told a developer to fix
+   * `img:nth-of-type(32)`, which names a position in a DOM and not a file
+   * anyone can open. The filename is the actionable half. It is populated
+   * only where the offending element genuinely IS the file (the element
+   * captured is an <img> or <source> carrying a src), never inferred from
+   * a descendant or guessed from a selector - naming the wrong file is
+   * worse than naming none.
+   */
+  resourceUrl?: string;
 }
 
 export interface Finding {

@@ -62,7 +62,15 @@ function candidate(
     title,
     description,
     pageUrl,
-    element: { pageUrl, selector: image.selector, snippet: image.alt ?? '' },
+    element: {
+      pageUrl,
+      selector: image.selector,
+      snippet: image.alt ?? '',
+      // The image file itself, so a per-occurrence row names something a
+      // developer can open. Absent rather than empty when the scanner had
+      // no usable src (a data: URI, or an <img> with none at all).
+      ...(image.src === '' ? {} : { resourceUrl: image.src }),
+    },
     // 2026-08-25 Lagnonu review, D4a. This heuristic produced 95 findings
     // and 12 of a 51-page report, one row per image, for a check the report
     // itself presents as a signal to verify rather than a conformity

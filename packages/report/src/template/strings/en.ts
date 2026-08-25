@@ -513,6 +513,7 @@ export const en: ReportStrings = {
     affectedFilesCountTemplate: '{count} files affected',
     affectedFilesCountSingularTemplate: '{count} file affected',
     affectedFilesLabel: 'Files',
+    affectedFilesSampleLabel: 'Files (examples)',
     samePagesAsTemplate: 'Same pages as {findingId}',
     pagesMaxColumnLabel: 'Max pages',
     occurrencesColumnLabel: 'Occurrences',

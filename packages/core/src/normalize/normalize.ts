@@ -368,19 +368,22 @@ function aggregateSamePageOccurrences(
     const pageUrls = new Set(group.map((c) => canonicalPageUrl(c.pageUrl)));
     if (pageUrls.size !== 1) continue;
 
-    // D4 (2026-08-25): a candidate given an explicit dedupeIdentity was
-    // assigned it to say what the defect is *about* - the image file, the
-    // control group, the heuristic reason. Aggregating purely on source and
-    // rule would undo that, and for the alt-text heuristic it merged two
-    // genuinely different instructions ("write alt text for this image" and
-    // "these images share one alt text") into one finding carrying only one
-    // of the two titles. Keeping the identity in the coarse key preserves
-    // trade-off 3's purpose - collapsing axe's positional selectors for one
-    // rule on one page - while leaving a deliberate identity intact, since
-    // candidates without one still share the empty string here exactly as
-    // before.
-    const identity = first.dedupeIdentity ?? '';
-    const coarseKey = `${first.source}|${first.ruleId}|${identity}|${[...pageUrls][0]}`;
+    // D4 (2026-08-25): aggregating purely on source and rule undid the
+    // deliberate identities introduced the same day. For the alt-text
+    // heuristic it merged two genuinely different instructions ("write alt
+    // text for this image" and "these images share one alt text") into one
+    // finding carrying only one of the two titles.
+    //
+    // The title is what separates them, and it is the honest test: this pass
+    // exists to collapse one rule's positional selectors on one page, and two
+    // candidates that would print different titles are not that. Keying on
+    // dedupeIdentity was tried first and is subtly wrong - it also splits
+    // candidates that differ only in which template emitted them while saying
+    // exactly the same thing, which cost a real sas-fernande.fr carousel its
+    // merge (a "previous slide" and a "next slide" arrow, one component, one
+    // fix, two rows). Candidates with no identity and one title behave
+    // exactly as they did before either change.
+    const coarseKey = `${first.source}|${first.ruleId}|${first.title}|${[...pageUrls][0]}`;
     coarseKeyByFineKey.set(fineKey, coarseKey);
     const fineKeys = fineKeysByCoarseKey.get(coarseKey);
     if (fineKeys) {
