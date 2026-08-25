@@ -236,7 +236,94 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     }));
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).toContain('3 constats prioritaires (2 critiques et 1 sérieux) sur un total de 4 constats');
+    expect(html).toContain('L&#39;audit a identifié 4 constats au total, dont 3 critiques ou sérieux (2 critiques et 1 sérieux)');
+  });
+});
+
+describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging sentence', () => {
+  function buildAnalysis(themes: Theme[]) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes,
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const emptyManifest: AuditManifest = {
+    auditId: 'a1',
+    kind: 'audit',
+    siteUrl: 'https://example.com/',
+    startedAt: '2026-08-02T00:00:00.000Z',
+    finishedAt: '2026-08-02T00:05:00.000Z',
+    tool: {
+      odysseusVersion: '0.1.0',
+      findingsSchemaVersion: 1,
+      axeCoreVersion: '4.12.1',
+      lighthouseVersion: '12.8.2',
+      playwrightVersion: '1.49.0',
+      chromiumVersion: '131.0.0',
+    },
+    config: {
+      maxPages: 20,
+      maxDepth: 5,
+      crawlDelayMs: 1000,
+      pageTimeoutMs: 30_000,
+      lighthouseTimeoutMs: 60_000,
+      userAgent: 'OdysseusAuditBot/0.1',
+      scanConcurrency: 3,
+    },
+    crawl: {
+      startUrl: 'https://example.com/',
+      visitedCount: 1,
+      maxPages: 20,
+      maxDepth: 5,
+      robotsTxtFound: true,
+      effectiveDelayMs: 1000,
+    },
+    pages: [{ url: 'https://example.com/', depth: 0, status: 'visited', errors: {} }],
+  };
+
+  const theme: Theme = {
+    title: 'Priorité 1',
+    category: 'accessibility',
+    businessImpact: 'Impact',
+    effort: 'low',
+    impact: 'high',
+    priorityRank: 1,
+    findingIds: ['f001'],
+    recommendedActions: ['Action'],
+  };
+
+  it('renders a pointer sentence when the rendered priorities cover fewer findings than were passed in', () => {
+    const analysis = buildAnalysis([theme]);
+    const findings = [buildFinding('f001'), buildFinding('f002')];
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).toContain('1 sont couverts par les priorités ci-dessous');
+    expect(html).toContain('Reste');
+  });
+
+  it('renders nothing when every finding is covered by a rendered priority', () => {
+    const analysis = buildAnalysis([theme]);
+    const findings = [buildFinding('f001')];
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).not.toContain('sont couverts par les priorités');
+  });
+
+  it('renders nothing when no priority is rendered at all', () => {
+    const analysis = buildAnalysis([]);
+    const findings = [buildFinding('f001')];
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).not.toContain('sont couverts par les priorités');
   });
 });
 

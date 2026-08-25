@@ -11,7 +11,7 @@ import {
   sheet,
 } from '../html-utils.js';
 import { sectionTitle } from '../section-registry.js';
-import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
+import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
 import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
 import { remediationFor } from '../remediation/index.js';
 import { selectRenderedThemes } from './themes.js';
@@ -114,6 +114,13 @@ function renderRuleBlock(strings: ReportStrings, language: ReportLanguage, block
       ? ''
       : `<p style="font-size:13px;margin-top:4px;max-width:70ch">${escapeHtml(remediation)}</p>`;
 
+  // block.severity was already computed (worst-of-group) for sort order
+  // but never shown, so every remaining item looked equally urgent
+  // regardless of its real severity - reusing the same badge colours
+  // the annex and stats tiles already use, not a new palette.
+  const severityColor = SEVERITY[block.severity];
+  const severityBadge = `<span style="display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.02em;padding:1px 6px;border-radius:4px;margin-left:6px;color:${severityColor.color};background:${severityColor.bg}">${escapeHtml(strings.findingsAppendix.severityLabels[block.severity])}</span>`;
+
   // The ids are already anchor markup while the label around them is plain
   // text, so the template is split on its own placeholder and each half is
   // escaped separately. Splitting the filled string on whitespace was tried
@@ -128,7 +135,7 @@ function renderRuleBlock(strings: ReportStrings, language: ReportLanguage, block
 
   return `
     <div class="remaining-rule" style="margin-bottom:var(--space-3)">
-      <div style="font-size:13.5px;font-weight:500">${escapeHtml(block.title)}</div>
+      <div style="font-size:13.5px;font-weight:500">${escapeHtml(block.title)}${severityBadge}</div>
       <div class="text-muted" style="font-size:11px;margin-top:2px">${escapeHtml(counts)}</div>
       ${actionLine}
       <div class="text-muted" style="font-size:11px;margin-top:4px">${refs}</div>

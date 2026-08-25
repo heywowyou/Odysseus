@@ -183,7 +183,8 @@ export const fr: ReportStrings = {
       "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport effort/impact. Les priorités rattachées à un critère d'accessibilité figurent en position {legalRank}. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale ».",
     topPriorityIsNotLegalNoPointer:
       "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport effort/impact. Aucune des priorités retenues dans ce rapport n'est rattachée à un critère d'accessibilité. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale » pour le détail.",
-    summaryCountsTemplate: "L'audit a identifié {actionable} constats prioritaires ({critical} critiques et {serious} sérieux) sur un total de {total} constats.",
+    summaryCountsTemplate: "L'audit a identifié {total} constats au total, dont {actionable} critiques ou sérieux ({critical} critiques et {serious} sérieux).",
+    coveredByPrioritiesTemplate: 'Parmi eux, {covered} sont couverts par les priorités ci-dessous ; les autres sont listés par sévérité dans « {remainingSection} ».',
   },
   legalExposure: {
     eyebrow: 'Exposition légale',
@@ -341,6 +342,8 @@ export const fr: ReportStrings = {
     // "de ce" is not - which removes the elision problem instead of
     // special-casing it.
     ownershipSplitUnknownVendorLabel: 'ce composant tiers',
+    thirdPartyOnlyTemplate: 'Ce chantier relève entièrement de {vendor} : la correction doit passer par son éditeur, pas par votre agence web.',
+    lcenCrossReferenceTemplate: 'Ce constat relève de l’obligation légale d’identification détaillée dans « {legalSection} ».',
   },
   renderDiffEvidence: {
     eyebrow: 'Preuve de rendu',
@@ -676,6 +679,8 @@ export const fr: ReportStrings = {
     pagePlural: 'pages',
     wcagLabel: 'WCAG',
     observationsCrossRefLabel: 'voir Observations',
+    splitGroupThirdPartyNoteTemplate:
+      'Encore {count} occurrences de cette règle concernent un composant tiers ; voir « {thirdPartyHeading} ».',
     crawledPagesHeadingTemplate: 'Pages analysées ({count})',
   },
   methodology: {

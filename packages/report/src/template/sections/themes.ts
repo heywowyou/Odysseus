@@ -22,6 +22,7 @@ import { escapeHtml, escapeProse, fillTemplate, formatCappedFindingIdLinks, form
 import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
+import { sectionTitle } from '../section-registry.js';
 
 /** F40: a quick win is low effort with medium or high impact, computed
  *  here in template code from the theme's own effort/impact - not from
@@ -325,6 +326,40 @@ function renderOwnershipSplitNote(strings: ReportStrings, language: ReportLangua
   return `<p style="font-size:11.5px;opacity:0.6;margin-top:4px">${escapeHtml(text)}</p>`;
 }
 
+/** Companion to renderOwnershipSplitNote, for the case that function
+ *  deliberately skips: a theme whose findings are entirely third-party. The
+ *  model's own recommendedActions prose has no notion of vendor ownership
+ *  and reads as "ask your agency" with no name - for a theme that is 100%
+ *  one named vendor's markup (e.g. a booking widget's own iframe), that
+ *  sends the client's agency after a fix it cannot make. Mutually exclusive
+ *  with renderOwnershipSplitNote by construction: a theme is either split,
+ *  fully third-party, or fully first-party, never two of those at once. */
+function renderThirdPartyOnlyNote(strings: ReportStrings, themeFindings: readonly Finding[]): string {
+  if (themeFindings.length === 0 || !themeFindings.every((f) => isThirdPartyFinding(f))) return '';
+
+  const t = strings.themes;
+  const vendors = [...new Set(themeFindings.map((f) => detectFindingVendor(f)).filter((v): v is string => v !== undefined))];
+  const vendorLabel = vendors.length > 0 ? vendors.join(', ') : t.ownershipSplitUnknownVendorLabel;
+
+  const text = fillTemplate(t.thirdPartyOnlyTemplate, { vendor: vendorLabel });
+  return `<p style="font-size:11.5px;opacity:0.6;margin-top:4px">${escapeHtml(text)}</p>`;
+}
+
+/** Points a priority card whose findings include the LCEN identification
+ *  finding (rule id LCEN_MENTIONS_LEGALES_RULE_ID) back to the legal-
+ *  exposure section, which is where the actual criterion, citation and
+ *  scan observation are spliced deterministically (trade-off 28). Without
+ *  this, a reader hits the finding here first with no indication that the
+ *  same fact is addressed at length elsewhere in the report. */
+function renderLcenCrossReferenceNote(strings: ReportStrings, themeFindings: readonly Finding[]): string {
+  if (!themeFindings.some((f) => f.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID)) return '';
+
+  const text = fillTemplate(strings.themes.lcenCrossReferenceTemplate, {
+    legalSection: sectionTitle('section-02', strings),
+  });
+  return `<p style="font-size:11.5px;opacity:0.6;margin-top:4px">${escapeHtml(text)}</p>`;
+}
+
 function renderTheme(
   strings: ReportStrings,
   language: ReportLanguage,
@@ -430,6 +465,8 @@ function renderTheme(
       ${citationBox}
       ${recommendedActionsBox}
       ${renderOwnershipSplitNote(strings, language, themeFindings)}
+      ${renderThirdPartyOnlyNote(strings, themeFindings)}
+      ${renderLcenCrossReferenceNote(strings, themeFindings)}
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.4fr);gap:var(--space-3);font-size:12px;margin-top:4px">
         <span class="text-muted">${escapeHtml(t.effortLabel)} : <strong style="color:var(--color-text)">${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
         <span class="text-muted">${escapeHtml(t.impactLabel)} : <strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>

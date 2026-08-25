@@ -1005,6 +1005,104 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
 
     expect(html).toContain('un composant tiers');
   });
+
+  it('fix #2 (2026-08-25 report review): names ZenChef when every finding in the theme is inside its iframe', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        pageUrls: ['https://example.com/'],
+        elements: [
+          { pageUrl: 'https://example.com/', selector: '.ZC_sdk__zc-iframe_k5FE3 >>> button[data-testid="x"]', snippet: '' },
+        ],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        pageUrls: ['https://example.com/reserver'],
+        elements: [{ pageUrl: 'https://example.com/reserver', selector: 'body.page > iframe.ZC_sdk__zc-iframe_k5FE3', snippet: '' }],
+      }),
+    ];
+    const analysis = buildAnalysis(['f001', 'f002']);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
+
+    expect(html).toContain('ZenChef');
+    expect(html).toContain('relève entièrement de');
+    // Mutually exclusive with the split note: this theme is entirely
+    // third-party, so the split sentence must not also render.
+    expect(html).not.toContain('à transmettre à son éditeur');
+  });
+});
+
+describe('fix #3 (2026-08-25 report review): the LCEN priority card cross-references the legal-exposure section', () => {
+  function buildFinding(overrides: Record<string, unknown>) {
+    return {
+      findingId: overrides['findingId'] ?? 'f001',
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'custom' as const,
+      ruleId: overrides['ruleId'] ?? 'some-other-rule',
+      category: 'privacy' as const,
+      severity: 'serious' as const,
+      wcagCriteria: [],
+      title: 'title',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: overrides['findingId'] ?? 'f001',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  function buildAnalysis(findingIds: string[]) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title: 'Mentions légales manquantes',
+          category: 'privacy' as const,
+          businessImpact: 'Impact',
+          effort: 'low' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds,
+          recommendedActions: [],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const manifest = { pages: [] } as never;
+
+  it('renders a pointer sentence naming the legal-exposure section when the theme includes the LCEN finding', () => {
+    const findings = [buildFinding({ findingId: 'f001', ruleId: 'lcen-mentions-legales-missing' })];
+    const analysis = buildAnalysis(['f001']);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
+
+    expect(html).toContain('obligation légale d’identification');
+    expect(html).toContain('Exposition légale');
+  });
+
+  it('renders nothing when the theme has no LCEN finding', () => {
+    const findings = [buildFinding({ findingId: 'f001', ruleId: 'some-other-rule' })];
+    const analysis = buildAnalysis(['f001']);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
+
+    expect(html).not.toContain('obligation légale d’identification');
+  });
 });
 
 // P1.5 (2026-08-21 La Corniche feedback pass): a director's first

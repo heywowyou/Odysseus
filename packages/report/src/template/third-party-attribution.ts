@@ -17,6 +17,14 @@ import type { Finding } from '@odysseus/core';
  * constants.ts's Lighthouse dedupe list already documents. Vendor names
  * are the actual selector prefixes/plugin slugs seen in the real data
  * (lacoorniche.com), not guessed.
+ *
+ * ZC_sdk__zc-iframe added from a real Domaine Lagnonu scan (`.ZC_sdk__zc-
+ * iframe_k5FE3 >>> button`, `body.page > iframe.ZC_sdk__zc-iframe_k5FE3`):
+ * the ZenChef booking-widget SDK. Without it, a theme confined entirely to
+ * this vendor's markup rendered "provider not identified" in the annex
+ * while section 03's transactional-flow note (which derives the vendor
+ * from the redirect URL, not this table) correctly named ZenChef -
+ * see the three-site review, 2026-08-25.
  */
 const VENDOR_SELECTOR_PATTERNS: ReadonlyArray<{ pattern: RegExp; vendor: string }> = [
   { pattern: /popmake|pum-content/i, vendor: 'Popup Maker' },
@@ -24,6 +32,7 @@ const VENDOR_SELECTOR_PATTERNS: ReadonlyArray<{ pattern: RegExp; vendor: string 
   { pattern: /smartpreview/i, vendor: 'SmartPreview' },
   { pattern: /diadao/i, vendor: 'Diadao' },
   { pattern: /cmplz/i, vendor: 'Complianz' },
+  { pattern: /ZC_sdk|zc-iframe|zenchef/i, vendor: 'ZenChef' },
 ];
 
 /** A shadow-piercing selector (Playwright's `>>>` combinator) means the

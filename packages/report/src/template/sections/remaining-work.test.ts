@@ -62,4 +62,34 @@ describe('renderRemainingWork against the real sas-fernande.fr scan', () => {
     expect(html).toContain('Still to address');
     expect(html).not.toContain('Reste');
   });
+
+  it('fix #5 (2026-08-25 report review): shows each rule group\'s own worst severity, not a uniform blank list', async () => {
+    const findings = await loadSasFernandeFindings();
+    const analysis = await loadSasFernandeAnalysis('fr');
+
+    const html = renderRemainingWork(getStrings('fr'), 6, 'fr', analysis, findings);
+    const remaining = selectRemainingFindings(analysis, findings);
+    const groupCount = html.split('class="remaining-rule"').length - 1;
+
+    const severityRank = { critical: 0, serious: 1, moderate: 2, minor: 3 } as const;
+    const worstByRule = new Map<string, keyof typeof severityRank>();
+    for (const finding of remaining) {
+      const current = worstByRule.get(finding.ruleId);
+      if (!current || severityRank[finding.severity] < severityRank[current]) {
+        worstByRule.set(finding.ruleId, finding.severity);
+      }
+    }
+
+    expect(groupCount).toBe(worstByRule.size);
+    // Every group carries the severity vocabulary reused from
+    // findingsAppendix.severityLabels, and remaining findings span more than
+    // one worst-severity value on this real fixture, so more than one label
+    // must appear.
+    const severityLabels = getStrings('fr').findingsAppendix.severityLabels;
+    const worstSeveritiesPresent = new Set(worstByRule.values());
+    expect(worstSeveritiesPresent.size).toBeGreaterThan(1);
+    for (const severity of worstSeveritiesPresent) {
+      expect(html).toContain(severityLabels[severity]);
+    }
+  });
 });

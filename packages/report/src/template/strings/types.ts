@@ -290,6 +290,13 @@ export interface ReportStrings {
      *  {total} (distinct findings). Rendered before the model's now
      *  purely qualitative executiveSummary prose. */
     summaryCountsTemplate: string;
+    /** Fix #1, 2026-08-25 report review: bridges the site-wide count in
+     *  summaryCountsTemplate to the 6-card Priorities section, which does
+     *  not cover every critical/serious finding (themes.ts's
+     *  MAX_RENDERED_THEMES cap). Template: {covered}, {remainingSection}
+     *  (section-05b's own title, via sectionTitle). Rendered only when
+     *  there is a genuine remainder. */
+    coveredByPrioritiesTemplate: string;
   };
   /** Promotes methodology's own legal-citation paragraph (rendered via
    *  the exported renderLegalCitationParagraph) to its own page for
@@ -496,6 +503,18 @@ export interface ReportStrings {
     /** Fallback for {vendor} above when no known vendor prefix matched
      *  any third-party finding's selector. */
     ownershipSplitUnknownVendorLabel: string;
+    /** Fix #2, 2026-08-25 report review: companion to ownershipSplitTemplate
+     *  for the case that template deliberately skips, a theme whose
+     *  findings are entirely third-party. Template: {vendor} (a known
+     *  vendor name, or ownershipSplitUnknownVendorLabel as fallback). */
+    thirdPartyOnlyTemplate: string;
+    /** Fix #3, 2026-08-25 report review: rendered on a priority card whose
+     *  findings include the LCEN identification finding, pointing back to
+     *  the legal-exposure section where the criterion, citation and scan
+     *  observation are spliced deterministically (CLAUDE.md trade-off 28).
+     *  Template: {legalSection} (section-02's own title, via
+     *  sectionTitle). */
+    lcenCrossReferenceTemplate: string;
   };
   /** Doc §3: bars only, no screenshots - two proportional-width bars
    *  (raw vs rendered visible-text length) plus a one-line caption, never
@@ -786,6 +805,13 @@ export interface ReportStrings {
     pagePlural: string;
     wcagLabel: string;
     observationsCrossRefLabel: string;
+    /** Fix #6, 2026-08-25 report review: rendered under a first-party rule
+     *  group when the same rule id also has occurrences in the third-party
+     *  section (item 1.4's partition), so a reader is not left thinking a
+     *  rule's footprint here is its entire footprint. Template: {count},
+     *  {thirdPartyHeading} (this same block's own thirdPartyHeading
+     *  string). */
+    splitGroupThirdPartyNoteTemplate: string;
     /** item 29: the list of crawled URLs was not printed anywhere - the
      *  client had no way to verify the scope they paid for beyond a bare
      *  count on the cover. Template: {count}. */

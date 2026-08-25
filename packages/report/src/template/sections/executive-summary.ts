@@ -3,6 +3,7 @@ import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, escapeProse, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { computeStatistics } from '../statistics.js';
+import { sectionTitle } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
 
 const TOP_THEME_COUNT = 3;
@@ -124,6 +125,33 @@ function renderCategoryImbalanceNote(strings: ReportStrings, stats: ReturnType<t
   return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.categoryImbalanceNote)}</p>`;
 }
 
+/** The site-wide critical/serious count (computeStatistics) has no relation
+ *  to what the 6-card Priorities section actually covers (themes.ts's
+ *  MAX_RENDERED_THEMES cap) - a reader who saw "31 priority findings" here
+ *  and then only 18 findings referenced across the Priorities cards had no
+ *  way to know the other 13 were simply out of the top-6 cut, not dropped.
+ *  Rendered only when there is a genuine remainder to point to; when every
+ *  resolved finding is covered by a rendered priority, the base sentence
+ *  already accounts for all of it and nothing more needs to be said. */
+function renderCoveredByPrioritiesNote(
+  strings: ReportStrings,
+  analysis: StoredAnalysis,
+  findings: readonly Finding[],
+  findingsById: ReadonlyMap<string, Finding>,
+): string {
+  const covered = new Set(
+    selectRenderedThemes(analysis.themes, findingsById).flatMap((theme) => theme.findingIds),
+  ).size;
+  if (covered === 0 || covered >= findings.length) return '';
+
+  const e = strings.executiveSummary;
+  const text = fillTemplate(e.coveredByPrioritiesTemplate, {
+    covered: formatNumber(covered, analysis.language),
+    remainingSection: sectionTitle('section-05b', strings),
+  });
+  return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-2);max-width:66ch">${escapeHtml(text)}</p>`;
+}
+
 export function renderExecutiveSummary(
   strings: ReportStrings,
   ordinal: number,
@@ -152,6 +180,7 @@ export function renderExecutiveSummary(
     ${renderSheetHeader(ordinal, e.eyebrow, e.heading)}
     <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(countsSentence)} ${escapeProse(analysis.executiveSummary)}</p>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
+    ${renderCoveredByPrioritiesNote(strings, analysis, findings, findingsById)}
     ${renderThirdPartySplitNote(strings, stats)}
     ${renderCategoryImbalanceNote(strings, stats)}
     ${renderTopPriorityLegalNote(strings, analysis.themes, findingsById)}

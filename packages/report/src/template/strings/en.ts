@@ -145,7 +145,8 @@ export const en: ReportStrings = {
       'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its effort-to-impact ratio. The priorities tied to an accessibility criterion rank at position {legalRank}. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section.',
     topPriorityIsNotLegalNoPointer:
       'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its effort-to-impact ratio. None of the priorities in this report are tied to an accessibility criterion. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section for the detail.',
-    summaryCountsTemplate: 'The audit identified {actionable} priority findings ({critical} critical and {serious} serious) out of {total} findings in total.',
+    summaryCountsTemplate: 'The audit identified {total} findings in total, including {actionable} that are critical or serious ({critical} critical and {serious} serious).',
+    coveredByPrioritiesTemplate: '{covered} of these are covered by the priorities below; the rest are listed by severity in "{remainingSection}".',
   },
   legalExposure: {
     eyebrow: 'Legal exposure',
@@ -246,6 +247,8 @@ export const en: ReportStrings = {
     ownershipSplitTemplate:
       'This priority covers {firstPartyPages} {firstPartyPageWord} on your own site (your agency can fix these) and {thirdPartyPages} {thirdPartyPageWord} belonging to {vendor} (pass on to its provider); a page can fall into both.',
     ownershipSplitUnknownVendorLabel: 'a third-party component',
+    thirdPartyOnlyTemplate: 'This priority is entirely inside {vendor}: it has to go through their provider, not your web agency.',
+    lcenCrossReferenceTemplate: 'This finding is part of the legal identification obligation detailed in "{legalSection}".',
   },
   renderDiffEvidence: {
     eyebrow: 'Render evidence',
@@ -543,6 +546,8 @@ export const en: ReportStrings = {
     pagePlural: 'pages',
     wcagLabel: 'WCAG',
     observationsCrossRefLabel: 'see Observations',
+    splitGroupThirdPartyNoteTemplate:
+      '{count} more occurrences of this rule affect a third-party component; see "{thirdPartyHeading}".',
     crawledPagesHeadingTemplate: 'Pages analyzed ({count})',
   },
   methodology: {

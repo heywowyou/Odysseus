@@ -217,10 +217,22 @@ function elementResourceUrls(finding: Finding): string[] {
 }
 
 /** Path and filename only. A column of forty absolute URLs sharing one
- *  origin is unreadable, and the origin is already on the cover. */
+ *  origin is unreadable, and the origin is already on the cover.
+ *
+ *  A credential-shaped param (key/token/secret/auth/password) is stripped
+ *  before rebuilding the query string, since a Lighthouse-reported LCP
+ *  resource can legitimately be a third-party request carrying one (a real
+ *  Google Maps tile URL, e.g. f084 on the Lagnonu report) - this is a
+ *  client-forwardable PDF, not a debug log. Ordinary cache-busting params
+ *  are kept, per this function's existing behaviour. */
+const CREDENTIAL_LOOKING_PARAM_PATTERN = /key|token|secret|auth|password/i;
+
 function shortenResourceUrl(url: string): string {
   try {
     const parsed = new URL(url);
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (CREDENTIAL_LOOKING_PARAM_PATTERN.test(key)) parsed.searchParams.delete(key);
+    }
     return `${parsed.pathname}${parsed.search}`;
   } catch {
     return url;
@@ -333,8 +345,25 @@ function renderRuleGroup(
    *  crossing selector matching none of the known prefixes. */
   clusterLookup: ClusterLookup,
   vendorLabel?: string,
+  /** Fix #6, 2026-08-25 report review: the number of this same rule's
+   *  occurrences that landed in the third-party section instead (item 1.4's
+   *  partition), so a first-party reader is not left thinking a rule they
+   *  see 3 times here is the rule's entire footprint when a vendor-embedded
+   *  instance of it also exists a few pages later. Purely a pointer sentence
+   *  computed from the caller's own partitioned data; does not change what
+   *  is counted where. */
+  thirdPartyCrossRefCount = 0,
 ): string {
   const a = strings.findingsAppendix;
+  const thirdPartyCrossRefNote =
+    thirdPartyCrossRefCount > 0
+      ? `<p style="font-size:11px;opacity:0.55;margin-top:2px">${escapeHtml(
+          fillTemplate(a.splitGroupThirdPartyNoteTemplate, {
+            count: formatNumber(thirdPartyCrossRefCount, language),
+            thirdPartyHeading: a.thirdPartyHeading,
+          }),
+        )}</p>`
+      : '';
   const vendorTag = vendorLabel
     ? `<span class="tag" style="background:var(--color-surface);opacity:0.75;font-size:10.5px">${escapeHtml(vendorLabel)}</span>`
     : '';
@@ -431,6 +460,7 @@ function renderRuleGroup(
           ${rows}
         </tbody>
       </table>
+      ${thirdPartyCrossRefNote}
     </div>
   `;
 }
@@ -512,6 +542,11 @@ function renderCategorySection(
   citedStatIds: Set<string>,
   totalPagesScanned: number,
   clusterLookup: ClusterLookup,
+  /** Fix #6: the same third-party partition renderFindingsAppendix already
+   *  computed once (item 1.4), passed down so a first-party group can point
+   *  to its own split-off third-party occurrences without a second pass
+   *  over findings or a new partition rule. */
+  thirdPartyFindings: Finding[],
 ): string {
   if (categoryFindings.length === 0) return '';
 
@@ -522,7 +557,17 @@ function renderCategorySection(
   const groupBlocks = groups
     .map((group) => {
       const isFullyDiverted = group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null);
-      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned, clusterLookup);
+      const thirdPartyCrossRefCount = thirdPartyFindings.filter((f) => group.memberRuleIds.includes(f.ruleId)).length;
+      return renderRuleGroup(
+        strings,
+        language,
+        group,
+        isFullyDiverted,
+        totalPagesScanned,
+        clusterLookup,
+        undefined,
+        thirdPartyCrossRefCount,
+      );
     })
     .join('');
   // item 40: a travel-industry AI-usage statistic (Phocuswright, 56%)
@@ -592,7 +637,7 @@ export function renderFindingsAppendix(
 
   const sections = CATEGORY_ORDER.map((category) => {
     const categoryFindings = firstPartyFindings.filter((finding) => finding.category === category);
-    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds, crawledPages.length, clusterLookup);
+    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds, crawledPages.length, clusterLookup, thirdPartyFindings);
   }).join('');
   const thirdPartySection = renderThirdPartySection(strings, language, thirdPartyFindings, missingPercentByUrl, crawledPages.length, clusterLookup);
 
