@@ -1669,8 +1669,8 @@ prospect sites. Each call is approved before it runs.
 ## Build order
 
 Milestones 0 through 8 are complete, as are milestones 8.5a, 8.5b, 8.5c,
-and 9a. Milestone 9b is next. Work in vertical slices, one milestone per
-session.
+9a, and 9b. Milestone 9b.5 is next, then 9c. Work in vertical slices, one
+milestone per session.
 
 1. Render diff only, CLI invocable — done
 2. Crawler: internal link discovery, robots.txt, depth and page caps — done
@@ -1693,8 +1693,102 @@ Milestone 9 (originally "prospecting mode") was split 2026-08-15 into
 throughput), and 9c (outreach generation); milestones 10 through 13
 (benchmark study, regime 2 documentation generator, free scope check,
 monitoring) follow. 9a is done 2026-08-16. 9b is done 2026-08-22: see
-trade-off 23. Full milestone list, including the phases beyond 8, is in
-the brief, section 7.
+trade-off 23.
+
+**9b.5: sitemap-supplemented full-site scan coverage.** Added
+2026-08-25, queued ahead of 9c on an explicit operator decision made
+during a real www.airelles.com audit. That audit's crawler reached 100
+pages by following internal links; the site's sitemap declared 516,
+and `sitemap-orphan-page`/`sitemap-stale` correctly flagged that only 1
+of the 100 crawled pages appears in the sitemap at all. Checked rather
+than assumed: `www.airelles.com` 301-redirects to the bare
+`airelles.com`, same server, so this is not a cross-domain split - the
+crawl genuinely never reached roughly 80 percent of the site's declared
+content, mostly the French-language subtree, because nothing links to
+it from the English pages the crawler found.
+
+The operator's call: for a flat EUR 1,600 full audit, the report must
+do both jobs, not pick one. State discoverability honestly (a page a
+site's own navigation cannot reach is a real defect, and folding
+sitemap URLs into the crawl queue would destroy the signal that
+currently detects it) and scan every declared page for real defects
+regardless of whether internal navigation reaches it (a client is not
+better served by an audit that silently skips 80 percent of their site
+because it happens to be poorly linked). These are two independent
+questions computed from the same two inputs (crawl-reachable set,
+sitemap set) and must stay decoupled: reachability is a link-graph fact,
+scan coverage is a scheduling decision, and this milestone's whole point
+is to stop conflating them.
+
+Shape, not yet built: every sitemap URL becomes scannable input
+alongside the crawl's own discoveries, tagged with how it was found
+(`link` vs `sitemap-only`) on the manifest - the same kind of addition
+trade-off 31's `discovered-not-scanned` status made for the opposite
+case (crawled but not scanned). `sitemap-orphan-page`/`sitemap-stale`
+keep computing purely from link-graph reachability, unaffected by
+whether the sitemap-only pages get scanned. Never fetch a sitemap URL
+on a different registrable domain than the one the crawl was authorized
+against; a same-site redirect (as confirmed for airelles.com) is fine,
+a genuinely different domain is not, without separate authorization for
+that domain. Expect roughly a multiple of current scan time and
+Lighthouse/axe load per audit once sitemap-only pages are included -
+accepted deliberately for coverage, worth remembering as the reason a
+future audit takes noticeably longer than the fixture or a
+small reference site suggests, not a regression.
+
+**9c: outreach generation, now specified in detail.** The operator
+pasted two design documents 2026-08-25, `docs/m9-prospecting-pipeline.md`
+(sourcing, qualification, prescan, scoring, contact discovery,
+attachment-free preview delivery, email infrastructure, warmup, sequence,
+compliance, instrumentation) and `docs/m9-technical-spec.md` (data model,
+sequence state machine, safety rails). Read both before starting 9c; they
+replace informal 9c planning with a real spec.
+
+Both documents were written without reference to what 9a/9b actually
+shipped and were flagged as such in their own reconciliation notes, not
+silently merged. Two conflicts were resolved with the operator on
+2026-08-25, same day, before any 9c code was written:
+
+1. The technical spec originally proposed two new packages,
+   `packages/prospecting` and `packages/outreach`, which would have made
+   ten packages against the eight-package ceiling this file already
+   states. Decided against: the ceiling protects a real enforced-import
+   boundary (see the package-count paragraph below), outreach has no
+   constraint of that shape, and 9a/9b already shipped prospecting inside
+   the existing four packages without one. The new logic folds into
+   `core`/`store`/`interface`/`cli` instead, per
+   `docs/m9-technical-spec.md`'s reconciliation note.
+2. The pipeline doc originally proposed a different set of sources
+   (DATAtourisme, Atout France, Sirene, OSM Overpass) from what 9a
+   actually built (AFNIC Fichier A, mentions-legales, SIREN, Sirene-stock
+   join). Decided: reuse 9a's existing Sirene/SIREN join rather than a
+   second one, add DATAtourisme and Atout France (each contributes data
+   the existing pipeline structurally lacks - accommodation-typed contact
+   info, and star rating/room count respectively), and defer OpenStreetMap
+   Overpass, whose own description in the doc is "gap filler," until a
+   real ingest run against the two kept sources shows a measured shortfall
+   worth its extra join complexity. See `docs/m9-prospecting-pipeline.md`
+   section 1.
+
+Both documents also need reconciliation against the existing canonical
+`docs/prospect-qualification.md` (who may be scanned and contacted) and
+`docs/outreach-rules.md` (what may be said), and the pipeline doc's
+compliance section (CNIL pixel/B2B-email positions, loi Cazenave) is
+pasted research, not yet checked against `docs/obligation-basis.md`'s
+sourcing bar the way every other legal claim in this product is - treat
+it as a first draft of that verification, not as cleared copy. New
+locked-contract-style files the technical spec proposes (`prospect.ts`
+additions, a `prescan` type, an `outreach` type) are not yet added to
+`.claude/settings.json`'s `permissions.ask` list; add them there if and
+when they are actually created.
+
+9b.5 (below) stays queued ahead of 9c on the same operator decision as
+before; the two are independent (9b.5 is full-audit coverage, 9c is
+prospecting outreach) and neither blocks the other's design work, only
+its build order.
+
+Full milestone list, including the phases beyond 8, is in the brief,
+section 7.
 
 Do not start a milestone before the previous one has tests passing, and
 do not consider a milestone finished until its output has been checked
