@@ -51,6 +51,34 @@ function truncateSnippet(html: string): string {
   return html.length > MAX_SNIPPET_LENGTH ? html.slice(0, MAX_SNIPPET_LENGTH) : html;
 }
 
+/** 2026-08-25 Lagnonu review, D4b. Rules whose defect belongs to a group of
+ *  controls rather than to each control individually. A real report listed
+ *  `target-size` twenty one times over four annex pages: twenty of them were
+ *  the pagination dots of one carousel, differing only by
+ *  `[aria-label="Go to slide N"]`. The client has one thing to do - make that
+ *  control group bigger - and reads it twenty one times.
+ *
+ *  The identity is the container, taken as the selector's ancestor path, so
+ *  controls in different containers stay separate findings. Deliberately not
+ *  selector normalization: trade-off 3 rejected stripping :nth-child(), and
+ *  trade-off 30 confirmed the reasoning with real counter-examples where
+ *  pattern-stripping merged genuinely distinct elements. Nothing is guessed
+ *  here - two controls merge only when their own selectors state the same
+ *  parent.
+ *
+ *  A selector with no ancestor path keeps its own identity rather than
+ *  collapsing onto a shared empty string, the same "never merge on absent
+ *  data" rule normalize-lighthouse.ts's resourceIdentityForItem follows. */
+const CONTAINER_IDENTIFIED_AXE_RULES: ReadonlySet<string> = new Set(['target-size']);
+
+function containerIdentity(ruleId: string, selector: string): string | undefined {
+  if (!CONTAINER_IDENTIFIED_AXE_RULES.has(ruleId)) return undefined;
+  const lastCombinator = selector.lastIndexOf('>');
+  if (lastCombinator === -1) return undefined;
+  const container = selector.slice(0, lastCombinator).trim();
+  return container.length > 0 ? container : undefined;
+}
+
 export function extractAxeCandidates(
   axe: AxeResultsInput,
   pageUrl: string,
@@ -77,6 +105,10 @@ export function extractAxeCandidates(
           selector,
           snippet: truncateSnippet(node.html),
         },
+        ...(() => {
+          const identity = containerIdentity(violation.id, selector);
+          return identity === undefined ? {} : { dedupeIdentity: identity };
+        })(),
         rawEvidenceForPage: {
           impact: node.impact ?? violation.impact ?? null,
           target: node.target,

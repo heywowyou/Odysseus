@@ -368,7 +368,19 @@ function aggregateSamePageOccurrences(
     const pageUrls = new Set(group.map((c) => canonicalPageUrl(c.pageUrl)));
     if (pageUrls.size !== 1) continue;
 
-    const coarseKey = `${first.source}|${first.ruleId}|${[...pageUrls][0]}`;
+    // D4 (2026-08-25): a candidate given an explicit dedupeIdentity was
+    // assigned it to say what the defect is *about* - the image file, the
+    // control group, the heuristic reason. Aggregating purely on source and
+    // rule would undo that, and for the alt-text heuristic it merged two
+    // genuinely different instructions ("write alt text for this image" and
+    // "these images share one alt text") into one finding carrying only one
+    // of the two titles. Keeping the identity in the coarse key preserves
+    // trade-off 3's purpose - collapsing axe's positional selectors for one
+    // rule on one page - while leaving a deliberate identity intact, since
+    // candidates without one still share the empty string here exactly as
+    // before.
+    const identity = first.dedupeIdentity ?? '';
+    const coarseKey = `${first.source}|${first.ruleId}|${identity}|${[...pageUrls][0]}`;
     coarseKeyByFineKey.set(fineKey, coarseKey);
     const fineKeys = fineKeysByCoarseKey.get(coarseKey);
     if (fineKeys) {
