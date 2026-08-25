@@ -441,7 +441,12 @@ export interface ReportStrings {
      *  site's own measured LCP is above the "good" threshold, so the
      *  reader has the real gap next to the stat instead of being left to
      *  multiply the citation's 0.1s figure by an assumed gap themselves. */
-    measuredLcpGapTemplate: string;
+    /** D7: names the metric the priority's own findings are about. Was
+     *  hardcoded to LCP, which put "median LCP at 4 s" under a priority
+     *  about total blocking time. Templates: {metric}, {value}, {gap},
+     *  {threshold} - values arrive pre-formatted with their own unit,
+     *  since TBT is quoted in ms where LCP is quoted in seconds. */
+    measuredCoreWebVitalGapTemplate: string;
     /** 2026-08-22 revenue-impact wiring. Template: {turnover}, {impact}
      *  (both pre-formatted euro amounts via formatNumber; the currency
      *  marker is baked into the template text itself, same convention as

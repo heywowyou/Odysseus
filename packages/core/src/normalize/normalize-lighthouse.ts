@@ -193,7 +193,7 @@ const CORE_WEB_VITAL_AUDIT_IDS = {
 /** item 9: the reverse of CORE_WEB_VITAL_AUDIT_IDS, so a Lighthouse audit
  *  id encountered in extractLighthouseCandidates can be matched back to
  *  its raw-value threshold row in CORE_WEB_VITAL_THRESHOLDS. */
-const AUDIT_ID_TO_CWV_KEY = new Map<string, keyof typeof CORE_WEB_VITAL_AUDIT_IDS>(
+export const AUDIT_ID_TO_CWV_KEY = new Map<string, keyof typeof CORE_WEB_VITAL_AUDIT_IDS>(
   Object.entries(CORE_WEB_VITAL_AUDIT_IDS).map(([key, auditId]) => [auditId, key as keyof typeof CORE_WEB_VITAL_AUDIT_IDS]),
 );
 

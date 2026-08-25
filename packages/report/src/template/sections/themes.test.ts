@@ -1415,3 +1415,135 @@ describe('B2.1: a category with critical findings always gets a rendered priorit
     expect(rendered.map((t) => t.priorityRank)).toEqual([1, 2]);
   });
 });
+
+/** D7 (2026-08-25, Lagnonu review). The gap sentence was hardcoded to LCP and
+ *  attached wherever the citation landed, so a priority titled "Blocage du
+ *  navigateur par des scripts" - total blocking time, median 3 397 ms against
+ *  a 200 ms threshold - carried "LCP median a 4 s". Same family as trade-off
+ *  16's B1: a deterministic attachment with the wrong anchor. */
+describe('D7: the measured gap names the metric the priority is actually about', () => {
+  function analysisWith(title: string) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title,
+          category: 'performance' as const,
+          businessImpact: 'Impact',
+          effort: 'medium' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds: ['f001'],
+          recommendedActions: ['Action'],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  function findingFor(ruleId: string) {
+    return {
+      findingId: 'f001',
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'lighthouse' as const,
+      ruleId,
+      category: 'performance' as const,
+      severity: 'serious' as const,
+      wcagCriteria: [],
+      title: ruleId,
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: 'd1',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  it('quotes blocking time, in milliseconds, for a blocking-time priority', () => {
+    const manifest = {
+      pages: [
+        {
+          url: 'https://example.com/',
+          status: 'visited',
+          coreWebVitals: {
+            tbt: { score: 0.1, numericValue: 3397, displayValue: '3397 ms' },
+            lcp: { score: 0.4, numericValue: 4000, displayValue: '4 s' },
+          },
+        },
+      ],
+    } as never;
+
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysisWith('Blocage du navigateur par des scripts'),
+      [findingFor('total-blocking-time')],
+      manifest,
+    );
+
+    expect(html).toContain('Écart mesuré sur ce site');
+    expect(html).toContain('TBT, temps de blocage');
+    // French digit grouping uses a non-breaking space, so normalise before
+    // comparing rather than hardcoding whichever space character Intl picks.
+    expect(html.replace(/[\u00a0\u202f]/g, ' ')).toContain('3 397 ms');
+    // The bug: LCP's own numbers appearing under a blocking-time priority.
+    expect(html).not.toContain('LCP, contenu principal');
+  });
+
+  it('still quotes LCP for an LCP priority', () => {
+    const manifest = {
+      pages: [
+        {
+          url: 'https://example.com/',
+          status: 'visited',
+          coreWebVitals: { lcp: { score: 0.1, numericValue: 5900, displayValue: '5.9 s' } },
+        },
+      ],
+    } as never;
+
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysisWith('Vitesse mobile insuffisante'),
+      [findingFor('largest-contentful-paint')],
+      manifest,
+    );
+
+    expect(html).toContain('LCP, contenu principal');
+    expect(html).toContain('5,9 s');
+  });
+
+  it('says nothing when the priority names no Core Web Vital at all', () => {
+    // Quoting an unrelated metric is worse than staying silent.
+    const manifest = {
+      pages: [
+        {
+          url: 'https://example.com/',
+          status: 'visited',
+          coreWebVitals: { lcp: { score: 0.1, numericValue: 5900, displayValue: '5.9 s' } },
+        },
+      ],
+    } as never;
+
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysisWith('En-têtes de sécurité manquants'),
+      [findingFor('render-blocking-resources')],
+      manifest,
+    );
+
+    expect(html).not.toContain('Écart mesuré sur ce site');
+  });
+});

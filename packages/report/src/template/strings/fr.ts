@@ -295,8 +295,8 @@ export const fr: ReportStrings = {
     conformityNonConformant: 'Non conforme',
     legalTagLabel: 'Exigence de conformité',
     impactCitationLabel: 'Repère chiffré',
-    measuredLcpGapTemplate:
-      "Écart mesuré sur ce site : LCP médian à {value} s, soit {gap} s au-dessus du seuil « bon » ({threshold} s).",
+    measuredCoreWebVitalGapTemplate:
+      "Écart mesuré sur ce site : {metric} médian à {value}, soit {gap} au-dessus du seuil « bon » ({threshold}).",
     revenueImpactTemplate:
       "Sur la base de votre chiffre d'affaires déclaré ({turnover} €), et si cette association se vérifiait pour votre activité, l'ordre de grandeur serait de jusqu'à {impact} € par an. Il s'agit d'une estimation indicative fondée sur une seule étude, pas d'une prévision garantie.",
     quickWinBadgeLabel: 'Gain rapide',

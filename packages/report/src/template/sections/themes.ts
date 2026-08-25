@@ -1,5 +1,14 @@
-import type { AuditManifest, Finding, ReferenceStat, ReportLanguage, StatSector, Theme } from '@odysseus/core';
+import type {
+  AuditManifest,
+  CoreWebVitalMetricKey,
+  Finding,
+  ReferenceStat,
+  ReportLanguage,
+  StatSector,
+  Theme,
+} from '@odysseus/core';
 import {
+  AUDIT_ID_TO_CWV_KEY,
   CORE_WEB_VITAL_THRESHOLDS,
   LCEN_MENTIONS_LEGALES_RULE_ID,
   estimateAggregateEffortDays,
@@ -8,6 +17,7 @@ import {
 } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
+import { formatMetricValue, METRIC_UNITS } from './core-web-vitals-table.js';
 import { escapeHtml, escapeProse, fillTemplate, formatCappedFindingIdLinks, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
@@ -133,19 +143,57 @@ function median(values: readonly number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
-function toSeconds(ms: number, language: ReportLanguage): string {
-  return formatNumber(Math.round((ms / 1000) * 10) / 10, language);
+/** The Core Web Vital a theme is actually about, read from its own
+ *  findings' rule ids. Where several apply, the one the most findings name
+ *  wins, ties broken by the fixed metric order so the choice is stable
+ *  across runs.
+ *
+ *  2026-08-25 Lagnonu review, D7: this used to be hardcoded to LCP, so a
+ *  priority titled "Blocage du navigateur par des scripts" - total blocking
+ *  time, median 3 397 ms against a 200 ms threshold - carried the sentence
+ *  "ecart mesure sur ce site : LCP median a 4 s". The note attached wherever
+ *  the citation landed and described a different metric than the priority it
+ *  sat under, which an IT-literate reader spots immediately. Same family as
+ *  trade-off 16's B1: a deterministic attachment with the wrong anchor. */
+const CWV_METRIC_PREFERENCE: readonly CoreWebVitalMetricKey[] = ['lcp', 'tbt', 'fcp', 'speedIndex', 'cls'];
+
+function themeCoreWebVitalMetric(themeFindings: readonly Finding[]): CoreWebVitalMetricKey | undefined {
+  const counts = new Map<CoreWebVitalMetricKey, number>();
+  for (const finding of themeFindings) {
+    const key = AUDIT_ID_TO_CWV_KEY.get(finding.ruleId);
+    if (key === undefined) continue;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  let best: CoreWebVitalMetricKey | undefined;
+  for (const key of CWV_METRIC_PREFERENCE) {
+    const count = counts.get(key);
+    if (count === undefined) continue;
+    if (best === undefined || count > (counts.get(best) ?? 0)) best = key;
+  }
+  return best;
 }
+
+const CWV_METRIC_LABELS: Record<CoreWebVitalMetricKey, (strings: ReportStrings) => string> = {
+  lcp: (s) => s.coreWebVitals.lcpLabel,
+  tbt: (s) => s.coreWebVitals.tbtLabel,
+  fcp: (s) => s.coreWebVitals.fcpLabel,
+  speedIndex: (s) => s.coreWebVitals.speedIndexLabel,
+  cls: (s) => s.coreWebVitals.clsLabel,
+};
 
 /** item 14: a Deloitte "0.1 second = X% conversion" stat invites a reader
  *  to naively multiply that relationship by however many seconds they
  *  assume their site is over threshold. States the theme's own measured
- *  LCP gap instead of leaving that extrapolation to the reader - only for
+ *  gap instead of leaving that extrapolation to the reader - only for
  *  the two ratio kinds actually expressed per 0.1s, and only when this
- *  site's own median LCP (across the theme's affected pages) is
+ *  site's own median for that metric (across the theme's affected pages) is
  *  genuinely above the "good" threshold, so a site that is actually fine
- *  never gets a manufactured gap sentence. */
-function measuredLcpGapNote(
+ *  never gets a manufactured gap sentence.
+ *
+ *  D7: a theme whose findings name no Core Web Vital gets no note at all,
+ *  rather than being handed LCP's. Saying nothing is correct there; quoting
+ *  an unrelated metric is not. */
+function measuredCoreWebVitalGapNote(
   strings: ReportStrings,
   language: ReportLanguage,
   stat: ReferenceStat,
@@ -154,20 +202,25 @@ function measuredLcpGapNote(
 ): string | undefined {
   if (!stat.ratio || !RATIO_KINDS_PER_TENTH_SECOND.has(stat.ratio.kind)) return undefined;
 
+  const metric = themeCoreWebVitalMetric(themeFindings);
+  if (metric === undefined) return undefined;
+
   const themePageUrls = new Set(themeFindings.flatMap((f) => f.pageUrls));
-  const lcpValues = manifest.pages
+  const values = manifest.pages
     .filter((page) => themePageUrls.has(page.url))
-    .map((page) => page.coreWebVitals?.lcp?.numericValue)
+    .map((page) => page.coreWebVitals?.[metric]?.numericValue)
     .filter((value): value is number => value !== null && value !== undefined);
 
-  const medianLcp = median(lcpValues);
-  const lcpThreshold = CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'lcp');
-  if (medianLcp === null || !lcpThreshold || medianLcp <= lcpThreshold.good) return undefined;
+  const medianValue = median(values);
+  const threshold = CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === metric);
+  if (medianValue === null || !threshold || medianValue <= threshold.good) return undefined;
 
-  return fillTemplate(strings.themes.measuredLcpGapTemplate, {
-    value: toSeconds(medianLcp, language),
-    gap: toSeconds(medianLcp - lcpThreshold.good, language),
-    threshold: toSeconds(lcpThreshold.good, language),
+  const unit = METRIC_UNITS[metric];
+  return fillTemplate(strings.themes.measuredCoreWebVitalGapTemplate, {
+    metric: CWV_METRIC_LABELS[metric](strings),
+    value: formatMetricValue(medianValue, unit, language),
+    gap: formatMetricValue(medianValue - threshold.good, unit, language),
+    threshold: formatMetricValue(threshold.good, unit, language),
   });
 }
 
@@ -322,7 +375,7 @@ function renderTheme(
     ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(theme.legalRelevance)}</p>`
     : `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(t.conformityNotApplicable)}</p>`;
 
-  const gapNote = citationStat ? measuredLcpGapNote(strings, language, citationStat, themeFindings, manifest) : undefined;
+  const gapNote = citationStat ? measuredCoreWebVitalGapNote(strings, language, citationStat, themeFindings, manifest) : undefined;
   const revenueImpactNote = citationStat ? renderRevenueImpactNote(strings, language, citationStat, turnoverEur) : undefined;
   const citationBox = citationStat
     ? renderReferenceStatNote(t.impactCitationLabel, citationStat, language, undefined, gapNote, revenueImpactNote)

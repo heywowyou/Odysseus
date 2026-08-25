@@ -217,8 +217,8 @@ export const en: ReportStrings = {
     conformityNonConformant: 'Non-conformant',
     legalTagLabel: 'Conformance requirement',
     impactCitationLabel: 'Reference data point',
-    measuredLcpGapTemplate:
-      'Measured gap on this site: median LCP at {value}s, {gap}s above the "good" threshold ({threshold}s).',
+    measuredCoreWebVitalGapTemplate:
+      'Measured gap on this site: median {metric} at {value}, {gap} above the "good" threshold ({threshold}).',
     revenueImpactTemplate:
       'Based on your reported turnover ({turnover} EUR), and if this association held for your business, the order of magnitude would be up to {impact} EUR per year. This is an indicative estimate based on a single study, not a guaranteed forecast.',
     quickWinBadgeLabel: 'Quick win',
