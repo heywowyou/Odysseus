@@ -6,3 +6,11 @@ allowBuilds:
   core-js: false
   es5-ext: false
   esbuild: true
+overrides:
+  # lodash.pick's GHSA-p6mc-m468-83gw has no fix: the registry never
+  # published a version past 4.4.0 despite the advisory naming 4.4.1 as
+  # patched. Deep transitive dep of structured-data-testing-tool via
+  # web-auto-extractor/cheerio; left unpatched, tracked for a future
+  # structured-data-testing-tool major bump or replacement.
+  'nth-check@<2.0.1': '>=2.0.1'
+  'validator@<13.15.22': '>=13.15.22'
