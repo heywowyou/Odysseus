@@ -80,7 +80,6 @@
     "crawlable-anchors",
     "cumulative-layout-shift",
     "document-latency-insight",
-    "document-title",
     "dom-size",
     "dom-size-insight",
     "duplicated-javascript",

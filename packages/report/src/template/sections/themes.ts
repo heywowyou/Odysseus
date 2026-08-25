@@ -157,6 +157,18 @@ function median(values: readonly number[]): number | null {
  *  trade-off 16's B1: a deterministic attachment with the wrong anchor. */
 const CWV_METRIC_PREFERENCE: readonly CoreWebVitalMetricKey[] = ['lcp', 'tbt', 'fcp', 'speedIndex', 'cls'];
 
+/** A real Lagnonu report exposed the gap this closes: a theme titled
+ *  "Blocage du navigateur par des scripts JavaScript" (TBT) bundled one
+ *  finding each for TBT, FCP, LCP and Speed Index (a real four-way tie),
+ *  and the preference order below silently broke the tie toward LCP
+ *  regardless of what the theme's own title was about - the exact wrong-
+ *  anchor failure this function exists to prevent, just in a case the
+ *  original D7 fix (single dominant metric) never covered. A genuine tie
+ *  for the top count is now no metric at all: D7's own principle already
+ *  states it - "saying nothing is correct there; quoting an unrelated
+ *  metric is not" - and that principle does not stop applying just
+ *  because the wrong metric it would otherwise quote happens to be the
+ *  most commonly cited one (LCP) rather than an arbitrary one. */
 function themeCoreWebVitalMetric(themeFindings: readonly Finding[]): CoreWebVitalMetricKey | undefined {
   const counts = new Map<CoreWebVitalMetricKey, number>();
   for (const finding of themeFindings) {
@@ -164,13 +176,11 @@ function themeCoreWebVitalMetric(themeFindings: readonly Finding[]): CoreWebVita
     if (key === undefined) continue;
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  let best: CoreWebVitalMetricKey | undefined;
-  for (const key of CWV_METRIC_PREFERENCE) {
-    const count = counts.get(key);
-    if (count === undefined) continue;
-    if (best === undefined || count > (counts.get(best) ?? 0)) best = key;
-  }
-  return best;
+  if (counts.size === 0) return undefined;
+
+  const maxCount = Math.max(...counts.values());
+  const topMetrics = CWV_METRIC_PREFERENCE.filter((key) => counts.get(key) === maxCount);
+  return topMetrics.length === 1 ? topMetrics[0] : undefined;
 }
 
 const CWV_METRIC_LABELS: Record<CoreWebVitalMetricKey, (strings: ReportStrings) => string> = {

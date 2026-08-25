@@ -1321,6 +1321,92 @@ needed, say so and stop. Do not change them and continue.
     "43/43 pages with a critical finding" while none of its six
     priorities was performance, which held four of the five criticals.
 
+32. **Three more defects closed regenerating the Lagnonu English report,
+    2026-08-25 session continuation**, none visible against the fixture
+    alone - all three needed the real 65-page scan.
+
+    **A generic CSS rule can put Paged.js into its own infinite-loop
+    guard on one language's copy and not the other.** English's report
+    generation failed outright on trade-off 17's "Layout repeated" class
+    (pdf.ts's own guard, not a crash: it aborts rather than ship a
+    silently truncated PDF). French generated cleanly from the same scan.
+    Root-caused by bisecting the actual generated HTML (binary search on
+    section slices, then on `.remaining-category` blocks) rather than
+    guessing from the CSS: the generic `h1, h2, h3, h4, h5, h6 { break-
+    after: avoid }` rule (P4.6) glues every `remaining-work.ts` category
+    heading (also an `h5`) to whatever follows it via Paged.js's iterative
+    break-after solver, and on English's longer remediation copy one
+    category heading landed at a page boundary the solver could not
+    resolve. `paged.css` now overrides `break-after` back to `auto` for
+    `.remaining-category h5` specifically (higher specificity than the
+    bare `h5` rule) and replaces it with a bounded `.remaining-category-
+    head` wrapper (`break-inside: avoid` around the heading plus its
+    first rule block only) - "bounded by construction," the same
+    reasoning trade-off 20's `.stat-tile-row` rule already relies on, and
+    exactly why that one heading/row pairing never hit this failure.
+    Confirmed against the full report end to end, both languages, after
+    the fix; do not revert to a bare `h5` rule for this section without
+    re-confirming the loop is gone.
+
+    **`measuredCoreWebVitalGapNote`'s tie-break silently favoured LCP.**
+    D7 (trade-off 31) fixed the case where a theme's findings named one
+    dominant Core Web Vital metric other than LCP. It did not cover a
+    genuine tie: a real Lagnonu theme titled "Blocage du navigateur par
+    des scripts JavaScript" (TBT) bundled one finding each for TBT, FCP,
+    LCP and Speed Index, and the preference-order tie-break
+    (`themes.ts`'s `CWV_METRIC_PREFERENCE`) picked LCP purely because it
+    came first in that list, reproducing D7's exact wrong-anchor defect
+    under a title about blocking scripts. Fixed by returning no metric at
+    all on a genuine tie for the top count, per D7's own stated principle
+    ("saying nothing is correct there; quoting an unrelated metric is
+    not") - that principle does not stop applying just because the wrong
+    metric happens to be the most-cited one rather than an arbitrary one.
+
+    **axe-core and a Lighthouse SEO audit share the literal rule id
+    `document-title`.** Confirmed against real scanner output (only
+    Lagnonu of the four reference audits triggers it): axe emits
+    `document-title` (WCAG 2.4.2, accessibility, serious) and Lighthouse's
+    SEO category emits its own audit of the same name (seo, moderate) for
+    the same missing `<title>` element on the same 14 pages -
+    `normalize-head-metadata.ts`'s own milestone-8 comment had already
+    reasoned that its custom SEO check must not duplicate Lighthouse's
+    `document-title` audit, but never checked whether axe also reports a
+    rule of that name. Same failure family as trade-off 1, arriving
+    through a different door. Fixed the same way trade-off 1 fixes its
+    own duplicates: added `document-title` to `LIGHTHOUSE_EXCLUDED_AUDITS`
+    (`packages/core/src/normalize/constants.ts`), keeping axe's side (WCAG-
+    referenced, more severity-accurate). `scripts/generate-reachable-rule-
+    ids.mjs` had to be re-run afterward - `reachable-rule-ids.test.ts`
+    computes the Lighthouse-reachable set from the same exclusion list, so
+    its committed fixture needed regenerating, not just the code fix.
+
+    **A normalize-layer change that removes one mid-list finding
+    renumbers every finding ID after it, and nothing before this session
+    surfaced how much that matters.** Finding IDs (`f001`, `f002`, ...)
+    are assigned positionally; removing the `document-title` duplicate on
+    Lagnonu shifted every later id back by one; `f035` stopped meaning
+    "missing title tag" and started meaning `no-h1`. `odysseus report`
+    still rendered the priority correctly, because Zod validation
+    (`llm-output.ts`) and the finding-id guard only check that a cited id
+    *exists* in `findings.json`, not that it still denotes the same
+    defect the model was shown. `odysseus analyze` does catch a stale
+    *structure* cache for exactly this reason (an existing `--regenerate-
+    structure` prompt, not newly added this session), which is what
+    surfaced the mismatch here - but a stored full analysis with no
+    structure-cache mismatch would have rendered silently wrong, citing a
+    real, current, wrong finding under an unrelated priority. Whenever a
+    normalize-layer change to a stored audit's `findings.json` can drop or
+    reorder findings (a new dedupe rule, a new exclusion like the one
+    above, `normalize <dir>` after such a change), any analysis already
+    generated against the old file must be treated as invalid and
+    regenerated (`analyze --regenerate-structure`), not reused - this is
+    not yet an automated guard the way the structure-cache check is, and
+    should probably become one.
+
+    All three closed with the full 1477-test suite green and all four
+    curated reference fixtures (`fixtures/audits.json`) refreshed and
+    passing `fixture-freshness.test.ts` at fingerprint `b8afddb24f9b743c`.
+
 
 ## Stack
 

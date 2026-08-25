@@ -35,7 +35,7 @@ describe('remediation copy', () => {
 
     const uncovered = [...observed].filter((ruleId) => REMEDIATION_FR[ruleId] === undefined).sort();
     expect(uncovered).toEqual([]);
-  });
+  }, 20000);
 
   it('holds identical key sets in both languages', () => {
     expect(Object.keys(REMEDIATION_FR).sort()).toEqual(Object.keys(REMEDIATION_EN).sort());

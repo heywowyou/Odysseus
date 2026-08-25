@@ -130,9 +130,19 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
     await page.evaluate(() => document.fonts.ready);
 
     let pagedjsLayoutFailure: string | undefined;
+    let debugNodePromise: Promise<void> | undefined;
     page.on('console', (msg) => {
       if (msg.type() === 'error' && msg.text().includes(PAGEDJS_LAYOUT_REPEATED_MARKER)) {
         pagedjsLayoutFailure = msg.text();
+        if (process.env['ODYSSEUS_DEBUG_PAGEDJS']) {
+          debugNodePromise = Promise.all(msg.args().map((a) => a.evaluate((n: unknown) => {
+            const el = n as Element;
+            return el && el.outerHTML ? el.outerHTML.slice(0, 2000) : String(n);
+          }).catch((e: unknown) => `<unresolvable: ${e instanceof Error ? e.message : String(e)}>`))).then((parts) => {
+            // eslint-disable-next-line no-console
+            console.error('[pagedjs:debug-node]', parts.join('\n---\n'));
+          });
+        }
       }
       if (process.env['ODYSSEUS_DEBUG_PAGEDJS']) {
         // eslint-disable-next-line no-console
@@ -148,6 +158,7 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
       await previewer.preview();
     });
 
+    if (debugNodePromise) await debugNodePromise;
     if (pagedjsLayoutFailure !== undefined) {
       throw new Error(
         `Report generation aborted: Paged.js hit its own layout-repeated guard and stopped ` +

@@ -1422,7 +1422,7 @@ describe('B2.1: a category with critical findings always gets a rendered priorit
  *  a 200 ms threshold - carried "LCP median a 4 s". Same family as trade-off
  *  16's B1: a deterministic attachment with the wrong anchor. */
 describe('D7: the measured gap names the metric the priority is actually about', () => {
-  function analysisWith(title: string) {
+  function analysisWith(title: string, findingIds: string[] = ['f001']) {
     return {
       auditId: 'a1',
       language: 'fr' as const,
@@ -1439,7 +1439,7 @@ describe('D7: the measured gap names the metric the priority is actually about',
           effort: 'medium' as const,
           impact: 'high' as const,
           priorityRank: 1,
-          findingIds: ['f001'],
+          findingIds,
           recommendedActions: ['Action'],
         },
       ],
@@ -1448,9 +1448,9 @@ describe('D7: the measured gap names the metric the priority is actually about',
     };
   }
 
-  function findingFor(ruleId: string) {
+  function findingFor(ruleId: string, findingId = 'f001') {
     return {
-      findingId: 'f001',
+      findingId,
       auditId: 'a1',
       schemaVersion: 1 as const,
       source: 'lighthouse' as const,
@@ -1545,5 +1545,44 @@ describe('D7: the measured gap names the metric the priority is actually about',
     );
 
     expect(html).not.toContain('Écart mesuré sur ce site');
+  });
+
+  it('says nothing on a genuine tie between distinct Core Web Vitals, rather than silently favouring LCP (real Lagnonu case)', () => {
+    // Real shape: one finding each for TBT, FCP, LCP and Speed Index under
+    // a priority titled for blocking scripts (TBT), not LCP. The old
+    // preference-order tie-break picked LCP purely because it came first
+    // in CWV_METRIC_PREFERENCE, producing an LCP gap sentence under a
+    // TBT-titled priority - the exact wrong-anchor defect D7 fixed for the
+    // single-dominant-metric case, reappearing in the tied case.
+    const manifest = {
+      pages: [
+        {
+          url: 'https://example.com/',
+          status: 'visited',
+          coreWebVitals: {
+            tbt: { score: 0.1, numericValue: 2500, displayValue: '2500 ms' },
+            fcp: { score: 0.1, numericValue: 3200, displayValue: '3.2 s' },
+            lcp: { score: 0.4, numericValue: 3900, displayValue: '3.9 s' },
+            speedIndex: { score: 0.1, numericValue: 9000, displayValue: '9 s' },
+          },
+        },
+      ],
+    } as never;
+
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysisWith('Blocage du navigateur par des scripts JavaScript', ['f002', 'f003', 'f004', 'f005']),
+      [
+        findingFor('total-blocking-time', 'f002'),
+        findingFor('first-contentful-paint', 'f003'),
+        findingFor('largest-contentful-paint', 'f004'),
+        findingFor('speed-index', 'f005'),
+      ],
+      manifest,
+    );
+
+    expect(html).not.toContain('Écart mesuré sur ce site');
+    expect(html).not.toContain('LCP, contenu principal');
   });
 });

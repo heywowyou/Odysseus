@@ -322,6 +322,26 @@ h5 {
   break-after: avoid;
 }
 
+/* remaining-work.ts (2026-08-25 Lagnonu review, English report): the
+   generic h1-h6 break-after: avoid rule above (P4.6) glues every
+   .remaining-category heading to whatever follows it via Paged.js's
+   iterative break-after solver. On a real Lagnonu English report that
+   solver hit its own "Layout repeated" infinite-loop guard (pdf.ts)
+   whenever a category heading landed at a page boundary it could not
+   resolve - confirmed by bisecting the generated HTML down to this exact
+   heading. This overrides break-after back to auto for these headings
+   specifically (higher specificity than the bare `h5` rule above) and
+   replaces it with a bounded break-inside: avoid wrapper around the
+   heading plus its first rule block only - "bounded by construction",
+   the same reasoning trade-off D1's .stat-tile-row rule already uses,
+   which is why that one heading/row pairing never had this failure. */
+.remaining-category h5 {
+  break-after: auto;
+}
+.remaining-category-head {
+  break-inside: avoid;
+}
+
 /* A CSS grid row built from display:contents cannot be kept together by the
    engine. Rows that must not split are wrapped in .row-atomic instead. */
 .row-atomic {

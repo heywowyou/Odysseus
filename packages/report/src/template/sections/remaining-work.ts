@@ -165,10 +165,28 @@ export function renderRemainingWork(
   const categoryBlocks = CATEGORY_ORDER.filter((category) => byCategory.has(category))
     .map((category) => {
       const blocks = groupByRule(byCategory.get(category) ?? [], language);
+      const [firstBlock, ...restBlocks] = blocks;
+      // The heading and its first rule block are wrapped in one
+      // break-inside: avoid unit (paged.css's `.remaining-category-head`,
+      // overriding the generic h1-h6 break-after: avoid rule for this
+      // heading specifically) rather than relying on that generic rule
+      // directly on the h5. On a real Lagnonu English report, the
+      // combination of that generic rule with this section's longer
+      // remediation copy put Paged.js's iterative break-after solver into
+      // its own "Layout repeated" infinite-loop guard (pdf.ts) whenever a
+      // category landed at a page boundary it could not resolve -
+      // confirmed by bisecting the generated HTML down to this exact
+      // heading/content pairing. A bounded atomic wrapper (one heading
+      // plus one small rule block, "bounded by construction" per the
+      // D1 stat-tile reasoning) keeps the same "never orphan the heading"
+      // intent without the iterative mechanism that looped.
       return `
         <div class="remaining-category" style="margin-bottom:var(--space-6)">
-          <h5 style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h5>
-          ${blocks.map((block) => renderRuleBlock(strings, language, block)).join('')}
+          <div class="remaining-category-head">
+            <h5 style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h5>
+            ${firstBlock ? renderRuleBlock(strings, language, firstBlock) : ''}
+          </div>
+          ${restBlocks.map((block) => renderRuleBlock(strings, language, block)).join('')}
         </div>
       `;
     })
