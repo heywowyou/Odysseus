@@ -512,7 +512,14 @@ condition stated, not on vague "use when helpful" judgment.
   situation; use it to route rather than guessing.
 - **grill-with-docs** — sharpening a plan or design through interview
   before committing to it, when the result should also produce an ADR or
-  glossary entry.
+  glossary entry. Delegates the interview itself to `grilling` and the
+  write-down to `domain-modeling`.
+- **grilling** — the user wants their thinking on a plan, decision, or
+  idea stress-tested, or uses a "grill" trigger phrase; also invoked by
+  `grill-with-docs` and by `improve-codebase-architecture`'s step 3
+  (walking a chosen deepening candidate to an interface). Unlike
+  `grill-with-docs`, model-invokable directly, no explicit `/` command
+  required.
 - **triage** — working an issue or external PR through the
   needs-triage/needs-info/ready-for-agent/ready-for-human/wontfix state
   machine on `heywowyou/Odysseus`.
