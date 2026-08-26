@@ -452,7 +452,7 @@ export async function scanPage(
   if (structuredDataError !== undefined) result.structuredDataError = structuredDataError;
 
   if (!options.skipLighthouse) {
-    if (options.delayMs) {
+    if (options.delayMs !== undefined && options.delayMs > 0) {
       await sleep(options.delayMs);
     }
 

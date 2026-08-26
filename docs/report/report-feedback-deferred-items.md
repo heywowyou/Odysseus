@@ -177,18 +177,13 @@ into the fix plan.
 
 ## Placeholder values awaiting a real answer, not a code fix
 
-**Empty as of 2026-08-25.** The one entry this section held (the SIRET)
+**Empty as of 2026-08-26.** The one entry this section held (the SIRET)
 was closed on inspection: `html-utils.ts` already defaults
 `ODYSSEUS_REGISTRATION_NUMBER` to the real registration number, and the
 value in `.env` matches it exactly (compared, not eyeballed). The
 pre-flight guard in `render-lint.ts` (`FORBIDDEN_PATTERNS`, matching the
 `[... a renseigner]` bracket convention) stays, since it is what stops any
 future placeholder shipping silently.
-
-One live nit worth fixing whenever that file is next touched: the code
-reads `process.env['ODYSSEUS_SIRET']` while `.env` defines `SIRET`, so the
-environment override never actually fires. Harmless today only because the
-committed default is the correct value.
 
 **Confirmed 2026-08-19, no longer open:** `ODYSSEUS_REAUDIT_PRICE_EUR_HT`
 / `ODYSSEUS_REAUDIT_LEAD_TIME_DAYS` (EUR 450 HT / 5 business days,

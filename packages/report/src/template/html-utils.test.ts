@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   escapeHtml,
   fillTemplate,
@@ -106,5 +106,26 @@ describe('formatFindingIdLinks', () => {
 
   it('returns an empty string for no IDs', () => {
     expect(formatFindingIdLinks([])).toBe('');
+  });
+});
+
+describe('report issuer configuration', () => {
+  it('uses the SIRET key loaded from the repository environment file', async () => {
+    const originalSiret = process.env['SIRET'];
+    const originalOdysseusSiret = process.env['ODYSSEUS_SIRET'];
+    process.env['SIRET'] = '12345678901234';
+    delete process.env['ODYSSEUS_SIRET'];
+    vi.resetModules();
+
+    try {
+      const { ODYSSEUS_REGISTRATION_NUMBER } = await import('./html-utils.js');
+      expect(ODYSSEUS_REGISTRATION_NUMBER).toBe('12345678901234');
+    } finally {
+      if (originalSiret === undefined) delete process.env['SIRET'];
+      else process.env['SIRET'] = originalSiret;
+      if (originalOdysseusSiret === undefined) delete process.env['ODYSSEUS_SIRET'];
+      else process.env['ODYSSEUS_SIRET'] = originalOdysseusSiret;
+      vi.resetModules();
+    }
   });
 });

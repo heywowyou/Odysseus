@@ -22,7 +22,7 @@ and not authority to override `CLAUDE.md`'s milestone order. Before acting on
 an entry, re-verify it against current HEAD and record the selected scope in
 `docs/session/current-session.md`. As findings are fixed, their sections are
 deleted here so this file reflects what remains rather than a frozen audit
-snapshot. Fixed so far: CORRECTNESS-01, CORRECTNESS-04,
+snapshot. Fixed so far: CORRECTNESS-01, CORRECTNESS-02, CORRECTNESS-03, CORRECTNESS-04,
 SEC-01, SEC-02, SEC-03/DX-06, SEC-04, PERF-01, ARCH-03/DOCS-01, SEC-06,
 TEST-01, TEST-02, TEST-03, TEST-04, TEST-07.
 Still open: SEC-05/DEP-01 (Lighthouse 12→13 dependency/build work is done,
@@ -32,16 +32,6 @@ remaining 9-rule gap needs a fresh decision, not a silent floor change —
 left open on purpose), TEST-05/TEST-06 (deliberately deferred), plus
 everything under Tech Debt & Architecture / Dependencies & Migrations /
 Direction not yet independently re-vetted.
-
-**New, not yet triaged**: while confirming TEST-07's fix, found that
-`packages/store`'s integration test files share one database and each
-calls `connection.dropDatabase()` in its own `afterAll` — running the
-suite with Vitest's default parallel file execution is flaky (2-10 of 46
-tests fail nondeterministically depending on file interleaving); the same
-suite is 46/46 stable under `--pool=threads --poolOptions.threads.singleThread`.
-Not fixed this session — flagging for a decision (give each file its own
-database name, or force the store package to run single-threaded) rather
-than picking one silently.
 
 **New, not yet triaged**: separately, CI has never completed a full test
 run on this repo (confirmed via `gh run list --branch main`: only 2 runs
@@ -71,17 +61,6 @@ environment.
 ---
 
 ## Correctness / Bugs
-
-Vetted directly (spot-checked `packages/interface/src/server.ts`).
-
-### [CORRECTNESS-02] Latent `persistAudit` orphaned-findings gap
-- Now that the queue's poll/claim loop is resilient to a transient claim
-  failure (fixed this session), this gap is live rather than dormant —
-  worth a fresh look before it's picked up.
-
-### [CORRECTNESS-03] `delayMs` truthy-check inconsistency
-- A `0`-vs-falsy check on a delay value behaves inconsistently between call
-  sites.
 
 Clean bill of health reported (checked, not flagged): the LLM
 invented-finding guard chain, legal-content splicing determinism, and the
@@ -325,16 +304,6 @@ compaction; re-fetch before treating this section as final.
    Lighthouse 12 → 13 (which drops the dependency entirely, not just
    makes it dormant). Confirmed by direct read of the current pin and the
    newer version's dependency tree.
-
-## Known dependency ordering between findings
-
-- The queue's poll/claim loop is now resilient to a transient claim
-  failure (fixed this session), which means CORRECTNESS-02 (latent
-  `persistAudit` orphaned-findings gap) is no longer dormant — the
-  subagent that originally flagged it expected it to start actively
-  firing once queue resilience landed.
-
----
 
 ## Gaps in this document (be aware before planning from it)
 

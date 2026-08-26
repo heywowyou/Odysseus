@@ -1,8 +1,8 @@
 /**
  * Persists a completed audit: upserts the audit document by auditId, then
- * bulk-upserts findings keyed by (auditId, dedupeKey). Upserting rather
- * than inserting means a retried `audit` invocation (same auditId) is
- * idempotent instead of duplicating documents.
+ * replaces its finding set through keyed upserts and obsolete-row cleanup.
+ * Replacing rather than inserting means a retried `audit` invocation (same
+ * auditId) is idempotent and cannot retain findings absent from the retry.
  */
 
 import type { Connection } from 'mongoose';
@@ -34,7 +34,10 @@ export async function persistAudit(
     { upsert: true },
   );
 
-  if (findings.length === 0) return;
+  if (findings.length === 0) {
+    await FindingModel.deleteMany({ auditId: manifest.auditId });
+    return;
+  }
 
   await FindingModel.bulkWrite(
     findings.map((finding) => ({
@@ -45,4 +48,9 @@ export async function persistAudit(
       },
     })),
   );
+
+  await FindingModel.deleteMany({
+    auditId: manifest.auditId,
+    dedupeKey: { $nin: findings.map((finding) => finding.dedupeKey) },
+  });
 }

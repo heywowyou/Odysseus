@@ -86,14 +86,15 @@ export const ODYSSEUS_CONTACT_EMAIL = 'contact@odysseusaudit.com';
  *  the same distinction packages/scanner/src/checks/mentions-legales.ts
  *  already encodes when reading a client's own legal notice.
  *
- *  Overridable via ODYSSEUS_SIRET so the value can be set per machine
- *  without a code change; the literal stays as the canonical default so
- *  an unset environment can never silently produce a report with no
- *  issuer identity, which is the failure this constant exists to
- *  prevent. */
+ *  Overridable via ODYSSEUS_SIRET, with SIRET retained for the repository's
+ *  existing environment file, so the value can be set per machine without a
+ *  code change. The literal stays as the canonical default so an unset
+ *  environment can never silently produce a report with no issuer identity,
+ *  which is the failure this constant exists to prevent. */
 export const ODYSSEUS_PRODUCER_NAME = 'Odysseus Audit';
 export const ODYSSEUS_SIGNATORY_NAME = 'Jules Fontaine';
-export const ODYSSEUS_REGISTRATION_NUMBER = process.env['ODYSSEUS_SIRET'] ?? '98076646300023';
+export const ODYSSEUS_REGISTRATION_NUMBER =
+  process.env['ODYSSEUS_SIRET'] ?? process.env['SIRET'] ?? '98076646300023';
 
 /** item 3.12: "Prochaines étapes" described re-audits and post-fix
  *  verification with no price, no lead time, and no way to order -

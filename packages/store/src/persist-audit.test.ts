@@ -109,6 +109,26 @@ describe.skipIf(!mongoAvailable)('persistAudit', () => {
     expect(await FindingModel.countDocuments({ auditId: 'persist-test-2' })).toBe(1);
   });
 
+  it('removes findings that are absent when the same audit is persisted again', async () => {
+    const manifest = buildManifest({ auditId: 'persist-test-retry' });
+    const retained = buildFinding({
+      auditId: 'persist-test-retry',
+      dedupeKey: 'retry-retained01',
+    });
+    const obsolete = buildFinding({
+      auditId: 'persist-test-retry',
+      findingId: 'f002',
+      dedupeKey: 'retry-obsolete01',
+    });
+
+    await persistAudit(connection!, manifest, [retained, obsolete]);
+    await persistAudit(connection!, manifest, [retained]);
+
+    const FindingModel = createFindingModel(connection!);
+    const storedFindings = await FindingModel.find({ auditId: 'persist-test-retry' }).lean();
+    expect(storedFindings.map((finding) => finding.dedupeKey)).toEqual(['retry-retained01']);
+  });
+
   it('creates the required indexes', async () => {
     const AuditModel = createAuditModel(connection!);
     const FindingModel = createFindingModel(connection!);
@@ -124,8 +144,17 @@ describe.skipIf(!mongoAvailable)('persistAudit', () => {
     expect(findingIndexKeys).toContainEqual({ auditId: 1, severity: 1 });
   });
 
-  it('handles zero findings without erroring', async () => {
+  it('removes every stored finding when a retry has zero findings', async () => {
     const manifest = buildManifest({ auditId: 'persist-test-3' });
-    await expect(persistAudit(connection!, manifest, [])).resolves.toBeUndefined();
+    const finding = buildFinding({
+      auditId: 'persist-test-3',
+      dedupeKey: 'zero-retry-key01',
+    });
+
+    await persistAudit(connection!, manifest, [finding]);
+    await persistAudit(connection!, manifest, []);
+
+    const FindingModel = createFindingModel(connection!);
+    expect(await FindingModel.countDocuments({ auditId: 'persist-test-3' })).toBe(0);
   });
 });
