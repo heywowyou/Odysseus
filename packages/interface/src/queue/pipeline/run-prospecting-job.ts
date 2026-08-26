@@ -25,7 +25,12 @@
 
 import { completeJob, updateJobProgress, type JobDocument, type UrlResult } from '@odysseus/store';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
-import { PROSPECTING_JOB_CONCURRENCY, PROSPECTING_MAX_DEPTH, PROSPECTING_MAX_PAGES } from '../../config.js';
+import {
+  PROSPECTING_JOB_CONCURRENCY,
+  PROSPECTING_MAX_DEPTH,
+  PROSPECTING_MAX_PAGES,
+  PROSPECTING_PROGRESS_WRITE_INTERVAL,
+} from '../../config.js';
 import type { PipelineContext } from '../job-queue.js';
 
 export async function runProspectingJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
@@ -45,7 +50,14 @@ export async function runProspectingJob(job: JobDocument, ctx: PipelineContext):
   const auditIds: string[] = [];
   let completedCount = 0;
 
-  async function reportProgress(): Promise<void> {
+  // Full-array $set on every call, so writing on every status transition of
+  // every URL scales write volume with job size. Only the completion
+  // transition is progress-worthy enough to write at all; even that is
+  // throttled to every Nth completion, with a forced write on the very
+  // last one so the stored state is never stale once the job finishes
+  // scanning.
+  async function reportProgress(force = false): Promise<void> {
+    if (!force && completedCount % PROSPECTING_PROGRESS_WRITE_INTERVAL !== 0) return;
     await updateJobProgress(connection, job.jobId, {
       progress: { message: `${completedCount} of ${urls.length} URLs scanned` },
       urlResults,
@@ -55,7 +67,6 @@ export async function runProspectingJob(job: JobDocument, ctx: PipelineContext):
   async function scanOne(index: number): Promise<void> {
     const url = urls[index]!;
     urlResults[index] = { url, status: 'scanning' };
-    await reportProgress();
 
     let origin: string;
     try {
@@ -63,7 +74,7 @@ export async function runProspectingJob(job: JobDocument, ctx: PipelineContext):
     } catch {
       urlResults[index] = { url, status: 'error', error: 'not a valid URL' };
       completedCount += 1;
-      await reportProgress();
+      await reportProgress(completedCount === urls.length);
       return;
     }
 
@@ -84,7 +95,7 @@ export async function runProspectingJob(job: JobDocument, ctx: PipelineContext):
     }
 
     completedCount += 1;
-    await reportProgress();
+    await reportProgress(completedCount === urls.length);
   }
 
   // Shared cursor: each worker claims the next unclaimed index rather

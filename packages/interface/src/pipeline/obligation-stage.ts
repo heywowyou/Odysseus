@@ -28,6 +28,7 @@ import {
   type SiteSignals,
 } from '@odysseus/core';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
+import { logger } from '../logger.js';
 
 /** siren keeps its own provenance (where the SIREN value itself came
  *  from) separate from the other fields' provenance (why they could not
@@ -143,8 +144,9 @@ function resolveSiteSignals(
     // A confirmed fact disagreeing with the detector is itself useful
     // signal for future detector work, per the milestone's design
     // constraints - logged, never used to change the resolved value.
-    console.warn(
-      `odysseus: manual hasTransactionalFlow override (${override.value}) disagrees with the detector (${detectedValue})`,
+    logger.warn(
+      { override: override.value, detected: detectedValue },
+      'manual hasTransactionalFlow override disagrees with the detector',
     );
   }
 

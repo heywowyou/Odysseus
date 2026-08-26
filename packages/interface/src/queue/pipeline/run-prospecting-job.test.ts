@@ -129,6 +129,33 @@ describe('runProspectingJob', () => {
     await expect(runProspectingJob(fakeJob([]), ctx)).rejects.toThrow(/no urls/);
   });
 
+  describe('throttled progress writes', () => {
+    it('does not call updateJobProgress once per URL for a batch larger than the write interval', async () => {
+      vi.mocked(runAuditStage).mockResolvedValue({
+        auditId: 'audit-x',
+        manifest: {} as never,
+        findings: [] as never,
+        auditDir: '/dir',
+        visitedCount: 1,
+        prunedPageDirCount: 0,
+        obligationAssessment: { status: 'undetermined', basis: [] } as never,
+      });
+
+      const urls = Array.from({ length: 25 }, (_, i) => `https://site-${i}.example/`);
+      await runProspectingJob(fakeJob(urls), ctx);
+
+      // 1 initial write plus at most a couple of throttled writes plus the
+      // final forced write - nowhere near one write per URL (25).
+      expect(vi.mocked(updateJobProgress).mock.calls.length).toBeLessThan(10);
+
+      const lastCall = vi.mocked(updateJobProgress).mock.calls.at(-1);
+      expect(lastCall?.[2]).toMatchObject({
+        progress: { message: `${urls.length} of ${urls.length} URLs scanned` },
+      });
+      expect((lastCall?.[2] as { urlResults: unknown[] }).urlResults).toHaveLength(urls.length);
+    });
+  });
+
   describe('2026-08-22 milestone 9b: bounded worker pool', () => {
     it('runs distinct origins concurrently rather than one at a time', async () => {
       // Each runAuditStage call blocks until every expected call has been

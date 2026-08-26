@@ -66,6 +66,11 @@ export type Theme = z.infer<typeof themeSchema>;
  * with the offending IDs, and retried. After a configured number of
  * retries the audit fails loudly rather than shipping a report that
  * cannot be traced to scanner output.
+ *
+ * Not currently called by the real pipeline: the structure pass validates
+ * via `packages/llm/src/structure-guards.ts`'s alias-ID duplicate instead
+ * (trade-off 27), which sees dense `x1..xN` alias IDs rather than real
+ * ones. Kept as a locked contract; do not assume this runs.
  */
 export function findInventedFindingIds(
   output: LlmOutput,
@@ -85,6 +90,9 @@ export function findInventedFindingIds(
 /**
  * Coverage check. Not a hard failure, but a report that silently drops
  * half the findings is a quality problem worth surfacing.
+ *
+ * Not currently called by the real pipeline; see the note on
+ * `findInventedFindingIds` above.
  */
 export function findUnreferencedFindingIds(
   output: LlmOutput,

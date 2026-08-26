@@ -10,6 +10,7 @@ import { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
 import { runProspectIngestionJob } from './queue/pipeline/run-prospect-ingestion-job.js';
 import { getInterfaceHost, getInterfacePort, getQueueConcurrency } from './config.js';
+import { logger } from './logger.js';
 
 export interface InterfaceServerHandle {
   server: Server;
@@ -42,12 +43,12 @@ export async function startInterfaceServer(connection: Connection): Promise<Inte
 
   const server = createServer((req, res) => {
     void router.handle(req, res).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ err: error, method: req.method, url: req.url }, 'unhandled error while handling request');
       if (!res.headersSent) {
         res.statusCode = 500;
         res.setHeader('content-type', 'application/json; charset=utf-8');
       }
-      res.end(JSON.stringify({ error: message }));
+      res.end(JSON.stringify({ error: 'Internal server error' }));
     });
   });
 
@@ -61,7 +62,7 @@ export async function startInterfaceServer(connection: Connection): Promise<Inte
 
   const orphanedCount = await queue.start();
   if (orphanedCount > 0) {
-    console.log(`odysseus serve: reset ${orphanedCount} job(s) left running by an unclean shutdown`);
+    logger.info({ orphanedCount }, 'reset job(s) left running by an unclean shutdown');
   }
 
   return {

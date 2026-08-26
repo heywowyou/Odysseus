@@ -14,6 +14,7 @@ import type { Connection } from 'mongoose';
 import { OriginLock } from '@odysseus/scanner';
 import { claimNextQueuedJob, failJob, resetOrphanedRunningJobs, type JobDocument, type JobType } from '@odysseus/store';
 import { DEFAULT_QUEUE_CONCURRENCY } from '../config.js';
+import { logger } from '../logger.js';
 
 export interface PipelineContext {
   connection: Connection;
@@ -97,7 +98,19 @@ export class JobQueue {
   private async runLoop(): Promise<void> {
     while (this.running) {
       while (this.activeCount < this.concurrency) {
-        const job = await claimNextQueuedJob(this.connection);
+        let job: JobDocument | null;
+        try {
+          job = await claimNextQueuedJob(this.connection);
+        } catch (error) {
+          // A transient claim failure (e.g. a Mongo hiccup) must not escape
+          // runLoop: an unhandled rejection here would either crash the
+          // process or, if swallowed elsewhere, leave this loop exited
+          // with `running` still true - silently never claiming work again.
+          // Log it and fall through to the poll-interval sleep below
+          // instead of retrying in a tight loop.
+          logger.error({ err: error }, 'failed to claim next queued job, will retry after poll interval');
+          break;
+        }
         if (!job) break;
         this.activeCount++;
         void this.runJob(job).finally(() => {

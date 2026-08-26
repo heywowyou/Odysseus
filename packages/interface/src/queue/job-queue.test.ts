@@ -5,14 +5,26 @@ vi.mock('@odysseus/store', () => ({
   failJob: vi.fn(),
   resetOrphanedRunningJobs: vi.fn(),
 }));
+vi.mock('../logger.js', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 import { claimNextQueuedJob, failJob, resetOrphanedRunningJobs } from '@odysseus/store';
+import { logger } from '../logger.js';
 import { JobQueue } from './job-queue.js';
 
 const fakeConnection = {} as never;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitFor(condition: () => boolean, timeoutMs = 1000, intervalMs = 5): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!condition()) {
+    if (Date.now() >= deadline) {
+      throw new Error('waitFor: condition was not met within the timeout');
+    }
+    await sleep(intervalMs);
+  }
 }
 
 function fakeJob(overrides: Partial<{ jobId: string; type: 'full-audit' | 'prospecting' | 'prospect-ingestion' }> = {}) {
@@ -73,7 +85,7 @@ describe('JobQueue', () => {
     });
     await queue.start();
     queue.notify();
-    await sleep(50);
+    await waitFor(() => runFullAuditJob.mock.calls.length >= 1);
 
     expect(runFullAuditJob).toHaveBeenCalledTimes(1);
     expect(runFullAuditJob).toHaveBeenCalledWith(job, expect.objectContaining({ connection: fakeConnection }));
@@ -95,7 +107,7 @@ describe('JobQueue', () => {
     });
     await queue.start();
     queue.notify();
-    await sleep(50);
+    await waitFor(() => runProspectingJob.mock.calls.length >= 1);
 
     expect(runProspectingJob).toHaveBeenCalledTimes(1);
     expect(runFullAuditJob).not.toHaveBeenCalled();
@@ -116,7 +128,7 @@ describe('JobQueue', () => {
     });
     await queue.start();
     queue.notify();
-    await sleep(50);
+    await waitFor(() => runProspectIngestionJob.mock.calls.length >= 1);
 
     expect(runProspectIngestionJob).toHaveBeenCalledTimes(1);
     expect(runProspectIngestionJob).toHaveBeenCalledWith(job, expect.objectContaining({ connection: fakeConnection }));
@@ -148,13 +160,13 @@ describe('JobQueue', () => {
     });
     await queue.start();
     queue.notify();
-    await sleep(50);
+    await waitFor(() => runFullAuditJob.mock.calls.length >= 1);
 
     expect(runFullAuditJob).toHaveBeenCalledTimes(1);
     expect(runFullAuditJob).toHaveBeenCalledWith(job1, expect.anything());
 
     releaseJob1();
-    await sleep(80);
+    await waitFor(() => runFullAuditJob.mock.calls.length >= 2);
 
     expect(runFullAuditJob).toHaveBeenCalledTimes(2);
     expect(runFullAuditJob).toHaveBeenCalledWith(job2, expect.anything());
@@ -172,9 +184,31 @@ describe('JobQueue', () => {
     });
     await queue.start();
     queue.notify();
-    await sleep(50);
+    await waitFor(() => vi.mocked(failJob).mock.calls.length >= 1);
 
     expect(failJob).toHaveBeenCalledWith(fakeConnection, 'job-boom', 'boom');
+  });
+
+  it('keeps polling after claimNextQueuedJob rejects once', async () => {
+    const job = fakeJob({ jobId: 'job-after-error' });
+    vi.mocked(claimNextQueuedJob)
+      .mockRejectedValueOnce(new Error('transient Mongo error'))
+      .mockResolvedValueOnce(job)
+      .mockResolvedValue(null);
+    const runFullAuditJob = vi.fn().mockResolvedValue(undefined);
+
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: { 'full-audit': runFullAuditJob, prospecting: vi.fn(), 'prospect-ingestion': vi.fn() },
+    });
+    await queue.start();
+    queue.notify();
+    await waitFor(() => runFullAuditJob.mock.calls.length >= 1);
+
+    expect(logger.error).toHaveBeenCalled();
+    expect(runFullAuditJob).toHaveBeenCalledTimes(1);
+    expect(runFullAuditJob).toHaveBeenCalledWith(job, expect.anything());
   });
 
   it('stops claiming after stop()', async () => {

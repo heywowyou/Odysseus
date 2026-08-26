@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ZodError } from 'zod';
 import type { Finding } from '@odysseus/core';
 import { mergeAnalysisPasses } from './merge.js';
 import type { StructureDocument } from './structure-schema.js';
@@ -125,5 +126,17 @@ describe('mergeAnalysisPasses', () => {
     expect(() => mergeAnalysisPasses(buildStructureDoc(), writingOutput, filteredFindings, 'en')).toThrow(
       /merge invariant violated/,
     );
+  });
+
+  it('throws a ZodError when the merged shape violates the locked llmOutputSchema, even though each pass\'s own input was otherwise valid', () => {
+    const structureDoc = buildStructureDoc();
+    // themeSchema requires findingIds to be non-empty; an otherwise-valid
+    // structure/writing pair with an empty array here is exactly the shape
+    // llmOutputSchema.parse(merged) exists to catch before it reaches a
+    // report - not something findThemeKeyMismatches or the earlier merge
+    // logic would reject on its own.
+    structureDoc.themes[0]!.findingIds = [];
+
+    expect(() => mergeAnalysisPasses(structureDoc, buildWritingOutput(), filteredFindings, 'en')).toThrow(ZodError);
   });
 });

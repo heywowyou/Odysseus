@@ -41,6 +41,7 @@ import { joinSireneStockEntry } from '../../prospecting/sirene-stock-join.js';
 import { fetchMentionsLegalesData } from '../../prospecting/mentions-legales-fetch.js';
 import { extractContactAddress } from '../../prospecting/extract-contact-address.js';
 import type { PipelineContext } from '../job-queue.js';
+import { logger } from '../../logger.js';
 
 const CHECKPOINT_ID = 'afnic-fichier-a';
 
@@ -72,8 +73,9 @@ export async function runProspectIngestionJob(job: JobDocument, ctx: PipelineCon
   const checkpointIsForCurrentFile =
     checkpoint?.sourceFilePath === afnicPath && checkpoint.sourceFileVersion === currentAfnicVersion;
   if (checkpoint && !checkpointIsForCurrentFile) {
-    console.warn(
-      `odysseus: AFNIC file at ${afnicPath} changed since the last checkpoint (was ${checkpoint.sourceFileVersion}, now ${currentAfnicVersion}) - resuming from byte 0`,
+    logger.warn(
+      { afnicPath, previousVersion: checkpoint.sourceFileVersion, currentVersion: currentAfnicVersion },
+      'AFNIC file changed since the last checkpoint, resuming from byte 0',
     );
   }
   const startByteOffset = checkpointIsForCurrentFile ? checkpoint.nextByteOffset : 0;
@@ -195,20 +197,23 @@ export async function runProspectIngestionJob(job: JobDocument, ctx: PipelineCon
       };
     }
 
-    await updateJobProgress(connection, job.jobId, {
-      progress: {
-        ingestion: {
-          afnicRowsScanned: afnicResult.rowsScanned,
-          candidatesFiltered: afnicResult.candidates.length,
-          candidatesFetched: fetchedCount,
-          candidatesQualified: qualifiedCount,
-          target: batchSize,
-        },
-      },
-      ingestionResults,
-    });
-
+    // Full-array $set on every candidate is O(n^2) write volume over a
+    // batch - throttle to the same interval already used for checkpoint
+    // persistence below, and rely on completeJob's own final write (after
+    // the loop) for exact end state.
     if ((i + 1) % PROSPECT_CHECKPOINT_WRITE_INTERVAL === 0) {
+      await updateJobProgress(connection, job.jobId, {
+        progress: {
+          ingestion: {
+            afnicRowsScanned: afnicResult.rowsScanned,
+            candidatesFiltered: afnicResult.candidates.length,
+            candidatesFetched: fetchedCount,
+            candidatesQualified: qualifiedCount,
+            target: batchSize,
+          },
+        },
+        ingestionResults,
+      });
       await persistCheckpoint();
     }
   }

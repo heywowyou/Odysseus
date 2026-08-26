@@ -162,4 +162,14 @@ describe('runProspectIngestionJob', () => {
     const lastCall = vi.mocked(upsertCheckpoint).mock.calls.at(-1)!;
     expect(lastCall[2].nextByteOffset).toBeGreaterThan(0);
   });
+
+  it('does not write per-candidate progress for a batch smaller than the write interval', async () => {
+    await runProspectIngestionJob(fakeJob(), ctx);
+
+    // Only the two phase-transition writes before the loop starts (afnic-scan,
+    // fetch-qualify) - the fixture's 2-candidate batch never reaches the
+    // PROSPECT_CHECKPOINT_WRITE_INTERVAL threshold, so no per-candidate write
+    // fires. The exact final state is still guaranteed by completeJob.
+    expect(vi.mocked(updateJobProgress).mock.calls.length).toBe(2);
+  });
 });

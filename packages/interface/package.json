@@ -17,10 +17,11 @@
   },
   "dependencies": {
     "@odysseus/core": "workspace:*",
-    "@odysseus/scanner": "workspace:*",
-    "@odysseus/store": "workspace:*",
     "@odysseus/llm": "workspace:*",
     "@odysseus/report": "workspace:*",
-    "csv-parse": "^5.6.0"
+    "@odysseus/scanner": "workspace:*",
+    "@odysseus/store": "workspace:*",
+    "csv-parse": "^5.6.0",
+    "pino": "^10.3.1"
   }
 }

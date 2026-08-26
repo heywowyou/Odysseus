@@ -21,7 +21,7 @@ import {
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { StoredAnalysis } from '@odysseus/report';
 import type { Router } from '../router.js';
-import { readJsonBody, sendError, sendJson } from '../http-utils.js';
+import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { runAllReportsStage } from '../pipeline/report-stage.js';
 
@@ -140,7 +140,11 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     let body: unknown;
     try {
       body = await readJsonBody(req);
-    } catch {
+    } catch (error) {
+      if (error instanceof PayloadTooLargeError) {
+        sendError(res, 413, 'request body is too large');
+        return;
+      }
       sendError(res, 400, 'request body must be valid JSON');
       return;
     }
@@ -182,7 +186,11 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     let body: unknown;
     try {
       body = await readJsonBody(req);
-    } catch {
+    } catch (error) {
+      if (error instanceof PayloadTooLargeError) {
+        sendError(res, 413, 'request body is too large');
+        return;
+      }
       sendError(res, 400, 'request body must be valid JSON');
       return;
     }

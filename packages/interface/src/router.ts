@@ -6,6 +6,46 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { sendError } from './http-utils.js';
+
+const STATE_CHANGING_METHODS = new Set(['POST', 'PATCH']);
+
+/** The dashboard binds to 127.0.0.1 by design, which stops a remote
+ *  attacker but not a malicious page open in the same browser while
+ *  odysseus serve is running - a CORS "simple request" (Content-Type:
+ *  text/plain, no preflight) can otherwise deliver a JSON-shaped body to
+ *  a state-changing endpoint with no confirmation shown to the operator.
+ *  Rejecting anything but an exact application/json body, plus any Origin
+ *  that doesn't match what the client actually connected to, closes that
+ *  without requiring the browser's CORS preflight at all. Absent Origin is
+ *  allowed - non-browser local tools (curl, the CLI) don't always send
+ *  one, and same-origin navigation reliably does when it matters. */
+function isAcceptableOrigin(req: IncomingMessage): boolean {
+  const origin = req.headers.origin;
+  if (origin === undefined) return true;
+  const host = req.headers.host;
+  if (host === undefined) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
+function hasJsonContentType(req: IncomingMessage): boolean {
+  const contentType = req.headers['content-type'];
+  if (contentType === undefined) return false;
+  return contentType.split(';')[0]?.trim().toLowerCase() === 'application/json';
+}
+
+/** Some state-changing routes (e.g. POST regenerate-report) take no body
+ *  at all and so never send a Content-Type - only routes that actually
+ *  read one via readJsonBody need to be held to application/json. */
+function hasBody(req: IncomingMessage): boolean {
+  const length = req.headers['content-length'];
+  if (length !== undefined) return Number.parseInt(length, 10) > 0;
+  return req.headers['transfer-encoding'] !== undefined;
+}
 
 export interface RouteContext {
   req: IncomingMessage;
@@ -74,6 +114,16 @@ export class Router {
       if (route.method !== method) continue;
       const params = matchSegments(route.segments, pathSegments);
       if (params) {
+        if (STATE_CHANGING_METHODS.has(method)) {
+          if (!isAcceptableOrigin(req)) {
+            sendError(res, 403, 'Origin not allowed');
+            return;
+          }
+          if (hasBody(req) && !hasJsonContentType(req)) {
+            sendError(res, 415, 'Content-Type must be application/json');
+            return;
+          }
+        }
         await route.handler({ req, res, params, query: url.searchParams });
         return;
       }

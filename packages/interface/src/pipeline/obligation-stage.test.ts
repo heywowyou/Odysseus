@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../sirene/sirene-cache.js', () => ({ lookupOperatorProfile: vi.fn() }));
+vi.mock('../logger.js', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
+import { logger } from '../logger.js';
 import { runObligationStage } from './obligation-stage.js';
 import type { AuditManifest, OperatorProfile } from '@odysseus/core';
 
@@ -269,8 +271,6 @@ describe('runObligationStage with a manual hasTransactionalFlow override', () =>
     const manifest = fakeManifest({
       siteSignals: { siren: '732829320', hasTransactionalFlow: false, transactionalFlowEvidence: [] },
     });
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
     const result = await runObligationStage(manifest, fakeConnection, undefined, {
       hasTransactionalFlow: { value: true, reason: 'redirects to a dedicated booking engine' },
     });
@@ -282,8 +282,7 @@ describe('runObligationStage with a manual hasTransactionalFlow override', () =>
       reason: 'redirects to a dedicated booking engine',
       detectedValue: false,
     });
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
+    expect(logger.warn).toHaveBeenCalled();
   });
 
   it('never lets the override set status directly - it still runs through assessObligations via siteSignals', async () => {
