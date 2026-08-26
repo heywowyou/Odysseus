@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAudit } from './normalize.js';
+import { normalizeAudit, type NormalizeAuditInput } from './normalize.js';
 import {
   buildAxeNode,
   buildAxeResultsInput,
@@ -238,5 +238,179 @@ describe('normalizeAudit', () => {
       });
       expect(findings.map((f) => f.ruleId)).toContain('robots-disallow-broad');
     });
+  });
+});
+
+/**
+ * B2 (2026-08-24 three-site review). A real Haaitza audit reported the
+ * same missing gallery link text five times, once per language variant of
+ * one page; 182 of its 265 link-name findings had exactly that shape.
+ */
+describe('B2: language-variant collapsing', () => {
+  const gallery = [
+    'https://haaitza.com/galerie-hotel-de-luxe-pyla',
+    'https://haaitza.com/en/photo-gallery-hotels-spa-gironde',
+    'https://haaitza.com/es/galera',
+  ];
+
+  const clusters = [
+    {
+      canonicalPageUrl: gallery[0]!,
+      members: [
+        { pageUrl: gallery[0]!, lang: 'fr' },
+        { pageUrl: gallery[1]!, lang: 'en' },
+        { pageUrl: gallery[2]!, lang: 'es' },
+      ],
+    },
+  ];
+
+  /** One defect in a shared template: the same rule, a per-instance
+   *  selector, once per language. Exactly the real shape. */
+  const pages = gallery.map((url, index) => ({
+    url,
+    axe: {
+      testEngine: { name: 'axe-core', version: '4.12.1' },
+      violations: [
+        {
+          id: 'link-name',
+          impact: 'serious',
+          tags: ['wcag2a', 'wcag244', 'wcag412'],
+          help: 'Links must have discernible text',
+          description: 'Links must have discernible text',
+          helpUrl: 'https://dequeuniversity.com/rules/axe/4.12/link-name',
+          nodes: [{ target: [`a[data-slide="21${index}0_23"]`], html: '<a></a>', failureSummary: '' }],
+        },
+      ],
+    },
+  })) as unknown as NormalizeAuditInput['pages'];
+
+  const args = { auditId: 'a1', startedAt: new Date('2026-08-24T00:00:00Z'), pages };
+
+  it('reports one finding per language without clusters', () => {
+    expect(normalizeAudit(args).filter((f) => f.ruleId === 'link-name')).toHaveLength(3);
+  });
+
+  it('collapses them into one finding when the site declares them as translations', () => {
+    const findings = normalizeAudit({ ...args, translationClusters: clusters }).filter(
+      (f) => f.ruleId === 'link-name',
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.occurrences).toBe(3);
+  });
+
+  it('still records every real page URL on the collapsed finding', () => {
+    const [finding] = normalizeAudit({ ...args, translationClusters: clusters }).filter(
+      (f) => f.ruleId === 'link-name',
+    );
+    expect([...finding!.pageUrls].sort()).toEqual([...gallery].sort());
+  });
+
+  it('is a no-op on a monolingual site, where every page is its own cluster', () => {
+    const singletons = gallery.map((url) => ({ canonicalPageUrl: url, members: [{ pageUrl: url }] }));
+    expect(normalizeAudit({ ...args, translationClusters: singletons })).toEqual(normalizeAudit(args));
+  });
+});
+
+/**
+ * Regression cover for a defect the per-function tests could not see
+ * (2026-08-24, lagnonu.fr). `detectMissingHreflang` fires only when no
+ * page declares hreflang, but `normalizeAudit` used to hand
+ * `extractHreflangCandidates` only those pages that already had hreflang,
+ * and skipped the call entirely when there were none - so the emitter was
+ * unreachable through the pipeline while its own unit tests, which call it
+ * directly, passed. A real trilingual 65-page site with zero hreflang
+ * produced no finding. These assertions go through `normalizeAudit` for
+ * that reason; do not rewrite them against `extractHreflangCandidates`.
+ */
+describe('normalizeAudit hreflang wiring', () => {
+  function pageWithHreflang(url: string, hreflangLinks: Array<{ lang: string; href: string }>) {
+    return buildNormalizePageInput({
+      url,
+      headMetadata: {
+        pageUrl: url,
+        title: null,
+        metaDescription: null,
+        canonicalUrls: [],
+        openGraphTags: {},
+        jsonLdBlocks: [],
+        headings: [],
+        hreflangLinks,
+        robotsMeta: null,
+      },
+    });
+  }
+
+  it('emits hreflang-missing when a multilingual site declares no hreflang anywhere', () => {
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        pageWithHreflang('https://example.com/fr/accueil', []),
+        pageWithHreflang('https://example.com/en/home', []),
+        pageWithHreflang('https://example.com/es/bienvenida', []),
+      ],
+    });
+    const missing = findings.filter((f) => f.ruleId === 'hreflang-missing');
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.description).toContain('en, es, fr');
+  });
+
+  it('attributes the site-level finding to the crawl start URL, not the first page reached', () => {
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        pageWithHreflang('https://example.com/en/activities', []),
+        pageWithHreflang('https://example.com/fr/accueil', []),
+      ],
+      crawl: { startUrl: 'https://example.com/', pages: [] },
+    });
+    const missing = findings.filter((f) => f.ruleId === 'hreflang-missing');
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.pageUrls).toEqual(['https://example.com/']);
+  });
+
+  it('stays silent on a monolingual site with no hreflang', () => {
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        pageWithHreflang('https://example.com/', []),
+        pageWithHreflang('https://example.com/tarifs', []),
+      ],
+    });
+    expect(findings.filter((f) => f.ruleId === 'hreflang-missing')).toHaveLength(0);
+  });
+
+  it('stays silent when the site does declare hreflang', () => {
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        pageWithHreflang('https://example.com/fr/accueil', [
+          { lang: 'fr', href: 'https://example.com/fr/accueil' },
+          { lang: 'en', href: 'https://example.com/en/home' },
+        ]),
+        pageWithHreflang('https://example.com/en/home', [
+          { lang: 'fr', href: 'https://example.com/fr/accueil' },
+          { lang: 'en', href: 'https://example.com/en/home' },
+        ]),
+      ],
+    });
+    expect(findings.filter((f) => f.ruleId === 'hreflang-missing')).toHaveLength(0);
+  });
+
+  it('reports a crawled target that does not link back, rather than treating it as out of scope', () => {
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        pageWithHreflang('https://example.com/fr/accueil', [
+          { lang: 'en', href: 'https://example.com/en/home' },
+        ]),
+        pageWithHreflang('https://example.com/en/home', []),
+      ],
+    });
+    expect(findings.filter((f) => f.ruleId === 'hreflang-no-return-link')).toHaveLength(1);
   });
 });

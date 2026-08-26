@@ -1,0 +1,74 @@
+{
+  "$comment": [
+    "The stored audits the test suite reads as fixtures, and why each one is here.",
+    "",
+    "This file exists because of a real failure on 2026-08-25: these directories live",
+    "under the gitignored artifacts/ tree, nothing re-derived them when normalization",
+    "changed, and nothing detected that they had gone stale. The sas-fernande fixture",
+    "was still reporting 78 findings months after collapses that took it to 42, so a",
+    "green suite meant nothing for the code those tests claimed to cover.",
+    "",
+    "Two things follow from listing them here. scripts/refresh-fixtures.mjs re-derives",
+    "exactly this set with one command, and fixture-freshness.test.ts fails the build",
+    "when any of them predates the current normalization code. Adding a new fixture",
+    "directory to a test means adding it here as well, or the freshness guard will not",
+    "know it exists.",
+    "",
+    "Keep this list curated, not accumulated. A second timestamp for a site already",
+    "listed needs a reason of its own written into its 'purpose'."
+  ],
+  "audits": [
+    {
+      "dir": "artifacts/sas-fernande.fr/2026-08-02T17-31-56Z",
+      "purpose": "Primary small-site fixture: 11 pages, a full severity spread, and a legal page whose findings are diverted. Drives build-input, statistics, observations, the PDF text-integrity check and the report axe audit."
+    },
+    {
+      "dir": "artifacts/sas-fernande.fr/2026-08-02T22-39-42Z",
+      "purpose": "Second sas-fernande scan of the same site, kept for the render-diff evidence path."
+    },
+    {
+      "dir": "artifacts/sas-fernande.fr/2026-08-16T00-00-02Z",
+      "purpose": "Post-milestone-8.5 sas-fernande scan: the only sas-fernande fixture carrying geo findings and reference-stat citations."
+    },
+    {
+      "dir": "artifacts/haaitza.com/2026-08-06T20-30-06Z",
+      "purpose": "Primary multi-page fixture: 20 pages, a site-wide WCAG failure, a high-occurrence single-page finding, and third-party vendor attribution. Drives structure-ranking, diversion, dominant-metric and computeStatistics."
+    },
+    {
+      "dir": "artifacts/haaitza.com/2026-08-08T11-07-43Z",
+      "purpose": "Carries the stored analysis whose real model output the severity-vocabulary guard was written against."
+    },
+    {
+      "dir": "artifacts/haaitza.com/2026-08-22T22-07-44Z",
+      "purpose": "Post-milestone-8.6 haaitza scan: security headers, CrUX field data, structured-data validation, and the rule-translation coverage check."
+    },
+    {
+      "dir": "artifacts/lacoorniche.com/2026-08-19T00-54-32Z",
+      "purpose": "The scan behind report-feedback-la-corniche: two very large rule families the model ranked 8th and 9th, which is what occurrence weighting exists to correct."
+    },
+    {
+      "dir": "artifacts/lacoorniche.com/2026-08-19T11-15-01Z",
+      "purpose": "Follow-up La Corniche scan used by the appendix page-union counts."
+    },
+    {
+      "dir": "artifacts/www.lacoorniche.com/2026-08-22T22-07-45Z",
+      "purpose": "Largest fixture by finding count. The stress case for annex pagination and Paged.js fragmentation."
+    },
+    {
+      "dir": "artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-17T14-13-52Z",
+      "purpose": "Monolingual French site: proves translation clustering is a no-op where a site declares no hreflang."
+    },
+    {
+      "dir": "artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-22T16-31-02Z",
+      "purpose": "Re-scan carrying the cookie-consent true negative from milestone 8.6: a real consent platform, zero trackers before consent."
+    },
+    {
+      "dir": "artifacts/www.lagnonu.fr/2026-08-24T16-45-59Z",
+      "purpose": "Pre-fix Domaine Lagnonu scan, kept as the render-diff networkidle regression case (trade-off 31's P0)."
+    },
+    {
+      "dir": "artifacts/www.lagnonu.fr/2026-08-24T23-03-25Z",
+      "purpose": "Current Domaine Lagnonu scan: trilingual, 43 pages, the reference for translation clustering and template-shape collapse."
+    }
+  ]
+}

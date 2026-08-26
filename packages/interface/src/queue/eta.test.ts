@@ -1,7 +1,18 @@
+import { UNLIMITED_MAX_PAGES } from '@odysseus/scanner';
 import { describe, expect, it } from 'vitest';
 import { computeCrawlEtaMs, computeScanEtaMs } from './eta.js';
 
 describe('computeCrawlEtaMs', () => {
+  // 2026-08-24: MAX_PAGES has no default limit any more, so the target the
+  // formula subtracts from can be the UNLIMITED_MAX_PAGES sentinel. Without
+  // this guard the dashboard rendered a countdown of roughly 285 million
+  // years instead of simply omitting the estimate.
+  it('returns undefined when the crawl is uncapped', () => {
+    expect(
+      computeCrawlEtaMs({ visited: 12, maxPages: UNLIMITED_MAX_PAGES, effectiveDelayMs: 1000 }),
+    ).toBeUndefined();
+  });
+
   it('multiplies remaining pages by the effective delay', () => {
     expect(computeCrawlEtaMs({ visited: 3, maxPages: 10, effectiveDelayMs: 1000 })).toBe(7000);
   });

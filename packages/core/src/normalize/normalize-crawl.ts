@@ -37,6 +37,9 @@ const BROAD_DISALLOW_MIN_MATCHED_PAGES = 3;
 
 export type CrawlPageStatus =
   | 'visited'
+  /** Crawled for links, never scanned; see ManifestPageStatus. Carries no
+   *  findings, but is still a discovered URL for robots-pattern tallies. */
+  | 'discovered-not-scanned'
   | 'skipped-robots'
   | 'skipped-non-html'
   | 'skipped-external-redirect'

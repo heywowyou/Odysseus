@@ -36,28 +36,39 @@ function loadSasFernandeManifest(): AuditManifest {
   return JSON.parse(readFileSync(manifestPath, 'utf-8')) as AuditManifest;
 }
 
+/** 2026-08-25: these used to pin the fixture's absolute counts (78 findings,
+ *  61 of them minor). That is the wrong thing to assert here. The fixture is
+ *  re-derivable at any time with `normalize <dir>`, and every dedupe or
+ *  collapse change legitimately moves those numbers - re-normalizing it this
+ *  session moved 78 to 42, and the suite had been green only because the
+ *  fixture predated collapses that shipped weeks earlier. What this filter
+ *  actually promises is "drop exactly the minor findings and nothing else",
+ *  so that is what is asserted, against whatever the fixture currently holds.
+ *  Absolute counts still belong in statistics.test.ts, where the number
+ *  itself is the thing under test. */
 describe('filterFindingsForLlm', () => {
-  it('drops the 61 minor findings out of 78 on the real sas-fernande scan', () => {
+  it('drops exactly the minor findings on the real sas-fernande scan', () => {
     const findings = loadSasFernandeFindings();
-    expect(findings).toHaveLength(78);
+    const minorCount = findings.filter((f) => f.severity === 'minor').length;
+    expect(minorCount).toBeGreaterThan(0);
 
     const filtered = filterFindingsForLlm(findings);
 
-    expect(filtered).toHaveLength(17);
+    expect(filtered).toHaveLength(findings.length - minorCount);
     expect(filtered.every((f) => f.severity !== 'minor')).toBe(true);
   });
 
-  it('keeps critical, serious, and moderate findings', () => {
+  it('keeps every critical, serious, and moderate finding, changing none of them', () => {
     const findings = loadSasFernandeFindings();
     const filtered = filterFindingsForLlm(findings);
 
-    const bySeverity = { critical: 0, serious: 0, moderate: 0 };
-    for (const f of filtered) {
-      if (f.severity === 'critical' || f.severity === 'serious' || f.severity === 'moderate') {
-        bySeverity[f.severity]++;
-      }
+    const count = (severity: string, list: readonly Finding[]): number =>
+      list.filter((f) => f.severity === severity).length;
+
+    for (const severity of ['critical', 'serious', 'moderate'] as const) {
+      expect(count(severity, filtered)).toBe(count(severity, findings));
+      expect(count(severity, filtered)).toBeGreaterThan(0);
     }
-    expect(bySeverity).toEqual({ critical: 7, serious: 8, moderate: 2 });
   });
 });
 
@@ -204,14 +215,25 @@ describe('computeSiteStats', () => {
   it('computes the full severity breakdown from unfiltered findings on the real sas-fernande scan', () => {
     const stats = computeSiteStats(loadSasFernandeFindings(), loadSasFernandeManifest());
 
-    expect(stats).toEqual({
-      pagesScanned: 11,
-      totalFindings: 78,
-      critical: 7,
-      serious: 8,
-      moderate: 2,
-      minor: 61,
-    });
+    // Derived from the fixture rather than pinned to a snapshot of it, for
+    // the reason given above filterFindingsForLlm: the severity mix moves
+    // whenever dedupe or a collapse changes, and re-pinning it each time
+    // tests nothing. What must hold is that the breakdown is computed from
+    // the UNFILTERED findings (the minor ones are the whole point of this
+    // function existing separately from filterFindingsForLlm) and that it
+    // accounts for every one of them. pagesScanned is a property of the scan,
+    // not of normalization, so it stays a literal.
+    const findings = loadSasFernandeFindings();
+    const count = (severity: string): number => findings.filter((f) => f.severity === severity).length;
+
+    expect(stats.pagesScanned).toBe(11);
+    expect(stats.totalFindings).toBe(findings.length);
+    expect(stats.critical).toBe(count('critical'));
+    expect(stats.serious).toBe(count('serious'));
+    expect(stats.moderate).toBe(count('moderate'));
+    expect(stats.minor).toBe(count('minor'));
+    expect(stats.minor).toBeGreaterThan(0);
+    expect(stats.critical + stats.serious + stats.moderate + stats.minor).toBe(stats.totalFindings);
   });
 });
 

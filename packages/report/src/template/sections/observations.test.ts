@@ -15,8 +15,16 @@ describe('renderObservations against the real sas-fernande.fr scan', () => {
     const html = renderObservations(getStrings('fr'), 6, diverted);
 
     expect(html).toContain('Pages légales exclues de l&#39;indexation');
-    // All 5 findings confined entirely to /mentions-legales/.
-    expect(html).toContain('f009, f012, f027, f042, f060');
+    // Every finding confined entirely to /mentions-legales/, named by id.
+    // Read off the same partition the section renders from rather than
+    // hardcoded: finding ids are reassigned densely on every normalization,
+    // so a literal list silently repoints at different findings.
+    const expectedIds = diverted
+      .map((d) => d.finding)
+      .filter((f) => f.pageUrls.every((url) => url.includes('/mentions-legales/')))
+      .map((f) => f.findingId);
+    expect(expectedIds.length).toBeGreaterThan(1);
+    expect(html).toContain(expectedIds.join(', '));
     // sas-fernande has no wrapper pages (render diff 0% everywhere).
     expect(html).not.toContain('Pages d&#39;intégration');
   });

@@ -62,8 +62,36 @@ function candidate(
     title,
     description,
     pageUrl,
-    element: { pageUrl, selector: image.selector, snippet: image.alt ?? '' },
-    rawEvidenceForPage: { reason, alt: image.alt, src: image.src },
+    element: {
+      pageUrl,
+      selector: image.selector,
+      snippet: image.alt ?? '',
+      // The image file itself, so a per-occurrence row names something a
+      // developer can open. Absent rather than empty when the scanner had
+      // no usable src (a data: URI, or an <img> with none at all).
+      ...(image.src === '' ? {} : { resourceUrl: image.src }),
+    },
+    // 2026-08-25 Lagnonu review, D4a. This heuristic produced 95 findings
+    // and 12 of a 51-page report, one row per image, for a check the report
+    // itself presents as a signal to verify rather than a conformity
+    // failure. A defect about an image belongs to the image file, not to
+    // where it happens to sit in a page: the selector identity split the
+    // same logo across 55 pages, and half of these images sit under a
+    // slider whose wrapper id is generated at runtime, so those rows also
+    // keyed differently on every scan (trade-off 30's unstable-id problem,
+    // which additionally breaks cross-run identity for the monitoring tier).
+    //
+    // Keyed on the reason rather than collapsed rule-wide, because the
+    // reasons are different instructions: "write alt text for this image"
+    // and "these images share one alt text" are not one action over a set of
+    // files, and trade-off 30 is explicit that collapsing independent
+    // problems hides findings. Two findings on the review site, not one and
+    // not ninety five.
+    dedupeIdentity: reason,
+    // The image file, carried the same way Lighthouse resource findings
+    // carry theirs, so the annex names the files instead of printing a
+    // positional selector no developer can act on.
+    rawEvidenceForPage: { reason, alt: image.alt, src: image.src, resourceUrl: image.src },
   };
 }
 

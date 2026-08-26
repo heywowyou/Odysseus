@@ -24,7 +24,7 @@ export const STRUCTURE_OUTPUT_JSON_SCHEMA = {
           findingIds: { type: 'array', items: { type: 'string' } },
           category: {
             type: 'string',
-            enum: ['accessibility', 'seo', 'performance', 'rendering'],
+            enum: ['accessibility', 'seo', 'performance', 'rendering', 'privacy'],
           },
           effort: { type: 'string', enum: ['low', 'medium', 'high'] },
           impact: { type: 'string', enum: ['low', 'medium', 'high'] },

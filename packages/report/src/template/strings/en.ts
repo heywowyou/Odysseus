@@ -22,7 +22,7 @@ export const en: ReportStrings = {
     consequenceRegulatory: 'A regulatory exposure already documented (see the "Legal exposure" section).',
     consequenceVisibility: 'Reduced visibility in search results and AI assistants.',
     notALegalOpinionNote:
-      'What this report is not: legal advice (see the "Legal exposure" section); an automated audit covering roughly 30 to 40 percent of accessibility criteria (see "Methodology and limits").',
+      'What this report is not: legal advice (see the "Legal exposure" section); an exhaustive audit, since automated detection covers roughly 30 to 40 percent of accessibility criteria (see "Methodology and limits").',
     nextActionsHeading: 'Your three next actions',
     nextActionItemTemplate: '{title}, pass on to: {contact} (effort: {effort}).',
     contactAgency: 'your agency',
@@ -41,7 +41,9 @@ export const en: ReportStrings = {
       "This figure excludes {count} further occurrences from a heuristic signal on alt-text quality, which is not a deterministic conformance test (see the \"Signals to verify\" section).",
     criticalDriverNoteTemplate: 'These critical findings come only from: {rules}.',
     thirdPartyOccurrencesNoteTemplate:
-      '{percent}% of these occurrences come from third-party components (forms, popups, booking widget) - see the "To address with your third-party providers" section.',
+      // B6: see the French entry for why this names the containing
+      // numbered section rather than the sub-heading alone.
+      '{percent}% of these occurrences come from third-party components (forms, popups, booking widget) - see "To address with your third-party providers", in the technical appendix.',
     pagesWithCriticalTileLabel: 'pages with at least one critical finding',
     criticalTileLabel: 'critical',
     seriousTileLabel: 'serious',
@@ -64,7 +66,7 @@ export const en: ReportStrings = {
     bodyIntro:
       'A failing criterion is a conformance gap, not an aesthetic preference. This page can be handed directly to a developer, an agency, or legal counsel.',
     scopeNote:
-      'This list of technical criteria does not, on its own, imply a conclusion about this site\'s legal obligation: it is technical, not legal, and does not contradict the obligation status established in section 2.',
+      'This list of technical criteria does not, on its own, imply a conclusion about this site\'s legal obligation: it is technical, not legal, and does not contradict the obligation status established in the "{section}" section.',
     criterionColumnLabel: 'Criterion',
     criterionNameColumnLabel: 'Name',
     findingsColumnLabel: 'Findings',
@@ -86,6 +88,23 @@ export const en: ReportStrings = {
     legalTitle: 'Legal pages excluded from indexing',
     legalBodyTemplate:
       "These pages (terms and conditions, cookie policy, privacy policy, or similar) are of a kind usually excluded from indexing (noindex). This is a common and often deliberate setup for this kind of page: no corrective action is recommended by default, just confirm the choice is intentional and that a noindex directive is actually in place. Findings involved: {findingIds}.",
+  },
+  remainingWork: {
+    eyebrow: 'Still to address',
+    heading: 'The remaining findings, grouped by theme',
+    introTemplate:
+      'The ranked priorities in section {prioritiesSection} cover what to fix first. The remaining {count} findings are grouped below by area and by rule, each with the corresponding action. Every line points back to the finding numbers in the annex.',
+    nothingRemaining:
+      'Every finding in this audit is covered by the ranked priorities. This section has nothing to add.',
+    findingSingular: 'finding',
+    findingPlural: 'findings',
+    occurrenceSingular: 'occurrence',
+    occurrencePlural: 'occurrences',
+    pageSingular: 'page',
+    pagePlural: 'pages',
+    findingRefsTemplate: 'Findings: {findingIds}',
+    scopeNote:
+      'The actions given describe the correction the detected rule calls for. They do not replace the judgment of whoever will work on the site.',
   },
   cover: {
     kicker: 'Odysseus · Digital audit',
@@ -123,10 +142,11 @@ export const en: ReportStrings = {
       'This site has few significant SEO and GEO findings relative to accessibility: most of the priorities below concern accessibility.',
     jumpLinkLabelTemplate: 'See priority {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
-      'Priority 1 above is a commercial issue, not a legal conformance issue: it was ranked first based on its effort-to-impact ratio. The legal conformance priorities rank at position {legalRank}.',
+      'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its effort-to-impact ratio. The priorities tied to an accessibility criterion rank at position {legalRank}. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section.',
     topPriorityIsNotLegalNoPointer:
-      "Priority 1 above is a commercial issue, not a legal conformance issue: it was ranked first based on its effort-to-impact ratio. None of the priorities in this report are directly tied to legal conformance; see the \"Legal exposure\" section for the detail.",
-    summaryCountsTemplate: 'The audit identified {actionable} priority findings ({critical} critical and {serious} serious) out of {total} findings in total.',
+      'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its effort-to-impact ratio. None of the priorities in this report are tied to an accessibility criterion. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section for the detail.',
+    summaryCountsTemplate: 'The audit identified {total} findings in total, including {actionable} that are critical or serious ({critical} critical and {serious} serious).',
+    coveredByPrioritiesTemplate: '{covered} of these are covered by the priorities below; the rest are listed by severity in "{remainingSection}".',
   },
   legalExposure: {
     eyebrow: 'Legal exposure',
@@ -164,6 +184,12 @@ export const en: ReportStrings = {
     registrySnapshotTemplate:
       'Sirene registry data: {denomination}, SIREN {siren}, {effectifs}, retrieved on {date} ({source}).',
     registrySnapshotEffectifsUnavailable: 'headcount band unavailable',
+    lcenKicker: 'Another applicable obligation',
+    lcenObserved:
+      'The scan found no SIREN, RCS or VAT number published on the pages of this site it visited.',
+    lcenSourceTemplate: 'Source: {citation}. Competent authority: {authority}.',
+    lcenScanLimitNote:
+      'A scan visits a limited number of pages and can miss one where this information appears. This obligation does not depend on the outcome of the accessibility analysis above. Have your situation confirmed by a legal adviser.',
     registrySnapshotVerbatimNote:
       "This denomination is reproduced exactly as it appears in the Sirene registry, associated with the SIREN above, not derived from the domain name.",
     transactionalFlowConflictTemplate:
@@ -209,8 +235,8 @@ export const en: ReportStrings = {
     conformityNonConformant: 'Non-conformant',
     legalTagLabel: 'Conformance requirement',
     impactCitationLabel: 'Reference data point',
-    measuredLcpGapTemplate:
-      'Measured gap on this site: median LCP at {value}s, {gap}s above the "good" threshold ({threshold}s).',
+    measuredCoreWebVitalGapTemplate:
+      'Measured gap on this site: median {metric} at {value}, {gap} above the "good" threshold ({threshold}).',
     revenueImpactTemplate:
       'Based on your reported turnover ({turnover} EUR), and if this association held for your business, the order of magnitude would be up to {impact} EUR per year. This is an indicative estimate based on a single study, not a guaranteed forecast.',
     quickWinBadgeLabel: 'Quick win',
@@ -219,8 +245,10 @@ export const en: ReportStrings = {
     pagesOfTotalTemplate: '{pages} {pageWord} of {totalPages}',
     refsLabel: 'Findings',
     ownershipSplitTemplate:
-      '{firstPartyPages} {firstPartyPageWord} belong to your site (your agency can fix these), {thirdPartyPages} {thirdPartyPageWord} belong to {vendor} (pass on to its provider).',
+      'This priority covers {firstPartyPages} {firstPartyPageWord} on your own site (your agency can fix these) and {thirdPartyPages} {thirdPartyPageWord} belonging to {vendor} (pass on to its provider); a page can fall into both.',
     ownershipSplitUnknownVendorLabel: 'a third-party component',
+    thirdPartyOnlyTemplate: 'This priority is entirely inside {vendor}: it has to go through their provider, not your web agency.',
+    lcenCrossReferenceTemplate: 'This finding is part of the legal identification obligation detailed in "{legalSection}".',
   },
   renderDiffEvidence: {
     eyebrow: 'Render evidence',
@@ -467,7 +495,7 @@ export const en: ReportStrings = {
     postFixBody:
       'Once priorities are addressed, a targeted check confirms the fixed findings are genuinely resolved, without re-running a full audit.',
     authorshipTemplate: 'Report produced by {producer}, generated on {date} (build {version}), report ID {reportId}.',
-    issuerBlockTemplate: 'Signatory: {signatory}. SIRET: {siret}.',
+    issuerBlockTemplate: 'Signatory: {signatory}. SIRET: {registrationNumber}.',
     liabilityStatement:
       'This report reproduces technical findings detected by automated tools, together with explanations and prioritization. It does not constitute legal advice; see the "Legal exposure" section and the methodology for coverage limits. Odysseus cannot be held liable for decisions made on the sole basis of this document.',
   },
@@ -482,6 +510,7 @@ export const en: ReportStrings = {
       geo: 'AI answer engine visibility (GEO)',
       performance: 'Performance',
       rendering: 'Rendering',
+      privacy: 'Privacy and security',
     },
     geoEmergingLabel: 'Emerging research',
     thirdPartyHeading: 'To resolve with your third-party providers',
@@ -500,6 +529,11 @@ export const en: ReportStrings = {
     pagesColumnLabel: 'Pages',
     allPagesAnalyzedTemplate: 'All pages analysed ({count})',
     andNMoreTemplate: 'and {count} more',
+    andNMoreSingularTemplate: 'and {count} more',
+    affectedFilesCountTemplate: '{count} files affected',
+    affectedFilesCountSingularTemplate: '{count} file affected',
+    affectedFilesLabel: 'Files',
+    affectedFilesSampleLabel: 'Files (examples)',
     samePagesAsTemplate: 'Same pages as {findingId}',
     pagesMaxColumnLabel: 'Max pages',
     occurrencesColumnLabel: 'Occurrences',
@@ -512,13 +546,18 @@ export const en: ReportStrings = {
     pagePlural: 'pages',
     wcagLabel: 'WCAG',
     observationsCrossRefLabel: 'see Observations',
+    splitGroupThirdPartyNoteTemplate:
+      '{count} more occurrences of this rule affect a third-party component; see "{thirdPartyHeading}".',
     crawledPagesHeadingTemplate: 'Pages analyzed ({count})',
   },
   methodology: {
     eyebrow: 'Methodology and limitations',
     heading: 'How this audit was carried out',
+    languageCoverageTemplate: 'Languages covered by this analysis: {languages}.',
+    languageNotScannedTemplate:
+      'No page was analyzed for the following languages, although the site publishes them: {languages}.',
     toolingParagraphTemplate:
-      'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages analyzed on {date} starting from the homepage. A translated homepage at the root of a language prefix (for example /en/) is not counted as a distinct page: only pages with their own content are crawled.',
+      'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages analyzed on {date} starting from the homepage. A URL that merely leads to the homepage for a language (for example /en) is not counted as an analyzed page, because it carries no content of its own; the pages in that language are crawled normally.',
     automatedCoverageCaveat:
       'Automated tools detect a well-documented but limited share of accessibility issues, a commonly cited industry estimate placing that share between 30 and 40 percent of criteria (a general estimate with no single attributable source, unlike the figures cited elsewhere in this report). This is a property of any automated audit, not a reservation about this one: it guarantees every finding listed is verifiable. This audit adds an extended accessibility pass covering keyboard navigation, focus order, form error handling, video caption presence, and a heuristic red flag for alt text quality. This audit is fully automated: some accessibility properties cannot be reliably evaluated by automated tools alone and are not covered by any finding in this report.',
     extendedPassNoneFoundNote:

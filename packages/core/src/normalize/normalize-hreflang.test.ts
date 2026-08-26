@@ -75,3 +75,59 @@ describe('hreflang-no-return-link', () => {
     expect(candidates[0]?.pageUrl).toBe(EN_URL);
   });
 });
+
+describe('hreflang-missing', () => {
+  // B1.4 (2026-08-24): the real Domaine Lagnonu scan had 43 pages across
+  // /fr/, /en/ and /es/ URL paths and zero hreflang anywhere, and produced
+  // no finding because nothing emitted this rule id.
+  it('fires when a multilingual site publishes no hreflang at all', () => {
+    const candidates = extractHreflangCandidates([
+      { url: 'https://site.example/fr/accueil', hreflangLinks: [] },
+      { url: 'https://site.example/en/home', hreflangLinks: [] },
+      { url: 'https://site.example/es/inicio', hreflangLinks: [] },
+    ]);
+
+    const missing = candidates.filter((c) => c.ruleId === 'hreflang-missing');
+    expect(missing).toHaveLength(1);
+    expect(missing[0]!.category).toBe('seo');
+    expect(missing[0]!.description).toContain('en, es, fr');
+  });
+
+  it('does not fire on a monolingual site (the common case)', () => {
+    const candidates = extractHreflangCandidates([
+      { url: 'https://site.example/', hreflangLinks: [] },
+      { url: 'https://site.example/contact', hreflangLinks: [] },
+    ]);
+
+    expect(candidates.filter((c) => c.ruleId === 'hreflang-missing')).toHaveLength(0);
+  });
+
+  it('does not fire when only one language path prefix is present', () => {
+    const candidates = extractHreflangCandidates([
+      { url: 'https://site.example/fr/accueil', hreflangLinks: [] },
+      { url: 'https://site.example/fr/contact', hreflangLinks: [] },
+    ]);
+
+    expect(candidates.filter((c) => c.ruleId === 'hreflang-missing')).toHaveLength(0);
+  });
+
+  it('does not fire when the site publishes any hreflang, leaving reciprocity to the other check', () => {
+    const candidates = extractHreflangCandidates([
+      {
+        url: 'https://site.example/fr/accueil',
+        hreflangLinks: [{ lang: 'en', href: 'https://site.example/en/home' }],
+      },
+      { url: 'https://site.example/en/home', hreflangLinks: [] },
+    ]);
+
+    expect(candidates.filter((c) => c.ruleId === 'hreflang-missing')).toHaveLength(0);
+  });
+
+  it('emits exactly one site-level finding, not one per page', () => {
+    const pages = ['fr', 'en', 'es'].flatMap((lang) =>
+      [1, 2, 3].map((n) => ({ url: `https://site.example/${lang}/page-${n}`, hreflangLinks: [] })),
+    );
+
+    expect(extractHreflangCandidates(pages).filter((c) => c.ruleId === 'hreflang-missing')).toHaveLength(1);
+  });
+});

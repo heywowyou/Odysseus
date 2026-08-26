@@ -90,6 +90,7 @@ export function computeStatistics(findings: readonly Finding[], manifest: AuditM
     rendering: 0,
     performance: 0,
     geo: 0,
+    privacy: 0,
   };
 
   for (const finding of findings) {

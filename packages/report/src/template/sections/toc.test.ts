@@ -33,7 +33,7 @@ describe('renderToc', () => {
     // The page-number pseudo-element now lives on the anchor itself
     // (class="toc-row"), not on a separate sibling span that never
     // carried the href attr() reads from - see paged.css.
-    expect((html.match(/class="toc-row"/g) ?? []).length).toBe(15);
+    expect((html.match(/class="toc-row"/g) ?? []).length).toBe(16);
   });
 
   it('B8: drops the old "page numbers are in the footer" footnote', () => {
@@ -55,22 +55,34 @@ describe('renderToc', () => {
       expect(html).not.toContain('Observations');
     });
 
-    it('renumbers every section after the gap so the sequence stays contiguous 1..14', () => {
+    it('renumbers every section after the gap so the sequence stays contiguous 1..15', () => {
       const html = renderToc(getStrings('fr'), withoutObservations);
-      for (let i = 1; i <= 14; i++) {
+      for (let i = 1; i <= 15; i++) {
         expect(html).toContain(`class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">${i}</span>`);
       }
       expect(html).not.toContain(
-        'class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">15</span>',
+        'class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">16</span>',
       );
     });
 
-    it('the row after the gap (section-07) is now the 7th row, not the 8th', () => {
+    // Stated relative to the unsuppressed render rather than as a literal
+    // ordinal: adding a section ahead of section-07 changes the number without
+    // changing the property under test, which is that suppressing exactly one
+    // earlier section shifts everything after it up by exactly one.
+    it('the row after the gap (section-07) shifts up by exactly one', () => {
       const html = renderToc(getStrings('fr'), withoutObservations);
       const section07Index = html.indexOf('href="#section-07"');
       const rowStart = html.lastIndexOf('<div style="display:flex;align-items:baseline', section07Index);
       const row = html.slice(rowStart, section07Index);
-      expect(row).toContain('>7</span>');
+      const fullHtml = renderToc(getStrings('fr'), new Set(SECTION_IDS));
+      const fullIndex = fullHtml.indexOf('href="#section-07"');
+      const fullRow = fullHtml.slice(
+        fullHtml.lastIndexOf('<div style="display:flex;align-items:baseline', fullIndex),
+        fullIndex,
+      );
+      const ordinalIn = (rowHtml: string): number =>
+        Number(/flex:none">(\d+)<\/span>/.exec(rowHtml)?.[1] ?? '0');
+      expect(ordinalIn(row)).toBe(ordinalIn(fullRow) - 1);
     });
   });
 });

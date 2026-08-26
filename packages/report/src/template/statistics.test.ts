@@ -27,9 +27,22 @@ describe('computeStatistics', () => {
     const stats = computeStatistics(findings, manifest);
     const { categoryCounts, ...rest } = stats;
 
+    // 2026-08-25: these were the numbers the doc verified against this
+    // fixture as it stood months ago. Re-deriving it with `normalize <dir>`
+    // this session brought it up to date with every dedupe and collapse
+    // change shipped since, and the totals moved (103 findings to 62). They
+    // are re-recorded rather than loosened, because here the number IS the
+    // thing under test - this block exists to catch computeStatistics
+    // drifting, not to describe the fixture.
+    //
+    // The cross-check that the collapse regrouped rather than dropped
+    // anything: accessibilityOccurrences (431) and
+    // thirdPartyAccessibilityOccurrences (165) are byte-identical to the
+    // pre-collapse values below, which is the same invariant trade-off 30
+    // used when it made this class of change.
     expect(rest).toEqual({
       pagesScanned: 20,
-      totalFindings: 103,
+      totalFindings: 62,
       accessibilityOccurrences: 431,
       // item 1.8: this real fixture predates alt-text-quality-heuristic
       // findings, so this is 0 here, not a claim that no site ever
@@ -43,12 +56,12 @@ describe('computeStatistics', () => {
       thirdPartyAccessibilityOccurrences: 165,
       pagesWithCritical: 20,
       critical: 8,
-      serious: 20,
+      serious: 14,
       moderate: 15,
-      minor: 60,
+      minor: 25,
       wcagCriteriaFailingCount: 7,
       pagesWithWcagFailure: 20,
-      accessibilityCount: 23,
+      accessibilityCount: 17,
       seoRenderingCount: 16,
       // item 39: the real haaitza manifest predates renderDiffMissingPercent
       // being recorded per page, so this is false here, not a claim that

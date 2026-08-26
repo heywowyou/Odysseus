@@ -5,6 +5,8 @@ import type { RedirectHostCache } from './checks/transactional-flow.js';
 import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
 import { checkLlmsTxt, type LlmsTxtCheckResult } from './checks/llms-txt.js';
 import { checkSecurityHeaders, type SecurityHeadersCheckResult } from './checks/security-headers.js';
+import { checkCookieConsent, type CookieConsentCheckResult } from './checks/cookie-consent.js';
+import { checkAccessibilityStatement, type AccessibilityStatementCheckResult } from './checks/accessibility-statement.js';
 import { fetchCruxFieldData } from './crux.js';
 import { type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import { type PageScanResult, scanPage } from './scan-page.js';
@@ -87,6 +89,8 @@ async function runScanLane(
   sitemapCheck: (SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] }) | undefined,
   llmsTxtCheck: LlmsTxtCheckResult | undefined,
   securityHeadersCheck: SecurityHeadersCheckResult | undefined,
+  cookieConsentCheck: CookieConsentCheckResult | undefined,
+  accessibilityStatementCheck: AccessibilityStatementCheckResult | undefined,
   bookingEngineUrl: string | undefined,
   skipLighthouse: boolean,
   onPageDone: (pageResult: PageScanResult) => void,
@@ -110,6 +114,8 @@ async function runScanLane(
       ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
       ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
       ...(securityHeadersCheck !== undefined ? { securityHeadersCheck } : {}),
+      ...(cookieConsentCheck !== undefined ? { cookieConsentCheck } : {}),
+      ...(accessibilityStatementCheck !== undefined ? { accessibilityStatementCheck } : {}),
       ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
       ...(skipLighthouse ? { skipLighthouse } : {}),
     });
@@ -135,6 +141,25 @@ async function runScanLane(
  * (writeAuditArtifacts builds its own url-keyed map), so this is safe.
  */
 export async function scanSite(startUrl: string, options: ScanSiteOptions): Promise<SiteScanResult> {
+  // 2026-08-25 Lagnonu review: the crawl discovers by link-following only,
+  // so a page the sitemap declares but nothing links to was never visited -
+  // and the report still said "65 pages analysees" without qualification.
+  // The sitemap is fetched once here, before the crawl, and its URLs are
+  // force-enqueued as seeds; the same result is reused for the post-crawl
+  // sitemap check below rather than fetched twice, so this costs the
+  // politeness budget nothing on the common path.
+  //
+  // Only the conventional /sitemap.xml is tried at this point, because
+  // robots.txt has not been read yet (crawlSite reads it) and a robots-
+  // declared sitemap at a non-conventional URL is not known until after.
+  // That case is handled below by re-checking, not by guessing here.
+  const preCrawlSitemap = await checkSitemap(
+    new URL(startUrl).origin,
+    [],
+    options.timeoutMs ?? getPageTimeoutMs(),
+  );
+  const sitemapSeeds = preCrawlSitemap.entries.map((entry) => entry.url);
+
   const crawl = await crawlSite(startUrl, {
     browser: options.browser,
     ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
@@ -143,7 +168,9 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
     ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
     ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
     ...(options.onProgress !== undefined ? { onProgress: options.onProgress } : {}),
-    ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
+    // Same-origin filtering and the exclusion globs still apply to these
+    // inside crawlSite, exactly as they do to an operator's own seeds.
+    seeds: [...(options.seeds ?? []), ...sitemapSeeds],
     ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
   });
 
@@ -172,13 +199,21 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
   // itself was never visited (e.g. disallowed by its own robots.txt),
   // since there is no page to attribute the finding to.
   const homepageWasVisited = pagesToScan.some((page) => page.url === crawl.startUrl);
-  const sitemapCheck = homepageWasVisited
-    ? {
-        ...(await checkSitemap(
+  // Reuses the pre-crawl fetch unless robots.txt declared a sitemap we had
+  // no way of knowing about before reading it, which is the only case where
+  // the conventional URL tried above could have been the wrong one.
+  const robotsDeclaredUnfetched = crawl.robotsSitemapUrls.some((url) => url !== preCrawlSitemap.sitemapUrl);
+  const sitemapResult =
+    preCrawlSitemap.found && !robotsDeclaredUnfetched
+      ? preCrawlSitemap
+      : await checkSitemap(
           new URL(crawl.startUrl).origin,
           crawl.robotsSitemapUrls,
           options.timeoutMs ?? getPageTimeoutMs(),
-        )),
+        );
+  const sitemapCheck = homepageWasVisited
+    ? {
+        ...sitemapResult,
         crawledUrls: pagesToScan.map((page) => page.url),
         // Every URL the crawl discovered at all (visited, robots-skipped,
         // non-HTML-skipped, or errored), not only the visited subset
@@ -212,6 +247,27 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
     options.timeoutMs ?? getPageTimeoutMs(),
   );
   const securityHeadersCheckForScan = homepageWasVisited ? securityHeadersCheck : undefined;
+
+  // C1: cookies and trackers active before consent. One extra navigation
+  // per audit, in a brand-new context so nothing from the crawl's own
+  // passes can be mistaken for the visitor having consented - which is
+  // why this cannot reuse a page the lanes already loaded. Same
+  // site-level, attributed-to-the-homepage shape as the checks above,
+  // and skipped entirely when the homepage was never visited, since
+  // there would be no page to attribute the finding to.
+  const cookieConsentCheck = homepageWasVisited
+    ? await checkCookieConsent(options.browser, crawl.startUrl, {
+        timeoutMs: options.timeoutMs ?? getPageTimeoutMs(),
+        ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
+      })
+    : undefined;
+
+  // C4: URL-pattern only, over the pages this crawl actually reached, so
+  // it costs no request at all. Skipped when the homepage was not
+  // visited, for the same reason as the checks above.
+  const accessibilityStatementCheck = homepageWasVisited
+    ? checkAccessibilityStatement(pagesToScan.map((page) => page.url))
+    : undefined;
 
   // CrUX is origin-level, not per-page, and only ever queried once per
   // audit regardless of page count - skipped entirely (not attempted and
@@ -260,6 +316,8 @@ export async function scanSite(startUrl: string, options: ScanSiteOptions): Prom
           sitemapCheck,
           llmsTxtCheckForScan,
           securityHeadersCheckForScan,
+          cookieConsentCheck,
+          accessibilityStatementCheck,
           options.bookingEngineUrl,
           options.skipLighthouse ?? false,
           onPageDone,

@@ -31,15 +31,58 @@ export interface AltTextExtraction {
   images: ImageFact[];
 }
 
+/** B5 (2026-08-24 three-site review): this check used to label every
+ *  image `img:nth-of-type(N)` where N was its index among *all* images in
+ *  the document. `:nth-of-type` is scoped to an element's parent, so that
+ *  selector usually does not match the element it names, and often
+ *  matches nothing at all - a developer handed "img:nth-of-type(32)" for
+ *  172 occurrences across 23 pages (real Palais Gallien report) has
+ *  nothing to act on. Replaced by, in order of preference: the element's
+ *  id, its image source (what a developer actually recognises and can
+ *  grep for), or a structural nth-child path, which is always valid CSS
+ *  and always resolves to exactly one element. */
+const SRC_SELECTOR_MAX_LENGTH = 120;
+
 export async function extractAltTextFacts(page: Page, pageUrl: string): Promise<AltTextExtraction> {
-  const images = await page.evaluate(() => {
+  const images = await page.evaluate((srcSelectorMaxLength) => {
+    /** A guaranteed-valid, guaranteed-unique path. Stops at the nearest
+     *  ancestor carrying an id, since that already pins the subtree. */
+    const structuralPath = (el: Element): string => {
+      const parts: string[] = [];
+      let current: Element | null = el;
+      while (current && current !== document.documentElement) {
+        if (current.id) {
+          parts.unshift(`#${CSS.escape(current.id)}`);
+          break;
+        }
+        const parent: Element | null = current.parentElement;
+        if (!parent) break;
+        const index = Array.from(parent.children).indexOf(current) + 1;
+        parts.unshift(`${current.tagName.toLowerCase()}:nth-child(${index})`);
+        current = parent;
+      }
+      return parts.join(' > ');
+    };
+
     const elements = Array.from(document.querySelectorAll('img'));
-    return elements.map((el, i) => {
+    return elements.map((el) => {
       const rect = el.getBoundingClientRect();
       const role = el.getAttribute('role');
       const isMarkedDecorative =
         role === 'presentation' || role === 'none' || el.getAttribute('aria-hidden') === 'true';
-      const selector = el.id ? `#${el.id}` : `img:nth-of-type(${i + 1})`;
+
+      const rawSrc = el.getAttribute('src') ?? '';
+      // A data: URI is not a filename a developer can recognise, and a
+      // very long src would make the annex's selector column unreadable.
+      const srcIsUsable =
+        rawSrc.length > 0 && rawSrc.length <= srcSelectorMaxLength && !rawSrc.startsWith('data:');
+
+      const selector = el.id
+        ? `#${CSS.escape(el.id)}`
+        : srcIsUsable
+          ? `img[src="${rawSrc}"]`
+          : structuralPath(el);
+
       return {
         selector,
         alt: el.hasAttribute('alt') ? el.getAttribute('alt') : null,
@@ -49,7 +92,7 @@ export async function extractAltTextFacts(page: Page, pageUrl: string): Promise<
         height: rect.height,
       };
     });
-  });
+  }, SRC_SELECTOR_MAX_LENGTH);
 
   return { pageUrl, images };
 }

@@ -1,7 +1,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Command } from 'commander';
-import { normalizeAudit, type AuditManifest, type NormalizePageInput } from '@odysseus/core';
+import {
+  buildTranslationClusters,
+  normalizeAudit,
+  type AuditManifest,
+  type NormalizePageInput,
+  type TranslationCluster,
+} from '@odysseus/core';
 
 /**
  * Re-runs normalization offline, from stored scan.json files only. No
@@ -44,7 +50,26 @@ export function registerNormalizeCommand(program: Command): void {
 
         const pages = await readPageInputs(resolvedDir);
 
+        // B2 (2026-08-24): collapses language-variant duplicates. Manifests
+        // written before the field existed carry no clusters, so they are
+        // rebuilt here from the same stored head metadata writeAuditArtifacts
+        // itself reads - the whole point of this command is that a stored
+        // audit gets today's normalization rules without being re-scanned,
+        // and a clustering rule that only ever applied to fresh scans would
+        // have broken that promise. Recomputed clusters are written back to
+        // the manifest below, because the report layer reads them from there
+        // rather than from findings.json.
+        const translationClusters: TranslationCluster[] =
+          manifest.translationClusters ??
+          buildTranslationClusters(
+            pages.map((page) => ({
+              pageUrl: page.url,
+              hreflangLinks: page.headMetadata?.hreflangLinks ?? [],
+            })),
+          );
+
         const findings = normalizeAudit({
+          translationClusters,
           auditId: manifest.auditId,
           startedAt: new Date(manifest.startedAt),
           pages,
@@ -73,6 +98,7 @@ export function registerNormalizeCommand(program: Command): void {
 
         const renormalizedManifest: AuditManifest = {
           ...manifest,
+          translationClusters,
           renormalizedAt: new Date().toISOString(),
         };
         await fs.writeFile(manifestPath, JSON.stringify(renormalizedManifest, null, 2));

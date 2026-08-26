@@ -96,6 +96,24 @@ export const LIGHTHOUSE_EXCLUDED_CATEGORIES = ['accessibility', 'best-practices'
  * since INP requires an actual user interaction during the trace -
  * documented already at normalize-lighthouse.ts's extractCoreWebVitals.
  *
+ * document-title: axe-core ships its own rule with the exact same id,
+ * "document-title" (WCAG 2.4.2, Page Titled), and Lighthouse's SEO-
+ * category audit of the same name fires on the identical defect (a page
+ * with no <title> element). This is the trade-off 1 duplicate-finding
+ * mistake ("Lighthouse's accessibility category emits no findings because
+ * axe already scans WCAG 2.2 AA directly") recurring through a different
+ * door: `packages/core/src/normalize/normalize-head-metadata.ts`'s own
+ * milestone-8 comment already reasoned that its custom SEO check must not
+ * duplicate Lighthouse's document-title audit, but never checked whether
+ * axe's accessibility scan also reports a rule of that name - it does.
+ * Confirmed against a real 2026-08-25 Lagnonu review report scan: f030
+ * (axe, accessibility, serious, WCAG 2.4.2) and f035 (lighthouse, seo,
+ * moderate) both fired for the same 14 pages, describing the same missing
+ * <title> element under two different categories and severities. axe's
+ * finding is kept (matches this file's own reasoning for keeping the
+ * legacy-over-insight audit above: it is the WCAG-referenced, more
+ * severity-accurate side of the pair).
+ *
  * Only add an ID here once overlap with a specific other rule, or
  * deprecation, is confirmed against real scanner output, not on
  * suspicion.
@@ -108,4 +126,5 @@ export const LIGHTHOUSE_EXCLUDED_AUDITS = [
   'largest-contentful-paint-element',
   'max-potential-fid',
   'interactive',
+  'document-title',
 ] as const;

@@ -7,15 +7,22 @@
  * which hand-duplicate logic next to a file they are not allowed to
  * touch. Keep in sync by hand. See docs/llm-layer-rules.md section 9.
  */
-import type { Finding } from '@odysseus/core';
 import type { StructurePassOutput } from './structure-schema.js';
+
+/** Both guards need finding IDs and nothing else. Typed structurally rather
+ *  than as Finding[] so the same functions can run against finding-alias.ts's
+ *  dense alias space, which is what analyze-structure.ts actually checks the
+ *  model's output against. Finding[] still satisfies this. */
+export interface HasFindingId {
+  readonly findingId: string;
+}
 
 /** Hard guard against invented findings, run against the structure
  *  pass's output - the only pass that decides findingIds. A non-empty
  *  result is a hard rejection: logged, retried, then fail-loud. */
 export function findInventedStructureFindingIds(
   output: StructurePassOutput,
-  inputFindings: readonly Finding[],
+  inputFindings: readonly HasFindingId[],
 ): string[] {
   const known = new Set(inputFindings.map((f) => f.findingId));
   const referenced = new Set<string>();
@@ -32,7 +39,7 @@ export function findInventedStructureFindingIds(
  *  half the findings is a quality problem worth surfacing. */
 export function findUnreferencedStructureFindingIds(
   output: StructurePassOutput,
-  inputFindings: readonly Finding[],
+  inputFindings: readonly HasFindingId[],
 ): string[] {
   const referenced = new Set<string>();
   for (const theme of output.themes) {

@@ -13,6 +13,12 @@
  * interfaces with zero adapter code.
  */
 
+import { buildCanonicalPageUrlMap, type TranslationCluster } from './translation-clusters.js';
+import { normalizeCookieConsent, type CookieConsentCheckInput } from './normalize-cookie-consent.js';
+import { normalizeAccessibilityStatement, type AccessibilityStatementCheckInput } from './normalize-accessibility-statement.js';
+import { normalizeNapConsistency, type NapConsistencyCheckInput } from './normalize-nap-consistency.js';
+import { normalizeReflow, type ReflowCheckInput } from './normalize-reflow.js';
+import { normalizeHtmlValidity, type HtmlValidityCheckInput } from './normalize-html-validity.js';
 import {
   FINDINGS_SCHEMA_VERSION,
   MAX_ELEMENTS_PER_FINDING,
@@ -24,7 +30,11 @@ import { computeDedupeKey } from './dedupe.js';
 import { assignFindingIds } from './finding-id.js';
 import { compareCriteria } from './wcag-tags.js';
 import { extractAxeCandidates, type AxeResultsInput } from './normalize-axe.js';
-import { extractLighthouseCandidates, type LighthouseResultInput } from './normalize-lighthouse.js';
+import {
+  computeSupersededAudits,
+  extractLighthouseCandidates,
+  type LighthouseResultInput,
+} from './normalize-lighthouse.js';
 import { extractRenderDiffCandidates } from './normalize-renderdiff.js';
 import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
 import { extractHeadMetadataCandidates, type HeadMetadataCheckInput } from './normalize-head-metadata.js';
@@ -102,6 +112,17 @@ export interface NormalizePageInput {
    *  established, since response headers are near-always identical
    *  across a site's pages. */
   securityHeaders?: SecurityHeadersCheckInput;
+  /** C1 (2026-08-24). Site-level, present only on the homepage's scan. */
+  cookieConsent?: CookieConsentCheckInput;
+  /** C4 (2026-08-24). Site-level, present only on the homepage's scan. */
+  accessibilityStatement?: AccessibilityStatementCheckInput;
+  /** C6 (2026-08-24). Per-page: contact details can legitimately differ
+   *  between a contact page and a property page. */
+  napConsistency?: NapConsistencyCheckInput;
+  /** C3 (2026-08-24). Per-page WCAG 1.4.10 measurement. */
+  reflow?: ReflowCheckInput;
+  /** C7 (2026-08-24). Per-page structural markup validity. */
+  htmlValidity?: HtmlValidityCheckInput;
   /** Milestone 8.6. Runs on every page (JSON-LD/microdata/RDFa are a
    *  per-page concern, same as headMetadata). */
   structuredData?: StructuredDataCheckInput;
@@ -123,14 +144,29 @@ export interface NormalizeAuditInput {
    *  CruxFieldDataResult's doc comment (types/manifest.ts) for why this
    *  lives at the audit level rather than attached to any one page. */
   cruxFieldData?: CruxFieldDataCheckInput;
+  /** B2 (2026-08-24). Language-variant groups, built from the site's own
+   *  hreflang declarations (translation-clusters.ts). Optional so
+   *  offline re-normalization against a manifest predating this field
+   *  still works - it simply gets no collapsing, exactly the behaviour
+   *  before this change. Never affects what was scanned or what was
+   *  detected: purely which pages count as the same place when
+   *  collapsing duplicate findings. */
+  translationClusters?: readonly TranslationCluster[];
 }
 
 function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
+  // D13: resolved over every page before any page is normalized, so a
+  // successor emitting on one page suppresses its legacy audits everywhere.
+  const supersededAudits = computeSupersededAudits(
+    input.pages.map((page) => page.lighthouse).filter((lhr): lhr is LighthouseResultInput => lhr !== undefined),
+  );
 
   for (const page of input.pages) {
     if (page.axe) candidates.push(...extractAxeCandidates(page.axe, page.url));
-    if (page.lighthouse) candidates.push(...extractLighthouseCandidates(page.lighthouse, page.url));
+    if (page.lighthouse) {
+      candidates.push(...extractLighthouseCandidates(page.lighthouse, page.url, supersededAudits));
+    }
     if (page.renderDiff) candidates.push(...extractRenderDiffCandidates(page.renderDiff, page.url));
     if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
     if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));
@@ -143,6 +179,12 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.videoCaptions) candidates.push(...extractVideoCaptionsCandidates(page.videoCaptions));
     if (page.altText) candidates.push(...extractAltTextCandidates(page.altText));
     if (page.securityHeaders) candidates.push(...extractSecurityHeadersCandidates(page.securityHeaders, page.url));
+    if (page.cookieConsent) candidates.push(...normalizeCookieConsent(page.cookieConsent, page.url));
+    if (page.accessibilityStatement)
+      candidates.push(...normalizeAccessibilityStatement(page.accessibilityStatement, page.url));
+    if (page.napConsistency) candidates.push(...normalizeNapConsistency(page.napConsistency, page.url));
+    if (page.reflow) candidates.push(...normalizeReflow(page.reflow, page.url));
+    if (page.htmlValidity) candidates.push(...normalizeHtmlValidity(page.htmlValidity, page.url));
     if (page.structuredData) candidates.push(...extractStructuredDataCandidates(page.structuredData));
   }
 
@@ -153,10 +195,23 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (homepageUrl) candidates.push(...extractCruxCandidates(input.cruxFieldData, homepageUrl));
   }
 
-  const pagesWithHreflang = input.pages
-    .filter((page) => page.headMetadata && page.headMetadata.hreflangLinks.length > 0)
+  // Every crawled page with head metadata is passed, including pages
+  // declaring no hreflang at all. Filtering to pages that already have
+  // hreflang made `hreflang-missing` unreachable by construction, since it
+  // fires precisely when no page has any - the emitter existed, its unit
+  // tests passed against a direct call, and a real trilingual site
+  // (lagnonu.fr, 65 pages, zero hreflang) still produced no finding.
+  // Passing every page also lets the reciprocity check above distinguish a
+  // crawled target that genuinely fails to link back from one it cannot
+  // see; it previously treated both as "outside crawl scope".
+  const hreflangPages = input.pages
+    .filter((page) => page.headMetadata)
     .map((page) => ({ url: page.url, hreflangLinks: page.headMetadata!.hreflangLinks }));
-  if (pagesWithHreflang.length > 0) candidates.push(...extractHreflangCandidates(pagesWithHreflang));
+  if (hreflangPages.length > 0) {
+    candidates.push(
+      ...extractHreflangCandidates(hreflangPages, input.crawl?.startUrl ?? input.pages[0]?.url),
+    );
+  }
 
   const pagesWithHeadMetadata = input.pages.filter((page) => page.headMetadata);
   if (pagesWithHeadMetadata.length > 0) {
@@ -214,6 +269,28 @@ function mergeGroup(
     perPage[candidate.pageUrl] = candidate.rawEvidenceForPage;
   }
 
+  // B4 (2026-08-24): the affected files, lifted out of the per-page evidence
+  // so they survive the last-write-wins collapse above. A site-wide resource
+  // finding (normalize-lighthouse.ts's RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS)
+  // has many candidates per page, so perPage keeps exactly one of them -
+  // which is acceptable for a page's score but would throw away the list of
+  // files the client actually has to fix. Sorted for a stable diff, deduped
+  // because one file referenced from several pages is one thing to fix.
+  // D12 (2026-08-25): two shapes reach here. Node-carrying audits push one
+  // candidate per element with a singular `resourceUrl`; url-only audits push
+  // one candidate per page with the page's whole `resourceUrls` list, so that
+  // their occurrence count stays one-per-page rather than one-per-file.
+  const resourceUrls = [
+    ...new Set(
+      group.flatMap((c) => {
+        const single = c.rawEvidenceForPage['resourceUrl'];
+        const many = c.rawEvidenceForPage['resourceUrls'];
+        const values = Array.isArray(many) ? many : [single];
+        return values.filter((url): url is string => typeof url === 'string' && url.length > 0);
+      }),
+    ),
+  ].sort();
+
   return {
     auditId,
     schemaVersion: FINDINGS_SCHEMA_VERSION,
@@ -232,8 +309,9 @@ function mergeGroup(
       dedupeComponents: {
         source: first.source,
         ruleId: first.ruleId,
-        selector: first.element?.selector ?? '',
+        selector: first.dedupeIdentity ?? first.element?.selector ?? '',
       },
+      ...(resourceUrls.length > 0 ? { resourceUrls } : {}),
       perPage,
     },
     dedupeKey,
@@ -258,9 +336,27 @@ function mergeGroup(
  * A fine group that is the only occupant of its coarse bucket (the common
  * case: one selector, one occurrence) or that already spans multiple
  * pages passes through with its original dedupeKey, unchanged.
+ *
+ * B2 (2026-08-24): "the same single page" is now judged after mapping
+ * each page onto its translation cluster's canonical URL. A real Haaitza
+ * audit had 182 of its 265 link-name findings each spanning exactly five
+ * pages, and those five were always the fr/en/it/es/pt-pt variants of one
+ * gallery page - one defect in one shared template, reported five times,
+ * which alone drove a 265-entry finding-id list and most of an 81-page
+ * report. Those groups are one page once the variants are recognised as
+ * one place, so this existing pass handles them with no second mechanism
+ * and no selector rewriting (which CLAUDE.md trade-off 3 rejected, for
+ * reasons that still hold - nothing here touches a selector).
+ *
+ * The merged Finding still carries every real page URL it was seen on:
+ * canonicalization decides grouping only, never what is recorded. On a
+ * monolingual site the map is empty and every page maps to itself, so the
+ * behaviour is byte-identical to before - confirmed against the real
+ * 23-page Palais Gallien scan, which produces the same 97 findings.
  */
 function aggregateSamePageOccurrences(
   fineGroups: Map<string, FindingCandidate[]>,
+  canonicalPageUrl: (pageUrl: string) => string,
 ): Map<string, FindingCandidate[]> {
   const coarseKeyByFineKey = new Map<string, string>();
   const fineKeysByCoarseKey = new Map<string, string[]>();
@@ -269,10 +365,25 @@ function aggregateSamePageOccurrences(
     const first = group[0];
     if (!first) continue;
 
-    const pageUrls = new Set(group.map((c) => c.pageUrl));
+    const pageUrls = new Set(group.map((c) => canonicalPageUrl(c.pageUrl)));
     if (pageUrls.size !== 1) continue;
 
-    const coarseKey = `${first.source}|${first.ruleId}|${[...pageUrls][0]}`;
+    // D4 (2026-08-25): aggregating purely on source and rule undid the
+    // deliberate identities introduced the same day. For the alt-text
+    // heuristic it merged two genuinely different instructions ("write alt
+    // text for this image" and "these images share one alt text") into one
+    // finding carrying only one of the two titles.
+    //
+    // The title is what separates them, and it is the honest test: this pass
+    // exists to collapse one rule's positional selectors on one page, and two
+    // candidates that would print different titles are not that. Keying on
+    // dedupeIdentity was tried first and is subtly wrong - it also splits
+    // candidates that differ only in which template emitted them while saying
+    // exactly the same thing, which cost a real sas-fernande.fr carousel its
+    // merge (a "previous slide" and a "next slide" arrow, one component, one
+    // fix, two rows). Candidates with no identity and one title behave
+    // exactly as they did before either change.
+    const coarseKey = `${first.source}|${first.ruleId}|${first.title}|${[...pageUrls][0]}`;
     coarseKeyByFineKey.set(fineKey, coarseKey);
     const fineKeys = fineKeysByCoarseKey.get(coarseKey);
     if (fineKeys) {
@@ -296,7 +407,11 @@ function aggregateSamePageOccurrences(
 
     const first = combined[0];
     if (!first) continue;
-    const pageUrl = [...new Set(combined.map((c) => c.pageUrl))][0] ?? '';
+    // The canonical URL, not an arbitrary variant, so the dedupeKey is
+    // stable across runs even if the crawl reaches the variants in a
+    // different order - cross-run identity for the monitoring tier is
+    // dedupeKey (CLAUDE.md trade-off 3).
+    const pageUrl = [...new Set(combined.map((c) => canonicalPageUrl(c.pageUrl)))][0] ?? '';
     const dedupeKey = computeDedupeKey(first.source, first.ruleId, pageUrl);
     result.set(dedupeKey, combined);
   }
@@ -314,7 +429,10 @@ export function normalizeAudit(input: NormalizeAuditInput): Finding[] {
 
   const fineGroups = new Map<string, FindingCandidate[]>();
   for (const candidate of candidates) {
-    const key = computeDedupeKey(candidate.source, candidate.ruleId, candidate.element?.selector ?? '');
+    // dedupeIdentity wins when an extractor has declared that this rule's
+    // identity is not its element (see FindingCandidate.dedupeIdentity).
+    const identity = candidate.dedupeIdentity ?? candidate.element?.selector ?? '';
+    const key = computeDedupeKey(candidate.source, candidate.ruleId, identity);
     const group = fineGroups.get(key);
     if (group) {
       group.push(candidate);
@@ -323,7 +441,8 @@ export function normalizeAudit(input: NormalizeAuditInput): Finding[] {
     }
   }
 
-  const groups = aggregateSamePageOccurrences(fineGroups);
+  const canonicalByPageUrl = buildCanonicalPageUrlMap(input.translationClusters ?? []);
+  const groups = aggregateSamePageOccurrences(fineGroups, (pageUrl) => canonicalByPageUrl.get(pageUrl) ?? pageUrl);
 
   const merged = [...groups.entries()].map(([dedupeKey, group]) =>
     mergeGroup(input.auditId, dedupeKey, group, input.startedAt),

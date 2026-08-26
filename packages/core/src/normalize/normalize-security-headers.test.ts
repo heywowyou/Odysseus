@@ -32,7 +32,12 @@ describe('security-headers', () => {
         SECURITY_HEADER_MISSING_X_FRAME_OPTIONS_RULE_ID,
       ].sort(),
     );
-    expect(candidates.every((c) => c.category === 'seo')).toBe(true);
+    // 2026-08-24: moved off 'seo', where these had been filed only
+    // because no better category existed, to the 'privacy' category added
+    // with them. Four of the five have nothing to do with search ranking,
+    // and a real report card read "Référencement (SEO) - En-têtes de
+    // sécurité manquants" above a paragraph about clickjacking.
+    expect(candidates.every((c) => c.category === 'privacy')).toBe(true);
   });
 
   it('does not flag HSTS on an http-only origin', () => {

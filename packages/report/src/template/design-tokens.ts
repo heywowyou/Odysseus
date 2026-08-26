@@ -39,16 +39,30 @@ export const SEVERITY: Record<Severity, { color: string; bg: string }> = {
  *  token" reasoning as the accessibility swap above. Re-run
  *  render-html.axe.test.ts once a geo finding is in the fixture to
  *  confirm this pairing also clears 1.4.3 - not assumed just because the
- *  parallel scale mirrors the primary one. */
+ *  parallel scale mirrors the primary one.
+ *
+ *  privacy.color/privacy.bg (added 2026-08-24 with the FindingCategory
+ *  value itself) is the first entry that could not reuse an existing
+ *  token: both accent scales are already spoken for (accessibility,
+ *  geo), and the three remaining hues are performance's blue, seo's teal
+ *  and rendering's grey. A warm gold is the only clearly distinct hue
+ *  left, and privacy postdates the canonical mockups by even further
+ *  than geo does, so there is nothing to re-derive from. The pair was
+ *  chosen by computing WCAG contrast rather than by eye: #e5c07b on
+ *  #332a19 is 8.18:1, and 10.19:1 against the page background - both
+ *  well clear of 1.4.3's 4.5:1. render-html.axe.test.ts confirms it
+ *  against a real rendered report, the same way the accessibility swap
+ *  was confirmed rather than assumed. */
 export const CATEGORY: Record<FindingCategory, { color: string; bg: string }> = {
   accessibility: { color: 'var(--color-accent-300)', bg: '#2b2741' },
   performance: { color: '#7fa8d9', bg: '#1f2a38' },
   seo: { color: '#6cbfae', bg: '#1c332e' },
   rendering: { color: '#9397ab', bg: '#292b31' },
   geo: { color: 'var(--color-accent-2-300)', bg: 'var(--color-accent-2-900)' },
+  privacy: { color: '#e5c07b', bg: '#332a19' },
 };
 
-export const CATEGORY_ORDER: readonly FindingCategory[] = ['accessibility', 'seo', 'rendering', 'performance', 'geo'];
+export const CATEGORY_ORDER: readonly FindingCategory[] = ['accessibility', 'privacy', 'seo', 'rendering', 'performance', 'geo'];
 
 /** Shared three-point ramp for any Faible/Moyen/Élevé (or Low/Medium/
  *  High) value that means "how urgent", not only the cover's own

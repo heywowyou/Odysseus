@@ -14,6 +14,48 @@ export function escapeHtml(value: string): string {
     .replaceAll("'", '&#39;');
 }
 
+/** A6 (2026-08-24 three-site review): a real La Corniche report printed
+ *  "des liens *hreflang* non réciproques" and "un attribut *aria-label*"
+ *  with the asterisks visible, and a Haaitza report did the same. The
+ *  writing prompt already says "no markdown fences", which the model
+ *  obeys - it emits valid JSON - but it still reaches for inline
+ *  emphasis *inside* a field value, which no fence rule covers.
+ *
+ *  Stripped at render time rather than before the analysis is stored, so
+ *  what is persisted stays byte-identical to what the model actually
+ *  returned. That provenance matters here for the same reason the
+ *  manifest records self-reported scanner versions: the stored artifact
+ *  is evidence of what happened, the report is a presentation of it.
+ *
+ *  Only the emphasis delimiters are removed, never the text between
+ *  them. Code spans keep their content for the same reason. An asterisk
+ *  or underscore that is not part of a delimiter pair is left alone, so
+ *  a hotel's own "5*****" or a snake_case attribute name survives. */
+const MARKDOWN_EMPHASIS_PATTERNS: readonly RegExp[] = [
+  /\*\*\*([^*\n]+?)\*\*\*/gu,
+  /\*\*([^*\n]+?)\*\*/gu,
+  /\*([^*\n]+?)\*/gu,
+  /___([^_\n]+?)___/gu,
+  /__([^_\n]+?)__/gu,
+  /`([^`\n]+?)`/gu,
+];
+
+export function stripInlineMarkdown(value: string): string {
+  let result = value;
+  for (const pattern of MARKDOWN_EMPHASIS_PATTERNS) {
+    result = result.replace(pattern, '$1');
+  }
+  return result;
+}
+
+/** Use for any string written by the model. Plain escapeHtml stays
+ *  correct for scanner output, string-file copy and URLs - those never
+ *  contain markdown, and running the stripper over a CSS selector like
+ *  `a[href*="x"]` could damage it. */
+export function escapeProse(value: string): string {
+  return escapeHtml(stripInlineMarkdown(value));
+}
+
 /** item 30 [REGRESSION]: the final page's "Une question ?" card said
  *  requests could go "directement à l'équipe Odysseus" without ever
  *  stating how to reach them - flagged once already on the haaitza pass
@@ -29,14 +71,29 @@ export const ODYSSEUS_CONTACT_EMAIL = 'contact@odysseusaudit.com';
  *  anywhere in a paid deliverable that may be forwarded to counsel. Code
  *  constants, same reasoning and same "flag for Jules, never silently
  *  omit" posture as ODYSSEUS_CONTACT_EMAIL above - not manual-input
- *  fields or LLM output. ODYSSEUS_SIRET is a genuine placeholder, not a
- *  real number: rendered so it reads as visibly incomplete
- *  ("[SIRET à renseigner]") rather than a plausible-looking fake number,
- *  so nobody mistakes it for real and publishes it. Replace with the
- *  real SIRET before this next ships. */
+ *  fields or LLM output.
+ *
+ *  A3 (2026-08-24): the placeholder was replaced by the nine-digit SIREN
+ *  Jules supplied, and the label was moved from SIRET to SIREN to match
+ *  the number rather than padding the number to fit the label.
+ *
+ *  Updated later the same day: Jules supplied the full fourteen-digit
+ *  SIRET (the same SIREN followed by NIC 00023), so the number and the
+ *  label move back together, exactly as the note above said they must.
+ *  A SIRET identifies one establishment where a SIREN identifies the
+ *  legal entity, which is the more precise thing to print on the
+ *  signature line of a document that may be forwarded to counsel - it is
+ *  the same distinction packages/scanner/src/checks/mentions-legales.ts
+ *  already encodes when reading a client's own legal notice.
+ *
+ *  Overridable via ODYSSEUS_SIRET so the value can be set per machine
+ *  without a code change; the literal stays as the canonical default so
+ *  an unset environment can never silently produce a report with no
+ *  issuer identity, which is the failure this constant exists to
+ *  prevent. */
 export const ODYSSEUS_PRODUCER_NAME = 'Odysseus Audit';
 export const ODYSSEUS_SIGNATORY_NAME = 'Jules Fontaine';
-export const ODYSSEUS_SIRET_PLACEHOLDER = '[SIRET à renseigner]';
+export const ODYSSEUS_REGISTRATION_NUMBER = process.env['ODYSSEUS_SIRET'] ?? '98076646300023';
 
 /** item 3.12: "Prochaines étapes" described re-audits and post-fix
  *  verification with no price, no lead time, and no way to order -
@@ -201,4 +258,88 @@ export function sheet(innerHtml: string, extraClass = '', id?: string): string {
   const className = extraClass ? `sheet ${extraClass}` : 'sheet';
   const idAttr = id ? ` id="${id}"` : '';
   return `<section class="${className}"${idAttr}>${innerHtml}</section>`;
+}
+
+/** Shared cap for every client-facing list of finding ids.
+ *
+ *  A7 (2026-08-24 three-site review): checklist.ts capped its own list at
+ *  10 in a7baac6, but themes.ts's priority card kept calling
+ *  formatFindingIdLinks uncapped, so a real Haaitza theme with 265
+ *  findingIds spilled the card's metadata row across two full pages and
+ *  then degraded into the one-fragment-per-line collapse CLAUDE.md
+ *  trade-off 17 already root-caused twice (appendix groups, then the
+ *  checklist cell). Same mechanism, third section - so the cap lives here
+ *  now, once, and both call sites read it, rather than each section
+ *  growing its own constant and its own drift.
+ *
+ *  10 is deliberate and unchanged from checklist.ts's original value: the
+ *  ids exist so the reader has something to look up in the annex, not so
+ *  the card enumerates every one. The annex is already the complete list. */
+export const FINDING_ID_LIST_CAP = 10;
+
+function capFindingIds(findingIds: readonly string[]): { shown: string[]; remaining: number } {
+  const sorted = [...findingIds].sort();
+  if (sorted.length <= FINDING_ID_LIST_CAP) return { shown: sorted, remaining: 0 };
+  return { shown: sorted.slice(0, FINDING_ID_LIST_CAP), remaining: sorted.length - FINDING_ID_LIST_CAP };
+}
+
+/** Plain-text capped variant, for cells that cannot carry links. */
+/** Resolves the "and N more" tail for a capped list, picking the singular
+ *  form at exactly one. Every capped-list helper below takes the whole
+ *  strings object rather than one template, so a caller cannot pass the
+ *  plural form alone and silently reintroduce "et 1 autres" - which is
+ *  what a real report printed before this existed. */
+export interface AndNMoreStrings {
+  readonly andNMoreTemplate: string;
+  readonly andNMoreSingularTemplate: string;
+}
+
+export function formatAndNMore(remaining: number, language: 'fr' | 'en', strings: AndNMoreStrings): string {
+  return fillTemplate(pluralize(remaining, strings.andNMoreSingularTemplate, strings.andNMoreTemplate), {
+    count: formatNumber(remaining, language),
+  });
+}
+
+export function formatCappedFindingIdRefs(
+  findingIds: readonly string[],
+  language: 'fr' | 'en',
+  strings: AndNMoreStrings,
+): string {
+  const { shown, remaining } = capFindingIds(findingIds);
+  if (remaining === 0) return shown.join(', ');
+  return `${shown.join(', ')} ${formatAndNMore(remaining, language, strings)}`;
+}
+
+/** Generic capped join, for any short-token list rendered inside a
+ *  fixed-width grid cell. The checklist's 80px WCAG column is the second
+ *  such cell found (A4/overflow audit, 2026-08-24): a theme spanning ten
+ *  criteria puts roughly sixty characters into it, and `.row-atomic`
+ *  (paged.css) then forbids the row from breaking, which is exactly the
+ *  fragment-taller-than-a-page condition CLAUDE.md trade-off 17 root-
+ *  caused. Bounding the content is the fix; loosening atomicity is not,
+ *  since a checklist row genuinely should not split. */
+export function formatCappedList(
+  values: readonly string[],
+  cap: number,
+  language: 'fr' | 'en',
+  strings: AndNMoreStrings,
+): string {
+  if (values.length <= cap) return values.join(', ');
+  const remaining = values.length - cap;
+  return `${values.slice(0, cap).join(', ')} ${formatAndNMore(remaining, language, strings)}`;
+}
+
+/** Linked capped variant. Returns raw HTML - do not escapeHtml() again.
+ *  The "et N autres" tail is escaped here since it comes from the string
+ *  files, which are trusted but templated. */
+export function formatCappedFindingIdLinks(
+  findingIds: readonly string[],
+  language: 'fr' | 'en',
+  strings: AndNMoreStrings,
+): string {
+  const { shown, remaining } = capFindingIds(findingIds);
+  const links = formatFindingIdLinks(shown);
+  if (remaining === 0) return links;
+  const tail = formatAndNMore(remaining, language, strings);
+  return `${links} <span class="text-muted">${escapeHtml(tail)}</span>`;
 }

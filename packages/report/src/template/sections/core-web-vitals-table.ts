@@ -24,9 +24,9 @@ const GOOD_COLOR = '#7cd9a0';
  *  disagree with the severity the same metric's underlying Finding
  *  carries. Only the display unit (ms vs seconds vs unitless) stays
  *  local, since core has no reason to know about report formatting. */
-type Unit = 'ms-to-s' | 'ms' | 'unitless';
+export type Unit = 'ms-to-s' | 'ms' | 'unitless';
 
-const METRIC_UNITS: Record<CoreWebVitalMetricKey, Unit> = {
+export const METRIC_UNITS: Record<CoreWebVitalMetricKey, Unit> = {
   lcp: 'ms-to-s',
   tbt: 'ms',
   fcp: 'ms-to-s',
@@ -42,7 +42,7 @@ const METRIC_UNITS: Record<CoreWebVitalMetricKey, Unit> = {
  *  keeps a genuine near-zero CLS visibly distinct from a literal 0. */
 const CLS_DECIMAL_PLACES = 3;
 
-function formatMetricValue(value: number, unit: Unit, language: ReportLanguage): string {
+export function formatMetricValue(value: number, unit: Unit, language: ReportLanguage): string {
   if (unit === 'ms-to-s') return `${formatNumber(Math.round((value / 1000) * 10) / 10, language)} s`;
   if (unit === 'ms') return `${formatNumber(Math.round(value), language)} ms`;
   const factor = 10 ** CLS_DECIMAL_PLACES;

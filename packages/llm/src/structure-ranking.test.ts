@@ -66,6 +66,67 @@ function findFinding(findings: Finding[], findingId: string): Finding {
   return finding;
 }
 
+/** 2026-08-25: these used to be finding-id literals (f039, f017, f086...).
+ *  Finding ids are assigned densely at normalization time, so every dedupe or
+ *  collapse change renumbers the whole fixture and silently repoints a test at
+ *  a different finding - or, worse, at one that no longer exists. Re-deriving
+ *  this session's fixture moved haaitza from 98 findings to 70 and f086 stopped
+ *  existing at all.
+ *
+ *  Each id below is now resolved from the property the test actually cares
+ *  about, so the test states its own premise instead of encoding a snapshot of
+ *  it. The three FILLER ids are genuinely arbitrary - those tests need a theme
+ *  to hold some real finding and do not care which. */
+function findByRule(findings: Finding[], ruleId: string, predicate: (f: Finding) => boolean = () => true): string {
+  const finding = findings.find((f) => f.ruleId === ruleId && predicate(f));
+  if (!finding) throw new Error(`fixture has no ${ruleId} finding matching the test's premise`);
+  return finding.findingId;
+}
+
+/** meta-viewport, WCAG 1.4.4, on 18 of 20 visited pages. */
+const siteWideWcagId = (findings: Finding[]): string => findByRule(findings, 'meta-viewport');
+/** link-name, 180 occurrences confined to one page. */
+const highOccurrenceId = (findings: Finding[]): string =>
+  findByRule(findings, 'link-name', (f) => f.pageUrls.length === 1 && f.occurrences > 100);
+/** offscreen-images: minor, and ranked ahead of the above by the model. */
+const lowVolumeMinorId = (findings: Finding[]): string => findByRule(findings, 'offscreen-images');
+/** An accessibility finding on a single page, so the site-wide floor does not
+ *  apply to it. */
+const confinedAccessibilityId = (findings: Finding[]): string =>
+  findByRule(findings, 'image-alt', (f) => f.pageUrls.length === 1);
+/** is-crawlable, confined to the CGU/cookies/privacy pages - entirely legal,
+ *  entirely diverted per docs/report-v2-refactor.md A3. */
+const divertedSeoId = (findings: Finding[]): string => findByRule(findings, 'is-crawlable');
+
+/** Three findings that are interchangeable for a test that does not care
+ *  which finding a theme holds. Derived, never hardcoded: finding ids are
+ *  reassigned densely on every normalization, and a stale literal either
+ *  points at a different finding or at none.
+ *
+ *  Two properties are required, both learned the hard way while repairing
+ *  these tests. They must share an identical occurrence and page profile,
+ *  because applyOccurrenceWeighting runs in the full pipeline and would
+ *  otherwise decide a test that is about effort ordering. And they must carry
+ *  no WCAG criteria, because enforceSiteWideAccessibilityFloor promotes a
+ *  site-wide accessibility finding and would otherwise decide a test that is
+ *  about something else. */
+function neutralFillerIds(findings: Finding[]): [string, string, string, string] {
+  const byProfile = new Map<string, Finding[]>();
+  for (const finding of findings) {
+    if (finding.wcagCriteria.length > 0) continue;
+    const key = `${finding.occurrences}|${finding.pageUrls.length}`;
+    byProfile.set(key, [...(byProfile.get(key) ?? []), finding]);
+  }
+  const group = [...byProfile.values()]
+    .filter((g) => g.length >= 4)
+    .sort((a, b) => b.length - a.length)[0];
+  if (!group) throw new Error('fixture has no four interchangeable non-WCAG findings');
+  const [a, b, c, d] = group.map((f) => f.findingId);
+  return [a!, b!, c!, d!];
+}
+
+const [fillerA, fillerB, fillerC, fillerD] = neutralFillerIds(loadHaaitzaFindings());
+
 function theme(
   themeKey: string,
   findingIds: string[],
@@ -89,17 +150,17 @@ describe('enforceSiteWideAccessibilityFloor', () => {
 
     // f039 (meta-viewport, WCAG 1.4.4) is on 18/20 visited pages - above
     // SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD (80%).
-    const siteWideFinding = findFinding(findings, 'f039');
+    const siteWideFinding = findFinding(findings, siteWideWcagId(findings));
     expect((siteWideFinding.pageUrls.length / 20) * 100).toBeGreaterThanOrEqual(
       SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD,
     );
 
     const themes: StructureThemeWithKey[] = [
-      theme('t1', ['f002'], { priorityRank: 1, impact: 'high' }),
-      theme('t2', ['f009'], { priorityRank: 2, impact: 'high' }),
-      theme('t3', ['f086'], { priorityRank: 3, impact: 'low' }),
+      theme('t1', [fillerA], { priorityRank: 1, impact: 'high' }),
+      theme('t2', [fillerB], { priorityRank: 2, impact: 'high' }),
+      theme('t3', [fillerC], { priorityRank: 3, impact: 'low' }),
       // Last of 4 themes: bottom quartile (ceil(4 * 0.75) = 3, 0-indexed).
-      theme('t4', ['f039'], { priorityRank: 4, impact: 'low' }),
+      theme('t4', [siteWideWcagId(findings)], { priorityRank: 4, impact: 'low' }),
     ];
 
     const result = enforceSiteWideAccessibilityFloor(themes, findings, manifest);
@@ -117,8 +178,10 @@ describe('enforceSiteWideAccessibilityFloor', () => {
     const findings = loadHaaitzaFindings();
     const manifest = loadHaaitzaManifest();
     const themes: StructureThemeWithKey[] = [
-      theme('t1', ['f002'], { priorityRank: 1, impact: 'high' }),
-      theme('t2', ['f086'], { priorityRank: 2, impact: 'low' }),
+      theme('t1', [fillerA], { priorityRank: 1, impact: 'high' }),
+      // Deliberately a finding confined to one page: the fillers above are
+      // all site-wide, which is exactly what this test needs t2 not to be.
+      theme('t2', [confinedAccessibilityId(findings)], { priorityRank: 2, impact: 'low' }),
     ];
 
     const result = enforceSiteWideAccessibilityFloor(themes, findings, manifest);
@@ -135,8 +198,8 @@ describe('applyOccurrenceWeighting', () => {
     // minor, low occurrence count - ranked ahead of f017 by the model here,
     // which is exactly the A6 failure mode.
     const themes: StructureThemeWithKey[] = [
-      theme('t-low-volume', ['f082'], { priorityRank: 1, category: 'performance' }),
-      theme('t-high-volume', ['f017'], { priorityRank: 2, category: 'accessibility' }),
+      theme('t-low-volume', [lowVolumeMinorId(findings)], { priorityRank: 1, category: 'performance' }),
+      theme('t-high-volume', [highOccurrenceId(findings)], { priorityRank: 2, category: 'accessibility' }),
     ];
 
     const result = applyOccurrenceWeighting(themes, findings);
@@ -148,7 +211,7 @@ describe('applyOccurrenceWeighting', () => {
 
   it('is a no-op renumbering for a single theme', () => {
     const findings = loadHaaitzaFindings();
-    const themes: StructureThemeWithKey[] = [theme('t1', ['f002'], { priorityRank: 5 })];
+    const themes: StructureThemeWithKey[] = [theme('t1', [fillerA], { priorityRank: 5 })];
 
     const result = applyOccurrenceWeighting(themes, findings);
 
@@ -162,10 +225,10 @@ describe('enforceQuickWinFloor', () => {
     // impact élevé), ranked below priority 4 (impact Faible) even though
     // the section is titled "classés par effort et par impact".
     const themes: StructureThemeWithKey[] = [
-      theme('t1', ['f002'], { priorityRank: 1, impact: 'high' }),
-      theme('t2', ['f009'], { priorityRank: 2, impact: 'medium' }),
-      theme('t-low-impact', ['f086'], { priorityRank: 3, impact: 'low' }),
-      theme('t-quick-win', ['f039'], { priorityRank: 4, effort: 'low', impact: 'high' }),
+      theme('t1', [fillerA], { priorityRank: 1, impact: 'high' }),
+      theme('t2', [fillerB], { priorityRank: 2, impact: 'medium' }),
+      theme('t-low-impact', [fillerC], { priorityRank: 3, impact: 'low' }),
+      theme('t-quick-win', [fillerD], { priorityRank: 4, effort: 'low', impact: 'high' }),
     ];
 
     const result = enforceQuickWinFloor(themes);
@@ -178,8 +241,8 @@ describe('enforceQuickWinFloor', () => {
 
   it('leaves order unchanged when no low-impact theme exists', () => {
     const themes: StructureThemeWithKey[] = [
-      theme('t1', ['f002'], { priorityRank: 1, impact: 'high' }),
-      theme('t-quick-win', ['f039'], { priorityRank: 2, effort: 'low', impact: 'medium' }),
+      theme('t1', [fillerA], { priorityRank: 1, impact: 'high' }),
+      theme('t-quick-win', [fillerC], { priorityRank: 2, effort: 'low', impact: 'medium' }),
     ];
 
     const result = enforceQuickWinFloor(themes);
@@ -189,8 +252,8 @@ describe('enforceQuickWinFloor', () => {
 
   it('leaves order unchanged when the quick win already ranks above every low-impact theme', () => {
     const themes: StructureThemeWithKey[] = [
-      theme('t-quick-win', ['f039'], { priorityRank: 1, effort: 'low', impact: 'high' }),
-      theme('t-low-impact', ['f086'], { priorityRank: 2, impact: 'low' }),
+      theme('t-quick-win', [fillerC], { priorityRank: 1, effort: 'low', impact: 'high' }),
+      theme('t-low-impact', [fillerD], { priorityRank: 2, impact: 'low' }),
     ];
 
     const result = enforceQuickWinFloor(themes);
@@ -200,8 +263,8 @@ describe('enforceQuickWinFloor', () => {
 
   it('never promotes a non-quick-win low-effort/low-impact theme', () => {
     const themes: StructureThemeWithKey[] = [
-      theme('t-other-low-impact', ['f002'], { priorityRank: 1, impact: 'low' }),
-      theme('t-low-effort-low-impact', ['f009'], { priorityRank: 2, effort: 'low', impact: 'low' }),
+      theme('t-other-low-impact', [fillerA], { priorityRank: 1, impact: 'low' }),
+      theme('t-low-effort-low-impact', [fillerB], { priorityRank: 2, effort: 'low', impact: 'low' }),
     ];
 
     const result = enforceQuickWinFloor(themes);
@@ -219,9 +282,9 @@ describe('enforceQuickWinFloor', () => {
 describe('enforceImpactEffortOrdering', () => {
   it('ranks the quick win first even when every theme carries the same (non-low) impact, matching the reported symptom', () => {
     const themes: StructureThemeWithKey[] = [
-      theme('t-high-effort', ['f002'], { priorityRank: 1, effort: 'high', impact: 'high' }),
-      theme('t-medium-effort', ['f009'], { priorityRank: 2, effort: 'medium', impact: 'high' }),
-      theme('t-quick-win', ['f039'], { priorityRank: 3, effort: 'low', impact: 'high' }),
+      theme('t-high-effort', [fillerA], { priorityRank: 1, effort: 'high', impact: 'high' }),
+      theme('t-medium-effort', [fillerB], { priorityRank: 2, effort: 'medium', impact: 'high' }),
+      theme('t-quick-win', [fillerC], { priorityRank: 3, effort: 'low', impact: 'high' }),
     ];
 
     const result = enforceImpactEffortOrdering(themes);
@@ -232,10 +295,10 @@ describe('enforceImpactEffortOrdering', () => {
 
   it('orders non-quick-win themes by descending impact-to-effort ratio', () => {
     const themes: StructureThemeWithKey[] = [
-      theme('t-medium-medium', ['f002'], { priorityRank: 1, effort: 'medium', impact: 'medium' }), // ratio 1
-      theme('t-high-low', ['f009'], { priorityRank: 2, effort: 'high', impact: 'low' }), // ratio 1/3
-      theme('t-low-high', ['f086'], { priorityRank: 3, effort: 'low', impact: 'high' }), // quick win, ratio 3
-      theme('t-medium-high', ['f039'], { priorityRank: 4, effort: 'medium', impact: 'high' }), // ratio 1.5
+      theme('t-medium-medium', [fillerA], { priorityRank: 1, effort: 'medium', impact: 'medium' }), // ratio 1
+      theme('t-high-low', [fillerB], { priorityRank: 2, effort: 'high', impact: 'low' }), // ratio 1/3
+      theme('t-low-high', [fillerC], { priorityRank: 3, effort: 'low', impact: 'high' }), // quick win, ratio 3
+      theme('t-medium-high', [fillerD], { priorityRank: 4, effort: 'medium', impact: 'high' }), // ratio 1.5
     ];
 
     const result = enforceImpactEffortOrdering(themes);
@@ -246,9 +309,9 @@ describe('enforceImpactEffortOrdering', () => {
 
   it('keeps the model\'s own relative order as a tiebreak when the ratio is equal', () => {
     const themes: StructureThemeWithKey[] = [
-      theme('t-a', ['f002'], { priorityRank: 1, effort: 'medium', impact: 'medium' }),
-      theme('t-b', ['f009'], { priorityRank: 2, effort: 'low', impact: 'low' }), // not a quick win (impact 'low')
-      theme('t-c', ['f086'], { priorityRank: 3, effort: 'high', impact: 'high' }), // same ratio as t-a
+      theme('t-a', [fillerA], { priorityRank: 1, effort: 'medium', impact: 'medium' }),
+      theme('t-b', [fillerB], { priorityRank: 2, effort: 'low', impact: 'low' }), // not a quick win (impact 'low')
+      theme('t-c', [fillerC], { priorityRank: 3, effort: 'high', impact: 'high' }), // same ratio as t-a
     ];
 
     const result = enforceImpactEffortOrdering(themes);
@@ -269,9 +332,9 @@ describe('enforceImpactEffortOrdering', () => {
   // (ratio 1.5).
   it('item 0.8: a medium-effort, high-impact theme outranks a low-effort, merely medium-impact one, by ratio', () => {
     const themes: StructureThemeWithKey[] = [
-      theme('t-quick-medium-1', ['f002'], { priorityRank: 1, effort: 'low', impact: 'medium' }), // ratio 2
-      theme('t-quick-medium-2', ['f009'], { priorityRank: 2, effort: 'low', impact: 'medium' }), // ratio 2
-      theme('t-image-alt', ['f086'], { priorityRank: 8, effort: 'medium', impact: 'high' }), // ratio 1.5, not a quick win
+      theme('t-quick-medium-1', [fillerA], { priorityRank: 1, effort: 'low', impact: 'medium' }), // ratio 2
+      theme('t-quick-medium-2', [fillerB], { priorityRank: 2, effort: 'low', impact: 'medium' }), // ratio 2
+      theme('t-image-alt', [fillerC], { priorityRank: 8, effort: 'medium', impact: 'high' }), // ratio 1.5, not a quick win
     ];
 
     const result = enforceImpactEffortOrdering(themes);
@@ -286,8 +349,8 @@ describe('enforceImpactEffortOrdering', () => {
 
   it('item 0.8: a medium-effort, high-impact theme now outranks a low-effort, low-impact one (ratio 1.5 > ratio 1)', () => {
     const themes: StructureThemeWithKey[] = [
-      theme('t-trivial-quick-win', ['f002'], { priorityRank: 1, effort: 'low', impact: 'low' }), // ratio 1, not a quick win (impact 'low')
-      theme('t-link-name', ['f009'], { priorityRank: 9, effort: 'medium', impact: 'high' }), // ratio 1.5
+      theme('t-trivial-quick-win', [fillerA], { priorityRank: 1, effort: 'low', impact: 'low' }), // ratio 1, not a quick win (impact 'low')
+      theme('t-link-name', [fillerB], { priorityRank: 9, effort: 'medium', impact: 'high' }), // ratio 1.5
     ];
 
     const result = enforceImpactEffortOrdering(themes);
@@ -297,9 +360,9 @@ describe('enforceImpactEffortOrdering', () => {
 
   it('is idempotent: running it twice produces the same order', () => {
     const themes: StructureThemeWithKey[] = [
-      theme('t1', ['f002'], { priorityRank: 1, effort: 'high', impact: 'medium' }),
-      theme('t2', ['f009'], { priorityRank: 2, effort: 'low', impact: 'high' }),
-      theme('t3', ['f086'], { priorityRank: 3, effort: 'medium', impact: 'low' }),
+      theme('t1', [fillerA], { priorityRank: 1, effort: 'high', impact: 'medium' }),
+      theme('t2', [fillerB], { priorityRank: 2, effort: 'low', impact: 'high' }),
+      theme('t3', [fillerC], { priorityRank: 3, effort: 'medium', impact: 'low' }),
     ];
 
     const once = enforceImpactEffortOrdering(themes);
@@ -321,7 +384,7 @@ describe('logContainmentWarnings', () => {
 
     // f013 (is-crawlable) is confined to the CGU/cookies/privacy pages -
     // entirely legal, entirely diverted per docs/report-v2-refactor.md A3.
-    const themes: StructureThemeWithKey[] = [theme('t1', ['f013'], { category: 'seo' })];
+    const themes: StructureThemeWithKey[] = [theme('t1', [divertedSeoId(findings)], { category: 'seo' })];
 
     logContainmentWarnings(themes, findings, manifest);
 
@@ -334,7 +397,7 @@ describe('logContainmentWarnings', () => {
     const manifest = loadHaaitzaManifest();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-    const themes: StructureThemeWithKey[] = [theme('t1', ['f002'])];
+    const themes: StructureThemeWithKey[] = [theme('t1', [fillerA])];
 
     logContainmentWarnings(themes, findings, manifest);
 
@@ -376,9 +439,9 @@ describe('applyStructureRankingRules', () => {
     const findings = loadHaaitzaFindings();
     const manifest = loadHaaitzaManifest();
     const themes: StructureThemeWithKey[] = [
-      theme('t-high-effort', ['f002'], { priorityRank: 1, effort: 'high', impact: 'high' }),
-      theme('t-medium-effort', ['f009'], { priorityRank: 2, effort: 'medium', impact: 'high' }),
-      theme('t-quick-win', ['f086'], { priorityRank: 3, effort: 'low', impact: 'high' }),
+      theme('t-high-effort', [fillerA], { priorityRank: 1, effort: 'high', impact: 'high' }),
+      theme('t-medium-effort', [fillerB], { priorityRank: 2, effort: 'medium', impact: 'high' }),
+      theme('t-quick-win', [fillerC], { priorityRank: 3, effort: 'low', impact: 'high' }),
     ];
 
     const result = applyStructureRankingRules(themes, findings, manifest);

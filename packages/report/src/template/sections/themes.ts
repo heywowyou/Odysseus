@@ -1,5 +1,14 @@
-import type { AuditManifest, Finding, ReferenceStat, ReportLanguage, StatSector, Theme } from '@odysseus/core';
+import type {
+  AuditManifest,
+  CoreWebVitalMetricKey,
+  Finding,
+  ReferenceStat,
+  ReportLanguage,
+  StatSector,
+  Theme,
+} from '@odysseus/core';
 import {
+  AUDIT_ID_TO_CWV_KEY,
   CORE_WEB_VITAL_THRESHOLDS,
   LCEN_MENTIONS_LEGALES_RULE_ID,
   estimateAggregateEffortDays,
@@ -8,10 +17,12 @@ import {
 } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatFindingIdLinks, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import { formatMetricValue, METRIC_UNITS } from './core-web-vitals-table.js';
+import { escapeHtml, escapeProse, fillTemplate, formatCappedFindingIdLinks, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
+import { sectionTitle } from '../section-registry.js';
 
 /** F40: a quick win is low effort with medium or high impact, computed
  *  here in template code from the theme's own effort/impact - not from
@@ -42,9 +53,75 @@ export const MAX_RENDERED_THEMES = 6;
  *  after, so it can never occupy a slot a real priority should have had.
  *  findingsById must be the same map the caller already builds for
  *  rendering, not a second lookup. */
+/**
+ * B2.1 (2026-08-24, Domaine Lagnonu). Section 04 told the director "43/43
+ * pages with a critical finding" while the Priorites section contained six
+ * chantiers and not one of them was performance - yet four of that site's
+ * five critical findings were performance (LCP, TBT, FCP, Speed Index, all
+ * 43 pages, median TBT 3 936 ms against a 200 ms threshold). The model had
+ * ranked those themes 12, 15 and 17, below the render cut, so the single
+ * number on the cover was driven by a problem the priorities never named.
+ *
+ * Every category holding at least one critical finding is therefore
+ * guaranteed its highest-ranked theme in the rendered list. Deterministic,
+ * and it leaves the model's ordering otherwise untouched: promoted themes
+ * take the place of the lowest-ranked themes that would have rendered,
+ * and the final list stays in priorityRank order so the numbering a reader
+ * sees is still ascending.
+ */
 export function selectRenderedThemes(themes: readonly Theme[], findingsById: ReadonlyMap<string, Finding>): Theme[] {
   const withResolvedFindings = themes.filter((theme) => theme.findingIds.some((id) => findingsById.has(id)));
-  return [...withResolvedFindings].sort((a, b) => a.priorityRank - b.priorityRank).slice(0, MAX_RENDERED_THEMES);
+  const byRank = [...withResolvedFindings].sort((a, b) => a.priorityRank - b.priorityRank);
+  const selected = byRank.slice(0, MAX_RENDERED_THEMES);
+  if (selected.length < MAX_RENDERED_THEMES) return selected;
+
+  const themeFindings = (theme: Theme): Finding[] =>
+    theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
+
+  const criticalCategories = new Set<string>();
+  for (const theme of byRank) {
+    for (const finding of themeFindings(theme)) {
+      if (finding.severity === 'critical') criticalCategories.add(finding.category);
+    }
+  }
+
+  const selectedKeys = new Set(selected.map((theme) => theme.priorityRank));
+  for (const category of criticalCategories) {
+    const alreadyShown = selected.some((theme) =>
+      themeFindings(theme).some((f) => f.category === category && f.severity === 'critical'),
+    );
+    if (alreadyShown) continue;
+
+    const promoted = byRank.find(
+      (theme) =>
+        !selectedKeys.has(theme.priorityRank) &&
+        themeFindings(theme).some((f) => f.category === category && f.severity === 'critical'),
+    );
+    if (!promoted) continue;
+
+    // Drop the lowest-ranked currently-selected theme that is not itself
+    // the only representative of some critical category.
+    for (let i = selected.length - 1; i >= 0; i--) {
+      const candidate = selected[i]!;
+      const covers = [...criticalCategories].filter((c) =>
+        themeFindings(candidate).some((f) => f.category === c && f.severity === 'critical'),
+      );
+      const isSoleRepresentative = covers.some(
+        (c) =>
+          selected.filter((t) => themeFindings(t).some((f) => f.category === c && f.severity === 'critical'))
+            .length === 1,
+      );
+      if (isSoleRepresentative) continue;
+      selectedKeys.delete(candidate.priorityRank);
+      selected.splice(i, 1);
+      break;
+    }
+
+    selected.push(promoted);
+    selectedKeys.add(promoted.priorityRank);
+  }
+
+  return selected.sort((a, b) => a.priorityRank - b.priorityRank);
 }
 
 /** Quick-win star icon, ported verbatim from report.reference.html's
@@ -67,19 +144,67 @@ function median(values: readonly number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
-function toSeconds(ms: number, language: ReportLanguage): string {
-  return formatNumber(Math.round((ms / 1000) * 10) / 10, language);
+/** The Core Web Vital a theme is actually about, read from its own
+ *  findings' rule ids. Where several apply, the one the most findings name
+ *  wins, ties broken by the fixed metric order so the choice is stable
+ *  across runs.
+ *
+ *  2026-08-25 Lagnonu review, D7: this used to be hardcoded to LCP, so a
+ *  priority titled "Blocage du navigateur par des scripts" - total blocking
+ *  time, median 3 397 ms against a 200 ms threshold - carried the sentence
+ *  "ecart mesure sur ce site : LCP median a 4 s". The note attached wherever
+ *  the citation landed and described a different metric than the priority it
+ *  sat under, which an IT-literate reader spots immediately. Same family as
+ *  trade-off 16's B1: a deterministic attachment with the wrong anchor. */
+const CWV_METRIC_PREFERENCE: readonly CoreWebVitalMetricKey[] = ['lcp', 'tbt', 'fcp', 'speedIndex', 'cls'];
+
+/** A real Lagnonu report exposed the gap this closes: a theme titled
+ *  "Blocage du navigateur par des scripts JavaScript" (TBT) bundled one
+ *  finding each for TBT, FCP, LCP and Speed Index (a real four-way tie),
+ *  and the preference order below silently broke the tie toward LCP
+ *  regardless of what the theme's own title was about - the exact wrong-
+ *  anchor failure this function exists to prevent, just in a case the
+ *  original D7 fix (single dominant metric) never covered. A genuine tie
+ *  for the top count is now no metric at all: D7's own principle already
+ *  states it - "saying nothing is correct there; quoting an unrelated
+ *  metric is not" - and that principle does not stop applying just
+ *  because the wrong metric it would otherwise quote happens to be the
+ *  most commonly cited one (LCP) rather than an arbitrary one. */
+function themeCoreWebVitalMetric(themeFindings: readonly Finding[]): CoreWebVitalMetricKey | undefined {
+  const counts = new Map<CoreWebVitalMetricKey, number>();
+  for (const finding of themeFindings) {
+    const key = AUDIT_ID_TO_CWV_KEY.get(finding.ruleId);
+    if (key === undefined) continue;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  if (counts.size === 0) return undefined;
+
+  const maxCount = Math.max(...counts.values());
+  const topMetrics = CWV_METRIC_PREFERENCE.filter((key) => counts.get(key) === maxCount);
+  return topMetrics.length === 1 ? topMetrics[0] : undefined;
 }
+
+const CWV_METRIC_LABELS: Record<CoreWebVitalMetricKey, (strings: ReportStrings) => string> = {
+  lcp: (s) => s.coreWebVitals.lcpLabel,
+  tbt: (s) => s.coreWebVitals.tbtLabel,
+  fcp: (s) => s.coreWebVitals.fcpLabel,
+  speedIndex: (s) => s.coreWebVitals.speedIndexLabel,
+  cls: (s) => s.coreWebVitals.clsLabel,
+};
 
 /** item 14: a Deloitte "0.1 second = X% conversion" stat invites a reader
  *  to naively multiply that relationship by however many seconds they
  *  assume their site is over threshold. States the theme's own measured
- *  LCP gap instead of leaving that extrapolation to the reader - only for
+ *  gap instead of leaving that extrapolation to the reader - only for
  *  the two ratio kinds actually expressed per 0.1s, and only when this
- *  site's own median LCP (across the theme's affected pages) is
+ *  site's own median for that metric (across the theme's affected pages) is
  *  genuinely above the "good" threshold, so a site that is actually fine
- *  never gets a manufactured gap sentence. */
-function measuredLcpGapNote(
+ *  never gets a manufactured gap sentence.
+ *
+ *  D7: a theme whose findings name no Core Web Vital gets no note at all,
+ *  rather than being handed LCP's. Saying nothing is correct there; quoting
+ *  an unrelated metric is not. */
+function measuredCoreWebVitalGapNote(
   strings: ReportStrings,
   language: ReportLanguage,
   stat: ReferenceStat,
@@ -88,20 +213,25 @@ function measuredLcpGapNote(
 ): string | undefined {
   if (!stat.ratio || !RATIO_KINDS_PER_TENTH_SECOND.has(stat.ratio.kind)) return undefined;
 
+  const metric = themeCoreWebVitalMetric(themeFindings);
+  if (metric === undefined) return undefined;
+
   const themePageUrls = new Set(themeFindings.flatMap((f) => f.pageUrls));
-  const lcpValues = manifest.pages
+  const values = manifest.pages
     .filter((page) => themePageUrls.has(page.url))
-    .map((page) => page.coreWebVitals?.lcp?.numericValue)
+    .map((page) => page.coreWebVitals?.[metric]?.numericValue)
     .filter((value): value is number => value !== null && value !== undefined);
 
-  const medianLcp = median(lcpValues);
-  const lcpThreshold = CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'lcp');
-  if (medianLcp === null || !lcpThreshold || medianLcp <= lcpThreshold.good) return undefined;
+  const medianValue = median(values);
+  const threshold = CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === metric);
+  if (medianValue === null || !threshold || medianValue <= threshold.good) return undefined;
 
-  return fillTemplate(strings.themes.measuredLcpGapTemplate, {
-    value: toSeconds(medianLcp, language),
-    gap: toSeconds(medianLcp - lcpThreshold.good, language),
-    threshold: toSeconds(lcpThreshold.good, language),
+  const unit = METRIC_UNITS[metric];
+  return fillTemplate(strings.themes.measuredCoreWebVitalGapTemplate, {
+    metric: CWV_METRIC_LABELS[metric](strings),
+    value: formatMetricValue(medianValue, unit, language),
+    gap: formatMetricValue(medianValue - threshold.good, unit, language),
+    threshold: formatMetricValue(threshold.good, unit, language),
   });
 }
 
@@ -163,6 +293,18 @@ function renderRevenueImpactNote(
  *  Rendered only when a theme's findings genuinely span both first- and
  *  third-party pages - a theme confined to one or the other needs no
  *  split, the existing prose already applies cleanly to all of it. */
+/** True when every finding under a theme carries the theme's own
+ *  category. A theme whose findings are all `privacy` or `geo` returns
+ *  false for any label the locked schema allows, which is the intended
+ *  outcome: no citation rather than a misattributed one. */
+function themeFindingsAgreeWithCategory(
+  theme: { category: string },
+  themeFindings: readonly Finding[],
+): boolean {
+  if (themeFindings.length === 0) return false;
+  return themeFindings.every((finding) => finding.category === theme.category);
+}
+
 function renderOwnershipSplitNote(strings: ReportStrings, language: ReportLanguage, themeFindings: readonly Finding[]): string {
   const thirdPartyFindings = themeFindings.filter((f) => isThirdPartyFinding(f));
   const firstPartyFindings = themeFindings.filter((f) => !isThirdPartyFinding(f));
@@ -180,6 +322,40 @@ function renderOwnershipSplitNote(strings: ReportStrings, language: ReportLangua
     thirdPartyPages: formatNumber(thirdPartyPages, language),
     thirdPartyPageWord: pageWord(strings, thirdPartyPages),
     vendor: vendorLabel,
+  });
+  return `<p style="font-size:11.5px;opacity:0.6;margin-top:4px">${escapeHtml(text)}</p>`;
+}
+
+/** Companion to renderOwnershipSplitNote, for the case that function
+ *  deliberately skips: a theme whose findings are entirely third-party. The
+ *  model's own recommendedActions prose has no notion of vendor ownership
+ *  and reads as "ask your agency" with no name - for a theme that is 100%
+ *  one named vendor's markup (e.g. a booking widget's own iframe), that
+ *  sends the client's agency after a fix it cannot make. Mutually exclusive
+ *  with renderOwnershipSplitNote by construction: a theme is either split,
+ *  fully third-party, or fully first-party, never two of those at once. */
+function renderThirdPartyOnlyNote(strings: ReportStrings, themeFindings: readonly Finding[]): string {
+  if (themeFindings.length === 0 || !themeFindings.every((f) => isThirdPartyFinding(f))) return '';
+
+  const t = strings.themes;
+  const vendors = [...new Set(themeFindings.map((f) => detectFindingVendor(f)).filter((v): v is string => v !== undefined))];
+  const vendorLabel = vendors.length > 0 ? vendors.join(', ') : t.ownershipSplitUnknownVendorLabel;
+
+  const text = fillTemplate(t.thirdPartyOnlyTemplate, { vendor: vendorLabel });
+  return `<p style="font-size:11.5px;opacity:0.6;margin-top:4px">${escapeHtml(text)}</p>`;
+}
+
+/** Points a priority card whose findings include the LCEN identification
+ *  finding (rule id LCEN_MENTIONS_LEGALES_RULE_ID) back to the legal-
+ *  exposure section, which is where the actual criterion, citation and
+ *  scan observation are spliced deterministically (trade-off 28). Without
+ *  this, a reader hits the finding here first with no indication that the
+ *  same fact is addressed at length elsewhere in the report. */
+function renderLcenCrossReferenceNote(strings: ReportStrings, themeFindings: readonly Finding[]): string {
+  if (!themeFindings.some((f) => f.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID)) return '';
+
+  const text = fillTemplate(strings.themes.lcenCrossReferenceTemplate, {
+    legalSection: sectionTitle('section-02', strings),
   });
   return `<p style="font-size:11.5px;opacity:0.6;margin-top:4px">${escapeHtml(text)}</p>`;
 }
@@ -244,7 +420,7 @@ function renderTheme(
     ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(theme.legalRelevance)}</p>`
     : `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(t.conformityNotApplicable)}</p>`;
 
-  const gapNote = citationStat ? measuredLcpGapNote(strings, language, citationStat, themeFindings, manifest) : undefined;
+  const gapNote = citationStat ? measuredCoreWebVitalGapNote(strings, language, citationStat, themeFindings, manifest) : undefined;
   const revenueImpactNote = citationStat ? renderRevenueImpactNote(strings, language, citationStat, turnoverEur) : undefined;
   const citationBox = citationStat
     ? renderReferenceStatNote(t.impactCitationLabel, citationStat, language, undefined, gapNote, revenueImpactNote)
@@ -260,7 +436,7 @@ function renderTheme(
         <div style="margin-top:4px">
           <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.recommendedActionsLabel)}</div>
           <ul style="margin:0;padding-left:1.2em;font-size:12.5px;opacity:0.9">
-            ${theme.recommendedActions.map((action) => `<li>${escapeHtml(action)}</li>`).join('')}
+            ${theme.recommendedActions.map((action) => `<li>${escapeProse(action)}</li>`).join('')}
           </ul>
         </div>
       `
@@ -281,20 +457,22 @@ function renderTheme(
             ${categoryTag}
             ${quickWinBadge}
           </div>
-          <div class="card-title">${escapeHtml(theme.title)}</div>
+          <div class="card-title">${escapeProse(theme.title)}</div>
         </div>
       </div>
-      <p class="card-body" style="opacity:0.9">${escapeHtml(theme.businessImpact)}</p>
+      <p class="card-body" style="opacity:0.9">${escapeProse(theme.businessImpact)}</p>
       ${legalBox}
       ${citationBox}
       ${recommendedActionsBox}
       ${renderOwnershipSplitNote(strings, language, themeFindings)}
+      ${renderThirdPartyOnlyNote(strings, themeFindings)}
+      ${renderLcenCrossReferenceNote(strings, themeFindings)}
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.4fr);gap:var(--space-3);font-size:12px;margin-top:4px">
         <span class="text-muted">${escapeHtml(t.effortLabel)} : <strong style="color:var(--color-text)">${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
         <span class="text-muted">${escapeHtml(t.impactLabel)} : <strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
         <span class="text-muted">${escapeHtml(t.affectedPagesLabel)} : <strong style="color:var(--color-text)">${escapeHtml(pagesText)}</strong></span>
         <span class="text-muted">${escapeHtml(t.conformityLabel)} : <strong style="color:${isNonConformant ? SEVERITY.critical.color : 'var(--color-neutral-500)'}">${escapeHtml(conformityValue)}</strong>${!isNonConformant && showConformityGloss ? ` <span style="font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</span>
-        <span class="text-muted">${escapeHtml(t.refsLabel)} : ${formatFindingIdLinks(theme.findingIds)}</span>
+        <span class="text-muted">${escapeHtml(t.refsLabel)} : ${formatCappedFindingIdLinks(theme.findingIds, language, strings.findingsAppendix)}</span>
       </div>
     </div>
   `;
@@ -424,9 +602,24 @@ export function renderThemes(
   const citationByRank = new Map<number, ReferenceStat>();
   const transactionalPageUrls = transactionalFlowPageUrls(analysis);
   for (const theme of sortedThemes) {
+    const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
+    // B2.2 (2026-08-24, Domaine Lagnonu). theme.category is chosen by the
+    // model, and a real run labelled a security-headers theme
+    // ('privacy' findings, per trade-off 25) as 'performance' - which would
+    // attach a page-speed conversion statistic to a security priority.
+    // That is trade-off 16's B1 defect arriving through the other input:
+    // B1 fixed the stats table, nothing checked the category it is keyed on.
+    //
+    // The locked themeSchema (llm-output.ts) offers only accessibility |
+    // seo | performance | rendering, so a privacy or geo theme has no
+    // correct value available and the model's answer cannot be "fixed" by
+    // rejecting it. Citations are therefore keyed off what the findings
+    // actually are, and suppressed entirely when the theme's own findings
+    // do not agree with its label - omitting a citation is always safe,
+    // attaching the wrong one is not.
+    if (!themeFindingsAgreeWithCategory(theme, themeFindings)) continue;
     if (!isCitableThemeCategory(theme.category)) continue;
     if (citedCategories.has(theme.category)) continue;
-    const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
     if (isCitationIneligibleTheme(themeFindings)) continue;
     // P0.2 (2026-08-21 La Corniche feedback pass): strictSector so a
     // hospitality report never falls back to a generic/cross-sector stat

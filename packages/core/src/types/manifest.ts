@@ -11,6 +11,7 @@
 
 import { FINDINGS_SCHEMA_VERSION } from './findings.js';
 import type { SiteSignals } from './compliance.js';
+import type { TranslationCluster } from '../normalize/translation-clusters.js';
 
 export type ManifestKind = 'audit' | 'render-diff';
 
@@ -32,6 +33,13 @@ export interface AuditConfigSnapshot {
   crawlDelayMs: number;
   pageTimeoutMs: number;
   lighthouseTimeoutMs: number;
+  /** Upper bound on the rendered pass's post-`load` wait for network
+   *  idle. Recorded for the same provenance reason as the other scan
+   *  config fields: it bounds how settled a page was when render-diff
+   *  measured it, so a missingPercent shift between two runs can be told
+   *  apart from a real site change. Optional because audits stored
+   *  before 2026-08-24 predate the setting. */
+  renderSettleTimeoutMs?: number;
   userAgent: string;
   /** Number of pages the scan phase processed at once. Each lane keeps
    *  crawlDelayMs pacing independently; this does not change politeness
@@ -46,6 +54,12 @@ export interface AuditConfigSnapshot {
  */
 export type ManifestPageStatus =
   | 'visited'
+  /** Fetched for link discovery only, deliberately not scanned, so it
+   *  produces no findings. Currently only a bare language homepage
+   *  (`/en`, `/es`), which duplicates the homepage it translates but can
+   *  be the sole link into that language's subtree. See links.ts's
+   *  isLanguageHomepagePath. */
+  | 'discovered-not-scanned'
   | 'skipped-robots'
   | 'skipped-non-html'
   | 'skipped-external-redirect'
@@ -228,4 +242,13 @@ export interface AuditManifest {
    *  Both must render the same way in a report (no real-user data
    *  shown); the distinction only matters for our own debugging. */
   cruxFieldData?: CruxFieldDataResult;
+  /** B2 (2026-08-24). Language-variant groups derived from the pages'
+   *  own hreflang declarations at scan time, so `normalize <dir>` can
+   *  re-run offline against a stored artifacts folder and reach the same
+   *  grouping without re-reading every page's head metadata. Optional:
+   *  absent on manifests predating this field, and empty on a site that
+   *  declares no alternates - both mean "no page is a translation of any
+   *  other", which is the correct answer for a monolingual site and the
+   *  behaviour that shipped before this existed. */
+  translationClusters?: TranslationCluster[];
 }

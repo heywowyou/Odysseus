@@ -1,3 +1,5 @@
+import type { FindingCategory } from '@odysseus/core';
+
 /**
  * Static report chrome: section headings, table labels, and the fixed
  * methodology/limitations boilerplate. The analysis prose itself
@@ -112,6 +114,13 @@ export interface ReportStrings {
      *  unconditionally (CLAUDE.md rule 6: state the criteria, never a
      *  verdict, regardless of whether section 11 reached a determination
      *  elsewhere). */
+    /** Points the reader at the section that does treat obligation status.
+     *  Template: {section}, the referenced section's own canonical title.
+     *  It used to hardcode "section 2", which named the wrong section: the
+     *  registry id `section-02` renders as ordinal 3, so the note pointed
+     *  at "Resume". Referencing by title, the way accessibility-statement.ts
+     *  already does, cannot drift when a section is suppressed and the
+     *  ordinals shift. */
     scopeNote: string;
     criterionColumnLabel: string;
     criterionNameColumnLabel: string;
@@ -141,6 +150,25 @@ export interface ReportStrings {
     legalTitle: string;
     /** Template: {findingIds}. */
     legalBodyTemplate: string;
+  };
+  remainingWork: {
+    eyebrow: string;
+    heading: string;
+    /** Template: {count}, {prioritiesSection}. */
+    introTemplate: string;
+    /** Shown instead of the whole section body when the ranked priorities
+     *  already account for every finding. */
+    nothingRemaining: string;
+    findingSingular: string;
+    findingPlural: string;
+    occurrenceSingular: string;
+    occurrencePlural: string;
+    pageSingular: string;
+    pagePlural: string;
+    /** Template: {findingIds}. */
+    findingRefsTemplate: string;
+    /** Fixed note under the heading, stating what this section is not. */
+    scopeNote: string;
   };
   cover: {
     kicker: string;
@@ -262,6 +290,13 @@ export interface ReportStrings {
      *  {total} (distinct findings). Rendered before the model's now
      *  purely qualitative executiveSummary prose. */
     summaryCountsTemplate: string;
+    /** Fix #1, 2026-08-25 report review: bridges the site-wide count in
+     *  summaryCountsTemplate to the 6-card Priorities section, which does
+     *  not cover every critical/serious finding (themes.ts's
+     *  MAX_RENDERED_THEMES cap). Template: {covered}, {remainingSection}
+     *  (section-05b's own title, via sectionTitle). Rendered only when
+     *  there is a genuine remainder. */
+    coveredByPrioritiesTemplate: string;
   };
   /** Promotes methodology's own legal-citation paragraph (rendered via
    *  the exported renderLegalCitationParagraph) to its own page for
@@ -359,6 +394,14 @@ export interface ReportStrings {
      *  registry denomination can carry formatting artifacts (an
      *  unbalanced parenthesis, seen on a real report) that read as a
      *  scraping error without this note. */
+    /** A7b: the LCEN identification obligation block. Renders only when the
+     *  lcen-mentions-legales-missing finding is present. Every legal word in
+     *  it is spliced from regimes.ts; these strings carry only the framing
+     *  and the scan-limitation caveat. docs/obligation-basis.md section 8bis. */
+    lcenKicker: string;
+    lcenObserved: string;
+    lcenSourceTemplate: string;
+    lcenScanLimitNote: string;
     registrySnapshotVerbatimNote: string;
     /** item 0.1: shown when a manual hasTransactionalFlow override
      *  disagrees with the detector (ObligationAssessment.
@@ -424,7 +467,12 @@ export interface ReportStrings {
      *  site's own measured LCP is above the "good" threshold, so the
      *  reader has the real gap next to the stat instead of being left to
      *  multiply the citation's 0.1s figure by an assumed gap themselves. */
-    measuredLcpGapTemplate: string;
+    /** D7: names the metric the priority's own findings are about. Was
+     *  hardcoded to LCP, which put "median LCP at 4 s" under a priority
+     *  about total blocking time. Templates: {metric}, {value}, {gap},
+     *  {threshold} - values arrive pre-formatted with their own unit,
+     *  since TBT is quoted in ms where LCP is quoted in seconds. */
+    measuredCoreWebVitalGapTemplate: string;
     /** 2026-08-22 revenue-impact wiring. Template: {turnover}, {impact}
      *  (both pre-formatted euro amounts via formatNumber; the currency
      *  marker is baked into the template text itself, same convention as
@@ -455,6 +503,18 @@ export interface ReportStrings {
     /** Fallback for {vendor} above when no known vendor prefix matched
      *  any third-party finding's selector. */
     ownershipSplitUnknownVendorLabel: string;
+    /** Fix #2, 2026-08-25 report review: companion to ownershipSplitTemplate
+     *  for the case that template deliberately skips, a theme whose
+     *  findings are entirely third-party. Template: {vendor} (a known
+     *  vendor name, or ownershipSplitUnknownVendorLabel as fallback). */
+    thirdPartyOnlyTemplate: string;
+    /** Fix #3, 2026-08-25 report review: rendered on a priority card whose
+     *  findings include the LCEN identification finding, pointing back to
+     *  the legal-exposure section where the criterion, citation and scan
+     *  observation are spliced deterministically (CLAUDE.md trade-off 28).
+     *  Template: {legalSection} (section-02's own title, via
+     *  sectionTitle). */
+    lcenCrossReferenceTemplate: string;
   };
   /** Doc §3: bars only, no screenshots - two proportional-width bars
    *  (raw vs rendered visible-text length) plus a one-line caption, never
@@ -646,12 +706,14 @@ export interface ReportStrings {
      *  paid deliverable that may be forwarded to counsel. Template:
      *  {producer}, {date}, {version}, {reportId}. */
     authorshipTemplate: string;
-    /** item 3.13: no issuer identity (legal entity, signatory, SIRET)
-     *  anywhere in the document - a professionalism and liability-
-     *  exposure gap for a EUR 1,600 HT French deliverable. Template:
-     *  {signatory}, {siret}. {siret} is a genuine placeholder
-     *  (ODYSSEUS_SIRET_PLACEHOLDER, html-utils.ts), rendered so it reads
-     *  as visibly incomplete rather than a plausible fake number. */
+    /** item 3.13: no issuer identity (legal entity, signatory,
+     *  registration number) anywhere in the document - a professionalism
+     *  and liability-exposure gap for a EUR 1,600 HT French deliverable.
+     *  Template: {signatory}, {registrationNumber}. A3 (2026-08-24): the
+     *  placeholder is filled; the label says SIRET now that the full
+     *  fourteen-digit number is known - see ODYSSEUS_REGISTRATION_NUMBER
+     *  (html-utils.ts), where label and number are documented as moving
+     *  together so the two can never disagree. */
     issuerBlockTemplate: string;
     liabilityStatement: string;
   };
@@ -659,13 +721,12 @@ export interface ReportStrings {
     eyebrow: string;
     heading: string;
     intro: string;
-    categoryLabels: {
-      accessibility: string;
-      seo: string;
-      geo: string;
-      performance: string;
-      rendering: string;
-    };
+    /** Keyed by FindingCategory rather than spelled out, so adding a
+     *  category to the locked contract fails here in both language files
+     *  until both are given a label - which is how the 'privacy'
+     *  addition (2026-08-24) was caught, rather than rendering an
+     *  undefined label in a client's report. */
+    categoryLabels: Record<FindingCategory, string>;
     /** Badge text for a reference-stat whose confidence is 'emerging',
      *  milestone 8.5c - quarantines GEO citations per the source
      *  research doc's Stage 3 recommendation. */
@@ -705,6 +766,23 @@ export interface ReportStrings {
      *  findings-appendix.ts) when a finding hits more pages than shown.
      *  Template: {count}, the number NOT shown. */
     andNMoreTemplate: string;
+    /** Singular form of the above. A remaining count of exactly one is
+     *  common (a capped list one item over its cap), and French "et 1
+     *  autres" is simply wrong. Template: {count}. */
+    andNMoreSingularTemplate: string;
+    /** B4: a site-wide resource finding (Lighthouse's image/asset audits)
+     *  collapses every affected file into one row, so the selector column
+     *  states a file count and a sub-row lists the files. Template:
+     *  {count}. */
+    affectedFilesCountTemplate: string;
+    /** Singular form of the above. Real reports hit this: an audit whose
+     *  collapsed row covers exactly one file rendered "1 fichiers
+     *  concernes". Template: {count}. */
+    affectedFilesCountSingularTemplate: string;
+    affectedFilesLabel: string;
+    /** Used instead of affectedFilesLabel when the stored occurrences were
+     *  capped, so the list below is a sample and not the whole set. */
+    affectedFilesSampleLabel: string;
     /** 2026-08-22, La Corniche report review: two or more findings in the
      *  same rule group frequently share the exact same page-URL set (the
      *  same booking widget missing an alt attribute on every page it
@@ -727,6 +805,13 @@ export interface ReportStrings {
     pagePlural: string;
     wcagLabel: string;
     observationsCrossRefLabel: string;
+    /** Fix #6, 2026-08-25 report review: rendered under a first-party rule
+     *  group when the same rule id also has occurrences in the third-party
+     *  section (item 1.4's partition), so a reader is not left thinking a
+     *  rule's footprint here is its entire footprint. Template: {count},
+     *  {thirdPartyHeading} (this same block's own thirdPartyHeading
+     *  string). */
+    splitGroupThirdPartyNoteTemplate: string;
     /** item 29: the list of crawled URLs was not printed anywhere - the
      *  client had no way to verify the scope they paid for beyond a bare
      *  count on the cover. Template: {count}. */
@@ -737,6 +822,15 @@ export interface ReportStrings {
     heading: string;
     /** Template: {axeVersion}, {lighthouseVersion}, {pages}, {date}. */
     toolingParagraphTemplate: string;
+    /** 2026-08-25: states which languages the crawl actually reached, on a
+     *  site that publishes more than one. A real report said "65 pages
+     *  analysees" for a trilingual site having visited only the French one.
+     *  Templates: {languages}. */
+    languageCoverageTemplate: string;
+    /** Appended when a language was discovered but no page of it scanned -
+     *  the case the sentence above exists to make impossible to miss.
+     *  Templates: {languages}. */
+    languageNotScannedTemplate: string;
     /** brief section 6.6: the well-documented ~30-40% automated coverage
      *  figure, stated in every report, not only accessibility audits. */
     automatedCoverageCaveat: string;

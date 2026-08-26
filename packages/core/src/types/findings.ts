@@ -22,12 +22,33 @@ export type FindingSource = 'axe' | 'lighthouse' | 'custom' | 'renderdiff';
  * split, so a future report section can address them separately. Purely
  * additive: no existing category was removed or renamed.
  */
+/**
+ * 'privacy' added 2026-08-24, on the same purely-additive terms as 'geo'
+ * (CLAUDE.md trade-off 14) and with Jules's explicit approval, since this
+ * file is a locked contract. Nothing was removed or renamed.
+ *
+ * Prompted by a real Palais Gallien report whose fourth priority card
+ * read "Référencement (SEO) - En-têtes de sécurité manquants" and then
+ * discussed clickjacking and Content-Security-Policy. Milestone 8.6's
+ * five security-header rules had been filed under 'seo' because no
+ * better value existed; four of the five have nothing to do with search
+ * ranking, and a client who sees one category label contradict its own
+ * contents has no reason to trust the rest of the categorisation.
+ *
+ * One value rather than separate 'security' and 'privacy': response
+ * headers, cookies set before consent, and third-party data transfer are
+ * one story to the buyer this product sells to (a French SMB, whose real
+ * enforcement exposure here is the CNIL), they are read by the same
+ * person, and eight categories would need eight report sections, colours
+ * and label pairs to keep a type total.
+ */
 export type FindingCategory =
   | 'accessibility'
   | 'seo'
   | 'geo'
   | 'performance'
-  | 'rendering';
+  | 'rendering'
+  | 'privacy';
 
 /**
  * One unified severity scale across all scanners. See severity.ts for the
@@ -46,6 +67,29 @@ export interface FindingElement {
   snippet: string;
   /** Reference to a stored screenshot, if one was captured. */
   screenshotRef?: string;
+  /**
+   * Absolute URL of the file this occurrence is actually about - an image
+   * src, most commonly - when the scanner recorded one. Undefined whenever
+   * the scanner did not, which is the normal case: a contrast failure or a
+   * heading-order failure is about a place in a page, not about a file.
+   *
+   * Added 2026-08-25 with Jules's explicit approval, since this file is a
+   * locked contract. Purely additive and optional, on the same terms as
+   * 'geo' and 'privacy' on FindingCategory: no stored audit becomes
+   * invalid, no reader has to change, and nothing was removed or renamed,
+   * so FINDINGS_SCHEMA_VERSION is deliberately not bumped. Bumping it
+   * would invalidate every stored audit to describe a field they are all
+   * still perfectly valid without.
+   *
+   * Why it exists: a report told a developer to fix
+   * `img:nth-of-type(32)`, which names a position in a DOM and not a file
+   * anyone can open. The filename is the actionable half. It is populated
+   * only where the offending element genuinely IS the file (the element
+   * captured is an <img> or <source> carrying a src), never inferred from
+   * a descendant or guessed from a selector - naming the wrong file is
+   * worse than naming none.
+   */
+  resourceUrl?: string;
 }
 
 export interface Finding {

@@ -103,6 +103,14 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
 // "Conformité : Sans objet" should not be something the reader has to
 // notice on their own after four pages of legal framing (cover, section
 // 02, section 07).
+//
+// A7b (2026-08-24): the note used to say the top priority was "un enjeu
+// commercial, pas un enjeu de conformité légale". legalRelevance is built
+// only for accessibility themes with WCAG criteria, so that claimed no legal
+// weight for privacy, LCEN and security themes it knows nothing about - on a
+// real report whose section 03 now carries an LCEN breach. The assertions
+// below follow the narrowed claim; top-priority-legal-note.test.ts pins the
+// copy itself.
 describe('item 16: a non-legal top priority is acknowledged in the executive summary', () => {
   const nonLegalTheme = {
     title: 'Vitesse mobile insuffisante',
@@ -179,7 +187,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     const analysis = buildAnalysis([nonLegalTheme, legalTheme]);
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001'), buildFinding('f002')], emptyManifest);
 
-    expect(html).toContain('La priorité 1 ci-dessus est un enjeu commercial');
+    expect(html).toContain("La priorité 1 ci-dessus n&#39;est rattachée à aucun critère d&#39;accessibilité");
     expect(html).toContain('position 2');
   });
 
@@ -187,7 +195,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     const analysis = buildAnalysis([nonLegalTheme]);
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001')], emptyManifest);
 
-    expect(html).toContain('La priorité 1 ci-dessus est un enjeu commercial');
+    expect(html).toContain("La priorité 1 ci-dessus n&#39;est rattachée à aucun critère d&#39;accessibilité");
     expect(html).toContain("Aucune des priorités");
   });
 
@@ -197,7 +205,7 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     const analysis = buildAnalysis([legalThemeRankedFirst, nonLegalThemeRankedSecond]);
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001'), buildFinding('f002')], emptyManifest);
 
-    expect(html).not.toContain('enjeu commercial');
+    expect(html).not.toContain("rattachée à aucun critère");
   });
 
   it('item 0.4: the counts sentence is bound from the findings passed in, never from the model prose', () => {
@@ -228,7 +236,94 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     }));
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).toContain('3 constats prioritaires (2 critiques et 1 sérieux) sur un total de 4 constats');
+    expect(html).toContain('L&#39;audit a identifié 4 constats au total, dont 3 critiques ou sérieux (2 critiques et 1 sérieux)');
+  });
+});
+
+describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging sentence', () => {
+  function buildAnalysis(themes: Theme[]) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes,
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const emptyManifest: AuditManifest = {
+    auditId: 'a1',
+    kind: 'audit',
+    siteUrl: 'https://example.com/',
+    startedAt: '2026-08-02T00:00:00.000Z',
+    finishedAt: '2026-08-02T00:05:00.000Z',
+    tool: {
+      odysseusVersion: '0.1.0',
+      findingsSchemaVersion: 1,
+      axeCoreVersion: '4.12.1',
+      lighthouseVersion: '12.8.2',
+      playwrightVersion: '1.49.0',
+      chromiumVersion: '131.0.0',
+    },
+    config: {
+      maxPages: 20,
+      maxDepth: 5,
+      crawlDelayMs: 1000,
+      pageTimeoutMs: 30_000,
+      lighthouseTimeoutMs: 60_000,
+      userAgent: 'OdysseusAuditBot/0.1',
+      scanConcurrency: 3,
+    },
+    crawl: {
+      startUrl: 'https://example.com/',
+      visitedCount: 1,
+      maxPages: 20,
+      maxDepth: 5,
+      robotsTxtFound: true,
+      effectiveDelayMs: 1000,
+    },
+    pages: [{ url: 'https://example.com/', depth: 0, status: 'visited', errors: {} }],
+  };
+
+  const theme: Theme = {
+    title: 'Priorité 1',
+    category: 'accessibility',
+    businessImpact: 'Impact',
+    effort: 'low',
+    impact: 'high',
+    priorityRank: 1,
+    findingIds: ['f001'],
+    recommendedActions: ['Action'],
+  };
+
+  it('renders a pointer sentence when the rendered priorities cover fewer findings than were passed in', () => {
+    const analysis = buildAnalysis([theme]);
+    const findings = [buildFinding('f001'), buildFinding('f002')];
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).toContain('1 sont couverts par les priorités ci-dessous');
+    expect(html).toContain('Reste');
+  });
+
+  it('renders nothing when every finding is covered by a rendered priority', () => {
+    const analysis = buildAnalysis([theme]);
+    const findings = [buildFinding('f001')];
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).not.toContain('sont couverts par les priorités');
+  });
+
+  it('renders nothing when no priority is rendered at all', () => {
+    const analysis = buildAnalysis([]);
+    const findings = [buildFinding('f001')];
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).not.toContain('sont couverts par les priorités');
   });
 });
 

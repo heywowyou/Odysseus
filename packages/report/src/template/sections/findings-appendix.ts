@@ -1,8 +1,17 @@
+import { buildClusterLookup, groupPageUrlsByTranslation, type ClusterLookup } from '../page-url-groups.js';
 import type { AuditManifest, Finding, FindingCategory, ReportLanguage, StatSector } from '@odysseus/core';
 import { selectReferenceStats } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatNumber, pluralize, renderSheetHeader, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  formatAndNMore,
+  formatNumber,
+  pluralize,
+  renderSheetHeader,
+  sheet,
+} from '../html-utils.js';
 import { renderSeverityBadge } from '../severity-badge.js';
 import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
@@ -52,12 +61,46 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
 // vanished with no error). Real `<tr>` elements are Paged.js's
 // well-supported, standard fragmentation unit and do not carry this
 // risk.
+/** 2026-08-24: table-layout:fixed is load-bearing, not cosmetic. With the
+ *  default auto layout the headCell widths below are only hints, and
+ *  Paged.js recomputes them per fragment: a rule group split across a page
+ *  break got a narrower first column on the continuation page, squeezed by
+ *  that fragment's own longest selector, and that cell's
+ *  overflow-wrap:anywhere then broke "f052" across two lines as "f05" /
+ *  "2" from page 20 of a real 29-page PDF onwards. Fixed layout makes every
+ *  fragment lay out identically; the first cell is additionally nowrap so
+ *  an id can never break mid-token even if a future change squeezes it
+ *  again. */
+const APPENDIX_TABLE_STYLE = 'width:100%;table-layout:auto;border-collapse:collapse;font-size:12.5px';
+
+/** D2 (2026-08-25, Lagnonu review): the four column widths, declared on
+ *  every row rather than only on the header.
+ *
+ *  table-layout:fixed takes its widths from the first row of whatever it is
+ *  laying out, and Paged.js gives a continuation fragment the tbody rows
+ *  without the thead - so every page after the first lost the declarations
+ *  entirely and fell back to distributing the width equally. Measured on a
+ *  real report: the selector column began at x~325 on the page carrying the
+ *  header and x~530 on every page after it, and selectors then wrapped
+ *  mid-token, `.link[href$="contact` / `o"]`. Carrying the widths on the
+ *  cells makes every fragment lay out identically whether or not it happens
+ *  to contain the header - but not on its own: table-layout:fixed reads the
+ *  first row of the fragment, and a page can open on a full-width
+ *  colspan="4" page-URL row, which declares no column widths at all. The
+ *  colgroup below is what actually pins the columns, since it applies to the
+ *  table regardless of which row leads the fragment. Both are kept: the
+ *  colgroup is the guarantee, the per-cell widths make each row
+ *  self-describing if a future change ever splits these into separate
+ *  tables. */
+const APPENDIX_COLUMN_WIDTHS = ['80px', '90px', '100px', 'auto'] as const;
+
 function headCell(label: string, width: string): string {
   return `<th style="width:${width};padding:6px var(--space-2);font-size:10px;letter-spacing:0.02em;text-transform:uppercase;text-align:left;font-weight:400;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider);white-space:nowrap">${escapeHtml(label)}</th>`;
 }
 
-function cell(html: string, extra = ''): string {
-  return `<td style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</td>`;
+function cell(html: string, extra = '', width?: string): string {
+  const widthRule = width === undefined ? '' : `width:${width};`;
+  return `<td style="${widthRule}padding:6px var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</td>`;
 }
 
 /** item 25: every finding row states a page count ("9 pages") and never
@@ -98,6 +141,10 @@ function renderPageUrlList(
    *  the first finding to have a given set, or when this finding's set is
    *  unique within the group. */
   samePagesAsFindingId: string | undefined,
+  /** B2: translation clusters read off the manifest, so five language
+   *  variants of one page print as one URL plus its language list rather
+   *  than five near-identical URLs that consume the whole cap. */
+  clusterLookup: ClusterLookup,
 ): string {
   if (finding.pageUrls.length === 0) return '';
   const a = strings.findingsAppendix;
@@ -106,15 +153,22 @@ function renderPageUrlList(
   if (samePagesAsFindingId !== undefined) {
     urlsText = fillTemplate(a.samePagesAsTemplate, { findingId: samePagesAsFindingId });
   } else {
-    const sortedUrls = [...finding.pageUrls].sort();
-    if (totalPagesScanned > 0 && sortedUrls.length === totalPagesScanned) {
+    const groups = groupPageUrlsByTranslation(finding.pageUrls, clusterLookup);
+    const entries = groups.map((group) =>
+      group.languages.length > 0
+        ? `${group.pageUrl} (${group.languages.join(', ')})`
+        : group.pageUrl,
+    );
+    // The "all pages" collapse still compares raw page counts: the claim
+    // is about the crawl's own scope, which is counted in real pages.
+    if (totalPagesScanned > 0 && finding.pageUrls.length === totalPagesScanned) {
       urlsText = fillTemplate(a.allPagesAnalyzedTemplate, { count: formatNumber(totalPagesScanned, language) });
-    } else if (sortedUrls.length > PAGE_URL_LIST_CAP) {
-      const shown = sortedUrls.slice(0, PAGE_URL_LIST_CAP);
-      const remaining = sortedUrls.length - PAGE_URL_LIST_CAP;
-      urlsText = `${shown.join(', ')} ${fillTemplate(a.andNMoreTemplate, { count: formatNumber(remaining, language) })}`;
+    } else if (entries.length > PAGE_URL_LIST_CAP) {
+      const shown = entries.slice(0, PAGE_URL_LIST_CAP);
+      const remaining = entries.length - PAGE_URL_LIST_CAP;
+      urlsText = `${shown.join(', ')} ${formatAndNMore(remaining, language, a)}`;
     } else {
-      urlsText = sortedUrls.join(', ');
+      urlsText = entries.join(', ');
     }
   }
 
@@ -128,6 +182,92 @@ function renderPageUrlList(
 
 /** item 3.1's own suggested cap. */
 const PAGE_URL_LIST_CAP = 5;
+
+/** B4 (2026-08-24): the affected files for a site-wide resource finding
+ *  (normalize-lighthouse.ts's RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS), read
+ *  off rawEvidence.resourceUrls. Those findings collapse every item of one
+ *  audit into a single row, so elements[0].selector is whichever DOM node
+ *  happened to sort first - true of one occurrence, misleading as the row's
+ *  only detail. The file list is what the client acts on. */
+const RESOURCE_URL_LIST_CAP = 8;
+
+function findingResourceUrls(finding: Finding): string[] {
+  const raw = (finding.rawEvidence as { resourceUrls?: unknown }).resourceUrls;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((url): url is string => typeof url === 'string');
+}
+
+/** 2026-08-25: the files named by the finding's own occurrences, for
+ *  element-scoped rules that were never collapsed onto a file identity.
+ *
+ *  Different from findingResourceUrls above, and deliberately not merged
+ *  with it. A collapsed resource finding IS its file list, so that list
+ *  replaces the selector column. An element-scoped finding is about a place
+ *  in a page that happens to be an image, so it keeps its selector and gains
+ *  the filename underneath: the developer needs both halves, "which element"
+ *  and "which file", and neither answers the other. */
+function elementResourceUrls(finding: Finding): string[] {
+  return [
+    ...new Set(
+      finding.elements
+        .map((element) => element.resourceUrl)
+        .filter((url): url is string => typeof url === 'string' && url.length > 0),
+    ),
+  ].sort();
+}
+
+/** Path and filename only. A column of forty absolute URLs sharing one
+ *  origin is unreadable, and the origin is already on the cover.
+ *
+ *  A credential-shaped param (key/token/secret/auth/password) is stripped
+ *  before rebuilding the query string, since a Lighthouse-reported LCP
+ *  resource can legitimately be a third-party request carrying one (a real
+ *  Google Maps tile URL, e.g. f084 on the Lagnonu report) - this is a
+ *  client-forwardable PDF, not a debug log. Ordinary cache-busting params
+ *  are kept, per this function's existing behaviour. */
+const CREDENTIAL_LOOKING_PARAM_PATTERN = /key|token|secret|auth|password/i;
+
+function shortenResourceUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (CREDENTIAL_LOOKING_PARAM_PATTERN.test(key)) parsed.searchParams.delete(key);
+    }
+    return `${parsed.pathname}${parsed.search}`;
+  } catch {
+    return url;
+  }
+}
+
+function renderResourceUrlList(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  finding: Finding,
+): string {
+  const collapsed = findingResourceUrls(finding);
+  const fromElements = collapsed.length === 0;
+  const urls = collapsed.length > 0 ? collapsed : elementResourceUrls(finding);
+  if (urls.length === 0) return '';
+  const a = strings.findingsAppendix;
+
+  // mergeGroup stores at most MAX_ELEMENTS_PER_FINDING occurrences, so an
+  // element-derived list on a finding with more occurrences than that is a
+  // sample and the true number of distinct files is genuinely unknown. Say
+  // "examples" and print no remainder rather than compute an "et N autres"
+  // against a set we know is truncated - a wrong count is worse than no
+  // count, the same reasoning the cover uses for an unconfirmed name.
+  const truncated = fromElements && finding.elements.length < finding.occurrences;
+
+  const shown = urls.slice(0, RESOURCE_URL_LIST_CAP).map(shortenResourceUrl);
+  const remaining = urls.length - shown.length;
+  const text =
+    remaining > 0 && !truncated
+      ? `${shown.join(', ')} ${formatAndNMore(remaining, language, a)}`
+      : shown.join(', ');
+  const label = truncated ? a.affectedFilesSampleLabel : a.affectedFilesLabel;
+
+  return `<tr class="appendix-url-row"><td class="url-cell" colspan="4" style="padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(label)} : ${escapeHtml(text)}</td></tr>`;
+}
 
 /** item 3.3: the anchor formatFindingIdLinks (html-utils.ts) links to from
  *  a theme card's "Constats : f002, f003" reference list - every annex
@@ -164,16 +304,32 @@ function renderSubTableRow(
   finding: Finding,
   totalPagesScanned: number,
   samePagesAsFindingId: string | undefined,
+  clusterLookup: ClusterLookup,
 ): string {
-  const selector = finding.elements[0]?.selector ?? '';
+  // B4: a site-wide resource finding has no meaningful single selector -
+  // its detail is the file list rendered below, so the column states how
+  // many files rather than naming an arbitrary one of their DOM nodes.
+  const resourceUrls = findingResourceUrls(finding);
+  const selector =
+    resourceUrls.length > 0
+      ? fillTemplate(
+          pluralize(
+            resourceUrls.length,
+            strings.findingsAppendix.affectedFilesCountSingularTemplate,
+            strings.findingsAppendix.affectedFilesCountTemplate,
+          ),
+          { count: formatNumber(resourceUrls.length, language) },
+        )
+      : (finding.elements[0]?.selector ?? '');
   return `
     <tr id="annexref-${escapeHtml(finding.findingId)}">
-      ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none')}
-      ${cell(formatNumber(finding.pageUrls.length, language))}
-      ${cell(formatNumber(finding.occurrences, language))}
-      ${cell(escapeHtml(selector), selectorCellStyle(selector))}
+      ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;white-space:nowrap', APPENDIX_COLUMN_WIDTHS[0])}
+      ${cell(formatNumber(finding.pageUrls.length, language), '', APPENDIX_COLUMN_WIDTHS[1])}
+      ${cell(formatNumber(finding.occurrences, language), '', APPENDIX_COLUMN_WIDTHS[2])}
+      ${cell(escapeHtml(selector), selectorCellStyle(selector), APPENDIX_COLUMN_WIDTHS[3])}
     </tr>
-    ${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId)}
+    ${renderResourceUrlList(strings, language, finding)}
+    ${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup)}
   `;
 }
 
@@ -187,9 +343,27 @@ function renderRuleGroup(
    *  name when detectFindingVendor found one consistently across the
    *  group, or a generic "unidentified vendor" label for a frame-
    *  crossing selector matching none of the known prefixes. */
+  clusterLookup: ClusterLookup,
   vendorLabel?: string,
+  /** Fix #6, 2026-08-25 report review: the number of this same rule's
+   *  occurrences that landed in the third-party section instead (item 1.4's
+   *  partition), so a first-party reader is not left thinking a rule they
+   *  see 3 times here is the rule's entire footprint when a vendor-embedded
+   *  instance of it also exists a few pages later. Purely a pointer sentence
+   *  computed from the caller's own partitioned data; does not change what
+   *  is counted where. */
+  thirdPartyCrossRefCount = 0,
 ): string {
   const a = strings.findingsAppendix;
+  const thirdPartyCrossRefNote =
+    thirdPartyCrossRefCount > 0
+      ? `<p style="font-size:11px;opacity:0.55;margin-top:2px">${escapeHtml(
+          fillTemplate(a.splitGroupThirdPartyNoteTemplate, {
+            count: formatNumber(thirdPartyCrossRefCount, language),
+            thirdPartyHeading: a.thirdPartyHeading,
+          }),
+        )}</p>`
+      : '';
   const vendorTag = vendorLabel
     ? `<span class="tag" style="background:var(--color-surface);opacity:0.75;font-size:10.5px">${escapeHtml(vendorLabel)}</span>`
     : '';
@@ -224,7 +398,7 @@ function renderRuleGroup(
       if (signature !== undefined && samePagesAsFindingId === undefined) {
         seenPageUrlSignatures.set(signature, finding.findingId);
       }
-      return renderSubTableRow(strings, language, finding, totalPagesScanned, samePagesAsFindingId);
+      return renderSubTableRow(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup);
     })
     .join('');
   const obsTag = isFullyDiverted
@@ -272,19 +446,21 @@ function renderRuleGroup(
         ${vendorTag}
         <span style="font-size:11px;opacity:0.6">${renderRuleSum(strings, language, group)}</span>
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <table style="${APPENDIX_TABLE_STYLE}">
+        <colgroup>${APPENDIX_COLUMN_WIDTHS.map((w) => `<col style="width:${w}">`).join('')}</colgroup>
         <thead>
           <tr>
-            ${headCell(a.findingIdColumnLabel, '80px')}
-            ${headCell(a.pagesColumnLabel, '90px')}
-            ${headCell(a.occurrencesColumnLabel, '100px')}
-            ${headCell(a.selectorColumnLabel, 'auto')}
+            ${headCell(a.findingIdColumnLabel, APPENDIX_COLUMN_WIDTHS[0])}
+            ${headCell(a.pagesColumnLabel, APPENDIX_COLUMN_WIDTHS[1])}
+            ${headCell(a.occurrencesColumnLabel, APPENDIX_COLUMN_WIDTHS[2])}
+            ${headCell(a.selectorColumnLabel, APPENDIX_COLUMN_WIDTHS[3])}
           </tr>
         </thead>
         <tbody>
           ${rows}
         </tbody>
       </table>
+      ${thirdPartyCrossRefNote}
     </div>
   `;
 }
@@ -332,6 +508,7 @@ function renderThirdPartySection(
   thirdPartyFindings: Finding[],
   missingPercentByUrl: ReadonlyMap<string, number>,
   totalPagesScanned: number,
+  clusterLookup: ClusterLookup,
 ): string {
   if (thirdPartyFindings.length === 0) return '';
 
@@ -341,7 +518,7 @@ function renderThirdPartySection(
       const isFullyDiverted = group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null);
       const vendors = new Set(group.findings.map((f) => detectFindingVendor(f) ?? strings.findingsAppendix.unknownVendorLabel));
       const vendorLabel = vendors.size === 1 ? [...vendors][0] : strings.findingsAppendix.unknownVendorLabel;
-      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned, vendorLabel);
+      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned, clusterLookup, vendorLabel);
     })
     .join('');
 
@@ -364,6 +541,12 @@ function renderCategorySection(
   sector: StatSector,
   citedStatIds: Set<string>,
   totalPagesScanned: number,
+  clusterLookup: ClusterLookup,
+  /** Fix #6: the same third-party partition renderFindingsAppendix already
+   *  computed once (item 1.4), passed down so a first-party group can point
+   *  to its own split-off third-party occurrences without a second pass
+   *  over findings or a new partition rule. */
+  thirdPartyFindings: Finding[],
 ): string {
   if (categoryFindings.length === 0) return '';
 
@@ -374,7 +557,17 @@ function renderCategorySection(
   const groupBlocks = groups
     .map((group) => {
       const isFullyDiverted = group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null);
-      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned);
+      const thirdPartyCrossRefCount = thirdPartyFindings.filter((f) => group.memberRuleIds.includes(f.ruleId)).length;
+      return renderRuleGroup(
+        strings,
+        language,
+        group,
+        isFullyDiverted,
+        totalPagesScanned,
+        clusterLookup,
+        undefined,
+        thirdPartyCrossRefCount,
+      );
     })
     .join('');
   // item 40: a travel-industry AI-usage statistic (Phocuswright, 56%)
@@ -422,6 +615,7 @@ export function renderFindingsAppendix(
   citedStatIds: Set<string> = new Set(),
 ): string {
   const missingPercentByUrl = buildMissingPercentIndex(manifest);
+  const clusterLookup = buildClusterLookup(manifest);
 
   // item 29: the list of crawled URLs was never printed anywhere - the
   // client had no way to verify the scope they paid for beyond a bare
@@ -443,9 +637,9 @@ export function renderFindingsAppendix(
 
   const sections = CATEGORY_ORDER.map((category) => {
     const categoryFindings = firstPartyFindings.filter((finding) => finding.category === category);
-    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds, crawledPages.length);
+    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds, crawledPages.length, clusterLookup, thirdPartyFindings);
   }).join('');
-  const thirdPartySection = renderThirdPartySection(strings, language, thirdPartyFindings, missingPercentByUrl, crawledPages.length);
+  const thirdPartySection = renderThirdPartySection(strings, language, thirdPartyFindings, missingPercentByUrl, crawledPages.length, clusterLookup);
 
   // item D8 (P4): each category heading used its own colour with nothing
   // stating what the four colours mean - a reader had to notice the

@@ -74,31 +74,49 @@ const PAGEDJS_LAYOUT_REPEATED_MARKER = 'Layout repeated';
  *  positives. */
 const ATOMIC_BLOCK_SELECTOR = '.card, .render-card, .theme-card, .glossary-entry, .section-head';
 
-async function detectPagedjsStructuralFailure(page: Page): Promise<string | undefined> {
-  const result = await page.evaluate((selector) => {
-    const pages = Array.from(document.querySelectorAll('.pagedjs_page'));
-    const blankPageIndex = pages.findIndex((p, i) => i > 0 && (p.textContent ?? '').trim().length === 0);
+/** One `.pagedjs_page` fragment's content, reduced to exactly what the
+ *  structural check needs. Extracted via page.evaluate (real DOM,
+ *  requires a browser) and handed to the pure functions below so the
+ *  actual pass/fail decision is testable without one. */
+export interface PagedPageModel {
+  text: string;
+  atomicBlockTexts: string[];
+}
 
-    const seenOnPage = new Map<string, number>();
-    let duplicateText: string | undefined;
-    pages.forEach((p, pageIndex) => {
-      const blocks = Array.from(p.querySelectorAll(selector));
-      for (const block of blocks) {
-        const text = block.textContent?.trim();
-        if (!text) continue;
-        const previousPage = seenOnPage.get(text);
-        if (previousPage !== undefined && previousPage !== pageIndex) {
-          duplicateText = text;
-          break;
-        }
-        seenOnPage.set(text, pageIndex);
+export interface PagedjsStructuralCheckResult {
+  blankPageIndex: number;
+  duplicateText: string | undefined;
+  pageCount: number;
+}
+
+/** Pure decision logic, no DOM: the cover page (index 0) is exempt from
+ *  the blank-page check per the same invariant paged-invariants.test.ts
+ *  grants it, and an atomic block's text is compared only against its
+ *  own prior occurrence, on a different page, never within the same
+ *  page fragment. */
+export function analyzePagedjsPages(pages: readonly PagedPageModel[]): PagedjsStructuralCheckResult {
+  const blankPageIndex = pages.findIndex((p, i) => i > 0 && p.text.trim().length === 0);
+
+  const seenOnPage = new Map<string, number>();
+  let duplicateText: string | undefined;
+  for (const [pageIndex, p] of pages.entries()) {
+    for (const rawText of p.atomicBlockTexts) {
+      const text = rawText.trim();
+      if (!text) continue;
+      const previousPage = seenOnPage.get(text);
+      if (previousPage !== undefined && previousPage !== pageIndex) {
+        duplicateText = text;
+        break;
       }
-      if (duplicateText) return;
-    });
+      seenOnPage.set(text, pageIndex);
+    }
+    if (duplicateText !== undefined) break;
+  }
 
-    return { blankPageIndex, duplicateText, pageCount: pages.length };
-  }, ATOMIC_BLOCK_SELECTOR);
+  return { blankPageIndex, duplicateText, pageCount: pages.length };
+}
 
+export function describePagedjsStructuralFailure(result: PagedjsStructuralCheckResult): string | undefined {
   if (result.blankPageIndex !== -1) {
     return (
       `Paged.js produced a blank interior page (page ${result.blankPageIndex + 1} of ${result.pageCount}), ` +
@@ -112,6 +130,17 @@ async function detectPagedjsStructuralFailure(page: Page): Promise<string | unde
     );
   }
   return undefined;
+}
+
+async function detectPagedjsStructuralFailure(page: Page): Promise<string | undefined> {
+  const pages = await page.evaluate((selector) => {
+    return Array.from(document.querySelectorAll('.pagedjs_page')).map((p) => ({
+      text: p.textContent ?? '',
+      atomicBlockTexts: Array.from(p.querySelectorAll(selector)).map((block) => block.textContent ?? ''),
+    }));
+  }, ATOMIC_BLOCK_SELECTOR);
+
+  return describePagedjsStructuralFailure(analyzePagedjsPages(pages));
 }
 
 export async function renderPdfFromHtml(html: string, browser: Browser): Promise<Buffer> {
@@ -130,9 +159,19 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
     await page.evaluate(() => document.fonts.ready);
 
     let pagedjsLayoutFailure: string | undefined;
+    let debugNodePromise: Promise<void> | undefined;
     page.on('console', (msg) => {
       if (msg.type() === 'error' && msg.text().includes(PAGEDJS_LAYOUT_REPEATED_MARKER)) {
         pagedjsLayoutFailure = msg.text();
+        if (process.env['ODYSSEUS_DEBUG_PAGEDJS']) {
+          debugNodePromise = Promise.all(msg.args().map((a) => a.evaluate((n: unknown) => {
+            const el = n as Element;
+            return el && el.outerHTML ? el.outerHTML.slice(0, 2000) : String(n);
+          }).catch((e: unknown) => `<unresolvable: ${e instanceof Error ? e.message : String(e)}>`))).then((parts) => {
+            // eslint-disable-next-line no-console
+            console.error('[pagedjs:debug-node]', parts.join('\n---\n'));
+          });
+        }
       }
       if (process.env['ODYSSEUS_DEBUG_PAGEDJS']) {
         // eslint-disable-next-line no-console
@@ -148,6 +187,7 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
       await previewer.preview();
     });
 
+    if (debugNodePromise) await debugNodePromise;
     if (pagedjsLayoutFailure !== undefined) {
       throw new Error(
         `Report generation aborted: Paged.js hit its own layout-repeated guard and stopped ` +

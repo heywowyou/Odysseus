@@ -12,7 +12,7 @@ import {
   ODYSSEUS_REAUDIT_LEAD_TIME_DAYS,
   ODYSSEUS_REAUDIT_PRICE_EUR_HT,
   ODYSSEUS_SIGNATORY_NAME,
-  ODYSSEUS_SIRET_PLACEHOLDER,
+  ODYSSEUS_REGISTRATION_NUMBER,
 } from '../html-utils.js';
 
 /** Static, code-owned copy - no scan data involved. Doc §3 cap: 3 cards,
@@ -41,7 +41,7 @@ export function renderNextSteps(strings: ReportStrings, ordinal: number, manifes
   });
   const issuerBlock = fillTemplate(n.issuerBlockTemplate, {
     signatory: ODYSSEUS_SIGNATORY_NAME,
-    siret: ODYSSEUS_SIRET_PLACEHOLDER,
+    registrationNumber: ODYSSEUS_REGISTRATION_NUMBER,
   });
   const reauditPricing = fillTemplate(n.reauditPricingTemplate, {
     price: formatNumber(ODYSSEUS_REAUDIT_PRICE_EUR_HT, language),

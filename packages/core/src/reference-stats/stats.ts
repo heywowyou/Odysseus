@@ -179,7 +179,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     source: 'Pew Research Center',
     year: 2025,
     citation: bilingual(
-      "La part des sessions se terminant sans aucun clic (« zero-click ») est passée à 26 % lorsqu'un résumé IA apparaissait, contre 16 % en son absence (Pew Research Center, juillet 2025).",
+      "La part des sessions se terminant sans aucun clic (« zero-click ») est passée à 26 % lorsqu'un résumé IA apparaissait, contre 16 % en son absence (Pew Research Center, juillet 2025).",
       "Sessions ending without any click ('zero-click') rose to 26% when an AI summary appeared, versus 16% when it did not (Pew Research Center, July 2025).",
     ),
     // item 1.1, same reasoning as the CTR stat above.

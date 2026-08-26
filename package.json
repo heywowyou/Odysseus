@@ -17,7 +17,8 @@
     "test:store:up": "docker compose up -d mongo-test",
     "test:store:down": "docker compose down",
     "serve": "tsx packages/cli/src/index.ts serve",
-    "serve:full": "pnpm --filter @odysseus/cli... run build && pnpm run serve"
+    "serve:full": "pnpm --filter @odysseus/cli... run build && pnpm run serve",
+    "fixtures:refresh": "node scripts/refresh-fixtures.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

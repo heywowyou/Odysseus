@@ -190,6 +190,56 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'security-header-missing-referrer-policy': 'minor',
   'security-header-missing-permissions-policy': 'minor',
 
+  // C1 (2026-08-24): cookie/consent. Rated above the security headers
+  // above, deliberately. A missing response header is a defense that is
+  // not in place; a tracking cookie written before consent is a thing
+  // the site is doing right now, on every visit, and it is the one
+  // obligation in this product whose scope is not disputed (CNIL
+  // enforcement does not turn on company size the way the EAA reading
+  // does). Not 'critical': that tier is reserved for a visitor being
+  // blocked or a page being unindexable, and this blocks nobody.
+  'cookie-non-essential-before-consent': 'serious',
+  'tracker-request-before-consent': 'serious',
+  // Moderate, not serious: absence of a *recognised* consent platform is
+  // weaker evidence than the presence of a named tracking cookie, since
+  // a hand-rolled banner would look identical to none at all. The two
+  // rules above already carry the concrete, certain fact.
+  'consent-mechanism-absent': 'moderate',
+  // Moderate: a real defect with a documented one-line fix
+  // (youtube-nocookie.com), but narrower than site-wide tracking.
+  'youtube-tracking-embed': 'moderate',
+
+  // C4 (2026-08-24). Moderate, not serious, on purpose: whether this
+  // document is mandatory for a given business is precisely the question
+  // rule 6 forbids this product from answering. Rating it 'serious'
+  // would assert the obligation applies through the severity scale
+  // instead of through prose - the same mistake, made less visibly.
+  'accessibility-statement-missing': 'moderate',
+
+  // C6 (2026-08-24). Moderate: a contradiction between the machine- and
+  // human-readable contact details genuinely suppresses an AI answer,
+  // but nothing is unreachable or unindexable as a result.
+  'nap-phone-mismatch': 'moderate',
+  'nap-postal-code-mismatch': 'moderate',
+
+  // C3 (2026-08-24). Serious, not critical: a reader can still reach the
+  // content by scrolling in two directions, which is exactly the burden
+  // WCAG 1.4.10 exists to remove, but it is not the content being
+  // unreachable - the same line drawn between a missing defense and a
+  // confirmed loss of access elsewhere in this table.
+  'reflow-horizontal-scroll': 'serious',
+
+  // C5 (2026-08-24). Minor on purpose: this is an inventory a DPO needs,
+  // not a defect. Nothing is broken, and a scanner has no basis for
+  // deciding which of these transfers is lawful.
+  'third-party-data-transfer': 'minor',
+
+  // C7 (2026-08-24). Minor: modern parsers recover from most malformed
+  // markup, which is exactly why WCAG 2.2 removed criterion 4.1.1
+  // (Parsing). Worth telling a developer; not worth a client's attention
+  // ahead of a contrast failure.
+  'html-structural-validity': 'minor',
+
   // Milestone 8.6: robots.txt blocking a named AI crawler. Capped below
   // robots-disallow-broad's own 'moderate': unlike a broad Disallow that
   // accidentally excludes a real content section, blocking a named

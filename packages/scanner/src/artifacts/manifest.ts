@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { FINDINGS_SCHEMA_VERSION } from '@odysseus/core';
+import type { TranslationCluster } from '@odysseus/core';
 import type {
   AuditConfigSnapshot,
   AuditManifest,
@@ -46,6 +47,7 @@ export interface BuildManifestInput {
   pages: ManifestPageEntry[];
   siteSignals?: AuditManifestSiteSignals;
   cruxFieldData?: CruxFieldDataResult;
+  translationClusters?: TranslationCluster[];
 }
 
 export function buildManifest(input: BuildManifestInput): AuditManifest {
@@ -77,5 +79,6 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
     pages: input.pages,
     ...(input.siteSignals !== undefined ? { siteSignals: input.siteSignals } : {}),
     ...(input.cruxFieldData !== undefined ? { cruxFieldData: input.cruxFieldData } : {}),
+    ...(input.translationClusters !== undefined ? { translationClusters: input.translationClusters } : {}),
   };
 }

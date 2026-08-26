@@ -966,7 +966,7 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
 
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
 
-    expect(html).toContain('relèvent de votre site');
+    expect(html).toContain('relevant de votre site');
     expect(html).toContain('Gravity Forms');
     expect(html).toContain('à transmettre à son éditeur');
   });
@@ -1004,6 +1004,104 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
 
     expect(html).toContain('un composant tiers');
+  });
+
+  it('fix #2 (2026-08-25 report review): names ZenChef when every finding in the theme is inside its iframe', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        pageUrls: ['https://example.com/'],
+        elements: [
+          { pageUrl: 'https://example.com/', selector: '.ZC_sdk__zc-iframe_k5FE3 >>> button[data-testid="x"]', snippet: '' },
+        ],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        pageUrls: ['https://example.com/reserver'],
+        elements: [{ pageUrl: 'https://example.com/reserver', selector: 'body.page > iframe.ZC_sdk__zc-iframe_k5FE3', snippet: '' }],
+      }),
+    ];
+    const analysis = buildAnalysis(['f001', 'f002']);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
+
+    expect(html).toContain('ZenChef');
+    expect(html).toContain('relève entièrement de');
+    // Mutually exclusive with the split note: this theme is entirely
+    // third-party, so the split sentence must not also render.
+    expect(html).not.toContain('à transmettre à son éditeur');
+  });
+});
+
+describe('fix #3 (2026-08-25 report review): the LCEN priority card cross-references the legal-exposure section', () => {
+  function buildFinding(overrides: Record<string, unknown>) {
+    return {
+      findingId: overrides['findingId'] ?? 'f001',
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'custom' as const,
+      ruleId: overrides['ruleId'] ?? 'some-other-rule',
+      category: 'privacy' as const,
+      severity: 'serious' as const,
+      wcagCriteria: [],
+      title: 'title',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: overrides['findingId'] ?? 'f001',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  function buildAnalysis(findingIds: string[]) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title: 'Mentions légales manquantes',
+          category: 'privacy' as const,
+          businessImpact: 'Impact',
+          effort: 'low' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds,
+          recommendedActions: [],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const manifest = { pages: [] } as never;
+
+  it('renders a pointer sentence naming the legal-exposure section when the theme includes the LCEN finding', () => {
+    const findings = [buildFinding({ findingId: 'f001', ruleId: 'lcen-mentions-legales-missing' })];
+    const analysis = buildAnalysis(['f001']);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
+
+    expect(html).toContain('obligation légale d’identification');
+    expect(html).toContain('Exposition légale');
+  });
+
+  it('renders nothing when the theme has no LCEN finding', () => {
+    const findings = [buildFinding({ findingId: 'f001', ruleId: 'some-other-rule' })];
+    const analysis = buildAnalysis(['f001']);
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
+
+    expect(html).not.toContain('obligation légale d’identification');
   });
 });
 
@@ -1244,5 +1342,345 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
 
     expect(html).toMatch(/Conformité : <strong style="color:var\(--color-neutral-500\)">Sans objet<\/strong>/);
     expect(html).not.toMatch(/Conformité : <strong style="color:#d97b82">Sans objet/);
+  });
+});
+
+describe('B2.2: theme category and reference-stat citations', () => {
+  function privacyFinding(findingId: string, ruleId: string): Finding {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'custom' as const,
+      ruleId,
+      category: 'privacy' as const,
+      severity: 'moderate' as const,
+      wcagCriteria: [],
+      title: ruleId,
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  const findings = [
+    privacyFinding('f1', 'security-header-missing-csp'),
+    privacyFinding('f2', 'security-header-missing-hsts'),
+  ];
+
+  async function analysisWithCategory(category: Theme['category']) {
+    const analysis = await loadSasFernandeAnalysis('fr');
+    return {
+      ...analysis,
+      themes: [
+        {
+          title: 'En-têtes de sécurité manquants',
+          category,
+          businessImpact: 'Impact commercial.',
+          effort: 'low' as const,
+          impact: 'medium' as const,
+          priorityRank: 1,
+          findingIds: ['f1', 'f2'],
+          recommendedActions: ['Demander a votre prestataire de configurer ces en-tetes.'],
+        },
+      ],
+    };
+  }
+
+  // The real Domaine Lagnonu analysis (2026-08-24) labelled exactly this
+  // theme 'performance' while all its findings were 'privacy', making it
+  // eligible for a page-speed conversion statistic - trade-off 16's B1
+  // defect arriving through the category rather than the stats table.
+  it('renders a mislabelled theme but attaches no citation to it', async () => {
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      await analysisWithCategory('performance'),
+      findings,
+      await loadSasFernandeManifest(),
+    );
+
+    expect(html).toContain('En-têtes de sécurité manquants');
+    expect(html).not.toContain('Deloitte');
+  });
+
+  // 'privacy' became a valid Theme category on 2026-08-24 (approved change
+  // to the locked llm-output.ts contract), so the model now has a correct
+  // answer available for exactly this theme.
+  it('accepts privacy as a theme category and renders it', async () => {
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      await analysisWithCategory('privacy'),
+      findings,
+      await loadSasFernandeManifest(),
+    );
+
+    expect(html).toContain('En-têtes de sécurité manquants');
+    // No privacy rows exist in the reference-stat table, so no citation.
+    expect(html).not.toContain('Deloitte');
+  });
+});
+
+describe('B2.1: a category with critical findings always gets a rendered priority', () => {
+  function finding(findingId: string, category: Finding['category'], severity: Finding['severity']): Finding {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'lighthouse' as const,
+      ruleId: `rule-${findingId}`,
+      category,
+      severity,
+      wcagCriteria: [],
+      title: 't',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  function theme(priorityRank: number, category: Theme['category'], findingIds: string[]): Theme {
+    return {
+      title: `Theme ${priorityRank}`,
+      category,
+      businessImpact: 'Impact.',
+      effort: 'low',
+      impact: 'medium',
+      priorityRank,
+      findingIds,
+      recommendedActions: ['Action.'],
+    };
+  }
+
+  // Mirrors the real Domaine Lagnonu shape: six accessibility/seo themes
+  // ranked above a performance theme that holds four of the five critical
+  // findings, so no performance priority rendered at all.
+  it('promotes the performance theme holding critical findings above the render cut', () => {
+    const findings = [
+      ...Array.from({ length: MAX_RENDERED_THEMES }, (_, i) =>
+        finding(`a${i}`, 'accessibility', i === 0 ? 'critical' : 'serious'),
+      ),
+      finding('p1', 'performance', 'critical'),
+    ];
+    const themes = [
+      ...Array.from({ length: MAX_RENDERED_THEMES }, (_, i) => theme(i + 1, 'accessibility', [`a${i}`])),
+      theme(MAX_RENDERED_THEMES + 6, 'performance', ['p1']),
+    ];
+    const findingsById = new Map(findings.map((f) => [f.findingId, f]));
+
+    const rendered = selectRenderedThemes(themes, findingsById);
+
+    expect(rendered).toHaveLength(MAX_RENDERED_THEMES);
+    expect(rendered.some((t) => t.category === 'performance')).toBe(true);
+    // Still ascending, so the numbering a reader sees stays in order.
+    expect(rendered.map((t) => t.priorityRank)).toEqual([...rendered.map((t) => t.priorityRank)].sort((a, b) => a - b));
+  });
+
+  it('keeps the accessibility critical theme while promoting performance', () => {
+    const findings = [
+      finding('a0', 'accessibility', 'critical'),
+      ...Array.from({ length: MAX_RENDERED_THEMES - 1 }, (_, i) => finding(`a${i + 1}`, 'accessibility', 'serious')),
+      finding('p1', 'performance', 'critical'),
+    ];
+    const themes = [
+      ...Array.from({ length: MAX_RENDERED_THEMES }, (_, i) => theme(i + 1, 'accessibility', [`a${i}`])),
+      theme(MAX_RENDERED_THEMES + 6, 'performance', ['p1']),
+    ];
+
+    const rendered = selectRenderedThemes(themes, new Map(findings.map((f) => [f.findingId, f])));
+
+    expect(rendered.some((t) => t.findingIds.includes('a0'))).toBe(true);
+    expect(rendered.some((t) => t.findingIds.includes('p1'))).toBe(true);
+  });
+
+  it('changes nothing when every theme already fits', () => {
+    const findings = [finding('a0', 'accessibility', 'critical'), finding('p1', 'performance', 'critical')];
+    const themes = [theme(1, 'accessibility', ['a0']), theme(2, 'performance', ['p1'])];
+
+    const rendered = selectRenderedThemes(themes, new Map(findings.map((f) => [f.findingId, f])));
+
+    expect(rendered.map((t) => t.priorityRank)).toEqual([1, 2]);
+  });
+});
+
+/** D7 (2026-08-25, Lagnonu review). The gap sentence was hardcoded to LCP and
+ *  attached wherever the citation landed, so a priority titled "Blocage du
+ *  navigateur par des scripts" - total blocking time, median 3 397 ms against
+ *  a 200 ms threshold - carried "LCP median a 4 s". Same family as trade-off
+ *  16's B1: a deterministic attachment with the wrong anchor. */
+describe('D7: the measured gap names the metric the priority is actually about', () => {
+  function analysisWith(title: string, findingIds: string[] = ['f001']) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title,
+          category: 'performance' as const,
+          businessImpact: 'Impact',
+          effort: 'medium' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds,
+          recommendedActions: ['Action'],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  function findingFor(ruleId: string, findingId = 'f001') {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'lighthouse' as const,
+      ruleId,
+      category: 'performance' as const,
+      severity: 'serious' as const,
+      wcagCriteria: [],
+      title: ruleId,
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: 'd1',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  it('quotes blocking time, in milliseconds, for a blocking-time priority', () => {
+    const manifest = {
+      pages: [
+        {
+          url: 'https://example.com/',
+          status: 'visited',
+          coreWebVitals: {
+            tbt: { score: 0.1, numericValue: 3397, displayValue: '3397 ms' },
+            lcp: { score: 0.4, numericValue: 4000, displayValue: '4 s' },
+          },
+        },
+      ],
+    } as never;
+
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysisWith('Blocage du navigateur par des scripts'),
+      [findingFor('total-blocking-time')],
+      manifest,
+    );
+
+    expect(html).toContain('Écart mesuré sur ce site');
+    expect(html).toContain('TBT, temps de blocage');
+    // French digit grouping uses a non-breaking space, so normalise before
+    // comparing rather than hardcoding whichever space character Intl picks.
+    expect(html.replace(/[\u00a0\u202f]/g, ' ')).toContain('3 397 ms');
+    // The bug: LCP's own numbers appearing under a blocking-time priority.
+    expect(html).not.toContain('LCP, contenu principal');
+  });
+
+  it('still quotes LCP for an LCP priority', () => {
+    const manifest = {
+      pages: [
+        {
+          url: 'https://example.com/',
+          status: 'visited',
+          coreWebVitals: { lcp: { score: 0.1, numericValue: 5900, displayValue: '5.9 s' } },
+        },
+      ],
+    } as never;
+
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysisWith('Vitesse mobile insuffisante'),
+      [findingFor('largest-contentful-paint')],
+      manifest,
+    );
+
+    expect(html).toContain('LCP, contenu principal');
+    expect(html).toContain('5,9 s');
+  });
+
+  it('says nothing when the priority names no Core Web Vital at all', () => {
+    // Quoting an unrelated metric is worse than staying silent.
+    const manifest = {
+      pages: [
+        {
+          url: 'https://example.com/',
+          status: 'visited',
+          coreWebVitals: { lcp: { score: 0.1, numericValue: 5900, displayValue: '5.9 s' } },
+        },
+      ],
+    } as never;
+
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysisWith('En-têtes de sécurité manquants'),
+      [findingFor('render-blocking-resources')],
+      manifest,
+    );
+
+    expect(html).not.toContain('Écart mesuré sur ce site');
+  });
+
+  it('says nothing on a genuine tie between distinct Core Web Vitals, rather than silently favouring LCP (real Lagnonu case)', () => {
+    // Real shape: one finding each for TBT, FCP, LCP and Speed Index under
+    // a priority titled for blocking scripts (TBT), not LCP. The old
+    // preference-order tie-break picked LCP purely because it came first
+    // in CWV_METRIC_PREFERENCE, producing an LCP gap sentence under a
+    // TBT-titled priority - the exact wrong-anchor defect D7 fixed for the
+    // single-dominant-metric case, reappearing in the tied case.
+    const manifest = {
+      pages: [
+        {
+          url: 'https://example.com/',
+          status: 'visited',
+          coreWebVitals: {
+            tbt: { score: 0.1, numericValue: 2500, displayValue: '2500 ms' },
+            fcp: { score: 0.1, numericValue: 3200, displayValue: '3.2 s' },
+            lcp: { score: 0.4, numericValue: 3900, displayValue: '3.9 s' },
+            speedIndex: { score: 0.1, numericValue: 9000, displayValue: '9 s' },
+          },
+        },
+      ],
+    } as never;
+
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysisWith('Blocage du navigateur par des scripts JavaScript', ['f002', 'f003', 'f004', 'f005']),
+      [
+        findingFor('total-blocking-time', 'f002'),
+        findingFor('first-contentful-paint', 'f003'),
+        findingFor('largest-contentful-paint', 'f004'),
+        findingFor('speed-index', 'f005'),
+      ],
+      manifest,
+    );
+
+    expect(html).not.toContain('Écart mesuré sur ce site');
+    expect(html).not.toContain('LCP, contenu principal');
   });
 });

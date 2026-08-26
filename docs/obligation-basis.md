@@ -261,6 +261,66 @@ since it implies non-conformity is unremarkable.
 
 ---
 
+## 8bis. LCEN identification obligation (mentions légales)
+
+Added 2026-08-24. A separate obligation from everything above, and the
+only one in this file that applies to every client without a scope test.
+
+**The requirement.** Article 1-1, I, 2° of loi n° 2004-575 du 21 juin
+2004 (LCEN). Verified verbatim against Légifrance
+(LEGIARTI000049568614), version in force since 23 May 2024. Status:
+`primary`.
+
+> Les personnes dont l'activité est d'éditer un service de communication
+> au public en ligne mettent à la disposition du public, dans un standard
+> ouvert : [...] 2° S'il s'agit de personnes morales, leur dénomination ou
+> leur raison sociale et leur siège social, leur numéro de téléphone et,
+> s'il s'agit d'entreprises assujetties aux formalités d'inscription au
+> registre du commerce et des sociétés ou au registre national des
+> entreprises en tant qu'entreprise du secteur des métiers et de
+> l'artisanat, le numéro de leur inscription, leur capital social et
+> l'adresse de leur siège social
+
+**Why the article number matters.** Loi n° 2024-449 du 21 mai 2024
+(SREN) restructured the LCEN to align it with règlement (UE) 2022/2065.
+The identification obligation used to sit in article 6-III, and most
+commercial sources online still cite it that way. It does not live there
+any more. `packages/core/src/compliance/regimes.ts` carried the stale
+`article 6-III et 6-VI-2` citation from the day it was written until
+2026-08-24; it was never rendered, which is the only reason a client
+never received it. Status of the old citation: superseded, never to be
+used.
+
+**Why this one may be stated where EAA scope may not.** Section 7's
+"we report, we do not conclude" rule exists because EAA scope turns on
+headcount, turnover and sector, and because the courts are split. None
+of that applies here: the obligation attaches to editing a professional
+online service at all, with no size threshold, no sector list and no
+contested case law. Stating the criterion and stating what the scan
+observed is therefore a factual report, not a conclusion about whether a
+law binds this client. The recommendation to confirm with a lawyer stays,
+for the same reason it stays everywhere else.
+
+**Sanctions: not verified, never stated.** The pre-SREN penalty
+(one year and EUR 75,000, quintupled for a legal person under art. 121-2
+code pénal) was in article 6-VI-2. Where that provision now sits after
+the SREN restructuring has NOT been checked against Légifrance, and the
+figure was not found in article 1-1 itself. Status: `disputed`, pending
+section 9. It must not appear in a report, in outreach, or anywhere else,
+which is independently required by section 7 in any case: no sanction
+amount is ever stated for a specific client. `regimes.ts`'s
+`sanctionCeiling` for this regime is unverified text and has no render
+path.
+
+**What the scanner may say.** That the criterion exists, quoted or
+paraphrased faithfully; that the scan did not find a SIREN, RCS or TVA
+identifier published on the pages it visited; that a scan visits a
+limited number of pages and can miss one; and that the client should
+confirm with a lawyer. Never that the client is in breach, never a
+deadline, never an amount.
+
+---
+
 ## 9. Remaining verification
 
 - microenterprise threshold wording in the decree text itself
@@ -269,6 +329,8 @@ since it implies non-conformity is unremarkable.
 - the transitional provisions and the 2030 date, section 3
 - the Caen and Lille ordonnances themselves rather than press summaries
 - outcome of Créteil, 22 September 2026
+- post-SREN location of the LCEN identification penalty provision
+  (old article 6-VI-2), section 8bis
 
 None of these block a first sale. Each blocks a specific sentence, and
 until it is resolved that sentence is simply not written.
@@ -298,6 +360,17 @@ until it is resolved that sentence is simply not written.
    of authorship, and the LLM report and outreach pipelines were never
    in scope for 50(4) at all since they are private, single-recipient
    documents. See `docs/operator-obligations.md` section 3.
+8. **LCEN cited by its pre-SREN article number, and absent from this
+   file entirely.** `regimes.ts` has held a fully written LCEN regime
+   citing `article 6-III et 6-VI-2` since it was created. That citation
+   was superseded by loi n° 2024-449 du 21 mai 2024, and this file, which
+   governs every legal claim in the product, had no LCEN entry at all -
+   so the regime was simultaneously unauthorised to state and wrong about
+   where the law is. It was saved from reaching a client only by never
+   having been wired to a render path. Both fixed 2026-08-24: section
+   8bis above, and the citation corrected in code. The general lesson is
+   trade-off 23's, again: a fact in code that no test and no doc covers
+   drifts silently.
 
 Common shape: a commercial source stated something convenient, others
 repeated it, and agreement between sources that copy each other is not

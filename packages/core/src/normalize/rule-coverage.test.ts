@@ -1,0 +1,147 @@
+/**
+ * How many of the rules this tool can emit are exercised by any stored
+ * fixture at all.
+ *
+ * Read this as a *recall* measurement, and only that. It says nothing about
+ * whether the findings a report does contain are correct, which is a separate
+ * property and the one that actually governs whether the report is sellable.
+ * The two are worth keeping apart explicitly, because conflating them is easy
+ * and expensive:
+ *
+ *   Recall     - does the scanner detect an issue that is really there.
+ *                Bounded by what automated detection can reach at all, which
+ *                docs/manual-accessibility-checklist.md puts at roughly 30 to
+ *                40 percent of WCAG criteria. No amount of fixture work moves
+ *                that ceiling, and the report says so in its own methodology.
+ *
+ *   Precision  - is every finding the report prints a real, correctly
+ *                described, singly-counted issue. This is the one held to a
+ *                near-perfect standard, because a duplicate or a wrong number
+ *                costs the report its credibility with a client who can check
+ *                it. It is guarded elsewhere: the collapse invariants
+ *                (occurrences preserved across a regrouping), the arithmetic
+ *                checks in statistics.test.ts, the invented-id, page-count and
+ *                legal-consequence guards in packages/llm, and the
+ *                single-rule concentration check below.
+ *
+ * What this file contributes to precision is narrow but real: a rule with no
+ * fixture behind it has never been observed firing, so nothing distinguishes
+ * "correctly silent on every site scanned so far" from "cannot fire at all".
+ * That is not hypothetical. Three rules shipped fully dressed with a severity
+ * mapping, remediation copy and report wiring, and no emitter at all:
+ * `hreflang-missing` (CLAUDE.md trade-off 31), the LCEN regime (trade-off 28),
+ * and both cost gates (trade-off 23). Each was found by reading, months late.
+ *
+ * A ratchet, not a target. It fails when coverage drops, so adding a rule with
+ * nothing exercising it is a deliberate, visible act. Raise the floor when
+ * coverage improves; never lower it to make a red build green.
+ */
+import { readFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import type { Finding } from '../types/findings.js';
+import { CUSTOM_CHECK_SEVERITY } from './severity.js';
+import { fixtureAudits } from '../../../../scripts/fixture-fingerprint.mjs';
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+
+/** Measured 2026-08-25 across the curated fixture set: 87 of 196 emittable
+ *  rules, 44 percent. Every uncovered rule is one no fixture has ever tripped,
+ *  so nothing in the suite would notice if it stopped working, or had never
+ *  worked. Raising this is the useful work; the list the failure message
+ *  prints is the to-do list for it. */
+const COVERAGE_FLOOR = 87;
+
+/** No single rule may account for more than this share of one audit's
+ *  findings.
+ *
+ *  Not a law, a smell, and it has now caught the same defect three times: 219
+ *  of 282 findings in five rules on Domaine Lagnonu (trade-off 31's follow-up),
+ *  102 of 305 in two Lighthouse image audits (trade-off 30), and 182 of 265
+ *  language variants of one page (trade-off 24). Each time the cause was the
+ *  same: the wrong identity chosen for a defect, so one instruction printed
+ *  dozens of times.
+ *
+ *  A rule legitimately over this line exists - writing alt text is a separate
+ *  editorial decision per image, so `image-alt` can honestly dominate a
+ *  picture-heavy site. The threshold is set above the highest such measured
+ *  case so that crossing it means something new happened, not that a known
+ *  case drifted. */
+const MAX_SINGLE_RULE_SHARE = 0.3;
+
+interface StoredAudit {
+  dir: string;
+  findings: Finding[];
+}
+
+/** Only the curated set in fixtures/audits.json, never every directory under
+ *  artifacts/. The artifacts tree accumulates every scan ever run, including
+ *  superseded ones nobody re-derives; judging today's code by those would
+ *  report a duplication bug that was fixed weeks ago and is still frozen into
+ *  an old scan's output. The freshness guard keeps the curated set current,
+ *  which is what makes it safe to assert on. */
+function storedAudits(): StoredAudit[] {
+  const audits: StoredAudit[] = [];
+  for (const audit of fixtureAudits()) {
+    const file = path.join(repoRoot, audit.dir, 'findings.json');
+    if (!existsSync(file)) continue;
+    audits.push({ dir: audit.dir, findings: JSON.parse(readFileSync(file, 'utf-8')) as Finding[] });
+  }
+  return audits;
+}
+
+function emittableRuleIds(): Set<string> {
+  const reachable = JSON.parse(
+    readFileSync(path.join(repoRoot, 'packages/report/src/template/reachable-rule-ids.json'), 'utf-8'),
+  ) as { axe: string[]; lighthouse: string[] };
+  return new Set([...reachable.axe, ...reachable.lighthouse, ...Object.keys(CUSTOM_CHECK_SEVERITY)]);
+}
+
+describe('rule coverage across all stored fixtures (recall)', () => {
+  it('does not fall below the measured floor', () => {
+    const observed = new Set(storedAudits().flatMap((audit) => audit.findings.map((f) => f.ruleId)));
+    const emittable = emittableRuleIds();
+    const covered = [...emittable].filter((ruleId) => observed.has(ruleId));
+
+    expect(
+      covered.length,
+      `Rule coverage fell to ${covered.length} of ${emittable.size}. Either a fixture was ` +
+        'removed, or a rule was added with nothing exercising it. Uncovered rules:\n' +
+        [...emittable]
+          .filter((ruleId) => !observed.has(ruleId))
+          .sort()
+          .join(', '),
+    ).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
+  });
+});
+
+describe('single-rule concentration in a stored audit (precision smell)', () => {
+  it('no rule dominates one audit past the threshold that has meant a duplication bug every time', () => {
+    const offenders: string[] = [];
+    for (const audit of storedAudits()) {
+      if (audit.findings.length < 20) continue; // too small for a share to mean anything
+      const byRule = new Map<string, number>();
+      for (const finding of audit.findings) {
+        byRule.set(finding.ruleId, (byRule.get(finding.ruleId) ?? 0) + 1);
+      }
+      for (const [ruleId, count] of byRule) {
+        const share = count / audit.findings.length;
+        if (share > MAX_SINGLE_RULE_SHARE) {
+          offenders.push(
+            `${audit.dir}: ${ruleId} is ${count} of ${audit.findings.length} findings (${Math.round(share * 100)}%)`,
+          );
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      'One rule dominates an audit. Check whether those findings are genuinely ' +
+        'separate decisions or one instruction printed many times, and if the ' +
+        'latter, give the rule a better identity (normalize-axe.ts shapeIdentity, ' +
+        'normalize-lighthouse.ts RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS).\n' +
+        offenders.join('\n'),
+    ).toEqual([]);
+  });
+});

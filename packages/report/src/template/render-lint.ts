@@ -43,7 +43,40 @@ const FORBIDDEN_PATTERNS: readonly { label: string; pattern: RegExp }[] = [
   // future placeholder using the same convention is caught the same way,
   // not just this one field.
   { label: 'unfilled "[... à renseigner]" placeholder', pattern: /\[[^[\]]*à renseigner\]/ },
+  // A6 (2026-08-24 three-site review): real La Corniche and Haaitza
+  // reports printed "des liens *hreflang* non réciproques" and "un
+  // attribut *aria-label*" with the asterisks visible - the model reached
+  // for inline emphasis inside a JSON field value, which the prompt's
+  // "no markdown fences" instruction never covered. escapeProse
+  // (html-utils.ts) strips it at every LLM-prose render point; this
+  // catches any render point that is added later and forgets to.
+  //
+  // Matched on the escaped form the document actually contains: a
+  // delimiter pair around text with no intervening newline or second
+  // delimiter. A lone asterisk (a hotel's "5*****", a footnote marker)
+  // has no pair and does not match.
+  //
+  // Underscore emphasis requires a word boundary on the outside of each
+  // delimiter, the way markdown itself does. Without that, any
+  // snake_case identifier that happens to contain two underscores
+  // matches - `.pagedjs_page_content` in the stylesheet did exactly that
+  // on the first attempt at this rule.
+  {
+    label: 'leaked markdown emphasis in rendered prose',
+    pattern: /(?:\*\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*\*|\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*|(?<![\w-])__(?=\S)[^_\n<>]{1,80}(?<=\S)__(?![\w-])|(?<![\w-])_(?=\S)[^_\n<>]{1,80}(?<=\S)_(?![\w-]))/,
+  },
 ];
+
+/** Style and script bodies are not prose. They are full of characters the
+ *  prose rules legitimately forbid (a CSS custom property's dashes, a
+ *  snake_case class name's underscores), and a client never reads them.
+ *  Stripped before every rule runs, not just the markdown one, so no
+ *  future rule has to rediscover this. */
+function stripNonProse(html: string): string {
+  return html
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/giu, ' ')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/giu, ' ');
+}
 
 export interface RenderLintViolation {
   label: string;
@@ -52,7 +85,8 @@ export interface RenderLintViolation {
   context: string;
 }
 
-export function findRenderLintViolations(html: string): RenderLintViolation[] {
+export function findRenderLintViolations(rawHtml: string): RenderLintViolation[] {
+  const html = stripNonProse(rawHtml);
   const violations: RenderLintViolation[] = [];
   for (const { label, pattern } of FORBIDDEN_PATTERNS) {
     const match = html.match(pattern);

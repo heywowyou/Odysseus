@@ -6,7 +6,7 @@ import {
   getMaxPages,
   getPageTimeoutMs,
 } from './config.js';
-import { normalizeInternalLinks } from './links.js';
+import { isLanguageHomepagePath, normalizeInternalLinks } from './links.js';
 import {
   AI_CRAWLER_USER_AGENTS,
   checkAiCrawlerAccess,
@@ -50,6 +50,9 @@ export interface CrawlOptions {
 
 export type CrawledPageStatus =
   | 'visited'
+  /** Fetched for link discovery only, never scanned. Keep in sync with
+   *  packages/core's ManifestPageStatus, per the duplication note there. */
+  | 'discovered-not-scanned'
   | 'skipped-robots'
   | 'skipped-non-html'
   | 'skipped-external-redirect'
@@ -266,7 +269,36 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
           pages.push(skippedPage);
         } else {
-          const visitedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'visited' };
+          // A bare language homepage duplicates the homepage it translates,
+          // yet is often the only route into that language's subtree
+          // (lagnonu.fr, where /en and /es are the sole links in). So it is
+          // always crawled for its links, and scanned only when the page
+          // itself declares hreflang.
+          //
+          // That condition is exactly what trade-off 24's translation
+          // clustering needs: a page declaring hreflang, including a self
+          // reference, clusters with the variants it names, so its findings
+          // collapse into the homepage's rather than multiplying them. With
+          // no hreflang nothing can collapse them, and each language
+          // homepage would restate every homepage defect once per language
+          // (lacoorniche.com, five languages) - the defect this rule was
+          // originally added for.
+          //
+          // Read off the DOM of the page already loaded here, not a second
+          // fetch, and never inferred from URL shape: trade-off 24 rejected
+          // prefix-guessing for clustering and the same reasoning binds here.
+          let discoverOnly = isLanguageHomepagePath(new URL(browserPage.url()).pathname);
+          if (discoverOnly) {
+            const declaresHreflang = await browserPage
+              .$$eval('link[rel="alternate"][hreflang]', (links) => links.length > 0)
+              .catch(() => false);
+            if (declaresHreflang) discoverOnly = false;
+          }
+          const visitedPage: CrawledPage = {
+            url: item.url,
+            depth: item.depth,
+            status: discoverOnly ? 'discovered-not-scanned' : 'visited',
+          };
           if (httpStatus !== undefined) visitedPage.httpStatus = httpStatus;
           if (item.discoveredFrom !== undefined) visitedPage.discoveredFrom = item.discoveredFrom;
           pages.push(visitedPage);

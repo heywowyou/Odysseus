@@ -33,6 +33,64 @@ const NON_HTML_EXTENSIONS = new Set([
 const LANGUAGE_HOMEPAGE_PATH_PATTERN = /^\/[a-z]{2}(-[a-z]{2})?\/?$/i;
 
 /**
+ * Revised 2026-08-24 (Domaine Lagnonu). The rule above was right about
+ * the duplicate and wrong about the drop. On La Corniche the language
+ * homepages were reachable content that also duplicated the homepage; on
+ * lagnonu.fr `/en` and `/es` are the ONLY links from the French homepage
+ * into their subtrees, so dropping them severed both entirely and left 22
+ * declared pages unvisited - the exact "whole page families of the site
+ * unvisited" outcome the original rule was written to prevent.
+ *
+ * The URL is therefore no longer dropped here. crawl.ts enqueues it,
+ * extracts its links, and records it `discovered-not-scanned`, so no
+ * scanner ever runs against it and it emits no findings. Both sites get
+ * what they need: no duplicated homepage defects, no severed subtree.
+ */
+export function isLanguageHomepagePath(pathname: string): boolean {
+  return LANGUAGE_HOMEPAGE_PATH_PATTERN.test(pathname);
+}
+
+/** B3 (2026-08-24 three-site review): a real haaitza.com crawl spent
+ *  eight of its slots on URLs of the form
+ *  `/?post_type=popup_theme&p=1317` - WordPress Popup Maker's internal
+ *  theme objects, not pages anyone can navigate to. Each cost a render, an
+ *  axe pass and a Lighthouse pass, produced findings against machinery
+ *  rather than content, and three of them were then printed to the client
+ *  in the legal-exposure section as "examples of pages where the booking
+ *  engine was found".
+ *
+ *  Keyed on the `post_type` query parameter carrying one of WordPress's
+ *  own internal, non-public post types, not on the presence of a query
+ *  string: `?page=2` and `?s=...` are real, navigable pages on countless
+ *  sites, and dropping every query URL would silently shrink the audited
+ *  scope. Same drop point as the two filters above - decided from the URL
+ *  alone, before any fetch, so a dropped URL never costs a crawl-budget
+ *  slot and never reaches the manifest. Add to this list only post types
+ *  confirmed non-public against a real site, never guessed. */
+const NON_PUBLIC_WP_POST_TYPES = new Set([
+  'popup_theme',
+  'popup',
+  'wp_block',
+  'wp_template',
+  'wp_template_part',
+  'wp_global_styles',
+  'wp_navigation',
+  'nav_menu_item',
+  'revision',
+  'custom_css',
+  'customize_changeset',
+  'oembed_cache',
+  'user_request',
+  'acf-field',
+  'acf-field-group',
+]);
+
+function isNonPublicWordPressObject(url: URL): boolean {
+  const postType = url.searchParams.get('post_type');
+  return postType !== null && NON_PUBLIC_WP_POST_TYPES.has(postType.toLowerCase());
+}
+
+/**
  * Converts an operator-supplied glob pattern (only `*` is a wildcard,
  * matching any run of characters including none) into a RegExp anchored
  * over the full URL string. Every other regex metacharacter is escaped
@@ -96,7 +154,7 @@ export function normalizeInternalLinks(
       resolved.pathname = resolved.pathname.slice(0, -1);
     }
     if (NON_HTML_EXTENSIONS.has(path.posix.extname(resolved.pathname).toLowerCase())) continue;
-    if (LANGUAGE_HOMEPAGE_PATH_PATTERN.test(resolved.pathname)) continue;
+    if (isNonPublicWordPressObject(resolved)) continue;
     resolved.hash = '';
     const normalized = resolved.toString();
     if (exclusionRegexes.some((pattern) => pattern.test(normalized))) continue;

@@ -95,6 +95,69 @@ real report that actually exhibits the narrower gap (not yet observed
 against the stress fixture or any committed real-site artifact), so the
 fix can be verified against the actual failure mode instead of guessed at.
 
+## Noted, below the duplication alarm threshold
+
+### `crawlable-anchors` (Lighthouse) shows the same template-shape pattern as `link-name`
+Source: 2026-08-25, while building the single-rule concentration guard
+(`packages/core/src/normalize/rule-coverage.test.ts`). A real
+www.lacoorniche.com audit has `crawlable-anchors` at 23% of findings (71 of
+309) - under the 30% alarm threshold, so the guard does not fire, but the
+shape is identical to what `shapeIdentity` (D4b, CLAUDE.md this session)
+already fixes for axe: the same `a.thumb-url` inside
+`div.inner` repeated once per room card, wrapped in a runtime-generated
+container id (`div#rooms-6a887606ba744`) that also changes per page load,
+the exact unstable-identity problem trade-off 30 documents.
+
+Not fixed this session: `shapeIdentity` is axe-only right now, and
+`crawlable-anchors` is a Lighthouse rule with no equivalent identity path.
+Extending it to Lighthouse's element-scoped (non-resource) rules is real
+scope, needs its own measurement the way D4b's axe version got, and the
+smell is currently below the threshold that would force the question. Watch
+the concentration guard: if a future site pushes this or a similar rule over
+30%, that is the trigger to build it rather than waiting for another report
+review to notice by hand.
+
+## Paged.js limitations in fragmented tables
+
+### Annex table headers do not repeat on continuation pages
+Source: 2026-08-25 Domaine Lagnonu review, D3. **Operator decision the same
+day: accept as it stands, revisit only if a later read-through still
+snags on it.**
+
+Paged.js 0.4.3 does not implement `display: table-header-group`
+repetition. An annex table spanning six pages prints its header row once,
+so every page after the first opens with four unlabelled columns. This is
+an engine limitation, not a CSS mistake: the `paged.css` comment that
+claimed the pattern worked was simply wrong and has been corrected, and
+nothing ever exercised it because the Core Web Vitals table always fits on
+one page.
+
+Accepting it is defensible now specifically because D2 was fixed in the
+same session: the four columns are geometrically stable across breaks and
+read unambiguously as id / page count / occurrence count / selector. It
+would not have been defensible while the columns were also moving.
+
+If it does need closing later, three routes exist, in ascending cost:
+1. Make each row self-describing with small inline column labels. No
+   engine work at all.
+2. Repeat the rule-group caption as a running header via a Paged.js hook.
+3. Upgrade or patch Paged.js.
+
+### `.appendix-url-row { break-before: avoid }` does not work
+Source: 2026-08-25 Domaine Lagnonu review, found while diagnosing D2.
+
+A finding's page-URL sub-row can be separated from the finding row it
+belongs to: in a real report, page 17 opened with a URL row whose own
+finding row was the last thing on page 16. Pre-existing and unrelated to
+that session's changes. The likely cause is the same one that defeated the
+`<thead>` and `<colgroup>` fixes for D2 - Paged.js's fragmentation of a
+table does not carry the relationship the CSS rule is expressed against -
+but that was not confirmed, so it needs its own diagnosis rather than an
+assumed cause. Worth pairing with D3 above if either is ever picked up,
+since both are the same engine's handling of fragmented tables.
+
+## Needs a locked-contract change
+
 ### Image filename/src instead of positional selectors
 Source: `archive/report-feedback-palais-gallien-v2.md` P4 item ("`img:nth-of-type(32)`
 [...] is not actionable [...] the image filename or src would be far more
@@ -114,18 +177,18 @@ into the fix plan.
 
 ## Placeholder values awaiting a real answer, not a code fix
 
-This isn't broken - it renders clearly-marked-as-placeholder, per
-CLAUDE.md's rule against ever showing a plausible fake number - but it
-needs a real decision (from Jules) before the report can ship to a client
-outside internal testing:
+**Empty as of 2026-08-25.** The one entry this section held (the SIRET)
+was closed on inspection: `html-utils.ts` already defaults
+`ODYSSEUS_REGISTRATION_NUMBER` to the real registration number, and the
+value in `.env` matches it exactly (compared, not eyeballed). The
+pre-flight guard in `render-lint.ts` (`FORBIDDEN_PATTERNS`, matching the
+`[... a renseigner]` bracket convention) stays, since it is what stops any
+future placeholder shipping silently.
 
-- `ODYSSEUS_SIRET_PLACEHOLDER` (`packages/report/src/template/html-utils.ts`):
-  literal `[SIRET à renseigner]`, needs the real SIRET. **Updated
-  2026-08-22:** a pre-flight guard now exists (`render-lint.ts`'s
-  `FORBIDDEN_PATTERNS`, matching the general `[... à renseigner]` bracket
-  convention) - PDF generation throws a clear local error rather than
-  shipping the placeholder silently, per the 2026-08-21 La Corniche
-  feedback pass, P0.4. The real value itself is still the open item here.
+One live nit worth fixing whenever that file is next touched: the code
+reads `process.env['ODYSSEUS_SIRET']` while `.env` defines `SIRET`, so the
+environment override never actually fires. Harmless today only because the
+committed default is the correct value.
 
 **Confirmed 2026-08-19, no longer open:** `ODYSSEUS_REAUDIT_PRICE_EUR_HT`
 / `ODYSSEUS_REAUDIT_LEAD_TIME_DAYS` (EUR 450 HT / 5 business days,
@@ -201,3 +264,53 @@ morale, cumulable (art. R451-4 du code de la consommation)." Confirmed
 both via `pdftotext` and a rendered screenshot of the page. Not an open
 item; noted here only so a future session does not re-investigate the
 same non-bug.
+
+
+## Closed: SCAN_CONCURRENCY does not inflate Lighthouse's lab LCP
+
+2026-08-24 (A11). Trade-off 20 left this genuinely open: a real La
+Corniche report showed lab-measured LCP median 33.2s directly above
+real-user CrUX LCP 4.1s, and one hypothesis was that running Lighthouse
+across `SCAN_CONCURRENCY` lanes still contends for host CPU against the
+throttled simulation, despite the serialization queue trade-off 10
+describes. That session could not test it, because confirming it on a
+live site would have needed two authorized scans of `lacoorniche.com`
+and only one was authorized. Re-scanning a live third-party site for a
+diagnostic nobody asked for is exactly what the politeness rule exists to
+prevent.
+
+The *mechanism* needs no live site at all. Tested against
+`fixtures/spa-demo` served by `vite preview`, six full scans, three at
+`SCAN_CONCURRENCY=1` and three at `SCAN_CONCURRENCY=3`, four pages each,
+comparing Lighthouse's own `largest-contentful-paint` numericValue.
+
+| | n (page measurements) | LCP median | LCP mean | min | max |
+|---|---|---|---|---|---|
+| `SCAN_CONCURRENCY=1` | 9 | 1402 ms | 1405 ms | 1353 | 1465 |
+| `SCAN_CONCURRENCY=3` | 9 | 1403 ms | 1393 ms | 1353 | 1443 |
+
+Per-URL medians: 0.95, 1.04, 1.00 (c3/c1). The two arms are
+indistinguishable, and the spread within each arm is larger than the
+difference between them. TBT was 0 ms throughout.
+
+**Conclusion: not supported.** Lane concurrency is not what produced the
+33.2s figure, and the existing Lighthouse serialization queue is doing
+its job. Do not remove that queue on the strength of this result - the
+collision it guards against is a `perf_hooks` mark collision, a different
+failure entirely (trade-off 10), and this experiment says nothing about
+it.
+
+**What this does not rule out.** The fixture is three trivial local pages
+with no real CPU work, so LCP here is dominated by Lighthouse's simulated
+throttling rather than by host contention. A heavy real site doing real
+main-thread work could still contend in a way this cannot show. What the
+result does establish is that lane concurrency has no *inherent*
+inflating effect, which was the specific claim on the table. The
+remaining explanation for a 33.2s lab figure is the ordinary one already
+disclosed to the client: a deliberately harsh single-run mobile
+simulation against a heavy site, which is what
+`core-web-vitals-table.ts`'s reconciliation note (trade-off 20) exists to
+say.
+
+Raw logs and the analysis script are session-scratch only, not committed;
+the numbers above are the result.

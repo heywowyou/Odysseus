@@ -1,7 +1,7 @@
 import type { Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, renderSheetHeader, sheet } from '../html-utils.js';
+import { escapeHtml, fillTemplate, renderSheetHeader, sheet, stripInlineMarkdown } from '../html-utils.js';
 import { sectionTitle } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
@@ -55,7 +55,7 @@ export function renderReportIntro(
       const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
       const contact = whoToContact(strings, themeFindings);
       const effortLabel = strings.themes.effortImpactLevels[theme.effort];
-      const text = fillTemplate(r.nextActionItemTemplate, { title: theme.title, contact, effort: effortLabel });
+      const text = fillTemplate(r.nextActionItemTemplate, { title: stripInlineMarkdown(theme.title), contact, effort: effortLabel });
       return `<li style="margin-bottom:8px">${escapeHtml(text)}</li>`;
     })
     .join('');

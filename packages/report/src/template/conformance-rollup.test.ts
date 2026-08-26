@@ -225,3 +225,30 @@ describe('item 1.11: the pages count is the true union across findings sharing a
     expect(rows[0]).toMatchObject({ criterion: '1.3.1', findingCount: 2, pages: 10 });
   });
 });
+
+// A8 (2026-08-24 three-site review): a real La Corniche report listed
+// criterion 2.1.3 in a table headed "niveau AA", with a blank name cell.
+describe('A8: level AAA criteria are out of scope for the AA conformance table', () => {
+  const aaaFinding = (criteria: string[]): Finding =>
+    ({
+      ruleId: 'scrollable-region-focusable',
+      category: 'accessibility',
+      wcagCriteria: criteria,
+      occurrences: 3,
+      pageUrls: ['https://example.com/a'],
+    }) as unknown as Finding;
+
+  it('drops a AAA-only criterion entirely', () => {
+    expect(buildConformanceRollup([aaaFinding(['2.1.3'])])).toEqual([]);
+  });
+
+  it('keeps the AA criteria of a finding that carries both levels', () => {
+    const rows = buildConformanceRollup([aaaFinding(['2.1.1', '2.1.3'])]);
+    expect(rows.map((r) => r.criterion)).toEqual(['2.1.1']);
+  });
+
+  it('keeps a criterion this codebase has never seen, rather than hiding it', () => {
+    const rows = buildConformanceRollup([aaaFinding(['4.1.4'])]);
+    expect(rows.map((r) => r.criterion)).toEqual(['4.1.4']);
+  });
+});

@@ -11,6 +11,7 @@ import type { GenerateReportInput } from './types.js';
 import { resolveRenderDiffEvidence } from './screenshots.js';
 import { renderHtml } from './template/render-html.js';
 import { findRenderLintViolations } from './template/render-lint.js';
+import { findUnconfirmedIdentityFields } from './template/unconfirmed-fields.js';
 import { renderPdfFromHtml } from './pdf.js';
 
 /** Chromium is launched once for the whole report and used solely for the
@@ -37,6 +38,19 @@ import { renderPdfFromHtml } from './pdf.js';
 export const REPORT_PDF_CHROMIUM_ARGS = ['--font-render-hinting=none'];
 
 export async function generateReportPdf(input: GenerateReportInput): Promise<Buffer> {
+  // D8: refuse before doing any work, not after rendering - the operator
+  // needs to be told to confirm the name, not handed a PDF with a guess on
+  // its cover.
+  const unconfirmed = findUnconfirmedIdentityFields(input.manualFields);
+  if (unconfirmed.length > 0) {
+    const details = unconfirmed.map((f) => `  - ${f.field}: "${f.value}" (detected, not confirmed)`).join('\n');
+    throw new Error(
+      'Report generation aborted: the client identity on the cover is still a detected guess, ' +
+        `never shipped to a client unconfirmed:\n${details}\n` +
+        'Confirm or correct these fields in the dashboard, then regenerate.',
+    );
+  }
+
   const { browser } = await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS });
   try {
     const {

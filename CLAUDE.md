@@ -31,9 +31,16 @@ rules) is `docs/operator-obligations.md`. Prospecting is governed by
 4. The LLM never receives raw HTML or full page content. Normalized
    findings plus site context only.
 5. Crawling is polite: respect robots.txt, identifiable user agent,
-   delay between requests, hard page cap, hard per-page timeout. The
+   delay between requests, hard per-page timeout. The
    delay is enforced between scanner passes on a page as well, not only
    between crawl requests.
+
+   **Amended 2026-08-24.** A page cap used to be mandatory
+   (`DEFAULT_MAX_PAGES` 20); it is now opt-in (`--max-pages`, `MAX_PAGES`)
+   and off by default, after a real audit silently under-reported a site
+   by more than a third. Politeness is otherwise unchanged. Do not
+   silently reintroduce a default cap. Full incident and reasoning:
+   `docs/decisions/trade-offs.md`, "Non-negotiable rule 5 amendment".
 6. Never overstate legal exposure in any generated text. Accessibility
    obligations depend on company size and sector. State the criterion,
    not a verdict on whether a law applies to a given client. This is the
@@ -52,6 +59,8 @@ rules) is `docs/operator-obligations.md`. Prospecting is governed by
 - `packages/core/src/types/findings.ts` — findings model v1
 - `packages/core/src/normalize/severity.ts` — severity mapping
 - `packages/core/src/types/llm-output.ts` — LLM schema and guards
+  (`themeSchema.category` gained `'privacy'` on 2026-08-24, an approved
+  change; see trade-off 31)
 
 Every downstream layer reads these shapes. Changing them invalidates
 stored audits and breaks monitoring diffs. If a change is genuinely
@@ -59,880 +68,172 @@ needed, say so and stop. Do not change them and continue.
 
 ## Known trade-offs, do not silently reverse
 
-1. **Lighthouse's `accessibility` and `best-practices` categories emit no
-   findings**, decided in Milestone 4. `accessibility` is axe-core
-   underneath, and axe already scans WCAG 2.2 AA directly against the same
-   page, so emitting both produced duplicate findings with two different
-   severity mappings for the same rule. `best-practices` bundles unrelated
-   concerns (HTTPS usage, deprecated APIs, console errors, image aspect
-   ratio) that have no correct home among the four locked
-   `FindingCategory` values; forcing one onto a client-facing report
-   section mislabels it. Both category scores are still recorded per page
-   in the audit manifest (`ManifestPageEntry.lighthouseExcludedCategoryScores`),
-   so the numbers are not lost, only unused for findings.
+Full write-ups (root cause, alternatives tried and rejected, measured
+effect) live in `docs/decisions/trade-offs.md`, same numbering. Each line
+below is the one governing "do not X" imperative; read the linked entry
+before touching the area it covers.
 
-   Category-level exclusion is not sufficient on its own. Lighthouse files
-   some accessibility audits under `seo` as well, so `image-alt` arrived
-   through the allowlisted path and duplicated axe's own `image-alt` with
-   a different severity. `LIGHTHOUSE_EXCLUDED_AUDITS` in `constants.ts`
-   suppresses individual audit IDs that axe already reports, regardless of
-   which category surfaces them. Add to that list only rules whose overlap
-   has been confirmed against real scanner output, not assumed.
+1. Axe already covers WCAG 2.2 AA; Lighthouse's `accessibility` category
+   is excluded to avoid duplicate findings, and `best-practices` has no
+   home among the four locked `FindingCategory` values. Do not re-enable
+   either category for finding emission without an argued change; add to
+   `LIGHTHOUSE_EXCLUDED_AUDITS` only overlap confirmed against real
+   output. → trade-offs.md#1
+2. `prune-screenshots.ts`'s `selectPageDirsToKeep`/`pruneScreenshots` is
+   the single implementation deciding which screenshots survive a scan.
+   Do not reimplement selection logic elsewhere. → trade-offs.md#2
+3. Dedupe (`computeDedupeKey`, cross-page) and
+   `aggregateSamePageOccurrences` (same-page, fine groups only) are two
+   separate passes with different keys. Do not merge them, and do not add
+   selector normalization (stripping `:nth-child()` etc merges genuinely
+   distinct elements). → trade-offs.md#3
+4. Non-HTML resources are dropped by extension before enqueueing
+   (`links.ts`), with a Content-Type fallback in `crawl.ts`. Never crawl
+   binary resources as pages. → trade-offs.md#4
+5. `persistAudit` upserts by `auditId` (a re-run is a retry);
+   `persistAnalysis` inserts (a re-run is a distinct, legitimate
+   document). Do not change either's semantics. → trade-offs.md#5
+6. Two cost gates control LLM calls: a conservative audit fallback and a
+   stricter prospecting-worthiness gate, both scoring on `SEVERITY_ORDER`
+   over distinct findings. Do not remove either without revisiting
+   `docs/llm-layer-rules.md` section 10. → trade-offs.md#6
+7. `structure-output-schema.ts`/`writing-output-schema.ts` are hand-
+   mirrored Zod-v3 copies needed only because the SDK helper requires
+   zod v4. Never treat them as the validation authority — the real Zod
+   schemas' `.parse()` is what runs. Delete the mirrors only if `core`
+   moves to zod v4. → trade-offs.md#7
+8. Findings the LLM can't give good advice about (wrapper pages,
+   noindex-legal pages) are diverted before the structure pass via
+   `packages/llm/src/diversion.ts`'s `partitionFindings`, not explained
+   away with a prompt instruction. `packages/report` must import that
+   function, never duplicate the predicate. `legalRelevance` is built in
+   code, never written by the model. → trade-offs.md#8
+9. `packages/report`'s `report.css` is hand-maintained CSS derived from
+   the two canonical mockups in `docs/mockups/`, not Tailwind. Do not
+   reintroduce a Tailwind build step without checking the existing design
+   system first; re-derive tokens from the mockups via computed styles,
+   never invent them. → trade-offs.md#9
+10. Render-diff/axe/Lighthouse run across `SCAN_CONCURRENCY` lanes; the
+    crawl stays sequential; Lighthouse calls are serialized behind an
+    in-process queue (confirmed `perf_hooks` collision). Do not remove
+    that queue without re-confirming the collision is gone.
+    → trade-offs.md#10
+11. Legal content (Argument B) is a deterministic splice from
+    `assessObligations()`, byte-identical-validated, never model prose.
+    Do not revert to a "be careful" prompt instruction instead of
+    withholding the pen. → trade-offs.md#11
+12. Single-tier commercial model: no paid screening tier, flat full-audit
+    price, free outreach preview instead. `ReportTier` is gone everywhere.
+    The preview is not a lighter report tier — give it its own render
+    path and its own RGPD article 14 disclosures. → trade-offs.md#12
+13. Full audit price is EUR 1,600 HT (raised from EUR 300 HT
+    2026-08-16), a pricing decision only, not a scope change. The Stripe
+    link amount is updated by hand. → trade-offs.md#13
+14. SEO/GEO checks use a new `geo` `FindingCategory` (purely additive),
+    not folded under `seo`. Citability of factual statements is
+    explicitly out of scope for a heuristic — that's an LLM-explains job,
+    not a scanner check. → trade-offs.md#14
+15. The business-impact reference-stat table
+    (`packages/core/src/reference-stats/stats.ts`) is compiled TS, not
+    JSON — it's edited content, not operator config. Only rows the
+    research doc tags "safe to cite by name" are encoded; never add an
+    aggregate market-size figure or an unverified year.
+    → trade-offs.md#15
+16. Reference-stat citation selection in the report is fully
+    deterministic (`selectReferenceStats` called at render time), never a
+    model choice. `Theme.category` has no `'geo'` option. Outreach
+    (9c) must never import `@odysseus/core`'s stat table — stricter "no
+    statistics" rule applies there. → trade-offs.md#16
+17. No annex group in the PDF is ever forced onto one page with
+    `break-inside: avoid`, regardless of finding count — only bounded
+    per-row atomicity is safe. Do not reintroduce group-level atomicity
+    without a real mechanism for bounding rendered height first.
+    → trade-offs.md#17
+18. Milestone 8.6 detections (security headers, AI-crawler robots check,
+    structured-data validation, CrUX field data) all use `source:
+    'custom'` into the existing dedupe/severity machinery. CrUX requires
+    `globalThis.fetch` passed explicitly (library throws in Node
+    otherwise). → trade-offs.md#18
+19. The PDF glyph-splitting defect is Chromium print-to-PDF font hinting,
+    fixed via `REPORT_PDF_CHROMIUM_ARGS` (`--font-render-hinting=none`)
+    applied only to the report's own Chromium launch, not the scanner's.
+    → trade-offs.md#19
+20. Five report-template fixes from a full read-through (broken
+    `--space-5` token, uncoloured Impact/Conformité, unfilled manual
+    fields via `prefillAuditManualFields`, contradictory lab-vs-CrUX Core
+    Web Vitals numbers, repeated annex URL lists). Do not reintroduce a
+    `var(--space-*)` reference without a matching declaration —
+    `spacing-tokens.test.ts` guards this. → trade-offs.md#20
+21. Sector-targeted reference-stat research lives in
+    `docs/research/sector-reference-stats/`, one file per sector. Only
+    wire in rows with confirmed methodology; an absence of a scalable
+    stat (e.g. hospitality accessibility-to-conversion) is the correct
+    conservative answer, not a gap to paper over. → trade-offs.md#21
+22. `estimateRevenueImpact` is wired only for `scales-down` citations with
+    a Sirene-reliable turnover, applied exactly once against full
+    turnover — never scaled by a measured gap, page count, or finding
+    count. Result is floored to 2 significant figures. Do not relax
+    `scales-down` eligibility to cover a context-only stat.
+    → trade-offs.md#22
+23. `computeBrokennessScore`/`isAuditFallbackEligible`/
+    `isProspectingWorthy` are real as of 9b but `isAuditFallbackEligible`
+    is still not wired into the pipeline — documented gap, not silently
+    solved. Restaurants (56.10A) stay disabled in the NAF allowlist; do
+    not enable by analogy to hotels without the same legal review.
+    → trade-offs.md#23
+24. Language variants of one page are collapsed into a single finding
+    using the site's own hreflang declarations only (two gates:
+    self-inclusion, one-URL-per-language) — never URL-prefix guessing.
+    Clusters are computed once in `write-audit.ts` and stored on the
+    manifest, not recomputed per consumer. → trade-offs.md#24
+25. `FindingCategory` gained `privacy` (approved locked-contract change)
+    covering both security-header and cookie/tracker concerns as one
+    client-facing story. → trade-offs.md#25
+26. Six 2026-08-24 detection checks (cookie/tracker consent, WCAG 1.4.10
+    reflow, accessibility-statement presence, third-party origin
+    inventory, NAP consistency, HTML structural validity via an
+    `ALLOWED_RULES` allowlist that excludes all `wcag/*` rules to avoid
+    axe duplication). NAP compares only phone/postal code, never street
+    names. → trade-offs.md#26
+27. The structure pass sees dense `x1..xN` alias finding IDs
+    (`finding-alias.ts`), not real ones, so there are no numeric gaps for
+    the model to "complete." Do not reintroduce a prompt instruction
+    about ID gaps — there's nothing left to explain. → trade-offs.md#27
+28. The LCEN identification obligation (article 1-1, I, 2, post-SREN) is
+    spliced deterministically from `regimes.ts` via `renderLcenBlock`,
+    never routed through `assessObligations()` (no scope test), and never
+    renders a sanction amount. → trade-offs.md#28
+29. Three client-visible copy fixes: the exec-summary "commercial not
+    legal" note now reflects what `legalRelevance` actually knows;
+    French guillemets use U+00A0 (guarded by
+    `guillemet-spacing.test.ts`), never U+202F (missing-glyph risk in
+    PDF). → trade-offs.md#29
+30. Lighthouse resource audits (images etc) collapse to one site-wide
+    finding via `FindingCandidate.dedupeIdentity` overriding selector
+    identity — allowlist only audits whose items describe one action over
+    a set of files; selector/URL-based identity was tried and measured
+    worse. → trade-offs.md#30
+31. `render-diff.ts` uses `load` + a bounded best-effort
+    `networkidle` wait (`RENDER_SETTLE_TIMEOUT_MS`), never a hard
+    `waitUntil: 'networkidle'` requirement — it can hang indefinitely on
+    a real site. Language subtrees are recorded `discovered-not-scanned`,
+    never silently dropped by a link filter. `hreflang-missing` must
+    actually have an emitter, not just severity/copy — sweep periodically
+    for other dressed-but-dead rule ids. The writing pass is guarded
+    against stating legal consequences
+    (`legal-consequence-guard.ts`). → trade-offs.md#31
+32. A normalize-layer change that drops/reorders findings renumbers every
+    later finding ID — any analysis generated against the old
+    `findings.json` must be regenerated (`analyze
+    --regenerate-structure`), never reused. Lighthouse's `document-title`
+    SEO audit duplicates axe's own rule of the same name — keep it in
+    `LIGHTHOUSE_EXCLUDED_AUDITS` and re-run
+    `generate-reachable-rule-ids.mjs` after any such change. A generic
+    `h1..h6 { break-after: avoid }` rule must not apply to
+    `.remaining-category h5` — use the bounded `.remaining-category-head`
+    wrapper instead. CWV metric tie-breaks return no metric on a genuine
+    tie, never fall back to LCP by list order. → trade-offs.md#32
 
-   This is why `heading-order` (documented in
-   `docs/manual-accessibility-checklist.md` as a confirmed axe detection
-   gap, tagged best-practice rather than WCAG) remains a real gap rather
-   than something a future session should "fix" by re-adding Lighthouse's
-   accessibility category. `best-practices` gets a deliberate per-audit-id
-   mapping table in Milestone 8, alongside the custom checks. Do not
-   re-enable either category for finding emission without that argued
-   change.
-
-2. **Screenshot pruning has one canonical implementation.**
-   `packages/scanner/src/artifacts/prune-screenshots.ts`'s
-   `selectPageDirsToKeep` / `pruneScreenshots` is the single place that
-   decides which page screenshots survive a scan (always the homepage,
-   plus the top N pages by render-diff `missingPercent`). Report
-   generation (Milestone 6) must import and call these functions rather
-   than reimplementing the selection logic, or the report will eventually
-   ask for a screenshot the scan already deleted.
-
-   The rationale is data minimisation, not disk space. Full-page
-   screenshots of a client site incidentally capture personal data, and
-   not capturing is a stronger position than deleting later.
-
-3. **Dedupe and aggregation are two separate passes, deliberately.**
-   `computeDedupeKey` (`source|ruleId|selector`) collapses the _same
-   selector across pages_, so a footer contrast failure appearing on
-   eleven pages becomes one finding with a count.
-   `aggregateSamePageOccurrences` collapses _different selectors within a
-   single page_ for the same source and rule, because axe emits distinct
-   positional selectors for rules like `link-in-text-block`, and sixty
-   nine instances of one defect on one page otherwise become sixty nine
-   separate findings each with `occurrences: 1`.
-
-   Aggregation runs only on fine groups confined to exactly one page.
-   Multi-page groups pass through untouched with their original
-   `dedupeKey`. Do not merge the two passes: they use different keys for
-   different reasons, and cross-run identity for the monitoring tier is
-   `dedupeKey`, so it matters which pass produced it.
-
-   Selector normalization was considered and rejected. Stripping
-   `:nth-child()` would merge genuinely distinct elements, and a real
-   scan confirmed that stable selectors dedupe correctly without it.
-
-4. **Non-HTML resources are never crawled as pages.** A real WordPress
-   site linked four `wp-content/uploads/*.jpg` attachment URLs from its
-   gallery, and each one cost a full render, an axe pass, and a Lighthouse
-   pass, producing findings against binary content. Links are dropped by
-   extension before being enqueued (`links.ts`), with a Content-Type check
-   in `crawl.ts` as a fallback for URLs whose extension reveals nothing.
-   Extension-dropped URLs never appear in the manifest at all; only the
-   Content-Type path records `skipped-non-html`.
-
-5. **Analyses are inserted, never upserted.** `persistAudit` upserts by
-   `auditId` because an audit re-run under the same ID is a retry of the
-   same work. `persistAnalysis` inserts, because an analysis re-run is
-   not: one per language, and again after a prompt change, are all
-   legitimately distinct documents. Each records its model identifier and
-   temperature, for the same provenance reason the manifest records
-   scanner versions.
-
-6. **The LLM is not called when a scan has not produced enough to justify
-   it**, decided 2026-08-03. Two gates: a conservative audit fallback
-   (falls back to a static template only when there is no critical or
-   serious finding and fewer than 5 moderate findings) and a stricter
-   prospecting worthiness gate before spending a call on outreach
-   generation (at least one critical finding, or two serious, or a page
-   with render diff missing 50 percent or more). Full thresholds and
-   reasoning in `docs/llm-layer-rules.md` section 10. Both gates score
-   findings using the existing `SEVERITY_ORDER` weights rather than a new
-   scale, and count distinct findings rather than occurrences. Do not
-   remove either gate to "always get a full analysis" without revisiting
-   the reasoning there first.
-
-7. **`packages/llm/src/structure-output-schema.ts` and
-   `writing-output-schema.ts` are hand-mirrored copies of their
-   respective non-locked Zod schemas**, needed because the SDK's
-   `responseFormatFromZodObject` helper requires zod v4 and this
-   workspace is zod v3. Each is an API shape hint, never the validation
-   authority: `structurePassOutputSchema.parse()` /
-   `writingPassOutputSchema.parse()` run explicitly on every response.
-   A test asserts each mirror and its Zod schema describe the same
-   shape so drift fails loudly. If `core` ever moves to zod v4, delete
-   the mirrors and use the helper.
-
-8. **Findings the LLM cannot give good advice about are diverted before
-   the structure pass, not passed in with a prompt instruction to be
-   careful**, decided during the report v2 refactor (2026-08-07) after a
-   real second-client scan (haaitza.com) put SEO advice about indexing a
-   third-party Facebook embed at rank 1 of the whole report.
-   `packages/llm/src/diversion.ts`'s `partitionFindings` removes findings
-   confined entirely to wrapper pages (`missingPercent >= 95`) or to a
-   `noindex`-legal-page URL pattern before they ever reach
-   `buildStructureInput`. Diverted findings are not dropped: they render
-   in a fixed-copy "Observations" section in the report template, built
-   from the same `partitionFindings` call against the same
-   `findings.json` and `manifest.json`, so the report's account of what
-   was diverted can never drift from what the model actually saw.
-   `packages/report` depends on `packages/llm` specifically for this
-   function; that dependency edge exists so there is exactly one
-   implementation of the diversion rule, not two hand-synced ones. Do not
-   revert to explaining these findings to the model instead of filtering
-   them, and do not duplicate the predicate in `packages/report` instead
-   of importing it. Similarly, `legalRelevance` on an accessibility theme
-   is built by `packages/llm/src/legal-relevance.ts` from a code-owned
-   WCAG criterion name table, never written by the writing pass (which
-   has no field for it at all) — the model choosing zero words of a legal
-   claim is the point. Full defect list and reasoning in
-   `docs/report-v2-refactor.md`.
-
-9. **`packages/report`'s template is hand-maintained CSS, not Tailwind**,
-   since the 2026-08-07 refactor. The compiled-Tailwind approach from
-   milestone 6 is gone: no `tailwind-input.css`, no `build:css` script, no
-   `tailwindcss`/`@tailwindcss/cli` dependency. `report.css` is written
-   directly. It went through two dark-theme generations: a
-   GlassWire-inspired reskin on 2026-08-07 (`docs/odysseus-project-brief-v2.md`,
-   "Post-7.1: scan concurrency and reskin"), then a full retokening on
-   2026-08-16 to actually match `docs/mockups/Ody Audit Report -
-   Standalone - Final 16082026.html` (full audit) and `... - Preview -
-   Final 16082026.html` (outreach preview) - the design system now has
-   exactly one canonical source, those two mockups, not GlassWire. Both
-   the original light-theme prototype and `docs/GlassWire/` were deleted
-   2026-08-16 as a result; `report.css` is the only design artifact left
-   in the repo, since the mockups themselves are opaque self-decoding
-   bundles, not plain CSS. If the mockups are ever revised, re-derive
-   `report.css`'s tokens the same way this pass did: load the mockup
-   locally and read colors/radii/spacing off computed styles via the
-   `playwright` MCP tools, not off assumption. Do not reintroduce a
-   Tailwind build step for this package without first checking whether
-   `report.css`'s existing design system (color tokens, badge/scale/tile
-   components, print rules) still covers the need; it was chosen
-   specifically because re-deriving that design in a utility
-   framework risked drifting from the one version that was actually
-   print-tested.
-
-10. **Scan-phase concurrency runs pages in lanes, not the crawl.** Shipped
-    2026-08-07. The crawl stays sequential; render-diff, axe, and Lighthouse
-    now run across `SCAN_CONCURRENCY` lanes (default 3) instead of one page
-    at a time, with the per-origin politeness delay unchanged in every lane,
-    per the "concurrency, not a shorter delay" rule already in the project
-    brief. Lighthouse calls are additionally serialized behind a small
-    in-process queue even though the lanes themselves run in parallel:
-    concurrent `lighthouse()` calls collide on Node's process-global
-    `perf_hooks` marks, confirmed 100% reproducible against the spa-demo
-    fixture, and unrelated to the CDP debug port each lane already gets its
-    own connection to. Do not remove that serialization queue to "let
-    Lighthouse run in the lanes too" without re-confirming the collision is
-    gone; `scanConcurrency` is recorded on `AuditConfigSnapshot` for the
-    same provenance reason other scan config fields are.
-
-11. **Argument B (the legal content) is a deterministic splice, in both
-    the report and outreach, never model prose**, decided 2026-08-15
-    alongside `docs/obligation-basis.md`, `docs/operator-obligations.md`,
-    and `docs/outreach-rules.md`. `assessObligations()` produces the
-    criteria, the company's registry data, and the case-law position as
-    fixed text; the compliance section of the report and milestone 9c's
-    outreach draft both splice that text in unmodified rather than asking
-    the model to write around it carefully. A validator confirms the
-    spliced block is byte-identical to what `assessObligations()`
-    produced before a report renders or a draft is created; a mismatch is
-    discarded, not repaired, on the same reasoning as the
-    language-compliance guard elsewhere in the LLM layer. Do not revert
-    to a prompt instruction telling the model to "be careful" with legal
-    claims instead of withholding the pen entirely; that was tried once
-    already for wrapper-page and noindex findings (trade-off 8) and
-    failed for the same reason it would fail here.
-
-12. **Single-tier commercial model: no paid screening tier, flat full-audit
-    price, free outreach preview instead**, decided 2026-08-16
-    (`docs/offer-positioning.md`). The paid EUR 290 screening tier from
-    milestone 8 is dropped entirely, not narrowed or renamed. The full
-    audit is now the only paid deliverable, at a flat, published price
-    (EUR 1,600 HT as of trade-off 13 below; originally EUR 300 HT on
-    2026-08-16), replacing the risk-banded EUR 1,200 to 1,900 range. `ReportTier`
-    is gone from `packages/report` (`renderHtml`/`generateReportPdf` take
-    no tier argument, there is exactly one report body), from
-    `packages/store` (`ReportDocumentFields` has no `tier` field; historical
-    documents still carry one on disk, simply unread), from
-    `packages/interface` (no `?tier=` query param, no tier-labeled download
-    links), and from `packages/cli` (no `--tier` flag).
-
-    In its place, a free, pre-purchase **outreach preview** document is
-    sent to cold prospects (milestone 9c, `docs/outreach-rules.md`). It is
-    not a lighter tier of the full report and must not be built as one: it
-    has its own content rules, and in particular never contains selectors,
-    finding IDs, or exact page locations, the way the old screening tier
-    did. Give it its own render path rather than a new branch on
-    `renderHtml`. It is also a likely first-contact artifact under RGPD
-    article 14, so it must carry the same identity/data-origin/purpose/
-    opt-out disclosures `docs/outreach-rules.md` section 7 requires of any
-    first-contact message, not assume an accompanying email carries them.
-
-13. **Full audit price raised from EUR 300 HT to EUR 1,600 HT**, decided
-    2026-08-16, same day as trade-off 12 (`docs/offer-positioning.md`,
-    canonical pricing source). Pricing decision only, not a scope change:
-    the product and deliverables are unchanged; milestone 8.5 will add
-    substance to justify the tier separately. Reasoning: EUR 300 HT read
-    as a comparison-shopping price rather than a considered one and
-    undercut every published market floor by enough to raise doubt about
-    quality instead of removing it. The free outreach preview introduced
-    by trade-off 12 now carries the trust-building, low-risk
-    first-contact job the low flat price was originally covering, so the
-    paid tier no longer needs to be priced as an entry point; market-rate
-    credibility is the goal instead. The Stripe payment link amount is
-    updated separately by hand, not by code or by this change. Current-
-    price mentions in `docs/odysseus-project-brief-v2.md` were updated to
-    EUR 1,600 HT along with the canonical source; only the "why the
-    prices are not being raised" reasoning in `docs/offer-positioning.md`
-    section 1 is deliberately left describing the superseded EUR 300 HT
-    figure, kept as history of how that number was reached, not the
-    current price.
-
-14. **Milestone 8.5a's SEO/GEO checks add a new `geo` `FindingCategory`
-    value rather than folding those checks under `seo`**, decided
-    2026-08-16 alongside the milestone itself. AI-answer-engine
-    extractability (schema/entity completeness, llms.txt, FAQ markup) is
-    a distinct audience from search-ranking signals, and a future report
-    session should be able to give GEO its own section without first
-    having to split rule IDs back out of `seo` by hand. Purely additive
-    to the locked `findings.ts` contract; nothing existing was removed or
-    renamed. As of this milestone, `geo` findings exist in
-    `findings.json` but are not yet in `packages/report`'s
-    `CATEGORY_ORDER` (`findings-appendix.ts`), so they do not render in
-    the PDF appendix - deliberate for this detection-only milestone, but
-    milestone 8.5b/8.5c must decide how they are actually presented
-    rather than leave them silently unrendered. `categoryLabels.geo`
-    exists in both language string files only so the type stays total
-    over `FindingCategory`; it is unused until `CATEGORY_ORDER` changes.
-
-    "Citability of factual statements" (is a sentence phrased in a way
-    an AI engine would cite) was explicitly scoped out of this milestone
-    rather than approximated with an invented heuristic: judging phrasing
-    is a semantic judgment, not a pattern match, and this milestone's
-    hard rule (deterministic scanners detect, LLM only explains) forbids
-    reaching for an LLM call to decide it. Do not add a "citability
-    score" or similar heuristic without revisiting this; the intended
-    path is 8.5c's LLM layer explaining citability from already-detected
-    facts, not a new scanner check inventing a proxy for it.
-
-    `robots.ts`'s `isAllowedByRobots` was refactored to be built on a new
-    exported `findBlockingPattern`, which returns *which* Disallow
-    pattern wins for a path rather than only whether the path is allowed
-    - needed so `robots-disallow-broad` (packages/scanner/src/crawl.ts)
-    can tally how many discovered pages each pattern actually blocks.
-    Behavior of `isAllowedByRobots` itself is unchanged; the existing
-    test suite for it passes unmodified against the refactor.
-
-15. **Milestone 8.5b's business-impact reference-stat table lives in
-    `packages/core/src/reference-stats/` as compiled TS constants
-    (`stats.ts`), not JSON**, decided 2026-08-16. This mirrors
-    `compliance/regimes.ts` (narrative, editor-curated content reviewed
-    in a diff) rather than `prospecting/config/naf-sector-allowlist.json`
-    (operator-editable, versioned config read via `readFileSync` at
-    runtime) - a citation's exact wording is content someone edits
-    deliberately, not a knob an operator flips. The table encodes only
-    the rows `docs/research/Odysseus Business-Impact Statistics
-    Reference Database Accessibility SEO & GEO.md` tags "SAFE TO CITE BY
-    NAME," plus, for GEO only, its "emerging / cite only as early data
-    suggests" tier; every row that doc marks "directionally useful but
-    not citable" or "not citable" is skipped entirely, not encoded
-    behind a flag. "Web Standards Commission" (wsc.us.org) and its
-    $13-18bn figure are excluded by omission - there is no row anywhere
-    in the table referencing it, and `stats.test.ts` asserts no citation
-    or source text contains its name, as a regression trip-wire against
-    a future well-meaning re-add. Princeton's GEO visibility paper
-    (Aggarwal et al., ACM KDD 2024) is tagged `confidence: 'emerging'`
-    here despite the source doc itself calling it "well-established,"
-    because it measures visibility within a controlled benchmark, not
-    revenue, and the doc's own recommendation is to quarantine every
-    GEO-adjacent number as "Emerging Research" until GEO acquires a
-    peer-reviewed revenue study; that is the only condition under which
-    this tag should change. Sector detection for stat selection
-    (`reference-stats/sector.ts`, NAF prefixes `55.`/`56.` to
-    `hospitality`) is a small table deliberately independent from
-    `prospecting/config/naf-sector-allowlist.json`, which
-    `docs/prospect-qualification.md` section 4 forbids citing to a
-    prospect as evidence of anything - conflating the two would let an
-    edit made for prospecting recall silently change what a paid report
-    cites, or vice versa. Several source-doc years are left unset
-    (`year?: number`, not guessed) for sources the doc itself calls
-    archived or undated, such as the W3C-documented Legal & General case
-    study - inventing a year would be exactly the kind of unchecked fact
-    rule 1 forbids.
-
-    This milestone is data and pure functions only: `selectReferenceStats`
-    and `estimateRevenueImpact` are not called from anywhere yet.
-    `packages/llm`'s prompts and `build-input.ts`, `packages/report`'s
-    templates, and `packages/interface`'s pipeline are all untouched;
-    `geo` findings still do not render in the PDF appendix (unchanged
-    from trade-off 14). Wiring this table into the LLM/report layer,
-    including deciding whether the model may select which stats appear
-    per theme or whether selection stays fully deterministic the way
-    `legalRelevance` already is, is milestone 8.5c's job, kept separate
-    on purpose the same way 8.5a stayed detection-only.
-
-16. **Milestone 8.5c wires 8.5b's reference-stat table into the paid audit
-    report with fully deterministic selection**, decided 2026-08-17: the
-    report calls `selectReferenceStats(theme.category, sector)` directly
-    at render time (`packages/report/src/template/sections/themes.ts`),
-    the same way `legalRelevance` is built in code rather than by the
-    model - no change to the locked `llm-output.ts` `Theme` schema, no
-    prompt change, no new invented-reference guard. `Theme.category`'s
-    schema has no `'geo'` option at all, so LLM-synthesized themes can
-    never be geo; a geo citation only ever appears in the findings-
-    appendix's geo section (`findings-appendix.ts`), never in the themes
-    section. `'rendering'` themes get no citation: the stat table has no
-    rows for that category, an absence, not a bug. Each citation is shown
-    exactly once per category, attached to that category's
-    highest-priority theme (`themes.ts`'s `citationByRank`), not repeated
-    on every theme of the same category.
-
-    **Revised 2026-08-17** (report-feedback-haaitza.md B1, same-day
-    follow-up): this paragraph originally also said `'performance'`
-    themes get no citation, same reasoning. That was true only because
-    three Deloitte page-speed/conversion stats were miscategorised as
-    `['accessibility', 'seo']` in `stats.ts` to give them a category slot
-    to attach to at all - which is exactly why a real report cited a
-    page-speed statistic under a "Vidéos sans sous-titres" priority and
-    a "Liens non explorables" priority, twice, and never under the actual
-    performance priority. Fixed by retagging those three rows to a new
-    `'performance'` `StatCategory` and extending `themes.ts`'s
-    eligibility to match; `'rendering'` remains uncited, genuinely absent
-    from the table. Citation selection also gained a document-wide
-    `citedStatIds` Set (`render-html.ts`, threaded into both `renderThemes`
-    and `renderFindingsAppendix`), since the original per-section dedupe
-    could not catch the same statistic being independently selected by
-    two different sections.
-
-    Client sector reaches the report through a new
-    `ObligationAssessment.sector?: StatSector` field
-    (`packages/core/src/types/compliance.ts`, not a locked contract),
-    spliced on by `packages/interface/src/pipeline/obligation-stage.ts`'s
-    `withSector` from the same `OperatorProfile.naf` it already resolves
-    via Sirene - no second lookup. Storing the derived two-value sector
-    rather than the raw NAF code is a deliberate data-minimisation
-    choice. `geo` was added to `design-tokens.ts`'s `CATEGORY_ORDER`/
-    `CATEGORY` (closing trade-off 14's "not yet rendered in the PDF
-    appendix" gap for the ordinary per-finding listing too, not only
-    citations), using `nocturne.css`'s existing, previously-unused second
-    accent hue scale (`--color-accent-2-*`) rather than an invented hex,
-    since geo postdates the canonical mockups and there is no mockup
-    entry to re-derive a color from; `render-html.axe.test.ts` passing
-    against the real sas-fernande.fr fixture after this change is the
-    same WCAG 1.4.3 confirmation the original accessibility-tag color
-    swap relied on, not an assumption that the parallel scale is
-    automatically compliant.
-
-    The reference-stats module remains report-only. Milestone 9c's
-    outreach generation (not yet built) must never import
-    `@odysseus/core`'s `selectReferenceStats`/`REFERENCE_STAT_TABLE` -
-    `docs/llm-layer-rules.md` section 11's "No statistics" rule for
-    outreach is deliberately stricter than the report path (a report has
-    a methodology section and a paying client, an email has neither).
-    `estimateRevenueImpact` remains unwired in both paths; a numeric
-    client-facing revenue figure was deliberately deferred rather than
-    riding along with citation wiring, since turnover is only
-    inconsistently available from `ObligationAssessment`'s basis facts.
-
-17. **No annex group in the PDF report is ever forced onto one page with
-    `break-inside: avoid`, regardless of how few findings it has**,
-    decided 2026-08-19 during the La Corniche feedback-fix session
-    (`docs/report/archive/report-feedback-la-corniche.md` item 1.6's follow-up
-    write-up). `packages/report/src/template/sections/findings-
-    appendix.ts` used to apply the `.appendix-group` CSS class (paged.css,
-    `break-inside: avoid`) to any rule group at or under
-    `APPENDIX_GROUP_KEEP_THRESHOLD` (6) findings, on the reasoning that
-    forcing a *large* group atomic would blank most of a page - true, but
-    it never checked *rendered height*, only finding count. A small group
-    can still be taller than a full page's remaining space once long
-    selectors and multi-page URL lists are accounted for, and
-    `break-inside: avoid` on a fragment taller than a page gives Paged.js's
-    layout algorithm no valid break point at all. Confirmed the hard way:
-    item 1.6's own fix (more accurate page-union counts) made one real
-    rule group (`heading-hierarchy-skip`, sas-fernande.fr) just tall
-    enough to cross that line, and `pdf.ts`'s existing Paged.js
-    "Layout repeated" guard (added earlier the same session for items
-    0.2/0.7, see the `packages/report` entry below) correctly refused to
-    generate rather than silently shipping a truncated PDF. Root-caused by
-    bisecting each session commit against the real fixture, not guessed.
-    Fixed by removing `.appendix-group` and `APPENDIX_GROUP_KEEP_THRESHOLD`
-    entirely: every annex group now flows freely across a page break,
-    exactly like large groups already did. The per-row
-    `table tbody tr { break-inside: avoid }` rule (paged.css) is the only
-    atomicity guarantee left for the annex, and it is safe because a
-    single finding's own row is always small. Do not reintroduce
-    group-level `break-inside: avoid` in the annex, keyed on finding count
-    or otherwise, without a real mechanism for bounding rendered height
-    first - CLAUDE.md's own testing section already requires regenerating
-    all three reference sites before considering a report-layer change
-    done, specifically because this class of bug does not show up against
-    the two-page `fixtures/spa-demo` fixture.
-
-18. **Milestone 8.6 added four detections from a tool survey session
-    (2026-08-22): security response headers, a named-AI-crawler
-    robots.txt check, structured-data validation, and CrUX real-user
-    field data.** All four use `source: 'custom'` and slot into the
-    existing dedupe/severity machinery rather than inventing a second
-    path, the same "detect, don't grade" posture every other custom
-    check in this codebase holds to.
-
-    Security headers (`checks/security-headers.ts`) and CrUX
-    (`crux.ts`) are both site-level, fetched once per audit and
-    attributed to the homepage - the same "attribute a site-level fact
-    to the one page every site has" pattern `llms-txt.ts`/`sitemap.ts`
-    already established, chosen because response headers and real-user
-    field data are near-always the same answer across a site's pages, so
-    a per-page fetch would just repeat it at the cost of the politeness
-    budget. Structured-data validation
-    (`checks/structured-data.ts`, the `structured-data-testing-tool`
-    npm package) runs per page inside the existing `onRenderedPage` hook
-    against `page.content()`, no extra page load; it uses the package's
-    built-in Google preset rather than its "auto-detect" mode, since
-    auto-detected tests are all marked optional by the library itself
-    (presence-only, no correctness judgment) - relying on those would
-    report nothing head-metadata.ts's own JSON-LD presence check doesn't
-    already cover. The AI-crawler check extends `robots.ts` rather than
-    adding a new fetch: `fetchRobotsRules` was refactored to route
-    through a new `fetchRobotsText`, so the crawl's own robots.txt fetch
-    can also be parsed against each named AI user-agent
-    (`AI_CRAWLER_USER_AGENTS`: GPTBot, ChatGPT-User, ClaudeBot,
-    Google-Extended, PerplexityBot) with zero extra network calls;
-    `isAllowedByRobots`/`findBlockingPattern`'s existing behavior is
-    unchanged.
-
-    CrUX has a minimum-traffic threshold before an origin gets a public
-    record at all, confirmed by reading the CrUX API's own documentation
-    - most audited sites (French SMBs) are expected to have none. This
-    is why `CruxFieldDataResult` (`packages/core/src/types/manifest.ts`,
-    not the locked findings contract) is a top-level, optional
-    `AuditManifest` field recording the raw values (or
-    `available: false`) regardless of severity, the same reasoning
-    `lighthouseExcludedCategoryScores` already established for Lighthouse's
-    excluded categories: absence of real-user data is a fact worth
-    keeping, not a Finding, and must never render as a pass. Poor CrUX
-    values (Google's own published LCP/CLS/INP "poor" thresholds) still
-    produce real `performance`-category findings from
-    `normalize-crux.ts`, derived from that same recorded data. CRUX_API_KEY
-    is optional; scan-site.ts skips the CrUX fetch entirely (not
-    attempted and failed) when it is unset, so a site is never charged a
-    doomed auth round trip.
-
-    One real bug caught during this session, not by the test suite:
-    `crux-api`'s default fetch resolution is `createOptions.fetch ||
-    window.fetch`, which throws `ReferenceError: window is not defined`
-    in Node when no explicit `fetch` is passed - found by reading the
-    library's source before wiring it in, not by a failing test. Fixed
-    by passing `globalThis.fetch` explicitly in `crux.ts`; do not remove
-    that explicit option on the assumption the library works standalone
-    in Node.
-
-    This closes out the tool-survey research from the same session (the
-    plan considered, and explicitly rejected for now: Pa11y as a second
-    accessibility engine, since it drives Puppeteer internally and would
-    mean a second headless-browser stack next to Playwright; AI-answer-
-    visibility SaaS trackers like Otterly/Profound, since they monitor
-    live third-party LLM answers on a recurring subscription rather than
-    scanning the client's own site, which breaks both the one-time-audit
-    pricing model and the "deterministic scanners detect" rule; the W3C
-    HTML validator, a rate-limited public service not meant for
-    per-audit automation). Detection only at first, matching how 8.5a was
-    scoped: `packages/llm` and `packages/interface`'s report path are
-    untouched, and the security-headers/AI-crawler/structured-data
-    findings need no report change of their own since they land in
-    existing categories (`seo`, `geo`) the appendix and themes sections
-    already render generically.
-
-    CrUX field data is the one exception, added the same day
-    (2026-08-22): `AuditManifest.cruxFieldData` is not a Finding (see
-    above), so nothing would have rendered it without an explicit reader.
-    `packages/report/src/template/sections/core-web-vitals-table.ts`
-    gained a second block under the existing Lighthouse lab-data table,
-    not a new numbered section - lab and field data are one performance
-    story, not two competing sections, and this avoids touching
-    `section-registry.ts`'s ordinal list, the TOC, or the reference
-    mockups over what is additive content inside an existing sheet. The
-    block renders in both branches (measurement fully failed, and
-    measurement succeeded), independently of whether Lighthouse's own lab
-    run succeeded, since CrUX and Lighthouse can each work or fail on
-    their own. INP's good/needsImprovement thresholds are hardcoded
-    locally in that file rather than added to `@odysseus/core`'s shared
-    `CoreWebVitalMetricKey` union, since INP has no lab equivalent
-    (Lighthouse's TBT is a lab-only proxy for it) and that shared type is
-    also consumed by `normalize-lighthouse.ts`'s severity capping, which
-    never handles INP. `render-html.axe.test.ts` (zero WCAG 2.2 AA
-    violations) and `paged-invariants.test.ts` (post-pagination axe audit
-    plus layout invariants) both pass unmodified against the added
-    markup, confirmed rather than assumed.
-
-19. **The long-deferred "letter-spacing" glyph-gap defect was root-caused
-    to Chromium's print-to-PDF font hinting, not a CSS value**, closed
-    2026-08-22 during a La Corniche report review session. A real report
-    showed words splitting into separate glyph runs in the extracted PDF
-    text - "Vot re prest at aire", "conf ormit e", "chiff res" - which
-    `docs/report/report-feedback-deferred-items.md` had tracked since
-    2026-08-19 under the wrong hypothesis (a stray `letter-spacing`,
-    `word-spacing`, or `justify` rule; none exist in `nocturne.css` or
-    `paged.css`, confirmed by grep both then and again this session).
-
-    A standalone probe rendered the same test string through the real
-    `renderPdfFromHtml` path, varying font-weight (400-700) and font-size
-    (11-20px) independently across 18+ combinations. The defect has no
-    clean weight or size threshold - it hit weight 400 at several sizes
-    too - so this is not the same class of bug as the earlier
-    letter-spacing correctness fix (a source value reduced to a safe
-    numeric threshold, `letter-spacing.test.ts`). It is a Chromium
-    glyph-hinting/positioning artifact in the PDF text layer itself.
-    Passing `--font-render-hinting=none` to the Chromium launch used for
-    the PDF render eliminated it across every tested combination with
-    zero misses.
-
-    Scoped narrowly: `packages/scanner/src/browser.ts`'s `launchBrowser`
-    gained an optional `extraArgs` parameter (additive, defaults to
-    today's args), and only `packages/report/src/index.ts`'s
-    `generateReportPdf` passes the hinting flag, via an exported
-    `REPORT_PDF_CHROMIUM_ARGS` constant. Scanner's own crawl/axe/
-    Lighthouse browser is unaffected - it never renders to PDF and has no
-    reason to change. `pdf-text-integrity.test.ts` was updated to launch
-    with the same production args so it tests what actually ships.
-
-    That existing test could not have caught this class of bug on its
-    own: it strips all whitespace before comparing extracted text, which
-    erases an inserted mid-word gap along with legitimate line-wrap
-    whitespace, a limitation its own docblock already disclosed. A new
-    `glyph-hinting.test.ts` reproduces the weight/size probe matrix
-    directly against the production Chromium args and asserts every
-    known word extracts as one contiguous token, closing the actual gap
-    in coverage rather than only re-asserting the fix once.
-
-20. **A full read-through of a real La Corniche report against its four
-    intended audiences (director, IT/agency, legal, annex reader) turned
-    up five more fixes, closed the same session as trade-off 19**,
-    2026-08-22.
-
-    **Section 01's cramped spacing** was `var(--space-5)`, referenced
-    five times across `report-intro.ts` and `core-web-vitals-table.ts`,
-    never defined anywhere in the repo including the approved mockup - it
-    silently computed to `0`, killing four of section 01's group
-    separators. The mockup (loaded via the playwright MCP, computed
-    styles read directly, per trade-off 9's own instruction to re-derive
-    rather than invent) uses `--space-6` for exactly this "separate a
-    content block from the next heading" role, achieved via the
-    *preceding* element's margin-bottom - headings never carry a top
-    margin in the design, and 1.55 line-height is deliberate even for
-    small body text, not a bug. Fixed by substituting the five broken
-    references with the token the design actually uses; no new token was
-    added and `nocturne.css` was not touched. A `spacing-tokens.test.ts`
-    guard now scans every `.ts`/`.css` file under `packages/report/src`
-    for a `var(--space-*)` reference with no matching declaration, closing
-    the exact blind spot that let this live undetected for months
-    (`letter-spacing.test.ts`'s own hardcoded file list, by contrast, is
-    documented as incomplete).
-
-    **Impact commercial and Conformité had no colour**, both rendering as
-    flat grey text inside a blanket `opacity:0.75` wrapper alongside
-    Effort. `cover.ts` already had the exact mechanism needed
-    (`RISK_COLOR`, mapping the identical three French words
-    low/medium/high onto the severity ramp for the cover's risk badge) -
-    promoted to `design-tokens.ts` as `LEVEL_COLOR`, referencing
-    `SEVERITY` directly rather than duplicating its hex values. Applied to
-    Impact in `themes.ts` and `checklist.ts`, and to "Non conforme" in
-    both `themes.ts` and `accessibility-statement.ts` (the latter
-    previously used the neutral lavender accent, not red). Effort
-    deliberately stays uncoloured everywhere: high effort means expensive,
-    not urgent, and painting it on the same red/amber/green ramp would
-    tell the reader the opposite of the truth. The blanket `opacity:0.75`
-    on the metadata row was removed (it would have washed out the new
-    colours) in favour of the existing `.text-muted` idiom on label text
-    only, values at full strength - and a real axe contrast failure this
-    surfaced (a nested `opacity:0.85` on the conformity gloss, doubly
-    dimming an already-muted parent, 3.92:1) was root-caused and fixed,
-    not worked around. The checklist's Impact column needed a second,
-    print-safe colour pairing: `paged.css`'s `#section-05` print override
-    forces every `div`'s colour with `!important` for its light-background
-    inversion, so the coloured value is a `<span data-level="...">`
-    instead (spans are outside that selector list), with three dedicated
-    dark-on-light hex pairs (confirmed 4.5:1+ against `#f7f7f5`) added to
-    the same print block - `LEVEL_COLOR`'s dark-mode hexes would have
-    failed contrast if reused there directly.
-
-    **Manual fields (nom commercial, dénomination sociale) were never
-    auto-filled**, despite usable signals already existing in two places
-    the pipeline already touches. Checked directly against the live
-    Sirene API for a real client, not assumed: `siege.nom_commercial`,
-    `enseigne_1/2/3`, and `liste_enseignes` were all `null` - Sirene
-    genuinely has no commercial/brand name on file for many companies, so
-    `nomCommercial` cannot come from there. It is, however, already in the
-    scan: the homepage's `headMetadata.openGraphTags['og:site_name']`
-    (falling back to the `<title>` tag's last `|`- or em-dash-delimited
-    segment, or a short separator-free title, per `deriveSiteName` in
-    `write-audit.ts`) - a new `siteSignals.siteName` manifest field,
-    following the exact precedent `siteSignals.siren` already set.
-    `raisonSociale` needed no new plumbing at all: `nom_complet` (what
-    `OperatorProfile.denomination` already maps to) is the same value as
-    `nom_raison_sociale`, already resolved once by `obligation-stage.ts`
-    and exposed on `ObligationAssessment.registrySnapshot.denomination` -
-    reused rather than adding a second Sirene field to fetch and parse.
-
-    A new `prefillAuditManualFields` (`packages/store/src/audits.ts`) is
-    deliberately not `setAuditManualFields` with different inputs: it
-    reads the current document first and writes only keys currently
-    absent, so a detected value can never overwrite an operator's own
-    entry regardless of write order - `setAuditManualFields` always
-    overwrites, the correct behaviour for its own explicit-edit call site
-    but the wrong one here. Every written field gets
-    `provenance: 'detected'`, which was already a live enum value in the
-    schema and type but had no writer anywhere in the codebase before this
-    - `accessibility-statement.ts`'s "to confirm" branch on that
-    provenance was dead code waiting for exactly this. Wired into
-    `audit-stage.ts` right after `persistAudit` (the audit document must
-    exist first) using `obligationAssessment`'s already-resolved
-    `registrySnapshot` and `manifest.siteSignals`, no second Sirene
-    lookup. The dashboard form now shows a "détecté, à confirmer" hint
-    next to a prefilled field (`app-audit.ts`'s `toggleDetectedHint`,
-    driven by the same `provenance` field), so an operator can tell a
-    guess from a confirmed value at a glance; the hint disappears once the
-    operator saves that field themselves; `recipientName` continues to
-    have no automatic source and is not attempted here (P2.7's precedent:
-    it is operator-only by design, never rendered anyway).
-
-    **Section 10 contradicted itself**: lab-measured LCP median 33.2s
-    directly above real-user CrUX LCP 4.1s, an 8x gap with no explanation,
-    on the single most credibility-sensitive page in the report for an
-    IT-literate reader. A concurrency-inflation hypothesis (whether
-    running Lighthouse across `SCAN_CONCURRENCY` lanes, per trade-off 10,
-    somehow still contends for host CPU against the throttled simulation
-    despite the existing serialization queue) was considered but not
-    tested: confirming it would need two full scans of the same live site
-    at different concurrency settings, and only one `lacoorniche.com` scan
-    was authorized in this session - re-scanning a live third-party site
-    an extra time purely for a diagnostic, beyond what was actually asked
-    for, is exactly the kind of scope creep the crawling-politeness rule
-    exists to prevent. Left as a genuinely open question for a session
-    that can budget two authorized scans specifically for it. Fixed
-    unconditionally instead: `core-web-vitals-table.ts` now renders a
-    fixed-copy reconciliation note between the two blocks (`realUserGapNote`
-    in both language files) explaining that lab data is a deliberately
-    harsh single-run simulation while CrUX is real visitors on real
-    devices, shown only when both a real lab number and a real CrUX table
-    are on the page together - there is nothing to reconcile when either
-    side is the "not measured" branch, so the note is suppressed there. The
-    same section separately stated "aggregated across 27 pages" while only
-    25 of 27 visited pages had returned a Lighthouse measurement (2 timed
-    out, correctly disclosed in section 11 but silently contradicted here)
-    - `pagesScanned` now counts pages with an actual `coreWebVitals` value,
-    matching what the medians below it actually average over, not every
-    visited page.
-
-    **The annex repeated identical URL lists across findings that share a
-    page set.** Many findings in the same rule group hit the exact same
-    pages (the same booking widget missing an alt attribute, present on
-    every page it appears on) - a real report repeated the identical five
-    URLs plus "et 21 autres" under nearly every finding in some groups,
-    the bulk of the annex's length for zero new information.
-    `findings-appendix.ts`'s `pageUrlSetSignature` computes the same
-    sorted-URL signature `renderPageUrlList` already sorts by;
-    `renderRuleGroup` walks its findings in the same `findingId` order the
-    rows are rendered in and remembers the first finding to carry each
-    signature, so every later finding sharing that exact signature prints
-    "Mêmes pages que fXXX" instead of the list. Deliberately narrow:
-    scoped to one rule group only (never across groups, where a shared
-    page set is a coincidence, not the same underlying cause), and skipped
-    for single-page findings (nothing to save by deduping one URL). Each
-    finding's own numeric page/occurrence-count columns are entirely
-    unaffected - only the detail sub-row's URL text is deduped, so nothing
-    downstream that reads `finding.pageUrls.length` needed to change.
-    Respects trade-off 17: no group or row atomicity was added or changed,
-    the fix is purely which text a sub-row prints.
-
-21. **Business-impact reference stats now have a sector-targeted research
-    layer, `docs/research/sector-reference-stats/`, one file per sector,
-    separate from the original general-purpose pass**, added 2026-08-22
-    after Jules flagged that a euro figure in the report has to be
-    conservative and genuinely sector-specific or it destroys the
-    report's credibility rather than adding to it - the working example
-    given was "buttons with no label text reduce reservations by 75%,"
-    which nobody would believe and which was never actually claimed by
-    any source in the table. `docs/research/sector-reference-stats/
-    hospitality.md` is the first file, `README.md` in the same directory
-    is the template and promotion criteria for adding the next sector.
-
-    Five new hospitality-tagged, `context-only` accessibility rows were
-    added to `stats.ts` (`accessable-avoidance-2023`,
-    `dcms-holiday-participation-gap-2024`,
-    `dge-accesmetrie-booking-rare-2019`,
-    `teixeira-hotel-accessibility-portugal-2022`,
-    `singh-hotel-accessibility-top100-2025`), closing a real gap:
-    `selectReferenceStats('accessibility', 'hospitality', { strictSector:
-    true })` returned nothing before this pass (asserted by a since-
-    updated test in `select.test.ts`), so a hospitality client's
-    accessibility themes got no citation at all. All five are
-    `context-only`, never `scales-down`: the research explicitly checked
-    six countries and confirmed no study anywhere ties a WCAG remediation
-    to a measured booking-conversion delta for a hotel or restaurant.
-    That absence is the correct, conservative answer, not a gap to
-    paper over with an invented ratio - see trade-off 15's same
-    "report, don't fabricate" reasoning for the removed Legal & General
-    citation. A sixth row, `siteminder-digital-experience-abandonment-
-    2025`, was added under `performance` (52% of travelers self-report
-    having abandoned a booking over a bad digital experience) with the
-    self-reported-recall caveat written into the citation text itself,
-    not left implicit - it is the one figure in the "no citable data"
-    section of the research with real disclosed methodology, and stating
-    its limitation inline is what makes it safe to use at all.
-
-    Several strong findings from the same research pass were
-    deliberately NOT wired into `stats.ts`: Coach Omnium's French hotel-
-    guest survey (booking-form friction, direct-vs-OTA booking share) has
-    no `StatCategory` home yet, the same "no home yet" situation
-    `performance`/`rendering` themes were already in per trade-off 16 -
-    kept in `hospitality.md` for future exec-summary or next-steps copy
-    rather than force-fit into a category it doesn't belong to. The EC/
-    GfK Belgium 2014 accessible-tourism economic study (783 million
-    trips, 394bn EUR) was excluded as an aggregate market-size figure in
-    the same family as the Click-Away Pound billions trade-off 15 already
-    excludes - never a per-client multiplier. QualiBooth's 2026
-    hospitality report was excluded as a *statistic* (proprietary 0-100
-    score, sample skewed to large international chains) but its failure-
-    pattern list independently corroborates what the scanner's own
-    hospitality-relevant checks already detect, which is useful context
-    for a future session, not a citation. Full promotion table and
-    reasoning for every entry, including the negative results (no
-    hospitality booking-abandonment rate exists anywhere with real
-    methodology; no accessibility-to-conversion study exists for
-    hospitality; Google Business Profile completeness claims are
-    universally asserted and never studied; restaurant-specific data is
-    thin across the board), is in `hospitality.md` itself - read it
-    before re-researching any of those questions.
-
-    Nothing in `packages/report`'s rendering path changed: the existing
-    `selectReferenceStats`/`citationByRank` mechanism in `themes.ts`
-    already renders a context-only stat's citation text generically, the
-    same way it already did for the Nestlé/Rotten Tomatoes case studies.
-    This pass is data-only, matching how 8.5b and the earlier hospitality
-    scoping work were both data-only passes before their own wiring
-    milestones.
-
-22. **`estimateRevenueImpact` (trade-off 15/16) is now actually wired into
-    the report**, 2026-08-22, same session as trade-off 21, closing the
-    "unwired in both paths" gap those trade-offs left open. A theme's
-    priority card gets a euro estimate (`themes.ts`'s
-    `renderRevenueImpactNote`) only when both hold: the theme's citation
-    is `scales-down` (never a context-only case study or aggregate -
-    `estimateRevenueImpact` itself refuses those), and the client's own
-    turnover is known from a reliable Sirene lookup. Turnover now reaches
-    the report through a new `ObligationAssessment.registrySnapshot.
-    turnoverEur?: number` field (`packages/core/src/types/compliance.ts`,
-    not a locked contract), spliced on by `obligation-stage.ts`'s
-    `withRegistrySnapshot` from the same `OperatorProfile.turnover` value
-    already resolved via Sirene - present only when Sirene's own
-    `SIRENE_TURNOVER_RELIABLE_EFFECTIF_CODES` gate passed, which happens
-    to cover exactly the 0-9-employee band Odysseus actually sells to.
-    No second lookup, no guessed figure: absent whenever the source
-    lookup itself marked turnover unreliable, the common case is simply
-    no euro figure rendered, same as an unmatched sector already renders
-    no citation at all.
-
-    The ratio is applied exactly once against the client's full reported
-    turnover - never scaled by a measured gap, a page count, or a finding
-    count. This was a deliberate design constraint from the discussion
-    that preceded the build, prompted directly by a "buttons with no
-    label text could reduce reservations by 75%" hypothetical Jules gave
-    as the failure mode to avoid: a per-0.1s speed-conversion ratio
-    naively multiplied by a client's actual multi-second LCP gap is
-    exactly the mechanism that manufactures a number like that from a
-    real, modest study. `measuredLcpGapNote` (existing, item 14) already
-    states the real gap as separate prose; the euro figure never touches
-    it. The raw result is additionally floored (never rounded up, never
-    to nearest) to 2 significant figures by `roundConservativeEurEstimate`
-    before display, so "up to 50 000 EUR" is shown rather than a
-    false-precision "50 500 EUR" - the "never overstate" posture already
-    governing legal-exposure copy, extended to money. The rendered
-    sentence itself (`themes.revenueImpactTemplate`, both languages) is
-    written as a hedged association ("if this association held for your
-    business... an indicative estimate... not a guaranteed forecast"),
-    never a forecast.
-
-    Because the trade-off 21 research confirmed no scalable hospitality
-    accessibility stat exists, accessibility themes for hospitality
-    clients get no euro figure regardless of turnover - only
-    `performance` themes currently can, via the Deloitte travel-sector
-    stat. That asymmetry is the correct, evidence-driven outcome, not a
-    bug to fix by relaxing `scales-down` eligibility for a context-only
-    row.
-
-23. **Milestone 9b (prospecting throughput), 2026-08-22.** Two findings
-    worth recording before the implementation itself.
-
-    First: `computeBrokennessScore`, `isAuditFallbackEligible`, and
-    `isProspectingWorthy` (`docs/llm-layer-rules.md` section 10, CLAUDE.md
-    rule 6) were documented as decided, shipped policy - "do not remove
-    either gate" - but did not exist anywhere in the codebase before this
-    milestone; `git log -S` on each symbol name only ever turns up the
-    doc-patch commits. Neither gate was ever actually enforced: every
-    audit has always called the LLM regardless of findings volume, and
-    prospecting has never called it at all (9c, which would need
-    `isProspectingWorthy`, isn't built yet). This milestone adds the real
-    implementation, `packages/core/src/cost-gating/brokenness.ts`, matching
-    section 10's spec exactly (SEVERITY_ORDER-weighted score, the two
-    threshold predicates) and tested against it - but does not wire
-    `isAuditFallbackEligible` into the real audit pipeline. That wiring
-    (a static "no significant issues" report template, replacing an LLM
-    call) is new report-template scope the 9b brief description never
-    asked for, not a trivial call-site change, and stays a documented gap
-    rather than something silently built or silently left claimed-but-
-    missing.
-
-    Second: enabling hospitality NAF codes for prospecting (an explicit
-    ask this session, alongside the throughput work) surfaced that
-    `docs/prospect-qualification.md` section 4 had gone stale relative to
-    `docs/obligation-basis.md`. Section 4 originally excluded hotels from
-    the first wave because "accommodation booking is a reading rather than
-    a settled position" - true when written, but `docs/obligation-basis.md`'s
-    own "Hotels and accommodation" entry was later upgraded from
-    `disputed` to `secondary` and now states hotels are "on comparable
-    legal footing to a standard online shop" for outreach purposes, with
-    the first-wave exclusion being about volume and framing sequencing,
-    not legal weakness. `naf-sector-allowlist.json` now enables 55.10Z
-    (hôtels) and 55.20Z (hébergement touristique de courte durée,
-    covering chambres d'hôtes) at `definitional` confidence on that basis;
-    `docs/prospect-qualification.md` section 4 was updated to match rather
-    than left contradicting the doc it defers to. Restaurants (56.10A) are
-    listed but deliberately left disabled: the accommodation-specific
-    legal reading does not automatically transfer to a table reservation,
-    and extending it by analogy without the same kind of review hotels
-    got would be exactly the unchecked-claim mistake rule 1 forbids. This
-    is a general lesson, not just a prospecting one - a cross-referenced
-    doc's conclusion can silently outlive the doc that cites it, and nothing
-    currently checks for that drift automatically.
-
-    The throughput changes themselves, scoped exactly to the 9b brief
-    description: `runProspectingJob`'s serial for-loop became a bounded
-    worker pool (`PROSPECTING_JOB_CONCURRENCY`, a shared-cursor scheme so
-    a worker that finishes early immediately claims more work rather than
-    owning a fixed slice), safe without grouping by origin because the
-    existing per-origin lock already serializes same-origin URLs
-    regardless of which worker reaches them - the pool's throughput gain
-    comes from distinct origins running in parallel, exactly as the brief
-    describes. `ScanPageOptions.skipLighthouse` (threaded through
-    `scan-site.ts` and `RunAuditStageOptions`, set only by
-    `runProspectingJob`) skips both the Lighthouse pass and its dedicated
-    pre-pass politeness delay; full audits never set it, since the paid
-    report needs real Core Web Vitals. `PROSPECTING_MAX_PAGES` raised from
-    1 to 3 and `PROSPECTING_MAX_DEPTH` from 0 to 1, per the brief's "home,
-    one listing page, one transactional page" description - documented
-    explicitly in `config.ts` as a page-count ceiling, not a page-role
-    classifier: the crawl still reaches pages in ordinary link order, so
-    there is no guarantee the second and third pages scanned are actually
-    a listing and a transactional page. Building that classifier is a
-    real, separate gap, flagged rather than silently assumed solved.
-    "Deterministic evidence screenshot selection" (the brief's fourth
-    bullet) is already satisfied by the existing
-    `pruneScreenshots`/`selectPageDirsToKeep` mechanism (trade-off 2)
-    that `runAuditStage` already calls unconditionally for every job type,
-    prospecting included - no new code needed there; which single
-    screenshot becomes an outreach email's hero image is a 9c decision,
-    not this milestone's.
 
 ## Stack
 
@@ -1026,6 +327,58 @@ without asking first. Prefer standard library and existing dependencies.
 When a task is ambiguous, ask rather than assuming. Inventing structure
 is worse than pausing.
 
+## Session log
+
+Keep `docs/session/current-session.md` current for the whole of every
+session. It is gitignored and deliberately ephemeral.
+
+Read it first, before anything else, at the start of a session. If it
+exists, a previous session did not finish: reconstruct from it rather
+than from the working tree alone.
+
+Write to it continuously, not at the end:
+
+- the session's plan and a checklist, before starting work;
+- tick each item the moment it is actually done, not when it is planned;
+- any finding worth keeping, at the moment it is found, including
+  negative results and things checked and ruled out;
+- for anything reconstructed after a crash, record what the evidence for
+  it was, so the next reader can tell a verified state from a guessed one.
+
+At the end of a session, fold what is durable into CLAUDE.md, the brief,
+or the relevant `docs/` file, then delete the session file. Nothing
+should survive only there. A session that ends with the file still
+present is an unfinished session, which is exactly what the next one
+needs to know.
+
+The reason is recovery, not bookkeeping: a crashed session leaves a large
+uncommitted working tree and no account of which items in it are finished,
+which are half-done, and which were deliberately deferred. That state is
+expensive to re-derive and easy to re-derive wrongly.
+
+## Pausing before the usage limit
+
+When usage approaches its limit (around 99 percent), stop and park the work
+deliberately rather than being cut off mid-change. Being interrupted at an
+arbitrary point is what produced the crashed session this file's session-log
+rule already exists to recover from, and a large half-applied refactor is the
+most expensive thing to hand to the next session.
+
+On approaching the limit:
+
+- do not start anything new: no new milestone, no multi-file refactor, no
+  fresh scan, no long measurement run;
+- bring the working tree to a state that builds and typechecks, even if that
+  means finishing one edit or reverting one;
+- update `docs/session/current-session.md` so it states exactly what is done,
+  what is in flight, and what the next concrete step is;
+- commit what is coherent, and say plainly in the session log what is left
+  uncommitted and why;
+- then stop and report, rather than beginning another unit of work.
+
+Resume from the session log after the usage resets, not from the working tree
+alone. The point is that the stopping point is chosen, not accidental.
+
 ## Testing
 
 Run against `fixtures/spa-demo`, a local client-rendered React app with
@@ -1054,6 +407,58 @@ Any fixture dev server started during a session must be stopped before the
 session ends. Verify it is stopped with `pgrep` before reporting
 completion.
 
+### Real-scan fixtures go stale silently. Refresh them and let a test catch it.
+
+Discovered 2026-08-25: the whole suite was green while
+`artifacts/sas-fernande.fr/2026-08-02T17-31-56Z` still reported 78 findings,
+months after normalization changes had taken it to 42. `artifacts/` is
+gitignored, so nothing versioned these directories, and nothing checked
+whether the code that produced them was still the code in the tree. Every
+test asserting "78 findings, 61 minor" was describing a pipeline that no
+longer existed, and would have handed the next person eight unexplained
+failures with no way to tell a real regression from accumulated staleness.
+
+`fixtures/audits.json` is now the single curated list of real-scan
+directories the test suite depends on, each with a one-line reason it is
+kept - curated, not accumulated, since the list had grown to thirteen
+directories with three timestamps for one site and no record of why. Run
+`pnpm fixtures:refresh` after any change under `packages/core/src/normalize`
+to re-derive every one of them with `normalize <dir>` and stamp each with a
+fingerprint of the normalization source that produced it
+(`scripts/fixture-fingerprint.mjs`). `fixture-freshness.test.ts` fails the
+build the moment a listed fixture's stamp does not match the code in the
+tree, so staleness is a red test, not a silent fact discovered by reading
+`git log` months later.
+
+Two more tests turn "the report is accurate" from a stated goal into a
+measured one, and are worth keeping distinct (`rule-coverage.test.ts`'s own
+header comment states this in full): **recall** - the scanner finding a real
+issue at all - is bounded by what automated detection can reach, documented
+at roughly 30 to 40 percent of WCAG criteria, and no fixture work moves that
+number. **Precision** - every finding the report prints being real, correctly
+described, and singly counted - is the property actually holding a client
+relationship, and is the one held to a near-perfect bar.
+
+- `rule-coverage.test.ts`'s recall ratchet fails when fewer of the tool's
+  emittable rules are exercised by any curated fixture than were measured
+  last time. A rule with a severity mapping, remediation copy, and report
+  wiring but no fixture behind it has never been observed firing - which is
+  exactly how `hreflang-missing` (trade-off 31), the LCEN regime
+  (trade-off 28), and both cost gates (trade-off 23) went unnoticed for
+  months. Raise the floor when coverage improves; never lower it to make a
+  red build green.
+- The same file's single-rule concentration check is a precision smell: no
+  rule may account for more than 30 percent of one audit's findings. It has
+  now caught the same underlying defect three times under three different
+  names - trade-off 31 (219 of 282 Lagnonu findings in five rules),
+  trade-off 30 (102 of 305 haaitza findings in two Lighthouse image audits),
+  trade-off 24 (182 of 265 language variants of one page) - and each time
+  the cause was the same: the wrong identity chosen for a defect, so one
+  instruction printed dozens of times. A rule can legitimately sit above the
+  line (`image-alt` on a picture-heavy site, where each image is genuinely a
+  separate editorial decision); the threshold exists to make crossing it a
+  question asked, not a pattern that ships unnoticed a fourth time.
+
 ## MCP servers
 
 Start Claude Code sessions in this repo with `codysseus` (alias for
@@ -1077,6 +482,91 @@ not auto-allow. mongodb-readonly can read real audit and prospect data;
 playwright can navigate to arbitrary URLs, including live client or
 prospect sites. Each call is approved before it runs.
 
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues on `heywowyou/Odysseus`, via the `gh` CLI. See
+`docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles (`needs-triage`, `needs-info`, `ready-for-agent`,
+`ready-for-human`, `wontfix`) map 1:1 to identically-named labels on the
+repo. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Multi-context: a root `CONTEXT-MAP.md` will point to a `CONTEXT.md` per
+package under `packages/<name>/`, created lazily as `/domain-modeling`
+resolves real terms and decisions, not scaffolded upfront. See
+`docs/agents/domain.md`.
+
+## Skill Usage Policy
+
+Installed via the `skills` CLI (`npx skills@latest list` to check the
+current set). Like the MCP policy above, these fire on the trigger
+condition stated, not on vague "use when helpful" judgment.
+
+- **ask-matt** — the user is unsure which of these skills fits their
+  situation; use it to route rather than guessing.
+- **grill-with-docs** — sharpening a plan or design through interview
+  before committing to it, when the result should also produce an ADR or
+  glossary entry. Delegates the interview itself to `grilling` and the
+  write-down to `domain-modeling`.
+- **grilling** — the user wants their thinking on a plan, decision, or
+  idea stress-tested, or uses a "grill" trigger phrase; also invoked by
+  `grill-with-docs` and by `improve-codebase-architecture`'s step 3
+  (walking a chosen deepening candidate to an interface). Unlike
+  `grill-with-docs`, model-invokable directly, no explicit `/` command
+  required.
+- **triage** — working an issue or external PR through the
+  needs-triage/needs-info/ready-for-agent/ready-for-human/wontfix state
+  machine on `heywowyou/Odysseus`.
+- **improve-codebase-architecture** — asked to survey this codebase for
+  deepening opportunities and want a visual HTML report to pick from
+  before grilling into one.
+- **to-spec** — the current conversation has already converged on a design
+  and just needs synthesizing into a spec published to GitHub Issues, with
+  no further interview.
+- **to-tickets** — breaking an agreed plan or spec into tracer-bullet
+  tickets with explicit blocking edges, published to GitHub Issues.
+- **implement** — implementing a piece of work that already has a spec or
+  ticket behind it.
+- **wayfinder** — planning work too large for one session as a map of
+  decision tickets on GitHub Issues, or resolving the next open ticket in
+  an existing map.
+- **prototype** — the user wants to sanity-check a state model, logic
+  shape, or UI look before committing, and the result is meant to be
+  thrown away.
+- **diagnosing-bugs** — the user says "diagnose" or "debug this", or
+  reports something broken, throwing, failing, or slow, with more than one
+  plausible cause (overlaps the sequential-thinking trigger above for that
+  case).
+- **research** — a topic needs investigating against primary sources and
+  the findings written to a Markdown file, matching this repo's existing
+  `docs/research/` pattern.
+- **tdd** — building a feature or fixing a bug test-first, reinforcing this
+  repo's own "write tests with fixtures" testing discipline.
+- **domain-modeling** — discussing codebase terminology, or writing/editing
+  a `CONTEXT.md` or ADR under the multi-context layout above.
+- **codebase-design** — designing or improving a module's interface,
+  deciding where a seam goes, or making code more testable — most relevant
+  to `core`'s locked-contract boundaries.
+- **resolving-merge-conflicts** — an in-progress git merge or rebase has
+  conflicts to resolve.
+- **wizard** — a step needs a human (provisioning infrastructure,
+  credentials, CI secrets, an unfamiliar dashboard, a one-off migration) —
+  never for a step the agent can perform itself.
+- **improve** (shadcn) — asked to audit the codebase read-only and produce
+  prioritized, self-contained plans for another agent to execute later;
+  never implements anything itself, unlike `improve-codebase-architecture`
+  which grills interactively toward one chosen change.
+- **find-skills** (vercel-labs) — the user asks "is there a skill for X" or
+  wants a capability none of the skills above cover; verify install count
+  and source reputation before recommending one, and read its full
+  generated output before treating it as authoritative.
+
 ## Style
 
 - TypeScript strict, no `any`, explicit return types on exported functions.
@@ -1091,8 +581,8 @@ prospect sites. Each call is approved before it runs.
 ## Build order
 
 Milestones 0 through 8 are complete, as are milestones 8.5a, 8.5b, 8.5c,
-and 9a. Milestone 9b is next. Work in vertical slices, one milestone per
-session.
+9a, and 9b. Milestone 9b.5 is next, then 9c. Work in vertical slices, one
+milestone per session.
 
 1. Render diff only, CLI invocable — done
 2. Crawler: internal link discovery, robots.txt, depth and page caps — done
@@ -1102,21 +592,17 @@ session.
 6. PDF report generation, bilingual — done
 7. Interface: queue and a private single-user dashboard (`odysseus serve`) — done
 8. Custom checks: meta/canonical/JSON-LD/sitemap/hreflang/heading-hierarchy plus the extended accessibility pass (keyboard traps, focus order, form error handling, video captions, alt-text heuristic) — done
-8.5a. Deterministic SEO and GEO (generative-engine-optimization) detection checks, a new `geo` finding category alongside `seo` — done 2026-08-16. Detection only: no reference data, no report changes, no LLM prose. See the milestone entry in the brief, section 7, and trade-off 14 below.
+8.5a. Deterministic SEO/GEO detection checks, new `geo` finding category — done 2026-08-16, detection only. See trade-off 14.
+8.5b. Reference-stat table, sector detection, revenue calculator (`packages/core/src/reference-stats/`) — done 2026-08-16, data/pure functions only. See trade-off 15.
+8.5c. Reference-stat table wired into the report (per-theme/geo citations, `geo` in `CATEGORY_ORDER`) — done 2026-08-17, report-only. See trade-off 16.
+8.6. Security headers, AI-crawler robots check, structured-data validation, CrUX field data — done 2026-08-22, detection only. See trade-off 18.
+9a. Prospect acquisition and qualification — done 2026-08-16.
+9b. Prospecting throughput (worker pool, `skipLighthouse`, raised page/depth caps) — done 2026-08-22. See trade-off 23.
+9b.5. Sitemap-supplemented full-site scan coverage — queued next. Full incident (airelles.com) and shape: `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
+9c. Outreach generation, now spec'd in detail (`docs/m9-prospecting-pipeline.md`, `docs/m9-technical-spec.md`). Reconciliation decisions and open verification gaps: `docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
 
-8.5b. Reference-stat table, sector detection, and per-client revenue calculator (`packages/core/src/reference-stats/`) — done 2026-08-16. Data and pure functions only, no LLM/report wiring yet. See trade-off 15.
-
-8.5c. Wired the reference-stat table into the paid audit report: `ObligationAssessment.sector`, deterministic per-theme and geo-section citations, `geo` added to `CATEGORY_ORDER` — done 2026-08-17. Report-only; outreach and the numeric revenue calculator remain unwired. See trade-off 16.
-
-8.6. Four detection additions surveyed against third-party audit tooling (security response headers, a named-AI-crawler robots.txt check, structured-data validation via `structured-data-testing-tool`, and CrUX real-user field data via `crux-api`) — done 2026-08-22. Detection only, scanner/core, no report/LLM wiring; see trade-off 18.
-
-Milestone 9 (originally "prospecting mode") was split 2026-08-15 into
-9a (prospect acquisition and qualification), 9b (prospecting
-throughput), and 9c (outreach generation); milestones 10 through 13
-(benchmark study, regime 2 documentation generator, free scope check,
-monitoring) follow. 9a is done 2026-08-16. 9b is done 2026-08-22: see
-trade-off 23. Full milestone list, including the phases beyond 8, is in
-the brief, section 7.
+Full milestone list, including the phases beyond 8, is in the brief,
+section 7.
 
 Do not start a milestone before the previous one has tests passing, and
 do not consider a milestone finished until its output has been checked

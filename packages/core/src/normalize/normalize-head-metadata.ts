@@ -54,6 +54,7 @@ export interface HeadMetadataCheckInput {
 export const META_TITLE_LENGTH_RULE_ID = 'meta-title-length';
 export const META_DESCRIPTION_LENGTH_RULE_ID = 'meta-description-length';
 export const CANONICAL_CONFLICTING_RULE_ID = 'canonical-conflicting';
+export const CANONICAL_MISSING_RULE_ID = 'canonical-missing';
 export const JSONLD_MISSING_RULE_ID = 'jsonld-missing';
 export const JSONLD_INVALID_RULE_ID = 'jsonld-invalid';
 export const HEADING_HIERARCHY_SKIP_RULE_ID = 'heading-hierarchy-skip';
@@ -149,6 +150,34 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
         ),
       );
     }
+  }
+
+  // 2026-08-24 sweep: `canonical-missing` had a severity mapping and
+  // remediation copy since milestone 8 and no emitter, so a page declaring
+  // no canonical at all produced nothing. The two neighbouring checks both
+  // require a canonical to already exist - canonical-conflicting needs more
+  // than one, and scan-page.ts only runs the canonical-target reachability
+  // check when there is exactly one - so zero was the uncovered case.
+  //
+  // Not covered by Lighthouse either: its own `canonical` audit validates a
+  // canonical that is present rather than reporting its absence. This is
+  // deliberately unlike `meta-title-missing` and `meta-description-missing`,
+  // which were left unimplemented in the same sweep precisely because
+  // Lighthouse's `document-title` and `meta-description` audits already
+  // emit for those, and adding ours would duplicate them (trade-off 1).
+  if (input.canonicalUrls.length === 0) {
+    candidates.push(
+      pageCandidate(
+        CANONICAL_MISSING_RULE_ID,
+        'seo',
+        [],
+        'No canonical URL declared',
+        'This page does not declare a canonical URL. When the same content is reachable at more than one address, search engines have to guess which one is authoritative, and may split ranking signals between them or index the wrong one.',
+        pageUrl,
+        null,
+        {},
+      ),
+    );
   }
 
   if (input.canonicalUrls.length > 1) {

@@ -86,3 +86,72 @@ describe('extractAltTextFacts against real pages', () => {
     expect(result.images).toEqual([]);
   });
 });
+
+/**
+ * B5 (2026-08-24 three-site review): a real Palais Gallien report handed
+ * a developer "img:nth-of-type(32)" for 172 occurrences across 23 pages.
+ * `:nth-of-type` is parent-scoped, so an index counted across the whole
+ * document usually names an element that does not exist.
+ */
+describe('B5: selectors actually resolve to the element they name', () => {
+  let browser: Browser;
+
+  beforeAll(async () => {
+    ({ browser } = await launchBrowser());
+  }, 30_000);
+
+  afterAll(async () => {
+    await browser?.close();
+  });
+
+  /** Keeps the page open so each emitted selector can be run back against
+   *  the very document it was derived from - the only check that actually
+   *  proves a selector resolves. */
+  async function withPage<T>(html: string, fn: (page: import('playwright').Page) => Promise<T>): Promise<T> {
+    const { server, origin } = await startStaticServer(html);
+    const context = await browser.newContext();
+    try {
+      const page = await context.newPage();
+      await page.goto(origin);
+      return await fn(page);
+    } finally {
+      await context.close();
+      server.close();
+    }
+  }
+
+  it('uses the image source when there is no id', async () => {
+    const selector = await withPage(
+      '<div><img src="/wp-content/uploads/chambre-deluxe.jpg" alt=""></div>',
+      async (page) => (await extractAltTextFacts(page, 'https://example.com/')).images[0]?.selector,
+    );
+    expect(selector).toBe('img[src="/wp-content/uploads/chambre-deluxe.jpg"]');
+  });
+
+  it('falls back to a structural path for a data: URI', async () => {
+    const selector = await withPage(
+      '<div><span></span><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt=""></div>',
+      async (page) => (await extractAltTextFacts(page, 'https://example.com/')).images[0]?.selector ?? '',
+    );
+    expect(selector).not.toContain('data:');
+    expect(selector).toContain('nth-child');
+  });
+
+  it('every emitted selector resolves to exactly one element on the page', async () => {
+    await withPage(
+      `<main>
+         <img id="hero" src="/a.jpg" alt="">
+         <div><img src="/b.jpg" alt=""><img src="/c.jpg" alt=""></div>
+         <section><figure><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt=""></figure></section>
+       </main>`,
+      async (page) => {
+        const result = await extractAltTextFacts(page, 'https://example.com/');
+        expect(result.images).toHaveLength(4);
+        for (const image of result.images) {
+          const count = await page.evaluate((s) => document.querySelectorAll(s).length, image.selector);
+          expect(count, `selector "${image.selector}" matched ${count} elements`).toBe(1);
+        }
+      },
+    );
+  });
+});

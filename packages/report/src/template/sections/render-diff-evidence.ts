@@ -5,7 +5,13 @@ import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from
 
 /** Doc §3: bars only, no screenshots - two proportional-width bars (raw
  *  HTML vs rendered visible-text length) and a one-line caption, never an
- *  <img>. Screenshots stay in the technical export; embedding rasters
+ *  <img>. A10 (2026-08-24): this used to say screenshots "stay in the
+ *  technical export", which was never true - there is no export route and
+ *  no other section renders them, so the scan's screenshots are simply not
+ *  shown to the client at all. That is the intended behaviour (the bars
+ *  carry the evidence, and not publishing full-page captures of a client
+ *  site is the data-minimisation posture trade-off 2 already takes), but
+ *  the comment promised a deliverable that does not exist. Embedding rasters
  *  here is what produced 20 pages of paired full-width screenshots and
  *  the blank slabs/orphaned captions the redesign fixed. The raw bar's
  *  width is proportional to the rendered bar (which is always drawn

@@ -367,7 +367,36 @@ Verified live in both languages against the real capture: 11 themes from 17 find
 
 **Milestone 9b: prospecting throughput.** `computeBrokennessScore`, `isProspectingWorthy`, and `isAuditFallbackEligible` move into `packages/core` per `docs/llm-layer-rules.md` section 10. Three changes in `runProspectingJob`: a bounded worker pool across distinct origins in place of the serial loop, safe because the per-origin lock already exists and the rate limit is per origin; Lighthouse removed from the prospecting config, since it is the serialisation bottleneck through the `perf_hooks` queue and performance score is the weakest outreach signal; prospecting page cap reduced to three (home, one listing page, one transactional page, the last retained because the flow detector needs it). Deterministic evidence screenshot selection.
 
+**Milestone 9b.5: sitemap-supplemented full-site scan coverage.** Added
+2026-08-25, ahead of 9c, on an operator decision made mid-review of a
+real www.airelles.com audit: the crawler reached 100 pages by following
+internal links while the site's sitemap declared 516, and the
+`sitemap-orphan-page`/`sitemap-stale` checks correctly flagged that only
+1 of the 100 crawled pages appears in the sitemap. Confirmed by
+redirect-checking the site rather than assumed: `www.airelles.com`
+301s to the bare `airelles.com`, same server, so this was not two
+different domains - the crawl genuinely never reached most of the site's
+declared French-language subtree because nothing in the English pages
+it found links there. For a flat EUR 1,600 full audit, the report needs
+to do two separate jobs rather than pick one: state discoverability
+honestly (an internal-navigation-unreachable page is itself a real
+defect, and the existing orphan/stale checks depend on the crawl not
+visiting sitemap-only URLs to detect it) and scan every declared page
+for real defects regardless of whether navigation reaches it. Shape,
+not yet built: every sitemap URL becomes scannable input tagged with its
+discovery method (`link` vs `sitemap-only`) on the manifest, the same
+kind of addition CLAUDE.md trade-off 31's `discovered-not-scanned`
+status made for the reverse case; the orphan/stale checks keep computing
+purely from link-graph reachability, unaffected by whether a
+sitemap-only page also gets scanned; a sitemap URL is never fetched
+across a different registrable domain than the one authorized. Expect
+scan time and Lighthouse/axe load to rise roughly in proportion to how
+many sitemap-only pages a site has, accepted deliberately for coverage.
+Full reasoning in CLAUDE.md's build-order section.
+
 **Milestone 9c: outreach generation.** Draft assembly per `docs/outreach-rules.md`: deterministic evidence, deterministic facts block, generated connective prose, validator confirming the block survived unmodified and that identity, data origin, and opt-out are present (`docs/llm-layer-rules.md` section 11). Draft queue, follow-up state machine keyed on reply detection, suppression check at draft time. Drafts created in the mailbox through the Gmail API, never sent. Separate sending domain with SPF, DKIM, DMARC.
+
+**9c specified in detail, 2026-08-25.** `docs/m9-prospecting-pipeline.md` and `docs/m9-technical-spec.md`, both operator-authored, replace the informal plan above with a full spec covering sourcing, prescan, scoring, contact discovery, attachment-free preview-page outreach, email infrastructure and warmup, sequencing, compliance, and instrumentation, plus a data model, sequence state machine, and safety rails. Two conflicts with the shipped state of the project, flagged in both documents' own reconciliation notes, were resolved with the operator the same day: no new packages (fold into the existing `core`/`store`/`interface`/`cli`, matching 9a/9b's own precedent, against the technical spec's original `packages/prospecting`/`packages/outreach` proposal), and sourcing reuses 9a's existing Sirene/SIREN join plus DATAtourisme and Atout France, deferring OpenStreetMap Overpass until a measured coverage gap justifies it. Full reasoning in CLAUDE.md's build-order section.
 
 **Milestone 10: benchmark study and percentile.** Batch scan of a bounded e-commerce cohort, aggregate percentile over stored findings, percentile surfaced in both report tiers, study published in French on `odysseusaudit.com`. Target: before 22 September 2026, the Créteil hearing in the E.Leclerc matter (`docs/obligation-basis.md` section 5), which will be the third data point in a contested line and will be covered. Generate the study with Mistral as with everything else; add the one-line AI-assistance disclosure from `docs/operator-obligations.md` section 3 near the top of the published page. No other change to authorship or pipeline.
 
