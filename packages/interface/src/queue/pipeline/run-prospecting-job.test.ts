@@ -63,13 +63,23 @@ describe('runProspectingJob', () => {
     expect(runAuditStage).toHaveBeenNthCalledWith(
       1,
       'https://a.example/',
-      { maxPages: PROSPECTING_MAX_PAGES, maxDepth: PROSPECTING_MAX_DEPTH, skipLighthouse: true },
+      {
+        maxPages: PROSPECTING_MAX_PAGES,
+        maxDepth: PROSPECTING_MAX_DEPTH,
+        skipLighthouse: true,
+        sitemapMode: 'inspect',
+      },
       fakeConnection,
     );
     expect(runAuditStage).toHaveBeenNthCalledWith(
       2,
       'https://b.example/',
-      { maxPages: PROSPECTING_MAX_PAGES, maxDepth: PROSPECTING_MAX_DEPTH, skipLighthouse: true },
+      {
+        maxPages: PROSPECTING_MAX_PAGES,
+        maxDepth: PROSPECTING_MAX_DEPTH,
+        skipLighthouse: true,
+        sitemapMode: 'inspect',
+      },
       fakeConnection,
     );
   });

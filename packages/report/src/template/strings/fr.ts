@@ -706,6 +706,12 @@ export const fr: ReportStrings = {
     languageCoverageTemplate: 'Langues couvertes par cette analyse : {languages}.',
     languageNotScannedTemplate:
       "Aucune page n'a été analysée pour les langues suivantes, bien que le site en publie : {languages}.",
+    sitemapCoverageTemplate:
+      "Détail du périmètre : {total} pages analysées, dont {linked} atteintes depuis la page d'accueil ou par des liens internes et {sitemapOnly} ajoutées depuis le sitemap.",
+    sitemapCoverageWithSeedsTemplate:
+      "Détail du périmètre : {total} pages analysées, dont {linked} atteintes depuis la page d'accueil ou par des liens internes, {seeded} fournies explicitement et {sitemapOnly} ajoutées depuis le sitemap.",
+    sitemapIncompleteTemplate:
+      "La couverture du sitemap est incomplète. Fichiers sitemap non lus : {failed}. URL de pages déclarées hors du périmètre autorisé ou filtrées par les règles de l'audit : {filtered}. Pages éligibles omises en raison du plafond configuré : {omitted}.",
     toolingParagraphTemplate:
       "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages analysées le {date} à partir de la page d'accueil. Une URL qui ne fait que mener à l'accueil d'une langue (par exemple /en) n'est pas comptée comme une page analysée, car elle ne porte pas de contenu propre ; les pages de cette langue sont explorées normalement.",
     automatedCoverageCaveat:

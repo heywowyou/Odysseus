@@ -1,29 +1,13 @@
 /**
- * Milestone 8: sitemap.xml raw-fact extraction. Site-level, not per-page
- * (there is one sitemap per site, not one per page) - runs once per
- * crawl, in scan-site.ts, after the crawl finishes, and its result is
- * attached only to the homepage's scan.json, the same "attribute a
- * site-level fact to the one page every site has" pattern
- * mentions-legales already established for the LCEN check when no
- * dedicated legal-notice page exists.
- *
- * Same split as every other custom check: this module only reports what
- * it found (does the sitemap exist, what URLs does it list); core's
- * normalize-sitemap.ts decides whether that counts as missing or stale,
- * by comparing against the crawl's own list of visited pages.
- *
- * Hand-rolled <loc>/<lastmod> extraction via regex rather than an XML
- * parser dependency, matching this codebase's existing "no HTML/XML
- * parser added to the dependency tree" precedent (extract-text.ts,
- * mentions-legales.ts) - sitemap XML's shape is simple and stable enough
- * that a full parser buys nothing here.
+ * Sitemap discovery and raw-fact extraction. The root fields remain
+ * compatible with milestone 8 artifacts; milestone 9b.5 adds flattened
+ * page entries across recursively resolved sitemap indexes.
  */
+
+import { isSameSiteHostname } from '../links.js';
 
 const LOC_PATTERN = /<loc>\s*([^<]+?)\s*<\/loc>/gi;
 const LASTMOD_PATTERN = /<lastmod>\s*([^<]+?)\s*<\/lastmod>/i;
-/** A sitemap index references other sitemap files instead of listing
- *  pages directly; detecting the root tag lets the caller decide not to
- *  treat those <loc> entries as page URLs. */
 const SITEMAP_INDEX_PATTERN = /<sitemapindex[\s>]/i;
 
 export interface SitemapEntry {
@@ -31,22 +15,53 @@ export interface SitemapEntry {
   lastmod?: string;
 }
 
+export interface SitemapFetchError {
+  url: string;
+  error: string;
+}
+
+export interface SitemapDocumentMetadata {
+  url: string;
+  isRoot: boolean;
+  isSitemapIndex: boolean;
+  entryCount: number;
+}
+
 export interface SitemapCheckResult {
-  /** The URL actually fetched successfully, if any. */
+  /** First successfully fetched root sitemap, retained for compatibility. */
   sitemapUrl?: string;
   found: boolean;
+  /** Whether the first successful root was a sitemap index. */
   isSitemapIndex: boolean;
+  /** Raw entries from the first successful root, retained for compatibility. */
   entries: SitemapEntry[];
+  /** Flattened page entries from all successfully resolved sitemap documents. */
+  pageEntries: SitemapEntry[];
+  /** One metadata record per successfully fetched sitemap document. */
+  fetchedDocuments: SitemapDocumentMetadata[];
+  /** URL-only compatibility convenience for callers predating document metadata. */
+  fetchedSitemapUrls: string[];
+  fetchErrors: SitemapFetchError[];
+  /** Legacy single-error summary used by historical normalization copy. */
   fetchError?: string;
 }
 
-/** Pure: extracts <loc>/<lastmod> pairs from raw sitemap XML text.
- *  Splitting on <url>/<sitemap> block boundaries before matching within
- *  each block (rather than matching <loc> and <lastmod> globally and
- *  hoping they line up) keeps each entry's lastmod correctly paired with
- *  its own loc, without a full XML parser dependency - matching this
- *  codebase's existing "hand-rolled over structured-but-simple text"
- *  precedent (extract-text.ts, mentions-legales.ts). */
+export interface SitemapCheckOptions {
+  userAgent?: string;
+  delayMs?: number;
+}
+
+function decodeXmlText(value: string): string {
+  return value
+    .replaceAll('&amp;', '&')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', "'");
+}
+
+/** Pure XML extraction. A full parser dependency is unnecessary for the
+ *  sitemap protocol's small `loc` and `lastmod` surface. */
 export function parseSitemapXml(xml: string): { isSitemapIndex: boolean; entries: SitemapEntry[] } {
   const isSitemapIndex = SITEMAP_INDEX_PATTERN.test(xml);
   const entries: SitemapEntry[] = [];
@@ -56,65 +71,158 @@ export function parseSitemapXml(xml: string): { isSitemapIndex: boolean; entries
     if (!locMatch?.[1]) continue;
     const lastmodMatch = block.match(LASTMOD_PATTERN);
     entries.push({
-      url: locMatch[1],
-      ...(lastmodMatch?.[1] ? { lastmod: lastmodMatch[1] } : {}),
+      url: decodeXmlText(locMatch[1]),
+      ...(lastmodMatch?.[1] ? { lastmod: decodeXmlText(lastmodMatch[1]) } : {}),
     });
   }
-  // Fallback for XML that doesn't use <url>/<sitemap> wrapper elements
-  // (technically non-conformant, but seen in the wild) - just take every
-  // <loc> at face value with no lastmod pairing.
   if (entries.length === 0) {
     for (const match of xml.matchAll(LOC_PATTERN)) {
-      if (match[1]) entries.push({ url: match[1] });
+      if (match[1]) entries.push({ url: decodeXmlText(match[1]) });
     }
   }
   return { isSitemapIndex, entries };
 }
 
+async function sleep(ms: number): Promise<void> {
+  if (ms <= 0) return;
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function tryFetchSitemap(
   url: string,
   timeoutMs: number,
-): Promise<{ xml: string } | { error: string }> {
+  userAgent: string | undefined,
+): Promise<{ xml: string; finalUrl: string } | { error: string }> {
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(timeoutMs),
+      ...(userAgent !== undefined ? { headers: { 'user-agent': userAgent } } : {}),
+    });
     if (!response.ok) return { error: `HTTP ${response.status}` };
-    return { xml: await response.text() };
+    return { xml: await response.text(), finalUrl: response.url || url };
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }
 }
 
+function resolveDocumentUrl(href: string, baseUrl: string, authorizedUrl: URL): string | undefined {
+  let resolved: URL;
+  try {
+    resolved = new URL(href, baseUrl);
+  } catch {
+    return undefined;
+  }
+  if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') return undefined;
+  if (!isSameSiteHostname(authorizedUrl.hostname, resolved.hostname)) return undefined;
+  if (resolved.port !== authorizedUrl.port) return undefined;
+  resolved.hash = '';
+  return resolved.toString();
+}
+
+interface SitemapQueueEntry {
+  url: string;
+  isRoot: boolean;
+}
+
 /**
- * Tries every Sitemap: URL declared in robots.txt first (the
- * authoritative source when present), then falls back to the
- * conventional /sitemap.xml location, since many sites publish one
- * without declaring it in robots.txt at all. Stops at the first
- * successful fetch.
+ * Resolves every robots-declared root sitemap, or the conventional
+ * `/sitemap.xml` fallback, then recursively resolves sitemap indexes.
+ * Documents outside the authorized hostname plus its www/apex counterpart
+ * are recorded as failures and never fetched.
  */
 export async function checkSitemap(
   origin: string,
   declaredSitemapUrls: readonly string[],
   timeoutMs: number,
+  options: SitemapCheckOptions = {},
 ): Promise<SitemapCheckResult> {
-  const fallbackUrl = new URL('/sitemap.xml', origin).href;
-  const candidates = declaredSitemapUrls.includes(fallbackUrl)
-    ? declaredSitemapUrls
-    : [...declaredSitemapUrls, fallbackUrl];
+  const authorizedUrl = new URL(origin);
+  const fallbackUrl = new URL('/sitemap.xml', authorizedUrl).href;
+  const initialRoots = declaredSitemapUrls.length > 0 ? [...declaredSitemapUrls] : [fallbackUrl];
+  const queue: SitemapQueueEntry[] = initialRoots.map((url) => ({ url, isRoot: true }));
+  const visitedDocuments = new Set<string>();
+  const fetchedDocuments: SitemapDocumentMetadata[] = [];
+  const fetchedSitemapUrls: string[] = [];
+  const fetchErrors: SitemapFetchError[] = [];
+  const pageEntriesByUrl = new Map<string, SitemapEntry>();
+  let firstRoot:
+    { sitemapUrl: string; isSitemapIndex: boolean; entries: SitemapEntry[] } | undefined;
+  let attemptedFallback = initialRoots.includes(fallbackUrl);
+  let hasFetched = false;
 
-  let lastError: string | undefined;
-  for (const candidate of candidates) {
-    const result = await tryFetchSitemap(candidate, timeoutMs);
-    if ('xml' in result) {
-      const { isSitemapIndex, entries } = parseSitemapXml(result.xml);
-      return { sitemapUrl: candidate, found: true, isSitemapIndex, entries };
+  while (queue.length > 0 || (!firstRoot && !attemptedFallback)) {
+    if (queue.length === 0) {
+      attemptedFallback = true;
+      queue.push({ url: fallbackUrl, isRoot: true });
     }
-    lastError = result.error;
+
+    const queued = queue.shift()!;
+    const documentUrl = resolveDocumentUrl(queued.url, origin, authorizedUrl);
+    if (documentUrl === undefined) {
+      fetchErrors.push({ url: queued.url, error: 'outside authorized hostname' });
+      continue;
+    }
+    if (visitedDocuments.has(documentUrl)) continue;
+    visitedDocuments.add(documentUrl);
+
+    if (hasFetched) await sleep(options.delayMs ?? 0);
+    hasFetched = true;
+    const fetched = await tryFetchSitemap(documentUrl, timeoutMs, options.userAgent);
+    if ('error' in fetched) {
+      fetchErrors.push({ url: documentUrl, error: fetched.error });
+      continue;
+    }
+
+    const finalUrl = resolveDocumentUrl(fetched.finalUrl, documentUrl, authorizedUrl);
+    if (finalUrl === undefined) {
+      fetchErrors.push({ url: documentUrl, error: 'redirected outside authorized hostname' });
+      continue;
+    }
+    visitedDocuments.add(finalUrl);
+    fetchedSitemapUrls.push(finalUrl);
+
+    const parsed = parseSitemapXml(fetched.xml);
+    fetchedDocuments.push({
+      url: finalUrl,
+      isRoot: queued.isRoot,
+      isSitemapIndex: parsed.isSitemapIndex,
+      entryCount: parsed.entries.length,
+    });
+    if (queued.isRoot && firstRoot === undefined) {
+      firstRoot = {
+        sitemapUrl: finalUrl,
+        isSitemapIndex: parsed.isSitemapIndex,
+        entries: parsed.entries,
+      };
+    }
+
+    if (parsed.isSitemapIndex) {
+      for (const entry of parsed.entries) queue.push({ url: entry.url, isRoot: false });
+      continue;
+    }
+
+    for (const entry of parsed.entries) {
+      let pageUrl = entry.url;
+      try {
+        pageUrl = new URL(entry.url, finalUrl).toString();
+      } catch {
+        // Preserve malformed declarations in the flattened facts so the
+        // crawl admission layer can count them as filtered coverage.
+      }
+      if (!pageEntriesByUrl.has(pageUrl)) pageEntriesByUrl.set(pageUrl, { ...entry, url: pageUrl });
+    }
   }
 
+  const lastError = fetchErrors.at(-1)?.error;
   return {
-    found: false,
-    isSitemapIndex: false,
-    entries: [],
-    ...(lastError !== undefined ? { fetchError: lastError } : {}),
+    ...(firstRoot !== undefined ? { sitemapUrl: firstRoot.sitemapUrl } : {}),
+    found: firstRoot !== undefined,
+    isSitemapIndex: firstRoot?.isSitemapIndex ?? false,
+    entries: firstRoot?.entries ?? [],
+    pageEntries: [...pageEntriesByUrl.values()],
+    fetchedDocuments,
+    fetchedSitemapUrls,
+    fetchErrors,
+    ...(firstRoot === undefined && lastError !== undefined ? { fetchError: lastError } : {}),
   };
 }

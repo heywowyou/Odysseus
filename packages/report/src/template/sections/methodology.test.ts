@@ -632,3 +632,56 @@ describe('item 3.11: the crawl cap is explained when it actually bound', () => {
     expect(html).not.toContain('plafond configuré');
   });
 });
+
+describe('milestone 9b.5 sitemap coverage disclosure', () => {
+  it('states the link, seed, and sitemap-only page breakdown in both languages', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const withDiscovery = {
+      ...manifest,
+      pages: manifest.pages.map((page, index) => ({
+        ...page,
+        discoveryMethod:
+          index < 6
+            ? ('link' as const)
+            : index === 6
+              ? ('seed' as const)
+              : ('sitemap-only' as const),
+      })),
+    };
+
+    const french = renderMethodology(getStrings('fr'), 11, withDiscovery, 'fr');
+    expect(french).toContain(
+      '6 atteintes depuis la page d&#39;accueil ou par des liens internes, 1 fournies explicitement et 4 ajoutées depuis le sitemap',
+    );
+
+    const english = renderMethodology(getStrings('en'), 11, withDiscovery, 'en');
+    expect(english).toContain(
+      '6 reached from the homepage or internal links, 1 supplied explicitly, and 4 added from the sitemap',
+    );
+  });
+
+  it('discloses partial sitemap resolution and configured-cap omissions', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const withIncompleteCoverage = {
+      ...manifest,
+      crawl: {
+        ...manifest.crawl,
+        sitemapCoverage: {
+          declaredPageCount: 20,
+          eligiblePageCount: 18,
+          scannedPageCount: 15,
+          filteredPageCount: 2,
+          capOmittedPageCount: 3,
+          failedSitemapCount: 1,
+        },
+      },
+    };
+
+    const html = renderMethodology(getStrings('en'), 11, withIncompleteCoverage, 'en');
+    expect(html).toContain('Sitemap documents not read: 1');
+    expect(html).toContain(
+      'Declared page URLs outside the authorized scope or filtered by the audit rules: 2',
+    );
+    expect(html).toContain('Eligible pages omitted by the configured cap: 3');
+  });
+});

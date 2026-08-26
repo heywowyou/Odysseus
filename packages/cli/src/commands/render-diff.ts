@@ -45,7 +45,7 @@ export function registerRenderDiffCommand(program: Command): void {
 
         const crawl: CrawlResult = {
           startUrl: url,
-          pages: [{ url, depth: 0, status: 'visited' }],
+          pages: [{ url, depth: 0, status: 'visited', discoveryMethod: 'link' }],
           visitedCount: 1,
           maxPages: 1,
           maxDepth: 0,
@@ -54,6 +54,7 @@ export function registerRenderDiffCommand(program: Command): void {
           robotsSitemapUrls: [],
           robotsDisallowMatches: [],
           aiCrawlerBlocks: [],
+          linkDiscoveredUrls: [url],
         };
 
         const artifacts = await writeAuditArtifacts({

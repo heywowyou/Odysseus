@@ -109,6 +109,52 @@ describe.skipIf(!mongoAvailable)('persistAudit', () => {
     expect(await FindingModel.countDocuments({ auditId: 'persist-test-2' })).toBe(1);
   });
 
+  it('persists sitemap mode, coverage, and page discovery provenance', async () => {
+    const manifest = buildManifest({
+      auditId: 'persist-sitemap-coverage',
+      config: { ...buildManifest().config, sitemapMode: 'supplement' },
+      crawl: {
+        ...buildManifest().crawl,
+        sitemapCoverage: {
+          declaredPageCount: 2,
+          eligiblePageCount: 2,
+          scannedPageCount: 2,
+          filteredPageCount: 0,
+          capOmittedPageCount: 0,
+          failedSitemapCount: 0,
+        },
+      },
+      pages: [
+        {
+          url: 'https://example.com/orphan',
+          depth: 0,
+          status: 'visited',
+          discoveryMethod: 'sitemap-only',
+          errors: {},
+        },
+        {
+          url: 'https://example.com/en',
+          depth: 1,
+          status: 'discovered-not-scanned',
+          discoveryMethod: 'link',
+          discoveredFrom: 'https://example.com/',
+          errors: {},
+        },
+      ],
+    });
+
+    await persistAudit(connection!, manifest, []);
+
+    const stored = await createAuditModel(connection!)
+      .findOne({ auditId: manifest.auditId })
+      .lean();
+    expect(stored?.config.sitemapMode).toBe('supplement');
+    expect(stored?.crawl.sitemapCoverage?.scannedPageCount).toBe(2);
+    expect(stored?.pages[0]?.discoveryMethod).toBe('sitemap-only');
+    expect(stored?.pages[1]?.status).toBe('discovered-not-scanned');
+    expect(stored?.pages[1]?.discoveredFrom).toBe('https://example.com/');
+  });
+
   it('removes findings that are absent when the same audit is persisted again', async () => {
     const manifest = buildManifest({ auditId: 'persist-test-retry' });
     const retained = buildFinding({

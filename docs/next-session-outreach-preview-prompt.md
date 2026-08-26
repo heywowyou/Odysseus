@@ -1,8 +1,8 @@
 # Deferred implementation brief: outreach preview generator
 
 **Status:** retained as a focused milestone 9c briefing, not the current
-handoff and not automatically the next task. `CLAUDE.md` queues milestone
-9b.5 before 9c. Use this brief only when the user explicitly selects the
+handoff and not automatically the next task. Milestone 9b.5 is complete and
+`CLAUDE.md` now queues 9c next. Use this brief only when the user explicitly selects the
 outreach-preview generator scope, and re-read the live canonical documents
 listed below before relying on it.
 

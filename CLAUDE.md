@@ -611,7 +611,7 @@ documents and guardrails directly.
 ## Build order
 
 Milestones 0 through 8 are complete, as are milestones 8.5a, 8.5b, 8.5c,
-9a, and 9b. Milestone 9b.5 is next, then 9c. Work in vertical slices, one
+9a, 9b, and 9b.5. Milestone 9c is next. Work in vertical slices, one
 milestone per session.
 
 Separate maintenance queues exist in `plans/findings.md` and
@@ -634,7 +634,7 @@ must be resolved first.
 8.6. Security headers, AI-crawler robots check, structured-data validation, CrUX field data — done 2026-08-22, detection only. See trade-off 18.
 9a. Prospect acquisition and qualification — done 2026-08-16.
 9b. Prospecting throughput (worker pool, `skipLighthouse`, raised page/depth caps) — done 2026-08-22. See trade-off 23.
-9b.5. Sitemap-supplemented full-site scan coverage — queued next. Full incident (airelles.com) and shape: `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
+9b.5. Sitemap-supplemented full-site scan coverage — done 2026-08-27. Recursive sitemap inspection stays separate from link reachability; full audits supplement eligible sitemap-only pages, while prospecting inspects and standalone crawl remains link-only. See the measured Haaitza validation in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
 9c. Outreach generation, now spec'd in detail (`docs/m9-prospecting-pipeline.md`, `docs/m9-technical-spec.md`). Reconciliation decisions and open verification gaps: `docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
 
 Full milestone list, including the phases beyond 8, is in the brief,

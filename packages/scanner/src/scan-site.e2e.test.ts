@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser } from 'playwright';
+import { normalizeAudit } from '@odysseus/core';
 import { launchBrowser } from './browser.js';
 import { scanSite, type ScanProgressEvent } from './scan-site.js';
 
@@ -64,8 +65,8 @@ describe('scanSite against fixtures/spa-demo', () => {
       screenshotDir: scratchScreenshotDir,
     });
 
-    expect(result.crawl.visitedCount).toBe(3);
-    expect(result.pages).toHaveLength(3);
+    expect(result.crawl.visitedCount).toBe(4);
+    expect(result.pages).toHaveLength(4);
 
     for (const pageResult of result.pages) {
       expect(pageResult.renderDiffError).toBeUndefined();
@@ -78,6 +79,25 @@ describe('scanSite against fixtures/spa-demo', () => {
 
     const scannedUrls = new Set(result.pages.map((p) => new URL(p.url).pathname));
     expect(scannedUrls.has('/private.html')).toBe(false);
+
+    const sitemapOnlyCrawlPage = result.crawl.pages.find(
+      (page) => new URL(page.url).pathname === '/sitemap-only.html',
+    );
+    expect(sitemapOnlyCrawlPage?.discoveryMethod).toBe('sitemap-only');
+    expect(result.crawl.linkDiscoveredUrls).not.toContain(`${TEST_URL}/sitemap-only.html`);
+    const sitemapOnlyScan = result.pages.find(
+      (page) => new URL(page.url).pathname === '/sitemap-only.html',
+    );
+    expect(sitemapOnlyScan?.axe?.violations.some((violation) => violation.id === 'image-alt')).toBe(
+      true,
+    );
+
+    const findings = normalizeAudit({
+      auditId: 'sitemap-supplement-test',
+      startedAt: new Date('2026-08-26T00:00:00.000Z'),
+      pages: result.pages,
+    });
+    expect(findings.some((finding) => finding.ruleId === 'sitemap-orphan-page')).toBe(true);
 
     const home = result.pages.find((p) => new URL(p.url).pathname === '/');
     expect(home?.transactionalFlowEvidence?.some((e) => e.kind === 'checkout-form')).toBe(true);
@@ -121,6 +141,33 @@ describe('scanSite against fixtures/spa-demo', () => {
     expect(pageEvents).toHaveLength(result.pages.length);
     expect(
       pageEvents.map((event) => (event.type === 'scan-page' ? event.scanned : undefined)),
-    ).toEqual([1, 2, 3]);
+    ).toEqual(result.pages.map((_, index) => index + 1));
+  }, 180_000);
+
+  it('keeps an operator-seeded sitemap page out of link reachability findings', async () => {
+    scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-site-'));
+    const seededUrl = `${TEST_URL}/sitemap-only.html`;
+    const result = await scanSite(TEST_URL, {
+      browser,
+      debugPort,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+      screenshotDir: scratchScreenshotDir,
+      seeds: [seededUrl],
+      sitemapMode: 'inspect',
+      skipLighthouse: true,
+    });
+
+    expect(result.crawl.pages.find((page) => page.url === seededUrl)?.discoveryMethod).toBe('seed');
+    expect(result.crawl.linkDiscoveredUrls).not.toContain(seededUrl);
+
+    const findings = normalizeAudit({
+      auditId: 'operator-seed-reachability-test',
+      startedAt: new Date('2026-08-26T00:00:00.000Z'),
+      pages: result.pages,
+    });
+    const orphan = findings.find((finding) => finding.ruleId === 'sitemap-orphan-page');
+    expect(orphan?.description).toContain(seededUrl);
   }, 180_000);
 });

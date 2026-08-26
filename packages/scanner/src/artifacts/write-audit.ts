@@ -422,6 +422,7 @@ export async function writeAuditArtifacts(
         url: crawledPage.url,
         depth: crawledPage.depth,
         status: crawledPage.status,
+        discoveryMethod: crawledPage.discoveryMethod,
         ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
         ...(crawledPage.error !== undefined ? { crawlError: crawledPage.error } : {}),
         ...(crawledPage.discoveredFrom !== undefined
@@ -448,6 +449,7 @@ export async function writeAuditArtifacts(
       pageDir: path.join('pages', pageDir),
       depth: crawledPage.depth,
       status: 'visited',
+      discoveryMethod: crawledPage.discoveryMethod,
       ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
       ...(crawledPage.discoveredFrom !== undefined
         ? { discoveredFrom: crawledPage.discoveredFrom }

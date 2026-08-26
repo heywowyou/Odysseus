@@ -1,8 +1,8 @@
 import type { Browser } from 'playwright';
-import type { CruxFieldDataResult } from '@odysseus/core';
+import type { CruxFieldDataResult, SitemapMode } from '@odysseus/core';
 import { getCruxApiKey, getPageTimeoutMs, getScanConcurrency } from './config.js';
 import type { RedirectHostCache } from './checks/transactional-flow.js';
-import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
+import type { SitemapCheckResult } from './checks/sitemap.js';
 import { checkLlmsTxt, type LlmsTxtCheckResult } from './checks/llms-txt.js';
 import {
   checkSecurityHeaders,
@@ -54,6 +54,10 @@ export interface ScanSiteOptions {
   /** Milestone 9b: forwarded to every page's scanPage call. See
    *  ScanPageOptions.skipLighthouse for the full reasoning. */
   skipLighthouse?: boolean;
+  /** Full scans supplement from sitemap by default. Prospecting selects
+   *  `inspect` so sitemap findings remain available without expanding its
+   *  three-page budget. */
+  sitemapMode?: Exclude<SitemapMode, 'none'>;
 }
 
 export interface SiteScanResult {
@@ -151,25 +155,7 @@ export async function scanSite(
   startUrl: string,
   options: ScanSiteOptions,
 ): Promise<SiteScanResult> {
-  // 2026-08-25 Lagnonu review: the crawl discovers by link-following only,
-  // so a page the sitemap declares but nothing links to was never visited -
-  // and the report still said "65 pages analysees" without qualification.
-  // The sitemap is fetched once here, before the crawl, and its URLs are
-  // force-enqueued as seeds; the same result is reused for the post-crawl
-  // sitemap check below rather than fetched twice, so this costs the
-  // politeness budget nothing on the common path.
-  //
-  // Only the conventional /sitemap.xml is tried at this point, because
-  // robots.txt has not been read yet (crawlSite reads it) and a robots-
-  // declared sitemap at a non-conventional URL is not known until after.
-  // That case is handled below by re-checking, not by guessing here.
-  const preCrawlSitemap = await checkSitemap(
-    new URL(startUrl).origin,
-    [],
-    options.timeoutMs ?? getPageTimeoutMs(),
-  );
-  const sitemapSeeds = preCrawlSitemap.entries.map((entry) => entry.url);
-
+  const sitemapMode = options.sitemapMode ?? 'supplement';
   const crawl = await crawlSite(startUrl, {
     browser: options.browser,
     ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
@@ -178,10 +164,9 @@ export async function scanSite(
     ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
     ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
     ...(options.onProgress !== undefined ? { onProgress: options.onProgress } : {}),
-    // Same-origin filtering and the exclusion globs still apply to these
-    // inside crawlSite, exactly as they do to an operator's own seeds.
-    seeds: [...(options.seeds ?? []), ...sitemapSeeds],
+    ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
     ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
+    sitemapMode,
   });
 
   const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
@@ -210,34 +195,16 @@ export async function scanSite(
   // itself was never visited (e.g. disallowed by its own robots.txt),
   // since there is no page to attribute the finding to.
   const homepageWasVisited = pagesToScan.some((page) => page.url === crawl.startUrl);
-  // Reuses the pre-crawl fetch unless robots.txt declared a sitemap we had
-  // no way of knowing about before reading it, which is the only case where
-  // the conventional URL tried above could have been the wrong one.
-  const robotsDeclaredUnfetched = crawl.robotsSitemapUrls.some(
-    (url) => url !== preCrawlSitemap.sitemapUrl,
-  );
-  const sitemapResult =
-    preCrawlSitemap.found && !robotsDeclaredUnfetched
-      ? preCrawlSitemap
-      : await checkSitemap(
-          new URL(crawl.startUrl).origin,
-          crawl.robotsSitemapUrls,
-          options.timeoutMs ?? getPageTimeoutMs(),
-        );
-  const sitemapCheck = homepageWasVisited
-    ? {
-        ...sitemapResult,
-        crawledUrls: pagesToScan.map((page) => page.url),
-        // Every URL the crawl discovered at all (visited, robots-skipped,
-        // non-HTML-skipped, or errored), not only the visited subset
-        // crawledUrls above tracks - milestone 8.5a's sitemap-orphan-page
-        // check needs "was this sitemap URL linked from anywhere on the
-        // site", which a skipped-but-discovered page still answers yes
-        // to. crawledUrls stays as-is (visited only) since staleness is
-        // rightly judged against pages that were actually scanned.
-        discoveredUrls: crawl.pages.map((page) => page.url),
-      }
-    : undefined;
+  const sitemapCheck =
+    homepageWasVisited && crawl.sitemap !== undefined
+      ? {
+          ...crawl.sitemap,
+          crawledUrls: crawl.pages
+            .filter((page) => page.status === 'visited' && page.discoveryMethod === 'link')
+            .map((page) => page.url),
+          discoveredUrls: crawl.linkDiscoveredUrls,
+        }
+      : undefined;
   const homepageUrlForScan = homepageWasVisited ? crawl.startUrl : undefined;
 
   // llms.txt is a site-level fetch, same shape as sitemap.xml above -

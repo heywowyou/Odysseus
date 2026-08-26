@@ -100,6 +100,7 @@ describe('writeAuditArtifacts against fixtures/spa-demo', () => {
           lighthouseTimeoutMs: 60000,
           userAgent: 'OdysseusAuditBot/0.1 (test)',
           scanConcurrency: 3,
+          sitemapMode: 'supplement',
         },
       });
     } finally {
@@ -110,6 +111,15 @@ describe('writeAuditArtifacts against fixtures/spa-demo', () => {
     expect(existsSync(path.join(result.auditDir, 'manifest.json'))).toBe(true);
     expect(result.manifest.kind).toBe('audit');
     expect(result.manifest.pages.length).toBeGreaterThan(0);
+    expect(result.manifest.crawl.sitemapCoverage).toMatchObject({
+      declaredPageCount: 4,
+      eligiblePageCount: 4,
+      scannedPageCount: 4,
+      capOmittedPageCount: 0,
+    });
+    expect(
+      result.manifest.pages.find((page) => new URL(page.url).pathname === '/sitemap-only.html'),
+    ).toMatchObject({ status: 'visited', discoveryMethod: 'sitemap-only' });
 
     expect(result.manifest.siteSignals?.siren).toBe('732829320');
     expect(result.manifest.siteSignals?.mentionsLegalesPageUrl).toBe(
@@ -141,5 +151,6 @@ describe('writeAuditArtifacts against fixtures/spa-demo', () => {
     });
     await writeFindingsFile(result.auditDir, findings);
     expect(existsSync(path.join(result.auditDir, 'findings.json'))).toBe(true);
+    expect(findings.some((finding) => finding.ruleId === 'sitemap-orphan-page')).toBe(true);
   }, 180_000);
 });

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { globToRegExp, isLanguageHomepagePath, normalizeInternalLinks } from './links.js';
+import {
+  globToRegExp,
+  isLanguageHomepagePath,
+  normalizeInternalLinks,
+  normalizePageUrl,
+} from './links.js';
 
 const BASE = 'https://client.example/current-page';
 
@@ -162,6 +167,43 @@ describe('globToRegExp', () => {
   it('anchors the pattern over the whole string', () => {
     expect(globToRegExp('/blog').test('/blog/post-1')).toBe(false);
     expect(globToRegExp('/blog*').test('/blog/post-1')).toBe(true);
+  });
+});
+
+describe('normalizePageUrl for sitemap coverage', () => {
+  it('accepts the exact hostname and its www counterpart', () => {
+    expect(
+      normalizePageUrl('https://www.client.example/page/', 'https://client.example/', {
+        allowWwwApex: true,
+      }),
+    ).toBe('https://www.client.example/page');
+  });
+
+  it('rejects other subdomains and registrable domains', () => {
+    expect(
+      normalizePageUrl('https://shop.client.example/page', 'https://client.example/', {
+        allowWwwApex: true,
+      }),
+    ).toBeUndefined();
+    expect(
+      normalizePageUrl('https://other.example/page', 'https://client.example/', {
+        allowWwwApex: true,
+      }),
+    ).toBeUndefined();
+  });
+
+  it('applies exclusions and non-HTML filtering to sitemap page URLs', () => {
+    expect(
+      normalizePageUrl('https://client.example/private/page', 'https://client.example/', {
+        allowWwwApex: true,
+        exclusionPatterns: ['https://client.example/private/*'],
+      }),
+    ).toBeUndefined();
+    expect(
+      normalizePageUrl('https://client.example/brochure.pdf', 'https://client.example/', {
+        allowWwwApex: true,
+      }),
+    ).toBeUndefined();
   });
 });
 

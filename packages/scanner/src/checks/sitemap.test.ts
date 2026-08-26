@@ -154,4 +154,131 @@ describe('checkSitemap', () => {
     expect(result.found).toBe(true);
     expect(result.sitemapUrl).toBe(`${started.origin}/sitemap.xml`);
   });
+
+  it('recursively flattens nested indexes, dedupes pages, and prevents cycles', async () => {
+    const routes: Record<string, { status: number; body: string }> = {};
+    const started = await startServer(routes);
+    server = started.server;
+    routes['/sitemap.xml'] = {
+      status: 200,
+      body: `<sitemapindex>
+        <sitemap><loc>${started.origin}/pages-a.xml</loc></sitemap>
+        <sitemap><loc>${started.origin}/nested.xml</loc></sitemap>
+      </sitemapindex>`,
+    };
+    routes['/pages-a.xml'] = {
+      status: 200,
+      body: `<urlset>
+        <url><loc>${started.origin}/one</loc></url>
+        <url><loc>${started.origin}/shared</loc></url>
+      </urlset>`,
+    };
+    routes['/nested.xml'] = {
+      status: 200,
+      body: `<sitemapindex>
+        <sitemap><loc>${started.origin}/pages-b.xml</loc></sitemap>
+        <sitemap><loc>${started.origin}/sitemap.xml</loc></sitemap>
+      </sitemapindex>`,
+    };
+    routes['/pages-b.xml'] = {
+      status: 200,
+      body: `<urlset>
+        <url><loc>${started.origin}/shared</loc></url>
+        <url><loc>${started.origin}/two?x=1&amp;y=2</loc></url>
+      </urlset>`,
+    };
+
+    const result = await checkSitemap(started.origin, [], 5000);
+
+    expect(result.isSitemapIndex).toBe(true);
+    expect(result.fetchedSitemapUrls).toHaveLength(4);
+    expect(result.fetchedDocuments).toEqual([
+      {
+        url: `${started.origin}/sitemap.xml`,
+        isRoot: true,
+        isSitemapIndex: true,
+        entryCount: 2,
+      },
+      {
+        url: `${started.origin}/pages-a.xml`,
+        isRoot: false,
+        isSitemapIndex: false,
+        entryCount: 2,
+      },
+      {
+        url: `${started.origin}/nested.xml`,
+        isRoot: false,
+        isSitemapIndex: true,
+        entryCount: 2,
+      },
+      {
+        url: `${started.origin}/pages-b.xml`,
+        isRoot: false,
+        isSitemapIndex: false,
+        entryCount: 2,
+      },
+    ]);
+    expect(result.pageEntries.map((entry) => entry.url)).toEqual([
+      `${started.origin}/one`,
+      `${started.origin}/shared`,
+      `${started.origin}/two?x=1&y=2`,
+    ]);
+    expect(result.fetchErrors).toEqual([]);
+  });
+
+  it('keeps readable child pages and records partial index failures', async () => {
+    const routes: Record<string, { status: number; body: string }> = {};
+    const started = await startServer(routes);
+    server = started.server;
+    routes['/sitemap.xml'] = {
+      status: 200,
+      body: `<sitemapindex>
+        <sitemap><loc>${started.origin}/pages.xml</loc></sitemap>
+        <sitemap><loc>${started.origin}/missing.xml</loc></sitemap>
+      </sitemapindex>`,
+    };
+    routes['/pages.xml'] = {
+      status: 200,
+      body: `<urlset><url><loc>${started.origin}/kept</loc></url></urlset>`,
+    };
+
+    const result = await checkSitemap(started.origin, [], 5000);
+
+    expect(result.found).toBe(true);
+    expect(result.pageEntries).toEqual([{ url: `${started.origin}/kept` }]);
+    expect(result.fetchErrors).toEqual([
+      { url: `${started.origin}/missing.xml`, error: 'HTTP 404' },
+    ]);
+  });
+
+  it('preserves malformed declared page URLs for coverage filtering', async () => {
+    const started = await startServer({
+      '/sitemap.xml': {
+        status: 200,
+        body: '<urlset><url><loc>http://[</loc></url></urlset>',
+      },
+    });
+    server = started.server;
+
+    const result = await checkSitemap(started.origin, [], 5000);
+
+    expect(result.pageEntries).toEqual([{ url: 'http://[' }]);
+  });
+
+  it('does not fetch a child sitemap outside the authorized hostname', async () => {
+    const routes: Record<string, { status: number; body: string }> = {};
+    const started = await startServer(routes);
+    server = started.server;
+    routes['/sitemap.xml'] = {
+      status: 200,
+      body: '<sitemapindex><sitemap><loc>https://other.example/pages.xml</loc></sitemap></sitemapindex>',
+    };
+
+    const result = await checkSitemap(started.origin, [], 5000);
+
+    expect(result.fetchedSitemapUrls).toEqual([`${started.origin}/sitemap.xml`]);
+    expect(result.fetchErrors).toEqual([
+      { url: 'https://other.example/pages.xml', error: 'outside authorized hostname' },
+    ]);
+  });
 });

@@ -52,12 +52,12 @@ canonical document says was superseded.
 
 | Document | Status and use |
 | --- | --- |
-| `docs/m9-prospecting-pipeline.md` | Reconciled design for later milestone 9c; not authority to skip the charter's queued 9b.5 milestone |
+| `docs/m9-prospecting-pipeline.md` | Reconciled design for milestone 9c, the next queued milestone; re-check it against shipped 9a/9b code before implementation |
 | `docs/m9-technical-spec.md` | Companion 9c technical design; reconcile proposed shapes against shipped 9a/9b code before implementation |
 | `plans/findings.md` | Maintenance backlog generated against the commit named in its header; some entries are intentionally unverified. Re-check every item against current HEAD before acting. Its presence does not make it the active session or override milestone order |
 | `docs/report/2026-08-24-lagnonu-feedback.md` | Current dated report-review record until its items are fixed or moved into the deferred queue |
 | `docs/report/report-feedback-deferred-items.md` | Canonical queue for report-review items deliberately deferred |
-| `docs/next-session-outreach-preview-prompt.md` | Deferred 9c briefing retained for useful constraints. It is not the current handoff and must not be treated as “next” while 9b.5 remains queued first |
+| `docs/next-session-outreach-preview-prompt.md` | Focused 9c preview-generator briefing retained for useful constraints. It is not the current handoff and does not select its own scope; use it only when the user starts that part of 9c |
 
 GitHub issues may also hold specs and task state. `docs/agents/issue-tracker.md`
 defines how to inspect them; never assume a local briefing is newer than its

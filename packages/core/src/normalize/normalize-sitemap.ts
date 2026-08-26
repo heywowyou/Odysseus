@@ -26,6 +26,17 @@ export interface SitemapCheckInput {
   found: boolean;
   isSitemapIndex: boolean;
   entries: SitemapEntryInput[];
+  /** Milestone 9b.5 flattened page entries across recursively resolved
+   *  sitemap indexes. Absent on historical scan artifacts. */
+  pageEntries?: SitemapEntryInput[];
+  fetchedDocuments?: {
+    url: string;
+    isRoot: boolean;
+    isSitemapIndex: boolean;
+    entryCount: number;
+  }[];
+  fetchedSitemapUrls?: string[];
+  fetchErrors?: { url: string; error: string }[];
   fetchError?: string;
   /** Every page the crawl actually visited, so staleness can be judged
    *  by how well the sitemap's own URL list matches what is really
@@ -91,13 +102,20 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
     );
   }
 
-  // A sitemap index lists other sitemap files, not pages directly - this
-  // milestone does not fetch and validate every referenced sub-sitemap,
-  // so staleness cannot be judged reliably here. The index itself being
-  // reachable is enough to not flag sitemap-missing either.
-  if (input.isSitemapIndex || input.crawledUrls.length === 0) {
+  // Historical artifacts only recorded a sitemap index's root entries,
+  // which are document URLs rather than pages. Keep ignoring those old
+  // roots; new artifacts carry recursively flattened pageEntries and can
+  // be judged normally.
+  if ((input.isSitemapIndex && input.pageEntries === undefined) || input.crawledUrls.length === 0) {
     return [];
   }
+
+  const pageEntries = input.pageEntries ?? input.entries;
+
+  // A resolved index with no readable child page entries is incomplete
+  // coverage, disclosed from manifest metadata rather than mislabeled as
+  // a missing root sitemap or judged stale against an empty set.
+  if (input.isSitemapIndex && pageEntries.length === 0) return [];
 
   // A 200 response with zero listed pages is functionally no sitemap at
   // all (confirmed against a real SPA dev server whose catch-all route
@@ -106,7 +124,7 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
   // missing rather than falling through to the staleness ratio below,
   // which would otherwise always trip at 0 matched pages regardless of
   // site size.
-  if (input.entries.length === 0) {
+  if (pageEntries.length === 0) {
     return missingCandidate(
       pageUrl,
       `A sitemap URL responded, but no page entries could be read from it (${input.sitemapUrl ?? 'unknown URL'}). A sitemap with no listed pages provides no benefit to search engines.`,
@@ -116,7 +134,7 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
 
   const candidates: FindingCandidate[] = [];
 
-  const sitemapUrlSet = new Set(input.entries.map((entry) => normalizeUrl(entry.url, pageUrl)));
+  const sitemapUrlSet = new Set(pageEntries.map((entry) => normalizeUrl(entry.url, pageUrl)));
   const matchedCount = input.crawledUrls.filter((url) =>
     sitemapUrlSet.has(normalizeUrl(url, pageUrl)),
   ).length;
@@ -130,11 +148,11 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
       severity: severityFromCustom(SITEMAP_STALE_RULE_ID),
       wcagCriteria: [],
       title: 'Sitemap does not reflect the current site',
-      description: `Only ${matchedCount} of ${input.crawledUrls.length} pages this audit actually found appear in the sitemap (${input.entries.length} URLs listed). A sitemap that has drifted from the real site can mislead search engines about which pages exist.`,
+      description: `Only ${matchedCount} of ${input.crawledUrls.length} pages this audit actually found appear in the sitemap (${pageEntries.length} URLs listed). A sitemap that has drifted from the real site can mislead search engines about which pages exist.`,
       pageUrl,
       element: null,
       rawEvidenceForPage: {
-        sitemapEntryCount: input.entries.length,
+        sitemapEntryCount: pageEntries.length,
         crawledPageCount: input.crawledUrls.length,
         matchedCount,
       },
@@ -145,7 +163,7 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
   // both a good match for the crawled pages and still list URLs the
   // crawl never found through any internal link at all.
   const discoveredSet = new Set(input.discoveredUrls.map((url) => normalizeUrl(url, pageUrl)));
-  const orphanUrls = input.entries
+  const orphanUrls = pageEntries
     .map((entry) => entry.url)
     .filter((url) => !discoveredSet.has(normalizeUrl(url, pageUrl)));
 

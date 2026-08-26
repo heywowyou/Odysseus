@@ -125,6 +125,20 @@ describe('sitemap-stale', () => {
     ).toEqual([]);
   });
 
+  it('judges a newly flattened sitemap index from pageEntries', () => {
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        isSitemapIndex: true,
+        entries: [{ url: 'https://example.com/pages.xml' }],
+        pageEntries: [{ url: 'https://example.com/' }, { url: 'https://example.com/orphan' }],
+        crawledUrls: ['https://example.com/', 'https://example.com/about'],
+        discoveredUrls: ['https://example.com/', 'https://example.com/about'],
+      }),
+    );
+
+    expect(candidates.map((candidate) => candidate.ruleId)).toContain(SITEMAP_ORPHAN_PAGE_RULE_ID);
+  });
+
   it('does not fire when there are no crawled URLs to compare against', () => {
     expect(extractSitemapCandidates(baseInput({ crawledUrls: [] }))).toEqual([]);
   });

@@ -1,4 +1,5 @@
 import type { Browser } from 'playwright';
+import type { PageDiscoveryMethod, SitemapCoverageSummary, SitemapMode } from '@odysseus/core';
 import {
   getCrawlDelayMs,
   getCrawlerUserAgent,
@@ -6,7 +7,12 @@ import {
   getMaxPages,
   getPageTimeoutMs,
 } from './config.js';
-import { isLanguageHomepagePath, normalizeInternalLinks } from './links.js';
+import {
+  isLanguageHomepagePath,
+  isSameSiteHostname,
+  normalizeInternalLinks,
+  normalizePageUrl,
+} from './links.js';
 import {
   AI_CRAWLER_USER_AGENTS,
   checkAiCrawlerAccess,
@@ -18,6 +24,9 @@ import {
 } from './robots.js';
 import { findMentionsLegalesUrl } from './checks/mentions-legales.js';
 import { isSocialPlatformHost } from './social-hosts.js';
+import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
+
+export { isSameSiteHostname } from './links.js';
 
 /** Progress events for a live ETA display. Purely additive: emitted only
  *  when a caller supplies onProgress, no behavior change otherwise.
@@ -46,6 +55,10 @@ export interface CrawlOptions {
   /** Glob patterns; a matching discovered URL is never enqueued. Passed
    *  straight through to normalizeInternalLinks. */
   exclusions?: string[];
+  /** `none` preserves the standalone link crawler, `inspect` resolves the
+   *  sitemap without scheduling its pages, and `supplement` appends eligible
+   *  sitemap-only pages after the link frontier. */
+  sitemapMode?: SitemapMode;
 }
 
 export type CrawledPageStatus =
@@ -65,6 +78,7 @@ export interface CrawledPage {
   httpStatus?: number;
   error?: string;
   discoveredFrom?: string;
+  discoveryMethod: PageDiscoveryMethod;
 }
 
 export interface CrawlResult {
@@ -104,12 +118,18 @@ export interface CrawlResult {
    *  call. Only blocked agents are included - an agent that is allowed
    *  has nothing for normalize-crawl.ts to report. */
   aiCrawlerBlocks: { agent: string; disallowPattern: string }[];
+  /** Every URL observed in an internal anchor, whether or not a configured
+   *  page cap left enough budget to navigate it. Includes the start URL. */
+  linkDiscoveredUrls: string[];
+  sitemap?: SitemapCheckResult;
+  sitemapCoverage?: SitemapCoverageSummary;
 }
 
 interface QueueItem {
   url: string;
   depth: number;
   discoveredFrom?: string;
+  discoveryMethod: PageDiscoveryMethod;
 }
 
 /**
@@ -132,31 +152,6 @@ function safeHostname(url: string): string | null {
   } catch {
     return null;
   }
-}
-
-/** True when `landedHostname` is safe to treat as the same site as
- *  `requestedHostname` for the purpose of following its links and
- *  scanning it as the requested page - either an exact match, or one is
- *  the other with a leading "www." label added or removed (the only
- *  redirect-driven cross-hostname pattern confirmed in the wild:
- *  www.lacoorniche.com 301s to lacoorniche.com). Deliberately narrow:
- *  a real haaitza.com crawl showed /carte-cadeaux forwarding (via a
- *  same-origin page whose content then points off-site) into
- *  haaitza-lacoorniche.diadabox.fr, a third-party booking platform
- *  shared with another client. Before this check existed, the crawler's
- *  own redirect-following fix (landedUrl below) treated that foreign
- *  domain as safe to crawl deeper into, since it only checked whether
- *  the navigation succeeded, not whether it stayed on the audited
- *  business's own site - 58 of that one audit's pages, and 16 of its 18
- *  "critical" findings, turned out to belong to the vendor's platform,
- *  not the client's. Anything other than an exact or www-prefix match
- *  must be treated the same as a social-platform redirect: not
- *  followed, not scanned, never attributed to the audited site. */
-export function isSameSiteHostname(requestedHostname: string, landedHostname: string): boolean {
-  if (requestedHostname === landedHostname) return true;
-  return (
-    requestedHostname === `www.${landedHostname}` || landedHostname === `www.${requestedHostname}`
-  );
 }
 
 /**
@@ -186,6 +181,26 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
       : parseRobotsTxt(robotsText, userAgent);
   const effectiveDelayMs = Math.max(delayMs, robotsRules.crawlDelayMs ?? 0);
+  const sitemapMode = options.sitemapMode ?? 'none';
+  const sitemap =
+    sitemapMode === 'none'
+      ? undefined
+      : await checkSitemap(start.origin, robotsRules.sitemapUrls, timeoutMs, {
+          userAgent,
+          delayMs: effectiveDelayMs,
+        });
+  const eligibleSitemapUrls = new Set<string>();
+  let filteredSitemapPageCount = 0;
+  if (sitemap !== undefined) {
+    for (const entry of sitemap.pageEntries) {
+      const normalized = normalizePageUrl(entry.url, start.toString(), {
+        allowWwwApex: true,
+        exclusionPatterns: options.exclusions ?? [],
+      });
+      if (normalized === undefined) filteredSitemapPageCount += 1;
+      else eligibleSitemapUrls.add(normalized);
+    }
+  }
 
   options.onProgress?.({
     type: 'crawl-start',
@@ -195,9 +210,12 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   });
 
   const pages: CrawledPage[] = [];
+  const pagesByUrl = new Map<string, CrawledPage>();
   const visited = new Set<string>();
+  const linkDiscoveredUrls = new Set<string>([start.toString()]);
+  const linkDiscoveredFrom = new Map<string, string>();
   const enqueued = new Set<string>([start.toString()]);
-  const queue: QueueItem[] = [{ url: start.toString(), depth: 0 }];
+  const queue: QueueItem[] = [{ url: start.toString(), depth: 0, discoveryMethod: 'link' }];
 
   // Manual-input-layer milestone: extra seed URLs are enqueued at depth 0,
   // same as the start URL, before the crawl loop begins. Off-origin seeds
@@ -216,163 +234,206 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     const normalizedSeed = resolvedSeed.toString();
     if (enqueued.has(normalizedSeed)) continue;
     enqueued.add(normalizedSeed);
-    queue.push({ url: normalizedSeed, depth: 0 });
+    queue.push({ url: normalizedSeed, depth: 0, discoveryMethod: 'seed' });
   }
 
   const context = await options.browser.newContext({ userAgent });
   context.setDefaultTimeout(timeoutMs);
   context.setDefaultNavigationTimeout(timeoutMs);
 
+  const recordPage = (page: CrawledPage): void => {
+    pages.push(page);
+    pagesByUrl.set(page.url, page);
+  };
+
   try {
     let isFirstNavigation = true;
+    let supplementalPhaseStarted = false;
 
-    while (queue.length > 0 && visited.size < maxPages) {
-      const item = queue.shift()!;
+    while (true) {
+      while (queue.length > 0 && visited.size < maxPages) {
+        const item = queue.shift()!;
+        const discoveryMethod = linkDiscoveredUrls.has(item.url) ? 'link' : item.discoveryMethod;
+        const discoveredFrom = item.discoveredFrom ?? linkDiscoveredFrom.get(item.url);
 
-      if (!isAllowedByRobots(robotsRules, new URL(item.url).pathname)) {
-        const skipped: CrawledPage = { url: item.url, depth: item.depth, status: 'skipped-robots' };
-        if (item.discoveredFrom !== undefined) skipped.discoveredFrom = item.discoveredFrom;
-        pages.push(skipped);
-        continue;
-      }
-
-      if (!isFirstNavigation) {
-        await new Promise((resolve) => setTimeout(resolve, effectiveDelayMs));
-      }
-      isFirstNavigation = false;
-      visited.add(item.url);
-      options.onProgress?.({
-        type: 'crawl-page',
-        visited: visited.size,
-        maxPages,
-        queued: queue.length,
-      });
-
-      const browserPage = await context.newPage();
-      try {
-        const response = await browserPage.goto(item.url, { waitUntil: 'load' });
-        const httpStatus = response?.status();
-        const contentType = response?.headers()['content-type'];
-
-        // A stub URL like /facebook or /instagram that server-side or
-        // client-side redirects out to a social platform is not a page of
-        // the audited site - it must never reach a detector (broken-link,
-        // render-diff, axe, Lighthouse), which is exactly what happened
-        // before this check existed: navigating a real browser context
-        // into facebook.com under headless conditions is slow and often
-        // errors out, and the resulting 'error' status then got reported
-        // as a broken internal link even though the redirect itself
-        // worked exactly as the site intended.
-        const finalHost = safeHostname(browserPage.url());
-        const requestedHost = new URL(item.url).hostname;
-        const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
-
-        if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
-          const skippedPage: CrawledPage = {
+        if (!isAllowedByRobots(robotsRules, new URL(item.url).pathname)) {
+          recordPage({
             url: item.url,
             depth: item.depth,
-            status: 'skipped-external-redirect',
-          };
-          if (httpStatus !== undefined) skippedPage.httpStatus = httpStatus;
-          if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
-          pages.push(skippedPage);
-        } else if (isNonHtmlContentType(contentType)) {
-          const skippedPage: CrawledPage = {
-            url: item.url,
-            depth: item.depth,
-            status: 'skipped-non-html',
-          };
-          if (httpStatus !== undefined) skippedPage.httpStatus = httpStatus;
-          if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
-          pages.push(skippedPage);
-        } else {
-          // A bare language homepage duplicates the homepage it translates,
-          // yet is often the only route into that language's subtree
-          // (lagnonu.fr, where /en and /es are the sole links in). So it is
-          // always crawled for its links, and scanned only when the page
-          // itself declares hreflang.
-          //
-          // That condition is exactly what trade-off 24's translation
-          // clustering needs: a page declaring hreflang, including a self
-          // reference, clusters with the variants it names, so its findings
-          // collapse into the homepage's rather than multiplying them. With
-          // no hreflang nothing can collapse them, and each language
-          // homepage would restate every homepage defect once per language
-          // (lacoorniche.com, five languages) - the defect this rule was
-          // originally added for.
-          //
-          // Read off the DOM of the page already loaded here, not a second
-          // fetch, and never inferred from URL shape: trade-off 24 rejected
-          // prefix-guessing for clustering and the same reasoning binds here.
-          let discoverOnly = isLanguageHomepagePath(new URL(browserPage.url()).pathname);
-          if (discoverOnly) {
-            const declaresHreflang = await browserPage
-              .$$eval('link[rel="alternate"][hreflang]', (links) => links.length > 0)
-              .catch(() => false);
-            if (declaresHreflang) discoverOnly = false;
-          }
-          const visitedPage: CrawledPage = {
-            url: item.url,
-            depth: item.depth,
-            status: discoverOnly ? 'discovered-not-scanned' : 'visited',
-          };
-          if (httpStatus !== undefined) visitedPage.httpStatus = httpStatus;
-          if (item.discoveredFrom !== undefined) visitedPage.discoveredFrom = item.discoveredFrom;
-          pages.push(visitedPage);
+            status: 'skipped-robots',
+            discoveryMethod,
+            ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+          });
+          continue;
+        }
 
-          if (item.depth < maxDepth) {
-            const hrefs = await browserPage.$$eval('a[href]', (anchors) =>
-              anchors.map((a) => a.getAttribute('href')),
-            );
-            // Resolved against browserPage.url() (where the navigation actually
-            // landed), not item.url (what was requested). A same-origin request
-            // can still land on a different origin after a server redirect - a
-            // www-to-apex 301 is the common case - and every link on the landed
-            // page is naturally absolute against that landed origin. Using
-            // item.url as the base made those links look cross-origin and got
-            // them all dropped, which silently reduced a real site's crawl to
-            // just the one redirect-landing page (confirmed against
-            // lacoorniche.com: www.lacoorniche.com 301s to lacoorniche.com,
-            // visitedCount was 1 before this fix).
-            const landedUrl = browserPage.url();
-            for (const link of normalizeInternalLinks(hrefs, landedUrl, options.exclusions ?? [])) {
-              if (enqueued.has(link) || enqueued.size >= maxPages) continue;
-              enqueued.add(link);
-              queue.push({ url: link, depth: item.depth + 1, discoveredFrom: item.url });
+        if (!isFirstNavigation) {
+          await new Promise((resolve) => setTimeout(resolve, effectiveDelayMs));
+        }
+        isFirstNavigation = false;
+        visited.add(item.url);
+        options.onProgress?.({
+          type: 'crawl-page',
+          visited: visited.size,
+          maxPages,
+          queued: queue.length,
+        });
+
+        const browserPage = await context.newPage();
+        try {
+          const response = await browserPage.goto(item.url, { waitUntil: 'load' });
+          const httpStatus = response?.status();
+          const contentType = response?.headers()['content-type'];
+
+          // A stub URL like /facebook or /instagram that server-side or
+          // client-side redirects out to a social platform is not a page of
+          // the audited site - it must never reach a detector (broken-link,
+          // render-diff, axe, Lighthouse), which is exactly what happened
+          // before this check existed: navigating a real browser context
+          // into facebook.com under headless conditions is slow and often
+          // errors out, and the resulting 'error' status then got reported
+          // as a broken internal link even though the redirect itself
+          // worked exactly as the site intended.
+          const finalHost = safeHostname(browserPage.url());
+          const requestedHost = new URL(item.url).hostname;
+          const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
+
+          if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
+            recordPage({
+              url: item.url,
+              depth: item.depth,
+              status: 'skipped-external-redirect',
+              discoveryMethod,
+              ...(httpStatus !== undefined ? { httpStatus } : {}),
+              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+            });
+          } else if (isNonHtmlContentType(contentType)) {
+            recordPage({
+              url: item.url,
+              depth: item.depth,
+              status: 'skipped-non-html',
+              discoveryMethod,
+              ...(httpStatus !== undefined ? { httpStatus } : {}),
+              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+            });
+          } else {
+            // A bare language homepage duplicates the homepage it translates,
+            // yet is often the only route into that language's subtree
+            // (lagnonu.fr, where /en and /es are the sole links in). So it is
+            // always crawled for its links, and scanned only when the page
+            // itself declares hreflang.
+            //
+            // That condition is exactly what trade-off 24's translation
+            // clustering needs: a page declaring hreflang, including a self
+            // reference, clusters with the variants it names, so its findings
+            // collapse into the homepage's rather than multiplying them. With
+            // no hreflang nothing can collapse them, and each language
+            // homepage would restate every homepage defect once per language
+            // (lacoorniche.com, five languages) - the defect this rule was
+            // originally added for.
+            //
+            // Read off the DOM of the page already loaded here, not a second
+            // fetch, and never inferred from URL shape: trade-off 24 rejected
+            // prefix-guessing for clustering and the same reasoning binds here.
+            let discoverOnly = isLanguageHomepagePath(new URL(browserPage.url()).pathname);
+            if (discoverOnly) {
+              const declaresHreflang = await browserPage
+                .$$eval('link[rel="alternate"][hreflang]', (links) => links.length > 0)
+                .catch(() => false);
+              if (declaresHreflang) discoverOnly = false;
+            }
+            recordPage({
+              url: item.url,
+              depth: item.depth,
+              status: discoverOnly ? 'discovered-not-scanned' : 'visited',
+              discoveryMethod,
+              ...(httpStatus !== undefined ? { httpStatus } : {}),
+              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+            });
+
+            if (discoveryMethod !== 'sitemap-only' && item.depth < maxDepth) {
+              const hrefs = await browserPage.$$eval('a[href]', (anchors) =>
+                anchors.map((a) => a.getAttribute('href')),
+              );
+              // Resolved against browserPage.url() (where the navigation actually
+              // landed), not item.url (what was requested). A same-origin request
+              // can still land on a different origin after a server redirect - a
+              // www-to-apex 301 is the common case - and every link on the landed
+              // page is naturally absolute against that landed origin. Using
+              // item.url as the base made those links look cross-origin and got
+              // them all dropped, which silently reduced a real site's crawl to
+              // just the one redirect-landing page (confirmed against
+              // lacoorniche.com: www.lacoorniche.com 301s to lacoorniche.com,
+              // visitedCount was 1 before this fix).
+              const landedUrl = browserPage.url();
+              for (const link of normalizeInternalLinks(
+                hrefs,
+                landedUrl,
+                options.exclusions ?? [],
+              )) {
+                linkDiscoveredUrls.add(link);
+                if (!linkDiscoveredFrom.has(link)) linkDiscoveredFrom.set(link, item.url);
+                const existingPage = pagesByUrl.get(link);
+                if (existingPage !== undefined) {
+                  existingPage.discoveryMethod = 'link';
+                  existingPage.discoveredFrom ??= item.url;
+                }
+                if (enqueued.has(link)) continue;
+                enqueued.add(link);
+                queue.push({
+                  url: link,
+                  depth: item.depth + 1,
+                  discoveredFrom: item.url,
+                  discoveryMethod: 'link',
+                });
+              }
             }
           }
+        } catch (error) {
+          // Playwright commits browserPage.url() to the in-progress
+          // navigation target even when goto() itself rejects (e.g. a
+          // timeout waiting for facebook.com to fire 'load' under headless
+          // conditions) - the redirect already happened at the network
+          // level before the failure, so this is still a social redirect,
+          // not a broken link on the audited site.
+          const finalHost = safeHostname(browserPage.url());
+          const requestedHost = new URL(item.url).hostname;
+          const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
+          if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
+            recordPage({
+              url: item.url,
+              depth: item.depth,
+              status: 'skipped-external-redirect',
+              discoveryMethod,
+              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+            });
+          } else {
+            const message = error instanceof Error ? error.message : String(error);
+            recordPage({
+              url: item.url,
+              depth: item.depth,
+              status: 'error',
+              error: message,
+              discoveryMethod,
+              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+            });
+          }
+        } finally {
+          await browserPage.close();
         }
-      } catch (error) {
-        // Playwright commits browserPage.url() to the in-progress
-        // navigation target even when goto() itself rejects (e.g. a
-        // timeout waiting for facebook.com to fire 'load' under headless
-        // conditions) - the redirect already happened at the network
-        // level before the failure, so this is still a social redirect,
-        // not a broken link on the audited site.
-        const finalHost = safeHostname(browserPage.url());
-        const requestedHost = new URL(item.url).hostname;
-        const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
-        if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
-          const skippedPage: CrawledPage = {
-            url: item.url,
-            depth: item.depth,
-            status: 'skipped-external-redirect',
-          };
-          if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
-          pages.push(skippedPage);
-        } else {
-          const message = error instanceof Error ? error.message : String(error);
-          const errorPage: CrawledPage = {
-            url: item.url,
-            depth: item.depth,
-            status: 'error',
-            error: message,
-          };
-          if (item.discoveredFrom !== undefined) errorPage.discoveredFrom = item.discoveredFrom;
-          pages.push(errorPage);
-        }
-      } finally {
-        await browserPage.close();
+      }
+
+      if (supplementalPhaseStarted || sitemapMode !== 'supplement') break;
+      supplementalPhaseStarted = true;
+      for (const url of eligibleSitemapUrls) {
+        if (enqueued.has(url)) continue;
+        enqueued.add(url);
+        queue.push({
+          url,
+          depth: 0,
+          discoveryMethod: linkDiscoveredUrls.has(url) ? 'link' : 'sitemap-only',
+          ...(linkDiscoveredFrom.has(url) ? { discoveredFrom: linkDiscoveredFrom.get(url)! } : {}),
+        });
       }
     }
   } finally {
@@ -393,6 +454,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
 
   const disallowMatchCounts = new Map<string, number>();
   for (const page of pages) {
+    if (page.discoveryMethod !== 'link') continue;
     const blockingPattern = findBlockingPattern(robotsRules, new URL(page.url).pathname);
     if (blockingPattern === undefined) continue;
     disallowMatchCounts.set(blockingPattern, (disallowMatchCounts.get(blockingPattern) ?? 0) + 1);
@@ -411,6 +473,23 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     )
     .map(({ agent, disallowPattern }) => ({ agent, disallowPattern }));
 
+  const sitemapCoverage: SitemapCoverageSummary | undefined =
+    sitemap === undefined
+      ? undefined
+      : {
+          declaredPageCount: sitemap.pageEntries.length,
+          eligiblePageCount: eligibleSitemapUrls.size,
+          scannedPageCount: [...eligibleSitemapUrls].filter(
+            (url) => pagesByUrl.get(url)?.status === 'visited',
+          ).length,
+          filteredPageCount: filteredSitemapPageCount,
+          capOmittedPageCount:
+            sitemapMode === 'supplement'
+              ? [...eligibleSitemapUrls].filter((url) => !pagesByUrl.has(url)).length
+              : 0,
+          failedSitemapCount: sitemap.fetchErrors.length,
+        };
+
   return {
     startUrl: start.toString(),
     pages,
@@ -423,5 +502,8 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     robotsSitemapUrls: robotsRules.sitemapUrls,
     robotsDisallowMatches,
     aiCrawlerBlocks,
+    linkDiscoveredUrls: [...linkDiscoveredUrls],
+    ...(sitemap !== undefined ? { sitemap } : {}),
+    ...(sitemapCoverage !== undefined ? { sitemapCoverage } : {}),
   };
 }

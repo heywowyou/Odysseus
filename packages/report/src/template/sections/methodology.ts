@@ -428,6 +428,43 @@ export function renderMethodology(
             : ` ${escapeHtml(fillTemplate(m.languageNotScannedTemplate, { languages: coverage.discoveredOnly.join(', ') }))}`
         }</p>`;
 
+  const analyzedPages = manifest.pages.filter((page) => page.status === 'visited');
+  const hasDiscoveryProvenance =
+    analyzedPages.length > 0 && analyzedPages.every((page) => page.discoveryMethod !== undefined);
+  const linkedPages = analyzedPages.filter((page) => page.discoveryMethod === 'link').length;
+  const seededPages = analyzedPages.filter((page) => page.discoveryMethod === 'seed').length;
+  const sitemapOnlyPages = analyzedPages.filter(
+    (page) => page.discoveryMethod === 'sitemap-only',
+  ).length;
+  const sitemapCoverageText = hasDiscoveryProvenance
+    ? fillTemplate(
+        seededPages > 0 ? m.sitemapCoverageWithSeedsTemplate : m.sitemapCoverageTemplate,
+        {
+          total: formatNumber(analyzedPages.length, language),
+          linked: formatNumber(linkedPages, language),
+          seeded: formatNumber(seededPages, language),
+          sitemapOnly: formatNumber(sitemapOnlyPages, language),
+        },
+      )
+    : undefined;
+  const sitemapCoverageNote = sitemapCoverageText
+    ? `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(sitemapCoverageText)}</p>`
+    : '';
+
+  const sitemapSummary = manifest.crawl.sitemapCoverage;
+  const sitemapIncomplete =
+    sitemapSummary !== undefined &&
+    (sitemapSummary.failedSitemapCount > 0 ||
+      sitemapSummary.filteredPageCount > 0 ||
+      sitemapSummary.capOmittedPageCount > 0);
+  const sitemapIncompleteNote = sitemapIncomplete
+    ? fillTemplate(m.sitemapIncompleteTemplate, {
+        failed: formatNumber(sitemapSummary.failedSitemapCount, language),
+        filtered: formatNumber(sitemapSummary.filteredPageCount, language),
+        omitted: formatNumber(sitemapSummary.capOmittedPageCount, language),
+      })
+    : undefined;
+
   const sirenNote = renderSirenProvenanceNote(
     strings,
     obligationAssessment,
@@ -473,6 +510,8 @@ export function renderMethodology(
     ${renderSheetHeader(ordinal, eyebrow, m.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
     ${languageCoverageNote}
+    ${sitemapCoverageNote}
+    ${sitemapIncompleteNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(sitemapIncompleteNote)}</p>` : ''}
     ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(crawlCapNote)}</p>` : ''}
     ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(socialExclusionNote)}</p>` : ''}
     ${lighthouseFailureNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(lighthouseFailureNote)}</p>` : ''}

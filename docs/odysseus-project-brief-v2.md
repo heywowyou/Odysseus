@@ -367,8 +367,8 @@ Verified live in both languages against the real capture: 11 themes from 17 find
 
 **Milestone 9b: prospecting throughput.** `computeBrokennessScore`, `isProspectingWorthy`, and `isAuditFallbackEligible` move into `packages/core` per `docs/llm-layer-rules.md` section 10. Three changes in `runProspectingJob`: a bounded worker pool across distinct origins in place of the serial loop, safe because the per-origin lock already exists and the rate limit is per origin; Lighthouse removed from the prospecting config, since it is the serialisation bottleneck through the `perf_hooks` queue and performance score is the weakest outreach signal; prospecting page cap reduced to three (home, one listing page, one transactional page, the last retained because the flow detector needs it). Deterministic evidence screenshot selection.
 
-**Milestone 9b.5: sitemap-supplemented full-site scan coverage.** Added
-2026-08-25, ahead of 9c, on an operator decision made mid-review of a
+**Milestone 9b.5: sitemap-supplemented full-site scan coverage.** Done
+2026-08-27, after being added ahead of 9c on an operator decision made mid-review of a
 real www.airelles.com audit: the crawler reached 100 pages by following
 internal links while the site's sitemap declared 516, and the
 `sitemap-orphan-page`/`sitemap-stale` checks correctly flagged that only
@@ -380,19 +380,25 @@ declared French-language subtree because nothing in the English pages
 it found links there. For a flat EUR 1,600 full audit, the report needs
 to do two separate jobs rather than pick one: state discoverability
 honestly (an internal-navigation-unreachable page is itself a real
-defect, and the existing orphan/stale checks depend on the crawl not
-visiting sitemap-only URLs to detect it) and scan every declared page
-for real defects regardless of whether navigation reaches it. Shape,
-not yet built: every sitemap URL becomes scannable input tagged with its
-discovery method (`link` vs `sitemap-only`) on the manifest, the same
-kind of addition CLAUDE.md trade-off 31's `discovered-not-scanned`
-status made for the reverse case; the orphan/stale checks keep computing
-purely from link-graph reachability, unaffected by whether a
-sitemap-only page also gets scanned; a sitemap URL is never fetched
-across a different registrable domain than the one authorized. Expect
-scan time and Lighthouse/axe load to rise roughly in proportion to how
-many sitemap-only pages a site has, accepted deliberately for coverage.
-Full reasoning in CLAUDE.md's build-order section.
+defect, and the existing orphan/stale checks depend on a separate link
+set) and scan every eligible declared page for real defects regardless
+of whether navigation reaches it.
+
+Shipped with `none`, `inspect`, and `supplement` sitemap modes, recursive
+index traversal, exact-host plus www/apex authorization, page discovery
+provenance, combined cap accounting, optional historical fields, Mongo
+persistence, and bilingual methodology coverage. Full audits and raw
+site scans supplement by default; prospecting inspects without expanding
+its three-page link crawl; standalone crawl stays link-only. Fixture
+tests prove that sitemap-only defects are reported while the page remains
+an orphan. The authorized Haaitza validation resolved 5 sitemap documents
+and 131 eligible pages during an uncapped 220-attempt audit: 130 sitemap
+pages were analyzed, the remaining page retained
+`skipped-external-redirect`, and zero pages were filtered or omitted by a
+cap. Haaitza currently links to every sitemap page, so the fixture remains
+the acceptance evidence for non-zero sitemap-only coverage and orphan
+preservation. Full reasoning is in the charter's build-order section and
+`docs/decisions/trade-offs.md`.
 
 **Milestone 9c: outreach generation.** Draft assembly per `docs/outreach-rules.md`: deterministic evidence, deterministic facts block, generated connective prose, validator confirming the block survived unmodified and that identity, data origin, and opt-out are present (`docs/llm-layer-rules.md` section 11). Draft queue, follow-up state machine keyed on reply detection, suppression check at draft time. Drafts created in the mailbox through the Gmail API, never sent. Separate sending domain with SPF, DKIM, DMARC.
 

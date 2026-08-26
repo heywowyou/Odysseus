@@ -15,6 +15,19 @@ import type { TranslationCluster } from '../normalize/translation-clusters.js';
 
 export type ManifestKind = 'audit' | 'render-diff';
 
+export type SitemapMode = 'none' | 'inspect' | 'supplement';
+
+export type PageDiscoveryMethod = 'link' | 'seed' | 'sitemap-only';
+
+export interface SitemapCoverageSummary {
+  declaredPageCount: number;
+  eligiblePageCount: number;
+  scannedPageCount: number;
+  filteredPageCount: number;
+  capOmittedPageCount: number;
+  failedSitemapCount: number;
+}
+
 export interface ToolVersions {
   odysseusVersion: string;
   findingsSchemaVersion: typeof FINDINGS_SCHEMA_VERSION;
@@ -45,6 +58,9 @@ export interface AuditConfigSnapshot {
    *  crawlDelayMs pacing independently; this does not change politeness
    *  per request, only how many page-lanes run concurrently. */
   scanConcurrency: number;
+  /** Optional for compatibility with audits captured before milestone
+   *  9b.5. Full audits use `supplement`; prospecting uses `inspect`. */
+  sitemapMode?: SitemapMode;
 }
 
 /**
@@ -145,6 +161,8 @@ export interface ManifestPageEntry {
   pageDir?: string;
   depth: number;
   status: ManifestPageStatus;
+  /** Optional because historical manifests predate discovery provenance. */
+  discoveryMethod?: PageDiscoveryMethod;
   httpStatus?: number;
   /** Recorded for every page regardless of whether a render-diff finding
    *  was emitted, so a healthy site's numbers aren't lost. */
@@ -231,6 +249,9 @@ export interface AuditManifest {
      *  agent has nothing for normalize-crawl.ts's ai-crawler-blocked
      *  check to report. */
     aiCrawlerBlocks?: { agent: string; disallowPattern: string }[];
+    /** Milestone 9b.5. Absent when sitemap inspection was disabled or on
+     *  historical manifests captured before sitemap coverage was tracked. */
+    sitemapCoverage?: SitemapCoverageSummary;
   };
   pages: ManifestPageEntry[];
   siteSignals?: AuditManifestSiteSignals;

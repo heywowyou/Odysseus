@@ -577,6 +577,12 @@ export const en: ReportStrings = {
     languageCoverageTemplate: 'Languages covered by this analysis: {languages}.',
     languageNotScannedTemplate:
       'No page was analyzed for the following languages, although the site publishes them: {languages}.',
+    sitemapCoverageTemplate:
+      'Coverage detail: {total} pages analyzed, including {linked} reached from the homepage or internal links and {sitemapOnly} added from the sitemap.',
+    sitemapCoverageWithSeedsTemplate:
+      'Coverage detail: {total} pages analyzed, including {linked} reached from the homepage or internal links, {seeded} supplied explicitly, and {sitemapOnly} added from the sitemap.',
+    sitemapIncompleteTemplate:
+      'Sitemap coverage was incomplete. Sitemap documents not read: {failed}. Declared page URLs outside the authorized scope or filtered by the audit rules: {filtered}. Eligible pages omitted by the configured cap: {omitted}.',
     toolingParagraphTemplate:
       'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} pages analyzed on {date} starting from the homepage. A URL that merely leads to the homepage for a language (for example /en) is not counted as an analyzed page, because it carries no content of its own; the pages in that language are crawled normally.',
     automatedCoverageCaveat:
