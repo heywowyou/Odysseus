@@ -12,7 +12,11 @@ import { describe, expect, it } from 'vitest';
 import { launchBrowser } from '@odysseus/scanner';
 import { renderHtml } from './render-html.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
-import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../test-fixtures.js';
+import {
+  loadSasFernandeAnalysis,
+  loadSasFernandeFindings,
+  loadSasFernandeManifest,
+} from '../test-fixtures.js';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -54,10 +58,10 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
     } finally {
       await browser.close();
     }
-  // Measured at ~28s on an idle machine, so a 30s budget left a 7 percent
-  // margin and this test failed as a timeout, not a violation, whenever
-  // anything else was using the CPU (a concurrent scan, a full suite run).
-  // Matched to the 60s the second case in this file already uses.
+    // Measured at ~28s on an idle machine, so a 30s budget left a 7 percent
+    // margin and this test failed as a timeout, not a violation, whenever
+    // anything else was using the CPU (a concurrent scan, a full suite run).
+    // Matched to the 60s the second case in this file already uses.
   }, 60_000);
 
   /**
@@ -72,8 +76,13 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
    */
   it('has zero WCAG 2.2 AA violations on a real report containing privacy findings', async () => {
     const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-    const auditDir = path.join(moduleDir, '../../../../artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-22T16-31-02Z');
-    const manifest = JSON.parse(readFileSync(path.join(auditDir, 'manifest.json'), 'utf-8')) as AuditManifest;
+    const auditDir = path.join(
+      moduleDir,
+      '../../../../artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-22T16-31-02Z',
+    );
+    const manifest = JSON.parse(
+      readFileSync(path.join(auditDir, 'manifest.json'), 'utf-8'),
+    ) as AuditManifest;
     // Re-normalized from the stored per-page scan.json rather than read
     // from the stored findings.json, exactly the way `normalize <dir>`
     // re-runs offline. The committed findings.json predates the 'privacy'
@@ -97,9 +106,15 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
     ) as StoredAnalysis;
     // JSON.parse leaves generatedAt a string; the store's own reader
     // revives it. renderLegalExposure does date arithmetic on it.
-    const analysis: StoredAnalysis = { ...rawAnalysis, generatedAt: new Date(rawAnalysis.generatedAt) };
+    const analysis: StoredAnalysis = {
+      ...rawAnalysis,
+      generatedAt: new Date(rawAnalysis.generatedAt),
+    };
 
-    expect(findings.some((f) => f.category === 'privacy'), 'fixture no longer contains a privacy finding').toBe(true);
+    expect(
+      findings.some((f) => f.category === 'privacy'),
+      'fixture no longer contains a privacy finding',
+    ).toBe(true);
 
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
@@ -129,7 +144,9 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
 });
 
 function readdirFirstAnalysis(auditDir: string): string {
-  const files = readdirSync(path.join(auditDir, 'analyses')).filter((f) => f.endsWith('-fr.json')).sort();
+  const files = readdirSync(path.join(auditDir, 'analyses'))
+    .filter((f) => f.endsWith('-fr.json'))
+    .sort();
   if (files.length === 0) throw new Error(`no French analysis in ${auditDir}/analyses`);
   return files[files.length - 1]!;
 }

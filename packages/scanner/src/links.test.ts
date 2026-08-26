@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { globToRegExp, isLanguageHomepagePath, normalizeInternalLinks } from './links.js';
+import {
+  globToRegExp,
+  isLanguageHomepagePath,
+  normalizeInternalLinks,
+  normalizePageUrl,
+} from './links.js';
 
 const BASE = 'https://client.example/current-page';
 
@@ -33,7 +38,12 @@ describe('normalizeInternalLinks', () => {
   it('drops non-http(s) schemes', () => {
     expect(
       normalizeInternalLinks(
-        ['mailto:hello@client.example', 'tel:+33123456789', 'javascript:void(0)', 'data:text/plain,hi'],
+        [
+          'mailto:hello@client.example',
+          'tel:+33123456789',
+          'javascript:void(0)',
+          'data:text/plain,hi',
+        ],
         BASE,
       ),
     ).toEqual([]);
@@ -71,7 +81,9 @@ describe('normalizeInternalLinks', () => {
 
   it('drops links matching a manual exclusion glob, before dedupe or extension filtering', () => {
     expect(
-      normalizeInternalLinks(['/blog/post-1', '/blog/post-2', '/about'], BASE, ['https://client.example/blog/*']),
+      normalizeInternalLinks(['/blog/post-1', '/blog/post-2', '/about'], BASE, [
+        'https://client.example/blog/*',
+      ]),
     ).toEqual(['https://client.example/about']);
   });
 
@@ -144,13 +156,54 @@ describe('globToRegExp', () => {
   });
 
   it('escapes regex metacharacters literally', () => {
-    expect(globToRegExp('https://client.example/a+b').test('https://client.example/a+b')).toBe(true);
-    expect(globToRegExp('https://client.example/a+b').test('https://client.example/aXb')).toBe(false);
+    expect(globToRegExp('https://client.example/a+b').test('https://client.example/a+b')).toBe(
+      true,
+    );
+    expect(globToRegExp('https://client.example/a+b').test('https://client.example/aXb')).toBe(
+      false,
+    );
   });
 
   it('anchors the pattern over the whole string', () => {
     expect(globToRegExp('/blog').test('/blog/post-1')).toBe(false);
     expect(globToRegExp('/blog*').test('/blog/post-1')).toBe(true);
+  });
+});
+
+describe('normalizePageUrl for sitemap coverage', () => {
+  it('accepts the exact hostname and its www counterpart', () => {
+    expect(
+      normalizePageUrl('https://www.client.example/page/', 'https://client.example/', {
+        allowWwwApex: true,
+      }),
+    ).toBe('https://www.client.example/page');
+  });
+
+  it('rejects other subdomains and registrable domains', () => {
+    expect(
+      normalizePageUrl('https://shop.client.example/page', 'https://client.example/', {
+        allowWwwApex: true,
+      }),
+    ).toBeUndefined();
+    expect(
+      normalizePageUrl('https://other.example/page', 'https://client.example/', {
+        allowWwwApex: true,
+      }),
+    ).toBeUndefined();
+  });
+
+  it('applies exclusions and non-HTML filtering to sitemap page URLs', () => {
+    expect(
+      normalizePageUrl('https://client.example/private/page', 'https://client.example/', {
+        allowWwwApex: true,
+        exclusionPatterns: ['https://client.example/private/*'],
+      }),
+    ).toBeUndefined();
+    expect(
+      normalizePageUrl('https://client.example/brochure.pdf', 'https://client.example/', {
+        allowWwwApex: true,
+      }),
+    ).toBeUndefined();
   });
 });
 

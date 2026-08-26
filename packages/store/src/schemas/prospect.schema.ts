@@ -144,5 +144,7 @@ prospectSchema.index({ domain: 1 });
 prospectSchema.index({ 'qualification.qualified': 1, createdAt: -1 });
 
 export function createProspectModel(connection: Connection): Model<ProspectDocument> {
-  return connection.models['Prospect'] ?? connection.model<ProspectDocument>('Prospect', prospectSchema);
+  return (
+    connection.models['Prospect'] ?? connection.model<ProspectDocument>('Prospect', prospectSchema)
+  );
 }

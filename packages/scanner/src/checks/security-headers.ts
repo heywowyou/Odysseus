@@ -24,7 +24,10 @@ export interface SecurityHeadersCheckResult {
   fetchError?: string;
 }
 
-export async function checkSecurityHeaders(origin: string, timeoutMs: number): Promise<SecurityHeadersCheckResult> {
+export async function checkSecurityHeaders(
+  origin: string,
+  timeoutMs: number,
+): Promise<SecurityHeadersCheckResult> {
   const isHttps = new URL(origin).protocol === 'https:';
   try {
     const response = await fetch(origin, { signal: AbortSignal.timeout(timeoutMs) });

@@ -1,6 +1,8 @@
 # M9 Prospecting Pipeline
 
-Status: design spec, added 2026-08-25, not yet implemented.
+Status: reconciled design for the remaining prospecting and outreach work,
+added 2026-08-25. Milestones 9a and 9b are already implemented; the later
+stages described here are not.
 Scope: hospitality (hotels) as the first vertical. Restaurants and
 e-commerce reuse the same machinery with different sourcing and scoring
 inputs.
@@ -400,9 +402,9 @@ Everything else is vanity.
 
 ## 12. Build order
 
-Each stage in a fresh Claude Code session in plan mode, per the usual workflow. Renumbered relative to the original draft to make the conflict with the already-shipped 9a/9b explicit rather than implicit - see the reconciliation note at the top of this document and `CLAUDE.md`'s build order before starting 9.1.
+Each stage belongs in a fresh coding-agent work session with an explicit plan and session log, per `docs/agents/handoff.md`. Renumbered relative to the original draft to make the conflict with the already-shipped 9a/9b explicit rather than implicit - see the reconciliation note at the top of this document and `CLAUDE.md`'s build order before starting 9.1.
 
-- **9.1** Sourcing ingest and `prospects` schema, with provenance and 3-year expiry. One-off job, quarterly refresh. Conflicts with 9a's existing AFNIC-based sourcing; needs a decision, not a silent replacement.
+- **9.1** Extend the shipped AFNIC/SIREN/Sirene sourcing ingest with DATAtourisme and Atout France, reusing the existing `prospects` schema and join rather than replacing them. Record provenance and 3-year expiry; run as a one-off job with quarterly refresh. This is the resolved sourcing decision from section 1.
 - **9.2** Cheap qualification filter with recorded rejection reasons. Overlaps with 9a's `qualifyProspect`; needs the same reconciliation.
 - **9.3** Prescan path: distinct from the full audit, no Lighthouse, three pages, budgeted at 90s.
 - **9.4** Evidence capture: render diff and annotated crop. Get this right, it is the product.

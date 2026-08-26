@@ -58,9 +58,7 @@ export function normalizeReflow(input: ReflowCheckInput, pageUrl: string): Findi
       // container actually setting the width and the thing to fix.
       // Page-scoped when the layout as a whole is at fault, rather than
       // naming an arbitrary element for the sake of having a selector.
-      element: widest
-        ? { pageUrl, selector: widest.selector, snippet: widest.snippet }
-        : null,
+      element: widest ? { pageUrl, selector: widest.selector, snippet: widest.snippet } : null,
       rawEvidenceForPage: {
         documentScrollWidthPx: input.documentScrollWidthPx,
         viewportWidthPx: input.viewportWidthPx,

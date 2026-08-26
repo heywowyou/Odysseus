@@ -109,7 +109,13 @@ describe('runReportStage', () => {
 
   it('names the file after the analysis language', async () => {
     const manifest = fakeManifest();
-    const result = await runReportStage(auditDir, manifest, [], { ...fakeAnalysis(), language: 'en' }, fakeConnection);
+    const result = await runReportStage(
+      auditDir,
+      manifest,
+      [],
+      { ...fakeAnalysis(), language: 'en' },
+      fakeConnection,
+    );
     expect(result.reportPath.endsWith('-en.pdf')).toBe(true);
   });
 });
@@ -138,7 +144,9 @@ describe('runAllReportsStage', () => {
     await runAllReportsStage(auditDir, manifest, [], { fr, en }, fakeConnection);
 
     expect(persistReport).toHaveBeenCalledTimes(2);
-    const persistedLanguages = vi.mocked(persistReport).mock.calls.map(([, fields]) => fields.language);
+    const persistedLanguages = vi
+      .mocked(persistReport)
+      .mock.calls.map(([, fields]) => fields.language);
     expect(persistedLanguages.sort()).toEqual(['en', 'fr']);
   });
 

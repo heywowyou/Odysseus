@@ -38,23 +38,30 @@ describe('alt-text-quality-heuristic - clean regression', () => {
   });
 
   it('does not fire for empty alt on a properly marked decorative image', () => {
-    expect(extractAltTextCandidates(withImages([image({ alt: '', isMarkedDecorative: true })]))).toEqual([]);
+    expect(
+      extractAltTextCandidates(withImages([image({ alt: '', isMarkedDecorative: true })])),
+    ).toEqual([]);
   });
 
   it('does not fire for empty alt on a small image (likely icon/spacer)', () => {
-    expect(extractAltTextCandidates(withImages([image({ alt: '', width: 16, height: 16 })]))).toEqual([]);
+    expect(
+      extractAltTextCandidates(withImages([image({ alt: '', width: 16, height: 16 })])),
+    ).toEqual([]);
   });
 });
 
 describe('filename-pattern alt text', () => {
-  it.each(['IMG_4021.jpg', 'DSC00123.png', 'PXL_20240102.jpg', 'photo_001'])('fires for "%s"', (alt) => {
-    const candidates = extractAltTextCandidates(withImages([image({ alt })]));
-    expect(candidates).toHaveLength(1);
-    expect(candidates[0]?.ruleId).toBe(ALT_TEXT_QUALITY_HEURISTIC_RULE_ID);
-    expect(candidates[0]?.category).toBe('accessibility');
-    expect(candidates[0]?.severity).toBe('minor');
-    expect(reasons(candidates)).toEqual(['filename-pattern']);
-  });
+  it.each(['IMG_4021.jpg', 'DSC00123.png', 'PXL_20240102.jpg', 'photo_001'])(
+    'fires for "%s"',
+    (alt) => {
+      const candidates = extractAltTextCandidates(withImages([image({ alt })]));
+      expect(candidates).toHaveLength(1);
+      expect(candidates[0]?.ruleId).toBe(ALT_TEXT_QUALITY_HEURISTIC_RULE_ID);
+      expect(candidates[0]?.category).toBe('accessibility');
+      expect(candidates[0]?.severity).toBe('minor');
+      expect(reasons(candidates)).toEqual(['filename-pattern']);
+    },
+  );
 });
 
 describe('generic placeholder alt text', () => {
@@ -64,7 +71,9 @@ describe('generic placeholder alt text', () => {
   });
 
   it('does not fire for a descriptive alt that merely contains a generic word', () => {
-    expect(extractAltTextCandidates(withImages([image({ alt: 'A close-up photo of the estate' })]))).toEqual([]);
+    expect(
+      extractAltTextCandidates(withImages([image({ alt: 'A close-up photo of the estate' })])),
+    ).toEqual([]);
   });
 });
 
@@ -84,7 +93,10 @@ describe('duplicate alt text across different images', () => {
       ]),
     );
     expect(candidates).toHaveLength(2);
-    expect(reasons(candidates)).toEqual(['duplicate-alt-across-different-images', 'duplicate-alt-across-different-images']);
+    expect(reasons(candidates)).toEqual([
+      'duplicate-alt-across-different-images',
+      'duplicate-alt-across-different-images',
+    ]);
   });
 
   it('does not fire for two images with identical alt and the same src (same image referenced twice)', () => {

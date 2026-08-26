@@ -68,10 +68,22 @@ function buildPages(): ManifestPageEntry[] {
       i % 3 === 0
         ? undefined
         : {
-            lcp: { score: 0.6, numericValue: 2200 + i * 300, displayValue: `${(2.2 + i * 0.3).toFixed(1)} s` },
-            cls: { score: 0.8, numericValue: 0.05 + i * 0.01, displayValue: `${(0.05 + i * 0.01).toFixed(2)}` },
+            lcp: {
+              score: 0.6,
+              numericValue: 2200 + i * 300,
+              displayValue: `${(2.2 + i * 0.3).toFixed(1)} s`,
+            },
+            cls: {
+              score: 0.8,
+              numericValue: 0.05 + i * 0.01,
+              displayValue: `${(0.05 + i * 0.01).toFixed(2)}`,
+            },
             tbt: { score: 0.7, numericValue: 150 + i * 20, displayValue: `${150 + i * 20} ms` },
-            fcp: { score: 0.7, numericValue: 900 + i * 100, displayValue: `${((900 + i * 100) / 1000).toFixed(1)} s` },
+            fcp: {
+              score: 0.7,
+              numericValue: 900 + i * 100,
+              displayValue: `${((900 + i * 100) / 1000).toFixed(1)} s`,
+            },
             speedIndex: {
               score: 0.6,
               numericValue: 2000 + i * 200,
@@ -130,7 +142,9 @@ function buildManifest(): AuditManifest {
   };
 }
 
-function buildFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'category' | 'severity'>): Finding {
+function buildFinding(
+  overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'category' | 'severity'>,
+): Finding {
   const pageUrl = overrides.pageUrls?.[0] ?? SITE_URL;
   return {
     auditId: 'stress-fixture-audit',
@@ -155,14 +169,18 @@ const WCAG_CRITERIA_ROTATION = ['1.4.3', '2.4.4', '4.1.2', '2.5.8', '1.1.1', '1.
 function buildRenderDiffFindings(pages: readonly ManifestPageEntry[]): Finding[] {
   return pages.slice(0, RENDER_DIFF_FAILURE_COUNT).map((page, i) => {
     const rawTextLength = 200 + i * 10;
-    const renderedTextLength = Math.round(rawTextLength / (1 - (page.renderDiffMissingPercent ?? 25) / 100));
+    const renderedTextLength = Math.round(
+      rawTextLength / (1 - (page.renderDiffMissingPercent ?? 25) / 100),
+    );
     return buildFinding({
       findingId: `f-rd-${pad(i, 3)}`,
       ruleId: RENDERDIFF_RULE_ID,
       category: 'rendering',
       severity: 'moderate',
       pageUrls: [page.url],
-      elements: [{ pageUrl: page.url, selector: i === 0 ? LONG_NO_BREAK_SELECTOR : '.hero', snippet: '' }],
+      elements: [
+        { pageUrl: page.url, selector: i === 0 ? LONG_NO_BREAK_SELECTOR : '.hero', snippet: '' },
+      ],
       rawEvidence: {
         perPage: {
           [page.url]: {
@@ -187,7 +205,10 @@ function buildOtherNonMinorFindings(count: number): Finding[] {
   for (let i = 0; i < count; i++) {
     const severity = severities[i % severities.length]!;
     const category = categories[i % categories.length]!;
-    const wcagCriteria = category === 'accessibility' ? [WCAG_CRITERIA_ROTATION[i % WCAG_CRITERIA_ROTATION.length]!] : [];
+    const wcagCriteria =
+      category === 'accessibility'
+        ? [WCAG_CRITERIA_ROTATION[i % WCAG_CRITERIA_ROTATION.length]!]
+        : [];
     findings.push(
       buildFinding({
         findingId: `f-nm-${pad(i, 3)}`,
@@ -234,14 +255,18 @@ function buildThemes(findings: readonly Finding[]): Theme[] {
 
   return Array.from({ length: THEME_COUNT }, (_, i) => {
     const themeFindings = nonMinor.filter((_, idx) => idx % THEME_COUNT === i);
-    const findingIds = themeFindings.length > 0 ? themeFindings.map((f) => f.findingId) : [nonMinor[0]!.findingId];
+    const findingIds =
+      themeFindings.length > 0 ? themeFindings.map((f) => f.findingId) : [nonMinor[0]!.findingId];
     const category = categories[i % categories.length]!;
 
     return {
       title: i === 0 ? LONG_THEME_TITLE : `Chantier prioritaire numéro ${i + 1}`,
       category,
       businessImpact: `Impact commercial décrit pour le chantier ${i + 1}, en langage clair, sans jargon technique.`,
-      legalRelevance: category === 'accessibility' ? `Critère WCAG concerné pour le chantier ${i + 1}.` : undefined,
+      legalRelevance:
+        category === 'accessibility'
+          ? `Critère WCAG concerné pour le chantier ${i + 1}.`
+          : undefined,
       effort: effortLevels[i % effortLevels.length]!,
       impact: impactLevels[(i + 1) % impactLevels.length]!,
       priorityRank: i + 1,
@@ -283,7 +308,7 @@ export function buildStressFixture(): StressFixture {
   const themes = buildThemes(findings);
   const llmOutput: LlmOutput = {
     executiveSummary:
-      "Ce site présente un nombre élevé de constats répartis entre accessibilité, référencement et performance, avec plusieurs priorités à fort impact commercial identifiées ci-dessous.",
+      'Ce site présente un nombre élevé de constats répartis entre accessibilité, référencement et performance, avec plusieurs priorités à fort impact commercial identifiées ci-dessous.',
     overallRisk: 'high',
     themes,
     quickWins: themes.filter((t) => t.effort === 'low').map((t) => t.findingIds[0]!),
@@ -308,7 +333,9 @@ export function buildStressFixture(): StressFixture {
  *  statement). Every accessibility finding's wcagCriteria is cleared. */
 export function buildStressFixtureNoWcagFailures(): StressFixture {
   const base = buildStressFixture();
-  const findings = base.findings.map((f) => (f.wcagCriteria.length > 0 ? { ...f, wcagCriteria: [] } : f));
+  const findings = base.findings.map((f) =>
+    f.wcagCriteria.length > 0 ? { ...f, wcagCriteria: [] } : f,
+  );
   const themes = base.analysis.themes.map((t) => ({ ...t, legalRelevance: undefined }));
   return {
     manifest: base.manifest,

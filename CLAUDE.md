@@ -1,5 +1,13 @@
 # Odysseus
 
+> **Shared project charter.** This file is consumed by both Claude Code and
+> Codex. Its filename is historical: it remains the authoritative source for
+> durable engineering and product rules. Codex starts from `AGENTS.md`, which
+> intentionally points here instead of maintaining a second copy. The shared
+> handoff protocol is `docs/agents/handoff.md`; document authority and status
+> are mapped in `docs/agents/documentation-map.md`; shared code and prose
+> conventions are in `docs/agents/coding-conventions.md`.
+
 Internal tooling for a productized web audit service sold to French small
 and mid-size businesses. Two audit types share one engine: technical /
 SPA-SEO, and accessibility against WCAG 2.2 AA and EN 301 549.
@@ -71,7 +79,8 @@ needed, say so and stop. Do not change them and continue.
 Full write-ups (root cause, alternatives tried and rejected, measured
 effect) live in `docs/decisions/trade-offs.md`, same numbering. Each line
 below is the one governing "do not X" imperative; read the linked entry
-before touching the area it covers.
+before touching the area it covers. A suffix such as `trade-offs.md#24`
+means numbered entry 24, not a literal Markdown heading anchor.
 
 1. Axe already covers WCAG 2.2 AA; Lighthouse's `accessibility` category
    is excluded to avoid duplicate findings, and `best-practices` has no
@@ -330,7 +339,9 @@ is worse than pausing.
 ## Session log
 
 Keep `docs/session/current-session.md` current for the whole of every
-session. It is gitignored and deliberately ephemeral.
+repository-work session. It is gitignored and deliberately ephemeral. Start
+new logs from `docs/agents/session-template.md`; conversational questions that
+do not inspect or change the repository do not need one.
 
 Read it first, before anything else, at the start of a session. If it
 exists, a previous session did not finish: reconstruct from it rather
@@ -346,10 +357,12 @@ Write to it continuously, not at the end:
   it was, so the next reader can tell a verified state from a guessed one.
 
 At the end of a session, fold what is durable into CLAUDE.md, the brief,
-or the relevant `docs/` file, then delete the session file. Nothing
-should survive only there. A session that ends with the file still
-present is an unfinished session, which is exactly what the next one
-needs to know.
+or the relevant `docs/` file. Delete the session file only when the working
+tree no longer needs its provenance, normally because the coherent work was
+committed or explicitly discarded. If implementation is complete but remains
+uncommitted, set status `ready-for-commit` and leave the log in place. Nothing
+durable should survive only there; the file's presence means the next agent
+must reconcile it before starting new work.
 
 The reason is recovery, not bookkeeping: a crashed session leaves a large
 uncommitted working tree and no account of which items in it are finished,
@@ -372,8 +385,9 @@ On approaching the limit:
   means finishing one edit or reverting one;
 - update `docs/session/current-session.md` so it states exactly what is done,
   what is in flight, and what the next concrete step is;
-- commit what is coherent, and say plainly in the session log what is left
-  uncommitted and why;
+- commit what is coherent when the user or active workflow authorizes a
+  commit; otherwise mark the log `ready-for-commit` and say plainly what is
+  left uncommitted and why;
 - then stop and report, rather than beginning another unit of work.
 
 Resume from the session log after the usage resets, not from the working tree
@@ -459,11 +473,17 @@ relationship, and is the one held to a near-perfect bar.
   separate editorial decision); the threshold exists to make crossing it a
   question asked, not a pattern that ships unnoticed a fourth time.
 
-## MCP servers
+## Claude Code MCP servers
 
 Start Claude Code sessions in this repo with `codysseus` (alias for
 `./scripts/dev.sh`), not a bare `claude`, so `.env` is sourced and the
 MCP servers below authenticate correctly.
+
+This launch instruction is Claude Code-specific. Codex and future agents use
+the tools exposed by their own host session; they must not assume these MCP
+servers are loaded merely because `.mcp.json` exists. The same data-access and
+live-navigation approval boundaries still apply whenever equivalent tools are
+available.
 
 Three MCP servers are available during development:
 
@@ -507,6 +527,11 @@ resolves real terms and decisions, not scaffolded upfront. See
 Installed via the `skills` CLI (`npx skills@latest list` to check the
 current set). Like the MCP policy above, these fire on the trigger
 condition stated, not on vague "use when helpful" judgment.
+
+This is a repository capability catalog, not proof that every host loaded
+every skill. Use a listed skill when it is available in the active agent; if
+it is unavailable, state that briefly and follow the underlying repository
+documents and guardrails directly.
 
 - **ask-matt** — the user is unsure which of these skills fits their
   situation; use it to route rather than guessing.
@@ -569,6 +594,9 @@ condition stated, not on vague "use when helpful" judgment.
 
 ## Style
 
+- `docs/agents/coding-conventions.md` is the complete shared coding and writing
+  system. Prettier owns layout; ESLint owns static code-quality rules;
+  TypeScript and tests own types and behavior.
 - TypeScript strict, no `any`, explicit return types on exported functions.
 - Plain language in every user-facing string. No jargon, no acronyms
   without expansion on first use.
@@ -577,12 +605,20 @@ condition stated, not on vague "use when helpful" judgment.
 - No em dashes or en dashes in generated text, code comments, or report
   copy.
 - Comments explain why, not what.
+- Run `pnpm run format` after maintained-source edits and `pnpm run check`
+  before handoff. Record affected tests and any manual review separately.
 
 ## Build order
 
 Milestones 0 through 8 are complete, as are milestones 8.5a, 8.5b, 8.5c,
-9a, and 9b. Milestone 9b.5 is next, then 9c. Work in vertical slices, one
+9a, 9b, and 9b.5. Milestone 9c is next. Work in vertical slices, one
 milestone per session.
+
+Separate maintenance queues exist in `plans/findings.md` and
+`docs/report/report-feedback-deferred-items.md`. They do not silently become
+the active milestone: verify their entries against current HEAD and act on
+them only when the user selects that maintenance scope or a blocking issue
+must be resolved first.
 
 1. Render diff only, CLI invocable — done
 2. Crawler: internal link discovery, robots.txt, depth and page caps — done
@@ -598,7 +634,7 @@ milestone per session.
 8.6. Security headers, AI-crawler robots check, structured-data validation, CrUX field data — done 2026-08-22, detection only. See trade-off 18.
 9a. Prospect acquisition and qualification — done 2026-08-16.
 9b. Prospecting throughput (worker pool, `skipLighthouse`, raised page/depth caps) — done 2026-08-22. See trade-off 23.
-9b.5. Sitemap-supplemented full-site scan coverage — queued next. Full incident (airelles.com) and shape: `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
+9b.5. Sitemap-supplemented full-site scan coverage — done 2026-08-27. Recursive sitemap inspection stays separate from link reachability; full audits supplement eligible sitemap-only pages, while prospecting inspects and standalone crawl remains link-only. See the measured Haaitza validation in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
 9c. Outreach generation, now spec'd in detail (`docs/m9-prospecting-pipeline.md`, `docs/m9-technical-spec.md`). Reconciliation decisions and open verification gaps: `docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
 
 Full milestone list, including the phases beyond 8, is in the brief,

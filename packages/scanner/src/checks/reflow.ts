@@ -101,7 +101,8 @@ export async function checkReflow(page: Page, pageUrl: string): Promise<ReflowCh
           document.body?.scrollWidth ?? 0,
         );
 
-        const offenders: { selector: string; widthPx: number; snippet: string; depth: number }[] = [];
+        const offenders: { selector: string; widthPx: number; snippet: string; depth: number }[] =
+          [];
         for (const el of Array.from(document.body?.querySelectorAll('*') ?? [])) {
           const rect = el.getBoundingClientRect();
           if (rect.width <= viewportWidth + tolerance) continue;
@@ -128,11 +129,13 @@ export async function checkReflow(page: Page, pageUrl: string): Promise<ReflowCh
           viewportWidth,
           scrollWidth,
           requiresHorizontalScroll: scrollWidth > viewportWidth + tolerance,
-          overflowElements: offenders.slice(0, maxElements).map(({ selector, widthPx, snippet }) => ({
-            selector,
-            widthPx,
-            snippet,
-          })),
+          overflowElements: offenders
+            .slice(0, maxElements)
+            .map(({ selector, widthPx, snippet }) => ({
+              selector,
+              widthPx,
+              snippet,
+            })),
         };
       },
       { tolerance: OVERFLOW_TOLERANCE_PX, maxElements: MAX_REPORTED_ELEMENTS },

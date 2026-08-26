@@ -14,7 +14,9 @@ import type { PipelineContext } from '../job-queue.js';
 
 const fakeConnection = {} as never;
 
-function fakeJob(overrides: Partial<{ jobId: string; siteUrl: string; options: Record<string, unknown> }> = {}) {
+function fakeJob(
+  overrides: Partial<{ jobId: string; siteUrl: string; options: Record<string, unknown> }> = {},
+) {
   return {
     jobId: overrides.jobId ?? 'job-1',
     type: 'full-audit',
@@ -156,7 +158,10 @@ describe('runFullAuditJob', () => {
   it('flags needsReview when no page has any measured Core Web Vital', async () => {
     vi.mocked(runAuditStage).mockResolvedValue({
       ...fakeAuditResult(),
-      manifest: { auditId: 'audit-1', pages: [{ url: 'https://example.com/', errors: {} }] } as never,
+      manifest: {
+        auditId: 'audit-1',
+        pages: [{ url: 'https://example.com/', errors: {} }],
+      } as never,
     });
     const job = fakeJob();
     await runFullAuditJob(job, ctx);

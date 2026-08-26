@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { checkAccessibilityStatement, findAccessibilityStatementUrl } from './accessibility-statement.js';
+import {
+  checkAccessibilityStatement,
+  findAccessibilityStatementUrl,
+} from './accessibility-statement.js';
 
 describe('findAccessibilityStatementUrl', () => {
   it.each([
@@ -31,6 +34,8 @@ describe('findAccessibilityStatementUrl', () => {
   });
 
   it('records how many pages were searched, so "not found" can state its own scope', () => {
-    expect(checkAccessibilityStatement(['https://x.fr/', 'https://x.fr/contact']).pagesSearched).toBe(2);
+    expect(
+      checkAccessibilityStatement(['https://x.fr/', 'https://x.fr/contact']).pagesSearched,
+    ).toBe(2);
   });
 });

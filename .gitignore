@@ -15,6 +15,7 @@ coverage/
 .playwright-mcp/
 /docs/GlassWire/
 
-# Crash-recovery session log. Ephemeral by design: written continuously
-# during a session, folded into CLAUDE.md / docs on completion, then deleted.
+# Crash-recovery session log. Ephemeral by design: written continuously from
+# docs/agents/session-template.md, folded into canonical docs, and retained
+# while uncommitted work still needs provenance.
 /docs/session/current-session.md

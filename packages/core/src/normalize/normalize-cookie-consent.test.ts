@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeCookieConsent, type CookieConsentCheckInput } from './normalize-cookie-consent.js';
+import {
+  normalizeCookieConsent,
+  type CookieConsentCheckInput,
+} from './normalize-cookie-consent.js';
 
 const HOMEPAGE = 'https://example.com/';
 
@@ -14,13 +17,24 @@ function input(overrides: Partial<CookieConsentCheckInput> = {}): CookieConsentC
   };
 }
 
-const ruleIds = (i: CookieConsentCheckInput) => normalizeCookieConsent(i, HOMEPAGE).map((c) => c.ruleId);
+const ruleIds = (i: CookieConsentCheckInput) =>
+  normalizeCookieConsent(i, HOMEPAGE).map((c) => c.ruleId);
 
 describe('normalizeCookieConsent', () => {
   it('emits nothing when the check did not run', () => {
     expect(
       normalizeCookieConsent(
-        input({ checked: false, nonEssentialCookies: [{ name: '_ga', domain: '.example.com', vendor: 'Google Analytics', isThirdParty: false }] }),
+        input({
+          checked: false,
+          nonEssentialCookies: [
+            {
+              name: '_ga',
+              domain: '.example.com',
+              vendor: 'Google Analytics',
+              isThirdParty: false,
+            },
+          ],
+        }),
         HOMEPAGE,
       ),
     ).toEqual([]);
@@ -33,7 +47,9 @@ describe('normalizeCookieConsent', () => {
   it('reports a tracking cookie written before consent', () => {
     const ids = ruleIds(
       input({
-        nonEssentialCookies: [{ name: '_ga', domain: '.example.com', vendor: 'Google Analytics', isThirdParty: false }],
+        nonEssentialCookies: [
+          { name: '_ga', domain: '.example.com', vendor: 'Google Analytics', isThirdParty: false },
+        ],
         consentPlatforms: ['Axeptio'],
       }),
     );
@@ -75,7 +91,9 @@ describe('normalizeCookieConsent', () => {
   it('files every finding under the privacy category with no WCAG criterion', () => {
     const candidates = normalizeCookieConsent(
       input({
-        nonEssentialCookies: [{ name: '_fbp', domain: '.example.com', vendor: 'Meta Pixel', isThirdParty: false }],
+        nonEssentialCookies: [
+          { name: '_fbp', domain: '.example.com', vendor: 'Meta Pixel', isThirdParty: false },
+        ],
         trackerRequests: [{ host: 'connect.facebook.net', vendor: 'Meta Pixel' }],
         usesTrackingYouTubeEmbed: true,
       }),
@@ -91,14 +109,27 @@ describe('normalizeCookieConsent', () => {
 
   it('never states that the client is in breach, only what was observed', () => {
     const text = normalizeCookieConsent(
-      input({ nonEssentialCookies: [{ name: '_ga', domain: '.example.com', vendor: 'Google Analytics', isThirdParty: false }] }),
+      input({
+        nonEssentialCookies: [
+          { name: '_ga', domain: '.example.com', vendor: 'Google Analytics', isThirdParty: false },
+        ],
+      }),
       HOMEPAGE,
     )
       .map((c) => `${c.title} ${c.description}`)
       .join(' ')
       .toLowerCase();
-    for (const forbidden of ['illegal', 'in breach', 'violation of', 'you must', 'fine of', 'unlawful']) {
-      expect(text, `description asserts a legal conclusion: "${forbidden}"`).not.toContain(forbidden);
+    for (const forbidden of [
+      'illegal',
+      'in breach',
+      'violation of',
+      'you must',
+      'fine of',
+      'unlawful',
+    ]) {
+      expect(text, `description asserts a legal conclusion: "${forbidden}"`).not.toContain(
+        forbidden,
+      );
     }
   });
 
@@ -107,8 +138,12 @@ describe('normalizeCookieConsent', () => {
       { name: '_fbp', domain: '.example.com', vendor: 'Meta Pixel', isThirdParty: false },
       { name: '_ga', domain: '.example.com', vendor: 'Google Analytics', isThirdParty: false },
     ];
-    const forward = normalizeCookieConsent(input({ nonEssentialCookies: cookies }), HOMEPAGE)[0]!.description;
-    const reverse = normalizeCookieConsent(input({ nonEssentialCookies: [...cookies].reverse() }), HOMEPAGE)[0]!.description;
+    const forward = normalizeCookieConsent(input({ nonEssentialCookies: cookies }), HOMEPAGE)[0]!
+      .description;
+    const reverse = normalizeCookieConsent(
+      input({ nonEssentialCookies: [...cookies].reverse() }),
+      HOMEPAGE,
+    )[0]!.description;
     expect(reverse).toBe(forward);
   });
 });
@@ -122,11 +157,15 @@ describe('C5: third-party data transfer inventory', () => {
     Array.from({ length: n }, (_, i) => ({ origin: `https://provider${i}.com`, requestCount: 1 }));
 
   it('emits nothing below the reporting threshold', () => {
-    expect(ruleIds(input({ thirdPartyOrigins: origins(4) }))).not.toContain('third-party-data-transfer');
+    expect(ruleIds(input({ thirdPartyOrigins: origins(4) }))).not.toContain(
+      'third-party-data-transfer',
+    );
   });
 
   it('emits an inventory at or above the threshold', () => {
-    expect(ruleIds(input({ thirdPartyOrigins: origins(5) }))).toContain('third-party-data-transfer');
+    expect(ruleIds(input({ thirdPartyOrigins: origins(5) }))).toContain(
+      'third-party-data-transfer',
+    );
   });
 
   it('emits nothing when the field is absent, so an older scan still normalizes', () => {
@@ -134,16 +173,18 @@ describe('C5: third-party data transfer inventory', () => {
   });
 
   it('names every provider, since a partial list is not an inventory', () => {
-    const description = normalizeCookieConsent(input({ thirdPartyOrigins: origins(7) }), HOMEPAGE).find(
-      (c) => c.ruleId === 'third-party-data-transfer',
-    )!.description;
+    const description = normalizeCookieConsent(
+      input({ thirdPartyOrigins: origins(7) }),
+      HOMEPAGE,
+    ).find((c) => c.ruleId === 'third-party-data-transfer')!.description;
     for (let i = 0; i < 7; i += 1) expect(description).toContain(`provider${i}.com`);
   });
 
   it('states it is an inventory, never that a transfer is unlawful', () => {
-    const description = normalizeCookieConsent(input({ thirdPartyOrigins: origins(6) }), HOMEPAGE).find(
-      (c) => c.ruleId === 'third-party-data-transfer',
-    )!.description;
+    const description = normalizeCookieConsent(
+      input({ thirdPartyOrigins: origins(6) }),
+      HOMEPAGE,
+    ).find((c) => c.ruleId === 'third-party-data-transfer')!.description;
     expect(description).toContain('inventory, not a judgment');
     for (const forbidden of ['unlawful', 'illegal', 'in breach', 'you must']) {
       expect(description.toLowerCase()).not.toContain(forbidden);

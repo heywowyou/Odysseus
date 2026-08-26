@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { renderChecklist } from './checklist.js';
 import { getStrings } from '../strings/i18n.js';
-import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
+import {
+  loadSasFernandeAnalysis,
+  loadSasFernandeFindings,
+  loadSasFernandeManifest,
+} from '../../test-fixtures.js';
 
 // item 35: the printable checklist was a near-exact restatement of the
 // priorities section with nothing added - same three items, same effort/
 // impact labels, same page counts. Now carries finding IDs and WCAG
 // criteria so it functions as an actual working checklist.
 describe('item 35: the checklist carries finding IDs and WCAG criteria', () => {
-  it('renders each rendered theme\'s finding IDs', async () => {
+  it("renders each rendered theme's finding IDs", async () => {
     const [analysis, findings, manifest] = await Promise.all([
       loadSasFernandeAnalysis('fr'),
       loadSasFernandeFindings(),
@@ -85,7 +89,7 @@ describe('item 2.7: the checklist has no stray status/date column, and carries a
 // !important - only an element outside that selector list (a span) can
 // carry its own colour through to the printed PDF.
 describe('2026-08-22: the checklist Impact column is colour-coded via a data-level span, Effort is not', () => {
-  it('wraps each row\'s Impact value in a data-level span with LEVEL_COLOR, distinct from the plain Effort cell', async () => {
+  it("wraps each row's Impact value in a data-level span with LEVEL_COLOR, distinct from the plain Effort cell", async () => {
     const [analysis, findings, manifest] = await Promise.all([
       loadSasFernandeAnalysis('fr'),
       loadSasFernandeFindings(),
@@ -95,7 +99,9 @@ describe('2026-08-22: the checklist Impact column is colour-coded via a data-lev
     const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
 
     const firstTheme = analysis.themes.slice(0, 6).find((t) => t.impact) ?? analysis.themes[0]!;
-    expect(html).toMatch(new RegExp(`data-level="${firstTheme.impact}" style="color:#[0-9a-f]{6}"`));
+    expect(html).toMatch(
+      new RegExp(`data-level="${firstTheme.impact}" style="color:#[0-9a-f]{6}"`),
+    );
   });
 });
 
@@ -132,7 +138,11 @@ describe('2026-08-22/23: the Constats cell caps a long findingIds list rather th
     };
   }
 
-  const manifest = { pages: [], siteUrl: 'https://client.example', startedAt: new Date().toISOString() } as never;
+  const manifest = {
+    pages: [],
+    siteUrl: 'https://client.example',
+    startedAt: new Date().toISOString(),
+  } as never;
 
   // selectRenderedThemes (themes.ts) drops any theme none of whose
   // findingIds resolve against the findings array, so the synthetic ids
@@ -165,7 +175,14 @@ describe('2026-08-22/23: the Constats cell caps a long findingIds list rather th
     const analysis = buildAnalysisWithFindingIds(manyIds);
     const findings = manyIds.map(buildFinding);
 
-    const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis as never, findings as never, manifest);
+    const html = renderChecklist(
+      getStrings('fr'),
+      5,
+      'fr',
+      analysis as never,
+      findings as never,
+      manifest,
+    );
 
     for (const id of manyIds.slice(0, 10)) expect(html).toContain(id);
     for (const id of manyIds.slice(10)) expect(html).not.toContain(id);
@@ -177,7 +194,14 @@ describe('2026-08-22/23: the Constats cell caps a long findingIds list rather th
     const analysis = buildAnalysisWithFindingIds(fewIds);
     const findings = fewIds.map(buildFinding);
 
-    const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis as never, findings as never, manifest);
+    const html = renderChecklist(
+      getStrings('fr'),
+      5,
+      'fr',
+      analysis as never,
+      findings as never,
+      manifest,
+    );
 
     for (const id of fewIds) expect(html).toContain(id);
     expect(html).not.toContain('autres');

@@ -43,7 +43,8 @@ export function buildClusterLookup(manifest: AuditManifest): ClusterLookup {
     // here keeps every downstream branch on the "ordinary page" path.
     if (cluster.members.length < 2) continue;
     clusterByCanonical.set(cluster.canonicalPageUrl, cluster);
-    for (const member of cluster.members) canonicalByPageUrl.set(member.pageUrl, cluster.canonicalPageUrl);
+    for (const member of cluster.members)
+      canonicalByPageUrl.set(member.pageUrl, cluster.canonicalPageUrl);
   }
   return { canonicalByPageUrl, clusterByCanonical };
 }

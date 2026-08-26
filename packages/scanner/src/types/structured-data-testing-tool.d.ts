@@ -5,7 +5,10 @@
  * off the resolved/rejected value and narrows those itself.
  */
 declare module 'structured-data-testing-tool' {
-  export function structuredDataTest(input: string, options?: Record<string, unknown>): Promise<unknown>;
+  export function structuredDataTest(
+    input: string,
+    options?: Record<string, unknown>,
+  ): Promise<unknown>;
 }
 
 declare module 'structured-data-testing-tool/presets.js' {

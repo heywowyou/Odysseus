@@ -94,7 +94,9 @@ export function groupAppendix(findings: readonly Finding[]): RuleGroup[] {
     pageSets.set(key, pageSet);
     group.pages = pageSet.size;
     if (finding.wcagCriteria.length > 0) {
-      group.wcagCriteria = [...new Set([...group.wcagCriteria, ...finding.wcagCriteria])].sort(compareCriteria);
+      group.wcagCriteria = [...new Set([...group.wcagCriteria, ...finding.wcagCriteria])].sort(
+        compareCriteria,
+      );
     }
     if (!group.memberRuleIds.includes(finding.ruleId)) {
       group.memberRuleIds = [...group.memberRuleIds, finding.ruleId].sort();
@@ -103,6 +105,8 @@ export function groupAppendix(findings: readonly Finding[]): RuleGroup[] {
   }
 
   return [...map.values()].sort(
-    (a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] || b.totalOccurrences - a.totalOccurrences,
+    (a, b) =>
+      SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] ||
+      b.totalOccurrences - a.totalOccurrences,
   );
 }

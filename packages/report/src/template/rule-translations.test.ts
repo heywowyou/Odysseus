@@ -9,7 +9,9 @@ import { loadSasFernandeFindings } from '../test-fixtures.js';
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 function loadFindings(relativeDir: string): Finding[] {
-  return JSON.parse(readFileSync(path.join(moduleDir, relativeDir, 'findings.json'), 'utf-8')) as Finding[];
+  return JSON.parse(
+    readFileSync(path.join(moduleDir, relativeDir, 'findings.json'), 'utf-8'),
+  ) as Finding[];
 }
 
 /**
@@ -24,13 +26,17 @@ function loadFindings(relativeDir: string): Finding[] {
 describe('item 38: every ruleId observed in real fixture data has a French translation', () => {
   it('every ruleId in the sas-fernande.fr fixture is covered', async () => {
     const findings = await loadSasFernandeFindings();
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
+      (id) => !RULE_TRANSLATIONS_FR[id],
+    );
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
   it('every ruleId in the real haaitza.com fixture is covered', () => {
     const findings = loadFindings('../../../../artifacts/haaitza.com/2026-08-06T20-30-06Z');
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
+      (id) => !RULE_TRANSLATIONS_FR[id],
+    );
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
@@ -38,7 +44,9 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
     const findings = loadFindings(
       '../../../../artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-17T14-13-52Z',
     );
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
+      (id) => !RULE_TRANSLATIONS_FR[id],
+    );
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
@@ -48,7 +56,9 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
   // been added when the site was first scanned.
   it('every ruleId in the real La Corniche fixture is covered', () => {
     const findings = loadFindings('../../../../artifacts/lacoorniche.com/2026-08-19T00-54-32Z');
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
+      (id) => !RULE_TRANSLATIONS_FR[id],
+    );
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
@@ -58,7 +68,9 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
   // what would have caught both leaking untranslated into a real report.
   it('every ruleId in the 2026-08-19T11-15-01Z La Corniche fixture is covered (aria-command-name, opengraph-missing)', () => {
     const findings = loadFindings('../../../../artifacts/lacoorniche.com/2026-08-19T11-15-01Z');
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
+      (id) => !RULE_TRANSLATIONS_FR[id],
+    );
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
@@ -71,12 +83,17 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
   // scan here whenever a detection milestone adds rules, or this guard
   // silently stops covering the newest half of the scanner.
   it.each([
-    ['Palais Gallien 2026-08-22', '../../../../artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-22T16-31-02Z'],
+    [
+      'Palais Gallien 2026-08-22',
+      '../../../../artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-22T16-31-02Z',
+    ],
     ['haaitza.com 2026-08-22', '../../../../artifacts/haaitza.com/2026-08-22T22-07-44Z'],
     ['La Corniche 2026-08-22', '../../../../artifacts/www.lacoorniche.com/2026-08-22T22-07-45Z'],
   ])('every ruleId in the real %s fixture is covered', (_name, dir) => {
     const findings = loadFindings(dir);
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter((id) => !RULE_TRANSLATIONS_FR[id]);
+    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
+      (id) => !RULE_TRANSLATIONS_FR[id],
+    );
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
@@ -87,7 +104,6 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
     }
   });
 });
-
 
 /**
  * Source-derived coverage, added 2026-08-24 after `hreflang-missing` and
@@ -116,7 +132,6 @@ describe('every custom rule that can be emitted has a French translation', () =>
     ).toEqual([]);
   });
 });
-
 
 /**
  * Full reachable-set coverage, 2026-08-24 (operator decision: translate

@@ -63,13 +63,23 @@ describe('runProspectingJob', () => {
     expect(runAuditStage).toHaveBeenNthCalledWith(
       1,
       'https://a.example/',
-      { maxPages: PROSPECTING_MAX_PAGES, maxDepth: PROSPECTING_MAX_DEPTH, skipLighthouse: true },
+      {
+        maxPages: PROSPECTING_MAX_PAGES,
+        maxDepth: PROSPECTING_MAX_DEPTH,
+        skipLighthouse: true,
+        sitemapMode: 'inspect',
+      },
       fakeConnection,
     );
     expect(runAuditStage).toHaveBeenNthCalledWith(
       2,
       'https://b.example/',
-      { maxPages: PROSPECTING_MAX_PAGES, maxDepth: PROSPECTING_MAX_DEPTH, skipLighthouse: true },
+      {
+        maxPages: PROSPECTING_MAX_PAGES,
+        maxDepth: PROSPECTING_MAX_DEPTH,
+        skipLighthouse: true,
+        sitemapMode: 'inspect',
+      },
       fakeConnection,
     );
   });
@@ -122,11 +132,42 @@ describe('runProspectingJob', () => {
     await runProspectingJob(fakeJob(['not a url', 'https://b.example/']), ctx);
 
     expect(runAuditStage).toHaveBeenCalledTimes(1);
-    expect(runAuditStage).toHaveBeenCalledWith('https://b.example/', expect.anything(), fakeConnection);
+    expect(runAuditStage).toHaveBeenCalledWith(
+      'https://b.example/',
+      expect.anything(),
+      fakeConnection,
+    );
   });
 
   it('throws if the job has no urls', async () => {
     await expect(runProspectingJob(fakeJob([]), ctx)).rejects.toThrow(/no urls/);
+  });
+
+  describe('throttled progress writes', () => {
+    it('does not call updateJobProgress once per URL for a batch larger than the write interval', async () => {
+      vi.mocked(runAuditStage).mockResolvedValue({
+        auditId: 'audit-x',
+        manifest: {} as never,
+        findings: [] as never,
+        auditDir: '/dir',
+        visitedCount: 1,
+        prunedPageDirCount: 0,
+        obligationAssessment: { status: 'undetermined', basis: [] } as never,
+      });
+
+      const urls = Array.from({ length: 25 }, (_, i) => `https://site-${i}.example/`);
+      await runProspectingJob(fakeJob(urls), ctx);
+
+      // 1 initial write plus at most a couple of throttled writes plus the
+      // final forced write - nowhere near one write per URL (25).
+      expect(vi.mocked(updateJobProgress).mock.calls.length).toBeLessThan(10);
+
+      const lastCall = vi.mocked(updateJobProgress).mock.calls.at(-1);
+      expect(lastCall?.[2]).toMatchObject({
+        progress: { message: `${urls.length} of ${urls.length} URLs scanned` },
+      });
+      expect((lastCall?.[2] as { urlResults: unknown[] }).urlResults).toHaveLength(urls.length);
+    });
   });
 
   describe('2026-08-22 milestone 9b: bounded worker pool', () => {
@@ -164,7 +205,12 @@ describe('runProspectingJob', () => {
       // 4 URLs against a 3-worker pool: the fast URL's worker must pick up
       // the 4th once done, not leave it for whichever worker "owns" it in
       // a fixed-slice scheme.
-      const urls = ['https://fast.example/', 'https://b.example/', 'https://c.example/', 'https://d.example/'];
+      const urls = [
+        'https://fast.example/',
+        'https://b.example/',
+        'https://c.example/',
+        'https://d.example/',
+      ];
       vi.mocked(runAuditStage).mockImplementation(async (url) => {
         const delay = url === 'https://fast.example/' ? 0 : 20;
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -185,7 +231,9 @@ describe('runProspectingJob', () => {
       expect(completeJob).toHaveBeenCalledWith(
         fakeConnection,
         'job-1',
-        expect.objectContaining({ auditIds: expect.arrayContaining([expect.stringContaining('audit-')]) }),
+        expect.objectContaining({
+          auditIds: expect.arrayContaining([expect.stringContaining('audit-')]),
+        }),
       );
     });
   });

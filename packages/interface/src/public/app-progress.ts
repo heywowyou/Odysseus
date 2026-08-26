@@ -1,5 +1,11 @@
 import { applyStrings } from './i18n-apply.js';
-import { escapeHtml, fetchJson, severityBadgesHtml, showError, type SeverityRollup } from './app-shared.js';
+import {
+  escapeHtml,
+  fetchJson,
+  severityBadgesHtml,
+  showError,
+  type SeverityRollup,
+} from './app-shared.js';
 
 const strings = applyStrings();
 
@@ -48,7 +54,13 @@ interface JobStatusResponse {
   error?: string;
 }
 
-const LATER_PHASE_LABEL_KEYS = ['normalize', 'analyze-fr', 'analyze-en', 'report-fr', 'report-en'] as const;
+const LATER_PHASE_LABEL_KEYS = [
+  'normalize',
+  'analyze-fr',
+  'analyze-en',
+  'report-fr',
+  'report-en',
+] as const;
 
 function formatEtaMs(ms: number | undefined): string {
   if (ms === undefined) return '';
@@ -59,13 +71,16 @@ function formatEtaMs(ms: number | undefined): string {
 function renderFullAudit(job: JobStatusResponse): void {
   urlResultsList.hidden = true;
   const isEtaPhase = job.phase === 'queued' || job.phase === 'crawl' || job.phase === 'scan';
-  twoPhase.hidden = !isEtaPhase && !LATER_PHASE_LABEL_KEYS.includes(job.phase as (typeof LATER_PHASE_LABEL_KEYS)[number]);
+  twoPhase.hidden =
+    !isEtaPhase &&
+    !LATER_PHASE_LABEL_KEYS.includes(job.phase as (typeof LATER_PHASE_LABEL_KEYS)[number]);
 
   const crawl = job.progress.crawl;
   if (crawl) {
     const pct = crawl.target > 0 ? Math.min(100, (crawl.visited / crawl.target) * 100) : 0;
     crawlBar.style.width = `${pct}%`;
-    crawlEta.textContent = job.phase === 'crawl' ? `${strings.progress.etaLabel}: ${formatEtaMs(crawl.etaMs)}` : '';
+    crawlEta.textContent =
+      job.phase === 'crawl' ? `${strings.progress.etaLabel}: ${formatEtaMs(crawl.etaMs)}` : '';
   }
 
   const scan = job.progress.scan;
@@ -73,13 +88,16 @@ function renderFullAudit(job: JobStatusResponse): void {
     const pct = scan.target > 0 ? Math.min(100, (scan.scanned / scan.target) * 100) : 0;
     scanBar.style.width = `${pct}%`;
     scanEta.textContent =
-      job.phase === 'scan' ? `${strings.progress.etaLabel}: ${formatEtaMs(scan.etaMs)} ${strings.progress.etaRoughSuffix}` : '';
+      job.phase === 'scan'
+        ? `${strings.progress.etaLabel}: ${formatEtaMs(scan.etaMs)} ${strings.progress.etaRoughSuffix}`
+        : '';
   } else if (job.phase !== 'queued' && job.phase !== 'crawl') {
     scanBar.style.width = '100%';
   }
 
   if (LATER_PHASE_LABEL_KEYS.includes(job.phase as (typeof LATER_PHASE_LABEL_KEYS)[number])) {
-    phaseStatus.textContent = strings.progress.phaseLabels[job.phase as (typeof LATER_PHASE_LABEL_KEYS)[number]];
+    phaseStatus.textContent =
+      strings.progress.phaseLabels[job.phase as (typeof LATER_PHASE_LABEL_KEYS)[number]];
   } else {
     phaseStatus.textContent = '';
   }
@@ -91,7 +109,12 @@ function renderProspecting(job: JobStatusResponse): void {
   phaseStatus.textContent = job.progress.message ?? '';
   urlResultsList.innerHTML = (job.urlResults ?? [])
     .map((result) => {
-      const badgeClass = result.status === 'complete' ? 'complete' : result.status === 'error' ? 'failed' : 'running';
+      const badgeClass =
+        result.status === 'complete'
+          ? 'complete'
+          : result.status === 'error'
+            ? 'failed'
+            : 'running';
       return `<li><span>${escapeHtml(result.url)}</span><span class="badge badge-${badgeClass}">${escapeHtml(result.status)}</span></li>`;
     })
     .join('');

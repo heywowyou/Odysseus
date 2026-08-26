@@ -15,7 +15,12 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { REPO_ROOT, FINGERPRINT_FILENAME, fixtureAudits, normalizeFingerprint } from './fixture-fingerprint.mjs';
+import {
+  REPO_ROOT,
+  FINGERPRINT_FILENAME,
+  fixtureAudits,
+  normalizeFingerprint,
+} from './fixture-fingerprint.mjs';
 
 const cli = path.join(REPO_ROOT, 'packages/cli/dist/index.js');
 if (!existsSync(cli)) {
@@ -41,7 +46,9 @@ for (const audit of audits) {
   refreshed += 1;
 }
 
-console.log(`\nRefreshed ${refreshed} of ${audits.length} fixture audits at fingerprint ${fingerprint}.`);
+console.log(
+  `\nRefreshed ${refreshed} of ${audits.length} fixture audits at fingerprint ${fingerprint}.`,
+);
 if (missing.length > 0) {
   console.error(
     `\n${missing.length} listed in fixtures/audits.json but not present on this machine:\n` +

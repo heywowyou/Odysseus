@@ -84,7 +84,11 @@ function isGlossaryTermRelevant(id: string, ctx: GlossaryContext): boolean {
  *  specific fractional-leftover-space condition that triggered it for
  *  this document; kept narrow to this section rather than applied
  *  report-wide since every other section already flows correctly. */
-export function renderGlossary(strings: ReportStrings, ordinal: number, ctx: GlossaryContext): string {
+export function renderGlossary(
+  strings: ReportStrings,
+  ordinal: number,
+  ctx: GlossaryContext,
+): string {
   const g = strings.glossary;
   const relevantTerms = g.terms.filter((t) => isGlossaryTermRelevant(t.id, ctx));
 
@@ -99,8 +103,12 @@ export function renderGlossary(strings: ReportStrings, ordinal: number, ctx: Glo
     )
     .join('');
 
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, g.eyebrow, g.heading)}
     ${items}
-  `, 'sheet-standalone', 'section-13');
+  `,
+    'sheet-standalone',
+    'section-13',
+  );
 }

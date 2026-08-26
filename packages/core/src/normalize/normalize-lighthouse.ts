@@ -138,7 +138,10 @@ export const RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS: ReadonlySet<string> = new Se
  *  caller falls back to selector identity rather than collapsing on a
  *  missing value (every item with no url would otherwise share the identity
  *  '' and merge into a single finding). */
-function resourceIdentityForItem(auditId: string, item: Record<string, unknown>): string | undefined {
+function resourceIdentityForItem(
+  auditId: string,
+  item: Record<string, unknown>,
+): string | undefined {
   if (!RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS.has(auditId)) return undefined;
   const url = item['url'];
   return typeof url === 'string' && url.length > 0 ? url : undefined;
@@ -156,9 +159,7 @@ interface LighthouseNodeValue {
 
 function isNodeValue(value: unknown): value is LighthouseNodeValue {
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    (value as { type?: unknown }).type === 'node'
+    typeof value === 'object' && value !== null && (value as { type?: unknown }).type === 'node'
   );
 }
 
@@ -194,7 +195,10 @@ const CORE_WEB_VITAL_AUDIT_IDS = {
  *  id encountered in extractLighthouseCandidates can be matched back to
  *  its raw-value threshold row in CORE_WEB_VITAL_THRESHOLDS. */
 export const AUDIT_ID_TO_CWV_KEY = new Map<string, keyof typeof CORE_WEB_VITAL_AUDIT_IDS>(
-  Object.entries(CORE_WEB_VITAL_AUDIT_IDS).map(([key, auditId]) => [auditId, key as keyof typeof CORE_WEB_VITAL_AUDIT_IDS]),
+  Object.entries(CORE_WEB_VITAL_AUDIT_IDS).map(([key, auditId]) => [
+    auditId,
+    key as keyof typeof CORE_WEB_VITAL_AUDIT_IDS,
+  ]),
 );
 
 /** item 9: severityFromLighthouse (locked severity.ts) grades a finding
@@ -340,9 +344,9 @@ export function computeSupersededAudits(
     for (const [auditId, audit] of Object.entries(lhr.audits)) {
       if (!audit.replacesAudits?.length) continue;
       if (!auditEmitsFinding(audit, auditId)) continue;
-    // A successor with no actionable item of its own would replace a file
-    // list with a blank row. Measured, not assumed: see
-    // auditHasActionableDetail above for the four insights this excludes.
+      // A successor with no actionable item of its own would replace a file
+      // list with a blank row. Measured, not assumed: see
+      // auditHasActionableDetail above for the four insights this excludes.
       if (!auditHasActionableDetail(audit)) continue;
       for (const replaced of audit.replacesAudits) superseded.set(replaced, auditId);
     }
@@ -379,7 +383,8 @@ export function extractLighthouseCandidates(
       const successorId = superseded.get(auditRef.id);
       if (successorId !== undefined) {
         const successor = lhr.audits[successorId];
-        const absorbedUrls = successor === undefined ? [] : resourceUrlsForAudit(auditRef.id, audit);
+        const absorbedUrls =
+          successor === undefined ? [] : resourceUrlsForAudit(auditRef.id, audit);
         if (successor !== undefined && absorbedUrls.length > 0) {
           candidates.push({
             source: 'lighthouse',
@@ -427,8 +432,9 @@ export function extractLighthouseCandidates(
       const items: Array<Record<string, unknown>> = Array.isArray(rawItems) ? rawItems : [];
       const nodeItems = items
         .map((item) => ({ item, node: findNodeValueInItem(item) }))
-        .filter((entry): entry is { item: Record<string, unknown>; node: LighthouseNodeValue } =>
-          entry.node !== undefined,
+        .filter(
+          (entry): entry is { item: Record<string, unknown>; node: LighthouseNodeValue } =>
+            entry.node !== undefined,
         )
         .slice(0, MAX_ELEMENTS_PER_FINDING);
 

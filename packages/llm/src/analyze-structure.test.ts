@@ -139,7 +139,14 @@ describe('analyzeStructure', () => {
     const result = await analyzeStructure(input, filteredFindings, false, manifest);
 
     expect(result.themes).toEqual([
-      { themeKey: 't1', category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1, findingIds: ['f1', 'f2'] },
+      {
+        themeKey: 't1',
+        category: 'accessibility',
+        effort: 'low',
+        impact: 'high',
+        priorityRank: 1,
+        findingIds: ['f1', 'f2'],
+      },
     ]);
     expect(result.model).toBe(MISTRAL_MODEL);
     expect(result.temperature).toBe(MISTRAL_TEMPERATURE);
@@ -148,7 +155,9 @@ describe('analyzeStructure', () => {
   });
 
   it('shows the model aliases, never the real finding IDs', async () => {
-    vi.mocked(callMistralForStructure).mockReset().mockResolvedValueOnce({ output: buildCleanOutput() });
+    vi.mocked(callMistralForStructure)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildCleanOutput() });
 
     await analyzeStructure(input, filteredFindings, false, manifest);
 
@@ -188,7 +197,9 @@ describe('analyzeStructure', () => {
       .mockReset()
       .mockResolvedValue({ output: buildInventedOutput() });
 
-    await expect(analyzeStructure(input, filteredFindings, false, manifest)).rejects.toThrow(/exhausted \d+ attempts/);
+    await expect(analyzeStructure(input, filteredFindings, false, manifest)).rejects.toThrow(
+      /exhausted \d+ attempts/,
+    );
     expect(callMistralForStructure).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 });

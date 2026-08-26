@@ -16,7 +16,10 @@ describe.skipIf(!mongoAvailable)('suppression', () => {
   });
 
   it('suppresses a domain by hash and finds it regardless of formatting', async () => {
-    await addSuppressionEntry(connection!, { domain: 'https://www.Opt-Out.fr/', reason: 'requested removal' });
+    await addSuppressionEntry(connection!, {
+      domain: 'https://www.Opt-Out.fr/',
+      reason: 'requested removal',
+    });
     expect(await isSuppressed(connection!, 'opt-out.fr')).toBe(true);
     expect(await isSuppressed(connection!, 'OPT-OUT.FR')).toBe(true);
   });
@@ -27,7 +30,9 @@ describe.skipIf(!mongoAvailable)('suppression', () => {
       address: 'contact@address-suppress.fr',
       reason: 'unsubscribed',
     });
-    expect(await isSuppressed(connection!, 'a-different-domain.fr', 'contact@address-suppress.fr')).toBe(true);
+    expect(
+      await isSuppressed(connection!, 'a-different-domain.fr', 'contact@address-suppress.fr'),
+    ).toBe(true);
   });
 
   it('as a regression guard, the suppression collection has no TTL index at all', async () => {

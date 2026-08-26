@@ -17,7 +17,11 @@ describe('mixed-content', () => {
 
   it('does not fire for a secure page with no insecure resources', () => {
     expect(
-      extractMixedContentCandidates({ pageUrl: 'https://example.com/', isPageSecure: true, insecureResourceUrls: [] }),
+      extractMixedContentCandidates({
+        pageUrl: 'https://example.com/',
+        isPageSecure: true,
+        insecureResourceUrls: [],
+      }),
     ).toEqual([]);
   });
 

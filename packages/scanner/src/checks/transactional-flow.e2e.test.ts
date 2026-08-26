@@ -3,14 +3,19 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser, Page } from 'playwright';
 import { launchBrowser } from '../browser.js';
-import { findDelegatedBookingRedirectChecks, type RedirectHostCache } from './transactional-flow.js';
+import {
+  findDelegatedBookingRedirectChecks,
+  type RedirectHostCache,
+} from './transactional-flow.js';
 
 /** Two tiny static servers (no Vite, no build step) rather than reusing
  *  fixtures/spa-demo: this only needs plain HTML pages to drive real
  *  Playwright navigation for the redirect-following behavior itself,
  *  which findBookingIntentLinks/classifyDestinationPage's unit tests
  *  already cover in isolation. */
-function startStaticServer(routes: Record<string, string>): Promise<{ server: Server; origin: string }> {
+function startStaticServer(
+  routes: Record<string, string>,
+): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
       const body = routes[req.url ?? '/'];
@@ -239,8 +244,12 @@ describe('findDelegatedBookingRedirectChecks with a shared RedirectHostCache', (
       expect(destinationA.requestCount()).toBe(1);
       expect(destinationB.requestCount()).toBe(1);
       expect(checks).toHaveLength(2);
-      expect(checks.find((c) => c.linkUrl.includes(destinationA.origin))?.resolution).toBe('single-property');
-      expect(checks.find((c) => c.linkUrl.includes(destinationB.origin))?.resolution).toBe('marketplace');
+      expect(checks.find((c) => c.linkUrl.includes(destinationA.origin))?.resolution).toBe(
+        'single-property',
+      );
+      expect(checks.find((c) => c.linkUrl.includes(destinationB.origin))?.resolution).toBe(
+        'marketplace',
+      );
     } finally {
       destinationA.server.close();
       destinationB.server.close();

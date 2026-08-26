@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { extractStructuredDataCandidates, STRUCTURED_DATA_INVALID_RULE_ID } from './normalize-structured-data.js';
+import {
+  extractStructuredDataCandidates,
+  STRUCTURED_DATA_INVALID_RULE_ID,
+} from './normalize-structured-data.js';
 
 describe('structured-data', () => {
   it('fires one finding for a page with failed schema fields', () => {
@@ -20,7 +23,11 @@ describe('structured-data', () => {
 
   it('does not fire when there are no failed tests', () => {
     expect(
-      extractStructuredDataCandidates({ pageUrl: 'https://example.com/', schemasFound: [], failedTests: [] }),
+      extractStructuredDataCandidates({
+        pageUrl: 'https://example.com/',
+        schemasFound: [],
+        failedTests: [],
+      }),
     ).toEqual([]);
   });
 });

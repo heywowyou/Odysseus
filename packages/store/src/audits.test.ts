@@ -1,7 +1,13 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type Finding } from '@odysseus/core';
 import { persistAudit } from './persist-audit.js';
-import { getAudit, getAuditManualFields, getFindingsForAudit, prefillAuditManualFields, setAuditManualFields } from './audits.js';
+import {
+  getAudit,
+  getAuditManualFields,
+  getFindingsForAudit,
+  prefillAuditManualFields,
+  setAuditManualFields,
+} from './audits.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -81,7 +87,10 @@ describe.skipIf(!mongoAvailable)('audits read helpers', () => {
 
   it('getFindingsForAudit returns every finding for that audit', async () => {
     const manifest = buildManifest('audits-read-2');
-    const findings = [buildFinding('audits-read-2', 'ar2-a'), buildFinding('audits-read-2', 'ar2-b')];
+    const findings = [
+      buildFinding('audits-read-2', 'ar2-a'),
+      buildFinding('audits-read-2', 'ar2-b'),
+    ];
     await persistAudit(connection!, manifest, findings);
 
     const found = await getFindingsForAudit(connection!, 'audits-read-2');

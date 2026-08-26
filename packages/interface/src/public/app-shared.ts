@@ -29,7 +29,10 @@ export interface SeverityRollup {
 
 const SEVERITIES = ['critical', 'serious', 'moderate', 'minor'] as const;
 
-export function severityBadgesHtml(rollup: SeverityRollup | undefined, strings: DashboardStrings): string {
+export function severityBadgesHtml(
+  rollup: SeverityRollup | undefined,
+  strings: DashboardStrings,
+): string {
   if (!rollup) return '';
   return SEVERITIES.filter((severity) => rollup[severity] > 0)
     .map(

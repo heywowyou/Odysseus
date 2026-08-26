@@ -26,11 +26,15 @@ function loadHaaitzaAuditDir(): string {
 }
 
 function loadHaaitzaManifest(): AuditManifest {
-  return JSON.parse(readFileSync(path.join(loadHaaitzaAuditDir(), 'manifest.json'), 'utf-8')) as AuditManifest;
+  return JSON.parse(
+    readFileSync(path.join(loadHaaitzaAuditDir(), 'manifest.json'), 'utf-8'),
+  ) as AuditManifest;
 }
 
 function loadHaaitzaFindings(): Finding[] {
-  return JSON.parse(readFileSync(path.join(loadHaaitzaAuditDir(), 'findings.json'), 'utf-8')) as Finding[];
+  return JSON.parse(
+    readFileSync(path.join(loadHaaitzaAuditDir(), 'findings.json'), 'utf-8'),
+  ) as Finding[];
 }
 
 /** report-feedback-la-corniche.md item 0.8: image-alt (25 Critique
@@ -43,11 +47,15 @@ function loadLaCornicheAuditDir(): string {
 }
 
 function loadLaCornicheManifest(): AuditManifest {
-  return JSON.parse(readFileSync(path.join(loadLaCornicheAuditDir(), 'manifest.json'), 'utf-8')) as AuditManifest;
+  return JSON.parse(
+    readFileSync(path.join(loadLaCornicheAuditDir(), 'manifest.json'), 'utf-8'),
+  ) as AuditManifest;
 }
 
 function loadLaCornicheFindings(): Finding[] {
-  return JSON.parse(readFileSync(path.join(loadLaCornicheAuditDir(), 'findings.json'), 'utf-8')) as Finding[];
+  return JSON.parse(
+    readFileSync(path.join(loadLaCornicheAuditDir(), 'findings.json'), 'utf-8'),
+  ) as Finding[];
 }
 
 /** The model's own raw grouping/effort/impact/rank for this audit,
@@ -55,7 +63,10 @@ function loadLaCornicheFindings(): Finding[] {
  *  exercises the exact input shape that actually reproduced the bug. */
 function loadLaCornicheRawThemes(): StructureThemeWithKey[] {
   const analysis = JSON.parse(
-    readFileSync(path.join(loadLaCornicheAuditDir(), 'analyses/2026-08-19T00-58-54Z-fr.json'), 'utf-8'),
+    readFileSync(
+      path.join(loadLaCornicheAuditDir(), 'analyses/2026-08-19T00-58-54Z-fr.json'),
+      'utf-8',
+    ),
   ) as { themes: StructureThemeWithKey[] };
   return analysis.themes.map((t, i) => ({ ...t, themeKey: `t${i + 1}` }));
 }
@@ -77,7 +88,11 @@ function findFinding(findings: Finding[], findingId: string): Finding {
  *  about, so the test states its own premise instead of encoding a snapshot of
  *  it. The three FILLER ids are genuinely arbitrary - those tests need a theme
  *  to hold some real finding and do not care which. */
-function findByRule(findings: Finding[], ruleId: string, predicate: (f: Finding) => boolean = () => true): string {
+function findByRule(
+  findings: Finding[],
+  ruleId: string,
+  predicate: (f: Finding) => boolean = () => true,
+): string {
   const finding = findings.find((f) => f.ruleId === ruleId && predicate(f));
   if (!finding) throw new Error(`fixture has no ${ruleId} finding matching the test's premise`);
   return finding.findingId;
@@ -198,8 +213,14 @@ describe('applyOccurrenceWeighting', () => {
     // minor, low occurrence count - ranked ahead of f017 by the model here,
     // which is exactly the A6 failure mode.
     const themes: StructureThemeWithKey[] = [
-      theme('t-low-volume', [lowVolumeMinorId(findings)], { priorityRank: 1, category: 'performance' }),
-      theme('t-high-volume', [highOccurrenceId(findings)], { priorityRank: 2, category: 'accessibility' }),
+      theme('t-low-volume', [lowVolumeMinorId(findings)], {
+        priorityRank: 1,
+        category: 'performance',
+      }),
+      theme('t-high-volume', [highOccurrenceId(findings)], {
+        priorityRank: 2,
+        category: 'accessibility',
+      }),
     ];
 
     const result = applyOccurrenceWeighting(themes, findings);
@@ -264,12 +285,19 @@ describe('enforceQuickWinFloor', () => {
   it('never promotes a non-quick-win low-effort/low-impact theme', () => {
     const themes: StructureThemeWithKey[] = [
       theme('t-other-low-impact', [fillerA], { priorityRank: 1, impact: 'low' }),
-      theme('t-low-effort-low-impact', [fillerB], { priorityRank: 2, effort: 'low', impact: 'low' }),
+      theme('t-low-effort-low-impact', [fillerB], {
+        priorityRank: 2,
+        effort: 'low',
+        impact: 'low',
+      }),
     ];
 
     const result = enforceQuickWinFloor(themes);
 
-    expect(result.map((t) => t.themeKey)).toEqual(['t-other-low-impact', 't-low-effort-low-impact']);
+    expect(result.map((t) => t.themeKey)).toEqual([
+      't-other-low-impact',
+      't-low-effort-low-impact',
+    ]);
   });
 });
 
@@ -289,7 +317,11 @@ describe('enforceImpactEffortOrdering', () => {
 
     const result = enforceImpactEffortOrdering(themes);
 
-    expect(result.map((t) => t.themeKey)).toEqual(['t-quick-win', 't-medium-effort', 't-high-effort']);
+    expect(result.map((t) => t.themeKey)).toEqual([
+      't-quick-win',
+      't-medium-effort',
+      't-high-effort',
+    ]);
     expect(result.map((t) => t.priorityRank)).toEqual([1, 2, 3]);
   });
 
@@ -303,11 +335,16 @@ describe('enforceImpactEffortOrdering', () => {
 
     const result = enforceImpactEffortOrdering(themes);
 
-    expect(result.map((t) => t.themeKey)).toEqual(['t-low-high', 't-medium-high', 't-medium-medium', 't-high-low']);
+    expect(result.map((t) => t.themeKey)).toEqual([
+      't-low-high',
+      't-medium-high',
+      't-medium-medium',
+      't-high-low',
+    ]);
     expect(result.map((t) => t.priorityRank)).toEqual([1, 2, 3, 4]);
   });
 
-  it('keeps the model\'s own relative order as a tiebreak when the ratio is equal', () => {
+  it("keeps the model's own relative order as a tiebreak when the ratio is equal", () => {
     const themes: StructureThemeWithKey[] = [
       theme('t-a', [fillerA], { priorityRank: 1, effort: 'medium', impact: 'medium' }),
       theme('t-b', [fillerB], { priorityRank: 2, effort: 'low', impact: 'low' }), // not a quick win (impact 'low')
@@ -344,7 +381,11 @@ describe('enforceImpactEffortOrdering', () => {
     // way". What item 0.8 actually needed was for image-alt to not be
     // buried behind *every* quick win regardless of ratio, which this
     // ordering (image-alt ranks 3rd here, not artificially last) confirms.
-    expect(result.map((t) => t.themeKey)).toEqual(['t-quick-medium-1', 't-quick-medium-2', 't-image-alt']);
+    expect(result.map((t) => t.themeKey)).toEqual([
+      't-quick-medium-1',
+      't-quick-medium-2',
+      't-image-alt',
+    ]);
   });
 
   it('item 0.8: a medium-effort, high-impact theme now outranks a low-effort, low-impact one (ratio 1.5 > ratio 1)', () => {
@@ -384,7 +425,9 @@ describe('logContainmentWarnings', () => {
 
     // f013 (is-crawlable) is confined to the CGU/cookies/privacy pages -
     // entirely legal, entirely diverted per docs/report-v2-refactor.md A3.
-    const themes: StructureThemeWithKey[] = [theme('t1', [divertedSeoId(findings)], { category: 'seo' })];
+    const themes: StructureThemeWithKey[] = [
+      theme('t1', [divertedSeoId(findings)], { category: 'seo' }),
+    ];
 
     logContainmentWarnings(themes, findings, manifest);
 
@@ -421,9 +464,7 @@ describe('applyStructureRankingRules', () => {
     const findingsById = new Map(findings.map((f) => [f.findingId, f]));
     const ruleIdOf = (t: StructureThemeWithKey): string | undefined =>
       findingsById.get(t.findingIds[0]!)?.ruleId;
-    const top6RuleIds = result
-      .filter((t) => t.priorityRank <= 6)
-      .map(ruleIdOf);
+    const top6RuleIds = result.filter((t) => t.priorityRank <= 6).map(ruleIdOf);
 
     expect(top6RuleIds).toContain('image-alt');
     expect(top6RuleIds).toContain('link-name');

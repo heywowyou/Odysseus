@@ -6,8 +6,18 @@ export const fr: DashboardStrings = {
     history: 'Historique',
   },
   common: {
-    severityLabels: { critical: 'Critique', serious: 'Sérieux', moderate: 'Modéré', minor: 'Mineur' },
-    statusLabels: { queued: 'En attente', running: 'En cours', complete: 'Terminé', failed: 'Échoué' },
+    severityLabels: {
+      critical: 'Critique',
+      serious: 'Sérieux',
+      moderate: 'Modéré',
+      minor: 'Mineur',
+    },
+    statusLabels: {
+      queued: 'En attente',
+      running: 'En cours',
+      complete: 'Terminé',
+      failed: 'Échoué',
+    },
     typeLabels: { fullAudit: 'Audit complet', prospecting: 'Prospection' },
     downloadReport: 'Télécharger le rapport',
     viewDetails: 'Voir le détail',
@@ -28,12 +38,14 @@ export const fr: DashboardStrings = {
     sirenHint:
       'À renseigner si vous connaissez déjà le SIREN de l’entreprise auditée. N’efface jamais le constat si le site ne publie pas le sien.',
     sirenInvalidError: 'Ce SIREN ne passe pas la clé de contrôle INSEE',
-    transactionalFlowLabel: 'Ce site propose-t-il une réservation ou un achat en ligne pour son propre compte ?',
+    transactionalFlowLabel:
+      'Ce site propose-t-il une réservation ou un achat en ligne pour son propre compte ?',
     transactionalFlowAutoOption: 'Laisser l’outil détecter',
     transactionalFlowYesOption: 'Oui',
     transactionalFlowNoOption: 'Non',
     transactionalFlowReasonLabel: 'Raison (facultatif)',
-    transactionalFlowReasonPlaceholder: 'Ex. redirige vers un moteur de réservation dédié, confirmé manuellement',
+    transactionalFlowReasonPlaceholder:
+      'Ex. redirige vers un moteur de réservation dédié, confirmé manuellement',
     advancedOptions: 'Options avancées',
     maxPagesLabel: 'Nombre maximum de pages',
     maxDepthLabel: 'Profondeur maximale des liens',

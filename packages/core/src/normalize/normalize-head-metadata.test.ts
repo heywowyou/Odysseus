@@ -24,8 +24,14 @@ function baseInput(overrides: Partial<HeadMetadataCheckInput> = {}): HeadMetadat
     metaDescription:
       'A meta description of a completely reasonable length that sits comfortably within the recommended SERP display range for search engines.',
     canonicalUrls: [PAGE_URL],
-    openGraphTags: { 'og:title': 'Title', 'og:description': 'Description', 'og:image': 'https://example.com/img.png' },
-    jsonLdBlocks: [{ raw: '{"@context":"https://schema.org","@type":"WebPage"}', selector: '#ld1', parsed: {} }],
+    openGraphTags: {
+      'og:title': 'Title',
+      'og:description': 'Description',
+      'og:image': 'https://example.com/img.png',
+    },
+    jsonLdBlocks: [
+      { raw: '{"@context":"https://schema.org","@type":"WebPage"}', selector: '#ld1', parsed: {} },
+    ],
     headings: [
       { level: 1, text: 'Main heading', selector: 'h1:nth-of-type(1)' },
       { level: 2, text: 'Sub heading', selector: 'h2:nth-of-type(1)' },
@@ -72,9 +78,7 @@ describe('meta-title-length', () => {
   });
 
   it('fires when the title is too long', () => {
-    const candidates = extractHeadMetadataCandidates(
-      baseInput({ title: 'A'.repeat(100) }),
-    );
+    const candidates = extractHeadMetadataCandidates(baseInput({ title: 'A'.repeat(100) }));
     expect(ruleIds(candidates)).toEqual([META_TITLE_LENGTH_RULE_ID]);
   });
 
@@ -91,7 +95,9 @@ describe('meta-description-length', () => {
   });
 
   it('fires when the description is too long', () => {
-    const candidates = extractHeadMetadataCandidates(baseInput({ metaDescription: 'A'.repeat(200) }));
+    const candidates = extractHeadMetadataCandidates(
+      baseInput({ metaDescription: 'A'.repeat(200) }),
+    );
     expect(ruleIds(candidates)).toEqual([META_DESCRIPTION_LENGTH_RULE_ID]);
   });
 });
@@ -113,7 +119,9 @@ describe('canonical-conflicting', () => {
   });
 
   it('does not fire for a single canonical tag', () => {
-    expect(extractHeadMetadataCandidates(baseInput({ canonicalUrls: ['https://example.com/'] }))).toEqual([]);
+    expect(
+      extractHeadMetadataCandidates(baseInput({ canonicalUrls: ['https://example.com/'] })),
+    ).toEqual([]);
   });
 });
 
@@ -127,7 +135,14 @@ describe('jsonld-missing / jsonld-invalid', () => {
   it('fires jsonld-invalid with a real selector when a block fails to parse', () => {
     const candidates = extractHeadMetadataCandidates(
       baseInput({
-        jsonLdBlocks: [{ raw: '{not valid json', selector: '#ld1', parsed: null, parseError: 'Unexpected token' }],
+        jsonLdBlocks: [
+          {
+            raw: '{not valid json',
+            selector: '#ld1',
+            parsed: null,
+            parseError: 'Unexpected token',
+          },
+        ],
       }),
     );
     expect(ruleIds(candidates)).toEqual([JSONLD_INVALID_RULE_ID]);
@@ -198,7 +213,9 @@ describe('heading-hierarchy-skip / multiple-h1 / no-h1', () => {
 
   it('fires no-h1 when there is no level-1 heading', () => {
     const candidates = extractHeadMetadataCandidates(
-      baseInput({ headings: [{ level: 2, text: 'Only a sub-heading', selector: 'h2:nth-of-type(1)' }] }),
+      baseInput({
+        headings: [{ level: 2, text: 'Only a sub-heading', selector: 'h2:nth-of-type(1)' }],
+      }),
     );
     expect(ruleIds(candidates)).toEqual([NO_H1_RULE_ID]);
     expect(candidates[0]?.severity).toBe('moderate');
@@ -225,7 +242,9 @@ describe('opengraph-missing', () => {
   });
 
   it('does not fire when at least one core Open Graph tag is present', () => {
-    expect(extractHeadMetadataCandidates(baseInput({ openGraphTags: { 'og:title': 'Title' } }))).toEqual([]);
+    expect(
+      extractHeadMetadataCandidates(baseInput({ openGraphTags: { 'og:title': 'Title' } })),
+    ).toEqual([]);
   });
 
   it('does not fire when unrelated og: tags are present alongside a core one', () => {
@@ -289,7 +308,9 @@ describe('canonical-missing', () => {
   });
 
   it('stays silent when a canonical is declared', () => {
-    const ids = extractHeadMetadataCandidates(headInput(['https://example.com/'])).map((c) => c.ruleId);
+    const ids = extractHeadMetadataCandidates(headInput(['https://example.com/'])).map(
+      (c) => c.ruleId,
+    );
     expect(ids).not.toContain(CANONICAL_MISSING_RULE_ID);
   });
 

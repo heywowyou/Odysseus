@@ -86,14 +86,15 @@ export const ODYSSEUS_CONTACT_EMAIL = 'contact@odysseusaudit.com';
  *  the same distinction packages/scanner/src/checks/mentions-legales.ts
  *  already encodes when reading a client's own legal notice.
  *
- *  Overridable via ODYSSEUS_SIRET so the value can be set per machine
- *  without a code change; the literal stays as the canonical default so
- *  an unset environment can never silently produce a report with no
- *  issuer identity, which is the failure this constant exists to
- *  prevent. */
+ *  Overridable via ODYSSEUS_SIRET, with SIRET retained for the repository's
+ *  existing environment file, so the value can be set per machine without a
+ *  code change. The literal stays as the canonical default so an unset
+ *  environment can never silently produce a report with no issuer identity,
+ *  which is the failure this constant exists to prevent. */
 export const ODYSSEUS_PRODUCER_NAME = 'Odysseus Audit';
 export const ODYSSEUS_SIGNATORY_NAME = 'Jules Fontaine';
-export const ODYSSEUS_REGISTRATION_NUMBER = process.env['ODYSSEUS_SIRET'] ?? '98076646300023';
+export const ODYSSEUS_REGISTRATION_NUMBER =
+  process.env['ODYSSEUS_SIRET'] ?? process.env['SIRET'] ?? '98076646300023';
 
 /** item 3.12: "Prochaines étapes" described re-audits and post-fix
  *  verification with no price, no lead time, and no way to order -
@@ -134,9 +135,7 @@ export function formatElapsedDuration(from: Date, to: Date, language: 'fr' | 'en
   );
   if (totalMonths < 12) {
     const months = Math.max(1, totalMonths);
-    return language === 'fr'
-      ? `${months} mois`
-      : `${months} month${months === 1 ? '' : 's'}`;
+    return language === 'fr' ? `${months} mois` : `${months} month${months === 1 ? '' : 's'}`;
   }
   const years = Math.floor(totalMonths / 12);
   if (years === 1) {
@@ -204,7 +203,10 @@ export function formatFindingIdRefs(findingIds: readonly string[]): string {
 export function formatFindingIdLinks(findingIds: readonly string[]): string {
   return [...findingIds]
     .sort()
-    .map((id) => `<a href="#annexref-${escapeHtml(id)}" style="color:inherit;text-decoration:underline">${escapeHtml(id)}</a>`)
+    .map(
+      (id) =>
+        `<a href="#annexref-${escapeHtml(id)}" style="color:inherit;text-decoration:underline">${escapeHtml(id)}</a>`,
+    )
     .join(', ');
 }
 
@@ -280,7 +282,10 @@ export const FINDING_ID_LIST_CAP = 10;
 function capFindingIds(findingIds: readonly string[]): { shown: string[]; remaining: number } {
   const sorted = [...findingIds].sort();
   if (sorted.length <= FINDING_ID_LIST_CAP) return { shown: sorted, remaining: 0 };
-  return { shown: sorted.slice(0, FINDING_ID_LIST_CAP), remaining: sorted.length - FINDING_ID_LIST_CAP };
+  return {
+    shown: sorted.slice(0, FINDING_ID_LIST_CAP),
+    remaining: sorted.length - FINDING_ID_LIST_CAP,
+  };
 }
 
 /** Plain-text capped variant, for cells that cannot carry links. */
@@ -294,10 +299,17 @@ export interface AndNMoreStrings {
   readonly andNMoreSingularTemplate: string;
 }
 
-export function formatAndNMore(remaining: number, language: 'fr' | 'en', strings: AndNMoreStrings): string {
-  return fillTemplate(pluralize(remaining, strings.andNMoreSingularTemplate, strings.andNMoreTemplate), {
-    count: formatNumber(remaining, language),
-  });
+export function formatAndNMore(
+  remaining: number,
+  language: 'fr' | 'en',
+  strings: AndNMoreStrings,
+): string {
+  return fillTemplate(
+    pluralize(remaining, strings.andNMoreSingularTemplate, strings.andNMoreTemplate),
+    {
+      count: formatNumber(remaining, language),
+    },
+  );
 }
 
 export function formatCappedFindingIdRefs(

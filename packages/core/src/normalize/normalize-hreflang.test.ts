@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { extractHreflangCandidates, HREFLANG_NO_RETURN_LINK_RULE_ID, type HreflangPageInput } from './normalize-hreflang.js';
+import {
+  extractHreflangCandidates,
+  HREFLANG_NO_RETURN_LINK_RULE_ID,
+  type HreflangPageInput,
+} from './normalize-hreflang.js';
 
 const FR_URL = 'https://example.com/fr/';
 const EN_URL = 'https://example.com/en/';
@@ -34,7 +38,9 @@ describe('hreflang-no-return-link', () => {
   });
 
   it('does not fire for a self-referencing hreflang tag', () => {
-    const pages: HreflangPageInput[] = [{ url: FR_URL, hreflangLinks: [{ lang: 'fr', href: FR_URL }] }];
+    const pages: HreflangPageInput[] = [
+      { url: FR_URL, hreflangLinks: [{ lang: 'fr', href: FR_URL }] },
+    ];
     expect(extractHreflangCandidates(pages)).toEqual([]);
   });
 
@@ -67,7 +73,13 @@ describe('hreflang-no-return-link', () => {
   it('only flags the direction missing a return link, not the page that already reciprocates', () => {
     const pages: HreflangPageInput[] = [
       { url: FR_URL, hreflangLinks: [{ lang: 'en', href: EN_URL }] },
-      { url: EN_URL, hreflangLinks: [{ lang: 'fr', href: FR_URL }, { lang: 'de', href: 'https://example.com/de/' }] },
+      {
+        url: EN_URL,
+        hreflangLinks: [
+          { lang: 'fr', href: FR_URL },
+          { lang: 'de', href: 'https://example.com/de/' },
+        ],
+      },
       { url: 'https://example.com/de/', hreflangLinks: [] },
     ];
     const candidates = extractHreflangCandidates(pages);
@@ -128,6 +140,8 @@ describe('hreflang-missing', () => {
       [1, 2, 3].map((n) => ({ url: `https://site.example/${lang}/page-${n}`, hreflangLinks: [] })),
     );
 
-    expect(extractHreflangCandidates(pages).filter((c) => c.ruleId === 'hreflang-missing')).toHaveLength(1);
+    expect(
+      extractHreflangCandidates(pages).filter((c) => c.ruleId === 'hreflang-missing'),
+    ).toHaveLength(1);
   });
 });

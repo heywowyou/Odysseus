@@ -10,7 +10,12 @@
  * not from documentation alone.
  */
 
-import { SIRENE_TURNOVER_RELIABLE_EFFECTIF_CODES, type OperatorProfile, type Provenanced, type SireneLookupResult } from '@odysseus/core';
+import {
+  SIRENE_TURNOVER_RELIABLE_EFFECTIF_CODES,
+  type OperatorProfile,
+  type Provenanced,
+  type SireneLookupResult,
+} from '@odysseus/core';
 
 const SIRENE_SEARCH_URL = 'https://recherche-entreprises.api.gouv.fr/search';
 

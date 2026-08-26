@@ -3,7 +3,11 @@ import { RENDERDIFF_RULE_ID, type AuditManifest, type Finding } from '@odysseus/
 import { resolveRenderDiffEvidence } from './screenshots.js';
 import { loadSasFernandeManifest } from './test-fixtures.js';
 
-function inflateMissingPercent(manifest: AuditManifest, pageDir: string, percent: number): AuditManifest {
+function inflateMissingPercent(
+  manifest: AuditManifest,
+  pageDir: string,
+  percent: number,
+): AuditManifest {
   return {
     ...manifest,
     pages: manifest.pages.map((page) =>
@@ -116,7 +120,9 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
   it('item 1.9: the homepage leads even when a non-homepage page has a strictly larger gap', async () => {
     const manifest = await loadSasFernandeManifest();
     const homepagePageDir = manifest.pages.find((p) => p.url === manifest.crawl.startUrl)?.pageDir;
-    const otherPageDir = manifest.pages.find((p) => p.pageDir !== undefined && p.pageDir !== homepagePageDir)?.pageDir;
+    const otherPageDir = manifest.pages.find(
+      (p) => p.pageDir !== undefined && p.pageDir !== homepagePageDir,
+    )?.pageDir;
 
     let inflated = inflateMissingPercent(manifest, homepagePageDir!, 25);
     inflated = inflateMissingPercent(inflated, otherPageDir!, 75);
@@ -155,7 +161,10 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
     const manifest = await loadSasFernandeManifest();
     const inflated = inflateMissingPercent(manifest, 'pages/root-c122da', 96);
 
-    const { pages, totalEligible, wrapperOrLegalExcludedCount } = resolveRenderDiffEvidence(inflated, []);
+    const { pages, totalEligible, wrapperOrLegalExcludedCount } = resolveRenderDiffEvidence(
+      inflated,
+      [],
+    );
 
     expect(pages).toHaveLength(0);
     expect(totalEligible).toBe(0);
@@ -164,7 +173,11 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
 
   it('excludes a legal-noindex page by URL pattern, regardless of its missingPercent (B6)', async () => {
     const manifest = await loadSasFernandeManifest();
-    const withLegalUrl = overridePageUrl(manifest, 'pages/root-c122da', 'https://example.com/mentions-legales/');
+    const withLegalUrl = overridePageUrl(
+      manifest,
+      'pages/root-c122da',
+      'https://example.com/mentions-legales/',
+    );
     const inflated = inflateMissingPercent(withLegalUrl, 'pages/root-c122da', 40);
 
     const { pages, wrapperOrLegalExcludedCount } = resolveRenderDiffEvidence(inflated, []);
@@ -179,7 +192,9 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
     // test above), so this case now deliberately uses two non-homepage
     // pages to keep isolating the B6 char-ranking rule on its own.
     const homepagePageDir = manifest.pages.find((p) => p.url === manifest.crawl.startUrl)?.pageDir;
-    const nonHomepageDirs = manifest.pages.filter((p) => p.pageDir !== undefined && p.pageDir !== homepagePageDir);
+    const nonHomepageDirs = manifest.pages.filter(
+      (p) => p.pageDir !== undefined && p.pageDir !== homepagePageDir,
+    );
     const smallGapPageDir = nonHomepageDirs[0]!.pageDir!;
     const bigGapPageDir = nonHomepageDirs[1]!.pageDir!;
 
@@ -191,8 +206,18 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
     manifestWithGaps = inflateMissingPercent(manifestWithGaps, bigGapPageDir, 20);
 
     const findings = [
-      buildRenderDiffFinding(manifest.pages.find((p) => p.pageDir === smallGapPageDir)!.url, 700, 1000, '.thin'),
-      buildRenderDiffFinding(manifest.pages.find((p) => p.pageDir === bigGapPageDir)!.url, 1000, 5000, '.big-gap'),
+      buildRenderDiffFinding(
+        manifest.pages.find((p) => p.pageDir === smallGapPageDir)!.url,
+        700,
+        1000,
+        '.thin',
+      ),
+      buildRenderDiffFinding(
+        manifest.pages.find((p) => p.pageDir === bigGapPageDir)!.url,
+        1000,
+        5000,
+        '.big-gap',
+      ),
     ];
 
     const { pages } = resolveRenderDiffEvidence(manifestWithGaps, findings);

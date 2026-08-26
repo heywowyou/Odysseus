@@ -19,7 +19,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { FINGERPRINT_FILENAME, REPO_ROOT, fixtureAudits, normalizeFingerprint } from '../../../../scripts/fixture-fingerprint.mjs';
+import {
+  FINGERPRINT_FILENAME,
+  REPO_ROOT,
+  fixtureAudits,
+  normalizeFingerprint,
+} from '../../../../scripts/fixture-fingerprint.mjs';
 
 interface FixtureAudit {
   dir: string;
@@ -40,14 +45,14 @@ describe('fixture freshness', () => {
       if (!existsSync(path.join(dir, 'findings.json'))) continue;
 
       const stampPath = path.join(dir, FINGERPRINT_FILENAME);
-      const stamp = existsSync(stampPath) ? readFileSync(stampPath, 'utf-8').trim() : '(never stamped)';
-      if (stamp !== expected) stale.push(`${audit.dir} was normalized at ${stamp}, code is at ${expected}`);
+      const stamp = existsSync(stampPath)
+        ? readFileSync(stampPath, 'utf-8').trim()
+        : '(never stamped)';
+      if (stamp !== expected)
+        stale.push(`${audit.dir} was normalized at ${stamp}, code is at ${expected}`);
     }
 
-    expect(
-      stale,
-      `Stale fixtures. Run: pnpm fixtures:refresh\n${stale.join('\n')}`,
-    ).toEqual([]);
+    expect(stale, `Stale fixtures. Run: pnpm fixtures:refresh\n${stale.join('\n')}`).toEqual([]);
   });
 
   it('every fixture audit states why it is kept', () => {

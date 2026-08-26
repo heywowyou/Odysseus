@@ -1,6 +1,11 @@
 import { getCriterionName } from '@odysseus/llm';
 import { ARTICLE_47_REGIME_ID } from '@odysseus/core';
-import type { AuditManualFields, Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
+import type {
+  AuditManualFields,
+  Finding,
+  ObligationAssessment,
+  ReportLanguage,
+} from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, renderSheetHeader, sheet } from '../html-utils.js';
 import { buildConformanceRollup } from '../conformance-rollup.js';
@@ -36,7 +41,8 @@ function fieldRow(label: string, value: string): string {
  *  feedback doc as a Jules decision); suppressing is the safe default
  *  rather than shipping a wrong-regime artifact. */
 export function isArticle47Regime(assessment: ObligationAssessment | undefined): boolean {
-  if (!assessment || (assessment.status !== 'in_scope' && assessment.status !== 'likely_in_scope')) return false;
+  if (!assessment || (assessment.status !== 'in_scope' && assessment.status !== 'likely_in_scope'))
+    return false;
   const basis = pickPrimaryBasis(assessment);
   return basis?.regimeId === ARTICLE_47_REGIME_ID;
 }
@@ -97,7 +103,8 @@ export function renderAccessibilityStatement(
     )
     .join('');
 
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, a.eyebrow, a.heading)}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-6)">${escapeHtml(a.intro)}</p>
     <div style="display:grid;grid-template-columns:1fr 220px;font-size:14px;margin-bottom:var(--space-6)">
@@ -123,5 +130,8 @@ export function renderAccessibilityStatement(
         <p style="font-size:13px;opacity:0.7">${escapeHtml(remediationPlanBody)}</p>
       </div>
     </div>
-  `, '', 'section-10');
+  `,
+    '',
+    'section-10',
+  );
 }

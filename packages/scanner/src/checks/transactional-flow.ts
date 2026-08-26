@@ -35,7 +35,12 @@ import { isSocialPlatformHost } from '../social-hosts.js';
 const CHECKOUT_FORM_SELECTOR =
   'form[action*="checkout"], form[action*="panier"], form[action*="cart"], [class*="add-to-cart"], [id*="add-to-cart"]';
 
-const PAYMENT_SCRIPT_SUBSTRINGS = ['js.stripe.com', 'checkout.stripe.com', 'paypal.com/sdk', 'paypalobjects.com'];
+const PAYMENT_SCRIPT_SUBSTRINGS = [
+  'js.stripe.com',
+  'checkout.stripe.com',
+  'paypal.com/sdk',
+  'paypalobjects.com',
+];
 const BOOKING_SCRIPT_SUBSTRINGS = ['simplebooking', 'resharmonics', 'thinkreservations'];
 
 /** item 0.1 (La Corniche pass, confirmed live against lacoorniche.com): a
@@ -74,7 +79,11 @@ const BOOKING_IFRAME_DOMAIN_SUBSTRINGS = [
   'module.lafourchette.com',
 ];
 
-const OUTBOUND_BOOKING_HOSTS = [/(^|\.)booking\.com$/i, /(^|\.)airbnb\.[a-z.]+$/i, /(^|\.)expedia\.[a-z.]+$/i];
+const OUTBOUND_BOOKING_HOSTS = [
+  /(^|\.)booking\.com$/i,
+  /(^|\.)airbnb\.[a-z.]+$/i,
+  /(^|\.)expedia\.[a-z.]+$/i,
+];
 
 /** Never followed regardless of link text, defense in depth alongside the
  *  \b word-boundary fix on BOOKING_INTENT_TEXT_PATTERN below (a live
@@ -158,7 +167,10 @@ export function findBookingIframes(iframeSrcs: readonly string[]): BookingIframe
   return matches;
 }
 
-export async function detectTransactionalFlow(page: Page, pageUrl: string): Promise<TransactionalFlowEvidence[]> {
+export async function detectTransactionalFlow(
+  page: Page,
+  pageUrl: string,
+): Promise<TransactionalFlowEvidence[]> {
   const evidence: TransactionalFlowEvidence[] = [];
 
   const formMatches = await page.$$eval(CHECKOUT_FORM_SELECTOR, (elements) =>
@@ -176,7 +188,9 @@ export async function detectTransactionalFlow(page: Page, pageUrl: string): Prom
     });
   }
 
-  const scriptSrcs = await page.$$eval('script[src]', (elements) => elements.map((el) => el.getAttribute('src') ?? ''));
+  const scriptSrcs = await page.$$eval('script[src]', (elements) =>
+    elements.map((el) => el.getAttribute('src') ?? ''),
+  );
   for (const src of scriptSrcs) {
     if (PAYMENT_SCRIPT_SUBSTRINGS.some((substring) => src.includes(substring))) {
       evidence.push({
@@ -217,7 +231,9 @@ export async function detectTransactionalFlow(page: Page, pageUrl: string): Prom
   // item 0.1: a booking/reservation widget embedded directly as a
   // third-party iframe, never checked before this fix (see
   // BOOKING_IFRAME_DOMAIN_SUBSTRINGS above).
-  const iframeSrcs = await page.$$eval('iframe[src]', (elements) => elements.map((el) => el.getAttribute('src') ?? ''));
+  const iframeSrcs = await page.$$eval('iframe[src]', (elements) =>
+    elements.map((el) => el.getAttribute('src') ?? ''),
+  );
   for (const { src, domain } of findBookingIframes(iframeSrcs)) {
     evidence.push({
       kind: 'booking-iframe',
@@ -330,7 +346,8 @@ export function classifyDestinationPage(
 
   return {
     resolution: 'undetermined',
-    detail: "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
+    detail:
+      "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
   };
 }
 
@@ -351,7 +368,11 @@ async function inspectDestinationPage(
     const destinationTitle = await destinationPage.title();
     const destinationBodyText = await destinationPage.evaluate(() => document.body.innerText);
 
-    const { resolution, detail } = classifyDestinationPage(originName, destinationTitle, destinationBodyText);
+    const { resolution, detail } = classifyDestinationPage(
+      originName,
+      destinationTitle,
+      destinationBodyText,
+    );
     return { linkUrl, destinationUrl, resolution, detail };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -376,7 +397,10 @@ async function inspectDestinationPage(
  * lanes racing to check the same host share one in-flight navigation
  * instead of both starting one.
  */
-export type RedirectHostCache = Map<string, Promise<Omit<TransactionalFlowRedirectCheck, 'pageUrl'>>>;
+export type RedirectHostCache = Map<
+  string,
+  Promise<Omit<TransactionalFlowRedirectCheck, 'pageUrl'>>
+>;
 
 export interface DelegatedBookingRedirectOptions {
   browser: Browser;

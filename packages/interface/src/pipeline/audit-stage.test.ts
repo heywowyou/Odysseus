@@ -62,7 +62,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(launchBrowser).mockResolvedValue({ browser: fakeBrowser, debugPort: 9222 });
   vi.mocked(scanSite).mockResolvedValue({
-    crawl: { visitedCount: 2, startUrl: 'https://example.com/', pages: [], maxPages: 20, maxDepth: 5, robotsTxtFound: true, effectiveDelayMs: 1000 },
+    crawl: {
+      visitedCount: 2,
+      startUrl: 'https://example.com/',
+      pages: [],
+      maxPages: 20,
+      maxDepth: 5,
+      robotsTxtFound: true,
+      effectiveDelayMs: 1000,
+    },
     pages: [],
   } as never);
   vi.mocked(writeAuditArtifacts).mockResolvedValue({
@@ -87,7 +95,12 @@ describe('runAuditStage', () => {
     });
     vi.mocked(writeAuditArtifacts).mockImplementation(async () => {
       calls.push('writeAuditArtifacts');
-      return { auditId: 'audit-123', auditDir: '/dir', manifest: fakeManifest(), pages: [] } as never;
+      return {
+        auditId: 'audit-123',
+        auditDir: '/dir',
+        manifest: fakeManifest(),
+        pages: [],
+      } as never;
     });
     vi.mocked(runObligationStage).mockImplementation(async () => {
       calls.push('runObligationStage');
@@ -129,7 +142,12 @@ describe('runAuditStage', () => {
 
     const result = await runAuditStage('https://example.com/', {}, fakeConnection);
 
-    expect(runObligationStage).toHaveBeenCalledWith(fakeManifest(), fakeConnection, undefined, undefined);
+    expect(runObligationStage).toHaveBeenCalledWith(
+      fakeManifest(),
+      fakeConnection,
+      undefined,
+      undefined,
+    );
     expect(result.obligationAssessment).toEqual({
       status: 'in_scope',
       basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }],
@@ -139,14 +157,26 @@ describe('runAuditStage', () => {
   it('passes options.manualSiren through to runObligationStage', async () => {
     await runAuditStage('https://example.com/', { manualSiren: '732829320' }, fakeConnection);
 
-    expect(runObligationStage).toHaveBeenCalledWith(fakeManifest(), fakeConnection, '732829320', undefined);
+    expect(runObligationStage).toHaveBeenCalledWith(
+      fakeManifest(),
+      fakeConnection,
+      '732829320',
+      undefined,
+    );
   });
 
   it('passes options.siteSignalOverrides through to runObligationStage', async () => {
-    const siteSignalOverrides = { hasTransactionalFlow: { value: true, reason: 'confirmed by hand' } };
+    const siteSignalOverrides = {
+      hasTransactionalFlow: { value: true, reason: 'confirmed by hand' },
+    };
     await runAuditStage('https://example.com/', { siteSignalOverrides }, fakeConnection);
 
-    expect(runObligationStage).toHaveBeenCalledWith(fakeManifest(), fakeConnection, undefined, siteSignalOverrides);
+    expect(runObligationStage).toHaveBeenCalledWith(
+      fakeManifest(),
+      fakeConnection,
+      undefined,
+      siteSignalOverrides,
+    );
   });
 
   it('passes maxPages/maxDepth through to scanSite when provided', async () => {
@@ -170,15 +200,28 @@ describe('runAuditStage', () => {
     const onProgress = vi.fn();
     await runAuditStage('https://example.com/', { onProgress }, fakeConnection);
 
-    expect(scanSite).toHaveBeenCalledWith('https://example.com/', expect.objectContaining({ onProgress }));
+    expect(scanSite).toHaveBeenCalledWith(
+      'https://example.com/',
+      expect.objectContaining({ onProgress }),
+    );
   });
 
   it('derives pruneScreenshots input from the manifest, marking the crawl start URL as the homepage', async () => {
     await runAuditStage('https://example.com/', {}, fakeConnection);
 
     expect(pruneScreenshots).toHaveBeenCalledWith('/artifacts/example.com/2026-08-04T00-00-00Z', [
-      { pageUrl: 'https://example.com/', pageDir: 'home-abc123', missingPercent: 0, isHomepage: true },
-      { pageUrl: 'https://example.com/about', pageDir: 'about-def456', missingPercent: 10, isHomepage: false },
+      {
+        pageUrl: 'https://example.com/',
+        pageDir: 'home-abc123',
+        missingPercent: 0,
+        isHomepage: true,
+      },
+      {
+        pageUrl: 'https://example.com/about',
+        pageDir: 'about-def456',
+        missingPercent: 10,
+        isHomepage: false,
+      },
     ]);
   });
 
@@ -206,7 +249,12 @@ describe('runAuditStage', () => {
       auditDir: '/artifacts/example.com/2026-08-04T00-00-00Z',
       manifest: {
         ...fakeManifest(),
-        siteSignals: { hasTransactionalFlow: false, transactionalFlowEvidence: [], siren: '732829320', siteName: 'La Co(o)rniche' },
+        siteSignals: {
+          hasTransactionalFlow: false,
+          transactionalFlowEvidence: [],
+          siren: '732829320',
+          siteName: 'La Co(o)rniche',
+        },
       },
       pages: [],
     } as never);
@@ -255,7 +303,9 @@ describe('runAuditStage', () => {
     expect(buildAuditDir).toHaveBeenCalledWith('/artifacts', 'example.com', expect.any(Date));
     expect(scanSite).toHaveBeenCalledWith(
       'https://example.com/',
-      expect.objectContaining({ screenshotDir: '/artifacts/example.com/2026-08-04T00-00-00Z/pages' }),
+      expect.objectContaining({
+        screenshotDir: '/artifacts/example.com/2026-08-04T00-00-00Z/pages',
+      }),
     );
   });
 });

@@ -72,7 +72,9 @@ describe('checkHtmlValidity', () => {
   it('never reports a house-style preference as a defect', async () => {
     // Lowercase doctype and unquoted attributes: html-validate's
     // recommended preset objects to both; neither is a defect.
-    const result = await run('<!doctype html><html lang=fr><head><title>t</title></head><body><p>x</p></body></html>');
+    const result = await run(
+      '<!doctype html><html lang=fr><head><title>t</title></head><body><p>x</p></body></html>',
+    );
     const ids = result.issues.map((i) => i.ruleId);
     expect(ids).not.toContain('doctype-style');
     expect(ids).not.toContain('attr-quotes');

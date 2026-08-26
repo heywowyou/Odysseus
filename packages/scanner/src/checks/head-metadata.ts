@@ -87,7 +87,10 @@ export function parseJsonLdBlocks(
   });
 }
 
-export async function extractHeadMetadata(page: Page, pageUrl: string): Promise<HeadMetadataExtraction> {
+export async function extractHeadMetadata(
+  page: Page,
+  pageUrl: string,
+): Promise<HeadMetadataExtraction> {
   const raw = await page.evaluate(() => {
     // The selector expression below is duplicated at each of its two use
     // sites (jsonLdRawBlocks, headings) rather than pulled into a shared
@@ -105,7 +108,8 @@ export async function extractHeadMetadata(page: Page, pageUrl: string): Promise<
     // avoids the injection. See keyboard-navigation.ts for the same fix
     // applied to a different check.
     const title = document.title.trim() || null;
-    const metaDescription = document.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || null;
+    const metaDescription =
+      document.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || null;
 
     const canonicalUrls = Array.from(document.querySelectorAll('link[rel="canonical"]'))
       .map((el) => el.getAttribute('href') ?? '')
@@ -118,26 +122,49 @@ export async function extractHeadMetadata(page: Page, pageUrl: string): Promise<
       if (property && content) openGraphTags[property] = content;
     }
 
-    const jsonLdElements = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+    const jsonLdElements = Array.from(
+      document.querySelectorAll('script[type="application/ld+json"]'),
+    );
     const jsonLdRawBlocks = jsonLdElements.map((el) => ({
       raw: el.textContent ?? '',
-      selector: el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}:nth-of-type(${jsonLdElements.indexOf(el) + 1})`,
+      selector: el.id
+        ? `#${el.id}`
+        : `${el.tagName.toLowerCase()}:nth-of-type(${jsonLdElements.indexOf(el) + 1})`,
     }));
 
     const headingElements = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
     const headings = headingElements.map((el) => ({
       level: Number(el.tagName.slice(1)),
       text: (el.textContent ?? '').trim(),
-      selector: el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}:nth-of-type(${headingElements.indexOf(el) + 1})`,
+      selector: el.id
+        ? `#${el.id}`
+        : `${el.tagName.toLowerCase()}:nth-of-type(${headingElements.indexOf(el) + 1})`,
     }));
 
     const hreflangLinks = Array.from(document.querySelectorAll('link[rel="alternate"][hreflang]'))
-      .map((el) => ({ lang: el.getAttribute('hreflang') ?? '', href: el.getAttribute('href') ?? '' }))
+      .map((el) => ({
+        lang: el.getAttribute('hreflang') ?? '',
+        href: el.getAttribute('href') ?? '',
+      }))
       .filter((link) => link.lang.length > 0 && link.href.length > 0);
 
-    const robotsMeta = document.querySelector('meta[name="robots"]')?.getAttribute('content')?.trim().toLowerCase() || null;
+    const robotsMeta =
+      document
+        .querySelector('meta[name="robots"]')
+        ?.getAttribute('content')
+        ?.trim()
+        .toLowerCase() || null;
 
-    return { title, metaDescription, canonicalUrls, openGraphTags, jsonLdRawBlocks, headings, hreflangLinks, robotsMeta };
+    return {
+      title,
+      metaDescription,
+      canonicalUrls,
+      openGraphTags,
+      jsonLdRawBlocks,
+      headings,
+      hreflangLinks,
+      robotsMeta,
+    };
   });
 
   return {

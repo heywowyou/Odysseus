@@ -20,7 +20,11 @@ function buildProfile(overrides: Partial<OperatorProfile> = {}): OperatorProfile
     denomination: { value: 'Test Company', source: 'sirene-api', retrievedAt },
     naf: { value: '62.01Z', source: 'sirene-api', retrievedAt },
     legalForm: { value: 'SAS', source: 'sirene-api', retrievedAt },
-    effectifBand: { value: { code: '02', label: '3 a 5 salaries' }, source: 'sirene-api', retrievedAt },
+    effectifBand: {
+      value: { code: '02', label: '3 a 5 salaries' },
+      source: 'sirene-api',
+      retrievedAt,
+    },
     turnover: { value: 500_000, source: 'sirene-api', retrievedAt },
     ...overrides,
   };
@@ -28,8 +32,15 @@ function buildProfile(overrides: Partial<OperatorProfile> = {}): OperatorProfile
 
 describe.skipIf(!mongoAvailable)('sirene cache', () => {
   it('caches a profile and returns it on a subsequent lookup', async () => {
-    const profile = buildProfile({ siren: { value: '111111116', source: 'sirene-api', retrievedAt: new Date() } });
-    await upsertSireneCache(connection!, '111111116', profile, new Date('2026-01-01T00:00:00.000Z'));
+    const profile = buildProfile({
+      siren: { value: '111111116', source: 'sirene-api', retrievedAt: new Date() },
+    });
+    await upsertSireneCache(
+      connection!,
+      '111111116',
+      profile,
+      new Date('2026-01-01T00:00:00.000Z'),
+    );
 
     const cached = await getCachedSireneProfile(connection!, '111111116');
     expect(cached?.siren.value).toBe('111111116');
@@ -41,21 +52,42 @@ describe.skipIf(!mongoAvailable)('sirene cache', () => {
   });
 
   it('returns a plain object every field of which survives a shallow spread (regression: a live Mongoose subdocument silently drops fields when spread)', async () => {
-    const profile = buildProfile({ siren: { value: '552032534', source: 'sirene-api', retrievedAt: new Date() } });
-    await upsertSireneCache(connection!, '552032534', profile, new Date('2026-01-01T00:00:00.000Z'));
+    const profile = buildProfile({
+      siren: { value: '552032534', source: 'sirene-api', retrievedAt: new Date() },
+    });
+    await upsertSireneCache(
+      connection!,
+      '552032534',
+      profile,
+      new Date('2026-01-01T00:00:00.000Z'),
+    );
 
     const cached = await getCachedSireneProfile(connection!, '552032534');
     // Exactly the operation packages/interface's obligation-stage.ts
     // performs when tagging siren provenance - must not silently lose
     // `value`/`retrievedAt`.
     const spread = { ...cached!.siren, source: 'siren:manual' };
-    expect(spread).toEqual({ value: '552032534', source: 'siren:manual', retrievedAt: cached!.siren.retrievedAt });
+    expect(spread).toEqual({
+      value: '552032534',
+      source: 'siren:manual',
+      retrievedAt: cached!.siren.retrievedAt,
+    });
   });
 
   it('upserts: a second call for the same SIREN converges to the latest retrievedAt, not a duplicate document', async () => {
     const siren = '222222229';
-    await upsertSireneCache(connection!, siren, buildProfile(), new Date('2026-01-01T00:00:00.000Z'));
-    await upsertSireneCache(connection!, siren, buildProfile(), new Date('2026-02-01T00:00:00.000Z'));
+    await upsertSireneCache(
+      connection!,
+      siren,
+      buildProfile(),
+      new Date('2026-01-01T00:00:00.000Z'),
+    );
+    await upsertSireneCache(
+      connection!,
+      siren,
+      buildProfile(),
+      new Date('2026-02-01T00:00:00.000Z'),
+    );
 
     const SireneCacheModel = createSireneCacheModel(connection!);
     expect(await SireneCacheModel.countDocuments({ siren })).toBe(1);

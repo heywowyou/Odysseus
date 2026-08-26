@@ -8,7 +8,11 @@
 
 import { randomUUID } from 'node:crypto';
 import type { Connection } from 'mongoose';
-import { hashSuppressionValue, normalizeAddressForHash, normalizeDomainForHash } from '@odysseus/core';
+import {
+  hashSuppressionValue,
+  normalizeAddressForHash,
+  normalizeDomainForHash,
+} from '@odysseus/core';
 import { createSuppressionModel } from './schemas/suppression.schema.js';
 
 export interface AddSuppressionEntryInput {
@@ -17,11 +21,16 @@ export interface AddSuppressionEntryInput {
   reason: string;
 }
 
-export async function addSuppressionEntry(connection: Connection, input: AddSuppressionEntryInput): Promise<void> {
+export async function addSuppressionEntry(
+  connection: Connection,
+  input: AddSuppressionEntryInput,
+): Promise<void> {
   const SuppressionModel = createSuppressionModel(connection);
   const domainHash = hashSuppressionValue(normalizeDomainForHash(input.domain));
   const addressHash =
-    input.address !== undefined ? hashSuppressionValue(normalizeAddressForHash(input.address)) : undefined;
+    input.address !== undefined
+      ? hashSuppressionValue(normalizeAddressForHash(input.address))
+      : undefined;
   await SuppressionModel.create({
     suppressionId: randomUUID(),
     domainHash,
@@ -31,10 +40,15 @@ export async function addSuppressionEntry(connection: Connection, input: AddSupp
   });
 }
 
-export async function isSuppressed(connection: Connection, domain: string, address?: string): Promise<boolean> {
+export async function isSuppressed(
+  connection: Connection,
+  domain: string,
+  address?: string,
+): Promise<boolean> {
   const SuppressionModel = createSuppressionModel(connection);
   const domainHash = hashSuppressionValue(normalizeDomainForHash(domain));
-  const addressHash = address !== undefined ? hashSuppressionValue(normalizeAddressForHash(address)) : undefined;
+  const addressHash =
+    address !== undefined ? hashSuppressionValue(normalizeAddressForHash(address)) : undefined;
 
   const query =
     addressHash !== undefined ? { $or: [{ domainHash }, { addressHash }] } : { domainHash };

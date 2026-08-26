@@ -46,8 +46,12 @@ function renderRows(jobs: JobSummary[]): void {
   emptyState.hidden = jobs.length > 0;
   rowsBody.innerHTML = jobs
     .map((job) => {
-      const typeLabel = job.type === 'full-audit' ? strings.common.typeLabels.fullAudit : strings.common.typeLabels.prospecting;
-      const rollup = job.status === 'complete' ? severityBadgesHtml(job.severityRollup, strings) : '';
+      const typeLabel =
+        job.type === 'full-audit'
+          ? strings.common.typeLabels.fullAudit
+          : strings.common.typeLabels.prospecting;
+      const rollup =
+        job.status === 'complete' ? severityBadgesHtml(job.severityRollup, strings) : '';
       return `
         <tr>
           <td>${escapeHtml(formatDate(job.createdAt))}</td>

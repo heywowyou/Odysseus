@@ -38,7 +38,15 @@ describe('item 3.2: the social-exclusion disclosure agrees with a singular count
     const manifest = await loadSasFernandeManifest();
     const withOneExcluded = {
       ...manifest,
-      pages: [...manifest.pages, { url: 'https://example.com/social/facebook/', depth: 1, status: 'skipped-external-redirect' as const, errors: {} }],
+      pages: [
+        ...manifest.pages,
+        {
+          url: 'https://example.com/social/facebook/',
+          depth: 1,
+          status: 'skipped-external-redirect' as const,
+          errors: {},
+        },
+      ],
     };
     const html = renderMethodology(getStrings('fr'), 11, withOneExcluded, 'fr');
 
@@ -52,8 +60,18 @@ describe('item 3.2: the social-exclusion disclosure agrees with a singular count
       ...manifest,
       pages: [
         ...manifest.pages,
-        { url: 'https://example.com/social/facebook/', depth: 1, status: 'skipped-external-redirect' as const, errors: {} },
-        { url: 'https://example.com/social/instagram/', depth: 1, status: 'skipped-external-redirect' as const, errors: {} },
+        {
+          url: 'https://example.com/social/facebook/',
+          depth: 1,
+          status: 'skipped-external-redirect' as const,
+          errors: {},
+        },
+        {
+          url: 'https://example.com/social/instagram/',
+          depth: 1,
+          status: 'skipped-external-redirect' as const,
+          errors: {},
+        },
       ],
     };
     const html = renderMethodology(getStrings('fr'), 11, withTwoExcluded, 'fr');
@@ -94,7 +112,7 @@ describe('renderMethodology surfaces the real Lighthouse failure reason', () => 
     };
     const html = renderMethodology(getStrings('fr'), 11, withFailures, 'fr');
 
-    expect(html).toContain("mesure de performance (Lighthouse)");
+    expect(html).toContain('mesure de performance (Lighthouse)');
     expect(html).toContain('exited before returning a result (code 1, signal null)');
     // Grouped, not one line per page: the per-page URL is stripped before
     // counting, so both failures collapse into a single "2/N pages" line.
@@ -128,7 +146,7 @@ describe('renderMethodology legal citation pointer', () => {
     const manifest = await loadSasFernandeManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
     expect(html).toContain('figure dans la section');
-    expect(html).not.toContain("sans se prononcer sur l&#39;applicabilité");
+    expect(html).not.toContain('sans se prononcer sur l&#39;applicabilité');
   });
 
   it('points back to legal exposure for every status, in_scope included', async () => {
@@ -149,7 +167,7 @@ describe('renderMethodology legal citation pointer', () => {
     expect(html).toContain('figure dans la section');
     // The full paragraph's regime-specific content must not be duplicated
     // here now that it renders only in legal-exposure.ts.
-    expect(html).not.toContain("Obligation d&#39;accessibilité numérique");
+    expect(html).not.toContain('Obligation d&#39;accessibilité numérique');
     expect(html).not.toContain('DGCCRF');
   });
 
@@ -369,7 +387,14 @@ describe('renderLegalCitationParagraph', () => {
             { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
             {
               kind: 'transactional-flow',
-              evidence: [{ kind: 'booking-engine-script', selector: 'script', pageUrl: 'https://example.com/', detail: 'simplebooking' }],
+              evidence: [
+                {
+                  kind: 'booking-engine-script',
+                  selector: 'script',
+                  pageUrl: 'https://example.com/',
+                  detail: 'simplebooking',
+                },
+              ],
             },
           ],
         },
@@ -390,7 +415,14 @@ describe('renderLegalCitationParagraph', () => {
             { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
             {
               kind: 'transactional-flow',
-              evidence: [{ kind: 'checkout-form', selector: 'form', pageUrl: 'https://example.com/', detail: 'action=/panier' }],
+              evidence: [
+                {
+                  kind: 'checkout-form',
+                  selector: 'form',
+                  pageUrl: 'https://example.com/',
+                  detail: 'action=/panier',
+                },
+              ],
             },
           ],
         },
@@ -410,7 +442,10 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
 
   it('renders no note when sirenSource is extracted', async () => {
     const manifest = await loadSasFernandeManifest();
-    const assessment: ObligationAssessment = { ...undeterminedAssessment, sirenSource: 'extracted' };
+    const assessment: ObligationAssessment = {
+      ...undeterminedAssessment,
+      sirenSource: 'extracted',
+    };
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', assessment, [lcenFinding]);
     expect(html).not.toContain('fourni manuellement');
   });
@@ -486,7 +521,14 @@ describe('renderMethodology never discloses manual vs automated resolution of a 
     ],
   };
 
-  const bannedPhrases = ['confirmée manuellement', 'confirmed manually', 'auditeur', 'auditor', 'diverge du résultat', 'disagrees with the result'];
+  const bannedPhrases = [
+    'confirmée manuellement',
+    'confirmed manually',
+    'auditeur',
+    'auditor',
+    'diverge du résultat',
+    'disagrees with the result',
+  ];
 
   it('never mentions manual confirmation or auditor override when the resolution source is manual, with a disagreement', async () => {
     const manifest = await loadSasFernandeManifest();
@@ -539,7 +581,7 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
   it('renders the "none found" note when no finding uses any of the four extended-pass rule ids', async () => {
     const manifest = await loadSasFernandeManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, []);
-    expect(html).toContain("Résultat de la passe d&#39;accessibilité étendue");
+    expect(html).toContain('Résultat de la passe d&#39;accessibilité étendue');
   });
 
   // item 1.7 (La Corniche pass): the note used to be entirely suppressed
@@ -556,7 +598,9 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
     expect(html).toContain('Résultat de la passe d&#39;accessibilité étendue');
     expect(html).toContain('pièges au clavier (aucune anomalie détectée)');
     expect(html).toContain('ordre de focus (aucune anomalie détectée)');
-    expect(html).toContain('erreurs de formulaire non associées à leur champ (aucune anomalie détectée)');
+    expect(html).toContain(
+      'erreurs de formulaire non associées à leur champ (aucune anomalie détectée)',
+    );
     expect(html).toContain('sous-titres vidéo (2 constats détectés)');
   });
 
@@ -565,7 +609,7 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
       { findingId: 'f1', ruleId: 'alt-text-quality-heuristic' },
     ]);
-    expect(html).toContain("Résultat de la passe d&#39;accessibilité étendue");
+    expect(html).toContain('Résultat de la passe d&#39;accessibilité étendue');
   });
 });
 
@@ -586,5 +630,58 @@ describe('item 3.11: the crawl cap is explained when it actually bound', () => {
     const uncapped = { ...manifest, crawl: { ...manifest.crawl, visitedCount: 11, maxPages: 20 } };
     const html = renderMethodology(getStrings('fr'), 11, uncapped, 'fr');
     expect(html).not.toContain('plafond configuré');
+  });
+});
+
+describe('milestone 9b.5 sitemap coverage disclosure', () => {
+  it('states the link, seed, and sitemap-only page breakdown in both languages', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const withDiscovery = {
+      ...manifest,
+      pages: manifest.pages.map((page, index) => ({
+        ...page,
+        discoveryMethod:
+          index < 6
+            ? ('link' as const)
+            : index === 6
+              ? ('seed' as const)
+              : ('sitemap-only' as const),
+      })),
+    };
+
+    const french = renderMethodology(getStrings('fr'), 11, withDiscovery, 'fr');
+    expect(french).toContain(
+      '6 atteintes depuis la page d&#39;accueil ou par des liens internes, 1 fournies explicitement et 4 ajoutées depuis le sitemap',
+    );
+
+    const english = renderMethodology(getStrings('en'), 11, withDiscovery, 'en');
+    expect(english).toContain(
+      '6 reached from the homepage or internal links, 1 supplied explicitly, and 4 added from the sitemap',
+    );
+  });
+
+  it('discloses partial sitemap resolution and configured-cap omissions', async () => {
+    const manifest = await loadSasFernandeManifest();
+    const withIncompleteCoverage = {
+      ...manifest,
+      crawl: {
+        ...manifest.crawl,
+        sitemapCoverage: {
+          declaredPageCount: 20,
+          eligiblePageCount: 18,
+          scannedPageCount: 15,
+          filteredPageCount: 2,
+          capOmittedPageCount: 3,
+          failedSitemapCount: 1,
+        },
+      },
+    };
+
+    const html = renderMethodology(getStrings('en'), 11, withIncompleteCoverage, 'en');
+    expect(html).toContain('Sitemap documents not read: 1');
+    expect(html).toContain(
+      'Declared page URLs outside the authorized scope or filtered by the audit rules: 2',
+    );
+    expect(html).toContain('Eligible pages omitted by the configured cap: 3');
   });
 });

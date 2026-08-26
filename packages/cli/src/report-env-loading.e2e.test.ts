@@ -29,10 +29,7 @@ ensureEnvLoaded();
 const MONGO_URI = process.env['MONGODB_URI'];
 const TEST_AUDIT_ID = 'test-fixture-report-env-loading';
 const WORKSPACE_ROOT = findWorkspaceRoot();
-const FIXTURE_SRC = path.join(
-  WORKSPACE_ROOT,
-  'artifacts/sas-fernande.fr/2026-08-02T22-39-42Z',
-);
+const FIXTURE_SRC = path.join(WORKSPACE_ROOT, 'artifacts/sas-fernande.fr/2026-08-02T22-39-42Z');
 const CLI_ENTRY = path.join(WORKSPACE_ROOT, 'packages/cli/src/index.ts');
 const TSX_BIN = path.join(WORKSPACE_ROOT, 'node_modules/.bin/tsx');
 
@@ -86,45 +83,50 @@ function runCli(args: string[], env: NodeJS.ProcessEnv): Promise<SpawnResult> {
   });
 }
 
-describe.skipIf(!mongoAvailable)('odysseus report: env loading without an inherited MONGODB_URI', () => {
-  let tempDir: string;
+describe.skipIf(!mongoAvailable)(
+  'odysseus report: env loading without an inherited MONGODB_URI',
+  () => {
+    let tempDir: string;
 
-  beforeAll(async () => {
-    // A previous failed run may have left a stale doc behind; clear it
-    // before asserting anything, not only after.
-    await deleteTestReportDocs();
+    beforeAll(async () => {
+      // A previous failed run may have left a stale doc behind; clear it
+      // before asserting anything, not only after.
+      await deleteTestReportDocs();
 
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-report-env-test-'));
-    await fs.cp(FIXTURE_SRC, tempDir, { recursive: true });
+      tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-report-env-test-'));
+      await fs.cp(FIXTURE_SRC, tempDir, { recursive: true });
 
-    const manifestPath = path.join(tempDir, 'manifest.json');
-    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8')) as { auditId: string };
-    manifest.auditId = TEST_AUDIT_ID;
-    await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+      const manifestPath = path.join(tempDir, 'manifest.json');
+      const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8')) as { auditId: string };
+      manifest.auditId = TEST_AUDIT_ID;
+      await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
-    const analysesDir = path.join(tempDir, 'analyses');
-    const analysisFiles = await fs.readdir(analysesDir);
-    for (const name of analysisFiles) {
-      const analysisPath = path.join(analysesDir, name);
-      const analysis = JSON.parse(await fs.readFile(analysisPath, 'utf-8')) as { auditId: string };
-      analysis.auditId = TEST_AUDIT_ID;
-      await fs.writeFile(analysisPath, JSON.stringify(analysis, null, 2));
-    }
-  }, 30_000);
+      const analysesDir = path.join(tempDir, 'analyses');
+      const analysisFiles = await fs.readdir(analysesDir);
+      for (const name of analysisFiles) {
+        const analysisPath = path.join(analysesDir, name);
+        const analysis = JSON.parse(await fs.readFile(analysisPath, 'utf-8')) as {
+          auditId: string;
+        };
+        analysis.auditId = TEST_AUDIT_ID;
+        await fs.writeFile(analysisPath, JSON.stringify(analysis, null, 2));
+      }
+    }, 30_000);
 
-  afterAll(async () => {
-    await deleteTestReportDocs();
-    if (tempDir) await fs.rm(tempDir, { recursive: true, force: true });
-  });
+    afterAll(async () => {
+      await deleteTestReportDocs();
+      if (tempDir) await fs.rm(tempDir, { recursive: true, force: true });
+    });
 
-  it('succeeds when MONGODB_URI is only present in .env, not inherited from the parent shell', async () => {
-    const childEnv = { ...process.env };
-    delete childEnv['MONGODB_URI'];
+    it('succeeds when MONGODB_URI is only present in .env, not inherited from the parent shell', async () => {
+      const childEnv = { ...process.env };
+      delete childEnv['MONGODB_URI'];
 
-    const result = await runCli(['report', tempDir, '--language', 'fr'], childEnv);
+      const result = await runCli(['report', tempDir, '--language', 'fr'], childEnv);
 
-    expect(result.stderr).not.toMatch(/MONGODB_URI is not set/);
-    expect(result.code).toBe(0);
-    expect(result.stdout).toContain(`Report for ${TEST_AUDIT_ID} complete`);
-  }, 60_000);
-});
+      expect(result.stderr).not.toMatch(/MONGODB_URI is not set/);
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain(`Report for ${TEST_AUDIT_ID} complete`);
+    }, 60_000);
+  },
+);

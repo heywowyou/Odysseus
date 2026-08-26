@@ -49,5 +49,8 @@ const sireneCacheSchema = new Schema<SireneCacheDocument>(
 );
 
 export function createSireneCacheModel(connection: Connection): Model<SireneCacheDocument> {
-  return connection.models['SireneCache'] ?? connection.model<SireneCacheDocument>('SireneCache', sireneCacheSchema);
+  return (
+    connection.models['SireneCache'] ??
+    connection.model<SireneCacheDocument>('SireneCache', sireneCacheSchema)
+  );
 }

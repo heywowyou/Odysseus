@@ -12,7 +12,8 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { connectToMongo, disconnectFromMongo, getMongoUri } from './connection.js';
 import { MONGODB_TEST_URI as TEST_URI, probeMongoAvailability } from './test-support.js';
 
-const { available: mongoAvailable, connection: probeConnection } = await probeMongoAvailability(TEST_URI);
+const { available: mongoAvailable, connection: probeConnection } =
+  await probeMongoAvailability(TEST_URI);
 
 afterAll(async () => {
   if (probeConnection) await probeConnection.close();
@@ -38,6 +39,20 @@ describe('getMongoUri', () => {
 });
 
 describe.skipIf(!mongoAvailable)('connectToMongo / disconnectFromMongo', () => {
+  it('isolates the default test database by Vitest worker', async () => {
+    const originalPoolId = process.env['VITEST_POOL_ID'];
+    process.env['VITEST_POOL_ID'] = '7';
+
+    try {
+      const { connection } = await probeMongoAvailability();
+      expect(connection?.name).toBe('odysseus_test_worker_7');
+      await connection?.close();
+    } finally {
+      if (originalPoolId === undefined) delete process.env['VITEST_POOL_ID'];
+      else process.env['VITEST_POOL_ID'] = originalPoolId;
+    }
+  });
+
   it('connects to and cleanly closes an isolated connection', async () => {
     const connection = await connectToMongo(TEST_URI);
     expect(connection.readyState).toBe(1); // connected

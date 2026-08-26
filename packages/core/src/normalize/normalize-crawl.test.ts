@@ -40,7 +40,11 @@ describe('robots-blocks-indexing', () => {
       baseInput({
         pages: [
           { url: START_URL, status: 'visited', httpStatus: 200 },
-          { url: 'https://example.com/private', status: 'skipped-robots', discoveredFrom: START_URL },
+          {
+            url: 'https://example.com/private',
+            status: 'skipped-robots',
+            discoveredFrom: START_URL,
+          },
         ],
       }),
     );
@@ -90,7 +94,12 @@ describe('broken-internal-link', () => {
       baseInput({
         pages: [
           { url: START_URL, status: 'visited', httpStatus: 200 },
-          { url: 'https://example.com/about', status: 'visited', httpStatus: 200, discoveredFrom: START_URL },
+          {
+            url: 'https://example.com/about',
+            status: 'visited',
+            httpStatus: 200,
+            discoveredFrom: START_URL,
+          },
         ],
       }),
     );
@@ -114,8 +123,18 @@ describe('broken-internal-link', () => {
       baseInput({
         pages: [
           { url: START_URL, status: 'visited', httpStatus: 200 },
-          { url: 'https://example.com/gone-a', status: 'visited', httpStatus: 404, discoveredFrom: START_URL },
-          { url: 'https://example.com/gone-b', status: 'visited', httpStatus: 500, discoveredFrom: START_URL },
+          {
+            url: 'https://example.com/gone-a',
+            status: 'visited',
+            httpStatus: 404,
+            discoveredFrom: START_URL,
+          },
+          {
+            url: 'https://example.com/gone-b',
+            status: 'visited',
+            httpStatus: 500,
+            discoveredFrom: START_URL,
+          },
         ],
       }),
     );

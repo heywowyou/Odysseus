@@ -35,10 +35,19 @@ describe('item 36: the printable checklist page inverts to a light background un
     await browser.close();
   });
 
-  it('paints #section-05\'s physical page with a light background and dark text under print media, unlike every other page', async () => {
+  it("paints #section-05's physical page with a light background and dark text under print media, unlike every other page", async () => {
     const { manifest, findings, analysis } = buildStressFixture();
-    const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(manifest, findings);
-    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages, renderDiffTotalEligible: totalEligible });
+    const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(
+      manifest,
+      findings,
+    );
+    const html = await renderHtml({
+      manifest,
+      findings,
+      analysis,
+      renderDiffEvidencePages,
+      renderDiffTotalEligible: totalEligible,
+    });
     const pagedjsSource = await readPagedjsSource();
 
     const context = await browser.newContext();
@@ -67,13 +76,15 @@ describe('item 36: the printable checklist page inverts to a light background un
       // produces dark ink on a still-dark page while this assertion, if it
       // only checked .pagedjs_page, would pass anyway. Check both.
       const checklistSheet = checklistPage?.querySelector('.pagedjs_sheet') ?? null;
-      const otherPage = document
-        .querySelector('#section-05')
-        ?.closest('.pagedjs_page')
+      const otherPage = document.querySelector('#section-05')?.closest('.pagedjs_page')
         ?.previousElementSibling as Element | null;
       const get = (el: Element | null | undefined) =>
         el ? { bg: getComputedStyle(el).backgroundColor, color: getComputedStyle(el).color } : null;
-      return { checklistPage: get(checklistPage), checklistSheet: get(checklistSheet), otherPage: get(otherPage) };
+      return {
+        checklistPage: get(checklistPage),
+        checklistSheet: get(checklistSheet),
+        otherPage: get(otherPage),
+      };
     });
 
     expect(colors.checklistPage).not.toBeNull();

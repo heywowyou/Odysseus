@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { FINDINGS_SCHEMA_VERSION, LCEN_MENTIONS_LEGALES_RULE_ID, type Finding } from '@odysseus/core';
+import {
+  FINDINGS_SCHEMA_VERSION,
+  LCEN_MENTIONS_LEGALES_RULE_ID,
+  type Finding,
+} from '@odysseus/core';
 import { resolveLcenFinding } from './lcen-resolution.js';
 
 function buildFinding(ruleId: string): Finding {

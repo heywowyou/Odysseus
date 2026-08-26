@@ -1,7 +1,14 @@
 import type { AuditManifest, Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, escapeProse, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  escapeProse,
+  fillTemplate,
+  formatNumber,
+  renderSheetHeader,
+  sheet,
+} from '../html-utils.js';
 import { computeStatistics } from '../statistics.js';
 import { sectionTitle } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
@@ -30,7 +37,9 @@ function renderTopPriorityLegalNote(
   const e = strings.executiveSummary;
   const firstLegalTheme = rendered.find((theme) => theme.legalRelevance !== undefined);
   const text = firstLegalTheme
-    ? fillTemplate(e.topPriorityIsNotLegalWithPointerTemplate, { legalRank: firstLegalTheme.priorityRank })
+    ? fillTemplate(e.topPriorityIsNotLegalWithPointerTemplate, {
+        legalRank: firstLegalTheme.priorityRank,
+      })
     : e.topPriorityIsNotLegalNoPointer;
 
   return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-3);max-width:66ch">${escapeHtml(text)}</p>`;
@@ -43,7 +52,9 @@ function renderTopPriorityLegalNote(
  *  prose lives (report.reference.html's exec-summary jump list is title
  *  + rank badge + "Voir ->" only, nothing else). */
 function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes']): string {
-  const topThemes = [...themes].sort((a, b) => a.priorityRank - b.priorityRank).slice(0, TOP_THEME_COUNT);
+  const topThemes = [...themes]
+    .sort((a, b) => a.priorityRank - b.priorityRank)
+    .slice(0, TOP_THEME_COUNT);
   if (topThemes.length === 0) return '';
 
   const e = strings.executiveSummary;
@@ -95,11 +106,17 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
  *  section most likely to be the only one a director actually reads in
  *  full. Rendered only when the percentage is meaningful (there is at
  *  least one non-heuristic accessibility occurrence to take a share of). */
-function renderThirdPartySplitNote(strings: ReportStrings, stats: ReturnType<typeof computeStatistics>): string {
-  if (stats.thirdPartyAccessibilityOccurrences === 0 || stats.accessibilityOccurrences === 0) return '';
+function renderThirdPartySplitNote(
+  strings: ReportStrings,
+  stats: ReturnType<typeof computeStatistics>,
+): string {
+  if (stats.thirdPartyAccessibilityOccurrences === 0 || stats.accessibilityOccurrences === 0)
+    return '';
 
   const e = strings.executiveSummary;
-  const percent = Math.round((stats.thirdPartyAccessibilityOccurrences / stats.accessibilityOccurrences) * 100);
+  const percent = Math.round(
+    (stats.thirdPartyAccessibilityOccurrences / stats.accessibilityOccurrences) * 100,
+  );
   return `<p style="font-size:12px;opacity:0.65;margin-top:var(--space-2);max-width:66ch">${escapeHtml(
     fillTemplate(e.thirdPartySplitSentenceTemplate, { percent }),
   )}</p>`;
@@ -116,7 +133,10 @@ function renderThirdPartySplitNote(strings: ReportStrings, stats: ReturnType<typ
  *  site has no SEO/GEO findings at all", which needs no framing). */
 const ACCESSIBILITY_DOMINANCE_THRESHOLD = 0.8;
 
-function renderCategoryImbalanceNote(strings: ReportStrings, stats: ReturnType<typeof computeStatistics>): string {
+function renderCategoryImbalanceNote(
+  strings: ReportStrings,
+  stats: ReturnType<typeof computeStatistics>,
+): string {
   const seoGeoCount = stats.categoryCounts.seo + stats.categoryCounts.geo;
   if (seoGeoCount === 0 || stats.totalFindings === 0) return '';
   if (stats.accessibilityCount / stats.totalFindings < ACCESSIBILITY_DOMINANCE_THRESHOLD) return '';
@@ -176,7 +196,8 @@ export function renderExecutiveSummary(
     total: formatNumber(stats.totalFindings, analysis.language),
   });
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, e.eyebrow, e.heading)}
     <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(countsSentence)} ${escapeProse(analysis.executiveSummary)}</p>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
@@ -185,5 +206,8 @@ export function renderExecutiveSummary(
     ${renderCategoryImbalanceNote(strings, stats)}
     ${renderTopPriorityLegalNote(strings, analysis.themes, findingsById)}
     ${renderStartHere(strings, analysis.themes)}
-  `, '', 'section-01');
+  `,
+    '',
+    'section-01',
+  );
 }

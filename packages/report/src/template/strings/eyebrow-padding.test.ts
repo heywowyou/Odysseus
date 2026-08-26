@@ -43,13 +43,19 @@ function collectEyebrows(strings: ReportStrings): { section: string; eyebrow: st
 }
 
 describe('section eyebrow strings carry no hand-typed ordinal (item 3)', () => {
-  it.each(collectEyebrows(fr))('fr $section eyebrow "$eyebrow" has no leading number', ({ eyebrow }) => {
-    expect(eyebrow).not.toMatch(LEADING_NUMBER_PATTERN);
-  });
+  it.each(collectEyebrows(fr))(
+    'fr $section eyebrow "$eyebrow" has no leading number',
+    ({ eyebrow }) => {
+      expect(eyebrow).not.toMatch(LEADING_NUMBER_PATTERN);
+    },
+  );
 
-  it.each(collectEyebrows(en))('en $section eyebrow "$eyebrow" has no leading number', ({ eyebrow }) => {
-    expect(eyebrow).not.toMatch(LEADING_NUMBER_PATTERN);
-  });
+  it.each(collectEyebrows(en))(
+    'en $section eyebrow "$eyebrow" has no leading number',
+    ({ eyebrow }) => {
+      expect(eyebrow).not.toMatch(LEADING_NUMBER_PATTERN);
+    },
+  );
 });
 
 describe('renderSheetHeader zero-pads whatever ordinal it is given', () => {

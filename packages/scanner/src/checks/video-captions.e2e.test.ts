@@ -49,7 +49,9 @@ describe('checkVideoCaptions against real pages', () => {
   // video source must never silently exempt a real captions gap.
 
   it('flags a video with no track element at all, defaulting hasAudio to true when undetermined', async () => {
-    const result = await checkHtml(`<body><video id="promo" src="movie.mp4" controls></video></body>`);
+    const result = await checkHtml(
+      `<body><video id="promo" src="movie.mp4" controls></video></body>`,
+    );
     expect(result.videos).toEqual([{ selector: '#promo', hasCaptionTrack: false, hasAudio: true }]);
   });
 
@@ -96,7 +98,9 @@ describe('checkVideoCaptions against real pages', () => {
         canvas.height = 2;
         const ctx = canvas.getContext('2d');
         if (ctx) ctx.fillRect(0, 0, 2, 2);
-        const videoStream = (canvas as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(10);
+        const videoStream = (
+          canvas as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }
+        ).captureStream(10);
         const tracks = videoStream.getVideoTracks() as MediaStreamTrack[];
 
         if (withAudioArg) {
@@ -145,7 +149,9 @@ describe('checkVideoCaptions against real pages', () => {
 
   it('detects hasAudio: false for a genuinely silent video, and does not treat it as missing captions', async () => {
     const result = await checkGeneratedVideo(false);
-    expect(result.videos).toEqual([{ selector: '#promo', hasCaptionTrack: false, hasAudio: false }]);
+    expect(result.videos).toEqual([
+      { selector: '#promo', hasCaptionTrack: false, hasAudio: false },
+    ]);
   });
 
   it('detects hasAudio: true for a video with a real audio track', async () => {

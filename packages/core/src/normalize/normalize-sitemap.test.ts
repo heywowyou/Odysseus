@@ -67,7 +67,10 @@ describe('sitemap-stale', () => {
   it('fires when most crawled pages are missing from the sitemap', () => {
     const candidates = extractSitemapCandidates(
       baseInput({
-        entries: [{ url: 'https://example.com/old-page-1' }, { url: 'https://example.com/old-page-2' }],
+        entries: [
+          { url: 'https://example.com/old-page-1' },
+          { url: 'https://example.com/old-page-2' },
+        ],
         crawledUrls: [
           'https://example.com/',
           'https://example.com/about',
@@ -114,9 +117,26 @@ describe('sitemap-stale', () => {
   it('does not judge staleness for a sitemap index', () => {
     expect(
       extractSitemapCandidates(
-        baseInput({ isSitemapIndex: true, entries: [{ url: 'https://example.com/sitemap-a.xml' }] }),
+        baseInput({
+          isSitemapIndex: true,
+          entries: [{ url: 'https://example.com/sitemap-a.xml' }],
+        }),
       ),
     ).toEqual([]);
+  });
+
+  it('judges a newly flattened sitemap index from pageEntries', () => {
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        isSitemapIndex: true,
+        entries: [{ url: 'https://example.com/pages.xml' }],
+        pageEntries: [{ url: 'https://example.com/' }, { url: 'https://example.com/orphan' }],
+        crawledUrls: ['https://example.com/', 'https://example.com/about'],
+        discoveredUrls: ['https://example.com/', 'https://example.com/about'],
+      }),
+    );
+
+    expect(candidates.map((candidate) => candidate.ruleId)).toContain(SITEMAP_ORPHAN_PAGE_RULE_ID);
   });
 
   it('does not fire when there are no crawled URLs to compare against', () => {
@@ -134,14 +154,20 @@ describe('sitemap-orphan-page', () => {
           { url: 'https://example.com/contact' },
           { url: 'https://example.com/orphan-promo' },
         ],
-        discoveredUrls: ['https://example.com/', 'https://example.com/about', 'https://example.com/contact'],
+        discoveredUrls: [
+          'https://example.com/',
+          'https://example.com/about',
+          'https://example.com/contact',
+        ],
       }),
     );
     expect(candidates).toHaveLength(1);
     expect(candidates[0]?.ruleId).toBe(SITEMAP_ORPHAN_PAGE_RULE_ID);
     expect(candidates[0]?.category).toBe('seo');
     expect(candidates[0]?.severity).toBe('minor');
-    expect(candidates[0]?.rawEvidenceForPage).toEqual({ orphanUrls: ['https://example.com/orphan-promo'] });
+    expect(candidates[0]?.rawEvidenceForPage).toEqual({
+      orphanUrls: ['https://example.com/orphan-promo'],
+    });
   });
 
   it('does not treat a page skipped-but-discovered (e.g. robots-blocked) as an orphan', () => {
@@ -155,7 +181,11 @@ describe('sitemap-orphan-page', () => {
           { url: 'https://example.com/about' },
           { url: 'https://example.com/contact' },
         ],
-        crawledUrls: ['https://example.com/', 'https://example.com/about', 'https://example.com/contact'],
+        crawledUrls: [
+          'https://example.com/',
+          'https://example.com/about',
+          'https://example.com/contact',
+        ],
         discoveredUrls: [
           'https://example.com/',
           'https://example.com/about',
@@ -185,6 +215,8 @@ describe('sitemap-orphan-page', () => {
         ],
       }),
     );
-    expect(candidates.map((c) => c.ruleId).sort()).toEqual([SITEMAP_ORPHAN_PAGE_RULE_ID, SITEMAP_STALE_RULE_ID].sort());
+    expect(candidates.map((c) => c.ruleId).sort()).toEqual(
+      [SITEMAP_ORPHAN_PAGE_RULE_ID, SITEMAP_STALE_RULE_ID].sort(),
+    );
   });
 });

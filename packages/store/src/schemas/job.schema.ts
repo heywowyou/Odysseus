@@ -104,7 +104,8 @@ export interface UrlResult {
   error?: string;
 }
 
-export type ProspectIngestionResultStatus = 'pending' | 'fetching' | 'no-siren' | 'qualified' | 'not-qualified' | 'error';
+export type ProspectIngestionResultStatus =
+  'pending' | 'fetching' | 'no-siren' | 'qualified' | 'not-qualified' | 'error';
 
 /** One entry per candidate in the *current batch only* (default 2,000,
  *  ~100-200 bytes each), never one entry per AFNIC row ever seen - a job
@@ -248,7 +249,11 @@ const jobIngestionResultSchema = new Schema(
 const jobSchema = new Schema<JobDocument>(
   {
     jobId: { type: String, required: true, unique: true },
-    type: { type: String, required: true, enum: ['full-audit', 'prospecting', 'prospect-ingestion'] },
+    type: {
+      type: String,
+      required: true,
+      enum: ['full-audit', 'prospecting', 'prospect-ingestion'],
+    },
     status: { type: String, required: true, enum: ['queued', 'running', 'complete', 'failed'] },
     phase: {
       type: String,

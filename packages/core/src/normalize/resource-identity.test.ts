@@ -17,7 +17,10 @@ import { RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS } from './normalize-lighthouse.js
 import { normalizeAudit } from './normalize.js';
 import type { NormalizePageInput } from './normalize.js';
 
-function lighthouseReport(auditId: string, items: Array<{ url: string; selector: string }>): unknown {
+function lighthouseReport(
+  auditId: string,
+  items: Array<{ url: string; selector: string }>,
+): unknown {
   return {
     categories: {
       performance: { auditRefs: [{ id: auditId, weight: 3, group: 'diagnostics' }] },
@@ -70,7 +73,10 @@ describe('site-wide collapse of resource-identified Lighthouse audits', () => {
       page(
         `https://example.com/room/${n}`,
         lighthouseReport(AUDIT, [
-          { url: 'https://example.com/img/suite.jpg', selector: `div#swiper-wrapper-${n}abc123def456 > div.bg-image` },
+          {
+            url: 'https://example.com/img/suite.jpg',
+            selector: `div#swiper-wrapper-${n}abc123def456 > div.bg-image`,
+          },
         ]),
       ),
     );
@@ -134,7 +140,10 @@ describe('site-wide collapse of resource-identified Lighthouse audits', () => {
     // credited or blamed for, so the assertion is set up to avoid it.
     const findings = normalize([
       page('https://example.com/', lighthouseReport('dom-size', [{ url: '', selector: 'div.a' }])),
-      page('https://example.com/about', lighthouseReport('dom-size', [{ url: '', selector: 'div.b' }])),
+      page(
+        'https://example.com/about',
+        lighthouseReport('dom-size', [{ url: '', selector: 'div.b' }]),
+      ),
     ]).filter((f) => f.ruleId === 'dom-size');
 
     expect(findings).toHaveLength(2);
@@ -145,8 +154,14 @@ describe('site-wide collapse of resource-identified Lighthouse audits', () => {
     // The same two-page setup as above, differing only in the audit id, so
     // the collapse is attributable to the allowlist and nothing else.
     const findings = normalize([
-      page('https://example.com/', lighthouseReport(AUDIT, [{ url: 'https://example.com/a.jpg', selector: 'div.a' }])),
-      page('https://example.com/about', lighthouseReport(AUDIT, [{ url: 'https://example.com/b.jpg', selector: 'div.b' }])),
+      page(
+        'https://example.com/',
+        lighthouseReport(AUDIT, [{ url: 'https://example.com/a.jpg', selector: 'div.a' }]),
+      ),
+      page(
+        'https://example.com/about',
+        lighthouseReport(AUDIT, [{ url: 'https://example.com/b.jpg', selector: 'div.b' }]),
+      ),
     ]).filter((f) => f.ruleId === AUDIT);
 
     expect(findings).toHaveLength(1);
@@ -160,7 +175,9 @@ describe('site-wide collapse of resource-identified Lighthouse audits', () => {
     ]);
     // A missing url must not collapse everything onto the identity '' by
     // accident; that would merge findings on the strength of absent data.
-    const findings = normalize([page('https://example.com/', report)]).filter((f) => f.ruleId === AUDIT);
+    const findings = normalize([page('https://example.com/', report)]).filter(
+      (f) => f.ruleId === AUDIT,
+    );
 
     expect(findings).toHaveLength(1);
     expect(findings[0]?.rawEvidence).not.toHaveProperty('resourceUrls');
@@ -181,7 +198,9 @@ describe('extractLighthouseCandidates sets dedupeIdentity only where intended', 
     expect(resource[0]?.dedupeIdentity).toBe('');
 
     const other = extractLighthouseCandidates(
-      lighthouseReport('dom-size', [{ url: 'https://example.com/a.jpg', selector: 'div.a' }]) as never,
+      lighthouseReport('dom-size', [
+        { url: 'https://example.com/a.jpg', selector: 'div.a' },
+      ]) as never,
       'https://example.com/',
     );
     expect(other[0]?.dedupeIdentity).toBeUndefined();
@@ -229,13 +248,23 @@ describe('D12: url-only resource audits collapse and keep their file list', () =
 
   it('collapses to one finding carrying every affected file', () => {
     const findings = normalize([
-      page('https://example.com/', urlOnlyReport(URL_ONLY_AUDIT, ['https://example.com/b.js', 'https://example.com/a.css'])),
-      page('https://example.com/about', urlOnlyReport(URL_ONLY_AUDIT, ['https://example.com/a.css', 'https://example.com/c.js'])),
+      page(
+        'https://example.com/',
+        urlOnlyReport(URL_ONLY_AUDIT, ['https://example.com/b.js', 'https://example.com/a.css']),
+      ),
+      page(
+        'https://example.com/about',
+        urlOnlyReport(URL_ONLY_AUDIT, ['https://example.com/a.css', 'https://example.com/c.js']),
+      ),
     ]).filter((f) => f.ruleId === URL_ONLY_AUDIT);
 
     expect(findings).toHaveLength(1);
     expect(findings[0]?.rawEvidence).toMatchObject({
-      resourceUrls: ['https://example.com/a.css', 'https://example.com/b.js', 'https://example.com/c.js'],
+      resourceUrls: [
+        'https://example.com/a.css',
+        'https://example.com/b.js',
+        'https://example.com/c.js',
+      ],
     });
   });
 
@@ -247,8 +276,22 @@ describe('D12: url-only resource audits collapse and keep their file list', () =
    *  dropped nor invented anything. */
   it('counts one occurrence per page, not one per file', () => {
     const findings = normalize([
-      page('https://example.com/', urlOnlyReport(URL_ONLY_AUDIT, ['https://example.com/a.css', 'https://example.com/b.js', 'https://example.com/c.js'])),
-      page('https://example.com/about', urlOnlyReport(URL_ONLY_AUDIT, ['https://example.com/a.css', 'https://example.com/b.js', 'https://example.com/c.js'])),
+      page(
+        'https://example.com/',
+        urlOnlyReport(URL_ONLY_AUDIT, [
+          'https://example.com/a.css',
+          'https://example.com/b.js',
+          'https://example.com/c.js',
+        ]),
+      ),
+      page(
+        'https://example.com/about',
+        urlOnlyReport(URL_ONLY_AUDIT, [
+          'https://example.com/a.css',
+          'https://example.com/b.js',
+          'https://example.com/c.js',
+        ]),
+      ),
     ]).filter((f) => f.ruleId === URL_ONLY_AUDIT);
 
     expect(findings[0]?.occurrences).toBe(2);
@@ -257,7 +300,10 @@ describe('D12: url-only resource audits collapse and keep their file list', () =
 
   it('leaves a url-only audit that is not allowlisted uncollapsed', () => {
     const findings = normalize([
-      page('https://example.com/', urlOnlyReport('total-byte-weight', ['https://example.com/a.css'])),
+      page(
+        'https://example.com/',
+        urlOnlyReport('total-byte-weight', ['https://example.com/a.css']),
+      ),
     ]).filter((f) => f.ruleId === 'total-byte-weight');
 
     expect(findings[0]?.rawEvidence).not.toHaveProperty('resourceUrls');

@@ -34,7 +34,10 @@ export interface CruxFieldDataCheckInput {
   inp?: { p75: number };
 }
 
-export function extractCruxCandidates(input: CruxFieldDataCheckInput, homepageUrl: string): FindingCandidate[] {
+export function extractCruxCandidates(
+  input: CruxFieldDataCheckInput,
+  homepageUrl: string,
+): FindingCandidate[] {
   if (!input.available) return [];
 
   const candidates: FindingCandidate[] = [];

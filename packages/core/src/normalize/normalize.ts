@@ -14,9 +14,18 @@
  */
 
 import { buildCanonicalPageUrlMap, type TranslationCluster } from './translation-clusters.js';
-import { normalizeCookieConsent, type CookieConsentCheckInput } from './normalize-cookie-consent.js';
-import { normalizeAccessibilityStatement, type AccessibilityStatementCheckInput } from './normalize-accessibility-statement.js';
-import { normalizeNapConsistency, type NapConsistencyCheckInput } from './normalize-nap-consistency.js';
+import {
+  normalizeCookieConsent,
+  type CookieConsentCheckInput,
+} from './normalize-cookie-consent.js';
+import {
+  normalizeAccessibilityStatement,
+  type AccessibilityStatementCheckInput,
+} from './normalize-accessibility-statement.js';
+import {
+  normalizeNapConsistency,
+  type NapConsistencyCheckInput,
+} from './normalize-nap-consistency.js';
 import { normalizeReflow, type ReflowCheckInput } from './normalize-reflow.js';
 import { normalizeHtmlValidity, type HtmlValidityCheckInput } from './normalize-html-validity.js';
 import {
@@ -37,11 +46,17 @@ import {
 } from './normalize-lighthouse.js';
 import { extractRenderDiffCandidates } from './normalize-renderdiff.js';
 import { extractCustomCandidates, type MentionsLegalesCheckInput } from './normalize-custom.js';
-import { extractHeadMetadataCandidates, type HeadMetadataCheckInput } from './normalize-head-metadata.js';
+import {
+  extractHeadMetadataCandidates,
+  type HeadMetadataCheckInput,
+} from './normalize-head-metadata.js';
 import { extractSitemapCandidates, type SitemapCheckInput } from './normalize-sitemap.js';
 import { extractCrawlCandidates, type NormalizeCrawlInput } from './normalize-crawl.js';
 import { extractHreflangCandidates } from './normalize-hreflang.js';
-import { extractMixedContentCandidates, type MixedContentCheckInput } from './normalize-mixed-content.js';
+import {
+  extractMixedContentCandidates,
+  type MixedContentCheckInput,
+} from './normalize-mixed-content.js';
 import {
   extractKeyboardNavigationCandidates,
   type KeyboardNavigationCheckInput,
@@ -50,7 +65,10 @@ import {
   extractFormErrorHandlingCandidates,
   type FormErrorHandlingCheckInput,
 } from './normalize-form-error-handling.js';
-import { extractVideoCaptionsCandidates, type VideoCaptionsCheckInput } from './normalize-video-captions.js';
+import {
+  extractVideoCaptionsCandidates,
+  type VideoCaptionsCheckInput,
+} from './normalize-video-captions.js';
 import { extractAltTextCandidates, type AltTextCheckInput } from './normalize-alt-text.js';
 import {
   extractCanonicalTargetCandidates,
@@ -159,7 +177,9 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   // D13: resolved over every page before any page is normalized, so a
   // successor emitting on one page suppresses its legacy audits everywhere.
   const supersededAudits = computeSupersededAudits(
-    input.pages.map((page) => page.lighthouse).filter((lhr): lhr is LighthouseResultInput => lhr !== undefined),
+    input.pages
+      .map((page) => page.lighthouse)
+      .filter((lhr): lhr is LighthouseResultInput => lhr !== undefined),
   );
 
   for (const page of input.pages) {
@@ -170,22 +190,30 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     if (page.renderDiff) candidates.push(...extractRenderDiffCandidates(page.renderDiff, page.url));
     if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
     if (page.headMetadata) candidates.push(...extractHeadMetadataCandidates(page.headMetadata));
-    if (page.canonicalTarget) candidates.push(...extractCanonicalTargetCandidates(page.canonicalTarget));
+    if (page.canonicalTarget)
+      candidates.push(...extractCanonicalTargetCandidates(page.canonicalTarget));
     if (page.sitemapCheck) candidates.push(...extractSitemapCandidates(page.sitemapCheck));
-    if (page.llmsTxtCheck) candidates.push(...extractLlmsTxtCandidates(page.llmsTxtCheck, page.url));
+    if (page.llmsTxtCheck)
+      candidates.push(...extractLlmsTxtCandidates(page.llmsTxtCheck, page.url));
     if (page.mixedContent) candidates.push(...extractMixedContentCandidates(page.mixedContent));
-    if (page.keyboardNavigation) candidates.push(...extractKeyboardNavigationCandidates(page.keyboardNavigation));
-    if (page.formErrorHandling) candidates.push(...extractFormErrorHandlingCandidates(page.formErrorHandling));
+    if (page.keyboardNavigation)
+      candidates.push(...extractKeyboardNavigationCandidates(page.keyboardNavigation));
+    if (page.formErrorHandling)
+      candidates.push(...extractFormErrorHandlingCandidates(page.formErrorHandling));
     if (page.videoCaptions) candidates.push(...extractVideoCaptionsCandidates(page.videoCaptions));
     if (page.altText) candidates.push(...extractAltTextCandidates(page.altText));
-    if (page.securityHeaders) candidates.push(...extractSecurityHeadersCandidates(page.securityHeaders, page.url));
-    if (page.cookieConsent) candidates.push(...normalizeCookieConsent(page.cookieConsent, page.url));
+    if (page.securityHeaders)
+      candidates.push(...extractSecurityHeadersCandidates(page.securityHeaders, page.url));
+    if (page.cookieConsent)
+      candidates.push(...normalizeCookieConsent(page.cookieConsent, page.url));
     if (page.accessibilityStatement)
       candidates.push(...normalizeAccessibilityStatement(page.accessibilityStatement, page.url));
-    if (page.napConsistency) candidates.push(...normalizeNapConsistency(page.napConsistency, page.url));
+    if (page.napConsistency)
+      candidates.push(...normalizeNapConsistency(page.napConsistency, page.url));
     if (page.reflow) candidates.push(...normalizeReflow(page.reflow, page.url));
     if (page.htmlValidity) candidates.push(...normalizeHtmlValidity(page.htmlValidity, page.url));
-    if (page.structuredData) candidates.push(...extractStructuredDataCandidates(page.structuredData));
+    if (page.structuredData)
+      candidates.push(...extractStructuredDataCandidates(page.structuredData));
   }
 
   if (input.crawl) candidates.push(...extractCrawlCandidates(input.crawl));
@@ -220,7 +248,9 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     // additive judgment - see normalize-geo.ts's own header comment for
     // why this is not a re-extraction.
     const geoPages: GeoPageInput[] = pagesWithHeadMetadata.map((page) => {
-      const jsonLdTypes = page.headMetadata!.jsonLdBlocks.flatMap((block) => readJsonLdTypes(block.parsed));
+      const jsonLdTypes = page.headMetadata!.jsonLdBlocks.flatMap((block) =>
+        readJsonLdTypes(block.parsed),
+      );
       return {
         pageUrl: page.url,
         jsonLdTypes,
@@ -247,9 +277,7 @@ function mergeGroup(
   const first = group[0];
   if (!first) throw new Error('normalize: mergeGroup called with an empty group');
 
-  const severity = group
-    .map((c) => c.severity)
-    .reduce((acc, s) => maxSeverity(acc, s));
+  const severity = group.map((c) => c.severity).reduce((acc, s) => maxSeverity(acc, s));
 
   const pageUrls = [...new Set(group.map((c) => c.pageUrl))].sort();
 
@@ -442,7 +470,10 @@ export function normalizeAudit(input: NormalizeAuditInput): Finding[] {
   }
 
   const canonicalByPageUrl = buildCanonicalPageUrlMap(input.translationClusters ?? []);
-  const groups = aggregateSamePageOccurrences(fineGroups, (pageUrl) => canonicalByPageUrl.get(pageUrl) ?? pageUrl);
+  const groups = aggregateSamePageOccurrences(
+    fineGroups,
+    (pageUrl) => canonicalByPageUrl.get(pageUrl) ?? pageUrl,
+  );
 
   const merged = [...groups.entries()].map(([dedupeKey, group]) =>
     mergeGroup(input.auditId, dedupeKey, group, input.startedAt),

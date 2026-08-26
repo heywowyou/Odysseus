@@ -11,8 +11,10 @@
 import { Schema, type Connection, type Model } from 'mongoose';
 import type { AuditManifest, AuditManualFields } from '@odysseus/core';
 
-export interface AuditDocumentFields
-  extends Omit<AuditManifest, 'startedAt' | 'finishedAt' | 'renormalizedAt'> {
+export interface AuditDocumentFields extends Omit<
+  AuditManifest,
+  'startedAt' | 'finishedAt' | 'renormalizedAt'
+> {
   startedAt: Date;
   finishedAt: Date;
   renormalizedAt?: Date;
@@ -46,6 +48,7 @@ const configSnapshotSchema = new Schema(
     lighthouseTimeoutMs: { type: Number, required: true },
     userAgent: { type: String, required: true },
     scanConcurrency: { type: Number, required: true },
+    sitemapMode: { type: String, enum: ['none', 'inspect', 'supplement'] },
   },
   { _id: false },
 );
@@ -58,6 +61,17 @@ const crawlStatsSchema = new Schema(
     maxDepth: { type: Number, required: true },
     robotsTxtFound: { type: Boolean, required: true },
     effectiveDelayMs: { type: Number, required: true },
+    sitemapCoverage: {
+      _id: false,
+      type: {
+        declaredPageCount: { type: Number, required: true },
+        eligiblePageCount: { type: Number, required: true },
+        scannedPageCount: { type: Number, required: true },
+        filteredPageCount: { type: Number, required: true },
+        capOmittedPageCount: { type: Number, required: true },
+        failedSitemapCount: { type: Number, required: true },
+      },
+    },
   },
   { _id: false },
 );
@@ -84,6 +98,8 @@ const coreWebVitalsSchema = new Schema(
     lcp: { type: coreWebVitalMeasurementSchema, required: true },
     cls: { type: coreWebVitalMeasurementSchema, required: true },
     tbt: { type: coreWebVitalMeasurementSchema, required: true },
+    fcp: { type: coreWebVitalMeasurementSchema, required: true },
+    speedIndex: { type: coreWebVitalMeasurementSchema, required: true },
   },
   { _id: false },
 );
@@ -93,16 +109,25 @@ const manifestPageEntrySchema = new Schema(
     url: { type: String, required: true },
     pageDir: { type: String },
     depth: { type: Number, required: true },
+    discoveryMethod: { type: String, enum: ['link', 'seed', 'sitemap-only'] },
     status: {
       type: String,
       required: true,
-      enum: ['visited', 'skipped-robots', 'skipped-non-html', 'skipped-external-redirect', 'error'],
+      enum: [
+        'visited',
+        'discovered-not-scanned',
+        'skipped-robots',
+        'skipped-non-html',
+        'skipped-external-redirect',
+        'error',
+      ],
     },
     httpStatus: { type: Number },
     renderDiffMissingPercent: { type: Number },
     lighthouseExcludedCategoryScores: { type: lighthouseExcludedCategoryScoresSchema },
     coreWebVitals: { type: coreWebVitalsSchema },
     crawlError: { type: String },
+    discoveredFrom: { type: String },
     errors: {
       _id: false,
       type: {

@@ -75,10 +75,15 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
       effectiveDelayMs: input.crawl.effectiveDelayMs,
       robotsDisallowMatches: input.crawl.robotsDisallowMatches,
       aiCrawlerBlocks: input.crawl.aiCrawlerBlocks,
+      ...(input.crawl.sitemapCoverage !== undefined
+        ? { sitemapCoverage: input.crawl.sitemapCoverage }
+        : {}),
     },
     pages: input.pages,
     ...(input.siteSignals !== undefined ? { siteSignals: input.siteSignals } : {}),
     ...(input.cruxFieldData !== undefined ? { cruxFieldData: input.cruxFieldData } : {}),
-    ...(input.translationClusters !== undefined ? { translationClusters: input.translationClusters } : {}),
+    ...(input.translationClusters !== undefined
+      ? { translationClusters: input.translationClusters }
+      : {}),
   };
 }

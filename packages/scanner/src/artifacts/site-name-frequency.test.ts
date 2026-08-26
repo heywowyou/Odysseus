@@ -43,8 +43,11 @@ describe('deriveSiteNameFromTitleFrequency', () => {
   });
 
   it('ignores a recurring segment too long to be a name', () => {
-    const long = 'Votre séjour dans un hébergement de grand luxe au coeur du Golfe d Ajaccio en Corse';
-    expect(deriveSiteNameFromTitleFrequency([`Accueil | ${long}`, `Contact | ${long}`])).toBeUndefined();
+    const long =
+      'Votre séjour dans un hébergement de grand luxe au coeur du Golfe d Ajaccio en Corse';
+    expect(
+      deriveSiteNameFromTitleFrequency([`Accueil | ${long}`, `Contact | ${long}`]),
+    ).toBeUndefined();
   });
 
   it('tolerates empty and whitespace-only titles', () => {

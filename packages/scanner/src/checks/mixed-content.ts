@@ -19,7 +19,10 @@ export interface MixedContentExtraction {
   insecureResourceUrls: string[];
 }
 
-export async function extractMixedContentResources(page: Page, pageUrl: string): Promise<MixedContentExtraction> {
+export async function extractMixedContentResources(
+  page: Page,
+  pageUrl: string,
+): Promise<MixedContentExtraction> {
   const isPageSecure = new URL(pageUrl).protocol === 'https:';
   if (!isPageSecure) {
     return { pageUrl, isPageSecure, insecureResourceUrls: [] };
@@ -29,7 +32,9 @@ export async function extractMixedContentResources(page: Page, pageUrl: string):
     performance.getEntriesByType('resource').map((entry) => entry.name),
   );
 
-  const insecureResourceUrls = [...new Set(resourceUrls.filter((url) => url.startsWith('http://')))];
+  const insecureResourceUrls = [
+    ...new Set(resourceUrls.filter((url) => url.startsWith('http://'))),
+  ];
 
   return { pageUrl, isPageSecure, insecureResourceUrls };
 }

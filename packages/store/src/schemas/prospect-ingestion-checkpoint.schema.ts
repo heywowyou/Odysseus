@@ -47,6 +47,9 @@ export function createProspectIngestionCheckpointModel(
 ): Model<ProspectIngestionCheckpointDocument> {
   return (
     connection.models['ProspectIngestionCheckpoint'] ??
-    connection.model<ProspectIngestionCheckpointDocument>('ProspectIngestionCheckpoint', checkpointSchema)
+    connection.model<ProspectIngestionCheckpointDocument>(
+      'ProspectIngestionCheckpoint',
+      checkpointSchema,
+    )
   );
 }

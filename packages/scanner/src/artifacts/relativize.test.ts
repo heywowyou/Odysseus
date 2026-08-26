@@ -27,7 +27,9 @@ describe('toAuditRelativeRefs', () => {
     const relativized = toAuditRelativeRefs(result, AUDIT_DIR);
 
     expect(relativized.rawScreenshotRef).toBe(path.join('pages', 'contact-d4e5f6', 'raw.png'));
-    expect(relativized.renderedScreenshotRef).toBe(path.join('pages', 'contact-d4e5f6', 'rendered.png'));
+    expect(relativized.renderedScreenshotRef).toBe(
+      path.join('pages', 'contact-d4e5f6', 'rendered.png'),
+    );
   });
 
   it('leaves every other field untouched', () => {

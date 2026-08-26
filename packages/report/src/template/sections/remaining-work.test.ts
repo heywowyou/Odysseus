@@ -63,7 +63,7 @@ describe('renderRemainingWork against the real sas-fernande.fr scan', () => {
     expect(html).not.toContain('Reste');
   });
 
-  it('fix #5 (2026-08-25 report review): shows each rule group\'s own worst severity, not a uniform blank list', async () => {
+  it("fix #5 (2026-08-25 report review): shows each rule group's own worst severity, not a uniform blank list", async () => {
     const findings = await loadSasFernandeFindings();
     const analysis = await loadSasFernandeAnalysis('fr');
 

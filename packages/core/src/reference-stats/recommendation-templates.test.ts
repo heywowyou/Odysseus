@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { CUSTOM_CHECK_SEVERITY } from '../normalize/severity.js';
-import { getRecommendationTemplates, RECOMMENDATION_TEMPLATES, recommendationTemplateSchema } from './recommendation-templates.js';
+import {
+  getRecommendationTemplates,
+  RECOMMENDATION_TEMPLATES,
+  recommendationTemplateSchema,
+} from './recommendation-templates.js';
 
 // Mirrors the seo/geo ruleId set in severity.ts's CUSTOM_CHECK_SEVERITY at
 // the time this table was written. Duplicated by value rather than

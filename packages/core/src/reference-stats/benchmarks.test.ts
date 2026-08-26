@@ -19,9 +19,19 @@ describe('REFERENCE_PERFORMANCE_BENCHMARKS', () => {
       statistic: { value: 1, unit: 'percent' },
       applicability: { revenueBand: 'any', notes: '' },
     };
-    expect(() => performanceBenchmarkSchema.parse({ ...base, sourceDate: '2024', scope: 'cross-sector-proxy' })).toThrow();
-    expect(() => performanceBenchmarkSchema.parse({ ...base, source: 'x', scope: 'cross-sector-proxy' })).toThrow();
-    expect(() => performanceBenchmarkSchema.parse({ ...base, source: 'x', sourceDate: '2024' })).toThrow();
+    expect(() =>
+      performanceBenchmarkSchema.parse({
+        ...base,
+        sourceDate: '2024',
+        scope: 'cross-sector-proxy',
+      }),
+    ).toThrow();
+    expect(() =>
+      performanceBenchmarkSchema.parse({ ...base, source: 'x', scope: 'cross-sector-proxy' }),
+    ).toThrow();
+    expect(() =>
+      performanceBenchmarkSchema.parse({ ...base, source: 'x', sourceDate: '2024' }),
+    ).toThrow();
   });
 
   it('marks only healthcare, hospitality, and professional-booking rows as sector-specific', () => {
@@ -48,14 +58,22 @@ describe('REFERENCE_PERFORMANCE_BENCHMARKS', () => {
 
 describe('getSectorBenchmark', () => {
   it('returns the matching entry for a real sector/metric pair', () => {
-    const result = getSectorBenchmark('hospitality', 'booking-abandonment-after-poor-digital-experience');
+    const result = getSectorBenchmark(
+      'hospitality',
+      'booking-abandonment-after-poor-digital-experience',
+    );
     expect(result?.statistic).toEqual({ value: 52, unit: 'percent' });
     expect(result?.scope).toBe('sector-specific');
   });
 
   it('returns null for a sector/metric pair with no data, never substituting another sector', () => {
     expect(getSectorBenchmark('healthcare', 'cart-abandonment-rate')).toBeNull();
-    expect(getSectorBenchmark('professional-booking', 'appointment-no-show-rate-reduction-online-vs-phone-booking')).toBeNull();
+    expect(
+      getSectorBenchmark(
+        'professional-booking',
+        'appointment-no-show-rate-reduction-online-vs-phone-booking',
+      ),
+    ).toBeNull();
   });
 
   it('returns null for an unknown metric on a sector that does have other data', () => {

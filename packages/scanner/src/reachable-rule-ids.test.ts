@@ -31,10 +31,19 @@ const COMMITTED_PATH = path.join(moduleDir, '../../report/src/template/reachable
 /** Mirrors the generator script. Lighthouse marks these informative: they
  *  carry no pass/fail score, so normalize-lighthouse.ts never emits them. */
 const INFORMATIVE = new Set([
-  'network-requests', 'network-rtt', 'network-server-latency', 'main-thread-tasks',
-  'diagnostics', 'metrics', 'screenshot-thumbnails', 'final-screenshot',
-  'script-treemap-data', 'resource-summary', 'critical-request-chains',
-  'user-timings', 'largest-contentful-paint-element',
+  'network-requests',
+  'network-rtt',
+  'network-server-latency',
+  'main-thread-tasks',
+  'diagnostics',
+  'metrics',
+  'screenshot-thumbnails',
+  'final-screenshot',
+  'script-treemap-data',
+  'resource-summary',
+  'critical-request-chains',
+  'user-timings',
+  'largest-contentful-paint-element',
 ]);
 
 describe('the committed reachable rule-id list matches the installed scanners', () => {
@@ -46,7 +55,10 @@ describe('the committed reachable rule-id list matches the installed scanners', 
     const tags = new Set<string>(WCAG22AA_TAGS);
     const actual = [
       ...new Set(
-        axe.getRules().filter((r) => (r.tags ?? []).some((t) => tags.has(t))).map((r) => r.ruleId),
+        axe
+          .getRules()
+          .filter((r) => (r.tags ?? []).some((t) => tags.has(t)))
+          .map((r) => r.ruleId),
       ),
     ].sort();
     const committed = JSON.parse(readFileSync(COMMITTED_PATH, 'utf-8')) as { axe: string[] };

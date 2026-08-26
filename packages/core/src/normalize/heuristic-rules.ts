@@ -18,4 +18,6 @@
  */
 import { ALT_TEXT_QUALITY_HEURISTIC_RULE_ID } from './normalize-alt-text.js';
 
-export const HEURISTIC_RULE_IDS: ReadonlySet<string> = new Set([ALT_TEXT_QUALITY_HEURISTIC_RULE_ID]);
+export const HEURISTIC_RULE_IDS: ReadonlySet<string> = new Set([
+  ALT_TEXT_QUALITY_HEURISTIC_RULE_ID,
+]);

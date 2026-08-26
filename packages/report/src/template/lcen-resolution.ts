@@ -32,10 +32,15 @@ export interface LcenResolution {
   resolvedSirenSourceUrl?: string;
 }
 
-export function resolveLcenFinding(findings: Finding[], sirenSourceUrl: string | undefined): LcenResolution {
+export function resolveLcenFinding(
+  findings: Finding[],
+  sirenSourceUrl: string | undefined,
+): LcenResolution {
   if (!sirenSourceUrl) return { findings };
 
-  const hasLcenFinding = findings.some((finding) => finding.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID);
+  const hasLcenFinding = findings.some(
+    (finding) => finding.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID,
+  );
   if (!hasLcenFinding) return { findings };
 
   return {

@@ -10,7 +10,9 @@ describe('normalizeRegistryDisplayName', () => {
   });
 
   it('collapses a parenthetical that repeats the name (real Palais Gallien value)', () => {
-    expect(normalizeRegistryDisplayName('LE PALAIS GALLIEN (LE PALAIS GALLIEN)')).toBe('LE PALAIS GALLIEN');
+    expect(normalizeRegistryDisplayName('LE PALAIS GALLIEN (LE PALAIS GALLIEN)')).toBe(
+      'LE PALAIS GALLIEN',
+    );
   });
 
   it('treats the repeat check as accent- and case-insensitive', () => {

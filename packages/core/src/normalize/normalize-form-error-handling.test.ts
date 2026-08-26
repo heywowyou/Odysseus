@@ -7,7 +7,9 @@ import {
 
 const PAGE_URL = 'https://example.com/';
 
-function baseField(overrides: Partial<FormErrorHandlingCheckInput['forms'][number]['fields'][number]> = {}) {
+function baseField(
+  overrides: Partial<FormErrorHandlingCheckInput['forms'][number]['fields'][number]> = {},
+) {
   return {
     selector: 'input[name="email"]',
     visuallyChanged: true,
@@ -18,7 +20,9 @@ function baseField(overrides: Partial<FormErrorHandlingCheckInput['forms'][numbe
   };
 }
 
-function inputWithFields(fields: FormErrorHandlingCheckInput['forms'][number]['fields']): FormErrorHandlingCheckInput {
+function inputWithFields(
+  fields: FormErrorHandlingCheckInput['forms'][number]['fields'],
+): FormErrorHandlingCheckInput {
   return { pageUrl: PAGE_URL, forms: [{ formSelector: '#newsletter', fields }] };
 }
 
@@ -40,13 +44,17 @@ describe('form-error-not-associated', () => {
 
   it('does not fire when aria-describedby points to real error text', () => {
     expect(
-      extractFormErrorHandlingCandidates(inputWithFields([baseField({ hasAssociatedErrorText: true })])),
+      extractFormErrorHandlingCandidates(
+        inputWithFields([baseField({ hasAssociatedErrorText: true })]),
+      ),
     ).toEqual([]);
   });
 
   it('does not fire when a role=alert / aria-live region exists in the form', () => {
     expect(
-      extractFormErrorHandlingCandidates(inputWithFields([baseField({ hasAlertRegionInForm: true })])),
+      extractFormErrorHandlingCandidates(
+        inputWithFields([baseField({ hasAlertRegionInForm: true })]),
+      ),
     ).toEqual([]);
   });
 
@@ -72,6 +80,9 @@ describe('form-error-not-associated', () => {
     };
     const candidates = extractFormErrorHandlingCandidates(input);
     expect(candidates).toHaveLength(2);
-    expect(candidates.map((c) => c.element?.selector)).toEqual(['#a input[name="x"]', '#b input[name="z"]']);
+    expect(candidates.map((c) => c.element?.selector)).toEqual([
+      '#a input[name="x"]',
+      '#b input[name="z"]',
+    ]);
   });
 });

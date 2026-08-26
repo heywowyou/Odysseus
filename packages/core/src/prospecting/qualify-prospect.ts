@@ -19,7 +19,10 @@
  * doc comment and docs/prospect-qualification.md section 4.
  */
 
-import type { ProspectQualificationInput, ProspectQualificationResult } from '../types/prospecting.js';
+import type {
+  ProspectQualificationInput,
+  ProspectQualificationResult,
+} from '../types/prospecting.js';
 
 export function qualifyProspect(input: ProspectQualificationInput): ProspectQualificationResult {
   const reasons: ProspectQualificationResult['reasons'] = [];

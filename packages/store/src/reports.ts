@@ -17,10 +17,15 @@ export async function getLatestReport(
   language: ReportLanguage,
 ): Promise<ReportDocument | null> {
   const ReportModel = createReportModel(connection);
-  return ReportModel.findOne({ auditId, language }).sort({ generatedAt: -1 }).lean<ReportDocument>();
+  return ReportModel.findOne({ auditId, language })
+    .sort({ generatedAt: -1 })
+    .lean<ReportDocument>();
 }
 
-export async function listReportLanguages(connection: Connection, auditId: string): Promise<ReportLanguage[]> {
+export async function listReportLanguages(
+  connection: Connection,
+  auditId: string,
+): Promise<ReportLanguage[]> {
   const ReportModel = createReportModel(connection);
   const languages = await ReportModel.distinct('language', { auditId });
   return languages as ReportLanguage[];

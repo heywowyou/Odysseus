@@ -6,7 +6,12 @@ export const en: DashboardStrings = {
     history: 'History',
   },
   common: {
-    severityLabels: { critical: 'Critical', serious: 'Serious', moderate: 'Moderate', minor: 'Minor' },
+    severityLabels: {
+      critical: 'Critical',
+      serious: 'Serious',
+      moderate: 'Moderate',
+      minor: 'Minor',
+    },
     statusLabels: { queued: 'Queued', running: 'Running', complete: 'Complete', failed: 'Failed' },
     typeLabels: { fullAudit: 'Full audit', prospecting: 'Prospecting' },
     downloadReport: 'Download report',
@@ -33,7 +38,8 @@ export const en: DashboardStrings = {
     transactionalFlowYesOption: 'Yes',
     transactionalFlowNoOption: 'No',
     transactionalFlowReasonLabel: 'Reason (optional)',
-    transactionalFlowReasonPlaceholder: 'E.g. redirects to a dedicated booking engine, confirmed by hand',
+    transactionalFlowReasonPlaceholder:
+      'E.g. redirects to a dedicated booking engine, confirmed by hand',
     advancedOptions: 'Advanced options',
     maxPagesLabel: 'Maximum pages',
     maxDepthLabel: 'Maximum link depth',

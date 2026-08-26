@@ -43,5 +43,8 @@ suppressionSchema.index({ domainHash: 1 });
 suppressionSchema.index({ addressHash: 1 }, { sparse: true });
 
 export function createSuppressionModel(connection: Connection): Model<SuppressionDocument> {
-  return connection.models['Suppression'] ?? connection.model<SuppressionDocument>('Suppression', suppressionSchema);
+  return (
+    connection.models['Suppression'] ??
+    connection.model<SuppressionDocument>('Suppression', suppressionSchema)
+  );
 }

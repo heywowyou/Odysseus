@@ -19,7 +19,10 @@ function isSiteWideAccessibilityFinding(finding: Finding, crawledPages: number):
   return (finding.pageUrls.length / crawledPages) * 100 >= SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD;
 }
 
-function themeFindings(theme: StructureThemeWithKey, findingsById: ReadonlyMap<string, Finding>): Finding[] {
+function themeFindings(
+  theme: StructureThemeWithKey,
+  findingsById: ReadonlyMap<string, Finding>,
+): Finding[] {
   return theme.findingIds
     .map((id) => findingsById.get(id))
     .filter((finding): finding is Finding => finding !== undefined);
@@ -42,7 +45,9 @@ export function enforceSiteWideAccessibilityFloor(
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const crawledPages = crawledPageCount(manifest);
   const isFloorTheme = (theme: StructureThemeWithKey): boolean =>
-    themeFindings(theme, findingsById).some((finding) => isSiteWideAccessibilityFinding(finding, crawledPages));
+    themeFindings(theme, findingsById).some((finding) =>
+      isSiteWideAccessibilityFinding(finding, crawledPages),
+    );
 
   const withImpactFloor = themes.map((theme) =>
     isFloorTheme(theme) && theme.impact === 'low' ? { ...theme, impact: 'medium' as const } : theme,
@@ -51,10 +56,14 @@ export function enforceSiteWideAccessibilityFloor(
   const sorted = [...withImpactFloor].sort((a, b) => a.priorityRank - b.priorityRank);
   const bottomQuartileStart = Math.ceil(sorted.length * BOTTOM_QUARTILE_FRACTION);
 
-  const promoted = sorted.filter((theme, index) => index >= bottomQuartileStart && isFloorTheme(theme));
+  const promoted = sorted.filter(
+    (theme, index) => index >= bottomQuartileStart && isFloorTheme(theme),
+  );
   if (promoted.length === 0) return renumberRanks(sorted);
 
-  const remaining = sorted.filter((theme, index) => !(index >= bottomQuartileStart && isFloorTheme(theme)));
+  const remaining = sorted.filter(
+    (theme, index) => !(index >= bottomQuartileStart && isFloorTheme(theme)),
+  );
   // Insert promoted themes so their final indices land strictly below
   // bottomQuartileStart, not at it - the boundary index is itself "in
   // the bottom quartile" by the index >= bottomQuartileStart rule below.
@@ -74,7 +83,10 @@ export function enforceSiteWideAccessibilityFloor(
  *  17-page, 203-occurrence finding are both exactly the kind of finding
  *  this rule exists to surface; they should not be weighed against each
  *  other). */
-function totalOccurrences(theme: StructureThemeWithKey, findingsById: ReadonlyMap<string, Finding>): number {
+function totalOccurrences(
+  theme: StructureThemeWithKey,
+  findingsById: ReadonlyMap<string, Finding>,
+): number {
   return themeFindings(theme, findingsById).reduce((sum, finding) => sum + finding.occurrences, 0);
 }
 
@@ -100,15 +112,19 @@ export function applyOccurrenceWeighting(
   const byOccurrenceDesc = [...sorted].sort(
     (a, b) => totalOccurrences(b, findingsById) - totalOccurrences(a, findingsById),
   );
-  const occurrenceRankIndex = new Map(byOccurrenceDesc.map((theme, index) => [theme.themeKey, index]));
+  const occurrenceRankIndex = new Map(
+    byOccurrenceDesc.map((theme, index) => [theme.themeKey, index]),
+  );
 
   const promoted = sorted.filter(
     (theme, modelRankIndex) =>
-      modelRankIndex >= halfIndex && (occurrenceRankIndex.get(theme.themeKey) ?? Infinity) < halfIndex,
+      modelRankIndex >= halfIndex &&
+      (occurrenceRankIndex.get(theme.themeKey) ?? Infinity) < halfIndex,
   );
   if (promoted.length === 0) return renumberRanks(sorted);
   promoted.sort(
-    (a, b) => (occurrenceRankIndex.get(a.themeKey) ?? 0) - (occurrenceRankIndex.get(b.themeKey) ?? 0),
+    (a, b) =>
+      (occurrenceRankIndex.get(a.themeKey) ?? 0) - (occurrenceRankIndex.get(b.themeKey) ?? 0),
   );
 
   const rest = sorted.filter((theme) => !promoted.includes(theme));
@@ -161,7 +177,11 @@ export function isQuickWinTheme(theme: Pick<StructureThemeWithKey, 'effort' | 'i
   return theme.effort === 'low' && theme.impact !== 'low';
 }
 
-const EFFORT_IMPACT_WEIGHT: Record<'low' | 'medium' | 'high', number> = { low: 1, medium: 2, high: 3 };
+const EFFORT_IMPACT_WEIGHT: Record<'low' | 'medium' | 'high', number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+};
 
 /** report-feedback-palais-gallien.md item 15: enforceQuickWinFloor above
  *  only promotes a quick win that falls *behind* the first impact-'low'
@@ -201,7 +221,9 @@ const EFFORT_IMPACT_WEIGHT: Record<'low' | 'medium' | 'high', number> = { low: 1
  *  without needing a separate absolute veto. Deleted the bucket rather
  *  than tune it; nothing in this file's own test suite depended on it
  *  doing anything the ratio didn't already do. */
-export function enforceImpactEffortOrdering(themes: readonly StructureThemeWithKey[]): StructureThemeWithKey[] {
+export function enforceImpactEffortOrdering(
+  themes: readonly StructureThemeWithKey[],
+): StructureThemeWithKey[] {
   const sorted = [...themes].sort((a, b) => {
     const aRatio = EFFORT_IMPACT_WEIGHT[a.impact] / EFFORT_IMPACT_WEIGHT[a.effort];
     const bRatio = EFFORT_IMPACT_WEIGHT[b.impact] / EFFORT_IMPACT_WEIGHT[b.effort];
@@ -227,15 +249,21 @@ export function enforceImpactEffortOrdering(themes: readonly StructureThemeWithK
  *  A theme with impact 'low' can never itself be a quick win (the
  *  predicate requires impact !== 'low'), so the boundary theme is always
  *  a genuine non-quick-win. */
-export function enforceQuickWinFloor(themes: readonly StructureThemeWithKey[]): StructureThemeWithKey[] {
+export function enforceQuickWinFloor(
+  themes: readonly StructureThemeWithKey[],
+): StructureThemeWithKey[] {
   const sorted = [...themes].sort((a, b) => a.priorityRank - b.priorityRank);
   const lowImpactFloorIndex = sorted.findIndex((theme) => theme.impact === 'low');
   if (lowImpactFloorIndex === -1) return renumberRanks(sorted);
 
-  const promoted = sorted.filter((theme, index) => index >= lowImpactFloorIndex && isQuickWinTheme(theme));
+  const promoted = sorted.filter(
+    (theme, index) => index >= lowImpactFloorIndex && isQuickWinTheme(theme),
+  );
   if (promoted.length === 0) return renumberRanks(sorted);
 
-  const remaining = sorted.filter((theme, index) => !(index >= lowImpactFloorIndex && isQuickWinTheme(theme)));
+  const remaining = sorted.filter(
+    (theme, index) => !(index >= lowImpactFloorIndex && isQuickWinTheme(theme)),
+  );
   const insertAt = Math.max(0, lowImpactFloorIndex - promoted.length);
   const reordered = [...remaining.slice(0, insertAt), ...promoted, ...remaining.slice(insertAt)];
 

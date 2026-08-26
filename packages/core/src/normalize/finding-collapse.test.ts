@@ -18,7 +18,10 @@ function normalize(pages: NormalizePageInput[]) {
   } as unknown as Parameters<typeof normalizeAudit>[0]);
 }
 
-function altTextPage(url: string, images: Array<{ selector: string; alt: string | null; src: string }>): NormalizePageInput {
+function altTextPage(
+  url: string,
+  images: Array<{ selector: string; alt: string | null; src: string }>,
+): NormalizePageInput {
   return {
     url,
     altText: {
@@ -55,8 +58,16 @@ describe('D4a: the alt-text heuristic collapses per reason, with the files named
       altTextPage('https://example.com/', [
         // The shape that made this urgent: a runtime-generated wrapper id,
         // which is unusable as a selector and unstable across scans.
-        { selector: '#swiper-wrapper-3bd6608a838df14e > div:nth-child(1) > img', alt: '', src: '/img/one.jpg' },
-        { selector: '#swiper-wrapper-3bd6608a838df14e > div:nth-child(2) > img', alt: '', src: '/img/two.jpg' },
+        {
+          selector: '#swiper-wrapper-3bd6608a838df14e > div:nth-child(1) > img',
+          alt: '',
+          src: '/img/one.jpg',
+        },
+        {
+          selector: '#swiper-wrapper-3bd6608a838df14e > div:nth-child(2) > img',
+          alt: '',
+          src: '/img/two.jpg',
+        },
       ]),
     ]).filter((f) => f.ruleId === 'alt-text-quality-heuristic');
 
@@ -83,9 +94,15 @@ describe('D4a: the alt-text heuristic collapses per reason, with the files named
 
   it('collapses the same image across pages into one finding', () => {
     const findings = normalize([
-      altTextPage('https://example.com/', [{ selector: 'footer > img', alt: '', src: '/img/logo.png' }]),
-      altTextPage('https://example.com/about', [{ selector: 'footer > img', alt: '', src: '/img/logo.png' }]),
-      altTextPage('https://example.com/contact', [{ selector: 'div > footer > img', alt: '', src: '/img/logo.png' }]),
+      altTextPage('https://example.com/', [
+        { selector: 'footer > img', alt: '', src: '/img/logo.png' },
+      ]),
+      altTextPage('https://example.com/about', [
+        { selector: 'footer > img', alt: '', src: '/img/logo.png' },
+      ]),
+      altTextPage('https://example.com/contact', [
+        { selector: 'div > footer > img', alt: '', src: '/img/logo.png' },
+      ]),
     ]).filter((f) => f.ruleId === 'alt-text-quality-heuristic');
 
     expect(findings).toHaveLength(1);
@@ -93,7 +110,11 @@ describe('D4a: the alt-text heuristic collapses per reason, with the files named
   });
 });
 
-function axePage(url: string, nodes: Array<{ selector: string }>, ruleId = 'target-size'): NormalizePageInput {
+function axePage(
+  url: string,
+  nodes: Array<{ selector: string }>,
+  ruleId = 'target-size',
+): NormalizePageInput {
   return {
     url,
     axe: {

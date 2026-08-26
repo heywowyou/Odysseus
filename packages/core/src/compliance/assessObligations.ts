@@ -29,8 +29,18 @@
  */
 
 import type { OperatorProfile } from '../types/entity.js';
-import type { ObligationAssessment, ObligationBasis, ObligationBasisFact, SiteSignals } from '../types/compliance.js';
-import { ARTICLE_47_REGIME_ID, ARTICLE_47_TURNOVER_THRESHOLD_EUR, EAA_REGIME_ID, SME_EXEMPTION_TURNOVER_THRESHOLD_EUR } from './regimes.js';
+import type {
+  ObligationAssessment,
+  ObligationBasis,
+  ObligationBasisFact,
+  SiteSignals,
+} from '../types/compliance.js';
+import {
+  ARTICLE_47_REGIME_ID,
+  ARTICLE_47_TURNOVER_THRESHOLD_EUR,
+  EAA_REGIME_ID,
+  SME_EXEMPTION_TURNOVER_THRESHOLD_EUR,
+} from './regimes.js';
 
 /** INSEE tranche_effectif_salarie codes for which the SME exemption's
  *  headcount leg can hold. Any band outside this set (10 salaries or
@@ -38,11 +48,14 @@ import { ARTICLE_47_REGIME_ID, ARTICLE_47_TURNOVER_THRESHOLD_EUR, EAA_REGIME_ID,
  *  even inspected - "turnover irrelevant once headcount clears". */
 const SME_EXEMPT_EFFECTIF_CODES = new Set(['00', '01', '02', '03', 'NN']);
 
-function knownSireneFailureReason(source: string): 'not-found' | 'api-unreachable' | 'etablissement-fermee' {
+function knownSireneFailureReason(
+  source: string,
+): 'not-found' | 'api-unreachable' | 'etablissement-fermee' {
   const prefix = 'sirene-lookup:';
   if (source.startsWith(prefix)) {
     const reason = source.slice(prefix.length);
-    if (reason === 'not-found' || reason === 'api-unreachable' || reason === 'etablissement-fermee') return reason;
+    if (reason === 'not-found' || reason === 'api-unreachable' || reason === 'etablissement-fermee')
+      return reason;
   }
   return 'api-unreachable';
 }
@@ -53,12 +66,18 @@ function knownSireneFailureReason(source: string): 'not-found' | 'api-unreachabl
 function undeterminedFact(profile: OperatorProfile): ObligationBasisFact | null {
   if (profile.siren.value === '') return { kind: 'siren-missing' };
   if (profile.effectifBand.value === null) {
-    return { kind: 'sirene-lookup-failed', reason: knownSireneFailureReason(profile.effectifBand.source) };
+    return {
+      kind: 'sirene-lookup-failed',
+      reason: knownSireneFailureReason(profile.effectifBand.source),
+    };
   }
   return null;
 }
 
-function checkSmeExemption(profile: OperatorProfile): { exempt: boolean; fact: ObligationBasisFact } {
+function checkSmeExemption(profile: OperatorProfile): {
+  exempt: boolean;
+  fact: ObligationBasisFact;
+} {
   const band = profile.effectifBand.value;
   if (!band) throw new Error('checkSmeExemption requires a resolved effectif band');
 
@@ -74,16 +93,26 @@ function checkSmeExemption(profile: OperatorProfile): { exempt: boolean; fact: O
   }
 
   if (turnover < SME_EXEMPTION_TURNOVER_THRESHOLD_EUR) {
-    return { exempt: true, fact: { kind: 'sme-exemption', effectifCode: band.code, turnoverEur: turnover } };
+    return {
+      exempt: true,
+      fact: { kind: 'sme-exemption', effectifCode: band.code, turnoverEur: turnover },
+    };
   }
 
   return {
     exempt: false,
-    fact: { kind: 'turnover', amountEur: turnover, thresholdEur: SME_EXEMPTION_TURNOVER_THRESHOLD_EUR },
+    fact: {
+      kind: 'turnover',
+      amountEur: turnover,
+      thresholdEur: SME_EXEMPTION_TURNOVER_THRESHOLD_EUR,
+    },
   };
 }
 
-export function assessObligations(profile: OperatorProfile, siteSignals?: SiteSignals): ObligationAssessment {
+export function assessObligations(
+  profile: OperatorProfile,
+  siteSignals?: SiteSignals,
+): ObligationAssessment {
   const undetermined = undeterminedFact(profile);
   if (undetermined) {
     return { status: 'undetermined', basis: [{ regimeId: EAA_REGIME_ID, facts: [undetermined] }] };
@@ -118,7 +147,9 @@ export function assessObligations(profile: OperatorProfile, siteSignals?: SiteSi
   if (article47Triggers && turnover !== null) {
     basis.push({
       regimeId: ARTICLE_47_REGIME_ID,
-      facts: [{ kind: 'turnover', amountEur: turnover, thresholdEur: ARTICLE_47_TURNOVER_THRESHOLD_EUR }],
+      facts: [
+        { kind: 'turnover', amountEur: turnover, thresholdEur: ARTICLE_47_TURNOVER_THRESHOLD_EUR },
+      ],
     });
   }
 

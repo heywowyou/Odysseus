@@ -31,7 +31,12 @@
 
 import { z } from 'zod';
 
-export const benchmarkSectorSchema = z.enum(['healthcare', 'hospitality', 'professional-booking', 'general']);
+export const benchmarkSectorSchema = z.enum([
+  'healthcare',
+  'hospitality',
+  'professional-booking',
+  'general',
+]);
 export type BenchmarkSector = z.infer<typeof benchmarkSectorSchema>;
 
 export const benchmarkScopeSchema = z.enum(['sector-specific', 'cross-sector-proxy']);
@@ -124,7 +129,8 @@ const RAW_BENCHMARKS: PerformanceBenchmark[] = [
     sector: 'general',
     metric: 'conversion-uplift-per-0.1s-mobile-speed-improvement-retail',
     statistic: { value: 8.4, unit: 'percent' },
-    source: 'Deloitte Digital & Google, "Milliseconds Make Millions," 2020 (37 brand sites, 30.5M sessions)',
+    source:
+      'Deloitte Digital & Google, "Milliseconds Make Millions," 2020 (37 brand sites, 30.5M sessions)',
     sourceDate: '2020',
     sourceUrl: 'https://web.dev/case-studies/milliseconds-make-millions',
     scope: 'cross-sector-proxy',
@@ -138,7 +144,8 @@ const RAW_BENCHMARKS: PerformanceBenchmark[] = [
     sector: 'general',
     metric: 'conversion-uplift-per-0.1s-mobile-speed-improvement-travel',
     statistic: { value: 10.1, unit: 'percent' },
-    source: 'Deloitte Digital & Google, "Milliseconds Make Millions," 2020 (37 brand sites, 30.5M sessions)',
+    source:
+      'Deloitte Digital & Google, "Milliseconds Make Millions," 2020 (37 brand sites, 30.5M sessions)',
     sourceDate: '2020',
     sourceUrl: 'https://web.dev/case-studies/milliseconds-make-millions',
     scope: 'cross-sector-proxy',
@@ -177,8 +184,8 @@ const RAW_BENCHMARKS: PerformanceBenchmark[] = [
   },
 ];
 
-export const REFERENCE_PERFORMANCE_BENCHMARKS: readonly PerformanceBenchmark[] = RAW_BENCHMARKS.map((entry) =>
-  performanceBenchmarkSchema.parse(entry),
+export const REFERENCE_PERFORMANCE_BENCHMARKS: readonly PerformanceBenchmark[] = RAW_BENCHMARKS.map(
+  (entry) => performanceBenchmarkSchema.parse(entry),
 );
 
 /**
@@ -188,6 +195,13 @@ export const REFERENCE_PERFORMANCE_BENCHMARKS: readonly PerformanceBenchmark[] =
  * header. No LLM involvement in selection, mirroring assessObligations()
  * and select.ts's selectReferenceStats().
  */
-export function getSectorBenchmark(sector: BenchmarkSector, metric: string): PerformanceBenchmark | null {
-  return REFERENCE_PERFORMANCE_BENCHMARKS.find((entry) => entry.sector === sector && entry.metric === metric) ?? null;
+export function getSectorBenchmark(
+  sector: BenchmarkSector,
+  metric: string,
+): PerformanceBenchmark | null {
+  return (
+    REFERENCE_PERFORMANCE_BENCHMARKS.find(
+      (entry) => entry.sector === sector && entry.metric === metric,
+    ) ?? null
+  );
 }

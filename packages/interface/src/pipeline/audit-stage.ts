@@ -35,6 +35,7 @@ import {
   type Finding,
   type ObligationAssessment,
   type SiteSignalOverrides,
+  type SitemapMode,
   normalizeRegistryDisplayName,
 } from '@odysseus/core';
 import { persistAudit, prefillAuditManualFields } from '@odysseus/store';
@@ -70,6 +71,8 @@ export interface RunAuditStageOptions {
    *  see ScanPageOptions.skipLighthouse's doc comment for why the
    *  prospecting pipeline does. */
   skipLighthouse?: boolean;
+  /** Full audits default to `supplement`; prospecting passes `inspect`. */
+  sitemapMode?: Exclude<SitemapMode, 'none'>;
 }
 
 export interface AuditStageResult {
@@ -106,7 +109,10 @@ export async function runAuditStage(
 
   try {
     const hostname = new URL(url).hostname;
-    const screenshotDir = path.join(buildAuditDir(getArtifactsRoot(), hostname, startedAt), 'pages');
+    const screenshotDir = path.join(
+      buildAuditDir(getArtifactsRoot(), hostname, startedAt),
+      'pages',
+    );
 
     const siteResult = await scanSite(url, {
       browser,
@@ -118,8 +124,11 @@ export async function runAuditStage(
       ...(options.onProgress !== undefined ? { onProgress: options.onProgress } : {}),
       ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
       ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
-      ...(options.bookingEngineUrl !== undefined ? { bookingEngineUrl: options.bookingEngineUrl } : {}),
+      ...(options.bookingEngineUrl !== undefined
+        ? { bookingEngineUrl: options.bookingEngineUrl }
+        : {}),
       ...(options.skipLighthouse ? { skipLighthouse: options.skipLighthouse } : {}),
+      ...(options.sitemapMode !== undefined ? { sitemapMode: options.sitemapMode } : {}),
     });
 
     const finishedAt = new Date();
@@ -133,6 +142,7 @@ export async function runAuditStage(
       renderSettleTimeoutMs: getRenderSettleTimeoutMs(),
       userAgent: getCrawlerUserAgent(),
       scanConcurrency: getScanConcurrency(),
+      sitemapMode: options.sitemapMode ?? 'supplement',
     };
 
     const artifacts = await writeAuditArtifacts({

@@ -8,11 +8,13 @@ function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOut
       {
         themeKey: 't1',
         title: 'Contraste des couleurs insuffisant',
-        businessImpact: 'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
+        businessImpact:
+          'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
         recommendedActions: ['Augmenter le contraste des couleurs sur les boutons et le texte.'],
       },
     ],
-    executiveSummary: 'Votre site présente plusieurs constats qui affectent son efficacité commerciale.',
+    executiveSummary:
+      'Votre site présente plusieurs constats qui affectent son efficacité commerciale.',
     notes: '',
     ...overrides,
   };
@@ -52,7 +54,10 @@ describe('findLegalConsequenceViolations', () => {
     const violations = findLegalConsequenceViolations(output, 'fr');
 
     expect(violations).toHaveLength(1);
-    expect(violations[0]).toMatchObject({ field: 'executiveSummary', matched: 'risques juridiques' });
+    expect(violations[0]).toMatchObject({
+      field: 'executiveSummary',
+      matched: 'risques juridiques',
+    });
   });
 
   it('flags "expose à des sanctions" in a theme business impact', () => {
@@ -80,8 +85,11 @@ describe('findLegalConsequenceViolations', () => {
         {
           themeKey: 't1',
           title: 'Mentions légales incomplètes',
-          businessImpact: 'La crédibilité du site auprès des partenaires professionnels en souffre.',
-          recommendedActions: ['Corrigez cette page, faute de quoi vous êtes passible de poursuites.'],
+          businessImpact:
+            'La crédibilité du site auprès des partenaires professionnels en souffre.',
+          recommendedActions: [
+            'Corrigez cette page, faute de quoi vous êtes passible de poursuites.',
+          ],
         },
       ],
     });
@@ -123,7 +131,8 @@ describe('findLegalConsequenceViolations', () => {
 
   it('accepts an English summary that stays commercial', () => {
     const output = buildOutput({
-      executiveSummary: 'Missing identification details reduce trust with partners and professional customers.',
+      executiveSummary:
+        'Missing identification details reduce trust with partners and professional customers.',
     });
 
     expect(findLegalConsequenceViolations(output, 'en')).toHaveLength(0);

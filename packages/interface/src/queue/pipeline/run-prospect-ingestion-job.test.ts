@@ -28,7 +28,12 @@ import type { PipelineContext } from '../job-queue.js';
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.join(moduleDir, '..', '..', '..', '..', '..');
 const afnicFixture = path.join(workspaceRoot, 'fixtures', 'prospecting', 'afnic-sample.csv');
-const sireneFixture = path.join(workspaceRoot, 'fixtures', 'prospecting', 'sirene-stock-sample.csv');
+const sireneFixture = path.join(
+  workspaceRoot,
+  'fixtures',
+  'prospecting',
+  'sirene-stock-sample.csv',
+);
 const cacheDir = path.join(workspaceRoot, 'data', 'sirene');
 const cachePath = path.join(cacheDir, 'stock-index-cache.jsonl');
 
@@ -52,10 +57,6 @@ function htmlHomepage(): string {
 
 function htmlMentionsLegales(domain: string): string {
   return `<html><body>SIREN ${QUALIFYING_SIREN}. Contact: contact@${domain}</body></html>`;
-}
-
-function htmlHomepageNoLegal(): string {
-  return '<html><body>Accueil, rien ici</body></html>';
 }
 
 beforeAll(async () => {
@@ -83,7 +84,9 @@ beforeEach(async () => {
   ctx = { connection: fakeConnection, originLock: new OriginLock() };
 
   vi.mocked(getCheckpoint).mockResolvedValue(null);
-  vi.mocked(isSuppressed).mockImplementation(async (_connection, domain: string) => domain === 'example-org3.fr');
+  vi.mocked(isSuppressed).mockImplementation(
+    async (_connection, domain: string) => domain === 'example-org3.fr',
+  );
   vi.mocked(createProspect).mockImplementation(async (_connection, input) => ({
     ...input,
     prospectId: 'p-1',
@@ -161,5 +164,15 @@ describe('runProspectIngestionJob', () => {
     expect(upsertCheckpoint).toHaveBeenCalled();
     const lastCall = vi.mocked(upsertCheckpoint).mock.calls.at(-1)!;
     expect(lastCall[2].nextByteOffset).toBeGreaterThan(0);
+  });
+
+  it('does not write per-candidate progress for a batch smaller than the write interval', async () => {
+    await runProspectIngestionJob(fakeJob(), ctx);
+
+    // Only the two phase-transition writes before the loop starts (afnic-scan,
+    // fetch-qualify) - the fixture's 2-candidate batch never reaches the
+    // PROSPECT_CHECKPOINT_WRITE_INTERVAL threshold, so no per-candidate write
+    // fires. The exact final state is still guaranteed by completeJob.
+    expect(vi.mocked(updateJobProgress).mock.calls.length).toBe(2);
   });
 });

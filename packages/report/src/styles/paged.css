@@ -29,8 +29,8 @@
      comment), not removed, so the visual uppercase spacing is still
      legible. */
   @top-right {
-    content: "Page " counter(page) " / " counter(pages);
-    font-family: "Inter", system-ui, sans-serif;
+    content: 'Page ' counter(page) ' / ' counter(pages);
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 10px;
     letter-spacing: 0.02em;
     text-transform: uppercase;
@@ -46,7 +46,7 @@
      the URL that follows it. */
   @bottom-center {
     content: string(footer-text);
-    font-family: "Inter", system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 9px;
     letter-spacing: 0.02em;
     color: #75798c;
@@ -72,7 +72,9 @@
      own generated stylesheet and getComputedStyle output. The shorthand
      path doesn't hit that inconsistency. */
   margin: 0 0 18mm 0;
-  @top-right { content: ""; }
+  @top-right {
+    content: '';
+  }
 }
 
 /* Paged.js paints each sheet. The ground is set on the sheet, not on the
@@ -160,7 +162,9 @@ html {
   break-before: page;
   break-after: page;
 }
-.sheet-standalone:last-child { break-after: auto; }
+.sheet-standalone:last-child {
+  break-after: auto;
+}
 
 /* Scoped with :not(.sheet-cover) rather than :first-child: Paged.js's
    selector matching does not reliably support :first-child in break
@@ -184,10 +188,12 @@ html {
   display: flex;
   flex-direction: column;
   position: relative;
-  background: radial-gradient(ellipse 900px 560px at 50% 0%,
+  background: radial-gradient(
+    ellipse 900px 560px at 50% 0%,
     var(--color-section-glow) 0%,
     var(--color-section) 45%,
-    var(--color-bg) 85%);
+    var(--color-bg) 85%
+  );
 }
 
 /* ---- break control ----
@@ -232,7 +238,12 @@ html {
    .section-head where used, but heading levels get this unconditionally
    for the same reason h2/h4/h5 already did); h3/h6 appear in report
    copy (h6 is the numbered eyebrow every .section-head already uses). */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   break-after: avoid;
 }
 
@@ -387,7 +398,7 @@ img {
   object-fit: contain;
 }
 img:not([src]),
-img[src=""] {
+img[src=''] {
   display: none;
 }
 
@@ -395,8 +406,13 @@ img[src=""] {
    Kept so `pnpm report:preview` looks like the artifact did in the browser,
    without affecting print. */
 @media screen {
-  body { background: #0e0f18; }
-  .pagedjs_page { margin: 0 auto 28px; box-shadow: 0 6px 18px rgba(0,0,0,0.55); }
+  body {
+    background: #0e0f18;
+  }
+  .pagedjs_page {
+    margin: 0 auto 28px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  }
 }
 
 /* item 36: section 05 (the printable checklist) is explicitly labeled
@@ -467,7 +483,13 @@ img[src=""] {
      (high 6.56:1, medium 5.5:1, low 5.23:1) - not the same hex as
      LEVEL_COLOR's dark-mode values, which would fail contrast on this
      light background. */
-  #section-05 [data-level="high"] { color: #a52a37 !important; }
-  #section-05 [data-level="medium"] { color: #8a5a1e !important; }
-  #section-05 [data-level="low"] { color: #6e6a1f !important; }
+  #section-05 [data-level='high'] {
+    color: #a52a37 !important;
+  }
+  #section-05 [data-level='medium'] {
+    color: #8a5a1e !important;
+  }
+  #section-05 [data-level='low'] {
+    color: #6e6a1f !important;
+  }
 }

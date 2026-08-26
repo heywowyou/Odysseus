@@ -71,7 +71,12 @@ describe('renderReportIntro', () => {
   });
 
   it('lists the top 3 themes as next actions, naming the agency when a theme is entirely first-party', () => {
-    const findings = [buildFinding({ findingId: 'f001', elements: [{ pageUrl: 'https://example.com/', selector: 'header nav a', snippet: '' }] })];
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        elements: [{ pageUrl: 'https://example.com/', selector: 'header nav a', snippet: '' }],
+      }),
+    ];
     const analysis = buildAnalysis([['f001']]);
 
     const html = renderReportIntro(getStrings('fr'), 1, analysis as never, findings);
@@ -82,7 +87,12 @@ describe('renderReportIntro', () => {
 
   it('names the vendor when a theme is entirely third-party', () => {
     const findings = [
-      buildFinding({ findingId: 'f001', elements: [{ pageUrl: 'https://example.com/', selector: '.gform_wrapper button', snippet: '' }] }),
+      buildFinding({
+        findingId: 'f001',
+        elements: [
+          { pageUrl: 'https://example.com/', selector: '.gform_wrapper button', snippet: '' },
+        ],
+      }),
     ];
     const analysis = buildAnalysis([['f001']]);
 
@@ -93,8 +103,20 @@ describe('renderReportIntro', () => {
 
   it('names both when a theme spans first- and third-party pages', () => {
     const findings = [
-      buildFinding({ findingId: 'f001', elements: [{ pageUrl: 'https://example.com/', selector: 'header nav a', snippet: '' }] }),
-      buildFinding({ findingId: 'f002', elements: [{ pageUrl: 'https://example.com/contact', selector: '.gform_wrapper button', snippet: '' }] }),
+      buildFinding({
+        findingId: 'f001',
+        elements: [{ pageUrl: 'https://example.com/', selector: 'header nav a', snippet: '' }],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        elements: [
+          {
+            pageUrl: 'https://example.com/contact',
+            selector: '.gform_wrapper button',
+            snippet: '',
+          },
+        ],
+      }),
     ];
     const analysis = buildAnalysis([['f001', 'f002']]);
 

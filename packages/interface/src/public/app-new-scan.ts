@@ -66,7 +66,11 @@ for (const input of form.querySelectorAll<HTMLInputElement>('input[name="type"]'
 }
 updateFieldVisibility();
 
-function parsePositiveIntField(formData: FormData, name: string, allowZero: boolean): number | undefined {
+function parsePositiveIntField(
+  formData: FormData,
+  name: string,
+  allowZero: boolean,
+): number | undefined {
   const raw = formData.get(name);
   if (raw === null || raw === '') return undefined;
   const parsed = Number(raw);
@@ -116,7 +120,9 @@ async function submit(): Promise<void> {
               maxDepth: parsePositiveIntField(formData, 'maxDepth', true),
               delayMs: parsePositiveIntField(formData, 'delayMs', true),
               ...(rawSiren !== '' ? { siren: rawSiren.replace(/\s/g, '') } : {}),
-              ...(rawTransactionalFlow !== '' ? { transactionalFlow: rawTransactionalFlow === 'true' } : {}),
+              ...(rawTransactionalFlow !== ''
+                ? { transactionalFlow: rawTransactionalFlow === 'true' }
+                : {}),
               ...(rawTransactionalFlow !== '' && rawTransactionalFlowReason !== ''
                 ? { transactionalFlowReason: rawTransactionalFlowReason }
                 : {}),

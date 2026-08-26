@@ -31,7 +31,7 @@ describe('estimateRevenueImpact', () => {
     expect(result).toEqual({ revenueGainEur: 0 });
   });
 
-  it('passes negative revenue through with no clamping (caller contract, not this function\'s)', () => {
+  it("passes negative revenue through with no clamping (caller contract, not this function's)", () => {
     const stat = findStat('deloitte-speed-conversion-travel-2020');
     const result = estimateRevenueImpact(stat, -1000);
     expect(result).toEqual({ revenueGainEur: -101 });

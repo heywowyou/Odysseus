@@ -3,12 +3,18 @@ import { extractMentionsLegales, findMentionsLegalesUrl } from './mentions-legal
 
 describe('findMentionsLegalesUrl', () => {
   it('finds a URL matching the mentions-legales pattern', () => {
-    const urls = ['https://example.com/', 'https://example.com/mentions-legales', 'https://example.com/contact'];
+    const urls = [
+      'https://example.com/',
+      'https://example.com/mentions-legales',
+      'https://example.com/contact',
+    ];
     expect(findMentionsLegalesUrl(urls)).toBe('https://example.com/mentions-legales');
   });
 
   it('returns null when no page matches', () => {
-    expect(findMentionsLegalesUrl(['https://example.com/', 'https://example.com/contact'])).toBeNull();
+    expect(
+      findMentionsLegalesUrl(['https://example.com/', 'https://example.com/contact']),
+    ).toBeNull();
   });
 
   // item 0.6 (La Corniche pass): a live site put its SIREN on
@@ -19,21 +25,30 @@ describe('findMentionsLegalesUrl', () => {
   // privacy page almost never carries a SIREN, and matching one risks
   // findMentionsLegalesUrl locking onto the wrong page.
   it('matches the CGU, CGV, and conditions-generales page families', () => {
-    expect(findMentionsLegalesUrl(['https://example.com/', 'https://example.com/cgu'])).toBe('https://example.com/cgu');
-    expect(findMentionsLegalesUrl(['https://example.com/', 'https://example.com/cgv/'])).toBe('https://example.com/cgv/');
+    expect(findMentionsLegalesUrl(['https://example.com/', 'https://example.com/cgu'])).toBe(
+      'https://example.com/cgu',
+    );
+    expect(findMentionsLegalesUrl(['https://example.com/', 'https://example.com/cgv/'])).toBe(
+      'https://example.com/cgv/',
+    );
     expect(
-      findMentionsLegalesUrl(['https://example.com/', 'https://example.com/conditions-generales-dutilisation/']),
+      findMentionsLegalesUrl([
+        'https://example.com/',
+        'https://example.com/conditions-generales-dutilisation/',
+      ]),
     ).toBe('https://example.com/conditions-generales-dutilisation/');
   });
 
   it('does not match an unrelated legal page (privacy, cookies)', () => {
-    expect(findMentionsLegalesUrl(['https://example.com/privacy', 'https://example.com/cookies'])).toBeNull();
+    expect(
+      findMentionsLegalesUrl(['https://example.com/privacy', 'https://example.com/cookies']),
+    ).toBeNull();
   });
 
   it('matches the singular "mention-legale" variant', () => {
-    expect(findMentionsLegalesUrl(['https://example.com/', 'https://example.com/mention-legale/'])).toBe(
-      'https://example.com/mention-legale/',
-    );
+    expect(
+      findMentionsLegalesUrl(['https://example.com/', 'https://example.com/mention-legale/']),
+    ).toBe('https://example.com/mention-legale/');
   });
 });
 

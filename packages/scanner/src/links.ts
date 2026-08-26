@@ -9,11 +9,39 @@ import path from 'node:path';
  * URLs whose extension doesn't reveal what they are.
  */
 const NON_HTML_EXTENSIONS = new Set([
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.svg', '.ico', '.bmp',
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-  '.zip', '.rar', '.7z', '.gz', '.tar',
-  '.mp3', '.mp4', '.mov', '.avi', '.webm', '.wav', '.ogg',
-  '.woff', '.woff2', '.ttf', '.eot', '.otf',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.avif',
+  '.svg',
+  '.ico',
+  '.bmp',
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
+  '.zip',
+  '.rar',
+  '.7z',
+  '.gz',
+  '.tar',
+  '.mp3',
+  '.mp4',
+  '.mov',
+  '.avi',
+  '.webm',
+  '.wav',
+  '.ogg',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.otf',
 ]);
 
 /** report-feedback-la-corniche.md item 1.3: a real 20-page crawl of a
@@ -90,6 +118,17 @@ function isNonPublicWordPressObject(url: URL): boolean {
   return postType !== null && NON_PUBLIC_WP_POST_TYPES.has(postType.toLowerCase());
 }
 
+/** Exact hostname or the same hostname with only a leading `www.` added
+ *  or removed. This is the deliberately narrow site identity proven safe
+ *  by the real redirect cases recorded in trade-off 31. */
+export function isSameSiteHostname(requestedHostname: string, candidateHostname: string): boolean {
+  if (requestedHostname === candidateHostname) return true;
+  return (
+    requestedHostname === `www.${candidateHostname}` ||
+    candidateHostname === `www.${requestedHostname}`
+  );
+}
+
 /**
  * Converts an operator-supplied glob pattern (only `*` is a wildcard,
  * matching any run of characters including none) into a RegExp anchored
@@ -99,8 +138,49 @@ function isNonPublicWordPressObject(url: URL): boolean {
  * as a regex fragment.
  */
 export function globToRegExp(glob: string): RegExp {
-  const escaped = glob.replace(/[.*+?^${}()|[\]\\]/g, (char) => (char === '*' ? '.*' : `\\${char}`));
+  const escaped = glob.replace(/[.*+?^${}()|[\]\\]/g, (char) =>
+    char === '*' ? '.*' : `\\${char}`,
+  );
   return new RegExp(`^${escaped}$`);
+}
+
+export interface NormalizePageUrlOptions {
+  exclusionPatterns?: readonly string[];
+  allowWwwApex?: boolean;
+}
+
+/** Normalizes one possible HTML page URL through the shared admission
+ *  policy used by link discovery and sitemap supplementation. */
+export function normalizePageUrl(
+  href: string,
+  baseUrl: string,
+  options: NormalizePageUrlOptions = {},
+): string | undefined {
+  let resolved: URL;
+  const base = new URL(baseUrl);
+  try {
+    resolved = new URL(href, base);
+  } catch {
+    return undefined;
+  }
+
+  if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') return undefined;
+  const hostAllowed = options.allowWwwApex
+    ? isSameSiteHostname(base.hostname, resolved.hostname) && resolved.port === base.port
+    : resolved.origin === base.origin;
+  if (!hostAllowed) return undefined;
+
+  if (resolved.pathname.length > 1 && resolved.pathname.endsWith('/')) {
+    resolved.pathname = resolved.pathname.slice(0, -1);
+  }
+  if (NON_HTML_EXTENSIONS.has(path.posix.extname(resolved.pathname).toLowerCase()))
+    return undefined;
+  if (isNonPublicWordPressObject(resolved)) return undefined;
+  resolved.hash = '';
+  const normalized = resolved.toString();
+  const exclusionRegexes = (options.exclusionPatterns ?? []).map(globToRegExp);
+  if (exclusionRegexes.some((pattern) => pattern.test(normalized))) return undefined;
+  return normalized;
 }
 
 /**
@@ -124,40 +204,13 @@ export function normalizeInternalLinks(
   baseUrl: string,
   exclusionPatterns: readonly string[] = [],
 ): string[] {
-  const base = new URL(baseUrl);
-  const exclusionRegexes = exclusionPatterns.map(globToRegExp);
   const seen = new Set<string>();
   const result: string[] = [];
 
   for (const href of hrefs) {
     if (!href) continue;
-    let resolved: URL;
-    try {
-      resolved = new URL(href, base);
-    } catch {
-      continue;
-    }
-    if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') continue;
-    if (resolved.origin !== base.origin) continue;
-    // A real haaitza.com crawl linked the same GDPR-form page as both
-    // /formulaire-rgpd and /formulaire-rgpd/ from different pages on the
-    // site - two hrefs, one page, but hashUrl() (paths.ts) hashes the full
-    // URL string, so they landed in distinct page directories and each
-    // cost its own crawl slot, render-diff, axe pass, and Lighthouse pass.
-    // Servers overwhelmingly treat the two forms as the same resource (one
-    // typically redirects to the other), so collapsing them here is safe
-    // in a way collapsing arbitrary query strings would not be - unlike
-    // LANGUAGE_HOMEPAGE_PATH_PATTERN above, this is not narrowed to one
-    // specific pattern because there is no comparable risk of dropping
-    // distinct content by stripping a trailing slash.
-    if (resolved.pathname.length > 1 && resolved.pathname.endsWith('/')) {
-      resolved.pathname = resolved.pathname.slice(0, -1);
-    }
-    if (NON_HTML_EXTENSIONS.has(path.posix.extname(resolved.pathname).toLowerCase())) continue;
-    if (isNonPublicWordPressObject(resolved)) continue;
-    resolved.hash = '';
-    const normalized = resolved.toString();
-    if (exclusionRegexes.some((pattern) => pattern.test(normalized))) continue;
+    const normalized = normalizePageUrl(href, baseUrl, { exclusionPatterns });
+    if (normalized === undefined) continue;
     if (seen.has(normalized)) continue;
     seen.add(normalized);
     result.push(normalized);

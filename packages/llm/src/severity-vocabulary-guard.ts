@@ -23,10 +23,11 @@ export const SEVERITY_VOCABULARY: Record<
  *  {fr,en}.ts's findingSingular/findingPlural), for the noun the model
  *  must use consistently rather than reaching for a synonym like
  *  "problème"/"problem" or "issue". */
-export const FINDING_NOUN_VOCABULARY: Record<ReportLanguage, { singular: string; plural: string }> = {
-  fr: { singular: 'constat', plural: 'constats' },
-  en: { singular: 'finding', plural: 'findings' },
-};
+export const FINDING_NOUN_VOCABULARY: Record<ReportLanguage, { singular: string; plural: string }> =
+  {
+    fr: { singular: 'constat', plural: 'constats' },
+    en: { singular: 'finding', plural: 'findings' },
+  };
 
 /**
  * Known synonyms the model reaches for instead of the canonical word,
@@ -97,9 +98,19 @@ export function findSeverityVocabularyViolations(
   checkField('executiveSummary', output.executiveSummary, language, violations);
   checkField('notes', output.notes, language, violations);
   output.themes.forEach((theme, i) => {
-    checkField(`themes[${i}](${theme.themeKey}).businessImpact`, theme.businessImpact, language, violations);
+    checkField(
+      `themes[${i}](${theme.themeKey}).businessImpact`,
+      theme.businessImpact,
+      language,
+      violations,
+    );
     theme.recommendedActions.forEach((action, j) => {
-      checkField(`themes[${i}](${theme.themeKey}).recommendedActions[${j}]`, action, language, violations);
+      checkField(
+        `themes[${i}](${theme.themeKey}).recommendedActions[${j}]`,
+        action,
+        language,
+        violations,
+      );
     });
   });
 

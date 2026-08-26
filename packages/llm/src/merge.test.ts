@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ZodError } from 'zod';
 import type { Finding } from '@odysseus/core';
 import { mergeAnalysisPasses } from './merge.js';
 import type { StructureDocument } from './structure-schema.js';
@@ -79,7 +80,12 @@ function buildWritingOutput(): WritingPassOutput {
 
 describe('mergeAnalysisPasses', () => {
   it('merges structure and writing themes by themeKey, and themeKey never leaks into the output', () => {
-    const merged = mergeAnalysisPasses(buildStructureDoc(), buildWritingOutput(), filteredFindings, 'en');
+    const merged = mergeAnalysisPasses(
+      buildStructureDoc(),
+      buildWritingOutput(),
+      filteredFindings,
+      'en',
+    );
 
     expect(merged.themes).toHaveLength(2);
     for (const theme of merged.themes) {
@@ -88,7 +94,12 @@ describe('mergeAnalysisPasses', () => {
   });
 
   it('builds legalRelevance deterministically for an accessibility theme, and omits it for a non-accessibility theme even when its finding carries a WCAG criterion', () => {
-    const merged = mergeAnalysisPasses(buildStructureDoc(), buildWritingOutput(), filteredFindings, 'fr');
+    const merged = mergeAnalysisPasses(
+      buildStructureDoc(),
+      buildWritingOutput(),
+      filteredFindings,
+      'fr',
+    );
 
     const accessibilityTheme = merged.themes.find((t) => t.category === 'accessibility');
     const seoTheme = merged.themes.find((t) => t.category === 'seo');
@@ -100,7 +111,12 @@ describe('mergeAnalysisPasses', () => {
   });
 
   it('carries structure-decided fields and writing-decided prose onto the same theme', () => {
-    const merged = mergeAnalysisPasses(buildStructureDoc(), buildWritingOutput(), filteredFindings, 'en');
+    const merged = mergeAnalysisPasses(
+      buildStructureDoc(),
+      buildWritingOutput(),
+      filteredFindings,
+      'en',
+    );
     const theme = merged.themes.find((t) => t.findingIds.includes('f1'));
 
     expect(theme).toMatchObject({
@@ -122,8 +138,22 @@ describe('mergeAnalysisPasses', () => {
     const writingOutput = buildWritingOutput();
     writingOutput.themes = writingOutput.themes.filter((t) => t.themeKey !== 't2');
 
-    expect(() => mergeAnalysisPasses(buildStructureDoc(), writingOutput, filteredFindings, 'en')).toThrow(
-      /merge invariant violated/,
-    );
+    expect(() =>
+      mergeAnalysisPasses(buildStructureDoc(), writingOutput, filteredFindings, 'en'),
+    ).toThrow(/merge invariant violated/);
+  });
+
+  it("throws a ZodError when the merged shape violates the locked llmOutputSchema, even though each pass's own input was otherwise valid", () => {
+    const structureDoc = buildStructureDoc();
+    // themeSchema requires findingIds to be non-empty; an otherwise-valid
+    // structure/writing pair with an empty array here is exactly the shape
+    // llmOutputSchema.parse(merged) exists to catch before it reaches a
+    // report - not something findThemeKeyMismatches or the earlier merge
+    // logic would reject on its own.
+    structureDoc.themes[0]!.findingIds = [];
+
+    expect(() =>
+      mergeAnalysisPasses(structureDoc, buildWritingOutput(), filteredFindings, 'en'),
+    ).toThrow(ZodError);
   });
 });

@@ -20,7 +20,9 @@ describe('findBookingEngineDomainReferences', () => {
   });
 
   it('finds nothing when no known booking engine domain is referenced', () => {
-    expect(findBookingEngineDomainReferences(['window.dataLayer = window.dataLayer || [];'])).toEqual([]);
+    expect(
+      findBookingEngineDomainReferences(['window.dataLayer = window.dataLayer || [];']),
+    ).toEqual([]);
   });
 
   it('deduplicates repeated domain matches across multiple scripts', () => {
@@ -36,12 +38,18 @@ describe('findBookingIframes', () => {
   it('matches a restaurant-reservation widget embedded as a third-party iframe', () => {
     const srcs = ['https://widget.thefork.com/4c1aa87c-f07e-43b7-9710-77b72a83b66a', 'about:blank'];
     expect(findBookingIframes(srcs)).toEqual([
-      { src: 'https://widget.thefork.com/4c1aa87c-f07e-43b7-9710-77b72a83b66a', domain: 'widget.thefork.com' },
+      {
+        src: 'https://widget.thefork.com/4c1aa87c-f07e-43b7-9710-77b72a83b66a',
+        domain: 'widget.thefork.com',
+      },
     ]);
   });
 
   it('does not match an unrelated iframe (a photo gallery widget, a webcam)', () => {
-    const srcs = ['//lightwidget.com/widgets/d1dcbeed497d51d1811c53264925a96d.html', 'https://g0.ipcamlive.com/player/player.php'];
+    const srcs = [
+      '//lightwidget.com/widgets/d1dcbeed497d51d1811c53264925a96d.html',
+      'https://g0.ipcamlive.com/player/player.php',
+    ];
     expect(findBookingIframes(srcs)).toEqual([]);
   });
 });
@@ -84,7 +92,9 @@ describe('findBookingIntentLinks', () => {
   });
 
   it('does not match "book" inside "Facebook" (real haaitza.com OOM crash, 2026-08-07: matched a Facebook social icon on every crawled page and repeatedly navigated a real browser context to facebook.com until the process ran out of heap)', () => {
-    const anchors = [{ href: 'https://www.facebook.com/haaitza', text: 'Suivez-nous sur Facebook' }];
+    const anchors = [
+      { href: 'https://www.facebook.com/haaitza', text: 'Suivez-nous sur Facebook' },
+    ];
     expect(findBookingIntentLinks(pageUrl, anchors)).toEqual([]);
   });
 
@@ -108,7 +118,9 @@ describe('findBookingIntentLinks', () => {
       { href: 'https://booking-engine.example/book', text: 'Book now' },
       { href: 'not a url', text: 'Book now' },
     ];
-    expect(findBookingIntentLinks(pageUrl, anchors)).toEqual(['https://booking-engine.example/book']);
+    expect(findBookingIntentLinks(pageUrl, anchors)).toEqual([
+      'https://booking-engine.example/book',
+    ]);
   });
 });
 

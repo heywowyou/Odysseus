@@ -42,7 +42,10 @@ export function normalizeHtmlValidity(
 
   // Grouped by the underlying rule, so "duplicate id" and "stray end
   // tag" stay separable in the annex without becoming one finding each.
-  const byRule = new Map<string, { ruleId: string; message: string; line: number; column: number }[]>();
+  const byRule = new Map<
+    string,
+    { ruleId: string; message: string; line: number; column: number }[]
+  >();
   for (const issue of input.issues) {
     const bucket = byRule.get(issue.ruleId);
     if (bucket) bucket.push(issue);

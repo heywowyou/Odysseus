@@ -43,7 +43,8 @@ export const METRIC_UNITS: Record<CoreWebVitalMetricKey, Unit> = {
 const CLS_DECIMAL_PLACES = 3;
 
 export function formatMetricValue(value: number, unit: Unit, language: ReportLanguage): string {
-  if (unit === 'ms-to-s') return `${formatNumber(Math.round((value / 1000) * 10) / 10, language)} s`;
+  if (unit === 'ms-to-s')
+    return `${formatNumber(Math.round((value / 1000) * 10) / 10, language)} s`;
   if (unit === 'ms') return `${formatNumber(Math.round(value), language)} ms`;
   const factor = 10 ** CLS_DECIMAL_PLACES;
   return formatNumber(Math.round(value * factor) / factor, language);
@@ -59,11 +60,19 @@ function median(values: readonly number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
-function metricValues(vitalsList: readonly (CoreWebVitals | undefined)[], key: CoreWebVitalMetricKey): number[] {
-  return vitalsList.map((v) => v?.[key]?.numericValue).filter((v): v is number => v !== null && v !== undefined);
+function metricValues(
+  vitalsList: readonly (CoreWebVitals | undefined)[],
+  key: CoreWebVitalMetricKey,
+): number[] {
+  return vitalsList
+    .map((v) => v?.[key]?.numericValue)
+    .filter((v): v is number => v !== null && v !== undefined);
 }
 
-function medianForMetric(vitalsList: readonly (CoreWebVitals | undefined)[], key: CoreWebVitalMetricKey): number | null {
+function medianForMetric(
+  vitalsList: readonly (CoreWebVitals | undefined)[],
+  key: CoreWebVitalMetricKey,
+): number | null {
   return median(metricValues(vitalsList, key));
 }
 
@@ -78,7 +87,10 @@ function medianForMetric(vitalsList: readonly (CoreWebVitals | undefined)[], key
  *  page"). Showing the worst page's value alongside the median lets the
  *  reader see why the finding's severity can outrank the median's rating,
  *  without adding reconciling prose. */
-function worstForMetric(vitalsList: readonly (CoreWebVitals | undefined)[], key: CoreWebVitalMetricKey): number | null {
+function worstForMetric(
+  vitalsList: readonly (CoreWebVitals | undefined)[],
+  key: CoreWebVitalMetricKey,
+): number | null {
   const values = metricValues(vitalsList, key);
   if (values.length === 0) return null;
   return Math.max(...values);
@@ -124,13 +136,36 @@ function renderRealUserDataBlock(
 
   const rows = [
     cruxFieldData.lcp
-      ? { key: 'lcp' as const, label: c.lcpLabel, unit: 'ms-to-s' as Unit, value: cruxFieldData.lcp.p75, good: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'lcp')!.good, needsImprovement: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'lcp')!.needsImprovement }
+      ? {
+          key: 'lcp' as const,
+          label: c.lcpLabel,
+          unit: 'ms-to-s' as Unit,
+          value: cruxFieldData.lcp.p75,
+          good: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'lcp')!.good,
+          needsImprovement: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'lcp')!
+            .needsImprovement,
+        }
       : null,
     cruxFieldData.inp
-      ? { key: 'inp' as const, label: c.inpLabel, unit: 'ms' as Unit, value: cruxFieldData.inp.p75, good: INP_GOOD_MS, needsImprovement: INP_NEEDS_IMPROVEMENT_MS }
+      ? {
+          key: 'inp' as const,
+          label: c.inpLabel,
+          unit: 'ms' as Unit,
+          value: cruxFieldData.inp.p75,
+          good: INP_GOOD_MS,
+          needsImprovement: INP_NEEDS_IMPROVEMENT_MS,
+        }
       : null,
     cruxFieldData.cls
-      ? { key: 'cls' as const, label: c.clsLabel, unit: 'unitless' as Unit, value: cruxFieldData.cls.p75, good: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'cls')!.good, needsImprovement: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'cls')!.needsImprovement }
+      ? {
+          key: 'cls' as const,
+          label: c.clsLabel,
+          unit: 'unitless' as Unit,
+          value: cruxFieldData.cls.p75,
+          good: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'cls')!.good,
+          needsImprovement: CORE_WEB_VITAL_THRESHOLDS.find((t) => t.key === 'cls')!
+            .needsImprovement,
+        }
       : null,
   ].filter((row): row is NonNullable<typeof row> => row !== null);
 
@@ -144,7 +179,12 @@ function renderRealUserDataBlock(
   const tableRows = rows
     .map((row) => {
       const rating = rateCoreWebVital(row.value, row.good, row.needsImprovement);
-      const ratingColor = rating === 'good' ? GOOD_COLOR : rating === 'mid' ? SEVERITY.moderate.color : SEVERITY.critical.color;
+      const ratingColor =
+        rating === 'good'
+          ? GOOD_COLOR
+          : rating === 'mid'
+            ? SEVERITY.moderate.color
+            : SEVERITY.critical.color;
       return `
         <tr>
           ${cell(escapeHtml(row.label))}
@@ -176,7 +216,11 @@ function renderRealUserDataBlock(
 
 function ratingLabel(strings: ReportStrings, rating: CoreWebVitalRating): string {
   const c = strings.coreWebVitals;
-  return rating === 'good' ? c.ratingGoodLabel : rating === 'mid' ? c.ratingNeedsImprovementLabel : c.ratingPoorLabel;
+  return rating === 'good'
+    ? c.ratingGoodLabel
+    : rating === 'mid'
+      ? c.ratingNeedsImprovementLabel
+      : c.ratingPoorLabel;
 }
 
 function headCell(label: string, width: string): string {
@@ -237,11 +281,15 @@ export function renderCoreWebVitalsTable(
   // not complete for this run, name where the reasoning is (methodology),
   // and stop there.
   if (!hasMeasuredCoreWebVitals(manifest)) {
-    return sheet(`
+    return sheet(
+      `
       ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
       <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(c.allUnmeasuredNote)}</p>
       ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, false)}
-    `, '', 'section-09');
+    `,
+      '',
+      'section-09',
+    );
   }
 
   const rows = CORE_WEB_VITAL_THRESHOLDS.map((metric) => {
@@ -259,7 +307,12 @@ export function renderCoreWebVitalsTable(
       `;
     }
     const rating = rateCoreWebVital(value, metric.good, metric.needsImprovement);
-    const ratingColor = rating === 'good' ? GOOD_COLOR : rating === 'mid' ? SEVERITY.moderate.color : SEVERITY.critical.color;
+    const ratingColor =
+      rating === 'good'
+        ? GOOD_COLOR
+        : rating === 'mid'
+          ? SEVERITY.moderate.color
+          : SEVERITY.critical.color;
     const worst = worstForMetric(vitalsList, metric.key);
     const worstCell =
       worst !== null && worst > value
@@ -285,7 +338,8 @@ export function renderCoreWebVitalsTable(
   // own, replacing the earlier display:contents `.row-atomic` workaround
   // that only existed because the grid markup had no real rows to begin
   // with.
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.introTemplate, { pages: formatNumber(pagesScanned, language) }))}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
@@ -304,5 +358,8 @@ export function renderCoreWebVitalsTable(
     </table>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-3)">${escapeHtml(c.worstPageFootnote)}</p>
     ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, true)}
-  `, '', 'section-09');
+  `,
+    '',
+    'section-09',
+  );
 }

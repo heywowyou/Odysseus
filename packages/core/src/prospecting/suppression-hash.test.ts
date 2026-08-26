@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { hashSuppressionValue, normalizeAddressForHash, normalizeDomainForHash } from './suppression-hash.js';
+import {
+  hashSuppressionValue,
+  normalizeAddressForHash,
+  normalizeDomainForHash,
+} from './suppression-hash.js';
 
 describe('normalizeDomainForHash', () => {
   it('lowercases and strips protocol, www, path, and trailing dot', () => {

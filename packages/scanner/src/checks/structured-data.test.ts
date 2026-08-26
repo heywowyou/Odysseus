@@ -7,7 +7,9 @@ function htmlWithJsonLd(jsonLd: Record<string, unknown>): string {
 
 describe('evaluateStructuredData', () => {
   it('reports no schemas and no failures for a page with no structured data at all', async () => {
-    const result = await evaluateStructuredData('<!doctype html><html><head></head><body>Hello</body></html>');
+    const result = await evaluateStructuredData(
+      '<!doctype html><html><head></head><body>Hello</body></html>',
+    );
     expect(result.schemasFound).toEqual([]);
     expect(result.failedTests).toEqual([]);
   });

@@ -2,7 +2,17 @@ import { compareCriteria } from '@odysseus/core';
 import type { AuditManifest, AuditManualFields, Finding, ReportLanguage } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, escapeProse, fillTemplate, formatCappedFindingIdRefs, formatCappedList, formatDate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  escapeProse,
+  fillTemplate,
+  formatCappedFindingIdRefs,
+  formatCappedList,
+  formatDate,
+  formatNumber,
+  renderSheetHeader,
+  sheet,
+} from '../html-utils.js';
 import { selectRenderedThemes } from './themes.js';
 import { LEVEL_COLOR } from '../design-tokens.js';
 
@@ -71,7 +81,9 @@ export function renderChecklist(
         .map((id) => findingsById.get(id))
         .filter((f): f is Finding => f !== undefined);
       const uniquePages = new Set(themeFindings.flatMap((f) => f.pageUrls)).size;
-      const wcagCriteria = [...new Set(themeFindings.flatMap((f) => f.wcagCriteria))].sort(compareCriteria);
+      const wcagCriteria = [...new Set(themeFindings.flatMap((f) => f.wcagCriteria))].sort(
+        compareCriteria,
+      );
 
       return `
         <div class="row-atomic">
@@ -87,7 +99,8 @@ export function renderChecklist(
     })
     .join('');
 
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
     <p style="font-size:12px;opacity:0.7;margin-bottom:4px">${escapeHtml(identifier)}</p>
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(c.intro)}</p>
@@ -101,5 +114,8 @@ export function renderChecklist(
       ${headCell(c.wcagColumnLabel)}
       ${rows}
     </div>
-  `, 'sheet-standalone', 'section-05');
+  `,
+    'sheet-standalone',
+    'section-05',
+  );
 }

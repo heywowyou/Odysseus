@@ -60,7 +60,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       id: 'broken-internal-link-fix-target',
       text: {
         fr: "Corrigez le lien pour qu'il pointe vers l'URL actuelle et valide de la page cible.",
-        en: 'Update the link to point at the target page\'s current, valid URL.',
+        en: "Update the link to point at the target page's current, valid URL.",
       },
     },
     {
@@ -84,7 +84,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'mixed-content-serve-https',
       text: {
-        fr: 'Chargez toutes les ressources (images, scripts, styles) via https:// plutôt que http:// pour éviter que le navigateur ne les bloque ou n\'avertisse le visiteur.',
+        fr: "Chargez toutes les ressources (images, scripts, styles) via https:// plutôt que http:// pour éviter que le navigateur ne les bloque ou n'avertisse le visiteur.",
         en: 'Load every resource (images, scripts, styles) over https:// instead of http:// so the browser does not block or warn about them.',
       },
     },
@@ -121,7 +121,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       id: 'meta-description-missing-add-summary',
       text: {
         fr: 'Ajoutez une balise meta description propre à cette page, résumant son contenu en une ou deux phrases.',
-        en: "Add a meta description tag specific to this page, summarizing its content in one or two sentences.",
+        en: 'Add a meta description tag specific to this page, summarizing its content in one or two sentences.',
       },
     },
   ],
@@ -138,7 +138,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'canonical-missing-add-self-referencing',
       text: {
-        fr: "Ajoutez une balise canonical, même auto-référente, pour indiquer explicitement quelle URL est la version de référence de cette page.",
+        fr: 'Ajoutez une balise canonical, même auto-référente, pour indiquer explicitement quelle URL est la version de référence de cette page.',
         en: 'Add a canonical tag, even a self-referencing one, to explicitly state which URL is the authoritative version of this page.',
       },
     },
@@ -147,7 +147,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'canonical-conflicting-pick-one-target',
       text: {
-        fr: "Faites en sorte que toutes les balises canonical de cette page pointent vers la même URL cible.",
+        fr: 'Faites en sorte que toutes les balises canonical de cette page pointent vers la même URL cible.',
         en: 'Make every canonical tag on this page point at the same target URL.',
       },
     },
@@ -157,7 +157,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       id: 'sitemap-missing-generate-and-submit',
       text: {
         fr: 'Générez un fichier sitemap.xml listant les pages importantes du site, et référencez-le dans le fichier robots.txt.',
-        en: 'Generate a sitemap.xml listing the site\'s important pages, and reference it from robots.txt.',
+        en: "Generate a sitemap.xml listing the site's important pages, and reference it from robots.txt.",
       },
     },
   ],
@@ -165,7 +165,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'sitemap-stale-regenerate',
       text: {
-        fr: 'Régénérez le sitemap pour qu\'il reflète les pages actuellement publiées sur le site, en retirant celles qui ont disparu et en ajoutant les nouvelles.',
+        fr: "Régénérez le sitemap pour qu'il reflète les pages actuellement publiées sur le site, en retirant celles qui ont disparu et en ajoutant les nouvelles.",
         en: 'Regenerate the sitemap so it reflects the pages currently published on the site, removing ones that are gone and adding new ones.',
       },
     },
@@ -175,7 +175,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       id: 'jsonld-missing-add-structured-data',
       text: {
         fr: 'Ajoutez un bloc de données structurées JSON-LD adapté au type de contenu de cette page (organisation, article, produit, etc.).',
-        en: 'Add a JSON-LD structured data block matching this page\'s content type (organization, article, product, and so on).',
+        en: "Add a JSON-LD structured data block matching this page's content type (organization, article, product, and so on).",
       },
     },
   ],
@@ -201,8 +201,8 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'hreflang-invalid-fix-language-codes',
       text: {
-        fr: 'Corrigez les codes de langue/région des balises hreflang pour qu\'ils respectent le format ISO attendu (ex. fr-FR, en-US).',
-        en: 'Fix the hreflang tags\' language/region codes to match the expected ISO format (e.g. fr-FR, en-US).',
+        fr: "Corrigez les codes de langue/région des balises hreflang pour qu'ils respectent le format ISO attendu (ex. fr-FR, en-US).",
+        en: "Fix the hreflang tags' language/region codes to match the expected ISO format (e.g. fr-FR, en-US).",
       },
     },
   ],
@@ -210,7 +210,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'hreflang-no-return-link-add-reciprocal-tag',
       text: {
-        fr: "Ajoutez la balise hreflang réciproque sur la page cible, pointant en retour vers cette page.",
+        fr: 'Ajoutez la balise hreflang réciproque sur la page cible, pointant en retour vers cette page.',
         en: 'Add the reciprocal hreflang tag on the target page, pointing back at this page.',
       },
     },
@@ -238,7 +238,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       id: 'no-h1-add-main-heading',
       text: {
         fr: 'Ajoutez un <h1> décrivant le sujet principal de la page.',
-        en: 'Add an <h1> describing the page\'s main subject.',
+        en: "Add an <h1> describing the page's main subject.",
       },
     },
   ],
@@ -246,7 +246,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'opengraph-missing-add-tags',
       text: {
-        fr: 'Ajoutez les balises Open Graph de base (og:title, og:description, og:image) pour contrôler l\'aperçu affiché lors du partage sur les réseaux sociaux.',
+        fr: "Ajoutez les balises Open Graph de base (og:title, og:description, og:image) pour contrôler l'aperçu affiché lors du partage sur les réseaux sociaux.",
         en: 'Add the basic Open Graph tags (og:title, og:description, og:image) to control the preview shown when the page is shared on social platforms.',
       },
     },
@@ -256,7 +256,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       id: 'image-oversized-compress-and-resize',
       text: {
         fr: "Compressez et redimensionnez l'image à la taille réellement affichée à l'écran, sans dépasser ce dont la mise en page a besoin.",
-        en: "Compress and resize the image to the size it is actually displayed at, no larger than the layout needs.",
+        en: 'Compress and resize the image to the size it is actually displayed at, no larger than the layout needs.',
       },
     },
     {
@@ -271,7 +271,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'image-legacy-format-convert-modern-format',
       text: {
-        fr: 'Convertissez l\'image en WebP ou AVIF, qui offrent une meilleure compression que JPEG/PNG à qualité visuelle équivalente.',
+        fr: "Convertissez l'image en WebP ou AVIF, qui offrent une meilleure compression que JPEG/PNG à qualité visuelle équivalente.",
         en: 'Convert the image to WebP or AVIF, which compress better than JPEG/PNG at equivalent visual quality.',
       },
     },
@@ -298,7 +298,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'canonical-target-noindex-resolve-conflict',
       text: {
-        fr: "Faites correspondre les deux signaux: soit retirez le noindex de la page cible du canonical, soit changez la cible du canonical vers une page indexable.",
+        fr: 'Faites correspondre les deux signaux: soit retirez le noindex de la page cible du canonical, soit changez la cible du canonical vers une page indexable.',
         en: 'Make the two signals agree: either remove noindex from the canonical target, or point the canonical at an indexable page instead.',
       },
     },
@@ -307,7 +307,7 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'sitemap-orphan-page-add-internal-link',
       text: {
-        fr: 'Ajoutez un lien interne vers cette page depuis une autre page du site, pour qu\'elle ne dépende plus uniquement du sitemap pour être découverte.',
+        fr: "Ajoutez un lien interne vers cette page depuis une autre page du site, pour qu'elle ne dépende plus uniquement du sitemap pour être découverte.",
         en: 'Add an internal link to this page from elsewhere on the site, so it no longer depends solely on the sitemap for discovery.',
       },
     },
@@ -352,19 +352,20 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'faq-content-without-schema-add-faqpage-schema',
       text: {
-        fr: "Ajoutez un balisage FAQPage correspondant aux questions déjà présentes sur la page, pour permettre leur extraction directe.",
+        fr: 'Ajoutez un balisage FAQPage correspondant aux questions déjà présentes sur la page, pour permettre leur extraction directe.',
         en: 'Add FAQPage markup matching the questions already present on the page, so they can be extracted directly.',
       },
     },
   ],
 };
 
-export const RECOMMENDATION_TEMPLATES: Readonly<Record<string, readonly RecommendationTemplate[]>> = Object.fromEntries(
-  Object.entries(RAW_TEMPLATES).map(([ruleId, templates]) => [
-    ruleId,
-    templates.map((template) => recommendationTemplateSchema.parse(template)),
-  ]),
-);
+export const RECOMMENDATION_TEMPLATES: Readonly<Record<string, readonly RecommendationTemplate[]>> =
+  Object.fromEntries(
+    Object.entries(RAW_TEMPLATES).map(([ruleId, templates]) => [
+      ruleId,
+      templates.map((template) => recommendationTemplateSchema.parse(template)),
+    ]),
+  );
 
 /**
  * Pure lookup. Returns every template for the given ruleId, in the fixed

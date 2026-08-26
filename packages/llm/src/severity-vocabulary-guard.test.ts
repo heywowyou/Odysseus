@@ -8,11 +8,13 @@ function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOut
       {
         themeKey: 't1',
         title: 'Contraste des couleurs insuffisant',
-        businessImpact: 'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
+        businessImpact:
+          'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
         recommendedActions: ['Augmenter le contraste des couleurs sur les boutons et le texte.'],
       },
     ],
-    executiveSummary: 'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
+    executiveSummary:
+      'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
     notes: '',
     ...overrides,
   };
@@ -25,7 +27,8 @@ describe('findSeverityVocabularyViolations', () => {
     // said "majeurs" while docs/report-design-system.md's canonical label
     // is "Sérieux" - the guard used to ban the correct word instead.
     const output = buildOutput({
-      executiveSummary: 'Nous avons identifié 130 problèmes, dont 8 critiques, 26 majeurs et 24 modérés.',
+      executiveSummary:
+        'Nous avons identifié 130 problèmes, dont 8 critiques, 26 majeurs et 24 modérés.',
     });
 
     const violations = findSeverityVocabularyViolations(output, 'fr');
@@ -36,7 +39,8 @@ describe('findSeverityVocabularyViolations', () => {
 
   it('finds no violations when the executive summary uses the canonical French words', () => {
     const output = buildOutput({
-      executiveSummary: 'Nous avons identifié 130 problèmes, dont 8 critiques, 26 sérieux et 24 modérés.',
+      executiveSummary:
+        'Nous avons identifié 130 problèmes, dont 8 critiques, 26 sérieux et 24 modérés.',
     });
 
     expect(findSeverityVocabularyViolations(output, 'fr')).toEqual([]);
@@ -49,7 +53,7 @@ describe('findSeverityVocabularyViolations', () => {
           themeKey: 't1',
           title: 'Titre',
           businessImpact: 'Ce problème grave affecte vos visiteurs sur mobile en particulier.',
-          recommendedActions: ["Corriger ce défaut avant tout autre point, car il est sévère."],
+          recommendedActions: ['Corriger ce défaut avant tout autre point, car il est sévère.'],
         },
       ],
     });
@@ -57,13 +61,17 @@ describe('findSeverityVocabularyViolations', () => {
     const violations = findSeverityVocabularyViolations(output, 'fr');
 
     expect(violations.map((v) => v.field)).toEqual(
-      expect.arrayContaining(['themes[0](t1).businessImpact', 'themes[0](t1).recommendedActions[0]']),
+      expect.arrayContaining([
+        'themes[0](t1).businessImpact',
+        'themes[0](t1).recommendedActions[0]',
+      ]),
     );
   });
 
   it('flags an English synonym ("major") against the canonical "serious" in an English report', () => {
     const output = buildOutput({
-      executiveSummary: 'We identified 130 issues, including 8 critical, 26 major and 24 moderate ones.',
+      executiveSummary:
+        'We identified 130 issues, including 8 critical, 26 major and 24 moderate ones.',
     });
 
     const violations = findSeverityVocabularyViolations(output, 'en');
@@ -74,7 +82,8 @@ describe('findSeverityVocabularyViolations', () => {
 
   it('finds no violations in a clean English analysis using the canonical words', () => {
     const output = buildOutput({
-      executiveSummary: 'We identified 130 issues, including 8 critical, 26 serious and 24 moderate ones.',
+      executiveSummary:
+        'We identified 130 issues, including 8 critical, 26 serious and 24 moderate ones.',
     });
 
     expect(findSeverityVocabularyViolations(output, 'en')).toEqual([]);

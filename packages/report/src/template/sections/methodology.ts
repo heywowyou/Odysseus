@@ -16,7 +16,15 @@ import {
 } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { computeLanguageCoverage } from '../language-coverage.js';
-import { escapeHtml, fillTemplate, formatDate, formatNumber, pluralize, renderSheetHeader, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  formatDate,
+  formatNumber,
+  pluralize,
+  renderSheetHeader,
+  sheet,
+} from '../html-utils.js';
 
 /** Sirene's own effectif-band labels (see packages/interface's
  *  sirene-client.ts) are French-only, since they come from an INSEE
@@ -45,7 +53,11 @@ const EFFECTIF_BAND_LABELS_EN: Record<string, string> = {
   '53': '10,000 employees or more',
 };
 
-function translateEffectifLabel(code: string, frenchLabel: string, language: ReportLanguage): string {
+function translateEffectifLabel(
+  code: string,
+  frenchLabel: string,
+  language: ReportLanguage,
+): string {
   if (language === 'fr') return frenchLabel;
   return EFFECTIF_BAND_LABELS_EN[code] ?? frenchLabel;
 }
@@ -55,7 +67,11 @@ function formatEur(amount: number, language: ReportLanguage): string {
   return language === 'fr' ? `${formatted} €` : `€${formatted}`;
 }
 
-function renderFact(fact: ObligationBasisFact, strings: ReportStrings, language: ReportLanguage): string | null {
+function renderFact(
+  fact: ObligationBasisFact,
+  strings: ReportStrings,
+  language: ReportLanguage,
+): string | null {
   const m = strings.methodology;
   switch (fact.kind) {
     case 'effectif-band':
@@ -120,7 +136,11 @@ function renderFact(fact: ObligationBasisFact, strings: ReportStrings, language:
   }
 }
 
-function renderFacts(basis: ObligationBasis, strings: ReportStrings, language: ReportLanguage): string {
+function renderFacts(
+  basis: ObligationBasis,
+  strings: ReportStrings,
+  language: ReportLanguage,
+): string {
   return basis.facts
     .map((fact) => renderFact(fact, strings, language))
     .filter((text): text is string => text !== null)
@@ -143,7 +163,9 @@ export function pickPrimaryBasis(
   const article47Basis = assessment.basis.find((b) => b.regimeId === ARTICLE_47_REGIME_ID);
 
   if (eaaBasis) {
-    const eaaOwnStatus: ObligationAssessment['status'] = eaaBasis.facts.some((f) => f.kind === 'transactional-flow')
+    const eaaOwnStatus: ObligationAssessment['status'] = eaaBasis.facts.some(
+      (f) => f.kind === 'transactional-flow',
+    )
       ? 'in_scope'
       : eaaBasis.facts.some((f) => f.kind === 'transactional-flow-unknown')
         ? 'likely_in_scope'
@@ -185,7 +207,9 @@ export function renderLegalCitationParagraph(
 
   const facts = renderFacts(basis, strings, language);
   const template =
-    assessment.status === 'in_scope' ? m.legalCitationInScopeTemplate : m.legalCitationLikelyInScopeTemplate;
+    assessment.status === 'in_scope'
+      ? m.legalCitationInScopeTemplate
+      : m.legalCitationLikelyInScopeTemplate;
   // item 3.15: "sous le contrôle de {authority}" produced "sous le
   // contrôle de Direction générale..." (missing "la") because `authority`
   // is a single canonical string shared with English (regimes.ts's own
@@ -196,7 +220,8 @@ export function renderLegalCitationParagraph(
   // contracts to "du") here, at fill time, language-scoped; English's
   // template has no preposition to prepend at all ("overseen by
   // {authority}").
-  const authorityDisplay = language === 'fr' ? `${regime.authorityPrefixFr} ${regime.authority}` : regime.authority;
+  const authorityDisplay =
+    language === 'fr' ? `${regime.authorityPrefixFr} ${regime.authority}` : regime.authority;
   const paragraph = fillTemplate(template, {
     regimeName: regime.name,
     authority: authorityDisplay,
@@ -335,7 +360,11 @@ function renderExtendedPassNote(
  *  pages collapses to one reason line instead of one near-identical line
  *  per page. Returns undefined when every page that was scanned at all
  *  had a successful Lighthouse pass. */
-function summarizeLighthouseFailures(strings: ReportStrings, manifest: AuditManifest, language: ReportLanguage): string | undefined {
+function summarizeLighthouseFailures(
+  strings: ReportStrings,
+  manifest: AuditManifest,
+  language: ReportLanguage,
+): string | undefined {
   const m = strings.methodology;
   const failures = manifest.pages
     .map((page) => page.errors.lighthouse)
@@ -399,7 +428,49 @@ export function renderMethodology(
             : ` ${escapeHtml(fillTemplate(m.languageNotScannedTemplate, { languages: coverage.discoveredOnly.join(', ') }))}`
         }</p>`;
 
-  const sirenNote = renderSirenProvenanceNote(strings, obligationAssessment, findings, resolvedSirenSourceUrl);
+  const analyzedPages = manifest.pages.filter((page) => page.status === 'visited');
+  const hasDiscoveryProvenance =
+    analyzedPages.length > 0 && analyzedPages.every((page) => page.discoveryMethod !== undefined);
+  const linkedPages = analyzedPages.filter((page) => page.discoveryMethod === 'link').length;
+  const seededPages = analyzedPages.filter((page) => page.discoveryMethod === 'seed').length;
+  const sitemapOnlyPages = analyzedPages.filter(
+    (page) => page.discoveryMethod === 'sitemap-only',
+  ).length;
+  const sitemapCoverageText = hasDiscoveryProvenance
+    ? fillTemplate(
+        seededPages > 0 ? m.sitemapCoverageWithSeedsTemplate : m.sitemapCoverageTemplate,
+        {
+          total: formatNumber(analyzedPages.length, language),
+          linked: formatNumber(linkedPages, language),
+          seeded: formatNumber(seededPages, language),
+          sitemapOnly: formatNumber(sitemapOnlyPages, language),
+        },
+      )
+    : undefined;
+  const sitemapCoverageNote = sitemapCoverageText
+    ? `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(sitemapCoverageText)}</p>`
+    : '';
+
+  const sitemapSummary = manifest.crawl.sitemapCoverage;
+  const sitemapIncomplete =
+    sitemapSummary !== undefined &&
+    (sitemapSummary.failedSitemapCount > 0 ||
+      sitemapSummary.filteredPageCount > 0 ||
+      sitemapSummary.capOmittedPageCount > 0);
+  const sitemapIncompleteNote = sitemapIncomplete
+    ? fillTemplate(m.sitemapIncompleteTemplate, {
+        failed: formatNumber(sitemapSummary.failedSitemapCount, language),
+        filtered: formatNumber(sitemapSummary.filteredPageCount, language),
+        omitted: formatNumber(sitemapSummary.capOmittedPageCount, language),
+      })
+    : undefined;
+
+  const sirenNote = renderSirenProvenanceNote(
+    strings,
+    obligationAssessment,
+    findings,
+    resolvedSirenSourceUrl,
+  );
   const extendedPassNote = renderExtendedPassNote(strings, language, findings);
   const lighthouseFailureNote = summarizeLighthouseFailures(strings, manifest, language);
 
@@ -408,7 +479,9 @@ export function renderMethodology(
   // one in the manifest with status 'skipped-external-redirect') - this
   // states the count so the client sees what was skipped and why,
   // without blowing this section's 1-sheet cap with a per-URL table.
-  const socialExclusionCount = manifest.pages.filter((page) => page.status === 'skipped-external-redirect').length;
+  const socialExclusionCount = manifest.pages.filter(
+    (page) => page.status === 'skipped-external-redirect',
+  ).length;
   const socialExclusionNote =
     socialExclusionCount === 1
       ? m.socialExclusionDisclosureSingularTemplate
@@ -432,10 +505,13 @@ export function renderMethodology(
   // second time, verbatim, duplicating legal-exposure.ts's own copy of
   // the same paragraph on a different page. Kept once there; this section
   // only points back to it now.
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, eyebrow, m.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
     ${languageCoverageNote}
+    ${sitemapCoverageNote}
+    ${sitemapIncompleteNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(sitemapIncompleteNote)}</p>` : ''}
     ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(crawlCapNote)}</p>` : ''}
     ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(socialExclusionNote)}</p>` : ''}
     ${lighthouseFailureNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(lighthouseFailureNote)}</p>` : ''}
@@ -445,5 +521,8 @@ export function renderMethodology(
     <div class="hr"></div>
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.legalCitationPointerSentence)}</p>
     ${sirenNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(sirenNote)}</p>` : ''}
-  `, '', 'section-11');
+  `,
+    '',
+    'section-11',
+  );
 }

@@ -12,7 +12,10 @@ import type { ContactAddress } from '@odysseus/core';
 
 const EMAIL_PATTERN = /\b([a-z0-9._%+-]+)@([a-z0-9.-]+\.[a-z]{2,})\b/gi;
 
-export function extractContactAddress(texts: readonly string[], siteDomain: string): ContactAddress | null {
+export function extractContactAddress(
+  texts: readonly string[],
+  siteDomain: string,
+): ContactAddress | null {
   const normalizedSiteDomain = siteDomain.toLowerCase();
 
   for (const text of texts) {

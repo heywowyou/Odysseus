@@ -27,12 +27,7 @@
  *  check. Punctuation is kept: "O! DE LA DUNE" and "O DE LA DUNE" are
  *  not confidently the same registered entity. */
 function comparisonKey(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/gu, '')
-    .toLowerCase()
-    .replace(/\s+/gu, ' ')
-    .trim();
+  return value.normalize('NFD').replace(/[̀-ͯ]/gu, '').toLowerCase().replace(/\s+/gu, ' ').trim();
 }
 
 /** Drops parenthesis characters that have no matching partner, left to

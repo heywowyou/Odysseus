@@ -71,7 +71,7 @@ for (const [uuid, { mime, buf }] of assets) {
 
 // The bundle escapes closing tags as \u002F to survive being embedded in a
 // <script>. Restore them now that we are writing a real document.
-source = source.split('<\\u002Fscript>').join('<\/script>');
+source = source.split('<\\u002Fscript>').join('</script>');
 
 writeFileSync(resolve(outputArg), source, 'utf8');
 

@@ -3,7 +3,12 @@ import type { Finding, ReportLanguage } from '@odysseus/core';
 import { sectionTitle } from '../section-registry.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
-import { buildConformanceRollup, buildHeuristicRollup, hasMultiCriterionFinding, type ConformanceRow } from '../conformance-rollup.js';
+import {
+  buildConformanceRollup,
+  buildHeuristicRollup,
+  hasMultiCriterionFinding,
+  type ConformanceRow,
+} from '../conformance-rollup.js';
 
 // Real <table>/<thead>/<tbody> markup, not a CSS grid of divs - same
 // pagedjs-fragility fix findings-appendix.ts and core-web-vitals-
@@ -129,11 +134,15 @@ export function renderConformanceSummary(
     `
     : '';
 
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:66ch;margin-bottom:var(--space-2)">${escapeHtml(c.bodyIntro)}</p>
     <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-6)">${escapeHtml(fillTemplate(c.scopeNote, { section: sectionTitle('section-02', strings) }))}</p>
     ${body}
     ${heuristicBlock}
-  `, '', 'section-07');
+  `,
+    '',
+    'section-07',
+  );
 }

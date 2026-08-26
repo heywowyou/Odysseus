@@ -17,9 +17,7 @@
 import { SEVERITY_ORDER } from './severity.js';
 import type { Finding } from '../types/findings.js';
 
-export function assignFindingIds(
-  findings: readonly Omit<Finding, 'findingId'>[],
-): Finding[] {
+export function assignFindingIds(findings: readonly Omit<Finding, 'findingId'>[]): Finding[] {
   const sorted = [...findings].sort((a, b) => {
     const severityDiff = SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity];
     if (severityDiff !== 0) return severityDiff;

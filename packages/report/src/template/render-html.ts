@@ -33,8 +33,14 @@ import { renderChecklist } from './sections/checklist.js';
 import { renderObservations } from './sections/observations.js';
 import { renderRemainingWork } from './sections/remaining-work.js';
 import { renderRenderDiffEvidence } from './sections/render-diff-evidence.js';
-import { hasMeasuredCoreWebVitals, renderCoreWebVitalsTable } from './sections/core-web-vitals-table.js';
-import { isArticle47Regime, renderAccessibilityStatement } from './sections/accessibility-statement.js';
+import {
+  hasMeasuredCoreWebVitals,
+  renderCoreWebVitalsTable,
+} from './sections/core-web-vitals-table.js';
+import {
+  isArticle47Regime,
+  renderAccessibilityStatement,
+} from './sections/accessibility-statement.js';
 import { renderFindingsAppendix } from './sections/findings-appendix.js';
 import { renderMethodology } from './sections/methodology.js';
 import { renderGlossary } from './sections/glossary.js';
@@ -43,7 +49,12 @@ import { escapeHtml } from './html-utils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const FONT_FILES = ['Inter-Regular.woff2', 'Inter-Medium.woff2', 'Inter-SemiBold.woff2', 'Inter-Bold.woff2'];
+const FONT_FILES = [
+  'Inter-Regular.woff2',
+  'Inter-Medium.woff2',
+  'Inter-SemiBold.woff2',
+  'Inter-Bold.woff2',
+];
 
 /** Resolves from this file's own __dirname the same way readReportCss used
  *  to (two levels below the package root whether run via tsx from src or
@@ -158,10 +169,28 @@ function renderBody(
       manualFields,
     ),
     renderStatistics(strings, ord('section-03'), analysis.language, resolvedFindings, manifest),
-    renderThemes(strings, ord('section-04'), analysis, resolvedFindings, manifest, citedStatIds, sectorOverride),
-    renderChecklist(strings, ord('section-05'), analysis.language, analysis, resolvedFindings, manifest, manualFields),
+    renderThemes(
+      strings,
+      ord('section-04'),
+      analysis,
+      resolvedFindings,
+      manifest,
+      citedStatIds,
+      sectorOverride,
+    ),
+    renderChecklist(
+      strings,
+      ord('section-05'),
+      analysis.language,
+      analysis,
+      resolvedFindings,
+      manifest,
+      manualFields,
+    ),
     renderRemainingWork(strings, ord('section-05b'), analysis.language, analysis, resolvedFindings),
-    includedSectionIds.has('section-06') ? renderObservations(strings, ord('section-06'), diverted) : '',
+    includedSectionIds.has('section-06')
+      ? renderObservations(strings, ord('section-06'), diverted)
+      : '',
     renderConformanceSummary(strings, ord('section-07'), resolvedFindings, analysis.language),
     renderRenderDiffEvidence(
       strings,

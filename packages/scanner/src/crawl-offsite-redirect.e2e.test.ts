@@ -49,7 +49,9 @@ describe('crawlSite following a redirect onto a genuinely different site', () =>
         return;
       }
       res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(`<html><body><a href="http://127.0.0.1:${PORT_B}/vendor-page-2">Vendor page 2</a></body></html>`);
+      res.end(
+        `<html><body><a href="http://127.0.0.1:${PORT_B}/vendor-page-2">Vendor page 2</a></body></html>`,
+      );
     });
     await Promise.all([listen(redirectServer, PORT_A), listen(targetServer, PORT_B)]);
     ({ browser } = await launchBrowser());

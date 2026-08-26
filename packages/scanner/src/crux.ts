@@ -36,7 +36,10 @@ interface CruxRecordMetrics {
   interaction_to_next_paint?: { percentiles?: { p75?: number | string } };
 }
 
-export async function fetchCruxFieldData(origin: string, apiKey: string): Promise<CruxFieldDataResult> {
+export async function fetchCruxFieldData(
+  origin: string,
+  apiKey: string,
+): Promise<CruxFieldDataResult> {
   try {
     // crux-api's own default falls back to `window.fetch`, which does not
     // exist in Node - confirmed by reading its source
@@ -45,7 +48,9 @@ export async function fetchCruxFieldData(origin: string, apiKey: string): Promis
     // v18, so passing it explicitly here avoids a ReferenceError on
     // every call.
     const queryRecord = createQueryRecord({ key: apiKey, fetch: globalThis.fetch });
-    const response = (await queryRecord({ origin })) as { record: { metrics: CruxRecordMetrics } } | null;
+    const response = (await queryRecord({ origin })) as {
+      record: { metrics: CruxRecordMetrics };
+    } | null;
     if (!response) return { available: false };
 
     const metrics = response.record.metrics;

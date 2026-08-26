@@ -10,7 +10,9 @@ describe('getNafSectorAllowlist', () => {
 
   it('marks 47.91A and 47.91B as definitional and enabled', () => {
     const allowlist = getNafSectorAllowlist();
-    const definitional = allowlist.codes.filter((entry) => ['47.91A', '47.91B'].includes(entry.code));
+    const definitional = allowlist.codes.filter((entry) =>
+      ['47.91A', '47.91B'].includes(entry.code),
+    );
     expect(definitional).toHaveLength(2);
     for (const entry of definitional) {
       expect(entry.confidence).toBe('definitional');
@@ -29,7 +31,9 @@ describe('getNafSectorAllowlist', () => {
 
   it('getEnabledNafCodes returns exactly the enabled codes', () => {
     const allowlist = getNafSectorAllowlist();
-    const expected = new Set(allowlist.codes.filter((entry) => entry.enabled).map((entry) => entry.code));
+    const expected = new Set(
+      allowlist.codes.filter((entry) => entry.enabled).map((entry) => entry.code),
+    );
     expect(getEnabledNafCodes()).toEqual(expected);
   });
 });

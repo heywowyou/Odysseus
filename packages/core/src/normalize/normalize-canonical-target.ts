@@ -20,8 +20,11 @@ export interface CanonicalTargetCheckInput {
   noindex: boolean;
 }
 
-export function extractCanonicalTargetCandidates(input: CanonicalTargetCheckInput): FindingCandidate[] {
-  const isUnreachable = input.fetchError !== undefined || (input.httpStatus !== undefined && input.httpStatus >= 400);
+export function extractCanonicalTargetCandidates(
+  input: CanonicalTargetCheckInput,
+): FindingCandidate[] {
+  const isUnreachable =
+    input.fetchError !== undefined || (input.httpStatus !== undefined && input.httpStatus >= 400);
 
   if (isUnreachable) {
     return [

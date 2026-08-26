@@ -41,7 +41,9 @@ describe('resourceUrlFromSnippet', () => {
   });
 
   it('does not extract a data URI, which is not a file anyone can open', () => {
-    expect(resourceUrlFromSnippet('<img src="data:image/gif;base64,R0lGOD">', PAGE)).toBeUndefined();
+    expect(
+      resourceUrlFromSnippet('<img src="data:image/gif;base64,R0lGOD">', PAGE),
+    ).toBeUndefined();
   });
 
   it('does not extract from an img with no src at all', () => {

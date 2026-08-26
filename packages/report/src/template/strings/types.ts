@@ -831,6 +831,15 @@ export interface ReportStrings {
      *  the case the sentence above exists to make impossible to miss.
      *  Templates: {languages}. */
     languageNotScannedTemplate: string;
+    /** Milestone 9b.5. Templates: {total}, {linked}, {sitemapOnly}. */
+    sitemapCoverageTemplate: string;
+    /** Same disclosure when operator seeds contributed pages. Templates:
+     *  {total}, {linked}, {seeded}, {sitemapOnly}. */
+    sitemapCoverageWithSeedsTemplate: string;
+    /** Rendered when sitemap resolution or the configured cap prevented
+     *  complete declared-page coverage. Templates: {failed}, {filtered},
+     *  {omitted}. */
+    sitemapIncompleteTemplate: string;
     /** brief section 6.6: the well-documented ~30-40% automated coverage
      *  figure, stated in every report, not only accessibility audits. */
     automatedCoverageCaveat: string;

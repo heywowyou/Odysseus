@@ -30,6 +30,15 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Check agent documentation
+        run: pnpm run docs:check
+
+      - name: Check formatting
+        run: pnpm run format:check
+
+      - name: Lint
+        run: pnpm run lint
+
       - name: Typecheck
         run: pnpm run typecheck
 

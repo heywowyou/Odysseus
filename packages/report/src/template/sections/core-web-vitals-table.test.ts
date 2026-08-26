@@ -92,7 +92,12 @@ describe('renderCoreWebVitalsTable', () => {
 
     const manifest = {
       siteUrl: 'https://example.com/',
-      pages: [measuredPage(1), measuredPage(2), visitedButUnmeasuredPage(3), visitedButUnmeasuredPage(4)],
+      pages: [
+        measuredPage(1),
+        measuredPage(2),
+        visitedButUnmeasuredPage(3),
+        visitedButUnmeasuredPage(4),
+      ],
     } as unknown as AuditManifest;
 
     const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
@@ -357,7 +362,12 @@ describe('renderCoreWebVitalsTable', () => {
       const manifest = await loadSasFernandeManifest();
       const withCrux = {
         ...manifest,
-        cruxFieldData: { available: true, lcp: { p75: 1200 }, inp: { p75: 550 }, cls: { p75: 0.3 } },
+        cruxFieldData: {
+          available: true,
+          lcp: { p75: 1200 },
+          inp: { p75: 550 },
+          cls: { p75: 0.3 },
+        },
       } as AuditManifest;
       const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', withCrux);
       expect(html).not.toContain('A large gap between the values above and below is expected');

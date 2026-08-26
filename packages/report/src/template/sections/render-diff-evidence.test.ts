@@ -13,7 +13,15 @@ describe('renderRenderDiffEvidence', () => {
       fr,
       8,
       'fr',
-      [{ pageUrl: 'https://example.com/', missingPercent: 12, rawTextLength: null, renderedTextLength: null, selector: '' }],
+      [
+        {
+          pageUrl: 'https://example.com/',
+          missingPercent: 12,
+          rawTextLength: null,
+          renderedTextLength: null,
+          selector: '',
+        },
+      ],
       1,
     );
 
@@ -26,7 +34,15 @@ describe('renderRenderDiffEvidence', () => {
       fr,
       8,
       'fr',
-      [{ pageUrl: 'https://example.com/', missingPercent: 40, rawTextLength: 10, renderedTextLength: 100, selector: '.hero' }],
+      [
+        {
+          pageUrl: 'https://example.com/',
+          missingPercent: 40,
+          rawTextLength: 10,
+          renderedTextLength: 100,
+          selector: '.hero',
+        },
+      ],
       1,
     );
 
@@ -37,14 +53,14 @@ describe('renderRenderDiffEvidence', () => {
     const html = renderRenderDiffEvidence(fr, 8, 'fr', [], 0, 0);
 
     expect(html).toContain('conservent leur texte dans le HTML brut');
-    expect(html).not.toContain("d&#39;intégration de contenu tiers font exception");
+    expect(html).not.toContain('d&#39;intégration de contenu tiers font exception');
   });
 
   it('names wrapper/legal pages as the exception when some were excluded (B6)', () => {
     const html = renderRenderDiffEvidence(fr, 8, 'fr', [], 0, 2);
 
     expect(html).toContain('conservent leur texte dans le HTML brut');
-    expect(html).toContain("d&#39;intégration de contenu tiers font exception");
+    expect(html).toContain('d&#39;intégration de contenu tiers font exception');
   });
 
   // report-feedback-la-corniche.md item 3.2: the plural overflow sentence

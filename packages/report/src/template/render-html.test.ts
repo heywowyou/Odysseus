@@ -4,7 +4,11 @@ import { renderHtml } from './render-html.js';
 import { escapeHtml } from './html-utils.js';
 import { findRenderLintViolations } from './render-lint.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
-import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../test-fixtures.js';
+import {
+  loadSasFernandeAnalysis,
+  loadSasFernandeFindings,
+  loadSasFernandeManifest,
+} from '../test-fixtures.js';
 
 describe('renderHtml against the real sas-fernande.fr audit', () => {
   it('composes a self-contained French document with inlined CSS and no leaked "undefined"', async () => {
@@ -63,7 +67,9 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
     // etc.) excludes that one known violation rather than asserting zero
     // violations outright. render-lint.test.ts asserts the guard itself
     // does catch this placeholder.
-    const unexpectedViolations = violations.filter((v) => v.label !== 'unfilled "[... à renseigner]" placeholder');
+    const unexpectedViolations = violations.filter(
+      (v) => v.label !== 'unfilled "[... à renseigner]" placeholder',
+    );
     expect(unexpectedViolations, JSON.stringify(unexpectedViolations, null, 2)).toEqual([]);
   });
 
@@ -141,9 +147,10 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   // reverting to the blanket wording fails this test, not just a new one.
   // item 3.14: rephrased as a positive statement, dropping the old
   // defensive "n'implique pas... ne contredit pas" framing.
-  const CONFORMANCE_SCOPE_NOTE = "indépendamment de toute question d&#39;obligation légale";
+  const CONFORMANCE_SCOPE_NOTE = 'indépendamment de toute question d&#39;obligation légale';
   const OLD_CONTRADICTORY_SCOPE_NOTE = 'sans se prononcer sur leur applicabilité légale précise';
-  const LEGAL_HEDGE = "sans se prononcer sur l&#39;applicabilité d&#39;une obligation légale particulière";
+  const LEGAL_HEDGE =
+    'sans se prononcer sur l&#39;applicabilité d&#39;une obligation légale particulière';
   const METHODOLOGY_POINTER = 'figure dans la section';
   // "Confirmé" / "relève de l'obligation suivante" (a settled conclusion)
   // was reworded to this hedged, criteria-based phrasing after a real
@@ -154,7 +161,10 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   it('resolved: legal exposure names a specific obligation once, methodology points back to it, conformance summary still carries its own fixed scope note', async () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
-    const analysis = { ...(await loadSasFernandeAnalysis('fr')), obligationAssessment: resolvedAssessment };
+    const analysis = {
+      ...(await loadSasFernandeAnalysis('fr')),
+      obligationAssessment: resolvedAssessment,
+    };
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
@@ -171,7 +181,10 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   it('undetermined: legal exposure hedges once, methodology points back to it, conformance summary carries the same fixed scope note regardless', async () => {
     const manifest = await loadSasFernandeManifest();
     const findings = await loadSasFernandeFindings();
-    const analysis = { ...(await loadSasFernandeAnalysis('fr')), obligationAssessment: undeterminedAssessment };
+    const analysis = {
+      ...(await loadSasFernandeAnalysis('fr')),
+      obligationAssessment: undeterminedAssessment,
+    };
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
@@ -194,4 +207,3 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
     expect(html.split(CONFORMANCE_SCOPE_NOTE).length - 1).toBe(1);
   });
 });
-

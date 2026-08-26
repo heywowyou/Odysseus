@@ -75,7 +75,9 @@ describe('REFERENCE_STAT_TABLE', () => {
     });
 
     it('labels the SiteMinder abandonment stat as self-reported recall, not a measured rate', () => {
-      const stat = REFERENCE_STAT_TABLE.find((s) => s.id === 'siteminder-digital-experience-abandonment-2025');
+      const stat = REFERENCE_STAT_TABLE.find(
+        (s) => s.id === 'siteminder-digital-experience-abandonment-2025',
+      );
       expect(stat).toBeDefined();
       expect(stat?.citation.fr.toLowerCase()).toContain('déclarative');
       expect(stat?.citation.en.toLowerCase()).toContain('self-reported');

@@ -35,7 +35,13 @@ export const ARTICLE_47_TURNOVER_THRESHOLD_EUR = 250_000_000;
  *  and Sirene's value is not used. Shared between assessObligations
  *  (core) and the Sirene client (interface) so the two can never
  *  disagree about which bands are trustworthy. */
-export const SIRENE_TURNOVER_RELIABLE_EFFECTIF_CODES: readonly string[] = ['NN', '00', '01', '02', '03'];
+export const SIRENE_TURNOVER_RELIABLE_EFFECTIF_CODES: readonly string[] = [
+  'NN',
+  '00',
+  '01',
+  '02',
+  '03',
+];
 
 interface Bilingual {
   fr: string;
@@ -46,7 +52,10 @@ function bilingual(fr: string, en: string): Record<ReportLanguage, string> {
   return { fr, en };
 }
 
-interface RegimeDefinition extends Omit<Regime, 'name' | 'thresholdDescription' | 'sanctionCeiling'> {
+interface RegimeDefinition extends Omit<
+  Regime,
+  'name' | 'thresholdDescription' | 'sanctionCeiling'
+> {
   name: Bilingual;
   thresholdDescription: Bilingual;
   sanctionCeiling: Bilingual;
@@ -63,7 +72,8 @@ const REGIME_DEFINITIONS: Record<string, RegimeDefinition> = {
       "S'applique aux entreprises de 10 salariés ou plus, ou dont le chiffre d'affaires ou le total de bilan annuel dépasse 2 000 000 €, lorsque le site propose un parcours transactionnel B2C de premier niveau (réservation, panier, paiement).",
       'Applies to companies with 10 or more employees, or with annual turnover or balance sheet total above EUR 2,000,000, when the site offers a first party B2C transactional flow (booking, cart, checkout).',
     ),
-    authority: 'Direction générale de la concurrence, de la consommation et de la répression des fraudes (DGCCRF)',
+    authority:
+      'Direction générale de la concurrence, de la consommation et de la répression des fraudes (DGCCRF)',
     authorityPrefixFr: 'de la',
     sanctionCeiling: bilingual(
       "Jusqu'à 50 000 € d'amende administrative par manquement constaté (à vérifier contre le décret en vigueur avant toute mention client)",
@@ -106,20 +116,22 @@ const REGIME_DEFINITIONS: Record<string, RegimeDefinition> = {
   [LCEN_MENTIONS_LEGALES_REGIME_ID]: {
     id: LCEN_MENTIONS_LEGALES_REGIME_ID,
     name: bilingual(
-      'Obligation d\'identification de l\'éditeur (LCEN, article 1-1)',
+      "Obligation d'identification de l'éditeur (LCEN, article 1-1)",
       'Publisher identification obligation (LCEN, article 1-1)',
     ),
     thresholdDescription: bilingual(
       "Toute personne dont l'activité est d'éditer un service de communication au public en ligne met à la disposition du public sa dénomination ou sa raison sociale, son siège social, son numéro de téléphone et, si elle est inscrite au registre du commerce et des sociétés ou au registre national des entreprises, son numéro d'inscription. Cette obligation ne dépend ni de la taille ni du secteur de l'entreprise.",
       'Any person whose activity is to publish an online public communication service must make available to the public its company name, registered office, telephone number and, if it is entered in the trade and companies register or the national business register, its registration number. This obligation depends on neither the size nor the sector of the business.',
     ),
-    authority: 'Direction générale de la concurrence, de la consommation et de la répression des fraudes (DGCCRF)',
+    authority:
+      'Direction générale de la concurrence, de la consommation et de la répression des fraudes (DGCCRF)',
     authorityPrefixFr: 'de la',
     sanctionCeiling: bilingual(
       'Non vérifié après la restructuration de la LCEN par la loi n. 2024-449 (ne pas citer)',
       'Not verified following the restructuring of the LCEN by loi n. 2024-449 (do not cite)',
     ),
-    legalCitation: 'Loi n° 2004-575 du 21 juin 2004, article 1-1, I, 2° (version en vigueur depuis le 23 mai 2024)',
+    legalCitation:
+      'Loi n° 2004-575 du 21 juin 2004, article 1-1, I, 2° (version en vigueur depuis le 23 mai 2024)',
   },
 };
 

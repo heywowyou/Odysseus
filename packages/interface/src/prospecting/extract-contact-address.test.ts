@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { extractContactAddress } from './extract-contact-address.js';
 
 describe('extractContactAddress', () => {
-  it('extracts a role address on the site\'s own domain', () => {
+  it("extracts a role address on the site's own domain", () => {
     const result = extractContactAddress(['Nous contacter: contact@example.fr'], 'example.fr');
-    expect(result).toEqual({ value: 'contact@example.fr', localPart: 'contact', domain: 'example.fr' });
+    expect(result).toEqual({
+      value: 'contact@example.fr',
+      localPart: 'contact',
+      domain: 'example.fr',
+    });
   });
 
   it('rejects a named-individual address', () => {
@@ -25,7 +29,10 @@ describe('extractContactAddress', () => {
   });
 
   it('scans multiple texts and returns the first qualifying match', () => {
-    const result = extractContactAddress(['no email here', 'reach us at info@example.fr'], 'example.fr');
+    const result = extractContactAddress(
+      ['no email here', 'reach us at info@example.fr'],
+      'example.fr',
+    );
     expect(result?.value).toBe('info@example.fr');
   });
 

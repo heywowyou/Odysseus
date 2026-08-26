@@ -32,11 +32,13 @@ describe('findLanguageComplianceViolations', () => {
         {
           themeKey: 't1',
           title: 'Contraste des couleurs insuffisant sur le site',
-          businessImpact: 'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
+          businessImpact:
+            'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
           recommendedActions: ['Augmenter le contraste des couleurs sur les boutons et le texte.'],
         },
       ],
-      executiveSummary: 'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
+      executiveSummary:
+        'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
       notes: 'Aucune information de contexte client fournie pour cet audit particulier.',
     };
 
@@ -84,7 +86,8 @@ describe('findLanguageComplianceViolations', () => {
         {
           themeKey: 't1',
           title: 'Contraste des couleurs insuffisant sur le site entier',
-          businessImpact: 'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
+          businessImpact:
+            'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
           recommendedActions: ['Augmenter le contraste des couleurs sur les boutons et le texte.'],
         },
       ],
@@ -163,11 +166,15 @@ describe('findLanguageComplianceViolations', () => {
             {
               themeKey: 't1',
               title,
-              businessImpact: 'This business impact sentence is deliberately generic filler text for the test case.',
-              recommendedActions: ['Test the site to confirm the fix works as expected in this scenario.'],
+              businessImpact:
+                'This business impact sentence is deliberately generic filler text for the test case.',
+              recommendedActions: [
+                'Test the site to confirm the fix works as expected in this scenario.',
+              ],
             },
           ],
-          executiveSummary: 'Your site has several issues that affect its commercial effectiveness.',
+          executiveSummary:
+            'Your site has several issues that affect its commercial effectiveness.',
           notes: '',
         };
 
@@ -179,7 +186,7 @@ describe('findLanguageComplianceViolations', () => {
     it.each([
       'Write unique, concise meta descriptions (150-160 characters) for each page, summarizing its content and purpose.',
       'Use tools like Google Search Console to monitor how your pages appear in search results.',
-      "Avoid duplicate meta descriptions across pages.",
+      'Avoid duplicate meta descriptions across pages.',
       "Avoid generic link text like 'click here' or 'read more.' Instead, use specific text like 'View our menu' or 'Book a table.'",
     ])(
       'does not flag %j as a recommendedAction (regression: franc alone misread this as French on a live almamia.fr run, but it contains no accent and no French stopword)',
@@ -189,11 +196,13 @@ describe('findLanguageComplianceViolations', () => {
             {
               themeKey: 't7',
               title: 'Missing page descriptions for search engines',
-              businessImpact: 'This business impact sentence is deliberately generic filler text for the test case.',
+              businessImpact:
+                'This business impact sentence is deliberately generic filler text for the test case.',
               recommendedActions: [action],
             },
           ],
-          executiveSummary: 'Your site has several issues that affect its commercial effectiveness.',
+          executiveSummary:
+            'Your site has several issues that affect its commercial effectiveness.',
           notes: '',
         };
 
@@ -214,7 +223,8 @@ describe('findLanguageComplianceViolations', () => {
           {
             themeKey: 't7',
             title: 'Missing page descriptions for search engines',
-            businessImpact: 'Pages without meta descriptions may not rank as well in search results.',
+            businessImpact:
+              'Pages without meta descriptions may not rank as well in search results.',
             recommendedActions: [
               'Optimisez la vitesse de chargement du site pour réduire le taux de rebond des visiteurs et améliorer les conversions.',
             ],

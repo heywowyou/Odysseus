@@ -14,9 +14,11 @@ import { Router } from '../router.js';
 import { registerScanRoutes } from './scans.js';
 
 function fakeReq(body: unknown): IncomingMessage {
-  const req = Readable.from([Buffer.from(JSON.stringify(body))]) as unknown as IncomingMessage;
+  const payload = Buffer.from(JSON.stringify(body));
+  const req = Readable.from([payload]) as unknown as IncomingMessage;
   req.method = 'POST';
   req.url = '/api/scans';
+  req.headers = { 'content-type': 'application/json', 'content-length': String(payload.length) };
   return req;
 }
 
@@ -45,7 +47,11 @@ describe('POST /api/scans siren validation', () => {
     const router = new Router();
     registerScanRoutes(router, fakeConnection, fakeQueue);
 
-    const req = fakeReq({ type: 'full-audit', url: 'https://example.com/', options: { siren: '123456789' } });
+    const req = fakeReq({
+      type: 'full-audit',
+      url: 'https://example.com/',
+      options: { siren: '123456789' },
+    });
     const res = fakeRes();
     await router.handle(req, res);
 
@@ -58,7 +64,11 @@ describe('POST /api/scans siren validation', () => {
     const router = new Router();
     registerScanRoutes(router, fakeConnection, fakeQueue);
 
-    const req = fakeReq({ type: 'full-audit', url: 'https://example.com/', options: { siren: '732829320' } });
+    const req = fakeReq({
+      type: 'full-audit',
+      url: 'https://example.com/',
+      options: { siren: '732829320' },
+    });
     const res = fakeRes();
     await router.handle(req, res);
 
@@ -80,5 +90,58 @@ describe('POST /api/scans siren validation', () => {
     expect(res.statusCode).toBe(201);
     const options = vi.mocked(createJob).mock.calls[0]?.[1]?.options;
     expect(options).not.toHaveProperty('siren');
+  });
+});
+
+describe('POST /api/scans URL scheme validation', () => {
+  it('rejects a file:// url, never creating a job', async () => {
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+
+    const req = fakeReq({ type: 'full-audit', url: 'file:///etc/passwd' });
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body ?? '{}').error).toMatch(/url/i);
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('rejects a javascript: url, never creating a job', async () => {
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+
+    const req = fakeReq({ type: 'full-audit', url: 'javascript:alert(1)' });
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('accepts an https:// url', async () => {
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+
+    const req = fakeReq({ type: 'full-audit', url: 'https://example.com/' });
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(201);
+  });
+});
+
+describe('POST /api/scans request body size limit', () => {
+  it('rejects an oversized body with 413, never creating a job', async () => {
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+
+    const oversizedUrl = `https://example.com/${'a'.repeat(1_100_000)}`;
+    const req = fakeReq({ type: 'full-audit', url: oversizedUrl });
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(413);
+    expect(createJob).not.toHaveBeenCalled();
   });
 });

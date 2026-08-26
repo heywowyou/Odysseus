@@ -29,7 +29,11 @@ export function createScanProgressReporter(
             effectiveDelayMs,
             // Absent when the crawl is uncapped: no known target, no honest ETA.
             ...(() => {
-              const etaMs = computeCrawlEtaMs({ visited: 0, maxPages: event.maxPages, effectiveDelayMs });
+              const etaMs = computeCrawlEtaMs({
+                visited: 0,
+                maxPages: event.maxPages,
+                effectiveDelayMs,
+              });
               return etaMs !== undefined ? { etaMs } : {};
             })(),
           },
@@ -47,7 +51,11 @@ export function createScanProgressReporter(
             target: event.maxPages,
             effectiveDelayMs,
             ...(() => {
-              const etaMs = computeCrawlEtaMs({ visited: event.visited, maxPages: event.maxPages, effectiveDelayMs });
+              const etaMs = computeCrawlEtaMs({
+                visited: event.visited,
+                maxPages: event.maxPages,
+                effectiveDelayMs,
+              });
               return etaMs !== undefined ? { etaMs } : {};
             })(),
           },

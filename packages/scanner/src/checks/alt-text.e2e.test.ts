@@ -107,7 +107,10 @@ describe('B5: selectors actually resolve to the element they name', () => {
   /** Keeps the page open so each emitted selector can be run back against
    *  the very document it was derived from - the only check that actually
    *  proves a selector resolves. */
-  async function withPage<T>(html: string, fn: (page: import('playwright').Page) => Promise<T>): Promise<T> {
+  async function withPage<T>(
+    html: string,
+    fn: (page: import('playwright').Page) => Promise<T>,
+  ): Promise<T> {
     const { server, origin } = await startStaticServer(html);
     const context = await browser.newContext();
     try {
@@ -131,7 +134,8 @@ describe('B5: selectors actually resolve to the element they name', () => {
   it('falls back to a structural path for a data: URI', async () => {
     const selector = await withPage(
       '<div><span></span><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt=""></div>',
-      async (page) => (await extractAltTextFacts(page, 'https://example.com/')).images[0]?.selector ?? '',
+      async (page) =>
+        (await extractAltTextFacts(page, 'https://example.com/')).images[0]?.selector ?? '',
     );
     expect(selector).not.toContain('data:');
     expect(selector).toContain('nth-child');
@@ -148,7 +152,10 @@ describe('B5: selectors actually resolve to the element they name', () => {
         const result = await extractAltTextFacts(page, 'https://example.com/');
         expect(result.images).toHaveLength(4);
         for (const image of result.images) {
-          const count = await page.evaluate((s) => document.querySelectorAll(s).length, image.selector);
+          const count = await page.evaluate(
+            (s) => document.querySelectorAll(s).length,
+            image.selector,
+          );
           expect(count, `selector "${image.selector}" matched ${count} elements`).toBe(1);
         }
       },

@@ -10,7 +10,10 @@ import { isValidSiren, type AuditManualFields } from '@odysseus/core';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
 import { createFindingModel, type FindingDocument } from './schemas/finding.schema.js';
 
-export async function getAudit(connection: Connection, auditId: string): Promise<AuditDocument | null> {
+export async function getAudit(
+  connection: Connection,
+  auditId: string,
+): Promise<AuditDocument | null> {
   const AuditModel = createAuditModel(connection);
   return AuditModel.findOne({ auditId }).lean<AuditDocument>();
 }
@@ -20,7 +23,9 @@ export async function getAuditManualFields(
   auditId: string,
 ): Promise<AuditManualFields | undefined> {
   const AuditModel = createAuditModel(connection);
-  const audit = await AuditModel.findOne({ auditId }, { manualFields: 1 }).lean<Pick<AuditDocument, 'manualFields'>>();
+  const audit = await AuditModel.findOne({ auditId }, { manualFields: 1 }).lean<
+    Pick<AuditDocument, 'manualFields'>
+  >();
   return audit?.manualFields;
 }
 
@@ -95,14 +100,20 @@ export async function prefillAuditManualFields(
   if (Object.keys(toWrite).length === 0) return toWrite;
 
   const provenancedPartial = Object.fromEntries(
-    Object.entries(toWrite).map(([key, value]) => [key, { value, provenance: 'detected' as const }]),
+    Object.entries(toWrite).map(([key, value]) => [
+      key,
+      { value, provenance: 'detected' as const },
+    ]),
   ) as Omit<AuditManualFields, 'updatedAt'>;
 
   await setAuditManualFields(connection, auditId, provenancedPartial);
   return toWrite;
 }
 
-export async function getFindingsForAudit(connection: Connection, auditId: string): Promise<FindingDocument[]> {
+export async function getFindingsForAudit(
+  connection: Connection,
+  auditId: string,
+): Promise<FindingDocument[]> {
   const FindingModel = createFindingModel(connection);
   return FindingModel.find({ auditId }).lean<FindingDocument[]>();
 }

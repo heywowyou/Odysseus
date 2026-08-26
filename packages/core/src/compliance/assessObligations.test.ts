@@ -27,7 +27,10 @@ function buildProfile(overrides: ProfileOverrides): OperatorProfile {
     effectifBand:
       effectifCode === null
         ? provenance(null, overrides.effectifSource ?? 'sirene-lookup:api-unreachable')
-        : provenance({ code: effectifCode, label: `Band ${effectifCode}` }, overrides.effectifSource ?? 'sirene-api'),
+        : provenance(
+            { code: effectifCode, label: `Band ${effectifCode}` },
+            overrides.effectifSource ?? 'sirene-api',
+          ),
     turnover: provenance(overrides.turnover ?? null),
   };
 }
@@ -51,7 +54,11 @@ describe('assessObligations', () => {
     const profile = buildProfile({ effectifCode: '22', turnover: null });
     const result = assessObligations(profile, withFlow);
     expect(result.status).toBe('in_scope');
-    expect(result.basis[0]?.facts).toContainEqual({ kind: 'effectif-band', code: '22', label: 'Band 22' });
+    expect(result.basis[0]?.facts).toContainEqual({
+      kind: 'effectif-band',
+      code: '22',
+      label: 'Band 22',
+    });
   });
 
   it('is in_scope by turnover alone with a low headcount band', () => {
@@ -104,10 +111,16 @@ describe('assessObligations', () => {
   });
 
   it('is undetermined when the Sirene lookup fails', () => {
-    const profile = buildProfile({ effectifCode: null, effectifSource: 'sirene-lookup:api-unreachable' });
+    const profile = buildProfile({
+      effectifCode: null,
+      effectifSource: 'sirene-lookup:api-unreachable',
+    });
     const result = assessObligations(profile, withFlow);
     expect(result.status).toBe('undetermined');
-    expect(result.basis[0]?.facts).toContainEqual({ kind: 'sirene-lookup-failed', reason: 'api-unreachable' });
+    expect(result.basis[0]?.facts).toContainEqual({
+      kind: 'sirene-lookup-failed',
+      reason: 'api-unreachable',
+    });
   });
 
   it('triggers article 47 independently of the EAA result', () => {

@@ -10,7 +10,10 @@ import type { SireneLookupResult } from '@odysseus/core';
 import { getCachedSireneProfile, upsertSireneCache } from '@odysseus/store';
 import { fetchSireneProfile } from './sirene-client.js';
 
-export async function lookupOperatorProfile(connection: Connection, siren: string): Promise<SireneLookupResult> {
+export async function lookupOperatorProfile(
+  connection: Connection,
+  siren: string,
+): Promise<SireneLookupResult> {
   const cached = await getCachedSireneProfile(connection, siren);
   if (cached) return { status: 'found', profile: cached };
 

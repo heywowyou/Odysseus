@@ -65,8 +65,17 @@ describe('item 0.1: the printable checklist page never regresses to dark-on-dark
 
   it('matches the known-good light-background baseline within a small pixel-diff tolerance', async () => {
     const { manifest, findings, analysis } = buildStressFixture();
-    const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(manifest, findings);
-    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages, renderDiffTotalEligible: totalEligible });
+    const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(
+      manifest,
+      findings,
+    );
+    const html = await renderHtml({
+      manifest,
+      findings,
+      analysis,
+      renderDiffEvidencePages,
+      renderDiffTotalEligible: totalEligible,
+    });
     const pagedjsSource = await readPagedjsSource();
 
     const context = await browser.newContext();
@@ -102,9 +111,16 @@ describe('item 0.1: the printable checklist page never regresses to dark-on-dark
     expect(actual.height).toBe(baseline.height);
 
     const diff = new PNG({ width: actual.width, height: actual.height });
-    const mismatchedPixels = pixelmatch(actual.data, baseline.data, diff.data, actual.width, actual.height, {
-      threshold: 0.1,
-    });
+    const mismatchedPixels = pixelmatch(
+      actual.data,
+      baseline.data,
+      diff.data,
+      actual.width,
+      actual.height,
+      {
+        threshold: 0.1,
+      },
+    );
     const totalPixels = actual.width * actual.height;
     const mismatchRatio = mismatchedPixels / totalPixels;
 

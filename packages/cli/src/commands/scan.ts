@@ -60,7 +60,10 @@ export function registerScanCommand(program: Command): void {
         const { browser, debugPort } = await launchBrowser();
         try {
           const hostname = new URL(url).hostname;
-          const screenshotDir = path.join(buildAuditDir(getArtifactsRoot(), hostname, new Date()), 'pages');
+          const screenshotDir = path.join(
+            buildAuditDir(getArtifactsRoot(), hostname, new Date()),
+            'pages',
+          );
 
           const result = await scanSite(url, {
             browser,

@@ -3,7 +3,9 @@ import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { checkLlmsTxt } from './llms-txt.js';
 
-function startServer(routes: Record<string, { status: number; body: string }>): Promise<{ server: Server; origin: string }> {
+function startServer(
+  routes: Record<string, { status: number; body: string }>,
+): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
       const route = routes[req.url ?? '/'];

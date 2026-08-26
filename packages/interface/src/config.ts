@@ -53,6 +53,14 @@ export const DEFAULT_PROSPECT_FETCH_TIMEOUT_MS = 15_000;
  *  not the whole batch - a deliberate trade-off of extra Mongo writes
  *  for crash resilience. */
 export const PROSPECT_CHECKPOINT_WRITE_INTERVAL = 100;
+/** How often (in URLs completed) run-prospecting-job.ts writes its
+ *  progress document, plus once more at job end via completeJob. Progress
+ *  writes replace the entire urlResults array (see UrlResult and
+ *  updateJobProgress) rather than patching one element, so writing on
+ *  every URL scales the write payload with the job size - same
+ *  checkpoint-interval idea as PROSPECT_CHECKPOINT_WRITE_INTERVAL, applied
+ *  to progress telemetry instead of resume state. */
+export const PROSPECTING_PROGRESS_WRITE_INTERVAL = 10;
 
 export function getInterfacePort(): number {
   ensureEnvLoaded();

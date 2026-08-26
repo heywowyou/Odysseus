@@ -11,10 +11,7 @@ export default function About() {
       </header>
 
       <main>
-        <p>
-          Domaine des Trois Chenes cultive la vigne en agriculture raisonnee
-          depuis 1978.
-        </p>
+        <p>Domaine des Trois Chenes cultive la vigne en agriculture raisonnee depuis 1978.</p>
         <a href="/">Retour a l'accueil</a>
       </main>
     </div>

@@ -66,11 +66,13 @@ export type Theme = z.infer<typeof themeSchema>;
  * with the offending IDs, and retried. After a configured number of
  * retries the audit fails loudly rather than shipping a report that
  * cannot be traced to scanner output.
+ *
+ * Not currently called by the real pipeline: the structure pass validates
+ * via `packages/llm/src/structure-guards.ts`'s alias-ID duplicate instead
+ * (trade-off 27), which sees dense `x1..xN` alias IDs rather than real
+ * ones. Kept as a locked contract; do not assume this runs.
  */
-export function findInventedFindingIds(
-  output: LlmOutput,
-  inputFindings: Finding[],
-): string[] {
+export function findInventedFindingIds(output: LlmOutput, inputFindings: Finding[]): string[] {
   const known = new Set(inputFindings.map((f) => f.findingId));
   const referenced = new Set<string>();
 
@@ -85,18 +87,16 @@ export function findInventedFindingIds(
 /**
  * Coverage check. Not a hard failure, but a report that silently drops
  * half the findings is a quality problem worth surfacing.
+ *
+ * Not currently called by the real pipeline; see the note on
+ * `findInventedFindingIds` above.
  */
-export function findUnreferencedFindingIds(
-  output: LlmOutput,
-  inputFindings: Finding[],
-): string[] {
+export function findUnreferencedFindingIds(output: LlmOutput, inputFindings: Finding[]): string[] {
   const referenced = new Set<string>();
   for (const theme of output.themes) {
     for (const id of theme.findingIds) referenced.add(id);
   }
-  return inputFindings
-    .map((f) => f.findingId)
-    .filter((id) => !referenced.has(id));
+  return inputFindings.map((f) => f.findingId).filter((id) => !referenced.has(id));
 }
 
 /** Report output language. Bilingual delivery is a product requirement,

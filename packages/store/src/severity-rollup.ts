@@ -20,7 +20,10 @@ interface SeverityCountRow {
   count: number;
 }
 
-export async function getSeverityRollup(connection: Connection, auditId: string): Promise<SeverityRollup> {
+export async function getSeverityRollup(
+  connection: Connection,
+  auditId: string,
+): Promise<SeverityRollup> {
   const rollups = await getSeverityRollups(connection, [auditId]);
   return rollups.get(auditId) ?? emptyRollup();
 }

@@ -9,7 +9,16 @@
   <body>
     <nav class="nav">
       <span class="nav-brand">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--color-accent)"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
           <circle cx="12" cy="12" r="9"></circle>
           <path d="M12 3v18M3 12h18"></path>
         </svg>
@@ -37,12 +46,26 @@
         <div id="full-audit-fields">
           <div class="field">
             <label for="url" data-i18n="newScan.urlLabel">Site URL</label>
-            <input class="input" type="url" id="url" name="url" data-i18n-placeholder="newScan.urlPlaceholder" required />
+            <input
+              class="input"
+              type="url"
+              id="url"
+              name="url"
+              data-i18n-placeholder="newScan.urlPlaceholder"
+              required
+            />
           </div>
 
           <div class="field">
             <label for="siren" data-i18n="newScan.sirenLabel">SIREN (optional)</label>
-            <input class="input" type="text" id="siren" name="siren" inputmode="numeric" data-i18n-placeholder="newScan.sirenPlaceholder" />
+            <input
+              class="input"
+              type="text"
+              id="siren"
+              name="siren"
+              inputmode="numeric"
+              data-i18n-placeholder="newScan.sirenPlaceholder"
+            />
             <p class="hint" data-i18n="newScan.sirenHint"></p>
           </div>
 
@@ -51,13 +74,17 @@
               Does this site take bookings or sell online for its own account?
             </label>
             <select class="input" id="transactionalFlow" name="transactionalFlow">
-              <option value="" data-i18n="newScan.transactionalFlowAutoOption">Let the tool detect</option>
+              <option value="" data-i18n="newScan.transactionalFlowAutoOption">
+                Let the tool detect
+              </option>
               <option value="true" data-i18n="newScan.transactionalFlowYesOption">Yes</option>
               <option value="false" data-i18n="newScan.transactionalFlowNoOption">No</option>
             </select>
           </div>
           <div class="field" id="transactional-flow-reason-field" hidden>
-            <label for="transactionalFlowReason" data-i18n="newScan.transactionalFlowReasonLabel">Reason (optional)</label>
+            <label for="transactionalFlowReason" data-i18n="newScan.transactionalFlowReasonLabel"
+              >Reason (optional)</label
+            >
             <input
               class="input"
               type="text"
@@ -71,7 +98,12 @@
         <div id="prospecting-fields" hidden>
           <div class="field">
             <label for="urls" data-i18n="newScan.urlsLabel">Site URLs</label>
-            <textarea class="input" id="urls" name="urls" data-i18n-placeholder="newScan.urlsPlaceholder"></textarea>
+            <textarea
+              class="input"
+              id="urls"
+              name="urls"
+              data-i18n-placeholder="newScan.urlsPlaceholder"
+            ></textarea>
           </div>
         </div>
 
@@ -91,19 +123,46 @@
           </div>
           <div class="field">
             <label for="seeds" data-i18n="newScan.seedsLabel">Extra seed URLs (one per line)</label>
-            <textarea class="input" id="seeds" name="seeds" data-i18n-placeholder="newScan.seedsPlaceholder"></textarea>
+            <textarea
+              class="input"
+              id="seeds"
+              name="seeds"
+              data-i18n-placeholder="newScan.seedsPlaceholder"
+            ></textarea>
           </div>
           <div class="field">
-            <label for="exclusions" data-i18n="newScan.exclusionsLabel">Exclusion patterns (one glob per line)</label>
-            <textarea class="input" id="exclusions" name="exclusions" data-i18n-placeholder="newScan.exclusionsPlaceholder"></textarea>
+            <label for="exclusions" data-i18n="newScan.exclusionsLabel"
+              >Exclusion patterns (one glob per line)</label
+            >
+            <textarea
+              class="input"
+              id="exclusions"
+              name="exclusions"
+              data-i18n-placeholder="newScan.exclusionsPlaceholder"
+            ></textarea>
           </div>
           <div class="field">
-            <label for="bookingEngineUrl" data-i18n="newScan.bookingEngineUrlLabel">Known booking engine URL (optional)</label>
-            <input class="input" type="text" id="bookingEngineUrl" name="bookingEngineUrl" data-i18n-placeholder="newScan.bookingEngineUrlPlaceholder" />
+            <label for="bookingEngineUrl" data-i18n="newScan.bookingEngineUrlLabel"
+              >Known booking engine URL (optional)</label
+            >
+            <input
+              class="input"
+              type="text"
+              id="bookingEngineUrl"
+              name="bookingEngineUrl"
+              data-i18n-placeholder="newScan.bookingEngineUrlPlaceholder"
+            />
           </div>
         </details>
 
-        <button type="submit" class="btn btn-primary btn-block" id="submit-button" data-i18n="newScan.submitButton">Start scan</button>
+        <button
+          type="submit"
+          class="btn btn-primary btn-block"
+          id="submit-button"
+          data-i18n="newScan.submitButton"
+        >
+          Start scan
+        </button>
       </form>
     </main>
     <script type="module" src="/app-new-scan.js"></script>

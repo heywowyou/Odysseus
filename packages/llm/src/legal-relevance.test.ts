@@ -47,7 +47,9 @@ describe('buildLegalRelevance', () => {
   });
 
   it('dedupes a repeated criterion', () => {
-    expect(buildLegalRelevance(['1.4.3', '1.4.3'], 'fr')).toBe(buildLegalRelevance(['1.4.3'], 'fr'));
+    expect(buildLegalRelevance(['1.4.3', '1.4.3'], 'fr')).toBe(
+      buildLegalRelevance(['1.4.3'], 'fr'),
+    );
   });
 
   it('joins three or more criteria with a final conjunction, not a bare comma list', () => {

@@ -79,7 +79,10 @@ function firstValidSiren(bodyText: string): string | undefined {
   return undefined;
 }
 
-export function extractMentionsLegales(pageUrl: string, bodyText: string): MentionsLegalesExtraction {
+export function extractMentionsLegales(
+  pageUrl: string,
+  bodyText: string,
+): MentionsLegalesExtraction {
   const result: MentionsLegalesExtraction = { pageUrl };
 
   const siren = firstValidSiren(bodyText);

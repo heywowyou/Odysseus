@@ -23,7 +23,11 @@ import type { Browser, Page } from 'playwright';
 import { launchBrowser } from '@odysseus/scanner';
 import { renderHtml } from './render-html.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
-import { buildStressFixture, buildStressFixtureNoFindings, buildStressFixtureNoWcagFailures } from '../stress-fixture.js';
+import {
+  buildStressFixture,
+  buildStressFixtureNoFindings,
+  buildStressFixtureNoWcagFailures,
+} from '../stress-fixture.js';
 
 const require = createRequire(import.meta.url);
 const WCAG22AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -61,7 +65,11 @@ interface PaginatedDocument {
  *  attached, for direct DOM assertions - a second, separate call handles
  *  the PDF-bytes-level checks (outline/tagging), since page.pdf() and
  *  DOM inspection can both run against the same paginated page. */
-async function paginate(browser: Browser, html: string, pagedjsSource: string): Promise<PaginatedDocument> {
+async function paginate(
+  browser: Browser,
+  html: string,
+  pagedjsSource: string,
+): Promise<PaginatedDocument> {
   const context = await browser.newContext();
   const page = await context.newPage();
   const consoleErrors: string[] = [];
@@ -83,8 +91,17 @@ async function paginate(browser: Browser, html: string, pagedjsSource: string): 
 
 async function buildStressHtml(): Promise<string> {
   const { manifest, findings, analysis } = buildStressFixture();
-  const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(manifest, findings);
-  return renderHtml({ manifest, findings, analysis, renderDiffEvidencePages, renderDiffTotalEligible: totalEligible });
+  const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(
+    manifest,
+    findings,
+  );
+  return renderHtml({
+    manifest,
+    findings,
+    analysis,
+    renderDiffEvidencePages,
+    renderDiffTotalEligible: totalEligible,
+  });
 }
 
 describe('Paged.js invariants against the stress fixture (docs/report-design-system.md section 4)', () => {
@@ -120,7 +137,9 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
   });
 
   it('invariant 5: the DOM page count matches what Paged.js itself resolved counter(pages) to', async () => {
-    const domPageCount = await doc.page.evaluate(() => document.querySelectorAll('.pagedjs_page').length);
+    const domPageCount = await doc.page.evaluate(
+      () => document.querySelectorAll('.pagedjs_page').length,
+    );
     expect(domPageCount).toBe(doc.pageCount);
   });
 
@@ -143,7 +162,9 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
     const marginInfo = await doc.page.evaluate(() =>
       Array.from(document.querySelectorAll('.pagedjs_page')).map((p) => {
         const topRight = p.querySelector('.pagedjs_margin-top-right .pagedjs_margin-content');
-        const bottomCenter = p.querySelector('.pagedjs_margin-bottom-center .pagedjs_margin-content');
+        const bottomCenter = p.querySelector(
+          '.pagedjs_margin-bottom-center .pagedjs_margin-content',
+        );
         return {
           isCover: p.classList.contains('pagedjs_cover_page'),
           counterRule: topRight ? getComputedStyle(topRight, '::after').content : '',
@@ -188,7 +209,9 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
 
   it('invariant 1: no <img> renders taller than 90mm (vacuously true here: section 08 has no <img> at all, per doc §3)', async () => {
     const imgHeights = await doc.page.evaluate(() =>
-      Array.from(document.querySelectorAll('.pagedjs_page img')).map((img) => img.getBoundingClientRect().height),
+      Array.from(document.querySelectorAll('.pagedjs_page img')).map(
+        (img) => img.getBoundingClientRect().height,
+      ),
     );
     // 90mm at 96dpi ~= 340px; Paged.js renders at print resolution, so use
     // a generous px-per-mm estimate rather than assume a fixed DPI.
@@ -199,10 +222,11 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
   });
 
   it('invariant 6: no page scrolls horizontally - content never spills off the printed sheet', async () => {
-    const overflowing = await doc.page.evaluate(() =>
-      Array.from(document.querySelectorAll('.pagedjs_page')).filter(
-        (p) => p.scrollWidth > p.clientWidth + 1,
-      ).length,
+    const overflowing = await doc.page.evaluate(
+      () =>
+        Array.from(document.querySelectorAll('.pagedjs_page')).filter(
+          (p) => p.scrollWidth > p.clientWidth + 1,
+        ).length,
     );
     expect(overflowing).toBe(0);
   });
@@ -261,11 +285,16 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
     const fillRatios = await doc.page.evaluate(() =>
       Array.from(document.querySelectorAll('.pagedjs_page')).map((p, index) => {
         const pageRect = p.getBoundingClientRect();
-        const contentEls = Array.from(p.querySelectorAll('.pagedjs_page_content *')).filter((el) => {
-          const r = el.getBoundingClientRect();
-          return r.height > 0 && r.width > 0;
-        });
-        const maxBottom = contentEls.reduce((max, el) => Math.max(max, el.getBoundingClientRect().bottom), pageRect.top);
+        const contentEls = Array.from(p.querySelectorAll('.pagedjs_page_content *')).filter(
+          (el) => {
+            const r = el.getBoundingClientRect();
+            return r.height > 0 && r.width > 0;
+          },
+        );
+        const maxBottom = contentEls.reduce(
+          (max, el) => Math.max(max, el.getBoundingClientRect().bottom),
+          pageRect.top,
+        );
         const usedHeight = maxBottom - pageRect.top;
         return { index, ratio: usedHeight / pageRect.height };
       }),
@@ -277,7 +306,7 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
     }
   });
 
-  it('the cover page (exempt from invariant 2\'s fill ratio) still carries its own real content, not a blank sheet', async () => {
+  it("the cover page (exempt from invariant 2's fill ratio) still carries its own real content, not a blank sheet", async () => {
     // A real regression this test would have caught: an earlier version
     // of paged.css's named `cover` page interacting with a `.footer-source`
     // node placed before the document flow pushed the cover's entire
@@ -315,7 +344,7 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
   });
 });
 
-describe('Paged.js invariants against doc §5\'s two empty-branch variants', () => {
+describe("Paged.js invariants against doc §5's two empty-branch variants", () => {
   let browser: Browser;
   let pagedjsSource: string;
 
@@ -329,7 +358,10 @@ describe('Paged.js invariants against doc §5\'s two empty-branch variants', () 
 
   it('renders and paginates the zero-WCAG-failures variant without error', async () => {
     const { manifest, findings, analysis } = buildStressFixtureNoWcagFailures();
-    const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(manifest, findings);
+    const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(
+      manifest,
+      findings,
+    );
     const html = await renderHtml({
       manifest,
       findings,
@@ -345,7 +377,10 @@ describe('Paged.js invariants against doc §5\'s two empty-branch variants', () 
 
   it('renders and paginates the zero-findings variant without error', async () => {
     const { manifest, findings, analysis } = buildStressFixtureNoFindings();
-    const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(manifest, findings);
+    const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(
+      manifest,
+      findings,
+    );
     const html = await renderHtml({
       manifest,
       findings,

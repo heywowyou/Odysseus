@@ -53,16 +53,12 @@ export function severityFromAxe(impact: string | null | undefined): Severity {
  * A weight of 0 means Lighthouse treats the audit as diagnostic only.
  * Those are recorded as 'minor' and never surface as headline findings.
  */
-export function severityFromLighthouse(
-  score: number | null,
-  weight: number,
-): Severity {
+export function severityFromLighthouse(score: number | null, weight: number): Severity {
   // Informative or not applicable audits carry no severity.
   if (score === null) return 'minor';
   if (weight === 0) return 'minor';
 
-  const failure: Severity =
-    score < 0.5 ? 'critical' : score < 0.9 ? 'serious' : 'minor';
+  const failure: Severity = score < 0.5 ? 'critical' : score < 0.9 ? 'serious' : 'minor';
 
   // Cap by weight. Low-weight audits cannot be headline findings.
   if (weight < 3) return capAt(failure, 'moderate');

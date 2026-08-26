@@ -48,7 +48,10 @@ export interface VideoCaptionsExtraction {
   videos: VideoCheckResult[];
 }
 
-export async function checkVideoCaptions(page: Page, pageUrl: string): Promise<VideoCaptionsExtraction> {
+export async function checkVideoCaptions(
+  page: Page,
+  pageUrl: string,
+): Promise<VideoCaptionsExtraction> {
   const videos = await page.evaluate(async () => {
     function waitFor(predicate: () => boolean, timeoutMs: number): Promise<boolean> {
       return new Promise((resolve) => {

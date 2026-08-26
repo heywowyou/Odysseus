@@ -2,7 +2,7 @@
 
 **Odysseus** is the name of both the audit service and the tool that powers it. Any earlier reference to "audit-play" refers to this project.
 
-**Purpose of this document.** Full context for a productized web audit service and the custom tool that powers it. A Claude instance reading this cold should understand the offer, the technical architecture, the workflow, and the remaining open work, without further background.
+**Purpose of this document.** Full context for a productized web audit service and the custom tool that powers it. A coding agent reading this cold should understand the offer, the technical architecture, the workflow, and the remaining open work, without further background.
 
 **Companion docs, added 2026-08-15, read alongside this brief for anything client-facing or legal.** `docs/obligation-basis.md` is the canonical source of legal facts about the client's position; nothing legal may be stated anywhere in the product unless it appears there with status `primary`. `docs/operator-obligations.md` covers Odysseus's own regulatory position (AI Act, electronic invoicing, the perimeter of legal advice, prospecting channel rules). `docs/offer-positioning.md` holds pricing and the diagnostic-not-audit-RGAA framing, superseding the pricing subsections of section 3 below where they conflict. `docs/prospect-qualification.md` and `docs/outreach-rules.md` govern milestone 9a to 9c. This brief's section 8 and section 9 point into those files rather than restating their contents, to avoid two sources of truth on legal claims.
 
@@ -46,7 +46,7 @@ Whether ChatGPT, Perplexity, and Google's AI answers mention the business or rec
 
 **Revised 2026-08-03.** Three tiers, reduced to two. Implementation and monitoring are dropped entirely, not deferred. Reasoning below.
 
-**Revised again 2026-08-15** (`docs/offer-positioning.md`): prices held at EUR 290 and EUR 1,200 to 1,900 HT, displayed HT everywhere from the first day per `docs/operator-obligations.md` section 6. Raising into the EUR 2,400 to 3,600 band was considered and rejected, since it assumes a buyer comparing quotes and a cold prospect's reference point is zero; revisit only after a case study and the milestone 10 benchmark study exist. The offer is now stated explicitly, on the offer page, in the proposal, and in the report itself, as a diagnostic rather than an audit RGAA: it does not produce an official taux de conformité over the 106 RGAA criteria and cannot serve as the basis for a déclaration d'accessibilité. Naming that limit first is the position, not a hedge; see `docs/offer-positioning.md` section 2 for what the diagnostic offers instead (whole-site crawl versus a sample of gabarits, render diff evidence, combined SEO/AEO and accessibility findings).
+**Historical pricing decision from 2026-08-15, superseded 2026-08-16.** Prices were then held at EUR 290 and EUR 1,200 to 1,900 HT. The current single-tier EUR 1,600 HT model is governed by `docs/offer-positioning.md` and the revision note above. The still-current offer-positioning rationale from that review is that this is a diagnostic rather than an audit RGAA: it does not produce an official taux de conformité over the 106 RGAA criteria and cannot serve as the basis for a déclaration d'accessibilité. Naming that limit first is the position, not a hedge; see `docs/offer-positioning.md` section 2 for what the diagnostic offers instead (whole-site crawl versus a sample of gabarits, render diff evidence, combined SEO/AEO and accessibility findings).
 
 **Revised again 2026-08-07** (commercial planning session, full detail in `docs/milestone-8-scope-addendum.md`): the video walkthrough is dropped, and the report is rendered from the exact crawl and scanners against `findings.json` (see 6.2 stage 5 and the addendum's section 1.2).
 
@@ -367,8 +367,8 @@ Verified live in both languages against the real capture: 11 themes from 17 find
 
 **Milestone 9b: prospecting throughput.** `computeBrokennessScore`, `isProspectingWorthy`, and `isAuditFallbackEligible` move into `packages/core` per `docs/llm-layer-rules.md` section 10. Three changes in `runProspectingJob`: a bounded worker pool across distinct origins in place of the serial loop, safe because the per-origin lock already exists and the rate limit is per origin; Lighthouse removed from the prospecting config, since it is the serialisation bottleneck through the `perf_hooks` queue and performance score is the weakest outreach signal; prospecting page cap reduced to three (home, one listing page, one transactional page, the last retained because the flow detector needs it). Deterministic evidence screenshot selection.
 
-**Milestone 9b.5: sitemap-supplemented full-site scan coverage.** Added
-2026-08-25, ahead of 9c, on an operator decision made mid-review of a
+**Milestone 9b.5: sitemap-supplemented full-site scan coverage.** Done
+2026-08-27, after being added ahead of 9c on an operator decision made mid-review of a
 real www.airelles.com audit: the crawler reached 100 pages by following
 internal links while the site's sitemap declared 516, and the
 `sitemap-orphan-page`/`sitemap-stale` checks correctly flagged that only
@@ -380,19 +380,25 @@ declared French-language subtree because nothing in the English pages
 it found links there. For a flat EUR 1,600 full audit, the report needs
 to do two separate jobs rather than pick one: state discoverability
 honestly (an internal-navigation-unreachable page is itself a real
-defect, and the existing orphan/stale checks depend on the crawl not
-visiting sitemap-only URLs to detect it) and scan every declared page
-for real defects regardless of whether navigation reaches it. Shape,
-not yet built: every sitemap URL becomes scannable input tagged with its
-discovery method (`link` vs `sitemap-only`) on the manifest, the same
-kind of addition CLAUDE.md trade-off 31's `discovered-not-scanned`
-status made for the reverse case; the orphan/stale checks keep computing
-purely from link-graph reachability, unaffected by whether a
-sitemap-only page also gets scanned; a sitemap URL is never fetched
-across a different registrable domain than the one authorized. Expect
-scan time and Lighthouse/axe load to rise roughly in proportion to how
-many sitemap-only pages a site has, accepted deliberately for coverage.
-Full reasoning in CLAUDE.md's build-order section.
+defect, and the existing orphan/stale checks depend on a separate link
+set) and scan every eligible declared page for real defects regardless
+of whether navigation reaches it.
+
+Shipped with `none`, `inspect`, and `supplement` sitemap modes, recursive
+index traversal, exact-host plus www/apex authorization, page discovery
+provenance, combined cap accounting, optional historical fields, Mongo
+persistence, and bilingual methodology coverage. Full audits and raw
+site scans supplement by default; prospecting inspects without expanding
+its three-page link crawl; standalone crawl stays link-only. Fixture
+tests prove that sitemap-only defects are reported while the page remains
+an orphan. The authorized Haaitza validation resolved 5 sitemap documents
+and 131 eligible pages during an uncapped 220-attempt audit: 130 sitemap
+pages were analyzed, the remaining page retained
+`skipped-external-redirect`, and zero pages were filtered or omitted by a
+cap. Haaitza currently links to every sitemap page, so the fixture remains
+the acceptance evidence for non-zero sitemap-only coverage and orphan
+preservation. Full reasoning is in the charter's build-order section and
+`docs/decisions/trade-offs.md`.
 
 **Milestone 9c: outreach generation.** Draft assembly per `docs/outreach-rules.md`: deterministic evidence, deterministic facts block, generated connective prose, validator confirming the block survived unmodified and that identity, data origin, and opt-out are present (`docs/llm-layer-rules.md` section 11). Draft queue, follow-up state machine keyed on reply detection, suppression check at draft time. Drafts created in the mailbox through the Gmail API, never sent. Separate sending domain with SPF, DKIM, DMARC.
 

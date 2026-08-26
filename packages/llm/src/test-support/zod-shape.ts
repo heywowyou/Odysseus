@@ -1,4 +1,4 @@
-import { ZodArray, ZodEnum, ZodObject, ZodOptional, type ZodTypeAny } from 'zod';
+import { ZodArray, ZodEnum, type ZodObject, ZodOptional, type ZodTypeAny } from 'zod';
 
 export interface ObjectShapeInfo {
   keys: string[];
@@ -43,7 +43,10 @@ export function describeZodShape(schema: ZodObject<Record<string, ZodTypeAny>>):
 }
 
 export function describeJsonSchemaShape(schema: {
-  properties: Record<string, { enum?: readonly string[]; type?: string; items?: { type?: string } }>;
+  properties: Record<
+    string,
+    { enum?: readonly string[]; type?: string; items?: { type?: string } }
+  >;
   required?: readonly string[];
 }): ObjectShapeInfo {
   const keys = Object.keys(schema.properties).sort();

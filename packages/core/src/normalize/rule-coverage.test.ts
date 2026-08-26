@@ -93,14 +93,23 @@ function storedAudits(): StoredAudit[] {
 
 function emittableRuleIds(): Set<string> {
   const reachable = JSON.parse(
-    readFileSync(path.join(repoRoot, 'packages/report/src/template/reachable-rule-ids.json'), 'utf-8'),
+    readFileSync(
+      path.join(repoRoot, 'packages/report/src/template/reachable-rule-ids.json'),
+      'utf-8',
+    ),
   ) as { axe: string[]; lighthouse: string[] };
-  return new Set([...reachable.axe, ...reachable.lighthouse, ...Object.keys(CUSTOM_CHECK_SEVERITY)]);
+  return new Set([
+    ...reachable.axe,
+    ...reachable.lighthouse,
+    ...Object.keys(CUSTOM_CHECK_SEVERITY),
+  ]);
 }
 
 describe('rule coverage across all stored fixtures (recall)', () => {
   it('does not fall below the measured floor', () => {
-    const observed = new Set(storedAudits().flatMap((audit) => audit.findings.map((f) => f.ruleId)));
+    const observed = new Set(
+      storedAudits().flatMap((audit) => audit.findings.map((f) => f.ruleId)),
+    );
     const emittable = emittableRuleIds();
     const covered = [...emittable].filter((ruleId) => observed.has(ruleId));
 

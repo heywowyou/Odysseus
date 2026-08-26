@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Finding } from '@odysseus/core';
-import { findInventedStructureFindingIds, findUnreferencedStructureFindingIds } from './structure-guards.js';
+import {
+  findInventedStructureFindingIds,
+  findUnreferencedStructureFindingIds,
+} from './structure-guards.js';
 import type { StructurePassOutput } from './structure-schema.js';
 
 function buildFinding(findingId: string): Finding {
@@ -30,7 +33,15 @@ const findings: Finding[] = [buildFinding('f1'), buildFinding('f2')];
 describe('findInventedStructureFindingIds', () => {
   it('returns an empty array when every referenced ID is known', () => {
     const output: StructurePassOutput = {
-      themes: [{ findingIds: ['f1', 'f2'], category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1 }],
+      themes: [
+        {
+          findingIds: ['f1', 'f2'],
+          category: 'accessibility',
+          effort: 'low',
+          impact: 'high',
+          priorityRank: 1,
+        },
+      ],
       quickWins: ['f1'],
       overallRisk: 'medium',
     };
@@ -40,7 +51,13 @@ describe('findInventedStructureFindingIds', () => {
   it('flags an invented ID inside a theme.findingIds', () => {
     const output: StructurePassOutput = {
       themes: [
-        { findingIds: ['f1', 'bogus-id'], category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1 },
+        {
+          findingIds: ['f1', 'bogus-id'],
+          category: 'accessibility',
+          effort: 'low',
+          impact: 'high',
+          priorityRank: 1,
+        },
       ],
       quickWins: [],
       overallRisk: 'medium',
@@ -50,7 +67,15 @@ describe('findInventedStructureFindingIds', () => {
 
   it('flags an invented ID that appears only in quickWins', () => {
     const output: StructurePassOutput = {
-      themes: [{ findingIds: ['f1'], category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1 }],
+      themes: [
+        {
+          findingIds: ['f1'],
+          category: 'accessibility',
+          effort: 'low',
+          impact: 'high',
+          priorityRank: 1,
+        },
+      ],
       quickWins: ['bogus-quick-win'],
       overallRisk: 'medium',
     };
@@ -61,7 +86,15 @@ describe('findInventedStructureFindingIds', () => {
 describe('findUnreferencedStructureFindingIds', () => {
   it('counts findings not referenced by any theme', () => {
     const output: StructurePassOutput = {
-      themes: [{ findingIds: ['f1'], category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1 }],
+      themes: [
+        {
+          findingIds: ['f1'],
+          category: 'accessibility',
+          effort: 'low',
+          impact: 'high',
+          priorityRank: 1,
+        },
+      ],
       quickWins: [],
       overallRisk: 'medium',
     };
@@ -70,7 +103,15 @@ describe('findUnreferencedStructureFindingIds', () => {
 
   it('does not count quickWins as coverage', () => {
     const output: StructurePassOutput = {
-      themes: [{ findingIds: ['f1'], category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1 }],
+      themes: [
+        {
+          findingIds: ['f1'],
+          category: 'accessibility',
+          effort: 'low',
+          impact: 'high',
+          priorityRank: 1,
+        },
+      ],
       quickWins: ['f2'],
       overallRisk: 'medium',
     };

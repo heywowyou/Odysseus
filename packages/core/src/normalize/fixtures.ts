@@ -29,7 +29,8 @@ export function buildAxeViolation(overrides: Partial<AxeViolationInput> = {}): A
     impact: 'serious',
     tags: ['wcag2aa', 'wcag143'],
     help: 'Elements must meet minimum color contrast ratio thresholds',
-    description: 'Ensures the contrast between foreground and background colors meets WCAG 2 AA contrast ratio thresholds',
+    description:
+      'Ensures the contrast between foreground and background colors meets WCAG 2 AA contrast ratio thresholds',
     helpUrl: 'https://dequeuniversity.com/rules/axe/4.12/color-contrast',
     nodes: [buildAxeNode()],
     ...overrides,
@@ -42,12 +43,15 @@ export function buildAxeResultsInput(
   return { violations };
 }
 
-export function buildLighthouseAudit(overrides: Partial<LighthouseAuditInput> = {}): LighthouseAuditInput {
+export function buildLighthouseAudit(
+  overrides: Partial<LighthouseAuditInput> = {},
+): LighthouseAuditInput {
   return {
     score: 0.3,
     scoreDisplayMode: 'numeric',
     title: 'Largest Contentful Paint',
-    description: 'Largest Contentful Paint marks the time at which the largest text or image is painted.',
+    description:
+      'Largest Contentful Paint marks the time at which the largest text or image is painted.',
     numericValue: 3200,
     displayValue: '3.2 s',
     ...overrides,
@@ -106,7 +110,9 @@ export function buildRenderDiffResult(overrides: Partial<RenderDiffResult> = {})
   };
 }
 
-export function buildNormalizePageInput(overrides: Partial<NormalizePageInput> = {}): NormalizePageInput {
+export function buildNormalizePageInput(
+  overrides: Partial<NormalizePageInput> = {},
+): NormalizePageInput {
   return {
     url: 'https://example.com/',
     ...overrides,

@@ -1,10 +1,18 @@
 import { Mistral } from '@mistralai/mistralai';
 import { getMistralApiKey } from './config.js';
 import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_OUTPUT_TOKENS } from './constants.js';
-import { structurePassOutputSchema, type StructureInput, type StructurePassOutput } from './structure-schema.js';
+import {
+  structurePassOutputSchema,
+  type StructureInput,
+  type StructurePassOutput,
+} from './structure-schema.js';
 import { STRUCTURE_OUTPUT_JSON_SCHEMA } from './structure-output-schema.js';
 import { buildStructureSystemPrompt, buildStructureUserPrompt } from './structure-prompt.js';
-import { writingPassOutputSchema, type WritingInput, type WritingPassOutput } from './writing-schema.js';
+import {
+  writingPassOutputSchema,
+  type WritingInput,
+  type WritingPassOutput,
+} from './writing-schema.js';
 import { WRITING_OUTPUT_JSON_SCHEMA } from './writing-output-schema.js';
 import { buildWritingSystemPrompt, buildWritingUserPrompt } from './writing-prompt.js';
 
@@ -105,7 +113,11 @@ export async function callMistralForWriting(
     messages: [
       {
         role: 'system',
-        content: buildWritingSystemPrompt(input.language, usedFallbackContext, input.dominantPerformanceMetric),
+        content: buildWritingSystemPrompt(
+          input.language,
+          usedFallbackContext,
+          input.dominantPerformanceMetric,
+        ),
       },
       { role: 'user', content: buildWritingUserPrompt(input) },
     ],

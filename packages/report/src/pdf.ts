@@ -94,7 +94,9 @@ export interface PagedjsStructuralCheckResult {
  *  grants it, and an atomic block's text is compared only against its
  *  own prior occurrence, on a different page, never within the same
  *  page fragment. */
-export function analyzePagedjsPages(pages: readonly PagedPageModel[]): PagedjsStructuralCheckResult {
+export function analyzePagedjsPages(
+  pages: readonly PagedPageModel[],
+): PagedjsStructuralCheckResult {
   const blankPageIndex = pages.findIndex((p, i) => i > 0 && p.text.trim().length === 0);
 
   const seenOnPage = new Map<string, number>();
@@ -116,7 +118,9 @@ export function analyzePagedjsPages(pages: readonly PagedPageModel[]): PagedjsSt
   return { blankPageIndex, duplicateText, pageCount: pages.length };
 }
 
-export function describePagedjsStructuralFailure(result: PagedjsStructuralCheckResult): string | undefined {
+export function describePagedjsStructuralFailure(
+  result: PagedjsStructuralCheckResult,
+): string | undefined {
   if (result.blankPageIndex !== -1) {
     return (
       `Paged.js produced a blank interior page (page ${result.blankPageIndex + 1} of ${result.pageCount}), ` +
@@ -136,7 +140,9 @@ async function detectPagedjsStructuralFailure(page: Page): Promise<string | unde
   const pages = await page.evaluate((selector) => {
     return Array.from(document.querySelectorAll('.pagedjs_page')).map((p) => ({
       text: p.textContent ?? '',
-      atomicBlockTexts: Array.from(p.querySelectorAll(selector)).map((block) => block.textContent ?? ''),
+      atomicBlockTexts: Array.from(p.querySelectorAll(selector)).map(
+        (block) => block.textContent ?? '',
+      ),
     }));
   }, ATOMIC_BLOCK_SELECTOR);
 
@@ -164,17 +170,23 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
       if (msg.type() === 'error' && msg.text().includes(PAGEDJS_LAYOUT_REPEATED_MARKER)) {
         pagedjsLayoutFailure = msg.text();
         if (process.env['ODYSSEUS_DEBUG_PAGEDJS']) {
-          debugNodePromise = Promise.all(msg.args().map((a) => a.evaluate((n: unknown) => {
-            const el = n as Element;
-            return el && el.outerHTML ? el.outerHTML.slice(0, 2000) : String(n);
-          }).catch((e: unknown) => `<unresolvable: ${e instanceof Error ? e.message : String(e)}>`))).then((parts) => {
-            // eslint-disable-next-line no-console
+          debugNodePromise = Promise.all(
+            msg.args().map((a) =>
+              a
+                .evaluate((n: unknown) => {
+                  const el = n as Element;
+                  return el && el.outerHTML ? el.outerHTML.slice(0, 2000) : String(n);
+                })
+                .catch(
+                  (e: unknown) => `<unresolvable: ${e instanceof Error ? e.message : String(e)}>`,
+                ),
+            ),
+          ).then((parts) => {
             console.error('[pagedjs:debug-node]', parts.join('\n---\n'));
           });
         }
       }
       if (process.env['ODYSSEUS_DEBUG_PAGEDJS']) {
-        // eslint-disable-next-line no-console
         console.error(`[pagedjs:${msg.type()}] ${msg.text()}`);
       }
     });

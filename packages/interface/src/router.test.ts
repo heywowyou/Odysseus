@@ -2,8 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Router } from './router.js';
 
-function fakeReq(method: string, url: string): IncomingMessage {
-  return { method, url } as never;
+function fakeReq(
+  method: string,
+  url: string,
+  headers: Record<string, string> = {},
+): IncomingMessage {
+  return { method, url, headers } as never;
 }
 
 function fakeRes(): ServerResponse & { statusCode: number; body: string | undefined } {
@@ -105,5 +109,72 @@ describe('Router', () => {
 
     expect(res.statusCode).toBe(404);
     expect(res.body).toBe('Not found');
+  });
+
+  describe('origin and content-type checks on state-changing requests', () => {
+    it('rejects a POST with a Content-Type other than application/json', async () => {
+      const router = new Router();
+      const handler = vi.fn();
+      router.post('/api/scans', handler);
+
+      const res = fakeRes();
+      await router.handle(
+        fakeReq('POST', '/api/scans', { 'content-type': 'text/plain', 'content-length': '2' }),
+        res,
+      );
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(415);
+    });
+
+    it('rejects a POST whose Origin does not match the request Host', async () => {
+      const router = new Router();
+      const handler = vi.fn();
+      router.post('/api/scans', handler);
+
+      const res = fakeRes();
+      await router.handle(
+        fakeReq('POST', '/api/scans', {
+          origin: 'https://attacker.example',
+          host: '127.0.0.1:4600',
+          'content-type': 'application/json',
+          'content-length': '2',
+        }),
+        res,
+      );
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('allows a same-origin JSON POST through', async () => {
+      const router = new Router();
+      const handler = vi.fn();
+      router.post('/api/scans', handler);
+
+      const res = fakeRes();
+      await router.handle(
+        fakeReq('POST', '/api/scans', {
+          origin: 'http://127.0.0.1:4600',
+          host: '127.0.0.1:4600',
+          'content-type': 'application/json',
+          'content-length': '2',
+        }),
+        res,
+      );
+
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows a bodyless POST with no Content-Type through, as long as the origin is acceptable', async () => {
+      const router = new Router();
+      const handler = vi.fn();
+      router.post('/api/audits/:auditId/regenerate-report', handler);
+
+      const res = fakeRes();
+      await router.handle(fakeReq('POST', '/api/audits/audit-1/regenerate-report'), res);
+
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
   });
 });

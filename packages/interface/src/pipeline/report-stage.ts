@@ -19,7 +19,10 @@ export interface ReportStageResult {
 }
 
 function timestampForFilename(date: Date): string {
-  return date.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/:/g, '-');
+  return date
+    .toISOString()
+    .replace(/\.\d{3}Z$/, 'Z')
+    .replace(/:/g, '-');
 }
 
 export async function runReportStage(
@@ -50,14 +53,20 @@ export async function runReportStage(
     auditDir,
     manifest,
     findings,
-    analysis: { ...analysis, ...(obligationAssessment !== undefined ? { obligationAssessment } : {}) },
+    analysis: {
+      ...analysis,
+      ...(obligationAssessment !== undefined ? { obligationAssessment } : {}),
+    },
     ...(manualFields !== undefined ? { manualFields } : {}),
   });
 
   const generatedAt = new Date();
   const reportsDir = path.join(auditDir, 'reports');
   await fs.mkdir(reportsDir, { recursive: true });
-  const reportPath = path.join(reportsDir, `${timestampForFilename(generatedAt)}-${analysis.language}.pdf`);
+  const reportPath = path.join(
+    reportsDir,
+    `${timestampForFilename(generatedAt)}-${analysis.language}.pdf`,
+  );
   await fs.writeFile(reportPath, pdf);
 
   await persistReport(connection, {

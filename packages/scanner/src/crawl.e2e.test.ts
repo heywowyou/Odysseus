@@ -55,6 +55,7 @@ describe('crawlSite against fixtures/spa-demo', () => {
 
     expect(result.robotsTxtFound).toBe(true);
     expect(result.visitedCount).toBe(3);
+    expect(result.sitemap).toBeUndefined();
 
     const byUrl = new Map(result.pages.map((page) => [new URL(page.url).pathname, page]));
 
@@ -121,6 +122,51 @@ describe('crawlSite against fixtures/spa-demo', () => {
 
     const pageEvents = events.filter((event) => event.type === 'crawl-page');
     expect(pageEvents).toHaveLength(result.visitedCount);
-    expect(pageEvents.map((event) => (event.type === 'crawl-page' ? event.visited : undefined))).toEqual([1, 2, 3]);
+    expect(
+      pageEvents.map((event) => (event.type === 'crawl-page' ? event.visited : undefined)),
+    ).toEqual([1, 2, 3]);
   }, 45_000);
+
+  it('inspects a sitemap without adding its orphan page to the link crawl', async () => {
+    const result = await crawlSite(TEST_URL, {
+      browser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+      sitemapMode: 'inspect',
+    });
+
+    expect(result.visitedCount).toBe(3);
+    expect(result.sitemap?.pageEntries).toHaveLength(4);
+    expect(result.pages.some((page) => page.discoveryMethod === 'sitemap-only')).toBe(false);
+    expect(result.sitemapCoverage).toMatchObject({
+      declaredPageCount: 4,
+      eligiblePageCount: 4,
+      scannedPageCount: 3,
+      capOmittedPageCount: 0,
+    });
+  }, 45_000);
+
+  it('supplements only after the link frontier and records cap omissions', async () => {
+    const uncapped = await crawlSite(TEST_URL, {
+      browser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+      sitemapMode: 'supplement',
+    });
+    expect(
+      uncapped.pages.find((page) => new URL(page.url).pathname === '/sitemap-only.html'),
+    ).toMatchObject({ status: 'visited', discoveryMethod: 'sitemap-only' });
+
+    const capped = await crawlSite(TEST_URL, {
+      browser,
+      maxPages: 3,
+      maxDepth: 3,
+      delayMs: 0,
+      sitemapMode: 'supplement',
+    });
+    expect(capped.pages.some((page) => page.discoveryMethod === 'sitemap-only')).toBe(false);
+    expect(capped.sitemapCoverage?.capOmittedPageCount).toBeGreaterThan(0);
+  }, 90_000);
 });

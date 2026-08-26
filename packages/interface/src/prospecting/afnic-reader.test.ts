@@ -4,7 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { streamAfnicCandidates } from './afnic-reader.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const fixturePath = path.join(moduleDir, '..', '..', '..', '..', 'fixtures', 'prospecting', 'afnic-sample.csv');
+const fixturePath = path.join(
+  moduleDir,
+  '..',
+  '..',
+  '..',
+  '..',
+  'fixtures',
+  'prospecting',
+  'afnic-sample.csv',
+);
 
 describe('streamAfnicCandidates', () => {
   it('decodes ISO-8859-1 correctly, including an accented field', async () => {
@@ -45,7 +54,12 @@ describe('streamAfnicCandidates', () => {
     expect(first.exhausted).toBe(false);
 
     // Resume from where the first read left off, reusing its discovered header.
-    const second = await streamAfnicCandidates(fixturePath, first.nextByteOffset, 100, first.headerColumns);
+    const second = await streamAfnicCandidates(
+      fixturePath,
+      first.nextByteOffset,
+      100,
+      first.headerColumns,
+    );
     const domains = second.candidates.map((c) => c.domain);
     expect(domains).not.toContain('example-org1.fr');
     expect(domains).toContain('example-org3.fr');

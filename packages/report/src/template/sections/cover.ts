@@ -33,7 +33,12 @@ const RISK_LEVEL_ORDER: readonly StoredAnalysis['overallRisk'][] = ['low', 'medi
  *  highlighted, plus a one-line note on the underlying critical/serious
  *  counts (computeStatistics, the same live-computed source item 10's
  *  stats-page tile already uses). */
-function renderRiskBadge(strings: ReportStrings, analysis: StoredAnalysis, findings: readonly Finding[], manifest: AuditManifest): string {
+function renderRiskBadge(
+  strings: ReportStrings,
+  analysis: StoredAnalysis,
+  findings: readonly Finding[],
+  manifest: AuditManifest,
+): string {
   const scale = RISK_LEVEL_ORDER.map((level) => {
     const isCurrent = level === analysis.overallRisk;
     const levelColor = LEVEL_COLOR[level];
@@ -44,9 +49,14 @@ function renderRiskBadge(strings: ReportStrings, analysis: StoredAnalysis, findi
   const basisNote = fillTemplate(strings.cover.riskBasisTemplate, {
     critical: formatNumber(stats.critical, analysis.language),
     criticalWord:
-      stats.critical === 1 ? strings.cover.criticalFindingSingular : strings.cover.criticalFindingPlural,
+      stats.critical === 1
+        ? strings.cover.criticalFindingSingular
+        : strings.cover.criticalFindingPlural,
     serious: formatNumber(stats.serious, analysis.language),
-    seriousWord: stats.serious === 1 ? strings.cover.seriousFindingSingular : strings.cover.seriousFindingPlural,
+    seriousWord:
+      stats.serious === 1
+        ? strings.cover.seriousFindingSingular
+        : strings.cover.seriousFindingPlural,
   });
 
   return `

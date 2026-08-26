@@ -63,7 +63,11 @@ export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
     }
 
     if (field === 'user-agent') {
-      const groupIsOpen = current !== null && current.disallow.length === 0 && current.allow.length === 0 && current.crawlDelayMs === undefined;
+      const groupIsOpen =
+        current !== null &&
+        current.disallow.length === 0 &&
+        current.allow.length === 0 &&
+        current.crawlDelayMs === undefined;
       if (!groupIsOpen) {
         current = { agents: [], disallow: [], allow: [] };
         groups.push(current);
@@ -82,16 +86,23 @@ export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
     }
     if (field === 'crawl-delay') {
       const seconds = Number.parseFloat(value);
-      if (Number.isFinite(seconds) && seconds >= 0) current.crawlDelayMs = Math.round(seconds * 1000);
+      if (Number.isFinite(seconds) && seconds >= 0)
+        current.crawlDelayMs = Math.round(seconds * 1000);
     }
   }
 
   const ua = userAgent.toLowerCase();
-  const matched = groups.find((g) => g.agents.includes(ua)) ?? groups.find((g) => g.agents.includes('*'));
+  const matched =
+    groups.find((g) => g.agents.includes(ua)) ?? groups.find((g) => g.agents.includes('*'));
 
   if (!matched) return { found: true, disallow: [], allow: [], sitemapUrls };
 
-  const result: RobotsRules = { found: true, disallow: matched.disallow, allow: matched.allow, sitemapUrls };
+  const result: RobotsRules = {
+    found: true,
+    disallow: matched.disallow,
+    allow: matched.allow,
+    sitemapUrls,
+  };
   if (matched.crawlDelayMs !== undefined) result.crawlDelayMs = matched.crawlDelayMs;
   return result;
 }
@@ -183,7 +194,13 @@ export async function fetchRobotsRules(
  * is a real, expected way this list goes stale - it is not meant to be
  * exhaustive forever.
  */
-export const AI_CRAWLER_USER_AGENTS = ['GPTBot', 'ChatGPT-User', 'ClaudeBot', 'Google-Extended', 'PerplexityBot'];
+export const AI_CRAWLER_USER_AGENTS = [
+  'GPTBot',
+  'ChatGPT-User',
+  'ClaudeBot',
+  'Google-Extended',
+  'PerplexityBot',
+];
 
 export interface AiCrawlerAccessResult {
   agent: string;
@@ -200,11 +217,16 @@ export interface AiCrawlerAccessResult {
  * breadth analysis the way robots-disallow-broad already does for the
  * primary crawler.
  */
-export function checkAiCrawlerAccess(robotsText: string | null, userAgents: string[]): AiCrawlerAccessResult[] {
+export function checkAiCrawlerAccess(
+  robotsText: string | null,
+  userAgents: string[],
+): AiCrawlerAccessResult[] {
   return userAgents.map((agent) => {
     if (robotsText === null) return { agent, blocked: false };
     const rules = parseRobotsTxt(robotsText, agent);
     const disallowPattern = findBlockingPattern(rules, '/');
-    return disallowPattern === undefined ? { agent, blocked: false } : { agent, blocked: true, disallowPattern };
+    return disallowPattern === undefined
+      ? { agent, blocked: false }
+      : { agent, blocked: true, disallowPattern };
   });
 }

@@ -58,9 +58,19 @@ export function findPageCountViolations(
   checkField('executiveSummary', output.executiveSummary, language, violations);
   checkField('notes', output.notes, language, violations);
   output.themes.forEach((theme, i) => {
-    checkField(`themes[${i}](${theme.themeKey}).businessImpact`, theme.businessImpact, language, violations);
+    checkField(
+      `themes[${i}](${theme.themeKey}).businessImpact`,
+      theme.businessImpact,
+      language,
+      violations,
+    );
     theme.recommendedActions.forEach((action, j) => {
-      checkField(`themes[${i}](${theme.themeKey}).recommendedActions[${j}]`, action, language, violations);
+      checkField(
+        `themes[${i}](${theme.themeKey}).recommendedActions[${j}]`,
+        action,
+        language,
+        violations,
+      );
     });
   });
 

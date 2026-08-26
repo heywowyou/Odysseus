@@ -39,7 +39,9 @@ export interface KeyboardNavigationCheckInput {
   focusSequence: Array<number | null>;
 }
 
-export function extractKeyboardNavigationCandidates(input: KeyboardNavigationCheckInput): FindingCandidate[] {
+export function extractKeyboardNavigationCandidates(
+  input: KeyboardNavigationCheckInput,
+): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
   const { pageUrl } = input;
 

@@ -9,7 +9,11 @@ import { renderCover } from './cover.js';
 import { renderLegalExposure } from './legal-exposure.js';
 import { fr } from '../strings/fr.js';
 import { en } from '../strings/en.js';
-import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
+import {
+  loadSasFernandeAnalysis,
+  loadSasFernandeFindings,
+  loadSasFernandeManifest,
+} from '../../test-fixtures.js';
 
 /** Minimal manifest for tests that don't care about SIREN/date specifics
  *  (item 24's own describe block below builds its own with a real siren). */
@@ -75,17 +79,41 @@ describe('item 42: the cover risk badge shows its scale and its basis', () => {
   });
 
   it('renders the undetermined action note when status is undetermined', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', { status: 'undetermined', basis: [] }, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      { status: 'undetermined', basis: [] },
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).toContain('publié sur le site ou communiqué');
   });
 
   it('does not render the action note for a determined status', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', { status: 'out_of_scope', basis: [] }, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      { status: 'out_of_scope', basis: [] },
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).not.toContain(fr.legalExposure.undeterminedActionNote);
   });
 
   it('renders the action note when obligationAssessment is absent entirely', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      undefined,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).toContain('publié sur le site ou communiqué');
   });
 });
@@ -102,17 +130,41 @@ describe('item 17: the EAA date reads as already in force, with a computed elaps
   });
 
   it('states the elapsed duration in years for a report generated 14 months later, matching the reported case', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      undefined,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).toContain('plus d&#39;un an');
   });
 
   it('states the elapsed duration in months for a report generated shortly after the date', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2025-09-28'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      undefined,
+      new Date('2025-09-28'),
+      fakeManifest(),
+      [],
+    );
     expect(html).toContain('3 mois');
   });
 
   it('renders the duration in English for an English report', () => {
-    const html = renderLegalExposure(en, 2, 'en', undefined, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      en,
+      2,
+      'en',
+      undefined,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).toContain('more than a year');
   });
 });
@@ -137,7 +189,15 @@ describe('item 18: EAA-route exposure facts (fine figure, case law state)', () =
   };
 
   it('states the EUR 7 500 R451-4 fine figure, never the EUR 50 000 article 47 figure', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', eaaInScope, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      eaaInScope,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).toContain('7 500');
     expect(html).not.toContain('50 000');
   });
@@ -149,18 +209,42 @@ describe('item 18: EAA-route exposure facts (fine figure, case law state)', () =
   // themselves, so it was never eligible to reach a client under the
   // doc's own primary-only rule despite having shipped here.
   it('never states the Lille/Caen case-law outcome, which is sourced from status-secondary material', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', eaaInScope, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      eaaInScope,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).not.toContain('Lille');
     expect(html).not.toContain('Caen');
   });
 
   it('renders nothing for an out_of_scope status', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', { status: 'out_of_scope', basis: [] }, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      { status: 'out_of_scope', basis: [] },
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).not.toContain('7 500');
   });
 
   it('renders nothing for an undetermined status', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      undefined,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).not.toContain('7 500');
   });
 
@@ -181,7 +265,15 @@ describe('item 18: EAA-route exposure facts (fine figure, case law state)', () =
         },
       ],
     };
-    const html = renderLegalExposure(fr, 2, 'fr', article47InScope, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      article47InScope,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).not.toContain('7 500');
   });
 });
@@ -193,21 +285,53 @@ describe('item 18: EAA-route exposure facts (fine figure, case law state)', () =
 // concerns.
 describe('item 24: the SIREN and extraction date are printed', () => {
   it('prints an extracted SIREN with the audit date', () => {
-    const manifest = fakeManifest({ siteSignals: { hasTransactionalFlow: true, transactionalFlowEvidence: [], siren: '552032534' } });
+    const manifest = fakeManifest({
+      siteSignals: {
+        hasTransactionalFlow: true,
+        transactionalFlowEvidence: [],
+        siren: '552032534',
+      },
+    });
     const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), manifest, []);
     expect(html).toContain('552032534');
   });
 
   it('a manually supplied SIREN wins over an extracted one', () => {
-    const manifest = fakeManifest({ siteSignals: { hasTransactionalFlow: true, transactionalFlowEvidence: [], siren: '552032534' } });
-    const manualFields = { siren: { value: '732829320', provenance: 'operator' as const }, updatedAt: new Date() };
-    const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), manifest, [], manualFields);
+    const manifest = fakeManifest({
+      siteSignals: {
+        hasTransactionalFlow: true,
+        transactionalFlowEvidence: [],
+        siren: '552032534',
+      },
+    });
+    const manualFields = {
+      siren: { value: '732829320', provenance: 'operator' as const },
+      updatedAt: new Date(),
+    };
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      undefined,
+      new Date('2026-08-17'),
+      manifest,
+      [],
+      manualFields,
+    );
     expect(html).toContain('732829320');
     expect(html).not.toContain('552032534');
   });
 
   it('states explicitly when no SIREN was ever resolved, rather than omitting the field', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      undefined,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).toContain('Aucun numéro SIREN');
   });
 });
@@ -222,7 +346,12 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
       siteSignals: {
         hasTransactionalFlow: true,
         transactionalFlowEvidence: [
-          { kind: 'checkout-form', selector: 'form#booking', pageUrl: 'https://example.com/reserver', detail: 'action=/reserver' },
+          {
+            kind: 'checkout-form',
+            selector: 'form#booking',
+            pageUrl: 'https://example.com/reserver',
+            detail: 'action=/reserver',
+          },
         ],
       },
     });
@@ -241,8 +370,18 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
       siteSignals: {
         hasTransactionalFlow: true,
         transactionalFlowEvidence: [
-          { kind: 'booking-iframe', selector: '#diadao-widget', pageUrl: 'https://example.com/', detail: 'diadao iframe' },
-          { kind: 'booking-iframe', selector: '#diadao-widget', pageUrl: 'https://example.com/chambres', detail: 'diadao iframe' },
+          {
+            kind: 'booking-iframe',
+            selector: '#diadao-widget',
+            pageUrl: 'https://example.com/',
+            detail: 'diadao iframe',
+          },
+          {
+            kind: 'booking-iframe',
+            selector: '#diadao-widget',
+            pageUrl: 'https://example.com/chambres',
+            detail: 'diadao iframe',
+          },
         ],
       },
     });
@@ -258,7 +397,12 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
       siteSignals: {
         hasTransactionalFlow: true,
         transactionalFlowEvidence: [
-          { kind: 'checkout-form', selector: 'form#booking', pageUrl: 'https://example.com/reserver', detail: 'action=/reserver' },
+          {
+            kind: 'checkout-form',
+            selector: 'form#booking',
+            pageUrl: 'https://example.com/reserver',
+            detail: 'action=/reserver',
+          },
         ],
       },
     });
@@ -286,11 +430,19 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
     });
     const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), manifest, []);
     expect(html).toContain('booking.example-engine.com');
-    expect(html).toContain("n&#39;a pas été exploré");
+    expect(html).toContain('n&#39;a pas été exploré');
   });
 
   it('renders nothing when no transactional-flow evidence exists at all', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      undefined,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).not.toContain('parcours transactionnel identifié');
   });
 });
@@ -300,7 +452,13 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
 // bracket, retrieval date, source), not just the SIREN.
 describe('item 0.1/1.11: the full registry snapshot is printed when a Sirene lookup succeeded', () => {
   it('prints denomination, SIREN, effectifs bracket, date and source together', () => {
-    const manifest = fakeManifest({ siteSignals: { hasTransactionalFlow: true, transactionalFlowEvidence: [], siren: '790852578' } });
+    const manifest = fakeManifest({
+      siteSignals: {
+        hasTransactionalFlow: true,
+        transactionalFlowEvidence: [],
+        siren: '790852578',
+      },
+    });
     const assessment = {
       status: 'in_scope' as const,
       basis: [],
@@ -324,8 +482,22 @@ describe('item 0.1/1.11: the full registry snapshot is printed when a Sirene loo
   });
 
   it('falls back to the SIREN-only note when no registry snapshot exists (no successful Sirene lookup)', () => {
-    const manifest = fakeManifest({ siteSignals: { hasTransactionalFlow: true, transactionalFlowEvidence: [], siren: '552032534' } });
-    const html = renderLegalExposure(fr, 2, 'fr', { status: 'undetermined', basis: [] }, new Date('2026-08-17'), manifest, []);
+    const manifest = fakeManifest({
+      siteSignals: {
+        hasTransactionalFlow: true,
+        transactionalFlowEvidence: [],
+        siren: '552032534',
+      },
+    });
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      { status: 'undetermined', basis: [] },
+      new Date('2026-08-17'),
+      manifest,
+      [],
+    );
     expect(html).toContain('552032534');
     expect(html).not.toContain('Données du répertoire Sirene');
   });
@@ -335,8 +507,19 @@ describe('item 0.1/1.11: the full registry snapshot is printed when a Sirene loo
 // same "Hors champ" sentence twice.
 describe('item 0.1: the out-of-scope explanation is not printed twice', () => {
   it('the short status description and the full paragraph are not the same sentence', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', { status: 'out_of_scope', basis: [] }, new Date('2026-08-17'), fakeManifest(), []);
-    const paragraphOccurrences = html.split('ne relève pas de l&#39;obligation d&#39;accessibilité numérique prévue par la loi').length - 1;
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      { status: 'out_of_scope', basis: [] },
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
+    const paragraphOccurrences =
+      html.split(
+        'ne relève pas de l&#39;obligation d&#39;accessibilité numérique prévue par la loi',
+      ).length - 1;
     expect(paragraphOccurrences).toBe(1);
   });
 });
@@ -352,7 +535,15 @@ describe('item 0.1: a transactional-flow signal conflict is stated explicitly', 
         hasTransactionalFlow: { value: false, source: 'manual' as const, detectedValue: true },
       },
     };
-    const html = renderLegalExposure(fr, 2, 'fr', assessment, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      assessment,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).toContain('Signal contradictoire');
   });
 
@@ -364,12 +555,28 @@ describe('item 0.1: a transactional-flow signal conflict is stated explicitly', 
         hasTransactionalFlow: { value: true, source: 'manual' as const, detectedValue: true },
       },
     };
-    const html = renderLegalExposure(fr, 2, 'fr', assessment, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      assessment,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).not.toContain('Signal contradictoire');
   });
 
   it('renders nothing when there is no resolution recorded at all', () => {
-    const html = renderLegalExposure(fr, 2, 'fr', { status: 'in_scope', basis: [] }, new Date('2026-08-17'), fakeManifest(), []);
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      { status: 'in_scope', basis: [] },
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
     expect(html).not.toContain('Signal contradictoire');
   });
 });

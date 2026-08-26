@@ -24,7 +24,10 @@ describe('findPageCountViolations', () => {
   // each contradicting the deterministic count on the same card.
   it.each([
     ['Assurez-vous que les liens répétés sur 18 pages reçoivent un libellé unique.', '18 pages'],
-    ['Remplacez les iframes sans titre par des alternatives sur les 18 pages concernées.', '18 pages'],
+    [
+      'Remplacez les iframes sans titre par des alternatives sur les 18 pages concernées.',
+      '18 pages',
+    ],
     ['Ajoutez des boutons Précédent/Suivant sur les 12 pages concernées.', '12 pages'],
   ])('rejects an invented page count: %s', (action, matched) => {
     const output = buildOutput({
@@ -77,19 +80,28 @@ describe('findPageCountViolations', () => {
 
   it('flags a page count in the executive summary', () => {
     expect(
-      findPageCountViolations(buildOutput({ executiveSummary: 'Le problème touche 43 pages du site.' }), 'fr'),
+      findPageCountViolations(
+        buildOutput({ executiveSummary: 'Le problème touche 43 pages du site.' }),
+        'fr',
+      ),
     ).toHaveLength(1);
   });
 
   it('flags the English form', () => {
     expect(
-      findPageCountViolations(buildOutput({ executiveSummary: 'This affects 18 pages of the site.' }), 'en'),
+      findPageCountViolations(
+        buildOutput({ executiveSummary: 'This affects 18 pages of the site.' }),
+        'en',
+      ),
     ).toHaveLength(1);
   });
 
   it('flags a singular page count', () => {
     expect(
-      findPageCountViolations(buildOutput({ executiveSummary: 'Corrigez la 1 page concernée.' }), 'fr'),
+      findPageCountViolations(
+        buildOutput({ executiveSummary: 'Corrigez la 1 page concernée.' }),
+        'fr',
+      ),
     ).toHaveLength(1);
   });
 });

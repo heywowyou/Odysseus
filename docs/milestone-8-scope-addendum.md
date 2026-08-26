@@ -1,6 +1,6 @@
 # Odysseus: Milestone 8 scope update and screening/full audit tier decisions
 
-**Purpose of this document.** This is an addendum to `docs/odysseus-project-brief-v2.md`, written after a commercial-side planning session on 2026-08-07. It should be read alongside that brief. A Claude Code instance reading this cold should be able to pick up milestone 8 work with the revised scope below, without needing the conversation that produced it.
+**Purpose of this document.** This is an addendum to `docs/odysseus-project-brief-v2.md`, written after a commercial-side planning session on 2026-08-07. It should be read alongside that brief. A coding agent reading this cold should be able to understand the revised milestone 8 scope below without needing the conversation that produced it.
 
 **Superseded 2026-08-16 (`docs/offer-positioning.md`).** The paid screening tier this document's title and section 1.2/1.6 describe is dropped entirely; the full audit is now the only paid deliverable, priced flat, and a free pre-purchase outreach preview (`docs/outreach-rules.md`) exists in place of screening as a distinct document, not a lighter tier. The milestone 8 scope decisions below (no video, one crawl for both audit types, the extended accessibility pass, custom checks) remain current and unaffected; only the screening/full tier split itself is stale. Kept in full as the historical record of why that split was originally shaped the way it was.
 

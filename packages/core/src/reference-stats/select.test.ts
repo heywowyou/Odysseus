@@ -36,9 +36,15 @@ describe('selectReferenceStats', () => {
   });
 
   it('B1: never returns the page-speed stats for accessibility or seo', () => {
-    const accessibilityIds = selectReferenceStats('accessibility', 'general').map((stat) => stat.id);
+    const accessibilityIds = selectReferenceStats('accessibility', 'general').map(
+      (stat) => stat.id,
+    );
     const seoIds = selectReferenceStats('seo', 'general').map((stat) => stat.id);
-    const speedStatIds = ['deloitte-speed-conversion-retail-2020', 'deloitte-speed-conversion-travel-2020', 'deloitte-aov-retail-2020'];
+    const speedStatIds = [
+      'deloitte-speed-conversion-retail-2020',
+      'deloitte-speed-conversion-travel-2020',
+      'deloitte-aov-retail-2020',
+    ];
     for (const id of speedStatIds) {
       expect(accessibilityIds).not.toContain(id);
       expect(seoIds).not.toContain(id);
@@ -105,9 +111,16 @@ describe('selectReferenceStats', () => {
     });
 
     it('a general-sector request with strictSector excludes hospitality-only rows too', () => {
-      const strict = selectReferenceStats('performance', 'general', { strictSector: true }).map((s) => s.id);
+      const strict = selectReferenceStats('performance', 'general', { strictSector: true }).map(
+        (s) => s.id,
+      );
       expect(strict).not.toContain('deloitte-speed-conversion-travel-2020');
-      expect(strict).toEqual(expect.arrayContaining(['deloitte-speed-conversion-retail-2020', 'deloitte-aov-retail-2020']));
+      expect(strict).toEqual(
+        expect.arrayContaining([
+          'deloitte-speed-conversion-retail-2020',
+          'deloitte-aov-retail-2020',
+        ]),
+      );
     });
 
     it('default (no options) keeps the original permissive rank-with-fallback behavior', () => {

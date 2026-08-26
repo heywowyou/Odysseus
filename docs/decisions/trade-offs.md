@@ -1386,8 +1386,8 @@ Milestone 9 (originally "prospecting mode") was split 2026-08-15 into 9a
 regime 2 documentation generator, free scope check, monitoring) follow. 9a
 is done 2026-08-16. 9b is done 2026-08-22: see trade-off 23.
 
-**9b.5: sitemap-supplemented full-site scan coverage.** Added 2026-08-25,
-queued ahead of 9c on an explicit operator decision made during a real
+**9b.5: sitemap-supplemented full-site scan coverage.** Done 2026-08-27,
+after being queued ahead of 9c on an explicit operator decision made during a real
 www.airelles.com audit. That audit's crawler reached 100 pages by
 following internal links; the site's sitemap declared 516, and
 `sitemap-orphan-page`/`sitemap-stale` correctly flagged that only 1 of the
@@ -1410,20 +1410,32 @@ two inputs (crawl-reachable set, sitemap set) and must stay decoupled:
 reachability is a link-graph fact, scan coverage is a scheduling decision,
 and this milestone's whole point is to stop conflating them.
 
-Shape, not yet built: every sitemap URL becomes scannable input alongside
-the crawl's own discoveries, tagged with how it was found (`link` vs
-`sitemap-only`) on the manifest - the same kind of addition trade-off 31's
-`discovered-not-scanned` status made for the opposite case (crawled but
-not scanned). `sitemap-orphan-page`/`sitemap-stale` keep computing purely
-from link-graph reachability, unaffected by whether the sitemap-only pages
-get scanned. Never fetch a sitemap URL on a different registrable domain
-than the one the crawl was authorized against; a same-site redirect (as
-confirmed for airelles.com) is fine, a genuinely different domain is not,
-without separate authorization for that domain. Expect roughly a multiple
-of current scan time and Lighthouse/axe load per audit once sitemap-only
-pages are included - accepted deliberately for coverage, worth remembering
-as the reason a future audit takes noticeably longer than the fixture or a
-small reference site suggests, not a regression.
+The crawler now owns that separation behind `none`, `inspect`, and
+`supplement` modes. It recursively resolves sitemap indexes, records each
+fetched document and partial error, admits only the authorized hostname or
+its exact www/apex counterpart, and appends eligible sitemap-only pages only
+after the link and operator-seed frontier. A configured cap covers combined
+attempts and reports omitted sitemap coverage. Page discovery provenance is
+stored in manifest JSON and MongoDB, but remains optional for historical
+artifacts. `sitemap-orphan-page` and `sitemap-stale` receive only the
+link-discovered set, so scanning an orphan cannot erase its reachability
+finding. Full audits supplement by default, prospecting uses inspect mode
+with its existing three-page link limit, and standalone crawl uses none.
+
+Acceptance used both layers deliberately. The fixture contains a
+sitemap-only page with deterministic accessibility defects; those defects
+normalize normally while `sitemap-orphan-page` remains present, and cap and
+operator-seed tests prove reachability isolation. With explicit operator
+permission, an uncapped full audit of haaitza.com then resolved 5 sitemap
+documents and 131 eligible page URLs across a recursive index. The crawler
+attempted 220 URLs total, analyzed 209, analyzed 130 of the sitemap URLs,
+and retained the last sitemap URL as `skipped-external-redirect`; the
+coverage summary recorded zero filtered pages, cap omissions, and document
+failures. Haaitza currently exposes every sitemap URL through its link
+graph, so it correctly produced zero sitemap-only pages and no orphan
+finding. Both French and English methodology renders were checked against
+that manifest. The larger scan time is accepted deliberately for paid
+full-site coverage.
 
 **9c: outreach generation, now specified in detail.** The operator pasted
 two design documents 2026-08-25, `docs/m9-prospecting-pipeline.md`
@@ -1471,7 +1483,6 @@ additions, a `prescan` type, an `outreach` type) are not yet added to
 `.claude/settings.json`'s `permissions.ask` list; add them there if and
 when they are actually created.
 
-9b.5 stays queued ahead of 9c on the same operator decision as before; the
-two are independent (9b.5 is full-audit coverage, 9c is prospecting
-outreach) and neither blocks the other's design work, only its build
-order.
+9b.5 is complete, so 9c is now the next queued milestone. Their designs
+remain independent: 9b.5 governs paid full-audit coverage, while 9c governs
+prospecting outreach.

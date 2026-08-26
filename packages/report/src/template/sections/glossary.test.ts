@@ -66,7 +66,17 @@ describe('item 33: the glossary is scoped to the terms a given report actually u
       transactionalFlowEvaluated: false,
       hasMeasuredCoreWebVitals: true,
     });
-    for (const term of ['Critique', 'Sérieux', 'Modéré', 'Mineur', 'LCP', 'FCP', 'TBT', 'CLS', 'Speed Index']) {
+    for (const term of [
+      'Critique',
+      'Sérieux',
+      'Modéré',
+      'Mineur',
+      'LCP',
+      'FCP',
+      'TBT',
+      'CLS',
+      'Speed Index',
+    ]) {
       expect(html).toContain(term);
     }
   });
@@ -170,7 +180,14 @@ describe('item 3.5: the 8 previously-missing glossary terms', () => {
       transactionalFlowEvaluated: false,
       hasMeasuredCoreWebVitals: true,
     });
-    for (const term of ['Sans objet', 'Pages concernées', 'Rendu', 'Sirene', 'Effort', 'Impact commercial']) {
+    for (const term of [
+      'Sans objet',
+      'Pages concernées',
+      'Rendu',
+      'Sirene',
+      'Effort',
+      'Impact commercial',
+    ]) {
       expect(html).toContain(term);
     }
   });

@@ -42,9 +42,7 @@ export interface AxeResultsInput {
 }
 
 function flattenAxeTarget(target: AxeTargetInput): string {
-  return target
-    .map((entry) => (Array.isArray(entry) ? entry.join(' ') : entry))
-    .join(' >>> ');
+  return target.map((entry) => (Array.isArray(entry) ? entry.join(' ') : entry)).join(' >>> ');
 }
 
 function truncateSnippet(html: string): string {
@@ -116,7 +114,8 @@ const UNIVERSAL_ATTRS: ReadonlySet<string> = new Set([
   'type',
 ]);
 
-const ROOT_ELEMENT = /^\s*<([a-zA-Z][\w-]*)((?:\s+[^\s=>]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)/;
+const ROOT_ELEMENT =
+  /^\s*<([a-zA-Z][\w-]*)((?:\s+[^\s=>]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)/;
 const ATTRIBUTE = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')|([^\s=]+)/g;
 
 export function shapeIdentity(snippet: string): string | undefined {
@@ -129,7 +128,8 @@ export function shapeIdentity(snippet: string): string | undefined {
   for (const attr of (root[2] ?? '').matchAll(ATTRIBUTE)) {
     const name = (attr[1] ?? attr[4] ?? '').toLowerCase();
     if (name === '') continue;
-    if (name === 'class') classList = (attr[2] ?? attr[3] ?? '').split(/\s+/).filter(Boolean).join(' ');
+    if (name === 'class')
+      classList = (attr[2] ?? attr[3] ?? '').split(/\s+/).filter(Boolean).join(' ');
     if (name === 'style') continue;
     names.add(name);
   }
@@ -199,10 +199,7 @@ export function resourceUrlFromSnippet(html: string, pageUrl: string): string | 
   }
 }
 
-export function extractAxeCandidates(
-  axe: AxeResultsInput,
-  pageUrl: string,
-): FindingCandidate[] {
+export function extractAxeCandidates(axe: AxeResultsInput, pageUrl: string): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
 
   for (const violation of axe.violations) {
