@@ -10,7 +10,9 @@ describe('fetchMentionsLegalesData', () => {
     vi.restoreAllMocks();
   });
 
-  function mockFetch(handler: (url: string) => { ok: boolean; text?: () => Promise<string>; url?: string }) {
+  function mockFetch(
+    handler: (url: string) => { ok: boolean; text?: () => Promise<string>; url?: string },
+  ) {
     global.fetch = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
       const url = input.toString();
       const result = handler(url);
@@ -49,7 +51,11 @@ describe('fetchMentionsLegalesData', () => {
     const fetchSpy = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
       const url = input.toString();
       if (url.endsWith('/robots.txt')) {
-        return { ok: true, url, text: async () => 'User-agent: *\nDisallow: /' } as unknown as Response;
+        return {
+          ok: true,
+          url,
+          text: async () => 'User-agent: *\nDisallow: /',
+        } as unknown as Response;
       }
       throw new Error(`unexpected fetch: ${url}`);
     });
@@ -61,7 +67,11 @@ describe('fetchMentionsLegalesData', () => {
       timeoutMs: 5000,
     });
 
-    expect(result).toEqual({ homepageText: null, mentionsLegalesUrl: null, mentionsLegalesText: null });
+    expect(result).toEqual({
+      homepageText: null,
+      mentionsLegalesUrl: null,
+      mentionsLegalesText: null,
+    });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 

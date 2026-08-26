@@ -114,7 +114,14 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
       lastSeenAt: new Date(),
     };
 
-    const withoutDedupe = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [geoFinding], buildManifest(), 'general');
+    const withoutDedupe = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [geoFinding],
+      buildManifest(),
+      'general',
+    );
     expect(withoutDedupe).toContain('Repère chiffré');
 
     const allGeoStatIds = new Set(selectReferenceStats('geo', 'general').map((stat) => stat.id));
@@ -153,7 +160,14 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
       },
     ];
 
-    const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, buildManifest(), 'general');
+    const html = renderFindingsAppendix(
+      getStrings('en'),
+      12,
+      'en',
+      findings,
+      buildManifest(),
+      'general',
+    );
     expect(html).not.toContain('<img src=x onerror=alert(1)>');
     expect(html).toContain('&lt;img');
   });
@@ -187,7 +201,14 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
       },
     ];
 
-    const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, buildManifest(), 'general');
+    const html = renderFindingsAppendix(
+      getStrings('en'),
+      12,
+      'en',
+      findings,
+      buildManifest(),
+      'general',
+    );
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
   });
@@ -251,7 +272,14 @@ describe('item 25: every finding lists its actual page URLs, not just a count', 
       },
     ];
 
-    const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, buildManifest(), 'general');
+    const html = renderFindingsAppendix(
+      getStrings('en'),
+      12,
+      'en',
+      findings,
+      buildManifest(),
+      'general',
+    );
     expect(html).toContain('https://example.com/a');
     expect(html).toContain('https://example.com/b');
     expect(html).toContain('https://example.com/c');
@@ -309,7 +337,9 @@ describe('item 3.1: repeated URL lists collapse instead of reprinting every page
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [finding], manifest, 'general');
     // The finding's own url-cell line, isolated from the separate crawled-
     // pages block (which legitimately lists every page-N URL regardless).
-    const urlCellLine = html.split('\n').find((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
+    const urlCellLine = html
+      .split('\n')
+      .find((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
     expect(urlCellLine).toBeDefined();
     expect(urlCellLine).toContain('et 4 autres');
     // Capped at 5: shown pages present, the 6th-9th are not spelled out.
@@ -320,7 +350,10 @@ describe('item 3.1: repeated URL lists collapse instead of reprinting every page
 
   it('lists every URL plainly, no collapse or cap, for a small finding well under the total', () => {
     const manifest = buildManifestWithPages(20);
-    const finding = buildFinding({ pageUrls: [manifest.pages[0]!.url, manifest.pages[1]!.url], occurrences: 2 });
+    const finding = buildFinding({
+      pageUrls: [manifest.pages[0]!.url, manifest.pages[1]!.url],
+      occurrences: 2,
+    });
 
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [finding], manifest, 'general');
     expect(html).toContain('page-0');
@@ -379,12 +412,14 @@ describe('2026-08-22: findings sharing an identical page-URL set within one rule
     // not the whole document - the separate "Pages analysées (N)" crawled-
     // pages block above the appendix legitimately lists every page URL
     // too, and sharedUrls is a subset of that longer joined string.
-    const urlCellLines = html.split('\n').filter((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
+    const urlCellLines = html
+      .split('\n')
+      .filter((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
     const linesWithFullList = urlCellLines.filter((line) => line.includes(sharedUrls.join(', ')));
     expect(linesWithFullList.length).toBe(1);
   });
 
-  it('keeps every finding\'s own page count in the compact numeric column, even when its URL list is deduped away', () => {
+  it("keeps every finding's own page count in the compact numeric column, even when its URL list is deduped away", () => {
     const manifest = buildManifestWithPages(10);
     const sharedUrls = manifest.pages.slice(0, 3).map((p) => p.url);
     const findings = [
@@ -403,12 +438,20 @@ describe('2026-08-22: findings sharing an identical page-URL set within one rule
     const sharedUrls = manifest.pages.slice(0, 3).map((p) => p.url);
     const findings = [
       buildFinding({ findingId: 'f001', ruleId: 'image-alt', pageUrls: sharedUrls }),
-      buildFinding({ findingId: 'f002', ruleId: 'link-name', category: 'accessibility', pageUrls: sharedUrls, dedupeKey: 'd2' }),
+      buildFinding({
+        findingId: 'f002',
+        ruleId: 'link-name',
+        category: 'accessibility',
+        pageUrls: sharedUrls,
+        dedupeKey: 'd2',
+      }),
     ];
 
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
     expect(html).not.toContain('Mêmes pages que f001');
-    const urlCellLines = html.split('\n').filter((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
+    const urlCellLines = html
+      .split('\n')
+      .filter((line) => line.includes('class="url-cell"') && line.includes('Pages :'));
     const linesWithFullList = urlCellLines.filter((line) => line.includes(sharedUrls.join(', ')));
     expect(linesWithFullList.length).toBe(2);
   });
@@ -469,7 +512,14 @@ describe('item 40: the GEO citation renders after the finding rows, not as a sec
       lastSeenAt: new Date(),
     };
 
-    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [geoFinding], buildManifest(), 'general');
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [geoFinding],
+      buildManifest(),
+      'general',
+    );
 
     const findingIndex = html.indexOf('entity-data-incomplete');
     const citationIndex = html.indexOf('Repère chiffré');
@@ -511,7 +561,9 @@ describe('item 26: minor findings get the same full page/selector detail as ever
 // invariant that the PDF text layer never drops characters. Renders at a
 // smaller font size instead: full text always present, never truncated.
 describe('item 2.6: a long selector renders smaller instead of being truncated', () => {
-  function buildFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'category' | 'severity'>): Finding {
+  function buildFinding(
+    overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'category' | 'severity'>,
+  ): Finding {
     const pageUrl = 'https://example.com/';
     return {
       auditId: 'a1',
@@ -533,7 +585,8 @@ describe('item 2.6: a long selector renders smaller instead of being truncated',
 
   it('renders a long shadow-piercing selector at a smaller font size, in full, never truncated', async () => {
     const manifest = buildManifest();
-    const longSelector = 'iframe >>> iframe >>> .captcha__header__logo.some-long-descendant-chain-class-name';
+    const longSelector =
+      'iframe >>> iframe >>> .captcha__header__logo.some-long-descendant-chain-class-name';
     const finding = buildFinding({
       findingId: 'f001',
       ruleId: 'color-contrast',
@@ -546,7 +599,9 @@ describe('item 2.6: a long selector renders smaller instead of being truncated',
 
     // escapeHtml turns ">" into "&gt;" - the selector's own ">>>"
     // combinators are still fully present, just HTML-escaped.
-    expect(html).toContain('iframe &gt;&gt;&gt; iframe &gt;&gt;&gt; .captcha__header__logo.some-long-descendant-chain-class-name');
+    expect(html).toContain(
+      'iframe &gt;&gt;&gt; iframe &gt;&gt;&gt; .captcha__header__logo.some-long-descendant-chain-class-name',
+    );
     expect(html).toContain('font-size:10px');
     expect(html).not.toContain('-webkit-line-clamp');
   });
@@ -576,7 +631,9 @@ describe('item 2.6: a long selector renders smaller instead of being truncated',
 // objection that the whole report doesn't understand how the site is
 // built.
 describe('item 1.4: third-party embed findings render in their own attributed block', () => {
-  function buildFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'category' | 'severity'>): Finding {
+  function buildFinding(
+    overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'category' | 'severity'>,
+  ): Finding {
     const pageUrl = 'https://example.com/';
     return {
       auditId: 'a1',
@@ -604,11 +661,22 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
       category: 'accessibility',
       severity: 'serious',
       elements: [
-        { pageUrl: 'https://example.com/', selector: '#popmake-1398 > .pum-content.popmake-content > iframe', snippet: '' },
+        {
+          pageUrl: 'https://example.com/',
+          selector: '#popmake-1398 > .pum-content.popmake-content > iframe',
+          snippet: '',
+        },
       ],
     });
 
-    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [popupFinding], manifest, 'general');
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [popupFinding],
+      manifest,
+      'general',
+    );
 
     expect(html).toContain('À traiter avec vos prestataires tiers');
     expect(html).toContain('Popup Maker');
@@ -631,7 +699,14 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
       ],
     });
 
-    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [iframeFinding], manifest, 'general');
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [iframeFinding],
+      manifest,
+      'general',
+    );
 
     expect(html).toContain('À traiter avec vos prestataires tiers');
     // P2.6 (2026-08-21 La Corniche feedback pass): "Prestataire tiers non
@@ -649,7 +724,14 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
       severity: 'critical',
     });
 
-    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [ordinaryFinding], manifest, 'general');
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [ordinaryFinding],
+      manifest,
+      'general',
+    );
 
     expect(html).not.toContain('À traiter avec vos prestataires tiers');
     expect(html).toContain('id="annexref-f003"');
@@ -663,9 +745,16 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
         ruleId: 'nested-interactive',
         category: 'accessibility',
         severity: 'serious',
-        elements: [{ pageUrl: 'https://example.com/', selector: '#gform_submit_button_1', snippet: '' }],
+        elements: [
+          { pageUrl: 'https://example.com/', selector: '#gform_submit_button_1', snippet: '' },
+        ],
       }),
-      buildFinding({ findingId: 'f003', ruleId: 'image-alt', category: 'accessibility', severity: 'critical' }),
+      buildFinding({
+        findingId: 'f003',
+        ruleId: 'image-alt',
+        category: 'accessibility',
+        severity: 'critical',
+      }),
     ];
 
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
@@ -688,7 +777,9 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
         ruleId: 'color-contrast',
         category: 'accessibility',
         severity: 'moderate',
-        elements: [{ pageUrl: 'https://example.com/', selector: '#gform_submit_button_1', snippet: '' }],
+        elements: [
+          { pageUrl: 'https://example.com/', selector: '#gform_submit_button_1', snippet: '' },
+        ],
       }),
     ];
 
@@ -707,7 +798,14 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
       severity: 'critical',
     });
 
-    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [ordinaryFinding], manifest, 'general');
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [ordinaryFinding],
+      manifest,
+      'general',
+    );
 
     expect(html).not.toContain('occurrences de cette règle concernent un composant tiers');
   });
@@ -743,7 +841,14 @@ describe('fix #4 (2026-08-25 report review): credential-looking query params are
 
   it('drops key and token params but keeps the rest of the query string', async () => {
     const manifest = buildManifest();
-    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [lcpResourceFinding()], manifest, 'general');
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [lcpResourceFinding()],
+      manifest,
+      'general',
+    );
 
     expect(html).not.toContain('SECRET123');
     expect(html).not.toContain('token=abc');

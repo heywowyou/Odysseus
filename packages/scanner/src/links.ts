@@ -9,11 +9,39 @@ import path from 'node:path';
  * URLs whose extension doesn't reveal what they are.
  */
 const NON_HTML_EXTENSIONS = new Set([
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.svg', '.ico', '.bmp',
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-  '.zip', '.rar', '.7z', '.gz', '.tar',
-  '.mp3', '.mp4', '.mov', '.avi', '.webm', '.wav', '.ogg',
-  '.woff', '.woff2', '.ttf', '.eot', '.otf',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.avif',
+  '.svg',
+  '.ico',
+  '.bmp',
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
+  '.zip',
+  '.rar',
+  '.7z',
+  '.gz',
+  '.tar',
+  '.mp3',
+  '.mp4',
+  '.mov',
+  '.avi',
+  '.webm',
+  '.wav',
+  '.ogg',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.otf',
 ]);
 
 /** report-feedback-la-corniche.md item 1.3: a real 20-page crawl of a
@@ -99,7 +127,9 @@ function isNonPublicWordPressObject(url: URL): boolean {
  * as a regex fragment.
  */
 export function globToRegExp(glob: string): RegExp {
-  const escaped = glob.replace(/[.*+?^${}()|[\]\\]/g, (char) => (char === '*' ? '.*' : `\\${char}`));
+  const escaped = glob.replace(/[.*+?^${}()|[\]\\]/g, (char) =>
+    char === '*' ? '.*' : `\\${char}`,
+  );
   return new RegExp(`^${escaped}$`);
 }
 

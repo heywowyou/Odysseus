@@ -4,7 +4,9 @@ import { parseJsonLdBlocks } from './head-metadata.js';
 describe('parseJsonLdBlocks', () => {
   it('parses valid JSON and keeps the raw text and selector', () => {
     const result = parseJsonLdBlocks([{ raw: '{"@type":"WebPage"}', selector: '#ld1' }]);
-    expect(result).toEqual([{ raw: '{"@type":"WebPage"}', selector: '#ld1', parsed: { '@type': 'WebPage' } }]);
+    expect(result).toEqual([
+      { raw: '{"@type":"WebPage"}', selector: '#ld1', parsed: { '@type': 'WebPage' } },
+    ]);
   });
 
   it('captures a parse error instead of throwing for invalid JSON', () => {

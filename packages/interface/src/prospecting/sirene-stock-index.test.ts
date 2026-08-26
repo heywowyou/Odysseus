@@ -6,7 +6,16 @@ import { describe, expect, it, afterEach } from 'vitest';
 import { getOrBuildSireneStockIndex } from './sirene-stock-index.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const fixturePath = path.join(moduleDir, '..', '..', '..', '..', 'fixtures', 'prospecting', 'sirene-stock-sample.csv');
+const fixturePath = path.join(
+  moduleDir,
+  '..',
+  '..',
+  '..',
+  '..',
+  'fixtures',
+  'prospecting',
+  'sirene-stock-sample.csv',
+);
 
 let tmpDir: string | undefined;
 
@@ -67,7 +76,10 @@ describe('getOrBuildSireneStockIndex', () => {
     // is observable in the result rather than only in a spy count.
     const cacheContent = await readFile(cachePath, 'utf-8');
     const [fingerprintLine] = cacheContent.split('\n');
-    await writeFile(cachePath, `${fingerprintLine}\n${JSON.stringify({ siren: 'sentinel', naf: 'x', denomination: 'y', effectifBand: { code: '12', label: 'y' }, etatAdministratif: 'A' })}\n`);
+    await writeFile(
+      cachePath,
+      `${fingerprintLine}\n${JSON.stringify({ siren: 'sentinel', naf: 'x', denomination: 'y', effectifBand: { code: '12', label: 'y' }, etatAdministratif: 'A' })}\n`,
+    );
 
     const second = await getOrBuildSireneStockIndex(fixturePath, cachePath);
     expect(second.lookup('sentinel')).not.toBeNull();

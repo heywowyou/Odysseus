@@ -1,0 +1,76 @@
+# Odysseus: Codex instructions
+
+This is Codex's repository entry point. `CLAUDE.md` is deliberately the
+**shared project charter**, despite its historical name: it is authoritative
+for product constraints, architecture, locked contracts, trade-offs, scope,
+testing, and the current milestone. Do not create a competing summary of
+those rules here.
+
+`docs/agents/handoff.md` is the shared protocol for handing work between
+Codex and Claude Code.
+`docs/agents/documentation-map.md` classifies canonical, planned, backlog,
+historical, and research documents.
+`docs/agents/coding-conventions.md` is the shared coding and writing system.
+
+## Start every session this way
+
+1. Read `docs/session/current-session.md` if it exists. It is an unfinished
+   handoff, not optional background.
+2. Run `git status --short` before editing. Treat existing changes as
+   deliberate until their provenance is established from the session log,
+   history, or the user.
+3. Read `CLAUDE.md` in full before proposing architecture or changing a
+   package boundary, then use `docs/agents/documentation-map.md` to select the
+   focused source documents.
+4. Before multi-step repository work, create the session log from
+   `docs/agents/session-template.md`. Keep it current and follow the handoff
+   protocol before pausing, handing off, or ending with uncommitted changes.
+
+## Documentation routing
+
+| Work concerns | Read before changing it |
+| --- | --- |
+| Any structural or cross-package change | `CLAUDE.md`, `docs/odysseus-project-brief-v2.md`, and relevant `docs/decisions/trade-offs.md` entries |
+| Normalization, dedupe, IDs, artifacts | `docs/normalization-rules.md` |
+| Model inputs, prompts, output guards, analysis | `docs/llm-layer-rules.md` |
+| Client-facing legal/compliance content | `docs/obligation-basis.md`, `docs/operator-obligations.md` |
+| Prospect sourcing, qualification, or contact data | `docs/prospect-qualification.md` |
+| Outreach previews or emails | `docs/outreach-rules.md`, `docs/m9-prospecting-pipeline.md`, `docs/m9-technical-spec.md` |
+| Offer, pricing, or sales claims | `docs/offer-positioning.md` |
+| Report design or PDF layout | `docs/report-design-system.md`, `docs/report-design-tokens.md`, canonical mockups in `docs/mockups/` |
+| Package vocabulary or architectural decisions | `docs/agents/domain.md`, relevant `CONTEXT.md` / ADRs if present |
+| GitHub issues | `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` |
+| Code style, naming, tests, comments, or product prose | `docs/agents/coding-conventions.md` |
+
+## Hard guardrails
+
+- Deterministic scanners find problems; the LLM only explains, groups,
+  prioritizes, and translates findings already in structured input.
+- Preserve finding provenance. Validate every LLM response with Zod; never
+  send raw HTML or whole pages to the model.
+- Do not make a client-specific legal conclusion. State criteria and verified
+  facts only; legal text is deterministic where the charter says it is.
+- Respect `robots.txt`, crawl pacing, and the opt-in page cap policy. Never
+  run a live third-party scan without the user's current, explicit permission
+  for that named site.
+- Stop and ask before changing a locked contract, adding a dependency, or
+  changing package boundaries. The complete locked-file list and package
+  roles are in `CLAUDE.md`.
+- Keep user-facing strings French and English from the start. Do not use em
+  dashes or en dashes in generated product copy or code comments.
+
+## Normal working agreement
+
+Work in small vertical slices. Add or update focused tests with a behaviour
+change, then run the narrowest relevant test and the appropriate project
+validation (`pnpm run typecheck`, the affected test suite, and live-site
+review only when authorised). Format maintained source with `pnpm run format`.
+Run `pnpm run check` before handoff; it covers documentation, formatting, lint,
+and typechecking. Do not start a new milestone before the prior one is verified
+as required by the shared charter.
+
+Never overwrite, revert, or fold unrelated work in a dirty tree. Report what
+you changed, what you verified, and any remaining risk in a form the other
+agent can continue from without inference. If completed work remains
+uncommitted, leave the session log with status `ready-for-commit`; the log is
+removed only after the working tree no longer needs that provenance.

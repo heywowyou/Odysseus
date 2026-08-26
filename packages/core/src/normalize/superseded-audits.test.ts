@@ -75,7 +75,11 @@ describe('D13: a Lighthouse insight suppresses the audits it replaces', () => {
       page(
         'https://example.com/',
         report({
-          [SUCCESSOR]: { score: 0.5, items: urlItems('https://example.com/a.jpg'), replacesAudits: [LEGACY] },
+          [SUCCESSOR]: {
+            score: 0.5,
+            items: urlItems('https://example.com/a.jpg'),
+            replacesAudits: [LEGACY],
+          },
           [LEGACY]: { score: 0.5, items: urlItems('https://example.com/a.jpg') },
         }),
       ),
@@ -93,8 +97,18 @@ describe('D13: a Lighthouse insight suppresses the audits it replaces', () => {
       page(
         'https://example.com/',
         report({
-          [SUCCESSOR]: { score: 0.5, items: urlItems('https://example.com/shared.jpg'), replacesAudits: [LEGACY] },
-          [LEGACY]: { score: 0.5, items: urlItems('https://example.com/shared.jpg', 'https://example.com/only-legacy.jpg') },
+          [SUCCESSOR]: {
+            score: 0.5,
+            items: urlItems('https://example.com/shared.jpg'),
+            replacesAudits: [LEGACY],
+          },
+          [LEGACY]: {
+            score: 0.5,
+            items: urlItems(
+              'https://example.com/shared.jpg',
+              'https://example.com/only-legacy.jpg',
+            ),
+          },
         }),
       ),
     ]);
@@ -113,7 +127,11 @@ describe('D13: a Lighthouse insight suppresses the audits it replaces', () => {
       page(
         'https://example.com/',
         report({
-          [SUCCESSOR]: { score: 1, items: urlItems('https://example.com/a.jpg'), replacesAudits: [LEGACY] },
+          [SUCCESSOR]: {
+            score: 1,
+            items: urlItems('https://example.com/a.jpg'),
+            replacesAudits: [LEGACY],
+          },
           [LEGACY]: { score: 0.5, items: urlItems('https://example.com/a.jpg') },
         }),
       ),
@@ -152,7 +170,11 @@ describe('D13: a Lighthouse insight suppresses the audits it replaces', () => {
       page(
         'https://example.com/',
         report({
-          [SUCCESSOR]: { score: 0.5, items: urlItems('https://example.com/a.jpg'), replacesAudits: [LEGACY] },
+          [SUCCESSOR]: {
+            score: 0.5,
+            items: urlItems('https://example.com/a.jpg'),
+            replacesAudits: [LEGACY],
+          },
           [LEGACY]: { score: 0.5, items: urlItems('https://example.com/a.jpg') },
         }),
       ),
@@ -161,7 +183,11 @@ describe('D13: a Lighthouse insight suppresses the audits it replaces', () => {
         report({
           // Successor passes here, legacy still fails. Without an
           // audit-wide decision this page alone re-creates the duplicate.
-          [SUCCESSOR]: { score: 1, items: urlItems('https://example.com/a.jpg'), replacesAudits: [LEGACY] },
+          [SUCCESSOR]: {
+            score: 1,
+            items: urlItems('https://example.com/a.jpg'),
+            replacesAudits: [LEGACY],
+          },
           [LEGACY]: { score: 0.5, items: urlItems('https://example.com/second-only.jpg') },
         }),
       ),

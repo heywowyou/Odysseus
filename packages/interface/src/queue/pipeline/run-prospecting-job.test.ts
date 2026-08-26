@@ -122,7 +122,11 @@ describe('runProspectingJob', () => {
     await runProspectingJob(fakeJob(['not a url', 'https://b.example/']), ctx);
 
     expect(runAuditStage).toHaveBeenCalledTimes(1);
-    expect(runAuditStage).toHaveBeenCalledWith('https://b.example/', expect.anything(), fakeConnection);
+    expect(runAuditStage).toHaveBeenCalledWith(
+      'https://b.example/',
+      expect.anything(),
+      fakeConnection,
+    );
   });
 
   it('throws if the job has no urls', async () => {
@@ -191,7 +195,12 @@ describe('runProspectingJob', () => {
       // 4 URLs against a 3-worker pool: the fast URL's worker must pick up
       // the 4th once done, not leave it for whichever worker "owns" it in
       // a fixed-slice scheme.
-      const urls = ['https://fast.example/', 'https://b.example/', 'https://c.example/', 'https://d.example/'];
+      const urls = [
+        'https://fast.example/',
+        'https://b.example/',
+        'https://c.example/',
+        'https://d.example/',
+      ];
       vi.mocked(runAuditStage).mockImplementation(async (url) => {
         const delay = url === 'https://fast.example/' ? 0 : 20;
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -212,7 +221,9 @@ describe('runProspectingJob', () => {
       expect(completeJob).toHaveBeenCalledWith(
         fakeConnection,
         'job-1',
-        expect.objectContaining({ auditIds: expect.arrayContaining([expect.stringContaining('audit-')]) }),
+        expect.objectContaining({
+          auditIds: expect.arrayContaining([expect.stringContaining('audit-')]),
+        }),
       );
     });
   });

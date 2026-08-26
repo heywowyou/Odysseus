@@ -13,8 +13,7 @@ import { checkReflow, REFLOW_VIEWPORT_WIDTH } from './reflow.js';
 function startServer(body: string): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((_req, res) => {
-      res
-        .writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
         .end(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
           <style>*{box-sizing:border-box}body{margin:0}</style></head><body>${body}</body></html>`);
     });
@@ -50,14 +49,18 @@ describe('checkReflow against a real browser layout', () => {
   }
 
   it('passes a responsive page', async () => {
-    const { result } = await run('<div style="width:100%"><p>Bonjour, ceci est un paragraphe.</p></div>');
+    const { result } = await run(
+      '<div style="width:100%"><p>Bonjour, ceci est un paragraphe.</p></div>',
+    );
     expect(result.checked).toBe(true);
     expect(result.requiresHorizontalScroll).toBe(false);
     expect(result.overflowElements).toEqual([]);
   }, 30_000);
 
   it('fails a page with a fixed-width element wider than 320px, and names it', async () => {
-    const { result } = await run('<div id="wide" style="width:900px;height:40px;background:#eee"></div>');
+    const { result } = await run(
+      '<div id="wide" style="width:900px;height:40px;background:#eee"></div>',
+    );
     expect(result.requiresHorizontalScroll).toBe(true);
     expect(result.viewportWidthPx).toBe(REFLOW_VIEWPORT_WIDTH);
     expect(result.overflowElements[0]?.selector).toBe('#wide');

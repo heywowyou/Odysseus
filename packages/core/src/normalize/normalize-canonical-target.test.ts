@@ -31,16 +31,16 @@ describe('canonical-target-unreachable', () => {
   });
 
   it('fires when the target could not be fetched at all', () => {
-    const candidates = extractCanonicalTargetCandidates(
-      baseInput({ fetchError: 'ETIMEDOUT' }),
-    );
+    const candidates = extractCanonicalTargetCandidates(baseInput({ fetchError: 'ETIMEDOUT' }));
     expect(candidates).toHaveLength(1);
     expect(candidates[0]?.ruleId).toBe(CANONICAL_TARGET_UNREACHABLE_RULE_ID);
     expect(candidates[0]?.description).toMatch(/ETIMEDOUT/);
   });
 
   it('does not also report noindex when the target is unreachable', () => {
-    const candidates = extractCanonicalTargetCandidates(baseInput({ httpStatus: 500, noindex: true }));
+    const candidates = extractCanonicalTargetCandidates(
+      baseInput({ httpStatus: 500, noindex: true }),
+    );
     expect(candidates).toHaveLength(1);
     expect(candidates[0]?.ruleId).toBe(CANONICAL_TARGET_UNREACHABLE_RULE_ID);
   });

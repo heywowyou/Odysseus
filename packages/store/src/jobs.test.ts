@@ -61,9 +61,17 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
   });
 
   it('claims the oldest queued job atomically and marks it running', async () => {
-    const first = await createJob(connection!, { type: 'full-audit', siteUrl: 'https://a.example/', options: {} });
+    const first = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://a.example/',
+      options: {},
+    });
     await new Promise((resolve) => setTimeout(resolve, 5));
-    await createJob(connection!, { type: 'full-audit', siteUrl: 'https://b.example/', options: {} });
+    await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://b.example/',
+      options: {},
+    });
 
     const claimed = await claimNextQueuedJob(connection!);
     expect(claimed?.jobId).toBe(first.jobId);
@@ -75,7 +83,11 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
   });
 
   it('updates phase and progress fields independently', async () => {
-    const job = await createJob(connection!, { type: 'full-audit', siteUrl: 'https://c.example/', options: {} });
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://c.example/',
+      options: {},
+    });
 
     await updateJobProgress(connection!, job.jobId, {
       phase: 'crawl',
@@ -84,11 +96,20 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
 
     const stored = await getJob(connection!, job.jobId);
     expect(stored?.phase).toBe('crawl');
-    expect(stored?.progress.crawl).toEqual({ visited: 2, target: 10, effectiveDelayMs: 1000, etaMs: 8000 });
+    expect(stored?.progress.crawl).toEqual({
+      visited: 2,
+      target: 10,
+      effectiveDelayMs: 1000,
+      etaMs: 8000,
+    });
   });
 
   it('completeJob sets status, phase, finishedAt and the auditId patch', async () => {
-    const job = await createJob(connection!, { type: 'full-audit', siteUrl: 'https://d.example/', options: {} });
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://d.example/',
+      options: {},
+    });
     await completeJob(connection!, job.jobId, { auditId: 'audit-123' });
 
     const stored = await getJob(connection!, job.jobId);
@@ -99,7 +120,11 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
   });
 
   it('failJob sets status, phase, finishedAt and the error message', async () => {
-    const job = await createJob(connection!, { type: 'full-audit', siteUrl: 'https://e.example/', options: {} });
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://e.example/',
+      options: {},
+    });
     await failJob(connection!, job.jobId, 'boom');
 
     const stored = await getJob(connection!, job.jobId);
@@ -116,7 +141,11 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
   });
 
   it('resetOrphanedRunningJobs requeues running jobs, preserving createdAt', async () => {
-    const job = await createJob(connection!, { type: 'full-audit', siteUrl: 'https://f.example/', options: {} });
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://f.example/',
+      options: {},
+    });
     const claimed = await claimNextQueuedJob(connection!);
     // Drain any other queued jobs left by earlier tests so `claimed` is deterministic.
     expect(claimed?.status).toBe('running');

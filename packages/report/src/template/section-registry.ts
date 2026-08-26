@@ -6,7 +6,12 @@ import type { ReportStrings } from './strings/i18n.js';
  *  sections actually end up included in a given report - see
  *  computeSectionNumbers below for the live, renumbered ordinal. */
 export const SECTION_IDS = [
-  'section-00', 'section-01', 'section-02', 'section-03', 'section-04', 'section-05',
+  'section-00',
+  'section-01',
+  'section-02',
+  'section-03',
+  'section-04',
+  'section-05',
   // Deliberately not renumbered into the sequence. These ids are stable keys
   // and DOM anchors, not ordinals - the number a reader sees is computed live
   // by computeSectionNumbers. Renaming section-06 onwards to insert this one
@@ -14,7 +19,13 @@ export const SECTION_IDS = [
   // and the reference mockup, to change nothing a client can see.
   'section-05b',
   'section-06',
-  'section-07', 'section-08', 'section-09', 'section-10', 'section-11', 'section-12', 'section-13',
+  'section-07',
+  'section-08',
+  'section-09',
+  'section-10',
+  'section-11',
+  'section-12',
+  'section-13',
   'section-14',
 ] as const;
 
@@ -76,7 +87,9 @@ export function sectionTitle(id: SectionId, strings: ReportStrings): string {
  *  (observations.ts, when partitionFindings diverted nothing) never
  *  leaves a gap in the numbering shown to the client, and the TOC and the
  *  body headers can never disagree on what number a section carries. */
-export function computeSectionNumbers(includedIds: ReadonlySet<SectionId>): ReadonlyMap<SectionId, number> {
+export function computeSectionNumbers(
+  includedIds: ReadonlySet<SectionId>,
+): ReadonlyMap<SectionId, number> {
   const numbers = new Map<SectionId, number>();
   let n = 0;
   for (const id of SECTION_IDS) {

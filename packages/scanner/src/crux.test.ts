@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fetchCruxFieldData } from './crux.js';
 
 function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 describe('fetchCruxFieldData', () => {
@@ -44,10 +47,7 @@ describe('fetchCruxFieldData', () => {
   });
 
   it('reports available: false with a fetchError on a network failure, without throwing', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new Error('network unreachable')),
-    );
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network unreachable')));
 
     const result = await fetchCruxFieldData('https://example.com', 'fake-key');
 

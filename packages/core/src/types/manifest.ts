@@ -9,7 +9,7 @@
  * so treat it as stable once milestones 5/6 start depending on it.
  */
 
-import { FINDINGS_SCHEMA_VERSION } from './findings.js';
+import type { FINDINGS_SCHEMA_VERSION } from './findings.js';
 import type { SiteSignals } from './compliance.js';
 import type { TranslationCluster } from '../normalize/translation-clusters.js';
 

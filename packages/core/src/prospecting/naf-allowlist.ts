@@ -56,7 +56,9 @@ export function getNafSectorAllowlist(): NafSectorAllowlist {
   const raw = JSON.parse(readFileSync(filePath, 'utf-8'));
   const parsed = nafSectorAllowlistSchema.parse(raw);
 
-  const enabledInferred = parsed.codes.filter((entry) => entry.enabled && entry.confidence === 'inferred');
+  const enabledInferred = parsed.codes.filter(
+    (entry) => entry.enabled && entry.confidence === 'inferred',
+  );
   if (enabledInferred.length > 0) {
     console.warn(
       `odysseus: naf-sector-allowlist.json has ${enabledInferred.length} 'inferred'-confidence code(s) enabled: ${enabledInferred
@@ -70,5 +72,9 @@ export function getNafSectorAllowlist(): NafSectorAllowlist {
 }
 
 export function getEnabledNafCodes(): ReadonlySet<string> {
-  return new Set(getNafSectorAllowlist().codes.filter((entry) => entry.enabled).map((entry) => entry.code));
+  return new Set(
+    getNafSectorAllowlist()
+      .codes.filter((entry) => entry.enabled)
+      .map((entry) => entry.code),
+  );
 }

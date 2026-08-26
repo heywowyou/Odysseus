@@ -38,7 +38,9 @@ export interface FormErrorHandlingCheckInput {
   forms: FormCheckInput[];
 }
 
-export function extractFormErrorHandlingCandidates(input: FormErrorHandlingCheckInput): FindingCandidate[] {
+export function extractFormErrorHandlingCandidates(
+  input: FormErrorHandlingCheckInput,
+): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
 
   for (const form of input.forms) {
@@ -57,7 +59,11 @@ export function extractFormErrorHandlingCandidates(input: FormErrorHandlingCheck
         description:
           'Submitting this required field empty visibly changed its appearance (e.g. a red border), but the field has no aria-invalid="true", no aria-describedby pointing to visible error text, and no role="alert" or aria-live region in the form. Screen reader users have no way to know the field failed validation or why.',
         pageUrl: input.pageUrl,
-        element: { pageUrl: input.pageUrl, selector: `${form.formSelector} ${field.selector}`, snippet: '' },
+        element: {
+          pageUrl: input.pageUrl,
+          selector: `${form.formSelector} ${field.selector}`,
+          snippet: '',
+        },
         rawEvidenceForPage: {
           formSelector: form.formSelector,
           ariaInvalidTrue: field.ariaInvalidTrue,

@@ -7,30 +7,40 @@ describe('htmlToText', () => {
   });
 
   it('strips script and style blocks entirely', () => {
-    const html = '<html><head><style>.a{color:red}</style></head><body><script>evil()</script>Visible</body></html>';
+    const html =
+      '<html><head><style>.a{color:red}</style></head><body><script>evil()</script>Visible</body></html>';
     expect(htmlToText(html)).toBe('Visible');
   });
 
   it('decodes common HTML entities', () => {
-    expect(htmlToText('<p>Terms &amp; conditions &mdash;? &nbsp;done</p>').replace('&mdash;', '')).toContain(
-      'Terms & conditions',
-    );
+    expect(
+      htmlToText('<p>Terms &amp; conditions &mdash;? &nbsp;done</p>').replace('&mdash;', ''),
+    ).toContain('Terms & conditions');
   });
 });
 
 describe('extractAnchorHrefs', () => {
   it('resolves relative hrefs against the base URL', () => {
-    const hrefs = extractAnchorHrefs('<a href="/mentions-legales">Mentions</a>', 'https://example.fr/');
+    const hrefs = extractAnchorHrefs(
+      '<a href="/mentions-legales">Mentions</a>',
+      'https://example.fr/',
+    );
     expect(hrefs).toEqual(['https://example.fr/mentions-legales']);
   });
 
   it('excludes cross-origin links', () => {
-    const hrefs = extractAnchorHrefs('<a href="https://other.fr/page">Other</a>', 'https://example.fr/');
+    const hrefs = extractAnchorHrefs(
+      '<a href="https://other.fr/page">Other</a>',
+      'https://example.fr/',
+    );
     expect(hrefs).toEqual([]);
   });
 
   it('excludes non-http(s) protocols', () => {
-    const hrefs = extractAnchorHrefs('<a href="mailto:contact@example.fr">Mail</a>', 'https://example.fr/');
+    const hrefs = extractAnchorHrefs(
+      '<a href="mailto:contact@example.fr">Mail</a>',
+      'https://example.fr/',
+    );
     expect(hrefs).toEqual([]);
   });
 });

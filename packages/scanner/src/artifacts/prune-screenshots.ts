@@ -47,7 +47,11 @@ export function selectPageDirsToKeep(
   }
 
   const qualifying = pages
-    .filter((page) => page.missingPercent !== undefined && page.missingPercent >= RENDER_DIFF_EMISSION_THRESHOLD_PERCENT)
+    .filter(
+      (page) =>
+        page.missingPercent !== undefined &&
+        page.missingPercent >= RENDER_DIFF_EMISSION_THRESHOLD_PERCENT,
+    )
     .sort((a, b) => (b.missingPercent ?? 0) - (a.missingPercent ?? 0));
 
   for (const page of qualifying.slice(0, topN)) {

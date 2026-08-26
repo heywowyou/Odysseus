@@ -33,11 +33,13 @@ export function selectReferenceStats(
     .filter((stat) => !options.strictSector || stat.sector === sector)
     .slice()
     .sort((a, b) => {
-      const sectorRank = (stat: ReferenceStat): number => (stat.sector === sector ? 0 : stat.sector === 'general' ? 1 : 2);
+      const sectorRank = (stat: ReferenceStat): number =>
+        stat.sector === sector ? 0 : stat.sector === 'general' ? 1 : 2;
       const sectorDiff = sectorRank(a) - sectorRank(b);
       if (sectorDiff !== 0) return sectorDiff;
 
-      const confidenceRank = (stat: ReferenceStat): number => (stat.confidence === 'established' ? 0 : 1);
+      const confidenceRank = (stat: ReferenceStat): number =>
+        stat.confidence === 'established' ? 0 : 1;
       return confidenceRank(a) - confidenceRank(b);
     });
 }

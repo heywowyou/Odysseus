@@ -11,7 +11,11 @@ import type { JobQueue } from '../queue/job-queue.js';
  *  visualization, qualified-prospect table) is not built in milestone 9a -
  *  the existing app-*.ts dashboard files are audit-scan-shaped, not
  *  prospect-shaped; that's a reasonable follow-up, not part of this. */
-export function registerProspectingRoutes(router: Router, connection: Connection, queue: JobQueue): void {
+export function registerProspectingRoutes(
+  router: Router,
+  connection: Connection,
+  queue: JobQueue,
+): void {
   router.post('/api/prospecting/ingest', async ({ res }) => {
     const job = await createJob(connection, { type: 'prospect-ingestion', options: {} });
     queue.notify();

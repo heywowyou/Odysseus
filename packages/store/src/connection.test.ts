@@ -12,7 +12,8 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { connectToMongo, disconnectFromMongo, getMongoUri } from './connection.js';
 import { MONGODB_TEST_URI as TEST_URI, probeMongoAvailability } from './test-support.js';
 
-const { available: mongoAvailable, connection: probeConnection } = await probeMongoAvailability(TEST_URI);
+const { available: mongoAvailable, connection: probeConnection } =
+  await probeMongoAvailability(TEST_URI);
 
 afterAll(async () => {
   if (probeConnection) await probeConnection.close();

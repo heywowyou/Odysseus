@@ -92,7 +92,9 @@ export async function streamAfnicCandidates(
 ): Promise<AfnicStreamResult> {
   const isResume = startByteOffset > 0;
   if (isResume && (!headerColumns || headerColumns.length === 0)) {
-    throw new Error('odysseus: streamAfnicCandidates requires headerColumns to resume from a non-zero byte offset');
+    throw new Error(
+      'odysseus: streamAfnicCandidates requires headerColumns to resume from a non-zero byte offset',
+    );
   }
 
   return new Promise((resolve, reject) => {
@@ -137,7 +139,6 @@ export async function streamAfnicCandidates(
 
     parser.on('readable', () => {
       let entry: { info: { bytes: number }; record: Record<string, string> | string[] };
-      // eslint-disable-next-line no-cond-assign
       while ((entry = parser.read()) !== null) {
         const { info, record } = entry;
         if (!isResume && discoveredHeaderColumns.length === 0 && !Array.isArray(record)) {

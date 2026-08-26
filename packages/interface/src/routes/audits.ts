@@ -31,7 +31,10 @@ import { runAllReportsStage } from '../pipeline/report-stage.js';
  *  already uses (packages/cli/src/commands/report.ts), duplicated here
  *  rather than shared: both are small, boundary-local helpers reading off
  *  disk, not logic either package should depend on the other for. */
-async function findLatestAnalysisFile(analysesDir: string, language: ReportLanguage): Promise<string | undefined> {
+async function findLatestAnalysisFile(
+  analysesDir: string,
+  language: ReportLanguage,
+): Promise<string | undefined> {
   let entries: string[];
   try {
     entries = await fs.readdir(analysesDir);
@@ -148,7 +151,10 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 400, 'request body must be valid JSON');
       return;
     }
-    const rawSiren = body !== null && typeof body === 'object' ? (body as Record<string, unknown>)['siren'] : undefined;
+    const rawSiren =
+      body !== null && typeof body === 'object'
+        ? (body as Record<string, unknown>)['siren']
+        : undefined;
     if (typeof rawSiren !== 'string') {
       sendError(res, 400, 'siren must be a string');
       return;
@@ -220,7 +226,11 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       // call gets the same guarantee, not just the UI's own flow.
       const lookup = await lookupOperatorProfile(connection, cleaned);
       if (lookup.status !== 'found') {
-        sendError(res, 400, `siren ${cleaned} could not be confirmed against the Sirene registry (${lookup.status})`);
+        sendError(
+          res,
+          400,
+          `siren ${cleaned} could not be confirmed against the Sirene registry (${lookup.status})`,
+        );
         return;
       }
       partial.siren = { value: cleaned, provenance: 'operator' };
@@ -271,13 +281,23 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       findLatestAnalysisFile(analysesDir, 'en'),
     ]);
     if (!frPath || !enPath) {
-      sendError(res, 409, 'both fr and en analyses must already exist before a report can be regenerated');
+      sendError(
+        res,
+        409,
+        'both fr and en analyses must already exist before a report can be regenerated',
+      );
       return;
     }
     const [fr, en] = await Promise.all([readAnalysis(frPath), readAnalysis(enPath)]);
 
     try {
-      const results = await runAllReportsStage(auditDir, manifest, findings, { fr, en }, connection);
+      const results = await runAllReportsStage(
+        auditDir,
+        manifest,
+        findings,
+        { fr, en },
+        connection,
+      );
       sendJson(res, 200, { reports: results });
     } catch (error) {
       sendError(res, 500, error instanceof Error ? error.message : 'could not regenerate reports');

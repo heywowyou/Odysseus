@@ -72,10 +72,7 @@ export type Theme = z.infer<typeof themeSchema>;
  * (trade-off 27), which sees dense `x1..xN` alias IDs rather than real
  * ones. Kept as a locked contract; do not assume this runs.
  */
-export function findInventedFindingIds(
-  output: LlmOutput,
-  inputFindings: Finding[],
-): string[] {
+export function findInventedFindingIds(output: LlmOutput, inputFindings: Finding[]): string[] {
   const known = new Set(inputFindings.map((f) => f.findingId));
   const referenced = new Set<string>();
 
@@ -94,17 +91,12 @@ export function findInventedFindingIds(
  * Not currently called by the real pipeline; see the note on
  * `findInventedFindingIds` above.
  */
-export function findUnreferencedFindingIds(
-  output: LlmOutput,
-  inputFindings: Finding[],
-): string[] {
+export function findUnreferencedFindingIds(output: LlmOutput, inputFindings: Finding[]): string[] {
   const referenced = new Set<string>();
   for (const theme of output.themes) {
     for (const id of theme.findingIds) referenced.add(id);
   }
-  return inputFindings
-    .map((f) => f.findingId)
-    .filter((id) => !referenced.has(id));
+  return inputFindings.map((f) => f.findingId).filter((id) => !referenced.has(id));
 }
 
 /** Report output language. Bilingual delivery is a product requirement,

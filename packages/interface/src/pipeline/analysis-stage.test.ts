@@ -85,7 +85,14 @@ beforeEach(async () => {
 
   vi.mocked(analyzeStructure).mockResolvedValue({
     themes: [
-      { themeKey: 't1', findingIds: ['f1'], category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1 },
+      {
+        themeKey: 't1',
+        findingIds: ['f1'],
+        category: 'accessibility',
+        effort: 'low',
+        impact: 'high',
+        priorityRank: 1,
+      },
     ],
     quickWins: ['f1'],
     overallRisk: 'high',
@@ -95,7 +102,14 @@ beforeEach(async () => {
   });
   vi.mocked(analyzeWriting).mockResolvedValue({
     output: {
-      themes: [{ themeKey: 't1', title: 'Contrast', businessImpact: 'Impact', recommendedActions: ['Fix it'] }],
+      themes: [
+        {
+          themeKey: 't1',
+          title: 'Contrast',
+          businessImpact: 'Impact',
+          recommendedActions: ['Fix it'],
+        },
+      ],
       executiveSummary: 'Summary',
       notes: '',
     },
@@ -113,7 +127,13 @@ afterEach(async () => {
 describe('runAnalysisStage', () => {
   it('generates a fresh structure pass when none exists, writes both files, and persists', async () => {
     const manifest = fakeManifest();
-    const result = await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'fr' }, fakeConnection);
+    const result = await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'fr' },
+      fakeConnection,
+    );
 
     expect(analyzeStructure).toHaveBeenCalledTimes(1);
     expect(result.structureReused).toBe(false);
@@ -141,10 +161,22 @@ describe('runAnalysisStage', () => {
 
   it('reuses an existing structure file for a second language call, without calling analyzeStructure again', async () => {
     const manifest = fakeManifest();
-    await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'fr' }, fakeConnection);
+    await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'fr' },
+      fakeConnection,
+    );
     vi.mocked(analyzeStructure).mockClear();
 
-    const result = await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'en' }, fakeConnection);
+    const result = await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'en' },
+      fakeConnection,
+    );
 
     expect(analyzeStructure).not.toHaveBeenCalled();
     expect(result.structureReused).toBe(true);
@@ -152,7 +184,13 @@ describe('runAnalysisStage', () => {
 
   it('regenerateStructure forces a fresh structure pass even when one exists', async () => {
     const manifest = fakeManifest();
-    await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'fr' }, fakeConnection);
+    await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'fr' },
+      fakeConnection,
+    );
     vi.mocked(analyzeStructure).mockClear();
 
     await runAnalysisStage(
@@ -168,7 +206,13 @@ describe('runAnalysisStage', () => {
 
   it('throws loudly when a reused structure file references a finding no longer present', async () => {
     const manifest = fakeManifest();
-    await runAnalysisStage(auditDir, manifest, [buildFinding({ findingId: 'f1' })], { language: 'fr' }, fakeConnection);
+    await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding({ findingId: 'f1' })],
+      { language: 'fr' },
+      fakeConnection,
+    );
 
     await expect(
       runAnalysisStage(
@@ -188,7 +232,13 @@ describe('runAnalysisStage', () => {
       basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }],
     });
 
-    const result = await runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'fr' }, fakeConnection);
+    const result = await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'fr' },
+      fakeConnection,
+    );
 
     expect(runObligationStage).toHaveBeenCalledWith(manifest, fakeConnection, undefined, undefined);
     expect(result.analysis.obligationAssessment).toEqual({
@@ -232,7 +282,9 @@ describe('runAnalysisStage', () => {
     const manifest = fakeManifest();
     vi.mocked(runObligationStage).mockResolvedValue({ status: 'in_scope', basis: [] });
 
-    const siteSignalOverrides = { hasTransactionalFlow: { value: true, reason: 'phone-only booking' } };
+    const siteSignalOverrides = {
+      hasTransactionalFlow: { value: true, reason: 'phone-only booking' },
+    };
     await runAnalysisStage(
       auditDir,
       manifest,
@@ -241,7 +293,12 @@ describe('runAnalysisStage', () => {
       fakeConnection,
     );
 
-    expect(runObligationStage).toHaveBeenCalledWith(manifest, fakeConnection, '498173988', siteSignalOverrides);
+    expect(runObligationStage).toHaveBeenCalledWith(
+      manifest,
+      fakeConnection,
+      '498173988',
+      siteSignalOverrides,
+    );
   });
 
   it('reports usedFallbackContext: false when an explicit siteContext is passed', async () => {
@@ -252,7 +309,12 @@ describe('runAnalysisStage', () => {
       [buildFinding()],
       {
         language: 'fr',
-        siteContext: { businessType: 'wine estate', primaryGoal: 'leads', languagesServed: ['fr'], targetMarkets: ['FR'] },
+        siteContext: {
+          businessType: 'wine estate',
+          primaryGoal: 'leads',
+          languagesServed: ['fr'],
+          targetMarkets: ['FR'],
+        },
       },
       fakeConnection,
     );

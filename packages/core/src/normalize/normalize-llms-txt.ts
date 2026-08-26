@@ -14,7 +14,10 @@ export interface LlmsTxtCheckInput {
   found: boolean;
 }
 
-export function extractLlmsTxtCandidates(input: LlmsTxtCheckInput, pageUrl: string): FindingCandidate[] {
+export function extractLlmsTxtCandidates(
+  input: LlmsTxtCheckInput,
+  pageUrl: string,
+): FindingCandidate[] {
   if (input.found) return [];
 
   return [

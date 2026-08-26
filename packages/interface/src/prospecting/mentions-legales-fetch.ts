@@ -51,15 +51,26 @@ export async function fetchMentionsLegalesData(
     }
 
     const mentionsLegalesUrl = findMentionsLegalesUrl(homepage.anchorUrls);
-    if (!mentionsLegalesUrl || !isAllowedByRobots(robotsRules, new URL(mentionsLegalesUrl).pathname)) {
-      return { homepageText: homepage.bodyText, mentionsLegalesUrl: null, mentionsLegalesText: null };
+    if (
+      !mentionsLegalesUrl ||
+      !isAllowedByRobots(robotsRules, new URL(mentionsLegalesUrl).pathname)
+    ) {
+      return {
+        homepageText: homepage.bodyText,
+        mentionsLegalesUrl: null,
+        mentionsLegalesText: null,
+      };
     }
 
     // Politeness applies to both requests, not only the first - per
     // docs/prospect-qualification.md section 5, "two requests is not an
     // excuse to skip identification."
     await sleep(effectiveDelayMs);
-    const mentionsLegales = await fetchPageText(mentionsLegalesUrl, options.timeoutMs, options.userAgent);
+    const mentionsLegales = await fetchPageText(
+      mentionsLegalesUrl,
+      options.timeoutMs,
+      options.userAgent,
+    );
 
     return {
       homepageText: homepage.bodyText,

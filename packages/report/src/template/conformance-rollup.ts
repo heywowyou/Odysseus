@@ -1,4 +1,9 @@
-import { compareCriteria, HEURISTIC_RULE_IDS, isAuditedConformanceLevel, type Finding } from '@odysseus/core';
+import {
+  compareCriteria,
+  HEURISTIC_RULE_IDS,
+  isAuditedConformanceLevel,
+  type Finding,
+} from '@odysseus/core';
 
 /** Per-criterion rollup for the conformance summary (docs/report-v2-refactor.md
  *  C20/C21): a WCAG failure is a different kind of fact from a slow
@@ -23,7 +28,10 @@ export interface ConformanceRow {
 }
 
 function rollup(findings: readonly Finding[], includeHeuristic: boolean): ConformanceRow[] {
-  const counts = new Map<string, { findingCount: number; totalOccurrences: number; pages: Set<string> }>();
+  const counts = new Map<
+    string,
+    { findingCount: number; totalOccurrences: number; pages: Set<string> }
+  >();
 
   for (const finding of findings) {
     if (finding.category !== 'accessibility' || finding.wcagCriteria.length === 0) continue;
@@ -35,7 +43,11 @@ function rollup(findings: readonly Finding[], includeHeuristic: boolean): Confor
       // focusable, in the report that surfaced this) is out of scope for
       // both, and rendered with a blank name besides.
       if (!isAuditedConformanceLevel(criterion)) continue;
-      const row = counts.get(criterion) ?? { findingCount: 0, totalOccurrences: 0, pages: new Set<string>() };
+      const row = counts.get(criterion) ?? {
+        findingCount: 0,
+        totalOccurrences: 0,
+        pages: new Set<string>(),
+      };
       row.findingCount += 1;
       row.totalOccurrences += finding.occurrences;
       for (const url of finding.pageUrls) row.pages.add(url);
@@ -46,7 +58,12 @@ function rollup(findings: readonly Finding[], includeHeuristic: boolean): Confor
   const map = new Map<string, ConformanceRow>(
     [...counts.entries()].map(([criterion, row]) => [
       criterion,
-      { criterion, findingCount: row.findingCount, totalOccurrences: row.totalOccurrences, pages: row.pages.size },
+      {
+        criterion,
+        findingCount: row.findingCount,
+        totalOccurrences: row.totalOccurrences,
+        pages: row.pages.size,
+      },
     ]),
   );
 
@@ -85,7 +102,9 @@ export function buildHeuristicRollup(findings: readonly Finding[]): ConformanceR
 export function hasMultiCriterionFinding(findings: readonly Finding[]): boolean {
   return findings.some(
     (finding) =>
-      finding.category === 'accessibility' && !HEURISTIC_RULE_IDS.has(finding.ruleId) && finding.wcagCriteria.length > 1,
+      finding.category === 'accessibility' &&
+      !HEURISTIC_RULE_IDS.has(finding.ruleId) &&
+      finding.wcagCriteria.length > 1,
   );
 }
 
@@ -98,7 +117,11 @@ export function hasMultiCriterionFinding(findings: readonly Finding[]): boolean 
 export function pagesWithWcagFailures(findings: readonly Finding[]): number {
   const pages = new Set<string>();
   for (const finding of findings) {
-    if (finding.category === 'accessibility' && finding.wcagCriteria.length > 0 && !HEURISTIC_RULE_IDS.has(finding.ruleId)) {
+    if (
+      finding.category === 'accessibility' &&
+      finding.wcagCriteria.length > 0 &&
+      !HEURISTIC_RULE_IDS.has(finding.ruleId)
+    ) {
       for (const url of finding.pageUrls) pages.add(url);
     }
   }

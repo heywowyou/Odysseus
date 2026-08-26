@@ -205,9 +205,9 @@ describe('buildWritingInput', () => {
     ];
 
     const siteStats = computeSiteStats(loadSasFernandeFindings(), loadSasFernandeManifest());
-    expect(() => buildWritingInput(staleThemes, filtered, siteContext, 'fr', siteStats, null)).toThrow(
-      /references unknown findingId/,
-    );
+    expect(() =>
+      buildWritingInput(staleThemes, filtered, siteContext, 'fr', siteStats, null),
+    ).toThrow(/references unknown findingId/);
   });
 });
 
@@ -224,7 +224,8 @@ describe('computeSiteStats', () => {
     // accounts for every one of them. pagesScanned is a property of the scan,
     // not of normalization, so it stays a literal.
     const findings = loadSasFernandeFindings();
-    const count = (severity: string): number => findings.filter((f) => f.severity === severity).length;
+    const count = (severity: string): number =>
+      findings.filter((f) => f.severity === severity).length;
 
     expect(stats.pagesScanned).toBe(11);
     expect(stats.totalFindings).toBe(findings.length);

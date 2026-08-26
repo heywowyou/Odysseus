@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computeBrokennessScore, isAuditFallbackEligible, isProspectingWorthy } from './brokenness.js';
+import {
+  computeBrokennessScore,
+  isAuditFallbackEligible,
+  isProspectingWorthy,
+} from './brokenness.js';
 import type { Finding, Severity } from '../types/findings.js';
 
 function buildFinding(severity: Severity, overrides: Partial<Finding> = {}): Finding {

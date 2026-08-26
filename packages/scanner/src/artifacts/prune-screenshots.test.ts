@@ -13,7 +13,12 @@ import {
 describe('selectPageDirsToKeep', () => {
   it('always keeps the homepage, even below the emission threshold', () => {
     const pages: PrunePageInfo[] = [
-      { pageUrl: 'https://example.com/', pageDir: 'root-aaaaaa', missingPercent: 0, isHomepage: true },
+      {
+        pageUrl: 'https://example.com/',
+        pageDir: 'root-aaaaaa',
+        missingPercent: 0,
+        isHomepage: true,
+      },
     ];
     expect(selectPageDirsToKeep(pages)).toEqual(new Set(['root-aaaaaa']));
   });
@@ -54,7 +59,12 @@ describe('selectPageDirsToKeep', () => {
   it('treats an undefined missingPercent as never qualifying', () => {
     const pages: PrunePageInfo[] = [
       { pageUrl: 'https://example.com/', pageDir: 'root', missingPercent: 0, isHomepage: true },
-      { pageUrl: 'https://example.com/a', pageDir: 'a', missingPercent: undefined, isHomepage: false },
+      {
+        pageUrl: 'https://example.com/a',
+        pageDir: 'a',
+        missingPercent: undefined,
+        isHomepage: false,
+      },
     ];
     expect(selectPageDirsToKeep(pages)).toEqual(new Set(['root']));
   });

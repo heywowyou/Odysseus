@@ -41,7 +41,10 @@ const TAB_ATTR = 'data-odysseus-tab-id';
  *  Tab presses to reveal a trap or a bad reorder. */
 const MAX_TAB_PRESSES = 60;
 
-export async function walkKeyboardNavigation(page: Page, pageUrl: string): Promise<KeyboardNavigationExtraction> {
+export async function walkKeyboardNavigation(
+  page: Page,
+  pageUrl: string,
+): Promise<KeyboardNavigationExtraction> {
   const tabbables = await page.evaluate((attr) => {
     // isVisible is inlined here rather than pulled out as a named helper:
     // this whole callback is serialized via Function.prototype.toString()

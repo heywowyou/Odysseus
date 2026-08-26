@@ -1,7 +1,13 @@
 import type { Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, renderSheetHeader, sheet, stripInlineMarkdown } from '../html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  renderSheetHeader,
+  sheet,
+  stripInlineMarkdown,
+} from '../html-utils.js';
 import { sectionTitle } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
@@ -52,15 +58,22 @@ export function renderReportIntro(
   const topThemes = selectRenderedThemes(analysis.themes, findingsById).slice(0, TOP_ACTION_COUNT);
   const actionsList = topThemes
     .map((theme) => {
-      const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
+      const themeFindings = theme.findingIds
+        .map((id) => findingsById.get(id))
+        .filter((f): f is Finding => f !== undefined);
       const contact = whoToContact(strings, themeFindings);
       const effortLabel = strings.themes.effortImpactLevels[theme.effort];
-      const text = fillTemplate(r.nextActionItemTemplate, { title: stripInlineMarkdown(theme.title), contact, effort: effortLabel });
+      const text = fillTemplate(r.nextActionItemTemplate, {
+        title: stripInlineMarkdown(theme.title),
+        contact,
+        effort: effortLabel,
+      });
       return `<li style="margin-bottom:8px">${escapeHtml(text)}</li>`;
     })
     .join('');
 
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
     <h5>${escapeHtml(r.audienceHeading)}</h5>
     <table style="width:100%;border-collapse:collapse;margin-bottom:var(--space-6)"><tbody>${audienceRows}</tbody></table>
@@ -74,7 +87,10 @@ export function renderReportIntro(
         ? `<h5>${escapeHtml(r.nextActionsHeading)}</h5><ol style="margin:0;padding-left:1.2em;font-size:12.5px;opacity:0.9">${actionsList}</ol>`
         : ''
     }
-  `, 'sheet-standalone', 'section-00');
+  `,
+    'sheet-standalone',
+    'section-00',
+  );
 }
 
 /** Same first-party/third-party classification renderOwnershipSplitNote
@@ -86,7 +102,11 @@ function whoToContact(strings: ReportStrings, themeFindings: readonly Finding[])
   const firstParty = themeFindings.filter((f) => !isThirdPartyFinding(f));
 
   if (thirdParty.length > 0 && firstParty.length === 0) {
-    const vendors = [...new Set(thirdParty.map((f) => detectFindingVendor(f)).filter((v): v is string => v !== undefined))];
+    const vendors = [
+      ...new Set(
+        thirdParty.map((f) => detectFindingVendor(f)).filter((v): v is string => v !== undefined),
+      ),
+    ];
     return vendors.length > 0 ? vendors.join(', ') : r.contactUnknownVendor;
   }
   if (thirdParty.length > 0 && firstParty.length > 0) {

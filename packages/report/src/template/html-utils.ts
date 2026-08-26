@@ -134,9 +134,7 @@ export function formatElapsedDuration(from: Date, to: Date, language: 'fr' | 'en
   );
   if (totalMonths < 12) {
     const months = Math.max(1, totalMonths);
-    return language === 'fr'
-      ? `${months} mois`
-      : `${months} month${months === 1 ? '' : 's'}`;
+    return language === 'fr' ? `${months} mois` : `${months} month${months === 1 ? '' : 's'}`;
   }
   const years = Math.floor(totalMonths / 12);
   if (years === 1) {
@@ -204,7 +202,10 @@ export function formatFindingIdRefs(findingIds: readonly string[]): string {
 export function formatFindingIdLinks(findingIds: readonly string[]): string {
   return [...findingIds]
     .sort()
-    .map((id) => `<a href="#annexref-${escapeHtml(id)}" style="color:inherit;text-decoration:underline">${escapeHtml(id)}</a>`)
+    .map(
+      (id) =>
+        `<a href="#annexref-${escapeHtml(id)}" style="color:inherit;text-decoration:underline">${escapeHtml(id)}</a>`,
+    )
     .join(', ');
 }
 
@@ -280,7 +281,10 @@ export const FINDING_ID_LIST_CAP = 10;
 function capFindingIds(findingIds: readonly string[]): { shown: string[]; remaining: number } {
   const sorted = [...findingIds].sort();
   if (sorted.length <= FINDING_ID_LIST_CAP) return { shown: sorted, remaining: 0 };
-  return { shown: sorted.slice(0, FINDING_ID_LIST_CAP), remaining: sorted.length - FINDING_ID_LIST_CAP };
+  return {
+    shown: sorted.slice(0, FINDING_ID_LIST_CAP),
+    remaining: sorted.length - FINDING_ID_LIST_CAP,
+  };
 }
 
 /** Plain-text capped variant, for cells that cannot carry links. */
@@ -294,10 +298,17 @@ export interface AndNMoreStrings {
   readonly andNMoreSingularTemplate: string;
 }
 
-export function formatAndNMore(remaining: number, language: 'fr' | 'en', strings: AndNMoreStrings): string {
-  return fillTemplate(pluralize(remaining, strings.andNMoreSingularTemplate, strings.andNMoreTemplate), {
-    count: formatNumber(remaining, language),
-  });
+export function formatAndNMore(
+  remaining: number,
+  language: 'fr' | 'en',
+  strings: AndNMoreStrings,
+): string {
+  return fillTemplate(
+    pluralize(remaining, strings.andNMoreSingularTemplate, strings.andNMoreTemplate),
+    {
+      count: formatNumber(remaining, language),
+    },
+  );
 }
 
 export function formatCappedFindingIdRefs(

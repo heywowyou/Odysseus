@@ -106,7 +106,10 @@ export async function runAuditStage(
 
   try {
     const hostname = new URL(url).hostname;
-    const screenshotDir = path.join(buildAuditDir(getArtifactsRoot(), hostname, startedAt), 'pages');
+    const screenshotDir = path.join(
+      buildAuditDir(getArtifactsRoot(), hostname, startedAt),
+      'pages',
+    );
 
     const siteResult = await scanSite(url, {
       browser,
@@ -118,7 +121,9 @@ export async function runAuditStage(
       ...(options.onProgress !== undefined ? { onProgress: options.onProgress } : {}),
       ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
       ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
-      ...(options.bookingEngineUrl !== undefined ? { bookingEngineUrl: options.bookingEngineUrl } : {}),
+      ...(options.bookingEngineUrl !== undefined
+        ? { bookingEngineUrl: options.bookingEngineUrl }
+        : {}),
       ...(options.skipLighthouse ? { skipLighthouse: options.skipLighthouse } : {}),
     });
 

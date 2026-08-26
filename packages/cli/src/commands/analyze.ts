@@ -42,7 +42,7 @@ export function registerAnalyzeCommand(program: Command): void {
     )
     .option(
       '--siren <number>',
-      'Manually supplied SIREN, same as `odysseus audit`\'s flag of the same name. Only consulted when this ' +
+      "Manually supplied SIREN, same as `odysseus audit`'s flag of the same name. Only consulted when this " +
         'audit has no obligation determination already computed by `audit` in the same process (i.e. every ' +
         'standalone `analyze <dir>` call) - reproduces the same manual override `audit --siren` was given, ' +
         'instead of silently recomputing from extracted facts alone.',
@@ -50,7 +50,7 @@ export function registerAnalyzeCommand(program: Command): void {
     )
     .option(
       '--override-transactional-flow <true|false>',
-      'Manually asserted hasTransactionalFlow override, same as `odysseus audit`\'s flag of the same name and ' +
+      "Manually asserted hasTransactionalFlow override, same as `odysseus audit`'s flag of the same name and " +
         'same "only consulted when no obligation determination already exists" posture as --siren above.',
       parseBooleanOption,
     )
@@ -102,7 +102,9 @@ export function registerAnalyzeCommand(program: Command): void {
             {
               language: opts.language,
               ...(usedFallback ? {} : { siteContext }),
-              ...(opts.regenerateStructure !== undefined ? { regenerateStructure: opts.regenerateStructure } : {}),
+              ...(opts.regenerateStructure !== undefined
+                ? { regenerateStructure: opts.regenerateStructure }
+                : {}),
               ...(opts.siren !== undefined ? { manualSiren: opts.siren } : {}),
               ...(siteSignalOverrides !== undefined ? { siteSignalOverrides } : {}),
             },
@@ -117,7 +119,9 @@ export function registerAnalyzeCommand(program: Command): void {
           console.log(`  Themes: ${result.analysis.themes.length}`);
           console.log(`  Quick wins: ${result.analysis.quickWins.length}`);
           if (result.unreferencedFindingCount > 0) {
-            console.log(`  Warning: ${result.unreferencedFindingCount} finding(s) not referenced by any theme`);
+            console.log(
+              `  Warning: ${result.unreferencedFindingCount} finding(s) not referenced by any theme`,
+            );
           }
           if (result.usedFallbackContext) {
             console.log('  Note: no --context file was provided; minimal site context was used.');

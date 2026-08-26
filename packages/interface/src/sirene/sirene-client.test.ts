@@ -93,20 +93,30 @@ describe('fetchSireneProfile', () => {
 
   it('returns not-found when the API returns zero results', async () => {
     vi.mocked(global.fetch).mockResolvedValueOnce(jsonResponse({ results: [] }));
-    expect(await fetchSireneProfile('000000000')).toEqual({ status: 'not-found', siren: '000000000' });
+    expect(await fetchSireneProfile('000000000')).toEqual({
+      status: 'not-found',
+      siren: '000000000',
+    });
   });
 
   it('returns etablissement-fermee when the establishment is not active', async () => {
     vi.mocked(global.fetch).mockResolvedValueOnce(
       jsonResponse({ results: [{ siren: '111111116', etat_administratif: 'C' }] }),
     );
-    expect(await fetchSireneProfile('111111116')).toEqual({ status: 'etablissement-fermee', siren: '111111116' });
+    expect(await fetchSireneProfile('111111116')).toEqual({
+      status: 'etablissement-fermee',
+      siren: '111111116',
+    });
   });
 
   it('returns api-unreachable when the fetch itself throws', async () => {
     vi.mocked(global.fetch).mockRejectedValueOnce(new Error('network down'));
     const result = await fetchSireneProfile('732829320');
-    expect(result).toEqual({ status: 'api-unreachable', siren: '732829320', detail: 'network down' });
+    expect(result).toEqual({
+      status: 'api-unreachable',
+      siren: '732829320',
+      detail: 'network down',
+    });
   });
 
   it('returns api-unreachable for a non-2xx HTTP response', async () => {

@@ -32,7 +32,11 @@ export const CORE_WEB_VITAL_THRESHOLDS: readonly CoreWebVitalThreshold[] = [
 
 export type CoreWebVitalRating = 'good' | 'mid' | 'poor';
 
-export function rateCoreWebVital(value: number, good: number, needsImprovement: number): CoreWebVitalRating {
+export function rateCoreWebVital(
+  value: number,
+  good: number,
+  needsImprovement: number,
+): CoreWebVitalRating {
   if (value <= good) return 'good';
   if (value <= needsImprovement) return 'mid';
   return 'poor';

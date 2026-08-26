@@ -7,10 +7,7 @@ describe('extractAxeCandidates', () => {
     const axe = buildAxeResultsInput([
       buildAxeViolation({
         id: 'color-contrast',
-        nodes: [
-          buildAxeNode({ target: ['#a'] }),
-          buildAxeNode({ target: ['#b'] }),
-        ],
+        nodes: [buildAxeNode({ target: ['#a'] }), buildAxeNode({ target: ['#b'] })],
       }),
     ]);
 
@@ -25,10 +22,7 @@ describe('extractAxeCandidates', () => {
     const axe = buildAxeResultsInput([
       buildAxeViolation({
         impact: 'moderate',
-        nodes: [
-          buildAxeNode({ impact: 'critical' }),
-          buildAxeNode({ impact: null }),
-        ],
+        nodes: [buildAxeNode({ impact: 'critical' }), buildAxeNode({ impact: null })],
       }),
     ]);
 
@@ -39,9 +33,7 @@ describe('extractAxeCandidates', () => {
   });
 
   it('derives wcagCriteria from the violation tags', () => {
-    const axe = buildAxeResultsInput([
-      buildAxeViolation({ tags: ['wcag2aa', 'wcag143'] }),
-    ]);
+    const axe = buildAxeResultsInput([buildAxeViolation({ tags: ['wcag2aa', 'wcag143'] })]);
     const candidates = extractAxeCandidates(axe, 'https://example.com/');
     expect(candidates[0]?.wcagCriteria).toEqual(['1.4.3']);
   });

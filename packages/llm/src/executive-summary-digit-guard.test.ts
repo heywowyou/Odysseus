@@ -8,11 +8,15 @@ function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOut
       {
         themeKey: 't1',
         title: 'Contraste des couleurs insuffisant',
-        businessImpact: 'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
-        recommendedActions: ['Augmenter le contraste des couleurs sur les boutons et le texte, sur 18 pages.'],
+        businessImpact:
+          'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
+        recommendedActions: [
+          'Augmenter le contraste des couleurs sur les boutons et le texte, sur 18 pages.',
+        ],
       },
     ],
-    executiveSummary: 'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
+    executiveSummary:
+      'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
     notes: '',
     ...overrides,
   };
@@ -25,7 +29,8 @@ describe('findExecutiveSummaryDigitViolations', () => {
     // report's actual bound counts (94 here vs 93 everywhere else in the
     // same document) once render-time finding resolution ran.
     const output = buildOutput({
-      executiveSummary: "L'audit a identifié 66 problèmes prioritaires sur un total de 94 constats.",
+      executiveSummary:
+        "L'audit a identifié 66 problèmes prioritaires sur un total de 94 constats.",
     });
 
     const violations = findExecutiveSummaryDigitViolations(output);
@@ -35,7 +40,8 @@ describe('findExecutiveSummaryDigitViolations', () => {
 
   it('finds no violation when executiveSummary is purely qualitative prose', () => {
     const output = buildOutput({
-      executiveSummary: 'Les problèmes les plus urgents concernent les images sans texte alternatif et les liens non identifiables.',
+      executiveSummary:
+        'Les problèmes les plus urgents concernent les images sans texte alternatif et les liens non identifiables.',
     });
 
     expect(findExecutiveSummaryDigitViolations(output)).toEqual([]);

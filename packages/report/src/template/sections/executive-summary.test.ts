@@ -3,7 +3,11 @@ import type { AuditManifest, Finding, Theme } from '@odysseus/core';
 import { renderExecutiveSummary } from './executive-summary.js';
 import { getStrings } from '../strings/i18n.js';
 import { escapeHtml } from '../html-utils.js';
-import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
+import {
+  loadSasFernandeAnalysis,
+  loadSasFernandeFindings,
+  loadSasFernandeManifest,
+} from '../../test-fixtures.js';
 
 function buildFinding(findingId: string): Finding {
   return {
@@ -71,7 +75,9 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, manifest);
-    const topThemes = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank).slice(0, 3);
+    const topThemes = [...analysis.themes]
+      .sort((a, b) => a.priorityRank - b.priorityRank)
+      .slice(0, 3);
 
     for (const theme of topThemes) {
       expect(html).toContain(`Voir priorité ${theme.priorityRank}`);
@@ -91,10 +97,14 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
     const findings = await loadSasFernandeFindings();
     const manifest = await loadSasFernandeManifest();
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, manifest);
-    const topThemes = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank).slice(0, 3);
+    const topThemes = [...analysis.themes]
+      .sort((a, b) => a.priorityRank - b.priorityRank)
+      .slice(0, 3);
 
     for (const theme of topThemes) {
-      expect(html).not.toContain(`Voir priorité ${theme.priorityRank} : ${escapeHtml(theme.title)}`);
+      expect(html).not.toContain(
+        `Voir priorité ${theme.priorityRank} : ${escapeHtml(theme.title)}`,
+      );
     }
   });
 });
@@ -185,27 +195,49 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
 
   it('states the top priority is commercial and points to the legal-priority rank, when one is rendered', () => {
     const analysis = buildAnalysis([nonLegalTheme, legalTheme]);
-    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001'), buildFinding('f002')], emptyManifest);
+    const html = renderExecutiveSummary(
+      getStrings('fr'),
+      1,
+      analysis,
+      [buildFinding('f001'), buildFinding('f002')],
+      emptyManifest,
+    );
 
-    expect(html).toContain("La priorité 1 ci-dessus n&#39;est rattachée à aucun critère d&#39;accessibilité");
+    expect(html).toContain(
+      'La priorité 1 ci-dessus n&#39;est rattachée à aucun critère d&#39;accessibilité',
+    );
     expect(html).toContain('position 2');
   });
 
   it('states the top priority is commercial with no pointer when no legal-relevant theme is rendered at all', () => {
     const analysis = buildAnalysis([nonLegalTheme]);
-    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001')], emptyManifest);
+    const html = renderExecutiveSummary(
+      getStrings('fr'),
+      1,
+      analysis,
+      [buildFinding('f001')],
+      emptyManifest,
+    );
 
-    expect(html).toContain("La priorité 1 ci-dessus n&#39;est rattachée à aucun critère d&#39;accessibilité");
-    expect(html).toContain("Aucune des priorités");
+    expect(html).toContain(
+      'La priorité 1 ci-dessus n&#39;est rattachée à aucun critère d&#39;accessibilité',
+    );
+    expect(html).toContain('Aucune des priorités');
   });
 
   it('renders nothing extra when the top priority is itself legal-relevant', () => {
     const legalThemeRankedFirst = { ...legalTheme, priorityRank: 1 };
     const nonLegalThemeRankedSecond = { ...nonLegalTheme, priorityRank: 2 };
     const analysis = buildAnalysis([legalThemeRankedFirst, nonLegalThemeRankedSecond]);
-    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, [buildFinding('f001'), buildFinding('f002')], emptyManifest);
+    const html = renderExecutiveSummary(
+      getStrings('fr'),
+      1,
+      analysis,
+      [buildFinding('f001'), buildFinding('f002')],
+      emptyManifest,
+    );
 
-    expect(html).not.toContain("rattachée à aucun critère");
+    expect(html).not.toContain('rattachée à aucun critère');
   });
 
   it('item 0.4: the counts sentence is bound from the findings passed in, never from the model prose', () => {
@@ -236,7 +268,9 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     }));
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
 
-    expect(html).toContain('L&#39;audit a identifié 4 constats au total, dont 3 critiques ou sérieux (2 critiques et 1 sérieux)');
+    expect(html).toContain(
+      'L&#39;audit a identifié 4 constats au total, dont 3 critiques ou sérieux (2 critiques et 1 sérieux)',
+    );
   });
 });
 

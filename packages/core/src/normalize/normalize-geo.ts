@@ -31,7 +31,8 @@ export const FAQ_CONTENT_WITHOUT_SCHEMA_RULE_ID = 'faq-content-without-schema';
  *  page is the subtype name, not the literal word "LocalBusiness", so an
  *  exact-match list would miss every real case. ENTITY_TYPE_PATTERN
  *  below matches on that basis instead of an enumerated list. */
-const ENTITY_TYPE_PATTERN = /(organization|localbusiness|website|hotel|restaurant|store|corporation)$/i;
+const ENTITY_TYPE_PATTERN =
+  /(organization|localbusiness|website|hotel|restaurant|store|corporation)$/i;
 
 const REQUIRED_ENTITY_FIELDS = ['name', 'address', 'telephone'];
 
@@ -102,10 +103,15 @@ export function findMissingEntityFields(parsed: unknown): string[] | null {
  * entity-data-incomplete and faq-content-without-schema are genuinely
  * per-page, so they are emitted once per qualifying page instead.
  */
-export function extractGeoCandidates(pages: GeoPageInput[], homepageUrl: string): FindingCandidate[] {
+export function extractGeoCandidates(
+  pages: GeoPageInput[],
+  homepageUrl: string,
+): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
 
-  const anyEntityFound = pages.some((page) => page.jsonLdTypes.some((type) => ENTITY_TYPE_PATTERN.test(type)));
+  const anyEntityFound = pages.some((page) =>
+    page.jsonLdTypes.some((type) => ENTITY_TYPE_PATTERN.test(type)),
+  );
   if (!anyEntityFound) {
     candidates.push({
       source: 'custom',

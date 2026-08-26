@@ -25,23 +25,28 @@ import type { StoredAnalysis } from '../../types.js';
  *  finding ids across 66 pages with 2 criteria. */
 const EXTREME_FINDING_COUNT = 400;
 
-const findings: Finding[] = Array.from({ length: EXTREME_FINDING_COUNT }, (_, i) => ({
-  findingId: `f${String(i + 1).padStart(3, '0')}`,
-  ruleId: 'link-name',
-  category: 'accessibility',
-  severity: 'serious',
-  wcagCriteria: ['1.1.1', '1.3.1', '1.4.3', '1.4.4', '2.1.1', '2.4.4', '2.5.8', '4.1.2'],
-  pageUrls: Array.from({ length: 40 }, (_, p) => `https://example.com/page-${p}`),
-  occurrences: 3,
-  elements: [{ pageUrl: 'https://example.com/page-0', selector: 'a', snippet: '<a></a>' }],
-}) as unknown as Finding);
+const findings: Finding[] = Array.from(
+  { length: EXTREME_FINDING_COUNT },
+  (_, i) =>
+    ({
+      findingId: `f${String(i + 1).padStart(3, '0')}`,
+      ruleId: 'link-name',
+      category: 'accessibility',
+      severity: 'serious',
+      wcagCriteria: ['1.1.1', '1.3.1', '1.4.3', '1.4.4', '2.1.1', '2.4.4', '2.5.8', '4.1.2'],
+      pageUrls: Array.from({ length: 40 }, (_, p) => `https://example.com/page-${p}`),
+      occurrences: 3,
+      elements: [{ pageUrl: 'https://example.com/page-0', selector: 'a', snippet: '<a></a>' }],
+    }) as unknown as Finding,
+);
 
 const analysis = {
   language: 'fr',
   themes: [
     {
       priorityRank: 1,
-      title: 'Liens sans texte identifiable, dans un intitulé volontairement très long pour tester la mise en page',
+      title:
+        'Liens sans texte identifiable, dans un intitulé volontairement très long pour tester la mise en page',
       category: 'accessibility',
       businessImpact: 'x',
       recommendedActions: ['a'],
@@ -59,13 +64,24 @@ const manifest = {
   startedAt: '2026-08-24T00:00:00.000Z',
   siteUrl: 'https://example.com/',
   crawl: { startUrl: 'https://example.com/' },
-  pages: Array.from({ length: 40 }, (_, p) => ({ url: `https://example.com/page-${p}`, status: 'visited' })),
+  pages: Array.from({ length: 40 }, (_, p) => ({
+    url: `https://example.com/page-${p}`,
+    status: 'visited',
+  })),
 } as unknown as AuditManifest;
 
 /** Text content of every `${cell(...)}` div in the rendered grid. */
 function cellTexts(html: string): string[] {
-  return [...html.matchAll(/<div style="padding:var\(--space-2\);border-bottom[^"]*">([\s\S]*?)<\/div>\s*(?=<div|<\/div>)/gu)]
-    .map((m) => m[1]!.replace(/<[^>]+>/gu, '').replace(/\s+/gu, ' ').trim());
+  return [
+    ...html.matchAll(
+      /<div style="padding:var\(--space-2\);border-bottom[^"]*">([\s\S]*?)<\/div>\s*(?=<div|<\/div>)/gu,
+    ),
+  ].map((m) =>
+    m[1]!
+      .replace(/<[^>]+>/gu, '')
+      .replace(/\s+/gu, ' ')
+      .trim(),
+  );
 }
 
 /** A 110px column at 11px monospace fits roughly 15 characters per line;

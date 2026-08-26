@@ -27,7 +27,12 @@ async function waitFor(condition: () => boolean, timeoutMs = 1000, intervalMs = 
   }
 }
 
-function fakeJob(overrides: Partial<{ jobId: string; type: 'full-audit' | 'prospecting' | 'prospect-ingestion' }> = {}) {
+function fakeJob(
+  overrides: Partial<{
+    jobId: string;
+    type: 'full-audit' | 'prospecting' | 'prospect-ingestion';
+  }> = {},
+) {
   return {
     jobId: overrides.jobId ?? 'job-1',
     type: overrides.type ?? 'full-audit',
@@ -81,14 +86,21 @@ describe('JobQueue', () => {
     queue = new JobQueue({
       connection: fakeConnection,
       pollIntervalMs: 20,
-      runners: { 'full-audit': runFullAuditJob, prospecting: runProspectingJob, 'prospect-ingestion': runProspectIngestionJob },
+      runners: {
+        'full-audit': runFullAuditJob,
+        prospecting: runProspectingJob,
+        'prospect-ingestion': runProspectIngestionJob,
+      },
     });
     await queue.start();
     queue.notify();
     await waitFor(() => runFullAuditJob.mock.calls.length >= 1);
 
     expect(runFullAuditJob).toHaveBeenCalledTimes(1);
-    expect(runFullAuditJob).toHaveBeenCalledWith(job, expect.objectContaining({ connection: fakeConnection }));
+    expect(runFullAuditJob).toHaveBeenCalledWith(
+      job,
+      expect.objectContaining({ connection: fakeConnection }),
+    );
     expect(runProspectingJob).not.toHaveBeenCalled();
     expect(runProspectIngestionJob).not.toHaveBeenCalled();
   });
@@ -103,7 +115,11 @@ describe('JobQueue', () => {
     queue = new JobQueue({
       connection: fakeConnection,
       pollIntervalMs: 20,
-      runners: { 'full-audit': runFullAuditJob, prospecting: runProspectingJob, 'prospect-ingestion': runProspectIngestionJob },
+      runners: {
+        'full-audit': runFullAuditJob,
+        prospecting: runProspectingJob,
+        'prospect-ingestion': runProspectIngestionJob,
+      },
     });
     await queue.start();
     queue.notify();
@@ -124,14 +140,21 @@ describe('JobQueue', () => {
     queue = new JobQueue({
       connection: fakeConnection,
       pollIntervalMs: 20,
-      runners: { 'full-audit': runFullAuditJob, prospecting: runProspectingJob, 'prospect-ingestion': runProspectIngestionJob },
+      runners: {
+        'full-audit': runFullAuditJob,
+        prospecting: runProspectingJob,
+        'prospect-ingestion': runProspectIngestionJob,
+      },
     });
     await queue.start();
     queue.notify();
     await waitFor(() => runProspectIngestionJob.mock.calls.length >= 1);
 
     expect(runProspectIngestionJob).toHaveBeenCalledTimes(1);
-    expect(runProspectIngestionJob).toHaveBeenCalledWith(job, expect.objectContaining({ connection: fakeConnection }));
+    expect(runProspectIngestionJob).toHaveBeenCalledWith(
+      job,
+      expect.objectContaining({ connection: fakeConnection }),
+    );
     expect(runFullAuditJob).not.toHaveBeenCalled();
     expect(runProspectingJob).not.toHaveBeenCalled();
   });
@@ -156,7 +179,11 @@ describe('JobQueue', () => {
       connection: fakeConnection,
       concurrency: 1,
       pollIntervalMs: 20,
-      runners: { 'full-audit': runFullAuditJob, prospecting: vi.fn(), 'prospect-ingestion': vi.fn() },
+      runners: {
+        'full-audit': runFullAuditJob,
+        prospecting: vi.fn(),
+        'prospect-ingestion': vi.fn(),
+      },
     });
     await queue.start();
     queue.notify();
@@ -180,7 +207,11 @@ describe('JobQueue', () => {
     queue = new JobQueue({
       connection: fakeConnection,
       pollIntervalMs: 20,
-      runners: { 'full-audit': runFullAuditJob, prospecting: vi.fn(), 'prospect-ingestion': vi.fn() },
+      runners: {
+        'full-audit': runFullAuditJob,
+        prospecting: vi.fn(),
+        'prospect-ingestion': vi.fn(),
+      },
     });
     await queue.start();
     queue.notify();
@@ -200,7 +231,11 @@ describe('JobQueue', () => {
     queue = new JobQueue({
       connection: fakeConnection,
       pollIntervalMs: 20,
-      runners: { 'full-audit': runFullAuditJob, prospecting: vi.fn(), 'prospect-ingestion': vi.fn() },
+      runners: {
+        'full-audit': runFullAuditJob,
+        prospecting: vi.fn(),
+        'prospect-ingestion': vi.fn(),
+      },
     });
     await queue.start();
     queue.notify();

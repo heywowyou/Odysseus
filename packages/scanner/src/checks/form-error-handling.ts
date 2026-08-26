@@ -67,7 +67,10 @@ export interface FormErrorHandlingExtraction {
   forms: FormCheckResult[];
 }
 
-export async function checkFormErrorHandling(page: Page, pageUrl: string): Promise<FormErrorHandlingExtraction> {
+export async function checkFormErrorHandling(
+  page: Page,
+  pageUrl: string,
+): Promise<FormErrorHandlingExtraction> {
   await page.route('**/*', (route) => route.abort());
   try {
     const forms = await page.evaluate(() => {
@@ -90,17 +93,21 @@ export async function checkFormErrorHandling(page: Page, pageUrl: string): Promi
         // helpers - see keyboard-navigation.ts's identical comment on
         // this same page.evaluate() serialization pitfall under tsx's
         // --keep-names dev runtime.
-        const requiredFields = Array.from(form.querySelectorAll('[required], [aria-required="true"]')).filter(
-          (el) => {
-            const rect = el.getBoundingClientRect();
-            const visible =
-              rect.width > 0 && rect.height > 0 && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none';
-            if (!visible || el.hasAttribute('disabled')) return false;
-            if (el instanceof HTMLSelectElement) return el.value === '';
-            if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return el.value.trim() === '';
-            return false;
-          },
-        );
+        const requiredFields = Array.from(
+          form.querySelectorAll('[required], [aria-required="true"]'),
+        ).filter((el) => {
+          const rect = el.getBoundingClientRect();
+          const visible =
+            rect.width > 0 &&
+            rect.height > 0 &&
+            getComputedStyle(el).visibility !== 'hidden' &&
+            getComputedStyle(el).display !== 'none';
+          if (!visible || el.hasAttribute('disabled')) return false;
+          if (el instanceof HTMLSelectElement) return el.value === '';
+          if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)
+            return el.value.trim() === '';
+          return false;
+        });
         if (requiredFields.length === 0) return;
 
         const beforeStyles = requiredFields.map((el) => {
@@ -125,7 +132,9 @@ export async function checkFormErrorHandling(page: Page, pageUrl: string): Promi
         }
         form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
-        const hasAlertRegionInForm = !!form.querySelector('[role="alert"], [aria-live="polite"], [aria-live="assertive"]');
+        const hasAlertRegionInForm = !!form.querySelector(
+          '[role="alert"], [aria-live="polite"], [aria-live="assertive"]',
+        );
 
         const fields = requiredFields.map((el, i) => {
           const afterStyle = getComputedStyle(el);
@@ -135,12 +144,10 @@ export async function checkFormErrorHandling(page: Page, pageUrl: string): Promi
           const ariaInvalidTrue = el.getAttribute('aria-invalid') === 'true';
           const describedBy = el.getAttribute('aria-describedby');
           const hasAssociatedErrorText = describedBy
-            ? describedBy
-                .split(/\s+/)
-                .some((id) => {
-                  const errEl = document.getElementById(id);
-                  return !!errEl && errEl.textContent!.trim().length > 0;
-                })
+            ? describedBy.split(/\s+/).some((id) => {
+                const errEl = document.getElementById(id);
+                return !!errEl && errEl.textContent!.trim().length > 0;
+              })
             : false;
 
           const selector = el.id
@@ -148,7 +155,13 @@ export async function checkFormErrorHandling(page: Page, pageUrl: string): Promi
             : `${el.tagName.toLowerCase()}[name="${el.getAttribute('name') ?? ''}"]`;
           el.removeAttribute(ATTR);
 
-          return { selector, visuallyChanged, ariaInvalidTrue, hasAssociatedErrorText, hasAlertRegionInForm };
+          return {
+            selector,
+            visuallyChanged,
+            ariaInvalidTrue,
+            hasAssociatedErrorText,
+            hasAlertRegionInForm,
+          };
         });
 
         const formSelector = form.id ? `#${form.id}` : `form:nth-of-type(${formIndex + 1})`;

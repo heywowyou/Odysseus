@@ -17,8 +17,12 @@ import { buildWritingSystemPrompt } from './writing-prompt.js';
 describe('item 0.4: the writing prompt forbids the model from writing any count itself', () => {
   it('instructs the model never to write a digit in executiveSummary, since the template now states every count', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
-    expect(prompt).toContain('do not restate, estimate, or reference any of those figures yourself');
-    expect(prompt).toContain('never write a number of findings, pages, or occurrences anywhere in executiveSummary');
+    expect(prompt).toContain(
+      'do not restate, estimate, or reference any of those figures yourself',
+    );
+    expect(prompt).toContain(
+      'never write a number of findings, pages, or occurrences anywhere in executiveSummary',
+    );
   });
 });
 
@@ -30,7 +34,7 @@ describe('item 0.4: the writing prompt forbids the model from writing any count 
 // exactly the manual testing the methodology section says is out of
 // scope.
 describe('item 3.7: the writing prompt assumes no in-house developer', () => {
-  it('instructs the model to address recommendations to a technical provider, not the client\'s own developers', () => {
+  it("instructs the model to address recommendations to a technical provider, not the client's own developers", () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
     expect(prompt).toContain('no in-house developer');
     expect(prompt).toContain('your technical provider');

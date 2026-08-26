@@ -11,6 +11,8 @@ export type { DashboardStrings } from './types.js';
 export type DashboardLanguage = 'fr' | 'en';
 export const DEFAULT_DASHBOARD_LANGUAGE: DashboardLanguage = 'fr';
 
-export function getStrings(language: DashboardLanguage = DEFAULT_DASHBOARD_LANGUAGE): DashboardStrings {
+export function getStrings(
+  language: DashboardLanguage = DEFAULT_DASHBOARD_LANGUAGE,
+): DashboardStrings {
   return language === 'fr' ? fr : en;
 }

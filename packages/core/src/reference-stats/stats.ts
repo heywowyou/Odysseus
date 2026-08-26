@@ -89,7 +89,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     source: 'Deloitte & Google, Milliseconds Make Millions',
     year: 2020,
     citation: bilingual(
-      "Une amélioration de 0,1 seconde de la vitesse mobile a été associée à une hausse de 10,1 % des conversions dans le secteur du voyage (Deloitte & Google, Milliseconds Make Millions, 2020).",
+      'Une amélioration de 0,1 seconde de la vitesse mobile a été associée à une hausse de 10,1 % des conversions dans le secteur du voyage (Deloitte & Google, Milliseconds Make Millions, 2020).',
       'A 0.1-second improvement in mobile site speed was associated with a +10.1% increase in travel-sector conversions (Deloitte & Google, Milliseconds Make Millions, 2020).',
     ),
     ratio: { kind: 'conversion-uplift-per-0.1s', value: 0.101 },
@@ -104,7 +104,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     source: 'Deloitte & Google, Milliseconds Make Millions',
     year: 2020,
     citation: bilingual(
-      "Une amélioration de 0,1 seconde de la vitesse mobile a été associée à une hausse de 9,2 % du panier moyen dans le commerce de détail (Deloitte & Google, Milliseconds Make Millions, 2020).",
+      'Une amélioration de 0,1 seconde de la vitesse mobile a été associée à une hausse de 9,2 % du panier moyen dans le commerce de détail (Deloitte & Google, Milliseconds Make Millions, 2020).',
       'A 0.1-second improvement in mobile site speed was associated with a +9.2% increase in average order value for retail (Deloitte & Google, Milliseconds Make Millions, 2020).',
     ),
     ratio: { kind: 'aov-uplift-per-0.1s', value: 0.092 },
@@ -168,7 +168,12 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     // attached it to "mentions légales manquantes" (a missing SIREN)
     // purely because that theme happened to be the top-ranked 'seo'
     // theme with no topical check at all.
-    eligibleRuleIds: ['meta-title-length', 'meta-description-length', 'jsonld-invalid', 'jsonld-missing'],
+    eligibleRuleIds: [
+      'meta-title-length',
+      'meta-description-length',
+      'jsonld-invalid',
+      'jsonld-missing',
+    ],
   },
   {
     id: 'pew-ai-overviews-zero-click-2025',
@@ -183,7 +188,12 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
       "Sessions ending without any click ('zero-click') rose to 26% when an AI summary appeared, versus 16% when it did not (Pew Research Center, July 2025).",
     ),
     // item 1.1, same reasoning as the CTR stat above.
-    eligibleRuleIds: ['meta-title-length', 'meta-description-length', 'jsonld-invalid', 'jsonld-missing'],
+    eligibleRuleIds: [
+      'meta-title-length',
+      'meta-description-length',
+      'jsonld-invalid',
+      'jsonld-missing',
+    ],
   },
   {
     id: 'nestle-rich-results-ctr',
@@ -193,7 +203,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     scalability: 'context-only',
     source: 'Google (Nestlé case study)',
     citation: bilingual(
-      "Les pages Nestlé affichées en résultat enrichi Google ont enregistré un taux de clic supérieur de 82 % à celui des pages non enrichies (étude de cas documentée par Google).",
+      'Les pages Nestlé affichées en résultat enrichi Google ont enregistré un taux de clic supérieur de 82 % à celui des pages non enrichies (étude de cas documentée par Google).',
       'Nestlé pages shown as Google rich results had an 82% higher click-through rate than non-rich pages (Google-documented case study).',
     ),
   },
@@ -205,7 +215,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     scalability: 'context-only',
     source: 'Google (Rotten Tomatoes case study)',
     citation: bilingual(
-      "Les pages Rotten Tomatoes intégrant des données structurées ont enregistré un taux de clic supérieur de 25 % (étude de cas documentée par Google).",
+      'Les pages Rotten Tomatoes intégrant des données structurées ont enregistré un taux de clic supérieur de 25 % (étude de cas documentée par Google).',
       'Rotten Tomatoes pages with structured data saw a 25% higher click-through rate (Google-documented case study).',
     ),
   },
@@ -219,7 +229,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     year: 2024,
     citation: bilingual(
       "Dans un test contrôlé portant sur environ 10 000 requêtes réparties sur 9 domaines, des optimisations de contenu ciblées ont augmenté la visibilité dans les réponses des moteurs génératifs jusqu'à 40 % ; cette mesure porte sur la visibilité de citation au sein du test, non sur le trafic ou le chiffre d'affaires (Aggarwal et al., GEO: Generative Engine Optimization, ACM KDD 2024).",
-      "In a controlled benchmark of about 10,000 queries across 9 domains, targeted content optimizations boosted visibility in generative-engine responses by up to 40%; this measures citation visibility within the benchmark, not traffic or revenue (Aggarwal et al., GEO: Generative Engine Optimization, ACM KDD 2024).",
+      'In a controlled benchmark of about 10,000 queries across 9 domains, targeted content optimizations boosted visibility in generative-engine responses by up to 40%; this measures citation visibility within the benchmark, not traffic or revenue (Aggarwal et al., GEO: Generative Engine Optimization, ACM KDD 2024).',
     ),
     ratio: { kind: 'visibility-uplift', value: 0.4 },
   },
@@ -266,7 +276,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     year: 2024,
     citation: bilingual(
       "45 % des adultes en situation de handicap en Angleterre n'ont pris aucune nuitée touristique au cours des 12 derniers mois, contre 34 % des adultes sans situation de handicap (UK Department for Culture, Media and Sport, Participation Survey 2024/25, statistiques nationales).",
-      "45% of disabled adults in England took no overnight domestic holiday in the past 12 months, versus 34% of non-disabled adults (UK Department for Culture, Media and Sport, Participation Survey 2024/25, national statistics).",
+      '45% of disabled adults in England took no overnight domestic holiday in the past 12 months, versus 34% of non-disabled adults (UK Department for Culture, Media and Sport, Participation Survey 2024/25, national statistics).',
     ),
   },
   // hospitality.md entry 5. French, exact client segment (5th-category
@@ -279,7 +289,8 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     sector: 'hospitality',
     confidence: 'emerging',
     scalability: 'context-only',
-    source: 'DGE / Accesmetrie, Retombées économiques de la mise aux normes accessibilité des ERP de 5e catégorie',
+    source:
+      'DGE / Accesmetrie, Retombées économiques de la mise aux normes accessibilité des ERP de 5e catégorie',
     year: 2019,
     citation: bilingual(
       "La possibilité de réserver une chambre adaptée directement sur le site de l'hôtel reste rare, la gestion du site étant le plus souvent confiée à un tiers (DGE / Accesmetrie, étude commandée par la Direction générale des entreprises, 2019, portant spécifiquement sur les hôtels et restaurants de 5e catégorie).",
@@ -298,7 +309,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     year: 2022,
     citation: bilingual(
       "Une étude portant sur 306 sites d'hôtels et de Pousadas de la région centrale du Portugal a mesuré un niveau d'accessibilité web globalement faible au regard des WCAG 2.0, les hôtels les plus haut de gamme obtenant, contre toute attente, les moins bons résultats (Teixeira, Eusébio et Teixeira, Tourism and Hospitality Research, étude évaluée par les pairs, 2022).",
-      "A study of 306 hotel and Pousada websites in central Portugal measured broadly low web accessibility against WCAG 2.0, with higher-category hotels scoring worse than expected (Teixeira, Eusébio and Teixeira, Tourism and Hospitality Research, peer-reviewed, 2022).",
+      'A study of 306 hotel and Pousada websites in central Portugal measured broadly low web accessibility against WCAG 2.0, with higher-category hotels scoring worse than expected (Teixeira, Eusébio and Teixeira, Tourism and Hospitality Research, peer-reviewed, 2022).',
     ),
   },
   // hospitality.md entry 9. Peer-reviewed venue, but single automated
@@ -315,7 +326,7 @@ export const REFERENCE_STAT_TABLE: readonly ReferenceStat[] = [
     year: 2025,
     citation: bilingual(
       "Une évaluation des 100 principaux sites d'hôtels selon les WCAG 2.0 niveau AA a mis en évidence des obstacles récurrents concernant les alternatives textuelles, la navigation et la compatibilité avec les technologies d'assistance (Singh, Sibi et Bashir, Tourism and Hospitality Research, étude évaluée par les pairs, 2025).",
-      "An evaluation of the top 100 hotel websites against WCAG 2.0 level AA found recurring barriers around text alternatives, navigability, and assistive-technology compatibility (Singh, Sibi and Bashir, Tourism and Hospitality Research, peer-reviewed, 2025).",
+      'An evaluation of the top 100 hotel websites against WCAG 2.0 level AA found recurring barriers around text alternatives, navigability, and assistive-technology compatibility (Singh, Sibi and Bashir, Tourism and Hospitality Research, peer-reviewed, 2025).',
     ),
   },
   // hospitality.md's "confirmed no citable data" section: the only

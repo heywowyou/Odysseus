@@ -54,7 +54,10 @@ function afnicFileFingerprint(filePath: string): string {
   return `${stats.size}:${stats.mtimeMs}`;
 }
 
-export async function runProspectIngestionJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
+export async function runProspectIngestionJob(
+  job: JobDocument,
+  ctx: PipelineContext,
+): Promise<void> {
   const { connection, originLock } = ctx;
   const batchSize = job.options.batchSize ?? getProspectBatchSize();
 
@@ -71,10 +74,15 @@ export async function runProspectIngestionJob(job: JobDocument, ctx: PipelineCon
   // file) resets to byte 0 rather than resuming against the wrong file -
   // see ProspectIngestionCheckpointFields's doc comment in @odysseus/store.
   const checkpointIsForCurrentFile =
-    checkpoint?.sourceFilePath === afnicPath && checkpoint.sourceFileVersion === currentAfnicVersion;
+    checkpoint?.sourceFilePath === afnicPath &&
+    checkpoint.sourceFileVersion === currentAfnicVersion;
   if (checkpoint && !checkpointIsForCurrentFile) {
     logger.warn(
-      { afnicPath, previousVersion: checkpoint.sourceFileVersion, currentVersion: currentAfnicVersion },
+      {
+        afnicPath,
+        previousVersion: checkpoint.sourceFileVersion,
+        currentVersion: currentAfnicVersion,
+      },
       'AFNIC file changed since the last checkpoint, resuming from byte 0',
     );
   }
@@ -94,7 +102,12 @@ export async function runProspectIngestionJob(job: JobDocument, ctx: PipelineCon
     },
   });
 
-  const afnicResult = await streamAfnicCandidates(afnicPath, startByteOffset, batchSize, headerColumns);
+  const afnicResult = await streamAfnicCandidates(
+    afnicPath,
+    startByteOffset,
+    batchSize,
+    headerColumns,
+  );
 
   await updateJobProgress(connection, job.jobId, {
     phase: 'fetch-qualify',
@@ -119,7 +132,9 @@ export async function runProspectIngestionJob(job: JobDocument, ctx: PipelineCon
       sourceFilePath: afnicPath,
       sourceFileVersion: currentAfnicVersion,
       nextByteOffset: afnicResult.nextByteOffset,
-      rowsProcessed: (checkpointIsForCurrentFile ? (checkpoint?.rowsProcessed ?? 0) : 0) + afnicResult.rowsScanned,
+      rowsProcessed:
+        (checkpointIsForCurrentFile ? (checkpoint?.rowsProcessed ?? 0) : 0) +
+        afnicResult.rowsScanned,
       headerColumns: afnicResult.headerColumns,
     });
   }
@@ -142,7 +157,8 @@ export async function runProspectIngestionJob(job: JobDocument, ctx: PipelineCon
     const legalText = fetchResult.mentionsLegalesText ?? fetchResult.homepageText;
     const siren =
       legalText !== null
-        ? (extractMentionsLegales(fetchResult.mentionsLegalesUrl ?? siteUrl, legalText).siren ?? null)
+        ? (extractMentionsLegales(fetchResult.mentionsLegalesUrl ?? siteUrl, legalText).siren ??
+          null)
         : null;
 
     if (siren === null) {
@@ -156,7 +172,12 @@ export async function runProspectIngestionJob(job: JobDocument, ctx: PipelineCon
       const domainSuppressed = await isSuppressed(connection, domain, contactAddress?.value);
       const sireneMatch = sireneIndex.lookup(siren);
 
-      const qualification = qualifyProspect({ sireneMatch, siren, domainSuppressed, contactAddress });
+      const qualification = qualifyProspect({
+        sireneMatch,
+        siren,
+        domainSuppressed,
+        contactAddress,
+      });
       const { denomination, naf, trancheEffectifs, etatAdministratif } = joinSireneStockEntry(
         sireneMatch,
         sireneIndex.version,
@@ -171,7 +192,11 @@ export async function runProspectIngestionJob(job: JobDocument, ctx: PipelineCon
         naf,
         trancheEffectifs,
         etatAdministratif,
-        qualification: { qualified: qualification.qualified, reasons: qualification.reasons, evaluatedAt },
+        qualification: {
+          qualified: qualification.qualified,
+          reasons: qualification.reasons,
+          evaluatedAt,
+        },
         scanJobId: job.jobId,
         ...(contactAddress ? { contactAddress } : {}),
         dataOrigin: {

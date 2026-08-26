@@ -14,7 +14,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
-import type { AuditManifest, Finding, ObligationAssessment, ReportLanguage, SiteSignalOverrides } from '@odysseus/core';
+import type {
+  AuditManifest,
+  Finding,
+  ObligationAssessment,
+  ReportLanguage,
+  SiteSignalOverrides,
+} from '@odysseus/core';
 import {
   analyzeStructure,
   analyzeWriting,
@@ -75,7 +81,10 @@ export interface AnalysisStageResult {
 }
 
 function timestampForFilename(date: Date): string {
-  return date.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/:/g, '-');
+  return date
+    .toISOString()
+    .replace(/\.\d{3}Z$/, 'Z')
+    .replace(/:/g, '-');
 }
 
 /** Newest existing analyses/<timestamp>-structure.json for this audit, by
@@ -118,7 +127,8 @@ async function loadOrGenerateStructure(
 
       const knownIds = new Set(forModel.map((f) => f.findingId));
       const referenced = new Set<string>();
-      for (const theme of structureDoc.themes) for (const id of theme.findingIds) referenced.add(id);
+      for (const theme of structureDoc.themes)
+        for (const id of theme.findingIds) referenced.add(id);
       for (const id of structureDoc.quickWins) referenced.add(id);
       const stale = [...referenced].filter((id) => !knownIds.has(id));
       if (stale.length > 0) {
@@ -199,8 +209,16 @@ export async function runAnalysisStage(
     structureDoc.themes.map((t) => t.themeKey),
     usedFallbackContext,
   );
-  const merged = mergeAnalysisPasses(structureDoc, writingResult.output, forModel, options.language);
-  const unreferencedFindingCount = findUnreferencedStructureFindingIds(structureDoc, forModel).length;
+  const merged = mergeAnalysisPasses(
+    structureDoc,
+    writingResult.output,
+    forModel,
+    options.language,
+  );
+  const unreferencedFindingCount = findUnreferencedStructureFindingIds(
+    structureDoc,
+    forModel,
+  ).length;
 
   // Not present in the queued pipeline (run-full-audit-job.ts passes it
   // through, computed once by runAuditStage), but the standalone
@@ -212,10 +230,18 @@ export async function runAnalysisStage(
   // falling back to extracted-only facts.
   const obligationAssessment =
     options.obligationAssessment ??
-    (await runObligationStage(manifest, connection, options.manualSiren, options.siteSignalOverrides));
+    (await runObligationStage(
+      manifest,
+      connection,
+      options.manualSiren,
+      options.siteSignalOverrides,
+    ));
 
   await fs.mkdir(analysesDir, { recursive: true });
-  const analysisPath = path.join(analysesDir, `${timestampForFilename(generatedAt)}-${options.language}.json`);
+  const analysisPath = path.join(
+    analysesDir,
+    `${timestampForFilename(generatedAt)}-${options.language}.json`,
+  );
   await fs.writeFile(
     analysisPath,
     JSON.stringify(

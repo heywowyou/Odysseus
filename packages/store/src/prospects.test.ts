@@ -1,5 +1,10 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { createProspect, getProspect, listQualifiedProspects, type NewProspectInput } from './prospects.js';
+import {
+  createProspect,
+  getProspect,
+  listQualifiedProspects,
+  type NewProspectInput,
+} from './prospects.js';
 import { createProspectModel } from './schemas/prospect.schema.js';
 import { probeMongoAvailability } from './test-support.js';
 
@@ -60,12 +65,19 @@ describe.skipIf(!mongoAvailable)('prospects', () => {
       connection!,
       baseInput({
         domain: 'with-address.fr',
-        contactAddress: { value: 'contact@with-address.fr', localPart: 'contact', domain: 'with-address.fr' },
+        contactAddress: {
+          value: 'contact@with-address.fr',
+          localPart: 'contact',
+          domain: 'with-address.fr',
+        },
       }),
     );
     expect(withAddress.contactAddress?.value).toBe('contact@with-address.fr');
 
-    const withoutAddress = await createProspect(connection!, baseInput({ domain: 'without-address.fr' }));
+    const withoutAddress = await createProspect(
+      connection!,
+      baseInput({ domain: 'without-address.fr' }),
+    );
     expect(withoutAddress.contactAddress).toBeUndefined();
   });
 
@@ -74,7 +86,11 @@ describe.skipIf(!mongoAvailable)('prospects', () => {
       connection!,
       baseInput({
         domain: 'not-qualified.fr',
-        qualification: { qualified: false, reasons: ['no-qualifying-contact-address'], evaluatedAt: new Date() },
+        qualification: {
+          qualified: false,
+          reasons: ['no-qualifying-contact-address'],
+          evaluatedAt: new Date(),
+        },
       }),
     );
     const qualified = await listQualifiedProspects(connection!, 500);

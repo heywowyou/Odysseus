@@ -28,7 +28,10 @@ describe('readJsonLdTypes', () => {
   });
 
   it('reads an array of @type values', () => {
-    expect(readJsonLdTypes({ '@type': ['Hotel', 'LodgingBusiness'] })).toEqual(['Hotel', 'LodgingBusiness']);
+    expect(readJsonLdTypes({ '@type': ['Hotel', 'LodgingBusiness'] })).toEqual([
+      'Hotel',
+      'LodgingBusiness',
+    ]);
   });
 
   it('returns an empty array for a block with no @type', () => {
@@ -65,12 +68,20 @@ describe('findMissingEntityFields', () => {
   });
 
   it('recognizes LocalBusiness subtypes like Hotel, not only the literal word', () => {
-    expect(findMissingEntityFields({ '@type': 'Hotel', name: 'Example' })).toEqual(['address', 'telephone']);
+    expect(findMissingEntityFields({ '@type': 'Hotel', name: 'Example' })).toEqual([
+      'address',
+      'telephone',
+    ]);
   });
 
   it('treats an empty-string field as missing, not merely present', () => {
     expect(
-      findMissingEntityFields({ '@type': 'LocalBusiness', name: 'Example', address: '  ', telephone: '01' }),
+      findMissingEntityFields({
+        '@type': 'LocalBusiness',
+        name: 'Example',
+        address: '  ',
+        telephone: '01',
+      }),
     ).toEqual(['address']);
   });
 });
@@ -81,7 +92,9 @@ describe('structured-data-entity-missing', () => {
       [page({ pageUrl: 'https://example.com/about', jsonLdTypes: ['BreadcrumbList'] })],
       HOMEPAGE_URL,
     );
-    const entityMissing = candidates.filter((c) => c.ruleId === STRUCTURED_DATA_ENTITY_MISSING_RULE_ID);
+    const entityMissing = candidates.filter(
+      (c) => c.ruleId === STRUCTURED_DATA_ENTITY_MISSING_RULE_ID,
+    );
     expect(entityMissing).toHaveLength(1);
     expect(entityMissing[0]?.category).toBe('geo');
     expect(entityMissing[0]?.severity).toBe('moderate');
@@ -96,7 +109,9 @@ describe('structured-data-entity-missing', () => {
       ],
       HOMEPAGE_URL,
     );
-    expect(candidates.filter((c) => c.ruleId === STRUCTURED_DATA_ENTITY_MISSING_RULE_ID)).toEqual([]);
+    expect(candidates.filter((c) => c.ruleId === STRUCTURED_DATA_ENTITY_MISSING_RULE_ID)).toEqual(
+      [],
+    );
   });
 });
 
@@ -125,7 +140,14 @@ describe('entity-data-incomplete', () => {
         page({
           jsonLdTypes: ['LocalBusiness'],
           jsonLdEntities: [
-            { parsed: { '@type': 'LocalBusiness', name: 'Example', address: 'Rue A', telephone: '01' } },
+            {
+              parsed: {
+                '@type': 'LocalBusiness',
+                name: 'Example',
+                address: 'Rue A',
+                telephone: '01',
+              },
+            },
           ],
         }),
       ],
@@ -136,7 +158,12 @@ describe('entity-data-incomplete', () => {
 
   it('does not fire for a non-entity JSON-LD block (e.g. a Product)', () => {
     const candidates = extractGeoCandidates(
-      [page({ jsonLdTypes: ['Product'], jsonLdEntities: [{ parsed: { '@type': 'Product', name: 'Widget' } }] })],
+      [
+        page({
+          jsonLdTypes: ['Product'],
+          jsonLdEntities: [{ parsed: { '@type': 'Product', name: 'Widget' } }],
+        }),
+      ],
       HOMEPAGE_URL,
     );
     expect(candidates.filter((c) => c.ruleId === ENTITY_DATA_INCOMPLETE_RULE_ID)).toEqual([]);
@@ -145,7 +172,10 @@ describe('entity-data-incomplete', () => {
 
 describe('faq-content-without-schema', () => {
   it('fires when a page has 3+ question-shaped headings and no FAQ/QA schema', () => {
-    const candidates = extractGeoCandidates([page({ questionHeadingCount: 3, hasFaqSchema: false })], HOMEPAGE_URL);
+    const candidates = extractGeoCandidates(
+      [page({ questionHeadingCount: 3, hasFaqSchema: false })],
+      HOMEPAGE_URL,
+    );
     const faq = candidates.filter((c) => c.ruleId === FAQ_CONTENT_WITHOUT_SCHEMA_RULE_ID);
     expect(faq).toHaveLength(1);
     expect(faq[0]?.category).toBe('geo');
@@ -154,12 +184,18 @@ describe('faq-content-without-schema', () => {
   });
 
   it('does not fire below the question-heading threshold', () => {
-    const candidates = extractGeoCandidates([page({ questionHeadingCount: 2, hasFaqSchema: false })], HOMEPAGE_URL);
+    const candidates = extractGeoCandidates(
+      [page({ questionHeadingCount: 2, hasFaqSchema: false })],
+      HOMEPAGE_URL,
+    );
     expect(candidates.filter((c) => c.ruleId === FAQ_CONTENT_WITHOUT_SCHEMA_RULE_ID)).toEqual([]);
   });
 
   it('does not fire when a matching FAQ/QA schema is present', () => {
-    const candidates = extractGeoCandidates([page({ questionHeadingCount: 5, hasFaqSchema: true })], HOMEPAGE_URL);
+    const candidates = extractGeoCandidates(
+      [page({ questionHeadingCount: 5, hasFaqSchema: true })],
+      HOMEPAGE_URL,
+    );
     expect(candidates.filter((c) => c.ruleId === FAQ_CONTENT_WITHOUT_SCHEMA_RULE_ID)).toEqual([]);
   });
 });

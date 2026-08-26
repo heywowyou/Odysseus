@@ -1,443 +1,1281 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="{{ meta.langCode }}">
-<head>
-<meta charset="utf-8">
-<title>{{ meta.title }} - {{ meta.client }}</title>
-<link rel="stylesheet" href="../styles/nocturne.css">
-<link rel="stylesheet" href="../styles/paged.css">
-</head>
-<body>
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ meta.title }} - {{ meta.client }}</title>
+    <link rel="stylesheet" href="../styles/nocturne.css" />
+    <link rel="stylesheet" href="../styles/paged.css" />
+  </head>
+  <body>
+    <!-- Lifted into the @bottom-center margin box of every page by string-set. -->
+    <div class="footer-source">Rapport confidentiel &middot; {{ meta.client }}</div>
 
-<!-- Lifted into the @bottom-center margin box of every page by string-set. -->
-<div class="footer-source">Rapport confidentiel &middot; {{ meta.client }}</div>
-
-<div style="font-family:var(--font-body);color:var(--color-text)">
-
-<!-- COVER -->
-<section class="sheet sheet-cover">
-  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-4)">
-    <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--color-accent-200)">Odysseus - Audit numérique</div>
-    <h1 style="font-size:52px;max-width:13ch;margin:0">{{ meta.title }}</h1>
-    <div style="font-size:17px;opacity:0.8;max-width:38ch">{{ meta.subtitle }}</div>
-  </div>
-  <div>
-    <div style="height:1px;background:linear-gradient(to right,var(--color-accent) 0,var(--color-accent) 120px,transparent 120px);margin-bottom:var(--space-8)"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;row-gap:var(--space-8);column-gap:var(--space-8);font-size:13px">
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Client</div>
-        <div style="font-size:18px">{{ meta.client }}</div>
-      </div>
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Date de l'audit</div>
-        <div style="font-size:18px">{{ meta.auditDate }}</div>
-      </div>
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Périmètre analysé</div>
-        <div style="font-size:18px">{{ meta.pagesScanned }} pages scannées</div>
-      </div>
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Langue du rapport</div>
-        <div style="font-size:18px">{{ meta.language }}</div>
-      </div>
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Norme auditée</div>
-        <div style="font-size:18px">{{ meta.standard }}</div>
-      </div>
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Niveau de risque global</div>
-        <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:calc(var(--radius-md)*0.75);font-size:14px;font-weight:500;background:{{ meta.riskBg }};color:{{ meta.riskColor }}">{{ meta.riskLabel }}</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- TOC -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">Sommaire</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-6)">Table des matières</h2>
-  {{#each toc as |item|}}
-    <div style="display:flex;align-items:baseline;gap:var(--space-3);padding:9px 0;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
-      <span style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">{{ item.n }}</span>
-      <span style="font-size:14.5px">{{ item.title }}</span>
-    </div>
-  {{/each}}
-  <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">Les signets du PDF exporté reprennent cette structure ; les numéros de page réels apparaissent en pied de page à l'impression.</p>
-</section>
-
-<!-- EXEC SUMMARY -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">01 · Résumé</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-4)">Résumé exécutif & priorités</h2>
-  <p style="font-size:15px;max-width:66ch;opacity:0.9">{{ execSummary }}</p>
-  <div style="margin-top:var(--space-6);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-lg)">
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-accent-300);margin-bottom:var(--space-3)">Par où commencer</div>
-    {{#each topThemes as |tt|}}
-      <a href="{{ tt.anchor }}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:8px 0;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
-        <span style="width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:11px;display:flex;align-items:center;justify-content:center">{{ tt.priorityRank }}</span>
-        <span style="font-size:14px;flex:1">{{ tt.title }}</span>
-        <span style="font-size:11px;color:var(--color-accent-300)">Voir →</span>
-      </a>
-    {{/each}}
-  </div>
-</section>
-
-<!-- LEGAL EXPOSURE -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">02 · Exposition légale</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-4)">Exposition légale</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-6)">
-    <div class="card elev-sm">
-      <div class="card-kicker">Échéance EAA</div>
-      <div class="card-title">28 juin 2025</div>
-      <div class="card-body">Date d'entrée en application des obligations de l'European Accessibility Act, fixée par la directive elle-même.</div>
-    </div>
-    <div class="card elev-sm">
-      <div class="card-kicker">Statut d'obligation</div>
-      <div class="card-title">{{ legal.statusLabel }}</div>
-      <div class="card-body">{{ legal.statusNote }}</div>
-    </div>
-  </div>
-  <p style="font-size:13.5px;opacity:0.85;max-width:66ch">{{ legal.paragraphText }}</p>
-  <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">Généré à partir de l'évaluation d'obligations existante ; aucune interprétation juridique supplémentaire n'a été ajoutée. Une revue par un conseil juridique reste nécessaire.</p>
-</section>
-
-<!-- AUDIT IN NUMBERS -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">03 · Chiffres clés</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-6)">L'audit en chiffres</h2>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
-    {{#each numberTiles as |n|}}
-      <div style="padding:var(--space-3);background:var(--color-surface);border-radius:var(--radius-md)">
-        <div style="font-size:28px;font-family:var(--font-heading);font-weight:500">{{ n.value }}</div>
-        <div style="font-size:11.5px;opacity:0.65;margin-top:4px">{{ n.label }}</div>
-      </div>
-    {{/each}}
-  </div>
-  <h5>Répartition par sévérité</h5>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
-    {{#each severityTiles as |s|}}
-      <div style="padding:var(--space-3);border-radius:var(--radius-md);background:{{ s.bg }}">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-          <span style="width:8px;height:8px;border-radius:50%;background:{{ s.color }}"></span>
-          <span style="font-size:12px;font-weight:500;color:{{ s.color }}">{{ s.label }}</span>
-        </div>
-        <div style="font-size:24px;font-family:var(--font-heading)">{{ s.count }}</div>
-        <div style="font-size:11px;opacity:0.65;margin-top:4px">{{ s.meaning }}</div>
-      </div>
-    {{/each}}
-  </div>
-  <h5>Répartition par catégorie</h5>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
-    {{#each categorySplit as |c|}}
-      <div style="padding:var(--space-3);border-radius:var(--radius-md);background:var(--color-surface)">
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:{{ c.color }}">{{ c.label }}</div>
-        <div style="font-size:22px;font-family:var(--font-heading);margin-top:6px">{{ c.count }}</div>
-      </div>
-    {{/each}}
-  </div>
-  <div class="hr"></div>
-  <p style="font-size:13.5px;opacity:0.85">{{ wcagFailCountText }}</p>
-</section>
-
-<!-- RANKED PRIORITIES -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">04 · Priorités</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-2)">Priorités classées</h2>
-  <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">{{ themeCountHeading }}</p>
-  {{#each themes as |t|}}
-    <div class="card elev-sm theme-card" style="margin-bottom:var(--space-4);gap:var(--space-3)" id="theme-{{ t.priorityRank }}" class="theme-card">
-      <div style="display:flex;align-items:flex-start;gap:var(--space-3)">
-        <span style="width:26px;height:26px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:12px;display:flex;align-items:center;justify-content:center">{{ t.priorityRank }}</span>
-        <div style="flex:1">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
-            <span class="tag" style="background:{{ t.categoryBg }};color:{{ t.categoryColor }}">{{ t.categoryLabel }}</span>
-            {{#if t.quickWin}}
-              <span class="tag" style="display:inline-flex;align-items:center;gap:4px;background:#1c3a2c;color:#7cd9a0"><svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor"><path d="M239.2 97.29a16 16 0 0 0-13.81-11L166 81.17 142.72 25.81a15.95 15.95 0 0 0-29.44 0L90 81.17l-59.39 5.16a16 16 0 0 0-9.11 28.06l45 38.83L53.09 211a16 16 0 0 0 23.84 17.34L128 198.49l51.07 29.83A16 16 0 0 0 202.91 211l-13.4-57.78 45-38.83a16 16 0 0 0 4.69-17.1Z"></path></svg>Quick win</span>
-            {{/if}}
+    <div style="font-family: var(--font-body); color: var(--color-text)">
+      <!-- COVER -->
+      <section class="sheet sheet-cover">
+        <div
+          style="
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: var(--space-4);
+          "
+        >
+          <div
+            style="
+              font-size: 11px;
+              letter-spacing: 0.14em;
+              text-transform: uppercase;
+              color: var(--color-accent-200);
+            "
+          >
+            Odysseus - Audit numérique
           </div>
-          <div class="card-title">{{ t.title }}</div>
-        </div>
-      </div>
-      <p class="card-body" style="opacity:0.9">{{ t.businessImpact }}</p>
-      {{#if t.legalRelevance}}
-        <p style="font-size:12px;opacity:0.6;margin:0">Pertinence légale : {{ t.legalRelevance }}</p>
-      {{/if}}
-      <div style="display:flex;gap:var(--space-6);flex-wrap:wrap;font-size:12px;opacity:0.75;margin-top:4px">
-        <span>Effort : <strong>{{ t.effortLabel }}</strong></span>
-        <span>Impact : <strong>{{ t.impactLabel }}</strong></span>
-        <span>Pages affectées : <strong>{{ t.affectedPagesText }}</strong></span>
-        <span>Conformité : <strong>{{ t.conformityLabel }}</strong></span>
-        <span>Réf. : {{ t.findingIdsText }}</span>
-      </div>
-    </div>
-  {{/each}}
-</section>
-
-<!-- PRINTABLE CHECKLIST -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">05 · Check-list imprimable</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-2)">Check-list des priorités</h2>
-  <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">Page pensée pour être imprimée ou capturée seule, sans prose, uniquement l'essentiel.</p>
-  <div style="display:grid;grid-template-columns:40px 1fr 90px 90px 110px;font-size:14px">
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">#</div>
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Priorité</div>
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Effort</div>
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Impact</div>
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Pages</div>
-    {{#each themes as |ck|}}
-      <div class="row-atomic">
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ ck.priorityRank }}</div>
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ ck.title }}</div>
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ ck.effortLabel }}</div>
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ ck.impactLabel }}</div>
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ ck.affectedPagesText }}</div>
-      </div>
-    {{/each}}
-  </div>
-</section>
-
-<!-- OBSERVATIONS -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">06 · Observations</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-6)">Observations hors classement</h2>
-  <div style="margin-bottom:var(--space-6)">
-    <h5>Pages wrapper tierces</h5>
-    <p style="font-size:13.5px;opacity:0.85;max-width:64ch">{{ obsWrapperText }}</p>
-  </div>
-  <div>
-    <h5>Pages noindex légales</h5>
-    <p style="font-size:13.5px;opacity:0.85;max-width:64ch">{{ obsNoindexText }}</p>
-  </div>
-</section>
-
-<!-- ACCESSIBILITY CONFORMANCE -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">07 · Conformité</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-3)">Conformité d'accessibilité</h2>
-  <p style="font-size:13.5px;opacity:0.85;max-width:66ch;margin-bottom:var(--space-2)">Un critère en échec est un écart de conformité, pas une préférence esthétique. Cette page peut être transmise directement à un développeur, une agence ou un conseil juridique.</p>
-  <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-6)">Cette liste cite des critères sans se prononcer sur leur applicabilité légale précise à ce site.</p>
-  {{#if wcagRows.length}}
-    <div style="display:grid;grid-template-columns:100px 1fr 90px 100px 100px;font-size:14px">
-      <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Critère</div>
-      <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Nom</div>
-      <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Constats</div>
-      <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Occurrences</div>
-      <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Pages max.</div>
-      {{#each wcagRows as |w|}}
-        <div class="row-atomic">
-          <div style="padding:var(--space-2);color:var(--color-accent-300);border-bottom:1px solid var(--color-divider)">{{ w.code }}</div>
-          <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ w.name }}</div>
-          <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ w.findingsCount }}</div>
-          <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ w.occurrences }}</div>
-          <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ w.maxPages }}</div>
-        </div>
-      {{/each}}
-    </div>
-  {{/if}}
-</section>
-
-<!-- RENDER EVIDENCE -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">08 · Preuves de rendu</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-2)">Preuves de rendu (brut vs affiché)</h2>
-  <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">{{ renderHealthyText }}</p>
-  {{#each renderPages as |r|}}
-    <div class="card elev-sm render-card" style="margin-bottom:var(--space-4)">
-      <div class="card-kicker">{{ r.url }}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-top:6px">
-        <div>
-          <div style="font-size:11px;opacity:0.6;margin-bottom:4px">HTML brut - {{ r.rawChars }} caractères</div>
-          <div style="height:10px;border-radius:5px;background:var(--color-neutral-800);overflow:hidden"><div style="height:100%;width:{{ r.rawPct }}%;background:var(--color-neutral-500)"></div></div>
+          <h1 style="font-size: 52px; max-width: 13ch; margin: 0">{{ meta.title }}</h1>
+          <div style="font-size: 17px; opacity: 0.8; max-width: 38ch">{{ meta.subtitle }}</div>
         </div>
         <div>
-          <div style="font-size:11px;opacity:0.6;margin-bottom:4px">Page rendue - {{ r.renderedChars }} caractères</div>
-          <div style="height:10px;border-radius:5px;background:var(--color-neutral-800);overflow:hidden"><div style="height:100%;width:100%;background:var(--color-accent)"></div></div>
-        </div>
-      </div>
-      <div class="card-body" style="margin-top:4px">Manquant : {{ r.missingPct }}% du texte visible absent du HTML brut, sur {{ r.selector }}.</div>
-    </div>
-  {{/each}}
-  {{#if renderOverflowText}}
-    <p style="font-size:12px;opacity:0.55;margin-top:var(--space-4)">{{ renderOverflowText }}</p>
-  {{/if}}
-</section>
-
-<!-- PERFORMANCE -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">09 · Performance</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-2)">Mesures de performance</h2>
-  <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">Valeurs médianes agrégées sur les 20 pages (Lighthouse), à titre illustratif.</p>
-  <div style="display:grid;grid-template-columns:1fr 130px 120px 120px;font-size:14px">
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Métrique</div>
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Valeur médiane</div>
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Seuil "bon"</div>
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Statut</div>
-    {{#each cwv as |metric|}}
-      <div class="row-atomic">
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ metric.name }}</div>
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ metric.value }}</div>
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ metric.threshold }}</div>
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider);color:{{ metric.color }}">{{ metric.status }}</div>
-      </div>
-    {{/each}}
-  </div>
-</section>
-
-<!-- ACCESSIBILITY STATEMENT -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">10 · Déclaration</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-2)">Projet de déclaration d'accessibilité</h2>
-  <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-6)">Squelette généré à partir des constats, à compléter par le client avant publication.</p>
-  <div style="display:grid;grid-template-columns:1fr 220px;font-size:14px;margin-bottom:var(--space-6)">
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Critère</div>
-    <div style="padding:var(--space-2);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">Statut de conformité</div>
-    {{#each wcagRows as |sw|}}
-      <div class="row-atomic">
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider)">{{ sw.code }} - {{ sw.name }}</div>
-        <div style="padding:var(--space-2);border-bottom:1px solid var(--color-divider);color:var(--color-accent-300)">Non conforme (partiellement)</div>
-      </div>
-    {{/each}}
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6)">
-    <div>
-      <h5>Contact</h5>
-      <p style="font-size:13px;opacity:0.7">[Adresse e-mail de contact à compléter par le client] - processus de signalement à définir.</p>
-    </div>
-    <div>
-      <h5>Plan de remédiation</h5>
-      <p style="font-size:13px;opacity:0.7">Voir la section « Priorités classées » ci-dessus pour le plan.</p>
-    </div>
-  </div>
-</section>
-
-<!-- METHODOLOGY -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">11 · Méthodologie</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-4)">Méthodologie et limites</h2>
-  <p style="font-size:13.5px;opacity:0.85;max-width:68ch">{{ methodologyText }}</p>
-  <div class="hr"></div>
-  <p style="font-size:13.5px;opacity:0.85;max-width:68ch"><strong>Couverture automatisée :</strong> un audit automatisé, quel qu'il soit, ne couvre qu'environ 30 à 40 % des critères d'accessibilité. Odysseus complète cette couverture par une passe étendue (navigation clavier, ordre de focus, erreurs de formulaire, sous-titres, heuristique de texte alternatif), mais certaines propriétés d'accessibilité ne peuvent être évaluées qu'humainement.</p>
-  <div class="hr"></div>
-  <p style="font-size:13.5px;opacity:0.85;max-width:68ch">{{ legal.paragraphText }}</p>
-</section>
-
-<!-- APPENDIX -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">12 · Annexe</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-2)">Annexe - liste complète des constats</h2>
-  <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-6)">Groupés par catégorie puis par règle. Chaque constat individuel apparaît nommément ; aucun n'est renvoyé "sur demande".</p>
-  {{#each appendixCategories as |cat|}}
-    <div style="margin-bottom:var(--space-8)">
-      <h4 style="color:{{ cat.color }}">{{ cat.label }}</h4>
-      {{#each cat.nonMinorGroups as |grp|}}
-        <div class="appendix-group" style="margin-bottom:var(--space-4)">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
-            <span class="tag" style="background:{{ grp.severityBg }};color:{{ grp.severityColor }}">{{ grp.severityLabel }}</span>
-            <span style="font-size:14px;font-weight:500">{{ grp.ruleTitle }}</span>
-            <span style="font-size:10px;font-family:ui-monospace,monospace;opacity:0.5">{{ grp.ruleId }}</span>
-          </div>
-          <div style="font-size:12px;opacity:0.6;margin-bottom:8px">{{ grp.summaryText }}</div>
-          <div style="display:grid;grid-template-columns:80px 90px 100px 1fr;font-size:12.5px">
-            <div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider)">ID</div>
-            <div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider)">Pages</div>
-            <div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider)">Occurrences</div>
-            <div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider)">Sélecteur</div>
-            {{#each grp.members as |m|}}
-              <div class="row-atomic">
-                <div class="mono" style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">{{ m.findingId }}</div>
-                <div style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">{{ m.pagesAffected }}</div>
-                <div style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">{{ m.occurrences }}</div>
-                <div class="mono selector-cell" style="padding:6px var(--space-2);opacity:0.8;border-bottom:1px solid var(--color-divider)">{{ m.selector }}</div>
+          <div
+            style="
+              height: 1px;
+              background: linear-gradient(
+                to right,
+                var(--color-accent) 0,
+                var(--color-accent) 120px,
+                transparent 120px
+              );
+              margin-bottom: var(--space-8);
+            "
+          ></div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              row-gap: var(--space-8);
+              column-gap: var(--space-8);
+              font-size: 13px;
+            "
+          >
+            <div>
+              <div
+                style="
+                  text-transform: uppercase;
+                  letter-spacing: 0.08em;
+                  font-size: 10px;
+                  opacity: 0.5;
+                  margin-bottom: 8px;
+                "
+              >
+                Client
               </div>
-            {{/each}}
-          </div>
-        </div>
-      {{/each}}
-      {{#if cat.minorGroups.length}}
-        <div style="margin-top:var(--space-3)">
-          <div style="font-size:12px;opacity:0.6;margin-bottom:6px">Constats mineurs, regroupés par règle pour la lisibilité :</div>
-          <div style="display:grid;grid-template-columns:1fr 90px 90px 110px;font-size:12.5px">
-            <div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider)">Règle</div>
-            <div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider)">Constats</div>
-            <div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider)">Pages max.</div>
-            <div style="padding:6px var(--space-2);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider)">Occurrences</div>
-            {{#each cat.minorGroups as |mg|}}
-              <div class="row-atomic">
-                <div class="mono" style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">{{ mg.ruleId }}</div>
-                <div style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">{{ mg.count }}</div>
-                <div style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">{{ mg.maxPages }}</div>
-                <div style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">{{ mg.occurrences }}</div>
+              <div style="font-size: 18px">{{ meta.client }}</div>
+            </div>
+            <div>
+              <div
+                style="
+                  text-transform: uppercase;
+                  letter-spacing: 0.08em;
+                  font-size: 10px;
+                  opacity: 0.5;
+                  margin-bottom: 8px;
+                "
+              >
+                Date de l'audit
               </div>
-            {{/each}}
+              <div style="font-size: 18px">{{ meta.auditDate }}</div>
+            </div>
+            <div>
+              <div
+                style="
+                  text-transform: uppercase;
+                  letter-spacing: 0.08em;
+                  font-size: 10px;
+                  opacity: 0.5;
+                  margin-bottom: 8px;
+                "
+              >
+                Périmètre analysé
+              </div>
+              <div style="font-size: 18px">{{ meta.pagesScanned }} pages scannées</div>
+            </div>
+            <div>
+              <div
+                style="
+                  text-transform: uppercase;
+                  letter-spacing: 0.08em;
+                  font-size: 10px;
+                  opacity: 0.5;
+                  margin-bottom: 8px;
+                "
+              >
+                Langue du rapport
+              </div>
+              <div style="font-size: 18px">{{ meta.language }}</div>
+            </div>
+            <div>
+              <div
+                style="
+                  text-transform: uppercase;
+                  letter-spacing: 0.08em;
+                  font-size: 10px;
+                  opacity: 0.5;
+                  margin-bottom: 8px;
+                "
+              >
+                Norme auditée
+              </div>
+              <div style="font-size: 18px">{{ meta.standard }}</div>
+            </div>
+            <div>
+              <div
+                style="
+                  text-transform: uppercase;
+                  letter-spacing: 0.08em;
+                  font-size: 10px;
+                  opacity: 0.5;
+                  margin-bottom: 8px;
+                "
+              >
+                Niveau de risque global
+              </div>
+              <div
+                style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:calc(var(--radius-md)*0.75);font-size:14px;font-weight:500;background:{{ meta.riskBg }};color:{{ meta.riskColor }}"
+              >
+                {{ meta.riskLabel }}
+              </div>
+            </div>
           </div>
         </div>
-      {{/if}}
-    </div>
-  {{/each}}
-</section>
+      </section>
 
-<!-- GLOSSARY -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">13 · Glossaire</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-6)">Glossaire</h2>
-  {{#each glossary as |g|}}
-    <div class="glossary-entry" style="margin-bottom:var(--space-4)">
-      <div style="font-size:14px;font-weight:500;color:var(--color-accent-300)">{{ g.term }}</div>
-      <div style="font-size:13px;opacity:0.8">{{ g.def }}</div>
-    </div>
-  {{/each}}
-</section>
+      <!-- TOC -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">Sommaire</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-6)">Table des matières</h2>
+        {{#each toc as |item|}}
+        <div
+          style="
+            display: flex;
+            align-items: baseline;
+            gap: var(--space-3);
+            padding: 9px 0;
+            background: linear-gradient(
+                to right,
+                transparent,
+                var(--color-divider) 0,
+                var(--color-divider) 100%,
+                transparent
+              )
+              no-repeat bottom/100% 1px;
+          "
+        >
+          <span style="font-size: 12px; color: var(--color-accent-300); width: 22px; flex: none"
+            >{{ item.n }}</span
+          >
+          <span style="font-size: 14.5px">{{ item.title }}</span>
+        </div>
+        {{/each}}
+        <p style="font-size: 11px; opacity: 0.5; margin-top: var(--space-4)">
+          Les signets du PDF exporté reprennent cette structure ; les numéros de page réels
+          apparaissent en pied de page à l'impression.
+        </p>
+      </section>
 
-<!-- NEXT STEPS -->
-<section class="sheet">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">14 · Suite</h6>
-  </div>
-  <h2 style="margin-bottom:var(--space-6)">Prochaines étapes & contact</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-4)">
-    <div class="card elev-sm">
-      <div class="card-title">Une question ?</div>
-      <div class="card-body">Toute demande de clarification sur un constat ou une priorité peut être adressée directement à l'équipe Odysseus, en citant l'identifiant du constat concerné.</div>
-    </div>
-    <div class="card elev-sm">
-      <div class="card-title">Ré-audits</div>
-      <div class="card-body">Un ré-audit relance le même périmètre et compare les résultats au rapport précédent, constat par constat, pour mesurer la progression.</div>
-    </div>
-    <div class="card elev-sm">
-      <div class="card-title">Vérification post-correctifs</div>
-      <div class="card-body">Une fois les correctifs déployés, une vérification ciblée confirme la résolution des constats concernés avant clôture.</div>
-    </div>
-  </div>
-</section>
+      <!-- EXEC SUMMARY -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">01 · Résumé</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-4)">Résumé exécutif & priorités</h2>
+        <p style="font-size: 15px; max-width: 66ch; opacity: 0.9">{{ execSummary }}</p>
+        <div
+          style="
+            margin-top: var(--space-6);
+            padding: var(--space-4);
+            background: var(--color-surface);
+            border-radius: var(--radius-lg);
+          "
+        >
+          <div
+            style="
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              color: var(--color-accent-300);
+              margin-bottom: var(--space-3);
+            "
+          >
+            Par où commencer
+          </div>
+          {{#each topThemes as |tt|}}
+          <a
+            href="{{ tt.anchor }}"
+            style="
+              display: flex;
+              align-items: center;
+              gap: var(--space-3);
+              text-decoration: none;
+              color: var(--color-text);
+              padding: 8px 0;
+              background: linear-gradient(
+                  to right,
+                  transparent,
+                  var(--color-divider) 0,
+                  var(--color-divider) 100%,
+                  transparent
+                )
+                no-repeat bottom/100% 1px;
+            "
+          >
+            <span
+              style="
+                width: 22px;
+                height: 22px;
+                flex: none;
+                border-radius: 50%;
+                border: 1px solid var(--color-accent);
+                color: var(--color-accent);
+                font-size: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+              >{{ tt.priorityRank }}</span
+            >
+            <span style="font-size: 14px; flex: 1">{{ tt.title }}</span>
+            <span style="font-size: 11px; color: var(--color-accent-300)">Voir →</span>
+          </a>
+          {{/each}}
+        </div>
+      </section>
 
-</div>
-</body>
+      <!-- LEGAL EXPOSURE -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">02 · Exposition légale</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-4)">Exposition légale</h2>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-4);
+            margin-bottom: var(--space-6);
+          "
+        >
+          <div class="card elev-sm">
+            <div class="card-kicker">Échéance EAA</div>
+            <div class="card-title">28 juin 2025</div>
+            <div class="card-body">
+              Date d'entrée en application des obligations de l'European Accessibility Act, fixée
+              par la directive elle-même.
+            </div>
+          </div>
+          <div class="card elev-sm">
+            <div class="card-kicker">Statut d'obligation</div>
+            <div class="card-title">{{ legal.statusLabel }}</div>
+            <div class="card-body">{{ legal.statusNote }}</div>
+          </div>
+        </div>
+        <p style="font-size: 13.5px; opacity: 0.85; max-width: 66ch">{{ legal.paragraphText }}</p>
+        <p style="font-size: 11px; opacity: 0.5; margin-top: var(--space-4)">
+          Généré à partir de l'évaluation d'obligations existante ; aucune interprétation juridique
+          supplémentaire n'a été ajoutée. Une revue par un conseil juridique reste nécessaire.
+        </p>
+      </section>
+
+      <!-- AUDIT IN NUMBERS -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">03 · Chiffres clés</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-6)">L'audit en chiffres</h2>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-3);
+            margin-bottom: var(--space-6);
+          "
+        >
+          {{#each numberTiles as |n|}}
+          <div
+            style="
+              padding: var(--space-3);
+              background: var(--color-surface);
+              border-radius: var(--radius-md);
+            "
+          >
+            <div style="font-size: 28px; font-family: var(--font-heading); font-weight: 500">
+              {{ n.value }}
+            </div>
+            <div style="font-size: 11.5px; opacity: 0.65; margin-top: 4px">{{ n.label }}</div>
+          </div>
+          {{/each}}
+        </div>
+        <h5>Répartition par sévérité</h5>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-3);
+            margin-bottom: var(--space-6);
+          "
+        >
+          {{#each severityTiles as |s|}}
+          <div style="padding:var(--space-3);border-radius:var(--radius-md);background:{{ s.bg }}">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px">
+              <span style="width:8px;height:8px;border-radius:50%;background:{{ s.color }}"></span>
+              <span style="font-size:12px;font-weight:500;color:{{ s.color }}">{{ s.label }}</span>
+            </div>
+            <div style="font-size: 24px; font-family: var(--font-heading)">{{ s.count }}</div>
+            <div style="font-size: 11px; opacity: 0.65; margin-top: 4px">{{ s.meaning }}</div>
+          </div>
+          {{/each}}
+        </div>
+        <h5>Répartition par catégorie</h5>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-3);
+            margin-bottom: var(--space-6);
+          "
+        >
+          {{#each categorySplit as |c|}}
+          <div
+            style="
+              padding: var(--space-3);
+              border-radius: var(--radius-md);
+              background: var(--color-surface);
+            "
+          >
+            <div
+              style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:{{ c.color }}"
+            >
+              {{ c.label }}
+            </div>
+            <div style="font-size: 22px; font-family: var(--font-heading); margin-top: 6px">
+              {{ c.count }}
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        <div class="hr"></div>
+        <p style="font-size: 13.5px; opacity: 0.85">{{ wcagFailCountText }}</p>
+      </section>
+
+      <!-- RANKED PRIORITIES -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">04 · Priorités</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-2)">Priorités classées</h2>
+        <p style="font-size: 13px; opacity: 0.6; margin-bottom: var(--space-6)">
+          {{ themeCountHeading }}
+        </p>
+        {{#each themes as |t|}}
+        <div
+          class="card elev-sm theme-card"
+          style="margin-bottom: var(--space-4); gap: var(--space-3)"
+          id="theme-{{ t.priorityRank }}"
+          class="theme-card"
+        >
+          <div style="display: flex; align-items: flex-start; gap: var(--space-3)">
+            <span
+              style="
+                width: 26px;
+                height: 26px;
+                flex: none;
+                border-radius: 50%;
+                border: 1px solid var(--color-accent);
+                color: var(--color-accent);
+                font-size: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+              >{{ t.priorityRank }}</span
+            >
+            <div style="flex: 1">
+              <div
+                style="
+                  display: flex;
+                  gap: 8px;
+                  align-items: center;
+                  flex-wrap: wrap;
+                  margin-bottom: 4px;
+                "
+              >
+                <span class="tag" style="background:{{ t.categoryBg }};color:{{ t.categoryColor }}"
+                  >{{ t.categoryLabel }}</span
+                >
+                {{#if t.quickWin}}
+                <span
+                  class="tag"
+                  style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    background: #1c3a2c;
+                    color: #7cd9a0;
+                  "
+                  ><svg width="10" height="10" viewBox="0 0 256 256" fill="currentColor">
+                    <path
+                      d="M239.2 97.29a16 16 0 0 0-13.81-11L166 81.17 142.72 25.81a15.95 15.95 0 0 0-29.44 0L90 81.17l-59.39 5.16a16 16 0 0 0-9.11 28.06l45 38.83L53.09 211a16 16 0 0 0 23.84 17.34L128 198.49l51.07 29.83A16 16 0 0 0 202.91 211l-13.4-57.78 45-38.83a16 16 0 0 0 4.69-17.1Z"
+                    ></path></svg
+                  >Quick win</span
+                >
+                {{/if}}
+              </div>
+              <div class="card-title">{{ t.title }}</div>
+            </div>
+          </div>
+          <p class="card-body" style="opacity: 0.9">{{ t.businessImpact }}</p>
+          {{#if t.legalRelevance}}
+          <p style="font-size: 12px; opacity: 0.6; margin: 0">
+            Pertinence légale : {{ t.legalRelevance }}
+          </p>
+          {{/if}}
+          <div
+            style="
+              display: flex;
+              gap: var(--space-6);
+              flex-wrap: wrap;
+              font-size: 12px;
+              opacity: 0.75;
+              margin-top: 4px;
+            "
+          >
+            <span>Effort : <strong>{{ t.effortLabel }}</strong></span>
+            <span>Impact : <strong>{{ t.impactLabel }}</strong></span>
+            <span>Pages affectées : <strong>{{ t.affectedPagesText }}</strong></span>
+            <span>Conformité : <strong>{{ t.conformityLabel }}</strong></span>
+            <span>Réf. : {{ t.findingIdsText }}</span>
+          </div>
+        </div>
+        {{/each}}
+      </section>
+
+      <!-- PRINTABLE CHECKLIST -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">05 · Check-list imprimable</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-2)">Check-list des priorités</h2>
+        <p style="font-size: 12px; opacity: 0.55; margin-bottom: var(--space-4)">
+          Page pensée pour être imprimée ou capturée seule, sans prose, uniquement l'essentiel.
+        </p>
+        <div
+          style="display: grid; grid-template-columns: 40px 1fr 90px 90px 110px; font-size: 14px"
+        >
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            #
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Priorité
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Effort
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Impact
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Pages
+          </div>
+          {{#each themes as |ck|}}
+          <div class="row-atomic">
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ ck.priorityRank }}
+            </div>
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ ck.title }}
+            </div>
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ ck.effortLabel }}
+            </div>
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ ck.impactLabel }}
+            </div>
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ ck.affectedPagesText }}
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </section>
+
+      <!-- OBSERVATIONS -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">06 · Observations</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-6)">Observations hors classement</h2>
+        <div style="margin-bottom: var(--space-6)">
+          <h5>Pages wrapper tierces</h5>
+          <p style="font-size: 13.5px; opacity: 0.85; max-width: 64ch">{{ obsWrapperText }}</p>
+        </div>
+        <div>
+          <h5>Pages noindex légales</h5>
+          <p style="font-size: 13.5px; opacity: 0.85; max-width: 64ch">{{ obsNoindexText }}</p>
+        </div>
+      </section>
+
+      <!-- ACCESSIBILITY CONFORMANCE -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">07 · Conformité</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-3)">Conformité d'accessibilité</h2>
+        <p style="font-size: 13.5px; opacity: 0.85; max-width: 66ch; margin-bottom: var(--space-2)">
+          Un critère en échec est un écart de conformité, pas une préférence esthétique. Cette page
+          peut être transmise directement à un développeur, une agence ou un conseil juridique.
+        </p>
+        <p style="font-size: 11px; opacity: 0.5; margin-bottom: var(--space-6)">
+          Cette liste cite des critères sans se prononcer sur leur applicabilité légale précise à ce
+          site.
+        </p>
+        {{#if wcagRows.length}}
+        <div
+          style="display: grid; grid-template-columns: 100px 1fr 90px 100px 100px; font-size: 14px"
+        >
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Critère
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Nom
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Constats
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Occurrences
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Pages max.
+          </div>
+          {{#each wcagRows as |w|}}
+          <div class="row-atomic">
+            <div
+              style="
+                padding: var(--space-2);
+                color: var(--color-accent-300);
+                border-bottom: 1px solid var(--color-divider);
+              "
+            >
+              {{ w.code }}
+            </div>
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ w.name }}
+            </div>
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ w.findingsCount }}
+            </div>
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ w.occurrences }}
+            </div>
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ w.maxPages }}
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
+      </section>
+
+      <!-- RENDER EVIDENCE -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">08 · Preuves de rendu</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-2)">Preuves de rendu (brut vs affiché)</h2>
+        <p style="font-size: 13px; opacity: 0.6; margin-bottom: var(--space-6)">
+          {{ renderHealthyText }}
+        </p>
+        {{#each renderPages as |r|}}
+        <div class="card elev-sm render-card" style="margin-bottom: var(--space-4)">
+          <div class="card-kicker">{{ r.url }}</div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: var(--space-4);
+              margin-top: 6px;
+            "
+          >
+            <div>
+              <div style="font-size: 11px; opacity: 0.6; margin-bottom: 4px">
+                HTML brut - {{ r.rawChars }} caractères
+              </div>
+              <div
+                style="
+                  height: 10px;
+                  border-radius: 5px;
+                  background: var(--color-neutral-800);
+                  overflow: hidden;
+                "
+              >
+                <div
+                  style="height:100%;width:{{ r.rawPct }}%;background:var(--color-neutral-500)"
+                ></div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 11px; opacity: 0.6; margin-bottom: 4px">
+                Page rendue - {{ r.renderedChars }} caractères
+              </div>
+              <div
+                style="
+                  height: 10px;
+                  border-radius: 5px;
+                  background: var(--color-neutral-800);
+                  overflow: hidden;
+                "
+              >
+                <div style="height: 100%; width: 100%; background: var(--color-accent)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body" style="margin-top: 4px">
+            Manquant : {{ r.missingPct }}% du texte visible absent du HTML brut, sur {{ r.selector
+            }}.
+          </div>
+        </div>
+        {{/each}} {{#if renderOverflowText}}
+        <p style="font-size: 12px; opacity: 0.55; margin-top: var(--space-4)">
+          {{ renderOverflowText }}
+        </p>
+        {{/if}}
+      </section>
+
+      <!-- PERFORMANCE -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">09 · Performance</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-2)">Mesures de performance</h2>
+        <p style="font-size: 12px; opacity: 0.55; margin-bottom: var(--space-4)">
+          Valeurs médianes agrégées sur les 20 pages (Lighthouse), à titre illustratif.
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 130px 120px 120px; font-size: 14px">
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Métrique
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Valeur médiane
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Seuil "bon"
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Statut
+          </div>
+          {{#each cwv as |metric|}}
+          <div class="row-atomic">
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ metric.name }}
+            </div>
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ metric.value }}
+            </div>
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ metric.threshold }}
+            </div>
+            <div
+              style="padding:var(--space-2);border-bottom:1px solid var(--color-divider);color:{{ metric.color }}"
+            >
+              {{ metric.status }}
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </section>
+
+      <!-- ACCESSIBILITY STATEMENT -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">10 · Déclaration</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-2)">Projet de déclaration d'accessibilité</h2>
+        <p style="font-size: 12px; opacity: 0.55; margin-bottom: var(--space-6)">
+          Squelette généré à partir des constats, à compléter par le client avant publication.
+        </p>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 220px;
+            font-size: 14px;
+            margin-bottom: var(--space-6);
+          "
+        >
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Critère
+          </div>
+          <div
+            style="
+              padding: var(--space-2);
+              font-size: 11px;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: color-mix(in srgb, var(--color-text) 60%, transparent);
+              border-bottom: 1px solid var(--color-divider);
+            "
+          >
+            Statut de conformité
+          </div>
+          {{#each wcagRows as |sw|}}
+          <div class="row-atomic">
+            <div style="padding: var(--space-2); border-bottom: 1px solid var(--color-divider)">
+              {{ sw.code }} - {{ sw.name }}
+            </div>
+            <div
+              style="
+                padding: var(--space-2);
+                border-bottom: 1px solid var(--color-divider);
+                color: var(--color-accent-300);
+              "
+            >
+              Non conforme (partiellement)
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6)">
+          <div>
+            <h5>Contact</h5>
+            <p style="font-size: 13px; opacity: 0.7">
+              [Adresse e-mail de contact à compléter par le client] - processus de signalement à
+              définir.
+            </p>
+          </div>
+          <div>
+            <h5>Plan de remédiation</h5>
+            <p style="font-size: 13px; opacity: 0.7">
+              Voir la section « Priorités classées » ci-dessus pour le plan.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- METHODOLOGY -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">11 · Méthodologie</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-4)">Méthodologie et limites</h2>
+        <p style="font-size: 13.5px; opacity: 0.85; max-width: 68ch">{{ methodologyText }}</p>
+        <div class="hr"></div>
+        <p style="font-size: 13.5px; opacity: 0.85; max-width: 68ch">
+          <strong>Couverture automatisée :</strong> un audit automatisé, quel qu'il soit, ne couvre
+          qu'environ 30 à 40 % des critères d'accessibilité. Odysseus complète cette couverture par
+          une passe étendue (navigation clavier, ordre de focus, erreurs de formulaire, sous-titres,
+          heuristique de texte alternatif), mais certaines propriétés d'accessibilité ne peuvent
+          être évaluées qu'humainement.
+        </p>
+        <div class="hr"></div>
+        <p style="font-size: 13.5px; opacity: 0.85; max-width: 68ch">{{ legal.paragraphText }}</p>
+      </section>
+
+      <!-- APPENDIX -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">12 · Annexe</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-2)">Annexe - liste complète des constats</h2>
+        <p style="font-size: 12px; opacity: 0.55; margin-bottom: var(--space-6)">
+          Groupés par catégorie puis par règle. Chaque constat individuel apparaît nommément ; aucun
+          n'est renvoyé "sur demande".
+        </p>
+        {{#each appendixCategories as |cat|}}
+        <div style="margin-bottom: var(--space-8)">
+          <h4 style="color:{{ cat.color }}">{{ cat.label }}</h4>
+          {{#each cat.nonMinorGroups as |grp|}}
+          <div class="appendix-group" style="margin-bottom: var(--space-4)">
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                flex-wrap: wrap;
+                margin-bottom: 4px;
+              "
+            >
+              <span
+                class="tag"
+                style="background:{{ grp.severityBg }};color:{{ grp.severityColor }}"
+                >{{ grp.severityLabel }}</span
+              >
+              <span style="font-size: 14px; font-weight: 500">{{ grp.ruleTitle }}</span>
+              <span style="font-size: 10px; font-family: ui-monospace, monospace; opacity: 0.5"
+                >{{ grp.ruleId }}</span
+              >
+            </div>
+            <div style="font-size: 12px; opacity: 0.6; margin-bottom: 8px">
+              {{ grp.summaryText }}
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 80px 90px 100px 1fr; font-size: 12.5px"
+            >
+              <div
+                style="
+                  padding: 6px var(--space-2);
+                  font-size: 10px;
+                  letter-spacing: 0.06em;
+                  text-transform: uppercase;
+                  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+                  border-bottom: 1px solid var(--color-divider);
+                "
+              >
+                ID
+              </div>
+              <div
+                style="
+                  padding: 6px var(--space-2);
+                  font-size: 10px;
+                  letter-spacing: 0.06em;
+                  text-transform: uppercase;
+                  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+                  border-bottom: 1px solid var(--color-divider);
+                "
+              >
+                Pages
+              </div>
+              <div
+                style="
+                  padding: 6px var(--space-2);
+                  font-size: 10px;
+                  letter-spacing: 0.06em;
+                  text-transform: uppercase;
+                  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+                  border-bottom: 1px solid var(--color-divider);
+                "
+              >
+                Occurrences
+              </div>
+              <div
+                style="
+                  padding: 6px var(--space-2);
+                  font-size: 10px;
+                  letter-spacing: 0.06em;
+                  text-transform: uppercase;
+                  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+                  border-bottom: 1px solid var(--color-divider);
+                "
+              >
+                Sélecteur
+              </div>
+              {{#each grp.members as |m|}}
+              <div class="row-atomic">
+                <div
+                  class="mono"
+                  style="padding: 6px var(--space-2); border-bottom: 1px solid var(--color-divider)"
+                >
+                  {{ m.findingId }}
+                </div>
+                <div
+                  style="padding: 6px var(--space-2); border-bottom: 1px solid var(--color-divider)"
+                >
+                  {{ m.pagesAffected }}
+                </div>
+                <div
+                  style="padding: 6px var(--space-2); border-bottom: 1px solid var(--color-divider)"
+                >
+                  {{ m.occurrences }}
+                </div>
+                <div
+                  class="mono selector-cell"
+                  style="
+                    padding: 6px var(--space-2);
+                    opacity: 0.8;
+                    border-bottom: 1px solid var(--color-divider);
+                  "
+                >
+                  {{ m.selector }}
+                </div>
+              </div>
+              {{/each}}
+            </div>
+          </div>
+          {{/each}} {{#if cat.minorGroups.length}}
+          <div style="margin-top: var(--space-3)">
+            <div style="font-size: 12px; opacity: 0.6; margin-bottom: 6px">
+              Constats mineurs, regroupés par règle pour la lisibilité :
+            </div>
+            <div
+              style="display: grid; grid-template-columns: 1fr 90px 90px 110px; font-size: 12.5px"
+            >
+              <div
+                style="
+                  padding: 6px var(--space-2);
+                  font-size: 10px;
+                  letter-spacing: 0.06em;
+                  text-transform: uppercase;
+                  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+                  border-bottom: 1px solid var(--color-divider);
+                "
+              >
+                Règle
+              </div>
+              <div
+                style="
+                  padding: 6px var(--space-2);
+                  font-size: 10px;
+                  letter-spacing: 0.06em;
+                  text-transform: uppercase;
+                  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+                  border-bottom: 1px solid var(--color-divider);
+                "
+              >
+                Constats
+              </div>
+              <div
+                style="
+                  padding: 6px var(--space-2);
+                  font-size: 10px;
+                  letter-spacing: 0.06em;
+                  text-transform: uppercase;
+                  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+                  border-bottom: 1px solid var(--color-divider);
+                "
+              >
+                Pages max.
+              </div>
+              <div
+                style="
+                  padding: 6px var(--space-2);
+                  font-size: 10px;
+                  letter-spacing: 0.06em;
+                  text-transform: uppercase;
+                  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+                  border-bottom: 1px solid var(--color-divider);
+                "
+              >
+                Occurrences
+              </div>
+              {{#each cat.minorGroups as |mg|}}
+              <div class="row-atomic">
+                <div
+                  class="mono"
+                  style="padding: 6px var(--space-2); border-bottom: 1px solid var(--color-divider)"
+                >
+                  {{ mg.ruleId }}
+                </div>
+                <div
+                  style="padding: 6px var(--space-2); border-bottom: 1px solid var(--color-divider)"
+                >
+                  {{ mg.count }}
+                </div>
+                <div
+                  style="padding: 6px var(--space-2); border-bottom: 1px solid var(--color-divider)"
+                >
+                  {{ mg.maxPages }}
+                </div>
+                <div
+                  style="padding: 6px var(--space-2); border-bottom: 1px solid var(--color-divider)"
+                >
+                  {{ mg.occurrences }}
+                </div>
+              </div>
+              {{/each}}
+            </div>
+          </div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </section>
+
+      <!-- GLOSSARY -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">13 · Glossaire</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-6)">Glossaire</h2>
+        {{#each glossary as |g|}}
+        <div class="glossary-entry" style="margin-bottom: var(--space-4)">
+          <div style="font-size: 14px; font-weight: 500; color: var(--color-accent-300)">
+            {{ g.term }}
+          </div>
+          <div style="font-size: 13px; opacity: 0.8">{{ g.def }}</div>
+        </div>
+        {{/each}}
+      </section>
+
+      <!-- NEXT STEPS -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">14 · Suite</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-6)">Prochaines étapes & contact</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-4)">
+          <div class="card elev-sm">
+            <div class="card-title">Une question ?</div>
+            <div class="card-body">
+              Toute demande de clarification sur un constat ou une priorité peut être adressée
+              directement à l'équipe Odysseus, en citant l'identifiant du constat concerné.
+            </div>
+          </div>
+          <div class="card elev-sm">
+            <div class="card-title">Ré-audits</div>
+            <div class="card-body">
+              Un ré-audit relance le même périmètre et compare les résultats au rapport précédent,
+              constat par constat, pour mesurer la progression.
+            </div>
+          </div>
+          <div class="card elev-sm">
+            <div class="card-title">Vérification post-correctifs</div>
+            <div class="card-body">
+              Une fois les correctifs déployés, une vérification ciblée confirme la résolution des
+              constats concernés avant clôture.
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
 </html>

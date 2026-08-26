@@ -64,13 +64,21 @@ function buildScanJson(
   return {
     url: scanResult.url,
     ...(relativizedRenderDiff !== undefined ? { renderDiff: relativizedRenderDiff } : {}),
-    ...(scanResult.renderDiffError !== undefined ? { renderDiffError: scanResult.renderDiffError } : {}),
+    ...(scanResult.renderDiffError !== undefined
+      ? { renderDiffError: scanResult.renderDiffError }
+      : {}),
     ...(scanResult.axe !== undefined ? { axe: scanResult.axe } : {}),
     ...(scanResult.axeError !== undefined ? { axeError: scanResult.axeError } : {}),
     ...(scanResult.lighthouse !== undefined ? { lighthouse: scanResult.lighthouse } : {}),
-    ...(scanResult.lighthouseError !== undefined ? { lighthouseError: scanResult.lighthouseError } : {}),
-    ...(scanResult.mentionsLegales !== undefined ? { mentionsLegales: scanResult.mentionsLegales } : {}),
-    ...(scanResult.mentionsLegalesError !== undefined ? { mentionsLegalesError: scanResult.mentionsLegalesError } : {}),
+    ...(scanResult.lighthouseError !== undefined
+      ? { lighthouseError: scanResult.lighthouseError }
+      : {}),
+    ...(scanResult.mentionsLegales !== undefined
+      ? { mentionsLegales: scanResult.mentionsLegales }
+      : {}),
+    ...(scanResult.mentionsLegalesError !== undefined
+      ? { mentionsLegalesError: scanResult.mentionsLegalesError }
+      : {}),
     ...(scanResult.transactionalFlowEvidence !== undefined
       ? { transactionalFlowEvidence: scanResult.transactionalFlowEvidence }
       : {}),
@@ -78,34 +86,54 @@ function buildScanJson(
       ? { transactionalFlowRedirectChecks: scanResult.transactionalFlowRedirectChecks }
       : {}),
     ...(scanResult.headMetadata !== undefined ? { headMetadata: scanResult.headMetadata } : {}),
-    ...(scanResult.headMetadataError !== undefined ? { headMetadataError: scanResult.headMetadataError } : {}),
-    ...(scanResult.canonicalTarget !== undefined ? { canonicalTarget: scanResult.canonicalTarget } : {}),
+    ...(scanResult.headMetadataError !== undefined
+      ? { headMetadataError: scanResult.headMetadataError }
+      : {}),
+    ...(scanResult.canonicalTarget !== undefined
+      ? { canonicalTarget: scanResult.canonicalTarget }
+      : {}),
     ...(scanResult.sitemapCheck !== undefined ? { sitemapCheck: scanResult.sitemapCheck } : {}),
     ...(scanResult.llmsTxtCheck !== undefined ? { llmsTxtCheck: scanResult.llmsTxtCheck } : {}),
     ...(scanResult.mixedContent !== undefined ? { mixedContent: scanResult.mixedContent } : {}),
-    ...(scanResult.mixedContentError !== undefined ? { mixedContentError: scanResult.mixedContentError } : {}),
-    ...(scanResult.keyboardNavigation !== undefined ? { keyboardNavigation: scanResult.keyboardNavigation } : {}),
+    ...(scanResult.mixedContentError !== undefined
+      ? { mixedContentError: scanResult.mixedContentError }
+      : {}),
+    ...(scanResult.keyboardNavigation !== undefined
+      ? { keyboardNavigation: scanResult.keyboardNavigation }
+      : {}),
     ...(scanResult.keyboardNavigationError !== undefined
       ? { keyboardNavigationError: scanResult.keyboardNavigationError }
       : {}),
-    ...(scanResult.formErrorHandling !== undefined ? { formErrorHandling: scanResult.formErrorHandling } : {}),
+    ...(scanResult.formErrorHandling !== undefined
+      ? { formErrorHandling: scanResult.formErrorHandling }
+      : {}),
     ...(scanResult.formErrorHandlingError !== undefined
       ? { formErrorHandlingError: scanResult.formErrorHandlingError }
       : {}),
     ...(scanResult.videoCaptions !== undefined ? { videoCaptions: scanResult.videoCaptions } : {}),
-    ...(scanResult.videoCaptionsError !== undefined ? { videoCaptionsError: scanResult.videoCaptionsError } : {}),
+    ...(scanResult.videoCaptionsError !== undefined
+      ? { videoCaptionsError: scanResult.videoCaptionsError }
+      : {}),
     ...(scanResult.altText !== undefined ? { altText: scanResult.altText } : {}),
     ...(scanResult.altTextError !== undefined ? { altTextError: scanResult.altTextError } : {}),
-    ...(scanResult.securityHeaders !== undefined ? { securityHeaders: scanResult.securityHeaders } : {}),
+    ...(scanResult.securityHeaders !== undefined
+      ? { securityHeaders: scanResult.securityHeaders }
+      : {}),
     ...(scanResult.cookieConsent !== undefined ? { cookieConsent: scanResult.cookieConsent } : {}),
     ...(scanResult.accessibilityStatement !== undefined
       ? { accessibilityStatement: scanResult.accessibilityStatement }
       : {}),
-    ...(scanResult.napConsistency !== undefined ? { napConsistency: scanResult.napConsistency } : {}),
+    ...(scanResult.napConsistency !== undefined
+      ? { napConsistency: scanResult.napConsistency }
+      : {}),
     ...(scanResult.reflow !== undefined ? { reflow: scanResult.reflow } : {}),
     ...(scanResult.htmlValidity !== undefined ? { htmlValidity: scanResult.htmlValidity } : {}),
-    ...(scanResult.structuredData !== undefined ? { structuredData: scanResult.structuredData } : {}),
-    ...(scanResult.structuredDataError !== undefined ? { structuredDataError: scanResult.structuredDataError } : {}),
+    ...(scanResult.structuredData !== undefined
+      ? { structuredData: scanResult.structuredData }
+      : {}),
+    ...(scanResult.structuredDataError !== undefined
+      ? { structuredDataError: scanResult.structuredDataError }
+      : {}),
   };
 }
 
@@ -178,11 +206,16 @@ const TITLE_BOILERPLATE_SEGMENTS = [
 const TITLE_STAR_RATING = /\s*\b[1-5]\s*(?:\*{1,5}|(?:étoiles?|etoiles?|stars?)\b)/giu;
 
 function stripTitleMarketing(title: string): string {
-  const withoutRating = title.replace(TITLE_STAR_RATING, ' ').replace(/\s{2,}/gu, ' ').trim();
-  const segments = withoutRating.split(/\s+[-–]\s+/u).map((segment) => segment.trim()).filter(Boolean);
+  const withoutRating = title
+    .replace(TITLE_STAR_RATING, ' ')
+    .replace(/\s{2,}/gu, ' ')
+    .trim();
+  const segments = withoutRating
+    .split(/\s+[-–]\s+/u)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
   while (segments.length > 1) {
-    const last = segments[segments.length - 1]!
-      .toLowerCase()
+    const last = segments[segments.length - 1]!.toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/gu, '');
     const isBoilerplate = TITLE_BOILERPLATE_SEGMENTS.some(
@@ -191,18 +224,27 @@ function stripTitleMarketing(title: string): string {
     if (!isBoilerplate) break;
     segments.pop();
   }
-  return segments.join(' - ').replace(/\s{2,}/gu, ' ').trim();
+  return segments
+    .join(' - ')
+    .replace(/\s{2,}/gu, ' ')
+    .trim();
 }
 
-export function deriveSiteName(headMetadata: WriteAuditArtifactsInput['siteResult']['pages'][number]['headMetadata']): string | undefined {
+export function deriveSiteName(
+  headMetadata: WriteAuditArtifactsInput['siteResult']['pages'][number]['headMetadata'],
+): string | undefined {
   const ogSiteName = headMetadata?.openGraphTags?.['og:site_name']?.trim();
   if (ogSiteName) return ogSiteName;
 
   const title = headMetadata?.title?.trim();
   if (!title) return undefined;
   for (const separator of TITLE_SITE_NAME_SEPARATORS) {
-    const segments = title.split(separator).map((segment) => segment.trim()).filter(Boolean);
-    if (segments.length > 1) return stripTitleMarketing(segments[segments.length - 1]!) || undefined;
+    const segments = title
+      .split(separator)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    if (segments.length > 1)
+      return stripTitleMarketing(segments[segments.length - 1]!) || undefined;
   }
   const cleaned = stripTitleMarketing(title);
   if (!cleaned) return undefined;
@@ -298,7 +340,9 @@ function findSiteNameSource(
     deriveSiteName(page.headMetadata) !== undefined;
 
   const byUrl = (url: string | undefined) =>
-    url === undefined ? undefined : siteResult.pages.find((page) => page.url === url && hasMetadata(page));
+    url === undefined
+      ? undefined
+      : siteResult.pages.find((page) => page.url === url && hasMetadata(page));
 
   const homepage = byUrl(siteResult.crawl.startUrl);
   if (homepage) return homepage;
@@ -309,12 +353,20 @@ function findSiteNameSource(
   const depthByUrl = new Map(siteResult.crawl.pages.map((page) => [page.url, page.depth]));
   return siteResult.pages
     .filter(hasMetadata)
-    .sort((a, b) => (depthByUrl.get(a.url) ?? Number.MAX_SAFE_INTEGER) - (depthByUrl.get(b.url) ?? Number.MAX_SAFE_INTEGER))
+    .sort(
+      (a, b) =>
+        (depthByUrl.get(a.url) ?? Number.MAX_SAFE_INTEGER) -
+        (depthByUrl.get(b.url) ?? Number.MAX_SAFE_INTEGER),
+    )
     .at(0);
 }
 
-function buildSiteSignals(siteResult: WriteAuditArtifactsInput['siteResult']): AuditManifestSiteSignals {
-  const transactionalFlowEvidence = siteResult.pages.flatMap((page) => page.transactionalFlowEvidence ?? []);
+function buildSiteSignals(
+  siteResult: WriteAuditArtifactsInput['siteResult'],
+): AuditManifestSiteSignals {
+  const transactionalFlowEvidence = siteResult.pages.flatMap(
+    (page) => page.transactionalFlowEvidence ?? [],
+  );
   const transactionalFlowRedirectChecks = siteResult.pages.flatMap(
     (page) => page.transactionalFlowRedirectChecks ?? [],
   );
@@ -335,7 +387,9 @@ function buildSiteSignals(siteResult: WriteAuditArtifactsInput['siteResult']): A
     siteResult.pages.map((page) => page.headMetadata?.title ?? ''),
   );
   const siteName =
-    explicitSiteName ?? recurringSiteName ?? deriveSiteName(findSiteNameSource(siteResult)?.headMetadata);
+    explicitSiteName ??
+    recurringSiteName ??
+    deriveSiteName(findSiteNameSource(siteResult)?.headMetadata);
 
   return {
     hasTransactionalFlow: transactionalFlowEvidence.length > 0,
@@ -370,7 +424,9 @@ export async function writeAuditArtifacts(
         status: crawledPage.status,
         ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
         ...(crawledPage.error !== undefined ? { crawlError: crawledPage.error } : {}),
-        ...(crawledPage.discoveredFrom !== undefined ? { discoveredFrom: crawledPage.discoveredFrom } : {}),
+        ...(crawledPage.discoveredFrom !== undefined
+          ? { discoveredFrom: crawledPage.discoveredFrom }
+          : {}),
         errors: {},
       });
       continue;
@@ -393,20 +449,30 @@ export async function writeAuditArtifacts(
       depth: crawledPage.depth,
       status: 'visited',
       ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
-      ...(crawledPage.discoveredFrom !== undefined ? { discoveredFrom: crawledPage.discoveredFrom } : {}),
+      ...(crawledPage.discoveredFrom !== undefined
+        ? { discoveredFrom: crawledPage.discoveredFrom }
+        : {}),
       ...(scanResult.renderDiff !== undefined
         ? { renderDiffMissingPercent: scanResult.renderDiff.missingPercent }
         : {}),
       ...(scanResult.lighthouse !== undefined
-        ? { lighthouseExcludedCategoryScores: extractLighthouseExcludedCategoryScores(scanResult.lighthouse) }
+        ? {
+            lighthouseExcludedCategoryScores: extractLighthouseExcludedCategoryScores(
+              scanResult.lighthouse,
+            ),
+          }
         : {}),
       ...(scanResult.lighthouse !== undefined
         ? { coreWebVitals: extractCoreWebVitals(scanResult.lighthouse) }
         : {}),
       errors: {
-        ...(scanResult.renderDiffError !== undefined ? { renderDiff: scanResult.renderDiffError } : {}),
+        ...(scanResult.renderDiffError !== undefined
+          ? { renderDiff: scanResult.renderDiffError }
+          : {}),
         ...(scanResult.axeError !== undefined ? { axe: scanResult.axeError } : {}),
-        ...(scanResult.lighthouseError !== undefined ? { lighthouse: scanResult.lighthouseError } : {}),
+        ...(scanResult.lighthouseError !== undefined
+          ? { lighthouse: scanResult.lighthouseError }
+          : {}),
       },
     });
 
@@ -437,7 +503,9 @@ export async function writeAuditArtifacts(
         hreflangLinks: page.headMetadata?.hreflangLinks ?? [],
       })),
     ),
-    ...(input.siteResult.cruxFieldData !== undefined ? { cruxFieldData: input.siteResult.cruxFieldData } : {}),
+    ...(input.siteResult.cruxFieldData !== undefined
+      ? { cruxFieldData: input.siteResult.cruxFieldData }
+      : {}),
   });
 
   await fs.writeFile(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest, null, 2));

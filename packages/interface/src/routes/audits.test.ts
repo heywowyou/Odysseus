@@ -15,7 +15,12 @@ vi.mock('@odysseus/scanner', () => ({
   getArtifactsRoot: vi.fn(() => '/tmp'),
 }));
 
-import { getAudit, getFindingsForAudit, getSeverityRollup, listReportLanguages } from '@odysseus/store';
+import {
+  getAudit,
+  getFindingsForAudit,
+  getSeverityRollup,
+  listReportLanguages,
+} from '@odysseus/store';
 import { Router } from '../router.js';
 import { registerAuditRoutes } from './audits.js';
 

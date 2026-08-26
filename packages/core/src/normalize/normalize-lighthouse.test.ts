@@ -119,10 +119,12 @@ describe('extractLighthouseCandidates', () => {
   // ms value (packages/report's core-web-vitals-table.ts). A real report
   // showed exactly this: TBT 560ms graded "à améliorer" (mid) by that
   // table while the underlying finding carried "Critique" (critical).
-  describe('item 9: Core Web Vital severity is capped by the metric\'s own raw-value rating', () => {
+  describe("item 9: Core Web Vital severity is capped by the metric's own raw-value rating", () => {
     it('caps a "critical" TBT finding down to "serious" when the raw value is only "mid" (560ms, matching the reported case)', () => {
       const lhr = buildLighthouseResultInput({
-        categories: { performance: { score: 0.3, auditRefs: [{ id: 'total-blocking-time', weight: 25 }] } },
+        categories: {
+          performance: { score: 0.3, auditRefs: [{ id: 'total-blocking-time', weight: 25 }] },
+        },
         audits: { 'total-blocking-time': buildLighthouseAudit({ score: 0.3, numericValue: 560 }) },
       });
       const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
@@ -131,7 +133,9 @@ describe('extractLighthouseCandidates', () => {
 
     it('leaves a "critical" TBT finding uncapped when the raw value is genuinely "poor" (700ms)', () => {
       const lhr = buildLighthouseResultInput({
-        categories: { performance: { score: 0.3, auditRefs: [{ id: 'total-blocking-time', weight: 25 }] } },
+        categories: {
+          performance: { score: 0.3, auditRefs: [{ id: 'total-blocking-time', weight: 25 }] },
+        },
         audits: { 'total-blocking-time': buildLighthouseAudit({ score: 0.3, numericValue: 700 }) },
       });
       const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
@@ -140,8 +144,12 @@ describe('extractLighthouseCandidates', () => {
 
     it('caps a "critical" LCP finding down to "serious" when the raw value is only "good" (2000ms)', () => {
       const lhr = buildLighthouseResultInput({
-        categories: { performance: { score: 0.2, auditRefs: [{ id: 'largest-contentful-paint', weight: 25 }] } },
-        audits: { 'largest-contentful-paint': buildLighthouseAudit({ score: 0.2, numericValue: 2000 }) },
+        categories: {
+          performance: { score: 0.2, auditRefs: [{ id: 'largest-contentful-paint', weight: 25 }] },
+        },
+        audits: {
+          'largest-contentful-paint': buildLighthouseAudit({ score: 0.2, numericValue: 2000 }),
+        },
       });
       const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
       expect(candidates[0]?.severity).toBe('serious');
@@ -149,8 +157,12 @@ describe('extractLighthouseCandidates', () => {
 
     it('does not cap non-Core-Web-Vital audits, even at the same score/weight', () => {
       const lhr = buildLighthouseResultInput({
-        categories: { performance: { score: 0.2, auditRefs: [{ id: 'render-blocking-resources', weight: 25 }] } },
-        audits: { 'render-blocking-resources': buildLighthouseAudit({ score: 0.2, numericValue: 560 }) },
+        categories: {
+          performance: { score: 0.2, auditRefs: [{ id: 'render-blocking-resources', weight: 25 }] },
+        },
+        audits: {
+          'render-blocking-resources': buildLighthouseAudit({ score: 0.2, numericValue: 560 }),
+        },
       });
       const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
       expect(candidates[0]?.severity).toBe('critical');
@@ -158,7 +170,9 @@ describe('extractLighthouseCandidates', () => {
 
     it('does not cap a Core Web Vital finding whose severity was already at or below "serious"', () => {
       const lhr = buildLighthouseResultInput({
-        categories: { performance: { score: 0.4, auditRefs: [{ id: 'total-blocking-time', weight: 5 }] } },
+        categories: {
+          performance: { score: 0.4, auditRefs: [{ id: 'total-blocking-time', weight: 5 }] },
+        },
         audits: { 'total-blocking-time': buildLighthouseAudit({ score: 0.4, numericValue: 560 }) },
       });
       const candidates = extractLighthouseCandidates(lhr, 'https://example.com/');
@@ -301,8 +315,16 @@ describe('extractCoreWebVitals', () => {
           numericValue: 31000,
           displayValue: '31.0 s',
         }),
-        'cumulative-layout-shift': buildLighthouseAudit({ score: 0.9, numericValue: 0.09, displayValue: '0.09' }),
-        'total-blocking-time': buildLighthouseAudit({ score: 0.03, numericValue: 2800, displayValue: '2,800 ms' }),
+        'cumulative-layout-shift': buildLighthouseAudit({
+          score: 0.9,
+          numericValue: 0.09,
+          displayValue: '0.09',
+        }),
+        'total-blocking-time': buildLighthouseAudit({
+          score: 0.03,
+          numericValue: 2800,
+          displayValue: '2,800 ms',
+        }),
       },
     });
 
@@ -313,7 +335,10 @@ describe('extractCoreWebVitals', () => {
   it('falls back to nulls per metric when an audit id is absent, rather than throwing', () => {
     const lhr = buildLighthouseResultInput({
       audits: {
-        'largest-contentful-paint': buildLighthouseAudit({ numericValue: 2000, displayValue: '2.0 s' }),
+        'largest-contentful-paint': buildLighthouseAudit({
+          numericValue: 2000,
+          displayValue: '2.0 s',
+        }),
         // cumulative-layout-shift and total-blocking-time deliberately omitted
       },
     });

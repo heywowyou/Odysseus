@@ -118,7 +118,13 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     const manifest = buildMinimalManifest();
 
     const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
-    const labels = ['Performance', 'Accessibilité', 'Référencement (SEO)', 'Rendu', 'Visibilité dans les moteurs d&#39;IA (GEO)'];
+    const labels = [
+      'Performance',
+      'Accessibilité',
+      'Référencement (SEO)',
+      'Rendu',
+      'Visibilité dans les moteurs d&#39;IA (GEO)',
+    ];
     const positions = labels.map((label) => html.indexOf(`>${label}<`));
 
     expect(positions.every((p) => p !== -1)).toBe(true);
@@ -141,7 +147,11 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
   // "critical" on every page it appears on.
   it('item 10: a performance finding capped below critical by item 9 does not inflate pagesWithCritical', () => {
     const cappedPerfFinding = buildCategoryFinding('performance', 1);
-    const cappedFinding: Finding = { ...cappedPerfFinding, severity: 'serious', pageUrls: ['https://example.com/'] };
+    const cappedFinding: Finding = {
+      ...cappedPerfFinding,
+      severity: 'serious',
+      pageUrls: ['https://example.com/'],
+    };
     const genuineAccessibilityCritical: Finding = {
       ...buildCategoryFinding('accessibility', 1),
       severity: 'critical',
@@ -149,7 +159,13 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
     };
     const manifest = buildMinimalManifest();
 
-    const html = renderStatistics(getStrings('en'), 3, 'en', [cappedFinding, genuineAccessibilityCritical], manifest);
+    const html = renderStatistics(
+      getStrings('en'),
+      3,
+      'en',
+      [cappedFinding, genuineAccessibilityCritical],
+      manifest,
+    );
 
     // Exactly 1 page has an (uncapped) critical finding, out of 1 scanned.
     expect(html).toContain('>1/1</div>');
@@ -163,7 +179,11 @@ describe('item 1.8: the accessibility-occurrences tile excludes heuristic occurr
   it('renders the exclusion footnote and the excluded count when a heuristic finding is present', () => {
     const findings: Finding[] = [
       { ...buildCategoryFinding('accessibility', 1), ruleId: 'image-alt', occurrences: 10 },
-      { ...buildCategoryFinding('accessibility', 2), ruleId: 'alt-text-quality-heuristic', occurrences: 74 },
+      {
+        ...buildCategoryFinding('accessibility', 2),
+        ruleId: 'alt-text-quality-heuristic',
+        occurrences: 74,
+      },
     ];
     const manifest = buildMinimalManifest();
 
@@ -200,7 +220,10 @@ describe('item 1.10: the critical-findings driver is named when concentrated in 
       category: 'accessibility',
       severity: 'critical',
       wcagCriteria: [],
-      title: ruleId === 'image-alt' ? 'Images must have alternate text' : 'Buttons must have discernible text',
+      title:
+        ruleId === 'image-alt'
+          ? 'Images must have alternate text'
+          : 'Buttons must have discernible text',
       description: 'd',
       pageUrls: [`https://example.com/${index}`],
       occurrences: 1,
@@ -233,7 +256,9 @@ describe('item 1.10: the critical-findings driver is named when concentrated in 
     // rules (docs/normalization-rules.md section 7); the fixture is used
     // rather than hand-asserting a specific count, so this test does not
     // silently drift if the fixture is ever regenerated with fewer.
-    const criticalRuleCount = new Set(findings.filter((f) => f.severity === 'critical').map((f) => f.ruleId)).size;
+    const criticalRuleCount = new Set(
+      findings.filter((f) => f.severity === 'critical').map((f) => f.ruleId),
+    ).size;
     if (criticalRuleCount > 3) {
       expect(html).not.toContain('proviennent uniquement de');
     }
@@ -252,7 +277,12 @@ describe('item 1.10: the critical-findings driver is named when concentrated in 
 describe('P1.2: the third-party occurrences footnote', () => {
   function buildThirdPartyFinding(index: number): Finding {
     const f = buildCategoryFinding('accessibility', index);
-    return { ...f, elements: [{ pageUrl: 'https://example.com/', selector: '.gform_wrapper button', snippet: '' }] };
+    return {
+      ...f,
+      elements: [
+        { pageUrl: 'https://example.com/', selector: '.gform_wrapper button', snippet: '' },
+      ],
+    };
   }
 
   it('renders the percentage when some accessibility occurrences are third-party', () => {

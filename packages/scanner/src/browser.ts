@@ -8,8 +8,7 @@ import { chromium, type Browser } from 'playwright';
  * default. Points at packages/site's /bot route, which explains the bot to
  * anyone who checks their logs.
  */
-export const ODYSSEUS_USER_AGENT =
-  'OdysseusAuditBot/0.1 (+https://odysseusaudit.com/bot)';
+export const ODYSSEUS_USER_AGENT = 'OdysseusAuditBot/0.1 (+https://odysseusaudit.com/bot)';
 
 /** Hard per-page timeout in ms, applied independently to each pass. */
 export const DEFAULT_TIMEOUT_MS = 30_000;

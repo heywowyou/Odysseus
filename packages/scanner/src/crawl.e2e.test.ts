@@ -121,6 +121,8 @@ describe('crawlSite against fixtures/spa-demo', () => {
 
     const pageEvents = events.filter((event) => event.type === 'crawl-page');
     expect(pageEvents).toHaveLength(result.visitedCount);
-    expect(pageEvents.map((event) => (event.type === 'crawl-page' ? event.visited : undefined))).toEqual([1, 2, 3]);
+    expect(
+      pageEvents.map((event) => (event.type === 'crawl-page' ? event.visited : undefined)),
+    ).toEqual([1, 2, 3]);
   }, 45_000);
 });

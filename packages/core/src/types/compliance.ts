@@ -129,7 +129,10 @@ export type ObligationBasisFact =
   | { kind: 'no-transactional-flow' }
   | { kind: 'transactional-flow-unknown' }
   | { kind: 'siren-missing' }
-  | { kind: 'sirene-lookup-failed'; reason: 'not-found' | 'api-unreachable' | 'etablissement-fermee' };
+  | {
+      kind: 'sirene-lookup-failed';
+      reason: 'not-found' | 'api-unreachable' | 'etablissement-fermee';
+    };
 
 export interface ObligationBasis {
   regimeId: string;

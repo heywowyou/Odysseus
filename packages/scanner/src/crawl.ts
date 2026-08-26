@@ -154,7 +154,9 @@ function safeHostname(url: string): string | null {
  *  followed, not scanned, never attributed to the audited site. */
 export function isSameSiteHostname(requestedHostname: string, landedHostname: string): boolean {
   if (requestedHostname === landedHostname) return true;
-  return requestedHostname === `www.${landedHostname}` || landedHostname === `www.${requestedHostname}`;
+  return (
+    requestedHostname === `www.${landedHostname}` || landedHostname === `www.${requestedHostname}`
+  );
 }
 
 /**
@@ -180,7 +182,9 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // token below, without a second request to robots.txt.
   const robotsText = await fetchRobotsText(start.origin, timeoutMs);
   const robotsRules: RobotsRules =
-    robotsText === null ? { found: false, disallow: [], allow: [], sitemapUrls: [] } : parseRobotsTxt(robotsText, userAgent);
+    robotsText === null
+      ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
+      : parseRobotsTxt(robotsText, userAgent);
   const effectiveDelayMs = Math.max(delayMs, robotsRules.crawlDelayMs ?? 0);
 
   options.onProgress?.({
@@ -237,7 +241,12 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
       }
       isFirstNavigation = false;
       visited.add(item.url);
-      options.onProgress?.({ type: 'crawl-page', visited: visited.size, maxPages, queued: queue.length });
+      options.onProgress?.({
+        type: 'crawl-page',
+        visited: visited.size,
+        maxPages,
+        queued: queue.length,
+      });
 
       const browserPage = await context.newPage();
       try {
@@ -259,12 +268,20 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
 
         if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
-          const skippedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'skipped-external-redirect' };
+          const skippedPage: CrawledPage = {
+            url: item.url,
+            depth: item.depth,
+            status: 'skipped-external-redirect',
+          };
           if (httpStatus !== undefined) skippedPage.httpStatus = httpStatus;
           if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
           pages.push(skippedPage);
         } else if (isNonHtmlContentType(contentType)) {
-          const skippedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'skipped-non-html' };
+          const skippedPage: CrawledPage = {
+            url: item.url,
+            depth: item.depth,
+            status: 'skipped-non-html',
+          };
           if (httpStatus !== undefined) skippedPage.httpStatus = httpStatus;
           if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
           pages.push(skippedPage);
@@ -336,12 +353,21 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         const requestedHost = new URL(item.url).hostname;
         const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
         if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
-          const skippedPage: CrawledPage = { url: item.url, depth: item.depth, status: 'skipped-external-redirect' };
+          const skippedPage: CrawledPage = {
+            url: item.url,
+            depth: item.depth,
+            status: 'skipped-external-redirect',
+          };
           if (item.discoveredFrom !== undefined) skippedPage.discoveredFrom = item.discoveredFrom;
           pages.push(skippedPage);
         } else {
           const message = error instanceof Error ? error.message : String(error);
-          const errorPage: CrawledPage = { url: item.url, depth: item.depth, status: 'error', error: message };
+          const errorPage: CrawledPage = {
+            url: item.url,
+            depth: item.depth,
+            status: 'error',
+            error: message,
+          };
           if (item.discoveredFrom !== undefined) errorPage.discoveredFrom = item.discoveredFrom;
           pages.push(errorPage);
         }
@@ -357,7 +383,11 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // page whose path matches the mentions-legales pattern but 404s - that
   // must never win over an actual 200 page just because it appears first.
   const resolvedUrls = pages
-    .filter((page) => page.status === 'visited' && (page.httpStatus === undefined || (page.httpStatus >= 200 && page.httpStatus < 300)))
+    .filter(
+      (page) =>
+        page.status === 'visited' &&
+        (page.httpStatus === undefined || (page.httpStatus >= 200 && page.httpStatus < 300)),
+    )
     .map((page) => page.url);
   const mentionsLegalesPageUrl = findMentionsLegalesUrl(resolvedUrls) ?? undefined;
 
@@ -367,13 +397,18 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     if (blockingPattern === undefined) continue;
     disallowMatchCounts.set(blockingPattern, (disallowMatchCounts.get(blockingPattern) ?? 0) + 1);
   }
-  const robotsDisallowMatches = [...disallowMatchCounts.entries()].map(([pattern, matchedPageCount]) => ({
-    pattern,
-    matchedPageCount,
-  }));
+  const robotsDisallowMatches = [...disallowMatchCounts.entries()].map(
+    ([pattern, matchedPageCount]) => ({
+      pattern,
+      matchedPageCount,
+    }),
+  );
 
   const aiCrawlerBlocks = checkAiCrawlerAccess(robotsText, AI_CRAWLER_USER_AGENTS)
-    .filter((result): result is { agent: string; blocked: true; disallowPattern: string } => result.blocked)
+    .filter(
+      (result): result is { agent: string; blocked: true; disallowPattern: string } =>
+        result.blocked,
+    )
     .map(({ agent, disallowPattern }) => ({ agent, disallowPattern }));
 
   return {

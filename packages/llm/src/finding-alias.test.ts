@@ -102,20 +102,34 @@ describe('aliasStructureInput', () => {
     const map = buildFindingAliasMap(laCornicheShape);
     const aliased = aliasStructureInput(input, map);
 
-    expect(aliased.findings.map((f) => f.findingId)).toEqual(['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7', 'x8']);
+    expect(aliased.findings.map((f) => f.findingId)).toEqual([
+      'x1',
+      'x2',
+      'x3',
+      'x4',
+      'x5',
+      'x6',
+      'x7',
+      'x8',
+    ]);
     expect(aliased.siteContext).toEqual(input.siteContext);
     expect(aliased.findings[0]?.ruleId).toBe(input.findings[0]?.ruleId);
     expect(aliased.findings[0]?.pageUrls).toEqual(input.findings[0]?.pageUrls);
   });
 
   it('never exposes a diverted finding ID to the model', () => {
-    const aliased = aliasStructureInput(buildInput(laCornicheShape), buildFindingAliasMap(laCornicheShape));
+    const aliased = aliasStructureInput(
+      buildInput(laCornicheShape),
+      buildFindingAliasMap(laCornicheShape),
+    );
     expect(JSON.stringify(aliased)).not.toContain('f320');
   });
 
   it('throws rather than silently passing an unaliased ID through', () => {
     const map = buildFindingAliasMap([buildFinding('f1')]);
-    expect(() => aliasStructureInput(buildInput([buildFinding('f2')]), map)).toThrow(/no alias for finding/);
+    expect(() => aliasStructureInput(buildInput([buildFinding('f2')]), map)).toThrow(
+      /no alias for finding/,
+    );
   });
 });
 
@@ -124,8 +138,20 @@ describe('resolveStructureOutputIds', () => {
     const map = buildFindingAliasMap(laCornicheShape);
     const output: StructurePassOutput = {
       themes: [
-        { findingIds: ['x1', 'x2', 'x3', 'x4'], category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1 },
-        { findingIds: ['x5', 'x6', 'x7', 'x8'], category: 'seo', effort: 'medium', impact: 'medium', priorityRank: 2 },
+        {
+          findingIds: ['x1', 'x2', 'x3', 'x4'],
+          category: 'accessibility',
+          effort: 'low',
+          impact: 'high',
+          priorityRank: 1,
+        },
+        {
+          findingIds: ['x5', 'x6', 'x7', 'x8'],
+          category: 'seo',
+          effort: 'medium',
+          impact: 'medium',
+          priorityRank: 2,
+        },
       ],
       quickWins: ['x1'],
       overallRisk: 'high',
@@ -143,7 +169,9 @@ describe('resolveStructureOutputIds', () => {
   it('throws if an unknown alias somehow reaches it', () => {
     const map = buildFindingAliasMap(laCornicheShape);
     const output: StructurePassOutput = {
-      themes: [{ findingIds: ['x99'], category: 'seo', effort: 'low', impact: 'low', priorityRank: 1 }],
+      themes: [
+        { findingIds: ['x99'], category: 'seo', effort: 'low', impact: 'low', priorityRank: 1 },
+      ],
       quickWins: [],
       overallRisk: 'low',
     };
@@ -157,7 +185,13 @@ describe('the invented-ID guard in alias space', () => {
   it('accepts an ID the model could only have got by completing the run, because it now denotes a finding it was shown', () => {
     const output: StructurePassOutput = {
       themes: [
-        { findingIds: ['x1', 'x2', 'x3', 'x4', 'x5'], category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1 },
+        {
+          findingIds: ['x1', 'x2', 'x3', 'x4', 'x5'],
+          category: 'accessibility',
+          effort: 'low',
+          impact: 'high',
+          priorityRank: 1,
+        },
       ],
       quickWins: [],
       overallRisk: 'medium',
@@ -169,7 +203,15 @@ describe('the invented-ID guard in alias space', () => {
 
   it('still hard-rejects an ID outside the range the model was shown', () => {
     const output: StructurePassOutput = {
-      themes: [{ findingIds: ['x1', 'x9'], category: 'seo', effort: 'low', impact: 'low', priorityRank: 1 }],
+      themes: [
+        {
+          findingIds: ['x1', 'x9'],
+          category: 'seo',
+          effort: 'low',
+          impact: 'low',
+          priorityRank: 1,
+        },
+      ],
       quickWins: [],
       overallRisk: 'low',
     };
@@ -178,7 +220,9 @@ describe('the invented-ID guard in alias space', () => {
 
   it('hard-rejects a real finding ID copied in from outside the alias space', () => {
     const output: StructurePassOutput = {
-      themes: [{ findingIds: ['f320'], category: 'seo', effort: 'low', impact: 'low', priorityRank: 1 }],
+      themes: [
+        { findingIds: ['f320'], category: 'seo', effort: 'low', impact: 'low', priorityRank: 1 },
+      ],
       quickWins: [],
       overallRisk: 'low',
     };

@@ -8,8 +8,10 @@ import { escapeProse, stripInlineMarkdown } from './html-utils.js';
  */
 describe('stripInlineMarkdown', () => {
   it('removes the delimiters and keeps the text (real report strings)', () => {
-    expect(stripInlineMarkdown('des liens *hreflang* non réciproques')).toBe('des liens hreflang non réciproques');
-    expect(stripInlineMarkdown("ajouter un attribut *aria-label* à chaque bouton")).toBe(
+    expect(stripInlineMarkdown('des liens *hreflang* non réciproques')).toBe(
+      'des liens hreflang non réciproques',
+    );
+    expect(stripInlineMarkdown('ajouter un attribut *aria-label* à chaque bouton')).toBe(
       'ajouter un attribut aria-label à chaque bouton',
     );
   });

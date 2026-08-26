@@ -54,7 +54,9 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
         ...(siteSignalOverrides !== undefined ? { siteSignalOverrides } : {}),
         ...(job.options.seeds !== undefined ? { seeds: job.options.seeds } : {}),
         ...(job.options.exclusions !== undefined ? { exclusions: job.options.exclusions } : {}),
-        ...(job.options.bookingEngineUrl !== undefined ? { bookingEngineUrl: job.options.bookingEngineUrl } : {}),
+        ...(job.options.bookingEngineUrl !== undefined
+          ? { bookingEngineUrl: job.options.bookingEngineUrl }
+          : {}),
         onProgress,
       },
       connection,

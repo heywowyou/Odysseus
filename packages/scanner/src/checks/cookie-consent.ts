@@ -274,17 +274,21 @@ export async function checkCookieConsent(
     const page = await context.newPage();
     await page.goto(homepageUrl, { waitUntil: 'networkidle', timeout: options.timeoutMs });
 
-    const consentPlatforms = await page.evaluate((markers) => {
-      const found: string[] = [];
-      for (const marker of markers) {
-        const byGlobal =
-          marker.global !== undefined &&
-          (marker.global in (window as unknown as Record<string, unknown>));
-        const bySelector = marker.selector !== undefined && document.querySelector(marker.selector) !== null;
-        if (byGlobal || bySelector) found.push(marker.name);
-      }
-      return found;
-    }, CMP_MARKERS as { name: string; global?: string; selector?: string }[]);
+    const consentPlatforms = await page.evaluate(
+      (markers) => {
+        const found: string[] = [];
+        for (const marker of markers) {
+          const byGlobal =
+            marker.global !== undefined &&
+            marker.global in (window as unknown as Record<string, unknown>);
+          const bySelector =
+            marker.selector !== undefined && document.querySelector(marker.selector) !== null;
+          if (byGlobal || bySelector) found.push(marker.name);
+        }
+        return found;
+      },
+      CMP_MARKERS as { name: string; global?: string; selector?: string }[],
+    );
 
     const siteHostname = new URL(homepageUrl).hostname;
     const cookies: ObservedCookie[] = (await context.cookies()).map((cookie) => {

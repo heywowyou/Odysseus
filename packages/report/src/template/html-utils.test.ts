@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { escapeHtml, fillTemplate, formatDate, formatFindingIdLinks, formatFindingIdRefs, formatNumber } from './html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  formatDate,
+  formatFindingIdLinks,
+  formatFindingIdRefs,
+  formatNumber,
+} from './html-utils.js';
 
 describe('escapeHtml', () => {
   it('escapes tags and quotes so injected markup cannot execute', () => {
@@ -61,7 +68,9 @@ describe('formatFindingIdRefs', () => {
   // into "f004-f008", which read as inconsistent next to every other
   // priority's comma-separated list on the same page.
   it('always comma-separates, even for a long run of consecutive IDs', () => {
-    expect(formatFindingIdRefs(['f004', 'f005', 'f006', 'f007', 'f008'])).toBe('f004, f005, f006, f007, f008');
+    expect(formatFindingIdRefs(['f004', 'f005', 'f006', 'f007', 'f008'])).toBe(
+      'f004, f005, f006, f007, f008',
+    );
   });
 
   it('keeps a run of exactly two as a comma list', () => {
@@ -69,7 +78,9 @@ describe('formatFindingIdRefs', () => {
   });
 
   it('sorts unordered input before joining', () => {
-    expect(formatFindingIdRefs(['f008', 'f004', 'f006', 'f005', 'f007'])).toBe('f004, f005, f006, f007, f008');
+    expect(formatFindingIdRefs(['f008', 'f004', 'f006', 'f005', 'f007'])).toBe(
+      'f004, f005, f006, f007, f008',
+    );
   });
 
   it('returns an empty string for no IDs', () => {

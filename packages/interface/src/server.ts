@@ -43,7 +43,10 @@ export async function startInterfaceServer(connection: Connection): Promise<Inte
 
   const server = createServer((req, res) => {
     void router.handle(req, res).catch((error: unknown) => {
-      logger.error({ err: error, method: req.method, url: req.url }, 'unhandled error while handling request');
+      logger.error(
+        { err: error, method: req.method, url: req.url },
+        'unhandled error while handling request',
+      );
       if (!res.headersSent) {
         res.statusCode = 500;
         res.setHeader('content-type', 'application/json; charset=utf-8');

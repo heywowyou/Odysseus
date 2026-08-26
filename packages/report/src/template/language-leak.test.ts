@@ -17,7 +17,11 @@ import { escapeHtml } from './html-utils.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import { en } from './strings/en.js';
 import { fr } from './strings/fr.js';
-import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../test-fixtures.js';
+import {
+  loadSasFernandeAnalysis,
+  loadSasFernandeFindings,
+  loadSasFernandeManifest,
+} from '../test-fixtures.js';
 
 function flattenStrings(value: unknown): string[] {
   if (typeof value === 'string') return [value];
@@ -48,7 +52,11 @@ function stripStyleBlock(html: string): string {
 function stripReferenceStatCitations(html: string): string {
   let stripped = html;
   for (const stat of REFERENCE_STAT_TABLE) {
-    stripped = stripped.split(escapeHtml(stat.citation.fr)).join('').split(escapeHtml(stat.citation.en)).join('');
+    stripped = stripped
+      .split(escapeHtml(stat.citation.fr))
+      .join('')
+      .split(escapeHtml(stat.citation.en))
+      .join('');
   }
   return stripped;
 }
@@ -90,9 +98,10 @@ describe('report chrome strings never leak into the other language', () => {
     );
 
     for (const value of enOnlyValues) {
-      expect(containsWholeValue(html, value), `unexpected English chrome string leaked: "${value}"`).toBe(
-        false,
-      );
+      expect(
+        containsWholeValue(html, value),
+        `unexpected English chrome string leaked: "${value}"`,
+      ).toBe(false);
     }
   });
 
@@ -107,9 +116,10 @@ describe('report chrome strings never leak into the other language', () => {
     );
 
     for (const value of frOnlyValues) {
-      expect(containsWholeValue(html, value), `unexpected French chrome string leaked: "${value}"`).toBe(
-        false,
-      );
+      expect(
+        containsWholeValue(html, value),
+        `unexpected French chrome string leaked: "${value}"`,
+      ).toBe(false);
     }
   });
 });

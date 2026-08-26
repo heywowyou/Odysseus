@@ -58,7 +58,9 @@ describe('deriveSiteName', () => {
 
   it('does not guess from a long, separator-free title - too likely a descriptive sentence, not a name', () => {
     const result = deriveSiteName(
-      metadata({ title: 'Welcome to our amazing hotel and spa in the heart of the bay of Arcachon' }),
+      metadata({
+        title: 'Welcome to our amazing hotel and spa in the heart of the bay of Arcachon',
+      }),
     );
     expect(result).toBeUndefined();
   });
@@ -78,30 +80,42 @@ describe('deriveSiteName', () => {
  */
 describe('deriveSiteName marketing-noise stripping', () => {
   it('drops a star rating and a trailing "Site Officiel" from the real Palais Gallien title', () => {
-    expect(deriveSiteName(metadata({ title: 'Hôtel Le Palais Gallien 5***** - Bordeaux - Site Officiel' }))).toBe(
-      'Hôtel Le Palais Gallien - Bordeaux',
-    );
+    expect(
+      deriveSiteName(
+        metadata({ title: 'Hôtel Le Palais Gallien 5***** - Bordeaux - Site Officiel' }),
+      ),
+    ).toBe('Hôtel Le Palais Gallien - Bordeaux');
   });
 
   it('keeps a segment that carries real information, even trailing', () => {
-    expect(deriveSiteName(metadata({ title: 'Hôtel du Port - Arcachon' }))).toBe('Hôtel du Port - Arcachon');
-  });
-
-  it('drops several stacked boilerplate segments', () => {
-    expect(deriveSiteName(metadata({ title: 'Domaine des Trois Chenes - Réservation en ligne - Accueil' }))).toBe(
-      'Domaine des Trois Chenes',
+    expect(deriveSiteName(metadata({ title: 'Hôtel du Port - Arcachon' }))).toBe(
+      'Hôtel du Port - Arcachon',
     );
   });
 
+  it('drops several stacked boilerplate segments', () => {
+    expect(
+      deriveSiteName(
+        metadata({ title: 'Domaine des Trois Chenes - Réservation en ligne - Accueil' }),
+      ),
+    ).toBe('Domaine des Trois Chenes');
+  });
+
   it('strips a spelled-out star rating too', () => {
-    expect(deriveSiteName(metadata({ title: 'Villa Marine 4 étoiles - Site officiel' }))).toBe('Villa Marine');
+    expect(deriveSiteName(metadata({ title: 'Villa Marine 4 étoiles - Site officiel' }))).toBe(
+      'Villa Marine',
+    );
   });
 
   it('still applies the cleanup to a separator-delimited brand segment', () => {
-    expect(deriveSiteName(metadata({ title: 'Chambre Deluxe | Villa Marine 5 étoiles' }))).toBe('Villa Marine');
+    expect(deriveSiteName(metadata({ title: 'Chambre Deluxe | Villa Marine 5 étoiles' }))).toBe(
+      'Villa Marine',
+    );
   });
 
   it('leaves an already-clean bare title untouched', () => {
-    expect(deriveSiteName(metadata({ title: 'Domaine des Trois Chenes' }))).toBe('Domaine des Trois Chenes');
+    expect(deriveSiteName(metadata({ title: 'Domaine des Trois Chenes' }))).toBe(
+      'Domaine des Trois Chenes',
+    );
   });
 });

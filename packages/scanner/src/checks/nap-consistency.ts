@@ -62,7 +62,11 @@ export function normalizePhone(raw: string): string {
  *  are all just values to recurse through, so no schema shape is
  *  assumed - a site nesting its LocalBusiness three levels deep inside a
  *  @graph is read the same as one declaring it at the top level. */
-function collectJsonLdStrings(value: unknown, keys: readonly string[], found: string[] = []): string[] {
+function collectJsonLdStrings(
+  value: unknown,
+  keys: readonly string[],
+  found: string[] = [],
+): string[] {
   if (Array.isArray(value)) {
     for (const item of value) collectJsonLdStrings(item, keys, found);
     return found;
@@ -103,10 +107,16 @@ export function buildNapConsistency(
   const structuredPhones = unique(
     collectJsonLdStrings(parsed, ['telephone', 'phone']).map(normalizePhone).filter(Boolean),
   );
-  const structuredPostalCodes = unique(collectJsonLdStrings(parsed, ['postalCode']).map((v) => v.replace(/\D/gu, '')));
+  const structuredPostalCodes = unique(
+    collectJsonLdStrings(parsed, ['postalCode']).map((v) => v.replace(/\D/gu, '')),
+  );
 
-  const visiblePhones = unique((visibleText.match(PHONE_PATTERN) ?? []).map(normalizePhone).filter(Boolean));
-  const visiblePostalCodes = unique([...visibleText.matchAll(FRENCH_POSTAL_CODE_PATTERN)].map((m) => m[1]!));
+  const visiblePhones = unique(
+    (visibleText.match(PHONE_PATTERN) ?? []).map(normalizePhone).filter(Boolean),
+  );
+  const visiblePostalCodes = unique(
+    [...visibleText.matchAll(FRENCH_POSTAL_CODE_PATTERN)].map((m) => m[1]!),
+  );
 
   // A declared value that appears nowhere in the visible text is only a
   // contradiction if the page shows a value of that kind at all. A page

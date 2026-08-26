@@ -46,7 +46,7 @@ const WCAG_CRITERION_NAMES: Record<ReportLanguage, Record<string, string>> = {
     '2.4.3': 'Ordre de focus',
     '2.4.4': 'Fonction du lien selon le contexte',
     '2.4.5': 'Accès multiples',
-    '2.4.6': "En-têtes et étiquettes",
+    '2.4.6': 'En-têtes et étiquettes',
     '2.4.7': 'Visibilité du focus',
     '2.4.11': 'Visibilité du focus, a minima',
     '2.5.1': 'Gestes du pointeur',
@@ -64,7 +64,7 @@ const WCAG_CRITERION_NAMES: Record<ReportLanguage, Record<string, string>> = {
     '3.2.6': 'Aide cohérente',
     '3.3.1': 'Identification des erreurs',
     '3.3.2': 'Étiquettes ou instructions',
-    '3.3.3': "Suggestion après une erreur",
+    '3.3.3': 'Suggestion après une erreur',
     '3.3.4': 'Prévention des erreurs (juridiques, financières, de données)',
     '3.3.7': 'Saisie redondante',
     '3.3.8': 'Authentification accessible, a minima',
@@ -162,7 +162,10 @@ function joinWithConjunction(parts: readonly string[], conjunction: string): str
  * Returns '' for an empty criteria list; callers (merge.ts) only call
  * this for accessibility themes with at least one WCAG criterion.
  */
-export function buildLegalRelevance(wcagCriteria: readonly string[], language: ReportLanguage): string {
+export function buildLegalRelevance(
+  wcagCriteria: readonly string[],
+  language: ReportLanguage,
+): string {
   const sorted = [...new Set(wcagCriteria)].sort(compareCriteria);
   if (sorted.length === 0) return '';
 

@@ -2,9 +2,20 @@ import type { AuditManifest, Finding } from '@odysseus/core';
 import { callMistralForStructure } from './client.js';
 import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { applyStructureRankingRules } from './structure-ranking.js';
-import { findInventedStructureFindingIds, findUnreferencedStructureFindingIds } from './structure-guards.js';
-import { aliasStructureInput, buildFindingAliasMap, resolveStructureOutputIds } from './finding-alias.js';
-import { assignThemeKeys, type StructureInput, type StructureThemeWithKey } from './structure-schema.js';
+import {
+  findInventedStructureFindingIds,
+  findUnreferencedStructureFindingIds,
+} from './structure-guards.js';
+import {
+  aliasStructureInput,
+  buildFindingAliasMap,
+  resolveStructureOutputIds,
+} from './finding-alias.js';
+import {
+  assignThemeKeys,
+  type StructureInput,
+  type StructureThemeWithKey,
+} from './structure-schema.js';
 
 export interface AnalyzeStructureResult {
   themes: StructureThemeWithKey[];

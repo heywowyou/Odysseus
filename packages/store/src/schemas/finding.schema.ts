@@ -90,5 +90,7 @@ findingSchema.index({ siteUrl: 1, dedupeKey: 1 });
 findingSchema.index({ auditId: 1, severity: 1 });
 
 export function createFindingModel(connection: Connection): Model<FindingDocument> {
-  return connection.models['Finding'] ?? connection.model<FindingDocument>('Finding', findingSchema);
+  return (
+    connection.models['Finding'] ?? connection.model<FindingDocument>('Finding', findingSchema)
+  );
 }

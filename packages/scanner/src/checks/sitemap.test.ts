@@ -67,7 +67,9 @@ describe('parseSitemapXml', () => {
   });
 });
 
-function startServer(routes: Record<string, { status: number; body: string }>): Promise<{ server: Server; origin: string }> {
+function startServer(
+  routes: Record<string, { status: number; body: string }>,
+): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
       const route = routes[req.url ?? '/'];
@@ -94,7 +96,10 @@ describe('checkSitemap', () => {
 
   it('fetches a declared robots.txt sitemap URL and parses it', async () => {
     const started = await startServer({
-      '/my-sitemap.xml': { status: 200, body: '<urlset><url><loc>https://example.com/</loc></url></urlset>' },
+      '/my-sitemap.xml': {
+        status: 200,
+        body: '<urlset><url><loc>https://example.com/</loc></url></urlset>',
+      },
     });
     server = started.server;
 
@@ -107,7 +112,10 @@ describe('checkSitemap', () => {
 
   it('falls back to /sitemap.xml when no declared URL is given', async () => {
     const started = await startServer({
-      '/sitemap.xml': { status: 200, body: '<urlset><url><loc>https://example.com/</loc></url></urlset>' },
+      '/sitemap.xml': {
+        status: 200,
+        body: '<urlset><url><loc>https://example.com/</loc></url></urlset>',
+      },
     });
     server = started.server;
 
@@ -130,11 +138,18 @@ describe('checkSitemap', () => {
 
   it('tries the fallback path when the declared URL 404s', async () => {
     const started = await startServer({
-      '/sitemap.xml': { status: 200, body: '<urlset><url><loc>https://example.com/fallback</loc></url></urlset>' },
+      '/sitemap.xml': {
+        status: 200,
+        body: '<urlset><url><loc>https://example.com/fallback</loc></url></urlset>',
+      },
     });
     server = started.server;
 
-    const result = await checkSitemap(started.origin, [`${started.origin}/missing-sitemap.xml`], 5000);
+    const result = await checkSitemap(
+      started.origin,
+      [`${started.origin}/missing-sitemap.xml`],
+      5000,
+    );
 
     expect(result.found).toBe(true);
     expect(result.sitemapUrl).toBe(`${started.origin}/sitemap.xml`);

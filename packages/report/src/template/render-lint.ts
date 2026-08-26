@@ -63,7 +63,8 @@ const FORBIDDEN_PATTERNS: readonly { label: string; pattern: RegExp }[] = [
   // on the first attempt at this rule.
   {
     label: 'leaked markdown emphasis in rendered prose',
-    pattern: /(?:\*\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*\*|\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*|(?<![\w-])__(?=\S)[^_\n<>]{1,80}(?<=\S)__(?![\w-])|(?<![\w-])_(?=\S)[^_\n<>]{1,80}(?<=\S)_(?![\w-]))/,
+    pattern:
+      /(?:\*\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*\*|\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*|(?<![\w-])__(?=\S)[^_\n<>]{1,80}(?<=\S)__(?![\w-])|(?<![\w-])_(?=\S)[^_\n<>]{1,80}(?<=\S)_(?![\w-]))/,
   },
 ];
 

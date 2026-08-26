@@ -1,6 +1,12 @@
 import type { Connection } from 'mongoose';
 import { isValidSiren } from '@odysseus/core';
-import { createJob, getJob, getSeverityRollups, listJobs, type JobOptionsSnapshot } from '@odysseus/store';
+import {
+  createJob,
+  getJob,
+  getSeverityRollups,
+  listJobs,
+  type JobOptionsSnapshot,
+} from '@odysseus/store';
 import type { Router } from '../router.js';
 import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
@@ -46,7 +52,9 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
   if (typeof rawSiren === 'string' && rawSiren.trim() !== '') {
     const cleaned = rawSiren.replace(/\s/g, '');
     if (!isValidSiren(cleaned)) {
-      throw new OptionsValidationError('siren must be a valid SIREN (9 digits, passing the INSEE checksum)');
+      throw new OptionsValidationError(
+        'siren must be a valid SIREN (9 digits, passing the INSEE checksum)',
+      );
     }
     options.siren = cleaned;
   }
@@ -54,7 +62,10 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
   if (typeof record['transactionalFlow'] === 'boolean') {
     options.transactionalFlow = record['transactionalFlow'];
   }
-  if (typeof record['transactionalFlowReason'] === 'string' && record['transactionalFlowReason'].trim() !== '') {
+  if (
+    typeof record['transactionalFlowReason'] === 'string' &&
+    record['transactionalFlowReason'].trim() !== ''
+  ) {
     options.transactionalFlowReason = record['transactionalFlowReason'].trim();
   }
 
@@ -150,7 +161,10 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
   router.get('/api/scans', async ({ res, query }) => {
     const limitParam = query.get('limit');
     const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : NaN;
-    const jobs = await listJobs(connection, Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined);
+    const jobs = await listJobs(
+      connection,
+      Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined,
+    );
 
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);
     const rollups = await getSeverityRollups(connection, auditIds);

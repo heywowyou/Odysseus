@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { extractCruxCandidates, CRUX_LCP_POOR_RULE_ID, CRUX_CLS_POOR_RULE_ID, CRUX_INP_POOR_RULE_ID } from './normalize-crux.js';
+import {
+  extractCruxCandidates,
+  CRUX_LCP_POOR_RULE_ID,
+  CRUX_CLS_POOR_RULE_ID,
+  CRUX_INP_POOR_RULE_ID,
+} from './normalize-crux.js';
 
 describe('crux', () => {
   it('produces no candidates when CrUX has no public record', () => {

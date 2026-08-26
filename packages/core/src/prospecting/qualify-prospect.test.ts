@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { qualifyProspect } from './qualify-prospect.js';
-import type { ContactAddress, ProspectQualificationInput, SireneIndexEntry } from '../types/prospecting.js';
+import type {
+  ContactAddress,
+  ProspectQualificationInput,
+  SireneIndexEntry,
+} from '../types/prospecting.js';
 
 const sireneMatch: SireneIndexEntry = {
   siren: '732829320',

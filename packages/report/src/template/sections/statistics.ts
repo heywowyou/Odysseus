@@ -1,4 +1,9 @@
-import { RENDER_DIFF_EMISSION_THRESHOLD_PERCENT, type AuditManifest, type Finding, type ReportLanguage } from '@odysseus/core';
+import {
+  RENDER_DIFF_EMISSION_THRESHOLD_PERCENT,
+  type AuditManifest,
+  type Finding,
+  type ReportLanguage,
+} from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
@@ -15,8 +20,13 @@ import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
  *  discover the concentration only after reading the full annex. */
 const CRITICAL_DRIVER_MAX_RULES = 3;
 
-function criticalDriverRuleTitles(findings: readonly Finding[], language: ReportLanguage): string[] {
-  const criticalRuleIds = [...new Set(findings.filter((f) => f.severity === 'critical').map((f) => f.ruleId))];
+function criticalDriverRuleTitles(
+  findings: readonly Finding[],
+  language: ReportLanguage,
+): string[] {
+  const criticalRuleIds = [
+    ...new Set(findings.filter((f) => f.severity === 'critical').map((f) => f.ruleId)),
+  ];
   if (criticalRuleIds.length === 0 || criticalRuleIds.length > CRITICAL_DRIVER_MAX_RULES) return [];
 
   return criticalRuleIds.map((ruleId) => {
@@ -45,7 +55,13 @@ function renderNumberTile(value: string, label: string): string {
   `;
 }
 
-function renderSeverityTile(label: string, count: string, meaning: string, color: string, bg: string): string {
+function renderSeverityTile(
+  label: string,
+  count: string,
+  meaning: string,
+  color: string,
+  bg: string,
+): string {
   return `
     <div class="stat-tile" style="padding:var(--space-3);border-radius:var(--radius-md);background:${bg}">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
@@ -82,7 +98,10 @@ export function renderStatistics(
     renderNumberTile(n(stats.pagesScanned), s.pagesTileLabel),
     renderNumberTile(n(stats.totalFindings), s.findingsTileLabel),
     renderNumberTile(n(stats.accessibilityOccurrences), s.accessibilityOccurrencesTileLabel),
-    renderNumberTile(`${n(stats.pagesWithCritical)}/${n(stats.pagesScanned)}`, s.pagesWithCriticalTileLabel),
+    renderNumberTile(
+      `${n(stats.pagesWithCritical)}/${n(stats.pagesScanned)}`,
+      s.pagesWithCriticalTileLabel,
+    ),
   ].join('');
 
   const severityMeanings = {
@@ -131,10 +150,18 @@ export function renderStatistics(
     .filter((category) => stats.categoryCounts[category] > 0)
     .sort((a, b) => stats.categoryCounts[b] - stats.categoryCounts[a]);
   const categoryTiles = nonZeroCategories
-    .map((category) => renderCategoryTile(categoryLabels[category], n(stats.categoryCounts[category]), CATEGORY[category].color))
+    .map((category) =>
+      renderCategoryTile(
+        categoryLabels[category],
+        n(stats.categoryCounts[category]),
+        CATEGORY[category].color,
+      ),
+    )
     .join('');
 
-  const wcagFailText = fillTemplate(s.wcagFailingDescriptionTemplate, { pages: n(stats.pagesWithWcagFailure) });
+  const wcagFailText = fillTemplate(s.wcagFailingDescriptionTemplate, {
+    pages: n(stats.pagesWithWcagFailure),
+  });
   const wcagFailCountText = `${n(stats.wcagCriteriaFailingCount)} ${wcagFailText}`;
 
   // item 1.8 (La Corniche pass): the tile above now excludes heuristic
@@ -148,7 +175,9 @@ export function renderStatistics(
   const heuristicOccurrencesNote =
     stats.accessibilityHeuristicOccurrences > 0
       ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
-          fillTemplate(s.heuristicOccurrencesExcludedNoteTemplate, { count: n(stats.accessibilityHeuristicOccurrences) }),
+          fillTemplate(s.heuristicOccurrencesExcludedNoteTemplate, {
+            count: n(stats.accessibilityHeuristicOccurrences),
+          }),
         )}</p>`
       : '';
 
@@ -167,7 +196,9 @@ export function renderStatistics(
     stats.thirdPartyAccessibilityOccurrences > 0 && stats.accessibilityOccurrences > 0
       ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
           fillTemplate(s.thirdPartyOccurrencesNoteTemplate, {
-            percent: Math.round((stats.thirdPartyAccessibilityOccurrences / stats.accessibilityOccurrences) * 100),
+            percent: Math.round(
+              (stats.thirdPartyAccessibilityOccurrences / stats.accessibilityOccurrences) * 100,
+            ),
           }),
         )}</p>`
       : '';
@@ -177,7 +208,8 @@ export function renderStatistics(
       ? `<div style="margin-bottom:var(--space-3)">${heuristicOccurrencesNote}${criticalDriverNote}${thirdPartyOccurrencesNote}</div>`
       : '<div style="margin-bottom:var(--space-3)"></div>';
 
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, s.eyebrow, s.heading)}
     <div class="stat-tile-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-3)">
       ${numberTiles}
@@ -195,5 +227,8 @@ export function renderStatistics(
     <div class="hr"></div>
     <h5>${escapeHtml(s.wcagFailingHeading)}</h5>
     <p style="font-size:13.5px;opacity:0.85">${escapeHtml(wcagFailCountText)}</p>
-  `, '', 'section-03');
+  `,
+    '',
+    'section-03',
+  );
 }

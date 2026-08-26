@@ -3,14 +3,18 @@ import { findRenderLintViolations } from './render-lint.js';
 
 describe('findRenderLintViolations', () => {
   it('flags an unfilled template placeholder', () => {
-    expect(findRenderLintViolations('<p>Manquant : {{percent}}%</p>').map((v) => v.label)).toContain(
-      'unresolved template placeholder "{{"',
-    );
+    expect(
+      findRenderLintViolations('<p>Manquant : {{percent}}%</p>').map((v) => v.label),
+    ).toContain('unresolved template placeholder "{{"');
   });
 
   it('flags the B2 shape: a sentence ending in a placeholder hyphen', () => {
-    const violations = findRenderLintViolations('<p>Manquant : 100% du texte visible absent du HTML brut, sur -.</p>');
-    expect(violations.map((v) => v.label)).toContain('placeholder hyphen before a sentence-ending period');
+    const violations = findRenderLintViolations(
+      '<p>Manquant : 100% du texte visible absent du HTML brut, sur -.</p>',
+    );
+    expect(violations.map((v) => v.label)).toContain(
+      'placeholder hyphen before a sentence-ending period',
+    );
   });
 
   it('flags a stringified undefined/null/NaN/[object Object]', () => {
@@ -31,7 +35,9 @@ describe('findRenderLintViolations', () => {
   // P0.4 (2026-08-21 La Corniche feedback pass): "[SIRET à renseigner]"
   // (ODYSSEUS_SIRET_PLACEHOLDER) reached a real client-facing PDF.
   it('flags the "[SIRET à renseigner]" placeholder', () => {
-    const violations = findRenderLintViolations('<p>Signataire : Jules Fontaine. SIRET : [SIRET à renseigner].</p>');
+    const violations = findRenderLintViolations(
+      '<p>Signataire : Jules Fontaine. SIRET : [SIRET à renseigner].</p>',
+    );
     expect(violations.map((v) => v.label)).toContain('unfilled "[... à renseigner]" placeholder');
   });
 
@@ -42,9 +48,13 @@ describe('findRenderLintViolations', () => {
 
   it('finds nothing wrong with clean, complete French copy', () => {
     expect(
-      findRenderLintViolations('<p>Manquant : 12% du texte visible absent du HTML brut, sur .hero-copy.</p>'),
+      findRenderLintViolations(
+        '<p>Manquant : 12% du texte visible absent du HTML brut, sur .hero-copy.</p>',
+      ),
     ).toEqual([]);
-    expect(findRenderLintViolations('<p>Signataire : Jules Fontaine. SIRET : 552032534.</p>')).toEqual([]);
+    expect(
+      findRenderLintViolations('<p>Signataire : Jules Fontaine. SIRET : 552032534.</p>'),
+    ).toEqual([]);
   });
 });
 
@@ -56,7 +66,9 @@ describe('A6: leaked markdown emphasis', () => {
       findRenderLintViolations('<p>des liens *hreflang* non réciproques</p>').map((v) => v.label),
     ).toContain('leaked markdown emphasis in rendered prose');
     expect(
-      findRenderLintViolations("<p>ajouter un attribut *aria-label* à chaque bouton</p>").map((v) => v.label),
+      findRenderLintViolations('<p>ajouter un attribut *aria-label* à chaque bouton</p>').map(
+        (v) => v.label,
+      ),
     ).toContain('leaked markdown emphasis in rendered prose');
   });
 
@@ -67,7 +79,9 @@ describe('A6: leaked markdown emphasis', () => {
 
   it('does not flag a lone asterisk, a star rating, or ordinary prose', () => {
     const clean = (html: string) =>
-      findRenderLintViolations(html).filter((v) => v.label === 'leaked markdown emphasis in rendered prose');
+      findRenderLintViolations(html).filter(
+        (v) => v.label === 'leaked markdown emphasis in rendered prose',
+      );
     expect(clean('<p>Hôtel Le Palais Gallien 5***** - Bordeaux</p>')).toEqual([]);
     expect(clean('<p>Les temps de chargement sont trop longs sur 23 pages.</p>')).toEqual([]);
     expect(clean('<p>Contactez-nous à contact@odysseusaudit.com.</p>')).toEqual([]);
@@ -76,16 +90,20 @@ describe('A6: leaked markdown emphasis', () => {
 
 describe('A6: prose rules never scan style or script bodies', () => {
   it('ignores a snake_case class name in a stylesheet', () => {
-    const html = '<style>.pagedjs_page_content > div { height: 100%; }</style><p>Rien à signaler.</p>';
+    const html =
+      '<style>.pagedjs_page_content > div { height: 100%; }</style><p>Rien à signaler.</p>';
     expect(findRenderLintViolations(html)).toEqual([]);
   });
 
   it('ignores an asterisk inside a script', () => {
-    expect(findRenderLintViolations('<script>const a = b * c * d;</script><p>Bonjour.</p>')).toEqual([]);
+    expect(
+      findRenderLintViolations('<script>const a = b * c * d;</script><p>Bonjour.</p>'),
+    ).toEqual([]);
   });
 
   it('still flags emphasis in the prose next to them', () => {
-    const html = '<style>.pagedjs_page_content{}</style><p>des liens *hreflang* non réciproques</p>';
+    const html =
+      '<style>.pagedjs_page_content{}</style><p>des liens *hreflang* non réciproques</p>';
     expect(findRenderLintViolations(html).map((v) => v.label)).toContain(
       'leaked markdown emphasis in rendered prose',
     );

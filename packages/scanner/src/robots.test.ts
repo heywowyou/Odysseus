@@ -1,14 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { checkAiCrawlerAccess, findBlockingPattern, isAllowedByRobots, parseRobotsTxt } from './robots.js';
+import {
+  checkAiCrawlerAccess,
+  findBlockingPattern,
+  isAllowedByRobots,
+  parseRobotsTxt,
+} from './robots.js';
 
 describe('parseRobotsTxt', () => {
   it('returns allow-all when the text has no matching group', () => {
     const rules = parseRobotsTxt('User-agent: SomeOtherBot\nDisallow: /\n', 'OdysseusAuditBot');
-    expect(rules).toEqual({ found: true, disallow: [], allow: [] , sitemapUrls: [] });
+    expect(rules).toEqual({ found: true, disallow: [], allow: [], sitemapUrls: [] });
   });
 
   it('returns allow-all for empty text', () => {
-    expect(parseRobotsTxt('', 'OdysseusAuditBot')).toEqual({ found: true, disallow: [], allow: [] , sitemapUrls: [] });
+    expect(parseRobotsTxt('', 'OdysseusAuditBot')).toEqual({
+      found: true,
+      disallow: [],
+      allow: [],
+      sitemapUrls: [],
+    });
   });
 
   it('prefers an exact user-agent match over the wildcard group', () => {
@@ -56,7 +66,9 @@ describe('parseRobotsTxt', () => {
       'Disallow: /admin',
       'Sitemap: https://example.com/sitemap.xml',
     ].join('\n');
-    expect(parseRobotsTxt(text, 'OdysseusAuditBot').sitemapUrls).toEqual(['https://example.com/sitemap.xml']);
+    expect(parseRobotsTxt(text, 'OdysseusAuditBot').sitemapUrls).toEqual([
+      'https://example.com/sitemap.xml',
+    ]);
   });
 
   it('collects multiple Sitemap directives', () => {
@@ -79,36 +91,43 @@ describe('parseRobotsTxt', () => {
 
 describe('isAllowedByRobots', () => {
   it('allows everything when there are no rules', () => {
-    expect(isAllowedByRobots({ found: true, disallow: [], allow: [] , sitemapUrls: [] }, '/anything')).toBe(true);
+    expect(
+      isAllowedByRobots({ found: true, disallow: [], allow: [], sitemapUrls: [] }, '/anything'),
+    ).toBe(true);
   });
 
   it('disallows a matching prefix', () => {
-    const rules = { found: true, disallow: ['/private'], allow: [] , sitemapUrls: [] };
+    const rules = { found: true, disallow: ['/private'], allow: [], sitemapUrls: [] };
     expect(isAllowedByRobots(rules, '/private')).toBe(false);
     expect(isAllowedByRobots(rules, '/private/nested')).toBe(false);
     expect(isAllowedByRobots(rules, '/public')).toBe(true);
   });
 
   it('lets a longer Allow override a broader Disallow', () => {
-    const rules = { found: true, disallow: ['/private'], allow: ['/private/public-notice'] , sitemapUrls: [] };
+    const rules = {
+      found: true,
+      disallow: ['/private'],
+      allow: ['/private/public-notice'],
+      sitemapUrls: [],
+    };
     expect(isAllowedByRobots(rules, '/private/public-notice')).toBe(true);
     expect(isAllowedByRobots(rules, '/private/secret')).toBe(false);
   });
 
   it('resolves an equal-length tie in favor of allow', () => {
-    const rules = { found: true, disallow: ['/x'], allow: ['/x'] , sitemapUrls: [] };
+    const rules = { found: true, disallow: ['/x'], allow: ['/x'], sitemapUrls: [] };
     expect(isAllowedByRobots(rules, '/x')).toBe(true);
   });
 
   it('supports a wildcard pattern', () => {
-    const rules = { found: true, disallow: ['/search*'], allow: [] , sitemapUrls: [] };
+    const rules = { found: true, disallow: ['/search*'], allow: [], sitemapUrls: [] };
     expect(isAllowedByRobots(rules, '/search?q=wine')).toBe(false);
     expect(isAllowedByRobots(rules, '/searching')).toBe(false);
     expect(isAllowedByRobots(rules, '/other')).toBe(true);
   });
 
   it('supports an end-anchored pattern', () => {
-    const rules = { found: true, disallow: ['/*.pdf$'], allow: [] , sitemapUrls: [] };
+    const rules = { found: true, disallow: ['/*.pdf$'], allow: [], sitemapUrls: [] };
     expect(isAllowedByRobots(rules, '/brochure.pdf')).toBe(false);
     expect(isAllowedByRobots(rules, '/brochure.pdf?download=1')).toBe(true);
   });
@@ -126,7 +145,12 @@ describe('findBlockingPattern', () => {
   });
 
   it('returns undefined when a longer Allow overrides the Disallow', () => {
-    const rules = { found: true, disallow: ['/private'], allow: ['/private/public-notice'], sitemapUrls: [] };
+    const rules = {
+      found: true,
+      disallow: ['/private'],
+      allow: ['/private/public-notice'],
+      sitemapUrls: [],
+    };
     expect(findBlockingPattern(rules, '/private/public-notice')).toBeUndefined();
   });
 

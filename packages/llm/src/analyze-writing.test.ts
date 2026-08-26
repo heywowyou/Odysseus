@@ -47,11 +47,13 @@ function buildCleanFrenchOutput(): WritingPassOutput {
       {
         themeKey: 't1',
         title: 'Contraste des couleurs insuffisant',
-        businessImpact: 'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
+        businessImpact:
+          'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
         recommendedActions: ['Augmenter le contraste des couleurs sur les boutons et le texte.'],
       },
     ],
-    executiveSummary: 'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
+    executiveSummary:
+      'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
     notes: '',
   };
 }
@@ -76,7 +78,8 @@ function buildDigitInSummaryOutput(): WritingPassOutput {
   // bound counts once render-time finding resolution ran after this pass
   // already had.
   const output = buildCleanFrenchOutput();
-  output.executiveSummary = "L'audit a identifié 66 problèmes prioritaires sur un total de 94 constats.";
+  output.executiveSummary =
+    "L'audit a identifié 66 problèmes prioritaires sur un total de 94 constats.";
   return output;
 }
 
@@ -87,7 +90,8 @@ function buildNonCanonicalSeverityWordOutput(): WritingPassOutput {
   // canonical label is "Sérieux" (docs/report-design-system.md), not
   // "majeur" - the guard's banned word flipped accordingly.
   const output = buildCleanFrenchOutput();
-  output.executiveSummary = 'Nous avons identifié 130 problèmes, dont 8 critiques, 26 majeurs et 24 modérés.';
+  output.executiveSummary =
+    'Nous avons identifié 130 problèmes, dont 8 critiques, 26 majeurs et 24 modérés.';
   return output;
 }
 

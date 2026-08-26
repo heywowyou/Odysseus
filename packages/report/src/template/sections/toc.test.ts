@@ -10,7 +10,9 @@ describe('renderToc', () => {
     const html = renderToc(getStrings('fr'), ALL_SECTIONS);
 
     for (let i = 1; i <= 15; i++) {
-      expect(html).toContain(`class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">${i}</span>`);
+      expect(html).toContain(
+        `class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">${i}</span>`,
+      );
     }
   });
 
@@ -58,7 +60,9 @@ describe('renderToc', () => {
     it('renumbers every section after the gap so the sequence stays contiguous 1..15', () => {
       const html = renderToc(getStrings('fr'), withoutObservations);
       for (let i = 1; i <= 15; i++) {
-        expect(html).toContain(`class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">${i}</span>`);
+        expect(html).toContain(
+          `class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">${i}</span>`,
+        );
       }
       expect(html).not.toContain(
         'class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">16</span>',
@@ -72,7 +76,10 @@ describe('renderToc', () => {
     it('the row after the gap (section-07) shifts up by exactly one', () => {
       const html = renderToc(getStrings('fr'), withoutObservations);
       const section07Index = html.indexOf('href="#section-07"');
-      const rowStart = html.lastIndexOf('<div style="display:flex;align-items:baseline', section07Index);
+      const rowStart = html.lastIndexOf(
+        '<div style="display:flex;align-items:baseline',
+        section07Index,
+      );
       const row = html.slice(rowStart, section07Index);
       const fullHtml = renderToc(getStrings('fr'), new Set(SECTION_IDS));
       const fullIndex = fullHtml.indexOf('href="#section-07"');

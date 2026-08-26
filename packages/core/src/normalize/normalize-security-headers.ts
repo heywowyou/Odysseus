@@ -14,9 +14,12 @@ import { severityFromCustom } from './severity.js';
 
 export const SECURITY_HEADER_MISSING_CSP_RULE_ID = 'security-header-missing-csp';
 export const SECURITY_HEADER_MISSING_HSTS_RULE_ID = 'security-header-missing-hsts';
-export const SECURITY_HEADER_MISSING_X_FRAME_OPTIONS_RULE_ID = 'security-header-missing-x-frame-options';
-export const SECURITY_HEADER_MISSING_REFERRER_POLICY_RULE_ID = 'security-header-missing-referrer-policy';
-export const SECURITY_HEADER_MISSING_PERMISSIONS_POLICY_RULE_ID = 'security-header-missing-permissions-policy';
+export const SECURITY_HEADER_MISSING_X_FRAME_OPTIONS_RULE_ID =
+  'security-header-missing-x-frame-options';
+export const SECURITY_HEADER_MISSING_REFERRER_POLICY_RULE_ID =
+  'security-header-missing-referrer-policy';
+export const SECURITY_HEADER_MISSING_PERMISSIONS_POLICY_RULE_ID =
+  'security-header-missing-permissions-policy';
 
 export interface SecurityHeadersCheckInput {
   fetched: boolean;
@@ -28,7 +31,12 @@ export interface SecurityHeadersCheckInput {
   hasPermissionsPolicy: boolean;
 }
 
-function candidate(ruleId: string, title: string, description: string, pageUrl: string): FindingCandidate {
+function candidate(
+  ruleId: string,
+  title: string,
+  description: string,
+  pageUrl: string,
+): FindingCandidate {
   return {
     source: 'custom',
     ruleId,

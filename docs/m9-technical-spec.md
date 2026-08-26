@@ -1,7 +1,8 @@
 # M9 Technical Specification
 
-Companion to `m9-prospecting-pipeline.md`. Status: design spec, added
-2026-08-25, not yet implemented.
+Companion to `m9-prospecting-pipeline.md`. Status: reconciled design for work
+after the already-shipped milestones 9a and 9b, added 2026-08-25; the later
+stages described here are not implemented.
 
 **This document as pasted proposes two new packages, `packages/prospecting`
 and `packages/outreach`. Decided against, 2026-08-25** (operator call,

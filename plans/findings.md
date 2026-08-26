@@ -17,10 +17,12 @@ trade-offs in `CLAUDE.md` — full independent re-verification of every
 `file:line` in those categories has not yet been done. Treat those as strong
 leads, not yet fully vetted.
 
-This document is being worked through live: as findings are fixed
-(per `/home/heywow/.claude/plans/using-plans-findings-md-fix-everything-zazzy-panda.md`),
-their sections are deleted here so this file always reflects what's left,
-not a frozen audit snapshot. Fixed so far: CORRECTNESS-01, CORRECTNESS-04,
+**Lifecycle:** this is a maintenance backlog, not a cross-agent session log
+and not authority to override `CLAUDE.md`'s milestone order. Before acting on
+an entry, re-verify it against current HEAD and record the selected scope in
+`docs/session/current-session.md`. As findings are fixed, their sections are
+deleted here so this file reflects what remains rather than a frozen audit
+snapshot. Fixed so far: CORRECTNESS-01, CORRECTNESS-04,
 SEC-01, SEC-02, SEC-03/DX-06, SEC-04, PERF-01, ARCH-03/DOCS-01, SEC-06,
 TEST-01, TEST-02, TEST-03, TEST-04, TEST-07.
 Still open: SEC-05/DEP-01 (Lighthouse 12→13 dependency/build work is done,

@@ -65,7 +65,8 @@ function choice(overrides: { finishReason?: string; content?: unknown } = {}) {
       {
         finishReason: overrides.finishReason ?? 'stop',
         message: {
-          content: 'content' in overrides ? overrides.content : JSON.stringify(validStructureOutput),
+          content:
+            'content' in overrides ? overrides.content : JSON.stringify(validStructureOutput),
         },
       },
     ],
@@ -85,7 +86,9 @@ describe('callMistralForStructure', () => {
 
   it('throws when the response has no choices', async () => {
     completeMock.mockResolvedValue({ choices: [] });
-    await expect(callMistralForStructure(structureInput, false)).rejects.toThrow('contained no choices');
+    await expect(callMistralForStructure(structureInput, false)).rejects.toThrow(
+      'contained no choices',
+    );
   });
 
   it('throws when the response was truncated (finishReason length)', async () => {
@@ -95,7 +98,9 @@ describe('callMistralForStructure', () => {
 
   it('throws when the message content is not a plain string', async () => {
     completeMock.mockResolvedValue(choice({ content: [{ type: 'text', text: 'x' }] }));
-    await expect(callMistralForStructure(structureInput, false)).rejects.toThrow('unexpected shape');
+    await expect(callMistralForStructure(structureInput, false)).rejects.toThrow(
+      'unexpected shape',
+    );
   });
 
   it('throws when the content is not valid JSON', async () => {
@@ -122,7 +127,9 @@ describe('callMistralForWriting', () => {
 
   it('throws when the response has no choices', async () => {
     completeMock.mockResolvedValue({ choices: [] });
-    await expect(callMistralForWriting(writingInput, false)).rejects.toThrow('contained no choices');
+    await expect(callMistralForWriting(writingInput, false)).rejects.toThrow(
+      'contained no choices',
+    );
   });
 
   it('throws when the response was truncated (finishReason length)', async () => {

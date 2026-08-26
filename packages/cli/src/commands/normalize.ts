@@ -88,7 +88,9 @@ export function registerNormalizeCommand(program: Command): void {
               ? { aiCrawlerBlocks: manifest.crawl.aiCrawlerBlocks }
               : {}),
           },
-          ...(manifest.cruxFieldData !== undefined ? { cruxFieldData: manifest.cruxFieldData } : {}),
+          ...(manifest.cruxFieldData !== undefined
+            ? { cruxFieldData: manifest.cruxFieldData }
+            : {}),
         });
 
         await fs.writeFile(

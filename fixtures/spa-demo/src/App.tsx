@@ -35,8 +35,8 @@ export default function App() {
         */}
         <h3>Nos vins</h3>
         <p>
-          Un domaine familial produisant des vins rouges et blancs depuis
-          trois generations, entre Bordeaux et la cote atlantique.
+          Un domaine familial produisant des vins rouges et blancs depuis trois generations, entre
+          Bordeaux et la cote atlantique.
         </p>
 
         {/*
@@ -44,8 +44,7 @@ export default function App() {
           4.5:1 ratio WCAG 2.2 AA requires for normal-size text.
         */}
         <p className="tasting-note">
-          Notes de degustation: fruits rouges, une pointe de vanille,
-          finale longue et epicee.
+          Notes de degustation: fruits rouges, une pointe de vanille, finale longue et epicee.
         </p>
 
         <section className="newsletter" aria-label="Inscription">
@@ -78,7 +77,9 @@ export default function App() {
             NOT set hasTransactionalFlow on its own - only the first-party
             form above should.
           */}
-          <a href="https://www.booking.com/hotel/fr/domaine-des-trois-chenes.html">Reserver sur Booking.com</a>
+          <a href="https://www.booking.com/hotel/fr/domaine-des-trois-chenes.html">
+            Reserver sur Booking.com
+          </a>
         </section>
       </main>
 

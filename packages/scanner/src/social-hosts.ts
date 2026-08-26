@@ -41,7 +41,9 @@ function isSocialExclusionPattern(value: unknown): value is SocialExclusionPatte
   return (
     typeof record['pattern'] === 'string' &&
     typeof record['rationale'] === 'string' &&
-    (record['confidence'] === 'high' || record['confidence'] === 'medium' || record['confidence'] === 'low') &&
+    (record['confidence'] === 'high' ||
+      record['confidence'] === 'medium' ||
+      record['confidence'] === 'low') &&
     typeof record['enabled'] === 'boolean'
   );
 }
@@ -60,7 +62,11 @@ function parseSocialExclusionConfig(raw: unknown): SocialExclusionConfig {
   if (!Array.isArray(record['patterns']) || !record['patterns'].every(isSocialExclusionPattern)) {
     throw new Error('odysseus: social-exclusion.json has a malformed patterns array');
   }
-  return { version: record['version'], sourceNote: record['sourceNote'], patterns: record['patterns'] };
+  return {
+    version: record['version'],
+    sourceNote: record['sourceNote'],
+    patterns: record['patterns'],
+  };
 }
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { analyzePagedjsPages, describePagedjsStructuralFailure, type PagedPageModel } from './pdf.js';
+import {
+  analyzePagedjsPages,
+  describePagedjsStructuralFailure,
+  type PagedPageModel,
+} from './pdf.js';
 
 function check(pages: readonly PagedPageModel[]): string | undefined {
   return describePagedjsStructuralFailure(analyzePagedjsPages(pages));
@@ -39,7 +43,7 @@ describe('analyzePagedjsPages / describePagedjsStructuralFailure', () => {
     expect(check(pages)).toBeUndefined();
   });
 
-  it('fails when an atomic block\'s text is duplicated across two different pages', () => {
+  it("fails when an atomic block's text is duplicated across two different pages", () => {
     const pages: PagedPageModel[] = [
       { text: 'Cover page', atomicBlockTexts: [] },
       { text: 'Section one content', atomicBlockTexts: ['Glossary entry: WCAG'] },

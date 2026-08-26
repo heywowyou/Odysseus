@@ -25,7 +25,9 @@ describe('extractRobotsMetaContent', () => {
   });
 });
 
-function startServer(routes: Record<string, { status: number; body: string }>): Promise<{ server: Server; origin: string }> {
+function startServer(
+  routes: Record<string, { status: number; body: string }>,
+): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
       const route = routes[req.url ?? '/'];
@@ -56,21 +58,39 @@ describe('checkCanonicalTarget', () => {
   });
 
   it('reports the httpStatus and noindex: false for a healthy target', async () => {
-    const started = await startServer({ '/target': { status: 200, body: '<html><head></head></html>' } });
+    const started = await startServer({
+      '/target': { status: 200, body: '<html><head></head></html>' },
+    });
     server = started.server;
 
-    const result = await checkCanonicalTarget(`${started.origin}/page`, `${started.origin}/target`, 5000);
+    const result = await checkCanonicalTarget(
+      `${started.origin}/page`,
+      `${started.origin}/target`,
+      5000,
+    );
 
-    expect(result).toEqual({ pageUrl: `${started.origin}/page`, canonicalUrl: `${started.origin}/target`, httpStatus: 200, noindex: false });
+    expect(result).toEqual({
+      pageUrl: `${started.origin}/page`,
+      canonicalUrl: `${started.origin}/target`,
+      httpStatus: 200,
+      noindex: false,
+    });
   });
 
   it('reports noindex: true when the target carries a noindex directive', async () => {
     const started = await startServer({
-      '/target': { status: 200, body: '<html><head><meta name="robots" content="noindex"></head></html>' },
+      '/target': {
+        status: 200,
+        body: '<html><head><meta name="robots" content="noindex"></head></html>',
+      },
     });
     server = started.server;
 
-    const result = await checkCanonicalTarget(`${started.origin}/page`, `${started.origin}/target`, 5000);
+    const result = await checkCanonicalTarget(
+      `${started.origin}/page`,
+      `${started.origin}/target`,
+      5000,
+    );
 
     expect(result?.noindex).toBe(true);
   });
@@ -79,7 +99,11 @@ describe('checkCanonicalTarget', () => {
     const started = await startServer({});
     server = started.server;
 
-    const result = await checkCanonicalTarget(`${started.origin}/page`, `${started.origin}/missing`, 5000);
+    const result = await checkCanonicalTarget(
+      `${started.origin}/page`,
+      `${started.origin}/missing`,
+      5000,
+    );
 
     expect(result?.httpStatus).toBe(404);
     expect(result?.noindex).toBe(false);

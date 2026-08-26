@@ -5,9 +5,22 @@ import {
   LCEN_MENTIONS_LEGALES_REGIME_ID,
   LCEN_MENTIONS_LEGALES_RULE_ID,
 } from '@odysseus/core';
-import type { AuditManifest, AuditManualFields, Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
+import type {
+  AuditManifest,
+  AuditManualFields,
+  Finding,
+  ObligationAssessment,
+  ReportLanguage,
+} from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatDate, formatElapsedDuration, renderSheetHeader, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  formatDate,
+  formatElapsedDuration,
+  renderSheetHeader,
+  sheet,
+} from '../html-utils.js';
 import { pickPrimaryBasis, renderLegalCitationParagraph } from './methodology.js';
 import { SEVERITY } from '../design-tokens.js';
 import { detectVendor } from '../third-party-attribution.js';
@@ -68,7 +81,10 @@ function renderSirenNote(
         source: snapshot.source,
       })
     : siren
-      ? fillTemplate(l.sirenTemplate, { siren, date: formatDate(new Date(manifest.startedAt), language) })
+      ? fillTemplate(l.sirenTemplate, {
+          siren,
+          date: formatDate(new Date(manifest.startedAt), language),
+        })
       : l.sirenUnavailable;
   // P2.1: a one-line trust note, only when a real registry snapshot
   // renders - explains that the denomination is reproduced verbatim from
@@ -88,9 +104,17 @@ function renderSirenNote(
  *  conflict record that resolution already keeps (siteSignalResolutions),
  *  the same "state the conflict, don't resolve it silently" precedent
  *  sirenMismatch already established for SIREN. */
-function renderTransactionalFlowConflictNote(strings: ReportStrings, obligationAssessment: ObligationAssessment | undefined): string {
+function renderTransactionalFlowConflictNote(
+  strings: ReportStrings,
+  obligationAssessment: ObligationAssessment | undefined,
+): string {
   const resolution = obligationAssessment?.siteSignalResolutions?.hasTransactionalFlow;
-  if (!resolution || resolution.detectedValue === undefined || resolution.detectedValue === resolution.value) return '';
+  if (
+    !resolution ||
+    resolution.detectedValue === undefined ||
+    resolution.detectedValue === resolution.value
+  )
+    return '';
 
   const l = strings.legalExposure;
   const manualValue = resolution.value
@@ -141,16 +165,29 @@ function renderTransactionalFlowScopeNote(strings: ReportStrings, manifest: Audi
   // vendor-prefix table third-party-attribution.ts already applies to
   // findings, since evidence[].selector is the same shape.
   const onSite = evidence.filter((e) => e.kind !== 'delegated-booking-redirect');
-  const vendors = [...new Set(onSite.map((e) => detectVendor(e.selector)).filter((v): v is string => v !== undefined))];
-  const examplePages = [...new Set(onSite.map((e) => e.pageUrl))].sort().slice(0, TRANSACTIONAL_FLOW_EXAMPLE_PAGE_COUNT).join(', ');
+  const vendors = [
+    ...new Set(
+      onSite.map((e) => detectVendor(e.selector)).filter((v): v is string => v !== undefined),
+    ),
+  ];
+  const examplePages = [...new Set(onSite.map((e) => e.pageUrl))]
+    .sort()
+    .slice(0, TRANSACTIONAL_FLOW_EXAMPLE_PAGE_COUNT)
+    .join(', ');
 
   const text =
     delegated.length > 0
       ? fillTemplate(l.transactionalFlowDelegatedTemplate, {
-          domain: providerDomains.length > 0 ? providerDomains.join(', ') : l.transactionalFlowDelegatedDomainUnknown,
+          domain:
+            providerDomains.length > 0
+              ? providerDomains.join(', ')
+              : l.transactionalFlowDelegatedDomainUnknown,
         })
       : vendors.length > 0
-        ? fillTemplate(l.transactionalFlowOnSiteTemplate, { vendors: vendors.join(', '), examplePages })
+        ? fillTemplate(l.transactionalFlowOnSiteTemplate, {
+            vendors: vendors.join(', '),
+            examplePages,
+          })
         : fillTemplate(l.transactionalFlowOnSiteNoVendorTemplate, { examplePages });
 
   return `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(text)}</p>`;
@@ -183,8 +220,13 @@ function renderTransactionalFlowScopeNote(strings: ReportStrings, manifest: Audi
  *  verified against Légifrance or an official publication and the status
  *  in obligation-basis.md itself is upgraded to primary - do not
  *  re-introduce it by relaxing this check instead. */
-function renderEaaExposureBlock(strings: ReportStrings, language: ReportLanguage, assessment: ObligationAssessment | undefined): string {
-  if (!assessment || (assessment.status !== 'in_scope' && assessment.status !== 'likely_in_scope')) return '';
+function renderEaaExposureBlock(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  assessment: ObligationAssessment | undefined,
+): string {
+  if (!assessment || (assessment.status !== 'in_scope' && assessment.status !== 'likely_in_scope'))
+    return '';
   const basis = pickPrimaryBasis(assessment);
   if (!basis || basis.regimeId !== EAA_REGIME_ID) return '';
 
@@ -249,7 +291,9 @@ function renderLcenBlock(
   language: ReportLanguage,
   findings: readonly Finding[],
 ): string {
-  const hasLcenFinding = findings.some((finding) => finding.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID);
+  const hasLcenFinding = findings.some(
+    (finding) => finding.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID,
+  );
   if (!hasLcenFinding) return '';
 
   const regime = getRegime(LCEN_MENTIONS_LEGALES_REGIME_ID, language);
@@ -269,7 +313,10 @@ function renderLcenBlock(
       <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(regime.thresholdDescription)}</p>
       <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(l.lcenObserved)}</p>
       <p style="font-size:11.5px;margin-top:var(--space-2);max-width:66ch" class="text-muted">${escapeHtml(
-        fillTemplate(l.lcenSourceTemplate, { citation: regime.legalCitation, authority: authorityDisplay }),
+        fillTemplate(l.lcenSourceTemplate, {
+          citation: regime.legalCitation,
+          authority: authorityDisplay,
+        }),
       )}</p>
       <p style="font-size:11.5px;margin-top:2px;max-width:66ch" class="text-muted">${escapeHtml(l.lcenScanLimitNote)}</p>
     </div>
@@ -305,7 +352,8 @@ export function renderLegalExposure(
 
   const lcenBlock = renderLcenBlock(strings, language, findings);
 
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, l.eyebrow, l.heading)}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-6)">
       <div class="card elev-sm">
@@ -327,5 +375,8 @@ export function renderLegalExposure(
     ${lcenBlock}
     ${renderSirenNote(strings, language, manifest, manualFields, obligationAssessment, lcenBlock !== '')}
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">${escapeHtml(l.disclaimerNote)}</p>
-  `, '', 'section-02');
+  `,
+    '',
+    'section-02',
+  );
 }

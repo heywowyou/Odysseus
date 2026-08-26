@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import type { Finding, Theme } from '@odysseus/core';
 import { selectReferenceStats } from '@odysseus/core';
-import { isQuickWinTheme, MAX_RENDERED_THEMES, renderThemes, selectRenderedThemes } from './themes.js';
+import {
+  isQuickWinTheme,
+  MAX_RENDERED_THEMES,
+  renderThemes,
+  selectRenderedThemes,
+} from './themes.js';
 import { getStrings } from '../strings/i18n.js';
 import { escapeHtml } from '../html-utils.js';
-import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
+import {
+  loadSasFernandeAnalysis,
+  loadSasFernandeFindings,
+  loadSasFernandeManifest,
+} from '../../test-fixtures.js';
 
 describe('renderThemes against the real sas-fernande.fr analysis', () => {
   it('renders only the top 6 themes by rank (doc §3 sections 04/05 cap), with a compact findingId reference and never a raw page URL (F38)', async () => {
@@ -23,7 +32,9 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
       expect(html).toContain(theme.findingIds[0]);
     }
     if (analysis.themes.length > MAX_RENDERED_THEMES) {
-      const dropped = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank)[MAX_RENDERED_THEMES]!;
+      const dropped = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank)[
+        MAX_RENDERED_THEMES
+      ]!;
       expect(html).not.toContain(`id="theme-${dropped.priorityRank}"`);
     }
     // No raw page URL anywhere in a theme card - only counts and refs.
@@ -205,7 +216,14 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
     };
     const citedStatIds = new Set<string>();
 
-    const html = renderThemes(getStrings('fr'), 4, twoPerformanceThemes, findings, manifest, citedStatIds);
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      twoPerformanceThemes,
+      findings,
+      manifest,
+      citedStatIds,
+    );
 
     // Only the first (highest-priority) theme in a category gets a
     // citation per the existing one-per-category rule, so this also
@@ -237,9 +255,18 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
       ],
     };
     const sector = analysis.obligationAssessment?.sector ?? 'general';
-    const citedStatIds = new Set(selectReferenceStats('performance', sector).map((stat) => stat.id));
+    const citedStatIds = new Set(
+      selectReferenceStats('performance', sector).map((stat) => stat.id),
+    );
 
-    const html = renderThemes(getStrings('fr'), 4, performanceOnly, findings, manifest, citedStatIds);
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      performanceOnly,
+      findings,
+      manifest,
+      citedStatIds,
+    );
 
     expect(html).not.toContain('Repère chiffré');
   });
@@ -365,7 +392,13 @@ describe('item 1.1: a stat with eligibleRuleIds only attaches to a theme whose f
     const legalFinding = buildFinding('lcen-mentions-legales-missing');
     const jsonldFinding = { ...buildFinding('jsonld-invalid'), findingId: 'f002' };
 
-    const html = renderThemes(getStrings('fr'), 4, analysis, [legalFinding, jsonldFinding], manifest);
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      analysis,
+      [legalFinding, jsonldFinding],
+      manifest,
+    );
 
     // The citation must land on card 2 (theme-2, jsonld-invalid), never
     // on card 1 (theme-1, the citation-ineligible mentions-légales one).
@@ -413,7 +446,9 @@ describe('item 13: transactional-context-only citations (cart-abandonment, check
     description: 'd',
     pageUrls: ['https://example.com/products'],
     occurrences: 3,
-    elements: [{ pageUrl: 'https://example.com/products', selector: '.collection__list', snippet: '' }],
+    elements: [
+      { pageUrl: 'https://example.com/products', selector: '.collection__list', snippet: '' },
+    ],
     rawEvidence: {},
     dedupeKey: 'd1',
     firstSeenAt: new Date(),
@@ -449,7 +484,9 @@ describe('item 13: transactional-context-only citations (cart-abandonment, check
 
   it('does not cite a cart-abandonment/checkout-uplift stat on a finding whose page has no transactional-flow evidence at all', () => {
     const analysis = buildAnalysis();
-    const manifest = { pages: [{ url: 'https://example.com/products', status: 'visited' }] } as never;
+    const manifest = {
+      pages: [{ url: 'https://example.com/products', status: 'visited' }],
+    } as never;
 
     const html = renderThemes(getStrings('fr'), 4, analysis, [ariaFinding], manifest);
 
@@ -457,7 +494,7 @@ describe('item 13: transactional-context-only citations (cart-abandonment, check
     expect(html).not.toContain('35,26');
   });
 
-  it('does not cite it even when the site has transactional-flow evidence elsewhere, if not on this finding\'s own page', () => {
+  it("does not cite it even when the site has transactional-flow evidence elsewhere, if not on this finding's own page", () => {
     const analysis = buildAnalysis({
       obligationAssessment: {
         status: 'in_scope',
@@ -468,7 +505,12 @@ describe('item 13: transactional-context-only citations (cart-abandonment, check
               {
                 kind: 'transactional-flow',
                 evidence: [
-                  { kind: 'checkout-form', selector: 'form', pageUrl: 'https://example.com/checkout', detail: '' },
+                  {
+                    kind: 'checkout-form',
+                    selector: 'form',
+                    pageUrl: 'https://example.com/checkout',
+                    detail: '',
+                  },
                 ],
               },
             ],
@@ -476,14 +518,16 @@ describe('item 13: transactional-context-only citations (cart-abandonment, check
         ],
       },
     });
-    const manifest = { pages: [{ url: 'https://example.com/products', status: 'visited' }] } as never;
+    const manifest = {
+      pages: [{ url: 'https://example.com/products', status: 'visited' }],
+    } as never;
 
     const html = renderThemes(getStrings('fr'), 4, analysis, [ariaFinding], manifest);
 
     expect(html).not.toContain('70,22');
   });
 
-  it('does cite it when the finding\'s own page carries real transactional-flow evidence', () => {
+  it("does cite it when the finding's own page carries real transactional-flow evidence", () => {
     const analysis = buildAnalysis({
       obligationAssessment: {
         status: 'in_scope',
@@ -507,7 +551,9 @@ describe('item 13: transactional-context-only citations (cart-abandonment, check
         ],
       },
     });
-    const manifest = { pages: [{ url: 'https://example.com/products', status: 'visited' }] } as never;
+    const manifest = {
+      pages: [{ url: 'https://example.com/products', status: 'visited' }],
+    } as never;
 
     const html = renderThemes(getStrings('fr'), 4, analysis, [ariaFinding], manifest);
 
@@ -519,7 +565,7 @@ describe('item 13: transactional-context-only citations (cart-abandonment, check
 // multiply the stated relationship by however many seconds they assume
 // their site is over threshold - the real gap on a real report was 3.4s
 // above the "good" LCP threshold, not 0.1s.
-describe('item 14: a per-0.1s performance citation states the site\'s own measured LCP gap', () => {
+describe("item 14: a per-0.1s performance citation states the site's own measured LCP gap", () => {
   const perfFinding = {
     findingId: 'f001',
     auditId: 'a1',
@@ -567,7 +613,11 @@ describe('item 14: a per-0.1s performance citation states the site\'s own measur
   it('states the measured gap when this site\'s LCP is genuinely above the "good" threshold (5900ms, matching the reported 5.9s vs 2.5s case)', () => {
     const manifest = {
       pages: [
-        { url: 'https://example.com/', status: 'visited', coreWebVitals: { lcp: { score: 0.1, numericValue: 5900, displayValue: '5.9 s' } } },
+        {
+          url: 'https://example.com/',
+          status: 'visited',
+          coreWebVitals: { lcp: { score: 0.1, numericValue: 5900, displayValue: '5.9 s' } },
+        },
       ],
     } as never;
 
@@ -581,7 +631,11 @@ describe('item 14: a per-0.1s performance citation states the site\'s own measur
   it('states nothing extra when this site\'s LCP is already at or under the "good" threshold', () => {
     const manifest = {
       pages: [
-        { url: 'https://example.com/', status: 'visited', coreWebVitals: { lcp: { score: 0.95, numericValue: 1800, displayValue: '1.8 s' } } },
+        {
+          url: 'https://example.com/',
+          status: 'visited',
+          coreWebVitals: { lcp: { score: 0.95, numericValue: 1800, displayValue: '1.8 s' } },
+        },
       ],
     } as never;
 
@@ -653,11 +707,23 @@ describe('2026-08-22 revenue-impact wiring: a scalable citation with known clien
   };
 
   const manifest = {
-    pages: [{ url: 'https://example.com/', status: 'visited', coreWebVitals: { lcp: { score: 0.1, numericValue: 5900, displayValue: '5.9 s' } } }],
+    pages: [
+      {
+        url: 'https://example.com/',
+        status: 'visited',
+        coreWebVitals: { lcp: { score: 0.1, numericValue: 5900, displayValue: '5.9 s' } },
+      },
+    ],
   } as never;
 
   it('renders the euro estimate when turnover is known and the top citation is scalable', () => {
-    const html = renderThemes(getStrings('fr'), 4, hospitalityAnalysisWithTurnover, [perfFinding], manifest);
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      hospitalityAnalysisWithTurnover,
+      [perfFinding],
+      manifest,
+    );
 
     // sector 'hospitality' + strictSector picks deloitte-speed-conversion-travel-2020
     // (ratio 0.101), applied once against 500 000 EUR -> 50 500 EUR raw,
@@ -696,10 +762,18 @@ describe('2026-08-22 revenue-impact wiring: a scalable citation with known clien
     };
     const accessibilityAnalysis = {
       ...hospitalityAnalysisWithTurnover,
-      themes: [{ ...hospitalityAnalysisWithTurnover.themes[0]!, category: 'accessibility' as const }],
+      themes: [
+        { ...hospitalityAnalysisWithTurnover.themes[0]!, category: 'accessibility' as const },
+      ],
     };
 
-    const html = renderThemes(getStrings('fr'), 4, accessibilityAnalysis as never, [accessibilityFinding], manifest);
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      accessibilityAnalysis as never,
+      [accessibilityFinding],
+      manifest,
+    );
 
     expect(html).not.toContain('estimation indicative');
   });
@@ -871,7 +945,10 @@ describe('item 0.6: a theme with no resolved findings is never selected as a ren
     const dangling = themeWithFindingIds(1, ['f-removed']);
     const real = themeWithFindingIds(2, ['f001']);
 
-    const rendered = selectRenderedThemes([dangling, real], new Map([['f001', buildFinding('f001') as never]]));
+    const rendered = selectRenderedThemes(
+      [dangling, real],
+      new Map([['f001', buildFinding('f001') as never]]),
+    );
 
     expect(rendered).toEqual([real]);
   });
@@ -882,7 +959,9 @@ describe('item 0.6: a theme with no resolved findings is never selected as a ren
       ...[2, 3, 4, 5, 6, 7].map((rank) => themeWithFindingIds(rank, [`f00${rank}`])),
     ];
     const findingsById = new Map(
-      [2, 3, 4, 5, 6, 7].map((rank) => [`f00${rank}`, buildFinding(`f00${rank}`) as never] as const),
+      [2, 3, 4, 5, 6, 7].map(
+        (rank) => [`f00${rank}`, buildFinding(`f00${rank}`) as never] as const,
+      ),
     );
 
     const rendered = selectRenderedThemes(themes, findingsById);
@@ -939,7 +1018,9 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
           impact: 'high' as const,
           priorityRank: 1,
           findingIds,
-          recommendedActions: ['Demandez à votre prestataire technique d\'ajouter un texte visible.'],
+          recommendedActions: [
+            "Demandez à votre prestataire technique d'ajouter un texte visible.",
+          ],
         },
       ],
       quickWins: [],
@@ -959,7 +1040,13 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
       buildFinding({
         findingId: 'f002',
         pageUrls: ['https://example.com/contact'],
-        elements: [{ pageUrl: 'https://example.com/contact', selector: '.gform_wrapper button', snippet: '' }],
+        elements: [
+          {
+            pageUrl: 'https://example.com/contact',
+            selector: '.gform_wrapper button',
+            snippet: '',
+          },
+        ],
       }),
     ];
     const analysis = buildAnalysis(['f001', 'f002']);
@@ -996,7 +1083,13 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
       buildFinding({
         findingId: 'f002',
         pageUrls: ['https://example.com/contact'],
-        elements: [{ pageUrl: 'https://example.com/contact', selector: '.some-widget >>> button', snippet: '' }],
+        elements: [
+          {
+            pageUrl: 'https://example.com/contact',
+            selector: '.some-widget >>> button',
+            snippet: '',
+          },
+        ],
       }),
     ];
     const analysis = buildAnalysis(['f001', 'f002']);
@@ -1012,13 +1105,23 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
         findingId: 'f001',
         pageUrls: ['https://example.com/'],
         elements: [
-          { pageUrl: 'https://example.com/', selector: '.ZC_sdk__zc-iframe_k5FE3 >>> button[data-testid="x"]', snippet: '' },
+          {
+            pageUrl: 'https://example.com/',
+            selector: '.ZC_sdk__zc-iframe_k5FE3 >>> button[data-testid="x"]',
+            snippet: '',
+          },
         ],
       }),
       buildFinding({
         findingId: 'f002',
         pageUrls: ['https://example.com/reserver'],
-        elements: [{ pageUrl: 'https://example.com/reserver', selector: 'body.page > iframe.ZC_sdk__zc-iframe_k5FE3', snippet: '' }],
+        elements: [
+          {
+            pageUrl: 'https://example.com/reserver',
+            selector: 'body.page > iframe.ZC_sdk__zc-iframe_k5FE3',
+            snippet: '',
+          },
+        ],
       }),
     ];
     const analysis = buildAnalysis(['f001', 'f002']);
@@ -1157,7 +1260,7 @@ describe('P1.5: the aggregate effort estimate sentence', () => {
 
   const manifest = { pages: [] } as never;
 
-  it('renders a global day-range estimate computed from the rendered cards\' effort labels', () => {
+  it("renders a global day-range estimate computed from the rendered cards' effort labels", () => {
     const efforts: Array<'low' | 'medium' | 'high'> = ['low', 'medium'];
     const findings = efforts.map((_, i) => buildFinding(`f00${i + 1}`));
     const analysis = buildAnalysis(efforts);
@@ -1257,7 +1360,10 @@ describe('P2.2: the inline "Sans objet" gloss', () => {
 // Effort deliberately stays uncoloured (high effort means expensive, not
 // urgent - colouring it red would say the opposite of the truth).
 describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort is not', () => {
-  function buildFinding(findingId: string, category: 'accessibility' | 'seo' = 'accessibility'): Finding {
+  function buildFinding(
+    findingId: string,
+    category: 'accessibility' | 'seo' = 'accessibility',
+  ): Finding {
     return {
       findingId,
       auditId: 'a1',
@@ -1340,7 +1446,9 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
     const analysis = buildAnalysis('medium', 'seo');
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
-    expect(html).toMatch(/Conformité : <strong style="color:var\(--color-neutral-500\)">Sans objet<\/strong>/);
+    expect(html).toMatch(
+      /Conformité : <strong style="color:var\(--color-neutral-500\)">Sans objet<\/strong>/,
+    );
     expect(html).not.toMatch(/Conformité : <strong style="color:#d97b82">Sans objet/);
   });
 });
@@ -1428,7 +1536,11 @@ describe('B2.2: theme category and reference-stat citations', () => {
 });
 
 describe('B2.1: a category with critical findings always gets a rendered priority', () => {
-  function finding(findingId: string, category: Finding['category'], severity: Finding['severity']): Finding {
+  function finding(
+    findingId: string,
+    category: Finding['category'],
+    severity: Finding['severity'],
+  ): Finding {
     return {
       findingId,
       auditId: 'a1',
@@ -1474,7 +1586,9 @@ describe('B2.1: a category with critical findings always gets a rendered priorit
       finding('p1', 'performance', 'critical'),
     ];
     const themes = [
-      ...Array.from({ length: MAX_RENDERED_THEMES }, (_, i) => theme(i + 1, 'accessibility', [`a${i}`])),
+      ...Array.from({ length: MAX_RENDERED_THEMES }, (_, i) =>
+        theme(i + 1, 'accessibility', [`a${i}`]),
+      ),
       theme(MAX_RENDERED_THEMES + 6, 'performance', ['p1']),
     ];
     const findingsById = new Map(findings.map((f) => [f.findingId, f]));
@@ -1484,17 +1598,23 @@ describe('B2.1: a category with critical findings always gets a rendered priorit
     expect(rendered).toHaveLength(MAX_RENDERED_THEMES);
     expect(rendered.some((t) => t.category === 'performance')).toBe(true);
     // Still ascending, so the numbering a reader sees stays in order.
-    expect(rendered.map((t) => t.priorityRank)).toEqual([...rendered.map((t) => t.priorityRank)].sort((a, b) => a - b));
+    expect(rendered.map((t) => t.priorityRank)).toEqual(
+      [...rendered.map((t) => t.priorityRank)].sort((a, b) => a - b),
+    );
   });
 
   it('keeps the accessibility critical theme while promoting performance', () => {
     const findings = [
       finding('a0', 'accessibility', 'critical'),
-      ...Array.from({ length: MAX_RENDERED_THEMES - 1 }, (_, i) => finding(`a${i + 1}`, 'accessibility', 'serious')),
+      ...Array.from({ length: MAX_RENDERED_THEMES - 1 }, (_, i) =>
+        finding(`a${i + 1}`, 'accessibility', 'serious'),
+      ),
       finding('p1', 'performance', 'critical'),
     ];
     const themes = [
-      ...Array.from({ length: MAX_RENDERED_THEMES }, (_, i) => theme(i + 1, 'accessibility', [`a${i}`])),
+      ...Array.from({ length: MAX_RENDERED_THEMES }, (_, i) =>
+        theme(i + 1, 'accessibility', [`a${i}`]),
+      ),
       theme(MAX_RENDERED_THEMES + 6, 'performance', ['p1']),
     ];
 
@@ -1505,7 +1625,10 @@ describe('B2.1: a category with critical findings always gets a rendered priorit
   });
 
   it('changes nothing when every theme already fits', () => {
-    const findings = [finding('a0', 'accessibility', 'critical'), finding('p1', 'performance', 'critical')];
+    const findings = [
+      finding('a0', 'accessibility', 'critical'),
+      finding('p1', 'performance', 'critical'),
+    ];
     const themes = [theme(1, 'accessibility', ['a0']), theme(2, 'performance', ['p1'])];
 
     const rendered = selectRenderedThemes(themes, new Map(findings.map((f) => [f.findingId, f])));
@@ -1670,7 +1793,12 @@ describe('D7: the measured gap names the metric the priority is actually about',
     const html = renderThemes(
       getStrings('fr'),
       4,
-      analysisWith('Blocage du navigateur par des scripts JavaScript', ['f002', 'f003', 'f004', 'f005']),
+      analysisWith('Blocage du navigateur par des scripts JavaScript', [
+        'f002',
+        'f003',
+        'f004',
+        'f005',
+      ]),
       [
         findingFor('total-blocking-time', 'f002'),
         findingFor('first-contentful-paint', 'f003'),

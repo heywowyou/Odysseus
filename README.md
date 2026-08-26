@@ -5,9 +5,15 @@ French small and mid-size businesses: technical/SPA-SEO and accessibility
 (WCAG 2.2 AA / EN 301 549) audits, deterministic scanners plus an LLM
 layer that explains and prioritizes but never detects.
 
-Full project context lives in [CLAUDE.md](CLAUDE.md) and
-`docs/odysseus-project-brief-v2.md` — read those before making
-architectural changes.
+The shared engineering charter lives in [CLAUDE.md](CLAUDE.md), regardless
+of which coding agent is used. Codex additionally reads [AGENTS.md](AGENTS.md)
+for its repository entry point; the cross-agent handoff protocol is
+[`docs/agents/handoff.md`](docs/agents/handoff.md), and the
+[documentation map](docs/agents/documentation-map.md) identifies canonical,
+planned, backlog, historical, and research material. The
+[shared conventions](docs/agents/coding-conventions.md) keep code and product
+writing consistent between agents. Read the charter and
+`docs/odysseus-project-brief-v2.md` before making architectural changes.
 
 ## Prerequisites
 
@@ -57,6 +63,15 @@ pnpm run typecheck   # tsc -b --pretty across the workspace
 pnpm run build        # tsc -b
 ```
 
+## Formatting, linting, and validation
+
+```bash
+pnpm run format        # format maintained source with Prettier
+pnpm run format:check  # verify the formatter baseline without writing
+pnpm run lint          # run ESLint across JavaScript and TypeScript source
+pnpm run check         # docs, formatting, lint, and workspace typecheck
+```
+
 ## Running the dashboard
 
 ```bash
@@ -70,5 +85,5 @@ Starts the job queue and the private single-user dashboard described in
 ## Learn more
 
 `CLAUDE.md` is the source of truth for architecture, locked contracts,
-non-negotiable rules, and the full list of documented trade-offs — read
-it before proposing any structural change.
+non-negotiable rules, and the full list of documented trade-offs — read it
+before proposing any structural change.

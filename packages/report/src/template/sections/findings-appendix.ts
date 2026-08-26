@@ -1,5 +1,15 @@
-import { buildClusterLookup, groupPageUrlsByTranslation, type ClusterLookup } from '../page-url-groups.js';
-import type { AuditManifest, Finding, FindingCategory, ReportLanguage, StatSector } from '@odysseus/core';
+import {
+  buildClusterLookup,
+  groupPageUrlsByTranslation,
+  type ClusterLookup,
+} from '../page-url-groups.js';
+import type {
+  AuditManifest,
+  Finding,
+  FindingCategory,
+  ReportLanguage,
+  StatSector,
+} from '@odysseus/core';
 import { selectReferenceStats } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import type { ReportStrings } from '../strings/i18n.js';
@@ -71,7 +81,8 @@ function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: 
  *  fragment lay out identically; the first cell is additionally nowrap so
  *  an id can never break mid-token even if a future change squeezes it
  *  again. */
-const APPENDIX_TABLE_STYLE = 'width:100%;table-layout:auto;border-collapse:collapse;font-size:12.5px';
+const APPENDIX_TABLE_STYLE =
+  'width:100%;table-layout:auto;border-collapse:collapse;font-size:12.5px';
 
 /** D2 (2026-08-25, Lagnonu review): the four column widths, declared on
  *  every row rather than only on the header.
@@ -162,7 +173,9 @@ function renderPageUrlList(
     // The "all pages" collapse still compares raw page counts: the claim
     // is about the crawl's own scope, which is counted in real pages.
     if (totalPagesScanned > 0 && finding.pageUrls.length === totalPagesScanned) {
-      urlsText = fillTemplate(a.allPagesAnalyzedTemplate, { count: formatNumber(totalPagesScanned, language) });
+      urlsText = fillTemplate(a.allPagesAnalyzedTemplate, {
+        count: formatNumber(totalPagesScanned, language),
+      });
     } else if (entries.length > PAGE_URL_LIST_CAP) {
       const shown = entries.slice(0, PAGE_URL_LIST_CAP);
       const remaining = entries.length - PAGE_URL_LIST_CAP;
@@ -384,7 +397,8 @@ function renderRuleGroup(
   // ordinary group would misrepresent it as one. List every actual member
   // rule id instead, comma-separated, same visual weight as the ordinary
   // single-code badge.
-  const ruleCodeDisplay = group.memberRuleIds.length > 1 ? group.memberRuleIds.join(', ') : group.ruleId;
+  const ruleCodeDisplay =
+    group.memberRuleIds.length > 1 ? group.memberRuleIds.join(', ') : group.ruleId;
   const sortedFindings = [...group.findings].sort((x, y) => x.findingId.localeCompare(y.findingId));
   // 2026-08-22, La Corniche report review: findings are already visited
   // in findingId order, so the first finding to carry a given page-URL
@@ -394,11 +408,19 @@ function renderRuleGroup(
   const rows = sortedFindings
     .map((finding) => {
       const signature = pageUrlSetSignature(finding);
-      const samePagesAsFindingId = signature !== undefined ? seenPageUrlSignatures.get(signature) : undefined;
+      const samePagesAsFindingId =
+        signature !== undefined ? seenPageUrlSignatures.get(signature) : undefined;
       if (signature !== undefined && samePagesAsFindingId === undefined) {
         seenPageUrlSignatures.set(signature, finding.findingId);
       }
-      return renderSubTableRow(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup);
+      return renderSubTableRow(
+        strings,
+        language,
+        finding,
+        totalPagesScanned,
+        samePagesAsFindingId,
+        clusterLookup,
+      );
     })
     .join('');
   const obsTag = isFullyDiverted
@@ -484,7 +506,9 @@ function renderGeoCitationBlock(
   // P0.2 (2026-08-21 La Corniche feedback pass): same strictSector rule
   // as themes.ts's citation selection - omit rather than fall back to a
   // cross-sector geo stat.
-  const top = selectReferenceStats('geo', sector, { strictSector: true }).find((stat) => !citedStatIds.has(stat.id));
+  const top = selectReferenceStats('geo', sector, { strictSector: true }).find(
+    (stat) => !citedStatIds.has(stat.id),
+  );
   if (!top) return '';
   citedStatIds.add(top.id);
   return renderReferenceStatNote(
@@ -515,10 +539,25 @@ function renderThirdPartySection(
   const groups = groupAppendix(thirdPartyFindings);
   const groupBlocks = groups
     .map((group) => {
-      const isFullyDiverted = group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null);
-      const vendors = new Set(group.findings.map((f) => detectFindingVendor(f) ?? strings.findingsAppendix.unknownVendorLabel));
-      const vendorLabel = vendors.size === 1 ? [...vendors][0] : strings.findingsAppendix.unknownVendorLabel;
-      return renderRuleGroup(strings, language, group, isFullyDiverted, totalPagesScanned, clusterLookup, vendorLabel);
+      const isFullyDiverted = group.findings.every(
+        (f) => classifyDiversion(f, missingPercentByUrl) !== null,
+      );
+      const vendors = new Set(
+        group.findings.map(
+          (f) => detectFindingVendor(f) ?? strings.findingsAppendix.unknownVendorLabel,
+        ),
+      );
+      const vendorLabel =
+        vendors.size === 1 ? [...vendors][0] : strings.findingsAppendix.unknownVendorLabel;
+      return renderRuleGroup(
+        strings,
+        language,
+        group,
+        isFullyDiverted,
+        totalPagesScanned,
+        clusterLookup,
+        vendorLabel,
+      );
     })
     .join('');
 
@@ -556,8 +595,12 @@ function renderCategorySection(
 
   const groupBlocks = groups
     .map((group) => {
-      const isFullyDiverted = group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null);
-      const thirdPartyCrossRefCount = thirdPartyFindings.filter((f) => group.memberRuleIds.includes(f.ruleId)).length;
+      const isFullyDiverted = group.findings.every(
+        (f) => classifyDiversion(f, missingPercentByUrl) !== null,
+      );
+      const thirdPartyCrossRefCount = thirdPartyFindings.filter((f) =>
+        group.memberRuleIds.includes(f.ruleId),
+      ).length;
       return renderRuleGroup(
         strings,
         language,
@@ -626,7 +669,10 @@ export function renderFindingsAppendix(
   // actually explored). Also feeds item 3.1's "toutes les pages
   // analysées" collapse below: the same total used on the cover and in
   // methodology.
-  const crawledPages = manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url).sort();
+  const crawledPages = manifest.pages
+    .filter((page) => page.status === 'visited')
+    .map((page) => page.url)
+    .sort();
 
   // item 1.4: split once, up front, so every downstream section (the
   // four category listings plus the new third-party block) reads from
@@ -637,16 +683,36 @@ export function renderFindingsAppendix(
 
   const sections = CATEGORY_ORDER.map((category) => {
     const categoryFindings = firstPartyFindings.filter((finding) => finding.category === category);
-    return renderCategorySection(strings, language, category, categoryFindings, missingPercentByUrl, sector, citedStatIds, crawledPages.length, clusterLookup, thirdPartyFindings);
+    return renderCategorySection(
+      strings,
+      language,
+      category,
+      categoryFindings,
+      missingPercentByUrl,
+      sector,
+      citedStatIds,
+      crawledPages.length,
+      clusterLookup,
+      thirdPartyFindings,
+    );
   }).join('');
-  const thirdPartySection = renderThirdPartySection(strings, language, thirdPartyFindings, missingPercentByUrl, crawledPages.length, clusterLookup);
+  const thirdPartySection = renderThirdPartySection(
+    strings,
+    language,
+    thirdPartyFindings,
+    missingPercentByUrl,
+    crawledPages.length,
+    clusterLookup,
+  );
 
   // item D8 (P4): each category heading used its own colour with nothing
   // stating what the four colours mean - a reader had to notice the
   // pattern by paging through the whole annex. Only categories that
   // actually have findings appear, same "don't show what's empty"
   // reasoning as item D7's zero-count stat tiles.
-  const presentCategories = CATEGORY_ORDER.filter((category) => firstPartyFindings.some((f) => f.category === category));
+  const presentCategories = CATEGORY_ORDER.filter((category) =>
+    firstPartyFindings.some((f) => f.category === category),
+  );
   const legend =
     presentCategories.length > 0
       ? `
@@ -671,12 +737,16 @@ export function renderFindingsAppendix(
       `
       : '';
 
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, strings.findingsAppendix.eyebrow, strings.findingsAppendix.heading)}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(strings.findingsAppendix.intro)}</p>
     ${legend}
     ${crawledPagesBlock}
     ${sections}
     ${thirdPartySection}
-  `, 'sheet-standalone', 'section-12');
+  `,
+    'sheet-standalone',
+    'section-12',
+  );
 }

@@ -79,6 +79,8 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
     pages: input.pages,
     ...(input.siteSignals !== undefined ? { siteSignals: input.siteSignals } : {}),
     ...(input.cruxFieldData !== undefined ? { cruxFieldData: input.cruxFieldData } : {}),
-    ...(input.translationClusters !== undefined ? { translationClusters: input.translationClusters } : {}),
+    ...(input.translationClusters !== undefined
+      ? { translationClusters: input.translationClusters }
+      : {}),
   };
 }

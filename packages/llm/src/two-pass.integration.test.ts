@@ -67,8 +67,20 @@ function buildFixedStructureOutput(findings: readonly Finding[]): StructurePassO
 
   return {
     themes: [
-      { findingIds: firstHalf, category: 'accessibility', effort: 'low', impact: 'high', priorityRank: 1 },
-      { findingIds: secondHalf, category: 'performance', effort: 'medium', impact: 'medium', priorityRank: 2 },
+      {
+        findingIds: firstHalf,
+        category: 'accessibility',
+        effort: 'low',
+        impact: 'high',
+        priorityRank: 1,
+      },
+      {
+        findingIds: secondHalf,
+        category: 'performance',
+        effort: 'medium',
+        impact: 'medium',
+        priorityRank: 2,
+      },
     ],
     quickWins: [firstHalf[0]!],
     overallRisk: 'high',
@@ -80,14 +92,17 @@ function buildWritingOutputFor(language: 'fr' | 'en', themeKeys: string[]): Writ
     language === 'fr'
       ? {
           title: 'Contraste des couleurs insuffisant sur le site',
-          businessImpact: 'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
-          executiveSummary: 'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
+          businessImpact:
+            'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
+          executiveSummary:
+            'Votre site présente plusieurs problèmes qui affectent son efficacité commerciale.',
           action: 'Augmenter le contraste des couleurs sur les boutons et le texte.',
         }
       : {
           title: 'Insufficient color contrast across the site',
           businessImpact: 'Older visitors may find it difficult to browse your website easily.',
-          executiveSummary: 'Your site has several issues that affect its commercial effectiveness.',
+          executiveSummary:
+            'Your site has several issues that affect its commercial effectiveness.',
           action: 'Increase the contrast ratio on buttons and body text.',
         };
 
@@ -114,11 +129,18 @@ describe('two-pass analysis produces identical structure across languages', () =
     const siteContext = buildFallbackSiteContext();
     const structureInput = buildStructureInput(filtered, siteContext);
 
-    vi.mocked(callMistralForStructure).mockReset().mockResolvedValueOnce({
-      output: buildFixedStructureOutput(filtered),
-    });
+    vi.mocked(callMistralForStructure)
+      .mockReset()
+      .mockResolvedValueOnce({
+        output: buildFixedStructureOutput(filtered),
+      });
 
-    const structureResult = await analyzeStructure(structureInput, filtered, false, loadSasFernandeManifest());
+    const structureResult = await analyzeStructure(
+      structureInput,
+      filtered,
+      false,
+      loadSasFernandeManifest(),
+    );
     const themeKeys = structureResult.themes.map((t) => t.themeKey);
 
     const structureDoc = {
@@ -128,17 +150,35 @@ describe('two-pass analysis produces identical structure across languages', () =
     };
     const siteStats = computeSiteStats(loadSasFernandeAllFindings(), loadSasFernandeManifest());
 
-    vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
-      output: buildWritingOutputFor('fr', themeKeys),
-    });
-    const frWritingInput = buildWritingInput(structureResult.themes, filtered, siteContext, 'fr', siteStats, null);
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({
+        output: buildWritingOutputFor('fr', themeKeys),
+      });
+    const frWritingInput = buildWritingInput(
+      structureResult.themes,
+      filtered,
+      siteContext,
+      'fr',
+      siteStats,
+      null,
+    );
     const frWriting = await analyzeWriting(frWritingInput, themeKeys, false);
     const mergedFr = mergeAnalysisPasses(structureDoc, frWriting.output, filtered, 'fr');
 
-    vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
-      output: buildWritingOutputFor('en', themeKeys),
-    });
-    const enWritingInput = buildWritingInput(structureResult.themes, filtered, siteContext, 'en', siteStats, null);
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({
+        output: buildWritingOutputFor('en', themeKeys),
+      });
+    const enWritingInput = buildWritingInput(
+      structureResult.themes,
+      filtered,
+      siteContext,
+      'en',
+      siteStats,
+      null,
+    );
     const enWriting = await analyzeWriting(enWritingInput, themeKeys, false);
     const mergedEn = mergeAnalysisPasses(structureDoc, enWriting.output, filtered, 'en');
 

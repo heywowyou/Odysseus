@@ -36,7 +36,11 @@ import { renderHtml } from './render-html.js';
 import { renderPdfFromHtml } from '../pdf.js';
 import { REPORT_PDF_CHROMIUM_ARGS } from '../index.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
-import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManifest } from '../test-fixtures.js';
+import {
+  loadSasFernandeAnalysis,
+  loadSasFernandeFindings,
+  loadSasFernandeManifest,
+} from '../test-fixtures.js';
 
 /** Every finding's representative selector (the one findings-appendix.ts
  *  actually renders, elements[0]?.selector) and every distinct page URL
@@ -45,7 +49,10 @@ import { loadSasFernandeAnalysis, loadSasFernandeFindings, loadSasFernandeManife
  *  selectors (img:nth-of-type(3), a plain URL query string, etc.) are
  *  excluded: they carry no hyphen or multi-token class name for a
  *  soft-wrap point to corrupt, so they add no signal here. */
-function collectLongStringsToVerify(findings: readonly Finding[]): { selectors: string[]; urls: string[] } {
+function collectLongStringsToVerify(findings: readonly Finding[]): {
+  selectors: string[];
+  urls: string[];
+} {
   const selectors = new Set<string>();
   const urls = new Set<string>();
   for (const finding of findings) {

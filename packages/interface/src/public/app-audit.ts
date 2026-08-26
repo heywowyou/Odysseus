@@ -1,5 +1,12 @@
 import { applyStrings } from './i18n-apply.js';
-import { escapeHtml, fetchJson, formatDate, severityBadgesHtml, showError, type SeverityRollup } from './app-shared.js';
+import {
+  escapeHtml,
+  fetchJson,
+  formatDate,
+  severityBadgesHtml,
+  showError,
+  type SeverityRollup,
+} from './app-shared.js';
 
 const strings = applyStrings();
 
@@ -67,7 +74,9 @@ const sirenCheckButton = document.getElementById('siren-check-button') as HTMLBu
 const sirenPreviewResult = document.getElementById('siren-preview-result')!;
 const sectorSelect = document.getElementById('mf-sector') as HTMLSelectElement;
 const manualFieldsStatus = document.getElementById('manual-fields-status')!;
-const regenerateReportButton = document.getElementById('regenerate-report-button') as HTMLButtonElement;
+const regenerateReportButton = document.getElementById(
+  'regenerate-report-button',
+) as HTMLButtonElement;
 
 /** 2026-08-22, La Corniche report review: a prefilled value carries
  *  provenance:'detected' (packages/store's prefillAuditManualFields) -
@@ -76,7 +85,10 @@ const regenerateReportButton = document.getElementById('regenerate-report-button
  *  fields that can actually be auto-filled today (siren, raisonSociale,
  *  nomCommercial); every other field's hint element simply does not
  *  exist in the DOM, so the lookup is a no-op for them. */
-function toggleDetectedHint(fieldId: string, provenance: 'detected' | 'operator' | undefined): void {
+function toggleDetectedHint(
+  fieldId: string,
+  provenance: 'detected' | 'operator' | undefined,
+): void {
   const hint = document.getElementById(`mf-${fieldId}-hint`) as HTMLElement | null;
   if (!hint) return;
   hint.hidden = provenance !== 'detected';
@@ -107,7 +119,11 @@ async function checkSiren(): Promise<void> {
   try {
     const result = await fetchJson<{ resolved: boolean; denomination?: string; siren: string }>(
       `/api/audits/${encodeURIComponent(auditId)}/manual-fields/siren-preview`,
-      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ siren }) },
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ siren }),
+      },
     );
     sirenPreviewResult.textContent = result.resolved
       ? `${strings.auditDetail.sirenResolvedPrefix} ${result.denomination}`
@@ -157,7 +173,9 @@ async function regenerateReport(): Promise<void> {
   regenerateReportButton.disabled = true;
   manualFieldsStatus.textContent = strings.auditDetail.regeneratingMessage;
   try {
-    await fetchJson(`/api/audits/${encodeURIComponent(auditId)}/regenerate-report`, { method: 'POST' });
+    await fetchJson(`/api/audits/${encodeURIComponent(auditId)}/regenerate-report`, {
+      method: 'POST',
+    });
     manualFieldsStatus.textContent = strings.auditDetail.regeneratedMessage;
     await load();
   } catch (error) {
@@ -167,7 +185,12 @@ async function regenerateReport(): Promise<void> {
   }
 }
 
-const SEVERITY_ORDER: Record<Finding['severity'], number> = { critical: 0, serious: 1, moderate: 2, minor: 3 };
+const SEVERITY_ORDER: Record<Finding['severity'], number> = {
+  critical: 0,
+  serious: 1,
+  moderate: 2,
+  minor: 3,
+};
 
 function render(detail: AuditDetail): void {
   metaSite.textContent = detail.siteUrl;
@@ -189,7 +212,9 @@ function render(detail: AuditDetail): void {
       .join('');
   }
 
-  const sortedFindings = [...detail.findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+  const sortedFindings = [...detail.findings].sort(
+    (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
+  );
   findingsRows.innerHTML = sortedFindings
     .map(
       (finding) => `

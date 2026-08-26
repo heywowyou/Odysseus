@@ -47,7 +47,11 @@ describe('POST /api/scans siren validation', () => {
     const router = new Router();
     registerScanRoutes(router, fakeConnection, fakeQueue);
 
-    const req = fakeReq({ type: 'full-audit', url: 'https://example.com/', options: { siren: '123456789' } });
+    const req = fakeReq({
+      type: 'full-audit',
+      url: 'https://example.com/',
+      options: { siren: '123456789' },
+    });
     const res = fakeRes();
     await router.handle(req, res);
 
@@ -60,7 +64,11 @@ describe('POST /api/scans siren validation', () => {
     const router = new Router();
     registerScanRoutes(router, fakeConnection, fakeQueue);
 
-    const req = fakeReq({ type: 'full-audit', url: 'https://example.com/', options: { siren: '732829320' } });
+    const req = fakeReq({
+      type: 'full-audit',
+      url: 'https://example.com/',
+      options: { siren: '732829320' },
+    });
     const res = fakeRes();
     await router.handle(req, res);
 

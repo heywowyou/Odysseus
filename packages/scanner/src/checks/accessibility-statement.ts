@@ -57,7 +57,10 @@ export function findAccessibilityStatementUrl(pageUrls: readonly string[]): stri
     } catch {
       return false;
     }
-    return ACCESSIBILITY_STATEMENT_PATH_PATTERN.test(pathname) || BARE_ACCESSIBILITY_SEGMENT.test(pathname);
+    return (
+      ACCESSIBILITY_STATEMENT_PATH_PATTERN.test(pathname) ||
+      BARE_ACCESSIBILITY_SEGMENT.test(pathname)
+    );
   });
   return byPattern ?? null;
 }

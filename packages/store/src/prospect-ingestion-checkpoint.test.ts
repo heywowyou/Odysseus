@@ -25,7 +25,10 @@ describe.skipIf(!mongoAvailable)('prospect ingestion checkpoint', () => {
     expect(first?.nextByteOffset).toBe(1000);
     expect(first?.rowsProcessed).toBe(50);
 
-    await upsertCheckpoint(connection!, 'afnic-fichier-a-test', { nextByteOffset: 2000, rowsProcessed: 100 });
+    await upsertCheckpoint(connection!, 'afnic-fichier-a-test', {
+      nextByteOffset: 2000,
+      rowsProcessed: 100,
+    });
     const second = await getCheckpoint(connection!, 'afnic-fichier-a-test');
     expect(second?.nextByteOffset).toBe(2000);
     expect(second?.rowsProcessed).toBe(100);

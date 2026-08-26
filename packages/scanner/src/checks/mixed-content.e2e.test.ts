@@ -11,7 +11,9 @@ import { extractMixedContentResources } from './mixed-content.js';
  *  argument (which extractMixedContentResources reads via new URL(...),
  *  independent of what protocol Playwright actually navigated with) -
  *  the resource-collection half is what genuinely needs a real browser. */
-function startStaticServer(routes: Record<string, string>): Promise<{ server: Server; origin: string }> {
+function startStaticServer(
+  routes: Record<string, string>,
+): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
       const body = routes[req.url ?? '/'];

@@ -59,7 +59,11 @@ function normalizeUrl(href: string, pageUrl: string): string {
   }
 }
 
-function missingCandidate(pageUrl: string, description: string, rawEvidenceForPage: Record<string, unknown>): FindingCandidate[] {
+function missingCandidate(
+  pageUrl: string,
+  description: string,
+  rawEvidenceForPage: Record<string, unknown>,
+): FindingCandidate[] {
   return [
     {
       source: 'custom',
@@ -113,7 +117,9 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
   const candidates: FindingCandidate[] = [];
 
   const sitemapUrlSet = new Set(input.entries.map((entry) => normalizeUrl(entry.url, pageUrl)));
-  const matchedCount = input.crawledUrls.filter((url) => sitemapUrlSet.has(normalizeUrl(url, pageUrl))).length;
+  const matchedCount = input.crawledUrls.filter((url) =>
+    sitemapUrlSet.has(normalizeUrl(url, pageUrl)),
+  ).length;
   const matchRatio = matchedCount / input.crawledUrls.length;
 
   if (matchRatio < STALE_MATCH_RATIO_THRESHOLD) {

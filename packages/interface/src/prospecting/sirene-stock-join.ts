@@ -17,7 +17,10 @@ export interface SireneStockJoinResult {
   etatAdministratif: Provenanced<string>;
 }
 
-export function joinSireneStockEntry(entry: SireneIndexEntry | null, stockVersion: string): SireneStockJoinResult {
+export function joinSireneStockEntry(
+  entry: SireneIndexEntry | null,
+  stockVersion: string,
+): SireneStockJoinResult {
   const retrievedAt = new Date();
   const source = `sirene-stock:${stockVersion}`;
 

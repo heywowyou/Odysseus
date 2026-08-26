@@ -115,7 +115,8 @@ export function normalizeCookieConsent(
     );
   }
 
-  const hasNonEssentialActivity = input.nonEssentialCookies.length > 0 || input.trackerRequests.length > 0;
+  const hasNonEssentialActivity =
+    input.nonEssentialCookies.length > 0 || input.trackerRequests.length > 0;
   if (hasNonEssentialActivity && input.consentPlatforms.length === 0) {
     candidates.push(
       candidate(
@@ -155,7 +156,9 @@ export function normalizeCookieConsent(
         'The homepage contacts several third-party providers',
         `Loading the homepage sends requests to ${thirdPartyOrigins.length} external providers: ${thirdPartyOrigins
           .map((entry) => new URL(entry.origin).hostname)
-          .join(', ')}. Each receives the visitor's IP address and the page being viewed. This is an inventory, not a judgment: some of these are necessary to deliver the page, and whether a given transfer needs to be disclosed or consented to depends on what the provider does with it.`,
+          .join(
+            ', ',
+          )}. Each receives the visitor's IP address and the page being viewed. This is an inventory, not a judgment: some of these are necessary to deliver the page, and whether a given transfer needs to be disclosed or consented to depends on what the provider does with it.`,
         homepageUrl,
         { thirdPartyOrigins },
       ),

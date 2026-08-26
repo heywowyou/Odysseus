@@ -10,7 +10,9 @@ import { extractHeadMetadata } from './head-metadata.js';
  *  drive a real Playwright navigation and confirm DOM extraction reads
  *  real page state (selectors especially - a fixture is the only way to
  *  confirm a real, non-sentinel selector comes back). */
-function startStaticServer(routes: Record<string, string>): Promise<{ server: Server; origin: string }> {
+function startStaticServer(
+  routes: Record<string, string>,
+): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
       const body = routes[req.url ?? '/'];
@@ -65,7 +67,10 @@ describe('extractHeadMetadata against real pages', () => {
     expect(result.title).toBe('A reasonable page title');
     expect(result.metaDescription).toBe('A reasonable meta description.');
     expect(result.canonicalUrls).toEqual(['https://example.com/']);
-    expect(result.openGraphTags).toEqual({ 'og:title': 'Reasonable', 'og:description': 'Reasonable description' });
+    expect(result.openGraphTags).toEqual({
+      'og:title': 'Reasonable',
+      'og:description': 'Reasonable description',
+    });
   });
 
   it('returns real, non-sentinel selectors for headings and JSON-LD blocks, and a parse error for invalid JSON-LD', async () => {

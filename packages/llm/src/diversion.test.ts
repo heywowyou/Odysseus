@@ -22,11 +22,15 @@ function loadHaaitzaAuditDir(): string {
 }
 
 function loadHaaitzaManifest(): AuditManifest {
-  return JSON.parse(readFileSync(path.join(loadHaaitzaAuditDir(), 'manifest.json'), 'utf-8')) as AuditManifest;
+  return JSON.parse(
+    readFileSync(path.join(loadHaaitzaAuditDir(), 'manifest.json'), 'utf-8'),
+  ) as AuditManifest;
 }
 
 function loadHaaitzaFindings(): Finding[] {
-  return JSON.parse(readFileSync(path.join(loadHaaitzaAuditDir(), 'findings.json'), 'utf-8')) as Finding[];
+  return JSON.parse(
+    readFileSync(path.join(loadHaaitzaAuditDir(), 'findings.json'), 'utf-8'),
+  ) as Finding[];
 }
 
 describe('buildMissingPercentIndex', () => {
@@ -54,9 +58,9 @@ describe('classifyDiversion', () => {
   const index = buildMissingPercentIndex(loadHaaitzaManifest());
 
   it('diverts a finding confined entirely to wrapper pages', () => {
-    expect(
-      classifyDiversion({ pageUrls: ['https://haaitza.com/social/facebook/'] }, index),
-    ).toBe('wrapper');
+    expect(classifyDiversion({ pageUrls: ['https://haaitza.com/social/facebook/'] }, index)).toBe(
+      'wrapper',
+    );
   });
 
   it('diverts a finding confined entirely to legal pages', () => {

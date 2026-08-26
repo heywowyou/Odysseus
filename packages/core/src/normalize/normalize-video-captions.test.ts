@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { extractVideoCaptionsCandidates, VIDEO_MISSING_CAPTIONS_RULE_ID } from './normalize-video-captions.js';
+import {
+  extractVideoCaptionsCandidates,
+  VIDEO_MISSING_CAPTIONS_RULE_ID,
+} from './normalize-video-captions.js';
 
 const PAGE_URL = 'https://example.com/';
 

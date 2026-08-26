@@ -28,7 +28,10 @@ const PAGE_HASH_LENGTH = 6;
 export function buildAuditTimestampDir(date: Date): string {
   // toISOString() -> '2026-08-02T14:32:05.123Z'; strip milliseconds, then
   // swap colons for hyphens -> '2026-08-02T14-32-05Z'.
-  return date.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/:/g, '-');
+  return date
+    .toISOString()
+    .replace(/\.\d{3}Z$/, 'Z')
+    .replace(/:/g, '-');
 }
 
 export function slugify(pathname: string): string {

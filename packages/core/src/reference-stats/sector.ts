@@ -17,5 +17,7 @@ const HOSPITALITY_NAF_PREFIXES: readonly string[] = ['55.', '56.']; // hébergem
  *  never silently narrow which stats a client sees. */
 export function detectSector(nafCode: string): StatSector {
   const normalized = nafCode.trim().toUpperCase();
-  return HOSPITALITY_NAF_PREFIXES.some((prefix) => normalized.startsWith(prefix)) ? 'hospitality' : 'general';
+  return HOSPITALITY_NAF_PREFIXES.some((prefix) => normalized.startsWith(prefix))
+    ? 'hospitality'
+    : 'general';
 }

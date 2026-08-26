@@ -5,7 +5,10 @@ import type { Browser } from 'playwright';
 import { launchBrowser } from '../browser.js';
 import { checkFormErrorHandling } from './form-error-handling.js';
 
-function startStaticServer(routes: Record<string, string>, onRequest?: () => void): Promise<{ server: Server; origin: string }> {
+function startStaticServer(
+  routes: Record<string, string>,
+  onRequest?: () => void,
+): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
       onRequest?.();

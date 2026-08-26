@@ -17,7 +17,11 @@ import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from
  *  width is proportional to the rendered bar (which is always drawn
  *  full-width, 100%): a page missing 80% of its text shows a raw bar at
  *  roughly a fifth the width of the rendered one. */
-function renderPageCard(strings: ReportStrings, language: ReportLanguage, page: RenderDiffEvidencePage): string {
+function renderPageCard(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  page: RenderDiffEvidencePage,
+): string {
   const r = strings.renderDiffEvidence;
 
   // B2: a missing selector (the 5-20% missingPercent band, where no
@@ -81,11 +85,15 @@ export function renderRenderDiffEvidence(
     // when the truth is "nothing wrong was found on the pages that
     // matter." State that positively instead of returning nothing.
     const wrapperNote = wrapperOrLegalExcludedCount > 0 ? ` ${r.positiveStatementWrapperNote}` : '';
-    return sheet(`
+    return sheet(
+      `
       ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
       <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">${escapeHtml(r.intro)}</p>
       <p style="font-size:13.5px;opacity:0.85">${escapeHtml(r.positiveStatementTemplate)}${escapeHtml(wrapperNote)}</p>
-    `, '', 'section-08');
+    `,
+      '',
+      'section-08',
+    );
   }
 
   const overflowCount = totalEligible - pages.length;
@@ -98,10 +106,14 @@ export function renderRenderDiffEvidence(
 
   const cards = pages.map((page) => renderPageCard(strings, language, page)).join('');
 
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
     <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">${escapeHtml(r.intro)}</p>
     ${cards}
     ${overflowText ? `<p style="font-size:12px;opacity:0.55;margin-top:var(--space-4)">${escapeHtml(overflowText)}</p>` : ''}
-  `, '', 'section-08');
+  `,
+    '',
+    'section-08',
+  );
 }

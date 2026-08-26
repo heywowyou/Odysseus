@@ -9,6 +9,11 @@
   },
   "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
   "scripts": {
+    "check": "pnpm run docs:check && pnpm run format:check && pnpm run lint && pnpm run typecheck",
+    "docs:check": "node scripts/check-agent-docs.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty",
@@ -21,10 +26,16 @@
     "fixtures:refresh": "node scripts/refresh-fixtures.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@types/node": "^22.10.5",
+    "eslint": "10.9.1",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.11.0",
     "playwright": "^1.62.1",
+    "prettier": "3.9.6",
     "tsx": "^4.19.2",
     "typescript": "^5.9.2",
+    "typescript-eslint": "8.68.0",
     "vitest": "^3.0.4"
   }
 }

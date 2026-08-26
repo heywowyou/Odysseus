@@ -103,7 +103,10 @@ describe('normalizeAudit', () => {
         buildNormalizePageInput({
           url: 'https://example.com/mentions-legales',
           axe: buildAxeResultsInput([
-            buildAxeViolation({ id: 'link-in-text-block', nodes: [buildAxeNode({ target: ['#a'] })] }),
+            buildAxeViolation({
+              id: 'link-in-text-block',
+              nodes: [buildAxeNode({ target: ['#a'] })],
+            }),
           ]),
         }),
       ],
@@ -113,9 +116,7 @@ describe('normalizeAudit', () => {
 
   it('caps elements at MAX_ELEMENTS_PER_FINDING when many selectors collide on one page', () => {
     const nodes = Array.from({ length: 25 }, (_, i) => buildAxeNode({ target: [`#node-${i}`] }));
-    const axe = buildAxeResultsInput([
-      buildAxeViolation({ id: 'link-in-text-block', nodes }),
-    ]);
+    const axe = buildAxeResultsInput([buildAxeViolation({ id: 'link-in-text-block', nodes })]);
 
     const findings = normalizeAudit({
       auditId: 'audit-1',
@@ -191,7 +192,9 @@ describe('normalizeAudit', () => {
       const findings = normalizeAudit({
         auditId: 'audit-1',
         startedAt: STARTED_AT,
-        pages: [buildNormalizePageInput({ url: 'https://example.com/', llmsTxtCheck: { found: false } })],
+        pages: [
+          buildNormalizePageInput({ url: 'https://example.com/', llmsTxtCheck: { found: false } }),
+        ],
       });
       expect(findings).toHaveLength(1);
       expect(findings[0]?.ruleId).toBe('llms-txt-missing');
@@ -278,7 +281,9 @@ describe('B2: language-variant collapsing', () => {
           help: 'Links must have discernible text',
           description: 'Links must have discernible text',
           helpUrl: 'https://dequeuniversity.com/rules/axe/4.12/link-name',
-          nodes: [{ target: [`a[data-slide="21${index}0_23"]`], html: '<a></a>', failureSummary: '' }],
+          nodes: [
+            { target: [`a[data-slide="21${index}0_23"]`], html: '<a></a>', failureSummary: '' },
+          ],
         },
       ],
     },
@@ -306,8 +311,13 @@ describe('B2: language-variant collapsing', () => {
   });
 
   it('is a no-op on a monolingual site, where every page is its own cluster', () => {
-    const singletons = gallery.map((url) => ({ canonicalPageUrl: url, members: [{ pageUrl: url }] }));
-    expect(normalizeAudit({ ...args, translationClusters: singletons })).toEqual(normalizeAudit(args));
+    const singletons = gallery.map((url) => ({
+      canonicalPageUrl: url,
+      members: [{ pageUrl: url }],
+    }));
+    expect(normalizeAudit({ ...args, translationClusters: singletons })).toEqual(
+      normalizeAudit(args),
+    );
   });
 });
 

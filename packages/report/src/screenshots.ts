@@ -23,7 +23,10 @@ import {
 } from '@odysseus/core';
 import { buildMissingPercentIndex, isLegalPage, isWrapperPage } from '@odysseus/llm';
 import { selectPageDirsToKeep, type PrunePageInfo } from '@odysseus/scanner';
-import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT, EVIDENCE_MAX_RENDER_DIFF_PAGES } from './constants.js';
+import {
+  EVIDENCE_INCLUSION_THRESHOLD_PERCENT,
+  EVIDENCE_MAX_RENDER_DIFF_PAGES,
+} from './constants.js';
 
 export interface RenderDiffEvidencePage {
   pageUrl: string;
@@ -134,7 +137,9 @@ export function resolveRenderDiffEvidence(
   ).length;
 
   const eligible = kept
-    .filter((page) => !isWrapperPage(page.pageUrl, missingPercentByUrl) && !isLegalPage(page.pageUrl))
+    .filter(
+      (page) => !isWrapperPage(page.pageUrl, missingPercentByUrl) && !isLegalPage(page.pageUrl),
+    )
     .filter((page) => (page.missingPercent ?? 0) >= EVIDENCE_INCLUSION_THRESHOLD_PERCENT)
     .map((page) => ({ page, detail: renderDiffDetailsForPage(findings, page.pageUrl) }))
     .sort((a, b) => {

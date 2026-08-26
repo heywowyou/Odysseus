@@ -38,7 +38,10 @@ import { logger } from '../logger.js';
  *  whichever OperatorProfile (resolved or unresolved) produced it - the
  *  same "never set by assessObligations itself" precedent as sirenSource,
  *  see ObligationAssessment.sector's doc comment in @odysseus/core. */
-function withSector(assessment: ObligationAssessment, profile: OperatorProfile): ObligationAssessment {
+function withSector(
+  assessment: ObligationAssessment,
+  profile: OperatorProfile,
+): ObligationAssessment {
   return { ...assessment, sector: detectSector(profile.naf.value) };
 }
 
@@ -46,7 +49,10 @@ function withSector(assessment: ObligationAssessment, profile: OperatorProfile):
  *  populated the profile - unresolvedProfile's placeholder denomination
  *  ('') would otherwise print as an empty registry input, which is worse
  *  than omitting the snapshot entirely. */
-function withRegistrySnapshot(assessment: ObligationAssessment, profile: OperatorProfile): ObligationAssessment {
+function withRegistrySnapshot(
+  assessment: ObligationAssessment,
+  profile: OperatorProfile,
+): ObligationAssessment {
   if (!profile.denomination.value) return assessment;
   return {
     ...assessment,
@@ -62,9 +68,17 @@ function withRegistrySnapshot(assessment: ObligationAssessment, profile: Operato
   };
 }
 
-function unresolvedProfile(siren: string, sirenSource: string, lookupFailureSource: string): OperatorProfile {
+function unresolvedProfile(
+  siren: string,
+  sirenSource: string,
+  lookupFailureSource: string,
+): OperatorProfile {
   const retrievedAt = new Date();
-  const field = <T,>(value: T): Provenanced<T> => ({ value, source: lookupFailureSource, retrievedAt });
+  const field = <T>(value: T): Provenanced<T> => ({
+    value,
+    source: lookupFailureSource,
+    retrievedAt,
+  });
   return {
     siren: { value: siren, source: sirenSource, retrievedAt },
     denomination: field(''),
@@ -91,10 +105,17 @@ interface ResolvedSiren {
  * being audited. Only one present: use it, tagged accordingly. Neither:
  * nothing to resolve.
  */
-function resolveEffectiveSiren(extracted: string | undefined, manual: string | undefined): ResolvedSiren | undefined {
+function resolveEffectiveSiren(
+  extracted: string | undefined,
+  manual: string | undefined,
+): ResolvedSiren | undefined {
   if (manual && extracted) {
     if (manual === extracted) return { siren: extracted, source: 'extracted' };
-    return { siren: manual, source: 'manual', mismatch: { extractedSiren: extracted, manualSiren: manual } };
+    return {
+      siren: manual,
+      source: 'manual',
+      mismatch: { extractedSiren: extracted, manualSiren: manual },
+    };
   }
   if (manual) return { siren: manual, source: 'manual' };
   if (extracted) return { siren: extracted, source: 'extracted' };
@@ -182,12 +203,17 @@ export async function runObligationStage(
   // defensively rather than letting a malformed value reach the Sirene
   // client - if it somehow arrives invalid, treat it as not supplied
   // rather than crash deep in the pipeline.
-  const validatedManualSiren = manualSiren !== undefined && isValidSiren(manualSiren) ? manualSiren : undefined;
+  const validatedManualSiren =
+    manualSiren !== undefined && isValidSiren(manualSiren) ? manualSiren : undefined;
 
   const resolved = resolveEffectiveSiren(extractedSiren, validatedManualSiren);
 
   if (!resolved) {
-    const profile = unresolvedProfile('', 'crawl:no-mentions-legales-siren', 'crawl:no-mentions-legales-siren');
+    const profile = unresolvedProfile(
+      '',
+      'crawl:no-mentions-legales-siren',
+      'crawl:no-mentions-legales-siren',
+    );
     return withSector(assessObligations(profile), profile);
   }
 
@@ -208,7 +234,11 @@ export async function runObligationStage(
       // failed manual lookup is a fact about the manual SIREN, not a
       // reason to silently re-try with a different one the operator did
       // not ask about.
-      const profile = unresolvedProfile(effectiveSiren, `siren:${sirenSource}`, `sirene-lookup:${lookup.status}`);
+      const profile = unresolvedProfile(
+        effectiveSiren,
+        `siren:${sirenSource}`,
+        `sirene-lookup:${lookup.status}`,
+      );
       return withSector(attachProvenance(assessObligations(profile)), profile);
     }
 
@@ -217,9 +247,14 @@ export async function runObligationStage(
       siren: { ...lookup.profile.siren, source: `siren:${sirenSource}` },
     };
 
-    const { siteSignals, resolutions } = resolveSiteSignals(manifest.siteSignals, siteSignalOverrides);
+    const { siteSignals, resolutions } = resolveSiteSignals(
+      manifest.siteSignals,
+      siteSignalOverrides,
+    );
 
-    const assessment = siteSignals ? assessObligations(profile, siteSignals) : assessObligations(profile);
+    const assessment = siteSignals
+      ? assessObligations(profile, siteSignals)
+      : assessObligations(profile);
 
     return withRegistrySnapshot(
       withSector(
@@ -235,7 +270,11 @@ export async function runObligationStage(
     // Any unexpected failure (e.g. Mongo unreachable) must not block the
     // rest of the audit - degrade to undetermined the same as a known
     // Sirene failure mode.
-    const profile = unresolvedProfile(effectiveSiren, `siren:${sirenSource}`, 'sirene-lookup:api-unreachable');
+    const profile = unresolvedProfile(
+      effectiveSiren,
+      `siren:${sirenSource}`,
+      'sirene-lookup:api-unreachable',
+    );
     return withSector(attachProvenance(assessObligations(profile)), profile);
   }
 }

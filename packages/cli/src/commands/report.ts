@@ -44,7 +44,9 @@ async function readAnalysis(analysisPath: string): Promise<StoredAnalysis> {
   return { ...parsed, generatedAt: new Date(parsed.generatedAt) };
 }
 
-async function loadManifestAndFindings(resolvedDir: string): Promise<{ manifest: AuditManifest; findings: Finding[] }> {
+async function loadManifestAndFindings(
+  resolvedDir: string,
+): Promise<{ manifest: AuditManifest; findings: Finding[] }> {
   const manifestPath = path.join(resolvedDir, 'manifest.json');
   const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8')) as AuditManifest;
 
@@ -54,7 +56,10 @@ async function loadManifestAndFindings(resolvedDir: string): Promise<{ manifest:
   return { manifest, findings };
 }
 
-async function loadLatestAnalysis(resolvedDir: string, language: ReportLanguage): Promise<StoredAnalysis> {
+async function loadLatestAnalysis(
+  resolvedDir: string,
+  language: ReportLanguage,
+): Promise<StoredAnalysis> {
   const analysisPath = await findLatestAnalysisFile(path.join(resolvedDir, 'analyses'), language);
   if (!analysisPath) {
     throw new Error(
@@ -73,15 +78,21 @@ export function registerReportCommand(program: Command): void {
         'Reads manifest.json, findings.json, and an analyses/*.json file; never re-scans the client site.',
     )
     .option('--language <fr|en>', 'Report language: fr or en', parseLanguage)
-    .option('--analysis <file>', 'Path to a specific analysis file; defaults to the latest for --language')
+    .option(
+      '--analysis <file>',
+      'Path to a specific analysis file; defaults to the latest for --language',
+    )
     .option(
       '--all',
-      'Generate both language reports (fr and en) from each language\'s existing latest analysis in one ' +
+      "Generate both language reports (fr and en) from each language's existing latest analysis in one " +
         'invocation, instead of one report per invocation. Requires both fr and en analyses to already ' +
         'exist; incompatible with --language and --analysis.',
     )
     .action(
-      async (artifactsDir: string, opts: { language?: ReportLanguage; analysis?: string; all?: boolean }) => {
+      async (
+        artifactsDir: string,
+        opts: { language?: ReportLanguage; analysis?: string; all?: boolean },
+      ) => {
         const resolvedDir = path.resolve(artifactsDir);
         let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
 
@@ -131,14 +142,22 @@ export function registerReportCommand(program: Command): void {
           const analysis = await readAnalysis(analysisPath);
 
           mongoConnection = await connectToMongo();
-          const result = await runReportStage(resolvedDir, manifest, findings, analysis, mongoConnection);
+          const result = await runReportStage(
+            resolvedDir,
+            manifest,
+            findings,
+            analysis,
+            mongoConnection,
+          );
 
           console.log(`Report for ${manifest.auditId} complete (${opts.language})`);
           console.log(`  Analysis used: ${path.relative(resolvedDir, analysisPath)}`);
           console.log(`  Written: ${result.reportPath}`);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          console.error(`odysseus report: failed to generate a report for ${resolvedDir}\n${message}`);
+          console.error(
+            `odysseus report: failed to generate a report for ${resolvedDir}\n${message}`,
+          );
           process.exitCode = 1;
         } finally {
           if (mongoConnection) await disconnectFromMongo(mongoConnection);

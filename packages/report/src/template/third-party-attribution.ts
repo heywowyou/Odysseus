@@ -60,7 +60,9 @@ export function detectVendor(selector: string): string | undefined {
  *  since a finding with even one third-party element still needs the
  *  same "talk to your vendor" framing for that instance. */
 export function isThirdPartyFinding(finding: Pick<Finding, 'elements'>): boolean {
-  return finding.elements.some((el) => detectVendor(el.selector) !== undefined || crossesFrameBoundary(el.selector));
+  return finding.elements.some(
+    (el) => detectVendor(el.selector) !== undefined || crossesFrameBoundary(el.selector),
+  );
 }
 
 /** The vendor name for a third-party finding, when one of the known

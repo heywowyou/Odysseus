@@ -43,12 +43,7 @@ export type FindingSource = 'axe' | 'lighthouse' | 'custom' | 'renderdiff';
  * and label pairs to keep a type total.
  */
 export type FindingCategory =
-  | 'accessibility'
-  | 'seo'
-  | 'geo'
-  | 'performance'
-  | 'rendering'
-  | 'privacy';
+  'accessibility' | 'seo' | 'geo' | 'performance' | 'rendering' | 'privacy';
 
 /**
  * One unified severity scale across all scanners. See severity.ts for the

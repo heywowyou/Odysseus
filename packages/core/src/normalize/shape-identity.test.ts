@@ -12,8 +12,12 @@ const PAGE = 'https://www.lagnonu.fr/';
 
 describe('shapeIdentity', () => {
   it('gives two gallery links from one template the same identity, despite different hrefs', () => {
-    const a = shapeIdentity('<a data-fancybox="gallery-15" href="/uploads/9ee45.jpg" data-caption="">');
-    const b = shapeIdentity('<a data-fancybox="gallery-28" href="/uploads/0583.jpg" data-caption="">');
+    const a = shapeIdentity(
+      '<a data-fancybox="gallery-15" href="/uploads/9ee45.jpg" data-caption="">',
+    );
+    const b = shapeIdentity(
+      '<a data-fancybox="gallery-28" href="/uploads/0583.jpg" data-caption="">',
+    );
     expect(a).toBeDefined();
     expect(a).toBe(b);
   });
@@ -47,8 +51,12 @@ describe('shapeIdentity', () => {
   });
 
   it('is order-insensitive across attributes but not across their names', () => {
-    expect(shapeIdentity('<a data-fancybox="g" href="/a">')).toBe(shapeIdentity('<a href="/b" data-fancybox="h">'));
-    expect(shapeIdentity('<a data-fancybox="g" href="/a">')).not.toBe(shapeIdentity('<a data-popup="g" href="/a">'));
+    expect(shapeIdentity('<a data-fancybox="g" href="/a">')).toBe(
+      shapeIdentity('<a href="/b" data-fancybox="h">'),
+    );
+    expect(shapeIdentity('<a data-fancybox="g" href="/a">')).not.toBe(
+      shapeIdentity('<a data-popup="g" href="/a">'),
+    );
   });
 });
 
@@ -62,7 +70,11 @@ describe('extractAxeCandidates template identity', () => {
           tags: ['wcag2a'],
           help: 'h',
           description: 'd',
-          nodes: htmls.map((html, i) => ({ html, target: [`x:nth-child(${i + 1})`], impact: 'serious' })),
+          nodes: htmls.map((html, i) => ({
+            html,
+            target: [`x:nth-child(${i + 1})`],
+            impact: 'serious',
+          })),
         },
       ],
     };
@@ -70,7 +82,10 @@ describe('extractAxeCandidates template identity', () => {
 
   it('applies the identity to an allowlisted rule', () => {
     const [a, b] = extractAxeCandidates(
-      violation('link-name', ['<a data-fancybox="g1" href="/a">', '<a data-fancybox="g2" href="/b">']),
+      violation('link-name', [
+        '<a data-fancybox="g1" href="/a">',
+        '<a data-fancybox="g2" href="/b">',
+      ]),
       PAGE,
     );
     expect(a?.dedupeIdentity).toBeDefined();
@@ -81,14 +96,20 @@ describe('extractAxeCandidates template identity', () => {
     // Writing alt text is a separate editorial decision per image, so
     // image-alt is deliberately excluded (trade-off 30's own warning).
     const [a] = extractAxeCandidates(
-      violation('image-alt', ['<img class="lazy" src="/a.jpg">', '<img class="lazy" src="/b.jpg">']),
+      violation('image-alt', [
+        '<img class="lazy" src="/a.jpg">',
+        '<img class="lazy" src="/b.jpg">',
+      ]),
       PAGE,
     );
     expect(a?.dedupeIdentity).toBeUndefined();
   });
 
   it('falls back to the container for a control whose own markup is not distinctive', () => {
-    const [a] = extractAxeCandidates(violation('target-size', ['<a href="#" class="">1</a>']), PAGE);
+    const [a] = extractAxeCandidates(
+      violation('target-size', ['<a href="#" class="">1</a>']),
+      PAGE,
+    );
     // Non-distinctive shape, and this selector has no ancestor path either,
     // so the candidate keeps its own selector identity rather than merging.
     expect(a?.dedupeIdentity).toBeUndefined();

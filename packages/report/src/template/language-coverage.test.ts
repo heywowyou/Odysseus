@@ -14,7 +14,7 @@ function manifestWith(pages: Array<{ url: string; status: string }>): AuditManif
   return { pages } as unknown as AuditManifest;
 }
 
-describe('language coverage stated from the site\'s own URL structure', () => {
+describe("language coverage stated from the site's own URL structure", () => {
   it('lists every language with at least one scanned page', () => {
     const coverage = computeLanguageCoverage(
       manifestWith([
@@ -52,7 +52,9 @@ describe('language coverage stated from the site\'s own URL structure', () => {
     ).toBeUndefined();
 
     expect(
-      computeLanguageCoverage(manifestWith([{ url: 'https://example.com/fr/a', status: 'visited' }])),
+      computeLanguageCoverage(
+        manifestWith([{ url: 'https://example.com/fr/a', status: 'visited' }]),
+      ),
     ).toBeUndefined();
   });
 });

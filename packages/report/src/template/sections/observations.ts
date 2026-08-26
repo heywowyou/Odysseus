@@ -1,6 +1,12 @@
 import type { DivertedFinding } from '@odysseus/llm';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatFindingIdRefs, renderSheetHeader, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  formatFindingIdRefs,
+  renderSheetHeader,
+  sheet,
+} from '../html-utils.js';
 
 /** Renders the diverted findings (docs/report-v2-refactor.md 4.1) into
  *  fixed, deterministic copy - never LLM prose, since the whole point of
@@ -16,7 +22,11 @@ import { escapeHtml, fillTemplate, formatFindingIdRefs, renderSheetHeader, sheet
  *  it rendered nothing. Returns '' when there is nothing to divert, same
  *  as before - the entire section-06 sheet is then absent from the body,
  *  and the caller's inclusion set must reflect that. */
-export function renderObservations(strings: ReportStrings, ordinal: number, diverted: readonly DivertedFinding[]): string {
+export function renderObservations(
+  strings: ReportStrings,
+  ordinal: number,
+  diverted: readonly DivertedFinding[],
+): string {
   if (diverted.length === 0) return '';
 
   const o = strings.observations;
@@ -42,9 +52,13 @@ export function renderObservations(strings: ReportStrings, ordinal: number, dive
       `
       : '';
 
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, o.eyebrow, o.heading)}
     ${wrapperBlock}
     ${legalBlock}
-  `, '', 'section-06');
+  `,
+    '',
+    'section-06',
+  );
 }

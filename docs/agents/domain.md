@@ -19,9 +19,9 @@ arbitrary folder split.
   specific package(s) you're touching.
 
 If any of these files don't exist, **proceed silently**. Don't flag their
-absence; don't suggest creating them upfront. The `/domain-modeling` skill
-(reached via `/grill-with-docs` and `/improve-codebase-architecture`)
-creates them lazily when terms or decisions actually get resolved.
+absence; don't suggest creating them upfront. The domain-modeling workflow,
+when available, creates them lazily when terms or decisions actually get
+resolved.
 
 ## File structure
 

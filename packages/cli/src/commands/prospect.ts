@@ -15,7 +15,12 @@
 
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
-import { connectToMongo, createJob, disconnectFromMongo, addSuppressionEntry } from '@odysseus/store';
+import {
+  connectToMongo,
+  createJob,
+  disconnectFromMongo,
+  addSuppressionEntry,
+} from '@odysseus/store';
 
 function parsePositiveInt(value: string): number {
   const parsed = Number.parseInt(value, 10);
@@ -28,7 +33,9 @@ function parsePositiveInt(value: string): number {
 export function registerProspectCommand(program: Command): void {
   const prospect = program
     .command('prospect')
-    .description('Milestone 9a: prospect acquisition and qualification against AFNIC + Sirene stock data.');
+    .description(
+      'Milestone 9a: prospect acquisition and qualification against AFNIC + Sirene stock data.',
+    );
 
   prospect
     .command('ingest')
@@ -36,7 +43,11 @@ export function registerProspectCommand(program: Command): void {
       'Enqueue one prospect-ingestion batch job. Requires a running `odysseus serve` process to pick it up ' +
         'and actually run the pipeline; this command only creates the job and prints its jobId.',
     )
-    .option('--batch-size <n>', 'How many AFNIC candidates this batch targets (default ODYSSEUS_PROSPECT_BATCH_SIZE)', parsePositiveInt)
+    .option(
+      '--batch-size <n>',
+      'How many AFNIC candidates this batch targets (default ODYSSEUS_PROSPECT_BATCH_SIZE)',
+      parsePositiveInt,
+    )
     .action(async (opts: { batchSize?: number }) => {
       let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
       try {
@@ -58,7 +69,9 @@ export function registerProspectCommand(program: Command): void {
 
   prospect
     .command('suppress <domain>')
-    .description('Record a permanent opt-out for a domain, never subject to the 90 day retention policy.')
+    .description(
+      'Record a permanent opt-out for a domain, never subject to the 90 day retention policy.',
+    )
     .option('--address <email>', 'Optional address to suppress alongside the domain')
     .option('--reason <text>', 'Reason recorded with the suppression entry', 'operator request')
     .action(async (domain: string, opts: { address?: string; reason: string }) => {
@@ -70,7 +83,9 @@ export function registerProspectCommand(program: Command): void {
           ...(opts.address !== undefined ? { address: opts.address } : {}),
           reason: opts.reason,
         });
-        console.log(`odysseus prospect suppress: recorded a permanent suppression entry for ${domain}`);
+        console.log(
+          `odysseus prospect suppress: recorded a permanent suppression entry for ${domain}`,
+        );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`odysseus prospect suppress: failed\n${message}`);

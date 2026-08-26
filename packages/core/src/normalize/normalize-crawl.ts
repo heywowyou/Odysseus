@@ -167,7 +167,11 @@ export function extractCrawlCandidates(input: NormalizeCrawlInput): FindingCandi
         selector: `a[href="${page.url}"]`,
         snippet: `Links to ${page.url}`,
       },
-      rawEvidenceForPage: { targetUrl: page.url, targetStatus: page.status, targetHttpStatus: page.httpStatus },
+      rawEvidenceForPage: {
+        targetUrl: page.url,
+        targetStatus: page.status,
+        targetHttpStatus: page.httpStatus,
+      },
     });
   }
 

@@ -90,12 +90,24 @@ describe('buildTranslationClusters', () => {
       { lang: 'fr', href: 'https://lacoorniche.com/les-chambres-et-suites-dune-du-pyla-hotel/' },
       { lang: 'en', href: 'https://lacoorniche.com/en/rooms-suites-hotel-pyla/' },
       { lang: 'es', href: 'https://lacoorniche.com/es/les-chambres-et-suites-dune-du-pyla-hotel/' },
-      { lang: 'x-default', href: 'https://lacoorniche.com/les-chambres-et-suites-dune-du-pyla-hotel/' },
+      {
+        lang: 'x-default',
+        href: 'https://lacoorniche.com/les-chambres-et-suites-dune-du-pyla-hotel/',
+      },
     ];
     const clusters = buildTranslationClusters([
-      { pageUrl: 'https://lacoorniche.com/les-chambres-et-suites-dune-du-pyla-hotel', hreflangLinks: listingBlock },
-      { pageUrl: 'https://lacoorniche.com/en/rooms-suites-hotel-pyla', hreflangLinks: listingBlock },
-      { pageUrl: 'https://lacoorniche.com/es/les-chambres-et-suites-dune-du-pyla-hotel', hreflangLinks: listingBlock },
+      {
+        pageUrl: 'https://lacoorniche.com/les-chambres-et-suites-dune-du-pyla-hotel',
+        hreflangLinks: listingBlock,
+      },
+      {
+        pageUrl: 'https://lacoorniche.com/en/rooms-suites-hotel-pyla',
+        hreflangLinks: listingBlock,
+      },
+      {
+        pageUrl: 'https://lacoorniche.com/es/les-chambres-et-suites-dune-du-pyla-hotel',
+        hreflangLinks: listingBlock,
+      },
       { pageUrl: 'https://lacoorniche.com/en/room/banc-darguin', hreflangLinks: listingBlock },
       { pageUrl: 'https://lacoorniche.com/en/room/dune', hreflangLinks: listingBlock },
     ]);
@@ -144,7 +156,9 @@ describe('buildTranslationClusters', () => {
 describe('buildCanonicalPageUrlMap', () => {
   it('maps every variant onto the canonical page', () => {
     const map = buildCanonicalPageUrlMap(buildTranslationClusters(HAAITZA_GALLERY));
-    expect(map.get('https://haaitza.com/es/galera')).toBe('https://haaitza.com/galerie-hotel-de-luxe-pyla');
+    expect(map.get('https://haaitza.com/es/galera')).toBe(
+      'https://haaitza.com/galerie-hotel-de-luxe-pyla',
+    );
     expect(map.get('https://haaitza.com/galerie-hotel-de-luxe-pyla')).toBe(
       'https://haaitza.com/galerie-hotel-de-luxe-pyla',
     );

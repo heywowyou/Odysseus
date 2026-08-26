@@ -63,7 +63,9 @@ interface StructuredDataTestResponse {
   failed?: StructuredDataTestObject[];
 }
 
-function isValidationFailedError(error: unknown): error is { type: string; res: StructuredDataTestResponse } {
+function isValidationFailedError(
+  error: unknown,
+): error is { type: string; res: StructuredDataTestResponse } {
   return (
     typeof error === 'object' &&
     error !== null &&
@@ -87,7 +89,9 @@ function toFailedTests(tests: StructuredDataTestObject[] | undefined): Structure
  *  head-metadata.ts's parseJsonLdBlocks for the same pattern). */
 export async function evaluateStructuredData(html: string): Promise<StructuredDataEvaluation> {
   try {
-    const result = (await structuredDataTest(html, { presets: [Google] })) as StructuredDataTestResponse;
+    const result = (await structuredDataTest(html, {
+      presets: [Google],
+    })) as StructuredDataTestResponse;
     return { schemasFound: result.schemas ?? [], failedTests: [] };
   } catch (error) {
     if (isValidationFailedError(error)) {
@@ -100,7 +104,10 @@ export async function evaluateStructuredData(html: string): Promise<StructuredDa
   }
 }
 
-export async function checkStructuredData(page: Page, pageUrl: string): Promise<StructuredDataCheckResult> {
+export async function checkStructuredData(
+  page: Page,
+  pageUrl: string,
+): Promise<StructuredDataCheckResult> {
   const html = await page.content();
   const evaluation = await evaluateStructuredData(html);
   return { pageUrl, ...evaluation };

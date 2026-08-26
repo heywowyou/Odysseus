@@ -69,6 +69,6 @@ describe('renderObservations against the real sas-fernande.fr scan', () => {
 
     expect(html).toContain('f1');
     expect(html).not.toContain('portent une directive noindex');
-    expect(html).toContain("généralement exclu de l&#39;indexation");
+    expect(html).toContain('généralement exclu de l&#39;indexation');
   });
 });

@@ -58,8 +58,11 @@ export function mergeAnalysisPasses(
     }
 
     const wcagCriteria =
-      structureTheme.category === 'accessibility' ? themeWcagCriteria(structureTheme, findingsById) : [];
-    const legalRelevance = wcagCriteria.length > 0 ? buildLegalRelevance(wcagCriteria, language) : undefined;
+      structureTheme.category === 'accessibility'
+        ? themeWcagCriteria(structureTheme, findingsById)
+        : [];
+    const legalRelevance =
+      wcagCriteria.length > 0 ? buildLegalRelevance(wcagCriteria, language) : undefined;
 
     return {
       title: writingTheme.title,

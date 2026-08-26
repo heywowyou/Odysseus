@@ -27,7 +27,9 @@ export const MONGO_SKIP_MARKER_PATH = join(tmpdir(), 'odysseus-store-mongo-skip.
  *  describe.skipIf during test collection (top-level await), rather than
  *  discovering unavailability inside a beforeAll hook, which runs too
  *  late to affect which describe blocks were collected. */
-export async function probeMongoAvailability(uri: string = MONGODB_TEST_URI): Promise<MongoProbeResult> {
+export async function probeMongoAvailability(
+  uri: string = MONGODB_TEST_URI,
+): Promise<MongoProbeResult> {
   try {
     const connection = await mongoose
       .createConnection(uri, { serverSelectionTimeoutMS: 2000 })

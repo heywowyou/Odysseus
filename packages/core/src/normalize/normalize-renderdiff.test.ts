@@ -19,15 +19,15 @@ describe('extractRenderDiffCandidates', () => {
   });
 
   it('maps severity via severityFromRenderDiff', () => {
-    expect(extractRenderDiffCandidates(buildRenderDiffResult({ missingPercent: 99 }), 'u')[0]?.severity).toBe(
-      'critical',
-    );
-    expect(extractRenderDiffCandidates(buildRenderDiffResult({ missingPercent: 60 }), 'u')[0]?.severity).toBe(
-      'serious',
-    );
-    expect(extractRenderDiffCandidates(buildRenderDiffResult({ missingPercent: 25 }), 'u')[0]?.severity).toBe(
-      'moderate',
-    );
+    expect(
+      extractRenderDiffCandidates(buildRenderDiffResult({ missingPercent: 99 }), 'u')[0]?.severity,
+    ).toBe('critical');
+    expect(
+      extractRenderDiffCandidates(buildRenderDiffResult({ missingPercent: 60 }), 'u')[0]?.severity,
+    ).toBe('serious');
+    expect(
+      extractRenderDiffCandidates(buildRenderDiffResult({ missingPercent: 25 }), 'u')[0]?.severity,
+    ).toBe('moderate');
   });
 
   it('stores the full RenderDiffResult in rawEvidenceForPage, not just the percentage', () => {

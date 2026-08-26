@@ -3,18 +3,27 @@ import { extractCustomCandidates, LCEN_MENTIONS_LEGALES_RULE_ID } from './normal
 
 describe('extractCustomCandidates (LCEN mentions-legales)', () => {
   it('emits nothing when a SIREN was found', () => {
-    expect(extractCustomCandidates({ pageUrl: 'https://example.com/mentions-legales', siren: '732829320' })).toEqual(
-      [],
-    );
+    expect(
+      extractCustomCandidates({
+        pageUrl: 'https://example.com/mentions-legales',
+        siren: '732829320',
+      }),
+    ).toEqual([]);
   });
 
   it('emits nothing when only an RCS or TVA number was found', () => {
-    expect(extractCustomCandidates({ pageUrl: 'https://example.com/mentions-legales', rcs: 'Paris 732829320' })).toEqual(
-      [],
-    );
-    expect(extractCustomCandidates({ pageUrl: 'https://example.com/mentions-legales', tva: 'FR12345678901' })).toEqual(
-      [],
-    );
+    expect(
+      extractCustomCandidates({
+        pageUrl: 'https://example.com/mentions-legales',
+        rcs: 'Paris 732829320',
+      }),
+    ).toEqual([]);
+    expect(
+      extractCustomCandidates({
+        pageUrl: 'https://example.com/mentions-legales',
+        tva: 'FR12345678901',
+      }),
+    ).toEqual([]);
   });
 
   it('emits one page-scoped candidate when none of siren/rcs/tva are found', () => {

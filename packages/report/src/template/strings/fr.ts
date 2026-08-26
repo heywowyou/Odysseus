@@ -7,7 +7,7 @@ export const fr: ReportStrings = {
   },
   reportIntro: {
     eyebrow: 'À propos de ce rapport',
-    heading: "Comment lire ce rapport",
+    heading: 'Comment lire ce rapport',
     audienceHeading: "À qui s'adresse chaque partie du rapport",
     audienceYouLabel: 'Vous (dirigeant)',
     audienceAgencyLabel: 'Votre prestataire / agence web',
@@ -17,19 +17,21 @@ export const fr: ReportStrings = {
       'Accessibilité : vos clients en situation de handicap peuvent-ils réserver et naviguer sur votre site ?',
     measuresSeo: 'Référencement (SEO) : Google comprend-il correctement vos pages ?',
     measuresGeo:
-      "Visibilité IA (GEO) : les assistants IA (ChatGPT et équivalents) peuvent-ils comprendre et recommander votre établissement ?",
+      'Visibilité IA (GEO) : les assistants IA (ChatGPT et équivalents) peuvent-ils comprendre et recommander votre établissement ?',
     measuresRendering:
       "Rendu : votre contenu existe-t-il même sans JavaScript, pour les robots et lecteurs d'écran les plus basiques ?",
     consequencesHeading: 'Ce que ça change concrètement pour vous',
     consequenceBooking: 'Des clients qui ne peuvent pas terminer une réservation.',
-    consequenceRegulatory: 'Une exposition réglementaire déjà documentée (voir la section « Exposition légale »).',
-    consequenceVisibility: 'Une visibilité réduite dans les résultats de recherche et les assistants IA.',
+    consequenceRegulatory:
+      'Une exposition réglementaire déjà documentée (voir la section « Exposition légale »).',
+    consequenceVisibility:
+      'Une visibilité réduite dans les résultats de recherche et les assistants IA.',
     notALegalOpinionNote:
       "Ce que ce rapport n'est pas : un avis juridique (voir la section « Exposition légale ») ; un audit exhaustif, la détection automatique couvrant environ 30 à 40 % des critères d'accessibilité (voir « Méthodologie et limites »).",
     nextActionsHeading: 'Vos trois prochaines actions',
     nextActionItemTemplate: '{title}, à transmettre à : {contact} (effort : {effort}).',
     contactAgency: 'votre agence',
-    contactAgencyAndVendor: 'votre agence et l\'éditeur du composant tiers concerné',
+    contactAgencyAndVendor: "votre agence et l'éditeur du composant tiers concerné",
     contactUnknownVendor: "l'éditeur du composant tiers concerné",
   },
   statistics: {
@@ -68,7 +70,7 @@ export const fr: ReportStrings = {
     severityBreakdownHeading: 'Répartition par sévérité',
     categoryBreakdownHeading: 'Répartition par catégorie',
     belowThresholdRenderGapNote:
-      "La catégorie « Rendu » affiche 0 constat, mais un écart de rendu réel a été mesuré sur au moins une page, en dessous du seuil de {threshold} % à partir duquel un constat est généré (voir la section « Preuve de rendu »).",
+      'La catégorie « Rendu » affiche 0 constat, mais un écart de rendu réel a été mesuré sur au moins une page, en dessous du seuil de {threshold} % à partir duquel un constat est généré (voir la section « Preuve de rendu »).',
     legendCriticalText: "bloque des visiteurs ou l'indexation",
     legendSeriousText: "dégrade fortement l'usage ou la conformité",
     legendModerateText: 'à corriger, sans urgence',
@@ -78,7 +80,7 @@ export const fr: ReportStrings = {
     eyebrow: 'Conformité accessibilité',
     heading: 'Critères WCAG 2.2 niveau AA en échec',
     bodyIntro:
-      "Un critère en échec est un écart de conformité, pas une préférence esthétique. Cette page peut être transmise directement à un développeur, une agence ou un conseil juridique.",
+      'Un critère en échec est un écart de conformité, pas une préférence esthétique. Cette page peut être transmise directement à un développeur, une agence ou un conseil juridique.',
     scopeNote:
       "Cette liste décrit des écarts de conformité technique, indépendamment de toute question d'obligation légale : le statut d'obligation de ce site est traité séparément, section « {section} ».",
     criterionColumnLabel: 'Critère',
@@ -169,7 +171,8 @@ export const fr: ReportStrings = {
     eyebrow: 'Résumé',
     heading: "Ce qu'il faut retenir",
     startHereKicker: 'Par où commencer',
-    glossaryPointerSentence: 'Les termes techniques utilisés dans ce rapport sont définis dans la section « Glossaire ».',
+    glossaryPointerSentence:
+      'Les termes techniques utilisés dans ce rapport sont définis dans la section « Glossaire ».',
     thirdPartySplitSentenceTemplate:
       "{percent} % des occurrences d'accessibilité proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation), et non du site lui-même.",
     // P2.4 (2026-08-21 La Corniche feedback pass): sets the expectation
@@ -183,8 +186,10 @@ export const fr: ReportStrings = {
       "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport effort/impact. Les priorités rattachées à un critère d'accessibilité figurent en position {legalRank}. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale ».",
     topPriorityIsNotLegalNoPointer:
       "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport effort/impact. Aucune des priorités retenues dans ce rapport n'est rattachée à un critère d'accessibilité. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale » pour le détail.",
-    summaryCountsTemplate: "L'audit a identifié {total} constats au total, dont {actionable} critiques ou sérieux ({critical} critiques et {serious} sérieux).",
-    coveredByPrioritiesTemplate: 'Parmi eux, {covered} sont couverts par les priorités ci-dessous ; les autres sont listés par sévérité dans « {remainingSection} ».',
+    summaryCountsTemplate:
+      "L'audit a identifié {total} constats au total, dont {actionable} critiques ou sérieux ({critical} critiques et {serious} sérieux).",
+    coveredByPrioritiesTemplate:
+      'Parmi eux, {covered} sont couverts par les priorités ci-dessous ; les autres sont listés par sévérité dans « {remainingSection} ».',
   },
   legalExposure: {
     eyebrow: 'Exposition légale',
@@ -254,11 +259,11 @@ export const fr: ReportStrings = {
     // a person still deserves a visible caveat when it contradicts
     // machine evidence, since it can mean either is wrong.
     transactionalFlowConflictTemplate:
-      "Signal contradictoire : la détection automatisée a identifié un parcours transactionnel sur ce site, mais une confirmation manuelle indique {manualValue}. À vérifier avant toute décision fondée sur ce statut.",
+      'Signal contradictoire : la détection automatisée a identifié un parcours transactionnel sur ce site, mais une confirmation manuelle indique {manualValue}. À vérifier avant toute décision fondée sur ce statut.',
     transactionalFlowConflictManualAbsent: "l'absence d'un tel parcours",
     transactionalFlowConflictManualPresent: 'sa présence',
     disclaimerNote:
-      "Cette section reproduit des critères réglementaires et des données publiques de votre entreprise, sans interprétation juridique supplémentaire. Une confirmation par un conseil juridique reste nécessaire avant toute décision.",
+      'Cette section reproduit des critères réglementaires et des données publiques de votre entreprise, sans interprétation juridique supplémentaire. Une confirmation par un conseil juridique reste nécessaire avant toute décision.',
     undeterminedActionNote:
       "Ce statut se précisera si le numéro SIREN de l'entreprise est publié sur le site ou communiqué à l'équipe Odysseus.",
     // P0.3 (2026-08-21 La Corniche feedback pass): this used to list every
@@ -270,7 +275,7 @@ export const fr: ReportStrings = {
     transactionalFlowOnSiteTemplate:
       "Un moteur de réservation est intégré via un composant présent sur l'ensemble du périmètre analysé ({vendors}). Exemples de pages où il a été relevé : {examplePages}.",
     transactionalFlowOnSiteNoVendorTemplate:
-      "Le parcours transactionnel identifié est intégré directement sur le site, via un composant présent sur plusieurs pages du périmètre analysé. Exemples de pages où il a été relevé : {examplePages}.",
+      'Le parcours transactionnel identifié est intégré directement sur le site, via un composant présent sur plusieurs pages du périmètre analysé. Exemples de pages où il a été relevé : {examplePages}.',
     transactionalFlowDelegatedTemplate:
       "Le parcours transactionnel identifié est délégué à un prestataire tiers ({domain}). Ce domaine n'a pas été exploré dans le cadre de cet audit, qui reste circonscrit au domaine du site audité.",
     transactionalFlowDelegatedDomainUnknown: 'domaine non identifié',
@@ -314,7 +319,7 @@ export const fr: ReportStrings = {
     legalTagLabel: 'Exigence de conformité',
     impactCitationLabel: 'Repère chiffré',
     measuredCoreWebVitalGapTemplate:
-      "Écart mesuré sur ce site : {metric} médian à {value}, soit {gap} au-dessus du seuil « bon » ({threshold}).",
+      'Écart mesuré sur ce site : {metric} médian à {value}, soit {gap} au-dessus du seuil « bon » ({threshold}).',
     revenueImpactTemplate:
       "Sur la base de votre chiffre d'affaires déclaré ({turnover} €), et si cette association se vérifiait pour votre activité, l'ordre de grandeur serait de jusqu'à {impact} € par an. Il s'agit d'une estimation indicative fondée sur une seule étude, pas d'une prévision garantie.",
     quickWinBadgeLabel: 'Gain rapide',
@@ -342,18 +347,21 @@ export const fr: ReportStrings = {
     // "de ce" is not - which removes the elision problem instead of
     // special-casing it.
     ownershipSplitUnknownVendorLabel: 'ce composant tiers',
-    thirdPartyOnlyTemplate: 'Ce chantier relève entièrement de {vendor} : la correction doit passer par son éditeur, pas par votre agence web.',
-    lcenCrossReferenceTemplate: 'Ce constat relève de l’obligation légale d’identification détaillée dans « {legalSection} ».',
+    thirdPartyOnlyTemplate:
+      'Ce chantier relève entièrement de {vendor} : la correction doit passer par son éditeur, pas par votre agence web.',
+    lcenCrossReferenceTemplate:
+      'Ce constat relève de l’obligation légale d’identification détaillée dans « {legalSection} ».',
   },
   renderDiffEvidence: {
     eyebrow: 'Preuve de rendu',
-    heading: "Ce que reçoit un moteur de recherche avant JavaScript",
+    heading: 'Ce que reçoit un moteur de recherche avant JavaScript',
     intro:
       "Chaque page est chargée deux fois : une fois sans JavaScript, comme le fait un robot d'indexation basique, une fois dans un navigateur complet. La différence mesure le contenu invisible pour les moteurs.",
     rawBarLabelTemplate: 'HTML brut - {chars} caractères',
     renderedBarLabelTemplate: 'Page rendue - {chars} caractères',
     charCountsUnavailableNote: 'Nombre de caractères non mesuré pour cette page.',
-    missingCaptionTemplate: 'Manquant : {percent}% du texte visible absent du HTML brut, sur {selector}.',
+    missingCaptionTemplate:
+      'Manquant : {percent}% du texte visible absent du HTML brut, sur {selector}.',
     missingCaptionNoSelectorTemplate: 'Manquant : {percent}% du texte visible absent du HTML brut.',
     // item 3.3 (La Corniche pass): "détail dans l'export technique"
     // promised a deliverable that does not exist in this product (see
@@ -368,12 +376,12 @@ export const fr: ReportStrings = {
     // threshold across all pages), independent of any single rule's own
     // page list in the annexe. Reworded so the two sections no longer
     // read as contradicting each other's counts.
-    overflowTextTemplate: "{count} autres pages du site présentent un écart de rendu comparable.",
-    overflowTextSingularTemplate: "1 autre page du site présente un écart de rendu comparable.",
+    overflowTextTemplate: '{count} autres pages du site présentent un écart de rendu comparable.',
+    overflowTextSingularTemplate: '1 autre page du site présente un écart de rendu comparable.',
     positiveStatementTemplate:
-      'Les pages commerciales de ce site conservent leur texte dans le HTML brut : aucun écart de rendu significatif n\'a été mesuré.',
+      "Les pages commerciales de ce site conservent leur texte dans le HTML brut : aucun écart de rendu significatif n'a été mesuré.",
     positiveStatementWrapperNote:
-      'Seules les pages d\'intégration de contenu tiers font exception à ce constat, voir la section Observations.',
+      "Seules les pages d'intégration de contenu tiers font exception à ce constat, voir la section Observations.",
   },
   coreWebVitals: {
     eyebrow: 'Performance',
@@ -401,28 +409,30 @@ export const fr: ReportStrings = {
       "La mesure de performance (Lighthouse) n'a pas abouti sur ce site pour cet audit et aucun constat de performance n'est donc rapporté ici. Voir la section « Méthodologie et limites » pour le détail.",
     realUserHeading: 'Données réelles (Chrome UX Report)',
     realUserIntro:
-      "Données de terrain issues des visiteurs Chrome réels de ce site sur les 28 derniers jours, lorsque des données publiques existent, en complément des mesures de laboratoire ci-dessus.",
+      'Données de terrain issues des visiteurs Chrome réels de ce site sur les 28 derniers jours, lorsque des données publiques existent, en complément des mesures de laboratoire ci-dessus.',
     realUserNoDataNote:
       "Aucune donnée Chrome UX Report publique n'existe pour ce site, le plus souvent parce qu'il ne reçoit pas encore assez de trafic Chrome pour atteindre le seuil de publication de Google. Ce n'est ni un succès ni un échec, cela signifie simplement qu'aucune comparaison avec des utilisateurs réels n'est disponible pour cet audit.",
     realUserGapNote:
-      "Un écart important entre les valeurs ci-dessus et ci-dessous est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau, un seul passage), tandis que les données réelles reflètent des visiteurs sur des appareils et connexions variés. Les deux mesures répondent à des questions différentes, elles ne se contredisent pas.",
+      'Un écart important entre les valeurs ci-dessus et ci-dessous est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau, un seul passage), tandis que les données réelles reflètent des visiteurs sur des appareils et connexions variés. Les deux mesures répondent à des questions différentes, elles ne se contredisent pas.',
     inpLabel: 'INP, réactivité',
   },
   accessibilityStatement: {
-    eyebrow: "Déclaration",
+    eyebrow: 'Déclaration',
     heading: "Projet de déclaration d'accessibilité",
-    intro: "Squelette généré à partir des constats, à compléter par le client avant publication.",
+    intro: 'Squelette généré à partir des constats, à compléter par le client avant publication.',
     criterionColumnLabel: 'Critère',
     statusColumnLabel: 'Statut de conformité',
     nonConformantLabel: 'Non conforme',
     contactHeading: 'Contact',
-    contactBody: '[Adresse e-mail de contact à compléter par le client] - processus de signalement à définir.',
-    contactEmailToConfirmTemplate: '{email} (détecté automatiquement, à confirmer avant publication)',
+    contactBody:
+      '[Adresse e-mail de contact à compléter par le client] - processus de signalement à définir.',
+    contactEmailToConfirmTemplate:
+      '{email} (détecté automatiquement, à confirmer avant publication)',
     remediationPlanHeading: 'Plan de remédiation',
     remediationPlanBodyTemplate: 'Voir la section « {section} » ci-dessus pour le plan.',
     firstPublicationDateLabel: 'Date de première publication',
     technologiesLabel: 'Technologies utilisées',
-    testEnvironmentLabel: "Environnement de test",
+    testEnvironmentLabel: 'Environnement de test',
     nonAccessibleContentLabel: 'Contenus non accessibles connus',
     feedbackProcedureLabel: 'Modalités de signalement',
     recoursePathLabel: 'Recours (Défenseur des droits)',
@@ -459,7 +469,8 @@ export const fr: ReportStrings = {
       {
         id: 'critical',
         term: 'Critique',
-        definition: 'Sévérité la plus haute : bloque une tâche essentielle pour une partie des utilisateurs.',
+        definition:
+          'Sévérité la plus haute : bloque une tâche essentielle pour une partie des utilisateurs.',
       },
       {
         id: 'serious',
@@ -484,32 +495,37 @@ export const fr: ReportStrings = {
       {
         id: 'lcp',
         term: 'LCP (Largest Contentful Paint)',
-        definition: "Temps d'affichage du plus grand élément visible de la page, un indicateur de vitesse perçue.",
+        definition:
+          "Temps d'affichage du plus grand élément visible de la page, un indicateur de vitesse perçue.",
       },
       {
         id: 'fcp',
         term: 'FCP (First Contentful Paint)',
-        definition: 'Temps avant le premier affichage de contenu à l\'écran.',
+        definition: "Temps avant le premier affichage de contenu à l'écran.",
       },
       {
         id: 'tbt',
         term: 'TBT (Total Blocking Time)',
-        definition: "Temps de blocage total : durée pendant laquelle la page ne répond pas aux interactions de l'utilisateur.",
+        definition:
+          "Temps de blocage total : durée pendant laquelle la page ne répond pas aux interactions de l'utilisateur.",
       },
       {
         id: 'cls',
         term: 'CLS (Cumulative Layout Shift)',
-        definition: "Stabilité visuelle : mesure les déplacements inattendus d'éléments pendant le chargement de la page.",
+        definition:
+          "Stabilité visuelle : mesure les déplacements inattendus d'éléments pendant le chargement de la page.",
       },
       {
         id: 'speed-index',
         term: 'Speed Index',
-        definition: "Vitesse à laquelle le contenu visible d'une page se remplit pendant le chargement.",
+        definition:
+          "Vitesse à laquelle le contenu visible d'une page se remplit pendant le chargement.",
       },
       {
         id: 'seo',
         term: 'SEO',
-        definition: "Référencement naturel : optimisation pour la visibilité dans les résultats des moteurs de recherche.",
+        definition:
+          'Référencement naturel : optimisation pour la visibilité dans les résultats des moteurs de recherche.',
       },
       {
         id: 'geo',
@@ -521,12 +537,13 @@ export const fr: ReportStrings = {
         id: 'constat-vs-occurrence',
         term: 'Constat / Occurrence',
         definition:
-          "Un constat est un problème distinct après regroupement ; une occurrence est chacune de ses apparitions individuelles sur le site. Un même constat peut compter plusieurs occurrences.",
+          'Un constat est un problème distinct après regroupement ; une occurrence est chacune de ses apparitions individuelles sur le site. Un même constat peut compter plusieurs occurrences.',
       },
       {
         id: 'selecteur',
         term: 'Sélecteur',
-        definition: "Expression technique identifiant précisément l'élément concerné dans le code de la page.",
+        definition:
+          "Expression technique identifiant précisément l'élément concerné dans le code de la page.",
       },
       {
         id: 'dgccrf',
@@ -538,7 +555,7 @@ export const fr: ReportStrings = {
         id: 'parcours-transactionnel',
         term: 'Parcours transactionnel',
         definition:
-          'Fonctionnalité du site permettant de réserver, ajouter au panier ou payer directement en ligne - le critère qui déclenche l\'obligation EAA.',
+          "Fonctionnalité du site permettant de réserver, ajouter au panier ou payer directement en ligne - le critère qui déclenche l'obligation EAA.",
       },
       {
         id: 'sans-objet',
@@ -580,7 +597,7 @@ export const fr: ReportStrings = {
         id: 'effort',
         term: 'Effort',
         definition:
-          "Estimation qualitative (Faible / Moyen / Élevé) de la charge de travail nécessaire pour corriger un chantier prioritaire, dérivée de la famille de règles et de la concentration des occurrences.",
+          'Estimation qualitative (Faible / Moyen / Élevé) de la charge de travail nécessaire pour corriger un chantier prioritaire, dérivée de la famille de règles et de la concentration des occurrences.',
       },
       {
         id: 'impact-commercial',
@@ -631,7 +648,7 @@ export const fr: ReportStrings = {
     categoryLabels: {
       accessibility: 'Accessibilité',
       seo: 'Référencement (SEO)',
-      geo: 'Visibilité dans les moteurs d\'IA (GEO)',
+      geo: "Visibilité dans les moteurs d'IA (GEO)",
       performance: 'Performance',
       rendering: 'Rendu',
       // 'Confidentialité et sécurité' rather than a single word: the
@@ -686,10 +703,9 @@ export const fr: ReportStrings = {
   methodology: {
     eyebrow: 'Méthodologie et limites',
     heading: 'Comment cet audit a été réalisé',
-    languageCoverageTemplate:
-      'Langues couvertes par cette analyse : {languages}.',
+    languageCoverageTemplate: 'Langues couvertes par cette analyse : {languages}.',
     languageNotScannedTemplate:
-      'Aucune page n\'a été analysée pour les langues suivantes, bien que le site en publie : {languages}.',
+      "Aucune page n'a été analysée pour les langues suivantes, bien que le site en publie : {languages}.",
     toolingParagraphTemplate:
       "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages analysées le {date} à partir de la page d'accueil. Une URL qui ne fait que mener à l'accueil d'une langue (par exemple /en) n'est pas comptée comme une page analysée, car elle ne porte pas de contenu propre ; les pages de cette langue sont explorées normalement.",
     automatedCoverageCaveat:
@@ -705,7 +721,7 @@ export const fr: ReportStrings = {
     // clean result is always stated rather than only implied by silence.
     extendedPassResultTemplate: "Résultat de la passe d'accessibilité étendue : {checks}.",
     extendedPassCheckKeyboardTrapsLabel: 'pièges au clavier',
-    extendedPassCheckFocusOrderLabel: "ordre de focus",
+    extendedPassCheckFocusOrderLabel: 'ordre de focus',
     extendedPassCheckFormErrorsLabel: 'erreurs de formulaire non associées à leur champ',
     extendedPassCheckVideoCaptionsLabel: 'sous-titres vidéo',
     extendedPassCheckCleanLabel: 'aucune anomalie détectée',
@@ -720,8 +736,10 @@ export const fr: ReportStrings = {
     legalCitationUndeterminedParagraph:
       "Ce rapport cite les critères techniques concernés (WCAG 2.2, EN 301 549) sans se prononcer sur l'applicabilité d'une obligation légale particulière à votre entreprise, laquelle dépend de sa taille et de son secteur d'activité.",
     legalCitationEffectifFactTemplate: "L'entreprise compte {label} d'après le répertoire Sirene.",
-    legalCitationTurnoverFactTemplate: "Le chiffre d'affaires annuel déclaré dépasse le seuil de {threshold}.",
-    legalCitationTransactionalFlowFactTemplate: 'Le site propose un parcours de {flowType} {location}.',
+    legalCitationTurnoverFactTemplate:
+      "Le chiffre d'affaires annuel déclaré dépasse le seuil de {threshold}.",
+    legalCitationTransactionalFlowFactTemplate:
+      'Le site propose un parcours de {flowType} {location}.',
     legalCitationTransactionalFlowLocationOnSite: 'directement en ligne',
     legalCitationTransactionalFlowLocationDelegated: 'en ligne, délégué à un prestataire tiers',
     legalCitationTransactionalFlowUnknownFact:
@@ -739,12 +757,13 @@ export const fr: ReportStrings = {
     legalCitationExemptionRouteSentence:
       "La voie d'exemption documentée à ce jour est une demande de dérogation pour charge disproportionnée, à déposer sur Démarches Simplifiées.",
     legalCitationManualSirenWithFindingTemplate:
-      "Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne le publie pas lui-même (voir constat {findingId}).",
+      'Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne le publie pas lui-même (voir constat {findingId}).',
     legalCitationManualSirenNoFindingSentence:
-      "Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne publie pas ce numéro lui-même.",
+      'Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne publie pas ce numéro lui-même.',
     legalCitationSirenMismatchTemplate:
-      "Le numéro SIREN fourni manuellement ({manualSiren}) diffère de celui publié sur le site ({extractedSiren}). Cette détermination retient le numéro fourni manuellement.",
-    legalCitationPointerSentence: 'Le détail de l\'exposition légale figure dans la section « Exposition légale ».',
+      'Le numéro SIREN fourni manuellement ({manualSiren}) diffère de celui publié sur le site ({extractedSiren}). Cette détermination retient le numéro fourni manuellement.',
+    legalCitationPointerSentence:
+      "Le détail de l'exposition légale figure dans la section « Exposition légale ».",
     socialExclusionDisclosureTemplate:
       "{count} pages ont été exclues de ce scan car elles redirigent vers un réseau social tiers, selon la liste d'exclusion par défaut d'Odysseus.",
     socialExclusionDisclosureSingularTemplate:
@@ -752,8 +771,9 @@ export const fr: ReportStrings = {
     // item P4 (La Corniche pass): rephrased so the sentence doesn't start
     // with a numeral, plain French style.
     crawlCapDisclosureTemplate:
-      "Le plafond configuré pour cet audit est de {maxPages} pages, pas la totalité du site : le site peut compter des pages supplémentaires non analysées.",
-    sirenSourceResolvedTemplate: 'Le numéro SIREN a été confirmé comme affiché sur cette page du site : {url}.',
+      'Le plafond configuré pour cet audit est de {maxPages} pages, pas la totalité du site : le site peut compter des pages supplémentaires non analysées.',
+    sirenSourceResolvedTemplate:
+      'Le numéro SIREN a été confirmé comme affiché sur cette page du site : {url}.',
     // P0.1 (2026-08-21 La Corniche feedback pass): the generic "n'a pas
     // abouti... voir Méthodologie" pointer in the performance section used
     // to lead here and find nothing further. This states the real,

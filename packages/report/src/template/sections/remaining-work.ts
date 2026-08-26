@@ -1,4 +1,4 @@
-import type { AuditManifest, Finding, FindingCategory, ReportLanguage, Severity } from '@odysseus/core';
+import type { Finding, FindingCategory, ReportLanguage, Severity } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
@@ -62,7 +62,10 @@ interface RuleBlock {
  *  findings array every other section reads, so this section and Observations
  *  can never disagree about what was withheld from the model (trade-off 8's
  *  single-implementation rule). */
-export function selectRemainingFindings(analysis: StoredAnalysis, findings: readonly Finding[]): Finding[] {
+export function selectRemainingFindings(
+  analysis: StoredAnalysis,
+  findings: readonly Finding[],
+): Finding[] {
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const covered = new Set(
     selectRenderedThemes(analysis.themes, findingsById).flatMap((theme) => theme.findingIds),
@@ -100,7 +103,11 @@ function groupByRule(findings: readonly Finding[], language: ReportLanguage): Ru
     );
 }
 
-function renderRuleBlock(strings: ReportStrings, language: ReportLanguage, block: RuleBlock): string {
+function renderRuleBlock(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  block: RuleBlock,
+): string {
   const r = strings.remainingWork;
   const counts = [
     `${formatNumber(block.findingIds.length, language)} ${pluralize(block.findingIds.length, r.findingSingular, r.findingPlural)}`,

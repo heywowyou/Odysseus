@@ -11,8 +11,10 @@
 import { Schema, type Connection, type Model } from 'mongoose';
 import type { AuditManifest, AuditManualFields } from '@odysseus/core';
 
-export interface AuditDocumentFields
-  extends Omit<AuditManifest, 'startedAt' | 'finishedAt' | 'renormalizedAt'> {
+export interface AuditDocumentFields extends Omit<
+  AuditManifest,
+  'startedAt' | 'finishedAt' | 'renormalizedAt'
+> {
   startedAt: Date;
   finishedAt: Date;
   renormalizedAt?: Date;

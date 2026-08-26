@@ -68,7 +68,10 @@ function splitPath(pathname: string): string[] {
 
 /** Matches literal segments exactly and captures `:name` segments.
  *  Returns null on any mismatch, including a different segment count. */
-function matchSegments(pattern: readonly string[], actual: readonly string[]): Record<string, string> | null {
+function matchSegments(
+  pattern: readonly string[],
+  actual: readonly string[],
+): Record<string, string> | null {
   if (pattern.length !== actual.length) return null;
   const params: Record<string, string> = {};
   for (let i = 0; i < pattern.length; i++) {

@@ -12,11 +12,15 @@ function loadHaaitzaAuditDir(): string {
 }
 
 function loadHaaitzaFindings(): Finding[] {
-  return JSON.parse(readFileSync(path.join(loadHaaitzaAuditDir(), 'findings.json'), 'utf-8')) as Finding[];
+  return JSON.parse(
+    readFileSync(path.join(loadHaaitzaAuditDir(), 'findings.json'), 'utf-8'),
+  ) as Finding[];
 }
 
 function loadHaaitzaManifest(): AuditManifest {
-  return JSON.parse(readFileSync(path.join(loadHaaitzaAuditDir(), 'manifest.json'), 'utf-8')) as AuditManifest;
+  return JSON.parse(
+    readFileSync(path.join(loadHaaitzaAuditDir(), 'manifest.json'), 'utf-8'),
+  ) as AuditManifest;
 }
 
 describe('computeStatistics', () => {
@@ -85,7 +89,9 @@ describe('computeStatistics', () => {
 // three genuinely hard counts - a real report had 74 of 703 (10 percent)
 // come from the heuristic alone.
 describe('item 1.8: heuristic occurrences are excluded from accessibilityOccurrences', () => {
-  function buildFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'occurrences'>): Finding {
+  function buildFinding(
+    overrides: Partial<Finding> & Pick<Finding, 'findingId' | 'ruleId' | 'occurrences'>,
+  ): Finding {
     return {
       auditId: 'a1',
       schemaVersion: 1,

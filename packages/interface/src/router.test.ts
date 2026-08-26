@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Router } from './router.js';
 
-function fakeReq(method: string, url: string, headers: Record<string, string> = {}): IncomingMessage {
+function fakeReq(
+  method: string,
+  url: string,
+  headers: Record<string, string> = {},
+): IncomingMessage {
   return { method, url, headers } as never;
 }
 

@@ -21,21 +21,37 @@ import { pathToFileURL } from 'node:url';
 // resolved through that package rather than by a hardcoded store path.
 const scannerRequire = createRequire(new URL('../packages/scanner/package.json', import.meta.url));
 const axe = createRequire(scannerRequire.resolve('@axe-core/playwright'))('axe-core');
-const cfg = (await import(pathToFileURL(scannerRequire.resolve('lighthouse/core/config/default-config.js')).href)).default;
+const cfg = (
+  await import(
+    pathToFileURL(scannerRequire.resolve('lighthouse/core/config/default-config.js')).href
+  )
+).default;
 const { LIGHTHOUSE_EXCLUDED_AUDITS } = await import('../packages/core/dist/normalize/constants.js');
 const { WCAG22AA_TAGS } = await import('../packages/scanner/dist/axe.js');
 
 /** Audits Lighthouse marks informative: they carry no pass/fail score, so
  *  normalize-lighthouse.ts never turns them into findings. */
 const INFORMATIVE = [
-  'network-requests', 'network-rtt', 'network-server-latency', 'main-thread-tasks',
-  'diagnostics', 'metrics', 'screenshot-thumbnails', 'final-screenshot',
-  'script-treemap-data', 'resource-summary', 'critical-request-chains',
-  'user-timings', 'largest-contentful-paint-element',
+  'network-requests',
+  'network-rtt',
+  'network-server-latency',
+  'main-thread-tasks',
+  'diagnostics',
+  'metrics',
+  'screenshot-thumbnails',
+  'final-screenshot',
+  'script-treemap-data',
+  'resource-summary',
+  'critical-request-chains',
+  'user-timings',
+  'largest-contentful-paint-element',
 ];
 
 const tags = new Set(WCAG22AA_TAGS);
-const axeIds = axe.getRules().filter((r) => (r.tags || []).some((t) => tags.has(t))).map((r) => r.ruleId);
+const axeIds = axe
+  .getRules()
+  .filter((r) => (r.tags || []).some((t) => tags.has(t)))
+  .map((r) => r.ruleId);
 
 const excluded = new Set([...LIGHTHOUSE_EXCLUDED_AUDITS, ...INFORMATIVE]);
 const lighthouseIds = [];

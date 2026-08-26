@@ -36,7 +36,10 @@ export function buildMissingPercentIndex(manifest: AuditManifest): Map<string, n
   return index;
 }
 
-export function isWrapperPage(url: string, missingPercentByUrl: ReadonlyMap<string, number>): boolean {
+export function isWrapperPage(
+  url: string,
+  missingPercentByUrl: ReadonlyMap<string, number>,
+): boolean {
   const missingPercent = missingPercentByUrl.get(url);
   return missingPercent !== undefined && missingPercent >= WRAPPER_PAGE_MISSING_PERCENT_THRESHOLD;
 }

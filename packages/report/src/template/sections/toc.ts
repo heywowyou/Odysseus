@@ -1,6 +1,11 @@
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, sheet } from '../html-utils.js';
-import { SECTION_IDS, computeSectionNumbers, sectionTitle, type SectionId } from '../section-registry.js';
+import {
+  SECTION_IDS,
+  computeSectionNumbers,
+  sectionTitle,
+  type SectionId,
+} from '../section-registry.js';
 
 /** `includedIds` is whichever of the 14 SECTION_IDS actually rendered a
  *  `<section>` in the body (render-html.ts's renderBody decides this
@@ -24,11 +29,14 @@ export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<Secti
     })
     .join('');
 
-  return sheet(`
+  return sheet(
+    `
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
       <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(strings.toc.eyebrow)}</h6>
     </div>
     <h2 style="margin-bottom:var(--space-6)">${escapeHtml(strings.toc.heading)}</h2>
     ${rows}
-  `, 'sheet-standalone');
+  `,
+    'sheet-standalone',
+  );
 }

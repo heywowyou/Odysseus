@@ -90,7 +90,10 @@ const obligationAssessmentSchemaMongo = new Schema(
     basis: {
       type: [
         new Schema(
-          { regimeId: { type: String, required: true }, facts: { type: [Schema.Types.Mixed], default: [] } },
+          {
+            regimeId: { type: String, required: true },
+            facts: { type: [Schema.Types.Mixed], default: [] },
+          },
           { _id: false },
         ),
       ],
@@ -103,7 +106,10 @@ const obligationAssessmentSchemaMongo = new Schema(
     sirenSource: { type: String, enum: ['extracted', 'manual'] },
     sirenMismatch: {
       type: new Schema(
-        { extractedSiren: { type: String, required: true }, manualSiren: { type: String, required: true } },
+        {
+          extractedSiren: { type: String, required: true },
+          manualSiren: { type: String, required: true },
+        },
         { _id: false },
       ),
     },
@@ -135,5 +141,7 @@ analysisSchema.index({ auditId: 1 });
 analysisSchema.index({ auditId: 1, language: 1, generatedAt: -1 });
 
 export function createAnalysisModel(connection: Connection): Model<AnalysisDocument> {
-  return connection.models['Analysis'] ?? connection.model<AnalysisDocument>('Analysis', analysisSchema);
+  return (
+    connection.models['Analysis'] ?? connection.model<AnalysisDocument>('Analysis', analysisSchema)
+  );
 }

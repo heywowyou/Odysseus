@@ -53,76 +53,74 @@ describe('scanSite against fixtures/spa-demo', () => {
     if (scratchScreenshotDir) await fs.rm(scratchScreenshotDir, { recursive: true, force: true });
   });
 
-  it(
-    'crawls then scans every visited page, skipping the robots-disallowed one',
-    async () => {
-      scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-site-'));
-      const result = await scanSite(TEST_URL, {
-        browser,
-        debugPort,
-        maxPages: 10,
-        maxDepth: 3,
-        delayMs: 0,
-        screenshotDir: scratchScreenshotDir,
-      });
+  it('crawls then scans every visited page, skipping the robots-disallowed one', async () => {
+    scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-site-'));
+    const result = await scanSite(TEST_URL, {
+      browser,
+      debugPort,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+      screenshotDir: scratchScreenshotDir,
+    });
 
-      expect(result.crawl.visitedCount).toBe(3);
-      expect(result.pages).toHaveLength(3);
+    expect(result.crawl.visitedCount).toBe(3);
+    expect(result.pages).toHaveLength(3);
 
-      for (const pageResult of result.pages) {
-        expect(pageResult.renderDiffError).toBeUndefined();
-        expect(pageResult.axeError).toBeUndefined();
-        expect(pageResult.lighthouseError).toBeUndefined();
-        expect(pageResult.renderDiff).toBeDefined();
-        expect(pageResult.axe).toBeDefined();
-        expect(pageResult.lighthouse).toBeDefined();
-      }
+    for (const pageResult of result.pages) {
+      expect(pageResult.renderDiffError).toBeUndefined();
+      expect(pageResult.axeError).toBeUndefined();
+      expect(pageResult.lighthouseError).toBeUndefined();
+      expect(pageResult.renderDiff).toBeDefined();
+      expect(pageResult.axe).toBeDefined();
+      expect(pageResult.lighthouse).toBeDefined();
+    }
 
-      const scannedUrls = new Set(result.pages.map((p) => new URL(p.url).pathname));
-      expect(scannedUrls.has('/private.html')).toBe(false);
+    const scannedUrls = new Set(result.pages.map((p) => new URL(p.url).pathname));
+    expect(scannedUrls.has('/private.html')).toBe(false);
 
-      const home = result.pages.find((p) => new URL(p.url).pathname === '/');
-      expect(home?.transactionalFlowEvidence?.some((e) => e.kind === 'checkout-form')).toBe(true);
+    const home = result.pages.find((p) => new URL(p.url).pathname === '/');
+    expect(home?.transactionalFlowEvidence?.some((e) => e.kind === 'checkout-form')).toBe(true);
 
-      const mentionsLegalesPage = result.pages.find((p) => new URL(p.url).pathname === '/mentions-legales.html');
-      expect(mentionsLegalesPage?.mentionsLegalesError).toBeUndefined();
-      expect(mentionsLegalesPage?.mentionsLegales?.siren).toBe('732829320');
+    const mentionsLegalesPage = result.pages.find(
+      (p) => new URL(p.url).pathname === '/mentions-legales.html',
+    );
+    expect(mentionsLegalesPage?.mentionsLegalesError).toBeUndefined();
+    expect(mentionsLegalesPage?.mentionsLegales?.siren).toBe('732829320');
 
-      // The outbound-only Booking.com link must not have been treated as a
-      // first-party check-out flow on any other page.
-      const about = result.pages.find((p) => new URL(p.url).pathname === '/about.html');
-      expect(about?.mentionsLegales).toBeUndefined();
-    },
-    180_000,
-  );
+    // The outbound-only Booking.com link must not have been treated as a
+    // first-party check-out flow on any other page.
+    const about = result.pages.find((p) => new URL(p.url).pathname === '/about.html');
+    expect(about?.mentionsLegales).toBeUndefined();
+  }, 180_000);
 
-  it(
-    'emits scan-start once and scan-page once per scanned page, alongside crawl events',
-    async () => {
-      scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-site-'));
-      const events: ScanProgressEvent[] = [];
+  it('emits scan-start once and scan-page once per scanned page, alongside crawl events', async () => {
+    scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-site-'));
+    const events: ScanProgressEvent[] = [];
 
-      const result = await scanSite(TEST_URL, {
-        browser,
-        debugPort,
-        maxPages: 10,
-        maxDepth: 3,
-        delayMs: 0,
-        screenshotDir: scratchScreenshotDir,
-        onProgress: (event) => events.push(event),
-      });
+    const result = await scanSite(TEST_URL, {
+      browser,
+      debugPort,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+      screenshotDir: scratchScreenshotDir,
+      onProgress: (event) => events.push(event),
+    });
 
-      expect(events.filter((event) => event.type === 'crawl-start')).toHaveLength(1);
-      expect(events.filter((event) => event.type === 'crawl-page')).toHaveLength(result.crawl.visitedCount);
+    expect(events.filter((event) => event.type === 'crawl-start')).toHaveLength(1);
+    expect(events.filter((event) => event.type === 'crawl-page')).toHaveLength(
+      result.crawl.visitedCount,
+    );
 
-      const starts = events.filter((event) => event.type === 'scan-start');
-      expect(starts).toHaveLength(1);
-      expect(starts[0]).toMatchObject({ totalPages: result.pages.length });
+    const starts = events.filter((event) => event.type === 'scan-start');
+    expect(starts).toHaveLength(1);
+    expect(starts[0]).toMatchObject({ totalPages: result.pages.length });
 
-      const pageEvents = events.filter((event) => event.type === 'scan-page');
-      expect(pageEvents).toHaveLength(result.pages.length);
-      expect(pageEvents.map((event) => (event.type === 'scan-page' ? event.scanned : undefined))).toEqual([1, 2, 3]);
-    },
-    180_000,
-  );
+    const pageEvents = events.filter((event) => event.type === 'scan-page');
+    expect(pageEvents).toHaveLength(result.pages.length);
+    expect(
+      pageEvents.map((event) => (event.type === 'scan-page' ? event.scanned : undefined)),
+    ).toEqual([1, 2, 3]);
+  }, 180_000);
 });

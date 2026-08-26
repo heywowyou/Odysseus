@@ -27,7 +27,10 @@ const HTML_ENTITIES: Readonly<Record<string, string>> = {
 };
 
 function decodeEntities(text: string): string {
-  return text.replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (match) => HTML_ENTITIES[match] ?? match);
+  return text.replace(
+    /&(amp|lt|gt|quot|#39|apos|nbsp);/g,
+    (match) => HTML_ENTITIES[match] ?? match,
+  );
 }
 
 export function htmlToText(html: string): string {

@@ -31,11 +31,7 @@ import type { FindingSource } from '../types/findings.js';
 
 const DEDUPE_KEY_LENGTH = 16;
 
-export function computeDedupeKey(
-  source: FindingSource,
-  ruleId: string,
-  selector: string,
-): string {
+export function computeDedupeKey(source: FindingSource, ruleId: string, selector: string): string {
   return createHash('sha256')
     .update(`${source}|${ruleId}|${selector}`)
     .digest('hex')

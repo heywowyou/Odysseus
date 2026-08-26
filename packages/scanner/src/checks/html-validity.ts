@@ -95,8 +95,9 @@ const validator = new HtmlValidate({
 
 export function selectReportableMessages(messages: readonly Message[]): HtmlValidityIssue[] {
   return messages
-    .filter((message): message is Message & { ruleId: string } =>
-      message.ruleId !== undefined && ALLOWED_RULES.has(message.ruleId),
+    .filter(
+      (message): message is Message & { ruleId: string } =>
+        message.ruleId !== undefined && ALLOWED_RULES.has(message.ruleId),
     )
     .map((message) => ({
       ruleId: message.ruleId,
@@ -106,7 +107,10 @@ export function selectReportableMessages(messages: readonly Message[]): HtmlVali
     }));
 }
 
-export async function checkHtmlValidity(page: Page, pageUrl: string): Promise<HtmlValidityCheckResult> {
+export async function checkHtmlValidity(
+  page: Page,
+  pageUrl: string,
+): Promise<HtmlValidityCheckResult> {
   try {
     const html = await page.content();
     const report = await validator.validateString(html);

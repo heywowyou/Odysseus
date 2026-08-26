@@ -17,10 +17,18 @@ export interface StructuredDataCheckInput {
   failedTests: { test: string; schema?: string; type?: string }[];
 }
 
-export function extractStructuredDataCandidates(input: StructuredDataCheckInput): FindingCandidate[] {
+export function extractStructuredDataCandidates(
+  input: StructuredDataCheckInput,
+): FindingCandidate[] {
   if (input.failedTests.length === 0) return [];
 
-  const schemasInvolved = [...new Set(input.failedTests.map((test) => test.schema).filter((schema): schema is string => Boolean(schema)))];
+  const schemasInvolved = [
+    ...new Set(
+      input.failedTests
+        .map((test) => test.schema)
+        .filter((schema): schema is string => Boolean(schema)),
+    ),
+  ];
 
   return [
     {

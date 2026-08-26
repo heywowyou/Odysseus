@@ -10,7 +10,13 @@ const URL = 'https://hotel.fr/contact';
 
 describe('normalizePhone', () => {
   it('treats every French writing convention for one number as equal', () => {
-    const forms = ['+33 5 56 22 33 44', '0033556223344', '05.56.22.33.44', '05 56 22 33 44', '0556223344'];
+    const forms = [
+      '+33 5 56 22 33 44',
+      '0033556223344',
+      '05.56.22.33.44',
+      '05 56 22 33 44',
+      '0556223344',
+    ];
     expect(new Set(forms.map(normalizePhone)).size).toBe(1);
     expect(normalizePhone(forms[0]!)).toBe('0556223344');
   });
@@ -40,7 +46,12 @@ describe('buildNapConsistency', () => {
   it('finds a phone nested inside an @graph, at any depth', () => {
     const result = buildNapConsistency(
       URL,
-      jsonLd({ '@graph': [{ '@type': 'WebSite' }, { '@type': 'Hotel', contactPoint: { telephone: '0556223344' } }] }),
+      jsonLd({
+        '@graph': [
+          { '@type': 'WebSite' },
+          { '@type': 'Hotel', contactPoint: { telephone: '0556223344' } },
+        ],
+      }),
       'Appelez le 05 56 22 33 99',
     );
     expect(result.structuredPhones).toEqual(['0556223344']);
@@ -51,7 +62,11 @@ describe('buildNapConsistency', () => {
   // contradictory - reporting that would be reporting an absence as a
   // conflict.
   it('reports nothing when the page shows no phone at all', () => {
-    const result = buildNapConsistency(URL, jsonLd({ telephone: '0556223344' }), 'Bienvenue à notre hôtel.');
+    const result = buildNapConsistency(
+      URL,
+      jsonLd({ telephone: '0556223344' }),
+      'Bienvenue à notre hôtel.',
+    );
     expect(result.phoneMismatch).toBe(false);
   });
 
@@ -101,7 +116,9 @@ describe('buildNapConsistency', () => {
   it('does not compare street names', () => {
     const result = buildNapConsistency(
       URL,
-      jsonLd({ address: { streetAddress: '12 boulevard du Président Wilson', postalCode: '33000' } }),
+      jsonLd({
+        address: { streetAddress: '12 boulevard du Président Wilson', postalCode: '33000' },
+      }),
       '12 bd Wilson, 33000 Bordeaux',
     );
     expect(result.postalCodeMismatch).toBe(false);

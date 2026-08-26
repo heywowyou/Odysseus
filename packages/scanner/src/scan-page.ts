@@ -1,10 +1,17 @@
 import type { Browser } from 'playwright';
 import type { Result as LighthouseResult } from 'lighthouse';
-import type { RenderDiffResult, TransactionalFlowEvidence, TransactionalFlowRedirectCheck } from '@odysseus/core';
+import type {
+  RenderDiffResult,
+  TransactionalFlowEvidence,
+  TransactionalFlowRedirectCheck,
+} from '@odysseus/core';
 import { type AxeResults, runAxe } from './axe.js';
 import { runLighthouseIsolated } from './lighthouse-isolated.js';
 import { renderDiff } from './render-diff.js';
-import { extractMentionsLegales, type MentionsLegalesExtraction } from './checks/mentions-legales.js';
+import {
+  extractMentionsLegales,
+  type MentionsLegalesExtraction,
+} from './checks/mentions-legales.js';
 import {
   detectTransactionalFlow,
   findDelegatedBookingRedirectChecks,
@@ -13,11 +20,23 @@ import {
 import { extractHeadMetadata, type HeadMetadataExtraction } from './checks/head-metadata.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
 import type { LlmsTxtCheckResult } from './checks/llms-txt.js';
-import { checkCanonicalTarget, type CanonicalTargetCheckResult } from './checks/canonical-target.js';
+import {
+  checkCanonicalTarget,
+  type CanonicalTargetCheckResult,
+} from './checks/canonical-target.js';
 import { getPageTimeoutMs } from './config.js';
-import { extractMixedContentResources, type MixedContentExtraction } from './checks/mixed-content.js';
-import { walkKeyboardNavigation, type KeyboardNavigationExtraction } from './checks/keyboard-navigation.js';
-import { checkFormErrorHandling, type FormErrorHandlingExtraction } from './checks/form-error-handling.js';
+import {
+  extractMixedContentResources,
+  type MixedContentExtraction,
+} from './checks/mixed-content.js';
+import {
+  walkKeyboardNavigation,
+  type KeyboardNavigationExtraction,
+} from './checks/keyboard-navigation.js';
+import {
+  checkFormErrorHandling,
+  type FormErrorHandlingExtraction,
+} from './checks/form-error-handling.js';
 import { checkVideoCaptions, type VideoCaptionsExtraction } from './checks/video-captions.js';
 import { extractAltTextFacts, type AltTextExtraction } from './checks/alt-text.js';
 import type { CookieConsentCheckResult } from './checks/cookie-consent.js';
@@ -99,7 +118,11 @@ export interface PageScanResult {
   transactionalFlowRedirectChecks?: TransactionalFlowRedirectCheck[];
   headMetadata?: HeadMetadataExtraction;
   headMetadataError?: string;
-  sitemapCheck?: SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[]; pageUrl: string };
+  sitemapCheck?: SitemapCheckResult & {
+    crawledUrls: string[];
+    discoveredUrls: string[];
+    pageUrl: string;
+  };
   llmsTxtCheck?: LlmsTxtCheckResult;
   canonicalTarget?: CanonicalTargetCheckResult;
   mixedContent?: MixedContentExtraction;
@@ -252,8 +275,12 @@ export async function scanPage(
             browser,
             ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
             ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
-            ...(options.redirectHostCache !== undefined ? { hostCache: options.redirectHostCache } : {}),
-            ...(options.bookingEngineUrl !== undefined ? { bookingEngineUrl: options.bookingEngineUrl } : {}),
+            ...(options.redirectHostCache !== undefined
+              ? { hostCache: options.redirectHostCache }
+              : {}),
+            ...(options.bookingEngineUrl !== undefined
+              ? { bookingEngineUrl: options.bookingEngineUrl }
+              : {}),
           });
           // Only a confirmed single-property redirect promotes to
           // transactional-flow evidence (drives hasTransactionalFlow);
@@ -347,7 +374,11 @@ export async function scanPage(
         // comparison, not a page error worth surfacing to the client.
         if (headMetadataResult !== undefined) {
           try {
-            napConsistencyResult = await checkNapConsistency(page, url, headMetadataResult.jsonLdBlocks);
+            napConsistencyResult = await checkNapConsistency(
+              page,
+              url,
+              headMetadataResult.jsonLdBlocks,
+            );
           } catch {
             napConsistencyResult = undefined;
           }
@@ -396,15 +427,18 @@ export async function scanPage(
   if (axeError !== undefined) result.axeError = axeError;
   if (mentionsLegalesResult !== undefined) result.mentionsLegales = mentionsLegalesResult;
   if (mentionsLegalesError !== undefined) result.mentionsLegalesError = mentionsLegalesError;
-  if (transactionalFlowEvidence !== undefined) result.transactionalFlowEvidence = transactionalFlowEvidence;
-  if (transactionalFlowRedirectChecks !== undefined) result.transactionalFlowRedirectChecks = transactionalFlowRedirectChecks;
+  if (transactionalFlowEvidence !== undefined)
+    result.transactionalFlowEvidence = transactionalFlowEvidence;
+  if (transactionalFlowRedirectChecks !== undefined)
+    result.transactionalFlowRedirectChecks = transactionalFlowRedirectChecks;
   if (headMetadataResult !== undefined) result.headMetadata = headMetadataResult;
   if (headMetadataError !== undefined) result.headMetadataError = headMetadataError;
   if (canonicalTargetResult !== undefined) result.canonicalTarget = canonicalTargetResult;
   if (mixedContentResult !== undefined) result.mixedContent = mixedContentResult;
   if (mixedContentError !== undefined) result.mixedContentError = mixedContentError;
   if (keyboardNavigationResult !== undefined) result.keyboardNavigation = keyboardNavigationResult;
-  if (keyboardNavigationError !== undefined) result.keyboardNavigationError = keyboardNavigationError;
+  if (keyboardNavigationError !== undefined)
+    result.keyboardNavigationError = keyboardNavigationError;
   if (formErrorHandlingResult !== undefined) result.formErrorHandling = formErrorHandlingResult;
   if (formErrorHandlingError !== undefined) result.formErrorHandlingError = formErrorHandlingError;
   if (videoCaptionsResult !== undefined) result.videoCaptions = videoCaptionsResult;

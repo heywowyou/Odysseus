@@ -36,10 +36,18 @@ export interface AltTextCheckInput {
 }
 
 /** e.g. IMG_4021.jpg, DSC00123.png, PXL_20240102_030405.jpg. */
-const FILENAME_PATTERN_ALT = /^(img|dsc|dcim|pxl|photo|image|picture)[-_ ]?\d{3,}(\.(jpe?g|png|gif|webp|bmp|heic))?$/i;
+const FILENAME_PATTERN_ALT =
+  /^(img|dsc|dcim|pxl|photo|image|picture)[-_ ]?\d{3,}(\.(jpe?g|png|gif|webp|bmp|heic))?$/i;
 const HAS_FILE_EXTENSION = /\.(jpe?g|png|gif|webp|bmp|heic)$/i;
 
-const GENERIC_PLACEHOLDER_ALT_TEXT = new Set(['image', 'photo', 'picture', 'img', 'graphic', 'icon']);
+const GENERIC_PLACEHOLDER_ALT_TEXT = new Set([
+  'image',
+  'photo',
+  'picture',
+  'img',
+  'graphic',
+  'icon',
+]);
 
 /** Below this, a 0-width/height decorative-looking image is very
  *  commonly a spacer or icon even without explicit decorative markup -

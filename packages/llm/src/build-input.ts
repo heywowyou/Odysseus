@@ -102,7 +102,10 @@ export function buildWritingInput(
  *  reports the true scope of the scan. See docs/report-v2-refactor.md
  *  B10. pagesScanned counts visited pages only, matching the crawled-page
  *  count structure-ranking.ts uses for the site-wide accessibility floor. */
-export function computeSiteStats(allFindings: readonly Finding[], manifest: AuditManifest): WritingSiteStats {
+export function computeSiteStats(
+  allFindings: readonly Finding[],
+  manifest: AuditManifest,
+): WritingSiteStats {
   const bySeverity = { critical: 0, serious: 0, moderate: 0, minor: 0 };
   for (const finding of allFindings) bySeverity[finding.severity]++;
 

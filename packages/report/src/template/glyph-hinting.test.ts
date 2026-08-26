@@ -43,7 +43,7 @@ function buildProbeHtml(styles: string): string {
   for (const weight of PROBE_WEIGHTS) {
     for (const size of PROBE_SIZES) {
       rows.push(
-        `<div style="font-weight:${weight};font-size:${size}px;font-family:var(--font-body);margin-bottom:4px">${testString}</div>`
+        `<div style="font-weight:${weight};font-size:${size}px;font-family:var(--font-body);margin-bottom:4px">${testString}</div>`,
       );
     }
   }

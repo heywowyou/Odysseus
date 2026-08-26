@@ -62,7 +62,14 @@ export const CATEGORY: Record<FindingCategory, { color: string; bg: string }> = 
   privacy: { color: '#e5c07b', bg: '#332a19' },
 };
 
-export const CATEGORY_ORDER: readonly FindingCategory[] = ['accessibility', 'privacy', 'seo', 'rendering', 'performance', 'geo'];
+export const CATEGORY_ORDER: readonly FindingCategory[] = [
+  'accessibility',
+  'privacy',
+  'seo',
+  'rendering',
+  'performance',
+  'geo',
+];
 
 /** Shared three-point ramp for any Faible/Moyen/Élevé (or Low/Medium/
  *  High) value that means "how urgent", not only the cover's own

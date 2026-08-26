@@ -53,37 +53,33 @@ describe('scanPage against fixtures/spa-demo', () => {
     if (scratchScreenshotDir) await fs.rm(scratchScreenshotDir, { recursive: true, force: true });
   });
 
-  it(
-    'runs render-diff, axe, and Lighthouse against the homepage with no scanner failures',
-    async () => {
-      scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-page-'));
-      const result = await scanPage(browser, debugPort, TEST_URL, {
-        delayMs: 0,
-        screenshotDir: scratchScreenshotDir,
-      });
+  it('runs render-diff, axe, and Lighthouse against the homepage with no scanner failures', async () => {
+    scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-page-'));
+    const result = await scanPage(browser, debugPort, TEST_URL, {
+      delayMs: 0,
+      screenshotDir: scratchScreenshotDir,
+    });
 
-      expect(result.renderDiffError).toBeUndefined();
-      expect(result.axeError).toBeUndefined();
-      expect(result.lighthouseError).toBeUndefined();
+    expect(result.renderDiffError).toBeUndefined();
+    expect(result.axeError).toBeUndefined();
+    expect(result.lighthouseError).toBeUndefined();
 
-      expect(result.renderDiff?.httpStatus).toBe(200);
-      expect(result.renderDiff?.missingPercent).toBeGreaterThan(90);
+    expect(result.renderDiff?.httpStatus).toBe(200);
+    expect(result.renderDiff?.missingPercent).toBeGreaterThan(90);
 
-      // The fixture's email input has no <label>, but its placeholder
-      // attribute is still a valid accessible-name source per the HTML-AAM
-      // spec, so axe-core's `label` rule does not fire here even though
-      // placeholder-as-label is a real UX anti-pattern. Only color-contrast
-      // and image-alt are rule violations axe-core actually reports.
-      const violationIds: string[] =
-        result.axe?.violations.map((violation: { id: string }) => violation.id) ?? [];
-      expect(violationIds).toEqual(expect.arrayContaining(['color-contrast', 'image-alt']));
+    // The fixture's email input has no <label>, but its placeholder
+    // attribute is still a valid accessible-name source per the HTML-AAM
+    // spec, so axe-core's `label` rule does not fire here even though
+    // placeholder-as-label is a real UX anti-pattern. Only color-contrast
+    // and image-alt are rule violations axe-core actually reports.
+    const violationIds: string[] =
+      result.axe?.violations.map((violation: { id: string }) => violation.id) ?? [];
+    expect(violationIds).toEqual(expect.arrayContaining(['color-contrast', 'image-alt']));
 
-      const categories = result.lighthouse?.categories ?? {};
-      for (const key of ['performance', 'accessibility', 'seo', 'best-practices']) {
-        expect(categories).toHaveProperty(key);
-        expect(typeof categories[key]?.score).toBe('number');
-      }
-    },
-    120_000,
-  );
+    const categories = result.lighthouse?.categories ?? {};
+    for (const key of ['performance', 'accessibility', 'seo', 'best-practices']) {
+      expect(categories).toHaveProperty(key);
+      expect(typeof categories[key]?.score).toBe('number');
+    }
+  }, 120_000);
 });

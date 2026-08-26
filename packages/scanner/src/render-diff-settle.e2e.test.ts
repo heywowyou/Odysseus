@@ -55,7 +55,8 @@ describe('renderDiff against a page that never reaches network idle', () => {
     });
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
-    if (address === null || typeof address === 'string') throw new Error('server did not bind a port');
+    if (address === null || typeof address === 'string')
+      throw new Error('server did not bind a port');
     testUrl = `http://127.0.0.1:${address.port}/`;
     ({ browser } = await launchBrowser());
     screenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-settle-'));

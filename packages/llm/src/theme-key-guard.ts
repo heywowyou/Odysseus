@@ -30,5 +30,7 @@ export function findThemeKeyMismatches(
 }
 
 export function isThemeKeyMismatchEmpty(mismatch: ThemeKeyMismatch): boolean {
-  return mismatch.missing.length === 0 && mismatch.extra.length === 0 && mismatch.duplicate.length === 0;
+  return (
+    mismatch.missing.length === 0 && mismatch.extra.length === 0 && mismatch.duplicate.length === 0
+  );
 }

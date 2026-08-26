@@ -10,7 +10,12 @@
  * that depends on them, avoiding a circular import.
  */
 
-import type { FindingCategory, FindingElement, FindingSource, Severity } from '../types/findings.js';
+import type {
+  FindingCategory,
+  FindingElement,
+  FindingSource,
+  Severity,
+} from '../types/findings.js';
 
 export interface FindingCandidate {
   source: FindingSource;

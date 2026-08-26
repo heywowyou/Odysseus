@@ -101,7 +101,11 @@ async function loadCacheIntoMap(cacheFilePath: string): Promise<Map<string, Sire
   return index;
 }
 
-async function buildCache(stockFilePath: string, cacheFilePath: string, stockFingerprint: string): Promise<void> {
+async function buildCache(
+  stockFilePath: string,
+  cacheFilePath: string,
+  stockFingerprint: string,
+): Promise<void> {
   const enabledNafCodes = getEnabledNafCodes();
   const output = createWriteStream(cacheFilePath, { encoding: 'utf-8' });
   output.write(`${JSON.stringify({ fingerprint: stockFingerprint })}\n`);
@@ -112,7 +116,6 @@ async function buildCache(stockFilePath: string, cacheFilePath: string, stockFin
 
     parser.on('readable', () => {
       let record: Record<string, string> | null;
-      // eslint-disable-next-line no-cond-assign
       while ((record = parser.read()) !== null) {
         const siren = record['siren'];
         const naf = record['activitePrincipaleUniteLegale'];

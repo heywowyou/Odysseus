@@ -43,7 +43,9 @@ export async function generateReportPdf(input: GenerateReportInput): Promise<Buf
   // its cover.
   const unconfirmed = findUnconfirmedIdentityFields(input.manualFields);
   if (unconfirmed.length > 0) {
-    const details = unconfirmed.map((f) => `  - ${f.field}: "${f.value}" (detected, not confirmed)`).join('\n');
+    const details = unconfirmed
+      .map((f) => `  - ${f.field}: "${f.value}" (detected, not confirmed)`)
+      .join('\n');
     throw new Error(
       'Report generation aborted: the client identity on the cover is still a detected guess, ' +
         `never shipped to a client unconfirmed:\n${details}\n` +
@@ -71,11 +73,9 @@ export async function generateReportPdf(input: GenerateReportInput): Promise<Buf
 
     const lintViolations = findRenderLintViolations(html);
     if (lintViolations.length > 0) {
-      const details = lintViolations
-        .map((v) => `  - ${v.label}: "...${v.context}..."`)
-        .join('\n');
+      const details = lintViolations.map((v) => `  - ${v.label}: "...${v.context}..."`).join('\n');
       throw new Error(
-        `Report generation aborted: rendered HTML contains ${lintViolations.length} render-lint violation(s), never shipped to a client:\n${details}`
+        `Report generation aborted: rendered HTML contains ${lintViolations.length} render-lint violation(s), never shipped to a client:\n${details}`,
       );
     }
 

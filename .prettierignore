@@ -1,0 +1,33 @@
+# Dependencies, build products, runtime data, and generated artifacts
+**/node_modules/**
+**/dist/**
+**/.next/**
+artifacts/**
+coverage/**
+data/**
+reports/**
+*.tsbuildinfo
+
+# Agent/plugin metadata and local tool configuration are owned externally.
+.agents/**
+.claude/**
+.codex/**
+.mcp.json
+skills-lock.json
+
+# Canonical or generated design artifacts are not formatter-owned source.
+docs/design/*.flat.html
+docs/mockups/**
+
+# Prose is governed by docs/agents/coding-conventions.md and docs:check.
+**/*.md
+
+# Preserve dependency-lock and external fixture serialization.
+pnpm-lock.yaml
+fixtures/**/*.csv
+
+# Binary and environment-specific files
+**/*.pdf
+**/*.png
+**/*.woff2
+.env

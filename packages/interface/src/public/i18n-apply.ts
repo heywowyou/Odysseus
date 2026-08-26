@@ -3,7 +3,11 @@ import { DEFAULT_DASHBOARD_LANGUAGE, getStrings, type DashboardStrings } from '.
 function getByPath(source: unknown, path: string): unknown {
   return path
     .split('.')
-    .reduce<unknown>((acc, key) => (acc && typeof acc === 'object' ? (acc as Record<string, unknown>)[key] : undefined), source);
+    .reduce<unknown>(
+      (acc, key) =>
+        acc && typeof acc === 'object' ? (acc as Record<string, unknown>)[key] : undefined,
+      source,
+    );
 }
 
 /** Applies the dashboard chrome strings to every element in the current
@@ -23,7 +27,9 @@ export function applyStrings(): DashboardStrings {
     if (typeof value === 'string') el.textContent = value;
   }
 
-  for (const el of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-i18n-placeholder]')) {
+  for (const el of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+    '[data-i18n-placeholder]',
+  )) {
     const path = el.dataset['i18nPlaceholder'];
     if (!path) continue;
     const value = getByPath(strings, path);

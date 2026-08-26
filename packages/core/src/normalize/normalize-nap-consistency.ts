@@ -77,7 +77,10 @@ export function normalizeNapConsistency(
         'The postal code in the structured data does not appear on the page',
         `This page declares postal code ${input.structuredPostalCodes.join(', ')} to search engines and AI assistants, but the code a visitor reads is ${input.visiblePostalCodes.join(', ')}.`,
         pageUrl,
-        { structuredPostalCodes: input.structuredPostalCodes, visiblePostalCodes: input.visiblePostalCodes },
+        {
+          structuredPostalCodes: input.structuredPostalCodes,
+          visiblePostalCodes: input.visiblePostalCodes,
+        },
       ),
     );
   }

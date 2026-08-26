@@ -18,7 +18,15 @@ import {
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { formatMetricValue, METRIC_UNITS } from './core-web-vitals-table.js';
-import { escapeHtml, escapeProse, fillTemplate, formatCappedFindingIdLinks, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  escapeProse,
+  fillTemplate,
+  formatCappedFindingIdLinks,
+  formatNumber,
+  renderSheetHeader,
+  sheet,
+} from '../html-utils.js';
 import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
@@ -69,8 +77,13 @@ export const MAX_RENDERED_THEMES = 6;
  * and the final list stays in priorityRank order so the numbering a reader
  * sees is still ascending.
  */
-export function selectRenderedThemes(themes: readonly Theme[], findingsById: ReadonlyMap<string, Finding>): Theme[] {
-  const withResolvedFindings = themes.filter((theme) => theme.findingIds.some((id) => findingsById.has(id)));
+export function selectRenderedThemes(
+  themes: readonly Theme[],
+  findingsById: ReadonlyMap<string, Finding>,
+): Theme[] {
+  const withResolvedFindings = themes.filter((theme) =>
+    theme.findingIds.some((id) => findingsById.has(id)),
+  );
   const byRank = [...withResolvedFindings].sort((a, b) => a.priorityRank - b.priorityRank);
   const selected = byRank.slice(0, MAX_RENDERED_THEMES);
   if (selected.length < MAX_RENDERED_THEMES) return selected;
@@ -108,8 +121,9 @@ export function selectRenderedThemes(themes: readonly Theme[], findingsById: Rea
       );
       const isSoleRepresentative = covers.some(
         (c) =>
-          selected.filter((t) => themeFindings(t).some((f) => f.category === c && f.severity === 'critical'))
-            .length === 1,
+          selected.filter((t) =>
+            themeFindings(t).some((f) => f.category === c && f.severity === 'critical'),
+          ).length === 1,
       );
       if (isSoleRepresentative) continue;
       selectedKeys.delete(candidate.priorityRank);
@@ -135,7 +149,10 @@ function pageWord(strings: ReportStrings, count: number): string {
   return count === 1 ? strings.findingsAppendix.pageSingular : strings.findingsAppendix.pagePlural;
 }
 
-const RATIO_KINDS_PER_TENTH_SECOND: ReadonlySet<string> = new Set(['conversion-uplift-per-0.1s', 'aov-uplift-per-0.1s']);
+const RATIO_KINDS_PER_TENTH_SECOND: ReadonlySet<string> = new Set([
+  'conversion-uplift-per-0.1s',
+  'aov-uplift-per-0.1s',
+]);
 
 function median(values: readonly number[]): number | null {
   if (values.length === 0) return null;
@@ -156,7 +173,13 @@ function median(values: readonly number[]): number | null {
  *  the citation landed and described a different metric than the priority it
  *  sat under, which an IT-literate reader spots immediately. Same family as
  *  trade-off 16's B1: a deterministic attachment with the wrong anchor. */
-const CWV_METRIC_PREFERENCE: readonly CoreWebVitalMetricKey[] = ['lcp', 'tbt', 'fcp', 'speedIndex', 'cls'];
+const CWV_METRIC_PREFERENCE: readonly CoreWebVitalMetricKey[] = [
+  'lcp',
+  'tbt',
+  'fcp',
+  'speedIndex',
+  'cls',
+];
 
 /** A real Lagnonu report exposed the gap this closes: a theme titled
  *  "Blocage du navigateur par des scripts JavaScript" (TBT) bundled one
@@ -170,7 +193,9 @@ const CWV_METRIC_PREFERENCE: readonly CoreWebVitalMetricKey[] = ['lcp', 'tbt', '
  *  metric is not" - and that principle does not stop applying just
  *  because the wrong metric it would otherwise quote happens to be the
  *  most commonly cited one (LCP) rather than an arbitrary one. */
-function themeCoreWebVitalMetric(themeFindings: readonly Finding[]): CoreWebVitalMetricKey | undefined {
+function themeCoreWebVitalMetric(
+  themeFindings: readonly Finding[],
+): CoreWebVitalMetricKey | undefined {
   const counts = new Map<CoreWebVitalMetricKey, number>();
   for (const finding of themeFindings) {
     const key = AUDIT_ID_TO_CWV_KEY.get(finding.ruleId);
@@ -264,7 +289,8 @@ function renderRevenueImpactNote(
   stat: ReferenceStat,
   turnoverEur: number | undefined,
 ): string | undefined {
-  if (turnoverEur === undefined || stat.scalability !== 'scales-down' || !stat.ratio) return undefined;
+  if (turnoverEur === undefined || stat.scalability !== 'scales-down' || !stat.ratio)
+    return undefined;
   const result = estimateRevenueImpact(stat, turnoverEur);
   if ('error' in result) return undefined;
   const impact = roundConservativeEurEstimate(result.revenueGainEur);
@@ -305,7 +331,11 @@ function themeFindingsAgreeWithCategory(
   return themeFindings.every((finding) => finding.category === theme.category);
 }
 
-function renderOwnershipSplitNote(strings: ReportStrings, language: ReportLanguage, themeFindings: readonly Finding[]): string {
+function renderOwnershipSplitNote(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  themeFindings: readonly Finding[],
+): string {
   const thirdPartyFindings = themeFindings.filter((f) => isThirdPartyFinding(f));
   const firstPartyFindings = themeFindings.filter((f) => !isThirdPartyFinding(f));
   if (thirdPartyFindings.length === 0 || firstPartyFindings.length === 0) return '';
@@ -313,7 +343,13 @@ function renderOwnershipSplitNote(strings: ReportStrings, language: ReportLangua
   const t = strings.themes;
   const firstPartyPages = new Set(firstPartyFindings.flatMap((f) => f.pageUrls)).size;
   const thirdPartyPages = new Set(thirdPartyFindings.flatMap((f) => f.pageUrls)).size;
-  const vendors = [...new Set(thirdPartyFindings.map((f) => detectFindingVendor(f)).filter((v): v is string => v !== undefined))];
+  const vendors = [
+    ...new Set(
+      thirdPartyFindings
+        .map((f) => detectFindingVendor(f))
+        .filter((v): v is string => v !== undefined),
+    ),
+  ];
   const vendorLabel = vendors.length > 0 ? vendors.join(', ') : t.ownershipSplitUnknownVendorLabel;
 
   const text = fillTemplate(t.ownershipSplitTemplate, {
@@ -334,11 +370,18 @@ function renderOwnershipSplitNote(strings: ReportStrings, language: ReportLangua
  *  sends the client's agency after a fix it cannot make. Mutually exclusive
  *  with renderOwnershipSplitNote by construction: a theme is either split,
  *  fully third-party, or fully first-party, never two of those at once. */
-function renderThirdPartyOnlyNote(strings: ReportStrings, themeFindings: readonly Finding[]): string {
+function renderThirdPartyOnlyNote(
+  strings: ReportStrings,
+  themeFindings: readonly Finding[],
+): string {
   if (themeFindings.length === 0 || !themeFindings.every((f) => isThirdPartyFinding(f))) return '';
 
   const t = strings.themes;
-  const vendors = [...new Set(themeFindings.map((f) => detectFindingVendor(f)).filter((v): v is string => v !== undefined))];
+  const vendors = [
+    ...new Set(
+      themeFindings.map((f) => detectFindingVendor(f)).filter((v): v is string => v !== undefined),
+    ),
+  ];
   const vendorLabel = vendors.length > 0 ? vendors.join(', ') : t.ownershipSplitUnknownVendorLabel;
 
   const text = fillTemplate(t.thirdPartyOnlyTemplate, { vendor: vendorLabel });
@@ -351,7 +394,10 @@ function renderThirdPartyOnlyNote(strings: ReportStrings, themeFindings: readonl
  *  scan observation are spliced deterministically (trade-off 28). Without
  *  this, a reader hits the finding here first with no indication that the
  *  same fact is addressed at length elsewhere in the report. */
-function renderLcenCrossReferenceNote(strings: ReportStrings, themeFindings: readonly Finding[]): string {
+function renderLcenCrossReferenceNote(
+  strings: ReportStrings,
+  themeFindings: readonly Finding[],
+): string {
   if (!themeFindings.some((f) => f.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID)) return '';
 
   const text = fillTemplate(strings.themes.lcenCrossReferenceTemplate, {
@@ -392,14 +438,17 @@ function renderTheme(
   turnoverEur: number | undefined,
 ): string {
   const t = strings.themes;
-  const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
+  const themeFindings = theme.findingIds
+    .map((id) => findingsById.get(id))
+    .filter((f): f is Finding => f !== undefined);
   const uniquePages = new Set(themeFindings.flatMap((f) => f.pageUrls)).size;
 
   const category = CATEGORY[theme.category];
   const categoryTag = `<span class="tag" style="background:${category.bg};color:${category.color}">${escapeHtml(strings.findingsAppendix.categoryLabels[theme.category])}</span>`;
-  const quickWinBadge = showQuickWinBadge && isQuickWinTheme(theme)
-    ? `<span class="tag qw" style="display:inline-flex;align-items:center;gap:4px;background:#1c3a2c;color:#7cd9a0">${QUICK_WIN_ICON}${escapeHtml(t.quickWinBadgeLabel)}</span>`
-    : '';
+  const quickWinBadge =
+    showQuickWinBadge && isQuickWinTheme(theme)
+      ? `<span class="tag qw" style="display:inline-flex;align-items:center;gap:4px;background:#1c3a2c;color:#7cd9a0">${QUICK_WIN_ICON}${escapeHtml(t.quickWinBadgeLabel)}</span>`
+      : '';
 
   const isNonConformant = theme.legalRelevance !== undefined;
   const conformityValue = isNonConformant ? t.conformityNonConformant : t.conformityNotApplicable;
@@ -420,10 +469,21 @@ function renderTheme(
     ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(theme.legalRelevance)}</p>`
     : `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(t.conformityNotApplicable)}</p>`;
 
-  const gapNote = citationStat ? measuredCoreWebVitalGapNote(strings, language, citationStat, themeFindings, manifest) : undefined;
-  const revenueImpactNote = citationStat ? renderRevenueImpactNote(strings, language, citationStat, turnoverEur) : undefined;
+  const gapNote = citationStat
+    ? measuredCoreWebVitalGapNote(strings, language, citationStat, themeFindings, manifest)
+    : undefined;
+  const revenueImpactNote = citationStat
+    ? renderRevenueImpactNote(strings, language, citationStat, turnoverEur)
+    : undefined;
   const citationBox = citationStat
-    ? renderReferenceStatNote(t.impactCitationLabel, citationStat, language, undefined, gapNote, revenueImpactNote)
+    ? renderReferenceStatNote(
+        t.impactCitationLabel,
+        citationStat,
+        language,
+        undefined,
+        gapNote,
+        revenueImpactNote,
+      )
     : '';
 
   // item 27: a diagnosis without a prescription - the LLM already writes
@@ -554,7 +614,10 @@ function isStatEligibleForRuleIds(stat: ReferenceStat, themeFindings: readonly F
  *  for a theme that has some real findings plus one already-resolved one,
  *  which selectRenderedThemes's filter does not touch. */
 function isCitationIneligibleTheme(themeFindings: readonly Finding[]): boolean {
-  return themeFindings.length === 0 || themeFindings.every((finding) => finding.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID);
+  return (
+    themeFindings.length === 0 ||
+    themeFindings.every((finding) => finding.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID)
+  );
 }
 
 function isStatEligibleForTheme(
@@ -564,7 +627,9 @@ function isStatEligibleForTheme(
 ): boolean {
   if (!isStatEligibleForRuleIds(stat, themeFindings)) return false;
   if (!stat.ratio || !RATIO_KINDS_REQUIRING_TRANSACTIONAL_CONTEXT.has(stat.ratio.kind)) return true;
-  return themeFindings.some((finding) => finding.pageUrls.some((url) => transactionalPageUrls.has(url)));
+  return themeFindings.some((finding) =>
+    finding.pageUrls.some((url) => transactionalPageUrls.has(url)),
+  );
 }
 
 export function renderThemes(
@@ -602,7 +667,9 @@ export function renderThemes(
   const citationByRank = new Map<number, ReferenceStat>();
   const transactionalPageUrls = transactionalFlowPageUrls(analysis);
   for (const theme of sortedThemes) {
-    const themeFindings = theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
+    const themeFindings = theme.findingIds
+      .map((id) => findingsById.get(id))
+      .filter((f): f is Finding => f !== undefined);
     // B2.2 (2026-08-24, Domaine Lagnonu). theme.category is chosen by the
     // model, and a real run labelled a security-headers theme
     // ('privacy' findings, per trade-off 25) as 'performance' - which would
@@ -627,7 +694,9 @@ export function renderThemes(
     // omit the citation entirely rather than approximate.
     const candidates = selectReferenceStats(theme.category, sector, { strictSector: true });
     const top = candidates.find(
-      (stat) => !citedStatIds.has(stat.id) && isStatEligibleForTheme(stat, themeFindings, transactionalPageUrls),
+      (stat) =>
+        !citedStatIds.has(stat.id) &&
+        isStatEligibleForTheme(stat, themeFindings, transactionalPageUrls),
     );
     if (top) {
       citationByRank.set(theme.priorityRank, top);
@@ -639,7 +708,9 @@ export function renderThemes(
   const showQuickWinBadge = !sortedThemes.every(isQuickWinTheme);
   // P2.2: the first rendered theme with no legalRelevance (i.e. whose
   // Conformité column reads "Sans objet") carries the inline gloss.
-  const firstNotApplicableRank = sortedThemes.find((theme) => theme.legalRelevance === undefined)?.priorityRank;
+  const firstNotApplicableRank = sortedThemes.find(
+    (theme) => theme.legalRelevance === undefined,
+  )?.priorityRank;
   const turnoverEur = analysis.obligationAssessment?.registrySnapshot?.turnoverEur;
   const themeBlocks = sortedThemes
     .map((theme) =>
@@ -682,9 +753,13 @@ export function renderThemes(
   // section - accept the resulting white space rather than a section
   // header starting two lines above a page break, same reasoning already
   // applied to the checklist/annexe/glossaire sections.
-  return sheet(`
+  return sheet(
+    `
     ${renderSheetHeader(ordinal, strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }))}
     ${aggregateEstimateNote}
     ${themeBlocks}
-  `, 'sheet-standalone', 'section-04');
+  `,
+    'sheet-standalone',
+    'section-04',
+  );
 }

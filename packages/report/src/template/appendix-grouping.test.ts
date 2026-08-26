@@ -58,8 +58,18 @@ describe('groupAppendix', () => {
       lastSeenAt: new Date(),
     };
     const findings: Finding[] = [
-      { ...base, findingId: 'f1', dedupeKey: 'd1', pageUrls: ['https://example.com/a', 'https://example.com/b'] },
-      { ...base, findingId: 'f2', dedupeKey: 'd2', pageUrls: ['https://example.com/b', 'https://example.com/c'] },
+      {
+        ...base,
+        findingId: 'f1',
+        dedupeKey: 'd1',
+        pageUrls: ['https://example.com/a', 'https://example.com/b'],
+      },
+      {
+        ...base,
+        findingId: 'f2',
+        dedupeKey: 'd2',
+        pageUrls: ['https://example.com/b', 'https://example.com/c'],
+      },
     ];
 
     const groups = groupAppendix(findings);
@@ -215,8 +225,22 @@ describe('item 1.3: the image-weight rule family clusters into one group', () =>
 
   it('keeps a family split into two groups when members have different severities', () => {
     const findings: Finding[] = [
-      { ...base, findingId: 'f1', ruleId: 'unsized-images', severity: 'moderate', dedupeKey: 'd1', pageUrls: ['https://example.com/a'] },
-      { ...base, findingId: 'f2', ruleId: 'modern-image-formats', severity: 'minor', dedupeKey: 'd2', pageUrls: ['https://example.com/b'] },
+      {
+        ...base,
+        findingId: 'f1',
+        ruleId: 'unsized-images',
+        severity: 'moderate',
+        dedupeKey: 'd1',
+        pageUrls: ['https://example.com/a'],
+      },
+      {
+        ...base,
+        findingId: 'f2',
+        ruleId: 'modern-image-formats',
+        severity: 'minor',
+        dedupeKey: 'd2',
+        pageUrls: ['https://example.com/b'],
+      },
     ];
 
     const groups = groupAppendix(findings);
@@ -226,7 +250,14 @@ describe('item 1.3: the image-weight rule family clusters into one group', () =>
 
   it('leaves a non-family ruleId completely unaffected (memberRuleIds has exactly one entry)', () => {
     const findings: Finding[] = [
-      { ...base, findingId: 'f1', ruleId: 'color-contrast', severity: 'serious', dedupeKey: 'd1', pageUrls: ['https://example.com/a'] },
+      {
+        ...base,
+        findingId: 'f1',
+        ruleId: 'color-contrast',
+        severity: 'serious',
+        dedupeKey: 'd1',
+        pageUrls: ['https://example.com/a'],
+      },
     ];
 
     const groups = groupAppendix(findings);

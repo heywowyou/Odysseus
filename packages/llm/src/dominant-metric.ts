@@ -16,7 +16,9 @@ type MetricKey = keyof typeof POOR_THRESHOLDS;
 function metricValues(manifest: AuditManifest, metric: MetricKey): number[] {
   return manifest.pages
     .map((page): CoreWebVitalMeasurement | undefined => page.coreWebVitals?.[metric])
-    .filter((measurement): measurement is CoreWebVitalMeasurement => measurement?.numericValue != null)
+    .filter(
+      (measurement): measurement is CoreWebVitalMeasurement => measurement?.numericValue != null,
+    )
     .map((measurement) => measurement.numericValue as number);
 }
 
@@ -38,7 +40,9 @@ export function computeDominantPerformanceMetric(manifest: AuditManifest): Metri
     const threshold = POOR_THRESHOLDS[metric];
     const poorValues = metricValues(manifest, metric).filter((value) => value > threshold);
     const averageRatio =
-      poorValues.length === 0 ? 0 : poorValues.reduce((sum, value) => sum + value / threshold, 0) / poorValues.length;
+      poorValues.length === 0
+        ? 0
+        : poorValues.reduce((sum, value) => sum + value / threshold, 0) / poorValues.length;
     return { metric, poorPageCount: poorValues.length, averageRatio };
   });
 

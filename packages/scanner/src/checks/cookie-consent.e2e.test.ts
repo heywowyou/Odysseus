@@ -11,7 +11,10 @@ import type { Browser } from 'playwright';
 import { launchBrowser } from '../browser.js';
 import { checkCookieConsent, classifyCookie, classifyTrackerUrl } from './cookie-consent.js';
 
-function startServer(html: string, setCookies: string[]): Promise<{ server: Server; origin: string }> {
+function startServer(
+  html: string,
+  setCookies: string[],
+): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((_req, res) => {
       res
@@ -40,7 +43,9 @@ describe('classifyCookie', () => {
 
 describe('classifyTrackerUrl', () => {
   it('matches a subdomain of a tracker host', () => {
-    expect(classifyTrackerUrl('https://stats.g.doubleclick.net/x')?.vendor).toBe('Google DoubleClick');
+    expect(classifyTrackerUrl('https://stats.g.doubleclick.net/x')?.vendor).toBe(
+      'Google DoubleClick',
+    );
   });
 
   it('does not match an ordinary first-party or CDN URL', () => {
@@ -93,10 +98,7 @@ describe('checkCookieConsent against a real page', () => {
     // The host does not resolve from the test environment; the request is
     // still made, which is the fact that matters - the visitor's IP would
     // reach the vendor on a real network.
-    const result = await run(
-      '<img src="https://www.google-analytics.com/collect?v=1" alt="">',
-      [],
-    );
+    const result = await run('<img src="https://www.google-analytics.com/collect?v=1" alt="">', []);
     expect(result.trackerRequests.map((r) => r.vendor)).toContain('Google Analytics');
   }, 30_000);
 
@@ -109,7 +111,10 @@ describe('checkCookieConsent against a real page', () => {
     const tracking = await run('<iframe src="https://www.youtube.com/embed/x"></iframe>', []);
     expect(tracking.usesTrackingYouTubeEmbed).toBe(true);
 
-    const privacyEnhanced = await run('<iframe src="https://www.youtube-nocookie.com/embed/x"></iframe>', []);
+    const privacyEnhanced = await run(
+      '<iframe src="https://www.youtube-nocookie.com/embed/x"></iframe>',
+      [],
+    );
     expect(privacyEnhanced.usesTrackingYouTubeEmbed).toBe(false);
   }, 45_000);
 
@@ -149,7 +154,9 @@ describe('C5: third-party origin inventory', () => {
       expect(hosts).toContain('cdn.example-provider.com');
       expect(hosts).not.toContain('127.0.0.1');
       // Two requests to one origin is one entry, counted.
-      expect(result.thirdPartyOrigins.find((e) => e.origin.includes('example-provider'))?.requestCount).toBe(2);
+      expect(
+        result.thirdPartyOrigins.find((e) => e.origin.includes('example-provider'))?.requestCount,
+      ).toBe(2);
     } finally {
       server.close();
     }
