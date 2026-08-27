@@ -390,11 +390,17 @@ authorization does not carry between sessions.
 
 ## Explicitly deferred
 
-- Overpass ingestion. The measurement condition is now met and the decision is
-  open: plan 003 measured 5,720 usable own-domain hotel candidates on
-  2026-08-27, below the 8,000 floor, so `decideOverpassNeed` returns `propose`.
-  A shortfall is not authorization. Adding the source is an operator decision
-  that has not been taken; until it is, this stays deferred.
+- Overpass ingestion. **Declined by the operator, 2026-08-27, with the
+  measurement in hand.** Plan 003 measured 5,720 usable own-domain candidates
+  against the 8,000 floor, so `decideOverpassNeed` returned `propose` and the
+  run ingested nothing. The operator's reasoning: the 8,000 floor was set
+  against a national-campaign target, not against what the pipeline needs to
+  start earning, and 5,720 supports the first-100 experiment and the campaign
+  behind it many times over. Population growth is expected to come from new
+  verticals and other EU countries rather than from a denser source for French
+  hotels. Do not re-propose Overpass on the strength of the shortfall alone;
+  re-propose only if French hotel supply itself becomes the binding constraint
+  on revenue.
 - DATAtourisme as a second source: evaluated and rejected 2026-08-27, see
   "Measured source facts". Reconsider only if plan 003 measures a large
   unusable-website rate among the 9,730 declared websites.

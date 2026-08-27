@@ -15,8 +15,8 @@
 - **Status**: DONE, 2026-08-27. Implemented, tested, and validated by a full
   live run over all 13,301 candidates; measured facts in
   `advisor-plans/README.md`, "Measured source facts". Binding decision 3 is
-  triggered (5,720 qualified against the 8,000 floor) and left open for the
-  operator; nothing was ingested.
+  triggered (5,720 qualified against the 8,000 floor) and resolved: the
+  operator declined Overpass on the measurement. Nothing was ingested.
 - **Planned at**: `f7ef7cf`, 2026-08-27
 - **Amended at**: 2026-08-27, before execution, by operator decision. See
   "Execution decisions" below. The steps are otherwise unchanged.
@@ -177,8 +177,10 @@ tests. No live hotel scan is authorized by this plan.
       and updates the candidate's current-state pointer. No `prospects` event is
       emitted at this stage; see execution decision 2.
 - [x] Coverage decides whether an Overpass plan is needed. It returned
-      `propose` at 5,720 qualified. The decision itself is the operator's and
-      is open; the run ingested nothing, which is the specified behaviour.
+      `propose` at 5,720 qualified; the run ingested nothing, which is the
+      specified behaviour. The operator declined Overpass on 2026-08-27 with
+      that number in hand. See `advisor-plans/README.md`, "Explicitly
+      deferred".
 - [x] Tests/check pass; plan 003 is `DONE`.
 
 ## STOP conditions
