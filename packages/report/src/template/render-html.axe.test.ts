@@ -17,10 +17,7 @@ import {
   loadSmallSiteFindings,
   loadSmallSiteManifest,
 } from '../test-fixtures.js';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { normalizeAudit, type AuditManifest, type NormalizePageInput } from '@odysseus/core';
+import type { Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../types.js';
 
 /** Same WCAG 2.2 AA tag set packages/scanner/src/axe.ts audits client
@@ -67,57 +64,29 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
   /**
    * The small-site fixture predates milestone 8.6 and contains no
    * privacy-category finding, so the run above never renders the
-   * 'privacy' colour pairing added 2026-08-24 - it would pass whatever
-   * hex that pairing used. This second run points the same audit at a
-   * real scan that does contain them (four security-header findings,
-   * moved from 'seo' to 'privacy' with the category), which is what
-   * actually confirms #e5c07b on #332a19 clears WCAG 1.4.3 rather than
-   * only the arithmetic saying so.
+   * 'privacy' colour pairing added 2026-08-24. This second run reclassifies
+   * one internally consistent theme and its findings in the committed fixture
+   * so the palette is exercised without relying on an operator's local scan.
    */
-  it('has zero WCAG 2.2 AA violations on a real report containing privacy findings', async () => {
-    const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-    const auditDir = path.join(
-      moduleDir,
-      '../../../../artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-22T16-31-02Z',
+  it('has zero WCAG 2.2 AA violations on a de-identified report containing a privacy theme', async () => {
+    const [manifest, findings, analysis] = await Promise.all([
+      loadSmallSiteManifest(),
+      loadSmallSiteFindings(),
+      loadSmallSiteAnalysis('fr'),
+    ]);
+    const { findings: privacyFindings, analysis: privacyAnalysis } = withPrivacyTheme(
+      findings,
+      analysis,
     );
-    const manifest = JSON.parse(
-      readFileSync(path.join(auditDir, 'manifest.json'), 'utf-8'),
-    ) as AuditManifest;
-    // Re-normalized from the stored per-page scan.json rather than read
-    // from the stored findings.json, exactly the way `normalize <dir>`
-    // re-runs offline. The committed findings.json predates the 'privacy'
-    // category and still tags the security-header rules 'seo'; running
-    // the real normalizer is what makes this a test of current behaviour
-    // instead of a test of a frozen snapshot, and it needs no re-scan.
-    const findings = normalizeAudit({
-      auditId: manifest.auditId,
-      startedAt: new Date(manifest.startedAt),
-      pages: readdirSync(path.join(auditDir, 'pages'), { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => path.join(auditDir, 'pages', entry.name, 'scan.json'))
-        .filter((file) => existsSync(file))
-        .map((file) => JSON.parse(readFileSync(file, 'utf-8')) as NormalizePageInput),
-      ...(manifest.translationClusters !== undefined
-        ? { translationClusters: manifest.translationClusters }
-        : {}),
+    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, privacyFindings);
+    const html = await renderHtml({
+      manifest,
+      findings: privacyFindings,
+      analysis: privacyAnalysis,
+      renderDiffEvidencePages,
     });
-    const rawAnalysis = JSON.parse(
-      readFileSync(path.join(auditDir, 'analyses', readdirFirstAnalysis(auditDir)), 'utf-8'),
-    ) as StoredAnalysis;
-    // JSON.parse leaves generatedAt a string; the store's own reader
-    // revives it. renderLegalExposure does date arithmetic on it.
-    const analysis: StoredAnalysis = {
-      ...rawAnalysis,
-      generatedAt: new Date(rawAnalysis.generatedAt),
-    };
 
-    expect(
-      findings.some((f) => f.category === 'privacy'),
-      'fixture no longer contains a privacy finding',
-    ).toBe(true);
-
-    const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
-    const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
+    expect(html).toContain('style="background:#332a19;color:#e5c07b"');
 
     const { browser } = await launchBrowser();
     try {
@@ -143,10 +112,23 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
   }, 60_000);
 });
 
-function readdirFirstAnalysis(auditDir: string): string {
-  const files = readdirSync(path.join(auditDir, 'analyses'))
-    .filter((f) => f.endsWith('-fr.json'))
-    .sort();
-  if (files.length === 0) throw new Error(`no French analysis in ${auditDir}/analyses`);
-  return files[files.length - 1]!;
+function withPrivacyTheme(
+  findings: Finding[],
+  analysis: StoredAnalysis,
+): { findings: Finding[]; analysis: StoredAnalysis } {
+  const [firstTheme, ...remainingThemes] = analysis.themes;
+  if (firstTheme === undefined) throw new Error('expected the fixture to contain a theme');
+
+  const privacyFindingIds = new Set(firstTheme.findingIds);
+  return {
+    findings: findings.map((finding) =>
+      privacyFindingIds.has(finding.findingId)
+        ? { ...finding, category: 'privacy' as const }
+        : finding,
+    ),
+    analysis: {
+      ...analysis,
+      themes: [{ ...firstTheme, category: 'privacy' as const }, ...remainingThemes],
+    },
+  };
 }

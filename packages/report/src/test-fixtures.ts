@@ -14,10 +14,10 @@ import type { StoredAnalysis } from './types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const SMALL_SITE_AUDIT_DIR = path.resolve(
-  __dirname,
-  '../../../fixtures/test-audits/small-site',
-);
+const TEST_AUDITS_ROOT = path.resolve(__dirname, '../../../fixtures/test-audits');
+const COMMITTED_TEST_AUDITS = ['small-site', 'multi-page', 'large-rule-families'] as const;
+
+export const SMALL_SITE_AUDIT_DIR = path.resolve(TEST_AUDITS_ROOT, 'small-site');
 
 /** The fixture follows the artifacts layout, `<timestamp>-<language>.json`,
  *  because report-env-loading.e2e.test.ts copies it and runs the real CLI
@@ -39,6 +39,23 @@ export async function loadSmallSiteManifest(): Promise<AuditManifest> {
 export async function loadSmallSiteFindings(): Promise<Finding[]> {
   const raw = await fs.readFile(path.join(SMALL_SITE_AUDIT_DIR, 'findings.json'), 'utf-8');
   return JSON.parse(raw) as Finding[];
+}
+
+/** Every rule observed across the committed, de-identified reference audits.
+ *  Coverage tests share this loader so none can quietly fall back to a local
+ *  gitignored artifacts tree. */
+export async function loadObservedFixtureRuleIds(): Promise<Set<string>> {
+  const fixtureFindings = await Promise.all(
+    COMMITTED_TEST_AUDITS.map(async (auditName) => {
+      const raw = await fs.readFile(
+        path.join(TEST_AUDITS_ROOT, auditName, 'findings.json'),
+        'utf-8',
+      );
+      return JSON.parse(raw) as Finding[];
+    }),
+  );
+
+  return new Set(fixtureFindings.flatMap((findings) => findings.map((finding) => finding.ruleId)));
 }
 
 export async function loadSmallSiteAnalysis(language: ReportLanguage): Promise<StoredAnalysis> {

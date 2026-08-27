@@ -2,17 +2,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { CUSTOM_CHECK_SEVERITY, type Finding } from '@odysseus/core';
+import { CUSTOM_CHECK_SEVERITY } from '@odysseus/core';
 import { RULE_TRANSLATIONS_FR } from './rule-translations.js';
-import { loadSmallSiteFindings } from '../test-fixtures.js';
+import { loadObservedFixtureRuleIds } from '../test-fixtures.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-
-function loadFindings(relativeDir: string): Finding[] {
-  return JSON.parse(
-    readFileSync(path.join(moduleDir, relativeDir, 'findings.json'), 'utf-8'),
-  ) as Finding[];
-}
 
 /**
  * item 38 [REGRESSION]: rule titles and codes rendered in English inside
@@ -24,79 +18,11 @@ function loadFindings(relativeDir: string): Finding[] {
  * untranslated the way this class of rule did before.
  */
 describe('item 38: every ruleId observed in real fixture data has a French translation', () => {
-  it('every ruleId in the small-site.test fixture is covered', async () => {
-    const findings = await loadSmallSiteFindings();
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
-      (id) => !RULE_TRANSLATIONS_FR[id],
-    );
-    expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
-  });
+  it('covers every ruleId in the committed de-identified fixture set', async () => {
+    const observed = await loadObservedFixtureRuleIds();
+    expect(observed.size).toBeGreaterThan(50);
 
-  it('every ruleId in the real haaitza fixture is covered', () => {
-    const findings = loadFindings('../../../../artifacts/haaitza.com/2026-08-06T20-30-06Z');
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
-      (id) => !RULE_TRANSLATIONS_FR[id],
-    );
-    expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
-  });
-
-  it('every ruleId in the real Palais Gallien fixture is covered', () => {
-    const findings = loadFindings(
-      '../../../../artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-17T14-13-52Z',
-    );
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
-      (id) => !RULE_TRANSLATIONS_FR[id],
-    );
-    expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
-  });
-
-  // item 2.3 [REGRESSION]: frame-title rendered as raw English
-  // ("Frames must have an accessible name") in a real Large Rule Families
-  // report - this fixture is exactly what would have caught it, had it
-  // been added when the site was first scanned.
-  it('every ruleId in the real La Corniche fixture is covered', () => {
-    const findings = loadFindings('../../../../artifacts/lacoorniche.com/2026-08-19T00-54-32Z');
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
-      (id) => !RULE_TRANSLATIONS_FR[id],
-    );
-    expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
-  });
-
-  // P1.1 (2026-08-21 Large Rule Families feedback pass, regression): the
-  // 00-54-32Z fixture above doesn't contain 'aria-command-name' or
-  // 'opengraph-missing' - this later same-day scan does, and is exactly
-  // what would have caught both leaking untranslated into a real report.
-  it('every ruleId in the 2026-08-19T11-15-01Z La Corniche fixture is covered (aria-command-name, opengraph-missing)', () => {
-    const findings = loadFindings('../../../../artifacts/lacoorniche.com/2026-08-19T11-15-01Z');
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
-      (id) => !RULE_TRANSLATIONS_FR[id],
-    );
-    expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
-  });
-
-  // A5 (2026-08-24 three-site review): every fixture pinned above
-  // predates milestone 8.6, so all five security-header rules plus
-  // structured-data-invalid, canonical-target-noindex, crux-lcp-poor,
-  // link-text and scrollable-region-focusable leaked untranslated into
-  // three real client reports while this suite stayed green. These three
-  // 2026-08-22 scans are the ones that would have caught it. Pin a fresh
-  // scan here whenever a detection milestone adds rules, or this guard
-  // silently stops covering the newest half of the scanner.
-  it.each([
-    [
-      'Palais Gallien 2026-08-22',
-      '../../../../artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-22T16-31-02Z',
-    ],
-    ['haaitza 2026-08-22', '../../../../artifacts/haaitza.com/2026-08-22T22-07-44Z'],
-    [
-      'Large Rule Families 2026-08-22',
-      '../../../../artifacts/www.lacoorniche.com/2026-08-22T22-07-45Z',
-    ],
-  ])('every ruleId in the real %s fixture is covered', (_name, dir) => {
-    const findings = loadFindings(dir);
-    const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
-      (id) => !RULE_TRANSLATIONS_FR[id],
-    );
+    const missing = [...observed].filter((id) => !RULE_TRANSLATIONS_FR[id]);
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 

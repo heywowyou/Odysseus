@@ -3,34 +3,13 @@
  * observed in real scanner output but carrying no remediation copy fails the
  * build rather than rendering as a finding a client is told nothing about.
  */
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { Finding } from '@odysseus/core';
+import { loadObservedFixtureRuleIds } from '../../test-fixtures.js';
 import { REMEDIATION_FR, REMEDIATION_EN, remediationFor } from './index.js';
 
-const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const artifactsRoot = path.join(moduleDir, '../../../../../artifacts');
-
-function observedRuleIds(): Set<string> {
-  const ruleIds = new Set<string>();
-  if (!existsSync(artifactsRoot)) return ruleIds;
-  for (const host of readdirSync(artifactsRoot)) {
-    const hostDir = path.join(artifactsRoot, host);
-    for (const stamp of readdirSync(hostDir)) {
-      const file = path.join(hostDir, stamp, 'findings.json');
-      if (!existsSync(file)) continue;
-      const findings = JSON.parse(readFileSync(file, 'utf-8')) as Finding[];
-      for (const finding of findings) ruleIds.add(finding.ruleId);
-    }
-  }
-  return ruleIds;
-}
-
 describe('remediation copy', () => {
-  it('covers every rule id observed in the committed reference audits', () => {
-    const observed = observedRuleIds();
+  it('covers every rule id observed in the committed reference audits', async () => {
+    const observed = await loadObservedFixtureRuleIds();
     expect(observed.size).toBeGreaterThan(50);
 
     const uncovered = [...observed].filter((ruleId) => REMEDIATION_FR[ruleId] === undefined).sort();
