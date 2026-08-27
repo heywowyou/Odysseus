@@ -2,15 +2,12 @@
 
 Source of truth: `docs/design/report-mockup-standalone.flat.html`, the
 "Nocturne" design system's plain-CSS mockup (tokens in a real `:root`
-block, real class names, Inter woff2 already inlined as data URIs) -
-read directly as source, not sampled from rendered pixels. This
-superseded the original approach of reading
-`docs/design/report-mockup-standalone.pdf` page by page with the
-`playwright` MCP tools (screenshots plus canvas pixel sampling), which
-this document used for its first pass before the flat file existed.
-Where a section below still cites a PDF page number, that section has
-not yet been re-derived from the flat file and should be treated as the
-older, less reliable pass - see "Port status" below. The companion
+block, real class names, Inter woff2 already inlined as data URIs). Read it
+directly as source, not from rendered pixels. The earlier generated PDFs and
+opaque bundled exports were removed after the flat sources became canonical.
+Where a section below still cites a page number, it has not yet been
+re-derived from the flat file and should be treated as the older, less
+reliable pass. The companion
 `docs/design/report-mockup-preview.flat.html` (outreach preview) reuses
 the same tokens rather than getting its own pass, since it is the same
 design system applied to a shorter document.

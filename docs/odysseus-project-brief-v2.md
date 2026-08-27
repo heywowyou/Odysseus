@@ -35,7 +35,11 @@ Reasoning, so it can be re-evaluated rather than assumed:
 The core finding most React and Next.js marketing sites are exposed to: content renders client-side only, so the raw HTML a crawler receives is close to empty. The business has flat organic traffic and no idea why. Also covers Core Web Vitals, meta and canonical tags, structured data (JSON-LD), sitemap and robots.txt, internal linking, and hreflang (relevant for bilingual FR/EN sites, common in the wine and tourism markets).
 
 **B. Accessibility audit (EAA / WCAG 2.2 / EN 301 549).**
-Automated conformance scan plus an extended accessibility pass (milestone 8, see `docs/milestone-8-scope-addendum.md`) automating detection of keyboard traps, focus order, form error handling, and video caption presence, plus a heuristic red-flag check for low-quality alt text. Delivered as a compliance-oriented report with prioritized remediation. Not marketed as a manual verification pass; see 3.2 and 3.3 for why. This is the audit type with externally generated urgency, see section 8.
+Automated conformance scan plus the shipped extended accessibility pass,
+covering keyboard traps, focus order, form error handling, video caption
+presence, and a heuristic red-flag check for low-quality alt text. The exact
+remaining detection gaps live in `docs/manual-accessibility-checklist.md`.
+This is not marketed as a manual verification pass.
 
 **C. AI visibility check (AEO / GEO), used as a hook, not as a core product.**
 Whether ChatGPT, Perplexity, and Google's AI answers mention the business or recommend a competitor. This sells hard because the screenshot is visceral. It is deliberately positioned as an add-on section inside the main report rather than a standalone paid product, because the detection is noisy run-to-run and the main lever (off-site brand mentions) is slow and largely outside the client's control. Sharp tip, solid spine.
@@ -48,7 +52,8 @@ Whether ChatGPT, Perplexity, and Google's AI answers mention the business or rec
 
 **Historical pricing decision from 2026-08-15, superseded 2026-08-16.** Prices were then held at EUR 290 and EUR 1,200 to 1,900 HT. The current single-tier EUR 1,600 HT model is governed by `docs/offer-positioning.md` and the revision note above. The still-current offer-positioning rationale from that review is that this is a diagnostic rather than an audit RGAA: it does not produce an official taux de conformité over the 106 RGAA criteria and cannot serve as the basis for a déclaration d'accessibilité. Naming that limit first is the position, not a hedge; see `docs/offer-positioning.md` section 2 for what the diagnostic offers instead (whole-site crawl versus a sample of gabarits, render diff evidence, combined SEO/AEO and accessibility findings).
 
-**Revised again 2026-08-07** (commercial planning session, full detail in `docs/milestone-8-scope-addendum.md`): the video walkthrough is dropped, and the report is rendered from the exact crawl and scanners against `findings.json` (see 6.2 stage 5 and the addendum's section 1.2).
+The video walkthrough is dropped. The report is rendered from the exact crawl
+and scanners against `findings.json` (see 6.2 stage 5).
 
 | Deliverable       | What it is                                                                                                                               | Price                                                                                                                    |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
@@ -57,7 +62,10 @@ Whether ChatGPT, Perplexity, and Google's AI answers mention the business or rec
 
 **Flat price, not risk-banded (2026-08-16).** Supersedes the risk-banded EUR 1,200 to 1,900 range described immediately below, kept for the historical reasoning only. The prior design placed the audit at one of a small number of fixed price points inside that range based on the already-computed overall risk level (low, medium, high), rather than a formula that climbed with every additional finding found, on the reasoning that the sites that score worst are usually the best prospecting targets and charging those same sites the most works against volume-based prospecting. That reasoning is no longer load-bearing now that there is one flat price for every full audit regardless of risk level; it is kept here only so the earlier design is not silently reinvented.
 
-**Price band, dropped 2026-08-16 in favor of a flat price.** Do not reopen a risk-banded or continuous pricing formula without a specific trigger, e.g. consistent client pushback that the deliverable isn't worth the price (already a kill-criterion in section 12). Full historical reasoning in `docs/milestone-8-scope-addendum.md` section 3.2, describing the now-dropped two-tier, risk-banded model.
+**Price band, dropped 2026-08-16 in favor of a flat price.** Do not reopen a
+risk-banded or continuous pricing formula without a specific trigger, such as
+consistent client pushback that the deliverable is not worth the price. The
+current rationale is canonical in `docs/offer-positioning.md`.
 
 **Price published (resolved 2026-08-07, price itself revised 2026-08-16).** A flat, single published price removes the main friction point for a cold prospect deciding whether the service is even in their budget more directly than a published range did. This resolves open question 5 in section 11.
 
@@ -71,7 +79,7 @@ Notes on pricing logic, unchanged from the original reasoning:
 
 **Revised 2026-08-16.** The paid screening tier described below (report depth split against one shared `findings.json`) is dropped along with the two-tier model in 3.2. The full audit is the only paid deliverable, unchanged in content from before. The free outreach preview replacing screening is not a lighter view of the same report template; it is a separate document with its own content rules in `docs/outreach-rules.md`, described at the end of this section.
 
-**Revised 2026-08-07** (full detail in `docs/milestone-8-scope-addendum.md` section 1.6): PDF report only, no video walkthrough (dropped entirely, not a feature that got demoted), rendered from `findings.json`.
+PDF report only, no video walkthrough, rendered from `findings.json`.
 
 **Full audit**, all of the following:
 
@@ -97,7 +105,11 @@ Notes on pricing logic, unchanged from the original reasoning:
 - Web agencies as white-label partners, reselling audits to their own client base. Higher volume, lower per-unit price.
 - Accessibility agencies and freelances, as a second, parallel channel: their automated-detection stage is pure cost, and a tool that compresses it has a buyer who already understands the value. Full reasoning in `docs/offer-positioning.md` section 5. Run five conversations from week one to settle whether the channel is real; do not stop the SMB track for it.
 
-**First vertical for outreach: unambiguous electronic commerce**, chosen for volume and clarity of framing, not because other segments are legally weaker. Qualification is domain-first and headcount-only (10 or more salaried persons), which is deliberately conservative: it produces no false positives at the cost of missing the small-headcount, high-turnover segment. Full mechanics in `docs/prospect-qualification.md`.
+**First vertical for outreach: French hotels rated at least three stars.** The
+2026-08-27 operator decision supersedes the earlier e-commerce-first plan.
+DATAtourisme is the base catalogue, enriched with Atout France and the shipped
+Sirene machinery. The complete source, qualification, and rollout decisions
+are in `advisor-plans/README.md`.
 
 **Deliberate non-targets.**
 
@@ -112,7 +124,7 @@ Notes on pricing logic, unchanged from the original reasoning:
 | ---------------------- | ------------------------------------------------------------ |
 | Qualification          | Automated mini-scan producing one piece of concrete evidence |
 | Scoping                | Written intake questionnaire, 8 to 12 targeted questions     |
-| Proposal               | Written proposal page presenting the two tiers               |
+| Proposal               | Written proposal page presenting the single paid audit       |
 | Delivery               | PDF report only (video walkthrough dropped 2026-08-07)        |
 | Follow-up              | Written question rounds, scoped and included in the price    |
 | Implementation kickoff | Written scope document plus a shared task board              |
@@ -150,7 +162,12 @@ Fetch each target page twice:
 
 Diff the two. Text content present in the rendered version but absent from the raw version is the SPA-SEO finding. Quantify it (percentage of visible text missing from raw HTML) and screenshot both. This diff is the single most sellable artifact the tool produces.
 
-Crawl scope: start from the homepage, follow internal links, respect robots.txt, cap depth and page count (default 20 pages, configurable). Politeness delay between requests. Identifiable user agent. `runAuditStage` takes no tier parameter (there is no tier concept left to take one, 2026-08-16); the one crawl and scanner pass this stage runs feeds both the full audit report (stage 5) and the outreach preview (a separate, much smaller render over the same `findings.json`, see `docs/outreach-rules.md`).
+Crawl scope: start from the homepage, follow internal links, supplement full
+audits with eligible sitemap URLs, respect robots.txt, and apply a page cap only
+when the operator opts in. Politeness delay and the identifiable user agent
+remain mandatory. `runAuditStage` takes no tier parameter; the paid report and
+the separate outreach preview consume scanner evidence through different
+render paths.
 
 **Stage 2: Run the scanners.**
 Against the rendered page:
@@ -234,7 +251,10 @@ Proposed output schema:
 ```
 
 **Stage 5: Report generation.**
-Render the structured result into a branded PDF. Printing a styled HTML template from Chromium is the pragmatic choice, since the template can be built in React and Tailwind and the same HTML can be served as a web version. Use Playwright's Chromium, which the scanner already depends on, rather than adding Puppeteer as a second browser dependency.
+Render the structured result into a branded PDF with the hand-maintained HTML
+and CSS system documented in `docs/report-design-system.md`. Paged.js handles
+paged media and Playwright's Chromium prints the result. Do not reintroduce
+Tailwind or Puppeteer.
 
 Report contents: cover, executive summary, overall risk, prioritized themes with impact and effort, render diff evidence with screenshots, Core Web Vitals table, full findings appendix grouped by category, methodology and tooling statement (important for credibility and for defensibility of accessibility claims), and a limitations statement (see 6.6).
 
@@ -254,18 +274,13 @@ This mode must be cheap and fast per site, since it runs against hundreds. The L
 
 ### 6.3 System architecture
 
-Scans are long-running and memory-heavy, so nothing runs inside a request cycle.
+Scans are long-running and memory-heavy, so the private interface enqueues work
+and workers run it outside the request cycle.
 
 ```
-Next.js dashboard
-    |
-    v
-Express API  ->  MongoDB (audits, findings, clients, prospects)
-    |
-    v
-BullMQ queue (Redis)
-    |
-    v
+Private node:http interface -> MongoDB-backed job queue
+                              |
+                              v
 Worker process:
     crawl (raw + rendered, Playwright)
     scanners (axe-core, Lighthouse, custom)
@@ -275,23 +290,31 @@ Worker process:
     mark complete
     |
     v
-Dashboard polls / subscribes -> renders result, download link
+Private dashboard polls -> renders status and report links
 ```
+
+The public Next.js site is a separately deployed marketing and bot-information
+site. It imports no private engine package and has no access to MongoDB or the
+job queue.
 
 ### 6.4 Data model, top level
 
 - `clients`: name, contacts, language preference, sector, size bracket, notes.
 - `audits`: as built in milestone 4. Site URL, timestamps, config snapshot, crawl statistics and page list, per-phase errors, and self-reported tool versions. The same type is written to `manifest.json` on disk, which is what lets normalization re-run offline against any artifacts folder with no database attached.
 - `findings`: as specified in 6.2 stage 3, linked to auditId.
-- `prospects`: url, sector, brokennessScore, evidenceRefs, outreach status, last scanned.
-- `outreach`: prospectId, sequence step, sent timestamps, replies, outcome.
+- `prospects`: insert-only qualification events with domain, entity evidence,
+  qualification facts, and expiry.
+- Future 9c catalogue, prescan, evidence, score, preview, draft, and outcome
+  records stay separate as defined by `advisor-plans/README.md`.
 - `reports`: auditId, language, version, file reference, generated timestamp.
 
 Version the findings model from day one. Reports will need regenerating and comparing over time, especially for monitoring clients.
 
 ### 6.5 Engineering constraints and gotchas
 
-- **Chromium is heavy.** Full render of 20 pages takes minutes and consumes significant memory. Cap concurrency per worker. Provision a machine that can actually host Chromium, not a minimal serverless function. Reuse browser instances across pages within a job, and close contexts cleanly to avoid leaks.
+- **Chromium is heavy.** A full-site render can take minutes and consume
+  significant memory. Cap concurrency per worker, reuse browser instances
+  across pages within a job, and close contexts cleanly to avoid leaks.
 - **Lighthouse and axe both need the page.** Sequence them against one rendered context rather than loading the page repeatedly.
 - **LLM cost is negligible, scanning cost is not.** Optimize crawl scope, not prompt length.
 - **Flaky performance metrics.** Core Web Vitals from a single lab run are noisy. Run performance passes more than once and report medians, or clearly label lab data as lab data. Consider pulling field data (CrUX) where available for larger sites, and say so in the methodology.
@@ -304,7 +327,12 @@ Version the findings model from day one. Reports will need regenerating and comp
 
 ### 6.6 Honest limits to state in every report
 
-Automated accessibility scanning catches a well-documented minority of WCAG issues, commonly cited around 30 to 40 percent. **Revised 2026-08-07:** keyboard navigation, focus order, form error handling, and media captions move from "requires manual checking" to milestone 8's extended accessibility pass, a genuinely automated (not LLM-judged) set of checks; alt text quality gets a heuristic red-flag check only, since judging editorial meaningfulness is a judgment call the governing rule in 6.1 does not permit a scanner or the LLM to make. Full scope in `docs/milestone-8-scope-addendum.md` sections 1.3 and 1.4. The report must state plainly what the extended pass covers and, for whatever remains genuinely outside automated reach once milestone 8 ships and is validated against real sites (`docs/manual-accessibility-checklist.md`), that it may still benefit from manual review. Do not claim a manual pass was performed when it was not, see 3.2 and 3.3. Overstating automated coverage is both a credibility risk and, in a compliance context, a liability risk. It is also a pricing argument: the extended pass is what a client cannot get from a free scanner.
+Automated accessibility scanning catches a well-documented minority of WCAG
+issues, commonly cited around 30 to 40 percent. Odysseus adds deterministic
+keyboard, focus-order, form-error, caption, and alt-text heuristic checks, but
+does not turn editorial judgment into detection. The report must state the
+remaining limits in `docs/manual-accessibility-checklist.md` and must never
+claim a manual pass was performed.
 
 ---
 
@@ -347,15 +375,23 @@ Verified live in both languages against the real capture: 11 themes from 17 find
 
 **Milestone 7: interface.** Done 2026-08-04. Queue and a private single-user dashboard (`odysseus serve`). Scope defined in 7.1 below.
 
-**Post-7.1: scan concurrency and reskin, 2026-08-07.** Not a milestone, three same-day increments on top of shipped work. Scan-phase concurrency (render-diff, axe, Lighthouse in `SCAN_CONCURRENCY` lanes, Lighthouse itself serialized behind an in-process queue to avoid a confirmed `perf_hooks` collision; full mechanics in `CLAUDE.md` trade-off 10) implements the "concurrency, not a shorter delay" decision from 6.5 that had been written down but not yet built. The dashboard and the PDF report were both restyled in a GlassWire-inspired dark theme, pure CSS on the dashboard (no markup or script changes), CSS plus the removal of two decorative print artifacts on the report, re-verified against the report's own axe-core WCAG 2.2 AA self-test after a first-pass contrast failure was caught and fixed. Superseded 2026-08-16: the report's color tokens were fully retokened to match `docs/mockups/Ody Audit Report - Standalone - Final 16082026.html` and its outreach-preview companion instead, and `docs/GlassWire/` was deleted; see `CLAUDE.md` trade-off 9.
+**Post-7.1: scan concurrency and report reskin, 2026-08-07 to 2026-08-16.**
+Scan phases run in lanes while Lighthouse remains serialized. The shipped
+Nocturne report design is derived from the readable flat sources in
+`docs/design/`; see trade-offs 9 and 10.
 
 **Milestone 8: custom checks.** Original scope: meta, canonical, JSON-LD, sitemap, hreflang, heading hierarchy, redirect chains. Deferred because axe and Lighthouse already produce enough to sell an audit; these deepen it rather than enable it.
 
 **Original scope shipped 2026-08-08.** Before writing detection code, a real Lighthouse result (haaitza.com) was checked against all 24 rule IDs `severity.ts` had pre-reserved: 8 already duplicate an existing, non-excluded Lighthouse `seo`/`performance` audit under a different rule ID (`meta-title-missing`, `meta-description-missing`, `canonical-missing`, `hreflang-missing`, `hreflang-invalid`, `image-oversized`, `image-legacy-format`, `redirect-chain-excessive`) and were deliberately left unimplemented rather than recreating the axe/Lighthouse-accessibility duplicate-finding mistake this document already records once. The other 16 shipped as genuine custom checks: `meta-title-length`, `meta-description-length`, `canonical-conflicting`, `jsonld-missing`, `jsonld-invalid`, `heading-hierarchy-skip`, `multiple-h1`, `no-h1`, `opengraph-missing` (per-page, one new scanner check reading the rendered page's head/body), `sitemap-missing`, `sitemap-stale` (site-level, reuses robots.txt's own Sitemap: directive), `robots-blocks-indexing`, `broken-internal-link` (crawl-level, judge the crawl's own results rather than any one page's content, since a blocked homepage or a broken target is never successfully scanned), `hreflang-no-return-link` (needs every crawled page's hreflang set at once to check reciprocity, the one thing a single-page Lighthouse audit cannot do), `mixed-content` (reads the Resource Timing API post-load, no new page load), and `noindex-on-public-page` (reuses the shared `LEGAL_PATH_PATTERN` `packages/llm`'s diversion logic already uses, so an intentionally-noindexed legal page is not flagged as a defect). Verified against `fixtures/spa-demo`'s seeded faults and against a live run. Full reasoning in each `packages/core/src/normalize/normalize-*.ts` file's header comment.
 
-**Scope expanded 2026-08-07** (full detail in `docs/milestone-8-scope-addendum.md` section 1.3): most of `docs/manual-accessibility-checklist.md`'s "to verify" list is folded in here as genuinely automated checks rather than a separate manual milestone. Added: keyboard traps and focus order (tab through every interactive element via Playwright, record focus order, flag traps and bad divergence from visual/DOM order), form error handling (submit required fields empty, check whether the resulting error is programmatically associated with the field versus conveyed by color alone), video captions (`<track kind="captions">` on native `<video>`, embed API query for YouTube/Vimeo where feasible), and an alt text quality heuristic (filename-pattern alt text, generic placeholder strings, empty alt on a non-decorative image, identical alt repeated across visually different images) as a red-flag check only, not a full editorial-quality judgment, since that would require the LLM to judge rather than detect. Every one of these must meet the same real-finding, real-selector, no-invented-content bar as every other check; the alt text heuristic is the only one that stays intentionally partial in what it claims to catch.
+**Scope expanded 2026-08-07.** Most former manual-check candidates became
+deterministic milestone 8 checks. The current coverage and remaining limits are
+maintained in `docs/manual-accessibility-checklist.md`.
 
-**Milestones 9a to 13, replaced 2026-08-15.** The original two-item plan (prospecting mode, then monitoring) is superseded by the six-milestone sequence below, written up in full in the 2026-08-15 patch that also delivered `docs/obligation-basis.md`, `docs/operator-obligations.md`, `docs/prospect-qualification.md`, `docs/outreach-rules.md`, and `docs/offer-positioning.md`. Monitoring moves from milestone 10 to milestone 13; the renumbering was free because the stale "milestone 10" wording elsewhere in the docs and codebase was already scheduled for cleanup (`docs/milestone-8-scope-addendum.md` section 3).
+**Milestones 9a to 13, replaced 2026-08-15.** The original two-item plan was
+superseded by the sequence below and the five focused prospecting, legal, and
+offer documents linked at the top of this brief. Monitoring moved to milestone
+13.
 
 **Milestone 9a: prospect acquisition and qualification.** Done 2026-08-16. First task, before any code: resolve whether AFNIC's free open data includes SIREN, NAF, and the real-site-versus-parking classification, or whether those sit only in the paid `.FR Performance` or SQUAW products (`docs/prospect-qualification.md` section 2). That answer determines whether this milestone is large or small. Then: AFNIC Fichier A ingestion, plain-HTTP mentions légales fetch, SIREN extraction reusing the entity layer, local Sirene stock join, deterministic qualification predicate, prospect collection with data origin, suppression collection. Blocking prerequisites, both previously horizon items: the real user agent resolving to `https://odysseusaudit.com/bot`, and 90 day deletion enforced at database level. Shipped as specified: `qualifyProspect` in `packages/core`, the AFNIC/mentions-legales/SIREN/Sirene-stock pipeline and the prospect/suppression collections in `packages/store` and `packages/interface`, and `odysseus prospect ingest`/`odysseus prospect suppress` in `packages/cli`.
 
@@ -402,7 +438,12 @@ preservation. Full reasoning is in the charter's build-order section and
 
 **Milestone 9c: outreach generation.** Draft assembly per `docs/outreach-rules.md`: deterministic evidence, deterministic facts block, generated connective prose, validator confirming the block survived unmodified and that identity, data origin, and opt-out are present (`docs/llm-layer-rules.md` section 11). Draft queue, follow-up state machine keyed on reply detection, suppression check at draft time. Drafts created in the mailbox through the Gmail API, never sent. Separate sending domain with SPF, DKIM, DMARC.
 
-**9c specified in detail, 2026-08-25.** `docs/m9-prospecting-pipeline.md` and `docs/m9-technical-spec.md`, both operator-authored, replace the informal plan above with a full spec covering sourcing, prescan, scoring, contact discovery, attachment-free preview-page outreach, email infrastructure and warmup, sequencing, compliance, and instrumentation, plus a data model, sequence state machine, and safety rails. Two conflicts with the shipped state of the project, flagged in both documents' own reconciliation notes, were resolved with the operator the same day: no new packages (fold into the existing `core`/`store`/`interface`/`cli`, matching 9a/9b's own precedent, against the technical spec's original `packages/prospecting`/`packages/outreach` proposal), and sourcing reuses 9a's existing Sirene/SIREN join plus DATAtourisme and Atout France, deferring OpenStreetMap Overpass until a measured coverage gap justifies it. Full reasoning in CLAUDE.md's build-order section.
+**9c reconciled into execution plans, 2026-08-27.** The 14 numbered plans in
+`advisor-plans/README.md` replace the earlier proposal drafts. They cover the
+hotel catalogue, exact identity resolution, cheap qualification, distinct
+prescan, evidence, versioned scoring, role contacts, safe previews, validated
+prose, Gmail drafts without send, reply/suppression handling, operator views,
+and the controlled first-100 rollout.
 
 **Milestone 10: benchmark study and percentile.** Batch scan of a bounded e-commerce cohort, aggregate percentile over stored findings, percentile surfaced in both report tiers, study published in French on `odysseusaudit.com`. Target: before 22 September 2026, the Créteil hearing in the E.Leclerc matter (`docs/obligation-basis.md` section 5), which will be the third data point in a contested line and will be covered. Generate the study with Mistral as with everything else; add the one-line AI-assistance disclosure from `docs/operator-obligations.md` section 3 near the top of the published page. No other change to authorship or pipeline.
 
@@ -519,7 +560,8 @@ Two items outside the legal-claims-to-clients scope of 8.1 to 8.3, tracked becau
 
 ### Settled 2026-08-07 (commercial planning session)
 
-Full detail in `docs/milestone-8-scope-addendum.md`, which should be read alongside this brief for milestone 8 work.
+The shipped milestone 8 scope and remaining gaps are summarized in section 7
+and `docs/manual-accessibility-checklist.md`.
 
 - **No video walkthrough.** Dropped entirely from both tiers, not deferred. Delivery is PDF report only. See 3.2, 3.3, 5, and 9.
 - **One crawl, two report views.** Screening and full audit run the identical crawl and scanners; tier only affects what the report template renders from the shared `findings.json`. `runAuditStage` takes no tier parameter. **Superseded 2026-08-16:** no tier concept remains; the one crawl now feeds the full audit report and the separately-templated outreach preview. See 6.2 stage 1 and stage 5.
@@ -542,7 +584,9 @@ Full detail in the five companion docs listed at the top of this brief.
 - **Headcount-only qualification, accepted as conservative.** No false positives, at the cost of missing the small-headcount high-turnover segment. See section 4 and `docs/prospect-qualification.md` section 3.
 - **Role addresses only, free-mail domains excluded.** See `docs/prospect-qualification.md` section 6.
 - **The send stays manual, and telephone prospecting is closed** by the rules in force since 11 August 2026. No sequencer integration. See `docs/outreach-rules.md` section 8 and `docs/operator-obligations.md` section 5.
-- **First vertical: unambiguous electronic commerce**, chosen for volume and clarity of framing. Hotels are sold on both arguments A and B, not held back to argument A alone; the legal footing for a booking flow that concludes a contract online is not materially weaker than a standard online shop. See section 4 and `docs/obligation-basis.md` section 3.
+- **First vertical was originally e-commerce. Superseded 2026-08-27:** hotels
+  rated at least three stars are the first campaign. See section 4 and
+  `advisor-plans/README.md`.
 - **Second channel opened: accessibility agencies and freelances**, run in parallel from week one, five conversations to settle whether it is real. See section 4 and `docs/offer-positioning.md` section 5.
 - **Free public scanner, still not now.** Milestone 12 is the conditional revisit, gated on milestone 10 producing traffic. See "No free public scanner" under Settled 2026-08-02 above, now qualified by this later decision.
 - **The benchmark study is LLM-generated like everything else**, with a one-line AI-assistance disclosure added for AI Act article 50(4). Client reports and outreach are confirmed out of scope for article 50 entirely, being private single-recipient documents, and need no disclosure and no pipeline change. See `docs/operator-obligations.md` section 3.

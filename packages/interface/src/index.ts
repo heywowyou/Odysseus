@@ -46,3 +46,15 @@ export type {
   HotelIngestReport,
   IngestHotelCatalogueOptions,
 } from './prospecting/hotel-sources/ingest-hotel-catalogue.js';
+export {
+  resolveHotels,
+  CURRENT_RESOLUTION_VERSION,
+} from './prospecting/hotel-identity/resolve-hotels.js';
+export type {
+  ResolveHotelsOptions,
+  ResolveHotelsReport,
+  HotelCandidateStorePort,
+} from './prospecting/hotel-identity/resolve-hotels.js';
+export { createMongoHotelCandidateStore } from './prospecting/hotel-identity/mongo-hotel-candidate-store.js';
+export { createHotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';
+export type { HotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';

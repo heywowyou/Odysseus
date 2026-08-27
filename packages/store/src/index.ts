@@ -84,9 +84,31 @@ export {
   insertHotelSourceRecords,
   getHotelSourceYield,
   listHotelSourceRecords,
+  streamHotelSourceRecords,
+  getLatestHotelIngestRunId,
 } from './hotel-source-records.js';
 export type {
   NewHotelSourceRecordInput,
   InsertHotelSourceRecordsResult,
   HotelSourceYield,
 } from './hotel-source-records.js';
+export { createHotelCandidateModel } from './schemas/hotel-candidate.schema.js';
+export type {
+  HotelCandidateDocument,
+  HotelCandidateDocumentFields,
+} from './schemas/hotel-candidate.schema.js';
+export {
+  upsertHotelCandidates,
+  listHotelCandidates,
+  getHotelCandidate,
+  getHotelCandidateYield,
+  recordHotelCandidateReview,
+} from './hotel-candidates.js';
+export type {
+  NewHotelCandidateInput,
+  UpsertHotelCandidatesResult,
+  HotelCandidateFilter,
+  HotelCandidateYield,
+  RecordHotelCandidateReviewInput,
+  RecordHotelCandidateReviewResult,
+} from './hotel-candidates.js';

@@ -13,6 +13,7 @@
 - **Depends on**: plan 001
 - **Category**: direction
 - **Planned at**: `f7ef7cf`, 2026-08-27
+- **Status**: `DONE`, 2026-08-27
 
 ## Why this matters
 
@@ -136,18 +137,28 @@ interface plus store/CLI behavior; no live lookup.
 
 ## Done criteria
 
-- [ ] Exact identifiers/domains are the only automatic merge paths.
-- [ ] Candidates retain exact Sirene join
+- [x] Exact identifiers/domains are the only automatic merge paths.
+- [x] Candidates retain exact Sirene join
       provenance, including missing/conflicting results.
-- [ ] Name/postcode candidates require explicit review.
-- [ ] Chains/groups are retained but excluded from SMB selection.
-- [ ] Catalogue yield and ambiguity are measurable.
-- [ ] Tests/check pass; plan 002 is `DONE`.
+- [x] Name/postcode candidates require explicit review.
+- [x] Chains/groups are retained but excluded from SMB selection.
+- [x] Catalogue yield and ambiguity are measurable.
+- [x] Tests/check pass; plan 002 is `DONE`.
 
 ## STOP conditions
 
 Stop for dependency approval, material exact-key collisions, inability to
 distinguish own/group/vendor domains, or any proposal to fuzzy-auto-merge.
+
+**Resolved 2026-08-27.** The step 4 dependency STOP condition fired and was
+answered: no dependency already in the tree does eTLD+1 with the public suffix
+list's private section, so `tldts` was proposed with its measured justification
+and approved by the operator as a direct dependency of `@odysseus/core`.
+`tldts-icann` was already present as a Lighthouse transitive dependency but is
+ICANN-only, which is precisely the half that misses the site-builder hosts. No
+other STOP condition fired: the export shows no exact-key collisions, own,
+group, and vendor domains are separable on real data, and nothing auto-merges
+on anything weaker than an exact key.
 
 ## Maintenance notes
 

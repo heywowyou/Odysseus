@@ -117,11 +117,10 @@ means numbered entry 24, not a literal Markdown heading anchor.
    away with a prompt instruction. `packages/report` must import that
    function, never duplicate the predicate. `legalRelevance` is built in
    code, never written by the model. → trade-offs.md#8
-9. `packages/report`'s `report.css` is hand-maintained CSS derived from
-   the two canonical mockups in `docs/mockups/`, not Tailwind. Do not
-   reintroduce a Tailwind build step without checking the existing design
-   system first; re-derive tokens from the mockups via computed styles,
-   never invent them. → trade-offs.md#9
+9. `packages/report`'s CSS is hand-maintained from the readable flat
+   design sources in `docs/design/`, not Tailwind. Do not reintroduce a
+   Tailwind build step without checking the existing design system first;
+   derive tokens from source CSS, never invent them. → trade-offs.md#9
 10. Render-diff/axe/Lighthouse run across `SCAN_CONCURRENCY` lanes; the
     crawl stays sequential; Lighthouse calls are serialized behind an
     in-process queue (confirmed `perf_hooks` collision). Do not remove
@@ -242,6 +241,14 @@ means numbered entry 24, not a literal Markdown heading anchor.
     `.remaining-category h5` — use the bounded `.remaining-category-head`
     wrapper instead. CWV metric tie-breaks return no metric on a genuine
     tie, never fall back to LCP by list order. → trade-offs.md#32
+33. eTLD+1 comes from `tldts` with `allowPrivateDomains`, never from a
+    hand-rolled parser and never from ICANN-only `tldts-icann`. A shared
+    registrable domain means chain only when it is absent from
+    `hotel-vendor-hosts.ts`; a vendor or federation host means independent
+    hotels routed to review, decided by the curated list rather than by group
+    size. Grouping counts the whole run before classifying any row, and only a
+    domain held by exactly one establishment is ever an identity key.
+    → trade-offs.md#33
 
 
 ## Stack
@@ -635,7 +642,11 @@ must be resolved first.
 9a. Prospect acquisition and qualification — done 2026-08-16.
 9b. Prospecting throughput (worker pool, `skipLighthouse`, raised page/depth caps) — done 2026-08-22. See trade-off 23.
 9b.5. Sitemap-supplemented full-site scan coverage — done 2026-08-27. Recursive sitemap inspection stays separate from link reachability; full audits supplement eligible sitemap-only pages, while prospecting inspects and standalone crawl remains link-only. See the measured Haaitza validation in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
-9c. Outreach generation, now spec'd in detail (`docs/m9-prospecting-pipeline.md`, `docs/m9-technical-spec.md`). Reconciliation decisions and open verification gaps: `docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
+9c. Hotel prospecting and outreach, planned as 14 vertical slices in
+`advisor-plans/README.md`. Plans 001 (catalogue ingestion) and 002 (identity,
+own domains, group routing) are done as of 2026-08-27; plan 003 is next. Reconciliation decisions and open verification
+gaps are recorded there and in `docs/decisions/trade-offs.md`, "Build order
+milestone notes", 9c.
 
 Full milestone list, including the phases beyond 8, is in the brief,
 section 7.

@@ -13,7 +13,7 @@
  * already cover the missing case today. Duplicating it here would
  * recreate the exact axe/Lighthouse-accessibility duplicate-finding
  * mistake CLAUDE.md already documents once, just for SEO instead of
- * accessibility. See docs/milestone-8-scope-addendum.md's build session
+ * accessibility. See docs/manual-accessibility-checklist.md
  * for the full Lighthouse-overlap audit this was checked against.
  */
 

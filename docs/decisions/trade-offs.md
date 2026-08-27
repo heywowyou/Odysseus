@@ -165,17 +165,13 @@ cap instead; that decision is the operator's.
    directly. It went through two dark-theme generations: a
    GlassWire-inspired reskin on 2026-08-07 (`docs/odysseus-project-brief-v2.md`,
    "Post-7.1: scan concurrency and reskin"), then a full retokening on
-   2026-08-16 to actually match `docs/mockups/Ody Audit Report -
-   Standalone - Final 16082026.html` (full audit) and `... - Preview -
-   Final 16082026.html` (outreach preview) - the design system now has
-   exactly one canonical source, those two mockups, not GlassWire. Both
-   the original light-theme prototype and `docs/GlassWire/` were deleted
-   2026-08-16 as a result; `report.css` is the only design artifact left
-   in the repo, since the mockups themselves are opaque self-decoding
-   bundles, not plain CSS. If the mockups are ever revised, re-derive
-   `report.css`'s tokens the same way this pass did: load the mockup
-   locally and read colors/radii/spacing off computed styles via the
-   `playwright` MCP tools, not off assumption. Do not reintroduce a
+   2026-08-16 to match the full-audit and outreach-preview designs. The
+   readable flattened sources now live at
+   `docs/design/report-mockup-standalone.flat.html` and
+   `docs/design/report-mockup-preview.flat.html`; they supersede the opaque
+   self-decoding bundles and generated PDFs that were removed in the docs
+   consolidation. If the designs are revised, re-derive tokens from their
+   literal source CSS, not from pixel sampling or assumption. Do not reintroduce a
    Tailwind build step for this package without first checking whether
    `report.css`'s existing design system (color tokens, badge/scale/tile
    components, print rules) still covers the need; it was chosen
@@ -1355,6 +1351,71 @@ cap instead; that decision is the operator's.
     curated reference fixtures (`fixtures/audits.json`) refreshed and
     passing `fixture-freshness.test.ts` at fingerprint `b8afddb24f9b743c`.
 
+33. **Hotel identity, own domains, and group routing, milestone 9c plan 002,
+    2026-08-27.** Four decisions, each of which was measured against the real
+    13,301-hotel Atout France export rather than argued from the plan document.
+
+    **`tldts` was added as a direct dependency of `@odysseus/core`, with
+    operator approval, because no existing dependency does eTLD+1 against the
+    public suffix list's private section.** `tldts-icann` was already in the
+    tree as a Lighthouse transitive dependency, and is exactly the wrong half:
+    ICANN-only resolution turns `hotelhavane.wixsite.com` into `wixsite.com`,
+    fabricating a chain out of eighteen unrelated independent hotels. Measured
+    before deciding: a naive last-two-labels registrable domain is wrong on
+    eleven hosts in the export, and only one of those eleven (`inghams.co.uk`)
+    is the multi-label ICANN case a hand-rolled fix would have targeted. The
+    other ten are site-builder hosts. Do not replace this with a hand-rolled
+    parser, and do not downgrade to the ICANN-only package.
+
+    **A curated vendor-host list is required in addition to the public suffix
+    list, not instead of it.** The private section covers only two of the ten
+    measured builder hosts (`wixsite.com`, `github.io`). The rest, plus booking
+    engines and federations, live in `hotel-vendor-hosts.ts` as compiled
+    TypeScript, the same posture as `free-mail-domains.ts`: edited content, not
+    operator config. Lookup is exact, never suffix matching. A host the list
+    misses but the suffix list marks private still fails safe, synthesized as a
+    `shared-platform` vendor - which correctly caught two uncurated platforms
+    (`webflow.io`, `webadorsite.com`) on the real run.
+
+    **A shared domain is not evidence of a chain, and the difference is
+    decided by the curated list rather than by group size.** Forty-five hotels
+    on `logishotels.com` are forty-five independent businesses sharing a
+    marketing federation's site, and they go to review. Twelve hotels on a
+    corporate domain are one chain, and they are excluded from the SMB
+    campaign. Both look identical to a counter. Getting this backwards sends an
+    independent-hotel pitch to a chain's head office, or drops a real prospect.
+
+    **Grouping is a two-pass computation over the whole run, and the order is
+    load bearing.** Whether a domain identifies one hotel or 1,196 Accor
+    properties is a property of the run, not of the row in front of you. A
+    single streaming pass would write the first Accor property as an
+    independent hotel holding `accor.com` and discover the truth 1,195 rows
+    later, after it was already persisted. Relatedly, only a domain held by
+    exactly one establishment is ever used as an identity key: keying a chain
+    property on its domain would merge 1,196 establishments into one candidate,
+    which is a deletion rather than a deduplication.
+
+    **Two defects found by re-resolving the real export, both invisible against
+    the fixture.** First, a second resolve reported 3,820 `needs-review`
+    identity links, every one of them a source row matching itself through the
+    candidate the first resolve had created from it. The fix computes the
+    identity key before the identity search and short-circuits on a key already
+    in the catalogue; the genuine collisions in the whole export number nine.
+    Second, `review` was written only via `$setOnInsert`, so a candidate that
+    became reviewable on a later run could never reach the queue. It is now
+    promoted in a second bulk write filtered on `review.state: 'not-required'`,
+    which moves the state in one direction only and never reopens a human
+    accept or reject. Both have tests; the first also has a companion test
+    asserting a real name-and-postcode collision between two different hotels
+    is still queued.
+
+    **The Sirene join is built and reports matching nothing, deliberately.**
+    Atout France carries no SIRET or SIREN column, and the company identifier
+    arrives in plan 003 from the hotel's own published identification. The seam
+    exists now so plan 003 is a drop-in, it distinguishes `no-identifier` from
+    `siren-not-in-qualifying-sirene-set`, and a missing stock file is an
+    explicit counter rather than a throw. Reported plainly rather than hidden.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.
@@ -1437,52 +1498,35 @@ finding. Both French and English methodology renders were checked against
 that manifest. The larger scan time is accepted deliberately for paid
 full-site coverage.
 
-**9c: outreach generation, now specified in detail.** The operator pasted
-two design documents 2026-08-25, `docs/m9-prospecting-pipeline.md`
-(sourcing, qualification, prescan, scoring, contact discovery,
-attachment-free preview delivery, email infrastructure, warmup, sequence,
-compliance, instrumentation) and `docs/m9-technical-spec.md` (data model,
-sequence state machine, safety rails). Read both before starting 9c; they
-replace informal 9c planning with a real spec.
+**9c: hotel prospecting and outreach.** The operator's two 2026-08-25
+proposal drafts were reconciled against shipped 9a/9b/9b.5 code, canonical
+legal and outreach rules, and three operator decisions made 2026-08-27. The
+result is the 14-slice execution queue in `advisor-plans/README.md`; the drafts
+were removed after consolidation so their superseded choices cannot look
+active.
 
-Both documents were written without reference to what 9a/9b actually
-shipped and were flagged as such in their own reconciliation notes, not
-silently merged. Two conflicts were resolved with the operator on
-2026-08-25, same day, before any 9c code was written:
+The binding decisions are: hotels first; DATAtourisme as the base catalogue,
+joined to Atout France and the shipped Sirene machinery; a hard three-star
+campaign threshold; and OpenStreetMap Overpass only if measured usable-domain
+yield is below 8,000. Exact SIRET, SIREN, or registrable-domain evidence may
+auto-resolve identity; name plus postcode is manual-review evidence only.
+Prescanning is a distinct three-page, no-Lighthouse path over shared scanner
+primitives. Scores are immutable and versioned. Contacts are role addresses on
+the hotel's own domain only. Operational prospect data expires after 90 days;
+permanent suppression stores hashes only.
 
-1. The technical spec originally proposed two new packages,
-   `packages/prospecting` and `packages/outreach`, which would have made
-   ten packages against the eight-package ceiling this file already
-   states. Decided against: the ceiling protects a real enforced-import
-   boundary (see the package-count paragraph in CLAUDE.md), outreach has
-   no constraint of that shape, and 9a/9b already shipped prospecting
-   inside the existing four packages without one. The new logic folds
-   into `core`/`store`/`interface`/`cli` instead, per
-   `docs/m9-technical-spec.md`'s reconciliation note.
-2. The pipeline doc originally proposed a different set of sources
-   (DATAtourisme, Atout France, Sirene, OSM Overpass) from what 9a
-   actually built (AFNIC Fichier A, mentions-legales, SIREN, Sirene-stock
-   join). Decided: reuse 9a's existing Sirene/SIREN join rather than a
-   second one, add DATAtourisme and Atout France (each contributes data
-   the existing pipeline structurally lacks - accommodation-typed contact
-   info, and star rating/room count respectively), and defer OpenStreetMap
-   Overpass, whose own description in the doc is "gap filler," until a
-   real ingest run against the two kept sources shows a measured shortfall
-   worth its extra join complexity. See `docs/m9-prospecting-pipeline.md`
-   section 1.
+Two proposed packages, a mutable prospect registry, fuzzy auto-merge, named
+contacts, three-year retention, phone outreach, automatic SMTP/IMAP sequences,
+and Atlas/VPS/Tailscale migration were rejected. Logic stays within the eight
+existing package roles. Gmail integration may create and inspect drafts but
+has no send method; every send remains manual. Public previews have their own
+minimal HTML contract, expire, disclose collection and opt-out facts, and
+contain no raw audit detail or legal conclusion.
 
-Both documents also need reconciliation against the existing canonical
-`docs/prospect-qualification.md` (who may be scanned and contacted) and
-`docs/outreach-rules.md` (what may be said), and the pipeline doc's
-compliance section (CNIL pixel/B2B-email positions, loi Cazenave) is
-pasted research, not yet checked against `docs/obligation-basis.md`'s
-sourcing bar the way every other legal claim in this product is - treat it
-as a first draft of that verification, not as cleared copy. New
-locked-contract-style files the technical spec proposes (`prospect.ts`
-additions, a `prescan` type, an `outreach` type) are not yet added to
-`.claude/settings.json`'s `permissions.ask` list; add them there if and
-when they are actually created.
-
-9b.5 is complete, so 9c is now the next queued milestone. Their designs
-remain independent: 9b.5 governs paid full-audit coverage, while 9c governs
-prospecting outreach.
+Legal copy remains source-gated: hotel-specific material in
+`docs/obligation-basis.md` cannot enter a real draft until it reaches primary
+status. Source schemas/licences, score weights, preview storage, Gmail OAuth,
+mailbox setup, live deployment, and every named-site scan remain explicit STOP
+gates in the relevant numbered plans. The first real wave cannot land before
+2026-09-15. Paid full-audit sitemap coverage from 9b.5 remains independent of
+this prospecting path.

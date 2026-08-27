@@ -35,9 +35,9 @@ historical, and research documents.
 | Model inputs, prompts, output guards, analysis | `docs/llm-layer-rules.md` |
 | Client-facing legal/compliance content | `docs/obligation-basis.md`, `docs/operator-obligations.md` |
 | Prospect sourcing, qualification, or contact data | `docs/prospect-qualification.md` |
-| Outreach previews or emails | `docs/outreach-rules.md`, `docs/m9-prospecting-pipeline.md`, `docs/m9-technical-spec.md` |
+| Outreach previews or emails | `docs/outreach-rules.md`, `advisor-plans/README.md`, and the relevant numbered plan |
 | Offer, pricing, or sales claims | `docs/offer-positioning.md` |
-| Report design or PDF layout | `docs/report-design-system.md`, `docs/report-design-tokens.md`, canonical mockups in `docs/mockups/` |
+| Report design or PDF layout | `docs/report-design-system.md`, `docs/report-design-tokens.md`, canonical flat sources in `docs/design/` |
 | Package vocabulary or architectural decisions | `docs/agents/domain.md`, relevant `CONTEXT.md` / ADRs if present |
 | GitHub issues | `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` |
 | Code style, naming, tests, comments, or product prose | `docs/agents/coding-conventions.md` |

@@ -8,7 +8,7 @@
  * performance categories (not excluded, unlike accessibility/best-
  * practices) do not already cover them - confirmed against a real
  * haaitza.com Lighthouse result during the build session, recorded in
- * docs/milestone-8-scope-addendum.md's build notes. Missing title,
+ * docs/manual-accessibility-checklist.md. Missing title,
  * missing description, and missing canonical are deliberately NOT
  * checked here: Lighthouse's document-title, meta-description, and
  * canonical audits already flag those, and duplicating them would

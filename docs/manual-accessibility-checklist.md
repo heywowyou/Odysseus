@@ -6,12 +6,9 @@ accessibility audit is not sold as if the scanner covers everything.
 
 Every entry here was confirmed against a real scan, not assumed.
 
-**2026-08-07 planning note** (`docs/milestone-8-scope-addendum.md`
-section 1.3): most of the "to verify" list below is scoped to become
-genuinely automated milestone 8 checks (keyboard traps, focus order,
-form error handling, video captions) rather than a manual pass, plus a
-heuristic red-flag check for alt text quality that stays deliberately
-partial rather than becoming an LLM editorial judgment.
+Most of the original "to verify" list became genuinely automated milestone 8
+checks rather than a manual pass. Alt-text quality remains a deliberately
+partial heuristic instead of an LLM editorial judgment.
 
 **Updated 2026-08-08:** milestone 8's *original* custom-check scope
 (meta/canonical/JSON-LD/sitemap/hreflang/heading-hierarchy/redirects,

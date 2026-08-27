@@ -97,6 +97,9 @@ importers:
 
   packages/core:
     dependencies:
+      tldts:
+        specifier: ^7.4.11
+        version: 7.4.11
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -2916,8 +2919,15 @@ packages:
   tldts-core@7.4.10:
     resolution: {integrity: sha512-KnQjp53ZekKgm/r3l+u8kJGGzYgrWdP8+Mql7a4vijh2WE0IrZWspQj/TpTxDho/YxO+AnOZnIjQcCD+q6iJsw==}
 
+  tldts-core@7.4.11:
+    resolution: {integrity: sha512-CW3WN2rIIE/Of21mulhgnGOwoDyEFNygyIBOONSdyAuSATgMMUCpLeUlB+E8sAwA5xRV9hYPl+kyZ9citHCaKg==}
+
   tldts-icann@7.4.10:
     resolution: {integrity: sha512-JrzJnTNDURpnyPCf/b0bq/mAiQhPcNwkwpfO67M0nECzVzSIuCFN+EYjqnEjnmO60nPRabS3zIFChbwPp/Q+Lg==}
+
+  tldts@7.4.11:
+    resolution: {integrity: sha512-aBiNayCfTQxuIJBm06M+xR14cYaYlDlSXZbgsnKzKNxDKUVq7KFwTjwBSsb7m9Y5xO8WfPnBc63WaYFMTGlvqw==}
+    hasBin: true
 
   tr46@0.0.3:
     resolution: {integrity: sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==}
@@ -5639,9 +5649,15 @@ snapshots:
 
   tldts-core@7.4.10: {}
 
+  tldts-core@7.4.11: {}
+
   tldts-icann@7.4.10:
     dependencies:
       tldts-core: 7.4.10
+
+  tldts@7.4.11:
+    dependencies:
+      tldts-core: 7.4.11
 
   tr46@0.0.3: {}
 

@@ -18,7 +18,6 @@ export default defineConfig(
     'data/**',
     'reports/**',
     'docs/design/**',
-    'docs/mockups/**',
   ]),
   {
     files: sourceFiles,

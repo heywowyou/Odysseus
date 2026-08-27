@@ -30,11 +30,21 @@ import {
   createJob,
   disconnectFromMongo,
   addSuppressionEntry,
+  getLatestHotelIngestRunId,
+  getHotelCandidateYield,
+  listHotelCandidates,
+  recordHotelCandidateReview,
 } from '@odysseus/store';
 import {
   createAtoutFranceSource,
+  createHotelSireneJoiner,
+  createMongoHotelCandidateStore,
   getAtoutFranceExportPath,
+  getSireneStockIndexCachePath,
+  getSireneStockPath,
   ingestHotelCatalogue,
+  resolveHotels,
+  CURRENT_RESOLUTION_VERSION,
 } from '@odysseus/interface';
 
 function parsePositiveInt(value: string): number {
@@ -49,7 +59,8 @@ export function registerProspectCommand(program: Command): void {
   const prospect = program
     .command('prospect')
     .description(
-      'Milestone 9a: prospect acquisition and qualification against AFNIC + Sirene stock data.',
+      'Prospect acquisition and qualification. Milestone 9a against AFNIC + Sirene stock data, ' +
+        'milestone 9c against the Atout France hotel catalogue.',
     );
 
   prospect
@@ -119,6 +130,172 @@ export function registerProspectCommand(program: Command): void {
         if (mongoConnection) await disconnectFromMongo(mongoConnection);
       }
     });
+
+  prospect
+    .command('hotel-resolve')
+    .description(
+      'Milestone 9c: resolve one ingest run of hotel_source_records into canonical hotel candidates, ' +
+        'labelling chains, vendor-hosted independents, and review items. Runs inline.',
+    )
+    .option('--ingest-run <id>', 'Ingest run to resolve (default: the most recent)')
+    .option(
+      '--resolution-version <version>',
+      'Resolution generation to write into',
+      CURRENT_RESOLUTION_VERSION,
+    )
+    .option('--limit <n>', 'Stop after this many source records', parsePositiveInt)
+    .option('--dry-run', 'Classify and count without writing anything', false)
+    .action(
+      async (opts: {
+        ingestRun?: string;
+        resolutionVersion: string;
+        limit?: number;
+        dryRun: boolean;
+      }) => {
+        let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+        try {
+          // Reading the catalogue needs a connection even for a dry run: the
+          // source records being classified live in the database, unlike
+          // hotel-ingest, whose input is a file on disk.
+          mongoConnection = await connectToMongo();
+          const ingestRunId = opts.ingestRun ?? (await getLatestHotelIngestRunId(mongoConnection));
+          if (ingestRunId === null) {
+            console.error(
+              'odysseus prospect hotel-resolve: no hotel source records found. Run `prospect hotel-ingest` first.',
+            );
+            process.exitCode = 1;
+            return;
+          }
+
+          const sireneJoiner = await createHotelSireneJoiner(
+            getSireneStockPath(),
+            getSireneStockIndexCachePath(),
+          );
+
+          const report = await resolveHotels({
+            store: createMongoHotelCandidateStore(mongoConnection),
+            ingestRunId,
+            resolutionVersion: opts.resolutionVersion,
+            dryRun: opts.dryRun,
+            sireneJoiner,
+            ...(opts.limit !== undefined ? { limit: opts.limit } : {}),
+          });
+
+          // Machine-readable on stdout for the same reason hotel-ingest's
+          // report is: this is the input to the usable-domain measurement that
+          // decides whether a further ingestion source is needed.
+          console.log(JSON.stringify(report, null, 2));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`odysseus prospect hotel-resolve: failed\n${message}`);
+          process.exitCode = 1;
+        } finally {
+          if (mongoConnection) await disconnectFromMongo(mongoConnection);
+        }
+      },
+    );
+
+  const review = prospect
+    .command('hotel-review')
+    .description(
+      'Milestone 9c: inspect and decide the hotel candidates resolution could not merge on exact evidence.',
+    );
+
+  review
+    .command('list')
+    .description('List candidates awaiting review, or filter by review state.')
+    .option(
+      '--resolution-version <version>',
+      'Resolution generation to read',
+      CURRENT_RESOLUTION_VERSION,
+    )
+    .option('--state <state>', 'not-required | pending | accepted | rejected', 'pending')
+    .option('--limit <n>', 'Maximum candidates to print', parsePositiveInt, 50)
+    .action(async (opts: { resolutionVersion: string; state: string; limit: number }) => {
+      let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+      try {
+        mongoConnection = await connectToMongo();
+        const candidates = await listHotelCandidates(
+          mongoConnection,
+          {
+            resolutionVersion: opts.resolutionVersion,
+            reviewState: opts.state as 'not-required' | 'pending' | 'accepted' | 'rejected',
+          },
+          opts.limit,
+        );
+        const summary = await getHotelCandidateYield(mongoConnection, opts.resolutionVersion);
+        console.log(
+          JSON.stringify(
+            {
+              summary,
+              candidates: candidates.map((candidate) => ({
+                candidateId: candidate.candidateId,
+                name: candidate.name,
+                postcode: candidate.postcode,
+                commune: candidate.commune,
+                starRating: candidate.starRating,
+                groupStatus: candidate.groupStatus,
+                groupDomain: candidate.groupDomain,
+                groupSize: candidate.groupSize,
+                ownRegistrableDomain: candidate.ownRegistrableDomain,
+                declaredWebsites: candidate.websiteCandidates.map((site) => site.raw),
+                queuedReason: candidate.review.queuedReason,
+                conflicts: candidate.conflicts,
+              })),
+            },
+            null,
+            2,
+          ),
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`odysseus prospect hotel-review list: failed\n${message}`);
+        process.exitCode = 1;
+      } finally {
+        if (mongoConnection) await disconnectFromMongo(mongoConnection);
+      }
+    });
+
+  for (const decision of ['accept', 'reject'] as const) {
+    review
+      .command(`${decision} <candidateId>`)
+      .description(
+        `Record a reviewed ${decision === 'accept' ? 'acceptance' : 'rejection'} for one candidate. ` +
+          'Idempotent: re-running the same decision reports no change rather than failing.',
+      )
+      .requiredOption('--actor <name>', 'Who made this decision, recorded on the candidate')
+      .requiredOption('--reason <text>', 'Why, recorded on the candidate')
+      .action(async (candidateId: string, opts: { actor: string; reason: string }) => {
+        let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+        try {
+          mongoConnection = await connectToMongo();
+          const result = await recordHotelCandidateReview(mongoConnection, {
+            candidateId,
+            decision: decision === 'accept' ? 'accepted' : 'rejected',
+            actor: opts.actor,
+            reason: opts.reason,
+          });
+          if (!result.found) {
+            console.error(
+              `odysseus prospect hotel-review ${decision}: no candidate with id ${candidateId}`,
+            );
+            process.exitCode = 1;
+            return;
+          }
+          console.log(
+            result.changed
+              ? `odysseus prospect hotel-review ${decision}: recorded for ${candidateId}`
+              : `odysseus prospect hotel-review ${decision}: already recorded for ${candidateId}, nothing changed`,
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`odysseus prospect hotel-review ${decision}: failed\n${message}`);
+          process.exitCode = 1;
+        } finally {
+          if (mongoConnection) await disconnectFromMongo(mongoConnection);
+        }
+      });
+  }
 
   prospect
     .command('suppress <domain>')

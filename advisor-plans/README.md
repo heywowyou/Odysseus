@@ -153,6 +153,37 @@ reusing the shipped mentions-légales extraction path, not from a catalogue
 column. Plan 002's exact-identifier auto-resolution is fed by the site, not by
 the source.
 
+**Identity and group facts, measured 2026-08-27 by resolving the full 13,301
+hotel export into a throwaway database.** Reproduce with
+`prospect hotel-resolve --dry-run`.
+
+| Measure | Count |
+| --- | --- |
+| Source rows resolved into candidates | 13,301 |
+| Independent hotels | 9,480 |
+| Chain or group members, retained but excluded from the campaign | 3,643 |
+| Hotels on a third-party vendor platform, routed to review | 113 |
+| No usable declared website | 65 |
+| Distinct domains held by more than one establishment | 207, covering 3,729 hotels |
+| Largest single group | `accor.com`, 1,196 properties |
+| Queued for manual review | 187 |
+| Campaign-ready: eligible, independent, own domain | 7,069 |
+
+Three facts worth carrying forward:
+
+- **Within-source identity dedupe is a no-op today.** Every source row has a
+  distinct `sourceId` and the catalogue carries no SIRET or SIREN, so the
+  registrable domain is the only axis that merges anything. Group detection,
+  not identity dedupe, is the load-bearing step in plan 002.
+- **Only nine name-plus-postcode collisions exist in the whole export.** Manual
+  review is therefore a real queue a person can clear, not a bottleneck. The
+  other 178 queued items are vendor-hosted or website-unusable, not identity
+  doubt.
+- **7,069 campaign-ready candidates**, against 7,094 hotels holding a unique
+  domain measured before implementation. The operator's position on this figure
+  stands: it is reported, not acted on, and binding decision 3 measures usable
+  yield only after plan 003's cheap qualification.
+
 **Population caveat for later analysis.** Atout France lists only *classified*
 accommodation. A hotel that never sought classification, or whose classification
 lapsed, is absent from the base catalogue entirely. The campaign population is
@@ -194,8 +225,8 @@ plainly wherever plan 014's results are interpreted rather than described as
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 | --- | --- | --- | --- | --- | --- |
-| [001](./001-hotel-catalogue-ingestion.md) | Ingest the national hotel catalogue | P1 | L | none | TODO |
-| [002](./002-hotel-identity-and-groups.md) | Resolve identities, own domains, and groups | P1 | L | 001 | TODO |
+| [001](./001-hotel-catalogue-ingestion.md) | Ingest the national hotel catalogue | P1 | L | none | DONE |
+| [002](./002-hotel-identity-and-groups.md) | Resolve identities, own domains, and groups | P1 | L | 001 | DONE |
 | [003](./003-cheap-hotel-qualification.md) | Qualify hotel websites without a browser | P1 | L | 002 | TODO |
 | [004](./004-distinct-hotel-prescan.md) | Build the distinct three-page hotel prescan | P1 | L | 003 | TODO |
 | [005](./005-hotel-evidence-capture.md) | Capture the two outreach evidence assets | P1 | L | 004 | TODO |

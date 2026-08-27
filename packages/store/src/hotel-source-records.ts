@@ -146,3 +146,39 @@ export async function listHotelSourceRecords(
   if (filter.ingestRunId !== undefined) query['ingestRunId'] = filter.ingestRunId;
   return Model.find(query).sort({ name: 1 }).limit(limit).lean<HotelSourceRecordDocument[]>();
 }
+
+/** Streams one run in `_id` order, for a caller that has to read the whole
+ *  catalogue rather than a page of it. listHotelSourceRecords is capped and
+ *  sorted for human-facing listings; this exists because identity resolution
+ *  needs two full passes over a run - one to count establishments per domain,
+ *  one to classify them - and holding tens of thousands of documents in memory
+ *  twice to avoid a second query is the wrong trade. */
+export async function* streamHotelSourceRecords(
+  connection: Connection,
+  ingestRunId: string,
+  batchSize = 500,
+): AsyncGenerator<HotelSourceRecordDocument> {
+  const Model = createHotelSourceRecordModel(connection);
+  const cursor = Model.find({ ingestRunId })
+    .sort({ _id: 1 })
+    .batchSize(batchSize)
+    .lean<HotelSourceRecordDocument>()
+    .cursor();
+  try {
+    for await (const document of cursor) {
+      yield document as HotelSourceRecordDocument;
+    }
+  } finally {
+    await cursor.close();
+  }
+}
+
+/** The most recently written ingest run, so a CLI caller does not have to
+ *  paste a UUID to resolve the batch they just ingested. */
+export async function getLatestHotelIngestRunId(connection: Connection): Promise<string | null> {
+  const Model = createHotelSourceRecordModel(connection);
+  const latest = await Model.findOne().sort({ createdAt: -1 }).select({ ingestRunId: 1 }).lean<{
+    ingestRunId: string;
+  }>();
+  return latest?.ingestRunId ?? null;
+}
