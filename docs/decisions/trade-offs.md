@@ -1458,6 +1458,13 @@ cap instead; that decision is the operator's.
     repo-wide rename overreached into exactly those places and had to be
     reverted twice.
 
+    The normalization recall ratchet needs the union of rules observed across
+    the larger curated local audit set, not only the three full committed
+    snapshots. `pnpm fixtures:rules` writes that union to
+    `fixtures/test-audits/observed-rule-ids.json`. The file contains sorted rule
+    IDs only and deliberately preserves no audit-to-rule mapping, so CI keeps
+    the measured coverage floor without publishing a named site's defects.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

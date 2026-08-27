@@ -255,7 +255,9 @@ means numbered entry 24, not a literal Markdown heading anchor.
     and never commit a real one as-is. Never hand-edit a fixture in place -
     rebuild it, so the script's read-back leak check and page-collision check
     both run. Real hostnames stay wherever they point at local gitignored
-    `artifacts/` directories. → trade-offs.md#34
+    `artifacts/` directories. The site-agnostic observed-rule inventory is
+    rebuilt with `pnpm fixtures:rules`; it must never encode which audit
+    emitted a rule. → trade-offs.md#34
 
 
 ## Stack

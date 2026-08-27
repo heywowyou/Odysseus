@@ -36,15 +36,16 @@
  * nothing exercising it is a deliberate, visible act. Raise the floor when
  * coverage improves; never lower it to make a red build green.
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { Finding } from '../types/findings.js';
 import { CUSTOM_CHECK_SEVERITY } from './severity.js';
-import { fixtureAudits } from '../../../../scripts/fixture-fingerprint.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+const testAuditsRoot = path.join(repoRoot, 'fixtures/test-audits');
+const committedTestAudits = ['small-site', 'multi-page', 'large-rule-families'] as const;
 
 /** Measured 2026-08-27 across the curated fixture set: 85 of 172 emittable
  *  rules, 49 percent. Every uncovered rule is one no fixture has ever tripped,
@@ -91,20 +92,25 @@ interface StoredAudit {
   findings: Finding[];
 }
 
-/** Only the curated set in fixtures/audits.json, never every directory under
- *  artifacts/. The artifacts tree accumulates every scan ever run, including
- *  superseded ones nobody re-derives; judging today's code by those would
- *  report a duplication bug that was fixed weeks ago and is still frozen into
- *  an old scan's output. The freshness guard keeps the curated set current,
- *  which is what makes it safe to assert on. */
+/** The committed de-identified audits retain per-audit shape, which is what the
+ *  concentration check needs. A clean checkout must exercise the same inputs
+ *  as an operator machine. */
 function storedAudits(): StoredAudit[] {
-  const audits: StoredAudit[] = [];
-  for (const audit of fixtureAudits()) {
-    const file = path.join(repoRoot, audit.dir, 'findings.json');
-    if (!existsSync(file)) continue;
-    audits.push({ dir: audit.dir, findings: JSON.parse(readFileSync(file, 'utf-8')) as Finding[] });
-  }
-  return audits;
+  return committedTestAudits.map((auditName) => {
+    const dir = path.join('fixtures/test-audits', auditName);
+    const file = path.join(repoRoot, dir, 'findings.json');
+    return { dir, findings: JSON.parse(readFileSync(file, 'utf-8')) as Finding[] };
+  });
+}
+
+/** Aggregate rule IDs from the larger curated local audit set without
+ *  committing any site-to-defect relationship. Rebuilt by `pnpm
+ *  fixtures:rules`. */
+function observedRuleIds(): Set<string> {
+  const values = JSON.parse(
+    readFileSync(path.join(testAuditsRoot, 'observed-rule-ids.json'), 'utf-8'),
+  ) as string[];
+  return new Set(values);
 }
 
 function emittableRuleIds(): Set<string> {
@@ -123,9 +129,7 @@ function emittableRuleIds(): Set<string> {
 
 describe('rule coverage across all stored fixtures (recall)', () => {
   it('does not fall below the measured floor', () => {
-    const observed = new Set(
-      storedAudits().flatMap((audit) => audit.findings.map((f) => f.ruleId)),
-    );
+    const observed = observedRuleIds();
     const emittable = emittableRuleIds();
     const covered = [...emittable].filter((ruleId) => observed.has(ruleId));
 
