@@ -29,6 +29,14 @@ an independent-hotel pitch to a chain. It preserves the shipped append-only
   name/postcode fallback, and a group queue. The safe reconciliation is exact
   auto-resolution plus manual review for name/postcode candidates.
 - The project has no general public-suffix dependency. Do not hand-roll eTLD+1.
+- Measured 2026-08-27: **neither** Atout France nor DATAtourisme carries a SIRET
+  or SIREN column (`advisor-plans/README.md`, "Measured source facts"). Do not
+  look for one. The exact-identifier auto-resolution path is fed by the SIREN
+  the hotel publishes on its own site, extracted during plan 003 by the shipped
+  mentions-legales path, so for most candidates the identifier arrives *after*
+  this plan's first join rather than before it. Plan for that ordering: a
+  candidate may legitimately sit in manual-review on name plus postcode until
+  plan 003 supplies an exact identifier that promotes it.
 
 ## Commands you will need
 
@@ -41,7 +49,7 @@ an independent-hotel pitch to a chain. It preserves the shipped append-only
 
 ## Scope
 
-**In scope**: DATAtourisme-to-Atout/Sirene joins; pure identity result contract;
+**In scope**: Atout-France-to-DATAtourisme/Sirene joins; pure identity contract;
 exact SIRET/SIREN/domain matching; manual-review candidates; canonical
 `hotel_candidates` catalogue; group/chain queue; provenance conflicts; CLI
 resolve/review commands with dry-run/limit.

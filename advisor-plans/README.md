@@ -6,10 +6,11 @@ milestone work continue directly on `main`; executors must not create an
 alternative branch unless that instruction changes.
 
 This plan set reconciles the shipped 9a, 9b, and 9b.5 system, canonical project
-documents, and the two operator-supplied M9 design drafts. Those untracked
-drafts are design evidence, not repository instructions. Execute these slices
-in dependency order, honor every STOP condition, and keep this index and the
-session handoff current so Codex or Claude Code can resume without inference.
+documents, and the operator-supplied M9 proposal drafts. The drafts were
+consolidated into these plans and removed; Git and session history retain their
+provenance. Execute these slices in dependency order, honor every STOP
+condition, and keep this index and the session handoff current so Codex or
+Claude Code can resume without inference.
 
 ## Outcome
 
@@ -22,10 +23,17 @@ suppression, retention, and outcome measurement.
 
 ## Binding decisions
 
-1. **Source-first national catalogue.** DATAtourisme is the base hotel
-   catalogue. Join Atout France classification and the repository's shipped
-   Sirene/SIRENE machinery before website qualification. AFNIC is not the base
-   discovery source for this campaign.
+1. **Source-first national catalogue.** Atout France's classified-accommodation
+   export is the base hotel catalogue; DATAtourisme is supplementary. Amended
+   2026-08-27 from the reverse arrangement after both sources were measured
+   (see "Measured source facts" below): Atout France is the authoritative
+   register of the official star rating that binding decision 2 makes a hard
+   gate, and it already carries the declared website, room count, and commune
+   in a single small file. DATAtourisme covers hotels absent from the
+   classified register and supplies alternate websites; its own
+   contributor-supplied rating is never promoted to the campaign gate. Join
+   the repository's shipped Sirene machinery before website qualification.
+   AFNIC is not the base discovery source for this campaign.
 2. **Hard three-star campaign gate.** A verified rating of three, four, or five
    stars is eligible. Lower-rated hotels are retained as
    `parked: below-three-stars`, never silently discarded or selected. Unknown
@@ -85,10 +93,68 @@ suppression, retention, and outcome measurement.
     limits, checkpoints, and reasoned yields. Live third-party scans still need
     current permission for each named site.
 
+## Measured source facts
+
+Measured 2026-08-27 by read-only fetches of the two published open-data files,
+before any implementation. Recorded here so a later executor inherits the
+evidence rather than re-deriving it. Both sources are regenerated daily and
+both figures should be re-measured, not assumed, whenever the campaign
+population is quoted.
+
+**Atout France**, `hebergements_classes.csv`, data.gouv.fr dataset
+`hebergements-touristiques-classes-en-france`, licence `fr-lo`. Semicolon
+delimited, UTF-8, header row present, missing values written as the literal
+string `-` rather than left empty. Columns: `DATE DE CLASSEMENT`,
+`TYPOLOGIE ÉTABLISSEMENT`, `CLASSEMENT`, `CATÉGORIE`,
+`MENTION (villages de vacances)`, `NOM COMMERCIAL`, `ADRESSE`, `CODE POSTAL`,
+`COMMUNE`, `SITE INTERNET`, `TYPE DE SÉJOUR`,
+`CAPACITÉ D'ACCUEIL (PERSONNES)`, `NOMBRE DE CHAMBRES`,
+`NOMBRE D'EMPLACEMENTS`,
+`NOMBRE D'UNITES D'HABITATION (résidences de tourisme)`,
+`NOMBRE DE LOGEMENTS (villages de vacances)`, `classement prorogé`.
+
+| Measure | Count |
+| --- | --- |
+| Rows, all accommodation typologies | 21,428 |
+| `HÔTEL DE TOURISME` rows | 13,301 |
+| Hotels rated 3, 4, or 5 stars | 9,765 |
+| Of those, carrying a `SITE INTERNET` value | 9,730 |
+| Hotels rated 1 or 2 stars (parked) | 3,536 |
+
+**DATAtourisme**, flat CSV export, data.gouv.fr dataset
+`datatourisme-la-base-nationale-des-donnees-publiques-dinformation-touristique-en-open-data`,
+Licence Ouverte 2.0. Nineteen regional files `datatourisme-reg-<code>.csv`
+totalling roughly 430 MB, plus a 275 MB national `datatourisme-place.csv`. The
+regional files are the bounded ingestion unit; the national monolith is not
+needed. Comma delimited, UTF-8. Columns: `Nom_du_POI`, `Categories_de_POI`,
+`Latitude`, `Longitude`, `Adresse_postale`, `Code_postal_et_commune`,
+`Periodes_regroupees`, `Covid19_mesures_specifiques`, `Createur_de_la_donnee`,
+`SIT_diffuseur`, `Date_de_mise_a_jour`, `Contacts_du_POI`,
+`Classements_du_POI`, `Description`, `URI_ID_du_POI`. Hotels are identified by
+the ontology URI `https://www.datatourisme.fr/ontology/core#Hotel` inside the
+pipe-joined `Categories_de_POI`. `Code_postal_et_commune` is written
+`20220#Algajola`, `Contacts_du_POI` mixes website, email, and telephone behind
+`#` and `|` separators, and `Classements_du_POI` is contributor-supplied and
+inconsistently populated.
+
+**Neither source carries SIRET or SIREN.** The company identifier continues to
+come from the hotel's own published identification during cheap qualification,
+reusing the shipped mentions-légales extraction path, not from a catalogue
+column. Plan 002's exact-identifier auto-resolution is fed by the site, not by
+the source.
+
+**Population caveat for later analysis.** Atout France lists only *classified*
+accommodation. A hotel that never sought classification, or whose classification
+lapsed, is absent from the base catalogue entirely. The campaign population is
+therefore definitionally "classified French hotels", which must be stated
+plainly wherever plan 014's results are interpreted rather than described as
+"French hotels".
+
 ## Deep module seams
 
-- `HotelCatalogueSource` in `interface`: streaming DATAtourisme and Atout
-  adapters behind one normalized, checkpointable ingestion contract.
+- `HotelCatalogueSource` in `interface`: streaming Atout France (base) and
+  DATAtourisme (supplementary) adapters behind one normalized, checkpointable
+  ingestion contract.
 - Hotel identity resolver in `core`: pure exact-resolution decision returning
   resolved, manual-review, or unresolved with provenance and reason codes.
 - Hotel-candidate helpers in `store`: catalogue state and joins remain separate
@@ -181,8 +247,9 @@ authorization does not carry between sessions.
 
 ## Milestone definition of done
 
-- The base catalogue is reproducibly ingested from verified DATAtourisme data,
-  joined to Atout France and Sirene, and reports source-level provenance/yield.
+- The base catalogue is reproducibly ingested from the verified Atout France
+  classified-accommodation export, supplemented by DATAtourisme and joined to
+  Sirene, and reports source-level provenance and yield.
 - Only verified three-to-five-star hotels enter this campaign; lower or unknown
   ratings remain queryable with explicit parked reasons.
 - The measured qualified own-domain population reaches 8,000 to 15,000, or an

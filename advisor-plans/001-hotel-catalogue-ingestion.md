@@ -18,9 +18,10 @@
 ## Why this matters
 
 Hotels are the first campaign, so sourcing must begin with hotels rather than
-generic AFNIC domains. DATAtourisme is the base catalogue; Atout France and the
-already-shipped Sirene machinery enrich it. The output is a renewable source
-catalogue, not yet a contactable prospect.
+generic AFNIC domains. Atout France's classified-accommodation export is the
+base catalogue; DATAtourisme supplements it and the already-shipped Sirene
+machinery enriches it downstream. The output is a renewable source catalogue,
+not yet a contactable prospect.
 
 ## Current state
 
@@ -28,9 +29,24 @@ catalogue, not yet a contactable prospect.
   events to `prospects`; it is not a national hotel ingest.
 - `sirene-stock-index.ts` is the streaming/index exemplar. Reuse its bounded,
   version-fingerprinted style rather than loading national files unbounded.
-- The two user-supplied `docs/report/m9-*` drafts establish the missing
-  source-first goal. Canonical rules still require provenance, role addresses,
-  90-day operational retention, and no new package.
+- The consolidated M9 proposal inputs established the missing source-first
+  goal. Canonical rules still require provenance, role addresses, 90-day
+  operational retention, and no new package.
+- Both source contracts were measured 2026-08-27 and are recorded in
+  `advisor-plans/README.md`, "Measured source facts": exact column headers,
+  delimiters, encodings, the Atout France `-` missing-value sentinel, the
+  DATAtourisme `core#Hotel` ontology filter, and the counts below. Step 1 of
+  this plan verifies those figures still hold; it does not re-derive them from
+  nothing.
+- Measured base-catalogue population: 13,301 classified hotels, of which 9,765
+  are rated three stars or better and 9,730 of those carry a declared website.
+  That clears the 8,000 lower bound before DATAtourisme contributes anything,
+  but a declared website is not yet a usable own domain - aggregator links,
+  parked domains, and chain corporate sites are attrited by plan 003, which
+  remains the Overpass decision point.
+- Neither source carries SIRET or SIREN. The company identifier comes from the
+  hotel's own published identification during plan 003, reusing the shipped
+  mentions-legales path, not from a catalogue column.
 - Target yield is 8,000 to 15,000 usable French hotel records with an own
   domain after later resolution/qualification. Overpass is not part of this
   first pass.
@@ -63,17 +79,23 @@ download without approval, or copying personal data unnecessary to the funnel.
 
 ## Steps
 
-### Step 1: Verify source contracts and reuse rights
+### Step 1: Confirm the recorded source contracts still hold
 
-Obtain current official schemas or licence-compatible samples for the national
-DATAtourisme accommodation flux and Atout France classified accommodation list.
-Record source URL/name, licence, release/version, retrieval date, encoding,
-delimiter, hotel type identifiers, website, source ID, SIRET, name, postcode,
-star rating, and room-count fields actually present. Create minimal synthetic
-fixtures with those exact shapes.
+Both contracts are already recorded in `advisor-plans/README.md`, "Measured
+source facts": source URL, licence, encoding, delimiter, literal column
+headers, hotel type identifiers, the fields actually present, and the fields
+confirmed absent. This step confirms they have not drifted, since both files
+are regenerated daily.
 
-**Verify**: `pnpm run docs:check` passes and every fixture field traces to the
-recorded source contract.
+Re-read the header row of each file the operator has downloaded and compare it
+byte for byte against the recorded columns. Create minimal synthetic fixtures
+carrying those exact header strings, the Atout France `-` missing-value
+sentinel, and at least one accented commune name so an encoding regression
+fails a test rather than a real ingest.
+
+**Verify**: `pnpm run docs:check` passes, every fixture field traces to the
+recorded source contract, and any header divergence is written into the README
+table before code is adjusted to it.
 
 ### Step 2: Define immutable normalized source records
 
@@ -92,11 +114,17 @@ fields, and provenance round-trip.
 
 ### Step 3: Build bounded streaming adapters
 
-Create one adapter per source behind the same iterator interface. DATAtourisme
-filters the national flux to hotel/accommodation types and is the base.
-Atout France supplies classification and capacity candidates only. Adapters
-count accepted, skipped, malformed, and non-hotel rows by reason without
-logging raw personal fields.
+Create one adapter per source behind the same iterator interface. Atout France
+is the base: it filters to the `HÔTEL DE TOURISME` typology and supplies the
+authoritative classification, the declared website, room count, and commune.
+DATAtourisme is supplementary: it filters the regional flux on the `core#Hotel`
+ontology URI and supplies coverage and alternate websites only, never the
+campaign gate. Adapters count accepted, skipped, malformed, and non-hotel rows
+by reason without logging raw personal fields.
+
+Atout France's export is small enough to read in one pass and needs no
+byte-offset resume machinery. The DATAtourisme regional set does, and reuses
+the shipped checkpoint helpers with a per-file checkpoint id.
 
 **Verify**: fixture tests snapshot normalized records and counters, including
 encoding, malformed rows, duplicates within a source, and cancellation/error.
@@ -119,18 +147,21 @@ dry-run zero writes, idempotent retry, and a machine-readable yield report.
 
 ## Done criteria
 
-- [ ] DATAtourisme national hotels ingest as the base catalogue.
-- [ ] Atout France records ingest independently with rating/capacity provenance.
+- [ ] Atout France classified hotels ingest as the base catalogue, with rating,
+      website, and capacity provenance.
+- [ ] DATAtourisme regional hotels ingest independently as a supplementary
+      source, never supplying the campaign rating.
 - [ ] Source history is immutable, versioned, 90-day retained, and resumable.
 - [ ] Yield report exists; no record is yet contactable or auto-merged.
 - [ ] Focused tests and `pnpm run check` pass; plan 001 is `DONE`.
 
 ## STOP conditions
 
-Stop if schema/licence cannot be verified, a dependency/package change is
-needed, national data cannot be processed boundedly, or the source lacks the
-claimed hotel identifiers. Do not substitute scraping Google Maps or another
-commercial list.
+Stop if a header row has drifted from the recorded contract in a way that
+changes which field carries the rating or the website, a dependency/package
+change is needed, national data cannot be processed boundedly, or a source
+lacks the claimed hotel identifiers. Do not substitute scraping Google Maps or
+another commercial list.
 
 ## Maintenance notes
 
