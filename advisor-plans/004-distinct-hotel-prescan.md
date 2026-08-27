@@ -112,11 +112,13 @@ concurrency/politeness, and legacy regression tests.
 
 ## Done criteria
 
-- [ ] Hotel prescan does not call the full-audit pipeline.
-- [ ] At most homepage, booking, and content pages run; no Lighthouse.
-- [ ] Direct metrics and booking fingerprint are persisted immutably for 90 days.
-- [ ] Dry-run/limit/concurrency and named-site permission gates exist.
-- [ ] Tests/check pass; plan 004 is `DONE`.
+- [x] Hotel prescan does not call the full-audit pipeline.
+- [x] At most homepage, booking, and content pages run; no Lighthouse.
+- [x] Direct metrics and booking fingerprint are persisted immutably for 90 days.
+- [x] Dry-run/limit/concurrency and named-site permission gates exist.
+- [x] Tests/check pass (1859 tests, `pnpm run check` clean); plan 004 is
+      `DONE`. Verified live against lacoorniche.com, twice, in 36 and 40
+      seconds. See `docs/decisions/trade-offs.md` entry 35.
 
 ## STOP conditions
 

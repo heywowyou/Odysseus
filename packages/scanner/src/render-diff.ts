@@ -25,6 +25,16 @@ export interface RenderDiffOptions {
    *  analysis (axe-core) against the exact same navigation instead of
    *  triggering another page load. */
   onRenderedPage?: (page: Page) => Promise<void>;
+  /** Invoked on the rendered page after it is created and *before* it
+   *  navigates, for a caller that must observe the navigation itself
+   *  rather than its result. Added for the prescan's byte and request
+   *  counting (plan 004): a `response` listener attached after `load`
+   *  misses the document and everything the initial parse requested,
+   *  which is most of a page's weight. Purely additive - no existing
+   *  caller passes it, so every audit path navigates exactly as before.
+   *  Anything that can be read from the loaded page belongs in
+   *  onRenderedPage instead; this hook must not navigate or block. */
+  onRenderedPageCreated?: (page: Page) => Promise<void>;
   /** Upper bound on the post-`load` wait for network idle. Defaults to
    *  RENDER_SETTLE_TIMEOUT_MS. Exceeding it is a normal outcome, not an
    *  error: see the settle block in renderDiff below. */
@@ -91,6 +101,7 @@ export async function renderDiff(
     renderedPage.on('pageerror', (err) => {
       consoleErrors.push(err.message);
     });
+    await options.onRenderedPageCreated?.(renderedPage);
     // 'load' rather than 'networkidle', with idle demoted to a bounded,
     // best-effort settle below. networkidle is unreachable on real sites
     // that hold a request open forever (chat widget, analytics heartbeat,

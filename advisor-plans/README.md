@@ -283,7 +283,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [001](./001-hotel-catalogue-ingestion.md) | Ingest the national hotel catalogue | P1 | L | none | DONE |
 | [002](./002-hotel-identity-and-groups.md) | Resolve identities, own domains, and groups | P1 | L | 001 | DONE |
 | [003](./003-cheap-hotel-qualification.md) | Qualify hotel websites without a browser | P1 | L | 002 | DONE |
-| [004](./004-distinct-hotel-prescan.md) | Build the distinct three-page hotel prescan | P1 | L | 003 | TODO |
+| [004](./004-distinct-hotel-prescan.md) | Build the distinct three-page hotel prescan | P1 | L | 003 | DONE |
 | [005](./005-hotel-evidence-capture.md) | Capture the two outreach evidence assets | P1 | L | 004 | TODO |
 | [006](./006-versioned-hotel-scoring.md) | Score candidates with immutable breakdowns | P1 | L | 001-005 | TODO |
 | [007](./007-role-contact-discovery.md) | Discover approved own-domain role contacts | P1 | M | 006 | TODO |
@@ -295,8 +295,10 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [013](./013-outreach-operator-interface.md) | Add the private outreach operator interface | P2 | L | 001-012 | TODO |
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013 | TODO |
 
-Status values: `TODO`, `IN PROGRESS`, `DONE`, `BLOCKED: <reason>`, or
-`REJECTED: <reason>`.
+Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
+`BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done
+criterion is met and the suite is green, but a verification step still needs a
+person - typically reading the first run against a live operator-named site.
 
 ## Dependency notes
 

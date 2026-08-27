@@ -102,6 +102,22 @@ export function getArtifactsRoot(): string {
   return path.join(workspaceRoot, DEFAULT_ARTIFACTS_DIR_NAME);
 }
 
+/**
+ * Prescans live under their own subdirectory of the same artifacts root
+ * rather than beside audit directories (milestone 9c plan 004). One root
+ * keeps `ODYSSEUS_ARTIFACTS_ROOT` the single thing an operator configures
+ * and the single thing `.gitignore` covers; the subdirectory keeps them out
+ * of `artifacts/<hostname>/`, where every consumer expects a directory to be
+ * an audit with a manifest. A prescan is not an audit and must never be
+ * readable as one.
+ *
+ * Subject to plan 004's 90 day operational retention: these directories are
+ * expected to be swept, unlike a paid audit's artifacts.
+ */
+export function getPrescansRoot(): string {
+  return path.join(getArtifactsRoot(), 'prescans');
+}
+
 function getPositiveIntEnv(name: string, defaultValue: number): number {
   ensureEnvLoaded();
   const raw = process.env[name];

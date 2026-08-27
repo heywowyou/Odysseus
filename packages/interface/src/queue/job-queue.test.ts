@@ -68,6 +68,7 @@ describe('JobQueue', () => {
         'full-audit': vi.fn().mockResolvedValue(undefined),
         prospecting: vi.fn().mockResolvedValue(undefined),
         'prospect-ingestion': vi.fn().mockResolvedValue(undefined),
+        'hotel-prescan': vi.fn().mockResolvedValue(undefined),
       },
     });
 
@@ -90,6 +91,7 @@ describe('JobQueue', () => {
         'full-audit': runFullAuditJob,
         prospecting: runProspectingJob,
         'prospect-ingestion': runProspectIngestionJob,
+        'hotel-prescan': vi.fn().mockResolvedValue(undefined),
       },
     });
     await queue.start();
@@ -119,6 +121,7 @@ describe('JobQueue', () => {
         'full-audit': runFullAuditJob,
         prospecting: runProspectingJob,
         'prospect-ingestion': runProspectIngestionJob,
+        'hotel-prescan': vi.fn().mockResolvedValue(undefined),
       },
     });
     await queue.start();
@@ -144,6 +147,7 @@ describe('JobQueue', () => {
         'full-audit': runFullAuditJob,
         prospecting: runProspectingJob,
         'prospect-ingestion': runProspectIngestionJob,
+        'hotel-prescan': vi.fn().mockResolvedValue(undefined),
       },
     });
     await queue.start();
@@ -183,6 +187,7 @@ describe('JobQueue', () => {
         'full-audit': runFullAuditJob,
         prospecting: vi.fn(),
         'prospect-ingestion': vi.fn(),
+        'hotel-prescan': vi.fn(),
       },
     });
     await queue.start();
@@ -211,6 +216,7 @@ describe('JobQueue', () => {
         'full-audit': runFullAuditJob,
         prospecting: vi.fn(),
         'prospect-ingestion': vi.fn(),
+        'hotel-prescan': vi.fn(),
       },
     });
     await queue.start();
@@ -235,6 +241,7 @@ describe('JobQueue', () => {
         'full-audit': runFullAuditJob,
         prospecting: vi.fn(),
         'prospect-ingestion': vi.fn(),
+        'hotel-prescan': vi.fn(),
       },
     });
     await queue.start();
@@ -250,7 +257,12 @@ describe('JobQueue', () => {
     queue = new JobQueue({
       connection: fakeConnection,
       pollIntervalMs: 20,
-      runners: { 'full-audit': vi.fn(), prospecting: vi.fn(), 'prospect-ingestion': vi.fn() },
+      runners: {
+        'full-audit': vi.fn(),
+        prospecting: vi.fn(),
+        'prospect-ingestion': vi.fn(),
+        'hotel-prescan': vi.fn(),
+      },
     });
     await queue.start();
     await queue.stop();

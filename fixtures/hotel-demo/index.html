@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hôtel Demo - Accueil</title>
+  </head>
+  <body>
+    <header>
+      <h1>Hôtel Demo</h1>
+      <nav>
+        <a href="/reservation.html">Réserver</a>
+        <a href="/nos-chambres.html">Nos chambres</a>
+        <a href="/en/book.html">Book now</a>
+        <a href="/en/rooms.html">Our rooms</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/mentions-legales.html">Mentions légales</a>
+        <a href="https://www.booking.com/hotel/fr/demo.html">Réserver sur Booking</a>
+      </nav>
+    </header>
+    <main>
+      <p>Un hôtel de démonstration, jamais un site tiers réel.</p>
+      <!-- Seeded fault: no alt attribute. -->
+      <img src="/cover.png" width="120" height="80" />
+      <!-- Seeded fault: heading level skipped from h1 to h3. -->
+      <h3>Nos services</h3>
+      <p>Petit déjeuner, parking, wifi.</p>
+    </main>
+    <script>
+      // Seeded: a real main-thread block, so blocking time is measurably
+      // non-zero rather than trivially absent.
+      (function () {
+        var end = performance.now() + 120;
+        while (performance.now() < end) {
+          /* deliberate */
+        }
+      })();
+      // Seeded: a layout shift after load, so CLS is non-zero.
+      setTimeout(function () {
+        document.body.insertAdjacentHTML('afterbegin', '<div style="height:180px"></div>');
+      }, 200);
+    </script>
+  </body>
+</html>

@@ -21,6 +21,7 @@ import type { HotelCampaignEligibility } from '../prospecting/hotel-star-rating.
 import type { HotelVendorHost } from '../prospecting/hotel-vendor-hosts.js';
 import type { DeclaredWebsiteUnusableReason } from '../prospecting/hotel-domain.js';
 import type { HotelQualificationOutcome } from './hotel-qualification.js';
+import type { HotelPrescanStatus } from './hotel-prescan.js';
 
 /** Which evidence merged an observation into a candidate. Ordered by strength,
  *  and the order is load bearing: `siret` names one establishment, `siren`
@@ -154,6 +155,21 @@ export interface HotelCandidateQualificationState {
   evaluatedAt: Date;
 }
 
+/** The latest prescan's outcome, denormalized onto the candidate.
+ *
+ *  A pointer, not the record, for the same reason as
+ *  HotelCandidateQualificationState: selecting which hotels still need a
+ *  prescan must be one indexed query over the catalogue, not a join against
+ *  a growing collection of prescans. Unlike a qualification, the record it
+ *  points at is never overwritten - a re-prescan inserts a new document and
+ *  moves this pointer, so the earlier measurements survive for comparison. */
+export interface HotelCandidatePrescanState {
+  prescanId: string;
+  prescanVersion: string;
+  status: HotelPrescanStatus;
+  prescannedAt: Date;
+}
+
 /** The canonical projection. One per establishment per resolution version. */
 export interface HotelCandidate {
   candidateId: string;
@@ -189,6 +205,10 @@ export interface HotelCandidate {
   /** Set by plan 003's qualification pass. Absent means never evaluated,
    *  which is different from evaluated and rejected. */
   qualification?: HotelCandidateQualificationState;
+  /** Set by plan 004's prescan pass. Absent means never prescanned. Same
+   *  pointer-not-record rule as `qualification` above: the measurements live
+   *  in `prescans`, one immutable document per run. */
+  prescan?: HotelCandidatePrescanState;
   conflicts: HotelCandidateConflict[];
   review: HotelCandidateReview;
 }

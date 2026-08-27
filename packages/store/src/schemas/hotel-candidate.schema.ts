@@ -88,6 +88,23 @@ const qualificationStateSchema = new Schema(
   { _id: false },
 );
 
+/** The prescan pointer. Same pointer-not-record rule as
+ *  qualificationStateSchema above; the measurements stay in `prescans`, one
+ *  immutable document per run. */
+const prescanStateSchema = new Schema(
+  {
+    prescanId: { type: String, required: true },
+    prescanVersion: { type: String, required: true },
+    status: {
+      type: String,
+      required: true,
+      enum: ['complete', 'blocked-by-robots', 'homepage-unreachable'],
+    },
+    prescannedAt: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
 const hotelCandidateSchema = new Schema<HotelCandidateDocument>(
   {
     candidateId: { type: String, required: true },
@@ -126,6 +143,7 @@ const hotelCandidateSchema = new Schema<HotelCandidateDocument>(
     groupSize: { type: Number },
     sireneJoin: { type: Schema.Types.Mixed },
     qualification: { type: qualificationStateSchema },
+    prescan: { type: prescanStateSchema },
     conflicts: { type: [conflictSchema], required: true },
     review: {
       state: {
@@ -157,6 +175,11 @@ hotelCandidateSchema.index({ resolutionVersion: 1, groupStatus: 1, campaignEligi
 hotelCandidateSchema.index({ resolutionVersion: 1, identityStatus: 1, 'review.state': 1 });
 // Plan 004's prescan selection query: the qualified candidates of one run.
 hotelCandidateSchema.index({ resolutionVersion: 1, 'qualification.outcome': 1 });
+// Plan 004's skip query: which of those have not been prescanned at the
+// current version. Sparse would not help - a candidate never prescanned has
+// no `prescan` subdocument at all, and that absence is precisely what the
+// query selects on.
+hotelCandidateSchema.index({ resolutionVersion: 1, 'prescan.prescanVersion': 1 });
 
 export function createHotelCandidateModel(connection: Connection): Model<HotelCandidateDocument> {
   return (

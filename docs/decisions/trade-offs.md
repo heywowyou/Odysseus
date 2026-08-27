@@ -1465,6 +1465,87 @@ cap instead; that decision is the operator's.
     IDs only and deliberately preserves no audit-to-rule mapping, so CI keeps
     the measured coverage floor without publishing a named site's defects.
 
+35. **The hotel prescan is a distinct path over shared scanner primitives, not
+    a smaller call into the audit pipeline (2026-08-27).** Plan 004's brief was
+    a 60-to-90-second, three-page, no-Lighthouse pass whose output feeds
+    evidence capture and scoring. The obvious implementation was to reuse
+    `runProspectingJob`, which already crawls three pages - but it does so by
+    calling `runAuditStage`, which persists paid-audit shapes (`AuditManifest`,
+    findings, obligation assessment) and would let a prescan drift back into
+    multi-minute work one option at a time. `prescanSite`
+    (`packages/scanner/src/prescan/`) therefore orchestrates `renderDiff`,
+    `runAxe`, and direct metrics itself, and never calls `runAuditStage`,
+    `scanSite`, `scanPage`, or Lighthouse. Politeness is unchanged and comes
+    from the same primitives: `fetchRobotsRules`, the crawl delay taken as the
+    maximum of the configured value and any robots `Crawl-delay`, the
+    identifiable user agent, and the per-page timeout. Artifacts live under a
+    separate `prescans/` root so a prescan directory can never be mistaken for
+    an audit one.
+
+    **Direct metrics were proved before anything was built on them,** because
+    nothing in `packages/scanner/src` measured performance and the slice had a
+    STOP condition if they proved unreliable. Buffered `PerformanceObserver`s
+    read after load give CLS, long tasks, and LCP without a second navigation;
+    bytes and request counts come from Playwright `response` events rather than
+    Resource Timing, which reports `transferSize: 0` for cross-origin responses
+    without Timing-Allow-Origin and would undercount exactly the third-party
+    weight worth reporting. That listener must be attached before navigation,
+    which is why `renderDiff` gained one additive `onRenderedPageCreated` hook.
+    Two results are worth keeping: the long-task observer was verified against
+    a deliberate 500ms block and reported 400ms (500 minus two 50ms
+    thresholds), so its zero on a fast page is a real zero and not a broken
+    observer; and **on a static fixture LCP is the only metric that
+    varies** (140-260ms), every other metric being deterministic given the same
+    observation window - which makes the window part of the measurement and is
+    why it is recorded alongside the numbers.
+
+    **That determinism does not survive contact with a real site, and the first
+    live prescan measured how far.** Two runs of lacoorniche.com minutes apart
+    agreed exactly on the axe facts (5 violations over 27 elements on the
+    content page, identical rule IDs) and to within 0.003 percent on transfer
+    bytes, but differed on request count (194 vs 196), third-party requests (58
+    vs 60), main-thread blocking (1483 vs 1527ms), CLS (0.0050 vs 0.0070), and
+    LCP (11060 vs 11244ms). A page pulling 60 third-party requests through a
+    consent manager, a captcha, two booking widgets, and an analytics stack has
+    no fixed byte count. Scoring must therefore treat every *metric* as
+    approximate and band it, not just LCP; only the axe facts are exactly
+    reproducible. Bands, not thresholds a re-run can cross.
+
+    **Page-role selection orders candidates by path depth first, lexicographic
+    second.** A plain lexicographic tie-break picked `/en/book.html` over
+    `/reservation.html` on a French fixture, which would have measured the
+    English translation of a French hotel's site and shown a French hotelier
+    evidence about pages their guests do not use. A translated subtree is
+    always deeper than the page it translates, so depth-first lands on the
+    primary-language page without guessing language from URL shape, which
+    trade-off 24 already forbids. The order stays total and deterministic,
+    which is what makes two prescans of an unchanged site comparable. Off-site
+    booking links are recorded as evidence and never scanned.
+
+    **A prescan is inserted, never upserted** - a re-run is a new observation
+    with new measurements, the `persistAnalysis` side of trade-off 5.
+    Idempotency comes from the job's default skip at the current
+    `prescanVersion`, not from a key.
+
+    **No `prospects` event is emitted, reversing the expectation
+    `hotel-qualification.schema.ts` recorded.** `prospects` is the milestone 9a
+    AFNIC funnel's event log and its shape says so: `dataOrigin.domainSource`
+    is enumerated to `afnic-fichier-a`, `companyDataSource` to `sirene-stock`,
+    and `siren`, `denomination`, and `naf` are required. Atout France carries
+    no SIREN, and 2,437 hotels publish no identification on their own site
+    either. Emitting anyway means either relaxing those required fields - one
+    collection meaning two things depending on which fields happen to be
+    present - or fabricating provenance no source supplied. The hotel funnel
+    keeps its own collections and `prescans` is the third; joining the two
+    funnels is a real design question left to whoever needs a view across both.
+    Reasoning is repeated in `packages/store/src/prescans.ts`'s header, where
+    the next person to reach for the shortcut will be.
+
+    `--limit` is required for a real `prospect prescan run` and is checked
+    before any connection is opened, so an unbounded batch is refused on its
+    arguments alone. A dry run is exempt because it contacts nobody: it plans,
+    it does not decide.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.
@@ -1575,6 +1656,23 @@ existing package roles. Gmail integration may create and inspect drafts but
 has no send method; every send remains manual. Public previews have their own
 minimal HTML contract, expire, disclose collection and opt-out facts, and
 contain no raw audit detail or legal conclusion.
+
+**Open defect found by plan 004's live verification, not yet fixed.**
+Qualification v1 rejects 340 hotels with reason `redirect-offsite`, over 298
+distinct redirect targets, of which 280 are hit exactly once. The repeated
+targets are what the rule is for and are correctly excluded
+(`esprit-de-france.com` 8, then `accor.com`, `timhotel.com`, `orsohotels.com`,
+`hotelsbarriere.com`). The singletons are largely a hotel arriving at its own
+rebranded domain: the operator-named verification site is one, where Atout
+France's declared `lacoorniche-pyla.com` redirects to the same hotel's
+`lacoorniche.com`. The rule therefore conflates "this domain now belongs to an
+OTA, a vendor, or a group" with "this hotel renamed itself", discarding roughly
+280 qualified prospects, about 4.9 percent on top of the 5,720 qualified. The
+distinguishing evidence is the one trade-off 33 already uses for group routing:
+a redirect target shared by several establishments is a chain, a target held by
+exactly one establishment is that hotel's own. Fixing it means re-qualifying
+the catalogue, so it is recorded here as an open decision rather than taken
+silently.
 
 Legal copy remains source-gated: hotel-specific material in
 `docs/obligation-basis.md` cannot enter a real draft until it reaches primary

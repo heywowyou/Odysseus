@@ -131,3 +131,22 @@ export type {
   HotelQualificationFilter,
   HotelQualificationYield,
 } from './hotel-qualifications.js';
+
+// Milestone 9c plan 004: the prescan collection. Inserted, never upserted -
+// see schemas/prescan.schema.ts for why a re-run is a new observation rather
+// than a correction of the previous one.
+export { createPrescanModel } from './schemas/prescan.schema.js';
+export type { PrescanDocument, PrescanDocumentFields } from './schemas/prescan.schema.js';
+export {
+  recordPrescan,
+  getPrescan,
+  getLatestPrescan,
+  listCandidatesToPrescan,
+  getPrescanSummary,
+} from './prescans.js';
+export type {
+  ListCandidatesToPrescanOptions,
+  PrescanRunSummary,
+  RecordPrescanInput,
+  RecordPrescanResult,
+} from './prescans.js';

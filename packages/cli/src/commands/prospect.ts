@@ -36,6 +36,8 @@ import {
   recordHotelCandidateReview,
   getHotelQualificationYield,
   listHotelQualifications,
+  getPrescanSummary,
+  listCandidatesToPrescan,
 } from '@odysseus/store';
 import { OriginLock, getCrawlDelayMs, getCrawlerUserAgent } from '@odysseus/scanner';
 import { decideOverpassNeed, type HotelQualificationOutcome } from '@odysseus/core';
@@ -54,7 +56,13 @@ import {
   ingestHotelCatalogue,
   resolveHotels,
   CURRENT_RESOLUTION_VERSION,
+  CURRENT_PRESCAN_VERSION,
 } from '@odysseus/interface';
+
+/** Read ceiling for a prescan dry run, which takes no --limit because it
+ *  contacts nobody. High enough to cover the whole qualified population, low
+ *  enough that a mistake cannot stream an unbounded collection into memory. */
+const DRY_RUN_PLAN_CEILING = 10_000;
 
 function parsePositiveInt(value: string): number {
   const parsed = Number.parseInt(value, 10);
@@ -401,6 +409,166 @@ export function registerProspectCommand(program: Command): void {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`odysseus prospect hotel-qualify reasons: failed\n${message}`);
+        process.exitCode = 1;
+      } finally {
+        if (mongoConnection) await disconnectFromMongo(mongoConnection);
+      }
+    });
+
+  const prescan = prospect
+    .command('prescan')
+    .description(
+      'Milestone 9c: prescan qualified hotels with a bounded three-page browser pass. ' +
+        'No Lighthouse, no paid-audit records.',
+    );
+
+  // Enqueued rather than run inline, unlike hotel-qualify. This is the
+  // distinction this file's header draws: hotel-qualify makes plain bounded
+  // HTTP requests, while a prescan drives Chromium against live third-party
+  // sites, which is exactly the work the queue's concurrency ceiling, its
+  // per-origin lock, and its politeness budget exist to bound. A dry run is
+  // the exception below, because it contacts nobody.
+  prescan
+    .command('run')
+    .description('Enqueue a prescan batch over the qualified candidates of a resolution version.')
+    .option(
+      '--resolution-version <version>',
+      'Resolution generation to prescan',
+      CURRENT_RESOLUTION_VERSION,
+    )
+    .option(
+      '--qualification-version <version>',
+      'Qualification generation whose qualified candidates are eligible',
+      CURRENT_QUALIFICATION_VERSION,
+    )
+    .option(
+      '--prescan-version <version>',
+      'Prescan rule generation to write into',
+      CURRENT_PRESCAN_VERSION,
+    )
+    .option('--limit <n>', 'Prescan at most this many hotels', parsePositiveInt)
+    .option('--concurrency <n>', 'Hotels in flight at once', parsePositiveInt, 3)
+    .option('--rescan', 'Measure again even where a prescan exists at this version', false)
+    .option(
+      '--dry-run',
+      'List what would be prescanned and its page budget, contacting nobody',
+      false,
+    )
+    .action(
+      async (opts: {
+        resolutionVersion: string;
+        qualificationVersion: string;
+        prescanVersion: string;
+        limit?: number;
+        concurrency: number;
+        rescan: boolean;
+        dryRun: boolean;
+      }) => {
+        // Checked before anything is opened, not inside the try below: a run
+        // with no bound is refused on its arguments alone, so the refusal
+        // costs no database connection and cannot be confused with a
+        // connection failure. A dry run is exempt because it contacts nobody.
+        if (!opts.dryRun && opts.limit === undefined) {
+          console.error(
+            'odysseus prospect prescan run: --limit is required. The qualified population is ' +
+              'thousands of live third-party sites, and binding decision 18 requires every ' +
+              'batch to be bounded.',
+          );
+          process.exitCode = 1;
+          return;
+        }
+
+        // A dry run plans over the whole qualified population, so it needs no
+        // bound of its own; this ceiling only stops an unbounded read.
+        const limit = opts.limit ?? DRY_RUN_PLAN_CEILING;
+
+        let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+        try {
+          mongoConnection = await connectToMongo();
+
+          if (opts.dryRun) {
+            // Planned here rather than by enqueuing a job that would then
+            // decline to do anything: a dry run launches no browser and makes
+            // no request, so it has no reason to need a running server. It
+            // reports the population and the page budget, never an outcome -
+            // see prescan-hotels.ts on why a plan must not report outcomes it
+            // did not observe.
+            const candidates = await listCandidatesToPrescan(mongoConnection, {
+              resolutionVersion: opts.resolutionVersion,
+              qualificationVersion: opts.qualificationVersion,
+              prescanVersion: opts.prescanVersion,
+              limit,
+              skipAlreadyPrescanned: !opts.rescan,
+            });
+            console.log(
+              JSON.stringify(
+                {
+                  dryRun: true,
+                  resolutionVersion: opts.resolutionVersion,
+                  qualificationVersion: opts.qualificationVersion,
+                  prescanVersion: opts.prescanVersion,
+                  concurrency: opts.concurrency,
+                  rescan: opts.rescan,
+                  plan: {
+                    candidatesConsidered: candidates.length,
+                    wouldPrescan: candidates.length,
+                    // Three pages per site is the cap, not the expectation: a
+                    // site with no booking or rooms page has fewer roles to
+                    // fill, so a real run lands below this.
+                    maxPagesLoaded: candidates.length * 3,
+                  },
+                  domains: candidates.slice(0, 25).map((row) => row.ownRegistrableDomain),
+                },
+                null,
+                2,
+              ),
+            );
+            return;
+          }
+
+          const job = await createJob(mongoConnection, {
+            type: 'hotel-prescan',
+            options: {
+              resolutionVersion: opts.resolutionVersion,
+              qualificationVersion: opts.qualificationVersion,
+              prescanVersion: opts.prescanVersion,
+              maxPages: limit,
+              concurrency: opts.concurrency,
+              rescan: opts.rescan,
+            },
+          });
+          console.log(`odysseus prospect prescan run: enqueued job ${job.jobId}`);
+          console.log(
+            'Run `odysseus serve` for a job queue that will pick this up. The queue is what ' +
+              'applies the per-origin lock and the crawl delay.',
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`odysseus prospect prescan run: failed\n${message}`);
+          process.exitCode = 1;
+        } finally {
+          if (mongoConnection) await disconnectFromMongo(mongoConnection);
+        }
+      },
+    );
+
+  prescan
+    .command('report')
+    .description('Print the outcome table for a prescan version.')
+    .option(
+      '--prescan-version <version>',
+      'Prescan generation to summarize',
+      CURRENT_PRESCAN_VERSION,
+    )
+    .action(async (opts: { prescanVersion: string }) => {
+      let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+      try {
+        mongoConnection = await connectToMongo();
+        const summary = await getPrescanSummary(mongoConnection, opts.prescanVersion);
+        console.log(JSON.stringify(summary, null, 2));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`odysseus prospect prescan report: failed\n${message}`);
         process.exitCode = 1;
       } finally {
         if (mongoConnection) await disconnectFromMongo(mongoConnection);

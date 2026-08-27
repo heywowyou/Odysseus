@@ -12,7 +12,7 @@
 import { Schema, type Connection, type Model } from 'mongoose';
 import type { ProspectQualificationReason } from './prospect.schema.js';
 
-export type JobType = 'full-audit' | 'prospecting' | 'prospect-ingestion';
+export type JobType = 'full-audit' | 'prospecting' | 'prospect-ingestion' | 'hotel-prescan';
 export type JobStatus = 'queued' | 'running' | 'complete' | 'failed';
 export type JobPhase =
   | 'queued'
@@ -26,6 +26,7 @@ export type JobPhase =
   | 'scanning'
   | 'afnic-scan'
   | 'fetch-qualify'
+  | 'prescanning'
   | 'complete'
   | 'failed';
 
@@ -60,6 +61,21 @@ export interface JobOptionsSnapshot {
    *  delegated-booking-redirect check) - short-circuits that check to
    *  'single-property' instead of re-guessing from page content. */
   bookingEngineUrl?: string;
+  /** hotel-prescan jobs only (milestone 9c plan 004). Which slice of the
+   *  catalogue this batch prescans, and at which rule versions, so a job
+   *  document alone says what it did rather than depending on whatever the
+   *  configured defaults happened to be when it ran. */
+  resolutionVersion?: string;
+  qualificationVersion?: string;
+  prescanVersion?: string;
+  /** Candidates in flight at once. Bounds browser work; it never shortens
+   *  the delay between requests, which the shared per-origin lock and the
+   *  crawl delay enforce independently. */
+  concurrency?: number;
+  /** Prescan candidates already measured at this prescan version. Absent
+   *  means the default skip, which is what makes a re-run of an interrupted
+   *  batch continue rather than start over. */
+  rescan?: boolean;
 }
 
 export interface JobProgressCrawl {
@@ -164,6 +180,11 @@ const jobOptionsSchema = new Schema(
     seeds: { type: [String] },
     exclusions: { type: [String] },
     bookingEngineUrl: { type: String },
+    resolutionVersion: { type: String },
+    qualificationVersion: { type: String },
+    prescanVersion: { type: String },
+    concurrency: { type: Number },
+    rescan: { type: Boolean },
   },
   { _id: false },
 );
@@ -252,7 +273,7 @@ const jobSchema = new Schema<JobDocument>(
     type: {
       type: String,
       required: true,
-      enum: ['full-audit', 'prospecting', 'prospect-ingestion'],
+      enum: ['full-audit', 'prospecting', 'prospect-ingestion', 'hotel-prescan'],
     },
     status: { type: String, required: true, enum: ['queued', 'running', 'complete', 'failed'] },
     phase: {
@@ -270,6 +291,7 @@ const jobSchema = new Schema<JobDocument>(
         'scanning',
         'afnic-scan',
         'fetch-qualify',
+        'prescanning',
         'complete',
         'failed',
       ],

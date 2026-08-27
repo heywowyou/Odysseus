@@ -71,6 +71,18 @@ export type {
   HotelSiteChecker,
 } from './prospecting/hotel-qualification/qualify-hotels.js';
 export { createMongoHotelQualificationStore } from './prospecting/hotel-qualification/mongo-hotel-qualification-store.js';
+export {
+  prescanHotels,
+  CURRENT_PRESCAN_VERSION,
+  PRESCAN_BATCH_SIZE,
+} from './prospecting/hotel-prescan/prescan-hotels.js';
+export type {
+  HotelPrescanStorePort,
+  HotelPrescanReport,
+  HotelPrescanPlan,
+  HotelPrescanner,
+  PrescanHotelsOptions,
+} from './prospecting/hotel-prescan/prescan-hotels.js';
 export { checkHotelSite } from './prospecting/check-hotel-site.js';
 export type { CheckHotelSiteOptions } from './prospecting/check-hotel-site.js';
 export type { HotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';

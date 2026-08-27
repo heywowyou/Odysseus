@@ -258,6 +258,18 @@ means numbered entry 24, not a literal Markdown heading anchor.
     `artifacts/` directories. The site-agnostic observed-rule inventory is
     rebuilt with `pnpm fixtures:rules`; it must never encode which audit
     emitted a rule. → trade-offs.md#34
+35. The hotel prescan is a distinct path over shared scanner primitives:
+    `prescanSite` never calls `runAuditStage`, `scanSite`, `scanPage`, or
+    Lighthouse, and its artifacts live under a separate `prescans/` root.
+    Metrics come from buffered `PerformanceObserver`s plus Playwright
+    `response` events, never Resource Timing; every metric is approximate on
+    a real site (measured: request counts, bytes, CLS, blocking time and LCP
+    all drift between runs, while axe facts do not), so scoring bands metrics
+    and never treats one as exact. Page roles order on
+    path depth before lexicographic, so a translated subtree never displaces the
+    page it translates. A prescan is inserted, never upserted, and emits no
+    `prospects` event - that collection is the AFNIC funnel's, and hotels carry
+    no SIREN. → trade-offs.md#35
 
 
 ## Stack

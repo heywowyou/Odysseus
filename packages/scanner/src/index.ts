@@ -95,3 +95,10 @@ export type {
   WriteAuditArtifactsResult,
 } from './artifacts/write-audit.js';
 export { writeFindingsFile } from './artifacts/write-findings.js';
+
+// Milestone 9c plan 004: the hotel prescan. A distinct three-page path over
+// the primitives above, deliberately not the audit pipeline - see
+// prescan/prescan-site.ts.
+export * from './prescan/index.js';
+export { getPrescansRoot } from './config.js';
+export { buildPrescanDir } from './artifacts/paths.js';

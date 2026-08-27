@@ -56,3 +56,11 @@ export function buildPageDir(url: string): string {
 export function buildAuditDir(artifactsRoot: string, hostname: string, startedAt: Date): string {
   return path.join(artifactsRoot, hostname, buildAuditTimestampDir(startedAt));
 }
+
+/** Prescan layout: `<prescansRoot>/<hostname>/<ISO-timestamp>/`, the same
+ *  hostname-then-timestamp shape as an audit directory so the two are
+ *  navigable the same way, under a root that keeps them distinguishable.
+ *  See getPrescansRoot() for why they are not siblings of audit directories. */
+export function buildPrescanDir(prescansRoot: string, hostname: string, startedAt: Date): string {
+  return path.join(prescansRoot, hostname, buildAuditTimestampDir(startedAt));
+}

@@ -37,6 +37,7 @@ export * from './types/prospecting.js';
 export * from './types/hotel-catalogue.js';
 export * from './types/hotel-candidate.js';
 export * from './types/hotel-qualification.js';
+export * from './types/hotel-prescan.js';
 export * from './prospecting/qualify-prospect.js';
 export * from './prospecting/effectif-threshold.js';
 export * from './prospecting/naf-allowlist.js';

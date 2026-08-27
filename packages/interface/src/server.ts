@@ -8,6 +8,7 @@ import { registerStaticFallback } from './routes/static.js';
 import { JobQueue } from './queue/job-queue.js';
 import { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
+import { runHotelPrescanJob } from './queue/pipeline/run-hotel-prescan-job.js';
 import { runProspectIngestionJob } from './queue/pipeline/run-prospect-ingestion-job.js';
 import { getInterfaceHost, getInterfacePort, getQueueConcurrency } from './config.js';
 import { logger } from './logger.js';
@@ -33,6 +34,7 @@ export async function startInterfaceServer(connection: Connection): Promise<Inte
       'full-audit': runFullAuditJob,
       prospecting: runProspectingJob,
       'prospect-ingestion': runProspectIngestionJob,
+      'hotel-prescan': runHotelPrescanJob,
     },
   });
 
