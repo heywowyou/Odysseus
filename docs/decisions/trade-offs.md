@@ -1416,6 +1416,48 @@ cap instead; that decision is the operator's.
     `siren-not-in-qualifying-sirene-set`, and a missing stock file is an
     explicit counter rather than a throw. Reported plainly rather than hidden.
 
+34. **Real-scan test fixtures are committed with the client removed, not
+    gitignored and not committed as-is (2026-08-27).** Twelve tests read
+    artifacts of real audited sites. Those directories were gitignored, so the
+    tests described data no other machine had: a fresh clone throws rather than
+    skips, and a green suite on CI meant nothing. Committing them as they stood
+    was worse - it would have put a named third party's full defect list in
+    public Git history permanently, which is not ours to publish and would
+    survive any later deletion.
+
+    Hostnames were never the secret: `fixtures/audits.json` already commits
+    them. What must not enter history is the *link* between a named site and
+    its measured defects. That is what makes a third option work.
+    `scripts/deidentify-audit.mjs` builds `fixtures/test-audits/` from stored
+    audits, named for what each exercises (`small-site`, `multi-page`,
+    `large-rule-families`), never for a client. Only `manifest.json`,
+    `findings.json`, and `analyses/` are read; `pages/*/scan.json` is never
+    touched because it carries base64 screenshots. The script verifies itself
+    by reading back every written byte and exiting non-zero on any surviving
+    token.
+
+    Two failure modes are worth knowing before touching that script, because
+    neither is obvious and one is silent:
+
+    - **Token matching from the hostname is not sufficient.** A second brand
+      name absent from the domain, four place names in SEO slugs, and one
+      hotel's name inside another's fixture (the sites cross-link) all
+      survived the first pass. The script prints the surviving path vocabulary
+      for a person to read. That reading step is the control, not the token
+      list.
+    - **Collapsing several tokens onto one replacement merges distinct
+      pages.** Two different page paths became the same path, silently turning
+      20 pages into a manifest that no longer matched its own findings.
+      Replacements are therefore injective pseudonyms with separate prose and
+      URL forms, and the script asserts no two originally-distinct pages
+      collided. Only the explicit collision check catches this; no test does.
+
+    Real hostnames stay wherever they point at local gitignored `artifacts/`
+    directories - `fixtures/audits.json`, `rule-translations.test.ts`, and
+    historical comments citing real scans are all correct as they are. A
+    repo-wide rename overreached into exactly those places and had to be
+    reverted twice.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

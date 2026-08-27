@@ -249,6 +249,13 @@ means numbered entry 24, not a literal Markdown heading anchor.
     size. Grouping counts the whole run before classifying any row, and only a
     domain held by exactly one establishment is ever an identity key.
     → trade-offs.md#33
+34. Real-scan test fixtures under `fixtures/test-audits/` are committed with
+    the client removed, built only by `scripts/deidentify-audit.mjs`. Never
+    gitignore them (a green suite then describes data no other machine has),
+    and never commit a real one as-is. Never hand-edit a fixture in place -
+    rebuild it, so the script's read-back leak check and page-collision check
+    both run. Real hostnames stay wherever they point at local gitignored
+    `artifacts/` directories. → trade-offs.md#34
 
 
 ## Stack

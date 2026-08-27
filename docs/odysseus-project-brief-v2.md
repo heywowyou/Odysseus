@@ -465,6 +465,19 @@ published page. No other change to authorship or pipeline.
 
 **Milestone 12: free scope check, conditional.** One URL in, criteria and registry data out, on the public site. Does not start until milestone 10 has produced measurable traffic. Revisits the "no free public scanner" decision in section 11 on the condition recorded there. The differentiator is weaker than first thought, since the output states facts rather than a determination; if it degrades into another free violation counter, do not ship it.
 
+**Milestone 14: other EU countries, not before France is proven.** Noted
+2026-08-27 so the idea is not lost, explicitly not scheduled. Does not start
+until the tool is running in production and French clients have actually
+bought. The technical criteria travel unchanged, since EN 301 549 is EU-wide;
+almost nothing client-facing does. Each country needs its own obligation basis
+(`docs/obligation-basis.md` is French law and French case law), its own company
+registry in place of the Sirene join, its own identification regime in place of
+the LCEN block, its own catalogue in place of Atout France, and its own
+language throughout. The report's legal content is a deterministic splice
+precisely so it cannot be improvised per country, so this is a real milestone
+and not a catalogue swap. Sequence it after the French campaign has revenue,
+never in parallel with it.
+
 **Milestone 13: monitoring.** Was milestone 10. Scheduled re-scans, regression detection, delta reports. Technical capability only; the subscription tier remains dropped (see 3.2).
 
 ### 7.1 Definition of done for the interface
