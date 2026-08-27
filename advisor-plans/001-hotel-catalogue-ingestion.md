@@ -19,9 +19,8 @@
 
 Hotels are the first campaign, so sourcing must begin with hotels rather than
 generic AFNIC domains. Atout France's classified-accommodation export is the
-base catalogue; DATAtourisme supplements it and the already-shipped Sirene
-machinery enriches it downstream. The output is a renewable source catalogue,
-not yet a contactable prospect.
+catalogue, and the already-shipped Sirene machinery enriches it downstream. The
+output is a renewable source catalogue, not yet a contactable prospect.
 
 ## Current state
 
@@ -32,19 +31,19 @@ not yet a contactable prospect.
 - The consolidated M9 proposal inputs established the missing source-first
   goal. Canonical rules still require provenance, role addresses, 90-day
   operational retention, and no new package.
-- Both source contracts were measured 2026-08-27 and are recorded in
+- The source contract was measured 2026-08-27 and is recorded in
   `advisor-plans/README.md`, "Measured source facts": exact column headers,
-  delimiters, encodings, the Atout France `-` missing-value sentinel, the
-  DATAtourisme `core#Hotel` ontology filter, and the counts below. Step 1 of
-  this plan verifies those figures still hold; it does not re-derive them from
+  delimiter, encoding, the `-` missing-value sentinel, the unquoted fields
+  containing literal quote characters, and the counts below. Step 1 of this
+  plan verifies those figures still hold; it does not re-derive them from
   nothing.
 - Measured base-catalogue population: 13,301 classified hotels, of which 9,765
   are rated three stars or better and 9,730 of those carry a declared website.
-  That clears the 8,000 lower bound before DATAtourisme contributes anything,
-  but a declared website is not yet a usable own domain - aggregator links,
-  parked domains, and chain corporate sites are attrited by plan 003, which
-  remains the Overpass decision point.
-- Neither source carries SIRET or SIREN. The company identifier comes from the
+  That clears the 8,000 lower bound from one source, but a declared website is
+  not yet a usable own domain - aggregator links, parked domains, and chain
+  corporate sites are attrited by plan 003, which remains the decision point
+  for whether any further source is needed.
+- The source carries no SIRET or SIREN. The company identifier comes from the
   hotel's own published identification during plan 003, reusing the shipped
   mentions-legales path, not from a catalogue column.
 - Target yield is 8,000 to 15,000 usable French hotel records with an own
@@ -61,8 +60,8 @@ not yet a contactable prospect.
 
 ## Scope
 
-**In scope**: source contracts/types in `core`; DATAtourisme and Atout France
-streaming adapters in `interface`; config getters; immutable raw-normalized
+**In scope**: source contracts/types in `core`; the Atout France streaming
+adapter in `interface`; config getters; immutable raw-normalized
 `hotel_source_records` store model/helpers; synthetic licence-safe fixtures;
 CLI `prospect hotel-ingest --source ... --dry-run --limit N`; source decision
 documentation.
@@ -114,17 +113,16 @@ fields, and provenance round-trip.
 
 ### Step 3: Build bounded streaming adapters
 
-Create one adapter per source behind the same iterator interface. Atout France
-is the base: it filters to the `HÔTEL DE TOURISME` typology and supplies the
-authoritative classification, the declared website, room count, and commune.
-DATAtourisme is supplementary: it filters the regional flux on the `core#Hotel`
-ontology URI and supplies coverage and alternate websites only, never the
-campaign gate. Adapters count accepted, skipped, malformed, and non-hotel rows
-by reason without logging raw personal fields.
+Build the adapter behind a source-agnostic iterator interface, so the ingest
+orchestration, the yield report, and the CLI do not each learn the file format.
+It filters to the `HÔTEL DE TOURISME` typology and supplies the authoritative
+classification, the declared website, room count, and commune. It counts
+accepted, skipped, malformed, and non-hotel rows by reason without logging raw
+personal fields.
 
-Atout France's export is small enough to read in one pass and needs no
-byte-offset resume machinery. The DATAtourisme regional set does, and reuses
-the shipped checkpoint helpers with a per-file checkpoint id.
+The export is small enough to read in one pass and needs no byte-offset resume
+machinery, but emissions still carry a file and an offset so a source spanning
+several files would not need the interface changed.
 
 **Verify**: fixture tests snapshot normalized records and counters, including
 encoding, malformed rows, duplicates within a source, and cancellation/error.
@@ -147,10 +145,8 @@ dry-run zero writes, idempotent retry, and a machine-readable yield report.
 
 ## Done criteria
 
-- [ ] Atout France classified hotels ingest as the base catalogue, with rating,
+- [ ] Atout France classified hotels ingest as the catalogue, with rating,
       website, and capacity provenance.
-- [ ] DATAtourisme regional hotels ingest independently as a supplementary
-      source, never supplying the campaign rating.
 - [ ] Source history is immutable, versioned, 90-day retained, and resumable.
 - [ ] Yield report exists; no record is yet contactable or auto-merged.
 - [ ] Focused tests and `pnpm run check` pass; plan 001 is `DONE`.
@@ -165,5 +161,8 @@ another commercial list.
 
 ## Maintenance notes
 
-Source changes create new adapter fixture versions. Overpass is evaluated only
-after plan 003 measures usable-domain yield against the 8,000 to 15,000 target.
+Source changes create new adapter fixture versions. A further source, Overpass
+or otherwise, is evaluated only after plan 003 measures usable-domain yield
+against the 8,000 to 15,000 target. DATAtourisme was evaluated and rejected;
+see `advisor-plans/README.md`, "Measured source facts", before proposing it
+again.

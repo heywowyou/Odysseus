@@ -54,7 +54,7 @@ export type HotelSourceRecordDocument = HotelSourceRecordDocumentFields;
 const hotelSourceRecordSchema = new Schema<HotelSourceRecordDocument>(
   {
     ingestRunId: { type: String, required: true },
-    source: { type: String, required: true, enum: ['atout-france', 'datatourisme'] },
+    source: { type: String, required: true, enum: ['atout-france'] },
     sourceId: { type: String, required: true },
     sourceVersion: { type: String, required: true },
     retrievedAt: { type: Date, required: true },

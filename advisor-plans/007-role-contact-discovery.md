@@ -42,7 +42,7 @@ records rather than guessing when none exists.
 allowlist; syntax and DNS MX existence if approved; per-source provenance;
 suppression; selected-prospect contact state; dry-run/limit CLI.
 
-**Out of scope**: named addresses, DATAtourisme named contacts, pattern guessing,
+**Out of scope**: named addresses, source-supplied named contacts, pattern guessing,
 SMTP/catch-all probing, verification vendors, free-mail, phone, contact forms,
 or contact before scoring selection.
 

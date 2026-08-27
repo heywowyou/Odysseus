@@ -29,9 +29,8 @@ an independent-hotel pitch to a chain. It preserves the shipped append-only
   name/postcode fallback, and a group queue. The safe reconciliation is exact
   auto-resolution plus manual review for name/postcode candidates.
 - The project has no general public-suffix dependency. Do not hand-roll eTLD+1.
-- Measured 2026-08-27: **neither** Atout France nor DATAtourisme carries a SIRET
-  or SIREN column (`advisor-plans/README.md`, "Measured source facts"). Do not
-  look for one. The exact-identifier auto-resolution path is fed by the SIREN
+- Measured 2026-08-27: the Atout France export carries no SIRET or SIREN column
+  (`advisor-plans/README.md`, "Measured source facts"). Do not look for one. The exact-identifier auto-resolution path is fed by the SIREN
   the hotel publishes on its own site, extracted during plan 003 by the shipped
   mentions-legales path, so for most candidates the identifier arrives *after*
   this plan's first join rather than before it. Plan for that ordering: a
@@ -49,7 +48,7 @@ an independent-hotel pitch to a chain. It preserves the shipped append-only
 
 ## Scope
 
-**In scope**: Atout-France-to-DATAtourisme/Sirene joins; pure identity contract;
+**In scope**: Atout-France-to-Sirene joins; pure identity result contract;
 exact SIRET/SIREN/domain matching; manual-review candidates; canonical
 `hotel_candidates` catalogue; group/chain queue; provenance conflicts; CLI
 resolve/review commands with dry-run/limit.
@@ -67,12 +66,13 @@ parser, website health, outreach qualification, mutation of source rows or
 
 ### Step 1: Join the base catalogue to classification and company facts
 
-Start from each normalized DATAtourisme hotel record. Join Atout France rows
-using exact source identifiers or SIRET, retaining Atout classification and
-capacity with source/version provenance. Feed exact SIRET/SIREN candidates into
-the already-shipped Sirene index/helpers to obtain only the company facts
-permitted by canonical qualification. Missing or conflicting joins remain
-explicit; neither source may create an establishment by itself in this base
+Start from each normalized Atout France hotel record, retaining its
+classification and capacity with source/version provenance. Feed exact
+SIRET/SIREN candidates into the already-shipped Sirene index/helpers to obtain
+only the company facts permitted by canonical qualification. Note the ordering
+recorded above: the catalogue supplies no identifier, so most candidates reach
+this step without one. Missing or conflicting joins remain explicit; a Sirene
+row may never create an establishment by itself in this base
 catalogue projection.
 
 **Verify**: fixtures cover exact three-source agreement, missing Atout/Sirene,
@@ -137,7 +137,7 @@ interface plus store/CLI behavior; no live lookup.
 ## Done criteria
 
 - [ ] Exact identifiers/domains are the only automatic merge paths.
-- [ ] DATAtourisme candidates retain exact Atout France and Sirene join
+- [ ] Candidates retain exact Sirene join
       provenance, including missing/conflicting results.
 - [ ] Name/postcode candidates require explicit review.
 - [ ] Chains/groups are retained but excluded from SMB selection.

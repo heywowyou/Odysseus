@@ -6,7 +6,7 @@
 > named site. Every send is manual. Update the index and session log daily.
 >
 > **Drift check (run first)**:
-> `git diff --stat f7ef7cf..HEAD -- CLAUDE.md docs/outreach-rules.md docs/operator-obligations.md docs/obligation-basis.md docs/prospect-qualification.md docs/m9-prospecting-pipeline.md docs/offer-positioning.md packages/interface/src/outreach packages/store/src/outreach* packages/site/app`
+> `git diff --stat f7ef7cf..HEAD -- CLAUDE.md advisor-plans/README.md docs/outreach-rules.md docs/operator-obligations.md docs/obligation-basis.md docs/prospect-qualification.md docs/offer-positioning.md packages/interface/src/outreach packages/store/src/outreach* packages/site/app`
 > Reconcile any drift before rollout; legal/product conflicts are STOP
 > conditions, not copy choices.
 
@@ -95,7 +95,7 @@ than reaching 100 quickly.
 Record pass/fail and evidence owner for:
 
 - plans 001 through 013 `DONE`, code validation recorded
-- approved DATAtourisme/Atout source contracts, exact Sirene join provenance,
+- approved Atout France source contract, exact Sirene join provenance,
   and a reconciled ambiguity report
 - verified three-to-five-star eligibility for every selected hotel, with lower
   and unknown ratings parked

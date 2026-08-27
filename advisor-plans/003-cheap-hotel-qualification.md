@@ -27,9 +27,12 @@ audit the filter.
   hotel viability state machine.
 - Operator decision: 3 stars is a hard campaign threshold. Hotels below 3
   stars remain in the catalogue as `parked: below-three-stars`, not deleted.
-- DATAtourisme is base; Atout/Sirene enrich. Overpass is considered only after
-  this stage measures usable own-domain coverage below 8,000, the lower bound
-  of the 8,000 to 15,000 target.
+- Atout France is the catalogue; Sirene enriches. A further source is
+  considered only after this stage measures usable own-domain coverage below
+  8,000, the lower bound of the 8,000 to 15,000 target. This stage's
+  unusable-website rate is also what would reopen the rejected DATAtourisme
+  alternate-website path; see `advisor-plans/README.md`, "Measured source
+  facts".
 
 ## Commands you will need
 

@@ -1,13 +1,14 @@
 /**
  * The one seam every hotel catalogue source is read through, so the CLI and
  * later the job pipeline never branch on which source they are ingesting.
+ * There is one source today; the seam exists because the ingest orchestration,
+ * the yield report, and the CLI would otherwise each grow their own knowledge
+ * of a file format.
  *
- * Two things differ enough between the sources that they are expressed here
- * rather than assumed by callers:
+ * Two decisions worth keeping if a second source is ever added:
  *
- * - A source may span several files. Atout France publishes one export;
- *   DATAtourisme publishes nineteen regional files, and a resume checkpoint
- *   has to name the file as well as the offset.
+ * - An emission names its own file, not just an offset, so a source spanning
+ *   several files can still produce a resume checkpoint.
  * - Counters are read from the source rather than returned by the generator,
  *   because a caller that stops early (a --limit) still needs the counts for
  *   the rows it did read, and a generator return value is only delivered to a

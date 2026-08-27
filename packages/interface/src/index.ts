@@ -26,7 +26,6 @@ export {
   getSireneStockIndexCachePath,
   getProspectBatchSize,
   getAtoutFranceExportPath,
-  getDatatourismeDir,
 } from './config.js';
 export { computeCrawlEtaMs, computeScanEtaMs } from './queue/eta.js';
 export type { CrawlEtaInput, ScanEtaInput } from './queue/eta.js';
@@ -41,7 +40,6 @@ export type { RouteContext, RouteHandler } from './router.js';
 export { startInterfaceServer } from './server.js';
 export type { InterfaceServerHandle } from './server.js';
 export { createAtoutFranceSource } from './prospecting/hotel-sources/atout-france-reader.js';
-export { createDatatourismeSource } from './prospecting/hotel-sources/datatourisme-reader.js';
 export type { HotelCatalogueSource } from './prospecting/hotel-sources/hotel-catalogue-source.js';
 export { ingestHotelCatalogue } from './prospecting/hotel-sources/ingest-hotel-catalogue.js';
 export type {

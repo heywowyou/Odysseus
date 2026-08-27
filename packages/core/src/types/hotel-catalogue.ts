@@ -13,18 +13,20 @@
  * 1. Neither source carries SIRET or SIREN, so there is no company-identifier
  *    field here. The identifier arrives later, from the hotel's own published
  *    identification during cheap qualification.
- * 2. Atout France writes missing values as the literal string '-'. Adapters
- *    normalize that to an absent optional field; a '-' must never reach a
+ * 2. Atout France writes missing values as the literal string '-'. The adapter
+ *    normalizes that to an absent optional field; a '-' must never reach a
  *    stored record, where it would read as real data.
  */
 
-/** Official French tourism classification, one to five stars. Only Atout
- *  France's value is authoritative: DATAtourisme carries a
- *  contributor-supplied rating that is inconsistently populated and must
- *  never be promoted to the campaign gate. */
+/** Official French tourism classification, one to five stars. Only the
+ *  classified-accommodation register is authoritative for it: a rating
+ *  contributed by any other source is not evidence the campaign gate accepts. */
 export type HotelStarRating = 1 | 2 | 3 | 4 | 5;
 
-export type HotelCatalogueSourceName = 'atout-france' | 'datatourisme';
+/** A union of one today. Kept as a union rather than collapsed to a literal
+ *  because the field's job is to say which source a stored row came from, and
+ *  that answer stops being useful the moment a second source is added. */
+export type HotelCatalogueSourceName = 'atout-france';
 
 /** Why a source row was not accepted, counted per ingest run so a yield
  *  report can explain a shortfall rather than only state one. */
@@ -38,15 +40,14 @@ export interface HotelSourceRecord {
   source: HotelCatalogueSourceName;
   /** The source's own stable identifier for this establishment. Atout France
    *  publishes no id column, so its adapter derives a deterministic one from
-   *  the fields that identify an establishment; DATAtourisme supplies
-   *  URI_ID_du_POI directly. */
+   *  the fields that identify an establishment. */
   sourceId: string;
   /** Fingerprint of the exact file this row came from, so a record can be
    *  traced back to one download rather than to a source in general. */
   sourceVersion: string;
   retrievedAt: Date;
-  /** Licence the row is redistributed under, recorded per row because the two
-   *  sources publish under different open licences. */
+  /** Licence the row is redistributed under, recorded per row rather than
+   *  assumed globally: a second source would publish under its own. */
   licence: string;
   name: string;
   address?: string;

@@ -23,17 +23,22 @@ suppression, retention, and outcome measurement.
 
 ## Binding decisions
 
-1. **Source-first national catalogue.** Atout France's classified-accommodation
-   export is the base hotel catalogue; DATAtourisme is supplementary. Amended
-   2026-08-27 from the reverse arrangement after both sources were measured
-   (see "Measured source facts" below): Atout France is the authoritative
-   register of the official star rating that binding decision 2 makes a hard
-   gate, and it already carries the declared website, room count, and commune
-   in a single small file. DATAtourisme covers hotels absent from the
-   classified register and supplies alternate websites; its own
-   contributor-supplied rating is never promoted to the campaign gate. Join
-   the repository's shipped Sirene machinery before website qualification.
-   AFNIC is not the base discovery source for this campaign.
+1. **Single-source national catalogue.** Atout France's classified-accommodation
+   export is the hotel catalogue. Amended twice on 2026-08-27, both times on
+   measurement rather than preference (see "Measured source facts" below).
+   First, DATAtourisme was demoted from base to supplementary: Atout France is
+   the authoritative register of the official star rating that binding decision
+   2 makes a hard gate, and it already carries the declared website, room
+   count, and commune in a single 3.6 MB file. Then DATAtourisme was dropped
+   entirely, for a structural reason rather than a coverage one: it is not the
+   classification register, so a hotel found only there can never be rated, and
+   therefore can never become campaign-eligible. It cannot grow the eligible
+   population at all. Its one residual use, an alternate website for a hotel
+   already in the register, needs a name-plus-postcode join that binding
+   decision 4 makes manual-review only, and the register already supplies a
+   website for 99.6 percent of eligible hotels. Join the repository's shipped
+   Sirene machinery before website qualification. AFNIC is not the base
+   discovery source for this campaign.
 2. **Hard three-star campaign gate.** A verified rating of three, four, or five
    stars is eligible. Lower-rated hotels are retained as
    `parked: below-three-stars`, never silently discarded or selected. Unknown
@@ -95,11 +100,11 @@ suppression, retention, and outcome measurement.
 
 ## Measured source facts
 
-Measured 2026-08-27 by read-only fetches of the two published open-data files,
-before any implementation. Recorded here so a later executor inherits the
-evidence rather than re-deriving it. Both sources are regenerated daily and
-both figures should be re-measured, not assumed, whenever the campaign
-population is quoted.
+Measured 2026-08-27 by read-only fetches of the published open-data files,
+before and during implementation. Recorded here so a later executor inherits
+the evidence rather than re-deriving it. The source is regenerated daily, so
+these figures should be re-measured, not assumed, whenever the campaign
+population is quoted. `prospect hotel-ingest --dry-run` reproduces them.
 
 **Atout France**, `hebergements_classes.csv`, data.gouv.fr dataset
 `hebergements-touristiques-classes-en-france`, licence `fr-lo`. Semicolon
@@ -121,24 +126,29 @@ string `-` rather than left empty. Columns: `DATE DE CLASSEMENT`,
 | Of those, carrying a `SITE INTERNET` value | 9,730 |
 | Hotels rated 1 or 2 stars (parked) | 3,536 |
 
+The export does not quote fields but does contain literal quote characters
+inside them (`RN 6 - Lieu dit "Le Chaumois"`). A CSV parser at its usual
+defaults rejects the whole file on the first such row. It also publishes
+scheme-less websites (`www.example.fr`) alongside absolute ones; those are
+stored verbatim, since deciding what a declared string resolves to belongs to
+qualification.
+
 **DATAtourisme**, flat CSV export, data.gouv.fr dataset
 `datatourisme-la-base-nationale-des-donnees-publiques-dinformation-touristique-en-open-data`,
-Licence Ouverte 2.0. Nineteen regional files `datatourisme-reg-<code>.csv`
-totalling roughly 430 MB, plus a 275 MB national `datatourisme-place.csv`. The
-regional files are the bounded ingestion unit; the national monolith is not
-needed. Comma delimited, UTF-8. Columns: `Nom_du_POI`, `Categories_de_POI`,
-`Latitude`, `Longitude`, `Adresse_postale`, `Code_postal_et_commune`,
-`Periodes_regroupees`, `Covid19_mesures_specifiques`, `Createur_de_la_donnee`,
-`SIT_diffuseur`, `Date_de_mise_a_jour`, `Contacts_du_POI`,
-`Classements_du_POI`, `Description`, `URI_ID_du_POI`. Hotels are identified by
-the ontology URI `https://www.datatourisme.fr/ontology/core#Hotel` inside the
-pipe-joined `Categories_de_POI`. `Code_postal_et_commune` is written
-`20220#Algajola`, `Contacts_du_POI` mixes website, email, and telephone behind
-`#` and `|` separators, and `Classements_du_POI` is contributor-supplied and
-inconsistently populated.
+Licence Ouverte 2.0. Evaluated and rejected as a second source, 2026-08-27.
+Nineteen regional files totalling roughly 430 MB plus a 275 MB national file,
+comma delimited, UTF-8, hotels identified by the ontology URI
+`https://www.datatourisme.fr/ontology/core#Hotel`. It carries a
+contributor-supplied `Classements_du_POI` that is not the classification
+register, which is what makes it structurally unable to contribute: an
+establishment found only here can never be rated, so it can never clear the
+campaign gate. Measured coverage on the one region checked, Corsica: 85 hotels
+against Atout France's 391, a 4.6x gap in the wrong direction. An adapter for
+it was built and tested against the real regional export before being removed;
+recover it from Git history if the bad-URL measurement in plan 003 ever makes
+the alternate-website path worth a manual-review join.
 
-**Neither source carries SIRET or SIREN.** The company identifier continues to
-come from the hotel's own published identification during cheap qualification,
+**Neither source carries SIRET or SIREN.** The company identifier comes from the hotel's own published identification during cheap qualification,
 reusing the shipped mentions-légales extraction path, not from a catalogue
 column. Plan 002's exact-identifier auto-resolution is fed by the site, not by
 the source.
@@ -152,9 +162,10 @@ plainly wherever plan 014's results are interpreted rather than described as
 
 ## Deep module seams
 
-- `HotelCatalogueSource` in `interface`: streaming Atout France (base) and
-  DATAtourisme (supplementary) adapters behind one normalized, checkpointable
-  ingestion contract.
+- `HotelCatalogueSource` in `interface`: the streaming Atout France adapter
+  behind one normalized, checkpointable ingestion contract. One source today;
+  the seam exists so the ingest orchestration, the yield report, and the CLI do
+  not each grow their own knowledge of a file format.
 - Hotel identity resolver in `core`: pure exact-resolution decision returning
   resolved, manual-review, or unresolved with provenance and reason codes.
 - Hotel-candidate helpers in `store`: catalogue state and joins remain separate
@@ -247,9 +258,9 @@ authorization does not carry between sessions.
 
 ## Milestone definition of done
 
-- The base catalogue is reproducibly ingested from the verified Atout France
-  classified-accommodation export, supplemented by DATAtourisme and joined to
-  Sirene, and reports source-level provenance and yield.
+- The catalogue is reproducibly ingested from the verified Atout France
+  classified-accommodation export, joined to Sirene, and reports source-level
+  provenance and yield.
 - Only verified three-to-five-star hotels enter this campaign; lower or unknown
   ratings remain queryable with explicit parked reasons.
 - The measured qualified own-domain population reaches 8,000 to 15,000, or an
@@ -295,6 +306,9 @@ authorization does not carry between sessions.
 
 - Overpass ingestion unless plan 003 measures fewer than 8,000 usable own-domain
   hotel candidates after the base catalogue and joins.
+- DATAtourisme as a second source: evaluated and rejected 2026-08-27, see
+  "Measured source facts". Reconsider only if plan 003 measures a large
+  unusable-website rate among the 9,730 declared websites.
 - Fuzzy/coordinate identity matching beyond the manual-review queue.
 - Restaurants and other verticals.
 - Vendor-channel outreach; booking-engine fingerprints support only aggregate
