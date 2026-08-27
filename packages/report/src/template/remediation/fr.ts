@@ -5,7 +5,7 @@
  * substance of the "Reste a traiter" section, which exists because a real
  * report gave a client seven ranked priorities and left every other finding
  * as an annex row with no guidance at all
- * (archive/report-feedback-palais-gallien-v2.md item 3.2).
+ * (2026-08 Palais Gallien review, retained in Git history, item 3.2).
  *
  * Code-owned for the same reason legalRelevance is (CLAUDE.md trade-off 8):
  * the model has no field for it and never writes a word of it. A remediation

@@ -107,9 +107,10 @@ PDF report only, no video walkthrough, rendered from `findings.json`.
 
 **First vertical for outreach: French hotels rated at least three stars.** The
 2026-08-27 operator decision supersedes the earlier e-commerce-first plan.
-DATAtourisme is the base catalogue, enriched with Atout France and the shipped
-Sirene machinery. The complete source, qualification, and rollout decisions
-are in `advisor-plans/README.md`.
+Atout France's classified-accommodation export is the sole catalogue, joined
+to the shipped Sirene machinery. DATAtourisme was evaluated and removed after
+measurement. The complete source, qualification, and rollout decisions are in
+`advisor-plans/README.md`.
 
 **Deliberate non-targets.**
 
@@ -256,19 +257,24 @@ and CSS system documented in `docs/report-design-system.md`. Paged.js handles
 paged media and Playwright's Chromium prints the result. Do not reintroduce
 Tailwind or Puppeteer.
 
-Report contents: cover, executive summary, overall risk, prioritized themes with impact and effort, render diff evidence with screenshots, Core Web Vitals table, full findings appendix grouped by category, methodology and tooling statement (important for credibility and for defensibility of accessibility claims), and a limitations statement (see 6.6).
+Report contents: cover, executive summary, overall risk, prioritized themes
+with impact and effort, render-diff comparison bars, Core Web Vitals table,
+full findings appendix grouped by category, methodology and tooling statement
+(important for credibility and for defensibility of accessibility claims),
+and a limitations statement (see 6.6).
 
 **Tier concept dropped 2026-08-16 (originally added 2026-08-07, shipped 2026-08-08).** This stage used to take a `tier: 'screening' | 'full'` argument controlling section inclusion and detail depth, with a lighter screening render and a full render sharing one `findings.json`. The paid screening tier is gone, so is the parameter: `@odysseus/report`'s `renderHtml`/`generateReportPdf` and `runReportStage` no longer take a tier argument, there is exactly one report body (`render-html.ts`'s single `renderBody`), the `odysseus report --tier` CLI flag is removed, and stored report documents (`ReportDocumentFields`) no longer carry a `tier` field (historical documents still have one on disk; it is simply not read). The free outreach preview that replaces screening is not a lighter render of this same template; it has its own render path, its own document, and its own content rules in `docs/outreach-rules.md`, not a tier flag on this one.
 
-**Stage 6: Prospecting mode.**
-The same pipeline in a stripped-down configuration:
-
-- Input: a list of candidate URLs.
-- Run only the fast, high-signal checks: render diff, axe critical and serious violations, Lighthouse performance score, missing meta and structured data.
-- Output: a ranked table of prospects by a composite "brokenness score", plus one auto-generated evidence screenshot each.
-- Feeds directly into the outreach system in section 9.
-
-This mode must be cheap and fast per site, since it runs against hundreds. The LLM is called only for prospects that clear a worthiness gate (defined in `docs/llm-layer-rules.md`, based on the severity mix of findings), never for every scanned site. Below that gate, a site is still scored and stored, it simply never reaches the LLM.
+**Stage 6: Prospecting pipeline.**
+This is a distinct bounded path, not a mode of the paid-audit pipeline. It
+starts with cheap HTTP qualification, then prescans at most the homepage, one
+same-site booking page, and one room or content page. It reuses low-level
+scanner primitives for axe, render diff, direct browser metrics, and booking
+fingerprints, but never calls Lighthouse, the paid-audit orchestration, or the
+LLM. Immutable prescan facts feed deterministic evidence selection and a
+versioned score. Only prospects that pass the explicit gates can proceed to
+the separately governed preview and outreach stages. The execution contract
+and rollout order live in `advisor-plans/README.md`.
 
 **Personalized outreach email generation (2026-08-03).** For prospects that clear the gate, the tool generates the cold email itself, not just a one-sentence hook, personalized to that site's specific findings. Evidence selection stays deterministic: the LLM does not choose which finding to feature, that choice is already made by the brokenness scoring and evidence selection above. The LLM's role is narrowly to write the email around evidence already selected. Output is a draft into a queue, never sent automatically, both because the manual review step is what keeps EU AI Act exposure low for the LLM layer (see 8.4) and because CNIL B2B email rules require clear identification and an opt-out in every message, which a human should confirm is present before send. The anti-hallucination guard carries over explicitly: state the WCAG criterion, never assert the EAA applies to this specific business. Email language follows the prospect's own site language, not a French default.
 
@@ -445,7 +451,15 @@ prescan, evidence, versioned scoring, role contacts, safe previews, validated
 prose, Gmail drafts without send, reply/suppression handling, operator views,
 and the controlled first-100 rollout.
 
-**Milestone 10: benchmark study and percentile.** Batch scan of a bounded e-commerce cohort, aggregate percentile over stored findings, percentile surfaced in both report tiers, study published in French on `odysseusaudit.com`. Target: before 22 September 2026, the Créteil hearing in the E.Leclerc matter (`docs/obligation-basis.md` section 5), which will be the third data point in a contested line and will be covered. Generate the study with Mistral as with everything else; add the one-line AI-assistance disclosure from `docs/operator-obligations.md` section 3 near the top of the published page. No other change to authorship or pipeline.
+**Milestone 10: benchmark study and percentile.** Batch scan of a bounded
+e-commerce cohort, aggregate percentile over stored findings, surface the
+percentile in the paid report, and publish the study in French on
+`odysseusaudit.com`. Target: before 22 September 2026, the Créteil hearing in
+the E.Leclerc matter (`docs/obligation-basis.md` section 5), which will be the
+third data point in a contested line and will be covered. Generate the study
+with Mistral as with everything else; add the one-line AI-assistance
+disclosure from `docs/operator-obligations.md` section 3 near the top of the
+published page. No other change to authorship or pipeline.
 
 **Milestone 11: regime 2 documentation generator.** Deterministic template fed by entity data and completed audit results, producing the technical documentation a regime 2 entity actually owes per `docs/obligation-basis.md` section 6. This replaces the déclaration d'accessibilité generator previously specified here, which was aimed at an article 47 obligation Odysseus's prospects do not carry. Hard constraint: nothing is emitted that was not measured on that site.
 

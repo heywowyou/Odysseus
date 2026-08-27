@@ -223,7 +223,12 @@ the correct report behaviour is to say so rather than approximate it.
 
 **Scalable:** Not a statistic, not applicable.
 
-**Relevance:** Ready-made, authority-backed content checklist material for the "what should actually be on your accessibility page" recommendation in your SEO and content sections, with versions already built for hotels, self-catering properties and food and drink businesses. Given your rule that the LLM only selects from pre-authored templates in packages/reference rather than generating new advice, this is free, citable source material for building those templates.
+**Relevance:** Ready-made, authority-backed content checklist material for the
+"what should actually be on your accessibility page" recommendation in SEO
+and content sections, with versions already built for hotels, self-catering
+properties, and food and drink businesses. The LLM must not generate advice
+from this source directly. If promoted, the guidance belongs in reviewed,
+deterministic remediation copy.
 
 ---
 

@@ -47,9 +47,9 @@ to EUR 300 HT are likewise superseded here, the canonical source.
 | Full audit | EUR 1,600 HT flat, published | automated PDF, no risk band, no freehand quote |
 | Re-audit | EUR 450 HT flat | 5 business days, a verification pass narrower in scope than a full re-scan |
 
-**Re-audit price confirmed 2026-08-19** (`report-feedback-la-corniche.md`
-item 3.5 / `report-feedback-deferred-items.md`), roughly 28% of the full
-audit price. This is the canonical source for
+**Re-audit price confirmed 2026-08-19** (La Corniche review follow-up,
+retained in Git history), roughly 28% of the full audit price. This is the
+canonical source for
 `ODYSSEUS_REAUDIT_PRICE_EUR_HT` / `ODYSSEUS_REAUDIT_LEAD_TIME_DAYS` in
 `packages/report/src/template/html-utils.ts`.
 

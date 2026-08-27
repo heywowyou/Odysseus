@@ -54,7 +54,6 @@ canonical document says was superseded.
 | --- | --- |
 | `advisor-plans/README.md` and plans `001` through `014` | Reconciled, execution-ready milestone 9c hotel prospecting and outreach queue; the index owns order, status, dependencies, and rejected proposal choices |
 | `plans/findings.md` | Maintenance backlog generated against the commit named in its header; some entries are intentionally unverified. Re-check every item against current HEAD before acting. Its presence does not make it the active session or override milestone order |
-| `docs/report/2026-08-24-lagnonu-feedback.md` | Current dated report-review record until its items are fixed or moved into the deferred queue |
 | `docs/report/report-feedback-deferred-items.md` | Canonical queue for report-review items deliberately deferred |
 
 GitHub issues may also hold specs and task state. `docs/agents/issue-tracker.md`

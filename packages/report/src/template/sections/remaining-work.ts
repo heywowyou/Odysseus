@@ -20,9 +20,10 @@ import { selectRenderedThemes } from './themes.js';
  * "Reste a traiter": the findings no ranked priority covers, grouped by area
  * and by rule, each with fixed remediation copy.
  *
- * archive/report-feedback-palais-gallien-v2.md item 3.2: a real report ranked
- * seven priorities and left the other 91 findings as annex rows with no
- * guidance at all. The annex says what and where; nothing said what to do.
+ * The 2026-08 Palais Gallien review, retained in Git history, found that a
+ * real report ranked seven priorities and left the other 91 findings as annex
+ * rows with no guidance at all. The annex says what and where; nothing said
+ * what to do.
  *
  * Entirely deterministic, on the same reasoning as legalRelevance (CLAUDE.md
  * trade-off 8) and the reference-stat citations (trade-off 16): the copy is

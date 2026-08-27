@@ -65,3 +65,24 @@ clients outside hospitality. `hospitality.md` is the first entry.
    accessibility-to-booking conversion in hospitality: no study
    anywhere ties a WCAG fix to a measured booking delta on a hotel or
    restaurant site. Say so in the report rather than approximate it.
+
+## Other-sector research backlog
+
+An exploratory cross-sector pass was removed because most of it duplicated
+the main research database or relied on weak vendor material. The useful
+negative results and candidates are retained here so they are not rediscovered
+without context:
+
+- Healthcare: private-practice booking and no-show research may provide a
+  peer-reviewed candidate. Re-check the primary paper and its population
+  before promotion.
+- Salons and wellness: Zenoti has a potentially useful vendor dataset. Treat
+  it as a commercial source and verify its methodology before relying on it.
+- Restaurants, real estate, car rental, activities, and local ecommerce: that
+  pass found no sufficiently strong sector-specific evidence. Prefer no claim
+  to a weak vendor proxy.
+- Cross-sector accessibility, performance, SEO, and GEO figures remain owned
+  by the main research database and the compiled reference-stat table.
+
+The removed exploratory file remains available in Git history if a future
+research pass needs to audit its rejected sources.

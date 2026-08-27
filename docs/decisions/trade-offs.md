@@ -405,8 +405,8 @@ cap instead; that decision is the operator's.
 17. **No annex group in the PDF report is ever forced onto one page with
     `break-inside: avoid`, regardless of how few findings it has**,
     decided 2026-08-19 during the La Corniche feedback-fix session
-    (`docs/report/archive/report-feedback-la-corniche.md` item 1.6's follow-up
-    write-up). `packages/report/src/template/sections/findings-
+    (the 2026-08-19 La Corniche review, retained in Git history, item 1.6's
+    follow-up write-up). `packages/report/src/template/sections/findings-
     appendix.ts` used to apply the `.appendix-group` CSS class (paged.css,
     `break-inside: avoid`) to any rule group at or under
     `APPENDIX_GROUP_KEEP_THRESHOLD` (6) findings, on the reasoning that
@@ -1505,11 +1505,15 @@ result is the 14-slice execution queue in `advisor-plans/README.md`; the drafts
 were removed after consolidation so their superseded choices cannot look
 active.
 
-The binding decisions are: hotels first; DATAtourisme as the base catalogue,
-joined to Atout France and the shipped Sirene machinery; a hard three-star
-campaign threshold; and OpenStreetMap Overpass only if measured usable-domain
-yield is below 8,000. Exact SIRET, SIREN, or registrable-domain evidence may
-auto-resolve identity; name plus postcode is manual-review evidence only.
+The binding decisions are: hotels first; Atout France's classified-
+accommodation export as the sole catalogue, joined to the shipped Sirene
+machinery; a hard three-star campaign threshold; and OpenStreetMap Overpass
+only if measured usable-domain yield after plan 003 is below 8,000.
+DATAtourisme was implemented, measured, then removed because it cannot add an
+eligible hotel outside the classification register and Atout France already
+provides a website for 99.6 percent of eligible rows. Exact SIRET, SIREN, or
+registrable-domain evidence may auto-resolve identity; name plus postcode is
+manual-review evidence only.
 Prescanning is a distinct three-page, no-Lighthouse path over shared scanner
 primitives. Scores are immutable and versioned. Contacts are role addresses on
 the hotel's own domain only. Operational prospect data expires after 90 days;
