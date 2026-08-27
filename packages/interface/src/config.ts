@@ -101,6 +101,28 @@ export function getSireneStockPath(): string {
   return path.join(findWorkspaceRoot(), 'data', 'sirene', 'stock-unite-legale.csv');
 }
 
+/** Milestone 9c hotel catalogue inputs, operator-downloaded into the same
+ *  gitignored data/ root as AFNIC and Sirene. Both are published open data and
+ *  both are regenerated daily, so the adapters read whatever the operator last
+ *  placed here and fingerprint it, rather than fetching on their own. */
+export function getAtoutFranceExportPath(): string {
+  ensureEnvLoaded();
+  const configured = process.env['ODYSSEUS_ATOUT_FRANCE_FILE_PATH'];
+  if (configured) return path.resolve(findWorkspaceRoot(), configured);
+  return path.join(findWorkspaceRoot(), 'data', 'atout-france', 'hebergements_classes.csv');
+}
+
+/** Directory holding the nineteen regional DATAtourisme exports. A directory
+ *  rather than a file list: the regional set changes only when DATAtourisme
+ *  changes its own publication, and enumerating it in config would go stale
+ *  silently. */
+export function getDatatourismeDir(): string {
+  ensureEnvLoaded();
+  const configured = process.env['ODYSSEUS_DATATOURISME_DIR'];
+  if (configured) return path.resolve(findWorkspaceRoot(), configured);
+  return path.join(findWorkspaceRoot(), 'data', 'datatourisme');
+}
+
 export function getSireneStockIndexCachePath(): string {
   return path.join(findWorkspaceRoot(), 'data', 'sirene', 'stock-index-cache.jsonl');
 }

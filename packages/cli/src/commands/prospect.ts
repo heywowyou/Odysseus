@@ -11,8 +11,20 @@
  * jobId. The actual work runs inside a live `odysseus serve` process's
  * JobQueue, per the explicit "JobQueue job type, not a standalone CLI
  * script" design decision for this milestone.
+ *
+ * `prospect hotel-ingest` (milestone 9c) deliberately diverges from that and
+ * runs inline. The reasoning behind the job-queue rule was that the shipped
+ * ingestion pipeline fetches candidate sites, so it needs the queue's
+ * concurrency ceiling and politeness budget. The hotel catalogue ingest reads
+ * a local open-data file the operator has already downloaded and writes
+ * catalogue rows: no network, no Chromium, nothing to be polite to. Routing it
+ * through the queue would add a running server as a prerequisite for a task
+ * that has none.
  */
 
+import { randomUUID } from 'node:crypto';
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
 import {
@@ -21,6 +33,14 @@ import {
   disconnectFromMongo,
   addSuppressionEntry,
 } from '@odysseus/store';
+import {
+  createAtoutFranceSource,
+  createDatatourismeSource,
+  getAtoutFranceExportPath,
+  getDatatourismeDir,
+  ingestHotelCatalogue,
+  type HotelCatalogueSource,
+} from '@odysseus/interface';
 
 function parsePositiveInt(value: string): number {
   const parsed = Number.parseInt(value, 10);
@@ -28,6 +48,32 @@ function parsePositiveInt(value: string): number {
     throw new InvalidArgumentError(`must be a positive integer, got "${value}"`);
   }
   return parsed;
+}
+
+type HotelSourceName = 'atout-france' | 'datatourisme';
+
+function parseHotelSourceName(value: string): HotelSourceName {
+  if (value === 'atout-france' || value === 'datatourisme') return value;
+  throw new InvalidArgumentError(`must be atout-france or datatourisme, got "${value}"`);
+}
+
+/** DATAtourisme publishes one file per region. Enumerating the directory keeps
+ *  the regional set correct when DATAtourisme changes its own publication,
+ *  which a hardcoded list in config would not. */
+function listDatatourismeRegionalFiles(directory: string): string[] {
+  const entries = readdirSync(directory).filter((entry) => entry.toLowerCase().endsWith('.csv'));
+  if (entries.length === 0) {
+    throw new Error(`no CSV export found in ${directory}`);
+  }
+  return entries.map((entry) => path.join(directory, entry));
+}
+
+function buildHotelSource(name: HotelSourceName, fileOverride?: string): HotelCatalogueSource {
+  if (name === 'atout-france') {
+    return createAtoutFranceSource({ filePath: fileOverride ?? getAtoutFranceExportPath() });
+  }
+  const directory = fileOverride ?? getDatatourismeDir();
+  return createDatatourismeSource({ filePaths: listDatatourismeRegionalFiles(directory) });
 }
 
 export function registerProspectCommand(program: Command): void {
@@ -66,6 +112,49 @@ export function registerProspectCommand(program: Command): void {
         if (mongoConnection) await disconnectFromMongo(mongoConnection);
       }
     });
+
+  prospect
+    .command('hotel-ingest')
+    .description(
+      'Milestone 9c: read a downloaded hotel catalogue export into hotel_source_records and print a yield report. ' +
+        'Runs inline; no `odysseus serve` process is needed.',
+    )
+    .requiredOption(
+      '--source <name>',
+      'atout-france (the base catalogue) or datatourisme (supplementary)',
+      parseHotelSourceName,
+    )
+    .option('--file <path>', 'Override the configured input path')
+    .option('--limit <n>', 'Stop after this many accepted hotels', parsePositiveInt)
+    .option('--dry-run', 'Parse and count without writing anything', false)
+    .action(
+      async (opts: { source: HotelSourceName; file?: string; limit?: number; dryRun: boolean }) => {
+        let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+        try {
+          const source = buildHotelSource(opts.source, opts.file);
+          if (!opts.dryRun) mongoConnection = await connectToMongo();
+
+          const report = await ingestHotelCatalogue({
+            source,
+            ingestRunId: randomUUID(),
+            dryRun: opts.dryRun,
+            ...(opts.limit !== undefined ? { limit: opts.limit } : {}),
+            ...(mongoConnection ? { connection: mongoConnection } : {}),
+          });
+
+          // Machine-readable on stdout: this report is the input to the
+          // usable-domain measurement that decides whether a further
+          // ingestion source is needed, so it must be parseable, not prose.
+          console.log(JSON.stringify(report, null, 2));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`odysseus prospect hotel-ingest: failed\n${message}`);
+          process.exitCode = 1;
+        } finally {
+          if (mongoConnection) await disconnectFromMongo(mongoConnection);
+        }
+      },
+    );
 
   prospect
     .command('suppress <domain>')

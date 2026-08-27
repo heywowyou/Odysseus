@@ -75,3 +75,18 @@ export { createProspectIngestionCheckpointModel } from './schemas/prospect-inges
 export type { ProspectIngestionCheckpointFields } from './schemas/prospect-ingestion-checkpoint.schema.js';
 export { getCheckpoint, upsertCheckpoint } from './prospect-ingestion-checkpoint.js';
 export type { CheckpointPatch } from './prospect-ingestion-checkpoint.js';
+export { createHotelSourceRecordModel } from './schemas/hotel-source-record.schema.js';
+export type {
+  HotelSourceRecordDocument,
+  HotelSourceRecordDocumentFields,
+} from './schemas/hotel-source-record.schema.js';
+export {
+  insertHotelSourceRecords,
+  getHotelSourceYield,
+  listHotelSourceRecords,
+} from './hotel-source-records.js';
+export type {
+  NewHotelSourceRecordInput,
+  InsertHotelSourceRecordsResult,
+  HotelSourceYield,
+} from './hotel-source-records.js';
