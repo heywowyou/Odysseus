@@ -1657,6 +1657,13 @@ has no send method; every send remains manual. Public previews have their own
 minimal HTML contract, expire, disclose collection and opt-out facts, and
 contain no raw audit detail or legal conclusion.
 
+**Screenshot retention is undecided and blocks campaign-scale prescanning.**
+The first live prescan wrote 18 MB of screenshots for two pages. At the scale
+plan 014 contemplates that is tens of gigabytes for evidence most candidates
+will never be contacted about. `prune-screenshots.ts` already owns which
+screenshots survive a scan (trade-off 2) and is the place to decide this, not a
+second selection rule inside the prescan path.
+
 **Open defect found by plan 004's live verification, not yet fixed.**
 Qualification v1 rejects 340 hotels with reason `redirect-offsite`, over 298
 distinct redirect targets, of which 280 are hit exactly once. The repeated
