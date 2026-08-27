@@ -3,6 +3,9 @@ node_modules/
 dist/
 /artifacts/
 /packages/*/artifacts/
+# Real scans of real third-party sites. Kept local for the same reason
+# artifacts/ is: the repository does not carry other people's site data.
+/fixtures/test-audits/
 /data/
 .claude/settings.local.json
 reports/
