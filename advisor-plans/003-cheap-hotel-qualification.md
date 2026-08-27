@@ -12,6 +12,11 @@
 - **Risk**: MED
 - **Depends on**: plan 002
 - **Category**: direction
+- **Status**: DONE, 2026-08-27. Implemented, tested, and validated by a full
+  live run over all 13,301 candidates; measured facts in
+  `advisor-plans/README.md`, "Measured source facts". Binding decision 3 is
+  triggered (5,720 qualified against the 8,000 floor) and left open for the
+  operator; nothing was ingested.
 - **Planned at**: `f7ef7cf`, 2026-08-27
 - **Amended at**: 2026-08-27, before execution, by operator decision. See
   "Execution decisions" below. The steps are otherwise unchanged.
@@ -163,13 +168,18 @@ tests. No live hotel scan is authorized by this plan.
 
 ## Done criteria
 
-- [ ] Below-3-star and unknown-rating hotels are parked and retained.
-- [ ] Dead/parked/broken/aggregator/no-booking sites have typed reasons.
-- [ ] Every evaluation writes one append-only `hotel_qualifications` document
+- [x] Below-3-star and unknown-rating hotels are parked and retained.
+      Measured: `below-three-stars` 3,536, `awaiting-review` 187.
+- [x] Dead/parked/broken/aggregator/no-booking sites have typed reasons.
+      Every one of the 13,301 candidates carries exactly one outcome and the
+      totals reconcile.
+- [x] Every evaluation writes one append-only `hotel_qualifications` document
       and updates the candidate's current-state pointer. No `prospects` event is
       emitted at this stage; see execution decision 2.
-- [ ] Coverage decides whether an Overpass plan is needed.
-- [ ] Tests/check pass; plan 003 is `DONE`.
+- [x] Coverage decides whether an Overpass plan is needed. It returned
+      `propose` at 5,720 qualified. The decision itself is the operator's and
+      is open; the run ingested nothing, which is the specified behaviour.
+- [x] Tests/check pass; plan 003 is `DONE`.
 
 ## STOP conditions
 

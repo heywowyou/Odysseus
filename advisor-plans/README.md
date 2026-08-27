@@ -187,6 +187,58 @@ Three facts worth carrying forward:
   stands: it is reported, not acted on, and binding decision 3 measures usable
   yield only after plan 003's cheap qualification.
 
+**Cheap qualification facts, measured 2026-08-27 by a full live run over the
+13,301 candidates** (read-only DNS/TLS/bounded-HTTP checks, no browser, under
+non-negotiable rule 5). The run took 81 minutes at concurrency 3 and reconciles:
+every candidate carries exactly one outcome. Reproduce the planning counts with
+`prospect hotel-qualify --dry-run`, the table with
+`prospect hotel-qualify report`.
+
+| Outcome | Count |
+| --- | --- |
+| Qualified | 5,720 |
+| Parked | 2,456 |
+| Rejected | 1,341 |
+| Already engaged (accessibility statement published) | 28 |
+| Group-routed | 3,756 |
+
+Loss reasons, largest first: `no-own-domain` 3,821, `group-member` 3,643,
+`below-three-stars` 3,536, `dns-unresolved` 401, `redirect-offsite` 340,
+`tls-invalid` 214, `awaiting-review` 187, `http-error` 151, `fetch-timeout` 127,
+`vendor-hosted` 113, `domain-moved` 44, `accessibility-statement-published` 28,
+`parked-domain-page` 25, `robots-denied` 16, `redirect-loop` 3,
+`non-html-response` 2. A candidate accumulates reasons rather than
+short-circuiting, so these sum above the candidate count by design.
+
+Non-blocking notes: `redirected-within-site` 4,141, `no-booking-path-detected`
+3,463, `no-identification-published` 2,437, `booking-path-offsite-only` 487.
+
+Three facts worth carrying forward:
+
+- **The declared websites are mostly alive.** Of the 7,069 campaign-ready
+  candidates, 5,720 qualified. Hard site failures (DNS, TLS, HTTP, timeout,
+  redirect, parked page, robots) account for roughly 1,300 - about 19 percent
+  of declared websites unusable, which is the "large unusable-website rate"
+  test the DATAtourisme alternate-website path was deferred against. It is not
+  large enough to reopen that decision.
+- **The booking gate must stay soft.** `no-booking-path-detected` fires on
+  3,463 candidates - over a quarter of the whole export. Binding decision 3 of
+  plan 003 (record, do not gate) is confirmed by measurement: hardening the gate
+  on today's no-browser detection would park thousands of hotels on a detection
+  weakness. `booking-path-offsite-only` at 487 is the fraction where a vendor
+  booking engine was the only funnel found.
+- **Identification is published less than half the time.** 2,437
+  `no-identification-published` means the mentions-legales SIREN recovery that
+  plan 002's exact-key resolution depends on is available for the majority but
+  far from all. Sirene-derived facts must stay optional downstream, never
+  assumed present.
+
+**Binding decision 3 is triggered and unresolved.** Qualified usable own-domain
+yield is 5,720 against the 8,000 floor, a shortfall of 2,280, so
+`decideOverpassNeed` returns `propose`. The run stopped at that and ingested
+nothing. Adding an OpenStreetMap Overpass source is an operator decision that
+has not been taken; do not treat the shortfall as authorization.
+
 **Population caveat for later analysis.** Atout France lists only *classified*
 accommodation. A hotel that never sought classification, or whose classification
 lapsed, is absent from the base catalogue entirely. The campaign population is
@@ -230,7 +282,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | --- | --- | --- | --- | --- | --- |
 | [001](./001-hotel-catalogue-ingestion.md) | Ingest the national hotel catalogue | P1 | L | none | DONE |
 | [002](./002-hotel-identity-and-groups.md) | Resolve identities, own domains, and groups | P1 | L | 001 | DONE |
-| [003](./003-cheap-hotel-qualification.md) | Qualify hotel websites without a browser | P1 | L | 002 | TODO |
+| [003](./003-cheap-hotel-qualification.md) | Qualify hotel websites without a browser | P1 | L | 002 | DONE |
 | [004](./004-distinct-hotel-prescan.md) | Build the distinct three-page hotel prescan | P1 | L | 003 | TODO |
 | [005](./005-hotel-evidence-capture.md) | Capture the two outreach evidence assets | P1 | L | 004 | TODO |
 | [006](./006-versioned-hotel-scoring.md) | Score candidates with immutable breakdowns | P1 | L | 001-005 | TODO |
@@ -338,8 +390,11 @@ authorization does not carry between sessions.
 
 ## Explicitly deferred
 
-- Overpass ingestion unless plan 003 measures fewer than 8,000 usable own-domain
-  hotel candidates after the base catalogue and joins.
+- Overpass ingestion. The measurement condition is now met and the decision is
+  open: plan 003 measured 5,720 usable own-domain hotel candidates on
+  2026-08-27, below the 8,000 floor, so `decideOverpassNeed` returns `propose`.
+  A shortfall is not authorization. Adding the source is an operator decision
+  that has not been taken; until it is, this stays deferred.
 - DATAtourisme as a second source: evaluated and rejected 2026-08-27, see
   "Measured source facts". Reconsider only if plan 003 measures a large
   unusable-website rate among the 9,730 declared websites.
