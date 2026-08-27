@@ -22,6 +22,11 @@ export { scanSite } from './scan-site.js';
 export type { SiteScanResult, ScanSiteOptions, ScanProgressEvent } from './scan-site.js';
 export { findMentionsLegalesUrl, extractMentionsLegales } from './checks/mentions-legales.js';
 export type { MentionsLegalesExtraction } from './checks/mentions-legales.js';
+export {
+  findAccessibilityStatementUrl,
+  checkAccessibilityStatement,
+} from './checks/accessibility-statement.js';
+export type { AccessibilityStatementCheckResult } from './checks/accessibility-statement.js';
 export { checkLlmsTxt } from './checks/llms-txt.js';
 export type { LlmsTxtCheckResult } from './checks/llms-txt.js';
 export { checkCanonicalTarget, extractRobotsMetaContent } from './checks/canonical-target.js';

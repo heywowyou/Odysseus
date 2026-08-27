@@ -73,6 +73,21 @@ const conflictSchema = new Schema(
   { _id: false },
 );
 
+/** The pointer, not the record. The evidence stays in `hotel_qualifications`;
+ *  this exists so prescan selection is one indexed query over the catalogue. */
+const qualificationStateSchema = new Schema(
+  {
+    outcome: {
+      type: String,
+      required: true,
+      enum: ['qualified', 'parked', 'rejected', 'already-engaged', 'group-routed'],
+    },
+    qualificationVersion: { type: String, required: true },
+    evaluatedAt: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
 const hotelCandidateSchema = new Schema<HotelCandidateDocument>(
   {
     candidateId: { type: String, required: true },
@@ -110,6 +125,7 @@ const hotelCandidateSchema = new Schema<HotelCandidateDocument>(
     groupDomain: { type: String },
     groupSize: { type: Number },
     sireneJoin: { type: Schema.Types.Mixed },
+    qualification: { type: qualificationStateSchema },
     conflicts: { type: [conflictSchema], required: true },
     review: {
       state: {
@@ -139,6 +155,8 @@ hotelCandidateSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 hotelCandidateSchema.index({ resolutionVersion: 1, ownRegistrableDomain: 1 });
 hotelCandidateSchema.index({ resolutionVersion: 1, groupStatus: 1, campaignEligibility: 1 });
 hotelCandidateSchema.index({ resolutionVersion: 1, identityStatus: 1, 'review.state': 1 });
+// Plan 004's prescan selection query: the qualified candidates of one run.
+hotelCandidateSchema.index({ resolutionVersion: 1, 'qualification.outcome': 1 });
 
 export function createHotelCandidateModel(connection: Connection): Model<HotelCandidateDocument> {
   return (

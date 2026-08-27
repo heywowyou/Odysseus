@@ -13,6 +13,7 @@ import type {
   HotelCandidateReviewState,
   HotelGroupStatus,
   HotelIdentityStatus,
+  HotelQualificationOutcome,
 } from '@odysseus/core';
 import {
   createHotelCandidateModel,
@@ -54,6 +55,9 @@ const REFRESHABLE_FIELDS = [
   'groupDomain',
   'groupSize',
   'sireneJoin',
+  // Derived, and the one derived field a re-run is meant to change: the point
+  // of re-qualifying is that a dead domain may have come back.
+  'qualification',
 ] as const satisfies ReadonlyArray<keyof HotelCandidate>;
 
 function refreshableSet(input: HotelCandidate): Record<string, unknown> {
@@ -155,6 +159,10 @@ export interface HotelCandidateFilter {
   groupStatus?: HotelGroupStatus;
   campaignEligibility?: HotelCampaignEligibility;
   reviewState?: HotelCandidateReviewState;
+  qualificationOutcome?: HotelQualificationOutcome;
+  /** True selects candidates never evaluated, which is a different set from
+   *  any single outcome and is what a resumed batch needs to ask for. */
+  qualificationMissing?: boolean;
 }
 
 export async function listHotelCandidates(
@@ -171,7 +179,52 @@ export async function listHotelCandidates(
     query['campaignEligibility'] = filter.campaignEligibility;
   }
   if (filter.reviewState !== undefined) query['review.state'] = filter.reviewState;
+  if (filter.qualificationOutcome !== undefined) {
+    query['qualification.outcome'] = filter.qualificationOutcome;
+  }
+  if (filter.qualificationMissing === true) query['qualification'] = { $exists: false };
   return Model.find(query).sort({ name: 1 }).limit(limit).lean<HotelCandidateDocument[]>();
+}
+
+export interface ListHotelCandidatesForQualificationOptions {
+  resolutionVersion: string;
+  limit: number;
+  /** The last candidateId of the previous page. */
+  after?: string;
+  /** Skip candidates already carrying a verdict at this version, so an
+   *  interrupted batch continues rather than restarting. */
+  skipAlreadyQualified: boolean;
+  qualificationVersion: string;
+}
+
+/**
+ * Cursor-paged over `candidateId` rather than skip/limit.
+ *
+ * A 7,000-domain run takes hours and writes to the same documents it is
+ * reading. Under skip/limit, a document acquiring a `qualification` field
+ * shifts every later page under the reading cursor, so candidates are silently
+ * skipped - the classic pagination-while-mutating bug, and here it would look
+ * like a coverage shortfall rather than like a defect. `candidateId` is unique
+ * and never rewritten, so a cursor over it is stable against exactly the write
+ * this run is performing.
+ */
+export async function listHotelCandidatesForQualification(
+  connection: Connection,
+  options: ListHotelCandidatesForQualificationOptions,
+): Promise<HotelCandidateDocument[]> {
+  const Model = createHotelCandidateModel(connection);
+  const query: Record<string, unknown> = { resolutionVersion: options.resolutionVersion };
+  if (options.after !== undefined) query['candidateId'] = { $gt: options.after };
+  if (options.skipAlreadyQualified) {
+    // Not `qualification: {$exists: false}`: a candidate carrying a verdict
+    // from an *earlier* version has not been evaluated under this one and must
+    // be re-checked, which is the whole point of versioning the rules.
+    query['qualification.qualificationVersion'] = { $ne: options.qualificationVersion };
+  }
+  return Model.find(query)
+    .sort({ candidateId: 1 })
+    .limit(options.limit)
+    .lean<HotelCandidateDocument[]>();
 }
 
 export async function getHotelCandidate(
@@ -191,6 +244,10 @@ export interface HotelCandidateYield {
    *  and holding a domain no other establishment holds. */
   campaignReady: number;
   withConflicts: number;
+  /** `not-evaluated` counts candidates plan 003 has not looked at yet, kept
+   *  distinct from any outcome so a partially finished batch is visible as
+   *  partially finished rather than as a poor yield. */
+  byQualificationOutcome: Record<HotelQualificationOutcome | 'not-evaluated', number>;
 }
 
 /** Computed in the database rather than by streaming documents back: the
@@ -207,6 +264,7 @@ export async function getHotelCandidateYield(
     review: Array<{ _id: HotelCandidateReviewState; count: number }>;
     conflicts: Array<{ count: number }>;
     campaignReady: Array<{ count: number }>;
+    qualification: Array<{ _id: HotelQualificationOutcome | null; count: number }>;
     total: Array<{ count: number }>;
   }>([
     { $match: { resolutionVersion } },
@@ -216,6 +274,9 @@ export async function getHotelCandidateYield(
         group: [{ $group: { _id: '$groupStatus', count: { $sum: 1 } } }],
         review: [{ $group: { _id: '$review.state', count: { $sum: 1 } } }],
         conflicts: [{ $match: { 'conflicts.0': { $exists: true } } }, { $count: 'count' }],
+        qualification: [
+          { $group: { _id: { $ifNull: ['$qualification.outcome', null] }, count: { $sum: 1 } } },
+        ],
         campaignReady: [
           {
             $match: {
@@ -252,6 +313,17 @@ export async function getHotelCandidateYield(
   for (const row of facets?.identity ?? []) byIdentityStatus[row._id] = row.count;
   for (const row of facets?.group ?? []) byGroupStatus[row._id] = row.count;
   for (const row of facets?.review ?? []) byReviewState[row._id] = row.count;
+  const byQualificationOutcome: Record<HotelQualificationOutcome | 'not-evaluated', number> = {
+    qualified: 0,
+    parked: 0,
+    rejected: 0,
+    'already-engaged': 0,
+    'group-routed': 0,
+    'not-evaluated': 0,
+  };
+  for (const row of facets?.qualification ?? []) {
+    byQualificationOutcome[row._id ?? 'not-evaluated'] = row.count;
+  }
 
   return {
     total: facets?.total[0]?.count ?? 0,
@@ -260,6 +332,7 @@ export async function getHotelCandidateYield(
     byReviewState,
     campaignReady: facets?.campaignReady[0]?.count ?? 0,
     withConflicts: facets?.conflicts[0]?.count ?? 0,
+    byQualificationOutcome,
   };
 }
 

@@ -57,4 +57,20 @@ export type {
 } from './prospecting/hotel-identity/resolve-hotels.js';
 export { createMongoHotelCandidateStore } from './prospecting/hotel-identity/mongo-hotel-candidate-store.js';
 export { createHotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';
+export {
+  qualifyHotels,
+  factsFor,
+  CURRENT_QUALIFICATION_VERSION,
+  QUALIFY_BATCH_SIZE,
+} from './prospecting/hotel-qualification/qualify-hotels.js';
+export type {
+  HotelQualificationStorePort,
+  HotelQualificationReport,
+  HotelQualificationPlan,
+  QualifyHotelsOptions,
+  HotelSiteChecker,
+} from './prospecting/hotel-qualification/qualify-hotels.js';
+export { createMongoHotelQualificationStore } from './prospecting/hotel-qualification/mongo-hotel-qualification-store.js';
+export { checkHotelSite } from './prospecting/check-hotel-site.js';
+export type { CheckHotelSiteOptions } from './prospecting/check-hotel-site.js';
 export type { HotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';

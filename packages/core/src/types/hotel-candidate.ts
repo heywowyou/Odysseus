@@ -20,6 +20,7 @@ import type { HotelStarRating } from './hotel-catalogue.js';
 import type { HotelCampaignEligibility } from '../prospecting/hotel-star-rating.js';
 import type { HotelVendorHost } from '../prospecting/hotel-vendor-hosts.js';
 import type { DeclaredWebsiteUnusableReason } from '../prospecting/hotel-domain.js';
+import type { HotelQualificationOutcome } from './hotel-qualification.js';
 
 /** Which evidence merged an observation into a candidate. Ordered by strength,
  *  and the order is load bearing: `siret` names one establishment, `siren`
@@ -138,6 +139,21 @@ export interface HotelSireneJoin {
   checkedAt: Date;
 }
 
+/** The current qualification verdict, denormalized onto the candidate.
+ *
+ *  A pointer, not the record: the evidence lives in `hotel_qualifications`,
+ *  one document per evaluation. This exists so prescan selection is a single
+ *  indexed query over the catalogue rather than a join, which matters at
+ *  thirteen thousand rows and matters more once plan 004 runs it repeatedly.
+ *  Being derived, it is safe to overwrite on a re-run - and it is the only
+ *  derived field here that a re-run is *expected* to change, since the point
+ *  of re-qualifying is that a dead domain may have come back. */
+export interface HotelCandidateQualificationState {
+  outcome: HotelQualificationOutcome;
+  qualificationVersion: string;
+  evaluatedAt: Date;
+}
+
 /** The canonical projection. One per establishment per resolution version. */
 export interface HotelCandidate {
   candidateId: string;
@@ -170,6 +186,9 @@ export interface HotelCandidate {
   groupDomain?: string;
   groupSize?: number;
   sireneJoin?: HotelSireneJoin;
+  /** Set by plan 003's qualification pass. Absent means never evaluated,
+   *  which is different from evaluated and rejected. */
+  qualification?: HotelCandidateQualificationState;
   conflicts: HotelCandidateConflict[];
   review: HotelCandidateReview;
 }

@@ -112,3 +112,22 @@ export type {
   RecordHotelCandidateReviewInput,
   RecordHotelCandidateReviewResult,
 } from './hotel-candidates.js';
+export { listHotelCandidatesForQualification } from './hotel-candidates.js';
+export type { ListHotelCandidatesForQualificationOptions } from './hotel-candidates.js';
+export { createHotelQualificationModel } from './schemas/hotel-qualification.schema.js';
+export type {
+  HotelQualificationDocument,
+  HotelQualificationDocumentFields,
+} from './schemas/hotel-qualification.schema.js';
+export {
+  recordHotelQualifications,
+  getHotelQualification,
+  listHotelQualifications,
+  getHotelQualificationYield,
+} from './hotel-qualifications.js';
+export type {
+  RecordHotelQualificationInput,
+  RecordHotelQualificationsResult,
+  HotelQualificationFilter,
+  HotelQualificationYield,
+} from './hotel-qualifications.js';

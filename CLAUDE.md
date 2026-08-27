@@ -403,13 +403,25 @@ alone. The point is that the stopping point is chosen, not accidental.
 ## Testing
 
 Run against `fixtures/spa-demo`, a local client-rendered React app with
-deliberately seeded faults. Do not run a development scan against a live
-third-party site on your own initiative. A scan against a specific live
-site is allowed only when the user has explicitly given the go-ahead for
-that site in the current conversation; that authorization covers the
-site named, not sites in general, and does not carry over to a future
-session. Vitest for unit tests, with scanner output fixtures committed
-so tests do not require a browser.
+deliberately seeded faults. Vitest for unit tests, with scanner output
+fixtures committed so tests do not require a browser.
+
+**Live-site authorization, amended 2026-08-27.** The per-named-site
+permission this section used to require is withdrawn. It was asked and
+re-asked for every batch of a campaign whose whole point is checking
+thousands of declared hotel domains, which made it a prompt to click
+through rather than a decision anyone was actually taking.
+
+Read-only, no-browser prospecting checks (DNS, TLS, bounded HTTP) against
+a domain a catalogue already declares are standing-authorized, subject to
+non-negotiable rule 5, which is unchanged and is what actually protects
+the site being checked: robots.txt honoured, identifiable user agent,
+delay between requests, hard timeout. Every such batch still runs bounded,
+with `--dry-run`, an explicit `--limit`, and a checkpoint.
+
+A *browser* audit of a live third-party site is still a deliberate act,
+not a background habit: prefer the fixture, and run Chromium against a
+real site when there is a reason to, not by default.
 
 The fixture is two pages and cannot exercise everything. Both bugs found
 after Milestone 4 (attachment URLs crawled as pages, positional selectors

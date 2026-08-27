@@ -41,9 +41,20 @@ export function htmlToText(html: string): string {
 
 const ANCHOR_HREF_PATTERN = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/gi;
 
-/** Resolved, same-origin hrefs only - the mentions-legales page is always
- *  on the same site as the homepage that links to it. */
-export function extractAnchorHrefs(html: string, baseUrl: string): string[] {
+/** Resolved hrefs. Same-origin only by default - the mentions-legales page is
+ *  always on the same site as the homepage that links to it, which is all
+ *  milestone 9a ever needed.
+ *
+ *  `includeOffOrigin` exists for plan 003, where an off-domain link is itself
+ *  the fact being measured: a hotel whose only booking route is an OTA listing
+ *  has a different funnel from one selling direct, and the default would hide
+ *  exactly the links that distinguish them. The default is unchanged so the
+ *  shipped 9a callers keep their current behaviour. */
+export function extractAnchorHrefs(
+  html: string,
+  baseUrl: string,
+  options: { includeOffOrigin?: boolean } = {},
+): string[] {
   const baseOrigin = new URL(baseUrl).origin;
   const hrefs: string[] = [];
   for (const match of html.matchAll(ANCHOR_HREF_PATTERN)) {
@@ -52,7 +63,7 @@ export function extractAnchorHrefs(html: string, baseUrl: string): string[] {
     try {
       const resolved = new URL(raw, baseUrl);
       if (!/^https?:$/.test(resolved.protocol)) continue;
-      if (resolved.origin !== baseOrigin) continue;
+      if (options.includeOffOrigin !== true && resolved.origin !== baseOrigin) continue;
       hrefs.push(resolved.href);
     } catch {
       continue;

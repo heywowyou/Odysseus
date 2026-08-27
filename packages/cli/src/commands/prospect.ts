@@ -34,10 +34,19 @@ import {
   getHotelCandidateYield,
   listHotelCandidates,
   recordHotelCandidateReview,
+  getHotelQualificationYield,
+  listHotelQualifications,
 } from '@odysseus/store';
+import { OriginLock, getCrawlDelayMs, getCrawlerUserAgent } from '@odysseus/scanner';
+import { decideOverpassNeed, type HotelQualificationOutcome } from '@odysseus/core';
 import {
+  CURRENT_QUALIFICATION_VERSION,
+  DEFAULT_PROSPECT_FETCH_TIMEOUT_MS,
+  checkHotelSite,
   createAtoutFranceSource,
   createHotelSireneJoiner,
+  createMongoHotelQualificationStore,
+  qualifyHotels,
   createMongoHotelCandidateStore,
   getAtoutFranceExportPath,
   getSireneStockIndexCachePath,
@@ -194,6 +203,209 @@ export function registerProspectCommand(program: Command): void {
         }
       },
     );
+
+  const qualify = prospect
+    .command('hotel-qualify')
+    .description(
+      'Milestone 9c: qualify campaign-ready hotel candidates with bounded DNS, TLS, and HTTP ' +
+        'checks. No browser, no recipient contact. Runs inline.',
+    );
+
+  // A group with a `run` subcommand rather than an action command that also
+  // has subcommands. The flat shape was tried and was quietly wrong: the
+  // parent and `report`/`reasons` both need --qualification-version, Commander
+  // binds the parent's copy, and the subcommand silently falls back to its
+  // default. That failed as an empty result list, not an error, which is the
+  // worst way for a reporting command to be wrong. Same shape as hotel-review
+  // below, for the same reason.
+  qualify
+    .command('run')
+    .description('Run the qualification pass over a resolution version.')
+    .option(
+      '--resolution-version <version>',
+      'Resolution generation to qualify',
+      CURRENT_RESOLUTION_VERSION,
+    )
+    .option(
+      '--qualification-version <version>',
+      'Qualification rule generation to write into',
+      CURRENT_QUALIFICATION_VERSION,
+    )
+    .option('--limit <n>', 'Stop after this many candidates', parsePositiveInt)
+    .option('--concurrency <n>', 'Candidates in flight at once', parsePositiveInt, 3)
+    .option(
+      '--resume',
+      'Skip candidates already carrying a verdict at this qualification version',
+      false,
+    )
+    .option(
+      '--dry-run',
+      'Count what would be checked, contacting nobody and writing nothing',
+      false,
+    )
+    .action(
+      async (opts: {
+        resolutionVersion: string;
+        qualificationVersion: string;
+        limit?: number;
+        concurrency: number;
+        resume: boolean;
+        dryRun: boolean;
+      }) => {
+        let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+        try {
+          // A connection even for a dry run: unlike hotel-ingest, the input is
+          // the catalogue in the database, not a file on disk. The dry run
+          // still makes no third-party request and writes nothing.
+          mongoConnection = await connectToMongo();
+
+          // One lock for the whole run, shared across every lane. A few hundred
+          // hotels sit behind one vendor host; without a shared lock, each lane
+          // would look individually polite while that host took every lane's
+          // request at once.
+          const originLock = new OriginLock();
+          const checkOptions = {
+            crawlDelayMs: getCrawlDelayMs(),
+            userAgent: getCrawlerUserAgent(),
+            timeoutMs: DEFAULT_PROSPECT_FETCH_TIMEOUT_MS,
+          };
+
+          const report = await qualifyHotels({
+            store: createMongoHotelQualificationStore(mongoConnection),
+            checkSite: (domain: string) => checkHotelSite(domain, originLock, checkOptions),
+            resolutionVersion: opts.resolutionVersion,
+            qualificationVersion: opts.qualificationVersion,
+            concurrency: opts.concurrency,
+            resume: opts.resume,
+            dryRun: opts.dryRun,
+            ...(opts.limit !== undefined ? { limit: opts.limit } : {}),
+            onProgress: (evaluated: number) => {
+              // stderr, so stdout stays a single parseable JSON document.
+              process.stderr.write(`qualified ${evaluated} candidates\n`);
+            },
+          });
+
+          console.log(JSON.stringify(report, null, 2));
+
+          // Null on a dry run, and a dry run has measured no yield to decide on.
+          if (report.overpass === 'propose') {
+            console.error(
+              'odysseus prospect hotel-qualify: qualified own-domain yield is below the 8,000 ' +
+                'target floor. Binding decision 3 requires presenting the measured shortfall and ' +
+                'an Overpass adapter plan for approval before any new source is ingested.',
+            );
+          }
+          if (!report.reconciles) {
+            console.error(
+              'odysseus prospect hotel-qualify: outcome counts do not reconcile with the number ' +
+                'evaluated. Treat this report as unreliable rather than as a result.',
+            );
+            process.exitCode = 1;
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`odysseus prospect hotel-qualify: failed\n${message}`);
+          process.exitCode = 1;
+        } finally {
+          if (mongoConnection) await disconnectFromMongo(mongoConnection);
+        }
+      },
+    );
+
+  qualify
+    .command('report')
+    .description('Print the coverage and loss-reason table for a qualification version.')
+    .option(
+      '--qualification-version <version>',
+      'Qualification generation to summarize',
+      CURRENT_QUALIFICATION_VERSION,
+    )
+    .option(
+      '--resolution-version <version>',
+      'Resolution generation to summarize alongside it',
+      CURRENT_RESOLUTION_VERSION,
+    )
+    .action(async (opts: { qualificationVersion: string; resolutionVersion: string }) => {
+      let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+      try {
+        mongoConnection = await connectToMongo();
+        const qualification = await getHotelQualificationYield(
+          mongoConnection,
+          opts.qualificationVersion,
+        );
+        const catalogue = await getHotelCandidateYield(mongoConnection, opts.resolutionVersion);
+        console.log(
+          JSON.stringify(
+            {
+              resolutionVersion: opts.resolutionVersion,
+              qualificationVersion: opts.qualificationVersion,
+              catalogue,
+              qualification,
+              // Printed rather than acted on: binding decision 3 requires the
+              // shortfall to be presented for approval, not resolved by a
+              // command.
+              overpass: decideOverpassNeed(qualification.byOutcome.qualified),
+            },
+            null,
+            2,
+          ),
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`odysseus prospect hotel-qualify report: failed\n${message}`);
+        process.exitCode = 1;
+      } finally {
+        if (mongoConnection) await disconnectFromMongo(mongoConnection);
+      }
+    });
+
+  qualify
+    .command('reasons')
+    .description('List individual parked or rejected candidates and why.')
+    .option(
+      '--qualification-version <version>',
+      'Qualification generation to read',
+      CURRENT_QUALIFICATION_VERSION,
+    )
+    .option('--outcome <outcome>', 'qualified | parked | rejected | already-engaged | group-routed')
+    .option('--limit <n>', 'Maximum rows to print', parsePositiveInt, 50)
+    .action(async (opts: { qualificationVersion: string; outcome?: string; limit: number }) => {
+      let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+      try {
+        mongoConnection = await connectToMongo();
+        const rows = await listHotelQualifications(
+          mongoConnection,
+          {
+            qualificationVersion: opts.qualificationVersion,
+            ...(opts.outcome === undefined
+              ? {}
+              : { outcome: opts.outcome as HotelQualificationOutcome }),
+          },
+          opts.limit,
+        );
+        console.log(
+          JSON.stringify(
+            rows.map((row) => ({
+              candidateId: row.candidateId,
+              domain: row.domain,
+              outcome: row.outcome,
+              reasons: row.reasons,
+              notes: row.notes,
+              finalUrl: row.siteFacts.finalUrl ?? null,
+              evaluatedAt: row.evaluatedAt,
+            })),
+            null,
+            2,
+          ),
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`odysseus prospect hotel-qualify reasons: failed\n${message}`);
+        process.exitCode = 1;
+      } finally {
+        if (mongoConnection) await disconnectFromMongo(mongoConnection);
+      }
+    });
 
   const review = prospect
     .command('hotel-review')

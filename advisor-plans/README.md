@@ -95,8 +95,11 @@ suppression, retention, and outcome measurement.
     collected nor used in this milestone.
 18. **Every operational batch is bounded.** Source, qualification, prescan,
     scoring, evidence, contact, and drafting commands support dry-run, explicit
-    limits, checkpoints, and reasoned yields. Live third-party scans still need
-    current permission for each named site.
+    limits, checkpoints, and reasoned yields. Amended 2026-08-27: the
+    per-named-site permission requirement is withdrawn, since it was being
+    re-asked for every batch of a campaign defined by checking thousands of
+    declared domains. Boundedness and crawling politeness are what keep a batch
+    safe and both stand; see CLAUDE.md, "Testing".
 
 ## Measured source facts
 
