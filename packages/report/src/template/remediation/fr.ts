@@ -112,6 +112,10 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     'Donnez des dimensions explicites aux images et réservez la place des éléments injectés après coup.',
   'lcen-mentions-legales-missing':
     "Publiez sur le site les informations d'identification de l'entreprise, dont le numéro SIREN ou RCS. Le critère exact et sa source figurent dans la section consacrée à l'exposition légale.",
+  'inp-breakdown-insight':
+    "Réduisez le délai entre le clic et la réponse visible de la page : allégez le code exécuté au moment de l'interaction et laissez le navigateur redessiner avant les traitements longs.",
+  'lcp-breakdown-insight':
+    "Raccourcissez les étapes qui précèdent l'affichage du plus grand élément de la page : temps de réponse du serveur, découverte de l'image, puis son chargement.",
   'lcp-discovery-insight':
     "Faites en sorte que le navigateur découvre l'image principale au plus tôt : déclarez-la dans le HTML plutôt que via un script.",
   'lcp-lazy-loaded':

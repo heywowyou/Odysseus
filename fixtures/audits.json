@@ -63,6 +63,14 @@
       "purpose": "Re-scan carrying the cookie-consent true negative from milestone 8.6: a real consent platform, zero trackers before consent."
     },
     {
+      "dir": "artifacts/www.airelles.com/2026-08-25T16-49-43Z",
+      "purpose": "The only fixture where the milestone 8.6 privacy checks fire positively: trackers and a third-party data transfer before consent, alongside broken-internal-link, canonical-target-unreachable, form-error-not-associated and llms-txt-missing. Six rules no other stored scan exercises."
+    },
+    {
+      "dir": "artifacts/haaitza.com/2026-08-26T17-51-41Z",
+      "purpose": "The only post-Lighthouse-upgrade fixture. Lighthouse renamed two dozen audits into an *-insight family, and every other stored scan predates it, so without this one the renamed rules have no coverage at all and the older names it replaced are counted instead."
+    },
+    {
       "dir": "artifacts/www.lagnonu.fr/2026-08-24T16-45-59Z",
       "purpose": "Pre-fix Domaine Lagnonu scan, kept as the render-diff networkidle regression case (trade-off 31's P0)."
     },

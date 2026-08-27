@@ -46,12 +46,28 @@ import { fixtureAudits } from '../../../../scripts/fixture-fingerprint.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 
-/** Measured 2026-08-25 across the curated fixture set: 87 of 196 emittable
- *  rules, 44 percent. Every uncovered rule is one no fixture has ever tripped,
+/** Measured 2026-08-27 across the curated fixture set: 85 of 172 emittable
+ *  rules, 49 percent. Every uncovered rule is one no fixture has ever tripped,
  *  so nothing in the suite would notice if it stopped working, or had never
  *  worked. Raising this is the useful work; the list the failure message
- *  prints is the to-do list for it. */
-const COVERAGE_FLOOR = 87;
+ *  prints is the to-do list for it.
+ *
+ *  The previous figure was 87 of 196, and 87 is not comparable to 85: the
+ *  denominator changed under it. A Lighthouse upgrade renamed two dozen audits
+ *  into an `*-insight` family, `generate-reachable-rule-ids.mjs` was re-run, and
+ *  the old names left the emittable set. Eleven of them were rules the curated
+ *  fixtures covered *only* under their pre-upgrade names, so the count fell
+ *  while nothing stopped working - verified by intersecting the removed names
+ *  against the observed set, which accounted for all eleven exactly.
+ *
+ *  That is a re-measurement, not the forbidden lowering, and it was paid for
+ *  rather than simply written down: two fixtures were curated in first
+ *  (`www.airelles.com` for the privacy checks firing positively, and the only
+ *  post-upgrade haaitza scan for the renamed audits), taking the count from 76
+ *  back to 85 and the fraction from 44 percent to 49. The remaining candidates
+ *  each added a single rule as a fourth timestamp of an already-listed site,
+ *  which is the accumulation fixtures/audits.json exists to prevent. */
+const COVERAGE_FLOOR = 85;
 
 /** No single rule may account for more than this share of one audit's
  *  findings.

@@ -92,6 +92,10 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     'Give images explicit dimensions and reserve space for elements injected after the fact.',
   'lcen-mentions-legales-missing':
     "Publish the company's identifying information on the site, including its SIREN or RCS number. The exact criterion and its source are set out in the legal exposure section.",
+  'inp-breakdown-insight':
+    'Shorten the delay between a click and the page responding: lighten the code run at the moment of the interaction, and let the browser repaint before any long processing.',
+  'lcp-breakdown-insight':
+    'Shorten the steps that precede the largest element appearing: server response time, discovery of the image, then loading it.',
   'lcp-discovery-insight':
     'Let the browser discover the main image as early as possible: declare it in the HTML rather than through a script.',
   'lcp-lazy-loaded':
