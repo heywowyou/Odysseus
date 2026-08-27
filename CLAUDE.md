@@ -424,6 +424,16 @@ call throws rather than returning a partial analysis. Live verification
 is a manual step, and for anything client-facing it means reading the
 output as the client would, not just checking that it validated.
 
+**Analysis and PDF authorization, amended 2026-08-27.** Generating or
+regenerating an analysis from a saved audit is standing-authorized. The
+structured `manifest.json` and normalized `findings.json` may be sent to the
+configured Mistral API, and French and English PDFs may be rendered from the
+validated stored analyses, without asking for permission each time. This does
+not authorize sending raw HTML, page bodies, or screenshots to the model, and
+it does not authorize a new live browser scan. Mistral analysis cost is
+negligible for this workflow and is not a separate approval gate; still avoid
+gratuitous regeneration and preserve the existing cost gates and provenance.
+
 Any fixture dev server started during a session must be stopped before the
 session ends. Verify it is stopped with `pgrep` before reporting
 completion.

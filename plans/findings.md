@@ -33,6 +33,9 @@ left open on purpose), TEST-05/TEST-06 (deliberately deferred), plus
 everything under Tech Debt & Architecture / Dependencies & Migrations /
 Direction not yet independently re-vetted.
 
+Recurring reviews of full-scan artifacts and client-facing PDFs use the
+separate cross-site ledger in [`report-findings.md`](report-findings.md).
+
 **New, not yet triaged**: separately, CI has never completed a full test
 run on this repo (confirmed via `gh run list --branch main`: only 2 runs
 exist total, both from this session). The first failed immediately on a
