@@ -18,9 +18,9 @@ import { resolveRenderDiffEvidence } from '../screenshots.js';
 import { en } from './strings/en.js';
 import { fr } from './strings/fr.js';
 import {
-  loadSasFernandeAnalysis,
-  loadSasFernandeFindings,
-  loadSasFernandeManifest,
+  loadSmallSiteAnalysis,
+  loadSmallSiteFindings,
+  loadSmallSiteManifest,
 } from '../test-fixtures.js';
 
 function flattenStrings(value: unknown): string[] {
@@ -42,7 +42,7 @@ function stripStyleBlock(html: string): string {
  *  Initiative") - real, intentional bilingual content, not a template-
  *  chrome leak. Once item 13's transactional-flow eligibility gate
  *  started excluding some citations, a different, previously-unselected
- *  citation carrying this exact collision surfaced in the sas-fernande
+ *  citation carrying this exact collision surfaced in the small-site
  *  fixture: the English chrome word "Accessibility" (categoryLabels.
  *  accessibility) matched as a substring of that citation's proper noun.
  *  Citation sentences are code-owned content, not template chrome (the
@@ -88,9 +88,9 @@ describe('report chrome strings never leak into the other language', () => {
   });
 
   it('the French document contains no strings/en.ts-only value', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
     const html = stripReferenceStatCitations(
@@ -106,9 +106,9 @@ describe('report chrome strings never leak into the other language', () => {
   });
 
   it('the English document contains no strings/fr.ts-only value', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('en');
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('en');
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
     const html = stripReferenceStatCitations(

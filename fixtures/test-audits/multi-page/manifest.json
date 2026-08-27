@@ -1,0 +1,796 @@
+{
+  "auditId": "72cadab8-f977-49b9-8990-283b77467a65",
+  "kind": "audit",
+  "siteUrl": "https://multi-page.test/",
+  "startedAt": "2026-08-06T20:30:06.028Z",
+  "finishedAt": "2026-08-06T20:57:19.894Z",
+  "tool": {
+    "odysseusVersion": "0.1.0",
+    "findingsSchemaVersion": 1,
+    "axeCoreVersion": "4.12.1",
+    "lighthouseVersion": "12.8.2",
+    "playwrightVersion": "1.62.1",
+    "chromiumVersion": "151.0.7922.34"
+  },
+  "config": {
+    "maxPages": 20,
+    "maxDepth": 5,
+    "crawlDelayMs": 1000,
+    "pageTimeoutMs": 30000,
+    "lighthouseTimeoutMs": 60000,
+    "userAgent": "OdysseusAudit/0.1 (+https://your-domain.example/bot)"
+  },
+  "crawl": {
+    "startUrl": "https://multi-page.test/",
+    "visitedCount": 20,
+    "maxPages": 20,
+    "maxDepth": 5,
+    "robotsTxtFound": true,
+    "effectiveDelayMs": 1000
+  },
+  "pages": [
+    {
+      "url": "https://multi-page.test/",
+      "pageDir": "pages/root-d36fb5",
+      "depth": 0,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.79,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 46356.571749999974,
+          "displayValue": "46.4 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 16493.09011917114,
+          "displayValue": "16,490 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/une-histoire-dhommes-hotel-multi-page-11-sur-mer/",
+      "pageDir": "pages/une-histoire-dhommes-hotel-multi-page-11-sur-mer-85b468",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.83,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 27315.31675000001,
+          "displayValue": "27.3 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 8134.500000000007,
+          "displayValue": "8,130 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/chambres-hotel-5-etoiles-multi-page-5/",
+      "pageDir": "pages/chambres-hotel-5-etoiles-multi-page-5-a977b9",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.83,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 31170.41874400176,
+          "displayValue": "31.2 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 6223.500000000002,
+          "displayValue": "6,220 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-5/",
+      "pageDir": "pages/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-5-10a71d",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.79,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 46584.82735000001,
+          "displayValue": "46.6 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 7289.999999999996,
+          "displayValue": "7,290 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/le-bar-multi-page-6/",
+      "pageDir": "pages/le-bar-multi-page-6-e25a9b",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.83,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 32570.221903749996,
+          "displayValue": "32.6 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 8388.890899999995,
+          "displayValue": "8,390 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/les-patisseries/la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-10/",
+      "pageDir": "pages/les-patisseries-la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-10-db1866",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.83,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 33684.793841249986,
+          "displayValue": "33.7 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 10751.403000000006,
+          "displayValue": "10,750 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/spa-multi-page-6-hotel-spa-dune-du-multi-page-10/",
+      "pageDir": "pages/spa-multi-page-6-hotel-spa-dune-du-multi-page-10-5fd5f9",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.83,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 35050.456653945905,
+          "displayValue": "35.1 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 15975.699688018802,
+          "displayValue": "15,980 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/boutique-du-multi-page-11-vacances-dune-du-multi-page-10/",
+      "pageDir": "pages/boutique-du-multi-page-11-vacances-dune-du-multi-page-10-a48961",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.83,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 36941.3000775,
+          "displayValue": "36.9 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 12691.999999999985,
+          "displayValue": "12,690 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/presentation/",
+      "pageDir": "pages/presentation-f0d0d3",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.83,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 28642.970599999993,
+          "displayValue": "28.6 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 11641.972549999993,
+          "displayValue": "11,640 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/galerie-hotel-de-luxe-multi-page-11/",
+      "pageDir": "pages/galerie-hotel-de-luxe-multi-page-11-5aff9e",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.8,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 63808.73244999996,
+          "displayValue": "63.8 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 17110.999999999993,
+          "displayValue": "17,110 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/social/facebook/",
+      "pageDir": "pages/social-facebook-49d9a1",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 100,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 1,
+        "bestPractices": 0.64
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.01,
+          "numericValue": 8695.202000000001,
+          "displayValue": "8.7 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0.004644468624078361,
+          "displayValue": "0.005"
+        },
+        "tbt": {
+          "score": 0.06,
+          "numericValue": 2266,
+          "displayValue": "2,270 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/social/instagram/",
+      "pageDir": "pages/social-instagram-84af19",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 100,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.74,
+        "bestPractices": 0.61
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0.11,
+          "numericValue": 6185.4299900000005,
+          "displayValue": "6.2 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0.003458358643940755,
+          "displayValue": "0.003"
+        },
+        "tbt": {
+          "score": 0.01,
+          "numericValue": 3533.4347499999985,
+          "displayValue": "3,530 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/conditions-generales-d-utilisation/",
+      "pageDir": "pages/conditions-generales-d-utilisation-f6967f",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.83,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 23783.089500000002,
+          "displayValue": "23.8 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 14481.372599999992,
+          "displayValue": "14,480 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/politique-de-confidentialite/",
+      "pageDir": "pages/politique-de-confidentialite-74677a",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.83,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 24004.481300000007,
+          "displayValue": "24.0 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 8773.5,
+          "displayValue": "8,770 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/politique-cookies/",
+      "pageDir": "pages/politique-cookies-2cd650",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.8,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 23101.328999999998,
+          "displayValue": "23.1 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 11386.836949999997,
+          "displayValue": "11,390 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/plan-de-site-hotel-romantique-multi-page-7/",
+      "pageDir": "pages/plan-de-site-hotel-romantique-multi-page-7-a5589b",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.8,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 24139.348700000002,
+          "displayValue": "24.1 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 13775.632399999999,
+          "displayValue": "13,780 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/en/",
+      "pageDir": "pages/en-4f9a38",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.79,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 42254.1192557114,
+          "displayValue": "42.3 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 6056.4923000000035,
+          "displayValue": "6,060 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/it/",
+      "pageDir": "pages/it-d8ded9",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.79,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 42782.34235394591,
+          "displayValue": "42.8 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 10232.435799999997,
+          "displayValue": "10,230 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/pt-pt/",
+      "pageDir": "pages/pt-pt-6cd9f6",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.79,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 43480.13724999997,
+          "displayValue": "43.5 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 18477.229829803873,
+          "displayValue": "18,480 ms"
+        }
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://multi-page.test/es/",
+      "pageDir": "pages/es-bb353b",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.79,
+        "bestPractices": 0.75
+      },
+      "coreWebVitals": {
+        "lcp": {
+          "score": 0,
+          "numericValue": 44243.917611981204,
+          "displayValue": "44.2 s"
+        },
+        "cls": {
+          "score": 1,
+          "numericValue": 0,
+          "displayValue": "0"
+        },
+        "tbt": {
+          "score": 0,
+          "numericValue": 14952.190600000007,
+          "displayValue": "14,950 ms"
+        }
+      },
+      "errors": {}
+    }
+  ],
+  "translationClusters": [
+    {
+      "canonicalPageUrl": "https://multi-page.test/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/boutique-du-multi-page-11-vacances-dune-du-multi-page-10/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/boutique-du-multi-page-11-vacances-dune-du-multi-page-10/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/chambres-hotel-5-etoiles-multi-page-5/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/chambres-hotel-5-etoiles-multi-page-5/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/conditions-generales-d-utilisation/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/conditions-generales-d-utilisation/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/en/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/en/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/es/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/es/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/galerie-hotel-de-luxe-multi-page-11/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/galerie-hotel-de-luxe-multi-page-11/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/it/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/it/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/le-bar-multi-page-6/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/le-bar-multi-page-6/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/les-patisseries/la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-10/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/les-patisseries/la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-10/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-5/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-5/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/plan-de-site-hotel-romantique-multi-page-7/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/plan-de-site-hotel-romantique-multi-page-7/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/politique-cookies/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/politique-cookies/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/politique-de-confidentialite/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/politique-de-confidentialite/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/presentation/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/presentation/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/pt-pt/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/pt-pt/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/social/facebook/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/social/facebook/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/social/instagram/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/social/instagram/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/spa-multi-page-6-hotel-spa-dune-du-multi-page-10/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/spa-multi-page-6-hotel-spa-dune-du-multi-page-10/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://multi-page.test/une-histoire-dhommes-hotel-multi-page-11-sur-mer/",
+      "members": [
+        {
+          "pageUrl": "https://multi-page.test/une-histoire-dhommes-hotel-multi-page-11-sur-mer/"
+        }
+      ]
+    }
+  ],
+  "renormalizedAt": "2026-08-27T12:31:22.200Z"
+}

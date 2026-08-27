@@ -20,18 +20,18 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
  *  Milestone 4 ... passed the entire test suite and were visible only in
  *  a real-site scan." Exercising the severity filter against real,
  *  messy scanner output is more meaningful than a hand-built fixture. */
-function loadSasFernandeFindings(): Finding[] {
+function loadSmallSiteFindings(): Finding[] {
   const findingsPath = path.join(
     moduleDir,
-    '../../../artifacts/sas-fernande.fr/2026-08-02T17-31-56Z/findings.json',
+    '../../../fixtures/test-audits/small-site/findings.json',
   );
   return JSON.parse(readFileSync(findingsPath, 'utf-8')) as Finding[];
 }
 
-function loadSasFernandeManifest(): AuditManifest {
+function loadSmallSiteManifest(): AuditManifest {
   const manifestPath = path.join(
     moduleDir,
-    '../../../artifacts/sas-fernande.fr/2026-08-02T17-31-56Z/manifest.json',
+    '../../../fixtures/test-audits/small-site/manifest.json',
   );
   return JSON.parse(readFileSync(manifestPath, 'utf-8')) as AuditManifest;
 }
@@ -47,8 +47,8 @@ function loadSasFernandeManifest(): AuditManifest {
  *  Absolute counts still belong in statistics.test.ts, where the number
  *  itself is the thing under test. */
 describe('filterFindingsForLlm', () => {
-  it('drops exactly the minor findings on the real sas-fernande scan', () => {
-    const findings = loadSasFernandeFindings();
+  it('drops exactly the minor findings on the real small-site scan', () => {
+    const findings = loadSmallSiteFindings();
     const minorCount = findings.filter((f) => f.severity === 'minor').length;
     expect(minorCount).toBeGreaterThan(0);
 
@@ -59,7 +59,7 @@ describe('filterFindingsForLlm', () => {
   });
 
   it('keeps every critical, serious, and moderate finding, changing none of them', () => {
-    const findings = loadSasFernandeFindings();
+    const findings = loadSmallSiteFindings();
     const filtered = filterFindingsForLlm(findings);
 
     const count = (severity: string, list: readonly Finding[]): number =>
@@ -74,7 +74,7 @@ describe('filterFindingsForLlm', () => {
 
 describe('buildStructureInput', () => {
   it('maps filtered findings to the StructureInput.findings Pick shape, no language field', () => {
-    const filtered = filterFindingsForLlm(loadSasFernandeFindings());
+    const filtered = filterFindingsForLlm(loadSmallSiteFindings());
     const siteContext = buildFallbackSiteContext();
 
     const input = buildStructureInput(filtered, siteContext);
@@ -118,7 +118,7 @@ describe('buildStructureInput', () => {
   });
 
   it('caps pageUrls at MAX_PAGE_URLS_FOR_LLM, even when a finding has far more', () => {
-    const filtered = filterFindingsForLlm(loadSasFernandeFindings());
+    const filtered = filterFindingsForLlm(loadSmallSiteFindings());
     const siteContext = buildFallbackSiteContext();
     const manyUrls = Array.from({ length: 200 }, (_, i) => `https://client.example/page-${i}`);
     const findingWithManyUrls: Finding = { ...filtered[0]!, pageUrls: manyUrls };
@@ -134,7 +134,7 @@ describe('buildStructureInput', () => {
 
 describe('buildWritingInput', () => {
   it('groups each structure theme with the finding records for its findingIds', () => {
-    const filtered = filterFindingsForLlm(loadSasFernandeFindings());
+    const filtered = filterFindingsForLlm(loadSmallSiteFindings());
     const siteContext = buildFallbackSiteContext();
     const [first, second, ...rest] = filtered;
     if (!first || !second) throw new Error('expected at least two findings in the fixture');
@@ -163,7 +163,7 @@ describe('buildWritingInput', () => {
       },
     ];
 
-    const siteStats = computeSiteStats(loadSasFernandeFindings(), loadSasFernandeManifest());
+    const siteStats = computeSiteStats(loadSmallSiteFindings(), loadSmallSiteManifest());
     const input = buildWritingInput(structureThemes, filtered, siteContext, 'fr', siteStats, null);
 
     expect(input.language).toBe('fr');
@@ -191,7 +191,7 @@ describe('buildWritingInput', () => {
   });
 
   it('throws when a structure theme references a findingId no longer in the current findings', () => {
-    const filtered = filterFindingsForLlm(loadSasFernandeFindings());
+    const filtered = filterFindingsForLlm(loadSmallSiteFindings());
     const siteContext = buildFallbackSiteContext();
     const staleThemes: StructureThemeWithKey[] = [
       {
@@ -204,7 +204,7 @@ describe('buildWritingInput', () => {
       },
     ];
 
-    const siteStats = computeSiteStats(loadSasFernandeFindings(), loadSasFernandeManifest());
+    const siteStats = computeSiteStats(loadSmallSiteFindings(), loadSmallSiteManifest());
     expect(() =>
       buildWritingInput(staleThemes, filtered, siteContext, 'fr', siteStats, null),
     ).toThrow(/references unknown findingId/);
@@ -212,8 +212,8 @@ describe('buildWritingInput', () => {
 });
 
 describe('computeSiteStats', () => {
-  it('computes the full severity breakdown from unfiltered findings on the real sas-fernande scan', () => {
-    const stats = computeSiteStats(loadSasFernandeFindings(), loadSasFernandeManifest());
+  it('computes the full severity breakdown from unfiltered findings on the real small-site scan', () => {
+    const stats = computeSiteStats(loadSmallSiteFindings(), loadSmallSiteManifest());
 
     // Derived from the fixture rather than pinned to a snapshot of it, for
     // the reason given above filterFindingsForLlm: the severity mix moves
@@ -223,7 +223,7 @@ describe('computeSiteStats', () => {
     // function existing separately from filterFindingsForLlm) and that it
     // accounts for every one of them. pagesScanned is a property of the scan,
     // not of normalization, so it stays a literal.
-    const findings = loadSasFernandeFindings();
+    const findings = loadSmallSiteFindings();
     const count = (severity: string): number =>
       findings.filter((f) => f.severity === severity).length;
 

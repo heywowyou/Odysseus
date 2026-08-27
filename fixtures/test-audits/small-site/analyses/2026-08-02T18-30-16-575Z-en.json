@@ -1,0 +1,172 @@
+{
+  "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+  "language": "en",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "generatedAt": "2026-08-02T18:30:16.575Z",
+  "executiveSummary": "Your website has significant issues in three areas: speed, accessibility, and search visibility. Every page loads slowly and content shifts around while it appears, which frustrates visitors and typically causes a meaningful share of them to leave before they see anything. The quote request page ('devis') has form fields that people using assistive technology cannot identify, so a potential customer relying on a screen reader may be unable to complete a request — this is your most direct revenue risk. Colour contrast problems appear on all eleven pages scanned, making text hard to read for older visitors and anyone in bright light. Separately, four pages — including the quote page and your news pages — are currently telling search engines not to list them, so they cannot be found through search at all. Several of these problems are cheap to fix (blocked indexing, missing page summaries, allowing pinch-to-zoom on mobile, labelling the quote form fields) and would deliver immediate value. The speed work is larger and should be planned as a dedicated project. Overall the site is functional but is leaking potential customers at several points.",
+  "overallRisk": "high",
+  "themes": [
+    {
+      "title": "Quote request form cannot be used by people relying on assistive technology",
+      "category": "accessibility",
+      "businessImpact": "On your quote request page, some form fields and a dropdown have no readable name attached to them. A visitor using a screen reader hears an unlabelled box and has no way of knowing what to enter. Because this is the page where enquiries turn into business, any visitor affected here is a lost lead rather than a mild inconvenience. Unlabelled fields also confuse browsers' autofill, which slows down every visitor, not only those with disabilities.",
+      "legalRelevance": "Relates to WCAG 2.1 Success Criterion 4.1.2 (Name, Role, Value) and 3.3.2 (Labels or Instructions), which are also referenced by the harmonised European standard EN 301 549. Whether any accessibility obligation applies to your organisation depends on your size and sector, which has not been assessed here.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 1,
+      "findingIds": ["f002", "f003"],
+      "recommendedActions": [
+        "Attach a visible text label to every input and dropdown on the quote page, connected to the field so assistive technology reads it aloud.",
+        "Where a visible label is not wanted for design reasons, use an accessible name attribute instead — never leave a field nameless.",
+        "Test the finished form end to end using a free screen reader (NVDA on Windows or VoiceOver on Mac) before publishing."
+      ]
+    },
+    {
+      "title": "Four important pages are hidden from Google",
+      "category": "seo",
+      "businessImpact": "Your quote request page, both news sections, and your legal notices page are instructing search engines not to list them. This means no one can arrive at your quote page from a Google search — a direct loss of enquiries. It is very often an accidental leftover from when the site was being built, and it is one of the fastest and cheapest problems on this list to correct.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 2,
+      "findingIds": ["f013"],
+      "recommendedActions": [
+        "Check the page settings in your content management system for a 'discourage search engines' or 'noindex' option and turn it off for these four pages.",
+        "Also review the robots.txt file for rules blocking these paths.",
+        "Once corrected, request re-indexing of these URLs in Google Search Console and confirm within a couple of weeks that they appear in search results."
+      ]
+    },
+    {
+      "title": "Pages take too long to show their first content",
+      "category": "performance",
+      "businessImpact": "Across all eleven pages scanned, visitors wait a noticeable amount of time before anything appears on screen, and longer still before the main image or headline is visible. Slow first impressions are the single most common reason people abandon a site before it even loads, and mobile visitors on weaker connections are hit hardest. Search engines also factor loading speed into rankings, so this cost compounds.",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 3,
+      "findingIds": ["f005", "f006", "f007"],
+      "recommendedActions": [
+        "Compress and resize all large images, and serve them in modern formats such as WebP.",
+        "Enable page caching and a content delivery network so pages are served from a location near the visitor.",
+        "Identify the largest element on each page (usually a hero image or banner) and give it loading priority instead of deferring it.",
+        "Remove or defer any plugins, fonts, and third-party scripts that are not essential to the page a visitor first sees."
+      ]
+    },
+    {
+      "title": "Page content jumps around while loading",
+      "category": "performance",
+      "businessImpact": "On eight of your pages, buttons and text move position as the page finishes loading. Visitors tap or click the wrong thing, which is annoying at best and, on a quote or contact path, causes people to give up. It also makes the site feel unprofessional and unstable, which undermines trust in your business.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 4,
+      "findingIds": ["f001"],
+      "recommendedActions": [
+        "Set explicit width and height on every image and embedded element so the browser reserves the correct space before the file arrives.",
+        "Reserve fixed space for banners, cookie notices, and any advertising or dynamically inserted blocks.",
+        "Preload web fonts and specify a fallback so text does not reflow when the custom font loads."
+      ]
+    },
+    {
+      "title": "Pages are unresponsive to clicks shortly after loading",
+      "category": "performance",
+      "businessImpact": "On nine pages, the browser is busy running code for a noticeable period after the page appears, so taps and clicks are ignored during that window. Visitors think the site is broken and click repeatedly or leave. This particularly harms mobile users on mid-range phones, who make up a large share of most French local audiences.",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 5,
+      "findingIds": ["f004"],
+      "recommendedActions": [
+        "Audit installed plugins and third-party scripts; remove anything unused and load the rest only on the pages that need them.",
+        "Defer non-critical JavaScript so it runs after the page becomes interactive.",
+        "Move analytics and marketing tags to load after the main content, ideally via a tag manager with deferred triggers."
+      ]
+    },
+    {
+      "title": "Text is hard to read across the whole site due to weak colour contrast",
+      "category": "accessibility",
+      "businessImpact": "On every page scanned, some text does not stand out enough from its background. This affects far more than users with a diagnosed impairment: anyone over roughly 45, anyone on a phone in daylight, and anyone with a dimmed screen struggles to read it. Where this affects prices, contact details, or buttons, it directly costs you enquiries.",
+      "legalRelevance": "Relates to WCAG 2.1 Success Criterion 1.4.3 (Contrast, Minimum), which requires a 4.5:1 ratio for normal text and 3:1 for large text, and is referenced by EN 301 549. Whether any accessibility obligation applies to your organisation depends on your size and sector, which has not been assessed here.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 6,
+      "findingIds": ["f010", "f011", "f015", "f012"],
+      "recommendedActions": [
+        "Identify the offending colour pairs — because they repeat on every page, they are almost certainly a handful of values in your theme's stylesheet.",
+        "Darken the text colours (or lighten the backgrounds) until each pair reaches at least 4.5:1, checking with a free contrast checker.",
+        "Update your brand colour guidelines with the corrected accessible values so the problem does not reappear on new pages."
+      ]
+    },
+    {
+      "title": "Mobile visitors cannot pinch to zoom",
+      "category": "accessibility",
+      "businessImpact": "On all eleven pages, the site prevents people from zooming in on their phone. Anyone who needs to enlarge small text — a very large portion of visitors over 50 — simply cannot, and will leave. There is no design benefit to this setting; it is nearly always an unintended default.",
+      "legalRelevance": "Relates to WCAG 2.1 Success Criterion 1.4.4 (Resize Text), referenced by EN 301 549. Whether any accessibility obligation applies to your organisation depends on your size and sector, which has not been assessed here.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 7,
+      "findingIds": ["f017"],
+      "recommendedActions": [
+        "Edit the viewport meta tag in the site template to remove 'user-scalable=no' and any 'maximum-scale' restriction.",
+        "Verify on a real phone that pinch-to-zoom works on every page type.",
+        "Confirm the layout still holds together at 200% zoom."
+      ]
+    },
+    {
+      "title": "Some links have no readable text",
+      "category": "accessibility",
+      "businessImpact": "Two links on your homepage — likely icon or image links such as social media buttons — carry no text describing where they lead. Screen reader users hear only 'link' and skip them, and search engines get no signal about what those pages contain, so you lose a little ranking value too.",
+      "legalRelevance": "Relates to WCAG 2.1 Success Criteria 2.4.4 (Link Purpose, In Context) and 4.1.2 (Name, Role, Value), referenced by EN 301 549. Whether any accessibility obligation applies to your organisation depends on your size and sector, which has not been assessed here.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 8,
+      "findingIds": ["f008"],
+      "recommendedActions": [
+        "Add descriptive alternative text to any image used as a link, or an accessible label on icon-only links (for example 'Our Facebook page').",
+        "Avoid generic wording such as 'click here' — describe the destination."
+      ]
+    },
+    {
+      "title": "Links in the legal notices page are only distinguishable by colour",
+      "category": "accessibility",
+      "businessImpact": "The legal notices page contains a large number of links that look like ordinary text apart from their colour. Colour-blind visitors — roughly one man in twelve — cannot tell they are clickable. On a page containing legal and contact information, this makes important references effectively invisible.",
+      "legalRelevance": "Relates to WCAG 2.1 Success Criterion 1.4.1 (Use of Color), referenced by EN 301 549. Whether any accessibility obligation applies to your organisation depends on your size and sector, which has not been assessed here.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 9,
+      "findingIds": ["f009"],
+      "recommendedActions": [
+        "Underline links that appear inside blocks of body text — a single stylesheet rule will fix all occurrences at once.",
+        "If underlining is unacceptable visually, ensure the colour difference against surrounding text reaches at least 3:1 and add a clear visual change on hover and keyboard focus."
+      ]
+    },
+    {
+      "title": "Four pages are missing search result summaries",
+      "category": "seo",
+      "businessImpact": "Your quote page, both news sections, and the legal notices page have no short description for search engines to display. Google then invents a snippet from whatever text it finds, which is usually less persuasive than a sentence you wrote yourself. A good summary measurably increases the share of searchers who click your result rather than a competitor's.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 10,
+      "findingIds": ["f016"],
+      "recommendedActions": [
+        "Write a unique 140–160 character description for each of the four pages, mentioning the service and location where relevant.",
+        "Include a reason to click — for example a free quote or a response time.",
+        "Add these through your CMS SEO settings and check how they render in a search result preview tool."
+      ]
+    },
+    {
+      "title": "Some tap targets on the homepage are too small",
+      "category": "accessibility",
+      "businessImpact": "Two interactive elements on the homepage are too small or too tightly packed to tap reliably on a phone. Visitors mis-tap, land somewhere they did not intend, and grow frustrated. This affects everyone using a touchscreen, not only people with reduced dexterity.",
+      "legalRelevance": "Relates to WCAG 2.2 Success Criterion 2.5.8 (Target Size, Minimum), which asks for a minimum 24 by 24 CSS pixel target or adequate spacing. Whether any accessibility obligation applies to your organisation depends on your size and sector, which has not been assessed here.",
+      "effort": "low",
+      "impact": "low",
+      "priorityRank": 11,
+      "findingIds": ["f014"],
+      "recommendedActions": [
+        "Increase the clickable area of the affected elements to at least 24 by 24 pixels, ideally 44 by 44 for comfort.",
+        "Where size cannot change, add surrounding spacing so neighbouring targets do not overlap.",
+        "Test the homepage on an actual phone rather than a resized desktop browser."
+      ]
+    }
+  ],
+  "quickWins": ["f013", "f002", "f003", "f017", "f016", "f008", "f009"],
+  "notes": "No intake questionnaire or business context was provided for this site. The priority ranking here reflects the technical severity of each finding and its general commercial risk only — it is not aligned to any stated business goal, target market, audience, or language strategy, because none was supplied. If you tell us what the site is meant to achieve (for example generating quote requests, recruiting staff, or promoting events), the ranking could shift considerably: in particular, the quote form and search indexing issues would move even higher if lead generation is the priority. Note also that four separate colour contrast findings were reported by the scanner; they have been grouped together because they most likely share a small number of underlying colour values in the site theme. Nothing in this report constitutes a legal assessment; accessibility criteria are cited as technical standards, and whether any specific regulation applies to your organisation depends on facts not examined here."
+}

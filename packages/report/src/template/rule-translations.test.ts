@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { CUSTOM_CHECK_SEVERITY, type Finding } from '@odysseus/core';
 import { RULE_TRANSLATIONS_FR } from './rule-translations.js';
-import { loadSasFernandeFindings } from '../test-fixtures.js';
+import { loadSmallSiteFindings } from '../test-fixtures.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -24,15 +24,15 @@ function loadFindings(relativeDir: string): Finding[] {
  * untranslated the way this class of rule did before.
  */
 describe('item 38: every ruleId observed in real fixture data has a French translation', () => {
-  it('every ruleId in the sas-fernande.fr fixture is covered', async () => {
-    const findings = await loadSasFernandeFindings();
+  it('every ruleId in the small-site.test fixture is covered', async () => {
+    const findings = await loadSmallSiteFindings();
     const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
       (id) => !RULE_TRANSLATIONS_FR[id],
     );
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
-  it('every ruleId in the real haaitza.com fixture is covered', () => {
+  it('every ruleId in the real haaitza fixture is covered', () => {
     const findings = loadFindings('../../../../artifacts/haaitza.com/2026-08-06T20-30-06Z');
     const missing = [...new Set(findings.map((f) => f.ruleId))].filter(
       (id) => !RULE_TRANSLATIONS_FR[id],
@@ -51,7 +51,7 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
   });
 
   // item 2.3 [REGRESSION]: frame-title rendered as raw English
-  // ("Frames must have an accessible name") in a real La Corniche
+  // ("Frames must have an accessible name") in a real Large Rule Families
   // report - this fixture is exactly what would have caught it, had it
   // been added when the site was first scanned.
   it('every ruleId in the real La Corniche fixture is covered', () => {
@@ -62,7 +62,7 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
     expect(missing, `missing translations for: ${missing.join(', ')}`).toEqual([]);
   });
 
-  // P1.1 (2026-08-21 La Corniche feedback pass, regression): the
+  // P1.1 (2026-08-21 Large Rule Families feedback pass, regression): the
   // 00-54-32Z fixture above doesn't contain 'aria-command-name' or
   // 'opengraph-missing' - this later same-day scan does, and is exactly
   // what would have caught both leaking untranslated into a real report.
@@ -87,8 +87,11 @@ describe('item 38: every ruleId observed in real fixture data has a French trans
       'Palais Gallien 2026-08-22',
       '../../../../artifacts/www.hotel-palais-gallien-bordeaux.com/2026-08-22T16-31-02Z',
     ],
-    ['haaitza.com 2026-08-22', '../../../../artifacts/haaitza.com/2026-08-22T22-07-44Z'],
-    ['La Corniche 2026-08-22', '../../../../artifacts/www.lacoorniche.com/2026-08-22T22-07-45Z'],
+    ['haaitza 2026-08-22', '../../../../artifacts/haaitza.com/2026-08-22T22-07-44Z'],
+    [
+      'Large Rule Families 2026-08-22',
+      '../../../../artifacts/www.lacoorniche.com/2026-08-22T22-07-45Z',
+    ],
   ])('every ruleId in the real %s fixture is covered', (_name, dir) => {
     const findings = loadFindings(dir);
     const missing = [...new Set(findings.map((f) => f.ruleId))].filter(

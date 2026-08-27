@@ -2,25 +2,25 @@ import { describe, expect, it } from 'vitest';
 import type { AuditManifest } from '@odysseus/core';
 import { hasMeasuredCoreWebVitals, renderCoreWebVitalsTable } from './core-web-vitals-table.js';
 import { getStrings } from '../strings/i18n.js';
-import { loadSasFernandeManifest } from '../../test-fixtures.js';
+import { loadSmallSiteManifest } from '../../test-fixtures.js';
 
 function buildMeasurement(numericValue: number, displayValue: string) {
   return { score: 0.9, numericValue, displayValue };
 }
 
 describe('renderCoreWebVitalsTable', () => {
-  // report-feedback-la-corniche.md item 0.3 [REGRESSION of this test's own
+  // report-feedback-large-rule-families.md item 0.3 [REGRESSION of this test's own
   // prior expectation]: a table of 5 "Non mesuré" rows, thresholds, and a
   // worst-page footnote that has nothing to explain reads as real data to
   // a client - a real report shipped exactly this table (Lighthouse
   // failed on all 18 pages) with the cover still claiming Performance was
-  // audited. Whether nothing was ever recorded (sas-fernande.fr's older
+  // audited. Whether nothing was ever recorded (small-site.test's older
   // capture, before coreWebVitals existed) or Lighthouse genuinely failed
   // on every page of a fresh scan, the section now states plainly that
   // measurement did not complete instead of rendering the unmeasured
   // table at all.
-  it('states plainly that measurement did not complete, instead of a table of "Non mesuré" rows, for the sas-fernande.fr capture (predates coreWebVitals)', async () => {
-    const manifest = await loadSasFernandeManifest();
+  it('states plainly that measurement did not complete, instead of a table of "Non mesuré" rows, for the small-site.test capture (predates coreWebVitals)', async () => {
+    const manifest = await loadSmallSiteManifest();
     expect(hasMeasuredCoreWebVitals(manifest)).toBe(false);
 
     const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
@@ -59,7 +59,7 @@ describe('renderCoreWebVitalsTable', () => {
     expect(html).not.toContain('example.com/'); // no per-page URL column
   });
 
-  // 2026-08-22, La Corniche report review: a real report stated medians
+  // 2026-08-22, Large Rule Families report review: a real report stated medians
   // were "aggregated across 27 pages" (every *visited* page) while only
   // 25 pages actually returned a Core Web Vitals measurement - the other
   // 2 timed out, correctly disclosed elsewhere in the report (section
@@ -142,7 +142,7 @@ describe('renderCoreWebVitalsTable', () => {
           depth: 0,
           status: 'visited',
           errors: {},
-          // 46s LCP, matching the real haaitza homepage - must read as
+          // 46s LCP, matching the real multi-page homepage - must read as
           // "poor" with context, not a bare unexplained number (A7).
           coreWebVitals: {
             lcp: buildMeasurement(46356, '46.4 s'),
@@ -337,7 +337,7 @@ describe('renderCoreWebVitalsTable', () => {
       expect(html).toContain('Real-user data');
     });
 
-    // 2026-08-22, La Corniche report review: a real report showed lab
+    // 2026-08-22, Large Rule Families report review: a real report showed lab
     // LCP at 33.2s directly above real-user LCP at 4.1s with no
     // explanation, reading as a self-contradiction rather than two
     // deliberately different measurements.
@@ -359,7 +359,7 @@ describe('renderCoreWebVitalsTable', () => {
     });
 
     it('never shows the gap-explanation note when lab measurement did not complete at all, even if CrUX has data', async () => {
-      const manifest = await loadSasFernandeManifest();
+      const manifest = await loadSmallSiteManifest();
       const withCrux = {
         ...manifest,
         cruxFieldData: {
@@ -374,7 +374,7 @@ describe('renderCoreWebVitalsTable', () => {
     });
 
     it('still renders the real-user block even when lab measurement did not complete at all', async () => {
-      const manifest = await loadSasFernandeManifest();
+      const manifest = await loadSmallSiteManifest();
       const withCrux = { ...manifest, cruxFieldData: { available: false } } as AuditManifest;
       const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', withCrux);
       expect(html).toContain('did not complete');

@@ -4,12 +4,12 @@ import { partitionFindings } from '@odysseus/llm';
 import type { Finding } from '@odysseus/core';
 import { renderObservations } from './observations.js';
 import { getStrings } from '../strings/i18n.js';
-import { loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
+import { loadSmallSiteFindings, loadSmallSiteManifest } from '../../test-fixtures.js';
 
-describe('renderObservations against the real sas-fernande.fr scan', () => {
+describe('renderObservations against the real small-site.test scan', () => {
   it('renders the legal-page box for f009 (link-in-text-block, confined to /mentions-legales/), with no wrapper box', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const { diverted } = partitionFindings(findings, manifest);
 
     const html = renderObservations(getStrings('fr'), 6, diverted);
@@ -25,7 +25,7 @@ describe('renderObservations against the real sas-fernande.fr scan', () => {
       .map((f) => f.findingId);
     expect(expectedIds.length).toBeGreaterThan(1);
     expect(html).toContain(expectedIds.join(', '));
-    // sas-fernande has no wrapper pages (render diff 0% everywhere).
+    // small-site has no wrapper pages (render diff 0% everywhere).
     expect(html).not.toContain('Pages d&#39;intégration');
   });
 
@@ -35,7 +35,7 @@ describe('renderObservations against the real sas-fernande.fr scan', () => {
     expect(html).toBe('');
   });
 
-  // report-feedback-la-corniche.md item 0.9: the "legal" diversion reason
+  // report-feedback-large-rule-families.md item 0.9: the "legal" diversion reason
   // is a URL-pattern match (LEGAL_PATH_PATTERN, @odysseus/core), never a
   // verified per-page noindex check - a real report diverted an
   // accessibility finding (nested-interactive, WCAG 4.1.2, confined to

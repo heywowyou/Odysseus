@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RENDERDIFF_RULE_ID, type AuditManifest, type Finding } from '@odysseus/core';
 import { resolveRenderDiffEvidence } from './screenshots.js';
-import { loadSasFernandeManifest } from './test-fixtures.js';
+import { loadSmallSiteManifest } from './test-fixtures.js';
 
 function inflateMissingPercent(
   manifest: AuditManifest,
@@ -61,9 +61,9 @@ function buildRenderDiffFinding(
   };
 }
 
-describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', () => {
+describe('resolveRenderDiffEvidence against the real small-site.test capture', () => {
   it('excludes every page when nothing crosses the 5% evidence-inclusion threshold (real data: 0% missing everywhere)', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const { pages, totalEligible } = resolveRenderDiffEvidence(manifest, []);
 
     expect(pages).toHaveLength(0);
@@ -71,7 +71,7 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
   });
 
   it('includes a page once its missingPercent crosses the threshold', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const inflated = inflateMissingPercent(manifest, 'pages/root-c122da', 40);
 
     const { pages } = resolveRenderDiffEvidence(inflated, []);
@@ -82,7 +82,7 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
   });
 
   it('caps at the 3 worst pages by missingPercent and reports how many were eligible', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     // The scan-time prune (selectPageDirsToKeep) always keeps the
     // homepage, plus separately its own top 3 by missingPercent. To reach
     // 4 distinct eligible candidates the homepage must qualify but rank
@@ -109,7 +109,7 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
     expect(pages[0]?.pageUrl).toBe(manifest.crawl.startUrl);
   });
 
-  // report-feedback-la-corniche.md item 1.9: a real report led this
+  // report-feedback-large-rule-families.md item 1.9: a real report led this
   // section with the site's own /plan-de-site-*/ page - the least
   // commercially relevant page it visited - above the homepage, purely
   // because its gap happened to be a few points wider. Full page-
@@ -118,7 +118,7 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
   // heuristic) that directly fixes "the sitemap page is never allowed to
   // outrank the homepage as the lead example".
   it('item 1.9: the homepage leads even when a non-homepage page has a strictly larger gap', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const homepagePageDir = manifest.pages.find((p) => p.url === manifest.crawl.startUrl)?.pageDir;
     const otherPageDir = manifest.pages.find(
       (p) => p.pageDir !== undefined && p.pageDir !== homepagePageDir,
@@ -134,7 +134,7 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
   });
 
   it('reads rawTextLength/renderedTextLength/selector from the matching text-missing-from-raw-html finding (B17)', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const homepageUrl = manifest.crawl.startUrl;
     const inflated = inflateMissingPercent(manifest, 'pages/root-c122da', 40);
     const findings = [buildRenderDiffFinding(homepageUrl, 42, 1830, '.hero-copy')];
@@ -147,7 +147,7 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
   });
 
   it('reports null lengths and an empty selector, never a guess, when no renderdiff finding exists for an included page', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const inflated = inflateMissingPercent(manifest, 'pages/root-c122da', 40);
 
     const { pages } = resolveRenderDiffEvidence(inflated, []);
@@ -158,7 +158,7 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
   });
 
   it('excludes a wrapper page (>=95% missing) from evidence, unlike an ordinary page below that threshold (B6)', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const inflated = inflateMissingPercent(manifest, 'pages/root-c122da', 96);
 
     const { pages, totalEligible, wrapperOrLegalExcludedCount } = resolveRenderDiffEvidence(
@@ -172,7 +172,7 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
   });
 
   it('excludes a legal-noindex page by URL pattern, regardless of its missingPercent (B6)', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const withLegalUrl = overridePageUrl(
       manifest,
       'pages/root-c122da',
@@ -187,7 +187,7 @@ describe('resolveRenderDiffEvidence against the real sas-fernande.fr capture', (
   });
 
   it('ranks by absolute characters missing, not by missingPercent, when both pages have a backing finding (B6)', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     // item 1.9 added a homepage tie-break ahead of this ranking (its own
     // test above), so this case now deliberately uses two non-homepage
     // pages to keep isolating the B6 char-ranking rule on its own.

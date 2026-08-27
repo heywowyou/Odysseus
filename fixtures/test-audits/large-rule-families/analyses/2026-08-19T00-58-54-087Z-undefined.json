@@ -1,0 +1,165 @@
+{
+  "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+  "themes": [
+    {
+      "findingIds": ["f003", "f007", "f009", "f013", "f016", "f019", "f021", "f022"],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 1,
+      "themeKey": "t2"
+    },
+    {
+      "findingIds": ["f058"],
+      "category": "seo",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 2,
+      "themeKey": "t10"
+    },
+    {
+      "findingIds": ["f043", "f047", "f051", "f055", "f063"],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 3,
+      "themeKey": "t8"
+    },
+    {
+      "findingIds": ["f068"],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 4,
+      "themeKey": "t12"
+    },
+    {
+      "findingIds": ["f067", "f069"],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 5,
+      "themeKey": "t11"
+    },
+    {
+      "findingIds": ["f038", "f041", "f054"],
+      "category": "seo",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 6,
+      "themeKey": "t6"
+    },
+    {
+      "findingIds": ["f040", "f057", "f059", "f065"],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 7,
+      "themeKey": "t7"
+    },
+    {
+      "findingIds": [
+        "f001",
+        "f002",
+        "f004",
+        "f005",
+        "f006",
+        "f008",
+        "f010",
+        "f011",
+        "f012",
+        "f014",
+        "f015",
+        "f017",
+        "f018",
+        "f020",
+        "f023",
+        "f024",
+        "f025",
+        "f026",
+        "f027",
+        "f028",
+        "f029",
+        "f030",
+        "f031",
+        "f032",
+        "f033"
+      ],
+      "category": "accessibility",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 8,
+      "themeKey": "t1"
+    },
+    {
+      "findingIds": [
+        "f034",
+        "f036",
+        "f042",
+        "f045",
+        "f046",
+        "f048",
+        "f050",
+        "f052",
+        "f053",
+        "f056",
+        "f060",
+        "f061",
+        "f062",
+        "f064",
+        "f066"
+      ],
+      "category": "accessibility",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 9,
+      "themeKey": "t3"
+    },
+    {
+      "findingIds": ["f037", "f049"],
+      "category": "accessibility",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 10,
+      "themeKey": "t5"
+    },
+    {
+      "findingIds": ["f035"],
+      "category": "rendering",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 11,
+      "themeKey": "t4"
+    },
+    {
+      "findingIds": ["f044"],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "low",
+      "priorityRank": 12,
+      "themeKey": "t9"
+    }
+  ],
+  "quickWins": [
+    "f003",
+    "f007",
+    "f009",
+    "f013",
+    "f016",
+    "f019",
+    "f021",
+    "f022",
+    "f038",
+    "f041",
+    "f043",
+    "f047",
+    "f051",
+    "f055",
+    "f058",
+    "f063"
+  ],
+  "overallRisk": "high",
+  "model": "mistral-large-latest",
+  "temperature": 0.2,
+  "generatedAt": "2026-08-19T00:58:54.087Z"
+}

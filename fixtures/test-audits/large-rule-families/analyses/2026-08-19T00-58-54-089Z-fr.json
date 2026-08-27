@@ -1,0 +1,263 @@
+{
+  "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+  "language": "fr",
+  "model": "mistral-large-latest",
+  "temperature": 0.2,
+  "generatedAt": "2026-08-19T00:58:54.089Z",
+  "executiveSummary": "L’audit a identifié 66 problèmes prioritaires (33 critiques et 33 sérieux) sur un total de 94 constats. Ces problèmes concernent principalement l’accessibilité et le référencement, avec des impacts directs sur l’expérience utilisateur et la visibilité en ligne. Les corrections les plus urgentes portent sur les images sans texte alternatif, les boutons et liens non identifiables, ainsi que les mentions légales manquantes. Une action rapide permettra d’améliorer l’inclusivité du site et de réduire les risques juridiques.",
+  "overallRisk": "high",
+  "themes": [
+    {
+      "title": "Boutons sans texte identifiable",
+      "category": "accessibility",
+      "businessImpact": "Les boutons sans texte clair empêchent les utilisateurs de technologies d’assistance de naviguer ou d’effectuer des actions, comme réserver une chambre ou accéder à des informations.",
+      "legalRelevance": "Critère 4.1.2 (Nom, rôle et valeur), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 1,
+      "findingIds": ["f003", "f007", "f009", "f013", "f016", "f019", "f021", "f022"],
+      "recommendedActions": [
+        "Confier à votre prestataire technique la correction des boutons sur les 18 pages concernées en ajoutant un texte visible ou un attribut `aria-label`.",
+        "Vérifier que les icônes utilisées comme boutons ont un texte alternatif approprié.",
+        "Tester la navigation avec un clavier pour s’assurer que tous les boutons sont accessibles."
+      ]
+    },
+    {
+      "title": "Mentions légales incomplètes",
+      "category": "seo",
+      "businessImpact": "L’absence de numéro SIREN ou RCS expose le site à des risques juridiques et peut nuire à la confiance des visiteurs, notamment pour les réservations ou les transactions.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 2,
+      "findingIds": ["f058"],
+      "recommendedActions": [
+        "Faire ajouter un numéro SIREN ou RCS valide dans les mentions légales, conformément à la loi LCEN.",
+        "Vérifier que les mentions légales sont accessibles depuis toutes les pages (ex. : pied de page).",
+        "Consulter un juriste pour s’assurer de la conformité complète des informations."
+      ]
+    },
+    {
+      "title": "Cadres sans titre accessible",
+      "category": "accessibility",
+      "businessImpact": "Les utilisateurs de lecteurs d’écran ne peuvent pas identifier le contenu des cadres (comme les cartes ou les vidéos intégrées), ce qui nuit à la navigation et à la compréhension.",
+      "legalRelevance": "Critère 4.1.2 (Nom, rôle et valeur), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 3,
+      "findingIds": ["f043", "f047", "f051", "f055", "f063"],
+      "recommendedActions": [
+        "Demander à votre prestataire technique d’ajouter un attribut `title` descriptif à tous les cadres (`iframe`) sur les 18 pages concernées.",
+        "Vérifier que les titres des cadres reflètent leur contenu (ex. : \"Carte de localisation de l’hôtel\").",
+        "Tester l’accessibilité des cadres avec un lecteur d’écran."
+      ]
+    },
+    {
+      "title": "Zoom et mise à l’échelle désactivés",
+      "category": "accessibility",
+      "businessImpact": "Les utilisateurs malvoyants ou âgés ne peuvent pas agrandir le texte, ce qui rend le site difficile à utiliser et peut entraîner une perte de visiteurs.",
+      "legalRelevance": "Critère 1.4.4 (Redimensionnement du texte), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 4,
+      "findingIds": ["f068"],
+      "recommendedActions": [
+        "Faire supprimer les restrictions de zoom dans la balise `<meta name=\"viewport\">` sur les 18 pages concernées.",
+        "Tester le site sur mobile pour s’assurer que le zoom fonctionne correctement.",
+        "Vérifier que les textes restent lisibles après agrandissement."
+      ]
+    },
+    {
+      "title": "Hiérarchie des titres désorganisée",
+      "category": "accessibility",
+      "businessImpact": "Une structure de titres incohérente rend la navigation difficile pour les utilisateurs de lecteurs d’écran et peut nuire au référencement naturel.",
+      "legalRelevance": "Critère 1.3.1 (Information et relations), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 5,
+      "findingIds": ["f067", "f069"],
+      "recommendedActions": [
+        "Demander à votre agence de corriger la hiérarchie des titres sur les 2 pages concernées (ex. : ajouter des titres de niveau 2 manquants).",
+        "Vérifier que les titres suivent une progression logique (ex. : H1 > H2 > H3).",
+        "Prioriser les pages avec du contenu commercial (ex. : chambres, actualités)."
+      ]
+    },
+    {
+      "title": "Données structurées invalides",
+      "category": "seo",
+      "businessImpact": "Les erreurs dans les données structurées empêchent les moteurs de recherche de comprendre et d’afficher correctement les informations (comme les tarifs ou les disponibilités), ce qui peut réduire la visibilité.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 6,
+      "findingIds": ["f038", "f041", "f054"],
+      "recommendedActions": [
+        "Demander à votre agence de corriger les erreurs de syntaxe JSON-LD sur les 18 pages concernées.",
+        "Valider les corrections avec l’outil de test des données structurées de Google.",
+        "Prioriser les pages avec des informations commerciales (ex. : chambres, événements)."
+      ]
+    },
+    {
+      "title": "Contraste des couleurs insuffisant",
+      "category": "accessibility",
+      "businessImpact": "Un contraste trop faible rend le texte difficile à lire pour les visiteurs malvoyants ou en plein soleil, ce qui peut augmenter le taux de rebond et réduire la conversion.",
+      "legalRelevance": "Critère 1.4.3 (Contraste minimum), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 7,
+      "findingIds": ["f040", "f057", "f059", "f065"],
+      "recommendedActions": [
+        "Faire ajuster les couleurs des textes et arrière-plans sur les 6 pages concernées pour respecter les normes d’accessibilité.",
+        "Utiliser des outils comme le vérificateur de contraste WCAG pour identifier les corrections nécessaires.",
+        "Prioriser les éléments interactifs (boutons, liens) et les textes longs."
+      ]
+    },
+    {
+      "title": "Images sans texte alternatif",
+      "category": "accessibility",
+      "businessImpact": "Les visiteurs malvoyants ou utilisant des lecteurs d’écran ne peuvent pas comprendre le contenu des images, ce qui nuit à l’expérience utilisateur et peut réduire l’engagement. Cela affecte aussi le référencement naturel.",
+      "legalRelevance": "Critère 1.1.1 (Contenu non textuel), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 8,
+      "findingIds": [
+        "f001",
+        "f002",
+        "f004",
+        "f005",
+        "f006",
+        "f008",
+        "f010",
+        "f011",
+        "f012",
+        "f014",
+        "f015",
+        "f017",
+        "f018",
+        "f020",
+        "f023",
+        "f024",
+        "f025",
+        "f026",
+        "f027",
+        "f028",
+        "f029",
+        "f030",
+        "f031",
+        "f032",
+        "f033"
+      ],
+      "recommendedActions": [
+        "Demander à votre agence de vérifier et ajouter un texte alternatif descriptif à toutes les images sur les 18 pages concernées.",
+        "Vérifier que les images purement décoratives sont marquées avec un attribut `aria-hidden=\"true\"` ou `role=\"presentation\"`.",
+        "Prioriser les images des pages clés comme la page d’accueil et les pages de chambres."
+      ]
+    },
+    {
+      "title": "Liens sans texte descriptif",
+      "category": "accessibility",
+      "businessImpact": "Les liens vides ou mal décrits rendent la navigation confuse pour les utilisateurs de lecteurs d’écran et peuvent nuire à la conversion, notamment pour les réservations ou les demandes d’information.",
+      "legalRelevance": "Critères 2.4.4 (Fonction du lien selon le contexte) et 4.1.2 (Nom, rôle et valeur), WCAG 2.2 niveau AA, référencés par la norme EN 301 549.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 9,
+      "findingIds": [
+        "f034",
+        "f036",
+        "f042",
+        "f045",
+        "f046",
+        "f048",
+        "f050",
+        "f052",
+        "f053",
+        "f056",
+        "f060",
+        "f061",
+        "f062",
+        "f064",
+        "f066"
+      ],
+      "recommendedActions": [
+        "Faire auditer par votre agence les liens sur les 18 pages pour ajouter un texte clair ou un attribut `aria-label`.",
+        "Éviter les liens génériques comme \"Cliquez ici\" et privilégier des descriptions précises.",
+        "Vérifier les liens dans les galeries d’images, où 77 occurrences ont été détectées."
+      ]
+    },
+    {
+      "title": "Vidéos sans sous-titres",
+      "category": "accessibility",
+      "businessImpact": "Les visiteurs sourds ou malentendants ne peuvent pas accéder au contenu audio des vidéos, ce qui limite l’impact des messages promotionnels ou informatifs.",
+      "legalRelevance": "Critère 1.2.2 (Sous-titres (enregistré)), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 10,
+      "findingIds": ["f037", "f049"],
+      "recommendedActions": [
+        "Faire ajouter des sous-titres ou une piste de transcription aux vidéos sur les 7 pages concernées.",
+        "Utiliser des outils automatisés pour générer des sous-titres, puis les faire relire pour précision.",
+        "Vérifier que les vidéos intégrées (comme celles des pages d’accueil ou des restaurants) sont couvertes."
+      ]
+    },
+    {
+      "title": "Contenu invisible sans JavaScript",
+      "category": "rendering",
+      "businessImpact": "Les moteurs de recherche et certains utilisateurs (notamment ceux avec des connexions lentes ou des bloqueurs de scripts) ne voient pas une partie du contenu, ce qui peut réduire la visibilité et l’accessibilité du site.",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 11,
+      "findingIds": ["f035"],
+      "recommendedActions": [
+        "Demander à votre prestataire technique de rendre le contenu critique accessible sans JavaScript sur les 16 pages concernées.",
+        "Vérifier que les textes et fonctionnalités clés (comme les formulaires de réservation) sont présents dans le code HTML initial.",
+        "Tester le site avec JavaScript désactivé pour identifier les éléments manquants."
+      ]
+    },
+    {
+      "title": "Zones tactiles trop petites",
+      "category": "accessibility",
+      "businessImpact": "Les boutons ou liens trop petits sont difficiles à activer sur mobile, ce qui peut frustrer les utilisateurs et réduire les interactions (ex. : réservations, clics sur les actualités).",
+      "legalRelevance": "Critère 2.5.8 (Taille de la cible, minimum), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "low",
+      "priorityRank": 12,
+      "findingIds": ["f044"],
+      "recommendedActions": [
+        "Faire agrandir les zones tactiles sur la page des actualités pour atteindre au moins 24px de taille.",
+        "Vérifier que l’espacement entre les éléments interactifs est suffisant.",
+        "Tester l’ergonomie mobile avec des outils comme Chrome DevTools."
+      ]
+    }
+  ],
+  "quickWins": [
+    "f003",
+    "f007",
+    "f009",
+    "f013",
+    "f016",
+    "f019",
+    "f021",
+    "f022",
+    "f038",
+    "f041",
+    "f043",
+    "f047",
+    "f051",
+    "f055",
+    "f058",
+    "f063"
+  ],
+  "notes": "Aucun contexte sur le site (type d’activité, objectifs commerciaux, marché cible) n’a été fourni. Les priorités reflètent donc uniquement la gravité des constats, sans ajustement en fonction des enjeux métiers spécifiques. Il est recommandé de partager ces informations pour affiner les recommandations lors d’un prochain audit.",
+  "obligationAssessment": {
+    "status": "undetermined",
+    "basis": [
+      {
+        "regimeId": "eaa-loi-2023-171",
+        "facts": [
+          {
+            "kind": "siren-missing"
+          }
+        ]
+      }
+    ],
+    "sector": "general"
+  }
+}

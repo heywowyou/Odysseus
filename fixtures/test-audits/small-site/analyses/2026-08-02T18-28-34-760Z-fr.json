@@ -1,0 +1,180 @@
+{
+  "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+  "language": "fr",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "generatedAt": "2026-08-02T18:28:34.760Z",
+  "executiveSummary": "L'audit automatisé de small-site.test révèle deux problèmes majeurs : un site globalement lent sur l'ensemble des pages (affichage tardif, page qui bouge pendant le chargement, interface qui ne réagit pas immédiatement) et de nombreux obstacles d'accessibilité qui gênent une partie des visiteurs, notamment les personnes malvoyantes ou utilisant un lecteur d'écran. Point le plus critique sur le plan commercial : le formulaire de devis contient des champs non identifiables par les technologies d'assistance, ce qui peut faire perdre des demandes clients, et quatre pages (dont la page devis et les actualités) sont actuellement bloquées à l'indexation, donc invisibles sur Google. Les problèmes de contraste de couleurs et l'impossibilité de zoomer sur mobile touchent toutes les pages. La bonne nouvelle : plusieurs correctifs sont rapides à mettre en œuvre (déblocage de l'indexation, étiquettes de formulaire, autorisation du zoom) et produiront un effet immédiat sur la visibilité et le taux de conversion.",
+  "overallRisk": "high",
+  "themes": [
+    {
+      "title": "Pages blocked from search engines",
+      "category": "seo",
+      "businessImpact": "Quatre pages, dont la page de demande de devis et les actualités, indiquent aux moteurs de recherche de ne pas les référencer. Elles n'apparaîtront donc jamais dans les résultats Google, ce qui prive l'entreprise de contacts entrants gratuits sur des pages pourtant commercialement stratégiques.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 1,
+      "findingIds": ["f013"],
+      "recommendedActions": [
+        "Vérifier la balise meta robots et le fichier robots.txt sur les quatre pages concernées",
+        "Retirer la directive noindex des pages devis, actualités et mentions légales si leur visibilité est souhaitée",
+        "Soumettre ensuite ces pages à l'indexation via Google Search Console",
+        "Contrôler qu'aucun réglage global du CMS n'active le blocage d'indexation"
+      ]
+    },
+    {
+      "title": "Quote form fields are not identifiable",
+      "category": "accessibility",
+      "businessImpact": "Sur la page de demande de devis, un menu déroulant et un champ de formulaire n'ont pas d'intitulé exploitable. Un visiteur utilisant un lecteur d'écran ne sait pas quelle information saisir et abandonne. C'est une perte directe de demandes commerciales sur la page la plus rentable du site.",
+      "legalRelevance": "Critère WCAG 2.1 4.1.2 (Nom, rôle et valeur), également repris dans la norme EN 301 549 pour les composants d'interface et les formulaires.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 2,
+      "findingIds": ["f002", "f003"],
+      "recommendedActions": [
+        "Associer une étiquette visible à chaque champ du formulaire de devis",
+        "Ajouter un intitulé accessible au menu déroulant",
+        "Tester le parcours complet du formulaire avec un lecteur d'écran ou une extension de vérification",
+        "Vérifier que le message de confirmation d'envoi est lui aussi annoncé"
+      ]
+    },
+    {
+      "title": "Slow page loading across the whole site",
+      "category": "performance",
+      "businessImpact": "Sur toutes les pages, le premier contenu et l'image principale mettent trop de temps à s'afficher. Les visiteurs sur mobile ou en connexion moyenne risquent de partir avant même de voir l'offre, et la lenteur pénalise aussi le classement dans Google.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 3,
+      "findingIds": ["f005", "f006", "f007"],
+      "recommendedActions": [
+        "Compresser et convertir les images en formats modernes (WebP/AVIF) avec dimensions adaptées",
+        "Activer la mise en cache navigateur et un CDN",
+        "Différer le chargement des images situées hors de l'écran",
+        "Réduire le nombre de scripts et de polices chargés au démarrage",
+        "Contrôler le temps de réponse de l'hébergement"
+      ]
+    },
+    {
+      "title": "Page content jumps while loading",
+      "category": "performance",
+      "businessImpact": "Sur huit pages, les éléments se déplacent pendant le chargement. Un visiteur peut cliquer au mauvais endroit, ce qui crée de la frustration et donne une impression d'amateurisme, en particulier sur mobile.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 4,
+      "findingIds": ["f001"],
+      "recommendedActions": [
+        "Réserver l'espace des images et vidéos en déclarant leurs dimensions (width/height)",
+        "Réserver l'espace des bannières, bandeaux et publicités insérés dynamiquement",
+        "Précharger les polices d'écriture pour éviter les sauts de texte",
+        "Revérifier le score après correction sur mobile et desktop"
+      ]
+    },
+    {
+      "title": "Interface unresponsive during load",
+      "category": "performance",
+      "businessImpact": "Sur neuf pages, le navigateur reste bloqué par des traitements trop lourds : les clics sur les menus ou boutons ne réagissent pas immédiatement. Cela décourage les visiteurs qui cherchent à contacter l'entreprise rapidement.",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 5,
+      "findingIds": ["f004"],
+      "recommendedActions": [
+        "Identifier et retirer les extensions ou scripts tiers non indispensables",
+        "Charger les scripts en mode différé (defer/async)",
+        "Découper ou alléger le code JavaScript le plus lourd",
+        "Limiter les outils de suivi et widgets externes"
+      ]
+    },
+    {
+      "title": "Insufficient colour contrast site-wide",
+      "category": "accessibility",
+      "businessImpact": "Sur l'ensemble des pages, certains textes et éléments sont trop peu contrastés par rapport à leur fond. Ils deviennent difficiles à lire pour beaucoup de visiteurs, notamment les personnes âgées, malvoyantes, ou simplement en plein soleil sur mobile. Un texte qu'on ne lit pas est un argument commercial perdu.",
+      "legalRelevance": "Critère WCAG 2.1 1.4.3 (Contraste minimum, niveau AA), repris dans la norme EN 301 549.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 6,
+      "findingIds": ["f010", "f011", "f015", "f012"],
+      "recommendedActions": [
+        "Relever les couleurs de texte et de fond problématiques et calculer leur ratio de contraste",
+        "Ajuster la palette pour atteindre au minimum 4,5:1 sur le texte courant et 3:1 sur les grands titres",
+        "Corriger en priorité les boutons d'appel à l'action et les menus",
+        "Documenter la palette corrigée dans la charte graphique pour éviter les régressions"
+      ]
+    },
+    {
+      "title": "Zoom disabled on mobile",
+      "category": "accessibility",
+      "businessImpact": "Sur toutes les pages, le site empêche d'agrandir le texte avec les doigts sur smartphone. Toute personne ayant une vue imparfaite est bloquée et quitte le site, alors que la majorité du trafic est souvent mobile.",
+      "legalRelevance": "Critère WCAG 2.1 1.4.4 (Redimensionnement du texte, niveau AA), repris dans la norme EN 301 549.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 7,
+      "findingIds": ["f017"],
+      "recommendedActions": [
+        "Retirer user-scalable=no et maximum-scale de la balise meta viewport",
+        "Vérifier que la mise en page reste correcte jusqu'à 200 % de zoom",
+        "Tester sur iOS et Android après correction"
+      ]
+    },
+    {
+      "title": "Links without readable text on the homepage",
+      "category": "accessibility",
+      "businessImpact": "Deux liens de la page d'accueil n'ont aucun texte compréhensible (souvent des icônes ou images cliquables). Les visiteurs utilisant un lecteur d'écran ne savent pas où ils mènent, et les moteurs de recherche ne comprennent pas non plus la destination.",
+      "legalRelevance": "Critères WCAG 2.1 2.4.4 (Fonction du lien à partir du contexte) et 4.1.2 (Nom, rôle et valeur).",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 8,
+      "findingIds": ["f008"],
+      "recommendedActions": [
+        "Ajouter un texte alternatif aux images ou icônes utilisées comme liens",
+        "Ou ajouter un intitulé accessible (aria-label) décrivant la destination",
+        "Vérifier les liens des réseaux sociaux et du logo"
+      ]
+    },
+    {
+      "title": "Links not distinguishable without colour",
+      "category": "accessibility",
+      "businessImpact": "Sur la page des mentions légales, de très nombreux liens ne se distinguent du texte que par leur couleur. Les personnes daltoniennes ou lisant sur un écran peu contrasté ne repèrent pas les liens et manquent des informations importantes.",
+      "legalRelevance": "Critère WCAG 2.1 1.4.1 (Utilisation de la couleur).",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 9,
+      "findingIds": ["f009"],
+      "recommendedActions": [
+        "Ajouter un soulignement (ou un autre repère visuel) aux liens intégrés dans les paragraphes",
+        "Appliquer la règle globalement via la feuille de style pour couvrir toutes les pages",
+        "Vérifier que le survol et le focus clavier restent bien visibles"
+      ]
+    },
+    {
+      "title": "Touch targets too small on the homepage",
+      "category": "accessibility",
+      "businessImpact": "Deux éléments cliquables de la page d'accueil sont trop petits ou trop rapprochés sur mobile. Les visiteurs cliquent à côté, se trompent de destination et se découragent, ce qui coûte des contacts.",
+      "legalRelevance": "Critère WCAG 2.2 2.5.8 (Taille de la cible, niveau AA minimum).",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 10,
+      "findingIds": ["f014"],
+      "recommendedActions": [
+        "Agrandir les zones cliquables concernées à au moins 24x24 pixels",
+        "Ajouter de la marge entre les éléments interactifs proches",
+        "Tester la navigation au doigt sur un smartphone réel"
+      ]
+    },
+    {
+      "title": "Missing search result descriptions",
+      "category": "seo",
+      "businessImpact": "Quatre pages n'ont pas de résumé destiné aux résultats de recherche. Google affiche alors un extrait de texte pris au hasard, moins convaincant, ce qui réduit le nombre de clics vers le site même quand il apparaît bien classé.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 11,
+      "findingIds": ["f016"],
+      "recommendedActions": [
+        "Rédiger une description unique de 120 à 155 caractères pour chaque page concernée",
+        "Y intégrer une proposition de valeur et une incitation à cliquer",
+        "Traiter en priorité la page de devis une fois son indexation débloquée"
+      ]
+    }
+  ],
+  "quickWins": ["f013", "f002", "f003", "f017", "f008", "f009", "f014", "f016"],
+  "notes": "Aucun contexte métier n'a été fourni pour ce site : ni type d'activité, ni objectif principal, ni marchés ou langues visés. Les priorités présentées ici reposent donc uniquement sur la gravité technique des constats et sur le risque commercial générique associé, et non sur des objectifs d'entreprise déclarés. Certaines hypothèses de bon sens ont été faites (par exemple que la page de devis a une valeur commerciale) : elles devront être confirmées. Par ailleurs, les obligations légales en matière d'accessibilité dépendent de la taille et du secteur de l'entreprise, éléments non communiqués ; seuls les critères WCAG concernés sont cités, sans conclusion sur l'applicabilité d'un texte de loi particulier. Un échange de cadrage permettrait d'affiner cet ordre de priorités."
+}

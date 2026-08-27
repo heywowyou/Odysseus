@@ -1,0 +1,204 @@
+{
+  "auditId": "72cadab8-f977-49b9-8990-283b77467a65",
+  "language": "fr",
+  "model": "mistral-large-latest",
+  "temperature": 0.2,
+  "generatedAt": "2026-08-06T21:14:07.810Z",
+  "executiveSummary": "Votre site présente plusieurs opportunités d’amélioration pour renforcer sa visibilité, son accessibilité et son expérience utilisateur. Les problèmes critiques incluent des contenus invisibles pour les moteurs de recherche, des boutons et liens sans texte identifiable, ainsi que des images sans descriptions alternatives. Ces lacunes peuvent limiter votre référencement et exclure certains utilisateurs. Par ailleurs, des performances lentes et des pages bloquées pour l’indexation risquent de réduire votre trafic et vos conversions. Enfin, des problèmes d’accessibilité, comme un faible contraste ou des zones tactiles trop petites, peuvent nuire à l’expérience des visiteurs. Corriger ces points permettra d’améliorer la satisfaction des clients, d’élargir votre audience et de renforcer votre positionnement en ligne.",
+  "overallRisk": "high",
+  "themes": [
+    {
+      "title": "Contenu invisible pour les moteurs de recherche et certains utilisateurs",
+      "category": "rendering",
+      "businessImpact": "Les pages concernées risquent de ne pas apparaître dans les résultats de recherche, ce qui peut réduire la visibilité de votre établissement et limiter les réservations en ligne. Les utilisateurs utilisant des technologies d'assistance ou des navigateurs sans JavaScript pourraient également ne pas accéder à ces informations.",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 1,
+      "findingIds": ["f001"],
+      "recommendedActions": [
+        "Rendre le contenu textuel disponible directement dans le code HTML, sans dépendre de JavaScript pour son affichage.",
+        "Vérifier que les pages critiques (comme les pages de réseaux sociaux) sont accessibles même sans JavaScript en utilisant des outils comme un navigateur en mode texte ou un crawler sans JavaScript.",
+        "Prioriser les pages listées pour une correction rapide afin d’améliorer leur référencement et leur accessibilité."
+      ]
+    },
+    {
+      "title": "Boutons et liens sans texte identifiable",
+      "category": "accessibility",
+      "businessImpact": "Les utilisateurs de lecteurs d’écran ou ceux naviguant au clavier ne peuvent pas comprendre la fonction des boutons et liens, ce qui complique la navigation et peut entraîner une perte de clients potentiels. Cela affecte également le référencement, car les moteurs de recherche ne peuvent pas interpréter correctement ces éléments.",
+      "legalRelevance": "Critères WCAG 2.2 2.4.4 (Objectif du lien dans son contexte) et 4.1.2 (Nom, rôle, valeur). Norme EN 301 549 applicable.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 2,
+      "findingIds": [
+        "f002",
+        "f009",
+        "f010",
+        "f011",
+        "f012",
+        "f014",
+        "f016",
+        "f017",
+        "f020",
+        "f021",
+        "f022",
+        "f023",
+        "f024",
+        "f027",
+        "f028"
+      ],
+      "recommendedActions": [
+        "Ajouter un texte visible ou un attribut aria-label/aria-labelledby aux boutons et liens pour décrire leur fonction ou leur destination.",
+        "Vérifier que chaque bouton et lien possède un texte clair et distinct, même s’il est masqué visuellement (via CSS) mais accessible aux technologies d’assistance.",
+        "Tester les pages avec un lecteur d’écran pour confirmer que tous les éléments interactifs sont compréhensibles."
+      ]
+    },
+    {
+      "title": "Images sans texte alternatif",
+      "category": "accessibility",
+      "businessImpact": "Les images sans description textuelle ne sont pas comprises par les moteurs de recherche ni par les utilisateurs malvoyants ou aveugles. Cela peut nuire à l’expérience utilisateur et réduire l’efficacité du référencement naturel.",
+      "legalRelevance": "Critère WCAG 2.2 1.1.1 (Contenu non textuel). Norme EN 301 549 applicable.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 3,
+      "findingIds": ["f003", "f008"],
+      "recommendedActions": [
+        "Ajouter un attribut alt descriptif à chaque image, en expliquant son contenu ou sa fonction.",
+        "Pour les images décoratives, utiliser un attribut alt vide (alt=\"\") ou un rôle aria-hidden=\"true\".",
+        "Vérifier que les images critiques (comme celles des chambres ou des services) sont correctement décrites pour améliorer leur référencement."
+      ]
+    },
+    {
+      "title": "Performances lentes du site",
+      "category": "performance",
+      "businessImpact": "Un site lent décourage les visiteurs, augmente le taux de rebond et peut réduire les conversions (réservations, demandes de renseignements). Les moteurs de recherche pénalisent également les sites lents dans leurs classements.",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 4,
+      "findingIds": ["f004", "f005", "f006", "f007"],
+      "recommendedActions": [
+        "Optimiser les images en réduisant leur taille et en utilisant des formats modernes (WebP).",
+        "Minimiser et regrouper les fichiers JavaScript et CSS pour réduire le temps de chargement.",
+        "Utiliser un outil de monitoring pour identifier les ressources bloquantes et les optimiser.",
+        "Activer la mise en cache du navigateur pour les ressources statiques."
+      ]
+    },
+    {
+      "title": "Pages bloquées pour l’indexation",
+      "category": "seo",
+      "businessImpact": "Les pages bloquées ne peuvent pas apparaître dans les résultats de recherche, ce qui limite la visibilité de votre site et peut empêcher les clients de trouver des informations importantes (comme les politiques de confidentialité ou les conditions générales).",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 5,
+      "findingIds": ["f013"],
+      "recommendedActions": [
+        "Vérifier le fichier robots.txt pour s’assurer qu’il n’empêche pas l’indexation des pages critiques.",
+        "Supprimer ou ajuster les balises meta noindex sur les pages qui doivent être accessibles aux moteurs de recherche.",
+        "Utiliser Google Search Console pour tester et valider l’indexation des pages concernées."
+      ]
+    },
+    {
+      "title": "Liens non explorables par les moteurs de recherche",
+      "category": "seo",
+      "businessImpact": "Les moteurs de recherche ne peuvent pas suivre les liens sans attribut href valide, ce qui limite la découverte de nouvelles pages et réduit l’efficacité du référencement. Cela peut également nuire à l’expérience utilisateur si les liens ne fonctionnent pas comme prévu.",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 6,
+      "findingIds": [
+        "f029",
+        "f030",
+        "f031",
+        "f032",
+        "f033",
+        "f034",
+        "f035",
+        "f036",
+        "f037",
+        "f040",
+        "f041",
+        "f042",
+        "f043"
+      ],
+      "recommendedActions": [
+        "Remplacer les liens utilisant des événements JavaScript (comme onclick) par des balises <a> avec un attribut href valide.",
+        "Vérifier que tous les liens pointent vers des destinations accessibles et pertinentes.",
+        "Tester les liens avec un outil comme Lighthouse pour confirmer leur crawlabilité."
+      ]
+    },
+    {
+      "title": "Problèmes de contraste et de visibilité des liens",
+      "category": "accessibility",
+      "businessImpact": "Un faible contraste ou des liens difficiles à distinguer rendent la navigation compliquée pour les utilisateurs malvoyants ou ceux naviguant dans des conditions de luminosité défavorables. Cela peut entraîner une frustration et une perte de clients.",
+      "legalRelevance": "Critères WCAG 2.2 1.4.1 (Utilisation de la couleur) et 1.4.3 (Contraste minimum). Norme EN 301 549 applicable.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 7,
+      "findingIds": ["f018", "f019", "f025"],
+      "recommendedActions": [
+        "Augmenter le contraste entre le texte des liens et leur arrière-plan pour respecter un ratio minimum de 4,5:1.",
+        "Ajouter des indicateurs visuels supplémentaires (comme un soulignement ou une bordure) pour distinguer les liens du texte environnant.",
+        "Utiliser un outil comme le Contrast Checker de WebAIM pour valider les corrections."
+      ]
+    },
+    {
+      "title": "Zones tactiles trop petites",
+      "category": "accessibility",
+      "businessImpact": "Les utilisateurs mobiles ou ceux ayant des difficultés motrices peuvent avoir du mal à interagir avec des éléments trop petits, ce qui nuit à l’expérience utilisateur et peut réduire les conversions (comme les clics sur des boutons de réservation).",
+      "legalRelevance": "Critère WCAG 2.2 2.5.8 (Taille de la cible). Norme EN 301 549 applicable.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 8,
+      "findingIds": ["f015"],
+      "recommendedActions": [
+        "Augmenter la taille des zones tactiles à au moins 24x24 pixels.",
+        "Ajouter un espacement suffisant entre les éléments interactifs pour éviter les clics accidentels.",
+        "Tester les pages sur mobile pour confirmer que tous les éléments sont facilement cliquables."
+      ]
+    },
+    {
+      "title": "Éléments interactifs imbriqués",
+      "category": "accessibility",
+      "businessImpact": "Les technologies d’assistance (comme les lecteurs d’écran) peuvent mal interpréter les éléments interactifs imbriqués, ce qui rend la navigation confuse et inaccessible pour certains utilisateurs. Cela peut entraîner une perte de confiance et de clients.",
+      "legalRelevance": "Critère WCAG 2.2 4.1.2 (Nom, rôle, valeur). Norme EN 301 549 applicable.",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 9,
+      "findingIds": ["f026"],
+      "recommendedActions": [
+        "Éviter d’imbriquer des éléments interactifs (comme des boutons dans des liens ou vice versa).",
+        "Utiliser des balises HTML sémantiques pour structurer les éléments interactifs.",
+        "Tester la page avec un lecteur d’écran pour vérifier que tous les éléments sont correctement annoncés."
+      ]
+    },
+    {
+      "title": "Page sans méta-description",
+      "category": "seo",
+      "businessImpact": "Une méta-description manquante réduit l’attractivité de votre page dans les résultats de recherche, ce qui peut diminuer le taux de clics et limiter la visibilité de votre établissement.",
+      "effort": "low",
+      "impact": "low",
+      "priorityRank": 10,
+      "findingIds": ["f038"],
+      "recommendedActions": [
+        "Ajouter une méta-description unique et descriptive pour la page concernée, en mettant en avant son contenu ou son utilité.",
+        "S’assurer que la méta-description ne dépasse pas 160 caractères pour éviter qu’elle ne soit tronquée dans les résultats de recherche.",
+        "Vérifier que toutes les pages importantes du site possèdent une méta-description optimisée."
+      ]
+    },
+    {
+      "title": "Zoom et mise à l’échelle désactivés",
+      "category": "accessibility",
+      "businessImpact": "Les utilisateurs malvoyants ou ceux ayant besoin d’agrandir le texte pour le lire peuvent être frustrés par cette limitation, ce qui nuit à l’accessibilité et à l’expérience utilisateur globale.",
+      "legalRelevance": "Critère WCAG 2.2 1.4.4 (Redimensionnement du texte). Norme EN 301 549 applicable.",
+      "effort": "low",
+      "impact": "low",
+      "priorityRank": 11,
+      "findingIds": ["f039"],
+      "recommendedActions": [
+        "Supprimer ou modifier l’attribut user-scalable=no dans la balise meta viewport.",
+        "S’assurer que le site reste fonctionnel et lisible lorsque le texte est agrandi jusqu’à 200%.",
+        "Tester le site sur différents appareils pour confirmer que le zoom fonctionne correctement."
+      ]
+    }
+  ],
+  "quickWins": ["f003", "f008", "f013", "f015", "f018", "f019", "f025", "f038", "f039"],
+  "notes": "Aucun contexte spécifique sur les objectifs commerciaux ou le public cible du site n’a été fourni. Les priorités indiquées dans ce rapport reflètent uniquement la gravité des problèmes détectés, sans tenir compte des éventuelles priorités stratégiques de votre entreprise. Nous vous recommandons de croiser ces recommandations avec vos objectifs business pour affiner les actions à mener en priorité."
+}

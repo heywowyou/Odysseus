@@ -1,0 +1,267 @@
+{
+  "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+  "kind": "audit",
+  "siteUrl": "https://small-site.test/",
+  "startedAt": "2026-08-02T17:31:56.493Z",
+  "finishedAt": "2026-08-02T17:38:59.080Z",
+  "tool": {
+    "odysseusVersion": "0.1.0",
+    "findingsSchemaVersion": 1,
+    "axeCoreVersion": "4.12.1",
+    "lighthouseVersion": "12.8.2",
+    "playwrightVersion": "1.62.1",
+    "chromiumVersion": "151.0.7922.34"
+  },
+  "config": {
+    "maxPages": 20,
+    "maxDepth": 5,
+    "crawlDelayMs": 1000,
+    "pageTimeoutMs": 30000,
+    "lighthouseTimeoutMs": 60000,
+    "userAgent": "OdysseusAudit/0.1 (+https://your-domain.example/bot)"
+  },
+  "crawl": {
+    "startUrl": "https://small-site.test/",
+    "visitedCount": 11,
+    "maxPages": 20,
+    "maxDepth": 5,
+    "robotsTxtFound": true,
+    "effectiveDelayMs": 1000
+  },
+  "pages": [
+    {
+      "url": "https://small-site.test/",
+      "pageDir": "pages/root-c122da",
+      "depth": 0,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.74,
+        "bestPractices": 1
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://small-site.test/small-site-4/",
+      "pageDir": "pages/small-site-4-7ab93e",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.85,
+        "bestPractices": 1
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://small-site.test/small-site-9/",
+      "pageDir": "pages/small-site-9-56f65f",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.85,
+        "bestPractices": 1
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://small-site.test/actualite-small-site-4/",
+      "pageDir": "pages/actualite-small-site-4-9f2bc9",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.87,
+        "bestPractices": 1
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://small-site.test/actualite-small-site-9/",
+      "pageDir": "pages/actualite-small-site-9-b3ea72",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.87,
+        "bestPractices": 1
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://small-site.test/galerie/",
+      "pageDir": "pages/galerie-db444c",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.87,
+        "bestPractices": 0.96
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://small-site.test/evenements-small-site-4/",
+      "pageDir": "pages/evenements-small-site-4-e5c7fa",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.87,
+        "bestPractices": 1
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://small-site.test/evenements-small-site-9/",
+      "pageDir": "pages/evenements-small-site-9-7a405c",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.87,
+        "bestPractices": 1
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://small-site.test/recrutement/",
+      "pageDir": "pages/recrutement-a85a9b",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.91,
+        "bestPractices": 0.96
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://small-site.test/devis/",
+      "pageDir": "pages/devis-76ceac",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.8,
+        "bestPractices": 1
+      },
+      "errors": {}
+    },
+    {
+      "url": "https://small-site.test/mentions-legales/",
+      "pageDir": "pages/mentions-legales-f9a505",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.82,
+        "bestPractices": 1
+      },
+      "errors": {}
+    }
+  ],
+  "renormalizedAt": "2026-08-27T12:31:11.607Z",
+  "translationClusters": [
+    {
+      "canonicalPageUrl": "https://small-site.test/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/actualite-small-site-4/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/actualite-small-site-4/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/actualite-small-site-9/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/actualite-small-site-9/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/devis/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/devis/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/evenements-small-site-4/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/evenements-small-site-4/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/evenements-small-site-9/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/evenements-small-site-9/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/small-site-4/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/small-site-4/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/galerie/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/galerie/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/small-site-9/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/small-site-9/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/mentions-legales/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/mentions-legales/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/recrutement/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/recrutement/"
+        }
+      ]
+    }
+  ]
+}

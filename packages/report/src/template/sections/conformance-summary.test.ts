@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { Finding } from '@odysseus/core';
 import { renderConformanceSummary } from './conformance-summary.js';
 import { getStrings } from '../strings/i18n.js';
-import { loadSasFernandeFindings } from '../../test-fixtures.js';
+import { loadSmallSiteFindings } from '../../test-fixtures.js';
 
-describe('renderConformanceSummary against the real sas-fernande.fr findings', () => {
+describe('renderConformanceSummary against the real small-site.test findings', () => {
   it('renders one row per WCAG criterion, with its official name resolved', async () => {
-    const findings = await loadSasFernandeFindings();
+    const findings = await loadSmallSiteFindings();
     const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
 
     expect(html).toContain('1.4.3');
@@ -24,7 +24,7 @@ describe('renderConformanceSummary against the real sas-fernande.fr findings', (
    *  criteria list itself - see render-html.test.ts's item-23 describe
    *  block for the assertion that the old phrase never recurs. */
   it('always states this criteria list alone does not conclude legal obligation', async () => {
-    const findings = await loadSasFernandeFindings();
+    const findings = await loadSmallSiteFindings();
     const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
     // item 3.14: rephrased as a positive statement of what the table is
     // ("décrit des écarts... indépendamment de toute question
@@ -87,7 +87,7 @@ describe('item 1.9: the heuristic block is structurally distinct from the real f
   });
 });
 
-// item 1.2 (La Corniche pass): the criteria table's occurrence column
+// item 1.2 (Large Rule Families pass): the criteria table's occurrence column
 // summed to 911 while the accessibility-occurrences tile elsewhere said
 // 703, a 208-occurrence gap (exactly the link-name occurrence count,
 // double-counted across two criterion rows by design) an agency had to
@@ -185,7 +185,7 @@ describe('renderConformanceSummary with no WCAG failures', () => {
  *  computeSectionNumbers renumbers live. Referencing by title instead. */
 describe('D5: the scope note names the legal-exposure section, not an ordinal', () => {
   it('renders the section title rather than a hardcoded number', async () => {
-    const findings = await loadSasFernandeFindings();
+    const findings = await loadSmallSiteFindings();
     const html = renderConformanceSummary(getStrings('fr'), 7, findings, 'fr');
 
     expect(html).toContain('Exposition légale');
@@ -193,7 +193,7 @@ describe('D5: the scope note names the legal-exposure section, not an ordinal', 
   });
 
   it('does the same in English', async () => {
-    const findings = await loadSasFernandeFindings();
+    const findings = await loadSmallSiteFindings();
     const html = renderConformanceSummary(getStrings('en'), 7, findings, 'en');
 
     expect(html).toContain('Legal exposure');
@@ -201,7 +201,7 @@ describe('D5: the scope note names the legal-exposure section, not an ordinal', 
   });
 
   it('leaves no {section} placeholder unresolved', async () => {
-    const findings = await loadSasFernandeFindings();
+    const findings = await loadSmallSiteFindings();
     for (const language of ['fr', 'en'] as const) {
       const html = renderConformanceSummary(getStrings(language), 7, findings, language);
       expect(html).not.toContain('{section}');

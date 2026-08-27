@@ -1,0 +1,263 @@
+{
+  "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+  "language": "en",
+  "model": "mistral-large-latest",
+  "temperature": 0.2,
+  "generatedAt": "2026-08-19T00:59:45.771Z",
+  "executiveSummary": "This audit identified 66 critical or serious findings out of 94 total across 18 pages scanned. These issues primarily affect accessibility and SEO, which can impact your site’s usability for guests with disabilities and its visibility in search results. Addressing these findings will help ensure all visitors can navigate and engage with your site effectively, while also reducing legal risks and improving search engine performance.",
+  "overallRisk": "high",
+  "themes": [
+    {
+      "title": "Buttons without accessible labels",
+      "category": "accessibility",
+      "businessImpact": "Buttons without clear labels prevent screen reader users from understanding their purpose, which may block them from completing actions like booking a room or contacting your team.",
+      "legalRelevance": "Criterion 4.1.2 (Name, Role, Value), WCAG 2.2 level AA, referenced by the EN 301 549 standard.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 1,
+      "findingIds": ["f003", "f007", "f009", "f013", "f016", "f019", "f021", "f022"],
+      "recommendedActions": [
+        "Ask your agency to add discernible text or ARIA labels to all buttons on the site.",
+        "Prioritize buttons on the homepage, booking flows, and language selection menus.",
+        "Test button labels with a keyboard to ensure they are navigable and understandable without a mouse."
+      ]
+    },
+    {
+      "title": "Missing legal business identifiers",
+      "category": "seo",
+      "businessImpact": "French law requires businesses to display their SIREN, RCS, or VAT number on their website. Missing this information can lead to legal risks and erode trust with potential guests.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 2,
+      "findingIds": ["f058"],
+      "recommendedActions": [
+        "Ask your agency to add a dedicated legal notice page with your SIREN, RCS, or VAT number.",
+        "Ensure the legal notice is linked from the footer of every page for easy access.",
+        "Verify that the information is accurate and up-to-date."
+      ]
+    },
+    {
+      "title": "Frames without accessible names",
+      "category": "accessibility",
+      "businessImpact": "Frames without descriptive names confuse screen reader users, making it harder for them to understand embedded content like maps or booking widgets.",
+      "legalRelevance": "Criterion 4.1.2 (Name, Role, Value), WCAG 2.2 level AA, referenced by the EN 301 549 standard.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 3,
+      "findingIds": ["f043", "f047", "f051", "f055", "f063"],
+      "recommendedActions": [
+        "Ask your agency to add accessible names or titles to all frames and iframes on the site.",
+        "Prioritize frames on the homepage, contact page, and booking flows.",
+        "Test frames with a screen reader to ensure they are announced clearly."
+      ]
+    },
+    {
+      "title": "Disabled text scaling",
+      "category": "accessibility",
+      "businessImpact": "Disabling text scaling prevents visitors with visual impairments from adjusting text size, making your site harder to read and potentially driving them away.",
+      "legalRelevance": "Criterion 1.4.4 (Resize Text), WCAG 2.2 level AA, referenced by the EN 301 549 standard.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 4,
+      "findingIds": ["f068"],
+      "recommendedActions": [
+        "Ask your agency to remove any meta viewport tags that disable text scaling.",
+        "Test the site on mobile devices to confirm text can be resized without breaking layout.",
+        "Ensure all pages, especially those with dense text like legal notices, remain readable when zoomed."
+      ]
+    },
+    {
+      "title": "Inconsistent heading structure",
+      "category": "accessibility",
+      "businessImpact": "Skipped heading levels make it harder for screen reader users to navigate your site, which may frustrate visitors trying to find information about rooms or amenities.",
+      "legalRelevance": "Criterion 1.3.1 (Info and Relationships), WCAG 2.2 level AA, referenced by the EN 301 549 standard.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 5,
+      "findingIds": ["f067", "f069"],
+      "recommendedActions": [
+        "Ask your technical provider to reorganize headings so they follow a logical hierarchy (e.g., no level 3 heading after a level 1).",
+        "Focus on the rooms and news pages, where content structure is key for guest decisions.",
+        "Test the heading structure with a screen reader to ensure it is easy to follow."
+      ]
+    },
+    {
+      "title": "Invalid structured data",
+      "category": "seo",
+      "businessImpact": "Invalid structured data prevents search engines from understanding key details about your business, such as room types or amenities, which can reduce visibility in search results.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 6,
+      "findingIds": ["f038", "f041", "f054"],
+      "recommendedActions": [
+        "Ask your agency to correct the JSON-LD structured data errors across all pages.",
+        "Validate the corrected data using Google’s Rich Results Test tool.",
+        "Focus on pages with business-critical information, like room listings and contact details."
+      ]
+    },
+    {
+      "title": "Low color contrast",
+      "category": "accessibility",
+      "businessImpact": "Text with low contrast is difficult to read for visitors with visual impairments, which may frustrate potential guests and lead them to leave your site.",
+      "legalRelevance": "Criterion 1.4.3 (Contrast (Minimum)), WCAG 2.2 level AA, referenced by the EN 301 549 standard.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 7,
+      "findingIds": ["f040", "f057", "f059", "f065"],
+      "recommendedActions": [
+        "Ask your technical provider to adjust text and background colors to meet WCAG contrast standards.",
+        "Prioritize the homepage, booking pages, and boutique page, where readability is critical for conversions.",
+        "Use a contrast checker tool to verify compliance before deploying changes."
+      ]
+    },
+    {
+      "title": "Missing image descriptions",
+      "category": "accessibility",
+      "businessImpact": "Visitors using screen readers cannot understand images, which may include key details about your services or offers. This can lead to lost bookings or inquiries from guests who rely on assistive technology.",
+      "legalRelevance": "Criterion 1.1.1 (Non-text Content), WCAG 2.2 level AA, referenced by the EN 301 549 standard.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 8,
+      "findingIds": [
+        "f001",
+        "f002",
+        "f004",
+        "f005",
+        "f006",
+        "f008",
+        "f010",
+        "f011",
+        "f012",
+        "f014",
+        "f015",
+        "f017",
+        "f018",
+        "f020",
+        "f023",
+        "f024",
+        "f025",
+        "f026",
+        "f027",
+        "f028",
+        "f029",
+        "f030",
+        "f031",
+        "f032",
+        "f033"
+      ],
+      "recommendedActions": [
+        "Ask your technical provider to add descriptive alternative text to all images across the site.",
+        "Ensure decorative images are marked with a role of \"none\" or \"presentation\" to avoid confusing screen readers.",
+        "Review the photo gallery and room pages, where image descriptions are especially important for guest decisions."
+      ]
+    },
+    {
+      "title": "Links without clear descriptions",
+      "category": "accessibility",
+      "businessImpact": "Links without descriptive text confuse screen reader users, making it harder for them to navigate your site or find key information like room details or contact options.",
+      "legalRelevance": "Criteria 2.4.4 (Link Purpose (In Context)) and 4.1.2 (Name, Role, Value), WCAG 2.2 level AA, referenced by the EN 301 549 standard.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 9,
+      "findingIds": [
+        "f034",
+        "f036",
+        "f042",
+        "f045",
+        "f046",
+        "f048",
+        "f050",
+        "f052",
+        "f053",
+        "f056",
+        "f060",
+        "f061",
+        "f062",
+        "f064",
+        "f066"
+      ],
+      "recommendedActions": [
+        "Ask your technical provider to add clear, descriptive text to all links, especially those in navigation menus and photo galleries.",
+        "Avoid generic link text like \"click here\" or \"read more\"—describe the destination instead.",
+        "Review the news and events pages, where links are frequently used to direct visitors to further details."
+      ]
+    },
+    {
+      "title": "Videos without captions",
+      "category": "accessibility",
+      "businessImpact": "Videos without captions exclude deaf or hard-of-hearing visitors, who may miss important details about your hotel’s amenities or atmosphere.",
+      "legalRelevance": "Criterion 1.2.2 (Captions (Prerecorded)), WCAG 2.2 level AA, referenced by the EN 301 549 standard.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 10,
+      "findingIds": ["f037", "f049"],
+      "recommendedActions": [
+        "Ask your technical provider to add captions or subtitles to all videos on the site.",
+        "Prioritize videos on the homepage and restaurant pages, where visual storytelling is key.",
+        "Ensure captions are synchronized with the audio and accurately reflect spoken content."
+      ]
+    },
+    {
+      "title": "Content hidden from search engines and assistive tools",
+      "category": "rendering",
+      "businessImpact": "Critical content that only appears after JavaScript runs may be invisible to search engines and screen readers, reducing your site’s visibility and accessibility for potential guests.",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 11,
+      "findingIds": ["f035"],
+      "recommendedActions": [
+        "Ask your agency to ensure all key content is present in the raw HTML, not just after JavaScript execution.",
+        "Prioritize pages like the homepage, room listings, and booking flows, where content visibility is essential for conversions.",
+        "Test pages with JavaScript disabled to confirm core information remains accessible."
+      ]
+    },
+    {
+      "title": "Small touch targets",
+      "category": "accessibility",
+      "businessImpact": "Small touch targets make it difficult for visitors with motor impairments to interact with your site on mobile devices, potentially blocking them from completing actions like reading news or booking a room.",
+      "legalRelevance": "Criterion 2.5.8 (Target Size (Minimum)), WCAG 2.2 level AA, referenced by the EN 301 549 standard.",
+      "effort": "low",
+      "impact": "low",
+      "priorityRank": 12,
+      "findingIds": ["f044"],
+      "recommendedActions": [
+        "Ask your technical provider to increase the size of touch targets to at least 24px or ensure sufficient spacing between them.",
+        "Focus on the news and events page, where interactive elements are frequently used.",
+        "Test touch targets on mobile devices to confirm they are easy to tap."
+      ]
+    }
+  ],
+  "quickWins": [
+    "f003",
+    "f007",
+    "f009",
+    "f013",
+    "f016",
+    "f019",
+    "f021",
+    "f022",
+    "f038",
+    "f041",
+    "f043",
+    "f047",
+    "f051",
+    "f055",
+    "f058",
+    "f063"
+  ],
+  "notes": "No site context (e.g., business goals, target market, or primary objectives) was provided for this audit. Priorities reflect finding severity only, not stated business goals. Focus on critical and serious issues first, as they have the most immediate impact on accessibility, legal compliance, and search visibility.",
+  "obligationAssessment": {
+    "status": "undetermined",
+    "basis": [
+      {
+        "regimeId": "eaa-loi-2023-171",
+        "facts": [
+          {
+            "kind": "siren-missing"
+          }
+        ]
+      }
+    ],
+    "sector": "general"
+  }
+}

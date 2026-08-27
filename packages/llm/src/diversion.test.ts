@@ -17,56 +17,56 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
  *  /social/ wrapper pages at 100% missing content, and three legal pages
  *  (CGU, cookie policy, privacy policy) under noindex. This is exactly
  *  the A1-A3 case the diversion filter exists to fix. */
-function loadHaaitzaAuditDir(): string {
-  return path.join(moduleDir, '../../../artifacts/haaitza.com/2026-08-06T20-30-06Z');
+function loadMultiPageAuditDir(): string {
+  return path.join(moduleDir, '../../../fixtures/test-audits/multi-page');
 }
 
-function loadHaaitzaManifest(): AuditManifest {
+function loadMultiPageManifest(): AuditManifest {
   return JSON.parse(
-    readFileSync(path.join(loadHaaitzaAuditDir(), 'manifest.json'), 'utf-8'),
+    readFileSync(path.join(loadMultiPageAuditDir(), 'manifest.json'), 'utf-8'),
   ) as AuditManifest;
 }
 
-function loadHaaitzaFindings(): Finding[] {
+function loadMultiPageFindings(): Finding[] {
   return JSON.parse(
-    readFileSync(path.join(loadHaaitzaAuditDir(), 'findings.json'), 'utf-8'),
+    readFileSync(path.join(loadMultiPageAuditDir(), 'findings.json'), 'utf-8'),
   ) as Finding[];
 }
 
 describe('buildMissingPercentIndex', () => {
   it('indexes the two wrapper pages at 100% missing', () => {
-    const index = buildMissingPercentIndex(loadHaaitzaManifest());
-    expect(index.get('https://haaitza.com/social/facebook/')).toBe(100);
-    expect(index.get('https://haaitza.com/social/instagram/')).toBe(100);
-    expect(index.get('https://haaitza.com/')).toBe(0);
+    const index = buildMissingPercentIndex(loadMultiPageManifest());
+    expect(index.get('https://multi-page.test/social/facebook/')).toBe(100);
+    expect(index.get('https://multi-page.test/social/instagram/')).toBe(100);
+    expect(index.get('https://multi-page.test/')).toBe(0);
   });
 });
 
 describe('isWrapperPage / isLegalPage', () => {
-  it('classifies the real haaitza wrapper and legal pages', () => {
-    const index = buildMissingPercentIndex(loadHaaitzaManifest());
-    expect(isWrapperPage('https://haaitza.com/social/facebook/', index)).toBe(true);
-    expect(isWrapperPage('https://haaitza.com/', index)).toBe(false);
-    expect(isLegalPage('https://haaitza.com/conditions-generales-d-utilisation/')).toBe(true);
-    expect(isLegalPage('https://haaitza.com/politique-cookies/')).toBe(true);
-    expect(isLegalPage('https://haaitza.com/politique-de-confidentialite/')).toBe(true);
-    expect(isLegalPage('https://haaitza.com/chambres-hotel-5-etoiles-arcachon/')).toBe(false);
+  it('classifies the real multi-page wrapper and legal pages', () => {
+    const index = buildMissingPercentIndex(loadMultiPageManifest());
+    expect(isWrapperPage('https://multi-page.test/social/facebook/', index)).toBe(true);
+    expect(isWrapperPage('https://multi-page.test/', index)).toBe(false);
+    expect(isLegalPage('https://multi-page.test/conditions-generales-d-utilisation/')).toBe(true);
+    expect(isLegalPage('https://multi-page.test/politique-cookies/')).toBe(true);
+    expect(isLegalPage('https://multi-page.test/politique-de-confidentialite/')).toBe(true);
+    expect(isLegalPage('https://multi-page.test/chambres-hotel-5-etoiles-multi-page/')).toBe(false);
   });
 });
 
 describe('classifyDiversion', () => {
-  const index = buildMissingPercentIndex(loadHaaitzaManifest());
+  const index = buildMissingPercentIndex(loadMultiPageManifest());
 
   it('diverts a finding confined entirely to wrapper pages', () => {
-    expect(classifyDiversion({ pageUrls: ['https://haaitza.com/social/facebook/'] }, index)).toBe(
-      'wrapper',
-    );
+    expect(
+      classifyDiversion({ pageUrls: ['https://multi-page.test/social/facebook/'] }, index),
+    ).toBe('wrapper');
   });
 
   it('diverts a finding confined entirely to legal pages', () => {
     expect(
       classifyDiversion(
-        { pageUrls: ['https://haaitza.com/conditions-generales-d-utilisation/'] },
+        { pageUrls: ['https://multi-page.test/conditions-generales-d-utilisation/'] },
         index,
       ),
     ).toBe('legal');
@@ -75,7 +75,7 @@ describe('classifyDiversion', () => {
   it('does not divert a finding that also touches an ordinary page', () => {
     expect(
       classifyDiversion(
-        { pageUrls: ['https://haaitza.com/social/facebook/', 'https://haaitza.com/'] },
+        { pageUrls: ['https://multi-page.test/social/facebook/', 'https://multi-page.test/'] },
         index,
       ),
     ).toBeNull();
@@ -87,9 +87,9 @@ describe('classifyDiversion', () => {
 });
 
 describe('partitionFindings', () => {
-  it('diverts only wrapper- and legal-confined findings from the real haaitza scan', () => {
-    const findings = loadHaaitzaFindings();
-    const manifest = loadHaaitzaManifest();
+  it('diverts only wrapper- and legal-confined findings from the real multi-page scan', () => {
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
 
     const { forModel, diverted } = partitionFindings(findings, manifest);
 

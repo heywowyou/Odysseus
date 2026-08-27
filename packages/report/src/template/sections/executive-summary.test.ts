@@ -4,9 +4,9 @@ import { renderExecutiveSummary } from './executive-summary.js';
 import { getStrings } from '../strings/i18n.js';
 import { escapeHtml } from '../html-utils.js';
 import {
-  loadSasFernandeAnalysis,
-  loadSasFernandeFindings,
-  loadSasFernandeManifest,
+  loadSmallSiteAnalysis,
+  loadSmallSiteFindings,
+  loadSmallSiteManifest,
 } from '../../test-fixtures.js';
 
 function buildFinding(findingId: string): Finding {
@@ -31,11 +31,11 @@ function buildFinding(findingId: string): Finding {
   };
 }
 
-describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () => {
+describe('renderExecutiveSummary against the real small-site.test analysis', () => {
   it('references the top 3 themes by rank and title as jump links, capped at 3 (doc §3 section 01)', async () => {
-    const analysis = await loadSasFernandeAnalysis('fr');
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, manifest);
 
     const sorted = [...analysis.themes].sort((a, b) => a.priorityRank - b.priorityRank);
@@ -58,9 +58,9 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
   });
 
   it('renders the LLM executive summary prose verbatim (escaped)', async () => {
-    const analysis = await loadSasFernandeAnalysis('en');
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const analysis = await loadSmallSiteAnalysis('en');
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderExecutiveSummary(getStrings('en'), 1, analysis, findings, manifest);
 
     expect(html).toContain(analysis.executiveSummary.slice(0, 30));
@@ -71,9 +71,9 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
   // with no stated destination, and carries a visual affordance (an
   // underline) distinguishing it from the plain-text theme title beside it.
   it('item 5: each jump link names its own priority rank, not a bare arrow, and is visually underlined', async () => {
-    const analysis = await loadSasFernandeAnalysis('fr');
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, manifest);
     const topThemes = [...analysis.themes]
       .sort((a, b) => a.priorityRank - b.priorityRank)
@@ -93,9 +93,9 @@ describe('renderExecutiveSummary against the real sas-fernande.fr analysis', () 
   // stand-alone accessible text (item 5's requirement) without the
   // duplication.
   it('item 3.4: the jump link no longer repeats the theme title a second time next to its own title span', async () => {
-    const analysis = await loadSasFernandeAnalysis('fr');
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, manifest);
     const topThemes = [...analysis.themes]
       .sort((a, b) => a.priorityRank - b.priorityRank)
@@ -361,7 +361,7 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
   });
 });
 
-// P2.4 (2026-08-21 La Corniche feedback pass): sets the expectation up
+// P2.4 (2026-08-21 Large Rule Families feedback pass): sets the expectation up
 // front rather than letting the reader discover, 20 pages in, that the
 // SEO/GEO pillars have little to say relative to accessibility.
 describe('P2.4: the category-imbalance note', () => {

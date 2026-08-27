@@ -5,16 +5,16 @@ import { escapeHtml } from './html-utils.js';
 import { findRenderLintViolations } from './render-lint.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import {
-  loadSasFernandeAnalysis,
-  loadSasFernandeFindings,
-  loadSasFernandeManifest,
+  loadSmallSiteAnalysis,
+  loadSmallSiteFindings,
+  loadSmallSiteManifest,
 } from '../test-fixtures.js';
 
-describe('renderHtml against the real sas-fernande.fr audit', () => {
+describe('renderHtml against the real small-site.test audit', () => {
   it('composes a self-contained French document with inlined CSS and no leaked "undefined"', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
@@ -36,9 +36,9 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
   // one composed document, since themes.ts and findings-appendix.ts each
   // know only their own half of the id/anchor pair.
   it('item 3.3: every theme card finding-id link resolves to a matching #annexref-{id} anchor in the annex', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
@@ -51,15 +51,15 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
   });
 
   it('B2: passes the render-lint pass (no unfilled placeholders, no stringified undefined/null/NaN)', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
     const violations = findRenderLintViolations(html);
 
-    // P0.4 (2026-08-21 La Corniche feedback pass): the real SIRET is a
+    // P0.4 (2026-08-21 Large Rule Families feedback pass): the real SIRET is a
     // tracked, deliberate gap (docs/report/report-feedback-deferred-
     // items.md), not a code bug - the guard is meant to keep blocking
     // PDF generation exactly like this until it's filled in, so this
@@ -76,14 +76,14 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
   // B3's "no majeur in the generated HTML" acceptance check is enforced at
   // the source: severity-vocabulary-guard.test.ts asserts the writing-pass
   // guard rejects "majeur" before an analysis is ever persisted. Not
-  // re-asserted here against the sas-fernande fixture, since that fixture
+  // re-asserted here against the small-site fixture, since that fixture
   // is frozen real LLM output captured before this fix and tests never
   // call the live Mistral API to regenerate it (CLAUDE.md, Testing).
 
   it('composes the English document with the English chrome strings, not French', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('en');
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('en');
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
@@ -93,9 +93,9 @@ describe('renderHtml against the real sas-fernande.fr audit', () => {
   });
 
   it('always renders the single-tier full document (2026-08-16: paid screening tier dropped)', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('en');
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('en');
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 
@@ -139,7 +139,7 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   // sur leur applicabilité légale précise à ce site" (we don't know if
   // this applies to you), which flatly contradicts a page-4 "Confirmé"
   // status on the very same document - a repeat of a defect already
-  // flagged once on the haaitza pass. Narrowed to scope the hedge to the
+  // flagged once on the multi-page pass. Narrowed to scope the hedge to the
   // criteria list itself ("this list alone doesn't conclude legal
   // obligation"), never a blanket "we don't know" statement, so it can
   // coexist with a confirmed status elsewhere in the report. The OLD
@@ -159,10 +159,10 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   const IN_SCOPE_CRITERIA_PHRASE = 'remplit les critères fixés pour l&#39;obligation suivante';
 
   it('resolved: legal exposure names a specific obligation once, methodology points back to it, conformance summary still carries its own fixed scope note', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
     const analysis = {
-      ...(await loadSasFernandeAnalysis('fr')),
+      ...(await loadSmallSiteAnalysis('fr')),
       obligationAssessment: resolvedAssessment,
     };
 
@@ -179,10 +179,10 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   });
 
   it('undetermined: legal exposure hedges once, methodology points back to it, conformance summary carries the same fixed scope note regardless', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
     const analysis = {
-      ...(await loadSasFernandeAnalysis('fr')),
+      ...(await loadSmallSiteAnalysis('fr')),
       obligationAssessment: undeterminedAssessment,
     };
 
@@ -195,10 +195,10 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   });
 
   it('absent assessment: treated the same as undetermined', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
-    const { obligationAssessment: _drop, ...rest } = await loadSasFernandeAnalysis('fr');
-    const analysis = rest as Awaited<ReturnType<typeof loadSasFernandeAnalysis>>;
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const { obligationAssessment: _drop, ...rest } = await loadSmallSiteAnalysis('fr');
+    const analysis = rest as Awaited<ReturnType<typeof loadSmallSiteAnalysis>>;
 
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
 

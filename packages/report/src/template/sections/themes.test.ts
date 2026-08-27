@@ -10,17 +10,17 @@ import {
 import { getStrings } from '../strings/i18n.js';
 import { escapeHtml } from '../html-utils.js';
 import {
-  loadSasFernandeAnalysis,
-  loadSasFernandeFindings,
-  loadSasFernandeManifest,
+  loadSmallSiteAnalysis,
+  loadSmallSiteFindings,
+  loadSmallSiteManifest,
 } from '../../test-fixtures.js';
 
-describe('renderThemes against the real sas-fernande.fr analysis', () => {
+describe('renderThemes against the real small-site.test analysis', () => {
   it('renders only the top 6 themes by rank (doc §3 sections 04/05 cap), with a compact findingId reference and never a raw page URL (F38)', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
 
     const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
@@ -44,9 +44,9 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
 
   it('marks a theme as a quick win only when effort is low and impact is not low', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
 
     const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
@@ -68,9 +68,9 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
 
   it('renders the deterministic legalRelevance sentence in a .legal box for an accessibility theme with WCAG criteria, and "Sans objet" otherwise', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
 
     const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
@@ -89,7 +89,7 @@ describe('renderThemes against the real sas-fernande.fr analysis', () => {
   });
 });
 
-// report-feedback-la-corniche.md item 3.9: SEO priority cards had no
+// report-feedback-large-rule-families.md item 3.9: SEO priority cards had no
 // "Exigence de conformité" box at all (legalRelevance is deterministically
 // accessibility-only, trade-off 16), making them one row shorter and
 // visibly different-shaped next to accessibility cards in the same "6
@@ -155,9 +155,9 @@ describe('item 3.9: every theme card gets the "Exigence de conformité" box, acc
 describe('B1: reference-stat citation eligibility and cross-document dedupe', () => {
   it('attaches a citation to a performance theme, not just accessibility/seo', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
     const findingId = findings[0]!.findingId;
     const performanceOnly = {
@@ -184,9 +184,9 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
 
   it('never cites the same statistic twice across the document, even across two performance themes', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
     const findingId = findings[0]!.findingId;
     const twoPerformanceThemes = {
@@ -234,9 +234,9 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
 
   it('a Set already containing the only matching statistic id suppresses the citation entirely (cross-section dedupe)', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
     const findingId = findings[0]!.findingId;
     const performanceOnly = {
@@ -272,7 +272,7 @@ describe('B1: reference-stat citation eligibility and cross-document dedupe', ()
   });
 });
 
-// report-feedback-la-corniche.md item 1.1: a real report cited the Pew
+// report-feedback-large-rule-families.md item 1.1: a real report cited the Pew
 // AI-overview click-through-rate statistic (category includes 'seo') on
 // "Mentions légales incomplètes" (a missing SIREN), because that theme
 // happened to be the highest-ranked 'seo' theme with no topical check at
@@ -784,11 +784,11 @@ describe('2026-08-22 revenue-impact wiring: a scalable citation with known clien
 // never rendered - a theme card stated the problem and its business
 // impact without ever stating what to do about it.
 describe('item 27: theme cards render recommendedActions', () => {
-  it('renders every recommended action for the real sas-fernande.fr themes', async () => {
+  it('renders every recommended action for the real small-site.test themes', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
 
     const html = renderThemes(getStrings('fr'), 4, analysis, findings, manifest);
@@ -813,7 +813,7 @@ describe('isQuickWinTheme', () => {
   });
 });
 
-// report-feedback-la-corniche.md item 1.5: a real report had all 6
+// report-feedback-large-rule-families.md item 1.5: a real report had all 6
 // rendered theme cards carrying the "Gain rapide" badge and "Effort :
 // Faible", under a heading claiming a two-axis sort ("classés par effort
 // et par impact") the data gave no evidence of - the badge distinguished
@@ -900,7 +900,7 @@ describe('item 1.5: the quick-win badge does not render when every rendered them
   });
 });
 
-// report-feedback-la-corniche.md item 0.6: a real report rendered a
+// report-feedback-large-rule-families.md item 0.6: a real report rendered a
 // priority ("Mentions légales incomplètes") with "Pages affectées: 0
 // pages sur 18" - its only finding had been stripped by
 // lcen-resolution.ts's resolveLcenFinding after a manual SIREN
@@ -970,7 +970,7 @@ describe('item 0.6: a theme with no resolved findings is never selected as a ren
   });
 });
 
-// P1.2 (2026-08-21 La Corniche feedback pass): a priority card's own
+// P1.2 (2026-08-21 Large Rule Families feedback pass): a priority card's own
 // recommended-action prose told the client to ask their agency to fix a
 // defect living inside a third-party plugin (e.g. Gravity Forms) their
 // agency structurally cannot patch. A deterministic sentence beneath the
@@ -1208,7 +1208,7 @@ describe('fix #3 (2026-08-25 report review): the LCEN priority card cross-refere
   });
 });
 
-// P1.5 (2026-08-21 La Corniche feedback pass): a director's first
+// P1.5 (2026-08-21 Large Rule Families feedback pass): a director's first
 // question is "what will this cost me" - "Faible/Moyen/Élevé" alone
 // doesn't answer it.
 describe('P1.5: the aggregate effort estimate sentence', () => {
@@ -1279,7 +1279,7 @@ describe('P1.5: the aggregate effort estimate sentence', () => {
   });
 });
 
-// P2.2 (2026-08-21 La Corniche feedback pass): "Sans objet" read as
+// P2.2 (2026-08-21 Large Rule Families feedback pass): "Sans objet" read as
 // "unknown" at the point it's first encountered - the explanation only
 // lived in the glossary, 20 pages later.
 describe('P2.2: the inline "Sans objet" gloss', () => {
@@ -1354,7 +1354,7 @@ describe('P2.2: the inline "Sans objet" gloss', () => {
   });
 });
 
-// 2026-08-22, La Corniche report review: Impact commercial and
+// 2026-08-22, Large Rule Families report review: Impact commercial and
 // Conformité rendered as plain grey text with no colour signal, so the
 // stated urgency ("Élevé", "Non conforme") carried no visual weight.
 // Effort deliberately stays uncoloured (high effort means expensive, not
@@ -1482,7 +1482,7 @@ describe('B2.2: theme category and reference-stat citations', () => {
   ];
 
   async function analysisWithCategory(category: Theme['category']) {
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const analysis = await loadSmallSiteAnalysis('fr');
     return {
       ...analysis,
       themes: [
@@ -1510,7 +1510,7 @@ describe('B2.2: theme category and reference-stat citations', () => {
       4,
       await analysisWithCategory('performance'),
       findings,
-      await loadSasFernandeManifest(),
+      await loadSmallSiteManifest(),
     );
 
     expect(html).toContain('En-têtes de sécurité manquants');
@@ -1526,7 +1526,7 @@ describe('B2.2: theme category and reference-stat citations', () => {
       4,
       await analysisWithCategory('privacy'),
       findings,
-      await loadSasFernandeManifest(),
+      await loadSmallSiteManifest(),
     );
 
     expect(html).toContain('En-têtes de sécurité manquants');

@@ -29,7 +29,7 @@ ensureEnvLoaded();
 const MONGO_URI = process.env['MONGODB_URI'];
 const TEST_AUDIT_ID = 'test-fixture-report-env-loading';
 const WORKSPACE_ROOT = findWorkspaceRoot();
-const FIXTURE_SRC = path.join(WORKSPACE_ROOT, 'artifacts/sas-fernande.fr/2026-08-02T22-39-42Z');
+const FIXTURE_SRC = path.join(WORKSPACE_ROOT, 'fixtures/test-audits/small-site');
 const CLI_ENTRY = path.join(WORKSPACE_ROOT, 'packages/cli/src/index.ts');
 const TSX_BIN = path.join(WORKSPACE_ROOT, 'node_modules/.bin/tsx');
 

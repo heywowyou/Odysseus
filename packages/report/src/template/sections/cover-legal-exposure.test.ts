@@ -10,9 +10,9 @@ import { renderLegalExposure } from './legal-exposure.js';
 import { fr } from '../strings/fr.js';
 import { en } from '../strings/en.js';
 import {
-  loadSasFernandeAnalysis,
-  loadSasFernandeFindings,
-  loadSasFernandeManifest,
+  loadSmallSiteAnalysis,
+  loadSmallSiteFindings,
+  loadSmallSiteManifest,
 } from '../../test-fixtures.js';
 
 /** Minimal manifest for tests that don't care about SIREN/date specifics
@@ -49,8 +49,8 @@ describe('B7: cover badge never contradicts an undetermined obligation status', 
   });
 
   it('renders the same risk value/colour regardless of the relabel', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const manifest = await loadSmallSiteManifest();
+    const analysis = await loadSmallSiteAnalysis('fr');
     const html = renderCover(fr, manifest, { ...analysis, overallRisk: 'high' });
     expect(html).toContain(fr.cover.riskLevels.high);
   });
@@ -61,8 +61,8 @@ describe('B7: cover badge never contradicts an undetermined obligation status', 
 // the tool got there.
 describe('item 42: the cover risk badge shows its scale and its basis', () => {
   it('shows all three scale labels (Faible/Moyen/Élevé), not just the current level', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const manifest = await loadSmallSiteManifest();
+    const analysis = await loadSmallSiteAnalysis('fr');
     const html = renderCover(fr, manifest, { ...analysis, overallRisk: 'high' });
     expect(html).toContain('Faible');
     expect(html).toContain('Moyen');
@@ -70,9 +70,9 @@ describe('item 42: the cover risk badge shows its scale and its basis', () => {
   });
 
   it('states the critical/serious counts the badge is based on', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
     const html = renderCover(fr, manifest, { ...analysis, overallRisk: 'high' }, findings);
     expect(html).toContain('Basé sur');
     expect(html).toMatch(/Basé sur \d+ constats critiques et \d+ constats sérieux/);
@@ -359,7 +359,7 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
     expect(html).toContain('https://example.com/reserver');
   });
 
-  // P0.3 (2026-08-21 La Corniche feedback pass): a real report listed all
+  // P0.3 (2026-08-21 Large Rule Families feedback pass): a real report listed all
   // 17 non-homepage URLs, including legal-notice pages like /cookies/ and
   // /politique-de-confidentialite/, implying the booking funnel lived on
   // those pages - it's a site-wide layout component, not a page-specific
@@ -447,7 +447,7 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
   });
 });
 
-// item 0.1/1.11 (La Corniche pass): "report, don't conclude" requires
+// item 0.1/1.11 (Large Rule Families pass): "report, don't conclude" requires
 // printing every registry input relied on (denomination, effectifs
 // bracket, retrieval date, source), not just the SIREN.
 describe('item 0.1/1.11: the full registry snapshot is printed when a Sirene lookup succeeded', () => {
@@ -474,7 +474,7 @@ describe('item 0.1/1.11: the full registry snapshot is printed when a Sirene loo
     expect(html).toContain('790852578');
     expect(html).toContain('20 à 49 salariés');
     expect(html).toContain('siren:extracted');
-    // P2.1 (2026-08-21 La Corniche feedback pass): a real report showed
+    // P2.1 (2026-08-21 Large Rule Families feedback pass): a real report showed
     // "(O! DE LA DUNE", an unbalanced parenthesis reproduced verbatim
     // from the Sirene registry - this note explains why rather than
     // reading as a scraping error.

@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { renderRemainingWork, selectRemainingFindings } from './remaining-work.js';
 import { selectRenderedThemes } from './themes.js';
 import { getStrings } from '../strings/i18n.js';
-import { loadSasFernandeAnalysis, loadSasFernandeFindings } from '../../test-fixtures.js';
+import { loadSmallSiteAnalysis, loadSmallSiteFindings } from '../../test-fixtures.js';
 
-describe('renderRemainingWork against the real sas-fernande.fr scan', () => {
+describe('renderRemainingWork against the real small-site.test scan', () => {
   it('covers exactly the findings no rendered priority accounts for', async () => {
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
 
     const remaining = selectRemainingFindings(analysis, findings);
     // selectRenderedThemes, not analysis.themes: a theme the priorities
@@ -28,8 +28,8 @@ describe('renderRemainingWork against the real sas-fernande.fr scan', () => {
   });
 
   it('gives every rendered rule group an action line, not only counts', async () => {
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
 
     const html = renderRemainingWork(getStrings('fr'), 6, 'fr', analysis, findings);
 
@@ -42,8 +42,8 @@ describe('renderRemainingWork against the real sas-fernande.fr scan', () => {
   });
 
   it('names every finding it covers, so nothing is silently omitted', async () => {
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
 
     const html = renderRemainingWork(getStrings('fr'), 6, 'fr', analysis, findings);
     const remaining = selectRemainingFindings(analysis, findings);
@@ -54,8 +54,8 @@ describe('renderRemainingWork against the real sas-fernande.fr scan', () => {
   });
 
   it('renders in English too, with no French leaking through', async () => {
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
 
     const html = renderRemainingWork(getStrings('en'), 6, 'en', analysis, findings);
 
@@ -64,8 +64,8 @@ describe('renderRemainingWork against the real sas-fernande.fr scan', () => {
   });
 
   it("fix #5 (2026-08-25 report review): shows each rule group's own worst severity, not a uniform blank list", async () => {
-    const findings = await loadSasFernandeFindings();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const findings = await loadSmallSiteFindings();
+    const analysis = await loadSmallSiteAnalysis('fr');
 
     const html = renderRemainingWork(getStrings('fr'), 6, 'fr', analysis, findings);
     const remaining = selectRemainingFindings(analysis, findings);

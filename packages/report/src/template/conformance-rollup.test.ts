@@ -17,17 +17,17 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
  *  recomputing against findings.json - recomputed here, the real data
  *  shows all 20 pages carry at least one WCAG-tagged accessibility
  *  finding. Trust the recomputed number over the doc's prose. */
-function loadHaaitzaFindings(): Finding[] {
+function loadMultiPageFindings(): Finding[] {
   const findingsPath = path.join(
     moduleDir,
-    '../../../../artifacts/haaitza.com/2026-08-06T20-30-06Z/findings.json',
+    '../../../../fixtures/test-audits/multi-page/findings.json',
   );
   return JSON.parse(readFileSync(findingsPath, 'utf-8')) as Finding[];
 }
 
 describe('buildConformanceRollup', () => {
-  it('produces exactly the 7 criteria the doc itself verified against the real haaitza scan', () => {
-    const findings = loadHaaitzaFindings();
+  it('produces exactly the 7 criteria the doc itself verified against the real multi-page scan', () => {
+    const findings = loadMultiPageFindings();
     const rows = buildConformanceRollup(findings);
 
     expect(rows.map((r) => r.criterion)).toEqual([
@@ -130,8 +130,8 @@ describe('buildConformanceRollup', () => {
 });
 
 describe('pagesWithWcagFailures', () => {
-  it('counts all 20 real haaitza pages, not the 18 the doc cited from a hand-transcription', () => {
-    const findings = loadHaaitzaFindings();
+  it('counts all 20 real multi-page pages, not the 18 the doc cited from a hand-transcription', () => {
+    const findings = loadMultiPageFindings();
     expect(pagesWithWcagFailures(findings)).toBe(20);
   });
 });
@@ -203,8 +203,8 @@ describe('item 8: heuristic findings never contribute to the conformance rollup'
     expect(pagesWithWcagFailures([heuristicFinding, genuineAxeFinding])).toBe(1);
   });
 
-  it('the real haaitza fixture (no heuristic findings in this particular scan) still recomputes the same 7-criteria rollup as before, confirming the exclusion is a no-op when there is nothing to exclude', () => {
-    const findings = loadHaaitzaFindings();
+  it('the real multi-page fixture (no heuristic findings in this particular scan) still recomputes the same 7-criteria rollup as before, confirming the exclusion is a no-op when there is nothing to exclude', () => {
+    const findings = loadMultiPageFindings();
     expect(findings.some((f) => f.ruleId === 'alt-text-quality-heuristic')).toBe(false);
     expect(buildConformanceRollup(findings).map((r) => r.criterion)).toEqual([
       '1.1.1',
@@ -266,7 +266,7 @@ describe("item 1.11: the pages count is the true union across findings sharing a
   });
 });
 
-// A8 (2026-08-24 three-site review): a real La Corniche report listed
+// A8 (2026-08-24 three-site review): a real Large Rule Families report listed
 // criterion 2.1.3 in a table headed "niveau AA", with a blank name cell.
 describe('A8: level AAA criteria are out of scope for the AA conformance table', () => {
   const aaaFinding = (criteria: string[]): Finding =>

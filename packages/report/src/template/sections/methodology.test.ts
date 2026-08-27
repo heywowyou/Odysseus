@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { ObligationAssessment } from '@odysseus/core';
 import { renderLegalCitationParagraph, renderMethodology } from './methodology.js';
 import { getStrings } from '../strings/i18n.js';
-import { loadSasFernandeManifest } from '../../test-fixtures.js';
+import { loadSmallSiteManifest } from '../../test-fixtures.js';
 
-describe('renderMethodology against the real sas-fernande.fr manifest', () => {
+describe('renderMethodology against the real small-site.test manifest', () => {
   it('states the crawl size (B16) and tool versions in one merged section, no separate limitations section', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
 
     // 11 pages, docs/normalization-rules.md section 7. item 3.6: "pages
@@ -22,7 +22,7 @@ describe('renderMethodology against the real sas-fernande.fr manifest', () => {
   });
 
   it('renders in English without leaking French', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('en'), 11, manifest, 'en');
 
     expect(html).toContain('11 pages analyzed');
@@ -30,12 +30,12 @@ describe('renderMethodology against the real sas-fernande.fr manifest', () => {
   });
 });
 
-// report-feedback-la-corniche.md item 3.2: the social-exclusion count
+// report-feedback-large-rule-families.md item 3.2: the social-exclusion count
 // used to render "1 page(s) ont été exclues" verbatim for a count of 1 -
 // a literal, unresolved pluralisation placeholder shipped to a client.
 describe('item 3.2: the social-exclusion disclosure agrees with a singular count', () => {
   it('uses the singular sentence for exactly one excluded page', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const withOneExcluded = {
       ...manifest,
       pages: [
@@ -55,7 +55,7 @@ describe('item 3.2: the social-exclusion disclosure agrees with a singular count
   });
 
   it('uses the plural sentence for more than one excluded page', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const withTwoExcluded = {
       ...manifest,
       pages: [
@@ -81,21 +81,21 @@ describe('item 3.2: the social-exclusion disclosure agrees with a singular count
   });
 });
 
-// P0.1 (2026-08-21 La Corniche feedback pass): the generic "n'a pas
+// P0.1 (2026-08-21 Large Rule Families feedback pass): the generic "n'a pas
 // abouti... voir Méthodologie" pointer used to lead here and find no
 // further detail. This asserts the real per-reason failure counts render
 // instead, grouped by normalized message (URL stripped) rather than one
 // line per page.
 describe('renderMethodology surfaces the real Lighthouse failure reason', () => {
   it('renders nothing extra when every visited page had a successful Lighthouse pass', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
 
     expect(html).not.toContain('Détail des échecs constatés');
   });
 
   it('groups identical failure reasons across pages into one summarized line', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const withFailures = {
       ...manifest,
       pages: manifest.pages.map((page, i) =>
@@ -122,13 +122,13 @@ describe('renderMethodology surfaces the real Lighthouse failure reason', () => 
 
 describe('renderMethodology section-number eyebrow', () => {
   it('shows "11", matching its position in the single-tier 14-section TOC (2026-08-16 redesign)', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
     expect(html).toContain('11 · Méthodologie et limites');
   });
 
   it('shows "11" in English too', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('en'), 11, manifest, 'en');
     expect(html).toContain('11 · Methodology and limitations');
   });
@@ -143,14 +143,14 @@ describe('renderMethodology section-number eyebrow', () => {
 // remaining full-paragraph render site.
 describe('renderMethodology legal citation pointer', () => {
   it('points back to legal exposure, and never repeats the full paragraph, when obligationAssessment is absent', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
     expect(html).toContain('figure dans la section');
     expect(html).not.toContain('sans se prononcer sur l&#39;applicabilité');
   });
 
   it('points back to legal exposure for every status, in_scope included', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const assessment: ObligationAssessment = {
       status: 'in_scope',
       basis: [
@@ -172,7 +172,7 @@ describe('renderMethodology legal citation pointer', () => {
   });
 
   it('renders the pointer sentence in English, not French', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('en'), 11, manifest, 'en');
     expect(html).toContain('Legal exposure');
     expect(html).not.toContain('figure dans la section');
@@ -441,7 +441,7 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
   };
 
   it('renders no note when sirenSource is extracted', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const assessment: ObligationAssessment = {
       ...undeterminedAssessment,
       sirenSource: 'extracted',
@@ -451,13 +451,13 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
   });
 
   it('renders no note when no assessment is present at all', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [lcenFinding]);
     expect(html).not.toContain('fourni manuellement');
   });
 
   it('links to the LCEN finding when sirenSource is manual and a matching finding exists', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const assessment: ObligationAssessment = { ...undeterminedAssessment, sirenSource: 'manual' };
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', assessment, [lcenFinding]);
     expect(html).toContain('fourni manuellement');
@@ -465,7 +465,7 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
   });
 
   it('falls back to a finding-less sentence when sirenSource is manual but no LCEN finding exists', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const assessment: ObligationAssessment = { ...undeterminedAssessment, sirenSource: 'manual' };
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', assessment, []);
     expect(html).toContain('fourni manuellement');
@@ -473,7 +473,7 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
   });
 
   it('renders the mismatch note with both numbers when sirenMismatch is present', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const assessment: ObligationAssessment = {
       ...undeterminedAssessment,
       sirenSource: 'manual',
@@ -488,7 +488,7 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
   });
 
   it('renders the mismatch note in English with the same two numbers', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const assessment: ObligationAssessment = {
       ...undeterminedAssessment,
       sirenSource: 'manual',
@@ -531,7 +531,7 @@ describe('renderMethodology never discloses manual vs automated resolution of a 
   ];
 
   it('never mentions manual confirmation or auditor override when the resolution source is manual, with a disagreement', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const assessment: ObligationAssessment = {
       ...inScopeAssessment,
       siteSignalResolutions: {
@@ -550,7 +550,7 @@ describe('renderMethodology never discloses manual vs automated resolution of a 
   });
 
   it('never mentions manual confirmation or auditor override in English either', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const assessment: ObligationAssessment = {
       ...inScopeAssessment,
       siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'manual' } },
@@ -562,7 +562,7 @@ describe('renderMethodology never discloses manual vs automated resolution of a 
   });
 
   it('renders identically to the detected-source case, since the note no longer exists', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const detected: ObligationAssessment = {
       ...inScopeAssessment,
       siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'detected' } },
@@ -579,18 +579,18 @@ describe('renderMethodology never discloses manual vs automated resolution of a 
 
 describe('item 1.10/B8: the extended accessibility pass states its own result', () => {
   it('renders the "none found" note when no finding uses any of the four extended-pass rule ids', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, []);
     expect(html).toContain('Résultat de la passe d&#39;accessibilité étendue');
   });
 
-  // item 1.7 (La Corniche pass): the note used to be entirely suppressed
+  // item 1.7 (Large Rule Families pass): the note used to be entirely suppressed
   // when any one of the four checks found something, so a real report
   // with only a video-captions finding said nothing at all about the
   // other three checks (keyboard traps, focus order, form errors), which
   // had genuinely found nothing. States each check individually instead.
   it('states each check individually, clean or with its own count, once at least one check found something', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
       { findingId: 'f1', ruleId: 'video-missing-captions' },
       { findingId: 'f2', ruleId: 'video-missing-captions' },
@@ -605,7 +605,7 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
   });
 
   it('ignores the alt-text heuristic rule id, which has its own separate block', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
       { findingId: 'f1', ruleId: 'alt-text-quality-heuristic' },
     ]);
@@ -618,7 +618,7 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
 // the entire site was covered.
 describe('item 3.11: the crawl cap is explained when it actually bound', () => {
   it('states the cap when the crawl visited exactly the configured max', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const capped = { ...manifest, crawl: { ...manifest.crawl, visitedCount: 20, maxPages: 20 } };
     const html = renderMethodology(getStrings('fr'), 11, capped, 'fr');
     // item P4: rephrased so the sentence no longer starts with a numeral.
@@ -626,7 +626,7 @@ describe('item 3.11: the crawl cap is explained when it actually bound', () => {
   });
 
   it('says nothing about the cap when the whole site is smaller than it', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const uncapped = { ...manifest, crawl: { ...manifest.crawl, visitedCount: 11, maxPages: 20 } };
     const html = renderMethodology(getStrings('fr'), 11, uncapped, 'fr');
     expect(html).not.toContain('plafond configuré');
@@ -635,7 +635,7 @@ describe('item 3.11: the crawl cap is explained when it actually bound', () => {
 
 describe('milestone 9b.5 sitemap coverage disclosure', () => {
   it('states the link, seed, and sitemap-only page breakdown in both languages', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const withDiscovery = {
       ...manifest,
       pages: manifest.pages.map((page, index) => ({
@@ -661,7 +661,7 @@ describe('milestone 9b.5 sitemap coverage disclosure', () => {
   });
 
   it('discloses partial sitemap resolution and configured-cap omissions', async () => {
-    const manifest = await loadSasFernandeManifest();
+    const manifest = await loadSmallSiteManifest();
     const withIncompleteCoverage = {
       ...manifest,
       crawl: {

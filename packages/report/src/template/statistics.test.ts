@@ -7,26 +7,26 @@ import { computeStatistics } from './statistics.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-function loadHaaitzaAuditDir(): string {
-  return path.join(moduleDir, '../../../../artifacts/haaitza.com/2026-08-06T20-30-06Z');
+function loadMultiPageAuditDir(): string {
+  return path.join(moduleDir, '../../../../fixtures/test-audits/multi-page');
 }
 
-function loadHaaitzaFindings(): Finding[] {
+function loadMultiPageFindings(): Finding[] {
   return JSON.parse(
-    readFileSync(path.join(loadHaaitzaAuditDir(), 'findings.json'), 'utf-8'),
+    readFileSync(path.join(loadMultiPageAuditDir(), 'findings.json'), 'utf-8'),
   ) as Finding[];
 }
 
-function loadHaaitzaManifest(): AuditManifest {
+function loadMultiPageManifest(): AuditManifest {
   return JSON.parse(
-    readFileSync(path.join(loadHaaitzaAuditDir(), 'manifest.json'), 'utf-8'),
+    readFileSync(path.join(loadMultiPageAuditDir(), 'manifest.json'), 'utf-8'),
   ) as AuditManifest;
 }
 
 describe('computeStatistics', () => {
-  it('matches every number the doc itself verified against the real haaitza scan', () => {
-    const findings = loadHaaitzaFindings();
-    const manifest = loadHaaitzaManifest();
+  it('matches every number the doc itself verified against the real multi-page scan', () => {
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
 
     const stats = computeStatistics(findings, manifest);
     const { categoryCounts, ...rest } = stats;
@@ -53,7 +53,7 @@ describe('computeStatistics', () => {
       // triggers the heuristic - see the dedicated describe block below
       // for the exclusion behaviour itself.
       accessibilityHeuristicOccurrences: 0,
-      // P1.2 (2026-08-21 La Corniche feedback pass): the real haaitza
+      // P1.2 (2026-08-21 Large Rule Families feedback pass): the real multi-page
       // fixture's own third-party occurrence count, confirmed against
       // third-party-attribution.ts's vendor table applied to this scan's
       // actual findings, not a guessed number.
@@ -67,7 +67,7 @@ describe('computeStatistics', () => {
       pagesWithWcagFailure: 20,
       accessibilityCount: 17,
       seoRenderingCount: 16,
-      // item 39: the real haaitza manifest predates renderDiffMissingPercent
+      // item 39: the real multi-page manifest predates renderDiffMissingPercent
       // being recorded per page, so this is false here, not a claim that
       // no below-threshold gap exists on that site.
       hasBelowThresholdRenderGap: false,
@@ -84,7 +84,7 @@ describe('computeStatistics', () => {
   });
 });
 
-// item 1.8 (La Corniche pass): the accessibility-occurrences tile used to
+// item 1.8 (Large Rule Families pass): the accessibility-occurrences tile used to
 // include alt-text-quality-heuristic occurrences with no caveat next to
 // three genuinely hard counts - a real report had 74 of 703 (10 percent)
 // come from the heuristic alone.
@@ -196,7 +196,7 @@ describe('item 39: hasBelowThresholdRenderGap', () => {
     expect(stats.hasBelowThresholdRenderGap).toBe(false);
   });
 
-  // report-feedback-la-corniche.md item 0.5 [REGRESSION]: a real report
+  // report-feedback-large-rule-families.md item 0.5 [REGRESSION]: a real report
   // measured a 62% gap on one page (well above the emission threshold,
   // so a genuine rendering-category finding exists) and a below-threshold
   // gap on another page, and the footnote still fired, printing "la

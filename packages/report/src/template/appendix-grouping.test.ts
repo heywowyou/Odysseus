@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Finding } from '@odysseus/core';
 import { groupAppendix } from './appendix-grouping.js';
-import { loadSasFernandeFindings } from '../test-fixtures.js';
+import { loadSmallSiteFindings } from '../test-fixtures.js';
 
 describe('groupAppendix', () => {
-  it('groups the real sas-fernande color-contrast findings by rule+severity, summing occurrences and unioning pages', async () => {
-    const findings = await loadSasFernandeFindings();
+  it('groups the real small-site color-contrast findings by rule+severity, summing occurrences and unioning pages', async () => {
+    const findings = await loadSmallSiteFindings();
     const groups = groupAppendix(findings);
 
     const colorContrast = groups.find((g) => g.ruleId === 'color-contrast');
@@ -25,7 +25,7 @@ describe('groupAppendix', () => {
   });
 
   it('keeps a single-finding, high-occurrence rule as its own group (link-in-text-block, 69 occurrences on one page)', async () => {
-    const findings = await loadSasFernandeFindings();
+    const findings = await loadSmallSiteFindings();
     const groups = groupAppendix(findings);
 
     const linkInTextBlock = groups.find((g) => g.ruleId === 'link-in-text-block');
@@ -35,7 +35,7 @@ describe('groupAppendix', () => {
     expect(linkInTextBlock.pages).toBe(1);
   });
 
-  // item 1.6 (La Corniche pass): a real report showed a priority card
+  // item 1.6 (Large Rule Families pass): a real report showed a priority card
   // stating "18 pages sur 18" for a rule while the annex group for that
   // same rule said "jusqu'à 17 pages" - two findings of the same rule
   // covered overlapping but not identical page sets, and the old
@@ -78,7 +78,7 @@ describe('groupAppendix', () => {
   });
 
   it('sorts groups by severity descending, then total occurrences descending', async () => {
-    const findings = await loadSasFernandeFindings();
+    const findings = await loadSmallSiteFindings();
     const groups = groupAppendix(findings);
 
     for (let i = 1; i < groups.length; i++) {
@@ -95,7 +95,7 @@ describe('groupAppendix', () => {
   });
 
   it('accumulates every distinct finding into exactly one group, none dropped or duplicated', async () => {
-    const findings = await loadSasFernandeFindings();
+    const findings = await loadSmallSiteFindings();
     const groups = groupAppendix(findings);
 
     const totalFindingsInGroups = groups.reduce((sum, g) => sum + g.findings.length, 0);
@@ -136,7 +136,7 @@ describe('groupAppendix', () => {
 // bottom by SEVERITY_ORDER rather than having their own detail withheld.
 describe('groupAppendix includes minor findings with full detail, sorted last', () => {
   it('groups every real minor finding into per-rule RuleGroups, not a condensed summary', async () => {
-    const findings = await loadSasFernandeFindings();
+    const findings = await loadSmallSiteFindings();
     const minor = findings.filter((f) => f.severity === 'minor');
     // Derived, not pinned: this fixture is re-normalizable and its minor
     // count moves with every collapse change. The invariant is that grouping
@@ -166,7 +166,7 @@ describe('groupAppendix includes minor findings with full detail, sorted last', 
   });
 
   it('sorts minor-severity groups after every other severity when mixed', async () => {
-    const findings = await loadSasFernandeFindings();
+    const findings = await loadSmallSiteFindings();
     const groups = groupAppendix(findings);
     const minorIndex = groups.findIndex((g) => g.severity === 'minor');
     const lastNonMinorIndex = groups.map((g) => g.severity).lastIndexOf('serious');

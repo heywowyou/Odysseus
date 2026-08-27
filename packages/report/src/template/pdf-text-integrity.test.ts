@@ -37,9 +37,9 @@ import { renderPdfFromHtml } from '../pdf.js';
 import { REPORT_PDF_CHROMIUM_ARGS } from '../index.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import {
-  loadSasFernandeAnalysis,
-  loadSasFernandeFindings,
-  loadSasFernandeManifest,
+  loadSmallSiteAnalysis,
+  loadSmallSiteFindings,
+  loadSmallSiteManifest,
 } from '../test-fixtures.js';
 
 /** Every finding's representative selector (the one findings-appendix.ts
@@ -74,9 +74,9 @@ function collectLongStringsToVerify(findings: readonly Finding[]): {
 describe('item 0.4: the generated PDF text layer never drops or merges characters at a wrap point', () => {
   it('extracts every long selector and page URL from a real generated PDF byte-for-byte intact', async () => {
     const [manifest, findings, analysis] = await Promise.all([
-      loadSasFernandeManifest(),
-      loadSasFernandeFindings(),
-      loadSasFernandeAnalysis('fr'),
+      loadSmallSiteManifest(),
+      loadSmallSiteFindings(),
+      loadSmallSiteAnalysis('fr'),
     ]);
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });

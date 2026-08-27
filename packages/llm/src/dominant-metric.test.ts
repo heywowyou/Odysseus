@@ -7,10 +7,10 @@ import { computeDominantPerformanceMetric } from './dominant-metric.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-function loadHaaitzaManifest(): AuditManifest {
+function loadMultiPageManifest(): AuditManifest {
   const manifestPath = path.join(
     moduleDir,
-    '../../../artifacts/haaitza.com/2026-08-06T20-30-06Z/manifest.json',
+    '../../../fixtures/test-audits/multi-page/manifest.json',
   );
   return JSON.parse(readFileSync(manifestPath, 'utf-8')) as AuditManifest;
 }
@@ -52,12 +52,12 @@ function buildManifest(pages: AuditManifest['pages']): AuditManifest {
 }
 
 describe('computeDominantPerformanceMetric', () => {
-  it('picks TBT for the real haaitza scan, where LCP and TBT are both poor on every page but TBT runs further past its threshold', () => {
+  it('picks TBT for the real multi-page scan, where LCP and TBT are both poor on every page but TBT runs further past its threshold', () => {
     // Verified by hand against docs/report-v2-refactor.md A4's own claim
     // ("Total Blocking Time runs to 16,490 ms on the homepage. That is a
     // JavaScript execution problem."): average LCP/threshold ratio ~8.3,
     // average TBT/threshold ratio ~18.2, CLS never poor (all ~0).
-    const manifest = loadHaaitzaManifest();
+    const manifest = loadMultiPageManifest();
 
     expect(computeDominantPerformanceMetric(manifest)).toBe('tbt');
   });

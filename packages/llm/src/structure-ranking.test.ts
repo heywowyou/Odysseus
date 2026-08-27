@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -21,53 +21,58 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
  *  floor case - and f017/f037 (link-name on the sitemap, crawlable-anchors
  *  in the footer) are the 180- and 203-occurrence findings the v1 report
  *  buried at single-occurrence visual weight. */
-function loadHaaitzaAuditDir(): string {
-  return path.join(moduleDir, '../../../artifacts/haaitza.com/2026-08-06T20-30-06Z');
+function loadMultiPageAuditDir(): string {
+  return path.join(moduleDir, '../../../fixtures/test-audits/multi-page');
 }
 
-function loadHaaitzaManifest(): AuditManifest {
+function loadMultiPageManifest(): AuditManifest {
   return JSON.parse(
-    readFileSync(path.join(loadHaaitzaAuditDir(), 'manifest.json'), 'utf-8'),
+    readFileSync(path.join(loadMultiPageAuditDir(), 'manifest.json'), 'utf-8'),
   ) as AuditManifest;
 }
 
-function loadHaaitzaFindings(): Finding[] {
+function loadMultiPageFindings(): Finding[] {
   return JSON.parse(
-    readFileSync(path.join(loadHaaitzaAuditDir(), 'findings.json'), 'utf-8'),
+    readFileSync(path.join(loadMultiPageAuditDir(), 'findings.json'), 'utf-8'),
   ) as Finding[];
 }
 
-/** report-feedback-la-corniche.md item 0.8: image-alt (25 Critique
+/** report-feedback-large-rule-families.md item 0.8: image-alt (25 Critique
  *  findings, 166 occurrences, all 18 pages) and link-name (Sérieux, 282
  *  occurrences, all 18 pages) - the two largest rule families in the
  *  whole audit - ranked 8th and 9th of 12 themes, entirely missing from
  *  the report's top-6 priorities. */
-function loadLaCornicheAuditDir(): string {
-  return path.join(moduleDir, '../../../artifacts/lacoorniche.com/2026-08-19T00-54-32Z');
+function loadLargeRuleFamiliesAuditDir(): string {
+  return path.join(moduleDir, '../../../fixtures/test-audits/large-rule-families');
 }
 
-function loadLaCornicheManifest(): AuditManifest {
+function loadLargeRuleFamiliesManifest(): AuditManifest {
   return JSON.parse(
-    readFileSync(path.join(loadLaCornicheAuditDir(), 'manifest.json'), 'utf-8'),
+    readFileSync(path.join(loadLargeRuleFamiliesAuditDir(), 'manifest.json'), 'utf-8'),
   ) as AuditManifest;
 }
 
-function loadLaCornicheFindings(): Finding[] {
+function loadLargeRuleFamiliesFindings(): Finding[] {
   return JSON.parse(
-    readFileSync(path.join(loadLaCornicheAuditDir(), 'findings.json'), 'utf-8'),
+    readFileSync(path.join(loadLargeRuleFamiliesAuditDir(), 'findings.json'), 'utf-8'),
   ) as Finding[];
 }
 
 /** The model's own raw grouping/effort/impact/rank for this audit,
  *  loaded from the stored analysis rather than hand-built, so this test
  *  exercises the exact input shape that actually reproduced the bug. */
-function loadLaCornicheRawThemes(): StructureThemeWithKey[] {
-  const analysis = JSON.parse(
-    readFileSync(
-      path.join(loadLaCornicheAuditDir(), 'analyses/2026-08-19T00-58-54Z-fr.json'),
-      'utf-8',
-    ),
-  ) as { themes: StructureThemeWithKey[] };
+function loadLargeRuleFamiliesRawThemes(): StructureThemeWithKey[] {
+  const analysesDir = path.join(loadLargeRuleFamiliesAuditDir(), 'analyses');
+  // Resolved by suffix: the fixture uses the artifacts layout, whose timestamp
+  // changes whenever the fixture is regenerated.
+  const file = readdirSync(analysesDir)
+    .filter((name) => name.endsWith('-fr.json'))
+    .sort()
+    .at(-1);
+  if (file === undefined) throw new Error(`No fr analysis under ${analysesDir}`);
+  const analysis = JSON.parse(readFileSync(path.join(analysesDir, file), 'utf-8')) as {
+    themes: StructureThemeWithKey[];
+  };
   return analysis.themes.map((t, i) => ({ ...t, themeKey: `t${i + 1}` }));
 }
 
@@ -81,7 +86,7 @@ function findFinding(findings: Finding[], findingId: string): Finding {
  *  Finding ids are assigned densely at normalization time, so every dedupe or
  *  collapse change renumbers the whole fixture and silently repoints a test at
  *  a different finding - or, worse, at one that no longer exists. Re-deriving
- *  this session's fixture moved haaitza from 98 findings to 70 and f086 stopped
+ *  this session's fixture moved multi-page from 98 findings to 70 and f086 stopped
  *  existing at all.
  *
  *  Each id below is now resolved from the property the test actually cares
@@ -140,7 +145,7 @@ function neutralFillerIds(findings: Finding[]): [string, string, string, string]
   return [a!, b!, c!, d!];
 }
 
-const [fillerA, fillerB, fillerC, fillerD] = neutralFillerIds(loadHaaitzaFindings());
+const [fillerA, fillerB, fillerC, fillerD] = neutralFillerIds(loadMultiPageFindings());
 
 function theme(
   themeKey: string,
@@ -160,8 +165,8 @@ function theme(
 
 describe('enforceSiteWideAccessibilityFloor', () => {
   it('bumps impact and promotes a bottom-quartile theme containing a site-wide WCAG finding', () => {
-    const findings = loadHaaitzaFindings();
-    const manifest = loadHaaitzaManifest();
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
 
     // f039 (meta-viewport, WCAG 1.4.4) is on 18/20 visited pages - above
     // SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD (80%).
@@ -190,8 +195,8 @@ describe('enforceSiteWideAccessibilityFloor', () => {
   });
 
   it('leaves a theme with no site-wide WCAG finding untouched', () => {
-    const findings = loadHaaitzaFindings();
-    const manifest = loadHaaitzaManifest();
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
     const themes: StructureThemeWithKey[] = [
       theme('t1', [fillerA], { priorityRank: 1, impact: 'high' }),
       // Deliberately a finding confined to one page: the fillers above are
@@ -207,7 +212,7 @@ describe('enforceSiteWideAccessibilityFloor', () => {
 
 describe('applyOccurrenceWeighting', () => {
   it('promotes a high-occurrence theme ranked low by the model above a single-occurrence theme ranked higher', () => {
-    const findings = loadHaaitzaFindings();
+    const findings = loadMultiPageFindings();
 
     // f017: link-name, 180 occurrences on one page. f082: offscreen-images,
     // minor, low occurrence count - ranked ahead of f017 by the model here,
@@ -231,7 +236,7 @@ describe('applyOccurrenceWeighting', () => {
   });
 
   it('is a no-op renumbering for a single theme', () => {
-    const findings = loadHaaitzaFindings();
+    const findings = loadMultiPageFindings();
     const themes: StructureThemeWithKey[] = [theme('t1', [fillerA], { priorityRank: 5 })];
 
     const result = applyOccurrenceWeighting(themes, findings);
@@ -241,7 +246,7 @@ describe('applyOccurrenceWeighting', () => {
 });
 
 describe('enforceQuickWinFloor', () => {
-  it('promotes a quick win (low effort, non-low impact) ranked below a low-impact theme, per report-feedback-haaitza.md B9', () => {
+  it('promotes a quick win (low effort, non-low impact) ranked below a low-impact theme, per report-feedback-multi-page.md B9', () => {
     // The real symptom: priority 6, badged "Gain rapide" (faible effort,
     // impact élevé), ranked below priority 4 (impact Faible) even though
     // the section is titled "classés par effort et par impact".
@@ -359,7 +364,7 @@ describe('enforceImpactEffortOrdering', () => {
     expect(result.map((t) => t.themeKey)).toEqual(['t-a', 't-b', 't-c']);
   });
 
-  // report-feedback-la-corniche.md item 0.8 [REGRESSION]: a site-wide,
+  // report-feedback-large-rule-families.md item 0.8 [REGRESSION]: a site-wide,
   // Critique-severity, 166-occurrence theme (image-alt, in the real
   // report) with a merely 'medium' effort used to rank below a
   // single-occurrence, low-impact quick win, because the old quick-win
@@ -419,8 +424,8 @@ describe('logContainmentWarnings', () => {
   });
 
   it('warns when a theme resolves entirely to diverted (legal-page) findings', () => {
-    const findings = loadHaaitzaFindings();
-    const manifest = loadHaaitzaManifest();
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     // f013 (is-crawlable) is confined to the CGU/cookies/privacy pages -
@@ -436,8 +441,8 @@ describe('logContainmentWarnings', () => {
   });
 
   it('does not warn for an ordinary theme', () => {
-    const findings = loadHaaitzaFindings();
-    const manifest = loadHaaitzaManifest();
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     const themes: StructureThemeWithKey[] = [theme('t1', [fillerA])];
@@ -448,16 +453,16 @@ describe('logContainmentWarnings', () => {
   });
 });
 
-// report-feedback-la-corniche.md item 0.8: exercises the full pipeline
+// report-feedback-large-rule-families.md item 0.8: exercises the full pipeline
 // (applyStructureRankingRules), not each rule in isolation - the actual
 // bug only showed up in how the rules composed (applyOccurrenceWeighting's
 // promotion was being discarded by enforceImpactEffortOrdering running
 // after it), which no single-function test below this point would catch.
 describe('applyStructureRankingRules', () => {
   it('item 0.8: promotes image-alt and link-name (the two largest rule families) into the top 6, matching the report render cap', () => {
-    const findings = loadLaCornicheFindings();
-    const manifest = loadLaCornicheManifest();
-    const rawThemes = loadLaCornicheRawThemes();
+    const findings = loadLargeRuleFamiliesFindings();
+    const manifest = loadLargeRuleFamiliesManifest();
+    const rawThemes = loadLargeRuleFamiliesRawThemes();
 
     const result = applyStructureRankingRules(rawThemes, findings, manifest);
 
@@ -477,8 +482,8 @@ describe('applyStructureRankingRules', () => {
   // through the full pipeline this time, not enforceImpactEffortOrdering
   // in isolation.
   it('item 15 [no regression]: a low-effort/high-impact theme still ranks first among same-impact themes through the full pipeline', () => {
-    const findings = loadHaaitzaFindings();
-    const manifest = loadHaaitzaManifest();
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
     const themes: StructureThemeWithKey[] = [
       theme('t-high-effort', [fillerA], { priorityRank: 1, effort: 'high', impact: 'high' }),
       theme('t-medium-effort', [fillerB], { priorityRank: 2, effort: 'medium', impact: 'high' }),

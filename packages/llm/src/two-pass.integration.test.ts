@@ -26,31 +26,31 @@ const { mergeAnalysisPasses } = await import('./merge.js');
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
 /** Same real fixture as build-input.test.ts: the 17 findings that
- *  survive the severity filter on the sas-fernande.fr scan whose real
+ *  survive the severity filter on the small-site.fr scan whose real
  *  fr/en analyses (2026-08-02T18-28-34Z-fr.json /
  *  2026-08-02T18-30-16Z-en.json) motivated this whole two-pass split -
  *  8 quick wins in French, 7 in English, from identical input. */
-function loadSasFernandeFilteredFindings(): Finding[] {
+function loadSmallSiteFilteredFindings(): Finding[] {
   const findingsPath = path.join(
     moduleDir,
-    '../../../artifacts/sas-fernande.fr/2026-08-02T17-31-56Z/findings.json',
+    '../../../fixtures/test-audits/small-site/findings.json',
   );
   const findings = JSON.parse(readFileSync(findingsPath, 'utf-8')) as Finding[];
   return filterFindingsForLlm(findings);
 }
 
-function loadSasFernandeAllFindings(): Finding[] {
+function loadSmallSiteAllFindings(): Finding[] {
   const findingsPath = path.join(
     moduleDir,
-    '../../../artifacts/sas-fernande.fr/2026-08-02T17-31-56Z/findings.json',
+    '../../../fixtures/test-audits/small-site/findings.json',
   );
   return JSON.parse(readFileSync(findingsPath, 'utf-8')) as Finding[];
 }
 
-function loadSasFernandeManifest(): AuditManifest {
+function loadSmallSiteManifest(): AuditManifest {
   const manifestPath = path.join(
     moduleDir,
-    '../../../artifacts/sas-fernande.fr/2026-08-02T17-31-56Z/manifest.json',
+    '../../../fixtures/test-audits/small-site/manifest.json',
   );
   return JSON.parse(readFileSync(manifestPath, 'utf-8')) as AuditManifest;
 }
@@ -120,7 +120,7 @@ function buildWritingOutputFor(language: 'fr' | 'en', themeKeys: string[]): Writ
 
 describe('two-pass analysis produces identical structure across languages', () => {
   it('shares findingIds, priorityRank, effort, impact, category, quickWins, and overallRisk between fr and en, differing only in prose', async () => {
-    const filtered = loadSasFernandeFilteredFindings();
+    const filtered = loadSmallSiteFilteredFindings();
     // Not a pinned count: this fixture is re-derivable with `normalize <dir>`
     // and its finding total moves with every dedupe change. What this test
     // needs is enough themes to compare across two languages.
@@ -139,7 +139,7 @@ describe('two-pass analysis produces identical structure across languages', () =
       structureInput,
       filtered,
       false,
-      loadSasFernandeManifest(),
+      loadSmallSiteManifest(),
     );
     const themeKeys = structureResult.themes.map((t) => t.themeKey);
 
@@ -148,7 +148,7 @@ describe('two-pass analysis produces identical structure across languages', () =
       quickWins: structureResult.quickWins,
       overallRisk: structureResult.overallRisk,
     };
-    const siteStats = computeSiteStats(loadSasFernandeAllFindings(), loadSasFernandeManifest());
+    const siteStats = computeSiteStats(loadSmallSiteAllFindings(), loadSmallSiteManifest());
 
     vi.mocked(callMistralForWriting)
       .mockReset()

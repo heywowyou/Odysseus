@@ -1,5 +1,5 @@
 /**
- * report-feedback-la-corniche.md item 0.3: the cover's "RÉFÉRENTIEL
+ * report-feedback-large-rule-families.md item 0.3: the cover's "RÉFÉRENTIEL
  * AUDITÉ" field always listed Performance among the audited categories
  * (item 3.8's own reasoning: "a clean category is still part of what was
  * checked"), which stopped being true the moment Lighthouse failed on
@@ -12,16 +12,16 @@ import { describe, expect, it } from 'vitest';
 import type { AuditManifest } from '@odysseus/core';
 import { renderCover } from './cover.js';
 import { fr } from '../strings/fr.js';
-import { loadSasFernandeAnalysis, loadSasFernandeManifest } from '../../test-fixtures.js';
+import { loadSmallSiteAnalysis, loadSmallSiteManifest } from '../../test-fixtures.js';
 
 function buildMeasurement(numericValue: number, displayValue: string) {
   return { score: 0.9, numericValue, displayValue };
 }
 
 describe('renderCover référentiel line reacts to whether performance was measured', () => {
-  it('omits Performance when no page has any measured Core Web Vital (sas-fernande.fr predates coreWebVitals)', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const analysis = await loadSasFernandeAnalysis('fr');
+  it('omits Performance when no page has any measured Core Web Vital (small-site.test predates coreWebVitals)', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const analysis = await loadSmallSiteAnalysis('fr');
     const html = renderCover(fr, manifest, analysis);
 
     // item 2.5: compared against the real strings constants, not a
@@ -31,7 +31,7 @@ describe('renderCover référentiel line reacts to whether performance was measu
     // retyped here would silently mismatch on the invisible NBSP.
     expect(html).toContain(fr.cover.wcagReferentialValueNoPerformance);
     expect(html).not.toContain(fr.cover.wcagReferentialValue);
-    // P0.1 (2026-08-21 La Corniche feedback pass): the subtitle line
+    // P0.1 (2026-08-21 Large Rule Families feedback pass): the subtitle line
     // ("Audit accessibilité, performance, SEO et GEO") was hardcoded and
     // unconditional, unlike wcagReferentialValue above.
     expect(html).toContain(fr.cover.subtitleNoPerformance);
@@ -39,8 +39,8 @@ describe('renderCover référentiel line reacts to whether performance was measu
   });
 
   it('includes Performance when at least one page has real Core Web Vitals data', async () => {
-    const manifest = await loadSasFernandeManifest();
-    const analysis = await loadSasFernandeAnalysis('fr');
+    const manifest = await loadSmallSiteManifest();
+    const analysis = await loadSmallSiteAnalysis('fr');
     const withVitals: AuditManifest = {
       ...manifest,
       pages: manifest.pages.map((page, i) =>

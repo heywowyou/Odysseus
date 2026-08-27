@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { renderChecklist } from './checklist.js';
 import { getStrings } from '../strings/i18n.js';
 import {
-  loadSasFernandeAnalysis,
-  loadSasFernandeFindings,
-  loadSasFernandeManifest,
+  loadSmallSiteAnalysis,
+  loadSmallSiteFindings,
+  loadSmallSiteManifest,
 } from '../../test-fixtures.js';
 
 // item 35: the printable checklist was a near-exact restatement of the
@@ -14,9 +14,9 @@ import {
 describe('item 35: the checklist carries finding IDs and WCAG criteria', () => {
   it("renders each rendered theme's finding IDs", async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
 
     const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
@@ -28,9 +28,9 @@ describe('item 35: the checklist carries finding IDs and WCAG criteria', () => {
 
   it('renders the WCAG criteria column header', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
 
     const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
@@ -40,9 +40,9 @@ describe('item 35: the checklist carries finding IDs and WCAG criteria', () => {
 
   it('is no longer identical to a bare rank/title/effort/impact/pages table', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
 
     const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
@@ -58,9 +58,9 @@ describe('item 35: the checklist carries finding IDs and WCAG criteria', () => {
 describe('item 2.7: the checklist has no stray status/date column, and carries a company/date identifier instead', () => {
   it('renders no "Statut / Date" column header', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
 
     const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
@@ -70,9 +70,9 @@ describe('item 2.7: the checklist has no stray status/date column, and carries a
 
   it('renders the site as an identifier line, so the page is identifiable once printed alone', async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
 
     const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
@@ -81,7 +81,7 @@ describe('item 2.7: the checklist has no stray status/date column, and carries a
   });
 });
 
-// 2026-08-22, La Corniche report review: the checklist's Impact column
+// 2026-08-22, Large Rule Families report review: the checklist's Impact column
 // used to render as plain text, identical in weight to Effort. The
 // coloured value must survive as a <span data-level="..."> rather than
 // on the row's own <div> cell, since paged.css's #section-05 print
@@ -91,9 +91,9 @@ describe('item 2.7: the checklist has no stray status/date column, and carries a
 describe('2026-08-22: the checklist Impact column is colour-coded via a data-level span, Effort is not', () => {
   it("wraps each row's Impact value in a data-level span with LEVEL_COLOR, distinct from the plain Effort cell", async () => {
     const [analysis, findings, manifest] = await Promise.all([
-      loadSasFernandeAnalysis('fr'),
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteAnalysis('fr'),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
 
     const html = renderChecklist(getStrings('fr'), 5, 'fr', analysis, findings, manifest);
@@ -105,7 +105,7 @@ describe('2026-08-22: the checklist Impact column is colour-coded via a data-lev
   });
 });
 
-// 2026-08-22/23, haaitza/la corniche report review: a theme with 100+
+// 2026-08-22/23, multi-page/la corniche report review: a theme with 100+
 // findingIds turned this column into an unbounded wall of text that,
 // combined with .row-atomic's break-inside: avoid, gave Paged.js no
 // valid break point and collapsed a real PDF into several pages of

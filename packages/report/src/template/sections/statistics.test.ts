@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AuditManifest, Finding, FindingCategory } from '@odysseus/core';
 import { renderStatistics } from './statistics.js';
 import { getStrings } from '../strings/i18n.js';
-import { loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
+import { loadSmallSiteFindings, loadSmallSiteManifest } from '../../test-fixtures.js';
 
 function buildCategoryFinding(category: FindingCategory, index: number): Finding {
   return {
@@ -50,10 +50,10 @@ function buildMinimalManifest(): AuditManifest {
   };
 }
 
-describe('renderStatistics against the real sas-fernande.fr scan', () => {
+describe('renderStatistics against the real small-site.test scan', () => {
   it('renders the real page count, finding count, and severity breakdown', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
 
     const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
@@ -70,8 +70,8 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
   });
 
   it('renders the wide WCAG-fail-count paragraph with the real pages-affected count filled in', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
 
     const html = renderStatistics(getStrings('en'), 3, 'en', findings, manifest);
 
@@ -80,13 +80,13 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
   });
 
   // item D7 (P4): a severity or category with zero findings is no longer
-  // rendered as an empty tile ("Modéré 0", "Rendu 0"), so the sas-fernande
+  // rendered as an empty tile ("Modéré 0", "Rendu 0"), so the small-site
   // fixture (which has findings in every severity but not necessarily
   // every category) is checked against however many are actually
   // non-zero, not a hardcoded cap.
   it('renders exactly 4 number tiles, one severity tile per non-zero severity, and one category tile per non-zero category', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
 
     const nonZeroSeverityCount = new Set(findings.map((f) => f.severity)).size;
     const nonZeroCategoryCount = new Set(findings.map((f) => f.category)).size;
@@ -103,7 +103,7 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
   // would silently drop out of the ordering check.
   it('B9: category tiles render in descending order by count, not the fixed CATEGORY_ORDER', () => {
     // CATEGORY_ORDER is accessibility/seo/rendering/performance/geo - give
-    // 'performance' the most findings (the real haaitza symptom: the
+    // 'performance' the most findings (the real multi-page symptom: the
     // largest bucket rendered fourth regardless of size) and confirm it
     // now renders first.
     const findings: Finding[] = [
@@ -132,8 +132,8 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
   });
 
   it('B9: the WCAG fail-count line carries a heading, not sitting unlabelled', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
 
     const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
@@ -172,7 +172,7 @@ describe('renderStatistics against the real sas-fernande.fr scan', () => {
   });
 });
 
-// item 1.8 (La Corniche pass): the accessibility-occurrences tile used to
+// item 1.8 (Large Rule Families pass): the accessibility-occurrences tile used to
 // include alt-text-quality-heuristic occurrences with no caveat, sitting
 // beside three genuinely hard counts.
 describe('item 1.8: the accessibility-occurrences tile excludes heuristic occurrences, with a footnote when it does', () => {
@@ -195,8 +195,8 @@ describe('item 1.8: the accessibility-occurrences tile excludes heuristic occurr
   });
 
   it('renders no footnote when there is no heuristic occurrence to exclude', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
 
     const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
@@ -204,7 +204,7 @@ describe('item 1.8: the accessibility-occurrences tile excludes heuristic occurr
   });
 });
 
-// item 1.10 (La Corniche pass): a real report's cover badge read "Élevé"
+// item 1.10 (Large Rule Families pass): a real report's cover badge read "Élevé"
 // off "18/18 pages avec au moins un constat critique", but all 33
 // Critique findings reduced to exactly 2 rules (image-alt, button-name)
 // that both happen to fire on every page - the "N/N" figure was
@@ -247,12 +247,12 @@ describe('item 1.10: the critical-findings driver is named when concentrated in 
   });
 
   it('renders no driver note when critical findings span more than the concentration threshold', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
 
     const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
-    // sas-fernande's own critical findings span more than 3 distinct
+    // small-site's own critical findings span more than 3 distinct
     // rules (docs/normalization-rules.md section 7); the fixture is used
     // rather than hand-asserting a specific count, so this test does not
     // silently drift if the fixture is ever regenerated with fewer.
@@ -271,7 +271,7 @@ describe('item 1.10: the critical-findings driver is named when concentrated in 
   });
 });
 
-// P1.2 (2026-08-21 La Corniche feedback pass): the third-party share of
+// P1.2 (2026-08-21 Large Rule Families feedback pass): the third-party share of
 // accessibility occurrences is the fact that determines who the client
 // calls first - it used to be buried on page 21 of 27.
 describe('P1.2: the third-party occurrences footnote', () => {

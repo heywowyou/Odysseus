@@ -3,7 +3,7 @@ import type { AuditManifest, Finding } from '@odysseus/core';
 import { selectReferenceStats } from '@odysseus/core';
 import { renderFindingsAppendix } from './findings-appendix.js';
 import { getStrings } from '../strings/i18n.js';
-import { loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
+import { loadSmallSiteFindings, loadSmallSiteManifest } from '../../test-fixtures.js';
 
 function buildManifest(): AuditManifest {
   return {
@@ -55,10 +55,10 @@ function buildManifestWithPages(count: number): AuditManifest {
   };
 }
 
-describe('renderFindingsAppendix against the real sas-fernande.fr findings', () => {
+describe('renderFindingsAppendix against the real small-site.test findings', () => {
   it('includes minor findings, which never reach the LLM layer', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     expect(findings.some((f) => f.severity === 'minor')).toBe(true);
 
     const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, manifest, 'general');
@@ -67,8 +67,8 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
   });
 
   it('groups findings under their category heading', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, manifest, 'general');
 
     expect(html).toContain('Accessibility');
@@ -76,8 +76,8 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
   });
 
   it('tags a rule group as diverted only when every one of its findings is confined to diverted pages', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
 
     // f009 (link-in-text-block) is confined entirely to /mentions-legales/,
@@ -218,8 +218,8 @@ describe('renderFindingsAppendix against the real sas-fernande.fr findings', () 
 // a French report.
 describe('item 38: rule titles and codes render in French with a gloss', () => {
   it('renders the French translation, not the English title, for a known rule', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
 
     expect(html).toContain('Le contraste des couleurs est insuffisant');
@@ -227,8 +227,8 @@ describe('item 38: rule titles and codes render in French with a gloss', () => {
   });
 
   it('renders a plain-language gloss under the machine rule code', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
 
     expect(html).toContain('color-contrast');
@@ -236,8 +236,8 @@ describe('item 38: rule titles and codes render in French with a gloss', () => {
   });
 
   it('leaves the English title untranslated for an English report', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderFindingsAppendix(getStrings('en'), 12, 'en', findings, manifest, 'general');
 
     expect(html).toContain('Elements must meet minimum color contrast ratio thresholds');
@@ -363,7 +363,7 @@ describe('item 3.1: repeated URL lists collapse instead of reprinting every page
   });
 });
 
-// 2026-08-22, La Corniche report review: a real report repeated the
+// 2026-08-22, Large Rule Families report review: a real report repeated the
 // identical 5-URL-plus-"et 21 autres" list under nearly every finding in
 // a rule group whose findings shared the same underlying page set (e.g.
 // a booking widget missing an alt attribute, present on the same pages
@@ -473,9 +473,9 @@ describe('2026-08-22: findings sharing an identical page-URL set within one rule
 // item 29: the client had no way to verify the crawl scope they paid for
 // beyond a bare count on the cover.
 describe('item 29: the list of crawled URLs is printed', () => {
-  it('lists every visited page URL from the real sas-fernande.fr manifest', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+  it('lists every visited page URL from the real small-site.test manifest', async () => {
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
 
     const visitedUrls = manifest.pages.filter((p) => p.status === 'visited').map((p) => p.url);
@@ -535,15 +535,15 @@ describe('item 40: the GEO citation renders after the finding rows, not as a sec
 // list of findings" for the single paid tier this product now has.
 describe('item 26: minor findings get the same full page/selector detail as every other severity', () => {
   it('never renders the old "on request" gating copy', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
     expect(html).not.toContain('disponible sur demande');
   });
 
   it('a minor finding renders its own findingId and page URLs, not a condensed per-rule summary', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const minorFinding = findings.find((f) => f.severity === 'minor');
     expect(minorFinding).toBeDefined();
 
@@ -553,7 +553,7 @@ describe('item 26: minor findings get the same full page/selector detail as ever
   });
 });
 
-// item 2.6 (La Corniche pass): a shadow-piercing selector
+// item 2.6 (Large Rule Families pass): a shadow-piercing selector
 // (iframe >>> iframe >>> .captcha__header__logo) wrapped across 3 lines
 // and visually dominated its row. A line-clamp/ellipsis truncation was
 // tried first and reverted - it removed the clamped text from the PDF's
@@ -623,7 +623,7 @@ describe('item 2.6: a long selector renders smaller instead of being truncated',
   });
 });
 
-// report-feedback-la-corniche.md item 1.4: a real report presented
+// report-feedback-large-rule-families.md item 1.4: a real report presented
 // findings on Popup Maker, Gravity Forms, a preview widget, and a
 // booking engine's own nested-iframe captcha as if they were the
 // client's own defects. The client's agency cannot edit any of that
@@ -709,7 +709,7 @@ describe('item 1.4: third-party embed findings render in their own attributed bl
     );
 
     expect(html).toContain('À traiter avec vos prestataires tiers');
-    // P2.6 (2026-08-21 La Corniche feedback pass): "Prestataire tiers non
+    // P2.6 (2026-08-21 Large Rule Families feedback pass): "Prestataire tiers non
     // identifié" read as the tool not knowing something, reframed as a
     // finding about the component itself.
     expect(html).toContain('Composant tiers, éditeur non identifié');
@@ -930,8 +930,8 @@ describe('D11: file counts and overflow tails agree in number', () => {
    *  the "and N more" tail is shared by the annex, the themes section and
    *  the checklist, and every one of them could print "et 1 autres". */
   it('never prints a plural overflow tail for a remainder of one', async () => {
-    const findings = await loadSasFernandeFindings();
-    const manifest = await loadSasFernandeManifest();
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
 
     expect(html).not.toContain('et 1 autres');

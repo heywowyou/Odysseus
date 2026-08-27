@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderFindingsAppendix } from './findings-appendix.js';
 import { getStrings } from '../strings/i18n.js';
-import { loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fixtures.js';
+import { loadSmallSiteFindings, loadSmallSiteManifest } from '../../test-fixtures.js';
 
 /**
  * 2026-08-24, Palais Gallien re-scan review. A rule group split across a
@@ -36,8 +36,8 @@ import { loadSasFernandeFindings, loadSasFernandeManifest } from '../../test-fix
 describe('2026-08-24: annex finding ids never break mid-token across a page fragment', () => {
   async function render(): Promise<string> {
     const [findings, manifest] = await Promise.all([
-      loadSasFernandeFindings(),
-      loadSasFernandeManifest(),
+      loadSmallSiteFindings(),
+      loadSmallSiteManifest(),
     ]);
     return renderFindingsAppendix(getStrings('fr'), 9, 'fr', findings, manifest, 'general');
   }

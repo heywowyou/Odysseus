@@ -13,9 +13,9 @@ import { launchBrowser } from '@odysseus/scanner';
 import { renderHtml } from './render-html.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import {
-  loadSasFernandeAnalysis,
-  loadSasFernandeFindings,
-  loadSasFernandeManifest,
+  loadSmallSiteAnalysis,
+  loadSmallSiteFindings,
+  loadSmallSiteManifest,
 } from '../test-fixtures.js';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -29,11 +29,11 @@ import type { StoredAnalysis } from '../types.js';
 const WCAG22AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 describe('the rendered report HTML passes its own axe-core audit', () => {
-  it('has zero WCAG 2.2 AA violations on the real sas-fernande.fr French report', async () => {
+  it('has zero WCAG 2.2 AA violations on the real small-site.test French report', async () => {
     const [manifest, findings, analysis] = await Promise.all([
-      loadSasFernandeManifest(),
-      loadSasFernandeFindings(),
-      loadSasFernandeAnalysis('fr'),
+      loadSmallSiteManifest(),
+      loadSmallSiteFindings(),
+      loadSmallSiteAnalysis('fr'),
     ]);
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
@@ -65,7 +65,7 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
   }, 60_000);
 
   /**
-   * The sas-fernande fixture predates milestone 8.6 and contains no
+   * The small-site fixture predates milestone 8.6 and contains no
    * privacy-category finding, so the run above never renders the
    * 'privacy' colour pairing added 2026-08-24 - it would pass whatever
    * hex that pairing used. This second run points the same audit at a
