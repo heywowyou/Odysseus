@@ -51,6 +51,8 @@ const REFRESHABLE_FIELDS = [
   'campaignEligibility',
   'websiteCandidates',
   'ownRegistrableDomain',
+  'domainProvenance',
+  'declaredRegistrableDomain',
   'groupStatus',
   'groupDomain',
   'groupSize',
@@ -184,6 +186,21 @@ export async function listHotelCandidates(
   }
   if (filter.qualificationMissing === true) query['qualification'] = { $exists: false };
   return Model.find(query).sort({ name: 1 }).limit(limit).lean<HotelCandidateDocument[]>();
+}
+
+/** The named candidates, in no particular order.
+ *
+ *  Separate from listHotelCandidates because it answers a different question:
+ *  that one filters a population, this one re-reads a set a pass has just
+ *  written to. The reconciliation pass uses it so its decision sees what the
+ *  catalogue now says rather than a copy it patched in memory. */
+export async function getHotelCandidatesByIds(
+  connection: Connection,
+  candidateIds: readonly string[],
+): Promise<HotelCandidateDocument[]> {
+  if (candidateIds.length === 0) return [];
+  const Model = createHotelCandidateModel(connection);
+  return Model.find({ candidateId: { $in: [...candidateIds] } }).lean<HotelCandidateDocument[]>();
 }
 
 export interface ListHotelCandidatesForQualificationOptions {
@@ -376,4 +393,76 @@ export async function recordHotelCandidateReview(
     },
   );
   return { changed: true, found: true };
+}
+
+/** One candidate's redirect verdict, applied to the catalogue.
+ *
+ * Two shapes rather than one generic update, because they are two different
+ * claims about the world and conflating them is exactly the mistake
+ * qualification v1 made: `adopt` says this hotel renamed itself and the
+ * campaign should follow, `route` says several establishments share this
+ * domain so it belongs to somebody's group queue.
+ *
+ * `identityKey` is deliberately not touched. It addresses the candidate
+ * within its resolution version, and rewriting it because a later pass
+ * learned a better domain would break every reference already taken against
+ * it. The provenance fields carry the new knowledge instead. */
+export type RedirectReclassification =
+  | {
+      kind: 'adopt';
+      candidateId: string;
+      /** The domain the redirect landed on, which no other establishment
+       *  holds. */
+      adoptedDomain: string;
+      /** What the catalogue declared, kept rather than overwritten. */
+      declaredDomain?: string;
+    }
+  | {
+      kind: 'route';
+      candidateId: string;
+      groupStatus: Extract<HotelGroupStatus, 'group-member' | 'vendor-hosted'>;
+      groupDomain: string;
+      /** Establishments at the shared domain, the evidence for the routing. */
+      groupSize: number;
+    };
+
+export async function applyRedirectReclassifications(
+  connection: Connection,
+  inputs: readonly RedirectReclassification[],
+): Promise<{ applied: number }> {
+  if (inputs.length === 0) return { applied: 0 };
+  const Model = createHotelCandidateModel(connection);
+  const now = new Date();
+
+  const result = await Model.bulkWrite(
+    inputs.map((input) => ({
+      updateOne: {
+        filter: { candidateId: input.candidateId },
+        update: {
+          $set:
+            input.kind === 'adopt'
+              ? {
+                  ownRegistrableDomain: input.adoptedDomain,
+                  domainProvenance: 'redirect-adopted',
+                  ...(input.declaredDomain === undefined
+                    ? {}
+                    : { declaredRegistrableDomain: input.declaredDomain }),
+                  updatedAt: now,
+                }
+              : {
+                  groupStatus: input.groupStatus,
+                  groupDomain: input.groupDomain,
+                  groupSize: input.groupSize,
+                  updatedAt: now,
+                },
+        },
+      },
+    })),
+    { ordered: false },
+  );
+
+  // matchedCount, not modifiedCount: re-running the pass over a catalogue it
+  // already reclassified changed nothing and still applied to every row, which
+  // is what makes this command safe to repeat.
+  return { applied: result.matchedCount };
 }

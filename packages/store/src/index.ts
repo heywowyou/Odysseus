@@ -114,6 +114,8 @@ export type {
 } from './hotel-candidates.js';
 export { listHotelCandidatesForQualification } from './hotel-candidates.js';
 export type { ListHotelCandidatesForQualificationOptions } from './hotel-candidates.js';
+export { applyRedirectReclassifications, getHotelCandidatesByIds } from './hotel-candidates.js';
+export type { RedirectReclassification } from './hotel-candidates.js';
 export { createHotelQualificationModel } from './schemas/hotel-qualification.schema.js';
 export type {
   HotelQualificationDocument,
@@ -123,6 +125,8 @@ export {
   recordHotelQualifications,
   getHotelQualification,
   listHotelQualifications,
+  listQualificationsByCandidate,
+  countCandidatesByOwnDomain,
   getHotelQualificationYield,
 } from './hotel-qualifications.js';
 export type {

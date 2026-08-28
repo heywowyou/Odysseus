@@ -54,7 +54,9 @@ import {
   createAtoutFranceSource,
   createHotelSireneJoiner,
   createMongoHotelQualificationStore,
+  createMongoReconcileRedirectsStore,
   qualifyHotels,
+  reconcileRedirects,
   createMongoHotelCandidateStore,
   getAtoutFranceExportPath,
   getSireneStockIndexCachePath,
@@ -319,6 +321,98 @@ export function registerProspectCommand(program: Command): void {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           console.error(`odysseus prospect hotel-qualify: failed\n${message}`);
+          process.exitCode = 1;
+        } finally {
+          if (mongoConnection) await disconnectFromMongo(mongoConnection);
+        }
+      },
+    );
+
+  qualify
+    .command('reconcile-redirects')
+    .description(
+      'Re-decide the verdicts whose declared site redirected elsewhere, and write the result ' +
+        'as a new complete qualification generation. A target several establishments reach is ' +
+        "a chain; one exactly one establishment holds is that hotel's own, and is adopted and " +
+        'checked on its own merits.',
+    )
+    .option(
+      '--resolution-version <version>',
+      'Resolution generation the verdicts belong to',
+      CURRENT_RESOLUTION_VERSION,
+    )
+    .requiredOption('--from-version <version>', 'Qualification generation to read')
+    .option(
+      '--to-version <version>',
+      'Qualification generation to write',
+      CURRENT_QUALIFICATION_VERSION,
+    )
+    .option('--limit <n>', 'Re-probe at most this many adopted domains', parsePositiveInt)
+    .option('--concurrency <n>', 'Domains in flight at once', parsePositiveInt, 3)
+    .option(
+      '--dry-run',
+      'Classify and report the request budget, contacting nobody and writing nothing',
+      false,
+    )
+    .action(
+      async (opts: {
+        resolutionVersion: string;
+        fromVersion: string;
+        toVersion: string;
+        limit?: number;
+        concurrency: number;
+        dryRun: boolean;
+      }) => {
+        // Bounded like every other batch, and for the same reason: the adopted
+        // domains are live third-party sites. The classification and the
+        // copy-forward touch nobody, so only the re-probe is capped.
+        if (!opts.dryRun && opts.limit === undefined) {
+          console.error(
+            'odysseus prospect hotel-qualify reconcile-redirects: --limit is required. Adopted ' +
+              'domains are fetched, and binding decision 18 requires every batch to be bounded.',
+          );
+          process.exitCode = 1;
+          return;
+        }
+
+        let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+        try {
+          mongoConnection = await connectToMongo();
+          const originLock = new OriginLock();
+          const report = await reconcileRedirects({
+            store: createMongoReconcileRedirectsStore(mongoConnection),
+            checkSite: (domain: string) =>
+              checkHotelSite(domain, originLock, {
+                crawlDelayMs: getCrawlDelayMs(),
+                userAgent: getCrawlerUserAgent(),
+                timeoutMs: DEFAULT_PROSPECT_FETCH_TIMEOUT_MS,
+              }),
+            resolutionVersion: opts.resolutionVersion,
+            fromVersion: opts.fromVersion,
+            toVersion: opts.toVersion,
+            concurrency: opts.concurrency,
+            dryRun: opts.dryRun,
+            ...(opts.limit !== undefined ? { limit: opts.limit } : {}),
+            onProgress: (reprobed: number) => {
+              process.stderr.write(`re-probed ${reprobed} adopted domains\n`);
+            },
+          });
+          console.log(JSON.stringify(report, null, 2));
+
+          // A generation that does not cover every source row is not a
+          // generation: listCandidatesToPrescan filters on the version, so a
+          // short one silently shrinks the prescan population.
+          if (!opts.dryRun && report.rowsWritten !== report.rowsRead) {
+            console.error(
+              `odysseus prospect hotel-qualify reconcile-redirects: wrote ${report.rowsWritten} ` +
+                `rows against ${report.rowsRead} read. Generation '${opts.toVersion}' is ` +
+                'incomplete and must not be used for selection.',
+            );
+            process.exitCode = 1;
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`odysseus prospect hotel-qualify reconcile-redirects: failed\n${message}`);
           process.exitCode = 1;
         } finally {
           if (mongoConnection) await disconnectFromMongo(mongoConnection);

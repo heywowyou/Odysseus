@@ -134,6 +134,8 @@ const hotelCandidateSchema = new Schema<HotelCandidateDocument>(
     },
     websiteCandidates: { type: [websiteCandidateSchema], required: true },
     ownRegistrableDomain: { type: String },
+    domainProvenance: { type: String, enum: ['declared', 'redirect-adopted'] },
+    declaredRegistrableDomain: { type: String },
     groupStatus: {
       type: String,
       required: true,

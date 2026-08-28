@@ -70,7 +70,20 @@ export type {
   QualifyHotelsOptions,
   HotelSiteChecker,
 } from './prospecting/hotel-qualification/qualify-hotels.js';
-export { createMongoHotelQualificationStore } from './prospecting/hotel-qualification/mongo-hotel-qualification-store.js';
+export {
+  createMongoHotelQualificationStore,
+  createMongoReconcileRedirectsStore,
+} from './prospecting/hotel-qualification/mongo-hotel-qualification-store.js';
+export {
+  reconcileRedirects,
+  RECONCILE_BATCH_SIZE,
+} from './prospecting/hotel-qualification/reconcile-redirects.js';
+export type {
+  ReconcileRedirectsStorePort,
+  ReconcileRedirectsOptions,
+  ReconcileRedirectsReport,
+  ReconcileRedirectsPlan,
+} from './prospecting/hotel-qualification/reconcile-redirects.js';
 export {
   prescanHotels,
   CURRENT_PRESCAN_VERSION,

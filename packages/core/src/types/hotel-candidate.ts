@@ -171,6 +171,8 @@ export interface HotelCandidatePrescanState {
 }
 
 /** The canonical projection. One per establishment per resolution version. */
+export type HotelDomainProvenance = 'declared' | 'redirect-adopted';
+
 export interface HotelCandidate {
   candidateId: string;
   resolutionVersion: string;
@@ -196,6 +198,17 @@ export interface HotelCandidate {
   /** Set only when the establishment has a domain no other establishment in
    *  the same resolution run holds. This is the field plan 003 consumes. */
   ownRegistrableDomain?: string;
+  /** Where `ownRegistrableDomain` came from. Absent means `declared`, which
+   *  is what every candidate written before the redirect reconciliation
+   *  carries. `redirect-adopted` means the catalogue's declared site
+   *  redirected here and no other establishment holds it, so the campaign is
+   *  about to contact this hotel at an address its source never published -
+   *  a fact a person reviewing the funnel must be able to see. */
+  domainProvenance?: HotelDomainProvenance;
+  /** The domain the catalogue declared, kept when an adopted one replaced it.
+   *  Provenance is never erased: the source said something, and a later
+   *  inference does not make that untrue. */
+  declaredRegistrableDomain?: string;
   groupStatus: HotelGroupStatus;
   /** The shared domain, and how many establishments hold it, when
    *  groupStatus is `group-member` or `vendor-hosted`. */

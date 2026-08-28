@@ -270,6 +270,21 @@ means numbered entry 24, not a literal Markdown heading anchor.
     page it translates. A prescan is inserted, never upserted, and emits no
     `prospects` event - that collection is the AFNIC funnel's, and hotels carry
     no SIREN. → trade-offs.md#35
+36. Hotel outreach evidence is a strict prescan-v2 contract over exactly two
+    logical assets - a raw/rendered composite and a measured failure crop -
+    plus three to five allowlisted summaries. Its schema has no place for
+    selectors, exact URLs, rule or finding IDs, free prose, legal conclusions,
+    or statistics. Anything short of both assets and three summaries is
+    `incomplete` and is unavailable to plan 006 selection. Do not widen the
+    contract to expose scanner output. → trade-offs.md#36
+37. A redirect off the declared domain is classified by counting
+    establishments at the target, never by comparing domain names: a target
+    several establishments reach or declare is a chain, one exactly one
+    establishment holds is that hotel's own and is adopted and re-checked. The
+    count spans the whole catalogue, redirect rows plus declared owners, or an
+    acquisition reads as a rename. Reconciliation writes a complete new
+    generation - one row out per row in - because `listCandidatesToPrescan`
+    filters on the qualification version. → trade-offs.md#37
 
 
 ## Stack

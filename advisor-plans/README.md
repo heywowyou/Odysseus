@@ -187,8 +187,8 @@ Three facts worth carrying forward:
   stands: it is reported, not acted on, and binding decision 3 measures usable
   yield only after plan 003's cheap qualification.
 
-**Cheap qualification facts, measured 2026-08-27 by a full live run over the
-13,301 candidates** (read-only DNS/TLS/bounded-HTTP checks, no browser, under
+**Cheap qualification facts (qualification v1), measured 2026-08-27 by a full
+live run over the 13,301 candidates** (read-only DNS/TLS/bounded-HTTP checks, no browser, under
 non-negotiable rule 5). The run took 81 minutes at concurrency 3 and reconciles:
 every candidate carries exactly one outcome. Reproduce the planning counts with
 `prospect hotel-qualify --dry-run`, the table with
@@ -209,6 +209,8 @@ Loss reasons, largest first: `no-own-domain` 3,821, `group-member` 3,643,
 `parked-domain-page` 25, `robots-denied` 16, `redirect-loop` 3,
 `non-html-response` 2. A candidate accumulates reasons rather than
 short-circuiting, so these sum above the candidate count by design.
+`redirect-offsite` and `domain-moved` are the two the v2 pass below revisits;
+`domain-moved` no longer exists as an outcome after it.
 
 Non-blocking notes: `redirected-within-site` 4,141, `no-booking-path-detected`
 3,463, `no-identification-published` 2,437, `booking-path-offsite-only` 487.
@@ -216,7 +218,8 @@ Non-blocking notes: `redirected-within-site` 4,141, `no-booking-path-detected`
 Three facts worth carrying forward:
 
 - **The declared websites are mostly alive.** Of the 7,069 campaign-ready
-  candidates, 5,720 qualified. Hard site failures (DNS, TLS, HTTP, timeout,
+  candidates, 5,720 qualified under v1 and 5,995 under v2. Hard site failures
+  (DNS, TLS, HTTP, timeout,
   redirect, parked page, robots) account for roughly 1,300 - about 19 percent
   of declared websites unusable, which is the "large unusable-website rate"
   test the DATAtourisme alternate-website path was deferred against. It is not
@@ -234,10 +237,56 @@ Three facts worth carrying forward:
   assumed present.
 
 **Binding decision 3 is triggered and unresolved.** Qualified usable own-domain
-yield is 5,720 against the 8,000 floor, a shortfall of 2,280, so
+yield is 5,720 against the 8,000 floor (5,995 after the v2 reconciliation
+below), a shortfall of 2,280, so
 `decideOverpassNeed` returns `propose`. The run stopped at that and ingested
 nothing. Adding an OpenStreetMap Overpass source is an operator decision that
-has not been taken; do not treat the shortfall as authorization.
+has not been taken; do not treat the shortfall as authorization. The v2
+reconciliation below moves this number, and does not move the decision: the
+operator declined Overpass on reasoning independent of the shortfall's size.
+
+**Qualification v2, measured 2026-08-28.** The v1 rule rejected every
+off-domain redirect. Measured over the stored v1 verdicts, 384 rows carry a
+redirect verdict, 383 of them with a usable landing URL, across 341 distinct
+registrable targets: 71 land on a target several establishments reach or already
+declare, and 312 land on one exactly one establishment holds, which is a hotel
+that renamed itself rather than a chain. The remaining row recorded no landing
+URL at all and keeps its v1 rejection. See
+trade-off 37 for the rule and why the count spans the whole catalogue rather
+than the redirect rows alone.
+
+Reproduce the classification with
+`prospect hotel-qualify reconcile-redirects --from-version v1 --dry-run`, which
+contacts nobody. The real pass re-probed the 312 adopted domains with the same
+read-only checks and wrote a complete v2 generation, one row per v1 row.
+
+| Outcome | v1 | v2 |
+| --- | --- | --- |
+| Qualified | 5,720 | 5,995 |
+| Parked | 2,456 | 2,412 |
+| Rejected | 1,341 | 1,037 |
+| Already engaged (accessibility statement published) | 28 | 30 |
+| Group-routed | 3,756 | 3,827 |
+
+Of the 312 adopted domains, 275 qualified, 35 were rejected on their own merits
+(the new domain was dead, or redirected off-site again, which is not chased),
+and 2 already publish an accessibility statement. `redirect-offsite` falls from
+340 to 87 and `domain-moved` disappears entirely; `domain-adopted-after-redirect`
+records 312 as a note, so an adopted domain is never mistaken downstream for a
+catalogue fact.
+
+The pass wrote one v2 row for every v1 row - 13,301 read, 13,301 written, 12,918
+copied forward unchanged. Completeness is load-bearing rather than tidy:
+`listCandidatesToPrescan` filters on the candidate's qualification pointer, so a
+v2 generation holding only the reconciled rows would have shrunk the prescan
+population to 312 while looking like a correct filter.
+
+Both generations are retained: `hotel_qualifications` is keyed on
+(`qualificationVersion`, `candidateId`), so
+`prospect hotel-qualify report --qualification-version v1` still returns the
+table above. The pointer on the candidate is single and current, which is why a
+prescan dry run against v1 now plans zero pages. That is the pointer behaving as
+designed, not a lost generation.
 
 **Population caveat for later analysis.** Atout France lists only *classified*
 accommodation. A hotel that never sought classification, or whose classification

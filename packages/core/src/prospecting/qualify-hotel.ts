@@ -104,11 +104,7 @@ export function qualifyHotelCandidate(facts: HotelQualificationFacts): HotelQual
     facts.ownRegistrableDomain !== '';
   if (!hasOwnDomain) reasons.push('no-own-domain');
 
-  // A same-name redirect is the one offsite landing that is not evidence of a
-  // dead domain, so it is withheld from the rejection set and parked below.
-  const movedDomain =
-    site.reachability === 'redirect-offsite' && site.redirectedToRelatedDomain === true;
-  const reachabilityRejection = movedDomain ? null : rejectionForReachability(site.reachability);
+  const reachabilityRejection = rejectionForReachability(site.reachability);
   // `no-own-domain` is already recorded above; not-attempted maps to the same
   // reason and must not be pushed twice.
   if (reachabilityRejection !== null && reachabilityRejection !== 'no-own-domain') {
@@ -128,7 +124,6 @@ export function qualifyHotelCandidate(facts: HotelQualificationFacts): HotelQual
   if (eligibility === 'parked-unknown-rating') reasons.push('unknown-star-rating');
 
   if (facts.reviewState === 'pending') reasons.push('awaiting-review');
-  if (movedDomain) reasons.push('domain-moved');
 
   // Both halves required, and both must actually be known. An absent effectif
   // band means the Sirene join found nothing, which is not evidence of size.
@@ -146,7 +141,6 @@ export function qualifyHotelCandidate(facts: HotelQualificationFacts): HotelQual
   const parked =
     eligibility !== 'eligible' ||
     facts.reviewState === 'pending' ||
-    movedDomain ||
     (smallEffectif && smallCapacity);
 
   // Non-blocking facts. Only meaningful when a page was actually read.
@@ -165,6 +159,10 @@ export function qualifyHotelCandidate(facts: HotelQualificationFacts): HotelQual
     if (!hasIdentifier) notes.push('no-identification-published');
     if (site.redirectedWithinSite === true) notes.push('redirected-within-site');
   }
+  // Recorded whatever the outcome, unlike the notes above: that the campaign
+  // reached this hotel at a domain the catalogue never published is true even
+  // when the adopted domain then turned out to be dead.
+  if (facts.domainAdoptedAfterRedirect === true) notes.push('domain-adopted-after-redirect');
 
   const outcome: HotelQualificationOutcome = alreadyEngaged
     ? 'already-engaged'

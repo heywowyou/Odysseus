@@ -7,12 +7,17 @@
 
 import type { Connection } from 'mongoose';
 import {
+  applyRedirectReclassifications,
+  countCandidatesByOwnDomain,
+  getHotelCandidatesByIds,
   listHotelCandidatesForQualification,
+  listQualificationsByCandidate,
   recordHotelQualifications,
   type HotelCandidateDocument,
   type RecordHotelQualificationInput,
 } from '@odysseus/store';
 import type { HotelQualificationStorePort } from './qualify-hotels.js';
+import type { ReconcileRedirectsStorePort } from './reconcile-redirects.js';
 
 export function createMongoHotelQualificationStore(
   connection: Connection,
@@ -24,5 +29,17 @@ export function createMongoHotelQualificationStore(
       const { created, updated } = await recordHotelQualifications(connection, inputs);
       return { created, updated };
     },
+  };
+}
+
+export function createMongoReconcileRedirectsStore(
+  connection: Connection,
+): ReconcileRedirectsStorePort {
+  return {
+    listQualifications: (options) => listQualificationsByCandidate(connection, options),
+    countCandidatesByOwnDomain: (options) => countCandidatesByOwnDomain(connection, options),
+    getCandidates: (candidateIds) => getHotelCandidatesByIds(connection, candidateIds),
+    applyReclassifications: (inputs) => applyRedirectReclassifications(connection, inputs),
+    record: (inputs) => recordHotelQualifications(connection, inputs),
   };
 }

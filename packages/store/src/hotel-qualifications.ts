@@ -160,6 +160,52 @@ export async function listHotelQualifications(
     .lean<HotelQualificationDocument[]>();
 }
 
+/** One page of a version's verdicts, ordered by candidateId so the whole
+ *  generation can be walked without holding 13,000 documents in memory. The
+ *  same cursor shape listCandidatesToQualify and listCandidatesToPrescan use. */
+export async function listQualificationsByCandidate(
+  connection: Connection,
+  options: { qualificationVersion: string; limit: number; after?: string },
+): Promise<HotelQualificationDocument[]> {
+  const Model = createHotelQualificationModel(connection);
+  const query: Record<string, unknown> = { qualificationVersion: options.qualificationVersion };
+  if (options.after !== undefined) query['candidateId'] = { $gt: options.after };
+  return Model.find(query)
+    .sort({ candidateId: 1 })
+    .limit(options.limit)
+    .lean<HotelQualificationDocument[]>();
+}
+
+/** How many establishments in a resolution run already declare each of these
+ *  domains as their own.
+ *
+ *  This is the second half of the redirect-target count, and it is why the
+ *  count cannot be taken from the redirect rows alone: measured 2026-08-28,
+ *  eleven hotels redirect to a domain another hotel already holds
+ *  (`mandarinoriental.com`, `tribehotels.com`, and others). Those are
+ *  acquisitions. Counting only redirects would read each as a rename and put
+ *  two establishments on one domain, which trade-off 33 rules out as an
+ *  identity key. */
+export async function countCandidatesByOwnDomain(
+  connection: Connection,
+  options: { resolutionVersion: string; domains: readonly string[] },
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (options.domains.length === 0) return counts;
+  const CandidateModel = createHotelCandidateModel(connection);
+  const rows = await CandidateModel.aggregate<{ _id: string; count: number }>([
+    {
+      $match: {
+        resolutionVersion: options.resolutionVersion,
+        ownRegistrableDomain: { $in: [...options.domains] },
+      },
+    },
+    { $group: { _id: '$ownRegistrableDomain', count: { $sum: 1 } } },
+  ]);
+  for (const row of rows) counts.set(row._id, row.count);
+  return counts;
+}
+
 export interface HotelQualificationYield {
   total: number;
   byOutcome: Record<HotelQualificationOutcome, number>;

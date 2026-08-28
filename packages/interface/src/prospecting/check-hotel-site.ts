@@ -95,19 +95,6 @@ function registrableDomainOf(url: string): string | null {
  *  hotel sells direct *with*. Measured on the first live batch, conflating them
  *  reported eight of ten qualified hotels as having no direct booking route
  *  when most of them plainly did. */
-/** The name under the public suffix: `hotelchaponfin.fr` and
- *  `hotelchaponfin.com` share one. Taken from the registrable domain, which has
- *  already had its suffix resolved, so splitting on the first dot is exact for
- *  multi-part suffixes too (`example.co.uk` gives `example`).
- *
- *  A generic name could pair two unrelated businesses. That costs nothing here:
- *  the only consequence of a match is parking the candidate for a person to
- *  look at, never following the redirect or qualifying on it. */
-function domainLabelOf(registrableDomain: string): string {
-  const [label = ''] = registrableDomain.split('.');
-  return label;
-}
-
 function collectBookingVendors(
   anchorUrls: readonly string[],
   ownRegistrableDomain: string | null,
@@ -189,19 +176,14 @@ export async function checkHotelSite(
     });
 
     if (homepage.kind === 'failed') {
+      // Where the redirect landed is recorded; what it means is not decided
+      // here. A probe sees one hotel and cannot tell `accor.com` from
+      // `lacoorniche.com` - only a count across the whole run can, which is
+      // what reconcile-redirects.ts does with this finalUrl. An earlier
+      // same-name heuristic tried to decide it per candidate and got the
+      // measured majority wrong.
       const facts: HotelSiteFacts = { reachability: REACHABILITY_FOR_FAILURE[homepage.failure] };
-      if (homepage.finalUrl !== undefined) {
-        facts.finalUrl = homepage.finalUrl;
-        const landed = registrableDomainOf(homepage.finalUrl);
-        if (
-          facts.reachability === 'redirect-offsite' &&
-          landed !== null &&
-          ownRegistrableDomain !== null &&
-          domainLabelOf(landed) === domainLabelOf(ownRegistrableDomain)
-        ) {
-          facts.redirectedToRelatedDomain = true;
-        }
-      }
+      if (homepage.finalUrl !== undefined) facts.finalUrl = homepage.finalUrl;
       return facts;
     }
 

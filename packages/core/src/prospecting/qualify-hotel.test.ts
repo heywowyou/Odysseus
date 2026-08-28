@@ -292,27 +292,42 @@ describe('deliberately not checked', () => {
   });
 });
 
-describe('a declared domain that moved TLD', () => {
-  const moved = {
-    reachability: 'redirect-offsite',
-    redirectedToRelatedDomain: true,
-    finalUrl: 'https://www.hotelchaponfin.fr/',
-  } as const;
-
-  it('parks rather than rejects, because a person can settle it in one look', () => {
-    // Measured on the first live batch: hotelchaponfin.com redirects to
-    // hotelchaponfin.fr. Rejecting discards a live hotel.
-    const result = qualifyHotelCandidate(facts({ site: { ...moved } }));
-    expect(result.outcome).toBe('parked');
-    expect(result.reasons).toContain('domain-moved');
-    expect(result.reasons).not.toContain('redirect-offsite');
-  });
-
-  it('still rejects an offsite landing on an unrelated domain', () => {
+describe('a declared domain that redirects off-site', () => {
+  // This decision no longer tries to tell a rename from a chain. It cannot:
+  // the evidence is how many establishments arrive at the landing domain,
+  // which is a fact about the whole run. An earlier same-name heuristic lived
+  // here and was measured wrong for the majority - 323 of 341 real targets are
+  // held by exactly one hotel. reconcile-redirects.ts decides, adopts the
+  // domain, and re-enters this function with the adopted site's own facts.
+  it('rejects, because an unreachable declared domain is what was observed', () => {
     const result = qualifyHotelCandidate(
-      facts({ site: { reachability: 'redirect-offsite', finalUrl: 'https://booking.com/x' } }),
+      facts({
+        site: { reachability: 'redirect-offsite', finalUrl: 'https://www.hotelchaponfin.fr/' },
+      }),
     );
     expect(result.outcome).toBe('rejected');
     expect(result.reasons).toContain('redirect-offsite');
+  });
+
+  it('qualifies the adopted domain on its own facts, and says it was adopted', () => {
+    const result = qualifyHotelCandidate(
+      facts({
+        domainAdoptedAfterRedirect: true,
+        site: { reachability: 'ok', finalUrl: 'https://www.hotelchaponfin.fr/' },
+      }),
+    );
+    expect(result.outcome).toBe('qualified');
+    expect(result.notes).toContain('domain-adopted-after-redirect');
+  });
+
+  it('records the adoption even when the adopted domain is itself dead', () => {
+    // The note is provenance, not a verdict: a person reading the funnel needs
+    // to know the campaign followed a redirect whatever came of it.
+    const result = qualifyHotelCandidate(
+      facts({ domainAdoptedAfterRedirect: true, site: { reachability: 'dns-unresolved' } }),
+    );
+    expect(result.outcome).toBe('rejected');
+    expect(result.reasons).toContain('dns-unresolved');
+    expect(result.notes).toContain('domain-adopted-after-redirect');
   });
 });

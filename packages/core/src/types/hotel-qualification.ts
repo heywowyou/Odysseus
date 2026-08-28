@@ -37,12 +37,6 @@ export type HotelQualificationOutcome =
 export type HotelParkedReason =
   | 'below-three-stars'
   | 'unknown-star-rating'
-  /** The declared domain redirects to a different registrable domain carrying
-   *  the same name, which is nearly always one business moving TLD rather than
-   *  an abandoned domain. Parked rather than rejected because a person can
-   *  settle it in one look, and parked rather than followed because the same
-   *  shape also describes a domain that was sold. */
-  | 'domain-moved'
   /** Effectif under 10 and capacity under 20. Named for what is actually
    *  known - that the microenterprise scope test has not been resolved - and
    *  never for a conclusion about whether an obligation applies to this
@@ -83,7 +77,14 @@ export type HotelQualificationNote =
   | 'no-booking-path-detected'
   | 'booking-path-offsite-only'
   | 'no-identification-published'
-  | 'redirected-within-site';
+  | 'redirected-within-site'
+  /** The domain this verdict is about is not the one the catalogue declared:
+   *  the declared site redirected to a domain no other establishment holds,
+   *  and the reconciliation pass adopted it. Non-blocking, because the adopted
+   *  domain was then checked on its own merits like any other - but a person
+   *  reading the funnel needs to see that the campaign is about to contact a
+   *  hotel at an address the source never published. */
+  | 'domain-adopted-after-redirect';
 
 /** An off-domain booking destination seen on the page. Recorded because it is
  *  a real fact about how the hotel sells, but it proves neither an own site
@@ -119,9 +120,6 @@ export interface HotelSiteFacts {
   mentionsLegalesUrl?: string | null;
   /** True when a redirect chain stayed on the same registrable domain. */
   redirectedWithinSite?: boolean;
-  /** Set only alongside `redirect-offsite`. Computed where the public suffix
-   *  list already is, so this package stays free of domain parsing. */
-  redirectedToRelatedDomain?: boolean;
 }
 
 export type HotelSiteReachability =
@@ -157,6 +155,11 @@ export interface HotelQualificationFacts {
   effectifBandCode?: string | null;
   /** Guest capacity from the catalogue. */
   capacity?: number | null;
+  /** True when `ownRegistrableDomain` is a domain the reconciliation pass
+   *  adopted from a redirect rather than one the catalogue declared. Carried
+   *  as a fact rather than emitted by the caller so every note this decision
+   *  produces comes from one place. */
+  domainAdoptedAfterRedirect?: boolean;
   site: HotelSiteFacts;
 }
 

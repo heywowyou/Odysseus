@@ -39,8 +39,16 @@ import type { HotelCandidateDocument } from '@odysseus/store';
 import type { RecordHotelQualificationInput } from '@odysseus/store';
 
 /** Bumped by hand when a qualification rule changes, never edited in place -
- *  the same discipline, and the same reason, as CURRENT_RESOLUTION_VERSION. */
-export const CURRENT_QUALIFICATION_VERSION = 'v1';
+ *  the same discipline, and the same reason, as CURRENT_RESOLUTION_VERSION.
+ *
+ *  v2 changed what an off-domain redirect means: v1 rejected every one of
+ *  them, which measured wrong for 312 of 384 real rows. A v2 generation is
+ *  produced by two commands, not one - this pass, then
+ *  `reconcile-redirects`, which is where the rename-versus-chain count lives
+ *  because only it sees the whole run. A v2 generation that has not been
+ *  reconciled still carries v1's redirect verdicts, so do not read one as
+ *  final until the reconciliation has written it. */
+export const CURRENT_QUALIFICATION_VERSION = 'v2';
 
 export const QUALIFY_BATCH_SIZE = 200;
 

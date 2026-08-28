@@ -323,8 +323,12 @@ describe('booking engines versus travel agencies', () => {
   });
 });
 
-describe('a domain that moved TLD', () => {
-  it('records the same-name landing rather than reporting a bare offsite redirect', async () => {
+describe('a redirect that leaves the declared domain', () => {
+  // The probe records where it landed and stops there. Whether that landing is
+  // a rename or a chain is a count across the whole run, which one candidate's
+  // probe cannot see - reconcile-redirects.ts decides it, and both cases below
+  // therefore look identical here on purpose.
+  it('reports the landing domain for a same-name move', async () => {
     mockFetch((url) => {
       if (url.endsWith('/robots.txt')) return { status: 404 };
       if (url.includes('hotel-exemple.fr'))
@@ -334,10 +338,10 @@ describe('a domain that moved TLD', () => {
 
     const facts = await check();
     expect(facts.reachability).toBe('redirect-offsite');
-    expect(facts.redirectedToRelatedDomain).toBe(true);
+    expect(facts.finalUrl).toContain('hotel-exemple.com');
   });
 
-  it('does not claim kinship with an unrelated landing domain', async () => {
+  it('reports the landing domain for an unrelated one the same way', async () => {
     mockFetch((url) => {
       if (url.endsWith('/robots.txt')) return { status: 404 };
       if (url.includes('hotel-exemple.fr'))
@@ -347,6 +351,6 @@ describe('a domain that moved TLD', () => {
 
     const facts = await check();
     expect(facts.reachability).toBe('redirect-offsite');
-    expect(facts.redirectedToRelatedDomain).toBeUndefined();
+    expect(facts.finalUrl).toContain('booking.com');
   });
 });

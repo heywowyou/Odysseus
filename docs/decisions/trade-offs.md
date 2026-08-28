@@ -1593,6 +1593,83 @@ cap instead; that decision is the operator's.
     therefore remains `IMPLEMENTED`, not `DONE`, until a separately authorized
     rerun accepts the corrected crop or truthful omission.
 
+37. **A redirect off the declared domain is classified by counting
+    establishments, not by comparing names (2026-08-28).** Qualification v1
+    rejected every off-domain landing as `redirect-offsite`. Measured against
+    the real catalogue, that was wrong for the large majority: of 341 distinct
+    redirect targets behind 383 rows, 18 are shared by several establishments -
+    the chains the rule was written for - and 323 are hit exactly once,
+    overwhelmingly a hotel that renamed itself. `lacoorniche-pyla.com`
+    redirecting to `lacoorniche.com` is one hotel, one owner, one new name, and
+    v1 discarded it.
+
+    The evidence that separates the two cases is the one trade-off 33 already
+    uses for group routing: a domain several establishments share is a chain's,
+    a domain exactly one establishment holds is that establishment's own.
+    `classifyRedirectTarget` in `core` applies it to redirect targets and takes
+    a count rather than a name, because no string comparison can tell
+    `accor.com` from `lacoorniche.com`. The curated vendor-host list still
+    outranks the count, so a vendor host reached by one hotel is still a vendor
+    host - it decided nothing on today's data, where no redirect target is on
+    the list, and it stays because the list is the authority the moment one is.
+
+    **The count spans the whole catalogue, not only the redirect rows.** Eleven
+    of the 323 single-hit targets are a domain another candidate already
+    declares as its own - `mandarinoriental.com`, `tribehotels.com`,
+    `fontenille-collection.com` among them. Those are acquisitions, and counting
+    redirects alone would read each as a rename and put two establishments on
+    one domain, which trade-off 33 rules out as an identity key. A declared
+    owner therefore counts as an establishment exactly as a redirect does,
+    which is what takes the recoverable population from 323 to 312.
+
+    The classification is a second pass (`reconcile-redirects.ts`), not a fix
+    inside `qualify-hotels.ts`, because that pass is streamed in pages of 200
+    across concurrent lanes and never holds the run. It reads the stored
+    verdicts, counts every target before classifying any row, routes shared and
+    vendor targets to the group queue with the group size as evidence, and for
+    a single-establishment target adopts the domain and re-runs the same cheap
+    checks against it. It never concludes that an adopted domain is a live
+    hotel site: a single-hit target can still be parked or for sale, and the
+    existing parked-page detection answers that from the page. The adopted
+    domain is recorded with `domainProvenance: 'redirect-adopted'`, the
+    declared one is kept beside it, `identityKey` is never rewritten, and every
+    verdict on an adopted domain carries the note
+    `domain-adopted-after-redirect` whatever its outcome.
+
+    Because the run-wide count now decides, v1's per-candidate same-name
+    heuristic had nothing left to do: `redirectedToRelatedDomain` and the
+    `domain-moved` parked reason are both removed rather than left dressed and
+    dead, the sweep trade-off 31 asks for. The probe records where a redirect
+    landed and stops there.
+
+    **Copy-forward is what makes the version true, not bookkeeping.**
+    `listCandidatesToPrescan` filters on `qualification.qualificationVersion`,
+    so a v2 generation holding only the reconciled rows would silently shrink
+    the prescan population from thousands to a few hundred and look like a
+    correct filter while doing it. The pass writes one v2 row per v1 row, and
+    the CLI fails the run when those two counts differ. A v2 generation is
+    therefore produced by two commands, `hotel-qualify run` then
+    `reconcile-redirects`; an unreconciled v2 still carries v1's redirect
+    verdicts and must not be read as final.
+
+    The re-probe is bounded by `--limit` like every other batch, while the
+    classification and the copy-forward describe the whole population - a plan
+    that reported only what a limit happened to reach would be the same
+    confident-and-wrong number `qualify-hotels.ts` already records avoiding.
+
+    **Run of record, 2026-08-28.** The real pass read 13,301 rows, classified
+    384 redirect rows (383 with a landing URL), re-probed the 312 adopted
+    domains under non-negotiable rule 5 with no browser, and wrote 13,301 v2
+    rows of which 12,918 were copied forward untouched. The adopted domains
+    became 275 qualified, 35 rejected on their own merits, and 2 already
+    engaged, taking the qualified population from 5,720 to 5,995. Neither
+    generation was destroyed: `hotel_qualifications` is keyed on
+    (`qualificationVersion`, `candidateId`), so the v1 table remains queryable.
+    The pointer on the candidate is single and current, so a prescan dry run
+    against v1 now plans zero pages - the pointer working, not a lost
+    generation. This does not reopen binding decision 3: the operator declined
+    Overpass on reasoning independent of the shortfall's size.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.
@@ -1713,22 +1790,19 @@ retention. Reusing it here would be wrong because it deliberately retains a
 homepage screenshot pair, while the public prescan contract forbids generic
 screenshots entirely.
 
-**Open defect found by plan 004's live verification, not yet fixed.**
-Qualification v1 rejects 340 hotels with reason `redirect-offsite`, over 298
-distinct redirect targets, of which 280 are hit exactly once. The repeated
-targets are what the rule is for and are correctly excluded
-(`esprit-de-france.com` 8, then `accor.com`, `timhotel.com`, `orsohotels.com`,
-`hotelsbarriere.com`). The singletons are largely a hotel arriving at its own
-rebranded domain: the operator-named verification site is one, where Atout
+**Resolved 2026-08-28, as qualification v2.** Qualification v1 rejected every
+redirect that left the declared registrable domain, conflating "this domain now
+belongs to an OTA, a vendor, or a group" with "this hotel renamed itself". The
+distinguishing evidence was the one trade-off 33 already uses for group routing,
+and the fix applies it: a redirect target several establishments reach is a
+chain's, a target exactly one establishment holds is that hotel's own. Measured
+over the stored v1 verdicts, 383 rows carried a redirect verdict across 341
+distinct targets: 71 shared, 312 held once, and one row with no usable landing
+URL. The operator-named verification site was among the 312, where Atout
 France's declared `lacoorniche-pyla.com` redirects to the same hotel's
-`lacoorniche.com`. The rule therefore conflates "this domain now belongs to an
-OTA, a vendor, or a group" with "this hotel renamed itself", discarding roughly
-280 qualified prospects, about 4.9 percent on top of the 5,720 qualified. The
-distinguishing evidence is the one trade-off 33 already uses for group routing:
-a redirect target shared by several establishments is a chain, a target held by
-exactly one establishment is that hotel's own. Fixing it means re-qualifying
-the catalogue, so it is recorded here as an open decision rather than taken
-silently.
+`lacoorniche.com`. The rule, the reason the count spans the whole catalogue
+rather than the redirect rows alone, and why the parked `domain-moved` state was
+removed rather than relabelled are all in numbered entry 37.
 
 Legal copy remains source-gated: hotel-specific material in
 `docs/obligation-basis.md` cannot enter a real draft until it reaches primary
