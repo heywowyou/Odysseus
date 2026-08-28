@@ -1589,9 +1589,16 @@ cap instead; that decision is the operator's.
     an integer-aligned temporary border and waits two animation frames before
     capture, avoiding native rounded-border and repaint races without image
     quantization. Local visual and concurrent deterministic browser tests pass,
-    but the one live-run authorization was not reused after that fix. Plan 005
-    therefore remains `IMPLEMENTED`, not `DONE`, until a separately authorized
-    rerun accepts the corrected crop or truthful omission.
+    and the one live-run authorization was deliberately not stretched to cover
+    the fix.
+
+    **Closed 2026-08-28.** A separately authorized rerun, routed through the
+    queue so the per-origin lock and crawl delay applied, retained a
+    490,365-byte composite and a 44,505-byte crop against the rejected run's
+    6,124. The crop is the full 240 by 160 contextual frame with its criterion
+    label completely legible, and it proves its paired observation rather than
+    merely showing a location: the outlined region is visually empty precisely
+    because the finding is a button with no accessible name. Plan 005 is `DONE`.
 
 37. **A redirect off the declared domain is classified by counting
     establishments, not by comparing names (2026-08-28).** Qualification v1

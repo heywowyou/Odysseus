@@ -701,13 +701,13 @@ must be resolved first.
 9b. Prospecting throughput (worker pool, `skipLighthouse`, raised page/depth caps) — done 2026-08-22. See trade-off 23.
 9b.5. Sitemap-supplemented full-site scan coverage — done 2026-08-27. Recursive sitemap inspection stays separate from link reachability; full audits supplement eligible sitemap-only pages, while prospecting inspects and standalone crawl remains link-only. See the measured Haaitza validation in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
 9c. Hotel prospecting and outreach, planned as 14 vertical slices in
-`advisor-plans/README.md`. Plans 001 through 004 are done as of 2026-08-27.
-Plan 005 is implemented and locally verified, but its first authorized live
-run exposed a viewport-edge crop defect; the fix awaits a separately authorized
-live acceptance rerun before the plan becomes `DONE`. Plan 006 follows only
-after that evidence gate is stable. Reconciliation decisions and open
-verification gaps are recorded there and in `docs/decisions/trade-offs.md`,
-"Build order milestone notes", 9c.
+`advisor-plans/README.md`. Plans 001 through 005 are done as of 2026-08-28:
+plan 005's corrected crop was
+accepted on a separately authorized live rerun, closing its evidence gate, and
+the `redirect-offsite` defect that gate surfaced is fixed as qualification v2
+(trade-off 37), taking the qualified population from 5,720 to 5,995. Plan 006 is
+next. Reconciliation decisions and remaining verification gaps are recorded there
+and in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
 
 Full milestone list, including the phases beyond 8, is in the brief,
 section 7.

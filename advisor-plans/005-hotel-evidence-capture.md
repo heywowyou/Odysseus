@@ -7,7 +7,7 @@
 
 ## Status
 
-- **Status**: IMPLEMENTED
+- **Status**: DONE
 - **Priority**: P1
 - **Effort**: L
 - **Risk**: HIGH
@@ -101,7 +101,7 @@ contract denial assertions, and store/artifact fault injection.
 - [x] Assets derive from measured canonical evidence and are bounded/compressed.
 - [x] Public summaries expose no private technical fields or legal/stat claims.
 - [x] Tests/check pass.
-- [ ] Repeat the authorized real-site visual acceptance after the crop-clamping fix,
+- [x] Repeat the authorized real-site visual acceptance after the crop-clamping fix,
   then mark plan 005 `DONE`.
 
 ## STOP conditions
@@ -132,3 +132,24 @@ races at native rounded borders and immediately after annotation repaint. The
 capture now uses an integer-aligned temporary border overlay plus a two-frame
 paint barrier. Eight concurrent copies of the two-prescan hash test then passed
 without color quantization, and the final focused matrix passed 53 tests.
+
+## Acceptance, 2026-08-28
+
+The separately authorized rerun against `lacoorniche.com` ran once, through the
+queue rather than an ad-hoc call, so the per-origin lock and crawl delay applied.
+It retained a 490,365-byte render composite, a 44,505-byte measured crop, and the
+expiry manifest, and produced the same five allowlisted summaries.
+
+Visual review accepts both. The crop is now the full 240 by 160 contextual frame
+with `WCAG 4.1.2` completely legible, against the rejected run's clipped 104 by
+104. Reviewed against the standard this plan's maintenance note sets - whether
+the asset proves the claimed observation rather than whether it looks dramatic -
+it does: the outlined region is visually empty because the paired observation is
+"a button has no accessible name", so an unmarked hotspot is the defect itself,
+not a mis-measured crop.
+
+One thing seen in the same read and deliberately left alone as outside this
+plan: two of the five summaries are the identical JavaScript-dependency sentence
+differing only by page role, so a reader sees one claim twice. That is summary
+selection, not evidence capture, and belongs to whichever slice owns the public
+summary list.
