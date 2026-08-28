@@ -1685,6 +1685,57 @@ cap instead; that decision is the operator's.
     generation. This does not reopen binding decision 3: the operator declined
     Overpass on reasoning independent of the shortfall's size.
 
+38. **Outreach scores are immutable and versioned; the cohort is a
+    separate generation, not a field on the score (2026-08-28).** Plan 006
+    needed a score that can be recomputed and compared without corrupting what
+    an earlier run concluded, and a selection that can be re-run without
+    rewriting scores. Both are insert-only: `hotel_scores` keyed on
+    (`scoringVersion`, `candidateId`, `computedAt`) with a deliberately
+    non-unique index, and `hotel_score_cohorts` holding one document per
+    selection run. Writing `selected` onto the score would have made the
+    selection destroy its own history the second time it ran, which is the same
+    reason prescans are inserted rather than upserted (trade-off 35).
+
+    **Worthiness is a new prescan-side predicate, not a reuse of the cost
+    gates.** `isProspectingWorthy` and `computeBrokennessScore` read `Finding`
+    objects, and a prescan deliberately produces none - it is a distinct path
+    that never calls the normalizer. Reusing them would have meant either
+    manufacturing findings from prescan pages or widening the gates' input,
+    and trade-offs 6 and 23 exist to keep those gates stable. `packages/core/
+    src/prospecting/hotel-outreach-score.ts` therefore holds its own pure
+    `isHotelOutreachWorthy`, and `cost-gating/brokenness.ts` is byte-for-byte
+    unchanged. Two predicates that look similar are the correct answer when
+    they read two different kinds of evidence.
+
+    **The `hotel-outreach-v1` weights are operator-approved**, which is what
+    lets the selector emit `selected` rather than `calibration` only. The
+    configuration carries `approved` explicitly, so an unapproved future
+    version still ranks and reports but writes no cohort. Every nonzero weight
+    maps to one stored fact, a missing fact scores zero and records an
+    `unknown` reason rather than being read as false, and metrics are banded
+    rather than compared exactly, because trade-off 35 measured that every
+    prescan metric drifts between runs while the axe facts do not.
+
+    **No `prospectId` on a score.** The hotel funnel emits no `prospects`
+    events for the reasons `prescans.ts` records at length, and a pointer into
+    a collection this funnel never writes would be the same ambiguity plan 003
+    declined to create.
+
+    **The market aggregate is an operator signal, not a campaign.**
+    `getPrescanVendorAggregate` counts booking hosts, booking mechanisms, and
+    recurring failure rules per hotel, and drops anything below a minimum group
+    size, because a fingerprint seen once is a fact about one identifiable
+    business rather than a fact about the market.
+
+    **Run of record, 2026-08-28.** The database holds one v2 prescan, so the
+    scorable population is one. Reported as such. Ability's heaviest component,
+    `direct-booking` at 30 points, is read from the cheap qualification pass's
+    `siteFacts.reservationUrl`, which is undetected across much of the
+    population, while the prescan does record `bookingEvidenceKinds` from a
+    booking-role page. Widening the fact source would change what an approved
+    weight means, so it belongs to a `hotel-outreach-v2` and an operator
+    decision, not to an in-place edit.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.
@@ -1784,7 +1835,9 @@ provides a website for 99.6 percent of eligible rows. Exact SIRET, SIREN, or
 registrable-domain evidence may auto-resolve identity; name plus postcode is
 manual-review evidence only.
 Prescanning is a distinct three-page, no-Lighthouse path over shared scanner
-primitives. Scores are immutable and versioned. Contacts are role addresses on
+primitives. Scores are immutable and versioned, and plan 006 shipped them that
+way on 2026-08-28 with operator-approved `hotel-outreach-v1` weights and a
+separate cohort generation; see trade-off 38. Contacts are role addresses on
 the hotel's own domain only. Operational prospect data expires after 90 days;
 permanent suppression stores hashes only.
 

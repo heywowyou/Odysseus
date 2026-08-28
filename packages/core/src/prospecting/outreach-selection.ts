@@ -1,0 +1,214 @@
+/**
+ * Milestone 9c plan 006: which scored hotels become this cohort.
+ *
+ * The rule is top brokenness decile within the top ability half. Ability first
+ * is deliberate and is not a tie-break preference: contacting the most broken
+ * sites in the country would mostly mean contacting hotels that cannot act on
+ * the report, so ability decides who is eligible to be ranked at all, and
+ * brokenness then decides who is most worth the email among them.
+ *
+ * Pure, and pure over the *whole population* rather than one row at a time: a
+ * decile is a property of a set, so this function is given every scored row and
+ * returns a verdict for every one of them. Callers never filter first and rank
+ * after - that would compute a decile of an already-filtered set and quietly
+ * change the rule.
+ */
+
+export const SELECTION_RULE_VERSION = 'half-ability-decile-brokenness-v1';
+
+export type OutreachSelectionState =
+  | 'selected'
+  | 'not-selected'
+  /** The scoring configuration is not approved, so nothing may be selected on
+   *  its strength. Ranking still runs, so the weights can be read against a
+   *  real population before anybody is contacted. */
+  | 'calibration';
+
+export type OutreachSelectionReason =
+  | 'top-brokenness-decile'
+  | 'below-brokenness-cutoff'
+  | 'below-ability-cutoff'
+  | 'not-qualified'
+  | 'not-campaign-eligible'
+  | 'evidence-incomplete'
+  | 'not-worthy'
+  | 'suppressed'
+  | 'scoring-version-mismatch'
+  | 'configuration-not-approved';
+
+/** One scored candidate, resolved by the caller. Deliberately flat facts, not
+ *  documents: this function must be testable without a database. */
+export interface OutreachSelectionRow {
+  candidateId: string;
+  scoreId: string;
+  scoringVersion: string;
+  brokennessTotal: number;
+  abilityTotal: number;
+  worthy: boolean;
+  evidenceComplete: boolean;
+  qualified: boolean;
+  campaignEligible: boolean;
+  suppressed: boolean;
+}
+
+export interface OutreachSelectionRecord {
+  candidateId: string;
+  scoreId: string;
+  state: OutreachSelectionState;
+  reason: OutreachSelectionReason;
+  /** Rank within the eligible population, 1-based, ordered by ability then
+   *  brokenness. Absent for a row that never entered ranking. */
+  rank?: number;
+}
+
+export interface OutreachSelectionOptions {
+  scoringVersion: string;
+  /** False leaves every eligible row in `calibration`. */
+  approved: boolean;
+}
+
+export interface OutreachSelection {
+  selectionRuleVersion: string;
+  scoringVersion: string;
+  approved: boolean;
+  /** Rows that cleared every gate and entered ranking. */
+  populationSize: number;
+  /** The lowest ability total that stayed in the top half, and the lowest
+   *  brokenness total that stayed in the decile. Null when nothing ranked. */
+  abilityCutoff: number | null;
+  brokennessCutoff: number | null;
+  selectedCount: number;
+  records: OutreachSelectionRecord[];
+}
+
+/** Every gate a row must clear before it is ranked, in a fixed order so the
+ *  reason a row was dropped does not depend on how the facts arrived. */
+function ineligibleReason(
+  row: OutreachSelectionRow,
+  scoringVersion: string,
+): OutreachSelectionReason | null {
+  if (row.scoringVersion !== scoringVersion) return 'scoring-version-mismatch';
+  if (row.suppressed) return 'suppressed';
+  if (!row.qualified) return 'not-qualified';
+  if (!row.campaignEligible) return 'not-campaign-eligible';
+  if (!row.evidenceComplete) return 'evidence-incomplete';
+  if (!row.worthy) return 'not-worthy';
+  return null;
+}
+
+/**
+ * Ties are broken on `candidateId` ascending, never left to sort stability.
+ * Two hotels with identical scores must land on the same side of a cutoff on
+ * every machine and in every run, or a rescore would show phantom movement.
+ */
+function compareByAbility(a: OutreachSelectionRow, b: OutreachSelectionRow): number {
+  if (a.abilityTotal !== b.abilityTotal) return b.abilityTotal - a.abilityTotal;
+  if (a.brokennessTotal !== b.brokennessTotal) return b.brokennessTotal - a.brokennessTotal;
+  return a.candidateId < b.candidateId ? -1 : a.candidateId > b.candidateId ? 1 : 0;
+}
+
+function compareByBrokenness(a: OutreachSelectionRow, b: OutreachSelectionRow): number {
+  if (a.brokennessTotal !== b.brokennessTotal) return b.brokennessTotal - a.brokennessTotal;
+  if (a.abilityTotal !== b.abilityTotal) return b.abilityTotal - a.abilityTotal;
+  return a.candidateId < b.candidateId ? -1 : a.candidateId > b.candidateId ? 1 : 0;
+}
+
+export function selectOutreachCohort(
+  rows: readonly OutreachSelectionRow[],
+  options: OutreachSelectionOptions,
+): OutreachSelection {
+  const records: OutreachSelectionRecord[] = [];
+  const eligible: OutreachSelectionRow[] = [];
+
+  for (const row of rows) {
+    const reason = ineligibleReason(row, options.scoringVersion);
+    if (reason === null) eligible.push(row);
+    else
+      records.push({
+        candidateId: row.candidateId,
+        scoreId: row.scoreId,
+        state: 'not-selected',
+        reason,
+      });
+  }
+
+  // Rounding up in both places, so a small population still produces a cohort
+  // of one rather than of none. `Math.floor` would make every population under
+  // twenty select nobody, which reads as a broken selector rather than as a
+  // deliberately empty cohort.
+  const byAbility = [...eligible].sort(compareByAbility);
+  const topHalf = byAbility.slice(0, Math.ceil(byAbility.length / 2));
+  const abilityCutoff =
+    topHalf.length === 0
+      ? null
+      : (topHalf[topHalf.length - 1] as OutreachSelectionRow).abilityTotal;
+
+  const byBrokenness = [...topHalf].sort(compareByBrokenness);
+  const decile = byBrokenness.slice(0, Math.ceil(byBrokenness.length / 10));
+  const brokennessCutoff =
+    decile.length === 0
+      ? null
+      : (decile[decile.length - 1] as OutreachSelectionRow).brokennessTotal;
+
+  const selectedIds = new Set(decile.map((row) => row.candidateId));
+  const rankByCandidateId = new Map<string, number>();
+  byBrokenness.forEach((row, index) => rankByCandidateId.set(row.candidateId, index + 1));
+
+  let selectedCount = 0;
+  for (const row of byAbility) {
+    const inTopHalf = rankByCandidateId.has(row.candidateId);
+    const rank = rankByCandidateId.get(row.candidateId);
+    if (!inTopHalf) {
+      records.push({
+        candidateId: row.candidateId,
+        scoreId: row.scoreId,
+        state: 'not-selected',
+        reason: 'below-ability-cutoff',
+      });
+      continue;
+    }
+    if (!selectedIds.has(row.candidateId)) {
+      records.push({
+        candidateId: row.candidateId,
+        scoreId: row.scoreId,
+        state: 'not-selected',
+        reason: 'below-brokenness-cutoff',
+        ...(rank === undefined ? {} : { rank }),
+      });
+      continue;
+    }
+    if (!options.approved) {
+      records.push({
+        candidateId: row.candidateId,
+        scoreId: row.scoreId,
+        state: 'calibration',
+        reason: 'configuration-not-approved',
+        ...(rank === undefined ? {} : { rank }),
+      });
+      continue;
+    }
+    selectedCount += 1;
+    records.push({
+      candidateId: row.candidateId,
+      scoreId: row.scoreId,
+      state: 'selected',
+      reason: 'top-brokenness-decile',
+      ...(rank === undefined ? {} : { rank }),
+    });
+  }
+
+  records.sort((a, b) =>
+    a.candidateId < b.candidateId ? -1 : a.candidateId > b.candidateId ? 1 : 0,
+  );
+
+  return {
+    selectionRuleVersion: SELECTION_RULE_VERSION,
+    scoringVersion: options.scoringVersion,
+    approved: options.approved,
+    populationSize: eligible.length,
+    abilityCutoff,
+    brokennessCutoff,
+    selectedCount,
+    records,
+  };
+}

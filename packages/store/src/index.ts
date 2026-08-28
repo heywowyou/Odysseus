@@ -69,7 +69,7 @@ export type {
   SuppressionDocument,
   SuppressionDocumentFields,
 } from './schemas/suppression.schema.js';
-export { addSuppressionEntry, isSuppressed } from './suppression.js';
+export { addSuppressionEntry, isSuppressed, findSuppressedDomains } from './suppression.js';
 export type { AddSuppressionEntryInput } from './suppression.js';
 export { createProspectIngestionCheckpointModel } from './schemas/prospect-ingestion-checkpoint.schema.js';
 export type { ProspectIngestionCheckpointFields } from './schemas/prospect-ingestion-checkpoint.schema.js';
@@ -147,10 +147,47 @@ export {
   getLatestPrescan,
   listCandidatesToPrescan,
   getPrescanSummary,
+  getPrescanVendorAggregate,
 } from './prescans.js';
 export type {
   ListCandidatesToPrescanOptions,
   PrescanRunSummary,
   RecordPrescanInput,
   RecordPrescanResult,
+  PrescanVendorAggregate,
+  PrescanVendorFingerprint,
 } from './prescans.js';
+
+// Milestone 9c plan 006: immutable outreach scores and the cohorts selected
+// from them. Both collections are inserted, never updated - see
+// schemas/score.schema.ts and schemas/score-cohort.schema.ts.
+export { createHotelScoreModel } from './schemas/score.schema.js';
+export type { HotelScoreDocument, HotelScoreDocumentFields } from './schemas/score.schema.js';
+export { createHotelScoreCohortModel } from './schemas/score-cohort.schema.js';
+export type {
+  HotelScoreCohortDocument,
+  HotelScoreCohortDocumentFields,
+  HotelScoreCohortMember,
+} from './schemas/score-cohort.schema.js';
+export {
+  recordHotelScores,
+  getLatestHotelScore,
+  listLatestHotelScores,
+  listHotelScores,
+  listCandidatesToScore,
+  findScoredCandidateIds,
+  getHotelScoreSummary,
+  diffHotelScoreVersions,
+  recordScoreCohort,
+  getLatestScoreCohort,
+} from './scores.js';
+export type {
+  RecordHotelScoreInput,
+  RecordHotelScoresResult,
+  ListHotelScoresOptions,
+  ListCandidatesToScoreOptions,
+  HotelScoreSummary,
+  HotelScoreDiff,
+  HotelScoreDiffRow,
+  RecordScoreCohortResult,
+} from './scores.js';

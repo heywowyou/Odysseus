@@ -56,3 +56,34 @@ export async function isSuppressed(
   const match = await SuppressionModel.findOne(query).lean();
   return match !== null;
 }
+
+/**
+ * Which of these domains are suppressed, in one query.
+ *
+ * A per-domain `isSuppressed` call is right when a single draft is about to be
+ * created and the check must be as late as possible. Selecting a cohort asks
+ * the same question of a whole population at once, and doing that one domain at
+ * a time is thousands of round trips for a set the collection can answer in
+ * one. Hashing still happens here, through the same core helpers, so the two
+ * paths cannot disagree about what "the same domain" means.
+ */
+export async function findSuppressedDomains(
+  connection: Connection,
+  domains: readonly string[],
+): Promise<Set<string>> {
+  if (domains.length === 0) return new Set();
+  const SuppressionModel = createSuppressionModel(connection);
+  const byHash = new Map<string, string>();
+  for (const domain of domains) {
+    byHash.set(hashSuppressionValue(normalizeDomainForHash(domain)), domain);
+  }
+  const rows = await SuppressionModel.find({ domainHash: { $in: [...byHash.keys()] } })
+    .select({ domainHash: 1 })
+    .lean<{ domainHash: string }[]>();
+  const suppressed = new Set<string>();
+  for (const row of rows) {
+    const domain = byHash.get(row.domainHash);
+    if (domain !== undefined) suppressed.add(domain);
+  }
+  return suppressed;
+}

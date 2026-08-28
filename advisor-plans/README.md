@@ -334,7 +334,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [003](./003-cheap-hotel-qualification.md) | Qualify hotel websites without a browser | P1 | L | 002 | DONE |
 | [004](./004-distinct-hotel-prescan.md) | Build the distinct three-page hotel prescan | P1 | L | 003 | DONE |
 | [005](./005-hotel-evidence-capture.md) | Capture the two outreach evidence assets | P1 | L | 004 | DONE |
-| [006](./006-versioned-hotel-scoring.md) | Score candidates with immutable breakdowns | P1 | L | 001-005 | TODO |
+| [006](./006-versioned-hotel-scoring.md) | Score candidates with immutable breakdowns | P1 | L | 001-005 | DONE |
 | [007](./007-role-contact-discovery.md) | Discover approved own-domain role contacts | P1 | M | 006 | TODO |
 | [008](./008-safe-outreach-preview-html.md) | Generate safe outreach preview HTML | P1 | L | 005 | TODO |
 | [009](./009-expiring-preview-publication.md) | Publish expiring previews and compliance pages | P1 | L | 008 | TODO |

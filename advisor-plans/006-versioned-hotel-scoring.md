@@ -7,6 +7,7 @@
 
 ## Status
 
+- **Status**: DONE
 - **Priority**: P1
 - **Effort**: L
 - **Risk**: HIGH
@@ -99,10 +100,10 @@ Pure score/cohort tables, store history, CLI, and unchanged cost-gate regression
 
 ## Done criteria
 
-- [ ] Scores are separate immutable documents with breakdown/version.
-- [ ] Below-3-star hotels cannot enter selection.
-- [ ] Approved selection implements top-half then top-decile deterministically.
-- [ ] Existing cost gates are unchanged; tests/check pass; plan 006 is `DONE`.
+- [x] Scores are separate immutable documents with breakdown/version.
+- [x] Below-3-star hotels cannot enter selection.
+- [x] Approved selection implements top-half then top-decile deterministically.
+- [x] Existing cost gates are unchanged; tests/check pass; plan 006 is `DONE`.
 
 ## STOP conditions
 
@@ -113,3 +114,31 @@ change cost gates/locked contracts/package boundaries.
 
 Never edit weights in place. The first 100 sends decide whether a score version
 has predictive value.
+
+## Verification note, 2026-08-28
+
+Implemented as specified, with both operator decisions taken before any code was
+written: the `hotel-outreach-v1` weights are approved, so the selector may write
+a `selected` state rather than `calibration` only, and worthiness is a new
+prescan-side predicate rather than a change to the shipped cost gates, which are
+byte-for-byte untouched. Reasoning and the market-aggregate caveat are recorded
+as trade-off 38.
+
+Full suite green: 232 files, 1977 tests, `pnpm run check` exit 0.
+
+The real local database was then scored, which contacts nobody. It holds exactly
+one v2 prescan, so the scorable population is one - `lacoorniche.com`, brokenness
+83, ability 50, worthy, evidence complete - and `score select` returns a
+one-member cohort. That is the honest state of the funnel today, not a defect:
+a real cohort needs a prescan batch, which is a separate authorized decision.
+
+One finding worth carrying forward. That hotel scored 0 of the 30 available
+`direct-booking` points on reason `booking-path-undetected`, and the stored v2
+qualification agrees with the score (`reservationUrl: null`, `bookingVendors:
+[]`), so the score is faithful to the facts. But the cheap no-browser pass
+records `no-booking-path-detected` on a large share of the qualified population,
+while the prescan does open a booking-role page and record
+`bookingEvidenceKinds`. Ability's single heaviest component is therefore read
+from the weaker of the two available sources. Broadening it to fall back on
+prescan evidence would change what an approved weight means, so it is left for
+an operator decision and a `hotel-outreach-v2` rather than edited in place.

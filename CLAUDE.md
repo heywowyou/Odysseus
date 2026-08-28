@@ -285,6 +285,14 @@ means numbered entry 24, not a literal Markdown heading anchor.
     acquisition reads as a rename. Reconciliation writes a complete new
     generation - one row out per row in - because `listCandidatesToPrescan`
     filters on the qualification version. → trade-offs.md#37
+38. Hotel outreach scores are insert-only and versioned, and the selected
+    cohort is its own insert-only generation, never a field written back onto
+    a score. Worthiness over a prescan is a separate pure predicate
+    (`isHotelOutreachWorthy`); do not reuse or edit the shipped cost gates,
+    which read `Finding`s a prescan never produces. A missing fact scores zero
+    and records an `unknown` reason, never a false, and metrics are banded.
+    Weights are approved per version and are never edited in place - broadening
+    what a weight reads is a new version. → trade-offs.md#38
 
 
 ## Stack
@@ -701,12 +709,14 @@ must be resolved first.
 9b. Prospecting throughput (worker pool, `skipLighthouse`, raised page/depth caps) — done 2026-08-22. See trade-off 23.
 9b.5. Sitemap-supplemented full-site scan coverage — done 2026-08-27. Recursive sitemap inspection stays separate from link reachability; full audits supplement eligible sitemap-only pages, while prospecting inspects and standalone crawl remains link-only. See the measured Haaitza validation in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
 9c. Hotel prospecting and outreach, planned as 14 vertical slices in
-`advisor-plans/README.md`. Plans 001 through 005 are done as of 2026-08-28:
+`advisor-plans/README.md`. Plans 001 through 006 are done as of 2026-08-28:
 plan 005's corrected crop was
 accepted on a separately authorized live rerun, closing its evidence gate, and
 the `redirect-offsite` defect that gate surfaced is fixed as qualification v2
 (trade-off 37), taking the qualified population from 5,720 to 5,995. Plan 006 is
-next. Reconciliation decisions and remaining verification gaps are recorded there
+done as of 2026-08-28: immutable versioned scores, an approved
+`hotel-outreach-v1` weight table, and a separate cohort generation
+(trade-off 38). Plan 007 is next. Reconciliation decisions and remaining verification gaps are recorded there
 and in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
 
 Full milestone list, including the phases beyond 8, is in the brief,

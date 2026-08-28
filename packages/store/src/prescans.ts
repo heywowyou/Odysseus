@@ -231,3 +231,87 @@ export async function getPrescanSummary(
 
   return { prescanVersion, byStatus, byEvidenceStatus, total };
 }
+
+export interface PrescanVendorFingerprint {
+  value: string;
+  hotels: number;
+}
+
+export interface PrescanVendorAggregate {
+  prescanVersion: string;
+  /** Hotels contributing to the counts below. */
+  prescansRead: number;
+  minimumGroupSize: number;
+  /** Off-site booking destinations, by registrable host, and the booking
+   *  mechanisms seen on the page. An operator signal about how this market
+   *  builds its funnels; it is not a vendor outreach list. */
+  bookingHosts: PrescanVendorFingerprint[];
+  bookingMechanisms: PrescanVendorFingerprint[];
+  /** Accessibility rules recurring across the population. */
+  failureRules: PrescanVendorFingerprint[];
+}
+
+/**
+ * What recurs across a prescanned population, counted per hotel rather than
+ * per occurrence.
+ *
+ * Anything appearing on fewer than `minimumGroupSize` hotels is dropped rather
+ * than listed: a fingerprint seen once is a fact about one identifiable
+ * business, and the question this answers - which engines and which failures
+ * recur in this market - is only meaningful in aggregate. Plan 006 keeps this
+ * as an operator signal, explicitly not a vendor outreach campaign.
+ */
+export async function getPrescanVendorAggregate(
+  connection: Connection,
+  prescanVersion: string,
+  minimumGroupSize = 5,
+): Promise<PrescanVendorAggregate> {
+  const rows = await createPrescanModel(connection)
+    .find({ prescanVersion })
+    .select({ offsiteBookingLinks: 1, pages: 1 })
+    .lean<{ offsiteBookingLinks: string[]; pages: HotelPrescan['pages'] }[]>();
+
+  const bookingHosts = new Map<string, number>();
+  const bookingMechanisms = new Map<string, number>();
+  const failureRules = new Map<string, number>();
+
+  const bump = (counter: Map<string, number>, values: Iterable<string>): void => {
+    for (const value of new Set(values)) counter.set(value, (counter.get(value) ?? 0) + 1);
+  };
+
+  for (const row of rows) {
+    bump(
+      bookingHosts,
+      row.offsiteBookingLinks.flatMap((link) => {
+        try {
+          return [new URL(link).hostname];
+        } catch {
+          return [];
+        }
+      }),
+    );
+    bump(
+      bookingMechanisms,
+      row.pages.flatMap((page) => page.bookingEvidenceKinds ?? []),
+    );
+    bump(
+      failureRules,
+      row.pages.flatMap((page) => page.axe?.ruleIds ?? []),
+    );
+  }
+
+  const toList = (counter: Map<string, number>): PrescanVendorFingerprint[] =>
+    [...counter.entries()]
+      .filter(([, hotels]) => hotels >= minimumGroupSize)
+      .map(([value, hotels]) => ({ value, hotels }))
+      .sort((a, b) => b.hotels - a.hotels || (a.value < b.value ? -1 : 1));
+
+  return {
+    prescanVersion,
+    prescansRead: rows.length,
+    minimumGroupSize,
+    bookingHosts: toList(bookingHosts),
+    bookingMechanisms: toList(bookingMechanisms),
+    failureRules: toList(failureRules),
+  };
+}

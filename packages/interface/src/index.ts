@@ -96,6 +96,29 @@ export type {
   HotelPrescanner,
   PrescanHotelsOptions,
 } from './prospecting/hotel-prescan/prescan-hotels.js';
+export {
+  scoreHotels,
+  scoreInputFor,
+  CURRENT_SCORING_VERSION,
+  SCORE_BATCH_SIZE,
+} from './prospecting/hotel-scoring/score-hotels.js';
+export type {
+  HotelScoringStorePort,
+  ScoreHotelsOptions,
+  ScoreHotelsReport,
+  ScoreHotelsPlan,
+  HotelScoreSkipReason,
+} from './prospecting/hotel-scoring/score-hotels.js';
+export { selectCohort } from './prospecting/hotel-scoring/select-cohort.js';
+export type {
+  CohortSelectionStorePort,
+  SelectCohortOptions,
+  SelectCohortReport,
+} from './prospecting/hotel-scoring/select-cohort.js';
+export {
+  createMongoHotelScoringStore,
+  createMongoCohortSelectionStore,
+} from './prospecting/hotel-scoring/mongo-hotel-score-store.js';
 export { checkHotelSite } from './prospecting/check-hotel-site.js';
 export type { CheckHotelSiteOptions } from './prospecting/check-hotel-site.js';
 export type { HotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';

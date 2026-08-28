@@ -49,6 +49,8 @@ export * from './prospecting/hotel-identity.js';
 export * from './prospecting/qualify-hotel.js';
 export * from './prospecting/redirect-target.js';
 export * from './prospecting/hotel-evidence.js';
+export * from './prospecting/hotel-outreach-score.js';
+export * from './prospecting/outreach-selection.js';
 export * from './prospecting/parked-page-signatures.js';
 export * from './prospecting/overpass-decision.js';
 export * from './cost-gating/brokenness.js';
