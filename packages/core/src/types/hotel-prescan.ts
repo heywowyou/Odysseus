@@ -114,4 +114,7 @@ export interface HotelPrescan {
   browserVersion: string;
   startedAt: Date;
   durationMs: number;
+  /** Optional only so stored v1 prescans remain readable. Every v2 scanner
+   *  and job result supplies a strict evidence object. */
+  evidence?: import('./hotel-prescan-evidence.js').HotelPrescanEvidence;
 }

@@ -24,13 +24,13 @@
  */
 
 import type { HotelCandidateDocument, RecordPrescanInput } from '@odysseus/store';
-import type { HotelPrescanStatus } from '@odysseus/core';
+import type { HotelEvidenceStatus, HotelPrescanStatus } from '@odysseus/core';
 
 /** Bumped by hand when what a prescan measures changes, never edited in
  *  place - the same discipline, and the same reason, as
  *  CURRENT_QUALIFICATION_VERSION: a later comparison must not silently mix
  *  two definitions of the same number. */
-export const CURRENT_PRESCAN_VERSION = 'v1';
+export const CURRENT_PRESCAN_VERSION = 'v2';
 
 export const PRESCAN_BATCH_SIZE = 100;
 
@@ -89,6 +89,7 @@ export interface HotelPrescanReport {
   dryRun: boolean;
   candidatesPrescanned: number;
   byStatus: Record<HotelPrescanStatus, number>;
+  byEvidenceStatus: Record<HotelEvidenceStatus | 'missing', number>;
   /** Pages actually loaded, which is the cost this run imposed on other
    *  people's servers and the honest unit to report a batch in. */
   pagesLoaded: number;
@@ -118,6 +119,10 @@ function emptyStatuses(): Record<HotelPrescanStatus, number> {
   return { complete: 0, 'blocked-by-robots': 0, 'homepage-unreachable': 0 };
 }
 
+function emptyEvidenceStatuses(): Record<HotelEvidenceStatus | 'missing', number> {
+  return { complete: 0, incomplete: 0, missing: 0 };
+}
+
 /** Round-robin lanes, the shape scan-site.ts and qualify-hotels.ts both use:
  *  a candidate list sorted by id must not put one slow host's neighbours all
  *  in one lane. */
@@ -131,6 +136,7 @@ function toLanes<T>(items: readonly T[], laneCount: number): T[][] {
 
 export async function prescanHotels(options: PrescanHotelsOptions): Promise<HotelPrescanReport> {
   const byStatus = emptyStatuses();
+  const byEvidenceStatus = emptyEvidenceStatuses();
   let candidatesPrescanned = 0;
   let pagesLoaded = 0;
   let failures = 0;
@@ -201,6 +207,7 @@ export async function prescanHotels(options: PrescanHotelsOptions): Promise<Hote
         continue;
       }
       byStatus[result.status] += 1;
+      byEvidenceStatus[result.evidence?.status ?? 'missing'] += 1;
       pagesLoaded += result.pages.length;
       const written = await options.store.record({
         ...result,
@@ -227,6 +234,7 @@ export async function prescanHotels(options: PrescanHotelsOptions): Promise<Hote
     dryRun: options.dryRun,
     candidatesPrescanned,
     byStatus,
+    byEvidenceStatus,
     pagesLoaded,
     failures,
     pointersMissed,

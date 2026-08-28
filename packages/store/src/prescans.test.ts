@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import type { HotelCandidate } from '@odysseus/core';
+import { HOTEL_EVIDENCE_OBSERVATIONS, type HotelCandidate } from '@odysseus/core';
 import {
   getLatestPrescan,
   getPrescan,
@@ -69,6 +69,49 @@ function prescan(overrides: Partial<RecordPrescanInput> = {}): RecordPrescanInpu
     startedAt: new Date(),
     durationMs: 14_000,
     ...overrides,
+  };
+}
+
+function completeEvidence(): NonNullable<RecordPrescanInput['evidence']> {
+  const hash = 'a'.repeat(64);
+  const asset = {
+    state: 'captured' as const,
+    ref: `evidence/${hash}.png`,
+    sha256: hash,
+    mimeType: 'image/png' as const,
+    byteSize: 1024,
+    width: 640,
+    height: 400,
+    pageRole: 'booking' as const,
+    factRef: `fact_${'b'.repeat(24)}`,
+    altText: { fr: 'Preuve mesurée', en: 'Measured evidence' },
+    selectionReason: 'booking-form-error' as const,
+  };
+  return {
+    schemaVersion: 1,
+    status: 'complete',
+    renderComparison: { ...asset, selectionReason: 'material-render-gap' },
+    specificFailure: asset,
+    summaries: [
+      {
+        observation: HOTEL_EVIDENCE_OBSERVATIONS['keyboard-trap']!,
+        severity: 'critical',
+        wcagCriteria: ['2.1.2'],
+        pageRole: 'booking',
+      },
+      {
+        observation: HOTEL_EVIDENCE_OBSERVATIONS['form-error-not-associated']!,
+        severity: 'serious',
+        wcagCriteria: ['3.3.1'],
+        pageRole: 'booking',
+      },
+      {
+        observation: HOTEL_EVIDENCE_OBSERVATIONS['text-missing-from-raw-html']!,
+        severity: 'moderate',
+        wcagCriteria: [],
+        pageRole: 'homepage',
+      },
+    ],
   };
 }
 
@@ -147,6 +190,24 @@ describe.skipIf(!mongoAvailable)('prescans', () => {
     // artifacts root moving.
     expect(stored?.pages[0]?.rawScreenshotRef).toBe('root-abc123/raw.png');
     expect(stored?.expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('round-trips strict v2 evidence while keeping a v1 document without it readable', async () => {
+    const v1 = await recordPrescan(connection!, prescan({ prescanVersion: 'v1' }));
+    const v2 = await recordPrescan(
+      connection!,
+      prescan({ prescanVersion: 'v2', evidence: completeEvidence(), pages: [] }),
+    );
+    expect((await getPrescan(connection!, v1.prescanId))?.evidence).toBeUndefined();
+    const storedV2 = await getPrescan(connection!, v2.prescanId);
+    expect(storedV2?.evidence).toEqual(completeEvidence());
+    expect(storedV2?.expiresAt.getTime()).toBeGreaterThan(Date.now() + 89 * 24 * 60 * 60 * 1000);
+  });
+
+  it('rejects a v2 record without evidence', async () => {
+    await expect(recordPrescan(connection!, prescan({ prescanVersion: 'v2' }))).rejects.toThrow(
+      'requires an evidence object',
+    );
   });
 
   it('inserts rather than replacing when the same candidate is prescanned again', async () => {
@@ -337,6 +398,30 @@ describe.skipIf(!mongoAvailable)('prescans', () => {
       complete: 1,
       'blocked-by-robots': 1,
       'homepage-unreachable': 1,
+    });
+    expect(summary.byEvidenceStatus).toEqual({ complete: 0, incomplete: 0, missing: 3 });
+  });
+
+  it('summarizes evidence-complete and evidence-incomplete records', async () => {
+    const prescanVersion = `pv-${randomUUID()}`;
+    await recordPrescan(connection!, prescan({ prescanVersion, evidence: completeEvidence() }));
+    await recordPrescan(
+      connection!,
+      prescan({
+        prescanVersion,
+        evidence: {
+          schemaVersion: 1,
+          status: 'incomplete',
+          renderComparison: { state: 'omitted', reason: 'no-material-render-gap' },
+          specificFailure: { state: 'omitted', reason: 'no-eligible-failure' },
+          summaries: [],
+        },
+      }),
+    );
+    expect((await getPrescanSummary(connection!, prescanVersion)).byEvidenceStatus).toEqual({
+      complete: 1,
+      incomplete: 1,
+      missing: 0,
     });
   });
 });

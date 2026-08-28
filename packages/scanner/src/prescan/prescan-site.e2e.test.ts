@@ -167,14 +167,43 @@ describe('prescanSite against fixtures/hotel-demo', () => {
     expect(homepage.axe!.affectedElementCount).toBeGreaterThan(0);
   }, 90_000);
 
-  it('stores screenshot references relative to the prescan directory', async () => {
+  it('retains only a complete composite and measured annotated crop', async () => {
     const result = await run();
+    expect(result.evidence.status).toBe('complete');
+    expect(result.evidence.summaries.length).toBeGreaterThanOrEqual(3);
     for (const page of result.pages) {
-      expect(page.rawScreenshotRef).toBeDefined();
-      expect(path.isAbsolute(page.rawScreenshotRef!)).toBe(false);
-      await expect(fs.stat(path.join(scratchDir, page.rawScreenshotRef!))).resolves.toBeDefined();
+      expect(page.rawScreenshotRef).toBeUndefined();
+      expect(page.renderedScreenshotRef).toBeUndefined();
     }
+    for (const asset of [result.evidence.renderComparison, result.evidence.specificFailure]) {
+      expect(asset.state).toBe('captured');
+      if (asset.state !== 'captured') continue;
+      expect(path.isAbsolute(asset.ref)).toBe(false);
+      expect(asset.byteSize).toBeLessThanOrEqual(1024 * 1024);
+      await expect(fs.stat(path.join(scratchDir, asset.ref))).resolves.toBeDefined();
+    }
+    expect(await fs.readdir(scratchDir)).toEqual(['evidence', 'expiry-manifest.json']);
   }, 90_000);
+
+  it('produces fixed content hashes without adding page navigations', async () => {
+    const first = await run();
+    const firstScratchDir = scratchDir;
+    const firstHashes = [first.evidence.renderComparison, first.evidence.specificFailure].map(
+      (asset) => (asset.state === 'captured' ? asset.sha256 : asset.reason),
+    );
+    const firstRequests = [...requestedPaths];
+    requestedPaths = [];
+    const second = await run();
+    const secondHashes = [second.evidence.renderComparison, second.evidence.specificFailure].map(
+      (asset) => (asset.state === 'captured' ? asset.sha256 : asset.reason),
+    );
+    expect(secondHashes).toEqual(firstHashes);
+    for (const pathname of ['/', '/reservation.html', '/nos-chambres.html']) {
+      expect(firstRequests.filter((requested) => requested === pathname)).toHaveLength(2);
+      expect(requestedPaths.filter((requested) => requested === pathname)).toHaveLength(2);
+    }
+    await fs.rm(firstScratchDir, { recursive: true, force: true });
+  }, 180_000);
 
   it('returns no audit manifest, findings, or analysis fields', async () => {
     const result = await run();

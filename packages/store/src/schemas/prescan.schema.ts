@@ -23,7 +23,12 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { HotelPrescanPage, HotelPrescanRoleAbsence, HotelPrescanStatus } from '@odysseus/core';
+import type {
+  HotelPrescanEvidence,
+  HotelPrescanPage,
+  HotelPrescanRoleAbsence,
+  HotelPrescanStatus,
+} from '@odysseus/core';
 
 export interface PrescanDocumentFields {
   prescanId: string;
@@ -44,6 +49,7 @@ export interface PrescanDocumentFields {
   browserVersion: string;
   startedAt: Date;
   durationMs: number;
+  evidence?: HotelPrescanEvidence;
   createdAt: Date;
   expiresAt: Date;
 }
@@ -79,6 +85,7 @@ const prescanSchema = new Schema<PrescanDocument>(
     browserVersion: { type: String, required: true },
     startedAt: { type: Date, required: true },
     durationMs: { type: Number, required: true },
+    evidence: { type: Schema.Types.Mixed, required: false },
     createdAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true },
   },
@@ -91,6 +98,7 @@ prescanSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 // over everything a repeatedly-prescanned candidate has accumulated.
 prescanSchema.index({ prescanVersion: 1, candidateId: 1, startedAt: -1 });
 prescanSchema.index({ prescanVersion: 1, status: 1 });
+prescanSchema.index({ prescanVersion: 1, 'evidence.status': 1 });
 prescanSchema.index({ scanJobId: 1 });
 
 export function createPrescanModel(connection: Connection): Model<PrescanDocument> {

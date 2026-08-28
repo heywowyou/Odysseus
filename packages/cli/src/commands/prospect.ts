@@ -39,7 +39,13 @@ import {
   getPrescanSummary,
   listCandidatesToPrescan,
 } from '@odysseus/store';
-import { OriginLock, getCrawlDelayMs, getCrawlerUserAgent } from '@odysseus/scanner';
+import {
+  OriginLock,
+  getCrawlDelayMs,
+  getCrawlerUserAgent,
+  getPrescansRoot,
+  sweepExpiredPrescanArtifacts,
+} from '@odysseus/scanner';
 import { decideOverpassNeed, type HotelQualificationOutcome } from '@odysseus/core';
 import {
   CURRENT_QUALIFICATION_VERSION,
@@ -572,6 +578,25 @@ export function registerProspectCommand(program: Command): void {
         process.exitCode = 1;
       } finally {
         if (mongoConnection) await disconnectFromMongo(mongoConnection);
+      }
+    });
+
+  prescan
+    .command('cleanup')
+    .description('List expired prescan artifacts, or remove them when --apply is explicit.')
+    .requiredOption('--limit <n>', 'Inspect at most this many prescan manifests', parsePositiveInt)
+    .option('--apply', 'Remove the listed expired prescan directories', false)
+    .action(async (opts: { limit: number; apply: boolean }) => {
+      try {
+        const report = await sweepExpiredPrescanArtifacts(getPrescansRoot(), {
+          dryRun: !opts.apply,
+          limit: opts.limit,
+        });
+        console.log(JSON.stringify(report, null, 2));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`odysseus prospect prescan cleanup: failed\n${message}`);
+        process.exitCode = 1;
       }
     });
 

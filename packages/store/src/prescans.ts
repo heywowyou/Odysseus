@@ -42,7 +42,12 @@
 
 import { randomUUID } from 'node:crypto';
 import type { Connection } from 'mongoose';
-import type { HotelPrescan, HotelPrescanStatus } from '@odysseus/core';
+import {
+  hotelPrescanEvidenceSchema,
+  type HotelEvidenceStatus,
+  type HotelPrescan,
+  type HotelPrescanStatus,
+} from '@odysseus/core';
 import { createPrescanModel, type PrescanDocument } from './schemas/prescan.schema.js';
 import {
   createHotelCandidateModel,
@@ -65,6 +70,10 @@ export async function recordPrescan(
   connection: Connection,
   input: RecordPrescanInput,
 ): Promise<RecordPrescanResult> {
+  if (input.prescanVersion === 'v2' && input.evidence === undefined) {
+    throw new Error('Prescan v2 requires an evidence object');
+  }
+  if (input.evidence !== undefined) hotelPrescanEvidenceSchema.parse(input.evidence);
   const PrescanModel = createPrescanModel(connection);
   await PrescanModel.init();
 
@@ -171,6 +180,7 @@ export interface PrescanRunSummary {
   prescanVersion: string;
   byStatus: Record<HotelPrescanStatus, number>;
   total: number;
+  byEvidenceStatus: Record<HotelEvidenceStatus | 'missing', number>;
 }
 
 /** Counts by outcome for one prescan version, for the CLI report. */
@@ -195,5 +205,22 @@ export async function getPrescanSummary(
     total += row.count;
   }
 
-  return { prescanVersion, byStatus, total };
+  const evidenceRows = await PrescanModel.aggregate<{
+    _id: HotelEvidenceStatus | null;
+    count: number;
+  }>([
+    { $match: { prescanVersion } },
+    { $group: { _id: { $ifNull: ['$evidence.status', null] }, count: { $sum: 1 } } },
+  ]);
+  const byEvidenceStatus: Record<HotelEvidenceStatus | 'missing', number> = {
+    complete: 0,
+    incomplete: 0,
+    missing: 0,
+  };
+  for (const row of evidenceRows) {
+    if (row._id === 'complete' || row._id === 'incomplete') byEvidenceStatus[row._id] = row.count;
+    else byEvidenceStatus.missing += row.count;
+  }
+
+  return { prescanVersion, byStatus, byEvidenceStatus, total };
 }

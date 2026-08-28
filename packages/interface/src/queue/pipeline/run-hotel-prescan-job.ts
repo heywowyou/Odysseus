@@ -20,7 +20,9 @@ import {
   buildPrescanDir,
   getPrescansRoot,
   launchBrowser,
+  removePrescanArtifacts,
   prescanSite,
+  sweepExpiredPrescanArtifacts,
   type PrescanResult,
 } from '@odysseus/scanner';
 import {
@@ -59,6 +61,19 @@ function toStoredPages(result: PrescanResult): HotelPrescanPage[] {
   });
 }
 
+export async function persistPrescanWithArtifactCleanup(
+  prescansRoot: string,
+  input: RecordPrescanInput,
+  persist: (value: RecordPrescanInput) => ReturnType<typeof recordPrescan>,
+): ReturnType<typeof recordPrescan> {
+  try {
+    return await persist(input);
+  } catch (error) {
+    await removePrescanArtifacts(prescansRoot, input.artifactsDir);
+    throw error;
+  }
+}
+
 export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
   const { connection, originLock } = ctx;
   const options = job.options;
@@ -78,6 +93,10 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
   });
 
   const prescansRoot = getPrescansRoot();
+  await sweepExpiredPrescanArtifacts(prescansRoot, {
+    dryRun: false,
+    limit: 10_000,
+  });
   const { browser } = await launchBrowser();
 
   let report: HotelPrescanReport;
@@ -85,7 +104,11 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
     report = await prescanHotels({
       store: {
         listCandidatesToPrescan: (listOptions) => listCandidatesToPrescan(connection, listOptions),
-        record: (input) => recordPrescan(connection, input),
+        record: async (input) => {
+          return persistPrescanWithArtifactCleanup(prescansRoot, input, (value) =>
+            recordPrescan(connection, value),
+          );
+        },
       },
       prescan: async (candidate: HotelCandidateDocument) => {
         const domain = candidate.ownRegistrableDomain;
@@ -132,6 +155,7 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
           browserVersion: result.browserVersion,
           startedAt: new Date(result.startedAt),
           durationMs: result.durationMs,
+          evidence: result.evidence,
         };
         return stored;
       },
@@ -161,7 +185,9 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
     progress: {
       message:
         `${report.candidatesPrescanned} hotels prescanned, ` +
-        `${report.pagesLoaded} pages loaded, ${report.failures} failed`,
+        `${report.pagesLoaded} pages loaded, ` +
+        `${report.byEvidenceStatus.complete} evidence-complete, ` +
+        `${report.byEvidenceStatus.incomplete} evidence-incomplete, ${report.failures} failed`,
     },
   });
   await completeJob(connection, job.jobId);

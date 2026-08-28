@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { HotelCandidateDocument, RecordPrescanInput } from '@odysseus/store';
 import {
+  CURRENT_PRESCAN_VERSION,
   prescanHotels,
   type HotelPrescanStorePort,
   type PrescanHotelsOptions,
@@ -30,6 +31,14 @@ function candidate(id: string, domain = `hotel-${id}.fr`): HotelCandidateDocumen
 
 type Measured = Awaited<ReturnType<PrescanHotelsOptions['prescan']>>;
 
+const incompleteEvidence: NonNullable<Measured['evidence']> = {
+  schemaVersion: 1,
+  status: 'incomplete',
+  renderComparison: { state: 'omitted', reason: 'no-material-render-gap' },
+  specificFailure: { state: 'omitted', reason: 'no-eligible-failure' },
+  summaries: [],
+};
+
 function measurement(overrides: Partial<Measured> = {}): Measured {
   return {
     domain: 'hotel-1.fr',
@@ -47,6 +56,7 @@ function measurement(overrides: Partial<Measured> = {}): Measured {
     browserVersion: '140.0.0.0',
     startedAt: new Date(),
     durationMs: 9000,
+    evidence: incompleteEvidence,
     ...overrides,
   };
 }
@@ -97,12 +107,17 @@ function options(overrides: Partial<PrescanHotelsOptions> = {}): PrescanHotelsOp
 }
 
 describe('prescanHotels', () => {
+  it('uses the evidence-bearing prescan v2 contract', () => {
+    expect(CURRENT_PRESCAN_VERSION).toBe('v2');
+  });
+
   it('prescans every selected candidate and records one document each', async () => {
     const store = fakeStore([candidate('a'), candidate('b'), candidate('c')]);
     const report = await prescanHotels(options({ store: store.port }));
 
     expect(report.candidatesPrescanned).toBe(3);
     expect(report.byStatus.complete).toBe(3);
+    expect(report.byEvidenceStatus).toEqual({ complete: 0, incomplete: 3, missing: 0 });
     expect(store.recorded).toHaveLength(3);
     expect(report.reconciles).toBe(true);
   });
@@ -152,6 +167,7 @@ describe('prescanHotels', () => {
       'blocked-by-robots': 0,
       'homepage-unreachable': 0,
     });
+    expect(report.byEvidenceStatus).toEqual({ complete: 0, incomplete: 0, missing: 0 });
     expect(report.plan).toEqual({
       candidatesConsidered: 2,
       wouldPrescan: 2,

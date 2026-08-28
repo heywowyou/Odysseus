@@ -23,3 +23,9 @@ export {
   type PrescanSiteOptions,
   type PrescanStatus,
 } from './prescan-site.js';
+export {
+  removePrescanArtifacts,
+  sweepExpiredPrescanArtifacts,
+  type PrescanExpirySweepOptions,
+  type PrescanExpirySweepReport,
+} from './evidence/retention.js';

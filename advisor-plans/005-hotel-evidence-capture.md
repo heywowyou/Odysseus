@@ -7,6 +7,7 @@
 
 ## Status
 
+- **Status**: IMPLEMENTED
 - **Priority**: P1
 - **Effort**: L
 - **Risk**: HIGH
@@ -37,7 +38,7 @@ disappear. This slice makes evidence capture a first-class, bounded interface.
 
 ## Scope
 
-**In scope**: deterministic evidence ranking; render-diff pair; element bounding
+**In scope**: deterministic evidence ranking; render-diff composite; element bounding
 box capture; cropped compressed image; fixed annotation primitives; safe public
 summary contract; artifact limits/cleanup; prescan evidence references.
 
@@ -53,7 +54,7 @@ screenshots, score weights, prose, object storage, or arbitrary image editing.
 
 ### Step 1: Define the evidence contract
 
-Return at most one material render-diff pair and one specific failure asset,
+Return at most one material render-diff composite and one specific failure asset,
 each with source page role, canonical internal finding reference, dimensions,
 hash, alt-text facts, selection reason, and omission reason. Public summaries
 contain observation, criterion, severity, and coarse role only.
@@ -96,10 +97,12 @@ contract denial assertions, and store/artifact fault injection.
 
 ## Done criteria
 
-- [ ] Every selectable prescan has the render pair and annotated specific crop.
-- [ ] Assets derive from measured canonical evidence and are bounded/compressed.
-- [ ] Public summaries expose no private technical fields or legal/stat claims.
-- [ ] Tests/check pass; plan 005 is `DONE`.
+- [x] Every selectable prescan has the render composite and annotated specific crop.
+- [x] Assets derive from measured canonical evidence and are bounded/compressed.
+- [x] Public summaries expose no private technical fields or legal/stat claims.
+- [x] Tests/check pass.
+- [ ] Repeat the authorized real-site visual acceptance after the crop-clamping fix,
+  then mark plan 005 `DONE`.
 
 ## STOP conditions
 
@@ -110,3 +113,22 @@ exposure, or scanner package-boundary changes.
 
 Evidence contract changes are versioned. Reviewer scrutiny belongs on whether
 the asset proves the claimed observation, not whether it merely looks dramatic.
+
+## Verification note, 2026-08-27
+
+Implementation and local verification are complete. The first bounded v2 run
+against `lacoorniche.com` loaded two pages, retained only a 253,693-byte
+composite, a 6,124-byte measured crop, and the expiry manifest, and produced
+five allowlisted summaries. Visual review accepted the composite but rejected
+the crop because viewport-edge clamping reduced it to 104 by 104 pixels and
+clipped the WCAG label. The clamping fix now preserves a minimum contextual
+frame by shifting the crop inside the viewport, and local Chromium review plus
+stable-hash tests pass. The one-run authorization was not stretched into a
+second live navigation, so this plan remains `IMPLEMENTED` until that corrected
+output is accepted on a separately authorized rerun.
+
+Final concurrency verification on 2026-08-28 exposed pixel-level Chromium
+races at native rounded borders and immediately after annotation repaint. The
+capture now uses an integer-aligned temporary border overlay plus a two-frame
+paint barrier. Eight concurrent copies of the two-prescan hash test then passed
+without color quantization, and the final focused matrix passed 53 tests.

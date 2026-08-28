@@ -1546,6 +1546,53 @@ cap instead; that decision is the operator's.
     arguments alone. A dry run is exempt because it contacts nobody: it plans,
     it does not decide.
 
+36. **Hotel outreach evidence is a strict prescan-v2 contract over two logical
+    assets, not a public view of scanner output (2026-08-27).** Stored v1
+    prescans remain readable without evidence; every v2 scanner and job result
+    requires it. The evidence object can represent only a raw/rendered composite
+    and a measured specific-failure crop. Captured assets carry verified PNG
+    dimensions, byte count, SHA-256 content address, coarse page role, an opaque
+    fact reference, fixed bilingual alt text, and a closed selection reason.
+    Omitted assets carry one closed reason code. Three to five public summaries
+    are selected from a fixed bilingual allowlist. Their schema has no place for
+    selectors, exact URLs, rule IDs, finding IDs, arbitrary prose, legal
+    conclusions, or statistics. Both assets and at least three summaries are
+    required for `complete`; anything else is explicitly `incomplete` and is
+    unavailable to plan 006 selection.
+
+    `prescanSite` remains the one scanner operation. Core owns only the strict
+    contract and pure ordering policy; browser geometry, annotation, Chromium
+    composition, downscaling, content promotion, and failure seams stay inside
+    the prescan deep module. This keeps the scanner interface smaller than the
+    implementation and avoids a new image dependency. Axe counts retain every
+    reported rule, but only deliberately allowlisted rules can become public
+    summaries or crops. Interactive keyboard and form checks run only when a
+    distinct booking page is selected, and structured-data facts come from the
+    already-rendered pages.
+
+    Final bytes are each capped at 1 MiB and together at 2 MiB. Atomic promotion
+    writes `evidence/<sha256>.png` only after hashing and verifies the stored
+    bytes before returning a reference. All raw/rendered page captures and
+    temporary candidates are then deleted. Artifact expiry is prescan start plus
+    90 days; each batch performs a bounded root-validated sweep, and
+    `prospect prescan cleanup --limit <n>` exposes the same operation as a dry
+    run unless `--apply` is explicit. Failed database insertion removes the
+    now-unreferenced prescan directory; a missed candidate pointer after a
+    successful insert retains it.
+
+    The authorized lacoorniche.com acceptance run loaded two pages and produced
+    a complete contract with a 253,693-byte composite, a 6,124-byte crop, and
+    five summaries. Visual review accepted the composite and rejected the crop:
+    a target at the viewport edge reduced the frame to 104 by 104 pixels and
+    clipped its label. Clamping now shifts a minimum contextual frame inside the
+    viewport instead of shrinking it at the edge. The measured annotation uses
+    an integer-aligned temporary border and waits two animation frames before
+    capture, avoiding native rounded-border and repaint races without image
+    quantization. Local visual and concurrent deterministic browser tests pass,
+    but the one live-run authorization was not reused after that fix. Plan 005
+    therefore remains `IMPLEMENTED`, not `DONE`, until a separately authorized
+    rerun accepts the corrected crop or truthful omission.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.
@@ -1657,12 +1704,14 @@ has no send method; every send remains manual. Public previews have their own
 minimal HTML contract, expire, disclose collection and opt-out facts, and
 contain no raw audit detail or legal conclusion.
 
-**Screenshot retention is undecided and blocks campaign-scale prescanning.**
-The first live prescan wrote 18 MB of screenshots for two pages. At the scale
-plan 014 contemplates that is tens of gigabytes for evidence most candidates
-will never be contacted about. `prune-screenshots.ts` already owns which
-screenshots survive a scan (trade-off 2) and is the place to decide this, not a
-second selection rule inside the prescan path.
+**Screenshot retention was resolved by plan 005.** The first live prescan wrote
+18 MB of generic screenshots for two pages. Prescan v2 retains none of them:
+finalization keeps only one content-addressed raw/rendered composite, one
+content-addressed measured failure crop, and a minimal expiry manifest. The
+paid-audit `prune-screenshots.ts` rule remains the sole owner of audit screenshot
+retention. Reusing it here would be wrong because it deliberately retains a
+homepage screenshot pair, while the public prescan contract forbids generic
+screenshots entirely.
 
 **Open defect found by plan 004's live verification, not yet fixed.**
 Qualification v1 rejects 340 hotels with reason `redirect-offsite`, over 298

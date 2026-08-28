@@ -28,7 +28,18 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Browser, Page } from 'playwright';
-import type { TransactionalFlowEvidence } from '@odysseus/core';
+import {
+  extractAxeCandidates,
+  extractFormErrorHandlingCandidates,
+  extractGeoCandidates,
+  extractKeyboardNavigationCandidates,
+  readJsonLdTypes,
+  rankHotelSpecificFailures,
+  toHotelEvidenceFact,
+  type HotelEvidenceFact,
+  type HotelPrescanEvidence,
+  type TransactionalFlowEvidence,
+} from '@odysseus/core';
 import { DEFAULT_TIMEOUT_MS } from '../browser.js';
 import {
   getCrawlDelayMs,
@@ -40,6 +51,9 @@ import { fetchRobotsRules, isAllowedByRobots, type RobotsRules } from '../robots
 import { renderDiff } from '../render-diff.js';
 import { runAxe, type AxeResults } from '../axe.js';
 import { detectTransactionalFlow, type AnchorLike } from '../checks/transactional-flow.js';
+import { checkFormErrorHandling } from '../checks/form-error-handling.js';
+import { extractHeadMetadata, type HeadMetadataExtraction } from '../checks/head-metadata.js';
+import { walkKeyboardNavigation } from '../checks/keyboard-navigation.js';
 import { measurePageMetrics, recordPageRequests, type PrescanPageMetrics } from './page-metrics.js';
 import {
   selectPrescanPages,
@@ -47,6 +61,8 @@ import {
   type PrescanPageSelection,
   type PrescanRoleAbsence,
 } from './page-roles.js';
+import { buildPrescanEvidence, type PrescanEvidencePage } from './evidence/build-evidence.js';
+import { captureFirstMeasuredFailure, type CapturedFailureCandidate } from './evidence/capture.js';
 
 export type PrescanStatus =
   | 'complete'
@@ -118,6 +134,7 @@ export interface PrescanResult {
    *  own rule that a recorded tool version is what ran rather than what is
    *  installed. */
   browserVersion: string;
+  evidence: HotelPrescanEvidence;
 }
 
 export interface PrescanSiteOptions {
@@ -186,6 +203,20 @@ async function extractAnchors(page: Page): Promise<AnchorLike[]> {
 interface LoadedPageOutcome {
   result: PrescanPageResult;
   anchors: AnchorLike[];
+  facts: HotelEvidenceFact[];
+  failureCapture: CapturedFailureCandidate | null;
+  headMetadata: HeadMetadataExtraction | null;
+}
+
+function isBookingCallToAction(
+  selector: string,
+  snippet: string,
+  bookingEvidence: readonly TransactionalFlowEvidence[],
+): boolean {
+  if (/r[ée]serv|\bbook(ing)?\b|disponibilit|availab/i.test(snippet)) return true;
+  return bookingEvidence.some(
+    (evidence) => selector.startsWith(evidence.selector) || evidence.selector.startsWith(selector),
+  );
 }
 
 /**
@@ -214,6 +245,9 @@ async function prescanOnePage(
     return {
       result: { role, url, skippedByRobots: true, durationMs: Date.now() - startedAt },
       anchors: [],
+      facts: [],
+      failureCapture: null,
+      headMetadata: null,
     };
   }
 
@@ -224,6 +258,9 @@ async function prescanOnePage(
   let bookingEvidence: TransactionalFlowEvidence[] | undefined;
   let bookingEvidenceError: string | undefined;
   let anchors: AnchorLike[] = [];
+  const facts: HotelEvidenceFact[] = [];
+  let failureCapture: CapturedFailureCandidate | null = null;
+  let headMetadata: HeadMetadataExtraction | null = null;
 
   let requestTotals: (() => ReturnType<ReturnType<typeof recordPageRequests>>) | undefined;
   let navigationStartedAt = startedAt;
@@ -266,9 +303,79 @@ async function prescanOnePage(
           }
         }
         try {
-          axe = summarizeAxe(await runAxe(page));
+          headMetadata = await extractHeadMetadata(page, url);
+        } catch {
+          headMetadata = null;
+        }
+        try {
+          const axeResults = await runAxe(page);
+          axe = summarizeAxe(axeResults);
+          const axeFacts = extractAxeCandidates(axeResults, url).map((candidate) =>
+            toHotelEvidenceFact(
+              candidate,
+              role,
+              candidate.element !== null &&
+                role === 'booking' &&
+                isBookingCallToAction(
+                  candidate.element.selector,
+                  candidate.element.snippet,
+                  bookingEvidence ?? [],
+                ),
+            ),
+          );
+          facts.push(...axeFacts);
+          failureCapture = await captureFirstMeasuredFailure(
+            options.browser,
+            page,
+            rankHotelSpecificFailures(axeFacts),
+          );
         } catch (error) {
           axeError = messageOf(error);
+        }
+        if (role === 'booking') {
+          const customFacts: HotelEvidenceFact[] = [];
+          try {
+            customFacts.push(
+              ...extractKeyboardNavigationCandidates(await walkKeyboardNavigation(page, url)).map(
+                (candidate) => toHotelEvidenceFact(candidate, role),
+              ),
+            );
+          } catch {
+            // An unavailable interactive fact is an omission, not a guessed failure.
+          }
+          try {
+            customFacts.push(
+              ...extractFormErrorHandlingCandidates(await checkFormErrorHandling(page, url)).map(
+                (candidate) => toHotelEvidenceFact(candidate, role),
+              ),
+            );
+          } catch {
+            // Same boundary as the keyboard check: preserve the other facts.
+          }
+          facts.push(...customFacts);
+          // Native constraint-validation bubbles and the current focus are
+          // browser UI state, not part of the measured DOM fact. Clear them
+          // before capture so identical page state produces identical pixels.
+          await page.keyboard.press('Escape').catch(() => undefined);
+          await page
+            .evaluate(() => {
+              if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+            })
+            .catch(() => undefined);
+          await page
+            .evaluate(
+              () =>
+                new Promise<void>((resolve) => {
+                  requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+                }),
+            )
+            .catch(() => undefined);
+          const customCapture = await captureFirstMeasuredFailure(
+            options.browser,
+            page,
+            rankHotelSpecificFailures(customFacts),
+          );
+          if (customCapture !== null) failureCapture = customCapture;
         }
       },
     });
@@ -305,11 +412,17 @@ async function prescanOnePage(
         durationMs: Date.now() - startedAt,
       },
       anchors,
+      facts,
+      failureCapture,
+      headMetadata,
     };
   } catch (error) {
     return {
       result: { role, url, error: messageOf(error), durationMs: Date.now() - startedAt },
       anchors: [],
+      facts: [],
+      failureCapture: null,
+      headMetadata: null,
     };
   }
 }
@@ -360,15 +473,29 @@ export async function prescanSite(
 
   options.onProgress?.({ type: 'prescan-start', startUrl, effectiveDelayMs });
 
-  if (!isAllowedByRobots(robots, new URL(startUrl).pathname)) {
+  async function finalizeEarly(
+    status: Exclude<PrescanStatus, 'complete'>,
+    pages: LoadedPageOutcome[],
+  ): Promise<PrescanResult> {
+    const evidence = await buildPrescanEvidence({
+      browser: options.browser,
+      prescanDir: options.artifactsDir,
+      pages,
+      startedAt,
+    });
     return {
       ...base,
-      status: 'blocked-by-robots',
-      pages: [],
+      status,
+      pages: pages.map((page) => withoutGenericScreenshotRefs(page.result)),
       absentRoles: [],
       offsiteBookingLinks: [],
       durationMs: Date.now() - started,
+      evidence,
     };
+  }
+
+  if (!isAllowedByRobots(robots, new URL(startUrl).pathname)) {
+    return finalizeEarly('blocked-by-robots', []);
   }
 
   const pageOptions = {
@@ -393,19 +520,12 @@ export async function prescanSite(
   });
 
   if (homepage.result.error !== undefined) {
-    return {
-      ...base,
-      status: 'homepage-unreachable',
-      pages: [homepage.result],
-      absentRoles: [],
-      offsiteBookingLinks: [],
-      durationMs: Date.now() - started,
-    };
+    return finalizeEarly('homepage-unreachable', [homepage]);
   }
 
   const selection: PrescanPageSelection = selectPrescanPages(startUrl, homepage.anchors);
   const furtherPages = selection.selected.filter((page) => page.role !== 'homepage');
-  const pages: PrescanPageResult[] = [homepage.result];
+  const outcomes: LoadedPageOutcome[] = [homepage];
 
   for (const [index, page] of furtherPages.entries()) {
     await sleep(effectiveDelayMs);
@@ -420,15 +540,74 @@ export async function prescanSite(
       ...pageOptions,
       collectAnchors: false,
     });
-    pages.push(outcome.result);
+    outcomes.push(outcome);
   }
+
+  const geoCandidates = extractGeoCandidates(
+    outcomes.flatMap((outcome) => {
+      const metadata = outcome.headMetadata;
+      if (metadata === null) return [];
+      const parsed = metadata.jsonLdBlocks
+        .map((block) => block.parsed)
+        .filter((value): value is object => value !== null && typeof value === 'object');
+      const types = parsed.flatMap(readJsonLdTypes);
+      return [
+        {
+          pageUrl: outcome.result.url,
+          jsonLdTypes: types,
+          jsonLdEntities: parsed.map((value) => ({ parsed: value })),
+          questionHeadingCount: metadata.headings.filter((heading) => /\?\s*$/.test(heading.text))
+            .length,
+          hasFaqSchema: types.some((type) => type === 'FAQPage' || type === 'QAPage'),
+        },
+      ];
+    }),
+    startUrl,
+  );
+  for (const candidate of geoCandidates) {
+    const outcome = outcomes.find((page) => page.result.url === candidate.pageUrl) ?? homepage;
+    outcome.facts.push(toHotelEvidenceFact(candidate, outcome.result.role));
+  }
+  for (const outcome of outcomes) {
+    const page = outcome.result;
+    if (
+      page.missingPercent !== undefined &&
+      page.rawTextLength !== undefined &&
+      page.renderedTextLength !== undefined
+    ) {
+      outcome.facts.push({
+        source: 'renderdiff',
+        ruleId: 'text-missing-from-raw-html',
+        severity: 'moderate',
+        wcagCriteria: [],
+        pageRole: page.role,
+        pageUrl: page.url,
+        missingPercent: page.missingPercent,
+        rawTextLength: page.rawTextLength,
+        renderedTextLength: page.renderedTextLength,
+      });
+    }
+  }
+  const evidencePages: PrescanEvidencePage[] = outcomes;
+  const evidence = await buildPrescanEvidence({
+    browser: options.browser,
+    prescanDir: options.artifactsDir,
+    pages: evidencePages,
+    startedAt,
+  });
 
   return {
     ...base,
     status: 'complete',
-    pages,
+    pages: outcomes.map((outcome) => withoutGenericScreenshotRefs(outcome.result)),
     absentRoles: selection.absent,
     offsiteBookingLinks: selection.offsiteBookingLinks,
     durationMs: Date.now() - started,
+    evidence,
   };
+}
+
+function withoutGenericScreenshotRefs(page: PrescanPageResult): PrescanPageResult {
+  const { rawScreenshotRef: _raw, renderedScreenshotRef: _rendered, ...retained } = page;
+  return retained;
 }

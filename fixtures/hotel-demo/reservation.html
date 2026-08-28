@@ -3,14 +3,30 @@
   <head>
     <meta charset="utf-8" />
     <title>Hôtel Demo - Réservation</title>
+    <style>
+      .validation-visible {
+        border: 4px solid #c40031;
+        background: #fff0f2;
+      }
+    </style>
   </head>
   <body>
     <h1>Réservation</h1>
     <form action="/checkout">
       <!-- Seeded fault: placeholder used instead of a label. -->
-      <input type="text" placeholder="Nom" />
+      <input id="guest-name" name="guest-name" type="text" placeholder="Nom" required />
       <button type="submit">Confirmer</button>
     </form>
     <a href="/">Accueil</a>
+    <script>
+      document.body.insertAdjacentHTML(
+        'beforeend',
+        '<section><h2>Votre séjour</h2><p>Choisissez vos dates, votre chambre et vos préférences pour préparer une réservation adaptée à votre séjour. Cette description est ajoutée uniquement après exécution de JavaScript afin de créer un écart de rendu matériel, local et reproductible.</p></section>',
+      );
+      document.querySelector('form').addEventListener('submit', function (event) {
+        event.preventDefault();
+        document.querySelector('#guest-name').classList.add('validation-visible');
+      });
+    </script>
   </body>
 </html>

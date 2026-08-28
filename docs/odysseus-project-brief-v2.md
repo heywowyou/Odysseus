@@ -274,7 +274,11 @@ fingerprints, but never calls Lighthouse, the paid-audit orchestration, or the
 LLM. Immutable prescan facts feed deterministic evidence selection and a
 versioned score. Only prospects that pass the explicit gates can proceed to
 the separately governed preview and outreach stages. The execution contract
-and rollout order live in `advisor-plans/README.md`.
+and rollout order live in `advisor-plans/README.md`. Prescan v2 reduces its
+temporary browser captures to one content-addressed raw/rendered composite,
+one content-addressed measured failure crop, and three to five fixed bilingual
+summaries. Generic screenshots are deleted, and incomplete evidence cannot
+enter scoring selection.
 
 **Personalized outreach email generation (2026-08-03).** For prospects that clear the gate, the tool generates the cold email itself, not just a one-sentence hook, personalized to that site's specific findings. Evidence selection stays deterministic: the LLM does not choose which finding to feature, that choice is already made by the brokenness scoring and evidence selection above. The LLM's role is narrowly to write the email around evidence already selected. Output is a draft into a queue, never sent automatically, both because the manual review step is what keeps EU AI Act exposure low for the LLM layer (see 8.4) and because CNIL B2B email rules require clear identification and an opt-out in every message, which a human should confirm is present before send. The anti-hallucination guard carries over explicitly: state the WCAG criterion, never assert the EAA applies to this specific business. Email language follows the prospect's own site language, not a French default.
 
