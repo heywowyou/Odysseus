@@ -164,6 +164,7 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
       qualificationVersion,
       prescanVersion,
       ...(options.maxPages !== undefined ? { limit: options.maxPages } : {}),
+      ...(options.domain !== undefined ? { domain: options.domain } : {}),
       concurrency: options.concurrency ?? PROSPECTING_JOB_CONCURRENCY,
       rescan: options.rescan ?? false,
       dryRun: false,

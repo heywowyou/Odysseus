@@ -75,9 +75,10 @@ function fakeStore(candidates: HotelCandidateDocument[]): {
     recorded,
     prescannedIds,
     port: {
-      listCandidatesToPrescan: async ({ limit, after, skipAlreadyPrescanned }) => {
+      listCandidatesToPrescan: async ({ limit, after, skipAlreadyPrescanned, domain }) => {
         let rows = [...candidates].sort((a, b) => a.candidateId.localeCompare(b.candidateId));
         if (after !== undefined) rows = rows.filter((row) => row.candidateId > after);
+        if (domain !== undefined) rows = rows.filter((row) => row.ownRegistrableDomain === domain);
         if (skipAlreadyPrescanned) rows = rows.filter((row) => !prescannedIds.has(row.candidateId));
         return rows.slice(0, limit);
       },
@@ -271,5 +272,46 @@ describe('prescanHotels', () => {
     const seen: number[] = [];
     await prescanHotels(options({ store: store.port, onProgress: (n) => seen.push(n) }));
     expect(seen.at(-1)).toBe(4);
+  });
+
+  it('visits only the named domain, not whichever candidate sorts first', async () => {
+    // The reason this option exists: the listing is ordered by candidateId, so
+    // a one-hotel batch expressed as a limit alone lands on 'a'. An
+    // authorization is for a named site, and this is what makes the command
+    // honour that rather than merely stay small.
+    const store = fakeStore([candidate('a'), candidate('b'), candidate('c')]);
+    const visited: string[] = [];
+    const report = await prescanHotels(
+      options({
+        store: store.port,
+        domain: 'hotel-c.fr',
+        prescan: async (row) => {
+          visited.push(row.ownRegistrableDomain as string);
+          return measurement();
+        },
+      }),
+    );
+
+    expect(visited).toEqual(['hotel-c.fr']);
+    expect(report.candidatesPrescanned).toBe(1);
+  });
+
+  it('contacts nobody when the named domain matches no qualified candidate', async () => {
+    const store = fakeStore([candidate('a'), candidate('b')]);
+    const visited: string[] = [];
+    const report = await prescanHotels(
+      options({
+        store: store.port,
+        domain: 'not-in-the-catalogue.fr',
+        prescan: async (row) => {
+          visited.push(row.ownRegistrableDomain as string);
+          return measurement();
+        },
+      }),
+    );
+
+    expect(visited).toEqual([]);
+    expect(report.candidatesPrescanned).toBe(0);
+    expect(store.recorded).toEqual([]);
   });
 });

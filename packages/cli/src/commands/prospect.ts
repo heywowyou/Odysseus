@@ -453,6 +453,12 @@ export function registerProspectCommand(program: Command): void {
       CURRENT_PRESCAN_VERSION,
     )
     .option('--limit <n>', 'Prescan at most this many hotels', parsePositiveInt)
+    .option(
+      '--domain <registrable-domain>',
+      'Prescan only this hotel, by its own registrable domain. A batch authorized ' +
+        'for one named site must say so here: --limit alone bounds the batch but ' +
+        'does not choose which site it visits.',
+    )
     .option('--concurrency <n>', 'Hotels in flight at once', parsePositiveInt, 3)
     .option('--rescan', 'Measure again even where a prescan exists at this version', false)
     .option(
@@ -466,6 +472,7 @@ export function registerProspectCommand(program: Command): void {
         qualificationVersion: string;
         prescanVersion: string;
         limit?: number;
+        domain?: string;
         concurrency: number;
         rescan: boolean;
         dryRun: boolean;
@@ -474,19 +481,26 @@ export function registerProspectCommand(program: Command): void {
         // with no bound is refused on its arguments alone, so the refusal
         // costs no database connection and cannot be confused with a
         // connection failure. A dry run is exempt because it contacts nobody.
-        if (!opts.dryRun && opts.limit === undefined) {
+        // --domain satisfies the same requirement by a different route: one
+        // named site is already a bound, and a narrower one than a count,
+        // because it names which site rather than only how many.
+        if (!opts.dryRun && opts.limit === undefined && opts.domain === undefined) {
           console.error(
-            'odysseus prospect prescan run: --limit is required. The qualified population is ' +
-              'thousands of live third-party sites, and binding decision 18 requires every ' +
-              'batch to be bounded.',
+            'odysseus prospect prescan run: --limit or --domain is required. The qualified ' +
+              'population is thousands of live third-party sites, and binding decision 18 ' +
+              'requires every batch to be bounded.',
           );
           process.exitCode = 1;
           return;
         }
 
         // A dry run plans over the whole qualified population, so it needs no
-        // bound of its own; this ceiling only stops an unbounded read.
-        const limit = opts.limit ?? DRY_RUN_PLAN_CEILING;
+        // bound of its own; this ceiling only stops an unbounded read. A named
+        // domain falls back to one site rather than to that ceiling: a domain
+        // is the identity of a single establishment wherever it qualifies at
+        // all, so anything above one would be a catalogue fault, and inheriting
+        // a four-figure ceiling would hide it.
+        const limit = opts.limit ?? (opts.domain === undefined ? DRY_RUN_PLAN_CEILING : 1);
 
         let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
         try {
@@ -504,6 +518,7 @@ export function registerProspectCommand(program: Command): void {
               qualificationVersion: opts.qualificationVersion,
               prescanVersion: opts.prescanVersion,
               limit,
+              ...(opts.domain === undefined ? {} : { domain: opts.domain }),
               skipAlreadyPrescanned: !opts.rescan,
             });
             console.log(
@@ -515,6 +530,7 @@ export function registerProspectCommand(program: Command): void {
                   prescanVersion: opts.prescanVersion,
                   concurrency: opts.concurrency,
                   rescan: opts.rescan,
+                  ...(opts.domain === undefined ? {} : { domain: opts.domain }),
                   plan: {
                     candidatesConsidered: candidates.length,
                     wouldPrescan: candidates.length,
@@ -539,6 +555,7 @@ export function registerProspectCommand(program: Command): void {
               qualificationVersion: opts.qualificationVersion,
               prescanVersion: opts.prescanVersion,
               maxPages: limit,
+              ...(opts.domain === undefined ? {} : { domain: opts.domain }),
               concurrency: opts.concurrency,
               rescan: opts.rescan,
             },

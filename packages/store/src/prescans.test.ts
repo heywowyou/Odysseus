@@ -321,6 +321,40 @@ describe.skipIf(!mongoAvailable)('prescans', () => {
     expect(selected.map((row) => row.candidateId)).toEqual([wanted]);
   });
 
+  it('restricts the listing to one named domain', async () => {
+    const resolutionVersion = `rv-${randomUUID()}`;
+    const qualificationVersion = `qv-${randomUUID()}`;
+    const prescanVersion = `pv-${randomUUID()}`;
+
+    // Two qualified candidates. Without the domain filter the listing is
+    // ordered by candidateId, so which one a one-hotel batch reaches is
+    // decided by a random UUID rather than by whoever authorized the scan.
+    await qualifiedCandidate(resolutionVersion, qualificationVersion);
+    const named = await qualifiedCandidate(resolutionVersion, qualificationVersion, {
+      ownRegistrableDomain: 'hotel-nomme.fr',
+    });
+
+    const selected = await listCandidatesToPrescan(connection!, {
+      resolutionVersion,
+      qualificationVersion,
+      prescanVersion,
+      limit: 50,
+      domain: 'hotel-nomme.fr',
+      skipAlreadyPrescanned: true,
+    });
+    expect(selected.map((row) => row.candidateId)).toEqual([named]);
+
+    const absent = await listCandidatesToPrescan(connection!, {
+      resolutionVersion,
+      qualificationVersion,
+      prescanVersion,
+      limit: 50,
+      domain: 'pas-au-catalogue.fr',
+      skipAlreadyPrescanned: true,
+    });
+    expect(absent).toEqual([]);
+  });
+
   it('skips a candidate already prescanned at this version, unless rescanning', async () => {
     const resolutionVersion = `rv-${randomUUID()}`;
     const qualificationVersion = `qv-${randomUUID()}`;

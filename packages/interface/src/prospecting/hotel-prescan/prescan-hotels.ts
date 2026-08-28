@@ -43,6 +43,7 @@ export interface HotelPrescanStorePort {
     limit: number;
     after?: string;
     skipAlreadyPrescanned: boolean;
+    domain?: string;
   }): Promise<HotelCandidateDocument[]>;
   record(input: RecordPrescanInput): Promise<{ prescanId: string; pointerWritten: boolean }>;
 }
@@ -75,6 +76,11 @@ export interface PrescanHotelsOptions {
    *  defaulting to the whole population. */
   limit?: number;
   concurrency: number;
+  /** Restrict the batch to one named registrable domain. This is how a scan
+   *  authorized for a specific site stays on that site: the alternative,
+   *  `--limit 1` over an id-ordered listing, is bounded but points somewhere
+   *  nobody chose. */
+  domain?: string;
   /** Measure again even where a prescan already exists at this version. */
   rescan: boolean;
   dryRun: boolean;
@@ -161,6 +167,7 @@ export async function prescanHotels(options: PrescanHotelsOptions): Promise<Hote
       prescanVersion: options.prescanVersion,
       limit: pageSize,
       ...(after === undefined ? {} : { after }),
+      ...(options.domain === undefined ? {} : { domain: options.domain }),
       skipAlreadyPrescanned: !options.rescan,
     });
     if (page.length === 0) break;

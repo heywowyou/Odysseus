@@ -139,6 +139,12 @@ export interface ListCandidatesToPrescanOptions {
    *  `--rescan`: deliberately measure again. */
   skipAlreadyPrescanned: boolean;
   prescanVersion: string;
+  /** One named registrable domain, when the batch is a single authorized
+   *  site rather than a slice of the population. Without it the listing is
+   *  ordered by `candidateId`, so a one-candidate batch would point a
+   *  browser at whichever hotel sorts first - not at the one somebody
+   *  actually authorized. */
+  domain?: string;
 }
 
 /**
@@ -165,6 +171,7 @@ export async function listCandidatesToPrescan(
     campaignEligibility: 'eligible',
     ownRegistrableDomain: { $exists: true, $ne: null },
   };
+  if (options.domain !== undefined) filter['ownRegistrableDomain'] = options.domain;
   if (options.after !== undefined) filter['candidateId'] = { $gt: options.after };
   if (options.skipAlreadyPrescanned) {
     filter['prescan.prescanVersion'] = { $ne: options.prescanVersion };

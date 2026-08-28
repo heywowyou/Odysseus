@@ -76,6 +76,10 @@ export interface JobOptionsSnapshot {
    *  means the default skip, which is what makes a re-run of an interrupted
    *  batch continue rather than start over. */
   rescan?: boolean;
+  /** One named registrable domain to prescan. Recorded on the job so the
+   *  document itself says which site was authorized, rather than leaving
+   *  that to be inferred from whichever candidate happened to sort first. */
+  domain?: string;
 }
 
 export interface JobProgressCrawl {
@@ -185,6 +189,7 @@ const jobOptionsSchema = new Schema(
     prescanVersion: { type: String },
     concurrency: { type: Number },
     rescan: { type: Boolean },
+    domain: { type: String },
   },
   { _id: false },
 );

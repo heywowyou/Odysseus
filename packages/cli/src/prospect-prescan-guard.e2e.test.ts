@@ -44,15 +44,29 @@ function runCli(args: string[]): Promise<SpawnResult> {
 }
 
 describe('odysseus prospect prescan: batch bounds', () => {
-  it('refuses a run with no --limit, before opening a connection', async () => {
+  it('refuses a run with neither --limit nor --domain, before opening a connection', async () => {
     const result = await runCli(['prospect', 'prescan', 'run']);
 
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain('--limit is required');
+    expect(result.stderr).toContain('--limit or --domain is required');
     // The refusal is about the arguments. If it had reached the database, this
     // is the message we would see instead.
     expect(result.stderr).not.toContain('ECONNREFUSED');
     expect(result.stdout).toBe('');
+  }, 60_000);
+
+  it('offers --domain as the other way to bound a run', async () => {
+    // Asserted through --help rather than by spawning a real --domain run:
+    // that run passes the argument guard and then waits out the driver's
+    // server-selection window against the dead port above, which costs half a
+    // minute to observe something --help states directly. The property that
+    // actually protects a third party - refusing an unbounded batch - is
+    // covered by the case above, which never gets that far.
+    const result = await runCli(['prospect', 'prescan', 'run', '--help']);
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain('--domain');
+    expect(result.stdout).toContain('registrable domain');
   }, 60_000);
 
   it('rejects a non-positive --limit rather than treating it as unbounded', async () => {
