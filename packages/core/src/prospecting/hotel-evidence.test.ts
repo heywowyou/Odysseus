@@ -120,6 +120,20 @@ describe('hotel evidence policy', () => {
     );
   });
 
+  it('states one claim once even when the same rule fires on two page roles', () => {
+    // The observation text is a function of the rule alone, so keying the
+    // dedupe on the role printed the identical sentence twice and spent two of
+    // five slots saying one thing. Observed on a real prescan.
+    const summaries = buildHotelEvidenceSummaries([
+      fact({ ruleId: 'button-name', pageRole: 'homepage' }),
+      fact({ ruleId: 'button-name', pageRole: 'content', selector: '#other' }),
+    ]);
+
+    expect(summaries).toHaveLength(1);
+    // The role kept is the ranked one, not whichever arrived first.
+    expect(summaries[0]?.pageRole).toBe('homepage');
+  });
+
   it('marks evidence incomplete when either asset or three summaries are missing', () => {
     const evidence = finalizeHotelPrescanEvidence({
       renderComparison: { state: 'omitted', reason: 'no-material-render-gap' },

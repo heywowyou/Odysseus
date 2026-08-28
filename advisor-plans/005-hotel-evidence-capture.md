@@ -148,8 +148,16 @@ it does: the outlined region is visually empty because the paired observation is
 "a button has no accessible name", so an unmarked hotspot is the defect itself,
 not a mis-measured crop.
 
-One thing seen in the same read and deliberately left alone as outside this
-plan: two of the five summaries are the identical JavaScript-dependency sentence
-differing only by page role, so a reader sees one claim twice. That is summary
-selection, not evidence capture, and belongs to whichever slice owns the public
-summary list.
+The same read found one defect in this plan's own step 2, which requires the
+summaries be deduped: two of the five were the identical JavaScript-dependency
+sentence differing only by page role, so a reader saw one claim twice and two of
+five slots said one thing. The dedupe was keyed on rule-and-role while the
+observation text is a function of the rule alone. It is now keyed on the rule,
+so the ranked role survives and each claim is stated once.
+
+A consequence worth stating: a site whose third summary was only a duplicate now
+yields two distinct claims and is correctly `incomplete` rather than complete on
+a repeated sentence. The accepted assets above are unaffected - both are chosen
+from the facts, not the summaries - but the stored `lacoorniche.com` prescan
+still carries the pre-fix list of five and would need a rerun to refresh it. No
+second live navigation was spent to do that.

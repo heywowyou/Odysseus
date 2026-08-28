@@ -180,9 +180,13 @@ export function buildHotelEvidenceSummaries(
   for (const fact of ordered) {
     const observation = HOTEL_EVIDENCE_OBSERVATIONS[fact.ruleId];
     if (observation === undefined) continue;
-    const key = `${fact.ruleId}\u0000${fact.pageRole}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    // Keyed on the rule alone, not on rule-and-role. The observation is a pure
+    // function of the rule id, so two roles of one rule are two copies of one
+    // sentence, and a reader cannot tell them apart. Keying on the role instead
+    // spends a slot in a list capped at five on a claim already made. The sort
+    // above runs role-ordered, so the copy kept is the most important role.
+    if (seen.has(fact.ruleId)) continue;
+    seen.add(fact.ruleId);
     summaries.push({
       observation,
       severity: fact.severity,

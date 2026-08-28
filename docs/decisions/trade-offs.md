@@ -1600,6 +1600,14 @@ cap instead; that decision is the operator's.
     merely showing a location: the outlined region is visually empty precisely
     because the finding is a button with no accessible name. Plan 005 is `DONE`.
 
+    That read also found the public summary list stating one claim twice: the
+    dedupe was keyed on rule-and-role, while the observation text is a function
+    of the rule alone, so one rule firing on two roles printed the same sentence
+    twice and spent two of five slots on it. The key is now the rule. A site
+    whose third summary was only a duplicate is now correctly `incomplete`
+    rather than complete on a repetition, which is the conservative direction:
+    three distinct things worth saying is what the contract is asserting.
+
 37. **A redirect off the declared domain is classified by counting
     establishments, not by comparing names (2026-08-28).** Qualification v1
     rejected every off-domain landing as `redirect-offsite`. Measured against
