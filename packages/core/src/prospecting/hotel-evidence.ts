@@ -203,8 +203,11 @@ export function finalizeHotelPrescanEvidence(input: {
   specificFailure: HotelEvidenceAsset;
   summaries: HotelEvidencePublicSummary[];
 }): HotelPrescanEvidence {
+  // The render composite is a bonus, not a requirement: see the schema's own
+  // note on version 2. A site that works without JavaScript has no render gap
+  // to photograph, and demanding one of it excluded most of the qualified
+  // population while their measured failures went unused.
   const complete =
-    input.renderComparison.state === 'captured' &&
     input.specificFailure.state === 'captured' &&
     input.summaries.length >= HOTEL_EVIDENCE_MIN_SUMMARIES;
   return hotelPrescanEvidenceSchema.parse({

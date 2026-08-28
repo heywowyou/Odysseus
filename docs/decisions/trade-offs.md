@@ -1556,9 +1556,50 @@ cap instead; that decision is the operator's.
     Omitted assets carry one closed reason code. Three to five public summaries
     are selected from a fixed bilingual allowlist. Their schema has no place for
     selectors, exact URLs, rule IDs, finding IDs, arbitrary prose, legal
-    conclusions, or statistics. Both assets and at least three summaries are
-    required for `complete`; anything else is explicitly `incomplete` and is
-    unavailable to plan 006 selection.
+    conclusions, or statistics.
+
+    **Amended 2026-08-28, evidence schema version 2, prescan version v3.**
+    `complete` originally required *both* assets plus at least three summaries.
+    The first batch of 25 real hotels measured that rule at 7 complete and 18
+    incomplete, and the stored records named the cause precisely: 17 of the 18
+    had a captured failure crop and three or more summaries, and were rejected
+    only because their `renderComparison` was omitted with reason
+    `no-material-render-gap`. Exactly one hotel had nothing to show at all.
+
+    The rule was wrong in a way that only a real population could reveal. A
+    render composite is proof of a *render* problem; it is produced only above
+    `HOTEL_RENDER_GAP_THRESHOLD_PERCENT` (20 percent), and an ordinary
+    server-rendered hotel site cannot produce one because it does not have that
+    defect. Requiring it of every hotel meant demanding evidence of a fault the
+    site does not have, and discarding the measured accessibility failures we
+    did photograph. The campaign was silently limited to the JavaScript-heavy
+    minority of its own qualified population, about 28 percent.
+
+    `complete` now requires the measured failure crop and at least three
+    summaries; the render composite is a bonus asset when a genuine gap exists.
+    Nothing else widens: `selectHotelRenderEvidence` and the 20 percent
+    threshold are unchanged, so the composite still means what it always meant,
+    the summary allowlist and the three-summary minimum are unchanged, and the
+    prohibition on selectors, URLs, rule IDs, prose, legal conclusions and
+    statistics is untouched. Anything short of the crop and three summaries is
+    still explicitly `incomplete` and unavailable to plan 006 selection.
+
+    Measured effect, 2026-08-29: a 120-hotel batch at prescan v3 produced 106
+    evidence-complete against 13 incomplete and 1 failed, an 89 percent
+    completeness rate against the old rule's 28 percent on the same kind of
+    population. 5 of the 120 were `homepage-unreachable`, a 4 percent catalogue
+    attrition rate the 25-hotel batch was too small to show. The 13 remaining
+    incomplete are the honest case the rule still excludes: no qualifying
+    failure could be photographed.
+
+    Two process notes worth keeping. First, the two-asset requirement had **no
+    test asserting it**: every existing case omitted the crop, never the
+    composite, so both suites passed unchanged after the rule was widened. The
+    replacement tests were confirmed to fail against the old rule before being
+    kept. Second, v2 records are not rewritten. A prescan is inserted, never
+    upserted (trade-off 35), and a stored status must have been produced by the
+    code whose rule it claims to follow, so the version bump is what separates
+    the two definitions rather than an in-place recompute.
 
     `prescanSite` remains the one scanner operation. Core owns only the strict
     contract and pure ordering policy; browser geometry, annotation, Chromium

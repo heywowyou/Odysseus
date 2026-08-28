@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION } from '@odysseus/core';
 import type { RecordPrescanInput } from '@odysseus/store';
 import { persistPrescanWithArtifactCleanup } from './run-hotel-prescan-job.js';
 
@@ -31,7 +32,7 @@ function input(artifactsDir: string): RecordPrescanInput {
     startedAt: new Date(),
     durationMs: 1,
     evidence: {
-      schemaVersion: 1,
+      schemaVersion: HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
       status: 'incomplete',
       renderComparison: { state: 'omitted', reason: 'no-material-render-gap' },
       specificFailure: { state: 'omitted', reason: 'no-eligible-failure' },

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { HotelEvidenceFact } from './hotel-evidence.js';
 import {
+  HOTEL_EVIDENCE_OBSERVATIONS,
+  type HotelEvidenceCapturedAsset,
+  type HotelEvidencePublicSummary,
+} from '../types/hotel-prescan-evidence.js';
+import {
   buildHotelEvidenceSummaries,
   createHotelEvidenceFactRef,
   finalizeHotelPrescanEvidence,
@@ -18,6 +23,36 @@ function fact(overrides: Partial<HotelEvidenceFact> = {}): HotelEvidenceFact {
     pageUrl: 'https://hotel.example/',
     selector: '#hero',
     ...overrides,
+  };
+}
+
+const CROP_HASH = 'c'.repeat(64);
+
+function capturedFailureAsset(): HotelEvidenceCapturedAsset {
+  return {
+    state: 'captured',
+    ref: `evidence/${CROP_HASH}.png`,
+    sha256: CROP_HASH,
+    mimeType: 'image/png',
+    byteSize: 2_048,
+    width: 240,
+    height: 276,
+    pageRole: 'booking',
+    factRef: `fact_${'d'.repeat(24)}`,
+    altText: { fr: 'Preuve mesurée', en: 'Measured evidence' },
+    selectionReason: 'booking-form-error',
+  };
+}
+
+function publicSummary(
+  severity: HotelEvidencePublicSummary['severity'],
+  pageRole: HotelEvidencePublicSummary['pageRole'],
+): HotelEvidencePublicSummary {
+  return {
+    observation: HOTEL_EVIDENCE_OBSERVATIONS['color-contrast']!,
+    severity,
+    wcagCriteria: ['1.4.3'],
+    pageRole,
   };
 }
 
@@ -134,11 +169,38 @@ describe('hotel evidence policy', () => {
     expect(summaries[0]?.pageRole).toBe('homepage');
   });
 
-  it('marks evidence incomplete when either asset or three summaries are missing', () => {
+  it('marks evidence incomplete when the measured failure or three summaries are missing', () => {
     const evidence = finalizeHotelPrescanEvidence({
       renderComparison: { state: 'omitted', reason: 'no-material-render-gap' },
       specificFailure: { state: 'omitted', reason: 'no-eligible-failure' },
       summaries: [],
+    });
+    expect(evidence.status).toBe('incomplete');
+  });
+
+  // The case that motivated schema version 2, taken from a real 25-hotel
+  // batch: 17 of them looked exactly like this. Ordinary server-rendered
+  // sites have no render gap to photograph, and version 1 discarded their
+  // measured failures for it.
+  it('completes a server-rendered hotel on its measured failure alone', () => {
+    const evidence = finalizeHotelPrescanEvidence({
+      renderComparison: { state: 'omitted', reason: 'no-material-render-gap' },
+      specificFailure: capturedFailureAsset(),
+      summaries: [
+        publicSummary('serious', 'booking'),
+        publicSummary('moderate', 'homepage'),
+        publicSummary('minor', 'content'),
+      ],
+    });
+    expect(evidence.status).toBe('complete');
+    expect(evidence.renderComparison.state).toBe('omitted');
+  });
+
+  it('still needs three summaries even when the failure is captured', () => {
+    const evidence = finalizeHotelPrescanEvidence({
+      renderComparison: { state: 'omitted', reason: 'no-material-render-gap' },
+      specificFailure: capturedFailureAsset(),
+      summaries: [publicSummary('serious', 'booking'), publicSummary('minor', 'content')],
     });
     expect(evidence.status).toBe('incomplete');
   });

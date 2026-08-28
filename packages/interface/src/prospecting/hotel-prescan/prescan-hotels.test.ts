@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION } from '@odysseus/core';
 import type { HotelCandidateDocument, RecordPrescanInput } from '@odysseus/store';
 import {
   CURRENT_PRESCAN_VERSION,
@@ -32,7 +33,7 @@ function candidate(id: string, domain = `hotel-${id}.fr`): HotelCandidateDocumen
 type Measured = Awaited<ReturnType<PrescanHotelsOptions['prescan']>>;
 
 const incompleteEvidence: NonNullable<Measured['evidence']> = {
-  schemaVersion: 1,
+  schemaVersion: HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
   status: 'incomplete',
   renderComparison: { state: 'omitted', reason: 'no-material-render-gap' },
   specificFailure: { state: 'omitted', reason: 'no-eligible-failure' },
@@ -108,8 +109,11 @@ function options(overrides: Partial<PrescanHotelsOptions> = {}): PrescanHotelsOp
 }
 
 describe('prescanHotels', () => {
-  it('uses the evidence-bearing prescan v2 contract', () => {
-    expect(CURRENT_PRESCAN_VERSION).toBe('v2');
+  // Pinned on purpose, so a bump is a decision rather than a diff nobody
+  // reads. v3 (2026-08-28) came from widening evidence completeness: v2
+  // records carry the older rule's status and must not be mixed with these.
+  it('uses the evidence-bearing prescan v3 contract', () => {
+    expect(CURRENT_PRESCAN_VERSION).toBe('v3');
   });
 
   it('prescans every selected candidate and records one document each', async () => {

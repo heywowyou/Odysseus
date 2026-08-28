@@ -88,7 +88,23 @@ describe('hotelPrescanEvidenceSchema', () => {
     expect(() => hotelPrescanEvidenceSchema.parse(input)).toThrow('fixed bilingual allowlist');
   });
 
-  it('requires both assets and three to five summaries for complete status', () => {
+  // Version 2. The render composite is a bonus asset, so a server-rendered
+  // hotel with a measured failure is complete without one; the crop is not,
+  // because it is the whole proof.
+  it('accepts a complete record whose render composite was omitted', () => {
+    const withoutComposite = completeEvidence();
+    withoutComposite.renderComparison = { state: 'omitted', reason: 'no-material-render-gap' };
+    expect(hotelPrescanEvidenceSchema.parse(withoutComposite).status).toBe('complete');
+  });
+
+  it('refuses to call that same record incomplete', () => {
+    const mislabelled = completeEvidence();
+    mislabelled.renderComparison = { state: 'omitted', reason: 'no-material-render-gap' };
+    mislabelled.status = 'incomplete';
+    expect(() => hotelPrescanEvidenceSchema.parse(mislabelled)).toThrow();
+  });
+
+  it('requires the measured failure and three to five summaries for complete status', () => {
     const missing = completeEvidence();
     missing.specificFailure = { state: 'omitted', reason: 'target-unresolved' };
     expect(() => hotelPrescanEvidenceSchema.parse(missing)).toThrow();

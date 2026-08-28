@@ -4,6 +4,7 @@ import type {
   PrescanDocument,
   RecordHotelScoreInput,
 } from '@odysseus/store';
+import { HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION } from '@odysseus/core';
 import type { HotelPrescanEvidence, HotelSiteFacts } from '@odysseus/core';
 import {
   CURRENT_SCORING_VERSION,
@@ -46,7 +47,7 @@ function candidate(
 }
 
 const completeEvidence: HotelPrescanEvidence = {
-  schemaVersion: 1,
+  schemaVersion: HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
   status: 'complete',
   renderComparison: {
     state: 'captured',

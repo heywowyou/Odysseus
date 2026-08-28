@@ -97,7 +97,11 @@ contract denial assertions, and store/artifact fault injection.
 
 ## Done criteria
 
-- [x] Every selectable prescan has the render composite and annotated specific crop.
+- [x] Every selectable prescan has the annotated specific crop; the render
+      composite is a bonus asset. Amended 2026-08-28 (evidence schema v2,
+      prescan v3) after a 25-hotel batch measured the both-assets rule as
+      excluding 17 hotels that had real photographed failures. See
+      `docs/decisions/trade-offs.md` entry 36.
 - [x] Assets derive from measured canonical evidence and are bounded/compressed.
 - [x] Public summaries expose no private technical fields or legal/stat claims.
 - [x] Tests/check pass.

@@ -1,6 +1,10 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { HOTEL_EVIDENCE_OBSERVATIONS, type HotelCandidate } from '@odysseus/core';
+import {
+  HOTEL_EVIDENCE_OBSERVATIONS,
+  HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
+  type HotelCandidate,
+} from '@odysseus/core';
 import {
   getLatestPrescan,
   getPrescan,
@@ -88,7 +92,7 @@ function completeEvidence(): NonNullable<RecordPrescanInput['evidence']> {
     selectionReason: 'booking-form-error' as const,
   };
   return {
-    schemaVersion: 1,
+    schemaVersion: HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
     status: 'complete',
     renderComparison: { ...asset, selectionReason: 'material-render-gap' },
     specificFailure: asset,
@@ -444,7 +448,7 @@ describe.skipIf(!mongoAvailable)('prescans', () => {
       prescan({
         prescanVersion,
         evidence: {
-          schemaVersion: 1,
+          schemaVersion: HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
           status: 'incomplete',
           renderComparison: { state: 'omitted', reason: 'no-material-render-gap' },
           specificFailure: { state: 'omitted', reason: 'no-eligible-failure' },

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Severity } from './findings.js';
 import type { HotelPrescanPageRole } from './hotel-prescan.js';
 
-export const HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION = 1 as const;
+export const HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION = 2 as const;
 export const HOTEL_EVIDENCE_MAX_ASSET_BYTES = 1024 * 1024;
 export const HOTEL_EVIDENCE_MAX_TOTAL_BYTES = 2 * 1024 * 1024;
 export const HOTEL_EVIDENCE_MIN_SUMMARIES = 3;
@@ -196,17 +196,24 @@ export const hotelPrescanEvidenceSchema: z.ZodType<HotelPrescanEvidence> = z
   })
   .strict()
   .superRefine((evidence, context) => {
-    const bothCaptured =
-      evidence.renderComparison.state === 'captured' &&
-      evidence.specificFailure.state === 'captured';
+    // Schema version 2. Version 1 required both assets, which measured on 25
+    // real hotels as excluding 17 of them: each had a photographed failure and
+    // three or more observations, and was rejected only because its site works
+    // without JavaScript and so has no render gap to photograph. A render
+    // composite is proof of a render problem, not proof in general, and
+    // requiring one of a server-rendered site is requiring evidence of a
+    // defect it does not have. The measured failure crop is what makes the
+    // claim real, so it is what completeness now turns on.
+    const proofCaptured = evidence.specificFailure.state === 'captured';
     const enoughSummaries = evidence.summaries.length >= HOTEL_EVIDENCE_MIN_SUMMARIES;
-    if (evidence.status === 'complete' && (!bothCaptured || !enoughSummaries)) {
+    if (evidence.status === 'complete' && (!proofCaptured || !enoughSummaries)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'complete evidence requires both assets and at least three summaries',
+        message:
+          'complete evidence requires the measured failure crop and at least three summaries',
       });
     }
-    if (evidence.status === 'incomplete' && bothCaptured && enoughSummaries) {
+    if (evidence.status === 'incomplete' && proofCaptured && enoughSummaries) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'evidence-complete input cannot be marked incomplete',

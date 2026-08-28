@@ -270,13 +270,17 @@ means numbered entry 24, not a literal Markdown heading anchor.
     page it translates. A prescan is inserted, never upserted, and emits no
     `prospects` event - that collection is the AFNIC funnel's, and hotels carry
     no SIREN. → trade-offs.md#35
-36. Hotel outreach evidence is a strict prescan-v2 contract over exactly two
-    logical assets - a raw/rendered composite and a measured failure crop -
-    plus three to five allowlisted summaries. Its schema has no place for
-    selectors, exact URLs, rule or finding IDs, free prose, legal conclusions,
-    or statistics. Anything short of both assets and three summaries is
-    `incomplete` and is unavailable to plan 006 selection. Do not widen the
-    contract to expose scanner output. → trade-offs.md#36
+36. Hotel outreach evidence is a strict contract over two logical assets - a
+    raw/rendered composite and a measured failure crop - plus three to five
+    allowlisted summaries. Its schema has no place for selectors, exact URLs,
+    rule or finding IDs, free prose, legal conclusions, or statistics. Do not
+    widen the contract to expose scanner output. **Amended 2026-08-28 (evidence
+    schema v2, prescan v3):** `complete` requires the measured failure crop and
+    three summaries; the composite is a bonus, because a server-rendered site
+    cannot produce one and the old rule discarded 17 of 25 real hotels that had
+    real photographed failures. Do not re-require the composite, and do not
+    lower the 20 percent render-gap threshold that governs when one is made.
+    → trade-offs.md#36
 37. A redirect off the declared domain is classified by counting
     establishments at the target, never by comparing domain names: a target
     several establishments reach or declare is a chain, one exactly one
@@ -688,6 +692,15 @@ documents and guardrails directly.
 - No em dashes or en dashes in generated text, code comments, or report
   copy.
 - Comments explain why, not what.
+- Explain any problem or decision to the operator in plain language before
+  naming a mechanism. Say what we were trying to do, what went wrong, and why
+  it matters, in ordinary words, with an analogy where one helps. File names,
+  identifiers and thresholds come after the point is made, not instead of it.
+  When the operator must choose, follow the explanation with a short options
+  table giving each option's cost and effect, a recommendation, and the reason
+  the rejected options are worse. Several decisions here are contract or legal
+  changes that are expensive to reverse, and a choice made without
+  understanding is approval on trust.
 - Run `pnpm run format` after maintained-source edits and `pnpm run check`
   before handoff. Record affected tests and any manual review separately.
 

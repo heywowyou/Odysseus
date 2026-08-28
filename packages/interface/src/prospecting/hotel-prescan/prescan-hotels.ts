@@ -30,7 +30,10 @@ import type { HotelEvidenceStatus, HotelPrescanStatus } from '@odysseus/core';
  *  place - the same discipline, and the same reason, as
  *  CURRENT_QUALIFICATION_VERSION: a later comparison must not silently mix
  *  two definitions of the same number. */
-export const CURRENT_PRESCAN_VERSION = 'v2';
+// v3 (2026-08-28): evidence completeness no longer requires the render
+// composite. Records written at v2 carry the older, stricter status and must
+// not be mixed with these.
+export const CURRENT_PRESCAN_VERSION = 'v3';
 
 export const PRESCAN_BATCH_SIZE = 100;
 
