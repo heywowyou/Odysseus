@@ -119,6 +119,29 @@ export {
   createMongoHotelScoringStore,
   createMongoCohortSelectionStore,
 } from './prospecting/hotel-scoring/mongo-hotel-score-store.js';
+// Milestone 9c plan 007: contact discovery over the selected cohort.
+export {
+  discoverContacts,
+  decideContact,
+  CURRENT_CONTACT_VERSION,
+} from './prospecting/hotel-contacts/discover-contacts.js';
+export type {
+  HotelContactStorePort,
+  ContactPagesFetcher,
+  DiscoverContactsOptions,
+  DiscoverContactsReport,
+} from './prospecting/hotel-contacts/discover-contacts.js';
+export { fetchContactPages } from './prospecting/hotel-contacts/fetch-contact-pages.js';
+export type {
+  FetchContactPagesOptions,
+  ContactPagesFetch,
+  ContactFetchOutcome,
+} from './prospecting/hotel-contacts/fetch-contact-pages.js';
+export { verifyMailDomain } from './prospecting/hotel-contacts/verify-mail-domain.js';
+export type { MailDomainVerifier } from './prospecting/hotel-contacts/verify-mail-domain.js';
+export { createMongoHotelContactStore } from './prospecting/hotel-contacts/mongo-hotel-contact-store.js';
+export type { MongoHotelContactStoreOptions } from './prospecting/hotel-contacts/mongo-hotel-contact-store.js';
+
 export { checkHotelSite } from './prospecting/check-hotel-site.js';
 export type { CheckHotelSiteOptions } from './prospecting/check-hotel-site.js';
 export type { HotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';

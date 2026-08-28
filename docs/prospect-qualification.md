@@ -193,6 +193,38 @@ prospecting covers professional addresses; a personal mailbox used for
 business does not qualify and would need consent. Exclude at
 qualification, not at draft time.
 
+**The allowlist, in preference order.** Amended 2026-08-28 on operator
+approval, for the milestone 9c hotel campaign:
+
+`direction`, `commercial`, `contact`, `info`, `sales`, `hello`, `bonjour`,
+`reception`, `accueil`, `reservations`, `reservation`.
+
+The order is not cosmetic. A hotel routinely publishes several of these on one
+page, and which one is chosen decides who reads the message: `direction@` is a
+decision maker, while `reservation@` is frequently an automated booking-engine
+inbox and `accueil@` reaches a front desk. The last four were added for the
+hotel campaign and deliberately rank below every address that reaches somebody
+who can act on an audit. `packages/core/src/prospecting/role-address.ts` holds
+the list; `discoverRoleContact` beside it returns the best-ranked address
+published, never the first encountered, and can return nothing else - a named
+local part has no path through it. Widening this list again is a new contact
+version, never an edit in place.
+
+**A subdomain of the company's own registrable domain counts as its own
+domain.** `contact@mail.exemple.fr` is the company's mailbox for a company at
+`exemple.fr`. Registrable domains come from the public suffix list, never from
+counting labels.
+
+**Mail-domain checks, and their limit.** The existence of an MX record may be
+read through a DNS resolver. It is a fact about the *domain* and never proof
+that a mailbox exists. SMTP probing, catch-all classification and third-party
+verification vendors remain prohibited. A resolver failure is recorded as
+unknown and never as "no mail service": a timeout is not evidence about a
+business.
+
+**No contact before selection.** Addresses are discovered only for hotels a
+scoring cohort has already selected, not for the qualified population.
+
 ---
 
 ## 7. Storage and retention

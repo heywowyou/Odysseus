@@ -40,3 +40,18 @@ describe('extractContactAddress', () => {
     expect(extractContactAddress(['nothing to see here'], 'example.fr')).toBeNull();
   });
 });
+
+describe('extractContactAddress after the plan 007 deepening', () => {
+  it('returns the best-ranked role address rather than the first printed', () => {
+    const result = extractContactAddress(
+      ['reservation@example.fr puis direction@example.fr'],
+      'example.fr',
+    );
+    expect(result?.value).toBe('direction@example.fr');
+  });
+
+  it("accepts a subdomain of the company's own registrable domain", () => {
+    const result = extractContactAddress(['contact@mail.example.fr'], 'example.fr');
+    expect(result?.value).toBe('contact@mail.example.fr');
+  });
+});

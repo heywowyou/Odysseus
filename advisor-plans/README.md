@@ -335,7 +335,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [004](./004-distinct-hotel-prescan.md) | Build the distinct three-page hotel prescan | P1 | L | 003 | DONE |
 | [005](./005-hotel-evidence-capture.md) | Capture the two outreach evidence assets | P1 | L | 004 | DONE |
 | [006](./006-versioned-hotel-scoring.md) | Score candidates with immutable breakdowns | P1 | L | 001-005 | DONE |
-| [007](./007-role-contact-discovery.md) | Discover approved own-domain role contacts | P1 | M | 006 | TODO |
+| [007](./007-role-contact-discovery.md) | Discover approved own-domain role contacts | P1 | M | 006 | IMPLEMENTED |
 | [008](./008-safe-outreach-preview-html.md) | Generate safe outreach preview HTML | P1 | L | 005 | TODO |
 | [009](./009-expiring-preview-publication.md) | Publish expiring previews and compliance pages | P1 | L | 008 | TODO |
 | [010](./010-validated-outreach-prose.md) | Generate and validate outreach prose | P1 | L | 006, 008 | TODO |
@@ -366,6 +366,16 @@ person - typically reading the first run against a live operator-named site.
   operator-controlled rollout, and every send remains manual.
 - The canonical blackout means the first hotel wave cannot land before
   2026-09-15, regardless of engineering completion.
+- Plan 007 is `IMPLEMENTED`, not `DONE`: every done criterion except the live
+  read is met and the full suite is green, but no cohort exists to read yet.
+  `prospect score select --dry-run` currently plans a cohort of one
+  (`lacoorniche.com`), because only one hotel has been prescanned, and a
+  one-hotel cohort is too thin to judge the local-part mix that decides whether
+  plan 011 should draft against `reservation@` at all. The verification is
+  blocked on a plan 004 prescan batch over live sites, which is its own
+  deliberate session, not a background step of this slice. Sequence to close it:
+  prescan a batch, `prospect score select`, `prospect contacts run --limit 5`,
+  `prospect contacts report`, then read every stored address as an operator.
 
 ## Verification baseline
 

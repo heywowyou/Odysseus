@@ -77,7 +77,10 @@ function homepageUrlFor(domain: string): string {
   return `https://${trimmed}/`;
 }
 
-function registrableDomainOf(url: string): string | null {
+/** Exported since plan 007: the contact fetch has to answer the same question
+ *  about the same kind of URL, and two spellings of "is this still the hotel's
+ *  own site" could disagree. */
+export function registrableDomainOf(url: string): string | null {
   const resolution = normalizeDeclaredWebsite(url);
   return resolution.kind === 'unusable' ? null : resolution.registrableDomain;
 }

@@ -294,6 +294,16 @@ means numbered entry 24, not a literal Markdown heading anchor.
     Weights are approved per version and are never edited in place - broadening
     what a weight reads is a new version. → trade-offs.md#38
 
+39. Hotel role contacts are discovered for the selected cohort only, never for
+    the qualified population, and a hotel with no usable address parks with one
+    of four typed reasons rather than a null. `discoverRoleContact` is the one
+    implementation, which `extractContactAddress` now adapts; it can only ever
+    return an allowlisted local part, so a named address is never captured at
+    all. The allowlist is ordered and widening it is a new `contactVersion`,
+    never an in-place edit. MX is read as a fact about the domain: no SMTP
+    probing, no catch-all classification, and a resolver failure is `unknown`,
+    never `no-mx`. Suppression is checked before the fetch and again before the
+    write. → trade-offs.md#39
 
 ## Stack
 

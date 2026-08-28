@@ -1,35 +1,44 @@
 /**
- * Contact-address extraction, per docs/prospect-qualification.md section
- * 6: role addresses only, on the company's own domain, never a
- * named-individual address. Named-individual addresses are never
- * captured at all, by construction of the role-only local-part
- * allowlist, not filtered post-hoc - the strongest form of "not
- * collected, stored or used."
+ * Contact-address extraction for the AFNIC funnel, per
+ * docs/prospect-qualification.md section 6: role addresses only, on the
+ * company's own domain, never a named-individual address.
+ *
+ * Since milestone 9c plan 007 this is an adapter, not an implementation. The
+ * decision lives in @odysseus/core's discoverRoleContact, so this funnel and
+ * the hotel campaign cannot drift about what counts as a usable address - the
+ * same reasoning suppression-hash.ts records for sharing its normalization
+ * between the write and read paths.
+ *
+ * Two consequences of the move, both deliberate. A page listing several role
+ * addresses now yields the best-ranked one rather than the first printed, which
+ * is what the ordered allowlist is for. And an address on a subdomain of the
+ * company's own registrable domain is now accepted, where exact host equality
+ * used to reject it; `contact@mail.example.fr` is the company's own mailbox by
+ * any honest reading of the rule.
+ *
+ * The typed absence discoverRoleContact returns is collapsed back to `null`
+ * here because qualifyProspect's contract takes a nullable address. The reason
+ * is not lost to the campaign that needs it: the hotel path reads the union
+ * directly.
  */
 
-import { isFreeMailDomain, isRoleAddress } from '@odysseus/core';
+import { discoverRoleContact } from '@odysseus/core';
 import type { ContactAddress } from '@odysseus/core';
-
-const EMAIL_PATTERN = /\b([a-z0-9._%+-]+)@([a-z0-9.-]+\.[a-z]{2,})\b/gi;
 
 export function extractContactAddress(
   texts: readonly string[],
   siteDomain: string,
 ): ContactAddress | null {
-  const normalizedSiteDomain = siteDomain.toLowerCase();
+  const result = discoverRoleContact(
+    texts.map((text) => ({
+      kind: 'homepage' as const,
+      // This funnel stores no provenance, so the site URL stands in for it.
+      url: `https://${siteDomain}/`,
+      text,
+    })),
+    siteDomain,
+  );
 
-  for (const text of texts) {
-    for (const match of text.matchAll(EMAIL_PATTERN)) {
-      const localPart = match[1]?.toLowerCase();
-      const domain = match[2]?.toLowerCase();
-      if (!localPart || !domain) continue;
-      if (domain !== normalizedSiteDomain) continue;
-      if (!isRoleAddress(localPart)) continue;
-      if (isFreeMailDomain(domain)) continue; // redundant given own-domain, kept explicit and testable
-
-      return { value: `${localPart}@${domain}`, localPart, domain };
-    }
-  }
-
-  return null;
+  if (result.outcome !== 'found') return null;
+  return { value: result.address, localPart: result.localPart, domain: result.domain };
 }

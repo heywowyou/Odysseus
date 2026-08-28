@@ -191,3 +191,26 @@ export type {
   HotelScoreDiffRow,
   RecordScoreCohortResult,
 } from './scores.js';
+
+// Milestone 9c plan 007: the contact collection. Upserted on
+// (contactVersion, candidateId) - see schemas/hotel-contact.schema.ts for why a
+// re-run over a bounded cohort is a retry rather than a new observation.
+export { createHotelContactModel } from './schemas/hotel-contact.schema.js';
+export type {
+  HotelContactDocument,
+  HotelContactDocumentFields,
+} from './schemas/hotel-contact.schema.js';
+export {
+  listCohortMembersToContact,
+  recordHotelContacts,
+  getHotelContact,
+  getHotelContactSummary,
+  listHotelContacts,
+} from './hotel-contacts.js';
+export type {
+  CohortMemberToContact,
+  ListCohortMembersToContactOptions,
+  RecordHotelContactInput,
+  RecordHotelContactsResult,
+  HotelContactSummary,
+} from './hotel-contacts.js';

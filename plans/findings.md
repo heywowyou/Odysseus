@@ -25,7 +25,7 @@ deleted here so this file reflects what remains rather than a frozen audit
 snapshot. Fixed so far: CORRECTNESS-01, CORRECTNESS-02, CORRECTNESS-03, CORRECTNESS-04,
 SEC-01, SEC-02, SEC-03/DX-06, SEC-04, PERF-01, ARCH-03/DOCS-01, SEC-06,
 TEST-01, TEST-02, TEST-03, TEST-04, TEST-07.
-Still open: SEC-05/DEP-01 (Lighthouse 12→13 dependency/build work is done,
+Still open: TEST-08 (new, found 2026-08-28), SEC-05/DEP-01 (Lighthouse 12→13 dependency/build work is done,
 but the upgrade dropped rule-coverage.test.ts's recall ratchet from
 87/196 to 78/172 after a live re-scan of sas-fernande.fr; closing the
 remaining 9-rule gap needs a fresh decision, not a silent floor change —
@@ -196,6 +196,30 @@ passed / 9 skipped files, 1507 tests passed, 42 skipped — all skips are
 `packages/store` integration tests requiring local Docker Mongo, which CI's
 `mongo-test` service does run) directly and reported real output, not
 inference.
+
+### [TEST-08] `severity-rollup.test.ts` asserts absolute counts against a database it never cleans, so it passes only on a fresh Mongo volume
+- **Evidence**: Found while running the full suite for milestone 9c plan 007,
+  and unrelated to that work (`git status` shows no `packages/store/src/severity-rollup*`
+  change). The file's header comment deliberately skips `dropDatabase`, on the
+  reasoning that "unique auditId/dedupeKey values per test keep this file's
+  assertions valid without exclusive DB ownership". Only `findingId` and
+  `dedupeKey` are randomized; the `auditId` values (`rollup-1`, `rollup-2`,
+  `rollup-3`) are constants, so every run inserts another finding under the same
+  audit and the counts grow monotonically. Observed `moderate` going 1, then 2,
+  then 3 on three consecutive runs, failing at
+  `packages/store/src/severity-rollup.test.ts:89`. `pnpm run test:store:down`
+  keeps the volume (no `-v`), so the state survives the documented teardown; the
+  suite went green again only after `docker compose down -v`.
+- **Impact**: The store suite fails on every run after the first on a developer
+  machine, and the failure looks like a severity-mapping regression rather than
+  leftover data. CI never sees it because each job starts a fresh service
+  container, which is also why it has gone unnoticed.
+- **Fix shape**: give the file per-run unique `auditId` values (the mechanism its
+  own comment already relies on), or delete just this file's own audits in an
+  `afterAll`. Do not add a second `dropDatabase` - the header comment records a
+  real race against the other Docker-gated files sharing the database.
+- **Effort**: S. **Risk**: LOW. **Confidence**: HIGH (reproduced three times,
+  and the counts increment by exactly one insert per run).
 
 ### [TEST-05] `scan-page.ts`/`scan-site.ts` — highest-churn scanner files (17/14 changes in 60 days) — have only slow real-browser e2e coverage
 - **Evidence**: No `scan-page.test.ts`/`scan-site.test.ts` exist, only

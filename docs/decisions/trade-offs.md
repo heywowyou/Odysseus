@@ -1736,6 +1736,78 @@ cap instead; that decision is the operator's.
     weight means, so it belongs to a `hotel-outreach-v2` and an operator
     decision, not to an in-place edit.
 
+39. **A contact is discovered for the selected cohort only, and a missing one
+    is a typed absence rather than a null (2026-08-28).** Plan 007 needed one
+    professional address per hotel the campaign has actually selected, and
+    needed the hotels it cannot write to to say why.
+
+    **The prohibition is structural, not a filter.** `discoverRoleContact` in
+    `packages/core/src/prospecting/discover-role-contact.ts` can only ever
+    return a local part from `role-address.ts`'s allowlist, so a named address
+    such as `prenom.nom@` has no code path to a return value at all. That is a
+    stronger reading of docs/prospect-qualification.md section 6's "not
+    collected, stored or used" than capturing an address and discarding it
+    later, and it is why the function returns an allowlisted local part rather
+    than an arbitrary string. `hotel_contacts` correspondingly has no field a
+    named contact, a phone number, or a verification vendor's verdict could
+    occupy.
+
+    **Four absences, not one null.** `no-address-published`,
+    `named-local-parts-only`, `free-mail-only` and `off-domain-only` mean
+    completely different things about a hotel: one publishes nothing readable
+    without JavaScript, one publishes only people, one has no professional
+    mailbox, and one is reachable only through an intermediary. Collapsing them
+    into `null` would throw away the only information that tells them apart,
+    and the campaign would have no way to know whether looking again could ever
+    help. The same reasoning as `DeclaredWebsiteResolution`'s union in
+    `hotel-domain.ts`.
+
+    **The allowlist is ordered, and the order is the decision.** A hotel
+    routinely publishes several role addresses on one page, and which one is
+    picked decides who reads the email. `direction@` is a decision maker;
+    `reservation@` is frequently an automated booking-engine inbox and
+    `accueil@` reaches a front desk. `direction`, `reception`, `accueil`,
+    `reservation` and `reservations` were added for this campaign on operator
+    approval, ranked below every address that reaches somebody who can act on
+    an audit, and the run report breaks found contacts down by local part so
+    that mix is readable before plan 011 drafts against it. Widening the
+    allowlist again is a new `contactVersion`, never an in-place edit, for the
+    reason `CURRENT_QUALIFICATION_VERSION` records.
+
+    **One implementation, both funnels.** The shipped 9a
+    `extractContactAddress` became a thin adapter over the same core function
+    rather than a second predicate alongside it. Two consequences were accepted
+    deliberately: the AFNIC funnel now returns the best-ranked address on a page
+    rather than the first printed, and an address on a subdomain of the
+    company's own registrable domain is now accepted where exact host equality
+    used to reject it. Both are the honest reading of the canonical rule, and
+    one implementation cannot drift from itself.
+
+    **MX is a fact about the domain, never about the mailbox.** `resolveMx`
+    through the system resolver reads a public record and sends nothing to the
+    hotel's mail server; SMTP probing, catch-all classification and
+    verification vendors stay forbidden. A domain with no MX parks the row and
+    *keeps* the address, because the hotel did publish one and an operator
+    reading a parked row needs to see what was found. A resolver failure is
+    `unknown` and never parks: a timeout is not evidence about a hotel.
+
+    **Suppression is asked twice, and they are different questions.** Once
+    before fetching, so a suppressed hotel receives no request at all, and once
+    immediately before persisting, against the discovered address as well as the
+    domain - an address-level opt-out cannot be tested before there is an
+    address, and a batch over thousands of sites runs long enough for an opt-out
+    to arrive mid-run. A suppressed row keeps no address.
+
+    **Three requests, and the population is a cohort.** Homepage, mentions
+    legales, contact page, behind the shared `OriginLock` and the crawl delay
+    that non-negotiable rule 5 requires, with the mentions legales URL reused
+    from the stored plan 003 qualification so it is not rediscovered - the
+    request itself cannot be saved, because `HotelSiteFacts` stores derived
+    facts and prescans store no page text. `listCohortMembersToContact` is
+    deliberately the only reader, and there is no "every qualified hotel" entry
+    point beside it, because plan 007's own scope line is that no contact
+    happens before scoring selection.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.
