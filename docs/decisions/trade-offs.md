@@ -1811,9 +1811,9 @@ belongs to an OTA, a vendor, or a group" with "this hotel renamed itself". The
 distinguishing evidence was the one trade-off 33 already uses for group routing,
 and the fix applies it: a redirect target several establishments reach is a
 chain's, a target exactly one establishment holds is that hotel's own. Measured
-over the stored v1 verdicts, 383 rows carried a redirect verdict across 341
-distinct targets: 71 shared, 312 held once, and one row with no usable landing
-URL. The operator-named verification site was among the 312, where Atout
+over the stored v1 verdicts, 384 rows carried a redirect verdict, 383 of them
+with a usable landing URL, across 341 distinct targets: 71 shared and 312 held
+once. The remaining row recorded no landing URL and keeps its v1 rejection. The operator-named verification site was among the 312, where Atout
 France's declared `lacoorniche-pyla.com` redirects to the same hotel's
 `lacoorniche.com`. The rule, the reason the count spans the whole catalogue
 rather than the redirect rows alone, and why the parked `domain-moved` state was
