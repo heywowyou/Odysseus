@@ -2,6 +2,14 @@ import type { ReportLanguage } from '@odysseus/core';
 import type { ProseField } from './prose-fields.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
+/** The observed fault phrase per language, verbatim from the first live
+ *  run. Shared with writing-prompt.ts's instruction so the prompt names
+ *  the exact shape of claim the guard rejects. */
+export const BUSINESS_CLAIM_EXAMPLES: Record<ReportLanguage, string> = {
+  fr: 'la page la plus rentable',
+  en: 'the most profitable page',
+};
+
 /**
  * The model's input contains no revenue, traffic, or conversion data, so
  * it can never know which page is the most commercially valuable one.

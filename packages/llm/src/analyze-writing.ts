@@ -1,5 +1,6 @@
 import { callMistralForWriting } from './client.js';
 import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
+import { findBusinessClaimViolations } from './business-claim-guard.js';
 import { findExecutiveSummaryDigitViolations } from './executive-summary-digit-guard.js';
 import { findLanguageComplianceViolations } from './language-guard.js';
 import { findLegalConsequenceViolations } from './legal-consequence-guard.js';
@@ -7,6 +8,7 @@ import { findPageCountViolations } from './page-count-guard.js';
 import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js';
 import { normalizeWritingOutputTypography } from './typography.js';
 import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
+import { findWcagCitationViolations } from './wcag-citation-guard.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 
 export interface AnalyzeWritingResult {
@@ -88,6 +90,24 @@ export async function analyzeWriting(
     const pageCountViolations = findPageCountViolations(result.output, input.language);
     if (pageCountViolations.length > 0) {
       lastFailureReason = `invented page count in field(s): ${pageCountViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    const wcagViolations = findWcagCitationViolations(result.output);
+    if (wcagViolations.length > 0) {
+      lastFailureReason = `outdated WCAG version citation in field(s): ${wcagViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    const businessViolations = findBusinessClaimViolations(result.output, input.language);
+    if (businessViolations.length > 0) {
+      lastFailureReason = `unhedged business-value claim in field(s): ${businessViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );

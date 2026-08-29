@@ -1,6 +1,8 @@
 import type { ReportLanguage } from '@odysseus/core';
+import { BUSINESS_CLAIM_EXAMPLES } from './business-claim-guard.js';
 import { FINDING_NOUN_VOCABULARY, SEVERITY_VOCABULARY } from './severity-vocabulary-guard.js';
 import type { WritingInput } from './writing-schema.js';
+import { REQUIRED_WCAG_VERSION } from './wcag-citation-guard.js';
 
 const LANGUAGE_INSTRUCTION: Record<ReportLanguage, string> = {
   fr: 'Write title, businessImpact, every entry in recommendedActions, executiveSummary, and notes entirely in French. Do not answer in English. Your response is checked by an automated language-compliance guard after every attempt; a response that is not in French will be rejected and you will be asked again.',
@@ -39,6 +41,16 @@ export function buildWritingSystemPrompt(
   const fn = FINDING_NOUN_VOCABULARY[language];
   const findingNounNote = `\n\nWhen referring to what the audit detected anywhere in your prose (executiveSummary, notes, businessImpact, or recommendedActions), use "${fn.singular}"/"${fn.plural}" (or its exact grammatical inflections), never a synonym like "${language === 'fr' ? 'problème(s)' : 'problem(s)'}" or "issue(s)". The stats box, the findings annex, and the sentence immediately before your executiveSummary text all use this exact word.`;
 
+  // Same source of truth as wcag-citation-guard.ts (REQUIRED_WCAG_VERSION):
+  // the prompt states the number the guard enforces, never a second copy.
+  const wcagVersionNote = `\n\nWhen citing the WCAG standard anywhere in your prose, cite version ${REQUIRED_WCAG_VERSION} exactly, never another version. The scanner audits the WCAG ${REQUIRED_WCAG_VERSION} AA criteria, so a citation of any other version contradicts the report's own methodology. Criterion numbers alone (like 1.4.3) are always safe.`;
+
+  // Same source of truth as business-claim-guard.ts
+  // (BUSINESS_CLAIM_EXAMPLES): the prompt names the exact shape of claim
+  // the guard rejects. The hedge escape hatch mirrors the guard's
+  // sentence-level hedge allowance.
+  const businessClaimNote = `\n\nYou are given no revenue, traffic, or conversion data, so you cannot know which page matters most commercially. Never assert one, for example never write "${BUSINESS_CLAIM_EXAMPLES[language]}" or any similar profitability or revenue superlative, as a fact. You may say a page appears commercially important and explain why, using a hedged verb ("semble", "appears") in that same sentence - that is inference the client can weigh, not a claim they must correct. Responses containing an unhedged business-value superlative are rejected.`;
+
   // item D8 (P4): a real report stated "Les lenteurs d'affichage, causées
   // par des scripts bloquants" - the scanner measured a correlation
   // between blocking-script findings and slow metrics, on the same page,
@@ -65,7 +77,7 @@ Each theme you are given below has a themeKey (for example "t1"). For every them
 You must return exactly one theme object per themeKey shown to you, echoing its themeKey verbatim. Do not invent a themeKey you were not shown, do not omit one you were shown, and do not return more than one object for the same themeKey.
 
 Also write an executiveSummary aimed at a non-technical decision maker, and a notes field for anything else worth telling the client. The report template states the exact counts (pages scanned, total findings, findings by severity) in a sentence placed immediately before your executiveSummary text, so do not restate, estimate, or reference any of those figures yourself: never write a number of findings, pages, or occurrences anywhere in executiveSummary, not even a rough or rounded one. Your response is checked for this after every attempt; a response containing a digit in executiveSummary is rejected and you are asked again. Write only the qualitative framing and connecting prose that goes with the counts already stated: what kind of problems dominate, why they matter for the business, and what the overall picture is.
-${dominantMetricNote}${severityVocabularyNote}${findingNounNote}${causationNote}
+${dominantMetricNote}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}
 ${LANGUAGE_INSTRUCTION[language]}${fallbackNote}
 
 Respond with structured JSON matching the required schema only. No prose outside the JSON fields, no markdown fences.`;

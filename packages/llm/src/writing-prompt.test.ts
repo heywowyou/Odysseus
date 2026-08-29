@@ -97,3 +97,25 @@ describe('P4: the writing prompt avoids asserting causation the scanner did not 
     expect(prompt).toContain('causées par');
   });
 });
+
+// docs/llm-layer-rules.md section 6: the first live run mixed WCAG 2.1
+// and 2.2 citations, and wrote "la page la plus rentable du site" with no
+// traffic or revenue data in the input. Both notes are paired with
+// guards (wcag-citation-guard.ts, business-claim-guard.ts); these tests
+// pin the instruction side of each pair to the same shared constants.
+describe('the writing prompt states the WCAG version and business-claim rules the guards enforce', () => {
+  it('instructs the model to cite exactly the version the guard requires', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain('cite version 2.2 exactly, never another version');
+  });
+
+  it('names the French fault phrase the business-claim guard rejects', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain('la page la plus rentable');
+  });
+
+  it('names the English fault phrase the business-claim guard rejects', () => {
+    const prompt = buildWritingSystemPrompt('en', false, null);
+    expect(prompt).toContain('the most profitable page');
+  });
+});

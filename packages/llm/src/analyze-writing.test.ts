@@ -95,6 +95,26 @@ function buildNonCanonicalSeverityWordOutput(): WritingPassOutput {
   return output;
 }
 
+function buildWcag21CitationOutput(): WritingPassOutput {
+  // Same fault class as the first live run's legalRelevance fields
+  // (sas-fernande.fr, 2026-08-02): a 2.1 citation next to a report whose
+  // methodology says 2.2. Here in a model-written field.
+  const output = buildCleanFrenchOutput();
+  output.themes[0]!.recommendedActions = [
+    'Rendez le contraste conforme au critère WCAG 2.1 1.4.3.',
+  ];
+  return output;
+}
+
+function buildUnhedgedBusinessClaimOutput(): WritingPassOutput {
+  // Verbatim from the real observed failure, artifacts/sas-fernande.fr/
+  // 2026-08-02T17-31-56Z/analyses/2026-08-02T18-28-34Z-fr.json.
+  const output = buildCleanFrenchOutput();
+  output.themes[0]!.businessImpact =
+    "Le visiteur abandonne. C'est une perte directe de demandes commerciales sur la page la plus rentable du site.";
+  return output;
+}
+
 describe('analyzeWriting', () => {
   it('returns the output on a clean pass', async () => {
     vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
@@ -158,6 +178,48 @@ describe('analyzeWriting', () => {
     vi.mocked(callMistralForWriting)
       .mockReset()
       .mockResolvedValue({ output: buildNonCanonicalSeverityWordOutput() });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+  });
+
+  it('retries once when the first response cites WCAG 2.1, then succeeds', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildWcag21CitationOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(result.output.themes[0]!.recommendedActions[0]).not.toMatch(/2\.1/);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws after exhausting retries when every attempt cites WCAG 2.1', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValue({ output: buildWcag21CitationOutput() });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+  });
+
+  it('retries once when the first response asserts an unhedged business claim, then succeeds', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildUnhedgedBusinessClaimOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(result.output.themes[0]!.businessImpact).not.toMatch(/rentable/i);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws after exhausting retries when every attempt asserts an unhedged business claim', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValue({ output: buildUnhedgedBusinessClaimOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
     expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);

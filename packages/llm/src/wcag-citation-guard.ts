@@ -1,6 +1,11 @@
 import type { ProseField } from './prose-fields.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
+/** The version the scanner's axe tag set actually audits, and the only
+ *  version citation prose may carry. Shared with writing-prompt.ts's
+ *  instruction so the prompt and the guard state the same number. */
+export const REQUIRED_WCAG_VERSION = '2.2';
+
 /**
  * The scanner runs axe against the WCAG 2.2 AA tag set, so every version
  * citation in the report must say 2.2 (docs/llm-layer-rules.md section 6,
