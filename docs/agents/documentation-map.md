@@ -52,9 +52,9 @@ canonical document says was superseded.
 
 | Document | Status and use |
 | --- | --- |
-| `advisor-plans/README.md` and plans `001` through `014` | Reconciled, execution-ready milestone 9c hotel prospecting and outreach queue; the index owns order, status, dependencies, and rejected proposal choices |
-| `plans/findings.md` | Maintenance backlog generated against the commit named in its header; some entries are intentionally unverified. Re-check every item against current HEAD before acting. Its presence does not make it the active session or override milestone order |
-| `docs/report/report-feedback-deferred-items.md` | Canonical queue for report-review items deliberately deferred |
+| `plans/README.md` and the numbered plans `001` through `015` | Approved, execution-ready plans; the index owns order, status, dependencies, and rejected proposal choices. Only selected, execution-ready work lives here; raw findings are never stored as plans |
+| GitHub issues on `heywowyou/Odysseus` | Intake for newly verified defects, requests, and decisions; resolved issues are closed with the commit and verification evidence (`docs/agents/issue-tracker.md`) |
+| `docs/report/report-feedback-deferred-items.md` | Canonical queue for report work with a current reproduction or an explicit future trigger; fixed items are removed once verified |
 
 GitHub issues may also hold specs and task state. `docs/agents/issue-tracker.md`
 defines how to inspect them; never assume a local briefing is newer than its

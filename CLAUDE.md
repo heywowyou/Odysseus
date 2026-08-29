@@ -774,8 +774,10 @@ Milestones 0 through 8 are complete, as are milestones 8.5a, 8.5b, 8.5c,
 9a, 9b, and 9b.5. Milestone 9c is next. Work in vertical slices, one
 milestone per session.
 
-Separate maintenance queues exist in `plans/findings.md` and
-`docs/report/report-feedback-deferred-items.md`. They do not silently become
+Separate maintenance queues exist in `docs/report/report-feedback-deferred-items.md`
+(report work with a current reproduction or an explicit future trigger) and in
+GitHub issues (the intake for newly verified defects, per
+`docs/agents/issue-tracker.md`). They do not silently become
 the active milestone: verify their entries against current HEAD and act on
 them only when the user selects that maintenance scope or a blocking issue
 must be resolved first.
@@ -795,27 +797,27 @@ must be resolved first.
 9a. Prospect acquisition and qualification — done 2026-08-16.
 9b. Prospecting throughput (worker pool, `skipLighthouse`, raised page/depth caps) — done 2026-08-22. See trade-off 23.
 9b.5. Sitemap-supplemented full-site scan coverage — done 2026-08-27. Recursive sitemap inspection stays separate from link reachability; full audits supplement eligible sitemap-only pages, while prospecting inspects and standalone crawl remains link-only. See the measured Haaitza validation in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
-9c. Hotel prospecting and outreach, planned as 14 vertical slices in
-`advisor-plans/README.md`. Plans 001 through 007 are done as of 2026-08-28:
-plan 005's corrected crop was
+9c. Hotel prospecting and outreach, planned as numbered vertical slices whose
+order, status, and dependencies are owned by `plans/README.md`. Durable
+decisions from the completed slices: plan 005's corrected crop was
 accepted on a separately authorized live rerun, closing its evidence gate, and
 the `redirect-offsite` defect that gate surfaced is fixed as qualification v2
-(trade-off 37), taking the qualified population from 5,720 to 5,995. Plan 006 is
-done as of 2026-08-28: immutable versioned scores, an approved
-`hotel-outreach-v1` weight table, and a separate cohort generation
-(trade-off 38). Plan 007 is done as of 2026-08-28: role contacts for the
-selected cohort only, four typed absences instead of a null, and an ordered
-local-part allowlist (trade-off 39). Plan 008 is done as of 2026-08-29: the
+(trade-off 37), taking the qualified population from 5,720 to 5,995. Scoring
+ships as immutable versioned scores with an approved
+`hotel-outreach-v1` weight table and a separate cohort generation
+(trade-off 38). Role contacts cover the
+selected cohort only, with four typed absences instead of a null and an ordered
+local-part allowlist (trade-off 39). The
 outreach preview renders as a self-contained HTML document from its own narrow
-contract, with the offer price as a code-owned constant (trade-off 42). Plan 009 is
-DONE as of 2026-08-29: previews publish to a private bucket behind an
+contract, with the offer price as a code-owned constant (trade-off 42). Previews
+publish to a private bucket behind an
 opaque token, the public site serves them by hashing the token the visitor
 brings, and the prospecting privacy, opt-out and offer pages exist with `/bot`
-corrected (trade-off 43). Step 6 (Scaleway bucket, Vercel env vars, redeploy,
-synthetic end-to-end check) is also complete, recorded in trade-off 43,
-"Provisioned and verified, 2026-08-29". Plan 010 is next. Reconciliation
-decisions and remaining verification gaps are recorded there
-and in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
+corrected (trade-off 43); that deployment step is complete, recorded in
+trade-off 43,
+"Provisioned and verified, 2026-08-29". Reconciliation
+decisions and remaining verification gaps are recorded in
+`docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
 
 Full milestone list, including the phases beyond 8, is in the brief,
 section 7.

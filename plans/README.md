@@ -337,17 +337,36 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [006](./006-versioned-hotel-scoring.md) | Score candidates with immutable breakdowns | P1 | L | 001-005 | DONE |
 | [007](./007-role-contact-discovery.md) | Discover approved own-domain role contacts | P1 | M | 006 | DONE |
 | [008](./008-safe-outreach-preview-html.md) | Generate safe outreach preview HTML | P1 | L | 005 | DONE |
-| [009](./009-expiring-preview-publication.md) | Publish expiring previews and compliance pages | P1 | L | 008 | IMPLEMENTED |
+| [009](./009-expiring-preview-publication.md) | Publish expiring previews and compliance pages | P1 | L | 008 | DONE |
 | [010](./010-validated-outreach-prose.md) | Generate and validate outreach prose | P1 | L | 006, 008 | DONE |
 | [011](./011-gmail-drafts-without-send.md) | Create reviewed Gmail drafts without sending | P1 | L | 007, 009, 010 | TODO |
 | [012](./012-replies-suppressions-outcomes.md) | Reconcile replies, suppressions, and outcomes | P2 | L | 011 | TODO |
 | [013](./013-outreach-operator-interface.md) | Add the private outreach operator interface | P2 | L | 001-012 | TODO |
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013 | TODO |
+| [015](./015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done
 criterion is met and the suite is green, but a verification step still needs a
 person - typically reading the first run against a live operator-named site.
+
+## Work lifecycle
+
+Each kind of work has exactly one home:
+
+1. GitHub issues (on `heywowyou/Odysseus`, via `gh`) are the intake for a
+   newly verified defect, request, or decision. See
+   `docs/agents/issue-tracker.md`.
+2. A numbered file under `plans/` is an approved, execution-ready plan.
+   A raw finding is never stored here as if it were a plan.
+3. `docs/report/report-feedback-deferred-items.md` holds only report work
+   with a current reproduction or an explicit future trigger. Fixed items
+   are removed once verified; Git history retains the evidence.
+4. Durable shipped rationale moves to the owning canonical document or
+   `docs/decisions/trade-offs.md`. Closed evidence stays in Git and issue
+   history.
+5. The active session log (`docs/session/current-session.md`, gitignored)
+   holds only in-flight recovery state and never becomes a backlog.
 
 ## Dependency notes
 
@@ -398,9 +417,9 @@ pnpm run test -- packages/store/src
 pnpm run test:store:down
 ```
 
-The full suite currently depends on local curated real-scan artifacts. If a
-clean checkout lacks them, do not weaken or skip fixture-backed tests. Report
-the existing fixture-baseline issue recorded in `plans/findings.md`.
+The expected baseline is simply that `pnpm run test` passes. A future failure
+is reproduced, then recorded as a new GitHub issue rather than pre-excused by
+deleted history.
 
 Never scan a live third-party hotel without current permission for that named
 site. Milestone acceptance needs an authorized real-hotel output review, but

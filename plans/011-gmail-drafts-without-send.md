@@ -48,7 +48,7 @@ a stale queued action from creating a draft that could be sent by reflex.
 | Store tests | `pnpm exec vitest run packages/store/src/outreach-drafts.test.ts packages/store/src/outreach-threads.test.ts` | all pass |
 | CLI tests | `pnpm exec vitest run packages/cli/src/commands/outreach.test.ts` | all pass |
 | Validation | `pnpm run check` | exit 0 |
-| Full suite | `pnpm run test` | all pass, except a reported pre-existing fixture baseline |
+| Full suite | `pnpm run test` | all pass |
 
 ## Scope
 

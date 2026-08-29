@@ -14,7 +14,7 @@
 - **Category**: direction
 - **Status**: DONE, 2026-08-27. Implemented, tested, and validated by a full
   live run over all 13,301 candidates; measured facts in
-  `advisor-plans/README.md`, "Measured source facts". Binding decision 3 is
+  `plans/README.md`, "Measured source facts". Binding decision 3 is
   triggered (5,720 qualified against the 8,000 floor) and resolved: the
   operator declined Overpass on the measurement. Nothing was ingested.
 - **Planned at**: `f7ef7cf`, 2026-08-27
@@ -68,7 +68,7 @@ audit the filter.
   considered only after this stage measures usable own-domain coverage below
   8,000, the lower bound of the 8,000 to 15,000 target. This stage's
   unusable-website rate is also what would reopen the rejected DATAtourisme
-  alternate-website path; see `advisor-plans/README.md`, "Measured source
+  alternate-website path; see `plans/README.md`, "Measured source
   facts".
 
 ## Commands you will need
@@ -179,7 +179,7 @@ tests. No live hotel scan is authorized by this plan.
 - [x] Coverage decides whether an Overpass plan is needed. It returned
       `propose` at 5,720 qualified; the run ingested nothing, which is the
       specified behaviour. The operator declined Overpass on 2026-08-27 with
-      that number in hand. See `advisor-plans/README.md`, "Explicitly
+      that number in hand. See `plans/README.md`, "Explicitly
       deferred".
 - [x] Tests/check pass; plan 003 is `DONE`.
 

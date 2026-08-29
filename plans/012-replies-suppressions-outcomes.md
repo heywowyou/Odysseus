@@ -46,7 +46,7 @@ while keeping interpretation and sending under human control.
 | Follow-up tests | `pnpm exec vitest run packages/interface/src/outreach/create-follow-up-draft.test.ts` | all pass |
 | CLI tests | `pnpm exec vitest run packages/cli/src/commands/outreach.test.ts` | all pass |
 | Validation | `pnpm run check` | exit 0 |
-| Full suite | `pnpm run test` | all pass, except a reported pre-existing fixture baseline |
+| Full suite | `pnpm run test` | all pass |
 
 ## Scope
 

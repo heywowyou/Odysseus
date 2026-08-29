@@ -31,7 +31,7 @@ an independent-hotel pitch to a chain. It preserves the shipped append-only
   auto-resolution plus manual review for name/postcode candidates.
 - The project has no general public-suffix dependency. Do not hand-roll eTLD+1.
 - Measured 2026-08-27: the Atout France export carries no SIRET or SIREN column
-  (`advisor-plans/README.md`, "Measured source facts"). Do not look for one. The exact-identifier auto-resolution path is fed by the SIREN
+  (`plans/README.md`, "Measured source facts"). Do not look for one. The exact-identifier auto-resolution path is fed by the SIREN
   the hotel publishes on its own site, extracted during plan 003 by the shipped
   mentions-legales path, so for most candidates the identifier arrives *after*
   this plan's first join rather than before it. Plan for that ordering: a

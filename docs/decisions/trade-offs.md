@@ -1875,7 +1875,8 @@ cap instead; that decision is the operator's.
 40. **A derived document fails closed on provenance, and five legal-copy rules
     the paid report had been breaking (2026-08-29).** A report read-through
     against a real Haaitza scan produced fifteen findings in
-    `plans/report-findings.md`; the five marked P0 are resolved here, and until
+    `plans/report-findings.md` (that ledger is since deleted; its review
+    evidence remains in Git history); the five marked P0 are resolved here, and until
     they were, the ledger's own instruction was that no report generated from
     current code could be sent to a client.
 
@@ -2543,7 +2544,8 @@ full-site coverage.
 **9c: hotel prospecting and outreach.** The operator's two 2026-08-25
 proposal drafts were reconciled against shipped 9a/9b/9b.5 code, canonical
 legal and outreach rules, and three operator decisions made 2026-08-27. The
-result is the 14-slice execution queue in `advisor-plans/README.md`; the drafts
+result is the execution queue in `plans/README.md` (14 slices at the time;
+the index owns the current list); the drafts
 were removed after consolidation so their superseded choices cannot look
 active.
 

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -26,7 +26,12 @@ for (const relativePath of requiredPaths) {
 function collectMarkdownFiles(directory) {
   const files = [];
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    if (entry.name === '.git' || entry.name === '.agents' || entry.name === 'node_modules') {
+    if (
+      entry.name === '.git' ||
+      entry.name === '.agents' ||
+      entry.name === '.zcode' ||
+      entry.name === 'node_modules'
+    ) {
       continue;
     }
     const entryPath = resolve(directory, entry.name);
@@ -96,6 +101,41 @@ const packageJson = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), '
 for (const scriptName of ['check', 'docs:check', 'format', 'format:check', 'lint', 'typecheck']) {
   if (!packageJson.scripts?.[scriptName]) {
     errors.push(`package.json must define the shared ${scriptName} script.`);
+  }
+}
+
+// Document topology guards (plan 015): executable plans live in plans/, raw
+// finding ledgers do not come back, and no maintained document points at the
+// retired advisor-plans/ location. The checker deliberately does not parse
+// plan statuses or infer product state.
+if (existsSync(resolve(repoRoot, 'advisor-plans'))) {
+  errors.push('The retired advisor-plans/ directory must not come back; plans live in plans/.');
+}
+for (const removedLedger of ['plans/findings.md', 'plans/report-findings.md']) {
+  if (existsSync(resolve(repoRoot, removedLedger))) {
+    errors.push(
+      `${removedLedger} is a retired finding ledger; verified defects go to GitHub issues and report work to docs/report/report-feedback-deferred-items.md.`,
+    );
+  }
+}
+if (!existsSync(resolve(repoRoot, 'plans/README.md'))) {
+  errors.push('plans/README.md must exist: it is the single index of executable plans.');
+}
+const advisorPlansReference = /advisor-plans\//;
+// plan 015 is the migration record itself: its body names the old location to
+// describe the move, which is history, not a live pointer.
+const migrationRecordPath = resolve(repoRoot, 'plans/015-consolidate-work-tracking.md');
+for (const markdownPath of markdownFiles) {
+  if (markdownPath === resolve(repoRoot, 'docs/session/current-session.md')) {
+    continue;
+  }
+  if (markdownPath === migrationRecordPath) {
+    continue;
+  }
+  if (advisorPlansReference.test(readFileSync(markdownPath, 'utf8'))) {
+    errors.push(
+      `${relative(repoRoot, markdownPath)} still references advisor-plans/; executable plans live in plans/.`,
+    );
   }
 }
 

@@ -110,7 +110,7 @@ PDF report only, no video walkthrough, rendered from `findings.json`.
 Atout France's classified-accommodation export is the sole catalogue, joined
 to the shipped Sirene machinery. DATAtourisme was evaluated and removed after
 measurement. The complete source, qualification, and rollout decisions are in
-`advisor-plans/README.md`.
+`plans/README.md`.
 
 **Deliberate non-targets.**
 
@@ -274,7 +274,7 @@ fingerprints, but never calls Lighthouse, the paid-audit orchestration, or the
 LLM. Immutable prescan facts feed deterministic evidence selection and a
 versioned score. Only prospects that pass the explicit gates can proceed to
 the separately governed preview and outreach stages. The execution contract
-and rollout order live in `advisor-plans/README.md`. Prescan v2 reduces its
+and rollout order live in `plans/README.md`. Prescan v2 reduces its
 temporary browser captures to one content-addressed raw/rendered composite,
 one content-addressed measured failure crop, and three to five fixed bilingual
 summaries. Generic screenshots are deleted, and incomplete evidence cannot
@@ -315,7 +315,7 @@ job queue.
 - `prospects`: insert-only qualification events with domain, entity evidence,
   qualification facts, and expiry.
 - Future 9c catalogue, prescan, evidence, score, preview, draft, and outcome
-  records stay separate as defined by `advisor-plans/README.md`.
+  records stay separate as defined by `plans/README.md`.
 - `reports`: auditId, language, version, file reference, generated timestamp.
 
 Version the findings model from day one. Reports will need regenerating and comparing over time, especially for monitoring clients.
@@ -449,7 +449,7 @@ preservation. Full reasoning is in the charter's build-order section and
 **Milestone 9c: outreach generation.** Draft assembly per `docs/outreach-rules.md`: deterministic evidence, deterministic facts block, generated connective prose, validator confirming the block survived unmodified and that identity, data origin, and opt-out are present (`docs/llm-layer-rules.md` section 11). Draft queue, follow-up state machine keyed on reply detection, suppression check at draft time. Drafts created in the mailbox through the Gmail API, never sent. Separate sending domain with SPF, DKIM, DMARC.
 
 **9c reconciled into execution plans, 2026-08-27.** The 14 numbered plans in
-`advisor-plans/README.md` replace the earlier proposal drafts. They cover the
+`plans/README.md` replace the earlier proposal drafts. They cover the
 hotel catalogue, exact identity resolution, cheap qualification, distinct
 prescan, evidence, versioned scoring, role contacts, safe previews, validated
 prose, Gmail drafts without send, reply/suppression handling, operator views,
@@ -617,14 +617,14 @@ Full detail in the five companion docs listed at the top of this brief.
 - **The send stays manual, and telephone prospecting is closed** by the rules in force since 11 August 2026. No sequencer integration. See `docs/outreach-rules.md` section 8 and `docs/operator-obligations.md` section 5.
 - **First vertical was originally e-commerce. Superseded 2026-08-27:** hotels
   rated at least three stars are the first campaign. See section 4 and
-  `advisor-plans/README.md`.
+  `plans/README.md`.
 - **Second channel opened: accessibility agencies and freelances**, run in parallel from week one, five conversations to settle whether it is real. See section 4 and `docs/offer-positioning.md` section 5.
 - **Free public scanner, still not now.** Milestone 12 is the conditional revisit, gated on milestone 10 producing traffic. See "No free public scanner" under Settled 2026-08-02 above, now qualified by this later decision.
 - **The benchmark study is LLM-generated like everything else**, with a one-line AI-assistance disclosure added for AI Act article 50(4). Client reports and outreach are confirmed out of scope for article 50 entirely, being private single-recipient documents, and need no disclosure and no pipeline change. See `docs/operator-obligations.md` section 3.
 
 ### Blocking, with a named dependency
 
-1. ~~**A real domain with a bot-information page.**~~ Partially resolved 2026-08-07: `odysseusaudit.com` (and `.fr`) purchased, `ODYSSEUS_USER_AGENT` and both `.env` files now point at `https://odysseusaudit.com/bot`, and `packages/site` (a standalone Next.js app, not part of the tsc build graph, deployed separately to Vercel) scaffolds that route. Still blocking until the `/bot` page actually has content (placeholder component only, next turn) and the site is deployed, so a site owner checking their logs still finds nothing live yet.
+1. ~~**A real domain with a bot-information page.**~~ Partially resolved 2026-08-07: `odysseusaudit.com` (and `.fr`) purchased, `ODYSSEUS_USER_AGENT` and both `.env` files now point at `https://odysseusaudit.com/bot`, and `packages/site` (a standalone Next.js app, not part of the tsc build graph, deployed separately to Vercel) scaffolds that route. Resolved 2026-08-29: the `/bot` page is corrected, the site is deployed, and the preview plus compliance-page path is provisioned and verified end to end (trade-off 43, "Provisioned and verified, 2026-08-29").
 2. ~~**The manual accessibility checklist**~~ Resolved 2026-08-08, and superseded 2026-08-16: milestone 8's original scope and its extended accessibility-pass addendum both shipped and were verified against `fixtures/spa-demo` and a real site (`docs/manual-accessibility-checklist.md`). A handful of items on that checklist (placeholder-as-only-label, reading order versus visual order, visible focus indicators) remain outside automated detection, but per `docs/offer-positioning.md` sections 1 and 2, no manual review of them is sold as part of any tier. Where the automated scanner can flag one as a finding it is reported like any other finding; where it cannot, it is simply not covered, and that gap is not filled by a manual add-on.
 3. ~~**Interface scope**, section 7.1. Gates milestone 7.~~ Resolved: milestone 7 shipped 2026-08-04 against that scope.
 4. **Whether AFNIC's free open data includes SIREN, NAF, and the real-site-versus-parking classification**, or whether those sit only in the paid `.FR Performance` or SQUAW products. Named the first task of milestone 9a, before any code, because the answer determines whether that milestone is large or small. `docs/prospect-qualification.md` section 2.
