@@ -11,7 +11,15 @@ export const LLM_SEVERITY_FLOOR: readonly Severity[] = ['critical', 'serious', '
  *  fails loudly. See docs/llm-layer-rules.md section 2. */
 export const MAX_RETRIES = 2;
 
-export const MISTRAL_MODEL = 'mistral-large-latest';
+/** Temporary, 2026-08-29: the configured API key's subscription tier
+ *  returns HTTP 403 tier_not_allowed for 'mistral-large-latest' specifically
+ *  (confirmed after billing was added - not a quota gate; medium and small
+ *  both work fine on the same key), so every live pass (structure, writing,
+ *  outreach) is pointed at medium until Large access is restored or a
+ *  provider decision replaces this entirely. Revert once Large access is
+ *  confirmed working again; see docs/session/current-session.md for the
+ *  full investigation. */
+export const MISTRAL_MODEL = 'mistral-medium-latest';
 
 /** Determinism lever for a task with one correct, repeatable answer over
  *  the same findings, not a brainstorm: two runs over the same findings
