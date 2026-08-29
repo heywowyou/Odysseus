@@ -2285,6 +2285,147 @@ Lighthouse successor-family deduplication remains monitor-only until a current
 scan reproduces it.
 
 
+### 45. Argument B ships for hotels under the general e-commerce rule
+
+Plan 010 inherited an obsolete hotel-specific hold on the deterministic legal
+facts block. The source review in `docs/obligation-basis.md` now permits hotels
+on the same terms as any other e-commerce prospect, and the preview path already
+sets `argumentB: true`. Outreach draft assembly follows that current doctrine.
+
+This does not let the model write legal prose or let the product decide that a
+named hotel is bound. The block still comes from `buildOutreachFactsBlock`,
+states criteria and verified registry facts only, and remains subject to the
+same source-capability gate for any future sector.
+
+
+### 46. The deterministic facts block belongs to touch 3 only
+
+Plan 010's generic assembly order could be read as inserting the legal facts
+block into every email. That would contradict the canonical sequence: argument
+A establishes credibility first, and argument B arrives only when the sequence
+closes. Touches 1 and 2 therefore cannot carry a facts block; touch 3 requires a
+rendered one and refuses when it is absent.
+
+The restriction is structural in `assembleOutreachDraft`, not a prompt request.
+The model receives no legal block at any touch and has no field in which to
+return one.
+
+
+### 47. Touch 1 prefers a render comparison but falls back to the measured failure crop
+
+Evidence schema v2 made the render composite optional because a server-rendered
+site can have no material raw-versus-rendered gap. In the measured set, 17 of 25
+hotels with genuine photographed failures had no composite. Requiring one would
+discard useful, reproducible evidence for most of that set.
+
+`selectOutreachEvidence` therefore prefers the render comparison for touch 1 and
+uses the measured failure crop when the composite is absent. Touch 2 takes the
+highest-ranked different allowlisted observation. Selection refuses when none
+exists, rather than repeating one claim across two touches. The selection
+version is `render-then-failure-v1`, so a later policy cannot silently rewrite
+what earlier drafts used.
+
+
+### 48. Facts-block identity protects against caller drift, not model rewriting
+
+The outreach model never receives the deterministic facts block, so it cannot
+alter it. The actual integrity risk lies between two deterministic stages: a
+caller can retain, mutate, or rebuild a stale block after preview publication
+and then hand it to draft assembly.
+
+Touch 3 assembly rebuilds the block from the current inputs, compares that value
+with the caller's expected block, and splices only the fresh rebuild. It then
+confirms that the exact rendered text occurs once in the body. A mismatch or a
+failed splice discards the draft. This preserves byte identity without inventing
+a model threat that does not exist.
+
+
+### 49. The approved regime threshold may appear only through the facts-block path
+
+The general outreach prohibition still rejects every figure whose source status
+is not `primary`. The regime threshold used by `buildOutreachFactsBlock` is an
+already approved exception in form, not in provenance: it already ships through
+the guarded preview path with argument B enabled and is generated from the same
+deterministic source.
+
+No free-form outreach prose may quote the threshold. The approval applies only
+to the existing deterministic block, with its criteria framing and without a
+client-specific legal conclusion.
+
+
+### 50. Touch-shape doctrine and enforcement land together
+
+Plan 010 originally deferred its word, sentence, and link limits to the final
+documentation commit while an earlier test was designed to read those limits
+from the canonical document. That ordering would have made the contract test
+fail for several otherwise complete commits.
+
+The touch-shape table therefore landed with the schemas and
+`outreach-limits.ts`, while the remaining doctrine amendments stayed in the
+final documentation slice. `outreach-limits.test.ts` reads the table, so a
+future limit change must update doctrine and enforcement in the same commit.
+
+
+### 51. Two distinct outreach observations are available in the current usable evidence
+
+A read-only measurement ran `selectOutreachEvidence` over all 144 stored
+prescans carrying an evidence field. It selected two distinct observations for
+106, or 73.6 percent. The other 38 refusals were all old or incomplete evidence:
+25 `evidence-schema-outdated` and 13 `evidence-incomplete`. Neither
+`no-distinct-second-observation` nor `observation-not-in-allowlist` fired.
+
+The selected pairs were 82 measured-failure then summary, 23 render-comparison
+then summary, and one render-comparison then measured-failure. The campaign can
+keep the three-touch doctrine for current usable evidence. This measurement is
+not permission to weaken the typed refusal if later evidence has only one
+observation.
+
+
+### 52. The strict outreach schema keeps its exact array bounds
+
+A live API probe against `mistral-medium-latest` used the exact touch 2 JSON
+schema with `strict: true`, `minItems: 2`, and `maxItems: 2`. The model returned
+two strings and the response was accepted on the first call. The schema needs no
+loosening or post-parse substitute for those bounds.
+
+The outreach mirrors contain no `maxLength`; character bounds remain in the
+authoritative Zod schemas, matching the existing writing-pass posture. Zod parse
+remains authoritative even where the provider accepts the JSON-schema hint.
+
+
+### 53. All Mistral passes use Medium until the account can call Large
+
+The configured account returned HTTP 403 `tier_not_allowed` for
+`mistral-large-latest` before and after billing was added, while Medium and Small
+were available. `MISTRAL_MODEL` therefore points to `mistral-medium-latest`, and
+the structure, writing, and outreach calls all inherit that one constant.
+
+This is an operational compatibility choice, not an outreach-specific model
+fork and not a provider evaluation. Comparing Mistral with another provider, or
+moving back to Large after access changes, requires separate quality evidence
+and approval.
+
+
+### 54. Outreach generation and deterministic assembly remain separate deep interfaces
+
+`generateOutreachProse` owns model calls, parsing, guards, retries, and discard
+inside `llm`. `assembleOutreachDraft` accepts only already validated prose and
+owns code-written links, identity, disclosures, facts, opt-out text, and final
+body lint inside `interface`. The assembler never calls the generator, and the
+public generation interface accepts no injectable client that could invert the
+package dependency.
+
+Touch 3 requires the caller's expected facts block because integrity can only be
+checked against a value produced alongside the published preview. The assembler
+always splices its own fresh rebuild. Follow-ups reuse the first subject with one
+idempotent `Re:` prefix; touch 1 carries URL-based privacy and opt-out links,
+while touches 2 and 3 use a reply-based opt-out so they introduce no new URL.
+Sender identity and data-origin wording are owned locally and checked for parity
+with the preview rather than imported across the report boundary. A composition
+lint failure throws and stops the batch because it signals a product bug; an
+expected missing per-prospect input returns a typed refusal.
+
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

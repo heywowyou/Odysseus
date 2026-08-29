@@ -123,11 +123,12 @@ paraphrases it, never summarises it into the subject line.
 Stated in the outreach prompt directly. Not inherited from the audit
 prompt.
 
-**Assembly order:** deterministic evidence selection, deterministic
-facts block, generated connective prose, then a validator confirming the
-block is byte-identical to what was spliced. A draft failing that check
-is discarded rather than repaired, on the same reasoning as the
-language-compliance guard.
+The model never receives the facts block. When assembling touch 3, code rebuilds
+the block from the obligation assessment, compares it with the block expected by
+the caller, and splices the freshly rebuilt value. This catches a caller that
+mutated or rebuilt stale content between preview publication and draft assembly.
+A mismatch is discarded rather than repaired. Touches 1 and 2 cannot carry a
+facts block.
 
 ---
 
@@ -138,9 +139,18 @@ substance; only the prose is generated.
 
 | Touch | Content | Source |
 |---|---|---|
-| 1 | Render diff: what a crawler sees versus what a person sees | scan |
-| 2 | One reproducible transactional failure, plus age framing where the sector fits | scan, behavioural checks |
+| 1 | Render diff: what a crawler sees versus what a person sees; if no render composite exists, the measured failure crop | scan |
+| 2 | One different allowlisted observation, plus age framing where the sector fits | scan, behavioural checks |
 | 3 | Criteria, this company's registry data, and where the case law stands | `assessObligations()` |
+
+The render comparison is preferred for touch 1, not required. A server-rendered
+site can have a genuine measured failure without a render gap. In that case,
+touch 1 uses the measured failure crop and touch 2 takes a different allowlisted
+summary. If no distinct second observation exists, no three-touch draft is
+created.
+
+The deterministic facts block appears on touch 3 only. Assembly refuses it on
+touches 1 and 2, so legal context cannot be front-loaded into the cold opener.
 
 Follow-ups generate only if no reply is detected on the thread. Spacing
 is a setting, not a constant in a prompt.
@@ -172,6 +182,13 @@ person. Every first-contact message states:
 
 The origin disclosure is why `docs/prospect-qualification.md` section 7
 stores data origin per record rather than relying on a boilerplate line.
+
+The prospect's site language is not yet stored on `HotelCandidate` or
+`HotelPrescan`. Until that missing fact has a deterministic source, draft
+generation inherits the operator-supplied language and records
+`languageSource: 'operator'`. The default value is not evidence that the site
+uses that language. A future detector must be versioned and reviewed before it
+replaces the operator source.
 
 A validator confirms identity, origin and opt-out are present before a
 draft is created. The human confirms again at review.
