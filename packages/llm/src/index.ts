@@ -69,3 +69,15 @@ export { findLanguageComplianceViolations } from './language-guard.js';
 export type { LanguageComplianceViolation } from './language-guard.js';
 
 export { ensureEnvLoaded, getMistralApiKey } from './config.js';
+
+export { buildOutreachProseInput } from './outreach/outreach-input.js';
+export type { OutreachEvidenceForModel, OutreachProseInput } from './outreach/outreach-input.js';
+export { outreachProseFields } from './outreach/outreach-schema.js';
+export type {
+  OutreachProseOutput,
+  OutreachTouch1Output,
+  OutreachTouch2Output,
+  OutreachTouch3Output,
+} from './outreach/outreach-schema.js';
+export { generateOutreachProse } from './outreach/generate-outreach-prose.js';
+export type { GenerateOutreachProseResult } from './outreach/generate-outreach-prose.js';
