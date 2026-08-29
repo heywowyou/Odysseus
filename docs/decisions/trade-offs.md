@@ -1511,6 +1511,29 @@ cap instead; that decision is the operator's.
     approximate and band it, not just LCP; only the axe facts are exactly
     reproducible. Bands, not thresholds a re-run can cross.
 
+    **Amended 2026-08-29: captured evidence bytes are the same kind of
+    approximate.** The prescan e2e test asserted that two consecutive runs
+    produce byte-identical evidence, and it failed on the annotated failure
+    crop while the render composite happened to match. The crop is a timed
+    screenshot of a live page that the fixture itself seeds with a post-load
+    layout shift, so its pixels legitimately differ between browser launches;
+    the assertion was claiming a guarantee the code never made. Nothing
+    downstream needs those bytes stable, because the ref is content-addressed:
+    a different capture is a different filename, and `embedOutreachEvidenceAsset`
+    re-verifies the hash it is handed. What the product depends on is choosing
+    the *same failure* to photograph each time, so the test now asserts
+    selection identity (state, page role, fact ref, selection reason) plus
+    ref-matches-hash, and keeps the two-loads-per-page assertion strict, since
+    that one is the politeness guarantee and is genuinely deterministic.
+
+    The same amendment relaxed two metric assertions in that file that demanded
+    a positive main-thread blocking time and a positive CLS. On a two-page
+    fixture served from disk on an idle machine, zero is the honest measurement,
+    so the test failed precisely when the machine was fast - a signal pointing
+    the wrong way. They now assert the observer collected a finite number, which
+    is what distinguishes a broken collector from a well-behaved page, and is
+    what this entry's own banding rule already required.
+
     **Page-role selection orders candidates by path depth first, lexicographic
     second.** A plain lexicographic tie-break picked `/en/book.html` over
     `/reservation.html` on a French fixture, which would have measured the

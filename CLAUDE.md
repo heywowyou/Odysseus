@@ -265,7 +265,10 @@ means numbered entry 24, not a literal Markdown heading anchor.
     `response` events, never Resource Timing; every metric is approximate on
     a real site (measured: request counts, bytes, CLS, blocking time and LCP
     all drift between runs, while axe facts do not), so scoring bands metrics
-    and never treats one as exact. Page roles order on
+    and never treats one as exact. Captured evidence bytes are approximate for
+    the same reason (amended 2026-08-29): assert that two runs select the same
+    failure and that each ref matches its own hash, never that they produce
+    identical pixels. Page roles order on
     path depth before lexicographic, so a translated subtree never displaces the
     page it translates. A prescan is inserted, never upserted, and emits no
     `prospects` event - that collection is the AFNIC funnel's, and the Atout

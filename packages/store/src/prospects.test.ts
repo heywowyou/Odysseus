@@ -100,6 +100,11 @@ describe.skipIf(!mongoAvailable)('prospects', () => {
 
   it('has a TTL index on expiresAt with expireAfterSeconds: 0', async () => {
     const ProspectModel = createProspectModel(connection!);
+    // Mongoose builds indexes in the background once the model compiles, so
+    // asking the collection what it has can outrun the build and fail under
+    // load on a machine that is otherwise fine. persist-audit.test.ts already
+    // waits the same way.
+    await ProspectModel.ensureIndexes();
     const indexes = await ProspectModel.collection.indexes();
     const ttlIndex = indexes.find((index) => index.key?.['expiresAt'] === 1);
     expect(ttlIndex).toBeDefined();
