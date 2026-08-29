@@ -4,6 +4,7 @@ export {
   MISTRAL_MODEL,
   MISTRAL_TEMPERATURE,
   MAX_OUTPUT_TOKENS,
+  REVIEWER_MAX_OUTPUT_TOKENS,
 } from './constants.js';
 export {
   filterFindingsForLlm,
@@ -40,6 +41,9 @@ export { analyzeStructure } from './analyze-structure.js';
 export type { AnalyzeStructureResult } from './analyze-structure.js';
 export { analyzeWriting } from './analyze-writing.js';
 export type { AnalyzeWritingResult } from './analyze-writing.js';
+export { analyzeReview, summarizeUnsupportedReviews } from './analyze-review.js';
+export type { ReviewOutcome } from './analyze-review.js';
+export type { ReviewerInput, ReviewerPassOutput } from './reviewer-schema.js';
 
 export { mergeAnalysisPasses } from './merge.js';
 

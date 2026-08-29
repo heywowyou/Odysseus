@@ -1,6 +1,11 @@
 import { Mistral } from '@mistralai/mistralai';
 import { getMistralApiKey } from './config.js';
-import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_OUTPUT_TOKENS } from './constants.js';
+import {
+  MISTRAL_MODEL,
+  MISTRAL_TEMPERATURE,
+  MAX_OUTPUT_TOKENS,
+  REVIEWER_MAX_OUTPUT_TOKENS,
+} from './constants.js';
 import {
   structurePassOutputSchema,
   type StructureInput,
@@ -15,6 +20,13 @@ import {
 } from './writing-schema.js';
 import { WRITING_OUTPUT_JSON_SCHEMA } from './writing-output-schema.js';
 import { buildWritingSystemPrompt, buildWritingUserPrompt } from './writing-prompt.js';
+import {
+  reviewerPassOutputSchema,
+  type ReviewerInput,
+  type ReviewerPassOutput,
+} from './reviewer-schema.js';
+import { REVIEWER_OUTPUT_JSON_SCHEMA } from './reviewer-output-schema.js';
+import { buildReviewerSystemPrompt, buildReviewerUserPrompt } from './reviewer-prompt.js';
 
 function createClient(): Mistral {
   return new Mistral({ apiKey: getMistralApiKey() });
@@ -150,5 +162,59 @@ export async function callMistralForWriting(
   }
 
   const output = writingPassOutputSchema.parse(JSON.parse(content));
+  return { output };
+}
+
+export interface RawReviewerCallResult {
+  output: ReviewerPassOutput;
+}
+
+/** Single call to Mistral for the shadow reviewer pass. Same posture as
+ *  callMistralForWriting, against reviewerPassOutputSchema and
+ *  REVIEWER_OUTPUT_JSON_SCHEMA instead, with the reviewer's own token
+ *  budget. The reviewer is shadow-mode: any error this throws is caught
+ *  by analyzeReview, which skips the review and never blocks the
+ *  analysis, so unlike the two production passes nothing here feeds a
+ *  retry loop. */
+export async function callMistralForReview(input: ReviewerInput): Promise<RawReviewerCallResult> {
+  const client = createClient();
+
+  const response = await client.chat.complete({
+    model: MISTRAL_MODEL,
+    maxTokens: REVIEWER_MAX_OUTPUT_TOKENS,
+    temperature: MISTRAL_TEMPERATURE,
+    messages: [
+      { role: 'system', content: buildReviewerSystemPrompt() },
+      { role: 'user', content: buildReviewerUserPrompt(input) },
+    ],
+    responseFormat: {
+      type: 'json_schema',
+      jsonSchema: {
+        name: 'reviewer_pass_output',
+        schemaDefinition: REVIEWER_OUTPUT_JSON_SCHEMA,
+        strict: true,
+      },
+    },
+  });
+
+  const choice = response.choices?.[0];
+  if (!choice) {
+    throw new Error('odysseus analyze (review pass): Mistral response contained no choices');
+  }
+
+  if (choice.finishReason === 'length') {
+    throw new Error(
+      'odysseus analyze (review pass): Mistral response was truncated (finishReason: length) - increase REVIEWER_MAX_OUTPUT_TOKENS',
+    );
+  }
+
+  const content = choice.message?.content;
+  if (typeof content !== 'string') {
+    throw new Error(
+      'odysseus analyze (review pass): Mistral response content was not a plain string (unexpected shape)',
+    );
+  }
+
+  const output = reviewerPassOutputSchema.parse(JSON.parse(content));
   return { output };
 }

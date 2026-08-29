@@ -24,6 +24,7 @@ import type {
 } from '@odysseus/core';
 import { assertFindingsProvenance, buildFindingsProvenance } from '@odysseus/core';
 import {
+  analyzeReview,
   analyzeStructure,
   analyzeWriting,
   buildFallbackSiteContext,
@@ -36,6 +37,7 @@ import {
   mergeAnalysisPasses,
   parseStructureDocument,
   partitionFindings,
+  summarizeUnsupportedReviews,
   type SiteContextInput,
   type StructureDocument,
 } from '@odysseus/llm';
@@ -286,6 +288,52 @@ export async function runAnalysisStage(
       ? { obligationAssessment: analysis.obligationAssessment }
       : {}),
   });
+
+  // Shadow reviewer (docs/llm-layer-rules.md section 12): runs after the
+  // analysis is fully written and persisted, and its whole body is
+  // wrapped so a reviewer failure of any kind can never block, fail, or
+  // delay the analysis it reviews. One extra Mistral call per analysis
+  // by operator decision, always on; verdicts are data for a later
+  // promotion decision, not a gate.
+  try {
+    const review = await analyzeReview({ writingInput, written: writingResult.output });
+    if (review.status === 'skipped') {
+      console.warn(
+        `odysseus analyze (review pass, language=${options.language}): skipped - ${review.reason}`,
+      );
+    } else {
+      const unsupported = summarizeUnsupportedReviews(review.output);
+      if (unsupported.length > 0) {
+        console.warn(
+          `odysseus analyze (review pass, language=${options.language}): ${unsupported.length} unsupported prose field(s):`,
+        );
+        for (const line of unsupported) {
+          console.warn(`  ${line}`);
+        }
+      }
+      const reviewPath = path.join(analysesDir, `${timestampForFilename(generatedAt)}-review.json`);
+      await fs.writeFile(
+        reviewPath,
+        JSON.stringify(
+          {
+            auditId: manifest.auditId,
+            analysisId,
+            language: options.language,
+            model: review.model,
+            temperature: review.temperature,
+            generatedAt,
+            reviews: review.output,
+          },
+          null,
+          2,
+        ),
+      );
+    }
+  } catch (error) {
+    console.warn(
+      `odysseus analyze (review pass, language=${options.language}): skipped - ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 
   return {
     analysis,

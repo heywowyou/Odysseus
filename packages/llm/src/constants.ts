@@ -46,3 +46,11 @@ export const MISTRAL_TEMPERATURE = 0.2;
  *  (finishReason: 'length') response as a defensive measure against this
  *  budget ever being exceeded again. */
 export const MAX_OUTPUT_TOKENS = 16000;
+
+/** Separate budget for the shadow reviewer pass (analyze-review.ts): it
+ *  emits one short verdict-plus-reason object per prose field, never
+ *  prose, so its worst case is roughly 20 themes times 4 fields times a
+ *  bounded reason (reviewer-schema.ts), well under the writing pass's
+ *  needs. Kept as its own constant so tuning the reviewer never silently
+ *  retunes a production pass. Same value as MAX_OUTPUT_TOKENS today. */
+export const REVIEWER_MAX_OUTPUT_TOKENS = 16000;

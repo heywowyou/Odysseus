@@ -5,12 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/llm', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@odysseus/llm')>();
-  return { ...actual, analyzeStructure: vi.fn(), analyzeWriting: vi.fn() };
+  return {
+    ...actual,
+    analyzeStructure: vi.fn(),
+    analyzeWriting: vi.fn(),
+    analyzeReview: vi.fn(),
+  };
 });
 vi.mock('@odysseus/store', () => ({ persistAnalysis: vi.fn() }));
 vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 
-import { analyzeStructure, analyzeWriting } from '@odysseus/llm';
+import { analyzeReview, analyzeStructure, analyzeWriting } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
 import {
   FINDINGS_SCHEMA_VERSION,
@@ -124,6 +129,22 @@ beforeEach(async () => {
   });
   vi.mocked(persistAnalysis).mockResolvedValue(undefined);
   vi.mocked(runObligationStage).mockResolvedValue({ status: 'undetermined', basis: [] });
+  vi.mocked(analyzeReview).mockResolvedValue({
+    status: 'ok',
+    output: {
+      themes: [
+        {
+          themeKey: 't1',
+          businessImpact: { verdict: 'supported', reason: 'matches finding f1' },
+          recommendedActions: [{ verdict: 'supported', reason: 'generic advice' }],
+        },
+      ],
+      executiveSummary: { verdict: 'supported', reason: 'generic framing only' },
+      notes: { verdict: 'supported', reason: 'empty' },
+    },
+    model: 'mistral-test',
+    temperature: 0.2,
+  });
 });
 
 afterEach(async () => {
@@ -349,5 +370,86 @@ describe('runAnalysisStage', () => {
     );
 
     expect(result.usedFallbackContext).toBe(false);
+  });
+
+  it('runs the shadow reviewer after persisting and writes a review file next to the analysis', async () => {
+    const manifest = fakeManifest();
+    const result = await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'fr' },
+      fakeConnection,
+    );
+
+    expect(analyzeReview).toHaveBeenCalledTimes(1);
+    expect(analyzeReview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        writingInput: expect.objectContaining({ language: 'fr' }),
+        written: expect.objectContaining({ executiveSummary: 'Summary' }),
+      }),
+    );
+
+    const files = await fs.readdir(path.join(auditDir, 'analyses'));
+    expect(files.some((f) => f.endsWith('-review.json'))).toBe(true);
+
+    const reviewFile = files.find((f) => f.endsWith('-review.json'))!;
+    const review = JSON.parse(
+      await fs.readFile(path.join(auditDir, 'analyses', reviewFile), 'utf-8'),
+    );
+    expect(review.auditId).toBe('audit-1');
+    expect(review.language).toBe('fr');
+    expect(review.analysisId).toBe(result.analysis.analysisId);
+    expect(review.reviews.themes[0].themeKey).toBe('t1');
+  });
+
+  it('still writes and persists the analysis when the reviewer is skipped', async () => {
+    const manifest = fakeManifest();
+    vi.mocked(analyzeReview).mockResolvedValueOnce({
+      status: 'skipped',
+      reason: 'HTTP 429',
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = await runAnalysisStage(
+        auditDir,
+        manifest,
+        [buildFinding()],
+        { language: 'fr' },
+        fakeConnection,
+      );
+
+      expect(result.analysisPath).toBeDefined();
+      expect(persistAnalysis).toHaveBeenCalledTimes(1);
+      const files = await fs.readdir(path.join(auditDir, 'analyses'));
+      expect(files.some((f) => f.endsWith('-fr.json'))).toBe(true);
+      expect(files.some((f) => f.endsWith('-review.json'))).toBe(false);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('skipped - HTTP 429'));
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('does not let a reviewer exception block the analysis', async () => {
+    const manifest = fakeManifest();
+    vi.mocked(analyzeReview).mockRejectedValueOnce(new Error('unexpected'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = await runAnalysisStage(
+        auditDir,
+        manifest,
+        [buildFinding()],
+        { language: 'fr' },
+        fakeConnection,
+      );
+
+      expect(result.analysis.executiveSummary).toBe('Summary');
+      expect(persistAnalysis).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('unexpected'));
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
