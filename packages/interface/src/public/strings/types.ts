@@ -109,6 +109,13 @@ export interface DashboardStrings {
     reportsHeading: string;
     noReportsYet: string;
     reportFreshness: Record<'fresh' | 'stale' | 'unverified', string>;
+    lifecycleLabel: string;
+    lifecycle: Record<'scanned' | 'analysed' | 'rendered' | 'approved', string>;
+    approveReportsButton: string;
+    approvingReportsMessage: string;
+    reportsApprovedMessage: string;
+    previewReport: string;
+    approvedDownload: string;
     manualFieldsHeading: string;
     manualFieldsHint: string;
     sirenLabel: string;

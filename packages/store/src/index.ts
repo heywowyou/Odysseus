@@ -7,6 +7,7 @@ export { persistAudit } from './persist-audit.js';
 export { createAnalysisModel } from './schemas/analysis.schema.js';
 export type { AnalysisDocument, AnalysisDocumentFields } from './schemas/analysis.schema.js';
 export { persistAnalysis } from './persist-analysis.js';
+export { getLatestAnalysis } from './analyses.js';
 export { createSireneCacheModel } from './schemas/sirene-cache.schema.js';
 export type {
   SireneCacheDocument,
@@ -16,6 +17,17 @@ export { upsertSireneCache, getCachedSireneProfile } from './persist-sirene-cach
 export { createReportModel } from './schemas/report.schema.js';
 export type { ReportDocument, ReportDocumentFields } from './schemas/report.schema.js';
 export { persistReport } from './persist-report.js';
+export { createReportApprovalModel } from './schemas/report-approval.schema.js';
+export type {
+  ApprovedReportRef,
+  ReportApprovalDocument,
+  ReportApprovalDocumentFields,
+} from './schemas/report-approval.schema.js';
+export {
+  approvalMatchesReportPair,
+  getLatestReportApproval,
+  persistReportApproval,
+} from './report-approvals.js';
 export { createJobModel } from './schemas/job.schema.js';
 export type {
   JobDocument,

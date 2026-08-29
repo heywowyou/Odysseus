@@ -1,4 +1,9 @@
-import { LEGAL_PATH_PATTERN, type AuditManifest, type Finding } from '@odysseus/core';
+import {
+  LCEN_MENTIONS_LEGALES_RULE_ID,
+  LEGAL_PATH_PATTERN,
+  type AuditManifest,
+  type Finding,
+} from '@odysseus/core';
 
 /** A page whose raw HTML is missing this much of its rendered content is
  *  treated as a third-party embed wrapper (a Facebook/Instagram page
@@ -56,7 +61,11 @@ export function classifyDiversion(
   finding: Pick<Finding, 'pageUrls'> & Partial<Pick<Finding, 'ruleId'>>,
   missingPercentByUrl: ReadonlyMap<string, number>,
 ): DiversionReason | null {
-  if (finding.ruleId === 'accessibility-statement-missing') return 'regime-dependent';
+  if (
+    finding.ruleId === 'accessibility-statement-missing' ||
+    finding.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID
+  )
+    return 'regime-dependent';
   if (finding.pageUrls.length === 0) return null;
   if (finding.pageUrls.every((url) => isWrapperPage(url, missingPercentByUrl))) return 'wrapper';
   if (finding.pageUrls.every((url) => isLegalPage(url))) return 'legal';

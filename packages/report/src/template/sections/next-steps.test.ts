@@ -58,6 +58,19 @@ describe('item 31: authorship and liability block', () => {
     expect(html).toContain('a1b2c3');
   });
 
+  it('labels scan and render provenance separately', () => {
+    const html = renderNextSteps(getStrings('en'), 14, fakeManifest(), 'en', {
+      reportId: 'report-123',
+      renderedAt: new Date('2026-08-29T00:00:00.000Z'),
+      rendererBuild: 'render-abc',
+      templateVersion: 2,
+    });
+    expect(html).toContain('render build render-abc');
+    expect(html).toContain('template 2');
+    expect(html).toContain('scan build 0.5.2');
+    expect(html).toContain('report-123');
+  });
+
   it('states a limitation-of-liability sentence consistent with "report, don\'t conclude"', () => {
     const html = renderNextSteps(getStrings('fr'), 14, fakeManifest(), 'fr');
     expect(html).toContain('ne saurait être tenu responsable');

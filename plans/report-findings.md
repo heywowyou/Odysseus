@@ -81,20 +81,25 @@ trigger that rule.
 | RF-04 | P0 | fixed | Legal | The French appendix declares an LCEN obligation “non respectée”, while other current recommendation text still cites superseded article 6-III. | S | Low | High |
 | RF-05 | P0 | fixed | Client, IT | CrUX 75th-percentile field values are labelled “median value”. | S | Low | High |
 | RF-06 | P0 | fixed | Legal, client | A missing accessibility statement is turned into an unconditional legal publication action without first establishing that the Article 47 regime applies. | S to M | Medium | High |
-| RF-07 | P1 | open | Client, IT | Executive severity can be inflated by findings that need context, especially intentional `noindex` pages and third-party-owned components. | M | Medium | High |
-| RF-08 | P1 | open | Client, IT | A priority theme can combine unrelated legal and technical findings while omitting a remediation for one or more included finding IDs. | M | Medium | High |
-| RF-09 | P1 | open | Client, IT | Report-wide development-day totals imply an estimation model that the canonical deferred queue says does not yet exist. | S now, L for model | Low to high | High |
+| RF-07 | P1 | fixed, regenerate | Client, IT | Executive severity can be inflated by findings that need context, especially intentional `noindex` pages and third-party-owned components. | M | Medium | High |
+| RF-08 | P1 | fixed, regenerate | Client, IT | A priority theme can combine unrelated legal and technical findings while omitting a remediation for one or more included finding IDs. | M | Medium | High |
+| RF-09 | P1 | fixed, regenerate | Client, IT | Report-wide development-day totals imply an estimation model that the canonical deferred queue says does not yet exist. | S now, L for model | Low to high | High |
 | RF-10 | P1 | monitor | Client, IT | Older reports contain duplicate Lighthouse successor and legacy audits; the latest Haaitza report does not reproduce the duplicate pair. | M | Medium | High |
-| RF-11 | P1 | decision | Client | The full technical appendix can dominate the report and bury the decision document. | M to L | Medium | High |
-| RF-13 | P1 | decision | Client, design | Pagination contradicts the canonical design contract and produces mixed sections plus pages that are mostly empty. | M | Medium | High |
-| RF-15 | P1 | open | Client, IT | The six displayed priorities are numbered 1, 2, 3, 4, 5, and 9 after occurrence weighting, with no explanation for the missing ranks. | S to M | Low | High |
-| RF-01 | P2 | open | Client, operations | Audit artifacts have no explicit lifecycle state distinguishing a completed crawl from an analysed, rendered, and approved deliverable. | M | Low | High |
-| RF-12 | P2 | open | Client | The cover names accessibility, performance, SEO, and GEO but omits privacy and security even when that category is present. | S | Low | High |
-| RF-14 | P2 | open | IT | “Worst page” displays only the worst numeric value, not the page, so the column label promises more than the table provides. | S to M | Low | High |
-| RF-16 | P2 | open | Client, legal | The legal page exposes the internal token `(siren:extracted)` and leaves a French employee-band value inside the English report. | S | Low | High |
-| RF-17 | P2 | open | Client, operations | The closing provenance line says the report was “generated on” the scan date and stamps the scanning build, not the render date or the rendering build, so two renders of one audit are indistinguishable and a re-render looks older than it is. | S | Low | High |
+| RF-11 | P1 | fixed, regenerate | Client | The full technical appendix can dominate the report and bury the decision document. | M to L | Medium | High |
+| RF-13 | P1 | fixed, regenerate | Client, design | Pagination contradicts the canonical design contract and produces mixed sections plus pages that are mostly empty. | M | Medium | High |
+| RF-15 | P1 | fixed, regenerate | Client, IT | The six displayed priorities are numbered 1, 2, 3, 4, 5, and 9 after occurrence weighting, with no explanation for the missing ranks. | S to M | Low | High |
+| RF-01 | P2 | fixed, regenerate | Client, operations | Audit artifacts have no explicit lifecycle state distinguishing a completed crawl from an analysed, rendered, and approved deliverable. | M | Low | High |
+| RF-12 | P2 | fixed, regenerate | Client | The cover names accessibility, performance, SEO, and GEO but omits privacy and security even when that category is present. | S | Low | High |
+| RF-14 | P2 | fixed, regenerate | IT | “Worst page” displays only the worst numeric value, not the page, so the column label promises more than the table provides. | S to M | Low | High |
+| RF-16 | P2 | fixed, regenerate | Client, legal | The legal page exposes the internal token `(siren:extracted)` and leaves a French employee-band value inside the English report. | S | Low | High |
+| RF-17 | P2 | fixed, regenerate | Client, operations | The closing provenance line says the report was “generated on” the scan date and stamps the scanning build, not the render date or the rendering build, so two renders of one audit are indistinguishable and a re-render looks older than it is. | S | Low | High |
 
 ## Detailed product findings
+
+Implementation completed on 2026-08-29. RF-01, RF-07 through RF-09, RF-11
+through RF-17 now await the required saved-artifact Haaitza regeneration and
+end-to-end PDF read-through before their rows move from `fixed, regenerate` to
+`fixed`. RF-10 remains `monitor`; no current report reproduces its trigger.
 
 ### RF-01: deliverable lifecycle is implicit
 

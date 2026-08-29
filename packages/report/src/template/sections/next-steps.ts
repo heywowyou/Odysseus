@@ -1,5 +1,6 @@
 import type { AuditManifest } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
+import type { ReportRenderMetadata } from '../../types.js';
 import {
   escapeHtml,
   fillTemplate,
@@ -34,16 +35,19 @@ export function renderNextSteps(
   ordinal: number,
   manifest: AuditManifest,
   language: 'fr' | 'en',
-  reportId = manifest.auditId,
+  renderMetadata?: ReportRenderMetadata,
 ): string {
   const n = strings.nextSteps;
 
   const questionBody = fillTemplate(n.questionBodyTemplate, { email: ODYSSEUS_CONTACT_EMAIL });
   const authorship = fillTemplate(n.authorshipTemplate, {
     producer: ODYSSEUS_PRODUCER_NAME,
-    date: formatDate(new Date(manifest.startedAt), language),
-    version: manifest.tool.odysseusVersion,
-    reportId,
+    scanDate: formatDate(new Date(manifest.finishedAt), language),
+    scanBuild: manifest.tool.odysseusVersion,
+    renderDate: formatDate(renderMetadata?.renderedAt ?? new Date(manifest.startedAt), language),
+    renderBuild: renderMetadata?.rendererBuild ?? manifest.tool.odysseusVersion,
+    templateVersion: String(renderMetadata?.templateVersion ?? 'legacy'),
+    reportId: renderMetadata?.reportId ?? manifest.auditId,
   });
   const issuerBlock = fillTemplate(n.issuerBlockTemplate, {
     signatory: ODYSSEUS_SIGNATORY_NAME,
@@ -83,7 +87,7 @@ export function renderNextSteps(
     <p style="font-size:11px;opacity:0.55;margin-top:4px">${escapeHtml(issuerBlock)}</p>
     <p style="font-size:11px;opacity:0.55;margin-top:4px;max-width:70ch">${escapeHtml(n.liabilityStatement)}</p>
   `,
-    'sheet-standalone',
+    '',
     'section-14',
   );
 }

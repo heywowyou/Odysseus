@@ -12,6 +12,7 @@ import {
 import { computeStatistics } from '../statistics.js';
 import { sectionTitle } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
+import { type RenderedPriority, summarizePriorityOwnership } from '../rendered-priorities.js';
 
 const TOP_THEME_COUNT = 3;
 
@@ -42,6 +43,21 @@ function renderTopPriorityLegalNote(
       })
     : e.topPriorityIsNotLegalNoPointer;
 
+  return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-3);max-width:66ch">${escapeHtml(text)}</p>`;
+}
+
+function renderTopPriorityLegalNoteFromPriorities(
+  strings: ReportStrings,
+  priorities: readonly RenderedPriority[],
+): string {
+  const top = priorities[0];
+  if (!top || top.theme.legalRelevance !== undefined) return '';
+  const firstLegal = priorities.find((priority) => priority.theme.legalRelevance !== undefined);
+  const text = firstLegal
+    ? fillTemplate(strings.executiveSummary.topPriorityIsNotLegalWithPointerTemplate, {
+        legalRank: firstLegal.displayRank,
+      })
+    : strings.executiveSummary.topPriorityIsNotLegalNoPointer;
   return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-3);max-width:66ch">${escapeHtml(text)}</p>`;
 }
 
@@ -101,6 +117,20 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
   `;
 }
 
+function renderStartHerePriorities(
+  strings: ReportStrings,
+  priorities: readonly RenderedPriority[],
+): string {
+  const rows = priorities.slice(0, TOP_THEME_COUNT).map(({ theme, displayRank }) => {
+    const label = fillTemplate(strings.executiveSummary.jumpLinkLabelTemplate, {
+      rank: displayRank,
+    });
+    return `<a href="#theme-${displayRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:8px 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px"><span style="width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:11px;display:flex;align-items:center;justify-content:center">${displayRank}</span><span style="font-size:14px;flex:1">${escapeProse(theme.title)}</span><span style="font-size:11px;color:var(--color-accent-300);text-decoration:underline">${escapeHtml(label)}</span></a>`;
+  });
+  if (rows.length === 0) return '';
+  return `<div style="margin-top:var(--space-6);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-lg)"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:var(--color-accent-300);margin-bottom:var(--space-3)">${escapeHtml(strings.executiveSummary.startHereKicker)}</div>${rows.join('')}</div>`;
+}
+
 /** P1.2 (2026-08-21 La Corniche feedback pass): same headline fact as
  *  statistics.ts's footnote, restated here since the résumé is the
  *  section most likely to be the only one a director actually reads in
@@ -158,9 +188,12 @@ function renderCoveredByPrioritiesNote(
   analysis: StoredAnalysis,
   findings: readonly Finding[],
   findingsById: ReadonlyMap<string, Finding>,
+  priorities?: readonly RenderedPriority[],
 ): string {
   const covered = new Set(
-    selectRenderedThemes(analysis.themes, findingsById).flatMap((theme) => theme.findingIds),
+    priorities
+      ? priorities.flatMap((priority) => priority.findings.map((finding) => finding.findingId))
+      : selectRenderedThemes(analysis.themes, findingsById).flatMap((theme) => theme.findingIds),
   ).size;
   if (covered === 0 || covered >= findings.length) return '';
 
@@ -178,6 +211,7 @@ export function renderExecutiveSummary(
   analysis: StoredAnalysis,
   findings: readonly Finding[],
   manifest: AuditManifest,
+  priorities?: readonly RenderedPriority[],
 ): string {
   const e = strings.executiveSummary;
   // item 0.4: counts are bound here, from the same resolvedFindings the
@@ -196,16 +230,27 @@ export function renderExecutiveSummary(
     total: formatNumber(stats.totalFindings, analysis.language),
   });
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
+  const ownership = priorities ? summarizePriorityOwnership(priorities) : undefined;
+  const ownershipNote = ownership
+    ? `<p style="font-size:12px;opacity:0.65;margin-top:var(--space-2);max-width:66ch">${escapeHtml(
+        fillTemplate(e.priorityOwnershipTemplate, {
+          firstParty: formatNumber(ownership['first-party-action'], analysis.language),
+          thirdParty: formatNumber(ownership['third-party-escalation'], analysis.language),
+          verifyIntent: formatNumber(ownership['verify-intent'], analysis.language),
+        }),
+      )}</p>`
+    : '';
   return sheet(
     `
     ${renderSheetHeader(ordinal, e.eyebrow, e.heading)}
     <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(countsSentence)} ${escapeProse(analysis.executiveSummary)}</p>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
-    ${renderCoveredByPrioritiesNote(strings, analysis, findings, findingsById)}
+    ${renderCoveredByPrioritiesNote(strings, analysis, findings, findingsById, priorities)}
+    ${ownershipNote}
     ${renderThirdPartySplitNote(strings, stats)}
     ${renderCategoryImbalanceNote(strings, stats)}
-    ${renderTopPriorityLegalNote(strings, analysis.themes, findingsById)}
-    ${renderStartHere(strings, analysis.themes)}
+    ${priorities ? renderTopPriorityLegalNoteFromPriorities(strings, priorities) : renderTopPriorityLegalNote(strings, analysis.themes, findingsById)}
+    ${priorities ? renderStartHerePriorities(strings, priorities) : renderStartHere(strings, analysis.themes)}
   `,
     '',
     'section-01',

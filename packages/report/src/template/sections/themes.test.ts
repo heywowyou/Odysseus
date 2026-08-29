@@ -1096,7 +1096,7 @@ describe('P1.2: the first-party/third-party ownership split note', () => {
 
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings as never, manifest);
 
-    expect(html).toContain('un composant tiers');
+    expect(html).toContain('ce composant tiers');
   });
 
   it('fix #2 (2026-08-25 report review): names ZenChef when every finding in the theme is inside its iframe', () => {
@@ -1260,15 +1260,15 @@ describe('P1.5: the aggregate effort estimate sentence', () => {
 
   const manifest = { pages: [] } as never;
 
-  it("renders a global day-range estimate computed from the rendered cards' effort labels", () => {
+  it('does not render an aggregate development-day estimate', () => {
     const efforts: Array<'low' | 'medium' | 'high'> = ['low', 'medium'];
     const findings = efforts.map((_, i) => buildFinding(`f00${i + 1}`));
     const analysis = buildAnalysis(efforts);
 
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
-    expect(html).toContain('Estimation globale');
-    expect(html).toContain('jours de développement');
+    expect(html).not.toContain('Estimation globale');
+    expect(html).not.toContain('jours de développement');
   });
 
   it('renders nothing when there are no rendered themes at all', () => {

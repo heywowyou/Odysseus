@@ -15,6 +15,7 @@ import {
 } from '../html-utils.js';
 import { selectRenderedThemes } from './themes.js';
 import { LEVEL_COLOR } from '../design-tokens.js';
+import type { RenderedPriority } from '../rendered-priorities.js';
 
 function headCell(label: string): string {
   return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
@@ -50,11 +51,14 @@ export function renderChecklist(
   findings: Finding[],
   manifest: AuditManifest,
   manualFields?: AuditManualFields,
+  priorities?: readonly RenderedPriority[],
 ): string {
   const c = strings.checklist;
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
-  const sortedThemes = selectRenderedThemes(analysis.themes, findingsById);
+  const sortedThemes = priorities
+    ? priorities.map((priority) => priority.theme)
+    : selectRenderedThemes(analysis.themes, findingsById);
   const levels = strings.themes.effortImpactLevels;
 
   // item 2.7: standing on its own once printed or captured, this page had
@@ -76,7 +80,8 @@ export function renderChecklist(
   // as a stray dash next to the WCAG column rather than a writable field.
   // Removed rather than widened or restyled.
   const rows = sortedThemes
-    .map((theme) => {
+    .map((theme, index) => {
+      const displayRank = priorities?.[index]?.displayRank ?? theme.priorityRank;
       const themeFindings = theme.findingIds
         .map((id) => findingsById.get(id))
         .filter((f): f is Finding => f !== undefined);
@@ -87,7 +92,7 @@ export function renderChecklist(
 
       return `
         <div class="row-atomic">
-          ${cell(String(theme.priorityRank))}
+          ${cell(String(displayRank))}
           ${cell(escapeProse(theme.title))}
           ${cell(escapeHtml(levels[theme.effort]))}
           ${cell(`<span data-level="${theme.impact}" style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(levels[theme.impact])}</span>`)}

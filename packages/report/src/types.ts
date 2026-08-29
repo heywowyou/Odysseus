@@ -39,6 +39,13 @@ export interface VerifiedStoredAnalysis extends StoredAnalysis {
   findingsProvenance: FindingsProvenance;
 }
 
+export interface ReportRenderMetadata {
+  reportId: string;
+  renderedAt: Date;
+  rendererBuild: string;
+  templateVersion: number;
+}
+
 /** Milestone 8 introduced a paid screening tier alongside the full audit,
  *  both rendered from the same findings.json with tier only affecting
  *  report depth. Dropped 2026-08-16 (docs/offer-positioning.md): the
@@ -49,8 +56,8 @@ export interface VerifiedStoredAnalysis extends StoredAnalysis {
  *  not a smaller tier of this one - see generateOutreachPreviewHtml. It
  *  produces HTML, never a PDF: nothing about it launches Chromium. */
 export interface GenerateReportInput {
-  /** UUID assigned by the report stage and printed in the document. */
-  reportId?: string;
+  /** Created before rendering and reused by every report artifact. */
+  renderMetadata: ReportRenderMetadata;
   /** Used to resolve page screenshot files on disk (manifest.pages[].pageDir
    *  is relative to this directory). Never read for anything else: findings
    *  and the manifest itself are passed in already parsed, not re-read here. */

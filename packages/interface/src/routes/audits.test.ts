@@ -1,6 +1,8 @@
 import { Readable } from 'node:stream';
+import { promises as fs } from 'node:fs';
+import { createHash } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FINDINGS_SCHEMA_VERSION, NORMALIZATION_FINGERPRINT } from '@odysseus/core';
 
 vi.mock('@odysseus/store', () => ({
@@ -8,6 +10,10 @@ vi.mock('@odysseus/store', () => ({
   getFindingsForAudit: vi.fn(),
   getSeverityRollup: vi.fn(),
   getLatestReport: vi.fn(),
+  getLatestAnalysis: vi.fn(),
+  getLatestReportApproval: vi.fn(),
+  approvalMatchesReportPair: vi.fn(() => false),
+  persistReportApproval: vi.fn(),
   listReportLanguages: vi.fn(),
 }));
 
@@ -20,6 +26,9 @@ import {
   getAudit,
   getFindingsForAudit,
   getLatestReport,
+  getLatestAnalysis,
+  getLatestReportApproval,
+  persistReportApproval,
   getSeverityRollup,
   listReportLanguages,
 } from '@odysseus/store';
@@ -30,6 +39,7 @@ function fakeReq(url: string): IncomingMessage {
   const req = Readable.from([]) as unknown as IncomingMessage;
   req.method = 'GET';
   req.url = url;
+  req.headers = {};
   return req;
 }
 
@@ -45,7 +55,9 @@ function fakeRes(): ServerResponse & { statusCode: number; body: string | undefi
   return res as never;
 }
 
-const fakeConnection = {} as never;
+const fakeConnection = {
+  transaction: async (callback: (session: unknown) => Promise<void>) => callback({}),
+} as never;
 const findingsProvenance = {
   findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
   normalizationFingerprint: NORMALIZATION_FINGERPRINT,
@@ -66,6 +78,76 @@ beforeEach(() => {
   vi.mocked(getSeverityRollup).mockResolvedValue({} as never);
   vi.mocked(listReportLanguages).mockResolvedValue(['fr', 'en']);
   vi.mocked(getLatestReport).mockResolvedValue(null);
+  vi.mocked(getLatestAnalysis).mockResolvedValue(null);
+  vi.mocked(getLatestReportApproval).mockResolvedValue(null);
+});
+
+afterEach(async () => {
+  await fs.rm('/tmp/fake-audit-dir', { recursive: true, force: true });
+});
+
+describe('POST /api/audits/:auditId/approve-reports', () => {
+  it('returns 409 unless a complete fresh bilingual pair verifies', async () => {
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/approve-reports');
+    req.method = 'POST';
+    const res = fakeRes();
+    await router.handle(req, res);
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toContain('French and English');
+  });
+
+  it('approves the exact complete digest-verified bilingual pair', async () => {
+    const pdf = Buffer.from('%PDF-approved');
+    const pdfDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
+    await fs.mkdir('/tmp/fake-audit-dir/reports', { recursive: true });
+    await Promise.all([
+      fs.writeFile('/tmp/fake-audit-dir/reports/fr.pdf', pdf),
+      fs.writeFile('/tmp/fake-audit-dir/reports/en.pdf', pdf),
+    ]);
+    vi.mocked(getLatestAnalysis).mockImplementation(
+      async (_connection, _auditId, language) =>
+        ({
+          analysisId: `analysis-${language}`,
+          auditId: 'audit-1',
+          language,
+          findingsProvenance,
+        }) as never,
+    );
+    vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) => ({
+      reportId: `report-${language}`,
+      auditId: 'audit-1',
+      analysisId: `analysis-${language}`,
+      findingsProvenance,
+      rendererVersion: 2,
+      rendererBuild: 'build',
+      pdfDigest,
+      language,
+      reportTemplateVersion: 2,
+      analysisGeneratedAt: new Date(),
+      fileRef: `reports/${language}.pdf`,
+      generatedAt: new Date(),
+    }));
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/approve-reports');
+    req.method = 'POST';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(201);
+    expect(persistReportApproval).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({
+        auditId: 'audit-1',
+        fr: { reportId: 'report-fr', pdfDigest },
+        en: { reportId: 'report-en', pdfDigest },
+      }),
+      expect.anything(),
+    );
+  });
 });
 
 describe('GET /api/audits/:auditId', () => {

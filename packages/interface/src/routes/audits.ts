@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
@@ -7,6 +7,7 @@ import {
   type AuditManifest,
   type AuditManualFields,
   type Finding,
+  type FindingsProvenance,
   type LlmOutput,
   type ReportLanguage,
   type StatSector,
@@ -14,10 +15,15 @@ import {
 import {
   getAudit,
   getFindingsForAudit,
+  getLatestAnalysis,
   getLatestReport,
+  getLatestReportApproval,
   getSeverityRollup,
+  approvalMatchesReportPair,
   listReportLanguages,
+  persistReportApproval,
   setAuditManualFields,
+  type ReportDocument,
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import {
@@ -65,6 +71,73 @@ async function readAnalysis(analysisPath: string): Promise<StoredAnalysis> {
 
 function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
+}
+
+type CurrentReportPair = { fr: ReportDocument; en: ReportDocument };
+
+function provenanceMatches(
+  actual: FindingsProvenance | undefined,
+  expected: FindingsProvenance | undefined,
+): boolean {
+  return (
+    actual?.findingsSchemaVersion === expected?.findingsSchemaVersion &&
+    actual?.normalizationFingerprint === expected?.normalizationFingerprint &&
+    actual?.findingsDigest === expected?.findingsDigest
+  );
+}
+
+type OptionalFindingsProvenance = AuditManifest['findingsProvenance'];
+
+async function readVerifiedReport(
+  auditDir: string,
+  report: ReportDocument,
+): Promise<Buffer | undefined> {
+  if (!report.pdfDigest) return undefined;
+  let pdf: Buffer;
+  try {
+    pdf = await fs.readFile(path.join(auditDir, report.fileRef));
+  } catch {
+    return undefined;
+  }
+  const digest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
+  return digest === report.pdfDigest ? pdf : undefined;
+}
+
+async function getFreshVerifiedPair(
+  connection: Connection,
+  auditId: string,
+  auditDir: string,
+  currentFindings: OptionalFindingsProvenance,
+): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en: Buffer } } | undefined> {
+  const [fr, en] = await Promise.all([
+    getLatestReport(connection, auditId, 'fr'),
+    getLatestReport(connection, auditId, 'en'),
+  ]);
+  const [frAnalysis, enAnalysis] = await Promise.all([
+    getLatestAnalysis(connection, auditId, 'fr'),
+    getLatestAnalysis(connection, auditId, 'en'),
+  ]);
+  if (
+    !fr ||
+    !en ||
+    !frAnalysis ||
+    !enAnalysis ||
+    !fr.reportId ||
+    !en.reportId ||
+    fr.analysisId !== frAnalysis.analysisId ||
+    en.analysisId !== enAnalysis.analysisId ||
+    !provenanceMatches(frAnalysis.findingsProvenance, currentFindings) ||
+    !provenanceMatches(enAnalysis.findingsProvenance, currentFindings) ||
+    classifyReportFreshness(fr, currentFindings) !== 'fresh' ||
+    classifyReportFreshness(en, currentFindings) !== 'fresh'
+  )
+    return undefined;
+  const [frPdf, enPdf] = await Promise.all([
+    readVerifiedReport(auditDir, fr),
+    readVerifiedReport(auditDir, en),
+  ]);
+  if (!frPdf || !enPdf) return undefined;
+  return { reports: { fr, en }, pdfs: { fr: frPdf, en: enPdf } };
 }
 
 const MANUAL_TEXT_FIELDS = [
@@ -118,13 +191,17 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const [findings, severityRollup, reportLanguages] = await Promise.all([
-      getFindingsForAudit(connection, auditId),
-      getSeverityRollup(connection, auditId),
-      listReportLanguages(connection, auditId),
-    ]);
+    const [findings, severityRollup, reportLanguages, frAnalysis, enAnalysis, approval] =
+      await Promise.all([
+        getFindingsForAudit(connection, auditId),
+        getSeverityRollup(connection, auditId),
+        listReportLanguages(connection, auditId),
+        getLatestAnalysis(connection, auditId, 'fr'),
+        getLatestAnalysis(connection, auditId, 'en'),
+        getLatestReportApproval(connection, auditId),
+      ]);
     const reports = await Promise.all(
-      reportLanguages.map(async (language) => {
+      (['fr', 'en'] as const).map(async (language) => {
         const report = await getLatestReport(connection, auditId, language);
         return {
           language,
@@ -134,6 +211,30 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         };
       }),
     );
+    const hostname = new URL(audit.siteUrl).hostname;
+    const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
+    const verifiedPair = await getFreshVerifiedPair(
+      connection,
+      auditId,
+      auditDir,
+      audit.findingsProvenance,
+    );
+    const analysed = Boolean(
+      frAnalysis &&
+      enAnalysis &&
+      provenanceMatches(frAnalysis.findingsProvenance, audit.findingsProvenance) &&
+      provenanceMatches(enAnalysis.findingsProvenance, audit.findingsProvenance),
+    );
+    const approved = Boolean(
+      verifiedPair && approvalMatchesReportPair(approval, verifiedPair.reports),
+    );
+    const lifecycle = approved
+      ? 'approved'
+      : verifiedPair
+        ? 'rendered'
+        : analysed
+          ? 'analysed'
+          : 'scanned';
 
     sendJson(res, 200, {
       auditId: audit.auditId,
@@ -145,6 +246,8 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       findings,
       reportLanguages,
       reports,
+      lifecycle,
+      approval: approved ? approval : null,
       manualFields: audit.manualFields,
     });
   });
@@ -321,6 +424,99 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     }
   });
 
+  router.post('/api/audits/:auditId/approve-reports', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const audit = await getAudit(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    const auditDir = buildAuditDir(
+      getArtifactsRoot(),
+      new URL(audit.siteUrl).hostname,
+      audit.startedAt,
+    );
+    const pair = await getFreshVerifiedPair(
+      connection,
+      auditId,
+      auditDir,
+      audit.findingsProvenance,
+    );
+    if (!pair) {
+      sendError(
+        res,
+        409,
+        'a complete, fresh, digest-verified French and English report pair is required',
+      );
+      return;
+    }
+    const approval = {
+      approvalId: randomUUID(),
+      auditId,
+      fr: { reportId: pair.reports.fr.reportId!, pdfDigest: pair.reports.fr.pdfDigest! },
+      en: { reportId: pair.reports.en.reportId!, pdfDigest: pair.reports.en.pdfDigest! },
+      approvedAt: new Date(),
+    };
+    try {
+      await connection.transaction(async (session) => {
+        const current = await getFreshVerifiedPair(
+          connection,
+          auditId,
+          auditDir,
+          audit.findingsProvenance,
+        );
+        if (
+          !current ||
+          current.reports.fr.reportId !== pair.reports.fr.reportId ||
+          current.reports.en.reportId !== pair.reports.en.reportId
+        ) {
+          throw new Error('report pair changed during approval');
+        }
+        await persistReportApproval(connection, approval, session);
+      });
+    } catch (error) {
+      sendError(
+        res,
+        409,
+        error instanceof Error ? error.message : 'report pair could not be approved',
+      );
+      return;
+    }
+    sendJson(res, 201, { approval });
+  });
+
+  router.get('/api/audits/:auditId/report/:language/preview', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const language = params['language']!;
+    if (!isReportLanguage(language)) {
+      sendError(res, 400, 'language must be "fr" or "en"');
+      return;
+    }
+    const audit = await getAudit(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    const report = await getLatestReport(connection, auditId, language);
+    if (!report || classifyReportFreshness(report, audit.findingsProvenance) !== 'fresh') {
+      sendError(res, 409, `a fresh ${language} report is required for preview`);
+      return;
+    }
+    const auditDir = buildAuditDir(
+      getArtifactsRoot(),
+      new URL(audit.siteUrl).hostname,
+      audit.startedAt,
+    );
+    const pdf = await readVerifiedReport(auditDir, report);
+    if (!pdf) {
+      sendError(res, 409, 'report PDF is missing or its digest does not match');
+      return;
+    }
+    res.statusCode = 200;
+    res.setHeader('content-type', 'application/pdf');
+    res.end(pdf);
+  });
+
   router.get('/api/audits/:auditId/report/:language', async ({ res, params }) => {
     const auditId = params['auditId']!;
     const language = params['language']!;
@@ -348,6 +544,17 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         409,
         `the latest ${language} report is ${freshness} and cannot be delivered; regenerate it from current analyses`,
       );
+      return;
+    }
+
+    const pair = await Promise.all([
+      getLatestReport(connection, auditId, 'fr'),
+      getLatestReport(connection, auditId, 'en'),
+      getLatestReportApproval(connection, auditId),
+    ]);
+    const [fr, en, approval] = pair;
+    if (!fr || !en || !approvalMatchesReportPair(approval, { fr, en })) {
+      sendError(res, 409, 'the current bilingual report pair has not been approved for delivery');
       return;
     }
 

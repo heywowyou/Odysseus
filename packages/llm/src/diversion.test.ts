@@ -96,6 +96,15 @@ describe('classifyDiversion', () => {
       ),
     ).toBe('regime-dependent');
   });
+
+  it('diverts LCEN identification findings before model analysis', () => {
+    expect(
+      classifyDiversion(
+        { ruleId: 'lcen-mentions-legales-missing', pageUrls: ['https://example.com/'] },
+        new Map(),
+      ),
+    ).toBe('regime-dependent');
+  });
 });
 
 describe('partitionFindings', () => {

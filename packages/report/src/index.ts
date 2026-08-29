@@ -1,5 +1,10 @@
 export { REPORT_TEMPLATE_VERSION } from './constants.js';
-export type { GenerateReportInput, StoredAnalysis, VerifiedStoredAnalysis } from './types.js';
+export type {
+  GenerateReportInput,
+  ReportRenderMetadata,
+  StoredAnalysis,
+  VerifiedStoredAnalysis,
+} from './types.js';
 export { classifyReportFreshness } from './freshness.js';
 export type { ReportFreshness, ReportFreshnessMetadata } from './freshness.js';
 /** Re-exported so packages/interface's job-completion gate (P0.1, 2026-08-21
@@ -86,7 +91,7 @@ export async function generateReportPdf(input: GenerateReportInput): Promise<Buf
       manifest: input.manifest,
       findings: input.findings,
       analysis: input.analysis,
-      ...(input.reportId !== undefined ? { reportId: input.reportId } : {}),
+      renderMetadata: input.renderMetadata,
       renderDiffEvidencePages,
       renderDiffTotalEligible,
       renderDiffWrapperOrLegalExcludedCount,

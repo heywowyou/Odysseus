@@ -24,9 +24,9 @@ export const SECTION_IDS = [
   'section-09',
   'section-10',
   'section-11',
-  'section-12',
   'section-13',
   'section-14',
+  'section-12',
 ] as const;
 
 export type SectionId = (typeof SECTION_IDS)[number];

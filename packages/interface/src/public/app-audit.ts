@@ -20,6 +20,9 @@ const rollupEl = document.getElementById('rollup')!;
 const noReports = document.getElementById('no-reports')!;
 const reportLinks = document.getElementById('report-links')!;
 const findingsRows = document.getElementById('findings-rows')!;
+const reportLifecycle = document.getElementById('report-lifecycle')!;
+const approveReportsButton = document.getElementById('approve-reports-button') as HTMLButtonElement;
+const reportApprovalStatus = document.getElementById('report-approval-status')!;
 
 interface Finding {
   findingId: string;
@@ -57,6 +60,7 @@ interface AuditDetail {
   findings: Finding[];
   reportLanguages: ('fr' | 'en')[];
   reports: Array<{ language: 'fr' | 'en'; status: 'fresh' | 'stale' | 'unverified' }>;
+  lifecycle: 'scanned' | 'analysed' | 'rendered' | 'approved';
   manualFields?: AuditManualFields;
 }
 
@@ -169,6 +173,27 @@ regenerateReportButton.addEventListener('click', () => {
   void regenerateReport();
 });
 
+approveReportsButton.addEventListener('click', () => {
+  void approveReports();
+});
+
+async function approveReports(): Promise<void> {
+  if (!auditId) return;
+  approveReportsButton.disabled = true;
+  reportApprovalStatus.textContent = strings.auditDetail.approvingReportsMessage;
+  try {
+    await fetchJson(`/api/audits/${encodeURIComponent(auditId)}/approve-reports`, {
+      method: 'POST',
+    });
+    reportApprovalStatus.textContent = strings.auditDetail.reportsApprovedMessage;
+    await load();
+  } catch (error) {
+    reportApprovalStatus.textContent = error instanceof Error ? error.message : String(error);
+  } finally {
+    approveReportsButton.disabled = false;
+  }
+}
+
 async function regenerateReport(): Promise<void> {
   if (!auditId) return;
   regenerateReportButton.disabled = true;
@@ -199,8 +224,10 @@ function render(detail: AuditDetail): void {
   metaPages.textContent = String(detail.pagesVisited);
   rollupEl.innerHTML = severityBadgesHtml(detail.severityRollup, strings);
   prefillManualFields(detail.manualFields);
+  reportLifecycle.textContent = strings.auditDetail.lifecycle[detail.lifecycle];
+  approveReportsButton.hidden = detail.lifecycle !== 'rendered';
 
-  if (detail.reports.length === 0) {
+  if (detail.reportLanguages.length === 0) {
     noReports.hidden = false;
     reportLinks.innerHTML = '';
   } else {
@@ -208,9 +235,10 @@ function render(detail: AuditDetail): void {
     reportLinks.innerHTML = detail.reports
       .map(({ language, status }) => {
         const href = `/api/audits/${encodeURIComponent(detail.auditId)}/report/${language}`;
+        const previewHref = `${href}/preview`;
         const label = escapeHtml(strings.auditDetail.reportFreshness[status]);
         return status === 'fresh'
-          ? `<p><a href="${href}">${escapeHtml(strings.common.downloadReport)} (${language.toUpperCase()})</a> <span class="badge">${label}</span></p>`
+          ? `<p><a href="${previewHref}">${escapeHtml(strings.auditDetail.previewReport)} (${language.toUpperCase()})</a>${detail.lifecycle === 'approved' ? ` · <a href="${href}">${escapeHtml(strings.auditDetail.approvedDownload)} (${language.toUpperCase()})</a>` : ''} <span class="badge">${label}</span></p>`
           : `<p>${language.toUpperCase()} <span class="badge">${label}</span></p>`;
       })
       .join('');

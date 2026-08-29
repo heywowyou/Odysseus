@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { AuditManifest } from '@odysseus/core';
-import { hasMeasuredCoreWebVitals, renderCoreWebVitalsTable } from './core-web-vitals-table.js';
+import {
+  hasMeasuredCoreWebVitals,
+  renderCoreWebVitalsTable,
+  worstForMetric,
+} from './core-web-vitals-table.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSmallSiteManifest } from '../../test-fixtures.js';
 
@@ -194,7 +198,20 @@ describe('renderCoreWebVitalsTable', () => {
     const html = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
     expect(html).toContain('500 ms'); // median, in the value column
     expect(html).toContain('3 900 ms'); // worst page, in its own column (fr narrow no-break space)
+    expect(html).toContain('href="https://example.com/3900"');
+    expect(html).toContain('>/3900<');
     expect(html).toContain('Pire page');
+  });
+
+  it('breaks equal worst-value ties by URL', () => {
+    const pages = [
+      { url: 'https://example.com/z', coreWebVitals: { lcp: buildMeasurement(3000, '3 s') } },
+      { url: 'https://example.com/a', coreWebVitals: { lcp: buildMeasurement(3000, '3 s') } },
+    ] as unknown as AuditManifest['pages'];
+    expect(worstForMetric(pages, 'lcp')).toEqual({
+      value: 3000,
+      pageUrl: 'https://example.com/a',
+    });
   });
 
   it('item 1.7/B2: shows "same as median" for a metric with no outlier page', () => {

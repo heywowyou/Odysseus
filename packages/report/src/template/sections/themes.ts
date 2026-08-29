@@ -11,7 +11,6 @@ import {
   AUDIT_ID_TO_CWV_KEY,
   CORE_WEB_VITAL_THRESHOLDS,
   LCEN_MENTIONS_LEGALES_RULE_ID,
-  estimateAggregateEffortDays,
   estimateRevenueImpact,
   selectReferenceStats,
 } from '@odysseus/core';
@@ -31,6 +30,9 @@ import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 import { sectionTitle } from '../section-registry.js';
+import { type RenderedPriority, selectRenderedThemes } from '../rendered-priorities.js';
+
+export { MAX_RENDERED_THEMES, selectRenderedThemes } from '../rendered-priorities.js';
 
 /** F40: a quick win is low effort with medium or high impact, computed
  *  here in template code from the theme's own effort/impact - not from
@@ -47,96 +49,6 @@ export function isQuickWinTheme(theme: Pick<Theme, 'effort' | 'impact'>): boolea
  *  allows up to 20 (llm-output.ts's themeSchema max). This is a report
  *  presentation cap, not a change to what the LLM is allowed to produce -
  *  the lower-priority themes past rank 6 are simply not printed. */
-export const MAX_RENDERED_THEMES = 6;
-
-/** Same top-N-by-rank selection shared by themes.ts and checklist.ts, so
- *  the two sections can never disagree on which themes made the cut.
- *
- *  item 0.6 (La Corniche pass): a theme can end up with zero resolved
- *  findings - e.g. the LCEN mentions-légales finding it was built from
- *  gets stripped later by lcen-resolution.ts's resolveLcenFinding once an
- *  operator confirms where the SIREN is displayed - and a dangling theme
- *  like that was still winning a top-6 slot and rendering "0 pages sur
- *  18" as if it were a real priority. Filtered out before ranking, not
- *  after, so it can never occupy a slot a real priority should have had.
- *  findingsById must be the same map the caller already builds for
- *  rendering, not a second lookup. */
-/**
- * B2.1 (2026-08-24, Domaine Lagnonu). Section 04 told the director "43/43
- * pages with a critical finding" while the Priorites section contained six
- * chantiers and not one of them was performance - yet four of that site's
- * five critical findings were performance (LCP, TBT, FCP, Speed Index, all
- * 43 pages, median TBT 3 936 ms against a 200 ms threshold). The model had
- * ranked those themes 12, 15 and 17, below the render cut, so the single
- * number on the cover was driven by a problem the priorities never named.
- *
- * Every category holding at least one critical finding is therefore
- * guaranteed its highest-ranked theme in the rendered list. Deterministic,
- * and it leaves the model's ordering otherwise untouched: promoted themes
- * take the place of the lowest-ranked themes that would have rendered,
- * and the final list stays in priorityRank order so the numbering a reader
- * sees is still ascending.
- */
-export function selectRenderedThemes(
-  themes: readonly Theme[],
-  findingsById: ReadonlyMap<string, Finding>,
-): Theme[] {
-  const withResolvedFindings = themes.filter((theme) =>
-    theme.findingIds.some((id) => findingsById.has(id)),
-  );
-  const byRank = [...withResolvedFindings].sort((a, b) => a.priorityRank - b.priorityRank);
-  const selected = byRank.slice(0, MAX_RENDERED_THEMES);
-  if (selected.length < MAX_RENDERED_THEMES) return selected;
-
-  const themeFindings = (theme: Theme): Finding[] =>
-    theme.findingIds.map((id) => findingsById.get(id)).filter((f): f is Finding => f !== undefined);
-
-  const criticalCategories = new Set<string>();
-  for (const theme of byRank) {
-    for (const finding of themeFindings(theme)) {
-      if (finding.severity === 'critical') criticalCategories.add(finding.category);
-    }
-  }
-
-  const selectedKeys = new Set(selected.map((theme) => theme.priorityRank));
-  for (const category of criticalCategories) {
-    const alreadyShown = selected.some((theme) =>
-      themeFindings(theme).some((f) => f.category === category && f.severity === 'critical'),
-    );
-    if (alreadyShown) continue;
-
-    const promoted = byRank.find(
-      (theme) =>
-        !selectedKeys.has(theme.priorityRank) &&
-        themeFindings(theme).some((f) => f.category === category && f.severity === 'critical'),
-    );
-    if (!promoted) continue;
-
-    // Drop the lowest-ranked currently-selected theme that is not itself
-    // the only representative of some critical category.
-    for (let i = selected.length - 1; i >= 0; i--) {
-      const candidate = selected[i]!;
-      const covers = [...criticalCategories].filter((c) =>
-        themeFindings(candidate).some((f) => f.category === c && f.severity === 'critical'),
-      );
-      const isSoleRepresentative = covers.some(
-        (c) =>
-          selected.filter((t) =>
-            themeFindings(t).some((f) => f.category === c && f.severity === 'critical'),
-          ).length === 1,
-      );
-      if (isSoleRepresentative) continue;
-      selectedKeys.delete(candidate.priorityRank);
-      selected.splice(i, 1);
-      break;
-    }
-
-    selected.push(promoted);
-    selectedKeys.add(promoted.priorityRank);
-  }
-
-  return selected.sort((a, b) => a.priorityRank - b.priorityRank);
-}
 
 /** Quick-win star icon, ported verbatim from report.reference.html's
  *  inline SVG (a 5-point star), fixed colour per the reference (not a
@@ -436,6 +348,7 @@ function renderTheme(
    *  client's effectif band - renderRevenueImpactNote already no-ops on
    *  undefined, this is just where it enters the call chain. */
   turnoverEur: number | undefined,
+  priority?: RenderedPriority,
 ): string {
   const t = strings.themes;
   const themeFindings = theme.findingIds
@@ -501,6 +414,25 @@ function renderTheme(
         </div>
       `
       : '';
+  const deterministicActionsBox =
+    priority && priority.remediations.length > 0
+      ? `<div style="margin-top:4px">
+          <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.reviewedRemediationLabel)}</div>
+          <ul style="margin:0;padding-left:1.2em;font-size:12.5px;opacity:0.9">
+            ${priority.remediations.map((item) => `<li><span class="mono">${escapeHtml(item.ruleId)}</span>: ${escapeHtml(item.text)}</li>`).join('')}
+          </ul>
+        </div>`
+      : '';
+  const ownershipBox = priority
+    ? `<p style="font-size:11.5px;opacity:0.65;margin-top:4px">${escapeHtml(
+        fillTemplate(t.ownershipCountsTemplate, {
+          firstParty: formatNumber(priority.ownershipCounts['first-party-action'], language),
+          thirdParty: formatNumber(priority.ownershipCounts['third-party-escalation'], language),
+          verifyIntent: formatNumber(priority.ownershipCounts['verify-intent'], language),
+        }),
+      )}</p>`
+    : '';
+  const displayRank = priority?.displayRank ?? theme.priorityRank;
 
   const pagesText = fillTemplate(t.pagesOfTotalTemplate, {
     pages: formatNumber(uniquePages, language),
@@ -509,9 +441,9 @@ function renderTheme(
   });
 
   return `
-    <div class="card elev-sm theme-card" style="margin-bottom:var(--space-4);gap:var(--space-3)" id="theme-${theme.priorityRank}">
+    <div class="card elev-sm theme-card" style="margin-bottom:var(--space-4);gap:var(--space-3)" id="theme-${displayRank}" data-model-priority-rank="${theme.priorityRank}">
       <div style="display:flex;align-items:flex-start;gap:var(--space-3)">
-        <span style="width:26px;height:26px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:12px;display:flex;align-items:center;justify-content:center">${theme.priorityRank}</span>
+        <span style="width:26px;height:26px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:12px;display:flex;align-items:center;justify-content:center">${displayRank}</span>
         <div style="flex:1">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
             ${categoryTag}
@@ -524,6 +456,8 @@ function renderTheme(
       ${legalBox}
       ${citationBox}
       ${recommendedActionsBox}
+      ${deterministicActionsBox}
+      ${ownershipBox}
       ${renderOwnershipSplitNote(strings, language, themeFindings)}
       ${renderThirdPartyOnlyNote(strings, themeFindings)}
       ${renderLcenCrossReferenceNote(strings, themeFindings)}
@@ -653,10 +587,26 @@ export function renderThemes(
    *  siren - only ever changes which reference-stat citation renders,
    *  never anything assessObligations decided. */
   sectorOverride?: StatSector,
+  priorities?: readonly RenderedPriority[],
 ): string {
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
-  const sortedThemes = selectRenderedThemes(analysis.themes, findingsById);
+  const renderedPriorities =
+    priorities ??
+    selectRenderedThemes(analysis.themes, findingsById).map((theme, index): RenderedPriority => ({
+      theme,
+      displayRank: index + 1,
+      findings: theme.findingIds
+        .map((id) => findingsById.get(id))
+        .filter((finding): finding is Finding => finding !== undefined),
+      ownershipCounts: {
+        'first-party-action': 0,
+        'third-party-escalation': 0,
+        'verify-intent': 0,
+      },
+      remediations: [],
+    }));
+  const sortedThemes = renderedPriorities.map((priority) => priority.theme);
   const sector = sectorOverride ?? analysis.obligationAssessment?.sector ?? 'general';
 
   // One citation per category, shown once on that category's
@@ -712,9 +662,10 @@ export function renderThemes(
     (theme) => theme.legalRelevance === undefined,
   )?.priorityRank;
   const turnoverEur = analysis.obligationAssessment?.registrySnapshot?.turnoverEur;
-  const themeBlocks = sortedThemes
-    .map((theme) =>
-      renderTheme(
+  const themeBlocks = renderedPriorities
+    .map((priority) => {
+      const theme = priority.theme;
+      return renderTheme(
         strings,
         analysis.language,
         theme,
@@ -725,8 +676,9 @@ export function renderThemes(
         showQuickWinBadge,
         theme.priorityRank === firstNotApplicableRank,
         turnoverEur,
-      ),
-    )
+        priority,
+      );
+    })
     .join('');
 
   // P1.5 (2026-08-21 La Corniche feedback pass): every priority card gave
@@ -736,19 +688,6 @@ export function renderThemes(
   // estimateAggregateEffortDays), not a new LLM claim. Half-day
   // granularity: the underlying bands are already coarse, and a bare
   // integer would imply more precision than either range actually has.
-  const effortEstimate = estimateAggregateEffortDays(sortedThemes.map((theme) => theme.effort));
-  const roundToHalfDay = (days: number): number => Math.max(0.5, Math.round(days * 2) / 2);
-  const aggregateEstimateNote =
-    sortedThemes.length > 0
-      ? `<p style="font-size:12px;opacity:0.6;margin-bottom:var(--space-4);max-width:66ch">${escapeHtml(
-          fillTemplate(strings.themes.aggregateEffortEstimateTemplate, {
-            min: formatNumber(roundToHalfDay(effortEstimate.minDays), analysis.language),
-            max: formatNumber(roundToHalfDay(effortEstimate.maxDays), analysis.language),
-            count: sortedThemes.length,
-          }),
-        )}</p>`
-      : '';
-
   // P4.1 (2026-08-21 La Corniche feedback pass): Priorités is a heavy
   // section - accept the resulting white space rather than a section
   // header starting two lines above a page break, same reasoning already
@@ -756,10 +695,9 @@ export function renderThemes(
   return sheet(
     `
     ${renderSheetHeader(ordinal, strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }))}
-    ${aggregateEstimateNote}
     ${themeBlocks}
   `,
-    'sheet-standalone',
+    '',
     'section-04',
   );
 }

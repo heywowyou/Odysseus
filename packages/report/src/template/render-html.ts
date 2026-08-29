@@ -16,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { partitionFindings } from '@odysseus/llm';
 import type { AuditManifest, AuditManualFields, Finding } from '@odysseus/core';
-import type { StoredAnalysis } from '../types.js';
+import type { ReportRenderMetadata, StoredAnalysis } from '../types.js';
 import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
 import { resolveLcenFinding } from './lcen-resolution.js';
@@ -46,6 +46,7 @@ import { renderMethodology } from './sections/methodology.js';
 import { renderGlossary } from './sections/glossary.js';
 import { renderNextSteps } from './sections/next-steps.js';
 import { escapeHtml } from './html-utils.js';
+import { buildRenderedPriorities } from './rendered-priorities.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -78,7 +79,7 @@ export async function readStylesInlined(): Promise<string> {
 }
 
 export interface RenderHtmlInput {
-  reportId?: string;
+  renderMetadata?: ReportRenderMetadata;
   manifest: AuditManifest;
   findings: Finding[];
   analysis: StoredAnalysis;
@@ -113,7 +114,7 @@ function renderBody(
   renderDiffTotalEligible: number,
   renderDiffWrapperOrLegalExcludedCount: number,
   manualFields: AuditManualFields | undefined,
-  reportId: string | undefined,
+  renderMetadata: ReportRenderMetadata | undefined,
 ): string {
   // B1: one Set shared by every reference-stat citation render site
   // (renderThemes, then renderFindingsAppendix's geo section), so the same
@@ -130,6 +131,12 @@ function renderBody(
     manualFields?.sirenSourceUrl?.value,
   );
   const sectorOverride = manualFields?.sector?.value;
+  const renderedPriorities = buildRenderedPriorities(
+    analysis.themes,
+    resolvedFindings,
+    manifest,
+    analysis.language,
+  );
 
   // report-feedback-palais-gallien.md items 1/2/4: computed once, here,
   // so the TOC and every numbered section's own header agree on exactly
@@ -158,8 +165,15 @@ function renderBody(
   return [
     renderCover(strings, manifest, analysis, resolvedFindings, manualFields),
     renderToc(strings, includedSectionIds),
-    renderReportIntro(strings, ord('section-00'), analysis, resolvedFindings),
-    renderExecutiveSummary(strings, ord('section-01'), analysis, resolvedFindings, manifest),
+    renderReportIntro(strings, ord('section-00'), analysis, resolvedFindings, renderedPriorities),
+    renderExecutiveSummary(
+      strings,
+      ord('section-01'),
+      analysis,
+      resolvedFindings,
+      manifest,
+      renderedPriorities,
+    ),
     renderLegalExposure(
       strings,
       ord('section-02'),
@@ -170,7 +184,14 @@ function renderBody(
       resolvedFindings,
       manualFields,
     ),
-    renderStatistics(strings, ord('section-03'), analysis.language, resolvedFindings, manifest),
+    renderStatistics(
+      strings,
+      ord('section-03'),
+      analysis.language,
+      resolvedFindings,
+      manifest,
+      renderedPriorities,
+    ),
     renderThemes(
       strings,
       ord('section-04'),
@@ -179,6 +200,7 @@ function renderBody(
       manifest,
       citedStatIds,
       sectorOverride,
+      renderedPriorities,
     ),
     renderChecklist(
       strings,
@@ -188,8 +210,16 @@ function renderBody(
       resolvedFindings,
       manifest,
       manualFields,
+      renderedPriorities,
     ),
-    renderRemainingWork(strings, ord('section-05b'), analysis.language, analysis, resolvedFindings),
+    renderRemainingWork(
+      strings,
+      ord('section-05b'),
+      analysis.language,
+      analysis,
+      resolvedFindings,
+      renderedPriorities,
+    ),
     includedSectionIds.has('section-06')
       ? renderObservations(strings, ord('section-06'), diverted, analysis.obligationAssessment)
       : '',
@@ -222,6 +252,13 @@ function renderBody(
       resolvedFindings,
       resolvedSirenSourceUrl,
     ),
+    renderGlossary(strings, ord('section-13'), {
+      findings: resolvedFindings,
+      obligationAssessment: analysis.obligationAssessment,
+      transactionalFlowEvaluated: manifest.siteSignals?.hasTransactionalFlow !== undefined,
+      hasMeasuredCoreWebVitals: hasMeasuredCoreWebVitals(manifest),
+    }),
+    renderNextSteps(strings, ord('section-14'), manifest, analysis.language, renderMetadata),
     renderFindingsAppendix(
       strings,
       ord('section-12'),
@@ -231,18 +268,12 @@ function renderBody(
       sectorOverride ?? analysis.obligationAssessment?.sector ?? 'general',
       citedStatIds,
     ),
-    renderGlossary(strings, ord('section-13'), {
-      findings: resolvedFindings,
-      obligationAssessment: analysis.obligationAssessment,
-      transactionalFlowEvaluated: manifest.siteSignals?.hasTransactionalFlow !== undefined,
-      hasMeasuredCoreWebVitals: hasMeasuredCoreWebVitals(manifest),
-    }),
-    renderNextSteps(strings, ord('section-14'), manifest, analysis.language, reportId),
   ].join('\n');
 }
 
 export async function renderHtml(input: RenderHtmlInput): Promise<string> {
-  const { manifest, findings, analysis, renderDiffEvidencePages, manualFields, reportId } = input;
+  const { manifest, findings, analysis, renderDiffEvidencePages, manualFields, renderMetadata } =
+    input;
   const renderDiffTotalEligible = input.renderDiffTotalEligible ?? renderDiffEvidencePages.length;
   const renderDiffWrapperOrLegalExcludedCount = input.renderDiffWrapperOrLegalExcludedCount ?? 0;
   const strings = getStrings(analysis.language);
@@ -257,7 +288,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     renderDiffTotalEligible,
     renderDiffWrapperOrLegalExcludedCount,
     manualFields,
-    reportId,
+    renderMetadata,
   );
 
   return `<!doctype html>

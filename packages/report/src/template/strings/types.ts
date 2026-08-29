@@ -27,6 +27,9 @@ export interface ReportStrings {
   toc: {
     eyebrow: string;
     heading: string;
+    decisionGroupLabel: string;
+    referenceGroupLabel: string;
+    technicalAnnexGroupLabel: string;
   };
   /** P3 (2026-08-21 La Corniche feedback pass): section-00, a new
    *  non-technical intro page before the résumé. Structural/navigational,
@@ -84,6 +87,8 @@ export interface ReportStrings {
      *  only in the annex's "À traiter avec vos prestataires tiers"
      *  section. Template: {percent}. */
     thirdPartyOccurrencesNoteTemplate: string;
+    /** Template: {firstParty}, {thirdParty}, {verifyIntent}. */
+    priorityOwnershipTemplate: string;
     pagesWithCriticalTileLabel: string;
     criticalTileLabel: string;
     seriousTileLabel: string;
@@ -245,6 +250,8 @@ export interface ReportStrings {
   executiveSummary: {
     eyebrow: string;
     heading: string;
+    /** Template: {firstParty}, {thirdParty}, {verifyIntent}. */
+    priorityOwnershipTemplate: string;
     /** Kicker over the "where to start" jump-link box (doc §3 section 01:
      *  prose + jump links, capped at 3). */
     startHereKicker: string;
@@ -497,6 +504,9 @@ export interface ReportStrings {
      *  stated the problem and its impact without ever stating what to do
      *  about it. */
     recommendedActionsLabel: string;
+    reviewedRemediationLabel: string;
+    /** Template: {firstParty}, {thirdParty}, {verifyIntent}. */
+    ownershipCountsTemplate: string;
     effortImpactLevels: { low: string; medium: string; high: string };
     /** Template: {pages}, {pageWord}, {totalPages}. */
     pagesOfTotalTemplate: string;
@@ -711,7 +721,8 @@ export interface ReportStrings {
     postFixBody: string;
     /** item 31: no authorship, terms, or liability block anywhere in a
      *  paid deliverable that may be forwarded to counsel. Template:
-     *  {producer}, {date}, {version}, {reportId}. */
+     *  {producer}, {renderDate}, {renderBuild}, {templateVersion},
+     *  {scanDate}, {scanBuild}, {reportId}. */
     authorshipTemplate: string;
     /** item 3.13: no issuer identity (legal entity, signatory,
      *  registration number) anywhere in the document - a professionalism

@@ -281,7 +281,7 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
     }
   });
 
-  it('invariant 2: no sheet is more than 80 percent empty, except the cover', async () => {
+  it('invariant 2: no sheet is more than 80 percent empty, except the cover and final appendix continuation', async () => {
     const fillRatios = await doc.page.evaluate(() =>
       Array.from(document.querySelectorAll('.pagedjs_page')).map((p, index) => {
         const pageRect = p.getBoundingClientRect();
@@ -296,12 +296,17 @@ describe('Paged.js invariants against the stress fixture (docs/report-design-sys
           pageRect.top,
         );
         const usedHeight = maxBottom - pageRect.top;
-        return { index, ratio: usedHeight / pageRect.height };
+        return {
+          index,
+          ratio: usedHeight / pageRect.height,
+          hasAppendix: Boolean(p.querySelector('#section-12')),
+        };
       }),
     );
 
-    for (const { index, ratio } of fillRatios) {
+    for (const { index, ratio, hasAppendix } of fillRatios) {
       if (index === 0) continue; // cover is exempt from the 80%-empty rule itself
+      if (index === fillRatios.length - 1 && hasAppendix) continue;
       expect(ratio).toBeGreaterThan(0.2);
     }
   });

@@ -2215,6 +2215,46 @@ the database region is named on the privacy page as AWS Paris (eu-west-3),
 alongside Scaleway's Paris region. Every processor is therefore disclosed with a
 location a reader can check, which is what the disclosure is for.
 
+### 44. A deliverable is an approved bilingual report pair, and the same PDF serves both audiences
+
+**Decision:** keep one complete PDF per language, put the technical appendix
+last, and approve an exact French and English pair before delivery. The report
+remains a single evidence-bearing artifact: finding IDs, URLs, selectors,
+occurrences, and provenance are not split into a second export. The table of
+contents groups decision and action material, reference and method material,
+and the final technical annex. Cover, contents, printable checklist, and annex
+are standalone; compatible short sections flow together under tested fill and
+section-mixing bounds.
+
+**Why:** splitting the appendix would make the director's document shorter but
+would create a second deliverable whose identity, approval, and retention could
+drift. Keeping it last preserves traceability while putting decisions first.
+Blanket page breaks caused sparse pages and contradicted the current renderer,
+so the canonical pagination contract now describes compact flow rather than an
+obsolete one-section-per-page rule.
+
+**Approval and provenance:** reports receive their report ID, render timestamp,
+renderer build, and template version before Chromium starts. Those same values
+are used in the PDF, filename, sidecar, and stored report. Scan completion and
+scan build remain separate manifest facts. An insert-only approval references
+the exact digest-verified current French and English report IDs. Lifecycle is
+derived as scanned, analysed, rendered, or approved; generating a later
+analysis or report automatically makes an older approval non-current without
+mutating history. Preview downloads require a fresh verified report, while
+deliverable downloads additionally require the current pair approval.
+
+**Priority interpretation:** raw severity totals and model overall risk remain
+unchanged. One report-owned priority view assigns contiguous display ranks,
+adds first-party, third-party, and verify-intent ownership counts, and requires
+reviewed code-owned remediation for every rendered rule family. Model ranks
+remain attached as provenance. LCEN and other regime-dependent findings stay
+out of model themes; a legacy mixed analysis must be regenerated.
+
+**Deferred boundaries:** numeric development-day estimates still require the
+evidence-based model in `docs/report/report-feedback-deferred-items.md`.
+Lighthouse successor-family deduplication remains monitor-only until a current
+scan reproduces it.
+
 
 ## Build order milestone notes (8.5a through 9c)
 

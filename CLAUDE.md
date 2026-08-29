@@ -355,6 +355,16 @@ means numbered entry 24, not a literal Markdown heading anchor.
     `OutreachSourceCapabilities`. The renderer lints its own output and throws.
     → trade-offs.md#42
 
+44. A paid deliverable is the exact current French and English report pair:
+    render identity is created before PDF generation, approval is insert-only
+    over both verified digests, previews require freshness, and delivery also
+    requires the matching current approval. Keep one PDF per language with the
+    technical appendix last; priorities use contiguous display ranks,
+    deterministic remediation, and ownership context without changing raw
+    severity or the locked LLM schema. Numeric effort estimates and Lighthouse
+    successor-family dedupe remain deferred until their recorded triggers.
+    → trade-offs.md#44
+
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
 module, Mongoose 9, Zod, Commander, Vitest, pino, `@mistralai/mistralai`.

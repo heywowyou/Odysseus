@@ -22,6 +22,7 @@ export interface ReportDocumentFields {
   analysisId: string;
   findingsProvenance: FindingsProvenance;
   rendererVersion: number;
+  rendererBuild: string;
   pdfDigest: string;
   language: ReportLanguage;
   /** REPORT_TEMPLATE_VERSION from @odysseus/report at generation time,
@@ -40,7 +41,12 @@ export interface ReportDocumentFields {
 }
 
 type LegacyOptionalFields =
-  'reportId' | 'analysisId' | 'findingsProvenance' | 'rendererVersion' | 'pdfDigest';
+  | 'reportId'
+  | 'analysisId'
+  | 'findingsProvenance'
+  | 'rendererVersion'
+  | 'rendererBuild'
+  | 'pdfDigest';
 export type ReportDocument = Omit<ReportDocumentFields, LegacyOptionalFields> &
   Partial<Pick<ReportDocumentFields, LegacyOptionalFields>>;
 
@@ -59,6 +65,7 @@ const reportSchema = new Schema<ReportDocument>(
       required: true,
     },
     rendererVersion: { type: Number, required: true },
+    rendererBuild: { type: String, required: true },
     pdfDigest: { type: String, required: true },
     language: { type: String, required: true, enum: ['fr', 'en'] },
     reportTemplateVersion: { type: Number, required: true },

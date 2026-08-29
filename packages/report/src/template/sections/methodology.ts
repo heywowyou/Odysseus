@@ -25,6 +25,7 @@ import {
   renderSheetHeader,
   sheet,
 } from '../html-utils.js';
+import { translateEffectifLabel } from '../effectif-label.js';
 
 /** Sirene's own effectif-band labels (see packages/interface's
  *  sirene-client.ts) are French-only, since they come from an INSEE
@@ -34,34 +35,6 @@ import {
  *  boundary, document why" precedent CLAUDE.md already uses elsewhere,
  *  since packages/report does not and should not depend on
  *  packages/interface. */
-const EFFECTIF_BAND_LABELS_EN: Record<string, string> = {
-  NN: 'an unreported headcount',
-  '00': '0 employees',
-  '01': '1 to 2 employees',
-  '02': '3 to 5 employees',
-  '03': '6 to 9 employees',
-  '11': '10 to 19 employees',
-  '12': '20 to 49 employees',
-  '21': '50 to 99 employees',
-  '22': '100 to 199 employees',
-  '31': '200 to 249 employees',
-  '32': '250 to 499 employees',
-  '41': '500 to 999 employees',
-  '42': '1,000 to 1,999 employees',
-  '51': '2,000 to 4,999 employees',
-  '52': '5,000 to 9,999 employees',
-  '53': '10,000 employees or more',
-};
-
-function translateEffectifLabel(
-  code: string,
-  frenchLabel: string,
-  language: ReportLanguage,
-): string {
-  if (language === 'fr') return frenchLabel;
-  return EFFECTIF_BAND_LABELS_EN[code] ?? frenchLabel;
-}
-
 function formatEur(amount: number, language: ReportLanguage): string {
   const formatted = formatNumber(amount, language);
   return language === 'fr' ? `${formatted} €` : `€${formatted}`;

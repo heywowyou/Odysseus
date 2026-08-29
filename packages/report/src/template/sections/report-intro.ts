@@ -11,6 +11,7 @@ import {
 import { sectionTitle } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
+import type { RenderedPriority } from '../rendered-priorities.js';
 
 const TOP_ACTION_COUNT = 3;
 
@@ -29,6 +30,7 @@ export function renderReportIntro(
   ordinal: number,
   analysis: StoredAnalysis,
   findings: readonly Finding[],
+  priorities?: readonly RenderedPriority[],
 ): string {
   const r = strings.reportIntro;
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
@@ -55,7 +57,11 @@ export function renderReportIntro(
     .map((line) => `<li style="margin-bottom:6px">${escapeHtml(line)}</li>`)
     .join('');
 
-  const topThemes = selectRenderedThemes(analysis.themes, findingsById).slice(0, TOP_ACTION_COUNT);
+  const topThemes = (
+    priorities
+      ? priorities.map((priority) => priority.theme)
+      : selectRenderedThemes(analysis.themes, findingsById)
+  ).slice(0, TOP_ACTION_COUNT);
   const actionsList = topThemes
     .map((theme) => {
       const themeFindings = theme.findingIds
@@ -88,7 +94,7 @@ export function renderReportIntro(
         : ''
     }
   `,
-    'sheet-standalone',
+    '',
     'section-00',
   );
 }

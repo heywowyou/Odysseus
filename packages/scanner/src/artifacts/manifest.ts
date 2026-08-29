@@ -22,7 +22,7 @@ let cachedOdysseusVersion: string | undefined;
  *  exposing a semver number that never gets bumped. Falls back to
  *  "unknown" outside a git checkout (e.g. a stripped deployment archive)
  *  rather than throwing. */
-function readOdysseusVersion(): string {
+export function readOdysseusBuildId(): string {
   if (cachedOdysseusVersion !== undefined) return cachedOdysseusVersion;
   try {
     cachedOdysseusVersion = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
@@ -58,7 +58,7 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
     startedAt: input.startedAt.toISOString(),
     finishedAt: input.finishedAt.toISOString(),
     tool: {
-      odysseusVersion: readOdysseusVersion(),
+      odysseusVersion: readOdysseusBuildId(),
       findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
       axeCoreVersion: input.tool.axeCoreVersion,
       lighthouseVersion: input.tool.lighthouseVersion,

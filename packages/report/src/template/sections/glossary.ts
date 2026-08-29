@@ -108,7 +108,7 @@ export function renderGlossary(
     ${renderSheetHeader(ordinal, g.eyebrow, g.heading)}
     ${items}
   `,
-    'sheet-standalone',
+    '',
     'section-13',
   );
 }

@@ -22,6 +22,7 @@ import {
 import { renderLegalCitationParagraph } from './methodology.js';
 import { SEVERITY } from '../design-tokens.js';
 import { detectVendor } from '../third-party-attribution.js';
+import { effectifCodeFromAssessment, translateEffectifLabel } from '../effectif-label.js';
 
 /** P0.3 (2026-08-21 La Corniche feedback pass): how many example pages to
  *  name when the transactional-flow component was found on-site. A short
@@ -67,7 +68,12 @@ function renderSirenNote(
     ? fillTemplate(l.registrySnapshotTemplate, {
         denomination: snapshot.denomination,
         siren: siren ?? '-',
-        effectifs: snapshot.effectifBandLabel ?? l.registrySnapshotEffectifsUnavailable,
+        effectifs:
+          translateEffectifLabel(
+            effectifCodeFromAssessment(obligationAssessment),
+            snapshot.effectifBandLabel,
+            language,
+          ) ?? l.registrySnapshotEffectifsUnavailable,
         // registrySnapshot.retrievedAt is typed as a real Date, but this
         // value is loaded from a persisted analysis JSON file with no
         // reviver (same as every other date field in this pipeline -
@@ -76,7 +82,6 @@ function renderSirenNote(
         // time value" crash against a live La Corniche regeneration
         // before this wrap was added.
         date: formatDate(new Date(snapshot.retrievedAt), language),
-        source: snapshot.source,
       })
     : siren
       ? fillTemplate(l.sirenTemplate, {

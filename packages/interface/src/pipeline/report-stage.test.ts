@@ -11,6 +11,7 @@ vi.mock('@odysseus/store', () => ({
   persistReport: vi.fn(),
   getAuditManualFields: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('@odysseus/scanner', () => ({ readOdysseusBuildId: vi.fn(() => 'render-build') }));
 
 import { generateReportPdf } from '@odysseus/report';
 import { persistReport } from '@odysseus/store';
@@ -101,7 +102,12 @@ describe('runReportStage', () => {
         manifest,
         findings: [],
         analysis,
-        reportId: result.reportId,
+        renderMetadata: expect.objectContaining({
+          reportId: result.reportId,
+          rendererBuild: 'render-build',
+          templateVersion: 3,
+          renderedAt: result.generatedAt,
+        }),
       }),
     );
 
@@ -119,6 +125,8 @@ describe('runReportStage', () => {
         analysisId: analysis.analysisId,
         findingsProvenance: manifest.findingsProvenance,
         rendererVersion: 3,
+        rendererBuild: 'render-build',
+        reportTemplateVersion: 3,
         pdfDigest: result.pdfDigest,
       }),
     );
@@ -129,6 +137,7 @@ describe('runReportStage', () => {
       analysisId: analysis.analysisId,
       findingsProvenance: manifest.findingsProvenance,
       rendererVersion: 3,
+      rendererBuild: 'render-build',
       pdfDigest: result.pdfDigest,
       language: 'fr',
       reportTemplateVersion: 3,

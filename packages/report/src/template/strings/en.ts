@@ -12,6 +12,9 @@ export const en: ReportStrings = {
   toc: {
     eyebrow: 'Contents',
     heading: "What's in this report",
+    decisionGroupLabel: 'Decision and action',
+    referenceGroupLabel: 'Reference and method',
+    technicalAnnexGroupLabel: 'Technical annex',
   },
   reportIntro: {
     eyebrow: 'About this report',
@@ -56,6 +59,8 @@ export const en: ReportStrings = {
       // B6: see the French entry for why this names the containing
       // numbered section rather than the sub-heading alone.
       '{percent}% of these occurrences come from third-party components (forms, popups, booking widget) - see "To address with your third-party providers", in the technical appendix.',
+    priorityOwnershipTemplate:
+      'Priorities: {firstParty} direct fixes, {thirdParty} third-party escalations, {verifyIntent} intent checks.',
     pagesWithCriticalTileLabel: 'pages with at least one critical finding',
     criticalTileLabel: 'critical',
     seriousTileLabel: 'serious',
@@ -121,16 +126,16 @@ export const en: ReportStrings = {
   cover: {
     kicker: 'Odysseus · Digital audit',
     reportTitle: 'Audit report',
-    subtitle: 'Accessibility, performance, SEO and GEO audit',
-    subtitleNoPerformance: 'Accessibility, SEO and GEO audit',
+    subtitle: 'Bilingual accessibility, performance, SEO, GEO, privacy and security audit',
+    subtitleNoPerformance: 'Bilingual accessibility, SEO, GEO, privacy and security audit',
     siteLabel: 'Site audited',
     dateLabel: 'Audit date',
     pagesScannedLabel: 'Scope analyzed',
     pagesScannedValueTemplate: '{count} pages analyzed',
     languageLabel: 'Report language',
     wcagReferentialLabel: 'Standard audited',
-    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO',
-    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO',
+    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO · Privacy · Security',
+    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO · Privacy · Security',
     riskSmallLabel: 'Technical findings severity',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     riskBasisTemplate: 'Based on {critical} {criticalWord} and {serious} {seriousWord}',
@@ -146,6 +151,8 @@ export const en: ReportStrings = {
   executiveSummary: {
     eyebrow: 'Summary',
     heading: 'What to take away',
+    priorityOwnershipTemplate:
+      'Within the priorities: {firstParty} direct fixes, {thirdParty} third-party escalations and {verifyIntent} intent checks.',
     startHereKicker: 'Where to start',
     glossaryPointerSentence:
       'Technical terms used in this report are defined in the "Glossary" section.',
@@ -192,7 +199,7 @@ export const en: ReportStrings = {
     sirenTemplate: 'SIREN {siren}, as found during this audit ({date}).',
     sirenUnavailable: 'No SIREN number could be identified for this site during this audit.',
     registrySnapshotTemplate:
-      'Sirene registry data: {denomination}, SIREN {siren}, {effectifs}, retrieved on {date} ({source}).',
+      'Sirene registry data: {denomination}, SIREN {siren}, {effectifs}, retrieved on {date}.',
     registrySnapshotEffectifsUnavailable: 'headcount band unavailable',
     lcenKicker: 'Another applicable obligation',
     lcenObserved:
@@ -252,6 +259,9 @@ export const en: ReportStrings = {
       'Based on your reported turnover ({turnover} EUR), and if this association held for your business, the order of magnitude would be up to {impact} EUR per year. This is an indicative estimate based on a single study, not a guaranteed forecast.',
     quickWinBadgeLabel: 'Quick win',
     recommendedActionsLabel: 'Recommended actions',
+    reviewedRemediationLabel: 'Reviewed technical remediation',
+    ownershipCountsTemplate:
+      'Ownership: {firstParty} direct fixes, {thirdParty} third-party escalations, {verifyIntent} intent checks.',
     effortImpactLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     pagesOfTotalTemplate: '{pages} {pageWord} of {totalPages}',
     refsLabel: 'Findings',
@@ -518,7 +528,7 @@ export const en: ReportStrings = {
     postFixBody:
       'Once priorities are addressed, a targeted check confirms the fixed findings are genuinely resolved, without re-running a full audit.',
     authorshipTemplate:
-      'Report produced by {producer}, generated on {date} (build {version}), report ID {reportId}.',
+      'Report produced by {producer}, rendered on {renderDate} (render build {renderBuild}, template {templateVersion}), from the scan completed on {scanDate} (scan build {scanBuild}), report ID {reportId}.',
     issuerBlockTemplate: 'Signatory: {signatory}. SIRET: {registrationNumber}.',
     liabilityStatement:
       'This report reproduces technical findings detected by automated tools, together with explanations and prioritization. It does not constitute legal advice; see the "Legal exposure" section and the methodology for coverage limits. Odysseus cannot be held liable for decisions made on the sole basis of this document.',

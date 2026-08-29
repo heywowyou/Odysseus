@@ -87,13 +87,24 @@ function medianForMetric(
  *  page"). Showing the worst page's value alongside the median lets the
  *  reader see why the finding's severity can outrank the median's rating,
  *  without adding reconciling prose. */
-function worstForMetric(
-  vitalsList: readonly (CoreWebVitals | undefined)[],
+export function worstForMetric(
+  pages: AuditManifest['pages'],
   key: CoreWebVitalMetricKey,
-): number | null {
-  const values = metricValues(vitalsList, key);
-  if (values.length === 0) return null;
-  return Math.max(...values);
+): { value: number; pageUrl: string } | null {
+  const measured = pages
+    .map((page) => ({ value: page.coreWebVitals?.[key]?.numericValue, pageUrl: page.url }))
+    .filter((item): item is { value: number; pageUrl: string } => item.value != null)
+    .sort((a, b) => b.value - a.value || a.pageUrl.localeCompare(b.pageUrl));
+  return measured[0] ?? null;
+}
+
+function compactPagePath(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.pathname || '/'}${parsed.search}`;
+  } catch {
+    return url;
+  }
 }
 
 /** INP has no lab equivalent (TBT is Lighthouse's lab-only proxy for it),
@@ -313,10 +324,13 @@ export function renderCoreWebVitalsTable(
         : rating === 'mid'
           ? SEVERITY.moderate.color
           : SEVERITY.critical.color;
-    const worst = worstForMetric(vitalsList, metric.key);
+    const worst = worstForMetric(manifest.pages, metric.key);
     const worstCell =
-      worst !== null && worst > value
-        ? cell(formatMetricValue(worst, unit, language), 'opacity:0.7')
+      worst !== null && worst.value > value
+        ? cell(
+            `<a href="${escapeHtml(worst.pageUrl)}" style="color:inherit;text-decoration:underline">${escapeHtml(compactPagePath(worst.pageUrl))}</a><br><span class="mono">${escapeHtml(formatMetricValue(worst.value, unit, language))}</span>`,
+            'opacity:0.7;font-size:11px',
+          )
         : cell(escapeHtml(c.worstPageSameAsMedian), 'opacity:0.55;font-size:12px');
     return `
       <tr>

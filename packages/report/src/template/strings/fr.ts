@@ -13,6 +13,9 @@ export const fr: ReportStrings = {
   toc: {
     eyebrow: 'Sommaire',
     heading: 'Contenu du rapport',
+    decisionGroupLabel: 'Décision et actions',
+    referenceGroupLabel: 'Références et méthode',
+    technicalAnnexGroupLabel: 'Annexe technique',
   },
   reportIntro: {
     eyebrow: 'À propos de ce rapport',
@@ -69,6 +72,8 @@ export const fr: ReportStrings = {
       // pages further on. Naming the numbered section that contains it is
       // the difference between a reference and a dead end.
       "{percent} % de ces occurrences proviennent de composants tiers (formulaires, fenêtres modales, widget de réservation) - voir « À traiter avec vos prestataires tiers », dans l'annexe technique.",
+    priorityOwnershipTemplate:
+      'Priorités : {firstParty} constats à corriger directement, {thirdParty} à transmettre à un tiers, {verifyIntent} à vérifier selon le contexte.',
     pagesWithCriticalTileLabel: 'pages avec au moins un constat critique',
     criticalTileLabel: 'critiques',
     seriousTileLabel: 'sérieux',
@@ -141,8 +146,8 @@ export const fr: ReportStrings = {
     // line whenever a company name occupies the H1, see cover.ts) reads as
     // generic against the four-category scope C9 already states lower on
     // this same page (WCAG 2.2 AA · Performance · SEO · GEO).
-    subtitle: 'Audit accessibilité, performance, SEO et GEO',
-    subtitleNoPerformance: 'Audit accessibilité, SEO et GEO',
+    subtitle: 'Audit bilingue accessibilité, performance, SEO, GEO, vie privée et sécurité',
+    subtitleNoPerformance: 'Audit bilingue accessibilité, SEO, GEO, vie privée et sécurité',
     siteLabel: 'Site audité',
     dateLabel: "Date de l'audit",
     pagesScannedLabel: 'Périmètre analysé',
@@ -155,8 +160,8 @@ export const fr: ReportStrings = {
     // new one ("WCAG 2.2 AA · Performance · SEO ·" / "GEO"). A non-
     // breaking space after "·" (not before) keeps each "· Term" pair
     // together, so wrapping can only happen between complete terms.
-    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO',
-    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO',
+    wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO · Vie privée · Sécurité',
+    wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO · Vie privée · Sécurité',
     riskSmallLabel: 'Niveau de criticité des constats',
     riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
     riskBasisTemplate: 'Basé sur {critical} {criticalWord} et {serious} {seriousWord}',
@@ -179,6 +184,8 @@ export const fr: ReportStrings = {
   executiveSummary: {
     eyebrow: 'Résumé',
     heading: "Ce qu'il faut retenir",
+    priorityOwnershipTemplate:
+      'Dans les priorités : {firstParty} constats à corriger directement, {thirdParty} à transmettre à un tiers et {verifyIntent} à vérifier selon votre contexte.',
     startHereKicker: 'Par où commencer',
     glossaryPointerSentence:
       'Les termes techniques utilisés dans ce rapport sont définis dans la section « Glossaire ».',
@@ -233,7 +240,7 @@ export const fr: ReportStrings = {
     // effectifsBand is the label already, may be absent when Sirene's
     // headcount field itself is unreliable for this entity's band.
     registrySnapshotTemplate:
-      'Données du répertoire Sirene : {denomination}, SIREN {siren}, {effectifs}, consultées le {date} ({source}).',
+      'Données du répertoire Sirene : {denomination}, SIREN {siren}, {effectifs}, consultées le {date}.',
     registrySnapshotEffectifsUnavailable: 'effectif non disponible',
     // P2.1 (2026-08-21 La Corniche feedback pass): a real registry
     // denomination rendered with an unbalanced parenthesis ("(O! DE LA
@@ -322,6 +329,9 @@ export const fr: ReportStrings = {
       "Sur la base de votre chiffre d'affaires déclaré ({turnover} €), et si cette association se vérifiait pour votre activité, l'ordre de grandeur serait de jusqu'à {impact} € par an. Il s'agit d'une estimation indicative fondée sur une seule étude, pas d'une prévision garantie.",
     quickWinBadgeLabel: 'Gain rapide',
     recommendedActionsLabel: 'Actions recommandées',
+    reviewedRemediationLabel: 'Remédiation technique vérifiée',
+    ownershipCountsTemplate:
+      'Responsabilité : {firstParty} à corriger directement, {thirdParty} à transmettre à un tiers, {verifyIntent} à vérifier selon le contexte.',
     effortImpactLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
     pagesOfTotalTemplate: '{pages} {pageWord} sur {totalPages}',
     refsLabel: 'Constats',
@@ -632,7 +642,7 @@ export const fr: ReportStrings = {
     postFixBody:
       'Une fois les priorités traitées, une vérification ciblée confirme que les constats corrigés le sont bien, sans relancer un audit complet.',
     authorshipTemplate:
-      'Rapport produit par {producer}, généré le {date} (build {version}), identifiant de rapport {reportId}.',
+      'Rapport produit par {producer}, rendu le {renderDate} (build de rendu {renderBuild}, modèle {templateVersion}), à partir du scan achevé le {scanDate} (build de scan {scanBuild}), identifiant de rapport {reportId}.',
     issuerBlockTemplate: 'Signataire : {signatory}. SIRET : {registrationNumber}.',
     liabilityStatement:
       "Ce rapport reproduit des constats techniques détectés par des outils automatisés, accompagnés d'explications et de priorisations. Il ne constitue pas un avis juridique ; voir la section « Exposition légale » et la méthodologie pour les limites de couverture. Odysseus ne saurait être tenu responsable des décisions prises sur la seule base de ce document.",

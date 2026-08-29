@@ -200,6 +200,14 @@ function buildRenderDiffFindings(pages: readonly ManifestPageEntry[]): Finding[]
 function buildOtherNonMinorFindings(count: number): Finding[] {
   const severities: Severity[] = ['critical', 'serious', 'moderate'];
   const categories: FindingCategory[] = ['accessibility', 'seo', 'performance', 'geo'];
+  const reviewedRuleIds = [
+    'color-contrast',
+    'canonical-missing',
+    'largest-contentful-paint',
+    'jsonld-missing',
+    'button-name',
+    'document-title',
+  ] as const;
   const findings: Finding[] = [];
 
   for (let i = 0; i < count; i++) {
@@ -212,7 +220,11 @@ function buildOtherNonMinorFindings(count: number): Finding[] {
     findings.push(
       buildFinding({
         findingId: `f-nm-${pad(i, 3)}`,
-        ruleId: `stress-rule-${i % 6}`,
+        // The stress fixture reaches the full report builder, whose
+        // fail-closed remediation contract intentionally rejects invented
+        // rule IDs. Rotate through reviewed real rules while keeping the
+        // fixture's volume and category distribution synthetic.
+        ruleId: reviewedRuleIds[i % reviewedRuleIds.length]!,
         category,
         severity,
         wcagCriteria,

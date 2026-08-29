@@ -7,6 +7,7 @@ import {
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
+import { type RenderedPriority, summarizePriorityOwnership } from '../rendered-priorities.js';
 import { computeStatistics } from '../statistics.js';
 import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
 
@@ -89,6 +90,7 @@ export function renderStatistics(
   language: ReportLanguage,
   findings: Finding[],
   manifest: AuditManifest,
+  priorities?: readonly RenderedPriority[],
 ): string {
   const stats = computeStatistics(findings, manifest);
   const s = strings.statistics;
@@ -202,10 +204,23 @@ export function renderStatistics(
           }),
         )}</p>`
       : '';
+  const ownership = priorities ? summarizePriorityOwnership(priorities) : undefined;
+  const priorityOwnershipNote = ownership
+    ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
+        fillTemplate(s.priorityOwnershipTemplate, {
+          firstParty: n(ownership['first-party-action']),
+          thirdParty: n(ownership['third-party-escalation']),
+          verifyIntent: n(ownership['verify-intent']),
+        }),
+      )}</p>`
+    : '';
 
   const footnotes =
-    heuristicOccurrencesNote || criticalDriverNote || thirdPartyOccurrencesNote
-      ? `<div style="margin-bottom:var(--space-3)">${heuristicOccurrencesNote}${criticalDriverNote}${thirdPartyOccurrencesNote}</div>`
+    heuristicOccurrencesNote ||
+    criticalDriverNote ||
+    thirdPartyOccurrencesNote ||
+    priorityOwnershipNote
+      ? `<div style="margin-bottom:var(--space-3)">${heuristicOccurrencesNote}${criticalDriverNote}${thirdPartyOccurrencesNote}${priorityOwnershipNote}</div>`
       : '<div style="margin-bottom:var(--space-3)"></div>';
 
   return sheet(

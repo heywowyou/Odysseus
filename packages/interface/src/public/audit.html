@@ -49,10 +49,24 @@
 
       <h2 data-i18n="auditDetail.reportsHeading">Reports</h2>
       <section class="card elev-sm" id="reports-card">
+        <p>
+          <strong data-i18n="auditDetail.lifecycleLabel">Lifecycle</strong>:
+          <span id="report-lifecycle"></span>
+        </p>
         <p class="empty-state" id="no-reports" data-i18n="auditDetail.noReportsYet" hidden>
           No report generated yet.
         </p>
         <div id="report-links"></div>
+        <button
+          type="button"
+          class="btn btn-primary"
+          id="approve-reports-button"
+          hidden
+          data-i18n="auditDetail.approveReportsButton"
+        >
+          Approve bilingual pair
+        </button>
+        <p id="report-approval-status" class="hint"></p>
       </section>
 
       <h2 data-i18n="auditDetail.manualFieldsHeading">Enrichment</h2>

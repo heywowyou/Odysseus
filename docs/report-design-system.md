@@ -55,8 +55,12 @@ Rules:
 - Inter is self-hosted in `packages/report/src/fonts` with `font-display: block`.
   No CDN, no `swap`. A swap during pagination changes measured heights and
   produces different page breaks on every run.
-- One `<section class="sheet">` per numbered section. A section may overflow
-  onto a second sheet; it may never share a sheet with the next section.
+- One `<section class="sheet">` per numbered section. Cover, contents,
+  printable checklist, and technical appendix are standalone. Compatible short
+  numbered sections may share a physical page.
+- The technical appendix is the final section in the PDF. Stable DOM section
+  IDs do not encode reading order.
+- A section heading and introduction stay with the first bounded content item.
 
 ## 3. Per section data contract
 
@@ -79,9 +83,9 @@ broken the audited site is.
 | 09 | Mesures de performance | **5 aggregated medians, no per page table** | 1 sheet |
 | 10 | Déclaration | one row per failing criterion | flows |
 | 11 | Méthodologie | fixed prose | 1 sheet |
-| 12 | Annexe | non minor findings named individually; minors grouped by rule | flows |
 | 13 | Glossaire | 9 entries | 1 sheet |
 | 14 | Prochaines étapes | 3 cards | 1 sheet |
+| 12 | Annexe technique finale | all finding, URL, selector, occurrence, and provenance detail | flows |
 
 Four decisions worth stating explicitly, because the previous output diverged on
 each of them:
@@ -137,13 +141,15 @@ Page count is deterministic once Paged.js runs, so these are checks, not
 opinions. `packages/report` should assert them against the stress fixture.
 
 1. No `<img>` renders taller than 90mm.
-2. No sheet is more than 80 percent empty except the cover.
-3. No sheet contains content from two different numbered sections.
-4. Every sheet has the footer string and a `Page n / N` counter.
-5. `N` in the counter equals the real page count.
-6. No text node overflows its container horizontally.
-7. Total page count for the stress fixture stays within 18 to 26.
-8. The generated PDF passes axe-core, and carries a bookmark outline.
+2. No non-cover sheet is more than 80 percent empty, except the final appendix
+   continuation page.
+3. No sheet contains more than three numbered sections.
+4. Standalone sections never share a sheet with another numbered section.
+5. Every non-cover sheet has the footer string and a `Page n / N` counter.
+6. `N` in the counter equals the real page count.
+7. No text node overflows its container horizontally.
+8. Total page count for the stress fixture stays within its tested range.
+9. The generated PDF passes axe-core and carries a bookmark outline.
 
 ## 5. Stress fixture
 

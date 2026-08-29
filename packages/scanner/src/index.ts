@@ -81,7 +81,7 @@ export {
 export { toAuditRelativeRefs } from './artifacts/relativize.js';
 export { collectToolVersions } from './artifacts/versions.js';
 export type { CollectedToolVersions } from './artifacts/versions.js';
-export { buildManifest } from './artifacts/manifest.js';
+export { buildManifest, readOdysseusBuildId } from './artifacts/manifest.js';
 export type { BuildManifestInput } from './artifacts/manifest.js';
 export {
   SCREENSHOT_PRUNE_KEEP_TOP_N,

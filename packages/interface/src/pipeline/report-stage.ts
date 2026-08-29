@@ -17,6 +17,7 @@ import {
   type ReportLanguage,
 } from '@odysseus/core';
 import { generateReportPdf, REPORT_TEMPLATE_VERSION, type StoredAnalysis } from '@odysseus/report';
+import { readOdysseusBuildId } from '@odysseus/scanner';
 import { getAuditManualFields, persistReport } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 
@@ -33,6 +34,10 @@ function timestampForFilename(date: Date): string {
     .toISOString()
     .replace(/\.\d{3}Z$/, 'Z')
     .replace(/:/g, '-');
+}
+
+function filenameToken(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
 export async function runReportStage(
@@ -56,6 +61,14 @@ export async function runReportStage(
   }
 
   const reportId = randomUUID();
+  const generatedAt = new Date();
+  const rendererBuild = readOdysseusBuildId();
+  const renderMetadata = {
+    reportId,
+    renderedAt: generatedAt,
+    rendererBuild,
+    templateVersion: REPORT_TEMPLATE_VERSION,
+  };
   // Manual-input-layer milestone: manual fields are read fresh from the
   // store here, at render time, rather than trusted from whatever was
   // baked into `analysis` when it was generated - this is what lets the
@@ -77,7 +90,7 @@ export async function runReportStage(
     auditDir,
     manifest,
     findings,
-    reportId,
+    renderMetadata,
     analysis: {
       ...analysis,
       ...(obligationAssessment !== undefined ? { obligationAssessment } : {}),
@@ -85,13 +98,12 @@ export async function runReportStage(
     ...(manualFields !== undefined ? { manualFields } : {}),
   });
 
-  const generatedAt = new Date();
   const pdfDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
   const reportsDir = path.join(auditDir, 'reports');
   await fs.mkdir(reportsDir, { recursive: true });
   const reportPath = path.join(
     reportsDir,
-    `${timestampForFilename(generatedAt)}-${analysis.language}.pdf`,
+    `${timestampForFilename(generatedAt)}-t${renderMetadata.templateVersion}-${filenameToken(rendererBuild)}-${reportId}-${analysis.language}.pdf`,
   );
   await fs.writeFile(reportPath, pdf);
 
@@ -101,6 +113,8 @@ export async function runReportStage(
     analysisId: analysis.analysisId,
     findingsProvenance,
     rendererVersion: REPORT_TEMPLATE_VERSION,
+    rendererBuild,
+    reportTemplateVersion: REPORT_TEMPLATE_VERSION,
     pdfDigest,
   };
   await fs.writeFile(
@@ -112,7 +126,6 @@ export async function runReportStage(
     ...reportProvenance,
     auditId: manifest.auditId,
     language: analysis.language,
-    reportTemplateVersion: REPORT_TEMPLATE_VERSION,
     analysisGeneratedAt: analysis.generatedAt,
     fileRef: path.relative(auditDir, reportPath),
     generatedAt,

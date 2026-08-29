@@ -16,6 +16,7 @@ import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
 import { remediationFor } from '../remediation/index.js';
 import { accessibilityStatementGuidance } from '../accessibility-statement-guidance.js';
 import { selectRenderedThemes } from './themes.js';
+import type { RenderedPriority } from '../rendered-priorities.js';
 
 /**
  * "Reste a traiter": the findings no ranked priority covers, grouped by area
@@ -67,10 +68,13 @@ interface RuleBlock {
 export function selectRemainingFindings(
   analysis: StoredAnalysis,
   findings: readonly Finding[],
+  priorities?: readonly RenderedPriority[],
 ): Finding[] {
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const covered = new Set(
-    selectRenderedThemes(analysis.themes, findingsById).flatMap((theme) => theme.findingIds),
+    priorities
+      ? priorities.flatMap((priority) => priority.findings.map((finding) => finding.findingId))
+      : selectRenderedThemes(analysis.themes, findingsById).flatMap((theme) => theme.findingIds),
   );
   return findings.filter((finding) => !covered.has(finding.findingId));
 }
@@ -162,9 +166,10 @@ export function renderRemainingWork(
   language: ReportLanguage,
   analysis: StoredAnalysis,
   findings: readonly Finding[],
+  priorities?: readonly RenderedPriority[],
 ): string {
   const r = strings.remainingWork;
-  const remaining = selectRemainingFindings(analysis, findings);
+  const remaining = selectRemainingFindings(analysis, findings, priorities);
 
   if (remaining.length === 0) {
     return sheet(

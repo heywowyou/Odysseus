@@ -533,7 +533,7 @@ describe('item 0.1/1.11: the full registry snapshot is printed when a Sirene loo
     expect(html).toContain('O DE LA DUNE');
     expect(html).toContain('790852578');
     expect(html).toContain('20 à 49 salariés');
-    expect(html).toContain('siren:extracted');
+    expect(html).not.toContain('siren:extracted');
     // P2.1 (2026-08-21 Large Rule Families feedback pass): a real report showed
     // "(O! DE LA DUNE", an unbalanced parenthesis reproduced verbatim
     // from the Sirene registry - this note explains why rather than

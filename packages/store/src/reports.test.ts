@@ -12,7 +12,12 @@ let reportSequence = 0;
 function reportFields(
   fields: Omit<
     ReportDocumentFields,
-    'reportId' | 'analysisId' | 'findingsProvenance' | 'rendererVersion' | 'pdfDigest'
+    | 'reportId'
+    | 'analysisId'
+    | 'findingsProvenance'
+    | 'rendererVersion'
+    | 'rendererBuild'
+    | 'pdfDigest'
   >,
 ): ReportDocumentFields {
   reportSequence += 1;
@@ -26,6 +31,7 @@ function reportFields(
       findingsDigest: `sha256:${'0'.repeat(64)}`,
     },
     rendererVersion: fields.reportTemplateVersion,
+    rendererBuild: 'test-build',
     pdfDigest: `sha256:${'1'.repeat(64)}`,
   };
 }
