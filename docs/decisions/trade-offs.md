@@ -2192,10 +2192,13 @@ complaints, reputation damage lands on the sending domain, and that domain must
 not be the one carrying mail to real clients. It also aligns with the preview
 links, the crawler user agent and the privacy notice, which are all
 `odysseusaudit.com`, and the volume is warmable, since drafts have no send
-method and the first wave is a controlled hundred. **This makes a monitored
-mailbox at that address a precondition of deploying the site**: an article 14
-notice pointing at an address nobody reads is worse than the two-address
-inconsistency it replaced.
+method and the first wave is a controlled hundred. This made a monitored mailbox
+at that address a precondition of deploying the site - an article 14 notice
+pointing at an address nobody reads is worse than the two-address inconsistency
+it replaced - and the operator confirmed on 2026-08-29 that the mailbox is being
+provisioned. Send it a message from outside the domain and read it there before
+the first outreach send, which is the only check that distinguishes a configured
+address from a delivering one.
 
 **The published price is guarded from the side that owns it.** `/offre` states
 `1 600 EUR HT`, matching what a preview quotes. The site imports nothing from
@@ -2206,10 +2209,11 @@ separators are U+00A0 written as `&#160;`, because the lint rule forbids a
 literal one in source.
 
 **Built, not provisioned.** Plan 009's step 6 is untouched: no Scaleway account,
-no credentials, no deploy, no live preview. Plan 009 is not DONE. Two facts are
-still owed by the operator before the site goes live: the monitored mailbox
-above, and the MongoDB Atlas region, to be named on the privacy page the way
-Scaleway's Paris region already is.
+no credentials, no deploy, no live preview. Plan 009 is not DONE. Both facts the
+operator owed are now settled: the outreach mailbox is being provisioned, and
+the database region is named on the privacy page as AWS Paris (eu-west-3),
+alongside Scaleway's Paris region. Every processor is therefore disclosed with a
+location a reader can check, which is what the disclosure is for.
 
 
 ## Build order milestone notes (8.5a through 9c)

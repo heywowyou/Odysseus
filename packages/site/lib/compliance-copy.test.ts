@@ -62,7 +62,12 @@ describe('prospecting privacy page', () => {
     ['the legal basis', ['intérêt légitime', 'legitimate interest']],
     ['the retention period', ['quatre-vingt-dix jours', 'Ninety days']],
     ['the objection route', ['/desinscription', 'CNIL']],
-    ['the processors', ['Scaleway', 'Vercel', 'MongoDB Atlas']],
+    // Named with their regions, because "a provider in the EU" is not a
+    // disclosure a reader can check and "AWS Paris (eu-west-3)" is.
+    [
+      'the processors and where they hold the data',
+      ['Scaleway', 'Vercel', 'MongoDB Atlas', 'eu-west-3', 'Paris'],
+    ],
   ])('states %s', (_name, required) => {
     for (const fact of required) expect(privacy).toContain(fact);
   });

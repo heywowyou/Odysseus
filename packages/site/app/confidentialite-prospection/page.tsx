@@ -113,10 +113,11 @@ export default function ProspectingPrivacyPage() {
 
         <p className="mb-4">
           Personne ne reçoit ces données à des fins qui lui soient propres, et rien n&apos;est ni
-          vendu ni loué. Trois prestataires techniques interviennent : Scaleway, qui héberge en
-          France (région de Paris) les aperçus publiés ; Vercel, qui héberge ce site ; et MongoDB
-          Atlas, qui héberge la base de données. Les aperçus sont stockés dans un espace privé et ne
-          sont accessibles que par le lien qui vous a été envoyé.
+          vendu ni loué. Trois prestataires techniques interviennent : Scaleway, qui héberge les
+          aperçus publiés en France (région de Paris) ; Vercel, qui héberge ce site ; et MongoDB
+          Atlas, qui héberge la base de données en France également (AWS Paris, eu-west-3). Les
+          aperçus sont stockés dans un espace privé et ne sont accessibles que par le lien qui vous
+          a été envoyé.
         </p>
 
         <h2 className="mb-4 text-xl font-semibold">Vos droits</h2>
@@ -218,9 +219,9 @@ export default function ProspectingPrivacyPage() {
         <p className="mb-4">
           Nobody receives this data for purposes of their own, and nothing is sold or rented. Three
           technical providers are involved: Scaleway, which hosts published previews in France
-          (Paris region); Vercel, which hosts this site; and MongoDB Atlas, which hosts the
-          database. Previews are stored privately and are reachable only through the link sent to
-          you.
+          (Paris region); Vercel, which hosts this site; and MongoDB Atlas, which hosts the database
+          in France as well (AWS Paris, eu-west-3). Previews are stored privately and are reachable
+          only through the link sent to you.
         </p>
 
         <h2 className="mb-4 text-xl font-semibold">Your rights</h2>
