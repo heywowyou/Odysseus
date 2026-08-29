@@ -145,6 +145,17 @@ substance; only the prose is generated.
 Follow-ups generate only if no reply is detected on the thread. Spacing
 is a setting, not a constant in a prompt.
 
+**Touch shape**, added with milestone 9c plan 010. Each row is what
+`packages/llm/src/outreach/outreach-limits.ts` enforces, so a change here
+must change that file's constants in the same commit, and
+`outreach-limits.test.ts` reads this table to keep the two from drifting.
+
+| Touch | Words | Sentences | Links |
+|---|---|---|---|
+| 1 | 60 to 90 | (bounded per field, not as one count) | one preview link, no new link on 2 or 3 |
+| 2 | up to 60 | exactly two | none |
+| 3 | up to 40 | exactly one closing sentence, before the deterministic deletion and opt-out lines | none |
+
 ---
 
 ## 7. Required disclosures
