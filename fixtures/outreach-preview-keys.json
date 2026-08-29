@@ -1,0 +1,30 @@
+{
+  "note": "Shared contract fixture for milestone 9c plan 009. packages/interface and packages/site each hold their own copy of token validation, hashing and object-key derivation, because the public site must not import a private workspace package. Both assert against this file, so the copies cannot drift apart in silence. Regenerate only if the derivation deliberately changes; a changed hash invalidates every published preview.",
+  "malformedTokens": [
+    "",
+    "short",
+    "../../etc/passwd",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=",
+    "aaaa/aaaa",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+  ],
+  "cases": [
+    {
+      "token": "csyD18P-fDI_3tAxpC8WRPQfDeIfeWfqXPpdPimXJf0",
+      "tokenHash": "4a62ccbb43f253fa85c3cfc522e7a1b7a4de748c3e4c0c172a15cdce1ba51589",
+      "objectKey": "previews/4a62ccbb43f253fa85c3cfc522e7a1b7a4de748c3e4c0c172a15cdce1ba51589.html"
+    },
+    {
+      "token": "G1o3cUUxJ7_5dNWyUHsGSy6spVpFbCAIB8kxsgIlwOU",
+      "tokenHash": "239fd452e89643152bbda3e12d2a35ec5a9bc4b66d95ff5f76496b63e5fc6293",
+      "objectKey": "previews/239fd452e89643152bbda3e12d2a35ec5a9bc4b66d95ff5f76496b63e5fc6293.html"
+    },
+    {
+      "token": "iMahOKnNPTewxSFlqzsNponkEuTAbMxm_-36HiREXpc",
+      "tokenHash": "ae46d65e1feede4e1c474f312f456cb34a754c7ab287b51db210dc3ff761bece",
+      "objectKey": "previews/ae46d65e1feede4e1c474f312f456cb34a754c7ab287b51db210dc3ff761bece.html"
+    }
+  ]
+}

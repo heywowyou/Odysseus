@@ -214,3 +214,29 @@ export type {
   RecordHotelContactsResult,
   HotelContactSummary,
 } from './hotel-contacts.js';
+
+// Milestone 9c plan 009: published outreach previews. Inserted at publication
+// and transitioned once at revocation - see schemas/outreach-preview.schema.ts
+// for why the raw token has no field to live in.
+export { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
+export type {
+  OutreachPreviewDocument,
+  OutreachPreviewDocumentFields,
+  OutreachPreviewStatus,
+} from './schemas/outreach-preview.schema.js';
+export {
+  recordOutreachPreview,
+  findOutreachPreviewByTokenHash,
+  getOutreachPreview,
+  revokeOutreachPreview,
+  listOutreachPreviews,
+  listLivePreviewsForDomain,
+  PREVIEW_PUBLIC_LIFETIME_DAYS,
+  PREVIEW_RETENTION_DAYS,
+} from './outreach-previews.js';
+export type {
+  RecordOutreachPreviewInput,
+  RecordedOutreachPreview,
+  RevokeOutreachPreviewResult,
+  ListOutreachPreviewsOptions,
+} from './outreach-previews.js';

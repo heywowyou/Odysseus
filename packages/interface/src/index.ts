@@ -26,6 +26,10 @@ export {
   getSireneStockIndexCachePath,
   getProspectBatchSize,
   getAtoutFranceExportPath,
+  // The preview's public base URL only. The bucket name, endpoint and
+  // credentials stay private to createConfiguredPreviewPublisher: a caller that
+  // could read them would be a caller that could build its own adapter.
+  getPreviewPublicBaseUrl,
 } from './config.js';
 export { computeCrawlEtaMs, computeScanEtaMs } from './queue/eta.js';
 export type { CrawlEtaInput, ScanEtaInput } from './queue/eta.js';
@@ -155,3 +159,50 @@ export type { MongoHotelContactStoreOptions } from './prospecting/hotel-contacts
 export { checkHotelSite } from './prospecting/check-hotel-site.js';
 export type { CheckHotelSiteOptions } from './prospecting/check-hotel-site.js';
 export type { HotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';
+
+// Milestone 9c plan 009: publishing outreach previews to a private bucket and
+// withdrawing them again. The port has two adapters - see
+// outreach/preview-publisher.ts on why that is what makes the seam real.
+export {
+  createPreviewToken,
+  hashPreviewToken,
+  isValidPreviewToken,
+  deriveObjectKey,
+  PREVIEW_TOKEN_PATTERN,
+  PREVIEW_OBJECT_PREFIX,
+} from './outreach/preview-token.js';
+export {
+  PREVIEW_CONTENT_TYPE,
+  PREVIEW_EXPIRY_METADATA_HEADER,
+} from './outreach/preview-publisher.js';
+export type {
+  PreviewObject,
+  PreviewPublisher,
+  PutPreviewObjectInput,
+} from './outreach/preview-publisher.js';
+export { createInMemoryPreviewPublisher } from './outreach/in-memory-preview-publisher.js';
+export type { InMemoryPreviewPublisher } from './outreach/in-memory-preview-publisher.js';
+export { createScalewayPreviewPublisher } from './outreach/scaleway-preview-publisher.js';
+export type { ScalewayPreviewPublisherOptions } from './outreach/scaleway-preview-publisher.js';
+export { createConfiguredPreviewPublisher } from './outreach/configured-preview-publisher.js';
+export {
+  publishPreview,
+  revokePreviewsForDomain,
+  buildPreviewInput,
+  previewLinks,
+  previewUrl,
+  CURRENT_PREVIEW_CONTENT_VERSION,
+} from './outreach/publish-preview.js';
+export type {
+  OutreachPreviewStorePort,
+  PublishPreviewOptions,
+  PublishPreviewResult,
+  PublishPreviewRefusal,
+  PreviewPublicationRow,
+  PreviewSireneFacts,
+  LivePreviewRef,
+  RecordPreviewInput,
+  RevokePreviewsResult,
+} from './outreach/publish-preview.js';
+export { createMongoOutreachPreviewStore } from './outreach/mongo-outreach-preview-store.js';
+export type { MongoOutreachPreviewStoreOptions } from './outreach/mongo-outreach-preview-store.js';

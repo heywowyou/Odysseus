@@ -35,6 +35,25 @@ describe.skipIf(!mongoAvailable)('suppression', () => {
     ).toBe(true);
   });
 
+  it('stores no raw domain or address anywhere on the document', async () => {
+    // The objection path is the one place a prospect hands us an address they
+    // want us to stop using. Keeping it in readable form to honour that request
+    // would be collecting more of what they objected to, which is why the
+    // collection is hash-only. This asserts it of the stored bytes rather than
+    // of the writer, so a later field added in good faith cannot reintroduce it.
+    await addSuppressionEntry(connection!, {
+      domain: 'no-raw-value.fr',
+      address: 'reservation@no-raw-value.fr',
+      reason: 'objection received',
+    });
+    const stored = await createSuppressionModel(connection!)
+      .findOne({ reason: 'objection received' })
+      .lean();
+    const serialized = JSON.stringify(stored);
+    expect(serialized).not.toContain('no-raw-value.fr');
+    expect(serialized).not.toContain('reservation@');
+  });
+
   it('as a regression guard, the suppression collection has no TTL index at all', async () => {
     const SuppressionModel = createSuppressionModel(connection!);
     const indexes = await SuppressionModel.collection.indexes();

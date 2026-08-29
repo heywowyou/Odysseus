@@ -2130,6 +2130,88 @@ sha256, because a file replaced between prescan and send means a preview showing
 the wrong hotel's screenshot.
 
 
+### 43. A preview is served by hashing the visitor's own token, and the public site never learns anything else
+
+Plan 008 could render a preview and nothing could put one in front of a hotel.
+Plan 009 gives it a home, and the shape of that home is forced by a constraint
+this repository already accepted: the marketing site is deliberately walled off
+from Mongo and from the audit engine. So publication cannot be a database read
+from the public side, and the link cannot be a lookup of anything the site
+knows. What the private side stores is a hash; what the recipient holds is the
+only copy of the token; and the site turns one into the other with a hash
+function and a single object read.
+
+**Provider: Scaleway Object Storage, `fr-par`.** Named on the privacy page as a
+recipient, with a "hosted in France" sentence that is true. It is
+S3-compatible, so the adapter moves to another S3 provider unchanged if that
+ever matters. **Dependency: `aws4fetch`**, one small dependency with no
+transitive tree, in both `@odysseus/interface` and `@odysseus/site`. The public
+half runs in a serverless function where the AWS SDK would outweigh the
+previews it serves, and the whole surface used is GET, PUT and DELETE on one
+key. Both adapters call `sign()` and hand the signed request to an injected
+`fetch`, so the production adapter is tested with no credentials and no network.
+
+**A pre-signed URL cannot do this job.** It was the obvious design and it does
+not survive contact with the requirement: a SigV4 query signature's lifetime is
+capped well below the thirty days a preview is meant to stay readable. So the
+site signs its own read on each visit, which is why the public side has a
+signing dependency at all.
+
+**Two expiries, deliberately different.** `publicExpiresAt` at thirty days is
+how long the link serves; `expiresAt` at ninety days is the retention the
+privacy page and `/bot` both publish, enforced by a precomputed field and an
+`expireAfterSeconds: 0` index, never a raw TTL on `createdAt`. The public one
+also rides on the object as `x-amz-meta-public-expires-at`, because the site
+cannot read Mongo and must still answer 410 for an expired preview and 404 for
+an unknown one. Mongo stays the private record of truth.
+
+**Two deviations from the plan text.** The route is a Route Handler, not a
+`page.tsx`: a page nests a complete self-contained document inside the app
+layout's own `<html>` and cannot set the response headers. And the token is
+validated for syntax before it is hashed, returning `null` rather than throwing,
+so malformed, unknown and revoked are one indistinguishable 404.
+
+**The key derivation is duplicated on purpose.** The site cannot import
+`@odysseus/interface`, so it carries its own copy of validate/hash/derive. The
+duplication is guarded by `fixtures/outreach-preview-keys.json`, a table of
+token/hash/key triples asserted from both packages, so drift is a red test
+rather than a preview that 404s for a token that was correctly issued.
+
+**Found by the end-to-end check, not by the suite.** A prescan stores
+`artifactsDir` relative to the prescans root, and the store adapter passed it
+through unresolved, so every real publication failed with an `ENOENT` on a path
+fragment - which reads exactly like a swept prescan. The adapter now resolves it,
+and `buildPreviewInput` refuses a relative directory with a message naming the
+cause. This is the same lesson as the two post-milestone-4 bugs: a green suite
+described a pipeline nobody had run against real stored data.
+
+**One contact address, chosen for containment.** Every prospect-facing surface
+now names `contact@odysseusaudit.com`. The already-warmed personal address was
+the tempting choice and is the wrong one to spend: cold outreach earns
+complaints, reputation damage lands on the sending domain, and that domain must
+not be the one carrying mail to real clients. It also aligns with the preview
+links, the crawler user agent and the privacy notice, which are all
+`odysseusaudit.com`, and the volume is warmable, since drafts have no send
+method and the first wave is a controlled hundred. **This makes a monitored
+mailbox at that address a precondition of deploying the site**: an article 14
+notice pointing at an address nobody reads is worse than the two-address
+inconsistency it replaced.
+
+**The published price is guarded from the side that owns it.** `/offre` states
+`1 600 EUR HT`, matching what a preview quotes. The site imports nothing from
+the workspace, so the figure is literal text; `packages/core/src/offer/
+pricing.test.ts` reads the page and compares it with `formatFullAuditPrice`, so
+a price change cannot go stale on the one page a prospect is sent to. The
+separators are U+00A0 written as `&#160;`, because the lint rule forbids a
+literal one in source.
+
+**Built, not provisioned.** Plan 009's step 6 is untouched: no Scaleway account,
+no credentials, no deploy, no live preview. Plan 009 is not DONE. Two facts are
+still owed by the operator before the site goes live: the monitored mailbox
+above, and the MongoDB Atlas region, to be named on the privacy page the way
+Scaleway's Paris region already is.
+
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

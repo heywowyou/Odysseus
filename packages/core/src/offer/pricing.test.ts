@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT, formatFullAuditPrice } from './pricing.js';
 
@@ -26,5 +29,33 @@ describe('the full-audit price', () => {
 
   it('is deterministic', () => {
     expect(formatFullAuditPrice('fr')).toBe(formatFullAuditPrice('fr'));
+  });
+});
+
+describe('the price published on the public offer page', () => {
+  // The marketing site imports nothing from this workspace by design, so the
+  // figure on /offre is literal text that cannot be derived from the constant
+  // above. The guard therefore lives here, on the side that owns the number: if
+  // the price ever changes, this fails rather than leaving a stale figure on the
+  // one page a prospect is sent to.
+  const offerPage = readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../site/app/offre/page.tsx'),
+    'utf8',
+  );
+
+  /** JSX cannot carry a literal U+00A0 - the no-irregular-whitespace lint rule
+   *  forbids it - so the page writes the separators as `&#160;`. Decoding here
+   *  is what lets the comparison be against the exact rendered bytes rather
+   *  than against a looser pattern. */
+  const rendered = offerPage.replaceAll('&#160;', '\u00a0');
+
+  it.each(['fr', 'en'] as const)('matches the %s rendering exactly', (language) => {
+    expect(rendered).toContain(formatFullAuditPrice(language));
+  });
+
+  it('quotes no other euro figure that could contradict it', () => {
+    const figures = rendered.match(/[\d\u00a0\u202f,. ]*\d(?:\s?(?:€|EUR))/gu) ?? [];
+    const distinct = new Set(figures.map((figure) => figure.trim()));
+    expect([...distinct]).toEqual(['1\u00a0600\u00a0€']);
   });
 });

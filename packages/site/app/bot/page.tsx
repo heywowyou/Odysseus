@@ -1,3 +1,13 @@
+/**
+ * Corrected 2026-08-29, milestone 9c plan 009.
+ *
+ * The page told site owners the bot runs Lighthouse whenever it visits. That is
+ * true of a commissioned audit and false of a prospecting visit, which skips
+ * Lighthouse entirely and stops at three pages. A bot page whose description
+ * does not match what a site owner sees in their own logs is worse than no bot
+ * page: it is the credibility signal not holding up to the one check anybody
+ * would run on it. The two cases are now described separately.
+ */
 export default function BotInfoPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -14,10 +24,22 @@ export default function BotInfoPage() {
         </p>
 
         <p className="mb-4">
-          Ce que le robot fait concrètement : il charge vos pages avec et sans exécution JavaScript
-          pour détecter les écarts de rendu (un problème fréquent sur les sites en React ou Next.js,
-          qui les rend invisibles aux moteurs de recherche), et il exécute des vérifications
-          automatisées d&apos;accessibilité (axe-core) et de performance (Lighthouse).
+          Ce que le robot fait concrètement dépend du cas, et les deux ne se ressemblent pas dans
+          vos journaux de connexion.
+        </p>
+
+        <p className="mb-4">
+          <strong>Audit commandé</strong> : il parcourt le site, charge chaque page avec et sans
+          exécution JavaScript pour détecter les écarts de rendu (un problème fréquent sur les sites
+          en React ou Next.js, qui les rend invisibles aux moteurs de recherche), et exécute des
+          vérifications automatisées d&apos;accessibilité (axe-core) et de performance (Lighthouse).
+        </p>
+
+        <p className="mb-4">
+          <strong>Analyse de prospection</strong> : trois pages au plus, jamais davantage, et
+          <strong> sans Lighthouse</strong>. Le robot charge chaque page deux fois, avec et sans
+          JavaScript, et exécute les vérifications d&apos;accessibilité. Il ne crée aucun compte, ne
+          soumet aucun formulaire et n&apos;effectue aucune réservation.
         </p>
 
         <p className="mb-4">
@@ -36,14 +58,23 @@ export default function BotInfoPage() {
         </p>
 
         <p className="mb-4">
-          Données conservées : le HTML rendu, le texte des pages, et des captures d&apos;écran, à
-          des fins d&apos;audit uniquement, supprimées automatiquement après 90 jours. Ces données
-          ne sont ni vendues ni partagées avec des tiers.
+          Données conservées : le rendu des pages et des captures d&apos;écran, à des fins
+          d&apos;audit uniquement, supprimées automatiquement après 90 jours. Ces données ne sont ni
+          vendues ni partagées avec des tiers. Pour une analyse de prospection, l&apos;origine des
+          données, leur usage et la marche à suivre pour s&apos;y opposer sont détaillés sur la page{' '}
+          <a className="underline" href="/confidentialite-prospection">
+            prospection et données personnelles
+          </a>
+          .
         </p>
 
-        <p>
-          Contact : pro@julesfontaine.com — pour toute question, ou pour demander le retrait de
-          votre site de toute analyse en cours ou future.
+        <p className="mb-4">
+          Contact : contact@odysseusaudit.com, pour toute question, ou pour demander le retrait de
+          votre site de toute analyse en cours ou future. La page{' '}
+          <a className="underline" href="/desinscription">
+            désinscription
+          </a>{' '}
+          explique ce qui se passe alors.
         </p>
 
         <p>
@@ -64,10 +95,22 @@ export default function BotInfoPage() {
         </p>
 
         <p className="mb-4">
-          What the bot actually does: it loads your pages with and without JavaScript execution to
-          detect rendering gaps (a common issue on React and Next.js sites, which can make them
-          invisible to search engines), and runs automated accessibility checks (axe-core) and
-          performance checks (Lighthouse).
+          What the bot actually does depends on the case, and the two do not look alike in your
+          access logs.
+        </p>
+
+        <p className="mb-4">
+          <strong>Commissioned audit</strong>: it walks the site, loads each page with and without
+          JavaScript execution to detect rendering gaps (a common issue on React and Next.js sites,
+          which can make them invisible to search engines), and runs automated accessibility checks
+          (axe-core) and performance checks (Lighthouse).
+        </p>
+
+        <p className="mb-4">
+          <strong>Prospecting analysis</strong>: at most three pages, never more, and
+          <strong> without Lighthouse</strong>. The bot loads each page twice, with and without
+          JavaScript, and runs the accessibility checks. It creates no account, submits no form, and
+          makes no booking.
         </p>
 
         <p className="mb-4">
@@ -86,13 +129,23 @@ export default function BotInfoPage() {
         </p>
 
         <p className="mb-4">
-          Data retained: rendered HTML, page text, and screenshots, for audit purposes only,
-          automatically deleted after 90 days. This data is never sold or shared with third parties.
+          Data retained: rendered pages and screenshots, for audit purposes only, automatically
+          deleted after 90 days. This data is never sold or shared with third parties. For a
+          prospecting analysis, where the data came from, what it is used for, and how to object are
+          set out on the{' '}
+          <a className="underline" href="/confidentialite-prospection">
+            prospecting and personal data
+          </a>{' '}
+          page.
         </p>
 
-        <p>
-          Contact: pro@julesfontaine.com, for any question, or to opt your site out of any current
-          or future scan.
+        <p className="mb-4">
+          Contact: contact@odysseusaudit.com, for any question, or to opt your site out of any
+          current or future scan. The{' '}
+          <a className="underline" href="/desinscription">
+            opt-out page
+          </a>{' '}
+          explains what happens when you do.
         </p>
 
         <p>

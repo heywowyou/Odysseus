@@ -135,3 +135,54 @@ export function getProspectBatchSize(): number {
 export function getPublicDir(): string {
   return path.join(findWorkspaceRoot(), 'packages', 'interface', 'dist', 'public');
 }
+
+/** Milestone 9c plan 009: the private bucket outreach previews are published
+ *  to. Scaleway Object Storage in `fr-par`, chosen because this bucket is a
+ *  named recipient on the prospecting privacy page and a French host in a
+ *  French region is the shortest truthful sentence to write there; it is plain
+ *  S3, so the choice is reversible in configuration alone. */
+export const DEFAULT_PREVIEW_BUCKET_ENDPOINT = 'https://s3.fr-par.scw.cloud';
+export const DEFAULT_PREVIEW_BUCKET_REGION = 'fr-par';
+/** `www`, deliberately. The apex 308-redirects to it, and a redirect would
+ *  carry a live preview token through a second host's request log. */
+export const DEFAULT_PREVIEW_PUBLIC_BASE_URL = 'https://www.odysseusaudit.com';
+
+export function getPreviewBucketEndpoint(): string {
+  ensureEnvLoaded();
+  return process.env['ODYSSEUS_PREVIEW_BUCKET_ENDPOINT'] ?? DEFAULT_PREVIEW_BUCKET_ENDPOINT;
+}
+
+export function getPreviewBucketRegion(): string {
+  ensureEnvLoaded();
+  return process.env['ODYSSEUS_PREVIEW_BUCKET_REGION'] ?? DEFAULT_PREVIEW_BUCKET_REGION;
+}
+
+export function getPreviewPublicBaseUrl(): string {
+  ensureEnvLoaded();
+  return process.env['ODYSSEUS_PREVIEW_PUBLIC_BASE_URL'] ?? DEFAULT_PREVIEW_PUBLIC_BASE_URL;
+}
+
+/** These three have no default and throw when unset. A silent fallback would
+ *  mean a publish command that looks configured, signs with an empty key and
+ *  fails at the provider with a message about credentials rather than about
+ *  this machine's `.env`. */
+function requiredPreviewEnv(name: string): string {
+  ensureEnvLoaded();
+  const value = process.env[name];
+  if (value === undefined || value === '') {
+    throw new Error(`${name} is not set; outreach preview publication needs it`);
+  }
+  return value;
+}
+
+export function getPreviewBucketName(): string {
+  return requiredPreviewEnv('ODYSSEUS_PREVIEW_BUCKET_NAME');
+}
+
+export function getPreviewBucketAccessKeyId(): string {
+  return requiredPreviewEnv('ODYSSEUS_PREVIEW_BUCKET_ACCESS_KEY_ID');
+}
+
+export function getPreviewBucketSecretKey(): string {
+  return requiredPreviewEnv('ODYSSEUS_PREVIEW_BUCKET_SECRET_KEY');
+}

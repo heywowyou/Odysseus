@@ -337,7 +337,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [006](./006-versioned-hotel-scoring.md) | Score candidates with immutable breakdowns | P1 | L | 001-005 | DONE |
 | [007](./007-role-contact-discovery.md) | Discover approved own-domain role contacts | P1 | M | 006 | DONE |
 | [008](./008-safe-outreach-preview-html.md) | Generate safe outreach preview HTML | P1 | L | 005 | DONE |
-| [009](./009-expiring-preview-publication.md) | Publish expiring previews and compliance pages | P1 | L | 008 | TODO |
+| [009](./009-expiring-preview-publication.md) | Publish expiring previews and compliance pages | P1 | L | 008 | IMPLEMENTED |
 | [010](./010-validated-outreach-prose.md) | Generate and validate outreach prose | P1 | L | 006, 008 | TODO |
 | [011](./011-gmail-drafts-without-send.md) | Create reviewed Gmail drafts without sending | P1 | L | 007, 009, 010 | TODO |
 | [012](./012-replies-suppressions-outcomes.md) | Reconcile replies, suppressions, and outcomes | P2 | L | 011 | TODO |
