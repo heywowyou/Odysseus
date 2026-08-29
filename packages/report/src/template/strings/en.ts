@@ -34,7 +34,7 @@ export const en: ReportStrings = {
     consequencesHeading: 'What this concretely changes for you',
     consequenceBooking: 'Customers who cannot complete a booking.',
     consequenceRegulatory:
-      'A regulatory exposure already documented (see the "Legal exposure" section).',
+      'Legal obligations that may apply to your establishment: the "Legal exposure" section sets out the criteria and the recorded facts, to be confirmed with your legal adviser.',
     consequenceVisibility: 'Reduced visibility in search results and AI assistants.',
     notALegalOpinionNote:
       'What this report is not: legal advice (see the "Legal exposure" section); an exhaustive audit, since automated detection covers roughly 30 to 40 percent of accessibility criteria (see "Methodology and limits").',
@@ -551,7 +551,13 @@ export const en: ReportStrings = {
     thirdPartyIntro:
       'These findings are in code belonging to a third-party plugin, widget, or embedded frame (booking engine, cookie banner, preview panel, form). Your agency cannot edit this code directly: the fix goes through the vendor or provider concerned.',
     thirdPartyCountedInTotalsNote:
-      'These findings still count toward the severity totals at the top of the report: it is a real conformance gap under the standard, even when the specific implementation observed here already turns out to be correct.',
+      // Revised 2026-08-30 with the French entry: the first wording read as
+      // two flat contradictory propositions ("a real conformance gap ...
+      // even when the specific implementation ... already turns out to be
+      // correct"). The note now explains how the two statements compose:
+      // the totals classify by the rule's general severity, this section
+      // adds the site-specific observation.
+      'These findings still count toward the severity totals at the top of the report: the totals include every finding the audit raised, classified by the general severity of its rule. A finding can therefore appear in the totals even when this section notes that the implementation observed on your site is already correct: the total describes the general rule, the observation describes your case.',
     unknownVendorLabel: 'Third-party component, provider not identified',
     severityLabels: {
       critical: 'Critical',

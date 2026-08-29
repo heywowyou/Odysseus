@@ -35,7 +35,7 @@ export const fr: ReportStrings = {
     consequencesHeading: 'Ce que ça change concrètement pour vous',
     consequenceBooking: 'Des clients qui ne peuvent pas terminer une réservation.',
     consequenceRegulatory:
-      'Une exposition réglementaire déjà documentée (voir la section « Exposition légale »).',
+      "Des obligations légales qui peuvent s'appliquer à votre établissement : la section « Exposition légale » décrit les critères et les faits enregistrés, à faire confirmer par votre conseil juridique.",
     consequenceVisibility:
       'Une visibilité réduite dans les résultats de recherche et les assistants IA.',
     notALegalOpinionNote:
@@ -672,11 +672,15 @@ export const fr: ReportStrings = {
     // P2.3 (2026-08-21 La Corniche feedback pass): a real report counted
     // a Complianz cookie-consent finding among the "sérieux" total on the
     // cover while this section noted the current implementation needs no
-    // action - both true at once (a valid conformity gap in the general
-    // case, already compliant in this specific implementation), but
-    // nothing said so, reading as an unexplained contradiction.
+    // action - both true at once, but nothing said so, reading as an
+    // unexplained contradiction. Revised 2026-08-30: the first wording
+    // overcorrected into two flat contradictory propositions ("un écart
+    // de conformité réel ... même lorsque l'implémentation ... s'avère
+    // déjà correcte"). The note now explains how the two statements
+    // compose: the totals classify by the rule's general severity, this
+    // section adds the site-specific observation.
     thirdPartyCountedInTotalsNote:
-      "Ces constats restent comptabilisés dans les totaux de sévérité en tête de rapport : il s'agit d'un écart de conformité réel au sens du référentiel, même lorsque l'implémentation actuellement observée s'avère déjà correcte dans ce cas précis.",
+      "Ces constats restent comptabilisés dans les totaux de sévérité en tête de rapport : les totaux reprennent tous les constats relevés par l'audit, classés selon la gravité générale de leur règle. Un constat peut donc figurer dans ces totaux alors même que cette section précise que l'implémentation observée sur votre site est déjà correcte : le total décrit la règle générale, l'observation décrit votre cas.",
     unknownVendorLabel: 'Composant tiers, éditeur non identifié',
     severityLabels: {
       critical: 'Critique',
