@@ -211,13 +211,18 @@ is needed for this step.
 
 ## Done criteria
 
-- [ ] Operator-approved provider decision is recorded.
-- [ ] Raw tokens exist only at creation and in the recipient URL.
-- [ ] Public previews expire at 30 days and private records by 90 days.
-- [ ] Site remains isolated from Mongo and the private audit engine.
-- [ ] Preview routes are unindexable, untracked, revocable, and safely cached.
-- [ ] Privacy, opt-out, and bot pages are truthful and bilingual.
-- [ ] Focused tests and `pnpm run check` pass; plan 009 is `DONE`.
+- [x] Operator-approved provider decision is recorded.
+- [x] Raw tokens exist only at creation and in the recipient URL.
+- [x] Public previews expire at 30 days and private records by 90 days.
+- [x] Site remains isolated from Mongo and the private audit engine.
+- [x] Preview routes are unindexable, untracked, revocable, and safely cached.
+- [x] Privacy, opt-out, and bot pages are truthful and bilingual.
+- [x] Focused tests and `pnpm run check` pass; plan 009 is `DONE`.
+
+Step 6 (deployment) completed 2026-08-29: Scaleway bucket provisioned, Vercel
+env vars set, redeployed, and a synthetic end-to-end check (200/404/robots/
+revoke) passed against the live site. See `docs/decisions/trade-offs.md`,
+trade-off 43, "Provisioned and verified, 2026-08-29".
 
 ## STOP conditions
 

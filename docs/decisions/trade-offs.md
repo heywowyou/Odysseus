@@ -2208,12 +2208,41 @@ a price change cannot go stale on the one page a prospect is sent to. The
 separators are U+00A0 written as `&#160;`, because the lint rule forbids a
 literal one in source.
 
-**Built, not provisioned.** Plan 009's step 6 is untouched: no Scaleway account,
-no credentials, no deploy, no live preview. Plan 009 is not DONE. Both facts the
-operator owed are now settled: the outreach mailbox is being provisioned, and
-the database region is named on the privacy page as AWS Paris (eu-west-3),
-alongside Scaleway's Paris region. Every processor is therefore disclosed with a
-location a reader can check, which is what the disclosure is for.
+**Provisioned and verified, 2026-08-29.** Plan 009's step 6 is complete. A
+Scaleway Object Storage bucket (`odysseus-previews`, region `fr-par`, private,
+no static-website hosting) and a project-scoped API key were created by the
+operator and recorded only as the five `ODYSSEUS_PREVIEW_BUCKET_*` values in the
+untracked root `.env` (private CLI) and the equivalent unprefixed
+`PREVIEW_BUCKET_*` values as Vercel project environment variables for
+`odysseus-site` (public route), the secret marked Sensitive there. The existing
+`odysseus-site` Vercel project (root directory `packages/site`, production
+domain `www.odysseusaudit.com`) was redeployed to pick them up.
+
+The end-to-end check used a synthetic object (a short "this is a test" HTML
+string, no candidate, no hotel, no third-party data) written directly through
+`createConfiguredPreviewPublisher()` to the real bucket, never through Mongo or
+a fabricated candidate record. Fetching `/apercu/<token>` on the live site
+returned 200 with `X-Robots-Tag: noindex, nofollow, noarchive`,
+`Cache-Control: private, no-store, max-age=0, must-revalidate`,
+`Referrer-Policy: no-referrer`, and the expected `Content-Security-Policy`; a
+bogus token returned 404; `robots.txt` disallows `/apercu/`. Deleting the object
+through the same publisher made the live URL 404 immediately, confirming revoke
+behaviour end to end. No secret, access key, or token appeared in any command
+output recorded here or elsewhere.
+
+Rollback: to withdraw a real, live preview, `odysseus prospect preview revoke
+<domain>` deletes the bucket object first and marks the Mongo record revoked
+second (`revokePreviewsForDomain`), so a failed delete never leaves a record
+falsely marked safe. To roll back the deployment itself, remove the five
+`PREVIEW_BUCKET_*` variables from the Vercel project (the route then fails
+closed with a 500 rather than serving stale content, since `read-preview.ts`
+throws on a missing required var) or revert the Scaleway API key from the IAM
+console, which invalidates both the CLI and the site's signing at once.
+Credential ownership is the operator's personal Scaleway and Vercel accounts;
+no CI system or shared secret store holds a copy of either key. Both facts the
+operator owed the privacy page were already settled before this step: the
+outreach mailbox is being provisioned, and the database region is named as AWS
+Paris (eu-west-3) alongside Scaleway's Paris region.
 
 ### 44. A deliverable is an approved bilingual report pair, and the same PDF serves both audiences
 

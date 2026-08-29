@@ -801,12 +801,13 @@ selected cohort only, four typed absences instead of a null, and an ordered
 local-part allowlist (trade-off 39). Plan 008 is done as of 2026-08-29: the
 outreach preview renders as a self-contained HTML document from its own narrow
 contract, with the offer price as a code-owned constant (trade-off 42). Plan 009 is
-IMPLEMENTED as of 2026-08-29: previews publish to a private bucket behind an
+DONE as of 2026-08-29: previews publish to a private bucket behind an
 opaque token, the public site serves them by hashing the token the visitor
 brings, and the prospecting privacy, opt-out and offer pages exist with `/bot`
-corrected (trade-off 43). Its step 6 is deliberately outstanding - no object
-storage account, no credentials, no deployment, no live preview - so plan 009 is
-not DONE and plan 010 is next. Reconciliation decisions and remaining verification gaps are recorded there
+corrected (trade-off 43). Step 6 (Scaleway bucket, Vercel env vars, redeploy,
+synthetic end-to-end check) is also complete, recorded in trade-off 43,
+"Provisioned and verified, 2026-08-29". Plan 010 is next. Reconciliation
+decisions and remaining verification gaps are recorded there
 and in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
 
 Full milestone list, including the phases beyond 8, is in the brief,
