@@ -13,6 +13,32 @@ Issues and specs for this repo live as GitHub issues on `heywowyou/Odysseus`. Us
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+## Resolution lifecycle (binding on every agent)
+
+Every verified defect follows one path through GitHub issues. There is no
+second ledger: no local backlog file, no findings document, no plan entry
+acting as the system of record (`plans/README.md`'s work lifecycle defines
+what each of those places is for instead).
+
+1. **Log it the moment it is deferred.** When work surfaces a real defect
+   that will not be fixed in the current session, create the issue before
+   the session ends, labelled `needs-triage`. The body must be
+   self-contained for a fresh session or another LLM: what is wrong, the
+   file and line pointers, the reproduction or verification evidence, the
+   user-visible impact, and a suggested fix direction. A finding audited as
+   unreachable is not an issue: record the audit reasoning where the finding
+   was evaluated and move on.
+2. **Reference the issue while fixing.** A commit or plan that implements a
+   fix names the issue (`Fixes #N` in the commit body, or a reference in
+   the plan file), so GitHub links the fix to the finding.
+3. **Close with evidence.** Close the issue only after the fix is committed
+   and verified; the closing comment carries the commit hash and the
+   verification commands with their results.
+4. **Triage moves labels, not files.** A triage decision is a label change
+   per `docs/agents/triage-labels.md` (`needs-triage` to `ready-for-agent`,
+   `ready-for-human`, or `wontfix`), never a copy of the finding into
+   another document.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_
