@@ -46,7 +46,8 @@ export interface VerifiedStoredAnalysis extends StoredAnalysis {
  *  deliverable, so there is no longer a tier to select at generation
  *  time. The free, pre-purchase outreach preview introduced the same day
  *  (docs/outreach-rules.md) is a deliberately separate document kind,
- *  not a smaller tier of this one - see generateOutreachPreviewPdf. */
+ *  not a smaller tier of this one - see generateOutreachPreviewHtml. It
+ *  produces HTML, never a PDF: nothing about it launches Chromium. */
 export interface GenerateReportInput {
   /** UUID assigned by the report stage and printed in the document. */
   reportId?: string;

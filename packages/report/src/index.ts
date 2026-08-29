@@ -8,6 +8,25 @@ export type { ReportFreshness, ReportFreshnessMetadata } from './freshness.js';
  *  manifest a second time in a different package. */
 export { hasMeasuredCoreWebVitals } from './template/sections/core-web-vitals-table.js';
 
+/** The outreach preview. A separate document kind from the paid report, not a
+ *  tier of it: synchronous, HTML only, no Chromium, and built from its own
+ *  narrow input contract rather than from `GenerateReportInput`. Do not spread
+ *  a report input into a preview input - the whole safety argument is that the
+ *  unsafe fields have nowhere to go. */
+export { generateOutreachPreviewHtml } from './outreach-preview/render-html.js';
+export { embedOutreachEvidenceAsset } from './outreach-preview/evidence-input.js';
+export type { OutreachEvidenceSlot } from './outreach-preview/evidence-input.js';
+export {
+  lintOutreachPreviewHtml,
+  OutreachPreviewLintError,
+} from './outreach-preview/preview-lint.js';
+export type {
+  OutreachPreviewImage,
+  OutreachPreviewInput,
+  OutreachPreviewLanguage,
+  PublicFindingSummary,
+} from './outreach-preview/types.js';
+
 import { launchBrowser } from '@odysseus/scanner';
 import type { GenerateReportInput } from './types.js';
 import { resolveRenderDiffEvidence } from './screenshots.js';

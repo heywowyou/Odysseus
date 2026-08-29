@@ -335,7 +335,16 @@ means numbered entry 24, not a literal Markdown heading anchor.
     weight always read this field and was merely starved of input.
     → trade-offs.md#41
 
-## Stack
+42. The outreach preview is a separate document kind, never a tier of the paid
+    report: its input contract (`packages/core/src/types/outreach-preview.ts`)
+    shares no type with `GenerateReportInput`, and strict objects plus closed
+    vocabularies are what reject finding IDs, selectors, exact URLs and
+    statistics - do not spread a report input into a preview input, and do not
+    widen the schema to admit one. The offer price is
+    `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` in `core`, never an input field; images
+    are PNG only; argument B is enabled for hotels as a general reading, behind
+    `OutreachSourceCapabilities`. The renderer lints its own output and throws.
+    → trade-offs.md#42
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
@@ -767,7 +776,10 @@ done as of 2026-08-28: immutable versioned scores, an approved
 `hotel-outreach-v1` weight table, and a separate cohort generation
 (trade-off 38). Plan 007 is done as of 2026-08-28: role contacts for the
 selected cohort only, four typed absences instead of a null, and an ordered
-local-part allowlist (trade-off 39). Plan 008 is next. Reconciliation decisions and remaining verification gaps are recorded there
+local-part allowlist (trade-off 39). Plan 008 is done as of 2026-08-29: the
+outreach preview renders as a self-contained HTML document from its own narrow
+contract, with the offer price as a code-owned constant (trade-off 42). Plan 009
+is next. Reconciliation decisions and remaining verification gaps are recorded there
 and in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
 
 Full milestone list, including the phases beyond 8, is in the brief,

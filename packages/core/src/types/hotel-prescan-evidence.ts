@@ -120,7 +120,10 @@ export interface HotelPrescanEvidence {
 }
 
 const bilingualTextSchema = z.object({ fr: z.string().min(1), en: z.string().min(1) }).strict();
-const fixedObservationSchema = bilingualTextSchema.superRefine((observation, context) => {
+/** Exported so the outreach preview validates observations against this one
+ *  allowlist rather than copying it. A second copy is how one document ends up
+ *  able to print a sentence the other has already rejected. */
+export const fixedObservationSchema = bilingualTextSchema.superRefine((observation, context) => {
   const allowed = Object.values(HOTEL_EVIDENCE_OBSERVATIONS).some(
     (candidate) => candidate.fr === observation.fr && candidate.en === observation.en,
   );

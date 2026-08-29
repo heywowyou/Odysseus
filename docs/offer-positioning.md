@@ -53,6 +53,16 @@ canonical source for
 `ODYSSEUS_REAUDIT_PRICE_EUR_HT` / `ODYSSEUS_REAUDIT_LEAD_TIME_DAYS` in
 `packages/report/src/template/html-utils.ts`.
 
+**Full audit price in code, 2026-08-29.** The published full-audit price is
+`ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` in `packages/core/src/offer/pricing.ts`, with
+`formatFullAuditPrice()` as the one approved spelling in each language. It sits
+in `core` rather than beside the re-audit price because more than one package
+has to agree about it: the outreach preview renders it, and plan 010's prose
+validator (in `llm`, which can only see `core`) has to recognise it in order to
+reject any other figure. The formatter normalizes the French thousands
+separator to U+00A0, so the rendered bytes do not change with the host's ICU
+version. The Stripe link amount is still updated by hand (trade-off 13).
+
 **Displayed HT everywhere from the first day.** Reasoning and the VAT
 threshold that makes this urgent are in
 `docs/operator-obligations.md` section 6.

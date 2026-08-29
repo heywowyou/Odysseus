@@ -1989,6 +1989,84 @@ operator's inputs and must never be read as a fact about a hotel - which is
 exactly why that status stays distinct from a miss.
 
 
+### 42. The outreach preview is a separate document kind, and its safety is structural
+
+**Context.** Cold outreach needs one credible place to send a prospect that
+shows their own evidence without giving away the paid report and without making
+a legal conclusion. The tempting implementation is to render `GenerateReportInput`
+with things removed.
+
+**Decision: start from nothing.** `OutreachPreviewInput`
+(`packages/core/src/types/outreach-preview.ts`) shares no type with the paid
+report and admits only what `docs/outreach-rules.md` permits. Every object is
+`.strict()`, and that is what actually rejects a finding ID, a selector, an
+exact URL or a statistic: they have nowhere to be put, so no scrubbing pass has
+to be correct. A preview built by projecting the report input would be one
+careless spread away from publishing all of it. **Do not spread a paid report
+object into a preview input.**
+
+**Five layers, each separately tested.** Strict objects; closed vocabularies
+(observations validate against the *exported* allowlist in
+`hotel-prescan-evidence.ts`, never a copy, so one document cannot print a
+sentence the other already rejects); an https-plus-host-allowlist URL policy,
+which is what makes "no remote asset, no tracker" enforceable rather than
+aspirational; image bounds reusing the evidence contract's own caps; and
+`containsProhibitedPreviewContent` over free text. `generateOutreachPreviewHtml`
+validates before rendering and runs the same guard over its own finished output,
+throwing on any hit, because a template can compose two safe strings into an
+unsafe sentence and a bad public document is worse than no document.
+
+**The contract lives in `core`, not `report`.** `packages/report` has no `zod`
+dependency and adding one is a package-seam change. More decisively, plan 010's
+prose validator lives in `llm`, which depends on `core` and nothing else in the
+workspace: a contract held in `report` would be unreachable there and would get
+re-typed as a literal. Rendering stays in `report`; the public surface is
+unchanged because `@odysseus/report` re-exports both.
+
+**The offer price is a constant, not a field.**
+`ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` with `formatFullAuditPrice()`, in
+`packages/core/src/offer/pricing.ts`. Because the schema is strict, a caller
+passing a price is *rejected*, which is what "sourced from one code-owned
+constant" has to mean to be worth stating. The formatter does not use
+`Intl.NumberFormat` output directly: French ICU emits U+202F, which trade-off 29
+records as a missing-glyph risk and which ICU has changed before, so a price
+whose bytes track the host's ICU version could not be asserted exactly.
+`ODYSSEUS_REAUDIT_PRICE_EUR_HT` deliberately stays in `report` - it is only ever
+rendered by the paid report.
+
+**PNG only, narrower than the plan text.** Plan 008 permitted
+`data:image/webp`. The shipped evidence contract is PNG end to end, so nothing
+in this repository can produce a webp; accepting one would create a code path
+with no producer and widen a contract trade-off 36 says not to widen.
+
+**Argument B is enabled for hotels, as a general reading.**
+`docs/obligation-basis.md` carries hotels at `secondary` and states the facts
+block may be used with them on the same terms as any other online shop, which
+supersedes plan 008's older "argument A only" text. It stays behind
+`OutreachSourceCapabilities.argumentB` so a sector whose sources have not been
+reviewed is one boolean away from a preview with no legal section. The block
+never reads `Regime.sanctionCeiling`, never prints turnover, and never states a
+verdict whatever status `assessObligations` reached - only the registry facts
+vary with it.
+
+**Two measured corrections worth keeping.** The currency guard compares
+whitespace-normalized strings on both sides: the French price and the regime
+thresholds carry no-break spaces, and any renderer that collapses whitespace
+turns them into ordinary ones, so the un-normalized comparison rejected the very
+amounts it had approved - a bug that looks like a safety win. And alt text is
+rejected at the input rather than escaped through: escaping makes `onerror=`
+inert, but an escaped handler still reads as one to the document lint, and
+keeping that lint strict is worth more than accepting the string.
+
+**Scope extension, argued.** `embedOutreachEvidenceAsset`
+(`packages/report/src/outreach-preview/evidence-input.ts`) is a third public
+symbol the plan's file list had no home for. The input carries base64 and the
+evidence record carries a `ref` to a file; without it plan 009's publisher must
+reimplement the read, the caps and the PNG check. It re-verifies the recorded
+sha256, because a file replaced between prescan and send means a preview showing
+the wrong hotel's screenshot.
+
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

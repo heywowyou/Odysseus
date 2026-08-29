@@ -101,7 +101,7 @@ export interface RenderHtmlInput {
  *  now the only paid deliverable this package renders. The free,
  *  pre-purchase outreach preview introduced the same day
  *  (docs/outreach-rules.md) is a deliberately separate document kind with
- *  its own render path (see outreach-preview.ts), not a lighter tier of
+ *  its own render path (see outreach-preview/render-html.ts), not a lighter tier of
  *  this function. Section order matches report.reference.html's 14
  *  numbered sheets plus the cover and table of contents. */
 function renderBody(
