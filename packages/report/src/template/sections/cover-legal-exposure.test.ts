@@ -4,7 +4,7 @@
  * a resolving action rather than leaving the client with nothing to do.
  */
 import { describe, expect, it } from 'vitest';
-import type { AuditManifest } from '@odysseus/core';
+import type { AuditManifest, ObligationAssessment } from '@odysseus/core';
 import { renderCover } from './cover.js';
 import { renderLegalExposure } from './legal-exposure.js';
 import { fr } from '../strings/fr.js';
@@ -169,12 +169,7 @@ describe('item 17: the EAA date reads as already in force, with a computed elaps
   });
 });
 
-// item 18: "Exposition légale" stated the obligation but never the
-// exposure - no fine amount, no mise en demeure/case-law state. Two
-// deterministic facts (fine figure, case-law state), gated on the
-// resolved regime being EAA, never rendered for out_of_scope/undetermined
-// or an article-47 resolution.
-describe('item 18: EAA-route exposure facts (fine figure, case law state)', () => {
+describe('RF-03: client-specific EAA sanctions are never rendered', () => {
   const eaaInScope: import('@odysseus/core').ObligationAssessment = {
     status: 'in_scope',
     basis: [
@@ -188,7 +183,7 @@ describe('item 18: EAA-route exposure facts (fine figure, case law state)', () =
     ],
   };
 
-  it('states the EUR 7 500 R451-4 fine figure, never the EUR 50 000 article 47 figure', () => {
+  it('does not state sanction amounts for an EAA assessment', () => {
     const html = renderLegalExposure(
       fr,
       2,
@@ -198,7 +193,7 @@ describe('item 18: EAA-route exposure facts (fine figure, case law state)', () =
       fakeManifest(),
       [],
     );
-    expect(html).toContain('7 500');
+    expect(html).not.toContain('7 500');
     expect(html).not.toContain('50 000');
   });
 
@@ -276,6 +271,71 @@ describe('item 18: EAA-route exposure facts (fine figure, case law state)', () =
     );
     expect(html).not.toContain('7 500');
   });
+});
+
+describe('RF-03: every assessment state is presented as observed inputs', () => {
+  const assessments: ObligationAssessment[] = [
+    {
+      status: 'in_scope',
+      basis: [
+        {
+          regimeId: 'eaa-loi-2023-171',
+          facts: [
+            { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+            { kind: 'transactional-flow', evidence: [] },
+          ],
+        },
+      ],
+    },
+    {
+      status: 'likely_in_scope',
+      basis: [
+        {
+          regimeId: 'eaa-loi-2023-171',
+          facts: [
+            { kind: 'effectif-band', code: '22', label: '100 à 199 salariés' },
+            { kind: 'transactional-flow-unknown' },
+          ],
+        },
+      ],
+    },
+    {
+      status: 'out_of_scope',
+      basis: [
+        {
+          regimeId: 'eaa-loi-2023-171',
+          facts: [{ kind: 'sme-exemption', effectifCode: '02', turnoverEur: 500_000 }],
+        },
+      ],
+    },
+    {
+      status: 'undetermined',
+      basis: [{ regimeId: 'eaa-loi-2023-171', facts: [{ kind: 'siren-missing' }] }],
+    },
+  ];
+
+  it.each([
+    ['fr', fr],
+    ['en', en],
+  ] as const)(
+    'contains no prohibited conclusion or filing instruction in %s',
+    (language, strings) => {
+      for (const assessment of assessments) {
+        const html = renderLegalExposure(
+          strings,
+          2,
+          language,
+          assessment,
+          new Date('2026-08-17'),
+          fakeManifest(),
+          [],
+        );
+        expect(html).not.toMatch(
+          /Critères réunis|Criteria met|Hors champ|Out of scope|remplit les critères|meets the criteria|relève probablement|likely falls|does not fall|ne relève pas|Démarches Simplifiées|7(?:[  ,.]?)500/i,
+        );
+      }
+    },
+  );
 });
 
 // item 24: section 02 relied on the Sirene registry for the headcount
@@ -503,10 +563,8 @@ describe('item 0.1/1.11: the full registry snapshot is printed when a Sirene loo
   });
 });
 
-// item 0.1: the card body and the paragraph below it used to print the
-// same "Hors champ" sentence twice.
-describe('item 0.1: the out-of-scope explanation is not printed twice', () => {
-  it('the short status description and the full paragraph are not the same sentence', () => {
+describe('RF-03: the internal out_of_scope state renders observed inputs, not a conclusion', () => {
+  it('contains no out-of-scope conclusion', () => {
     const html = renderLegalExposure(
       fr,
       2,
@@ -516,11 +574,9 @@ describe('item 0.1: the out-of-scope explanation is not printed twice', () => {
       fakeManifest(),
       [],
     );
-    const paragraphOccurrences =
-      html.split(
-        'ne relève pas de l&#39;obligation d&#39;accessibilité numérique prévue par la loi',
-      ).length - 1;
-    expect(paragraphOccurrences).toBe(1);
+    expect(html).not.toContain('Hors champ');
+    expect(html).not.toContain('ne relève pas de l&#39;obligation');
+    expect(html).toContain('Seuil ou parcours non observé');
   });
 });
 

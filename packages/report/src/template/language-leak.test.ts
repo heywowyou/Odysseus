@@ -11,7 +11,7 @@
  * "sev-critical" with the severity word "critical" itself.
  */
 import { describe, expect, it } from 'vitest';
-import { REFERENCE_STAT_TABLE } from '@odysseus/core';
+import { REFERENCE_STAT_TABLE, REGIME_TABLE, getRegime } from '@odysseus/core';
 import { renderHtml } from './render-html.js';
 import { escapeHtml } from './html-utils.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
@@ -76,6 +76,32 @@ function containsWholeValue(haystack: string, value: string): boolean {
   return new RegExp(pattern).test(haystack);
 }
 
+/** The same collision as stripReferenceStatCitations, from a second source of
+ *  code-owned bilingual content. `regimes.ts` names the EAA regime in French as
+ *  "Obligation d'accessibilite numerique (loi n° 2023-171, transposant
+ *  l'European Accessibility Act)": the directive's title is a proper noun and
+ *  stays in English inside the French sentence, which is correct copy, not a
+ *  leak. The English chrome word "Accessibility" (categoryLabels.accessibility)
+ *  matches inside it. Regime names and legal citations are code-owned content
+ *  rather than template chrome, so they are stripped before the chrome-leak
+ *  check, exactly as reference-stat citations are. */
+function stripRegimeProperNouns(html: string): string {
+  let stripped = html;
+  // REGIME_TABLE is read for its ids only: its values carry the French column
+  // alone, and regimes.ts asks consumers to resolve a regime through getRegime.
+  for (const regimeId of Object.keys(REGIME_TABLE)) {
+    for (const language of ['fr', 'en'] as const) {
+      const regime = getRegime(regimeId, language);
+      if (!regime) continue;
+      for (const value of [regime.name, regime.legalCitation, regime.authority]) {
+        if (value === '') continue;
+        stripped = stripped.split(escapeHtml(value)).join('');
+      }
+    }
+  }
+  return stripped;
+}
+
 const enValues = new Set(flattenStrings(en));
 const frValues = new Set(flattenStrings(fr));
 const enOnlyValues = [...enValues].filter((value) => !frValues.has(value));
@@ -93,8 +119,12 @@ describe('report chrome strings never leak into the other language', () => {
     const analysis = await loadSmallSiteAnalysis('fr');
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
-    const html = stripReferenceStatCitations(
-      stripStyleBlock(await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages })),
+    const html = stripRegimeProperNouns(
+      stripReferenceStatCitations(
+        stripStyleBlock(
+          await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages }),
+        ),
+      ),
     );
 
     for (const value of enOnlyValues) {
@@ -111,8 +141,12 @@ describe('report chrome strings never leak into the other language', () => {
     const analysis = await loadSmallSiteAnalysis('en');
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
 
-    const html = stripReferenceStatCitations(
-      stripStyleBlock(await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages })),
+    const html = stripRegimeProperNouns(
+      stripReferenceStatCitations(
+        stripStyleBlock(
+          await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages }),
+        ),
+      ),
     );
 
     for (const value of frOnlyValues) {

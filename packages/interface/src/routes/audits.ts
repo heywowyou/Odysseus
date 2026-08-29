@@ -1,4 +1,5 @@
-import { createReadStream, promises as fs } from 'node:fs';
+import { promises as fs } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
@@ -19,7 +20,11 @@ import {
   setAuditManualFields,
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
-import type { StoredAnalysis } from '@odysseus/report';
+import {
+  classifyReportFreshness,
+  type ReportFreshness,
+  type StoredAnalysis,
+} from '@odysseus/report';
 import type { Router } from '../router.js';
 import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
@@ -118,6 +123,17 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       getSeverityRollup(connection, auditId),
       listReportLanguages(connection, auditId),
     ]);
+    const reports = await Promise.all(
+      reportLanguages.map(async (language) => {
+        const report = await getLatestReport(connection, auditId, language);
+        return {
+          language,
+          status: (report
+            ? classifyReportFreshness(report, audit.findingsProvenance)
+            : 'unverified') as ReportFreshness,
+        };
+      }),
+    );
 
     sendJson(res, 200, {
       auditId: audit.auditId,
@@ -128,6 +144,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       severityRollup,
       findings,
       reportLanguages,
+      reports,
       manualFields: audit.manualFields,
     });
   });
@@ -300,7 +317,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       );
       sendJson(res, 200, { reports: results });
     } catch (error) {
-      sendError(res, 500, error instanceof Error ? error.message : 'could not regenerate reports');
+      sendError(res, 409, error instanceof Error ? error.message : 'could not regenerate reports');
     }
   });
 
@@ -324,21 +341,35 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
+    const freshness = classifyReportFreshness(report, audit.findingsProvenance);
+    if (freshness !== 'fresh') {
+      sendError(
+        res,
+        409,
+        `the latest ${language} report is ${freshness} and cannot be delivered; regenerate it from current analyses`,
+      );
+      return;
+    }
+
     const hostname = new URL(audit.siteUrl).hostname;
     const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
     const filePath = path.join(auditDir, report.fileRef);
 
-    // setHeader/statusCode are just object properties until the first
-    // real write, so the error handler below can still safely overwrite
-    // them with a JSON error response - nothing has been flushed yet in
-    // the common failure case (the file is missing, so createReadStream
-    // errors before any 'data' event, hence before pipe() writes).
+    let pdf: Buffer;
+    try {
+      pdf = await fs.readFile(filePath);
+    } catch {
+      sendError(res, 404, 'report file not found on disk');
+      return;
+    }
+    const actualDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
+    if (actualDigest !== report.pdfDigest) {
+      sendError(res, 409, 'report PDF digest does not match its provenance record');
+      return;
+    }
+
     res.statusCode = 200;
     res.setHeader('content-type', 'application/pdf');
-    const stream = createReadStream(filePath);
-    stream.on('error', () => {
-      if (!res.headersSent) sendError(res, 404, 'report file not found on disk');
-    });
-    stream.pipe(res);
+    res.end(pdf);
   });
 }

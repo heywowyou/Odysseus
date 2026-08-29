@@ -1,6 +1,15 @@
 import type { ReportStrings } from './types.js';
 
 export const fr: ReportStrings = {
+  accessibilityStatementGuidance: {
+    heading: "Déclaration d'accessibilité",
+    notFoundObservation:
+      "Aucune déclaration d'accessibilité n'a été trouvée sur les pages visitées.",
+    article47Recommendation:
+      "Pour le régime de l'article 47 enregistré dans cette analyse, publiez la déclaration et ajoutez un lien vers celle-ci depuis le pied de page.",
+    optionalRecommendation:
+      "En dehors du régime de l'article 47, cette publication est une bonne pratique facultative : vous pouvez publier une déclaration et ajouter un lien depuis le pied de page.",
+  },
   toc: {
     eyebrow: 'Sommaire',
     heading: 'Contenu du rapport',
@@ -200,31 +209,20 @@ export const fr: ReportStrings = {
       "Date d'entrée en application des obligations de l'EAA, fixée par la directive elle-même. Les obligations sont donc déjà en vigueur, depuis {duration}, pas à venir.",
     obligationStatusLabel: "Statut d'obligation",
     statusLabels: {
-      // "Confirmé" read as a settled legal conclusion ("you are subject
-      // to this obligation"), which docs/obligation-basis.md section 7
-      // explicitly forbids ("any scope statement presented as settled").
-      // "Critères réunis" states that the criteria appear met on the
-      // available data - permitted under the same section - without
-      // asserting the conclusion itself.
-      in_scope: 'Critères réunis',
-      likely_in_scope: 'Probable',
-      out_of_scope: 'Hors champ',
-      undetermined: 'Indéterminé',
+      in_scope: 'Effectif et parcours observés',
+      likely_in_scope: 'Parcours à confirmer',
+      out_of_scope: 'Seuil ou parcours non observé',
+      undetermined: 'Données insuffisantes',
     },
     statusShortDescriptions: {
       in_scope:
-        "Sur la base des éléments disponibles, ce site remplit les critères d'une obligation d'accessibilité numérique.",
+        "Le répertoire Sirene et les pages visitées ont fourni les données d'effectif et de parcours transactionnel détaillées ci-dessous.",
       likely_in_scope:
-        "Les éléments disponibles indiquent que ce site relève probablement d'une obligation d'accessibilité numérique, sans confirmation complète.",
-      // item 0.1 (La Corniche pass): this used to restate
-      // legalCitationOutOfScopeParagraph below almost word for word, so
-      // the card and the paragraph printed the same sentence twice on the
-      // same page. Shortened to a plain status label; the full basis
-      // (which elements, which law) stays the paragraph's job, stated
-      // once.
-      out_of_scope: "Ce site ne relève pas, à ce stade, de l'obligation d'accessibilité numérique.",
+        "Le répertoire Sirene a fourni les données d'entreprise, mais le parcours transactionnel reste à vérifier.",
+      out_of_scope:
+        "Les données vérifiées indiquent soit un effectif et un chiffre d'affaires sous les seuils cités, soit qu'aucun parcours transactionnel n'a été trouvé sur les pages visitées.",
       undetermined:
-        "Le statut d'obligation n'a pas pu être établi avec certitude : l'identifiant d'entreprise (SIREN/RCS) est absent du site, ce qui empêche de confirmer le palier réglementaire applicable.",
+        "L'identifiant d'entreprise ou les données Sirene nécessaires n'étaient pas disponibles pour comparer les faits observés aux seuils cités.",
     },
     exposureHeading: 'Exposition en cas de manquement',
     sirenLabel: 'SIREN',
@@ -390,6 +388,7 @@ export const fr: ReportStrings = {
       'Valeurs médianes agrégées sur les {pages} pages. Simulation mobile avec limitation réseau, passage unique, données de laboratoire (Lighthouse) et non de terrain.',
     metricColumnLabel: 'Métrique',
     valueColumnLabel: 'Valeur médiane',
+    realUserValueColumnLabel: '75e percentile',
     worstPageColumnLabel: 'Pire page',
     worstPageSameAsMedian: 'Comme la médiane',
     worstPageFootnote:
@@ -734,34 +733,34 @@ export const fr: ReportStrings = {
     extendedPassCheckFoundSingular: 'constat détecté',
     extendedPassCheckFoundPlural: 'constats détectés',
     legalCitationInScopeTemplate:
-      "Sur la base des éléments disponibles, ce site remplit les critères fixés pour l'obligation suivante : {regimeName}, sous le contrôle {authority} ({legalCitation}). {facts} Cette lecture ne constitue pas une qualification juridique définitive ; une confirmation par un conseil juridique reste recommandée.",
+      'Critères publiés pour {regimeName}, sous le contrôle {authority} ({legalCitation}). Faits vérifiés pour cet audit : {facts}',
     legalCitationLikelyInScopeTemplate:
-      "Les éléments disponibles indiquent que ce site relève probablement de l'obligation suivante : {regimeName}, sous le contrôle {authority} ({legalCitation}). {facts} Cette évaluation n'a pas pu être confirmée faute d'une vérification complète du parcours du site.",
+      'Critères publiés pour {regimeName}, sous le contrôle {authority} ({legalCitation}). Faits vérifiés pour cet audit : {facts}',
     legalCitationOutOfScopeParagraph:
-      "Sur la base des éléments disponibles (taille de l'entreprise et absence de parcours de réservation, panier ou paiement en ligne), ce site ne relève pas de l'obligation d'accessibilité numérique prévue par la loi n° 2023-171.",
+      'Critères publiés pour {regimeName}, sous le contrôle {authority} ({legalCitation}). Faits vérifiés pour cet audit : {facts}',
     legalCitationUndeterminedParagraph:
-      "Ce rapport cite les critères techniques concernés (WCAG 2.2, EN 301 549) sans se prononcer sur l'applicabilité d'une obligation légale particulière à votre entreprise, laquelle dépend de sa taille et de son secteur d'activité.",
+      'Critères publiés pour {regimeName}, sous le contrôle {authority} ({legalCitation}). Données disponibles pour cet audit : {facts}',
     legalCitationEffectifFactTemplate: "L'entreprise compte {label} d'après le répertoire Sirene.",
     legalCitationTurnoverFactTemplate:
-      "Le chiffre d'affaires annuel déclaré dépasse le seuil de {threshold}.",
+      "Le chiffre d'affaires annuel enregistré est de {amount} ; le seuil publié est de {threshold}.",
+    legalCitationSmeFactTemplate:
+      "Le répertoire indique la tranche d'effectif {effectifCode} et un chiffre d'affaires de {turnover}.",
     legalCitationTransactionalFlowFactTemplate:
       'Le site propose un parcours de {flowType} {location}.',
     legalCitationTransactionalFlowLocationOnSite: 'directement en ligne',
     legalCitationTransactionalFlowLocationDelegated: 'en ligne, délégué à un prestataire tiers',
     legalCitationTransactionalFlowUnknownFact:
       "La présence d'un parcours de réservation, panier ou paiement en ligne n'a pas pu être confirmée sur l'ensemble du site.",
+    legalCitationNoTransactionalFlowFact:
+      "Aucun parcours de réservation, panier ou paiement en ligne n'a été trouvé sur les pages visitées.",
+    legalCitationSirenMissingFact: "Aucun identifiant SIREN n'a été trouvé sur les pages visitées.",
+    legalCitationSireneLookupFailedTemplate:
+      "La consultation du répertoire Sirene n'a pas fourni de fiche exploitable ({reason}).",
     transactionalFlowTypeLabels: {
       booking: 'réservation',
       cartOrPayment: 'panier ou de paiement',
       both: 'réservation, panier ou paiement',
     },
-    // P1.3 (2026-08-21 La Corniche feedback pass): "déposée" read as a
-    // past participle agreeing with "une demande" - "a request... filed"
-    // - implying a derogation request had already been submitted. This
-    // describes an available path, not a completed action; "à déposer"
-    // states the request is something to be filed, not something filed.
-    legalCitationExemptionRouteSentence:
-      "La voie d'exemption documentée à ce jour est une demande de dérogation pour charge disproportionnée, à déposer sur Démarches Simplifiées.",
     legalCitationManualSirenWithFindingTemplate:
       'Le numéro SIREN utilisé pour cette détermination a été fourni manuellement, ce site ne le publie pas lui-même (voir constat {findingId}).',
     legalCitationManualSirenNoFindingSentence:
@@ -788,6 +787,12 @@ export const fr: ReportStrings = {
     lighthouseFailureIntroSentence:
       "La mesure de performance (Lighthouse) n'a pas abouti sur ce site pour cet audit. Détail des échecs constatés :",
     lighthouseFailureReasonTemplate: '{count}/{total} pages : {reason}',
+    lighthouseFailureReasons: {
+      browserUnreachable: "le navigateur de mesure n'a pas pu être contacté",
+      processStopped: "la mesure s'est interrompue avant de renvoyer un résultat",
+      timedOut: 'la mesure a dépassé le temps imparti',
+      unknown: "la mesure n'a pas abouti pour une raison technique",
+    },
   },
   footer: {
     confidentialityLabel: 'Rapport confidentiel',

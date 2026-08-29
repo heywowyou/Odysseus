@@ -105,6 +105,7 @@ export const fr: DashboardStrings = {
     pagesColumn: 'Pages concernées',
     reportsHeading: 'Rapports',
     noReportsYet: 'Aucun rapport généré pour le moment.',
+    reportFreshness: { fresh: 'À jour', stale: 'Obsolète', unverified: 'Non vérifié' },
     manualFieldsHeading: 'Enrichissement',
     manualFieldsHint: 'Champs optionnels, modifiables à tout moment sans relancer le scan.',
     sirenLabel: 'SIREN',

@@ -38,23 +38,49 @@ meaning or behavior, not the seriousness of the underlying issue.
 
 ## Current delivery verdict
 
-**Do not send the newly generated Haaitza PDFs, or another report generated
-from the current report code, to a client until RF-02 through RF-06 are
-resolved.** The actual Haaitza PDFs confirm client-specific EAA conclusions,
-an unsupported exemption route, a sanction amount, an unconditional legal
-action for the accessibility statement, and an incorrect statistical label.
-RF-04 remains a cross-client blocker in the current LCEN rendering path even
-though Haaitza published a detected identifier and did not trigger that rule.
+**Updated 2026-08-29. The P0 delivery gate is lifted.** RF-02 through RF-06 are
+fixed in code, covered by tests, and confirmed in a freshly rendered pair of
+Haaitza PDFs read end to end. The analysis was regenerated with
+`--regenerate-structure` against
+`artifacts/haaitza.com/2026-08-26T17-51-41Z` (required by trade-off 32, since a
+normalize change renumbers findings), and both languages were rendered from it.
+Confirmed absent from both documents: a client-specific criteria verdict
+("Criteres reunis" / "Criteria met"), the Demarches Simplifiees exemption route,
+any sanction or fine amount, any citation of LCEN article 6-III, and any
+stringified `null`, `undefined` or unfilled CSS token. Confirmed present: the
+obligation status column reads "Effectif et parcours observes" / "Headcount and
+flow observed" and the section closes by saying it reproduces criteria and
+public registry data with no added legal interpretation and that counsel is
+still needed; the accessibility statement is offered as an optional best
+practice outside the Article 47 regime rather than as an obligation; and the
+real-user table is headed "75E PERCENTILE" / "75TH PERCENTILE".
+
+P1 and P2 entries below remain open, including two the read-through re-confirmed
+in the new PDFs (RF-16) and one it newly surfaced (RF-17). Neither blocks
+delivery. What the P0 fixes do is recorded in trade-off 40: derived documents now
+carry a `findingsProvenance` stamp and fail closed without one; the report no
+longer states a client-specific criteria verdict, names an exemption filing
+route, or prints a client-specific sanction amount; superseded LCEN article
+6-III is gone from the recommendation path; accessibility-statement publication
+is conditioned on an independently established Article 47 regime; and CrUX field
+values are labelled 75th percentile rather than median.
+
+The original evidence, unchanged: the Haaitza PDFs generated before these fixes
+confirmed client-specific EAA conclusions, an unsupported exemption route, a
+sanction amount, an unconditional legal action for the accessibility statement,
+and an incorrect statistical label. RF-04 was a cross-client blocker in the LCEN
+rendering path even though Haaitza published a detected identifier and did not
+trigger that rule.
 
 ## Active roll-up
 
 | ID | Priority | Status | Main reader | Finding | Effort | Fix risk | Confidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| RF-02 | P0 | open | All | Derived analyses and PDFs are not bound to a digest or normalization fingerprint of the current findings; old outputs can survive renormalization and look current. | M | Medium | High |
-| RF-03 | P0 | open | Legal, client | The report says the client meets EAA criteria, names an exemption filing route, and prints a specific sanction amount. | S to M | Medium | High |
-| RF-04 | P0 | open | Legal | The French appendix declares an LCEN obligation “non respectée”, while other current recommendation text still cites superseded article 6-III. | S | Low | High |
-| RF-05 | P0 | open | Client, IT | CrUX 75th-percentile field values are labelled “median value”. | S | Low | High |
-| RF-06 | P0 | open | Legal, client | A missing accessibility statement is turned into an unconditional legal publication action without first establishing that the Article 47 regime applies. | S to M | Medium | High |
+| RF-02 | P0 | fixed | All | Derived analyses and PDFs are not bound to a digest or normalization fingerprint of the current findings; old outputs can survive renormalization and look current. | M | Medium | High |
+| RF-03 | P0 | fixed | Legal, client | The report says the client meets EAA criteria, names an exemption filing route, and prints a specific sanction amount. | S to M | Medium | High |
+| RF-04 | P0 | fixed | Legal | The French appendix declares an LCEN obligation “non respectée”, while other current recommendation text still cites superseded article 6-III. | S | Low | High |
+| RF-05 | P0 | fixed | Client, IT | CrUX 75th-percentile field values are labelled “median value”. | S | Low | High |
+| RF-06 | P0 | fixed | Legal, client | A missing accessibility statement is turned into an unconditional legal publication action without first establishing that the Article 47 regime applies. | S to M | Medium | High |
 | RF-07 | P1 | open | Client, IT | Executive severity can be inflated by findings that need context, especially intentional `noindex` pages and third-party-owned components. | M | Medium | High |
 | RF-08 | P1 | open | Client, IT | A priority theme can combine unrelated legal and technical findings while omitting a remediation for one or more included finding IDs. | M | Medium | High |
 | RF-09 | P1 | open | Client, IT | Report-wide development-day totals imply an estimation model that the canonical deferred queue says does not yet exist. | S now, L for model | Low to high | High |
@@ -66,6 +92,7 @@ though Haaitza published a detected identifier and did not trigger that rule.
 | RF-12 | P2 | open | Client | The cover names accessibility, performance, SEO, and GEO but omits privacy and security even when that category is present. | S | Low | High |
 | RF-14 | P2 | open | IT | “Worst page” displays only the worst numeric value, not the page, so the column label promises more than the table provides. | S to M | Low | High |
 | RF-16 | P2 | open | Client, legal | The legal page exposes the internal token `(siren:extracted)` and leaves a French employee-band value inside the English report. | S | Low | High |
+| RF-17 | P2 | open | Client, operations | The closing provenance line says the report was “generated on” the scan date and stamps the scanning build, not the render date or the rendering build, so two renders of one audit are indistinguishable and a re-render looks older than it is. | S | Low | High |
 
 ## Detailed product findings
 
@@ -525,8 +552,9 @@ Positive qualities observed across the reports:
   commercial and legal values.
 - The old Palais Gallien analysis used client-specific “sanctions” and “legal
   risks” prose. The current legal-consequence guard rejects those phrases.
-  RF-03 and RF-04 remain open because deterministic report paths still produce
-  prohibited legal wording.
+  RF-03 and RF-04 were open for the same underlying reason: the guard catches
+  model prose, but the prohibited wording was coming from deterministic report
+  paths the guard never sees. Both are fixed at those paths (trade-off 40).
 
 ## Monitored or rejected concerns
 

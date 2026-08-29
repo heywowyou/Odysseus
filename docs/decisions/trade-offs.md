@@ -1849,6 +1849,93 @@ cap instead; that decision is the operator's.
     point beside it, because plan 007's own scope line is that no contact
     happens before scoring selection.
 
+40. **A derived document fails closed on provenance, and five legal-copy rules
+    the paid report had been breaking (2026-08-29).** A report read-through
+    against a real Haaitza scan produced fifteen findings in
+    `plans/report-findings.md`; the five marked P0 are resolved here, and until
+    they were, the ledger's own instruction was that no report generated from
+    current code could be sent to a client.
+
+    **The provenance problem, plainly.** Findings are renumbered whenever the
+    normalization layer changes what it emits or in what order (numbered entry
+    32). An analysis and a PDF are both derived from a particular findings file,
+    but nothing recorded which one. So a PDF rendered last month could be handed
+    to a client this month describing finding 14 as a missing page title when
+    finding 14 had since become something else entirely, and nothing in the
+    document or the database would say so. It is the same hazard as quoting a
+    page number from an edition of a book that has been reset.
+
+    The fix is a stamp, not a check at read time: `findingsProvenance` on the
+    manifest, on every analysis, and on every stored report, carrying the
+    findings schema version, the normalization fingerprint, and a digest of the
+    findings themselves. `packages/core/src/normalize/findings-provenance.ts` is
+    the single place that computes and compares one; the interface's analysis and
+    report stages assert through it rather than reimplementing the comparison.
+    **Fail closed, not fail quiet:** an artifact carrying no provenance at all is
+    refused with an instruction to renormalize and regenerate, rather than
+    trusted because it is old. Refusing a legacy artifact is cheap; shipping a
+    stale one to a paying client is not.
+
+    **Five copy rules.** Each was observed in a rendered document, not inferred.
+    None of them is a wording preference: all five are non-negotiable rule 6, "we
+    report, we do not conclude", failing in a specific place.
+
+    - No client-specific criteria verdict. The report printed "Criteres reunis"
+      against a named business, which is a conclusion that a law binds it.
+    - No exemption filing route. Naming Demarches Simplifiees tells the reader
+      what procedure to start, which is advice about their own legal position.
+    - No client-specific sanction figure. A euro amount beside a client's name
+      reads as their exposure, whatever the surrounding hedge says.
+    - No superseded citation. LCEN article 6-III was replaced by article 1-1, I,
+      2 post-SREN; recommendation copy still cited the old one.
+    - Accessibility-statement publication is conditional. "Publish a statement"
+      became an unconditional action even where the Article 47 regime had not
+      been independently established.
+
+    The CrUX label fix belongs to the same read-through: field data reports the
+    75th percentile, and calling it a median misstates what the number is.
+
+    **Two things this exposed that were not in the ledger.**
+
+    *All three committed de-identified fixtures were stale, not one.* The
+    expected staleness was superseded LCEN copy, which only
+    `large-rule-families` carried. The real gap was that `small-site` and
+    `multi-page` carried no `findingsProvenance` at all, so the new fail-closed
+    check refused them, and `packages/cli/src/report-env-loading.e2e.test.ts` -
+    which copies `small-site` and runs the real CLI - went red. Committed
+    fixtures do reach the pipeline's assertions; the earlier belief that they
+    could not was wrong. `scripts/deidentify-audit.mjs` was itself the root
+    cause: it rewrote findings while copying the source's provenance stamp
+    verbatim, producing a fixture that failed its own digest check. It now
+    derives the stamp through `buildFindingsProvenance` and synthesizes an
+    `analysisId` the same deterministic way it already synthesized an `auditId`,
+    so a fixture's provenance always describes its own findings.
+
+    Numbered entry 34 says never hand-edit a fixture, and the source-to-fixture
+    mapping is deliberately unrecorded. Both held: each source was recovered by
+    a unique `finishedAt` match and each redaction token by aligning source
+    strings against the committed pseudonyms, then every rebuild was proved
+    equivalent to what it replaced rather than assumed to be. `multi-page`
+    reproduced with zero content differences under a pure renaming of the
+    pseudonym ordinals; `small-site` with one, and that one is a repair - the
+    previous build had redacted the place name "pilat" inside the English word
+    "Compilation", corrupting a Lighthouse group label to name nobody. Ordinal
+    renumbering is safe only because nothing in the tree references a numbered
+    fixture slug, which was checked rather than assumed.
+
+    *The Lighthouse failure line printed the tool's own error text.* Where
+    Lighthouse fails on a page, the methodology section summarized the cause by
+    quoting the internal message, so a client document could read "worker exited
+    before returning a result (code 1, signal null)" - naming a private function
+    and a process exit signal, and printing a stringified null that the render
+    lint exists to catch. Grouping now happens on a translated cause rather than
+    on the raw string, so the two spellings of a stopped worker collapse into one
+    line instead of two. Four causes cover the 420 real failures observed in
+    stored scans: browser unreachable (301), worker stopped (112), timeout (7),
+    and an explicit unknown for anything else. The unknown branch is the point:
+    a message shape nobody has seen yet must degrade to plain language, not leak.
+
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

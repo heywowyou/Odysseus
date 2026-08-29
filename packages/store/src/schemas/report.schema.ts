@@ -6,7 +6,7 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { ReportLanguage } from '@odysseus/core';
+import type { FindingsProvenance, ReportLanguage } from '@odysseus/core';
 
 /** Milestone 8 addendum introduced a paid screening tier alongside the
  *  full audit, and a stored report recorded which of the two it was.
@@ -17,7 +17,12 @@ import type { ReportLanguage } from '@odysseus/core';
  *  written, not migrated, since old values remain valid history and
  *  nothing here needs them. */
 export interface ReportDocumentFields {
+  reportId: string;
   auditId: string;
+  analysisId: string;
+  findingsProvenance: FindingsProvenance;
+  rendererVersion: number;
+  pdfDigest: string;
   language: ReportLanguage;
   /** REPORT_TEMPLATE_VERSION from @odysseus/report at generation time,
    *  the same provenance reason the manifest records tool versions: a
@@ -34,11 +39,27 @@ export interface ReportDocumentFields {
   generatedAt: Date;
 }
 
-export type ReportDocument = ReportDocumentFields;
+type LegacyOptionalFields =
+  'reportId' | 'analysisId' | 'findingsProvenance' | 'rendererVersion' | 'pdfDigest';
+export type ReportDocument = Omit<ReportDocumentFields, LegacyOptionalFields> &
+  Partial<Pick<ReportDocumentFields, LegacyOptionalFields>>;
 
 const reportSchema = new Schema<ReportDocument>(
   {
+    reportId: { type: String, required: true },
     auditId: { type: String, required: true },
+    analysisId: { type: String, required: true },
+    findingsProvenance: {
+      _id: false,
+      type: {
+        findingsSchemaVersion: { type: Number, required: true },
+        normalizationFingerprint: { type: String, required: true },
+        findingsDigest: { type: String, required: true },
+      },
+      required: true,
+    },
+    rendererVersion: { type: Number, required: true },
+    pdfDigest: { type: String, required: true },
     language: { type: String, required: true, enum: ['fr', 'en'] },
     reportTemplateVersion: { type: Number, required: true },
     analysisGeneratedAt: { type: Date, required: true },
@@ -53,6 +74,7 @@ const reportSchema = new Schema<ReportDocument>(
 // is the intended common case.
 reportSchema.index({ auditId: 1 });
 reportSchema.index({ auditId: 1, language: 1, generatedAt: -1 });
+reportSchema.index({ reportId: 1 }, { unique: true, sparse: true });
 
 export function createReportModel(connection: Connection): Model<ReportDocument> {
   return connection.models['Report'] ?? connection.model<ReportDocument>('Report', reportSchema);

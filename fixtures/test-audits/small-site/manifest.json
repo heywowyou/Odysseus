@@ -43,8 +43,21 @@
       "errors": {}
     },
     {
+      "url": "https://small-site.test/small-site-2/",
+      "pageDir": "pages/small-site-2-7ab93e",
+      "depth": 1,
+      "status": "visited",
+      "httpStatus": 200,
+      "renderDiffMissingPercent": 0,
+      "lighthouseExcludedCategoryScores": {
+        "accessibility": 0.85,
+        "bestPractices": 1
+      },
+      "errors": {}
+    },
+    {
       "url": "https://small-site.test/small-site-4/",
-      "pageDir": "pages/small-site-4-7ab93e",
+      "pageDir": "pages/small-site-4-56f65f",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -56,21 +69,8 @@
       "errors": {}
     },
     {
-      "url": "https://small-site.test/small-site-9/",
-      "pageDir": "pages/small-site-9-56f65f",
-      "depth": 1,
-      "status": "visited",
-      "httpStatus": 200,
-      "renderDiffMissingPercent": 0,
-      "lighthouseExcludedCategoryScores": {
-        "accessibility": 0.85,
-        "bestPractices": 1
-      },
-      "errors": {}
-    },
-    {
-      "url": "https://small-site.test/actualite-small-site-4/",
-      "pageDir": "pages/actualite-small-site-4-9f2bc9",
+      "url": "https://small-site.test/actualite-small-site-2/",
+      "pageDir": "pages/actualite-small-site-2-9f2bc9",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -82,8 +82,8 @@
       "errors": {}
     },
     {
-      "url": "https://small-site.test/actualite-small-site-9/",
-      "pageDir": "pages/actualite-small-site-9-b3ea72",
+      "url": "https://small-site.test/actualite-small-site-4/",
+      "pageDir": "pages/actualite-small-site-4-b3ea72",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -108,8 +108,8 @@
       "errors": {}
     },
     {
-      "url": "https://small-site.test/evenements-small-site-4/",
-      "pageDir": "pages/evenements-small-site-4-e5c7fa",
+      "url": "https://small-site.test/evenements-small-site-2/",
+      "pageDir": "pages/evenements-small-site-2-e5c7fa",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -121,8 +121,8 @@
       "errors": {}
     },
     {
-      "url": "https://small-site.test/evenements-small-site-9/",
-      "pageDir": "pages/evenements-small-site-9-7a405c",
+      "url": "https://small-site.test/evenements-small-site-4/",
+      "pageDir": "pages/evenements-small-site-4-7a405c",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -173,13 +173,21 @@
       "errors": {}
     }
   ],
-  "renormalizedAt": "2026-08-27T12:31:11.607Z",
+  "renormalizedAt": "2026-08-28T23:15:20.222Z",
   "translationClusters": [
     {
       "canonicalPageUrl": "https://small-site.test/",
       "members": [
         {
           "pageUrl": "https://small-site.test/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/actualite-small-site-2/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/actualite-small-site-2/"
         }
       ]
     },
@@ -192,18 +200,18 @@
       ]
     },
     {
-      "canonicalPageUrl": "https://small-site.test/actualite-small-site-9/",
-      "members": [
-        {
-          "pageUrl": "https://small-site.test/actualite-small-site-9/"
-        }
-      ]
-    },
-    {
       "canonicalPageUrl": "https://small-site.test/devis/",
       "members": [
         {
           "pageUrl": "https://small-site.test/devis/"
+        }
+      ]
+    },
+    {
+      "canonicalPageUrl": "https://small-site.test/evenements-small-site-2/",
+      "members": [
+        {
+          "pageUrl": "https://small-site.test/evenements-small-site-2/"
         }
       ]
     },
@@ -216,18 +224,10 @@
       ]
     },
     {
-      "canonicalPageUrl": "https://small-site.test/evenements-small-site-9/",
+      "canonicalPageUrl": "https://small-site.test/small-site-2/",
       "members": [
         {
-          "pageUrl": "https://small-site.test/evenements-small-site-9/"
-        }
-      ]
-    },
-    {
-      "canonicalPageUrl": "https://small-site.test/small-site-4/",
-      "members": [
-        {
-          "pageUrl": "https://small-site.test/small-site-4/"
+          "pageUrl": "https://small-site.test/small-site-2/"
         }
       ]
     },
@@ -240,10 +240,10 @@
       ]
     },
     {
-      "canonicalPageUrl": "https://small-site.test/small-site-9/",
+      "canonicalPageUrl": "https://small-site.test/small-site-4/",
       "members": [
         {
-          "pageUrl": "https://small-site.test/small-site-9/"
+          "pageUrl": "https://small-site.test/small-site-4/"
         }
       ]
     },
@@ -263,5 +263,10 @@
         }
       ]
     }
-  ]
+  ],
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "4e4a1460057e8334",
+    "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+  }
 }

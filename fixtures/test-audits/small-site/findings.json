@@ -11,12 +11,12 @@
     "description": "Cumulative Layout Shift measures the movement of visible elements within the viewport. [Learn more about the Cumulative Layout Shift metric](https://web.dev/articles/cls).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/small-site-4/",
-      "https://small-site.test/small-site-9/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 8,
@@ -28,7 +28,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0.84,
           "scoreDisplayMode": "numeric",
           "numericValue": 0.11998114825298868,
@@ -50,7 +50,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0.84,
           "scoreDisplayMode": "numeric",
           "numericValue": 0.11922380362344744,
@@ -72,7 +72,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0.79,
           "scoreDisplayMode": "numeric",
           "numericValue": 0.13913980556579986,
@@ -94,7 +94,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0.79,
           "scoreDisplayMode": "numeric",
           "numericValue": 0.13857612569486424,
@@ -116,7 +116,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0.84,
           "scoreDisplayMode": "numeric",
           "numericValue": 0.11993513925565455,
@@ -138,7 +138,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0.84,
           "scoreDisplayMode": "numeric",
           "numericValue": 0.11953408506918387,
@@ -329,13 +329,13 @@
     "description": "Sum of all time periods between FCP and Time to Interactive, when task length exceeded 50ms, expressed in milliseconds. [Learn more about the Total Blocking Time metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-total-blocking-time/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 9,
@@ -347,7 +347,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0.18,
           "scoreDisplayMode": "numeric",
           "numericValue": 1278.1554,
@@ -360,7 +360,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0.16,
           "scoreDisplayMode": "numeric",
           "numericValue": 1374,
@@ -373,7 +373,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0.12,
           "scoreDisplayMode": "numeric",
           "numericValue": 1578.090799999999,
@@ -386,7 +386,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0.12,
           "scoreDisplayMode": "numeric",
           "numericValue": 1577.1220000000008,
@@ -399,7 +399,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0.05,
           "scoreDisplayMode": "numeric",
           "numericValue": 2413.9826,
@@ -425,7 +425,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0.09,
           "scoreDisplayMode": "numeric",
           "numericValue": 1859,
@@ -483,14 +483,14 @@
     "description": "First Contentful Paint marks the time at which the first text or image is painted. [Learn more about the First Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/first-contentful-paint/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -503,7 +503,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0.56,
           "scoreDisplayMode": "numeric",
           "numericValue": 2800.2823000000003,
@@ -516,7 +516,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0.62,
           "scoreDisplayMode": "numeric",
           "numericValue": 2632.6778000000004,
@@ -542,7 +542,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0.61,
           "scoreDisplayMode": "numeric",
           "numericValue": 2661.2457,
@@ -555,7 +555,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0.69,
           "scoreDisplayMode": "numeric",
           "numericValue": 2439.3482000000004,
@@ -568,7 +568,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0.55,
           "scoreDisplayMode": "numeric",
           "numericValue": 2850.0919,
@@ -594,7 +594,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0.61,
           "scoreDisplayMode": "numeric",
           "numericValue": 2665.1273,
@@ -665,14 +665,14 @@
     "description": "Largest Contentful Paint marks the time at which the largest text or image is painted. [Learn more about the Largest Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-largest-contentful-paint/)",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -685,7 +685,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": 17364.33795,
@@ -698,7 +698,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": 20595.597800000003,
@@ -724,7 +724,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": 19509.24775,
@@ -737,7 +737,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": 21534.573200000006,
@@ -750,7 +750,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": 19406.5745,
@@ -776,7 +776,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": 25321.6743,
@@ -847,14 +847,14 @@
     "description": "Speed Index shows how quickly the contents of a page are visibly populated. [Learn more about the Speed Index metric](https://developer.chrome.com/docs/lighthouse/performance/speed-index/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -867,7 +867,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0.56,
           "scoreDisplayMode": "numeric",
           "numericValue": 5434.377108285304,
@@ -880,7 +880,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0.53,
           "scoreDisplayMode": "numeric",
           "numericValue": 5604.809480131858,
@@ -906,7 +906,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0.46,
           "scoreDisplayMode": "numeric",
           "numericValue": 6042.564316284253,
@@ -919,7 +919,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0.37,
           "scoreDisplayMode": "numeric",
           "numericValue": 6653.788759157776,
@@ -932,7 +932,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0.35,
           "scoreDisplayMode": "numeric",
           "numericValue": 6765.3137844855255,
@@ -958,7 +958,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0.29,
           "scoreDisplayMode": "numeric",
           "numericValue": 7276.227379012975,
@@ -1237,26 +1237,26 @@
     "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 11,
     "elements": [
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
         "selector": "a[href$=\"www.EDConcept24.fr\"]",
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
+        "pageUrl": "https://small-site.test/actualite-small-site-4/",
         "selector": "a[href$=\"www.EDConcept24.fr\"]",
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
@@ -1266,17 +1266,17 @@
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
       {
+        "pageUrl": "https://small-site.test/evenements-small-site-2/",
+        "selector": "a[href$=\"www.EDConcept24.fr\"]",
+        "snippet": "<a href=\"redacted\">redacted</a>"
+      },
+      {
         "pageUrl": "https://small-site.test/evenements-small-site-4/",
         "selector": "a[href$=\"www.EDConcept24.fr\"]",
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
       {
-        "pageUrl": "https://small-site.test/evenements-small-site-9/",
-        "selector": "a[href$=\"www.EDConcept24.fr\"]",
-        "snippet": "<a href=\"redacted\">redacted</a>"
-      },
-      {
-        "pageUrl": "https://small-site.test/small-site-4/",
+        "pageUrl": "https://small-site.test/small-site-2/",
         "selector": "a[href$=\"www.EDConcept24.fr\"]",
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
@@ -1286,7 +1286,7 @@
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
       {
-        "pageUrl": "https://small-site.test/small-site-9/",
+        "pageUrl": "https://small-site.test/small-site-4/",
         "selector": "a[href$=\"www.EDConcept24.fr\"]",
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
@@ -1313,7 +1313,7 @@
         "selector": "a[href$=\"www.EDConcept24.fr\"]"
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "impact": "serious",
           "target": ["a[href$=\"www.EDConcept24.fr\"]"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
@@ -1330,7 +1330,7 @@
             "RGAA-3.2.1"
           ]
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "impact": "serious",
           "target": ["a[href$=\"www.EDConcept24.fr\"]"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
@@ -1364,6 +1364,23 @@
             "RGAA-3.2.1"
           ]
         },
+        "https://small-site.test/evenements-small-site-2/": {
+          "impact": "serious",
+          "target": ["a[href$=\"www.EDConcept24.fr\"]"],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
+          "tags": [
+            "cat.color",
+            "wcag2aa",
+            "wcag143",
+            "TTv5",
+            "TT13.c",
+            "EN-301-549",
+            "EN-9.1.4.3",
+            "ACT",
+            "RGAAv4",
+            "RGAA-3.2.1"
+          ]
+        },
         "https://small-site.test/evenements-small-site-4/": {
           "impact": "serious",
           "target": ["a[href$=\"www.EDConcept24.fr\"]"],
@@ -1381,24 +1398,7 @@
             "RGAA-3.2.1"
           ]
         },
-        "https://small-site.test/evenements-small-site-9/": {
-          "impact": "serious",
-          "target": ["a[href$=\"www.EDConcept24.fr\"]"],
-          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
-          "tags": [
-            "cat.color",
-            "wcag2aa",
-            "wcag143",
-            "TTv5",
-            "TT13.c",
-            "EN-301-549",
-            "EN-9.1.4.3",
-            "ACT",
-            "RGAAv4",
-            "RGAA-3.2.1"
-          ]
-        },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "impact": "serious",
           "target": ["a[href$=\"www.EDConcept24.fr\"]"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
@@ -1432,7 +1432,7 @@
             "RGAA-3.2.1"
           ]
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "impact": "serious",
           "target": ["a[href$=\"www.EDConcept24.fr\"]"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
@@ -1520,26 +1520,26 @@
     "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 11,
     "elements": [
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
         "selector": "#footer-editor-info > a",
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
+        "pageUrl": "https://small-site.test/actualite-small-site-4/",
         "selector": "#footer-editor-info > a",
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
@@ -1549,17 +1549,17 @@
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
       {
+        "pageUrl": "https://small-site.test/evenements-small-site-2/",
+        "selector": "#footer-editor-info > a",
+        "snippet": "<a href=\"redacted\">redacted</a>"
+      },
+      {
         "pageUrl": "https://small-site.test/evenements-small-site-4/",
         "selector": "#footer-editor-info > a",
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
       {
-        "pageUrl": "https://small-site.test/evenements-small-site-9/",
-        "selector": "#footer-editor-info > a",
-        "snippet": "<a href=\"redacted\">redacted</a>"
-      },
-      {
-        "pageUrl": "https://small-site.test/small-site-4/",
+        "pageUrl": "https://small-site.test/small-site-2/",
         "selector": "#footer-editor-info > a",
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
@@ -1569,7 +1569,7 @@
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
       {
-        "pageUrl": "https://small-site.test/small-site-9/",
+        "pageUrl": "https://small-site.test/small-site-4/",
         "selector": "#footer-editor-info > a",
         "snippet": "<a href=\"redacted\">redacted</a>"
       },
@@ -1596,7 +1596,7 @@
         "selector": "#footer-editor-info > a"
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "impact": "serious",
           "target": ["#footer-editor-info > a"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
@@ -1613,7 +1613,7 @@
             "RGAA-3.2.1"
           ]
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "impact": "serious",
           "target": ["#footer-editor-info > a"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
@@ -1647,6 +1647,23 @@
             "RGAA-3.2.1"
           ]
         },
+        "https://small-site.test/evenements-small-site-2/": {
+          "impact": "serious",
+          "target": ["#footer-editor-info > a"],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
+          "tags": [
+            "cat.color",
+            "wcag2aa",
+            "wcag143",
+            "TTv5",
+            "TT13.c",
+            "EN-301-549",
+            "EN-9.1.4.3",
+            "ACT",
+            "RGAAv4",
+            "RGAA-3.2.1"
+          ]
+        },
         "https://small-site.test/evenements-small-site-4/": {
           "impact": "serious",
           "target": ["#footer-editor-info > a"],
@@ -1664,24 +1681,7 @@
             "RGAA-3.2.1"
           ]
         },
-        "https://small-site.test/evenements-small-site-9/": {
-          "impact": "serious",
-          "target": ["#footer-editor-info > a"],
-          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
-          "tags": [
-            "cat.color",
-            "wcag2aa",
-            "wcag143",
-            "TTv5",
-            "TT13.c",
-            "EN-301-549",
-            "EN-9.1.4.3",
-            "ACT",
-            "RGAAv4",
-            "RGAA-3.2.1"
-          ]
-        },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "impact": "serious",
           "target": ["#footer-editor-info > a"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
@@ -1715,7 +1715,7 @@
             "RGAA-3.2.1"
           ]
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "impact": "serious",
           "target": ["#footer-editor-info > a"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: bold). Expected contrast ratio of 4.5:1",
@@ -1857,20 +1857,20 @@
     "title": "Page is blocked from indexing",
     "description": "Search engines are unable to include your pages in search results if they don't have permission to crawl them. [Learn more about crawler directives](https://developer.chrome.com/docs/lighthouse/seo/is-crawlable/).",
     "pageUrls": [
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
       "https://small-site.test/mentions-legales/"
     ],
     "occurrences": 4,
     "elements": [
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
         "selector": "head > meta",
         "snippet": "<meta name=\"robots\" content=\"redacted\" />"
       },
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
+        "pageUrl": "https://small-site.test/actualite-small-site-4/",
         "selector": "head > meta",
         "snippet": "<meta name=\"robots\" content=\"redacted\" />"
       },
@@ -1892,7 +1892,7 @@
         "selector": "head > meta"
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "binary",
           "numericValue": null,
@@ -1915,7 +1915,7 @@
             "nodeLabel": "head > meta"
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "binary",
           "numericValue": null,
@@ -2049,26 +2049,26 @@
     "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 11,
     "elements": [
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
         "selector": "#footer-editor-info",
         "snippet": "<div id=\"footer-editor-info\">redacted<span><a href=\"redacted\">redacted</a></span>redacted<a href=\"redacted\">redacted</a></div>"
       },
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
+        "pageUrl": "https://small-site.test/actualite-small-site-4/",
         "selector": "#footer-editor-info",
         "snippet": "<div id=\"footer-editor-info\">redacted<span><a href=\"redacted\">redacted</a></span>redacted<a href=\"redacted\">redacted</a></div>"
       },
@@ -2078,17 +2078,17 @@
         "snippet": "<div id=\"footer-editor-info\">redacted<span><a href=\"redacted\">redacted</a></span>redacted<a href=\"redacted\">redacted</a></div>"
       },
       {
+        "pageUrl": "https://small-site.test/evenements-small-site-2/",
+        "selector": "#footer-editor-info",
+        "snippet": "<div id=\"footer-editor-info\">redacted<span><a href=\"redacted\">redacted</a></span>redacted<a href=\"redacted\">redacted</a></div>"
+      },
+      {
         "pageUrl": "https://small-site.test/evenements-small-site-4/",
         "selector": "#footer-editor-info",
         "snippet": "<div id=\"footer-editor-info\">redacted<span><a href=\"redacted\">redacted</a></span>redacted<a href=\"redacted\">redacted</a></div>"
       },
       {
-        "pageUrl": "https://small-site.test/evenements-small-site-9/",
-        "selector": "#footer-editor-info",
-        "snippet": "<div id=\"footer-editor-info\">redacted<span><a href=\"redacted\">redacted</a></span>redacted<a href=\"redacted\">redacted</a></div>"
-      },
-      {
-        "pageUrl": "https://small-site.test/small-site-4/",
+        "pageUrl": "https://small-site.test/small-site-2/",
         "selector": "#footer-editor-info",
         "snippet": "<div id=\"footer-editor-info\">redacted<span><a href=\"redacted\">redacted</a></span>redacted<a href=\"redacted\">redacted</a></div>"
       },
@@ -2098,7 +2098,7 @@
         "snippet": "<div id=\"footer-editor-info\">redacted<span><a href=\"redacted\">redacted</a></span>redacted<a href=\"redacted\">redacted</a></div>"
       },
       {
-        "pageUrl": "https://small-site.test/small-site-9/",
+        "pageUrl": "https://small-site.test/small-site-4/",
         "selector": "#footer-editor-info",
         "snippet": "<div id=\"footer-editor-info\">redacted<span><a href=\"redacted\">redacted</a></span>redacted<a href=\"redacted\">redacted</a></div>"
       },
@@ -2125,7 +2125,7 @@
         "selector": "#footer-editor-info"
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "impact": "serious",
           "target": ["#footer-editor-info"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
@@ -2142,7 +2142,7 @@
             "RGAA-3.2.1"
           ]
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "impact": "serious",
           "target": ["#footer-editor-info"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
@@ -2176,6 +2176,23 @@
             "RGAA-3.2.1"
           ]
         },
+        "https://small-site.test/evenements-small-site-2/": {
+          "impact": "serious",
+          "target": ["#footer-editor-info"],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
+          "tags": [
+            "cat.color",
+            "wcag2aa",
+            "wcag143",
+            "TTv5",
+            "TT13.c",
+            "EN-301-549",
+            "EN-9.1.4.3",
+            "ACT",
+            "RGAAv4",
+            "RGAA-3.2.1"
+          ]
+        },
         "https://small-site.test/evenements-small-site-4/": {
           "impact": "serious",
           "target": ["#footer-editor-info"],
@@ -2193,24 +2210,7 @@
             "RGAA-3.2.1"
           ]
         },
-        "https://small-site.test/evenements-small-site-9/": {
-          "impact": "serious",
-          "target": ["#footer-editor-info"],
-          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
-          "tags": [
-            "cat.color",
-            "wcag2aa",
-            "wcag143",
-            "TTv5",
-            "TT13.c",
-            "EN-301-549",
-            "EN-9.1.4.3",
-            "ACT",
-            "RGAAv4",
-            "RGAA-3.2.1"
-          ]
-        },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "impact": "serious",
           "target": ["#footer-editor-info"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
@@ -2244,7 +2244,7 @@
             "RGAA-3.2.1"
           ]
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "impact": "serious",
           "target": ["#footer-editor-info"],
           "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.12 (foreground color: #666666, background color: #171717, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
@@ -2330,8 +2330,8 @@
     "title": "Document does not have a meta description",
     "description": "Meta descriptions may be included in search results to concisely summarize page content. [Learn more about the meta description](https://developer.chrome.com/docs/lighthouse/seo/meta-description/).",
     "pageUrls": [
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
       "https://small-site.test/mentions-legales/"
     ],
@@ -2344,7 +2344,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "binary",
           "numericValue": null,
@@ -2357,7 +2357,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "binary",
           "numericValue": null,
@@ -2416,26 +2416,26 @@
     "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/meta-viewport?application=playwright",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 11,
     "elements": [
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
         "selector": "meta[name=\"viewport\"]",
         "snippet": "<meta name=\"viewport\" content=\"redacted\">"
       },
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
+        "pageUrl": "https://small-site.test/actualite-small-site-4/",
         "selector": "meta[name=\"viewport\"]",
         "snippet": "<meta name=\"viewport\" content=\"redacted\">"
       },
@@ -2445,17 +2445,17 @@
         "snippet": "<meta name=\"viewport\" content=\"redacted\">"
       },
       {
+        "pageUrl": "https://small-site.test/evenements-small-site-2/",
+        "selector": "meta[name=\"viewport\"]",
+        "snippet": "<meta name=\"viewport\" content=\"redacted\">"
+      },
+      {
         "pageUrl": "https://small-site.test/evenements-small-site-4/",
         "selector": "meta[name=\"viewport\"]",
         "snippet": "<meta name=\"viewport\" content=\"redacted\">"
       },
       {
-        "pageUrl": "https://small-site.test/evenements-small-site-9/",
-        "selector": "meta[name=\"viewport\"]",
-        "snippet": "<meta name=\"viewport\" content=\"redacted\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/small-site-4/",
+        "pageUrl": "https://small-site.test/small-site-2/",
         "selector": "meta[name=\"viewport\"]",
         "snippet": "<meta name=\"viewport\" content=\"redacted\">"
       },
@@ -2465,7 +2465,7 @@
         "snippet": "<meta name=\"viewport\" content=\"redacted\">"
       },
       {
-        "pageUrl": "https://small-site.test/small-site-9/",
+        "pageUrl": "https://small-site.test/small-site-4/",
         "selector": "meta[name=\"viewport\"]",
         "snippet": "<meta name=\"viewport\" content=\"redacted\">"
       },
@@ -2492,7 +2492,7 @@
         "selector": "meta[name=\"viewport\"]"
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "impact": "moderate",
           "target": ["meta[name=\"viewport\"]"],
           "failureSummary": "Fix any of the following:\n  user-scalable on <meta> tag disables zooming on mobile devices",
@@ -2507,7 +2507,7 @@
             "RGAA-10.4.2"
           ]
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "impact": "moderate",
           "target": ["meta[name=\"viewport\"]"],
           "failureSummary": "Fix any of the following:\n  user-scalable on <meta> tag disables zooming on mobile devices",
@@ -2537,6 +2537,21 @@
             "RGAA-10.4.2"
           ]
         },
+        "https://small-site.test/evenements-small-site-2/": {
+          "impact": "moderate",
+          "target": ["meta[name=\"viewport\"]"],
+          "failureSummary": "Fix any of the following:\n  user-scalable on <meta> tag disables zooming on mobile devices",
+          "tags": [
+            "cat.sensory-and-visual-cues",
+            "wcag2aa",
+            "wcag144",
+            "EN-301-549",
+            "EN-9.1.4.4",
+            "ACT",
+            "RGAAv4",
+            "RGAA-10.4.2"
+          ]
+        },
         "https://small-site.test/evenements-small-site-4/": {
           "impact": "moderate",
           "target": ["meta[name=\"viewport\"]"],
@@ -2552,22 +2567,7 @@
             "RGAA-10.4.2"
           ]
         },
-        "https://small-site.test/evenements-small-site-9/": {
-          "impact": "moderate",
-          "target": ["meta[name=\"viewport\"]"],
-          "failureSummary": "Fix any of the following:\n  user-scalable on <meta> tag disables zooming on mobile devices",
-          "tags": [
-            "cat.sensory-and-visual-cues",
-            "wcag2aa",
-            "wcag144",
-            "EN-301-549",
-            "EN-9.1.4.4",
-            "ACT",
-            "RGAAv4",
-            "RGAA-10.4.2"
-          ]
-        },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "impact": "moderate",
           "target": ["meta[name=\"viewport\"]"],
           "failureSummary": "Fix any of the following:\n  user-scalable on <meta> tag disables zooming on mobile devices",
@@ -2597,7 +2597,7 @@
             "RGAA-10.4.2"
           ]
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "impact": "moderate",
           "target": ["meta[name=\"viewport\"]"],
           "failureSummary": "Fix any of the following:\n  user-scalable on <meta> tag disables zooming on mobile devices",
@@ -2676,14 +2676,14 @@
     "description": "Leverage the `font-display` CSS feature to ensure text is user-visible while webfonts are loading. [Learn more about `font-display`](https://developer.chrome.com/docs/lighthouse/performance/font-display/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -2696,7 +2696,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -2714,7 +2714,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -2750,7 +2750,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -2768,7 +2768,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -2786,7 +2786,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -2822,7 +2822,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -2917,13 +2917,13 @@
     "description": "Large network payloads cost users real money and are highly correlated with long load times. [Learn how to reduce payload sizes](https://developer.chrome.com/docs/lighthouse/performance/total-byte-weight/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 9,
@@ -2935,7 +2935,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 6387447,
@@ -2989,7 +2989,7 @@
             "totalItems": 10
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 6458086,
@@ -3043,7 +3043,7 @@
             "totalItems": 10
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 6270769,
@@ -3097,7 +3097,7 @@
             "totalItems": 10
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 6654919,
@@ -3151,7 +3151,7 @@
             "totalItems": 10
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 10177884,
@@ -3259,7 +3259,7 @@
             "totalItems": 10
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 10612147,
@@ -3440,18 +3440,78 @@
     "description": "These are the largest layout shifts observed on the page. Each table item represents a single layout shift, and shows the element that shifted the most. Below each item are possible root causes that led to the layout shift. Some of these layout shifts may not be included in the CLS metric value due to [windowing](https://web.dev/articles/cls#what_is_cls). [Learn how to improve CLS](https://web.dev/articles/optimize-cls)",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/small-site-4/",
-      "https://small-site.test/small-site-9/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 99,
     "elements": [
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
+      },
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
         "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
         "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
       },
@@ -3487,66 +3547,6 @@
       },
       {
         "pageUrl": "https://small-site.test/actualite-small-site-4/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-4/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
-        "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-        "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
         "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
         "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">"
       }
@@ -3558,6 +3558,29 @@
         "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation"
       },
       "perPage": {
+        "https://small-site.test/actualite-small-site-2/": {
+          "score": 0,
+          "scoreDisplayMode": "metricSavings",
+          "numericValue": null,
+          "displayValue": "15 layout shifts found",
+          "title": "Avoid large layout shifts",
+          "node": {
+            "type": "node",
+            "lhId": "page-13-DIV",
+            "path": "1,HTML,1,BODY,1,DIV,1,HEADER,0,DIV,1,DIV",
+            "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
+            "boundingRect": {
+              "top": 43,
+              "bottom": 123,
+              "left": 197,
+              "right": 371,
+              "width": 174,
+              "height": 80
+            },
+            "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">",
+            "nodeLabel": "div#page-container > header#main-header > div.container > div#et-top-navigation"
+          }
+        },
         "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
@@ -3581,7 +3604,7 @@
             "nodeLabel": "div#page-container > header#main-header > div.container > div#et-top-navigation"
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -3589,7 +3612,7 @@
           "title": "Avoid large layout shifts",
           "node": {
             "type": "node",
-            "lhId": "page-13-DIV",
+            "lhId": "page-16-DIV",
             "path": "1,HTML,1,BODY,1,DIV,1,HEADER,0,DIV,1,DIV",
             "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
             "boundingRect": {
@@ -3627,30 +3650,7 @@
             "nodeLabel": "div#page-container > header#main-header > div.container > div#et-top-navigation"
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
-          "score": 0,
-          "scoreDisplayMode": "metricSavings",
-          "numericValue": null,
-          "displayValue": "15 layout shifts found",
-          "title": "Avoid large layout shifts",
-          "node": {
-            "type": "node",
-            "lhId": "page-16-DIV",
-            "path": "1,HTML,1,BODY,1,DIV,1,HEADER,0,DIV,1,DIV",
-            "selector": "div#page-container > header#main-header > div.container > div#et-top-navigation",
-            "boundingRect": {
-              "top": 43,
-              "bottom": 123,
-              "left": 197,
-              "right": 371,
-              "width": 174,
-              "height": 80
-            },
-            "snippet": "<div id=\"et-top-navigation\" data-height=\"66\" data-fixed-height=\"40\" style=\"padding-left: 142px;\">",
-            "nodeLabel": "div#page-container > header#main-header > div.container > div#et-top-navigation"
-          }
-        },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -3673,7 +3673,7 @@
             "nodeLabel": "div#page-container > header#main-header > div.container > div#et-top-navigation"
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -3761,14 +3761,14 @@
     "description": "Your first network request is the most important.  Reduce its latency by avoiding redirects, ensuring a fast server response, and enabling text compression.",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -3781,7 +3781,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -3794,7 +3794,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -3820,7 +3820,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -3833,7 +3833,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -3846,7 +3846,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -3872,7 +3872,7 @@
             "totalItems": 0
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -3943,14 +3943,14 @@
     "description": "A long cache lifetime can speed up repeat visits to your page. [Learn more about efficient cache policies](https://developer.chrome.com/docs/lighthouse/performance/uses-long-cache-ttl/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -4036,7 +4036,7 @@
         "https://small-site.test/wp-includes/js/jquery/jquery.min.js?ver=3.7.1"
       ],
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 5655133.706250001,
@@ -4065,7 +4065,7 @@
             "https://small-site.test/wp-content/uploads/2024/01/12736-NOJT6Pyh-980x77.png"
           ]
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 5718249.375000001,
@@ -4122,7 +4122,7 @@
             "https://small-site.test/wp-content/uploads/useanyfont/uaf.css?ver=1716894999"
           ]
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 5560928.26875,
@@ -4151,7 +4151,7 @@
             "https://small-site.test/wp-content/uploads/2024/01/12736-NOJT6Pyh-980x77.png"
           ]
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 5904308.74375,
@@ -4180,7 +4180,7 @@
             "https://small-site.test/wp-content/uploads/2024/01/12736-NOJT6Pyh-980x77.png"
           ]
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 9052214.925,
@@ -4238,7 +4238,7 @@
             "https://small-site.test/wp-content/uploads/2024/01/403859804_895398805274155_5203730548630003683_n-980x1225.jpg"
           ]
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 9439989.9375,
@@ -4366,13 +4366,13 @@
     "description": "A forced reflow occurs when JavaScript queries geometric properties (such as offsetWidth) after styles have been invalidated by a change to the DOM state. This can result in poor performance. Learn more about [forced reflows](https://developers.google.com/web/fundamentals/performance/rendering/avoid-large-complex-layouts-and-layout-thrashing#avoid-forced-synchronous-layouts) and possible mitigations.",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/"
     ],
     "occurrences": 9,
@@ -4384,7 +4384,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -4484,7 +4484,7 @@
             "totalItems": 2
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -4591,7 +4591,7 @@
             "totalItems": 2
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -4630,7 +4630,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -4710,7 +4710,7 @@
             "totalItems": 2
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -4930,7 +4930,7 @@
             "totalItems": 2
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -5289,7 +5289,7 @@
               "height": 719
             },
             "snippet": "<div class=\"et_pb_slider_container_inner\">",
-            "nodeLabel": "RESTAURANT Small Site 4\nLes Meilleurs Restaurants à Small Site 6 : Small Site 4 et Small Site 9\nR…"
+            "nodeLabel": "RESTAURANT Small Site 2\nLes Meilleurs Restaurants à Small Site 3 : Small Site 2 et Small Site 4\nR…"
           }
         }
       }
@@ -5311,14 +5311,14 @@
     "description": "[Avoid chaining critical requests](https://developer.chrome.com/docs/lighthouse/performance/critical-request-chains) by reducing the length of chains, reducing the download size of resources, or deferring the download of unnecessary resources to improve page load.",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -5331,7 +5331,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -5346,7 +5346,7 @@
                   "type": "network-tree",
                   "chains": {
                     "2E5DD70C08B3087F202C0C2B5E77B7DB": {
-                      "url": "https://small-site.test/actualite-small-site-4/",
+                      "url": "https://small-site.test/actualite-small-site-2/",
                       "navStartToEndTime": 1612,
                       "transferSize": 16487,
                       "isLongest": true,
@@ -5495,7 +5495,7 @@
             "totalItems": 3
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -5510,7 +5510,7 @@
                   "type": "network-tree",
                   "chains": {
                     "E898679DC58FBFAAC0CD4DA97E527159": {
-                      "url": "https://small-site.test/actualite-small-site-9/",
+                      "url": "https://small-site.test/actualite-small-site-4/",
                       "navStartToEndTime": 1790,
                       "transferSize": 16557,
                       "isLongest": true,
@@ -5805,7 +5805,7 @@
             "totalItems": 3
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -5820,7 +5820,7 @@
                   "type": "network-tree",
                   "chains": {
                     "EDEA0089B9763D22879268431CB10A12": {
-                      "url": "https://small-site.test/evenements-small-site-4/",
+                      "url": "https://small-site.test/evenements-small-site-2/",
                       "navStartToEndTime": 1711,
                       "transferSize": 18667,
                       "isLongest": true,
@@ -5945,7 +5945,7 @@
             "totalItems": 3
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -5960,7 +5960,7 @@
                   "type": "network-tree",
                   "chains": {
                     "E652B272149F8F6FB956B37B2126F7C4": {
-                      "url": "https://small-site.test/evenements-small-site-9/",
+                      "url": "https://small-site.test/evenements-small-site-4/",
                       "navStartToEndTime": 1636,
                       "transferSize": 18615,
                       "isLongest": true,
@@ -6085,7 +6085,7 @@
             "totalItems": 3
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -6100,7 +6100,7 @@
                   "type": "network-tree",
                   "chains": {
                     "1B5A644CBE950A07FDF682DAAF4AAB35": {
-                      "url": "https://small-site.test/small-site-4/",
+                      "url": "https://small-site.test/small-site-2/",
                       "navStartToEndTime": 1754,
                       "transferSize": 19444,
                       "isLongest": true,
@@ -6377,7 +6377,7 @@
             "totalItems": 3
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -6392,7 +6392,7 @@
                   "type": "network-tree",
                   "chains": {
                     "FF7A8B23B8A12BD5034B0D81D0B82C28": {
-                      "url": "https://small-site.test/small-site-9/",
+                      "url": "https://small-site.test/small-site-4/",
                       "navStartToEndTime": 1903,
                       "transferSize": 19835,
                       "isLongest": true,
@@ -7131,12 +7131,12 @@
     "description": "Layout shifts occur when elements move absent any user interaction. [Investigate the causes of layout shifts](https://web.dev/articles/optimize-cls), such as elements being added, removed, or their fonts changing as the page loads.",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/small-site-4/",
-      "https://small-site.test/small-site-9/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 8,
@@ -7148,7 +7148,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -7289,7 +7289,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -7430,7 +7430,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -7643,7 +7643,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -7697,7 +7697,7 @@
                         "height": 1571
                       },
                       "snippet": "<div class=\"et_pb_section et_pb_section_1 et_section_regular et_pb_section_sticky\">",
-                      "nodeLabel": "Célébrations Gourmandes\n\nRestez à l'affût chez Small Site 9, car de passionnantes sur…"
+                      "nodeLabel": "Célébrations Gourmandes\n\nRestez à l'affût chez Small Site 4, car de passionnantes sur…"
                     },
                     "score": 0.1326910627691549
                   },
@@ -7856,7 +7856,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -7910,7 +7910,7 @@
                         "height": 1600
                       },
                       "snippet": "<div class=\"et_pb_section et_pb_section_2 et_pb_with_background et_section_regular\">",
-                      "nodeLabel": "à Small Site 6\nUn Héritage Culinaire, Une Histoire Familiale\nIl y a trois ans, j’ai…"
+                      "nodeLabel": "à Small Site 3\nUn Héritage Culinaire, Une Histoire Familiale\nIl y a trois ans, j’ai…"
                     },
                     "score": 0.1138476150617144
                   },
@@ -7997,7 +7997,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -8051,7 +8051,7 @@
                         "height": 1536
                       },
                       "snippet": "<div class=\"et_pb_section et_pb_section_2 et_pb_with_background et_section_regular\">",
-                      "nodeLabel": "à Small Site 6\nUne Histoire Gourmande\n\nIl y a trois ans, j'ai entrepris l'aventure …"
+                      "nodeLabel": "à Small Site 3\nUne Histoire Gourmande\n\nIl y a trois ans, j'ai entrepris l'aventure …"
                     },
                     "score": 0.1135966722056039
                   },
@@ -8333,7 +8333,7 @@
                         "height": 2316
                       },
                       "snippet": "<div class=\"et_pb_section et_pb_section_1 et_pb_with_background et_section_regular\">",
-                      "nodeLabel": "Small Site 4\n\nBienvenue chez Small Site 4 - Moulleau, votre destination culinaire privi…"
+                      "nodeLabel": "Small Site 2\n\nBienvenue chez Small Site 2 - Moulleau, votre destination culinaire privi…"
                     },
                     "score": 0.2370139271314236,
                     "subItems": {
@@ -8371,7 +8371,7 @@
                         "height": 719
                       },
                       "snippet": "<div class=\"et_pb_slider_container_inner\">",
-                      "nodeLabel": "RESTAURANT Small Site 4\nLes Meilleurs Restaurants à Small Site 6 : Small Site 4 et Small Site 9\nR…"
+                      "nodeLabel": "RESTAURANT Small Site 2\nLes Meilleurs Restaurants à Small Site 3 : Small Site 2 et Small Site 4\nR…"
                     },
                     "score": 0.1241128864725317
                   },
@@ -8503,14 +8503,14 @@
     "description": "Reduce unused rules from stylesheets and defer CSS not used for above-the-fold content to decrease bytes consumed by network activity. [Learn how to reduce unused CSS](https://developer.chrome.com/docs/lighthouse/performance/unused-css-rules/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -8535,7 +8535,7 @@
         "https://small-site.test/wp-includes/css/dist/block-library/style.min.css?ver=c4f00b429a9e7109c9fc4f9c1548c452"
       ],
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 300,
@@ -8547,7 +8547,7 @@
             "https://small-site.test/wp-includes/css/dist/block-library/style.min.css?ver=c4f00b429a9e7109c9fc4f9c1548c452"
           ]
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 300,
@@ -8570,6 +8570,18 @@
             "https://small-site.test/wp-includes/css/dist/block-library/style.min.css?ver=c4f00b429a9e7109c9fc4f9c1548c452"
           ]
         },
+        "https://small-site.test/evenements-small-site-2/": {
+          "score": 0,
+          "scoreDisplayMode": "metricSavings",
+          "numericValue": 300,
+          "displayValue": "Est savings of 164 KiB",
+          "title": "Reduce unused CSS",
+          "resourceUrls": [
+            "https://small-site.test/wp-content/themes/Divi/style-static.min.css?ver=4.25.1",
+            "body[data-scroll-step=\"0\"] .et_pb_divider_0{transform:translateY(100px); … } …",
+            "https://small-site.test/wp-includes/css/dist/block-library/style.min.css?ver=c4f00b429a9e7109c9fc4f9c1548c452"
+          ]
+        },
         "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
@@ -8582,19 +8594,7 @@
             "https://small-site.test/wp-includes/css/dist/block-library/style.min.css?ver=c4f00b429a9e7109c9fc4f9c1548c452"
           ]
         },
-        "https://small-site.test/evenements-small-site-9/": {
-          "score": 0,
-          "scoreDisplayMode": "metricSavings",
-          "numericValue": 300,
-          "displayValue": "Est savings of 164 KiB",
-          "title": "Reduce unused CSS",
-          "resourceUrls": [
-            "https://small-site.test/wp-content/themes/Divi/style-static.min.css?ver=4.25.1",
-            "body[data-scroll-step=\"0\"] .et_pb_divider_0{transform:translateY(100px); … } …",
-            "https://small-site.test/wp-includes/css/dist/block-library/style.min.css?ver=c4f00b429a9e7109c9fc4f9c1548c452"
-          ]
-        },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 600,
@@ -8618,7 +8618,7 @@
             "https://small-site.test/wp-includes/css/dist/block-library/style.min.css?ver=c4f00b429a9e7109c9fc4f9c1548c452"
           ]
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 450,
@@ -8684,14 +8684,14 @@
     "description": "Resources are blocking the first paint of your page. Consider delivering critical JS/CSS inline and deferring all non-critical JS/styles. [Learn how to eliminate render-blocking resources](https://developer.chrome.com/docs/lighthouse/performance/render-blocking-resources/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -8712,7 +8712,7 @@
         "https://small-site.test/wp-includes/js/jquery/jquery.min.js?ver=3.7.1"
       ],
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1721,
@@ -8725,7 +8725,7 @@
             "https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800&subset=latin,latin-ext&display=swap"
           ]
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1566,
@@ -8751,7 +8751,7 @@
             "https://small-site.test/wp-content/plugins/cookie-law-info/legacy/public/css/cookie-law-info-public.css?ver=3.2.1"
           ]
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1432,
@@ -8764,7 +8764,7 @@
             "https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800&subset=latin,latin-ext&display=swap"
           ]
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1306,
@@ -8777,7 +8777,7 @@
             "https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800&subset=latin,latin-ext&display=swap"
           ]
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1794,
@@ -8803,7 +8803,7 @@
             "https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800&subset=latin,latin-ext&display=swap"
           ]
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1558,
@@ -8874,13 +8874,13 @@
     "description": "Polyfills and transforms enable legacy browsers to use new JavaScript features. However, many aren't necessary for modern browsers. Consider modifying your JavaScript build process to not transpile [Baseline](https://web.dev/baseline) features, unless you know you must support legacy browsers. [Learn why most sites can deploy ES6+ code without transpiling](https://philipwalton.com/articles/the-state-of-es5-on-the-web/)",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 9,
@@ -8899,6 +8899,16 @@
         "https://www.gstatic.com/recaptcha/releases/w_Yb7dGGXaKesJ7BMiqFJqBG/recaptcha__fr.js"
       ],
       "perPage": {
+        "https://small-site.test/actualite-small-site-2/": {
+          "score": 0.5,
+          "scoreDisplayMode": "metricSavings",
+          "numericValue": 0,
+          "displayValue": "Est savings of 1 KiB",
+          "title": "Avoid serving legacy JavaScript to modern browsers",
+          "resourceUrls": [
+            "https://small-site.test/wp-content/themes/Divi/includes/builder/feature/dynamic-assets/assets/js/motion-effects.js?ver=4.25.1"
+          ]
+        },
         "https://small-site.test/actualite-small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
@@ -8909,7 +8919,7 @@
             "https://small-site.test/wp-content/themes/Divi/includes/builder/feature/dynamic-assets/assets/js/motion-effects.js?ver=4.25.1"
           ]
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 0,
@@ -8929,17 +8939,7 @@
             "https://small-site.test/wp-content/themes/Divi/includes/builder/feature/dynamic-assets/assets/js/motion-effects.js?ver=4.25.1"
           ]
         },
-        "https://small-site.test/evenements-small-site-9/": {
-          "score": 0.5,
-          "scoreDisplayMode": "metricSavings",
-          "numericValue": 0,
-          "displayValue": "Est savings of 1 KiB",
-          "title": "Avoid serving legacy JavaScript to modern browsers",
-          "resourceUrls": [
-            "https://small-site.test/wp-content/themes/Divi/includes/builder/feature/dynamic-assets/assets/js/motion-effects.js?ver=4.25.1"
-          ]
-        },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 0,
@@ -8959,7 +8959,7 @@
             "https://small-site.test/wp-content/themes/Divi/includes/builder/feature/dynamic-assets/assets/js/motion-effects.js?ver=4.25.1"
           ]
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 0,
@@ -9012,13 +9012,13 @@
     "description": "Consider reducing the time spent parsing, compiling, and executing JS. You may find delivering smaller JS payloads helps with this. [Learn how to reduce Javascript execution time](https://developer.chrome.com/docs/lighthouse/performance/bootup-time/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 9,
@@ -9030,7 +9030,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 2305.4879999999976,
@@ -9046,7 +9046,7 @@
                 "scriptParseCompile": 18.292
               },
               {
-                "url": "https://small-site.test/actualite-small-site-4/",
+                "url": "https://small-site.test/actualite-small-site-2/",
                 "total": 1766.8519999999999,
                 "scripting": 39.95199999999999,
                 "scriptParseCompile": 21.304
@@ -9080,7 +9080,7 @@
             "totalItems": 6
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 2170.9399999999923,
@@ -9090,7 +9090,7 @@
             "type": "table",
             "items": [
               {
-                "url": "https://small-site.test/actualite-small-site-9/",
+                "url": "https://small-site.test/actualite-small-site-4/",
                 "total": 2403.94,
                 "scripting": 30.283999999999995,
                 "scriptParseCompile": 26.78
@@ -9130,7 +9130,7 @@
             "totalItems": 6
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 2922.4799999999977,
@@ -9140,7 +9140,7 @@
             "type": "table",
             "items": [
               {
-                "url": "https://small-site.test/evenements-small-site-4/",
+                "url": "https://small-site.test/evenements-small-site-2/",
                 "total": 2639.7600000000007,
                 "scripting": 26.227999999999984,
                 "scriptParseCompile": 26.807999999999993
@@ -9180,7 +9180,7 @@
             "totalItems": 6
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 2628.959999999992,
@@ -9190,7 +9190,7 @@
             "type": "table",
             "items": [
               {
-                "url": "https://small-site.test/evenements-small-site-9/",
+                "url": "https://small-site.test/evenements-small-site-4/",
                 "total": 2688.0119999999997,
                 "scripting": 55.363999999999976,
                 "scriptParseCompile": 49.855999999999995
@@ -9236,7 +9236,7 @@
             "totalItems": 7
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 3272.259999999989,
@@ -9246,7 +9246,7 @@
             "type": "table",
             "items": [
               {
-                "url": "https://small-site.test/small-site-4/",
+                "url": "https://small-site.test/small-site-2/",
                 "total": 3170.228000000001,
                 "scripting": 19.93999999999999,
                 "scriptParseCompile": 17.148
@@ -9336,7 +9336,7 @@
             "totalItems": 6
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 2851.407999999993,
@@ -9346,7 +9346,7 @@
             "type": "table",
             "items": [
               {
-                "url": "https://small-site.test/small-site-9/",
+                "url": "https://small-site.test/small-site-4/",
                 "total": 2661.5640000000003,
                 "scripting": 28.495999999999988,
                 "scriptParseCompile": 39.932
@@ -9541,13 +9541,13 @@
     "description": "Consider reducing the time spent parsing, compiling and executing JS. You may find delivering smaller JS payloads helps with this. [Learn how to minimize main-thread work](https://developer.chrome.com/docs/lighthouse/performance/mainthread-work-breakdown/)",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 9,
@@ -9559,7 +9559,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 5879.891999999979,
@@ -9595,7 +9595,7 @@
               },
               {
                 "group": "scriptParseCompile",
-                "groupLabel": "Script Parsing & ComSmall Site 11ion",
+                "groupLabel": "Script Parsing & Compilation",
                 "duration": 149.53199999999995
               },
               {
@@ -9608,7 +9608,7 @@
             "totalItems": 7
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 6383.255999999988,
@@ -9644,7 +9644,7 @@
               },
               {
                 "group": "scriptParseCompile",
-                "groupLabel": "Script Parsing & ComSmall Site 11ion",
+                "groupLabel": "Script Parsing & Compilation",
                 "duration": 145.612
               },
               {
@@ -9657,7 +9657,7 @@
             "totalItems": 7
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 7129.5559999999805,
@@ -9688,7 +9688,7 @@
               },
               {
                 "group": "scriptParseCompile",
-                "groupLabel": "Script Parsing & ComSmall Site 11ion",
+                "groupLabel": "Script Parsing & Compilation",
                 "duration": 208.72
               },
               {
@@ -9706,7 +9706,7 @@
             "totalItems": 7
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 6847.687999999979,
@@ -9737,7 +9737,7 @@
               },
               {
                 "group": "scriptParseCompile",
-                "groupLabel": "Script Parsing & ComSmall Site 11ion",
+                "groupLabel": "Script Parsing & Compilation",
                 "duration": 204.296
               },
               {
@@ -9755,7 +9755,7 @@
             "totalItems": 7
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 8535.016000000003,
@@ -9791,7 +9791,7 @@
               },
               {
                 "group": "scriptParseCompile",
-                "groupLabel": "Script Parsing & ComSmall Site 11ion",
+                "groupLabel": "Script Parsing & Compilation",
                 "duration": 202.084
               },
               {
@@ -9845,7 +9845,7 @@
               },
               {
                 "group": "scriptParseCompile",
-                "groupLabel": "Script Parsing & ComSmall Site 11ion",
+                "groupLabel": "Script Parsing & Compilation",
                 "duration": 120.35600000000002
               }
             ],
@@ -9853,7 +9853,7 @@
             "totalItems": 7
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 7564.415999999973,
@@ -9894,7 +9894,7 @@
               },
               {
                 "group": "scriptParseCompile",
-                "groupLabel": "Script Parsing & ComSmall Site 11ion",
+                "groupLabel": "Script Parsing & Compilation",
                 "duration": 137.324
               }
             ],
@@ -9928,7 +9928,7 @@
               },
               {
                 "group": "scriptParseCompile",
-                "groupLabel": "Script Parsing & ComSmall Site 11ion",
+                "groupLabel": "Script Parsing & Compilation",
                 "duration": 353.7800000000001
               },
               {
@@ -9987,7 +9987,7 @@
               },
               {
                 "group": "scriptParseCompile",
-                "groupLabel": "Script Parsing & ComSmall Site 11ion",
+                "groupLabel": "Script Parsing & Compilation",
                 "duration": 264.76800000000003
               },
               {
@@ -10019,12 +10019,12 @@
     "description": "Optimize LCP by making the LCP image [discoverable](https://web.dev/articles/optimize-lcp#1_eliminate_resource_load_delay) from the HTML immediately, and [avoiding lazy-loading](https://web.dev/articles/lcp-lazy-loading)",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 8,
@@ -10036,7 +10036,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -10076,14 +10076,14 @@
                   "height": 527
                 },
                 "snippet": "<div class=\"et_pb_section et_pb_section_0 et_pb_with_background et_section_regular et_…\" data-fix-page-container=\"on\" style=\"padding-top: 251px;\">",
-                "nodeLabel": "Small Site 4\n\t"
+                "nodeLabel": "Small Site 2\n\t"
               }
             ],
             "truncated": false,
             "totalItems": 2
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -10123,7 +10123,7 @@
                   "height": 549
                 },
                 "snippet": "<div class=\"et_pb_section et_pb_section_0 et_pb_with_background et_section_regular et_…\" data-fix-page-container=\"on\" style=\"padding-top: 251px;\">",
-                "nodeLabel": "Small Site 9\n\t"
+                "nodeLabel": "Small Site 4\n\t"
               }
             ],
             "truncated": false,
@@ -10177,7 +10177,7 @@
             "totalItems": 2
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -10217,7 +10217,7 @@
                   "height": 534
                 },
                 "snippet": "<div class=\"et_pb_section et_pb_section_1 et_pb_with_background et_section_regular et_…\" data-fix-page-container=\"on\" style=\"padding-top: 251px;\">",
-                "nodeLabel": "Small Site 4\n\t"
+                "nodeLabel": "Small Site 2\n\t"
               }
             ],
             "truncated": false,
@@ -10264,14 +10264,14 @@
                   "height": 622
                 },
                 "snippet": "<div class=\"et_pb_section et_pb_section_0 et_pb_with_background et_section_regular et_…\" data-fix-page-container=\"on\" style=\"padding-top: 146px;\">",
-                "nodeLabel": "à Small Site 6\nGalerie\nRestaurant Small Site 9 Small Site 6\nRestaurant Small Site 9 Small Site 6\n\nResta…"
+                "nodeLabel": "à Small Site 3\nGalerie\nRestaurant Small Site 4 Small Site 3\nRestaurant Small Site 4 Small Site 3\n\nResta…"
               }
             ],
             "truncated": false,
             "totalItems": 2
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "numeric",
           "numericValue": null,
@@ -10311,7 +10311,7 @@
                   "height": 541
                 },
                 "snippet": "<div class=\"et_pb_section et_pb_section_1 et_pb_with_background et_section_regular et_…\" data-fix-page-container=\"on\" style=\"padding-top: 251px;\">",
-                "nodeLabel": "Small Site 9\n\t"
+                "nodeLabel": "Small Site 4\n\t"
               }
             ],
             "truncated": false,
@@ -10405,7 +10405,7 @@
                   "height": 830
                 },
                 "snippet": "<div class=\"et_pb_slide et_pb_slide_0 et_pb_bg_layout_dark et_pb_media_alignment_cente…\" data-slide-id=\"et_pb_slide_0\" data-fix-page-container=\"on\" style=\"padding-top: 111px; z-index: 1; display: block; opacity: 1;\">",
-                "nodeLabel": "RESTAURANT Small Site 4\nLes Meilleurs Restaurants à Small Site 6 : Small Site 4 et Small Site 9\nR…"
+                "nodeLabel": "RESTAURANT Small Site 2\nLes Meilleurs Restaurants à Small Site 3 : Small Site 2 et Small Site 4\nR…"
               }
             ],
             "truncated": false,
@@ -10471,14 +10471,14 @@
     "description": "Keep the server response time for the main document short because all other requests depend on it. [Learn more about the Time to First Byte metric](https://developer.chrome.com/docs/lighthouse/performance/time-to-first-byte/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -10491,7 +10491,7 @@
         "selector": ""
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1559.846,
@@ -10501,7 +10501,7 @@
             "type": "opportunity",
             "items": [
               {
-                "url": "https://small-site.test/actualite-small-site-4/",
+                "url": "https://small-site.test/actualite-small-site-2/",
                 "responseTime": 1559.846
               }
             ],
@@ -10509,7 +10509,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1733.696,
@@ -10519,7 +10519,7 @@
             "type": "opportunity",
             "items": [
               {
-                "url": "https://small-site.test/actualite-small-site-9/",
+                "url": "https://small-site.test/actualite-small-site-4/",
                 "responseTime": 1733.696
               }
             ],
@@ -10545,7 +10545,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1613.63,
@@ -10555,7 +10555,7 @@
             "type": "opportunity",
             "items": [
               {
-                "url": "https://small-site.test/evenements-small-site-4/",
+                "url": "https://small-site.test/evenements-small-site-2/",
                 "responseTime": 1613.63
               }
             ],
@@ -10563,7 +10563,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1568.2959999999998,
@@ -10573,7 +10573,7 @@
             "type": "opportunity",
             "items": [
               {
-                "url": "https://small-site.test/evenements-small-site-9/",
+                "url": "https://small-site.test/evenements-small-site-4/",
                 "responseTime": 1568.2959999999998
               }
             ],
@@ -10581,7 +10581,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1705.88,
@@ -10591,7 +10591,7 @@
             "type": "opportunity",
             "items": [
               {
-                "url": "https://small-site.test/small-site-4/",
+                "url": "https://small-site.test/small-site-2/",
                 "responseTime": 1705.88
               }
             ],
@@ -10617,7 +10617,7 @@
             "totalItems": 1
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 1852.9589999999998,
@@ -10627,7 +10627,7 @@
             "type": "opportunity",
             "items": [
               {
-                "url": "https://small-site.test/small-site-9/",
+                "url": "https://small-site.test/small-site-4/",
                 "responseTime": 1852.9589999999998
               }
             ],
@@ -10708,29 +10708,29 @@
     "description": "Consider lazy-loading offscreen and hidden images after all critical resources have finished loading to lower time to interactive. [Learn how to defer offscreen images](https://developer.chrome.com/docs/lighthouse/performance/offscreen-images/).",
     "pageUrls": [
       "https://small-site.test/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
-      "https://small-site.test/small-site-9/"
+      "https://small-site.test/evenements-small-site-4/",
+      "https://small-site.test/small-site-2/",
+      "https://small-site.test/small-site-4/"
     ],
     "occurrences": 17,
     "elements": [
       {
-        "pageUrl": "https://small-site.test/evenements-small-site-9/",
+        "pageUrl": "https://small-site.test/evenements-small-site-4/",
         "selector": "div.et_builder_inner_content > div.et_pb_section > div.et_pb_row > div.et_pb_column",
         "snippet": "<div class=\"et_pb_column et_pb_column_1_4 et_pb_column_10 et_clickable et_pb_section_v…\">"
       },
       {
-        "pageUrl": "https://small-site.test/evenements-small-site-9/",
+        "pageUrl": "https://small-site.test/evenements-small-site-4/",
         "selector": "div.et_builder_inner_content > div.et_pb_section > div.et_pb_row > div.et_pb_column",
         "snippet": "<div class=\"et_pb_column et_pb_column_1_4 et_pb_column_11 et_clickable et_pb_section_v…\">"
       },
       {
-        "pageUrl": "https://small-site.test/small-site-4/",
+        "pageUrl": "https://small-site.test/small-site-2/",
         "selector": "div.et_pb_column > div.et_pb_module > span.et_pb_image_wrap > img.wp-image-45",
         "snippet": "<img decoding=\"async\" width=\"1920\" height=\"93\" src=\"redacted\" alt=\"redacted\" srcset=\"redacted\" sizes=\"(min-width: 0px) and (max-width: 480px) 480px, (min-width: 481px) and (max…\" class=\"wp-image-45\">"
       },
       {
-        "pageUrl": "https://small-site.test/small-site-9/",
+        "pageUrl": "https://small-site.test/small-site-4/",
         "selector": "div.et_pb_column > div.et_pb_module > span.et_pb_image_wrap > img.wp-image-45",
         "snippet": "<img decoding=\"async\" width=\"1920\" height=\"93\" src=\"redacted\" alt=\"redacted\" srcset=\"redacted\" sizes=\"(min-width: 0px) and (max-width: 480px) 480px, (min-width: 481px) and (max…\" class=\"wp-image-45\">"
       },
@@ -10822,7 +10822,7 @@
         "https://small-site.test/wp-content/uploads/2024/01/top_row_ripped-1-980x47.png"
       ],
       "perPage": {
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 0,
@@ -10846,7 +10846,7 @@
           },
           "resourceUrl": "https://small-site.test/wp-content/uploads/2024/01/376573617_357743573247533_464472217472529113_n.jpg"
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 150,
@@ -10870,7 +10870,7 @@
           },
           "resourceUrl": "https://small-site.test/wp-content/uploads/2024/01/down_row_ripped-980x47.png"
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 150,
@@ -10914,7 +10914,7 @@
               "height": 441
             },
             "snippet": "<img decoding=\"async\" width=\"400\" height=\"516\" src=\"redacted\" alt=\"redacted\" srcset=\"redacted\" sizes=\"(max-width:479px) 479px, 100vw\" class=\"wp-image-113\">",
-            "nodeLabel": "restaurant Small Site 9 Small Site 6"
+            "nodeLabel": "restaurant Small Site 4 Small Site 3"
           },
           "resourceUrl": "https://small-site.test/wp-content/uploads/2024/01/SLY08081-400x516.jpg"
         }
@@ -10937,25 +10937,30 @@
     "description": "These are the largest layout shifts observed on the page. Each table item represents a single layout shift, and shows the element that shifted the most. Below each item are possible root causes that led to the layout shift. Some of these layout shifts may not be included in the CLS metric value due to [windowing](https://web.dev/articles/cls#what_is_cls). [Learn how to improve CLS](https://web.dev/articles/optimize-cls)",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/small-site-4/",
-      "https://small-site.test/small-site-9/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 8,
     "elements": [
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "div.entry-content > div.et-l > div.et_builder_inner_content > div.et_pb_section",
+        "snippet": "<div class=\"et_pb_section et_pb_section_1 et_section_regular\">"
+      },
       {
         "pageUrl": "https://small-site.test/actualite-small-site-4/",
         "selector": "div.entry-content > div.et-l > div.et_builder_inner_content > div.et_pb_section",
         "snippet": "<div class=\"et_pb_section et_pb_section_1 et_section_regular\">"
       },
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
+        "pageUrl": "https://small-site.test/evenements-small-site-2/",
         "selector": "div.entry-content > div.et-l > div.et_builder_inner_content > div.et_pb_section",
-        "snippet": "<div class=\"et_pb_section et_pb_section_1 et_section_regular\">"
+        "snippet": "<div class=\"et_pb_section et_pb_section_1 et_section_regular et_pb_section_sticky\">"
       },
       {
         "pageUrl": "https://small-site.test/evenements-small-site-4/",
@@ -10963,17 +10968,12 @@
         "snippet": "<div class=\"et_pb_section et_pb_section_1 et_section_regular et_pb_section_sticky\">"
       },
       {
-        "pageUrl": "https://small-site.test/evenements-small-site-9/",
-        "selector": "div.entry-content > div.et-l > div.et_builder_inner_content > div.et_pb_section",
-        "snippet": "<div class=\"et_pb_section et_pb_section_1 et_section_regular et_pb_section_sticky\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/small-site-4/",
+        "pageUrl": "https://small-site.test/small-site-2/",
         "selector": "div.entry-content > div.et-l > div.et_builder_inner_content > div.et_pb_section",
         "snippet": "<div class=\"et_pb_section et_pb_section_2 et_pb_with_background et_section_regular\">"
       },
       {
-        "pageUrl": "https://small-site.test/small-site-9/",
+        "pageUrl": "https://small-site.test/small-site-4/",
         "selector": "div.entry-content > div.et-l > div.et_builder_inner_content > div.et_pb_section",
         "snippet": "<div class=\"et_pb_section et_pb_section_2 et_pb_with_background et_section_regular\">"
       },
@@ -10995,7 +10995,7 @@
         "selector": "div.entry-content > div.et-l > div.et_builder_inner_content > div.et_pb_section"
       },
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11018,7 +11018,7 @@
             "nodeLabel": "Découvrez les dernières actualités, événements et délices culinaires en nous su…"
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11041,7 +11041,7 @@
             "nodeLabel": "Découvrez les dernières actualités, événements et délices culinaires en nous su…"
           }
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11064,7 +11064,7 @@
             "nodeLabel": "Fêtes Gourmandes\n\nNous sommes ravis de partager notre passion pour la gastronom…"
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11084,10 +11084,10 @@
               "height": 1571
             },
             "snippet": "<div class=\"et_pb_section et_pb_section_1 et_section_regular et_pb_section_sticky\">",
-            "nodeLabel": "Célébrations Gourmandes\n\nRestez à l'affût chez Small Site 9, car de passionnantes sur…"
+            "nodeLabel": "Célébrations Gourmandes\n\nRestez à l'affût chez Small Site 4, car de passionnantes sur…"
           }
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11107,10 +11107,10 @@
               "height": 1600
             },
             "snippet": "<div class=\"et_pb_section et_pb_section_2 et_pb_with_background et_section_regular\">",
-            "nodeLabel": "à Small Site 6\nUn Héritage Culinaire, Une Histoire Familiale\nIl y a trois ans, j’ai…"
+            "nodeLabel": "à Small Site 3\nUn Héritage Culinaire, Une Histoire Familiale\nIl y a trois ans, j’ai…"
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11130,7 +11130,7 @@
               "height": 1536
             },
             "snippet": "<div class=\"et_pb_section et_pb_section_2 et_pb_with_background et_section_regular\">",
-            "nodeLabel": "à Small Site 6\nUne Histoire Gourmande\n\nIl y a trois ans, j'ai entrepris l'aventure …"
+            "nodeLabel": "à Small Site 3\nUne Histoire Gourmande\n\nIl y a trois ans, j'ai entrepris l'aventure …"
           }
         },
         "https://small-site.test/recrutement/": {
@@ -11176,7 +11176,7 @@
               "height": 2316
             },
             "snippet": "<div class=\"et_pb_section et_pb_section_1 et_pb_with_background et_section_regular\">",
-            "nodeLabel": "Small Site 4\n\nBienvenue chez Small Site 4 - Moulleau, votre destination culinaire privi…"
+            "nodeLabel": "Small Site 2\n\nBienvenue chez Small Site 2 - Moulleau, votre destination culinaire privi…"
           }
         }
       }
@@ -11198,14 +11198,14 @@
     "description": "Reduce unused JavaScript and defer loading scripts until they are required to decrease bytes consumed by network activity. [Learn how to reduce unused JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unused-javascript/).",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -11223,7 +11223,7 @@
         "https://www.gstatic.com/recaptcha/releases/w_Yb7dGGXaKesJ7BMiqFJqBG/recaptcha__fr.js"
       ],
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0.5,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 0,
@@ -11233,7 +11233,7 @@
             "https://small-site.test/wp-content/themes/Divi/js/scripts.min.js?ver=4.25.1"
           ]
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 150,
@@ -11253,6 +11253,16 @@
             "https://small-site.test/wp-content/themes/Divi/js/scripts.min.js?ver=4.25.1"
           ]
         },
+        "https://small-site.test/evenements-small-site-2/": {
+          "score": 0,
+          "scoreDisplayMode": "metricSavings",
+          "numericValue": 150,
+          "displayValue": "Est savings of 42 KiB",
+          "title": "Reduce unused JavaScript",
+          "resourceUrls": [
+            "https://small-site.test/wp-content/themes/Divi/js/scripts.min.js?ver=4.25.1"
+          ]
+        },
         "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
@@ -11263,17 +11273,7 @@
             "https://small-site.test/wp-content/themes/Divi/js/scripts.min.js?ver=4.25.1"
           ]
         },
-        "https://small-site.test/evenements-small-site-9/": {
-          "score": 0,
-          "scoreDisplayMode": "metricSavings",
-          "numericValue": 150,
-          "displayValue": "Est savings of 42 KiB",
-          "title": "Reduce unused JavaScript",
-          "resourceUrls": [
-            "https://small-site.test/wp-content/themes/Divi/js/scripts.min.js?ver=4.25.1"
-          ]
-        },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 300,
@@ -11293,7 +11293,7 @@
             "https://small-site.test/wp-content/themes/Divi/js/scripts.min.js?ver=4.25.1"
           ]
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": 300,
@@ -11519,23 +11519,28 @@
     "title": "Avoid large layout shifts",
     "description": "These are the largest layout shifts observed on the page. Each table item represents a single layout shift, and shows the element that shifted the most. Below each item are possible root causes that led to the layout shift. Some of these layout shifts may not be included in the CLS metric value due to [windowing](https://web.dev/articles/cls#what_is_cls). [Learn how to improve CLS](https://web.dev/articles/optimize-cls)",
     "pageUrls": [
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/small-site-4/",
-      "https://small-site.test/small-site-9/",
       "https://small-site.test/recrutement/"
     ],
     "occurrences": 7,
     "elements": [
+      {
+        "pageUrl": "https://small-site.test/actualite-small-site-2/",
+        "selector": "body.page-template-default > div#page-container > header#main-header",
+        "snippet": "<header id=\"main-header\" data-height-onload=\"66\" data-fixed-height-onload=\"0\" style=\"top: 43px;\">"
+      },
       {
         "pageUrl": "https://small-site.test/actualite-small-site-4/",
         "selector": "body.page-template-default > div#page-container > header#main-header",
         "snippet": "<header id=\"main-header\" data-height-onload=\"66\" data-fixed-height-onload=\"0\" style=\"top: 43px;\">"
       },
       {
-        "pageUrl": "https://small-site.test/actualite-small-site-9/",
+        "pageUrl": "https://small-site.test/evenements-small-site-2/",
         "selector": "body.page-template-default > div#page-container > header#main-header",
         "snippet": "<header id=\"main-header\" data-height-onload=\"66\" data-fixed-height-onload=\"0\" style=\"top: 43px;\">"
       },
@@ -11545,17 +11550,12 @@
         "snippet": "<header id=\"main-header\" data-height-onload=\"66\" data-fixed-height-onload=\"0\" style=\"top: 43px;\">"
       },
       {
-        "pageUrl": "https://small-site.test/evenements-small-site-9/",
+        "pageUrl": "https://small-site.test/small-site-2/",
         "selector": "body.page-template-default > div#page-container > header#main-header",
         "snippet": "<header id=\"main-header\" data-height-onload=\"66\" data-fixed-height-onload=\"0\" style=\"top: 43px;\">"
       },
       {
         "pageUrl": "https://small-site.test/small-site-4/",
-        "selector": "body.page-template-default > div#page-container > header#main-header",
-        "snippet": "<header id=\"main-header\" data-height-onload=\"66\" data-fixed-height-onload=\"0\" style=\"top: 43px;\">"
-      },
-      {
-        "pageUrl": "https://small-site.test/small-site-9/",
         "selector": "body.page-template-default > div#page-container > header#main-header",
         "snippet": "<header id=\"main-header\" data-height-onload=\"66\" data-fixed-height-onload=\"0\" style=\"top: 43px;\">"
       },
@@ -11572,6 +11572,29 @@
         "selector": "body.page-template-default > div#page-container > header#main-header"
       },
       "perPage": {
+        "https://small-site.test/actualite-small-site-2/": {
+          "score": 0,
+          "scoreDisplayMode": "metricSavings",
+          "numericValue": null,
+          "displayValue": "15 layout shifts found",
+          "title": "Avoid large layout shifts",
+          "node": {
+            "type": "node",
+            "lhId": "page-12-HEADER",
+            "path": "1,HTML,1,BODY,1,DIV,1,HEADER",
+            "selector": "body.page-template-default > div#page-container > header#main-header",
+            "boundingRect": {
+              "top": 43,
+              "bottom": 123,
+              "left": 0,
+              "right": 412,
+              "width": 412,
+              "height": 80
+            },
+            "snippet": "<header id=\"main-header\" data-height-onload=\"66\" data-fixed-height-onload=\"0\" style=\"top: 43px;\">",
+            "nodeLabel": " "
+          }
+        },
         "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
@@ -11595,7 +11618,7 @@
             "nodeLabel": " "
           }
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11603,7 +11626,7 @@
           "title": "Avoid large layout shifts",
           "node": {
             "type": "node",
-            "lhId": "page-12-HEADER",
+            "lhId": "page-15-HEADER",
             "path": "1,HTML,1,BODY,1,DIV,1,HEADER",
             "selector": "body.page-template-default > div#page-container > header#main-header",
             "boundingRect": {
@@ -11641,30 +11664,7 @@
             "nodeLabel": " "
           }
         },
-        "https://small-site.test/evenements-small-site-9/": {
-          "score": 0,
-          "scoreDisplayMode": "metricSavings",
-          "numericValue": null,
-          "displayValue": "15 layout shifts found",
-          "title": "Avoid large layout shifts",
-          "node": {
-            "type": "node",
-            "lhId": "page-15-HEADER",
-            "path": "1,HTML,1,BODY,1,DIV,1,HEADER",
-            "selector": "body.page-template-default > div#page-container > header#main-header",
-            "boundingRect": {
-              "top": 43,
-              "bottom": 123,
-              "left": 0,
-              "right": 412,
-              "width": 412,
-              "height": 80
-            },
-            "snippet": "<header id=\"main-header\" data-height-onload=\"66\" data-fixed-height-onload=\"0\" style=\"top: 43px;\">",
-            "nodeLabel": " "
-          }
-        },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11687,7 +11687,7 @@
             "nodeLabel": " "
           }
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11752,14 +11752,14 @@
     "description": "Reducing the download time of images can improve the perceived load time of the page and LCP. [Learn more about optimizing image size](https://developer.chrome.com/docs/lighthouse/performance/uses-optimized-images/)",
     "pageUrls": [
       "https://small-site.test/",
+      "https://small-site.test/actualite-small-site-2/",
       "https://small-site.test/actualite-small-site-4/",
-      "https://small-site.test/actualite-small-site-9/",
       "https://small-site.test/devis/",
+      "https://small-site.test/evenements-small-site-2/",
       "https://small-site.test/evenements-small-site-4/",
-      "https://small-site.test/evenements-small-site-9/",
-      "https://small-site.test/small-site-4/",
+      "https://small-site.test/small-site-2/",
       "https://small-site.test/galerie/",
-      "https://small-site.test/small-site-9/",
+      "https://small-site.test/small-site-4/",
       "https://small-site.test/mentions-legales/",
       "https://small-site.test/recrutement/"
     ],
@@ -11840,7 +11840,7 @@
         "https://small-site.test/wp-content/uploads/2024/01/trgtrggtr-980x1225.png"
       ],
       "perPage": {
-        "https://small-site.test/actualite-small-site-4/": {
+        "https://small-site.test/actualite-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11861,7 +11861,7 @@
           ],
           "absorbedFrom": "modern-image-formats"
         },
-        "https://small-site.test/actualite-small-site-9/": {
+        "https://small-site.test/actualite-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11897,7 +11897,7 @@
           ],
           "absorbedFrom": "modern-image-formats"
         },
-        "https://small-site.test/evenements-small-site-4/": {
+        "https://small-site.test/evenements-small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11919,7 +11919,7 @@
           ],
           "absorbedFrom": "modern-image-formats"
         },
-        "https://small-site.test/evenements-small-site-9/": {
+        "https://small-site.test/evenements-small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11941,7 +11941,7 @@
           ],
           "absorbedFrom": "modern-image-formats"
         },
-        "https://small-site.test/small-site-4/": {
+        "https://small-site.test/small-site-2/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,
@@ -11994,7 +11994,7 @@
           ],
           "absorbedFrom": "modern-image-formats"
         },
-        "https://small-site.test/small-site-9/": {
+        "https://small-site.test/small-site-4/": {
           "score": 0,
           "scoreDisplayMode": "metricSavings",
           "numericValue": null,

@@ -259,5 +259,11 @@
       }
     ],
     "sector": "general"
-  }
+  },
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "4e4a1460057e8334",
+    "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+  },
+  "analysisId": "2886586f-04df-43a2-8bb4-822dbfd29c48"
 }

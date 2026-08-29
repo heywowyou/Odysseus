@@ -10,32 +10,12 @@
  */
 
 import type { Connection } from 'mongoose';
-import type { LlmOutput, ObligationAssessment, ReportLanguage } from '@odysseus/core';
 import { createAnalysisModel, type AnalysisDocumentFields } from './schemas/analysis.schema.js';
 
 export async function persistAnalysis(
   connection: Connection,
-  auditId: string,
-  language: ReportLanguage,
-  model: string,
-  temperature: number,
-  generatedAt: Date,
-  output: LlmOutput,
-  obligationAssessment?: ObligationAssessment,
+  fields: AnalysisDocumentFields,
 ): Promise<void> {
   const AnalysisModel = createAnalysisModel(connection);
-  const fields: AnalysisDocumentFields = {
-    auditId,
-    language,
-    model,
-    temperature,
-    generatedAt,
-    executiveSummary: output.executiveSummary,
-    overallRisk: output.overallRisk,
-    themes: output.themes,
-    quickWins: output.quickWins,
-    notes: output.notes,
-    ...(obligationAssessment ? { obligationAssessment } : {}),
-  };
   await AnalysisModel.create(fields);
 }

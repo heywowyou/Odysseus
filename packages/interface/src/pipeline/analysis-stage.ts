@@ -12,6 +12,7 @@
  */
 
 import { promises as fs } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import type {
@@ -21,6 +22,7 @@ import type {
   ReportLanguage,
   SiteSignalOverrides,
 } from '@odysseus/core';
+import { assertFindingsProvenance, buildFindingsProvenance } from '@odysseus/core';
 import {
   analyzeStructure,
   analyzeWriting,
@@ -38,7 +40,7 @@ import {
   type StructureDocument,
 } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
-import type { StoredAnalysis } from '@odysseus/report';
+import type { VerifiedStoredAnalysis } from '@odysseus/report';
 import { runObligationStage } from './obligation-stage.js';
 
 export interface RunAnalysisStageOptions {
@@ -72,7 +74,7 @@ export interface RunAnalysisStageOptions {
 }
 
 export interface AnalysisStageResult {
-  analysis: StoredAnalysis;
+  analysis: VerifiedStoredAnalysis;
   analysisPath: string;
   structurePath: string;
   structureReused: boolean;
@@ -118,12 +120,18 @@ async function loadOrGenerateStructure(
   usedFallback: boolean,
   regenerate: boolean,
   manifest: AuditManifest,
+  findingsProvenance: ReturnType<typeof buildFindingsProvenance>,
 ): Promise<{ structureDoc: StructureDocument; reused: boolean; structurePath: string }> {
   if (!regenerate) {
     const existingPath = await findLatestStructureFile(analysesDir);
     if (existingPath) {
       const raw = JSON.parse(await fs.readFile(existingPath, 'utf-8'));
       const structureDoc = parseStructureDocument(raw);
+      assertFindingsProvenance(
+        structureDoc.findingsProvenance,
+        findingsProvenance,
+        'structure document',
+      );
 
       const knownIds = new Set(forModel.map((f) => f.findingId));
       const referenced = new Set<string>();
@@ -155,6 +163,7 @@ async function loadOrGenerateStructure(
     model: structureResult.model,
     temperature: structureResult.temperature,
     generatedAt: generatedAt.toISOString(),
+    findingsProvenance,
   };
 
   await fs.mkdir(analysesDir, { recursive: true });
@@ -171,6 +180,8 @@ export async function runAnalysisStage(
   options: RunAnalysisStageOptions,
   connection: Connection,
 ): Promise<AnalysisStageResult> {
+  const findingsProvenance = buildFindingsProvenance(allFindings);
+  assertFindingsProvenance(manifest.findingsProvenance, findingsProvenance, 'legacy manifest');
   const usedFallbackContext = options.siteContext === undefined;
   const siteContext = options.siteContext ?? buildFallbackSiteContext();
   // Diversion (docs/report-v2-refactor.md 4.1) runs after the severity
@@ -188,6 +199,7 @@ export async function runAnalysisStage(
     usedFallbackContext,
     options.regenerateStructure ?? false,
     manifest,
+    findingsProvenance,
   );
 
   // siteStats is computed from allFindings (unfiltered), not forModel, so
@@ -237,49 +249,46 @@ export async function runAnalysisStage(
       options.siteSignalOverrides,
     ));
 
+  const analysisId = randomUUID();
+  const analysis: VerifiedStoredAnalysis = {
+    ...merged,
+    analysisId,
+    auditId: manifest.auditId,
+    findingsProvenance,
+    language: options.language,
+    model: writingResult.model,
+    temperature: writingResult.temperature,
+    generatedAt,
+    obligationAssessment,
+  };
+
   await fs.mkdir(analysesDir, { recursive: true });
   const analysisPath = path.join(
     analysesDir,
     `${timestampForFilename(generatedAt)}-${options.language}.json`,
   );
-  await fs.writeFile(
-    analysisPath,
-    JSON.stringify(
-      {
-        auditId: manifest.auditId,
-        language: options.language,
-        model: writingResult.model,
-        temperature: writingResult.temperature,
-        generatedAt: generatedAt.toISOString(),
-        ...merged,
-        obligationAssessment,
-      },
-      null,
-      2,
-    ),
-  );
+  await fs.writeFile(analysisPath, JSON.stringify(analysis, null, 2));
 
-  await persistAnalysis(
-    connection,
-    manifest.auditId,
-    options.language,
-    writingResult.model,
-    writingResult.temperature,
-    generatedAt,
-    merged,
-    obligationAssessment,
-  );
+  await persistAnalysis(connection, {
+    analysisId: analysis.analysisId,
+    auditId: analysis.auditId,
+    findingsProvenance: analysis.findingsProvenance,
+    language: analysis.language,
+    model: analysis.model,
+    temperature: analysis.temperature,
+    generatedAt: analysis.generatedAt,
+    executiveSummary: analysis.executiveSummary,
+    overallRisk: analysis.overallRisk,
+    themes: analysis.themes,
+    quickWins: analysis.quickWins,
+    notes: analysis.notes,
+    ...(analysis.obligationAssessment
+      ? { obligationAssessment: analysis.obligationAssessment }
+      : {}),
+  });
 
   return {
-    analysis: {
-      ...merged,
-      auditId: manifest.auditId,
-      language: options.language,
-      model: writingResult.model,
-      temperature: writingResult.temperature,
-      generatedAt,
-      obligationAssessment,
-    },
+    analysis,
     analysisPath,
     structurePath,
     structureReused: reused,

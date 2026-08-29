@@ -12,6 +12,7 @@
 import type { FINDINGS_SCHEMA_VERSION } from './findings.js';
 import type { SiteSignals } from './compliance.js';
 import type { TranslationCluster } from '../normalize/translation-clusters.js';
+import type { FindingsProvenance } from '../normalize/findings-provenance.js';
 
 export type ManifestKind = 'audit' | 'render-diff';
 
@@ -231,6 +232,10 @@ export interface AuditManifest {
   /** Stamped only by the `normalize` command when it re-runs
    *  normalization offline against stored scan.json files. */
   renormalizedAt?: string;
+  /** Provenance of the exact findings.json derived from this manifest.
+   *  Optional only for historical manifests; analysis and report generation
+   *  fail closed until `normalize` stamps legacy artifacts. */
+  findingsProvenance?: FindingsProvenance;
   tool: ToolVersions;
   config: AuditConfigSnapshot;
   crawl: {

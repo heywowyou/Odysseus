@@ -8,7 +8,7 @@ import { LEGAL_PATH_PATTERN, type AuditManifest, type Finding } from '@odysseus/
  *  only catches the near-total case. See docs/report-v2-refactor.md A1-A3. */
 export const WRAPPER_PAGE_MISSING_PERCENT_THRESHOLD = 95;
 
-export type DiversionReason = 'wrapper' | 'legal';
+export type DiversionReason = 'wrapper' | 'legal' | 'regime-dependent';
 
 export interface DivertedFinding {
   finding: Finding;
@@ -53,9 +53,10 @@ export function isLegalPage(url: string): boolean {
  *  ordinary page still reaches the model: only the near-entirely
  *  third-party or near-entirely legal case is diverted. */
 export function classifyDiversion(
-  finding: Pick<Finding, 'pageUrls'>,
+  finding: Pick<Finding, 'pageUrls'> & Partial<Pick<Finding, 'ruleId'>>,
   missingPercentByUrl: ReadonlyMap<string, number>,
 ): DiversionReason | null {
+  if (finding.ruleId === 'accessibility-statement-missing') return 'regime-dependent';
   if (finding.pageUrls.length === 0) return null;
   if (finding.pageUrls.every((url) => isWrapperPage(url, missingPercentByUrl))) return 'wrapper';
   if (finding.pageUrls.every((url) => isLegalPage(url))) return 'legal';

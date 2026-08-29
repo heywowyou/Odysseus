@@ -20,6 +20,7 @@ export * from './compliance/assessObligations.js';
 export * from './compliance/enforcement-facts.js';
 export * from './compliance/registry-name.js';
 export * from './normalize/translation-clusters.js';
+export * from './normalize/findings-provenance.js';
 export * from './normalize/normalize-cookie-consent.js';
 export * from './normalize/normalize-accessibility-statement.js';
 export * from './normalize/normalize-nap-consistency.js';

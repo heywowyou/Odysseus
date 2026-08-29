@@ -12,7 +12,12 @@ vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 
 import { analyzeStructure, analyzeWriting } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
-import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type Finding } from '@odysseus/core';
+import {
+  FINDINGS_SCHEMA_VERSION,
+  buildFindingsProvenance,
+  type AuditManifest,
+  type Finding,
+} from '@odysseus/core';
 import { runObligationStage } from './obligation-stage.js';
 import { runAnalysisStage } from './analysis-stage.js';
 
@@ -41,13 +46,14 @@ function buildFinding(overrides: Partial<Finding> = {}): Finding {
   };
 }
 
-function fakeManifest(): AuditManifest {
+function fakeManifest(findings: Finding[] = [buildFinding()]): AuditManifest {
   return {
     auditId: 'audit-1',
     kind: 'audit',
     siteUrl: 'https://example.com/',
     startedAt: '2026-08-02T00:00:00.000Z',
     finishedAt: '2026-08-02T00:05:00.000Z',
+    findingsProvenance: buildFindingsProvenance(findings),
     tool: {
       odysseusVersion: '0.1.0',
       findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
@@ -139,6 +145,8 @@ describe('runAnalysisStage', () => {
     expect(result.structureReused).toBe(false);
     expect(result.usedFallbackContext).toBe(true);
     expect(result.analysis.language).toBe('fr');
+    expect(result.analysis.analysisId).toEqual(expect.any(String));
+    expect(result.analysis.findingsProvenance).toEqual(manifest.findingsProvenance);
     expect(result.analysis.executiveSummary).toBe('Summary');
     expect(result.unreferencedFindingCount).toBe(0);
 
@@ -149,14 +157,32 @@ describe('runAnalysisStage', () => {
 
     expect(persistAnalysis).toHaveBeenCalledWith(
       fakeConnection,
-      'audit-1',
-      'fr',
-      'mistral-test',
-      0.2,
-      expect.any(Date),
-      expect.objectContaining({ executiveSummary: 'Summary' }),
-      { status: 'undetermined', basis: [] },
+      expect.objectContaining({
+        analysisId: result.analysis.analysisId,
+        auditId: 'audit-1',
+        language: 'fr',
+        findingsProvenance: manifest.findingsProvenance,
+        executiveSummary: 'Summary',
+        obligationAssessment: { status: 'undetermined', basis: [] },
+      }),
     );
+
+    const structure = JSON.parse(await fs.readFile(result.structurePath, 'utf-8'));
+    const analysis = JSON.parse(await fs.readFile(result.analysisPath, 'utf-8'));
+    expect(structure.findingsProvenance).toEqual(manifest.findingsProvenance);
+    expect(analysis.analysisId).toBe(result.analysis.analysisId);
+    expect(analysis.findingsProvenance).toEqual(manifest.findingsProvenance);
+  });
+
+  it('fails closed before an LLM call when a legacy manifest has no findings provenance', async () => {
+    const manifest = fakeManifest();
+    delete manifest.findingsProvenance;
+
+    await expect(
+      runAnalysisStage(auditDir, manifest, [buildFinding()], { language: 'fr' }, fakeConnection),
+    ).rejects.toThrow(/legacy manifest.*normalize.*regenerate/i);
+    expect(analyzeStructure).not.toHaveBeenCalled();
+    expect(analyzeWriting).not.toHaveBeenCalled();
   });
 
   it('reuses an existing structure file for a second language call, without calling analyzeStructure again', async () => {
@@ -205,20 +231,22 @@ describe('runAnalysisStage', () => {
   });
 
   it('throws loudly when a reused structure file references a finding no longer present', async () => {
-    const manifest = fakeManifest();
+    const originalFinding = buildFinding({ findingId: 'f1' });
+    const manifest = fakeManifest([originalFinding]);
     await runAnalysisStage(
       auditDir,
       manifest,
-      [buildFinding({ findingId: 'f1' })],
+      [originalFinding],
       { language: 'fr' },
       fakeConnection,
     );
 
+    const replacement = buildFinding({ findingId: 'f2', dedupeKey: 'd2' });
     await expect(
       runAnalysisStage(
         auditDir,
-        manifest,
-        [buildFinding({ findingId: 'f2', dedupeKey: 'd2' })],
+        fakeManifest([replacement]),
+        [replacement],
         { language: 'en' },
         fakeConnection,
       ),
@@ -247,13 +275,14 @@ describe('runAnalysisStage', () => {
     });
     expect(persistAnalysis).toHaveBeenCalledWith(
       fakeConnection,
-      'audit-1',
-      'fr',
-      'mistral-test',
-      0.2,
-      expect.any(Date),
-      expect.objectContaining({ executiveSummary: 'Summary' }),
-      { status: 'in_scope', basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }] },
+      expect.objectContaining({
+        auditId: 'audit-1',
+        executiveSummary: 'Summary',
+        obligationAssessment: {
+          status: 'in_scope',
+          basis: [{ regimeId: 'eaa-loi-2023-171', facts: [] }],
+        },
+      }),
     );
   });
 

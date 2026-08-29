@@ -13,6 +13,12 @@ import type { FindingCategory } from '@odysseus/core';
  * an English label inside a French report.
  */
 export interface ReportStrings {
+  accessibilityStatementGuidance: {
+    heading: string;
+    notFoundObservation: string;
+    article47Recommendation: string;
+    optionalRecommendation: string;
+  };
   /** TOC row labels are no longer a separate hand-typed array (report-
    *  feedback-palais-gallien.md item 3): section-registry.ts's
    *  sectionTitle() reads each row's label from that section's own
@@ -569,6 +575,7 @@ export interface ReportStrings {
     introTemplate: string;
     metricColumnLabel: string;
     valueColumnLabel: string;
+    realUserValueColumnLabel: string;
     /** item 1.7/B2: a metric's aggregated finding severity is driven by
      *  the worst page (severity.ts's maxSeverity dedupe rule), not the
      *  median this table otherwise shows - showing the worst page's own
@@ -889,8 +896,10 @@ export interface ReportStrings {
     legalCitationUndeterminedParagraph: string;
     /** Template: {label}, the effectif band's human-readable text. */
     legalCitationEffectifFactTemplate: string;
-    /** Template: {threshold}, a formatted currency amount. */
+    /** Template: {amount}, {threshold}, formatted currency amounts. */
     legalCitationTurnoverFactTemplate: string;
+    /** Template: {effectifCode}, {turnover}. */
+    legalCitationSmeFactTemplate: string;
     /** item 41: names the specific detected flow type (e.g. "réservation
      *  en ligne") instead of listing "réservation, panier ou paiement"
      *  with "ou", which read as the tool being unsure which one it
@@ -906,19 +915,15 @@ export interface ReportStrings {
     legalCitationTransactionalFlowLocationOnSite: string;
     legalCitationTransactionalFlowLocationDelegated: string;
     legalCitationTransactionalFlowUnknownFact: string;
+    legalCitationNoTransactionalFlowFact: string;
+    legalCitationSirenMissingFact: string;
+    /** Template: {reason}. */
+    legalCitationSireneLookupFailedTemplate: string;
     /** Plain-language labels for the specific flow type(s) actually
      *  detected (SiteSignals.transactionalFlowEvidence's own `kind`),
      *  substituted into legalCitationTransactionalFlowFactTemplate's
      *  {flowType}. */
     transactionalFlowTypeLabels: { booking: string; cartOrPayment: string; both: string };
-    /** The exemption route documented to date (via Démarches Simplifiées,
-     *  plural - the platform's real name, item 3.15), stated once per
-     *  report per the milestone's acceptance criteria, appended after
-     *  legalCitationInScopeTemplate/legalCitationLikelyInScopeTemplate.
-     *  item 3.16: "la seule voie documentée" ("the only documented
-     *  route") read as a settled legal conclusion rather than a
-     *  statement of current documentation - softened to "à ce jour". */
-    legalCitationExemptionRouteSentence: string;
     /** Manual-SIREN milestone: appended after the main paragraph
      *  (whichever status it is) when the SIREN used came from a manual
      *  override rather than the site's own mentions-legales page, and a
@@ -969,8 +974,23 @@ export interface ReportStrings {
      *  counts instead of a dead-end pointer with no follow-through. */
     lighthouseFailureIntroSentence: string;
     /** Template: {count}, {total}, {reason}. One line per distinct
-     *  normalized failure reason across the scan. */
+     *  failure cause across the scan. */
     lighthouseFailureReasonTemplate: string;
+    /** The client-facing wording for each cause a failed Lighthouse run can
+     *  have. The tool's own message is an internal one ("runLighthouseIsolated:
+     *  worker for <url> exited before returning a result (code 1, signal
+     *  null)") and must never reach a client: it names an internal function and
+     *  a process exit signal, which the plain-language rule forbids, and its
+     *  literal "null" trips render-lint's stringified-null rule and aborts the
+     *  render outright. Causes are the ones actually observed across stored
+     *  scans; anything unrecognized falls back to `unknown` rather than leaking
+     *  the raw text. */
+    lighthouseFailureReasons: {
+      browserUnreachable: string;
+      processStopped: string;
+      timedOut: string;
+      unknown: string;
+    };
   };
   footer: {
     confidentialityLabel: string;

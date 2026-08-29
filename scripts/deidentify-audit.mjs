@@ -29,9 +29,21 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// Provenance is computed through core's own module rather than reimplemented
+// here, so a fixture's digest can never disagree with the pipeline's.
+const provenanceModule = path.join(
+  REPO_ROOT,
+  'packages/core/dist/normalize/findings-provenance.js',
+);
+if (!existsSync(provenanceModule)) {
+  console.error('Build first: pnpm build');
+  process.exit(1);
+}
+const { buildFindingsProvenance } = await import(pathToFileURL(provenanceModule).href);
 
 function parseArgs(argv) {
   const options = { tokens: [] };
@@ -136,7 +148,19 @@ function rewrite(node, replacements) {
 /** Stable across regenerations, so a fixture rebuild is not a diff of every
  *  auditId. Derived from the fixture name, never from the source. */
 function fixtureAuditId(name) {
-  const hex = createHash('sha256').update(`odysseus-fixture:${name}`).digest('hex');
+  return fixtureUuid(`odysseus-fixture:${name}`);
+}
+
+/** Analyses generated before `analysisId` existed carry none, and the
+ *  fail-closed report check rejects them. A fixture's identifiers are synthetic
+ *  anyway, so derive this one the same way and for the same reason as the
+ *  auditId: stable across rebuilds, never traceable to the source. */
+function fixtureAnalysisId(name, file) {
+  return fixtureUuid(`odysseus-fixture-analysis:${name}:${file}`);
+}
+
+function fixtureUuid(seed) {
+  const hex = createHash('sha256').update(seed).digest('hex');
   return [
     hex.slice(0, 8),
     hex.slice(8, 12),
@@ -162,15 +186,24 @@ function finalize(value) {
   return JSON.parse(JSON.stringify(rewritten).replaceAll(manifest.auditId, auditId));
 }
 
+/** Provenance is derived from the findings, so it must be recomputed rather
+ *  than carried over. De-identification rewrites titles, descriptions and URLs,
+ *  which changes the digest: copying the source's stamp produces a fixture that
+ *  fails its own fail-closed check with "stale manifest findings digest". The
+ *  fixture is a distinct synthetic audit and its provenance describes its own
+ *  findings, not the ones it was derived from. */
+const fixtureFindings = finalize(findings);
+const fixtureProvenance = buildFindingsProvenance(fixtureFindings);
+
 rmSync(targetDir, { recursive: true, force: true });
 mkdirSync(targetDir, { recursive: true });
 writeFileSync(
   path.join(targetDir, 'manifest.json'),
-  `${JSON.stringify(finalize(manifest), null, 2)}\n`,
+  `${JSON.stringify({ ...finalize(manifest), findingsProvenance: fixtureProvenance }, null, 2)}\n`,
 );
 writeFileSync(
   path.join(targetDir, 'findings.json'),
-  `${JSON.stringify(finalize(findings), null, 2)}\n`,
+  `${JSON.stringify(fixtureFindings, null, 2)}\n`,
 );
 
 const sourceAnalyses = path.join(sourceDir, 'analyses');
@@ -179,7 +212,13 @@ if (existsSync(sourceAnalyses)) {
   mkdirSync(path.join(targetDir, 'analyses'), { recursive: true });
   for (const file of readdirSync(sourceAnalyses).sort()) {
     if (!file.endsWith('.json')) continue;
-    const analysis = finalize(JSON.parse(readFileSync(path.join(sourceAnalyses, file), 'utf-8')));
+    const analysis = {
+      ...finalize(JSON.parse(readFileSync(path.join(sourceAnalyses, file), 'utf-8'))),
+      // Same reason as the manifest: an analysis binds to the findings it
+      // describes, and in the fixture those are the rewritten ones.
+      findingsProvenance: fixtureProvenance,
+      analysisId: fixtureAnalysisId(options.name, file),
+    };
     // The artifacts layout, because report-env-loading.e2e.test.ts copies this
     // fixture and runs the real CLI against it, and the CLI resolves an
     // analysis by that name.

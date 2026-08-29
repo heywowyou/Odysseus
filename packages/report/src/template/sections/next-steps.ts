@@ -34,6 +34,7 @@ export function renderNextSteps(
   ordinal: number,
   manifest: AuditManifest,
   language: 'fr' | 'en',
+  reportId = manifest.auditId,
 ): string {
   const n = strings.nextSteps;
 
@@ -42,7 +43,7 @@ export function renderNextSteps(
     producer: ODYSSEUS_PRODUCER_NAME,
     date: formatDate(new Date(manifest.startedAt), language),
     version: manifest.tool.odysseusVersion,
-    reportId: manifest.auditId,
+    reportId,
   });
   const issuerBlock = fillTemplate(n.issuerBlockTemplate, {
     signatory: ODYSSEUS_SIGNATORY_NAME,

@@ -7,10 +7,17 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { ObligationAssessment, ReportLanguage, Theme } from '@odysseus/core';
+import type {
+  FindingsProvenance,
+  ObligationAssessment,
+  ReportLanguage,
+  Theme,
+} from '@odysseus/core';
 
 export interface AnalysisDocumentFields {
+  analysisId: string;
   auditId: string;
+  findingsProvenance: FindingsProvenance;
   language: ReportLanguage;
   /** Mistral model identifier, e.g. 'mistral-large-latest'. Recorded
    *  alongside temperature for the same provenance reason the audit
@@ -117,9 +124,20 @@ const obligationAssessmentSchemaMongo = new Schema(
   { _id: false },
 );
 
+const findingsProvenanceSchemaMongo = new Schema(
+  {
+    findingsSchemaVersion: { type: String, required: true },
+    normalizationFingerprint: { type: String, required: true },
+    findingsDigest: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const analysisSchema = new Schema<AnalysisDocument>(
   {
+    analysisId: { type: String, required: true },
     auditId: { type: String, required: true },
+    findingsProvenance: { type: findingsProvenanceSchemaMongo, required: true },
     language: { type: String, required: true, enum: ['fr', 'en'] },
     model: { type: String, required: true },
     temperature: { type: Number, required: true },
@@ -139,6 +157,7 @@ const analysisSchema = new Schema<AnalysisDocument>(
 // common case, unlike the single unique audits document per auditId.
 analysisSchema.index({ auditId: 1 });
 analysisSchema.index({ auditId: 1, language: 1, generatedAt: -1 });
+analysisSchema.index({ analysisId: 1 }, { unique: true, sparse: true });
 
 export function createAnalysisModel(connection: Connection): Model<AnalysisDocument> {
   return (

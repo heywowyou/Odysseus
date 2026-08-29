@@ -203,7 +203,7 @@ function renderRealUserDataBlock(
       <thead>
         <tr>
           ${headCell(c.metricColumnLabel, 'auto')}
-          ${headCell(c.valueColumnLabel, '110px')}
+          ${headCell(c.realUserValueColumnLabel, '110px')}
           ${headCell(c.statusColumnLabel, '120px')}
         </tr>
       </thead>

@@ -84,6 +84,18 @@ describe('classifyDiversion', () => {
   it('does not divert a finding with no pages', () => {
     expect(classifyDiversion({ pageUrls: [] }, index)).toBeNull();
   });
+
+  it('diverts accessibility-statement guidance before page classification', () => {
+    expect(
+      classifyDiversion(
+        {
+          ruleId: 'accessibility-statement-missing',
+          pageUrls: ['https://multi-page.test/'],
+        },
+        index,
+      ),
+    ).toBe('regime-dependent');
+  });
 });
 
 describe('partitionFindings', () => {

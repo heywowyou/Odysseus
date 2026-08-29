@@ -166,6 +166,15 @@ const manualFieldsSchema = new Schema(
   { _id: false },
 );
 
+const findingsProvenanceSchema = new Schema(
+  {
+    findingsSchemaVersion: { type: Number, required: true },
+    normalizationFingerprint: { type: String, required: true },
+    findingsDigest: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const auditSchema = new Schema<AuditDocument>(
   {
     auditId: { type: String, required: true, unique: true },
@@ -174,6 +183,7 @@ const auditSchema = new Schema<AuditDocument>(
     startedAt: { type: Date, required: true },
     finishedAt: { type: Date, required: true },
     renormalizedAt: { type: Date },
+    findingsProvenance: { type: findingsProvenanceSchema },
     tool: { type: toolVersionsSchema, required: true },
     config: { type: configSnapshotSchema, required: true },
     crawl: { type: crawlStatsSchema, required: true },

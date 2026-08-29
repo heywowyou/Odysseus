@@ -14,18 +14,20 @@ vi.mock('@odysseus/store', () => ({
 
 import { generateReportPdf } from '@odysseus/report';
 import { persistReport } from '@odysseus/store';
-import type { AuditManifest } from '@odysseus/core';
+import { buildFindingsProvenance, type AuditManifest } from '@odysseus/core';
 import { runAllReportsStage, runReportStage } from './report-stage.js';
 
 const fakeConnection = {} as never;
 
 function fakeManifest(): AuditManifest {
+  const findings: never[] = [];
   return {
     auditId: 'audit-1',
     kind: 'audit',
     siteUrl: 'https://example.com/',
     startedAt: '2026-08-02T00:00:00.000Z',
     finishedAt: '2026-08-02T00:05:00.000Z',
+    findingsProvenance: buildFindingsProvenance(findings),
     tool: {
       odysseusVersion: '0.1.0',
       findingsSchemaVersion: 1,
@@ -56,8 +58,11 @@ function fakeManifest(): AuditManifest {
 }
 
 function fakeAnalysis() {
+  const findingsProvenance = buildFindingsProvenance([]);
   return {
+    analysisId: '00000000-0000-4000-8000-000000000001',
     auditId: 'audit-1',
+    findingsProvenance,
     language: 'fr' as const,
     model: 'mistral-test',
     temperature: 0.2,
@@ -90,21 +95,63 @@ describe('runReportStage', () => {
 
     const result = await runReportStage(auditDir, manifest, [], analysis, fakeConnection);
 
-    expect(generateReportPdf).toHaveBeenCalledWith({ auditDir, manifest, findings: [], analysis });
+    expect(generateReportPdf).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auditDir,
+        manifest,
+        findings: [],
+        analysis,
+        reportId: result.reportId,
+      }),
+    );
 
     const written = await fs.readFile(result.reportPath);
     expect(written.toString()).toBe('%PDF-fake');
     expect(path.dirname(result.reportPath)).toBe(path.join(auditDir, 'reports'));
     expect(result.reportPath.endsWith('-fr.pdf')).toBe(true);
+    expect(result.reportId).toEqual(expect.any(String));
+    expect(result.pdfDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+
+    const sidecar = JSON.parse(await fs.readFile(result.provenancePath, 'utf-8'));
+    expect(sidecar).toEqual(
+      expect.objectContaining({
+        reportId: result.reportId,
+        analysisId: analysis.analysisId,
+        findingsProvenance: manifest.findingsProvenance,
+        rendererVersion: 3,
+        pdfDigest: result.pdfDigest,
+      }),
+    );
 
     expect(persistReport).toHaveBeenCalledWith(fakeConnection, {
       auditId: 'audit-1',
+      reportId: result.reportId,
+      analysisId: analysis.analysisId,
+      findingsProvenance: manifest.findingsProvenance,
+      rendererVersion: 3,
+      pdfDigest: result.pdfDigest,
       language: 'fr',
       reportTemplateVersion: 3,
       analysisGeneratedAt: analysis.generatedAt,
       fileRef: path.relative(auditDir, result.reportPath),
       generatedAt: result.generatedAt,
     });
+  });
+
+  it('rejects stale analysis provenance before Chromium report generation starts', async () => {
+    const manifest = fakeManifest();
+    const analysis = {
+      ...fakeAnalysis(),
+      findingsProvenance: {
+        ...fakeAnalysis().findingsProvenance,
+        findingsDigest: `sha256:${'f'.repeat(64)}`,
+      },
+    };
+
+    await expect(runReportStage(auditDir, manifest, [], analysis, fakeConnection)).rejects.toThrow(
+      /stale analysis.*findings digest/i,
+    );
+    expect(generateReportPdf).not.toHaveBeenCalled();
   });
 
   it('names the file after the analysis language', async () => {

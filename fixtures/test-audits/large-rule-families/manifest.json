@@ -43,75 +43,75 @@
       }
     },
     {
-      "url": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-11-hotel/",
-      "pageDir": "pages/les-chambres-et-suites-dune-du-large-rule-families-11-hotel-2d5971",
+      "url": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-7-hotel/",
+      "pageDir": "pages/les-chambres-et-suites-dune-du-large-rule-families-7-hotel-2d5971",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
       "discoveredFrom": "https://large-rule-families.test/",
       "renderDiffMissingPercent": 67.47,
       "errors": {
-        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-11-hotel/ exited before returning a result (code 1, signal null)"
+        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-7-hotel/ exited before returning a result (code 1, signal null)"
       }
     },
     {
-      "url": "https://large-rule-families.test/le-restaurant-large-rule-families-11-sur-mer/",
-      "pageDir": "pages/le-restaurant-large-rule-families-11-sur-mer-82f75e",
+      "url": "https://large-rule-families.test/le-restaurant-large-rule-families-7-sur-mer/",
+      "pageDir": "pages/le-restaurant-large-rule-families-7-sur-mer-82f75e",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
       "discoveredFrom": "https://large-rule-families.test/",
       "renderDiffMissingPercent": 63.05,
       "errors": {
-        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/le-restaurant-large-rule-families-11-sur-mer/ exited before returning a result (code 1, signal null)"
+        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/le-restaurant-large-rule-families-7-sur-mer/ exited before returning a result (code 1, signal null)"
       }
     },
     {
-      "url": "https://large-rule-families.test/le-bar-hotel-restaurant-large-rule-families-11-sur-mer/",
-      "pageDir": "pages/le-bar-hotel-restaurant-large-rule-families-11-sur-mer-ca038a",
+      "url": "https://large-rule-families.test/le-bar-hotel-restaurant-large-rule-families-7-sur-mer/",
+      "pageDir": "pages/le-bar-hotel-restaurant-large-rule-families-7-sur-mer-ca038a",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
       "discoveredFrom": "https://large-rule-families.test/",
       "renderDiffMissingPercent": 67.48,
       "errors": {
-        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/le-bar-hotel-restaurant-large-rule-families-11-sur-mer/ exited before returning a result (code 1, signal null)"
+        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/le-bar-hotel-restaurant-large-rule-families-7-sur-mer/ exited before returning a result (code 1, signal null)"
       }
     },
     {
-      "url": "https://large-rule-families.test/spa-large-rule-families-6-hotel-piscine-large-rule-families-5/",
-      "pageDir": "pages/spa-large-rule-families-6-hotel-piscine-large-rule-families-5-f9baf4",
+      "url": "https://large-rule-families.test/spa-large-rule-families-5-hotel-piscine-large-rule-families-4/",
+      "pageDir": "pages/spa-large-rule-families-5-hotel-piscine-large-rule-families-4-f9baf4",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
       "discoveredFrom": "https://large-rule-families.test/",
       "renderDiffMissingPercent": 65.67,
       "errors": {
-        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/spa-large-rule-families-6-hotel-piscine-large-rule-families-5/ exited before returning a result (code 1, signal null)"
+        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/spa-large-rule-families-5-hotel-piscine-large-rule-families-4/ exited before returning a result (code 1, signal null)"
       }
     },
     {
-      "url": "https://large-rule-families.test/la-boutique-week-end-large-rule-families-11/",
-      "pageDir": "pages/la-boutique-week-end-large-rule-families-11-8597f9",
+      "url": "https://large-rule-families.test/la-boutique-week-end-large-rule-families-7/",
+      "pageDir": "pages/la-boutique-week-end-large-rule-families-7-8597f9",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
       "discoveredFrom": "https://large-rule-families.test/",
       "renderDiffMissingPercent": 61.48,
       "errors": {
-        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/la-boutique-week-end-large-rule-families-11/ exited before returning a result (code 1, signal null)"
+        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/la-boutique-week-end-large-rule-families-7/ exited before returning a result (code 1, signal null)"
       }
     },
     {
-      "url": "https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-10/",
-      "pageDir": "pages/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-10-5bc3ff",
+      "url": "https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-6/",
+      "pageDir": "pages/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-6-5bc3ff",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
       "discoveredFrom": "https://large-rule-families.test/",
       "renderDiffMissingPercent": 16.1,
       "errors": {
-        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-10/ exited before returning a result (code 1, signal null)"
+        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-6/ exited before returning a result (code 1, signal null)"
       }
     },
     {
@@ -167,15 +167,15 @@
       }
     },
     {
-      "url": "https://large-rule-families.test/plan-de-site-hotel-luxe-large-rule-families-5/",
-      "pageDir": "pages/plan-de-site-hotel-luxe-large-rule-families-5-e6c8c2",
+      "url": "https://large-rule-families.test/plan-de-site-hotel-luxe-large-rule-families-4/",
+      "pageDir": "pages/plan-de-site-hotel-luxe-large-rule-families-4-e6c8c2",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
       "discoveredFrom": "https://large-rule-families.test/",
       "renderDiffMissingPercent": 75.27,
       "errors": {
-        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/plan-de-site-hotel-luxe-large-rule-families-5/ exited before returning a result (code 1, signal null)"
+        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/plan-de-site-hotel-luxe-large-rule-families-4/ exited before returning a result (code 1, signal null)"
       }
     },
     {
@@ -227,39 +227,39 @@
       }
     },
     {
-      "url": "https://large-rule-families.test/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-5-la-large-rule-families-4/",
-      "pageDir": "pages/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-5-la-large-rule-families-4-65712c",
+      "url": "https://large-rule-families.test/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-4-la-large-rule-families-3/",
+      "pageDir": "pages/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-4-la-large-rule-families-3-65712c",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
       "discoveredFrom": "https://large-rule-families.test/",
       "renderDiffMissingPercent": 48.39,
       "errors": {
-        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-5-la-large-rule-families-4/ exited before returning a result (code 1, signal null)"
+        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-4-la-large-rule-families-3/ exited before returning a result (code 1, signal null)"
       }
     },
     {
-      "url": "https://large-rule-families.test/les-evenements-seminaire-large-rule-families-5/",
-      "pageDir": "pages/les-evenements-seminaire-large-rule-families-5-6594b7",
+      "url": "https://large-rule-families.test/les-evenements-seminaire-large-rule-families-4/",
+      "pageDir": "pages/les-evenements-seminaire-large-rule-families-4-6594b7",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
       "discoveredFrom": "https://large-rule-families.test/",
       "renderDiffMissingPercent": 63.98,
       "errors": {
-        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/les-evenements-seminaire-large-rule-families-5/ exited before returning a result (code 1, signal null)"
+        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/les-evenements-seminaire-large-rule-families-4/ exited before returning a result (code 1, signal null)"
       }
     },
     {
-      "url": "https://large-rule-families.test/les-actualites-hotel-luxe-large-rule-families-11/",
-      "pageDir": "pages/les-actualites-hotel-luxe-large-rule-families-11-497256",
+      "url": "https://large-rule-families.test/les-actualites-hotel-luxe-large-rule-families-7/",
+      "pageDir": "pages/les-actualites-hotel-luxe-large-rule-families-7-497256",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
       "discoveredFrom": "https://large-rule-families.test/",
       "renderDiffMissingPercent": 0,
       "errors": {
-        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/les-actualites-hotel-luxe-large-rule-families-11/ exited before returning a result (code 1, signal null)"
+        "lighthouse": "runLighthouseIsolated: worker for https://large-rule-families.test/les-actualites-hotel-luxe-large-rule-families-7/ exited before returning a result (code 1, signal null)"
       }
     }
   ],
@@ -279,49 +279,49 @@
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-11-hotel/"
+        "pageUrl": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-7-hotel/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-11-hotel/"
+        "pageUrl": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-7-hotel/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19&roomid=67390",
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-11-hotel/"
+        "pageUrl": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-7-hotel/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/le-restaurant-large-rule-families-11-sur-mer/"
+        "pageUrl": "https://large-rule-families.test/le-restaurant-large-rule-families-7-sur-mer/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/le-bar-hotel-restaurant-large-rule-families-11-sur-mer/"
+        "pageUrl": "https://large-rule-families.test/le-bar-hotel-restaurant-large-rule-families-7-sur-mer/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/spa-large-rule-families-6-hotel-piscine-large-rule-families-5/"
+        "pageUrl": "https://large-rule-families.test/spa-large-rule-families-5-hotel-piscine-large-rule-families-4/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/la-boutique-week-end-large-rule-families-11/"
+        "pageUrl": "https://large-rule-families.test/la-boutique-week-end-large-rule-families-7/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
@@ -342,14 +342,14 @@
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-10/"
+        "pageUrl": "https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-6/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/plan-de-site-hotel-luxe-large-rule-families-5/"
+        "pageUrl": "https://large-rule-families.test/plan-de-site-hotel-luxe-large-rule-families-4/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/en/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
@@ -391,21 +391,21 @@
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/les-actualites-hotel-luxe-large-rule-families-11/"
+        "pageUrl": "https://large-rule-families.test/les-actualites-hotel-luxe-large-rule-families-7/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/les-evenements-seminaire-large-rule-families-5/"
+        "pageUrl": "https://large-rule-families.test/les-evenements-seminaire-large-rule-families-4/"
       },
       {
         "linkUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr/search?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "destinationUrl": "https://www.secure-hotel-booking.com/d-edge/hotel-la-large-rule-families-2/2YQG/17908/fr?hotelId=17908&departureDate=2026-08-20&selectedAdultCount=2&arrivalDate=2026-08-19",
         "resolution": "undetermined",
         "detail": "Destination page matches neither the origin page's own identifying text nor a multi-property search UI.",
-        "pageUrl": "https://large-rule-families.test/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-5-la-large-rule-families-4/"
+        "pageUrl": "https://large-rule-families.test/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-4-la-large-rule-families-3/"
       }
     ]
   },
@@ -452,66 +452,66 @@
       ]
     },
     {
-      "canonicalPageUrl": "https://large-rule-families.test/la-boutique-week-end-large-rule-families-11/",
+      "canonicalPageUrl": "https://large-rule-families.test/la-boutique-week-end-large-rule-families-7/",
       "members": [
         {
-          "pageUrl": "https://large-rule-families.test/la-boutique-week-end-large-rule-families-11/"
+          "pageUrl": "https://large-rule-families.test/la-boutique-week-end-large-rule-families-7/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-10/",
+      "canonicalPageUrl": "https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-6/",
       "members": [
         {
-          "pageUrl": "https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-10/"
+          "pageUrl": "https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-6/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://large-rule-families.test/le-bar-hotel-restaurant-large-rule-families-11-sur-mer/",
+      "canonicalPageUrl": "https://large-rule-families.test/le-bar-hotel-restaurant-large-rule-families-7-sur-mer/",
       "members": [
         {
-          "pageUrl": "https://large-rule-families.test/le-bar-hotel-restaurant-large-rule-families-11-sur-mer/"
+          "pageUrl": "https://large-rule-families.test/le-bar-hotel-restaurant-large-rule-families-7-sur-mer/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://large-rule-families.test/le-restaurant-large-rule-families-11-sur-mer/",
+      "canonicalPageUrl": "https://large-rule-families.test/le-restaurant-large-rule-families-7-sur-mer/",
       "members": [
         {
-          "pageUrl": "https://large-rule-families.test/le-restaurant-large-rule-families-11-sur-mer/"
+          "pageUrl": "https://large-rule-families.test/le-restaurant-large-rule-families-7-sur-mer/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://large-rule-families.test/les-actualites-hotel-luxe-large-rule-families-11/",
+      "canonicalPageUrl": "https://large-rule-families.test/les-actualites-hotel-luxe-large-rule-families-7/",
       "members": [
         {
-          "pageUrl": "https://large-rule-families.test/les-actualites-hotel-luxe-large-rule-families-11/"
+          "pageUrl": "https://large-rule-families.test/les-actualites-hotel-luxe-large-rule-families-7/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-11-hotel/",
+      "canonicalPageUrl": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-7-hotel/",
       "members": [
         {
-          "pageUrl": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-11-hotel/"
+          "pageUrl": "https://large-rule-families.test/les-chambres-et-suites-dune-du-large-rule-families-7-hotel/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://large-rule-families.test/les-evenements-seminaire-large-rule-families-5/",
+      "canonicalPageUrl": "https://large-rule-families.test/les-evenements-seminaire-large-rule-families-4/",
       "members": [
         {
-          "pageUrl": "https://large-rule-families.test/les-evenements-seminaire-large-rule-families-5/"
+          "pageUrl": "https://large-rule-families.test/les-evenements-seminaire-large-rule-families-4/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://large-rule-families.test/plan-de-site-hotel-luxe-large-rule-families-5/",
+      "canonicalPageUrl": "https://large-rule-families.test/plan-de-site-hotel-luxe-large-rule-families-4/",
       "members": [
         {
-          "pageUrl": "https://large-rule-families.test/plan-de-site-hotel-luxe-large-rule-families-5/"
+          "pageUrl": "https://large-rule-families.test/plan-de-site-hotel-luxe-large-rule-families-4/"
         }
       ]
     },
@@ -524,21 +524,26 @@
       ]
     },
     {
-      "canonicalPageUrl": "https://large-rule-families.test/spa-large-rule-families-6-hotel-piscine-large-rule-families-5/",
+      "canonicalPageUrl": "https://large-rule-families.test/spa-large-rule-families-5-hotel-piscine-large-rule-families-4/",
       "members": [
         {
-          "pageUrl": "https://large-rule-families.test/spa-large-rule-families-6-hotel-piscine-large-rule-families-5/"
+          "pageUrl": "https://large-rule-families.test/spa-large-rule-families-5-hotel-piscine-large-rule-families-4/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://large-rule-families.test/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-5-la-large-rule-families-4/",
+      "canonicalPageUrl": "https://large-rule-families.test/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-4-la-large-rule-families-3/",
       "members": [
         {
-          "pageUrl": "https://large-rule-families.test/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-5-la-large-rule-families-4/"
+          "pageUrl": "https://large-rule-families.test/une-histoire-dhommes-hotel-5-etoiles-large-rule-families-4-la-large-rule-families-3/"
         }
       ]
     }
   ],
-  "renormalizedAt": "2026-08-27T12:31:39.399Z"
+  "renormalizedAt": "2026-08-28T23:17:57.124Z",
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "4e4a1460057e8334",
+    "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+  }
 }

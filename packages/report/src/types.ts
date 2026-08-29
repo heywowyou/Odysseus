@@ -2,6 +2,7 @@ import type {
   AuditManifest,
   AuditManualFields,
   Finding,
+  FindingsProvenance,
   LlmOutput,
   ObligationAssessment,
   ReportLanguage,
@@ -16,7 +17,11 @@ import type {
  * at the boundary, not this package's.
  */
 export interface StoredAnalysis extends LlmOutput {
+  /** Absent only on legacy artifacts, which report generation rejects. */
+  analysisId?: string;
   auditId: string;
+  /** Absent only on legacy artifacts, which report generation rejects. */
+  findingsProvenance?: FindingsProvenance;
   language: ReportLanguage;
   model: string;
   temperature: number;
@@ -29,6 +34,11 @@ export interface StoredAnalysis extends LlmOutput {
   obligationAssessment?: ObligationAssessment;
 }
 
+export interface VerifiedStoredAnalysis extends StoredAnalysis {
+  analysisId: string;
+  findingsProvenance: FindingsProvenance;
+}
+
 /** Milestone 8 introduced a paid screening tier alongside the full audit,
  *  both rendered from the same findings.json with tier only affecting
  *  report depth. Dropped 2026-08-16 (docs/offer-positioning.md): the
@@ -38,6 +48,8 @@ export interface StoredAnalysis extends LlmOutput {
  *  (docs/outreach-rules.md) is a deliberately separate document kind,
  *  not a smaller tier of this one - see generateOutreachPreviewPdf. */
 export interface GenerateReportInput {
+  /** UUID assigned by the report stage and printed in the document. */
+  reportId?: string;
   /** Used to resolve page screenshot files on disk (manifest.pages[].pageDir
    *  is relative to this directory). Never read for anything else: findings
    *  and the manifest itself are passed in already parsed, not re-read here. */

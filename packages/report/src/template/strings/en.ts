@@ -1,6 +1,14 @@
 import type { ReportStrings } from './types.js';
 
 export const en: ReportStrings = {
+  accessibilityStatementGuidance: {
+    heading: 'Accessibility statement',
+    notFoundObservation: 'No accessibility statement was found on the visited pages.',
+    article47Recommendation:
+      'For the Article 47 regime recorded in this analysis, publish the statement and link to it from the footer.',
+    optionalRecommendation:
+      'Outside the Article 47 regime, publication is an optional best practice: you may publish a statement and link to it from the footer.',
+  },
   toc: {
     eyebrow: 'Contents',
     heading: "What's in this report",
@@ -164,26 +172,20 @@ export const en: ReportStrings = {
       'Date the European Accessibility Act obligations enter into application, set by the directive itself. The obligations have therefore already been in force for {duration}, not upcoming.',
     obligationStatusLabel: 'Obligation status',
     statusLabels: {
-      // See the matching fr.ts comment: "Confirmed" read as a settled
-      // legal conclusion, which docs/obligation-basis.md section 7
-      // forbids. "Criteria met" states what the available data shows
-      // without asserting the conclusion itself.
-      in_scope: 'Criteria met',
-      likely_in_scope: 'Likely',
-      out_of_scope: 'Out of scope',
-      undetermined: 'Undetermined',
+      in_scope: 'Headcount and flow observed',
+      likely_in_scope: 'Flow requires verification',
+      out_of_scope: 'Threshold or flow not observed',
+      undetermined: 'Insufficient data',
     },
     statusShortDescriptions: {
       in_scope:
-        'Based on the available evidence, this site meets the criteria for a digital accessibility obligation.',
+        'The Sirene registry and visited pages supplied the headcount and transactional-flow inputs detailed below.',
       likely_in_scope:
-        'The available evidence indicates this site likely falls under a digital accessibility obligation, without full confirmation.',
-      // item 0.1 (La Corniche pass): see the matching fr.ts comment - this
-      // used to restate legalCitationOutOfScopeParagraph below almost
-      // word for word.
-      out_of_scope: 'This site does not currently fall under the digital accessibility obligation.',
+        'The Sirene registry supplied company data, but the transactional flow still requires verification.',
+      out_of_scope:
+        'Verified data indicates either headcount and turnover below the cited thresholds, or that no transactional flow was found on the visited pages.',
       undetermined:
-        'The obligation status could not be established with certainty: the site does not publish a business identifier (SIREN/RCS), which prevents confirming which regulatory tier applies.',
+        'The business identifier or Sirene data needed to compare observed facts with the cited thresholds was unavailable.',
     },
     exposureHeading: 'Exposure if non-compliant',
     sirenLabel: 'SIREN',
@@ -287,6 +289,7 @@ export const en: ReportStrings = {
       'Median values aggregated across {pages} pages. Simulated mobile with network throttling, single run, lab data (Lighthouse) rather than field data.',
     metricColumnLabel: 'Metric',
     valueColumnLabel: 'Median value',
+    realUserValueColumnLabel: '75th percentile',
     worstPageColumnLabel: 'Worst page',
     worstPageSameAsMedian: 'Same as median',
     worstPageFootnote:
@@ -598,30 +601,33 @@ export const en: ReportStrings = {
     extendedPassCheckFoundSingular: 'finding detected',
     extendedPassCheckFoundPlural: 'findings detected',
     legalCitationInScopeTemplate:
-      'Based on the available evidence, this site meets the criteria set for the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts} This reading is not a definitive legal qualification; confirmation by legal counsel is still recommended.',
+      'Published criteria for {regimeName}, overseen by {authority} ({legalCitation}). Facts verified for this audit: {facts}',
     legalCitationLikelyInScopeTemplate:
-      "The available evidence indicates this site likely falls under the following obligation: {regimeName}, overseen by {authority} ({legalCitation}). {facts} This assessment could not be fully confirmed without a complete review of the site's transactional flow.",
+      'Published criteria for {regimeName}, overseen by {authority} ({legalCitation}). Facts verified for this audit: {facts}',
     legalCitationOutOfScopeParagraph:
-      'Based on the available evidence (company size and the absence of a booking, cart, or checkout flow directly online), this site does not fall under the digital accessibility obligation set by loi n° 2023-171.',
+      'Published criteria for {regimeName}, overseen by {authority} ({legalCitation}). Facts verified for this audit: {facts}',
     legalCitationUndeterminedParagraph:
-      'This report cites the relevant technical criteria (WCAG 2.2, EN 301 549) without asserting whether a specific legal obligation applies to your business, which depends on its size and sector.',
+      'Published criteria for {regimeName}, overseen by {authority} ({legalCitation}). Data available for this audit: {facts}',
     legalCitationEffectifFactTemplate: 'The company has {label} according to the Sirene registry.',
     legalCitationTurnoverFactTemplate:
-      'Declared annual turnover exceeds the {threshold} threshold.',
+      'Recorded annual turnover is {amount}; the published threshold is {threshold}.',
+    legalCitationSmeFactTemplate:
+      'The registry reports headcount band {effectifCode} and turnover of {turnover}.',
     legalCitationTransactionalFlowFactTemplate: 'The site offers a {flowType} {location}.',
     legalCitationTransactionalFlowLocationOnSite: 'directly online',
     legalCitationTransactionalFlowLocationDelegated: 'online, delegated to a third-party provider',
     legalCitationTransactionalFlowUnknownFact:
       'Whether the site offers a booking, cart, or checkout flow directly online could not be confirmed across the whole site.',
+    legalCitationNoTransactionalFlowFact:
+      'No booking, cart, or checkout flow was found on the visited pages.',
+    legalCitationSirenMissingFact: 'No SIREN identifier was found on the visited pages.',
+    legalCitationSireneLookupFailedTemplate:
+      'The Sirene registry lookup did not return a usable record ({reason}).',
     transactionalFlowTypeLabels: {
       booking: 'booking flow',
       cartOrPayment: 'cart or checkout flow',
       both: 'booking, cart, or checkout flow',
     },
-    // P1.3 (2026-08-21 La Corniche feedback pass): "filed via" read as an
-    // already-completed action rather than an available path.
-    legalCitationExemptionRouteSentence:
-      'The exemption route documented to date is a disproportionate burden waiver request, to be filed via Démarches Simplifiées.',
     legalCitationManualSirenWithFindingTemplate:
       'The SIREN number used for this determination was provided manually; this site does not publish it itself (see finding {findingId}).',
     legalCitationManualSirenNoFindingSentence:
@@ -641,6 +647,12 @@ export const en: ReportStrings = {
     lighthouseFailureIntroSentence:
       'Performance measurement (Lighthouse) did not complete on this site for this audit. Failure detail:',
     lighthouseFailureReasonTemplate: '{count}/{total} pages: {reason}',
+    lighthouseFailureReasons: {
+      browserUnreachable: 'the measurement browser could not be reached',
+      processStopped: 'the measurement stopped before returning a result',
+      timedOut: 'the measurement exceeded the time allowed',
+      unknown: 'the measurement did not complete for a technical reason',
+    },
   },
   footer: {
     confidentialityLabel: 'Confidential report',

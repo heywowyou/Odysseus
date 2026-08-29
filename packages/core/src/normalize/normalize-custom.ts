@@ -32,9 +32,9 @@ export function extractCustomCandidates(input: MentionsLegalesCheckInput): Findi
       category: 'seo',
       severity: severityFromCustom(LCEN_MENTIONS_LEGALES_RULE_ID),
       wcagCriteria: [],
-      title: 'No SIREN, RCS, or VAT number found on the site',
+      title: 'No SIREN, RCS, or VAT number found on visited pages',
       description:
-        'French law (LCEN article 6-III) requires an online professional to publish a SIREN or RCS number identifying the business. None of the three identifiers (SIREN, RCS, VAT) could be found, either because no dedicated legal notice page could be identified or because the page found does not list any of them.',
+        'LCEN article 1-1, I, 2° states the publisher-identification information to make available. No SIREN, RCS, or VAT identifier was found on the pages visited during this audit.',
       pageUrl: input.pageUrl,
       element: null,
       rawEvidenceForPage: { siren: input.siren, rcs: input.rcs, tva: input.tva },

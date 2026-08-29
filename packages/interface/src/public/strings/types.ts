@@ -108,6 +108,7 @@ export interface DashboardStrings {
     pagesColumn: string;
     reportsHeading: string;
     noReportsYet: string;
+    reportFreshness: Record<'fresh' | 'stale' | 'unverified', string>;
     manualFieldsHeading: string;
     manualFieldsHint: string;
     sirenLabel: string;

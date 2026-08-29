@@ -78,6 +78,7 @@ export async function readStylesInlined(): Promise<string> {
 }
 
 export interface RenderHtmlInput {
+  reportId?: string;
   manifest: AuditManifest;
   findings: Finding[];
   analysis: StoredAnalysis;
@@ -112,6 +113,7 @@ function renderBody(
   renderDiffTotalEligible: number,
   renderDiffWrapperOrLegalExcludedCount: number,
   manualFields: AuditManualFields | undefined,
+  reportId: string | undefined,
 ): string {
   // B1: one Set shared by every reference-stat citation render site
   // (renderThemes, then renderFindingsAppendix's geo section), so the same
@@ -189,7 +191,7 @@ function renderBody(
     ),
     renderRemainingWork(strings, ord('section-05b'), analysis.language, analysis, resolvedFindings),
     includedSectionIds.has('section-06')
-      ? renderObservations(strings, ord('section-06'), diverted)
+      ? renderObservations(strings, ord('section-06'), diverted, analysis.obligationAssessment)
       : '',
     renderConformanceSummary(strings, ord('section-07'), resolvedFindings, analysis.language),
     renderRenderDiffEvidence(
@@ -235,12 +237,12 @@ function renderBody(
       transactionalFlowEvaluated: manifest.siteSignals?.hasTransactionalFlow !== undefined,
       hasMeasuredCoreWebVitals: hasMeasuredCoreWebVitals(manifest),
     }),
-    renderNextSteps(strings, ord('section-14'), manifest, analysis.language),
+    renderNextSteps(strings, ord('section-14'), manifest, analysis.language, reportId),
   ].join('\n');
 }
 
 export async function renderHtml(input: RenderHtmlInput): Promise<string> {
-  const { manifest, findings, analysis, renderDiffEvidencePages, manualFields } = input;
+  const { manifest, findings, analysis, renderDiffEvidencePages, manualFields, reportId } = input;
   const renderDiffTotalEligible = input.renderDiffTotalEligible ?? renderDiffEvidencePages.length;
   const renderDiffWrapperOrLegalExcludedCount = input.renderDiffWrapperOrLegalExcludedCount ?? 0;
   const strings = getStrings(analysis.language);
@@ -255,6 +257,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     renderDiffTotalEligible,
     renderDiffWrapperOrLegalExcludedCount,
     manualFields,
+    reportId,
   );
 
   return `<!doctype html>

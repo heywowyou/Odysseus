@@ -1,4 +1,5 @@
 import type { DivertedFinding } from '@odysseus/llm';
+import type { ObligationAssessment } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
   escapeHtml,
@@ -7,6 +8,7 @@ import {
   renderSheetHeader,
   sheet,
 } from '../html-utils.js';
+import { accessibilityStatementGuidance } from '../accessibility-statement-guidance.js';
 
 /** Renders the diverted findings (docs/report-v2-refactor.md 4.1) into
  *  fixed, deterministic copy - never LLM prose, since the whole point of
@@ -26,12 +28,16 @@ export function renderObservations(
   strings: ReportStrings,
   ordinal: number,
   diverted: readonly DivertedFinding[],
+  obligationAssessment?: ObligationAssessment,
 ): string {
   if (diverted.length === 0) return '';
 
   const o = strings.observations;
   const wrapperIds = diverted.filter((d) => d.reason === 'wrapper').map((d) => d.finding.findingId);
   const legalIds = diverted.filter((d) => d.reason === 'legal').map((d) => d.finding.findingId);
+  const regimeDependentIds = diverted
+    .filter((d) => d.reason === 'regime-dependent')
+    .map((d) => d.finding.findingId);
 
   const wrapperBlock =
     wrapperIds.length > 0
@@ -51,12 +57,24 @@ export function renderObservations(
         </div>
       `
       : '';
+  const statementGuidance = accessibilityStatementGuidance(strings, obligationAssessment);
+  const regimeDependentBlock =
+    regimeDependentIds.length > 0
+      ? `
+        <div>
+          <h5>${escapeHtml(strings.accessibilityStatementGuidance.heading)}</h5>
+          <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(statementGuidance.observation)} ${escapeHtml(statementGuidance.recommendation)}</p>
+          <p class="text-muted" style="font-size:11px">${escapeHtml(formatFindingIdRefs(regimeDependentIds))}</p>
+        </div>
+      `
+      : '';
 
   return sheet(
     `
     ${renderSheetHeader(ordinal, o.eyebrow, o.heading)}
     ${wrapperBlock}
     ${legalBlock}
+    ${regimeDependentBlock}
   `,
     '',
     'section-06',

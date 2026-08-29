@@ -335,6 +335,8 @@ describe('renderCoreWebVitalsTable', () => {
       expect(html).toContain('550 ms'); // INP poor
       expect(html).toContain('0.3'); // CLS poor
       expect(html).toContain('Real-user data');
+      expect(html).toContain('Median value');
+      expect(html.split('75th percentile').length - 1).toBe(1);
     });
 
     // 2026-08-22, Large Rule Families report review: a real report showed lab

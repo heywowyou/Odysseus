@@ -47,7 +47,7 @@ export function normalizeAccessibilityStatement(
       // lawyer.
       wcagCriteria: [],
       title: 'No accessibility statement was found',
-      description: `None of the ${input.pagesSearched} page(s) analysed is an accessibility statement ("déclaration d'accessibilité"). A site within the scope of the French accessibility obligation is required to publish one, separately from the technical conformance measured elsewhere in this report. A statement published on a page outside this audit's scope would not be visible here.`,
+      description: `None of the ${input.pagesSearched} page(s) analysed is an accessibility statement ("déclaration d'accessibilité"). Publication guidance depends on whether Article 47 applies; outside that regime, publication is presented only as an optional best practice. A statement on a page outside this audit's scope would not be visible here.`,
       pageUrl: homepageUrl,
       element: null,
       rawEvidenceForPage: { pagesSearched: input.pagesSearched },

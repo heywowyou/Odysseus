@@ -14,6 +14,7 @@ import { sectionTitle } from '../section-registry.js';
 import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
 import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
 import { remediationFor } from '../remediation/index.js';
+import { accessibilityStatementGuidance } from '../accessibility-statement-guidance.js';
 import { selectRenderedThemes } from './themes.js';
 
 /**
@@ -108,6 +109,7 @@ function renderRuleBlock(
   strings: ReportStrings,
   language: ReportLanguage,
   block: RuleBlock,
+  analysis: StoredAnalysis,
 ): string {
   const r = strings.remainingWork;
   const counts = [
@@ -116,7 +118,10 @@ function renderRuleBlock(
     `${formatNumber(block.pages, language)} ${pluralize(block.pages, r.pageSingular, r.pagePlural)}`,
   ].join(' · ');
 
-  const remediation = remediationFor(block.ruleId, language);
+  const remediation =
+    block.ruleId === 'accessibility-statement-missing'
+      ? accessibilityStatementGuidance(strings, analysis.obligationAssessment).recommendation
+      : remediationFor(block.ruleId, language);
   const actionLine =
     remediation === undefined
       ? ''
@@ -199,9 +204,9 @@ export function renderRemainingWork(
         <div class="remaining-category" style="margin-bottom:var(--space-6)">
           <div class="remaining-category-head">
             <h5 style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h5>
-            ${firstBlock ? renderRuleBlock(strings, language, firstBlock) : ''}
+            ${firstBlock ? renderRuleBlock(strings, language, firstBlock, analysis) : ''}
           </div>
-          ${restBlocks.map((block) => renderRuleBlock(strings, language, block)).join('')}
+          ${restBlocks.map((block) => renderRuleBlock(strings, language, block, analysis)).join('')}
         </div>
       `;
     })

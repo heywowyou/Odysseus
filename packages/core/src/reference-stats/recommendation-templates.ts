@@ -280,8 +280,8 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
     {
       id: 'lcen-mentions-legales-missing-publish-identifier',
       text: {
-        fr: "Publiez le numéro SIREN ou RCS de l'entreprise sur une page mentions légales identifiable, conformément à l'article 6-III de la LCEN.",
-        en: "Publish the business's SIREN or RCS number on an identifiable legal notice page, as required by LCEN article 6-III.",
+        fr: "Publiez les informations d'identification prévues par l'article 1-1, I, 2° de la LCEN sur une page de mentions légales identifiable, notamment le numéro SIREN ou RCS lorsqu'il est requis.",
+        en: 'Publish the identification information specified by LCEN article 1-1, I, 2° on an identifiable legal notice page, including the SIREN or RCS number where required.',
       },
     },
   ],

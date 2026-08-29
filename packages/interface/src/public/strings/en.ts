@@ -99,6 +99,7 @@ export const en: DashboardStrings = {
     pagesColumn: 'Affected pages',
     reportsHeading: 'Reports',
     noReportsYet: 'No report generated yet.',
+    reportFreshness: { fresh: 'Fresh', stale: 'Stale', unverified: 'Unverified' },
     manualFieldsHeading: 'Enrichment',
     manualFieldsHint: 'Optional fields, editable at any time with no rescan.',
     sirenLabel: 'SIREN',

@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import type { LlmOutput } from '@odysseus/core';
+import { FINDINGS_SCHEMA_VERSION, NORMALIZATION_FINGERPRINT, type LlmOutput } from '@odysseus/core';
+import type { AnalysisDocumentFields } from './schemas/analysis.schema.js';
 import { persistAnalysis } from './persist-analysis.js';
 import { createAnalysisModel } from './schemas/analysis.schema.js';
 import { probeMongoAvailability } from './test-support.js';
@@ -35,27 +36,49 @@ function buildOutput(overrides: Partial<LlmOutput> = {}): LlmOutput {
   };
 }
 
+function buildFields(
+  analysisId: string,
+  auditId: string,
+  language: 'fr' | 'en',
+  generatedAt: Date,
+  overrides: Partial<LlmOutput> = {},
+): AnalysisDocumentFields {
+  return {
+    analysisId,
+    auditId,
+    findingsProvenance: {
+      findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
+      normalizationFingerprint: NORMALIZATION_FINGERPRINT,
+      findingsDigest: `sha256:${'0'.repeat(64)}`,
+    },
+    language,
+    model: 'mistral-large',
+    temperature: 0.2,
+    generatedAt,
+    ...buildOutput(overrides),
+  };
+}
+
 describe.skipIf(!mongoAvailable)('persistAnalysis', () => {
   it('inserts a new document rather than upserting: two calls with the same auditId produce two distinct documents', async () => {
-    const output = buildOutput();
-
     await persistAnalysis(
       connection!,
-      'persist-analysis-test-1',
-      'en',
-      'mistral-large',
-      0.2,
-      new Date('2026-08-02T00:00:00.000Z'),
-      output,
+      buildFields(
+        '00000000-0000-4000-8000-000000000001',
+        'persist-analysis-test-1',
+        'en',
+        new Date('2026-08-02T00:00:00.000Z'),
+      ),
     );
     await persistAnalysis(
       connection!,
-      'persist-analysis-test-1',
-      'fr',
-      'mistral-large',
-      0.2,
-      new Date('2026-08-02T00:05:00.000Z'),
-      buildOutput({ executiveSummary: 'Resume texte.' }),
+      buildFields(
+        '00000000-0000-4000-8000-000000000002',
+        'persist-analysis-test-1',
+        'fr',
+        new Date('2026-08-02T00:05:00.000Z'),
+        { executiveSummary: 'Resume texte.' },
+      ),
     );
 
     const AnalysisModel = createAnalysisModel(connection!);
@@ -66,16 +89,14 @@ describe.skipIf(!mongoAvailable)('persistAnalysis', () => {
   });
 
   it('stores obligationAssessment only when provided', async () => {
-    const output = buildOutput();
-
     await persistAnalysis(
       connection!,
-      'persist-analysis-test-2',
-      'en',
-      'mistral-large',
-      0.2,
-      new Date('2026-08-02T00:00:00.000Z'),
-      output,
+      buildFields(
+        '00000000-0000-4000-8000-000000000003',
+        'persist-analysis-test-2',
+        'en',
+        new Date('2026-08-02T00:00:00.000Z'),
+      ),
     );
 
     const AnalysisModel = createAnalysisModel(connection!);

@@ -56,6 +56,7 @@ interface AuditDetail {
   severityRollup: SeverityRollup;
   findings: Finding[];
   reportLanguages: ('fr' | 'en')[];
+  reports: Array<{ language: 'fr' | 'en'; status: 'fresh' | 'stale' | 'unverified' }>;
   manualFields?: AuditManualFields;
 }
 
@@ -199,15 +200,18 @@ function render(detail: AuditDetail): void {
   rollupEl.innerHTML = severityBadgesHtml(detail.severityRollup, strings);
   prefillManualFields(detail.manualFields);
 
-  if (detail.reportLanguages.length === 0) {
+  if (detail.reports.length === 0) {
     noReports.hidden = false;
     reportLinks.innerHTML = '';
   } else {
     noReports.hidden = true;
-    reportLinks.innerHTML = detail.reportLanguages
-      .map((language) => {
+    reportLinks.innerHTML = detail.reports
+      .map(({ language, status }) => {
         const href = `/api/audits/${encodeURIComponent(detail.auditId)}/report/${language}`;
-        return `<p><a href="${href}">${escapeHtml(strings.common.downloadReport)} (${language.toUpperCase()})</a></p>`;
+        const label = escapeHtml(strings.auditDetail.reportFreshness[status]);
+        return status === 'fresh'
+          ? `<p><a href="${href}">${escapeHtml(strings.common.downloadReport)} (${language.toUpperCase()})</a> <span class="badge">${label}</span></p>`
+          : `<p>${language.toUpperCase()} <span class="badge">${label}</span></p>`;
       })
       .join('');
   }

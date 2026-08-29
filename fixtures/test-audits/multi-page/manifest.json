@@ -60,8 +60,8 @@
       "errors": {}
     },
     {
-      "url": "https://multi-page.test/une-histoire-dhommes-hotel-multi-page-11-sur-mer/",
-      "pageDir": "pages/une-histoire-dhommes-hotel-multi-page-11-sur-mer-85b468",
+      "url": "https://multi-page.test/une-histoire-dhommes-hotel-multi-page-8-sur-mer/",
+      "pageDir": "pages/une-histoire-dhommes-hotel-multi-page-8-sur-mer-85b468",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -90,8 +90,8 @@
       "errors": {}
     },
     {
-      "url": "https://multi-page.test/chambres-hotel-5-etoiles-multi-page-5/",
-      "pageDir": "pages/chambres-hotel-5-etoiles-multi-page-5-a977b9",
+      "url": "https://multi-page.test/chambres-hotel-5-etoiles-multi-page-3/",
+      "pageDir": "pages/chambres-hotel-5-etoiles-multi-page-3-a977b9",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -120,8 +120,8 @@
       "errors": {}
     },
     {
-      "url": "https://multi-page.test/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-5/",
-      "pageDir": "pages/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-5-10a71d",
+      "url": "https://multi-page.test/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-3/",
+      "pageDir": "pages/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-3-10a71d",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -150,8 +150,8 @@
       "errors": {}
     },
     {
-      "url": "https://multi-page.test/le-bar-multi-page-6/",
-      "pageDir": "pages/le-bar-multi-page-6-e25a9b",
+      "url": "https://multi-page.test/le-bar-multi-page-4/",
+      "pageDir": "pages/le-bar-multi-page-4-e25a9b",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -180,8 +180,8 @@
       "errors": {}
     },
     {
-      "url": "https://multi-page.test/les-patisseries/la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-10/",
-      "pageDir": "pages/les-patisseries-la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-10-db1866",
+      "url": "https://multi-page.test/les-patisseries/la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-7/",
+      "pageDir": "pages/les-patisseries-la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-7-db1866",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -210,8 +210,8 @@
       "errors": {}
     },
     {
-      "url": "https://multi-page.test/spa-multi-page-6-hotel-spa-dune-du-multi-page-10/",
-      "pageDir": "pages/spa-multi-page-6-hotel-spa-dune-du-multi-page-10-5fd5f9",
+      "url": "https://multi-page.test/spa-multi-page-4-hotel-spa-dune-du-multi-page-7/",
+      "pageDir": "pages/spa-multi-page-4-hotel-spa-dune-du-multi-page-7-5fd5f9",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -240,8 +240,8 @@
       "errors": {}
     },
     {
-      "url": "https://multi-page.test/boutique-du-multi-page-11-vacances-dune-du-multi-page-10/",
-      "pageDir": "pages/boutique-du-multi-page-11-vacances-dune-du-multi-page-10-a48961",
+      "url": "https://multi-page.test/boutique-du-multi-page-8-vacances-dune-du-multi-page-7/",
+      "pageDir": "pages/boutique-du-multi-page-8-vacances-dune-du-multi-page-7-a48961",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -300,8 +300,8 @@
       "errors": {}
     },
     {
-      "url": "https://multi-page.test/galerie-hotel-de-luxe-multi-page-11/",
-      "pageDir": "pages/galerie-hotel-de-luxe-multi-page-11-5aff9e",
+      "url": "https://multi-page.test/galerie-hotel-de-luxe-multi-page-8/",
+      "pageDir": "pages/galerie-hotel-de-luxe-multi-page-8-5aff9e",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -480,8 +480,8 @@
       "errors": {}
     },
     {
-      "url": "https://multi-page.test/plan-de-site-hotel-romantique-multi-page-7/",
-      "pageDir": "pages/plan-de-site-hotel-romantique-multi-page-7-a5589b",
+      "url": "https://multi-page.test/plan-de-site-hotel-romantique-multi-page-5/",
+      "pageDir": "pages/plan-de-site-hotel-romantique-multi-page-5-a5589b",
       "depth": 1,
       "status": "visited",
       "httpStatus": 200,
@@ -640,18 +640,18 @@
       ]
     },
     {
-      "canonicalPageUrl": "https://multi-page.test/boutique-du-multi-page-11-vacances-dune-du-multi-page-10/",
+      "canonicalPageUrl": "https://multi-page.test/boutique-du-multi-page-8-vacances-dune-du-multi-page-7/",
       "members": [
         {
-          "pageUrl": "https://multi-page.test/boutique-du-multi-page-11-vacances-dune-du-multi-page-10/"
+          "pageUrl": "https://multi-page.test/boutique-du-multi-page-8-vacances-dune-du-multi-page-7/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://multi-page.test/chambres-hotel-5-etoiles-multi-page-5/",
+      "canonicalPageUrl": "https://multi-page.test/chambres-hotel-5-etoiles-multi-page-3/",
       "members": [
         {
-          "pageUrl": "https://multi-page.test/chambres-hotel-5-etoiles-multi-page-5/"
+          "pageUrl": "https://multi-page.test/chambres-hotel-5-etoiles-multi-page-3/"
         }
       ]
     },
@@ -680,10 +680,10 @@
       ]
     },
     {
-      "canonicalPageUrl": "https://multi-page.test/galerie-hotel-de-luxe-multi-page-11/",
+      "canonicalPageUrl": "https://multi-page.test/galerie-hotel-de-luxe-multi-page-8/",
       "members": [
         {
-          "pageUrl": "https://multi-page.test/galerie-hotel-de-luxe-multi-page-11/"
+          "pageUrl": "https://multi-page.test/galerie-hotel-de-luxe-multi-page-8/"
         }
       ]
     },
@@ -696,34 +696,34 @@
       ]
     },
     {
-      "canonicalPageUrl": "https://multi-page.test/le-bar-multi-page-6/",
+      "canonicalPageUrl": "https://multi-page.test/le-bar-multi-page-4/",
       "members": [
         {
-          "pageUrl": "https://multi-page.test/le-bar-multi-page-6/"
+          "pageUrl": "https://multi-page.test/le-bar-multi-page-4/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://multi-page.test/les-patisseries/la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-10/",
+      "canonicalPageUrl": "https://multi-page.test/les-patisseries/la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-7/",
       "members": [
         {
-          "pageUrl": "https://multi-page.test/les-patisseries/la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-10/"
+          "pageUrl": "https://multi-page.test/les-patisseries/la-patisserie-de-famille-hotel-restaurant-dune-du-multi-page-7/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://multi-page.test/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-5/",
+      "canonicalPageUrl": "https://multi-page.test/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-3/",
       "members": [
         {
-          "pageUrl": "https://multi-page.test/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-5/"
+          "pageUrl": "https://multi-page.test/les-restaurants-cafe-bar-brasserie-restaurant-etoile-multi-page-3/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://multi-page.test/plan-de-site-hotel-romantique-multi-page-7/",
+      "canonicalPageUrl": "https://multi-page.test/plan-de-site-hotel-romantique-multi-page-5/",
       "members": [
         {
-          "pageUrl": "https://multi-page.test/plan-de-site-hotel-romantique-multi-page-7/"
+          "pageUrl": "https://multi-page.test/plan-de-site-hotel-romantique-multi-page-5/"
         }
       ]
     },
@@ -776,21 +776,26 @@
       ]
     },
     {
-      "canonicalPageUrl": "https://multi-page.test/spa-multi-page-6-hotel-spa-dune-du-multi-page-10/",
+      "canonicalPageUrl": "https://multi-page.test/spa-multi-page-4-hotel-spa-dune-du-multi-page-7/",
       "members": [
         {
-          "pageUrl": "https://multi-page.test/spa-multi-page-6-hotel-spa-dune-du-multi-page-10/"
+          "pageUrl": "https://multi-page.test/spa-multi-page-4-hotel-spa-dune-du-multi-page-7/"
         }
       ]
     },
     {
-      "canonicalPageUrl": "https://multi-page.test/une-histoire-dhommes-hotel-multi-page-11-sur-mer/",
+      "canonicalPageUrl": "https://multi-page.test/une-histoire-dhommes-hotel-multi-page-8-sur-mer/",
       "members": [
         {
-          "pageUrl": "https://multi-page.test/une-histoire-dhommes-hotel-multi-page-11-sur-mer/"
+          "pageUrl": "https://multi-page.test/une-histoire-dhommes-hotel-multi-page-8-sur-mer/"
         }
       ]
     }
   ],
-  "renormalizedAt": "2026-08-27T12:31:22.200Z"
+  "renormalizedAt": "2026-08-28T23:16:45.174Z",
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "4e4a1460057e8334",
+    "findingsDigest": "sha256:89272af65c331a67473cd477450ac42eb6b57c5c78f81aac9476a05050f0b6d8"
+  }
 }

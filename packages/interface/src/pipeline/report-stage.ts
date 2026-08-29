@@ -6,15 +6,25 @@
  */
 
 import { promises as fs } from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
-import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
+import {
+  assertFindingsProvenance,
+  buildFindingsProvenance,
+  type AuditManifest,
+  type Finding,
+  type ReportLanguage,
+} from '@odysseus/core';
 import { generateReportPdf, REPORT_TEMPLATE_VERSION, type StoredAnalysis } from '@odysseus/report';
 import { getAuditManualFields, persistReport } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 
 export interface ReportStageResult {
+  reportId: string;
   reportPath: string;
+  provenancePath: string;
+  pdfDigest: string;
   generatedAt: Date;
 }
 
@@ -32,6 +42,20 @@ export async function runReportStage(
   analysis: StoredAnalysis,
   connection: Connection,
 ): Promise<ReportStageResult> {
+  const findingsProvenance = buildFindingsProvenance(findings);
+  assertFindingsProvenance(manifest.findingsProvenance, findingsProvenance, 'manifest');
+  assertFindingsProvenance(analysis.findingsProvenance, findingsProvenance, 'analysis');
+  if (analysis.analysisId === undefined) {
+    throw new Error(
+      'Report generation aborted: legacy analysis has no analysis ID. Run normalize, ' +
+        'regenerate the structure and both analyses, then regenerate the report.',
+    );
+  }
+  if (analysis.auditId !== manifest.auditId) {
+    throw new Error('Report generation aborted: analysis belongs to a different audit.');
+  }
+
+  const reportId = randomUUID();
   // Manual-input-layer milestone: manual fields are read fresh from the
   // store here, at render time, rather than trusted from whatever was
   // baked into `analysis` when it was generated - this is what lets the
@@ -53,6 +77,7 @@ export async function runReportStage(
     auditDir,
     manifest,
     findings,
+    reportId,
     analysis: {
       ...analysis,
       ...(obligationAssessment !== undefined ? { obligationAssessment } : {}),
@@ -61,6 +86,7 @@ export async function runReportStage(
   });
 
   const generatedAt = new Date();
+  const pdfDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
   const reportsDir = path.join(auditDir, 'reports');
   await fs.mkdir(reportsDir, { recursive: true });
   const reportPath = path.join(
@@ -69,7 +95,21 @@ export async function runReportStage(
   );
   await fs.writeFile(reportPath, pdf);
 
+  const provenancePath = `${reportPath}.provenance.json`;
+  const reportProvenance = {
+    reportId,
+    analysisId: analysis.analysisId,
+    findingsProvenance,
+    rendererVersion: REPORT_TEMPLATE_VERSION,
+    pdfDigest,
+  };
+  await fs.writeFile(
+    provenancePath,
+    JSON.stringify({ ...reportProvenance, generatedAt: generatedAt.toISOString() }, null, 2),
+  );
+
   await persistReport(connection, {
+    ...reportProvenance,
     auditId: manifest.auditId,
     language: analysis.language,
     reportTemplateVersion: REPORT_TEMPLATE_VERSION,
@@ -78,7 +118,7 @@ export async function runReportStage(
     generatedAt,
   });
 
-  return { reportPath, generatedAt };
+  return { reportId, reportPath, provenancePath, pdfDigest, generatedAt };
 }
 
 export interface AllReportsStageResult {

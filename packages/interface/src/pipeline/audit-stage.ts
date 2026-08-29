@@ -25,11 +25,13 @@ import {
   scanSite,
   writeAuditArtifacts,
   writeFindingsFile,
+  writeManifestFile,
   type PrunePageInfo,
   type ScanProgressEvent,
 } from '@odysseus/scanner';
 import {
   normalizeAudit,
+  buildFindingsProvenance,
   type AuditConfigSnapshot,
   type AuditManifest,
   type Finding,
@@ -195,13 +197,18 @@ export async function runAuditStage(
         : {}),
     });
     await writeFindingsFile(artifacts.auditDir, findings);
+    const manifest: AuditManifest = {
+      ...artifacts.manifest,
+      findingsProvenance: buildFindingsProvenance(findings),
+    };
+    await writeManifestFile(artifacts.auditDir, manifest);
 
     const { prunedPageDirs } = await pruneScreenshots(
       artifacts.auditDir,
-      prunePageInfoFromManifest(artifacts.manifest),
+      prunePageInfoFromManifest(manifest),
     );
 
-    await persistAudit(connection, artifacts.manifest, findings);
+    await persistAudit(connection, manifest, findings);
 
     // 2026-08-22, La Corniche report review: the audit doc must exist
     // before this (persistAudit upserts by auditId above), and
@@ -234,7 +241,7 @@ export async function runAuditStage(
 
     return {
       auditId: artifacts.auditId,
-      manifest: artifacts.manifest,
+      manifest,
       findings,
       auditDir: artifacts.auditDir,
       visitedCount: siteResult.crawl.visitedCount,

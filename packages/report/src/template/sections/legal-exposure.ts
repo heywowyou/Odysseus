@@ -1,6 +1,4 @@
 import {
-  EAA_REGIME_ID,
-  eaaSanctionFigureSentence,
   getRegime,
   LCEN_MENTIONS_LEGALES_REGIME_ID,
   LCEN_MENTIONS_LEGALES_RULE_ID,
@@ -21,7 +19,7 @@ import {
   renderSheetHeader,
   sheet,
 } from '../html-utils.js';
-import { pickPrimaryBasis, renderLegalCitationParagraph } from './methodology.js';
+import { renderLegalCitationParagraph } from './methodology.js';
 import { SEVERITY } from '../design-tokens.js';
 import { detectVendor } from '../third-party-attribution.js';
 
@@ -220,25 +218,6 @@ function renderTransactionalFlowScopeNote(strings: ReportStrings, manifest: Audi
  *  verified against Légifrance or an official publication and the status
  *  in obligation-basis.md itself is upgraded to primary - do not
  *  re-introduce it by relaxing this check instead. */
-function renderEaaExposureBlock(
-  strings: ReportStrings,
-  language: ReportLanguage,
-  assessment: ObligationAssessment | undefined,
-): string {
-  if (!assessment || (assessment.status !== 'in_scope' && assessment.status !== 'likely_in_scope'))
-    return '';
-  const basis = pickPrimaryBasis(assessment);
-  if (!basis || basis.regimeId !== EAA_REGIME_ID) return '';
-
-  const l = strings.legalExposure;
-  return `
-    <div style="margin-top:var(--space-6)">
-      <h5>${escapeHtml(l.exposureHeading)}</h5>
-      <p style="font-size:13.5px;opacity:0.85;max-width:66ch">${escapeHtml(eaaSanctionFigureSentence(language))}</p>
-    </div>
-  `;
-}
-
 /** The date EAA obligations enter into application (arrêté du 9 octobre
  *  2023 / loi n° 2023-171), matching l.eaaDeadlineValue's display text.
  *  Kept as a real Date, not just a display string, so item 17's elapsed-
@@ -371,7 +350,6 @@ export function renderLegalExposure(
     <p style="font-size:13.5px;opacity:0.85;max-width:66ch">${escapeHtml(paragraph)}</p>
     ${renderTransactionalFlowScopeNote(strings, manifest)}
     ${renderTransactionalFlowConflictNote(strings, obligationAssessment)}
-    ${renderEaaExposureBlock(strings, language, obligationAssessment)}
     ${lcenBlock}
     ${renderSirenNote(strings, language, manifest, manualFields, obligationAssessment, lcenBlock !== '')}
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">${escapeHtml(l.disclaimerNote)}</p>

@@ -5,7 +5,7 @@
  */
 export const REMEDIATION_EN: Readonly<Record<string, string>> = {
   'accessibility-statement-missing':
-    'Publish an accessibility statement and link to it from the footer. It is a separate document from the technical conformity measured elsewhere.',
+    'Optional best practice outside Article 47: consider publishing an accessibility statement and linking to it from the footer.',
   'alt-text-quality-heuristic':
     'Rewrite the alt text on these images so each one describes what it actually shows. This needs a human read, not an automated fix.',
   'aria-command-name':

@@ -309,6 +309,19 @@ means numbered entry 24, not a literal Markdown heading anchor.
     never `no-mx`. Suppression is checked before the fetch and again before the
     write. → trade-offs.md#39
 
+40. Every derived document carries a `findingsProvenance` stamp (findings
+    schema version, normalization fingerprint, findings digest) and fails
+    closed: an analysis, report or artifact carrying none is refused, never
+    trusted for being old. `packages/core/src/normalize/findings-provenance.ts`
+    is the one place that computes or compares one. Five legal-copy rules bind
+    the paid report: no client-specific criteria verdict, no exemption filing
+    route, no client-specific sanction figure, no superseded LCEN article 6-III,
+    and accessibility-statement publication conditioned on an independently
+    established Article 47 regime. `scripts/deidentify-audit.mjs` derives a
+    fixture's provenance rather than copying the source's, and the Lighthouse
+    failure line names a translated cause, never the tool's own message.
+    → trade-offs.md#40
+
 ## Stack
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
@@ -732,14 +745,16 @@ must be resolved first.
 9b. Prospecting throughput (worker pool, `skipLighthouse`, raised page/depth caps) — done 2026-08-22. See trade-off 23.
 9b.5. Sitemap-supplemented full-site scan coverage — done 2026-08-27. Recursive sitemap inspection stays separate from link reachability; full audits supplement eligible sitemap-only pages, while prospecting inspects and standalone crawl remains link-only. See the measured Haaitza validation in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9b.5.
 9c. Hotel prospecting and outreach, planned as 14 vertical slices in
-`advisor-plans/README.md`. Plans 001 through 006 are done as of 2026-08-28:
+`advisor-plans/README.md`. Plans 001 through 007 are done as of 2026-08-28:
 plan 005's corrected crop was
 accepted on a separately authorized live rerun, closing its evidence gate, and
 the `redirect-offsite` defect that gate surfaced is fixed as qualification v2
 (trade-off 37), taking the qualified population from 5,720 to 5,995. Plan 006 is
 done as of 2026-08-28: immutable versioned scores, an approved
 `hotel-outreach-v1` weight table, and a separate cohort generation
-(trade-off 38). Plan 007 is next. Reconciliation decisions and remaining verification gaps are recorded there
+(trade-off 38). Plan 007 is done as of 2026-08-28: role contacts for the
+selected cohort only, four typed absences instead of a null, and an ordered
+local-part allowlist (trade-off 39). Plan 008 is next. Reconciliation decisions and remaining verification gaps are recorded there
 and in `docs/decisions/trade-offs.md`, "Build order milestone notes", 9c.
 
 Full milestone list, including the phases beyond 8, is in the brief,

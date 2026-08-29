@@ -80,7 +80,13 @@ function renderFact(
       });
     case 'turnover':
       return fillTemplate(m.legalCitationTurnoverFactTemplate, {
+        amount: formatEur(fact.amountEur, language),
         threshold: formatEur(fact.thresholdEur, language),
+      });
+    case 'sme-exemption':
+      return fillTemplate(m.legalCitationSmeFactTemplate, {
+        effectifCode: fact.effectifCode,
+        turnover: formatEur(fact.turnoverEur, language),
       });
     // item 41: names the specific flow type(s) actually detected instead
     // of listing all three possibilities with "ou", which read as the
@@ -126,13 +132,12 @@ function renderFact(
     }
     case 'transactional-flow-unknown':
       return m.legalCitationTransactionalFlowUnknownFact;
-    // sme-exemption, no-transactional-flow, siren-missing, and
-    // sirene-lookup-failed are read by legalCitationOutOfScopeParagraph/
-    // legalCitationUndeterminedParagraph's own fixed copy, not by this
-    // per-fact renderer, which only backs the in_scope/likely_in_scope
-    // templates.
-    default:
-      return null;
+    case 'no-transactional-flow':
+      return m.legalCitationNoTransactionalFlowFact;
+    case 'siren-missing':
+      return m.legalCitationSirenMissingFact;
+    case 'sirene-lookup-failed':
+      return fillTemplate(m.legalCitationSireneLookupFailedTemplate, { reason: fact.reason });
   }
 }
 
@@ -188,15 +193,23 @@ export function renderLegalCitationParagraph(
 ): string {
   const m = strings.methodology;
 
-  if (!assessment || assessment.status === 'undetermined') {
-    return m.legalCitationUndeterminedParagraph;
+  if (!assessment) {
+    const regime = getRegime(EAA_REGIME_ID, language);
+    if (!regime) return '';
+    const authorityDisplay =
+      language === 'fr' ? `${regime.authorityPrefixFr} ${regime.authority}` : regime.authority;
+    return fillTemplate(m.legalCitationUndeterminedParagraph, {
+      regimeName: regime.name,
+      authority: authorityDisplay,
+      legalCitation: regime.legalCitation,
+      facts: m.legalCitationSirenMissingFact,
+    });
   }
 
-  if (assessment.status === 'out_of_scope') {
-    return m.legalCitationOutOfScopeParagraph;
-  }
-
-  const basis = pickPrimaryBasis(assessment);
+  const basis =
+    assessment.status === 'in_scope' || assessment.status === 'likely_in_scope'
+      ? pickPrimaryBasis(assessment)
+      : assessment.basis[0];
   const regime = basis ? getRegime(basis.regimeId, language) : undefined;
   if (!basis || !regime) {
     // Should not happen in practice (assessObligations always attaches a
@@ -206,10 +219,12 @@ export function renderLegalCitationParagraph(
   }
 
   const facts = renderFacts(basis, strings, language);
-  const template =
-    assessment.status === 'in_scope'
-      ? m.legalCitationInScopeTemplate
-      : m.legalCitationLikelyInScopeTemplate;
+  const template = {
+    in_scope: m.legalCitationInScopeTemplate,
+    likely_in_scope: m.legalCitationLikelyInScopeTemplate,
+    out_of_scope: m.legalCitationOutOfScopeParagraph,
+    undetermined: m.legalCitationUndeterminedParagraph,
+  }[assessment.status];
   // item 3.15: "sous le contrôle de {authority}" produced "sous le
   // contrôle de Direction générale..." (missing "la") because `authority`
   // is a single canonical string shared with English (regimes.ts's own
@@ -229,7 +244,7 @@ export function renderLegalCitationParagraph(
     facts,
   });
 
-  return `${paragraph} ${m.legalCitationExemptionRouteSentence}`;
+  return paragraph;
 }
 
 /**
@@ -360,6 +375,28 @@ function renderExtendedPassNote(
  *  pages collapses to one reason line instead of one near-identical line
  *  per page. Returns undefined when every page that was scanned at all
  *  had a successful Lighthouse pass. */
+/** Turns the tool's own failure message into wording a client can read.
+ *
+ *  The raw message is internal ("runLighthouseIsolated: worker for <url> exited
+ *  before returning a result (code 1, signal null)"). Printing it in a paid
+ *  deliverable breaks the plain-language rule, and its literal "null" trips
+ *  render-lint's stringified-null rule, which aborts the whole render. Grouping
+ *  now happens on the translated cause, so two spellings of one cause (an exit
+ *  code and a SIGTERM, say) collapse to a single line instead of two.
+ *
+ *  The patterns match the causes actually present in stored scans. An
+ *  unrecognized message deliberately falls back to `unknown` rather than
+ *  passing the raw text through. */
+function classifyLighthouseFailure(message: string, m: ReportStrings['methodology']): string {
+  const reasons = m.lighthouseFailureReasons;
+  if (/failed to fetch browser websocket url|fetch failed/i.test(message)) {
+    return reasons.browserUnreachable;
+  }
+  if (/did not respond within/i.test(message)) return reasons.timedOut;
+  if (/exited before returning a result/i.test(message)) return reasons.processStopped;
+  return reasons.unknown;
+}
+
 function summarizeLighthouseFailures(
   strings: ReportStrings,
   manifest: AuditManifest,
@@ -374,8 +411,8 @@ function summarizeLighthouseFailures(
   const totalPages = manifest.pages.filter((page) => page.status === 'visited').length;
   const counts = new Map<string, number>();
   for (const message of failures) {
-    const normalized = message.replace(/https?:\/\/\S+/g, '<url>');
-    counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+    const reason = classifyLighthouseFailure(message, m);
+    counts.set(reason, (counts.get(reason) ?? 0) + 1);
   }
 
   const reasonLines = [...counts.entries()]

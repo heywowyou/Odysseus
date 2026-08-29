@@ -329,7 +329,8 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
   },
   'lcen-mentions-legales-missing': {
     label: 'Aucun numéro SIREN, RCS ou de TVA trouvé sur le site',
-    gloss: 'Obligation légale de mentions légales (LCEN) non respectée.',
+    gloss:
+      "Aucun identifiant SIREN, RCS ou TVA n'a été trouvé sur les pages visitées (LCEN, article 1-1, I, 2°).",
   },
   'lcp-discovery-insight': {
     label: 'Découverte de la requête du LCP',

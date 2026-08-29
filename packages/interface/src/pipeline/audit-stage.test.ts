@@ -5,6 +5,7 @@ vi.mock('@odysseus/scanner', () => ({
   scanSite: vi.fn(),
   writeAuditArtifacts: vi.fn(),
   writeFindingsFile: vi.fn(),
+  writeManifestFile: vi.fn(),
   pruneScreenshots: vi.fn(),
   buildAuditDir: vi.fn(() => '/artifacts/example.com/2026-08-04T00-00-00Z'),
   getArtifactsRoot: vi.fn(() => '/artifacts'),
@@ -35,8 +36,9 @@ import {
   scanSite,
   writeAuditArtifacts,
   writeFindingsFile,
+  writeManifestFile,
 } from '@odysseus/scanner';
-import { normalizeAudit } from '@odysseus/core';
+import { buildFindingsProvenance, normalizeAudit } from '@odysseus/core';
 import { persistAudit, prefillAuditManualFields } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 import { runAuditStage } from './audit-stage.js';
@@ -81,6 +83,7 @@ beforeEach(() => {
   } as never);
   vi.mocked(normalizeAudit).mockReturnValue([{ findingId: 'f1' }] as never);
   vi.mocked(writeFindingsFile).mockResolvedValue(undefined);
+  vi.mocked(writeManifestFile).mockResolvedValue(undefined);
   vi.mocked(pruneScreenshots).mockResolvedValue({ prunedPageDirs: ['about-def456'] } as never);
   vi.mocked(persistAudit).mockResolvedValue(undefined);
   vi.mocked(runObligationStage).mockResolvedValue({ status: 'undetermined', basis: [] });
@@ -113,6 +116,9 @@ describe('runAuditStage', () => {
     vi.mocked(writeFindingsFile).mockImplementation(async () => {
       calls.push('writeFindingsFile');
     });
+    vi.mocked(writeManifestFile).mockImplementation(async () => {
+      calls.push('writeManifestFile');
+    });
     vi.mocked(pruneScreenshots).mockImplementation(async () => {
       calls.push('pruneScreenshots');
       return { prunedPageDirs: [] } as never;
@@ -129,9 +135,22 @@ describe('runAuditStage', () => {
       'runObligationStage',
       'normalizeAudit',
       'writeFindingsFile',
+      'writeManifestFile',
       'pruneScreenshots',
       'persistAudit',
     ]);
+  });
+
+  it('stamps the manifest and persistence input with the exact findings provenance', async () => {
+    const findings = [{ findingId: 'f1' }] as never;
+    vi.mocked(normalizeAudit).mockReturnValue(findings);
+
+    const result = await runAuditStage('https://example.com/', {}, fakeConnection);
+    const expected = buildFindingsProvenance(findings);
+
+    expect(result.manifest.findingsProvenance).toEqual(expected);
+    expect(writeManifestFile).toHaveBeenCalledWith(result.auditDir, result.manifest);
+    expect(persistAudit).toHaveBeenCalledWith(fakeConnection, result.manifest, findings);
   });
 
   it('calls runObligationStage with the manifest writeAuditArtifacts produced, and threads its result into the result', async () => {
@@ -230,7 +249,10 @@ describe('runAuditStage', () => {
 
     expect(result).toEqual({
       auditId: 'audit-123',
-      manifest: fakeManifest(),
+      manifest: {
+        ...fakeManifest(),
+        findingsProvenance: buildFindingsProvenance([{ findingId: 'f1' }] as never),
+      },
       findings: [{ findingId: 'f1' }],
       auditDir: '/artifacts/example.com/2026-08-04T00-00-00Z',
       visitedCount: 2,

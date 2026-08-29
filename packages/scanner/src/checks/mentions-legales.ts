@@ -1,5 +1,5 @@
 /**
- * LCEN article 6-III mentions-legales extraction: SIREN (checksum
+ * LCEN article 1-1, I, 2° mentions-legales extraction: SIREN (checksum
  * validated), RCS, and TVA intracommunautaire numbers. Pure regex over
  * already-extracted page text (page.evaluate(() => document.body.
  * innerText), the same idiom render-diff.ts already uses) - no HTML

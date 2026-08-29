@@ -3,6 +3,7 @@ import type { ObligationAssessment } from '@odysseus/core';
 import { renderLegalCitationParagraph, renderMethodology } from './methodology.js';
 import { getStrings } from '../strings/i18n.js';
 import { loadSmallSiteManifest } from '../../test-fixtures.js';
+import { escapeHtml } from '../html-utils.js';
 
 describe('renderMethodology against the real small-site.test manifest', () => {
   it('states the crawl size (B16) and tool versions in one merged section, no separate limitations section', async () => {
@@ -113,10 +114,14 @@ describe('renderMethodology surfaces the real Lighthouse failure reason', () => 
     const html = renderMethodology(getStrings('fr'), 11, withFailures, 'fr');
 
     expect(html).toContain('mesure de performance (Lighthouse)');
-    expect(html).toContain('exited before returning a result (code 1, signal null)');
-    // Grouped, not one line per page: the per-page URL is stripped before
-    // counting, so both failures collapse into a single "2/N pages" line.
-    expect(html.match(/exited before returning a result/g)?.length).toBe(1);
+    // The tool's own wording names an internal function and a process exit
+    // signal, so the reader is told the cause instead.
+    const stoppedFr = escapeHtml("la mesure s'est interrompue avant de renvoyer un résultat");
+    expect(html).toContain(stoppedFr);
+    expect(html).not.toContain('exited before returning a result');
+    // Grouped, not one line per page: both failures share one cause and
+    // collapse into a single "2/N pages" line.
+    expect(html.split(stoppedFr).length - 1).toBe(1);
   });
 });
 
@@ -186,21 +191,23 @@ describe('renderMethodology legal citation pointer', () => {
 // renderLegalCitationParagraph directly, the same function
 // legal-exposure.ts's own render site uses.
 describe('renderLegalCitationParagraph', () => {
-  it('renders the pre-milestone hedge verbatim when obligationAssessment is absent', () => {
+  it('renders criteria and the missing observed input when obligationAssessment is absent', () => {
     const html = renderLegalCitationParagraph(getStrings('fr'), undefined, 'fr');
-    expect(html).toContain("sans se prononcer sur l'applicabilité");
+    expect(html).toContain('Critères publiés pour');
+    expect(html).toContain("Aucun identifiant SIREN n'a été trouvé sur les pages visitées");
   });
 
-  it('renders the pre-milestone hedge for status undetermined', () => {
+  it('renders the verified missing input for status undetermined', () => {
     const assessment: ObligationAssessment = {
       status: 'undetermined',
       basis: [{ regimeId: 'eaa-loi-2023-171', facts: [{ kind: 'siren-missing' }] }],
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
-    expect(html).toContain("sans se prononcer sur l'applicabilité");
+    expect(html).toContain('Données disponibles pour cet audit');
+    expect(html).toContain("Aucun identifiant SIREN n'a été trouvé sur les pages visitées");
   });
 
-  it('renders the out_of_scope paragraph with no regime name or citation', () => {
+  it('renders criteria and registry facts without an out-of-scope conclusion', () => {
     const assessment: ObligationAssessment = {
       status: 'out_of_scope',
       basis: [
@@ -211,11 +218,13 @@ describe('renderLegalCitationParagraph', () => {
       ],
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
-    expect(html).toContain('ne relève pas de');
-    expect(html).not.toContain('Loi n° 2023-171');
+    expect(html).toContain('Loi n° 2023-171');
+    expect(html).toContain("tranche d'effectif 02");
+    expect(html).toContain('500 000 €');
+    expect(html).not.toContain('ne relève pas de');
   });
 
-  it('renders the in_scope paragraph naming the regime, authority, citation, and facts, with the exemption route', () => {
+  it('renders the in_scope inputs without an exemption route or legal conclusion', () => {
     const assessment: ObligationAssessment = {
       status: 'in_scope',
       basis: [
@@ -243,9 +252,8 @@ describe('renderLegalCitationParagraph', () => {
     // fixture's evidence array is empty).
     expect(html).toContain('parcours de réservation, panier ou paiement directement en ligne');
     expect(html).not.toContain('premier niveau');
-    // item 3.15: "Démarche Simplifiée" (singular) was wrong - the
-    // platform's real name is plural.
-    expect(html).toContain('Démarches Simplifiées');
+    expect(html).not.toContain('Démarches Simplifiées');
+    expect(html).not.toContain('remplit les critères');
     expect(html).not.toContain('50 000');
   });
 
@@ -339,7 +347,7 @@ describe('renderLegalCitationParagraph', () => {
     });
   });
 
-  it('renders the likely_in_scope paragraph with softened framing when the transactional flow gate is unconfirmed', () => {
+  it('renders the likely_in_scope inputs without a likely-scope conclusion', () => {
     const assessment: ObligationAssessment = {
       status: 'likely_in_scope',
       basis: [
@@ -353,7 +361,7 @@ describe('renderLegalCitationParagraph', () => {
       ],
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
-    expect(html).toContain('relève probablement de');
+    expect(html).not.toContain('relève probablement de');
     expect(html).toContain("n'a pas pu être confirmée");
   });
 
@@ -683,5 +691,61 @@ describe('milestone 9b.5 sitemap coverage disclosure', () => {
       'Declared page URLs outside the authorized scope or filtered by the audit rules: 2',
     );
     expect(html).toContain('Eligible pages omitted by the configured cap: 3');
+  });
+});
+
+// A report whose Lighthouse workers crashed used to print the tool's own
+// message as the client-facing "failure detail" - an internal function name and
+// a process exit signal in a paid deliverable. Its literal "null" also tripped
+// render-lint's stringified-null rule, so generating the report aborted
+// entirely rather than shipping it. Both halves are regressions worth pinning.
+describe('Lighthouse failure detail is plain language, never the raw tool message', () => {
+  const RAW_MESSAGES = [
+    'runLighthouseIsolated: worker for https://example.test/a exited before returning a result (code 1, signal null)',
+    'runLighthouseIsolated: worker for https://example.test/b exited before returning a result (code null, signal SIGTERM)',
+    'runLighthouseIsolated: Failed to fetch browser webSocket URL from https://example.test/c fetch failed',
+    'runLighthouseIsolated: worker for https://example.test/d did not respond within 75000ms',
+  ];
+
+  async function renderWithFailures(language: 'fr' | 'en'): Promise<string> {
+    const manifest = await loadSmallSiteManifest();
+    const withFailures = {
+      ...manifest,
+      pages: manifest.pages.map((page, index) => ({
+        ...page,
+        errors: { ...page.errors, lighthouse: RAW_MESSAGES[index % RAW_MESSAGES.length] ?? '' },
+      })),
+    };
+    return renderMethodology(getStrings(language), 11, withFailures, language);
+  }
+
+  it('never leaks the internal message, its exit signal, or a stringified null', async () => {
+    for (const language of ['fr', 'en'] as const) {
+      const html = await renderWithFailures(language);
+      expect(html).not.toContain('runLighthouseIsolated');
+      expect(html).not.toContain('SIGTERM');
+      expect(html).not.toMatch(/\bnull\b/);
+      expect(html).not.toContain('webSocket');
+    }
+  });
+
+  it('names each observed cause in the reader language', async () => {
+    const fr = await renderWithFailures('fr');
+    expect(fr).toContain(escapeHtml("le navigateur de mesure n'a pas pu être contacté"));
+    expect(fr).toContain(escapeHtml("la mesure s'est interrompue avant de renvoyer un résultat"));
+    expect(fr).toContain('la mesure a dépassé le temps imparti');
+
+    const en = await renderWithFailures('en');
+    expect(en).toContain('the measurement browser could not be reached');
+    expect(en).toContain('the measurement stopped before returning a result');
+    expect(en).toContain('the measurement exceeded the time allowed');
+  });
+
+  it('collapses two spellings of one cause into a single line', async () => {
+    // The exit-code and SIGTERM messages are the same cause, and grouping on
+    // the translated reason is what merges them.
+    const en = await renderWithFailures('en');
+    const occurrences = en.split('the measurement stopped before returning a result').length - 1;
+    expect(occurrences).toBe(1);
   });
 });

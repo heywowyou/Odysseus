@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { effortSchema, impactSchema } from '@odysseus/core';
+import { FINDINGS_SCHEMA_VERSION, effortSchema, impactSchema } from '@odysseus/core';
 import type { LlmInput } from '@odysseus/core';
 
 /** Everything the structure pass sees: findings and site context, no
@@ -43,6 +43,14 @@ export const structureThemeWithKeySchema = structureThemeSchema.extend({
 });
 export type StructureThemeWithKey = z.infer<typeof structureThemeWithKeySchema>;
 
+const findingsProvenanceSchema = z
+  .object({
+    findingsSchemaVersion: z.literal(FINDINGS_SCHEMA_VERSION),
+    normalizationFingerprint: z.string().min(1),
+    findingsDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+  })
+  .strict();
+
 /** The persisted analyses/<timestamp>-structure.json shape. */
 export const structureDocumentSchema = z
   .object({
@@ -53,6 +61,9 @@ export const structureDocumentSchema = z
     model: z.string().min(1),
     temperature: z.number(),
     generatedAt: z.string().min(1),
+    // Optional only so legacy files can be parsed and rejected with the
+    // operator-facing remediation emitted by the analysis boundary.
+    findingsProvenance: findingsProvenanceSchema.optional(),
   })
   .strict();
 export type StructureDocument = z.infer<typeof structureDocumentSchema>;

@@ -24,7 +24,7 @@
  */
 export const REMEDIATION_FR: Readonly<Record<string, string>> = {
   'accessibility-statement-missing':
-    "Publiez une déclaration d'accessibilité et faites-y un lien depuis le pied de page. C'est un document distinct de la conformité technique mesurée par ailleurs.",
+    "Bonne pratique facultative hors article 47 : envisagez de publier une déclaration d'accessibilité et d'ajouter un lien depuis le pied de page.",
   'alt-text-quality-heuristic':
     "Reprenez le texte alternatif de ces images pour qu'il décrive ce que chacune montre réellement. Ce point demande une relecture humaine, pas un correctif automatique.",
   'aria-command-name':

@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import {
   buildTranslationClusters,
+  buildFindingsProvenance,
   normalizeAudit,
   type AuditManifest,
   type NormalizePageInput,
@@ -102,6 +103,7 @@ export function registerNormalizeCommand(program: Command): void {
           ...manifest,
           translationClusters,
           renormalizedAt: new Date().toISOString(),
+          findingsProvenance: buildFindingsProvenance(findings),
         };
         await fs.writeFile(manifestPath, JSON.stringify(renormalizedManifest, null, 2));
 
