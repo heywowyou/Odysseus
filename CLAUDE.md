@@ -366,6 +366,13 @@ means numbered entry 24, not a literal Markdown heading anchor.
     successor-family dedupe remain deferred until their recorded triggers.
     → trade-offs.md#44
 
+55. WCAG-citation and business-claim guards run in the writing pass's retry
+    loop (measured promotion, zero false positives over stored analyses), and
+    an always-on shadow reviewer returns evidence-bound prose verdicts without
+    ever blocking; it is not promotable to a gate on the current medium model,
+    which flags required generic commercial consequences as unsupported.
+    → trade-offs.md#55
+
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
 module, Mongoose 9, Zod, Commander, Vitest, pino, `@mistralai/mistralai`.

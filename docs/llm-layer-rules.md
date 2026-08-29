@@ -296,7 +296,16 @@ output.
 so the report cites 2.2. The first live run mixed 2.1 and 2.2 citations.
 Criterion numbers are identical across versions so nothing was factually
 wrong, but a client's developer will notice a report claiming to audit
-2.2 while citing 2.1.
+2.2 while citing 2.1. Guarded since 2026-08-29:
+`findWcagCitationViolations` (`wcag-citation-guard.ts`) runs inside
+`analyzeWriting`'s retry loop and rejects any version citation other than
+`REQUIRED_WCAG_VERSION` (2.2), which the writing prompt states from the
+same constant. The patterns exclude three-part criterion numbers (2.1.1,
+1.2.1) and contrast ratios (2.1:1); measured against every stored
+analysis, they match exactly the 10 historical fault strings and no
+legitimate prose. The guard covers only model-written prose fields:
+`legalRelevance` has been built in code since the v2 refactor and cites
+2.2 by construction.
 
 **Do not assert business facts that were not supplied.** The first live
 run described the quote page as "la page la plus rentable du site". A
@@ -305,7 +314,16 @@ extends section 4: without an intake file the model must not invent a
 business type, a primary goal, revenue attribution, traffic assumptions,
 or relative page value. It may say a page _appears_ commercially
 important and why, which is inference the client can weigh, not a claim
-they have to correct.
+they have to correct. Guarded since 2026-08-29:
+`findBusinessClaimViolations` (`business-claim-guard.ts`) runs inside
+`analyzeWriting`'s retry loop and rejects unhedged profitability and
+revenue superlatives ("plus rentable", "most profitable", "génère le
+plus"). Scope is calibrated against stored output: traffic superlatives
+("Prioriser les pages les plus visitées", "high-traffic pages") are
+legitimate generic advice phrasing and must keep passing, and a hedge
+anywhere in the same sentence ("semble", "appears") makes the claim
+permitted inference. The writing prompt names the fault phrase from the
+guard's `BUSINESS_CLAIM_EXAMPLES` constant.
 
 **Severity vocabulary must match the report's canonical labels, added
 2026-08-10 after a real manual review of a haaitza.com full audit.** The
@@ -590,3 +608,74 @@ one-line disclosure specified in `docs/operator-obligations.md` section 3
 to the published page.
 
 **Language follows the prospect's site**, unchanged.
+
+---
+
+## 12. The shadow reviewer pass
+
+Added 2026-08-29. One extra Mistral call per analysis, always on (operator
+decision), that reviews the writing pass's prose against exactly the input
+the writer was shown. It exists for the one fault class the deterministic
+guards cannot see: a fluent, unsupported assertion about this specific
+business that no pattern list anticipates.
+
+**Shape.** `analyzeReview` (`analyze-review.ts`) takes the same
+`WritingInput` the writer received plus the writer's `WritingPassOutput`,
+and returns one evidence-bound verdict per guarded prose field:
+`supported` / `unsupported` / `unsure`, each with a required reason
+naming or quoting what was checked (`reviewer-schema.ts`). It covers the
+same surface the deterministic guards scan (executiveSummary, notes,
+businessImpact, recommendedActions), excluding theme titles for the same
+reason. The theme-key correlation contract mirrors section 9: one review
+object per shown themeKey, echoed verbatim; a mismatched set is a skip,
+not a rejection.
+
+**It never blocks anything.** One attempt, no retry loop: API errors,
+malformed bodies, and correlation mismatches all become
+`{ status: 'skipped', reason }` and the analysis proceeds unchanged. The
+reviewer produces data for a later promotion decision; it is not a gate,
+and forcing verdicts with retries would contradict the reason it is
+shadow-mode. Verdicts persist insert-only to
+`analyses/<timestamp>-review.json`, next to the analysis they review, and
+the console gets a single summary line (per-field reasons live in the
+file).
+
+**Promotion criteria, decided up front.** The reviewer enters the
+writing pass's retry loop only if the campaign data shows it catching
+real unsupported facts without false positives. It never re-judges what
+deterministic guards already answer exactly (language, severity
+vocabulary, page counts, digits, legal vocabulary): a second, flakier
+opinion on a question code answers perfectly is noise, not defense.
+
+**Validation campaign, 2026-08-29: the reviewer is NOT promoted.**
+Measured on real re-analyses (sas-fernande.fr fr and en, three runs on
+`mistral-medium-latest`; lacoorniche.com fr): the medium model flags
+essentially every `businessImpact` field `unsupported` for stating
+exactly the generic commercial consequences ("may cost customers and
+bookings", "losing leads and sales") the writing prompt itself requires
+- a systematic false-positive pattern on that field type. Two
+interventions failed to move it: an explicit carve-out rule (generic
+consequences are never unsupported), then explicit few-shot contrast
+examples ("may cost you customers": supported, every time; "your most
+profitable page": unsupported). The model contradicted the examples
+verbatim in its reasons. Conclusion: this is a model-capability limit,
+not a prompt bug. The prompt keeps the correct specification (see
+`reviewer-prompt.test.ts`, which pins both sides of it) so the same
+instrument can be re-measured when `mistral-large-latest` access is
+restored or a provider decision lands. Until then the stream must be
+read knowing the bias: `unsupported` on a businessImpact field currently
+means "states consequences", while the rare genuinely interesting catch
+(an unhedged "this directly harms your SEO") is real signal buried in
+it.
+
+**Same campaign, guard-side evidence.** The two new deterministic guards
+(section 6) fired zero times on three fresh real analyses and zero false
+positives across all 90 stored analyses (`packages/llm/src/
+lint-stored-analyses.ts`), matching the one historical fault each was
+built from. The pre-existing severity-vocabulary guard rejected a real
+lacoorniche.com first attempt ("graves") and the retry loop recovered -
+the reject-log-retry-fail-loud machinery working as designed on live
+output. Also noted: Mistral rate-limits (HTTP 429) on the medium tier
+are common enough that back-to-back analyze runs need spacing; a 429
+during retries fails the analysis loudly (by design), and a 429 on the
+reviewer skips it (also by design).

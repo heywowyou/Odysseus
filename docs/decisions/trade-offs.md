@@ -2426,6 +2426,38 @@ lint failure throws and stops the batch because it signals a product bug; an
 expected missing per-prospect input returns a typed refusal.
 
 
+### 55. Writing-pass prose quality is enforced by pattern guards plus a not-yet-promotable shadow reviewer
+
+Two deterministic guards joined `analyzeWriting`'s retry loop on
+2026-08-29, each sourced from a real stored fault and measured against
+every stored analysis before promotion: `wcag-citation-guard.ts` (the
+first live run mixed WCAG 2.1 into a 2.2 audit; patterns exclude
+criterion numbers and contrast ratios, measured to match exactly the 10
+fault strings and nothing legitimate) and `business-claim-guard.ts`
+("la page la plus rentable du site"; bans profitability and revenue
+superlatives only, because traffic superlatives are legitimate generic
+advice in real output; a hedge in the same sentence permits the claim,
+matching the doctrine's inference escape hatch). Both first ran
+log-only over stored analyses (`packages/llm/src/lint-stored-analyses.ts`)
+and were promoted with zero false positives; do not add a prose guard to
+the retry loop without the same measured promotion step, and do not
+widen the business-claim patterns to traffic vocabulary.
+
+The shadow reviewer (`analyze-review.ts`, one extra Mistral call per
+analysis, always on by operator decision) checks the writer's prose
+against exactly the writer's input and returns evidence-bound verdicts.
+It is not a gate and must not become one on the current model: the
+2026-08-29 campaign measured `mistral-medium-latest` flagging every
+businessImpact field unsupported for stating the generic commercial
+consequences the writing prompt itself requires, immune to both an
+explicit carve-out rule and few-shot examples. The prompt keeps the
+correct specification for re-measurement when Large access or a provider
+decision lands. Do not retry on reviewer failure (it skips, by design),
+do not per-field-log its verdicts to the console (single summary line
+only), and read `unsupported` on businessImpact fields as "states
+consequences" until the bias is re-measured as gone.
+
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.
