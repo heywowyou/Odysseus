@@ -302,14 +302,17 @@ export async function runAnalysisStage(
         `odysseus analyze (review pass, language=${options.language}): skipped - ${review.reason}`,
       );
     } else {
-      const unsupported = summarizeUnsupportedReviews(review.output);
-      if (unsupported.length > 0) {
+      // One line only. The validation campaign (2026-08-29) measured the
+      // medium-tier reviewer flagging every businessImpact field for
+      // stating the generic commercial consequences the writing prompt
+      // itself requires, so per-field console output would be a wall of
+      // misleading warnings; the per-field reasons live in the review
+      // file, where a human reads them with that bias in mind.
+      const unsupportedCount = summarizeUnsupportedReviews(review.output).length;
+      if (unsupportedCount > 0) {
         console.warn(
-          `odysseus analyze (review pass, language=${options.language}): ${unsupported.length} unsupported prose field(s):`,
+          `odysseus analyze (review pass, language=${options.language}): ${unsupportedCount} prose field(s) reviewed unsupported - see the -review.json file for the reasons`,
         );
-        for (const line of unsupported) {
-          console.warn(`  ${line}`);
-        }
       }
       const reviewPath = path.join(analysesDir, `${timestampForFilename(generatedAt)}-review.json`);
       await fs.writeFile(
