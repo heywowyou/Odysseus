@@ -32,18 +32,36 @@ function isPlausibleGlob(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0 && !/[\x00-\x1f]/.test(value);
 }
 
-/** Thrown only for siren: an invalid maxPages/maxDepth/delayMs is
- *  silently ignored (matching this function's existing behavior for
- *  those), but a manually supplied SIREN must fail fast rather than
- *  travel further into the pipeline, per the manual-SIREN milestone's
- *  design constraints - same checksum validation, same fail-fast
- *  behavior, as the CLI boundary. */
+/** Thrown at this route's boundary so a bad option fails fast with 400
+ *  instead of travelling into the pipeline, the same fail-fast rule as
+ *  the CLI's manual-SIREN boundary (same checksum validation there,
+ *  same behavior here). */
 class OptionsValidationError extends Error {}
+
+/** A crawl option must be a positive whole number when present. Zero or
+ *  a negative value is not "no limit": the crawler applies a stored
+ *  option as-is (only an absent one falls back to config), so zero pages
+ *  empties the audit, zero depth strands the crawl, and zero delay strips
+ *  the politeness pacing of CLAUDE.md rule 5. A fraction cannot be a page
+ *  count at all. */
+function requirePositiveIntOptions(
+  record: Record<string, unknown>,
+  keys: readonly ('maxPages' | 'maxDepth' | 'delayMs')[],
+): void {
+  for (const key of keys) {
+    const raw = record[key];
+    if (raw === undefined) continue;
+    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw <= 0) {
+      throw new OptionsValidationError(`${key} must be a positive whole number`);
+    }
+  }
+}
 
 function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
   const options: JobOptionsSnapshot = {};
   if (raw === undefined || raw === null || typeof raw !== 'object') return options;
   const record = raw as Record<string, unknown>;
+  requirePositiveIntOptions(record, ['maxPages', 'maxDepth', 'delayMs']);
   if (typeof record['maxPages'] === 'number') options.maxPages = record['maxPages'];
   if (typeof record['maxDepth'] === 'number') options.maxDepth = record['maxDepth'];
   if (typeof record['delayMs'] === 'number') options.delayMs = record['delayMs'];

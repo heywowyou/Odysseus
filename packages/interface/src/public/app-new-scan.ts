@@ -66,16 +66,11 @@ for (const input of form.querySelectorAll<HTMLInputElement>('input[name="type"]'
 }
 updateFieldVisibility();
 
-function parsePositiveIntField(
-  formData: FormData,
-  name: string,
-  allowZero: boolean,
-): number | undefined {
+function parsePositiveIntField(formData: FormData, name: string): number | undefined {
   const raw = formData.get(name);
   if (raw === null || raw === '') return undefined;
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) return undefined;
-  if (allowZero ? parsed < 0 : parsed <= 0) return undefined;
+  if (!Number.isInteger(parsed) || parsed <= 0) return undefined;
   return parsed;
 }
 
@@ -116,9 +111,9 @@ async function submit(): Promise<void> {
             type: 'full-audit' as const,
             url: String(formData.get('url') ?? '').trim(),
             options: {
-              maxPages: parsePositiveIntField(formData, 'maxPages', false),
-              maxDepth: parsePositiveIntField(formData, 'maxDepth', true),
-              delayMs: parsePositiveIntField(formData, 'delayMs', true),
+              maxPages: parsePositiveIntField(formData, 'maxPages'),
+              maxDepth: parsePositiveIntField(formData, 'maxDepth'),
+              delayMs: parsePositiveIntField(formData, 'delayMs'),
               ...(rawSiren !== '' ? { siren: rawSiren.replace(/\s/g, '') } : {}),
               ...(rawTransactionalFlow !== ''
                 ? { transactionalFlow: rawTransactionalFlow === 'true' }

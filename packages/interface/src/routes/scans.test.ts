@@ -93,6 +93,52 @@ describe('POST /api/scans siren validation', () => {
   });
 });
 
+describe('POST /api/scans numeric crawl option validation', () => {
+  it.each([
+    ['maxPages', 0],
+    ['maxPages', -5],
+    ['maxPages', 2.5],
+    ['maxDepth', 0],
+    ['maxDepth', -1],
+    ['maxDepth', 1.5],
+    ['delayMs', 0],
+    ['delayMs', -1000],
+    ['delayMs', 99.9],
+  ] as const)('rejects %s = %s with 400, never creating a job', async (key, value) => {
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+
+    const req = fakeReq({
+      type: 'full-audit',
+      url: 'https://example.com/',
+      options: { [key]: value },
+    });
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body ?? '{}').error).toBe(`${key} must be a positive whole number`);
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('passes positive whole-number options through to createJob', async () => {
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+
+    const req = fakeReq({
+      type: 'full-audit',
+      url: 'https://example.com/',
+      options: { maxPages: 50, maxDepth: 3, delayMs: 1000 },
+    });
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(201);
+    const options = vi.mocked(createJob).mock.calls[0]?.[1]?.options;
+    expect(options).toMatchObject({ maxPages: 50, maxDepth: 3, delayMs: 1000 });
+  });
+});
+
 describe('POST /api/scans URL scheme validation', () => {
   it('rejects a file:// url, never creating a job', async () => {
     const router = new Router();
