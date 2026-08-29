@@ -1,13 +1,14 @@
 # Odysseus: Codex instructions
 
-This is Codex's repository entry point. `CLAUDE.md` is deliberately the
+This is Codex's repository entry point; ZCode (added 2026-08-29) starts here
+as well. `CLAUDE.md` is deliberately the
 **shared project charter**, despite its historical name: it is authoritative
 for product constraints, architecture, locked contracts, trade-offs, scope,
 testing, and the current milestone. Do not create a competing summary of
 those rules here.
 
 `docs/agents/handoff.md` is the shared protocol for handing work between
-Codex and Claude Code.
+Codex, Claude Code, and ZCode.
 `docs/agents/documentation-map.md` classifies canonical, planned, backlog,
 historical, and research documents.
 `docs/agents/coding-conventions.md` is the shared coding and writing system.

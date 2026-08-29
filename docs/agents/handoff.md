@@ -1,8 +1,8 @@
 # Cross-agent working agreement
 
-Odysseus is maintained through both Claude Code and Codex. They work in the
-same checkout, so the repository, not either chat transcript, is the source
-of truth for in-flight work.
+Odysseus is maintained through Claude Code, Codex, and ZCode (added
+2026-08-29). They work in the same checkout, so the repository, not any chat
+transcript, is the source of truth for in-flight work.
 
 ## Sources of truth
 

@@ -1,7 +1,8 @@
 # Odysseus
 
-> **Shared project charter.** This file is consumed by both Claude Code and
-> Codex. Its filename is historical: it remains the authoritative source for
+> **Shared project charter.** This file is consumed by Claude Code, Codex,
+> and ZCode (added 2026-08-29). Its filename is historical: it remains the
+> authoritative source for
 > durable engineering and product rules. Codex starts from `AGENTS.md`, which
 > intentionally points here instead of maintaining a second copy. The shared
 > handoff protocol is `docs/agents/handoff.md`; document authority and status
@@ -620,11 +621,13 @@ Start Claude Code sessions in this repo with `codysseus` (alias for
 `./scripts/dev.sh`), not a bare `claude`, so `.env` is sourced and the
 MCP servers below authenticate correctly.
 
-This launch instruction is Claude Code-specific. Codex and future agents use
-the tools exposed by their own host session; they must not assume these MCP
-servers are loaded merely because `.mcp.json` exists. The same data-access and
-live-navigation approval boundaries still apply whenever equivalent tools are
-available.
+This launch instruction is Claude Code-specific. Codex, ZCode, and future
+agents use the tools exposed by their own host session; they must not assume
+these MCP servers are loaded merely because `.mcp.json` exists. The same
+data-access and live-navigation approval boundaries still apply whenever
+equivalent tools are available. ZCode has no wrapper equivalent to
+`codysseus`; where a command needs credentials, source `.env` at the point of
+use (`set -a; . ./.env; set +a`), the same pattern Codex already uses.
 
 Three MCP servers are available during development:
 

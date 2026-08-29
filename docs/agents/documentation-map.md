@@ -12,7 +12,7 @@ For repository work, read in this order:
 1. `docs/session/current-session.md`, if present. It is the live handoff.
 2. `git status --short`. Reconcile the tree with the handoff before editing.
 3. `CLAUDE.md`. Despite its filename, this is the shared project charter for
-   Claude Code, Codex, and any future coding agent.
+   Claude Code, Codex, ZCode, and any future coding agent.
 4. This map, then the focused documents for the task.
 
 If there is no session log but the tree is dirty, do not infer ownership or
