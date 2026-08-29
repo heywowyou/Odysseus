@@ -20,6 +20,29 @@ function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOut
 }
 
 describe('findBusinessClaimViolations', () => {
+  it('rejects a profitability superlative asserted in a theme title', () => {
+    // The title renders as a heading beside the canonical severity
+    // vocabulary with no prose next to it to carry the claim, so a
+    // superlative in a label is as unchecked as one in a sentence.
+    const output = buildOutput({
+      themes: [
+        {
+          themeKey: 't1',
+          title: 'La page la plus rentable du site',
+          businessImpact: 'Vos visiteurs abandonnent avant d’envoyer leur demande.',
+          recommendedActions: ['Simplifier le formulaire de devis.'],
+        },
+      ],
+    });
+
+    const violations = findBusinessClaimViolations(output, 'fr');
+
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatchObject({
+      field: 'themes[0](t1).title',
+      matched: 'plus rentable',
+    });
+  });
   // Verbatim from the first live run (sas-fernande.fr, 2026-08-02), the
   // fault this guard exists for.
   it('rejects the unhedged profitability superlative', () => {

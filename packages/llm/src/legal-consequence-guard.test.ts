@@ -137,4 +137,25 @@ describe('findLegalConsequenceViolations', () => {
 
     expect(findLegalConsequenceViolations(output, 'en')).toHaveLength(0);
   });
+
+  it('flags a legal-consequence claim in a theme title', () => {
+    const output = buildOutput({
+      themes: [
+        {
+          themeKey: 't1',
+          title: 'Vente en ligne : les risques juridiques d’un site non conforme',
+          businessImpact: 'Vos visiteurs abandonnent avant de réserver.',
+          recommendedActions: ['Corriger les points relevés avec votre prestataire technique.'],
+        },
+      ],
+    });
+
+    const violations = findLegalConsequenceViolations(output, 'fr');
+
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatchObject({
+      field: 'themes[0](t1).title',
+      matched: 'risques juridiques',
+    });
+  });
 });

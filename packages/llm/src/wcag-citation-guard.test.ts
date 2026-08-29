@@ -20,6 +20,26 @@ function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOut
 }
 
 describe('findWcagCitationViolations', () => {
+  it('rejects a version citation in a theme title and keeps a bare criterion number legal', () => {
+    // A titled citation would render as a heading contradicting the
+    // report's own 2.2 methodology statement; a criterion number inside a
+    // title is identical across versions and stays legal, like in prose.
+    const output = buildOutput({
+      themes: [
+        {
+          themeKey: 't1',
+          title: 'Conformité WCAG 2.1 du critère 1.4.3',
+          businessImpact: 'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu.',
+          recommendedActions: ['Augmenter le contraste des textes.'],
+        },
+      ],
+    });
+
+    const violations = findWcagCitationViolations(output);
+
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatchObject({ field: 'themes[0](t1).title', matched: 'WCAG 2.1' });
+  });
   // Verbatim from the first live run's analyses (sas-fernande.fr,
   // 2026-08-02T18-28-34Z-fr.json and 2026-08-02T18-30-16Z-en.json), the
   // fault this guard exists for.

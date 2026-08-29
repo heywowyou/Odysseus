@@ -63,13 +63,18 @@ export function findWcagCitationViolationsInFields(
  *  has been built entirely in code (legal-relevance.ts) since
  *  docs/report-v2-refactor.md 4.3, so the model cannot write a version
  *  citation there and the code-built text cites 2.2 by construction.
- *  Theme titles are excluded like the other prose guards: a version
- *  citation in a short label has no reader-visible meaning to check. */
+ *  Theme titles are included like every other model-written field since
+ *  the 2026-08-30 pass: their earlier exclusion ("no reader-visible
+ *  meaning to check") held only while titles stayed unversioned, and a
+ *  title like "Conformite WCAG 2.1" would render as a heading that
+ *  contradicts the report's own methodology statement; the stored titles
+ *  matched nothing. */
 export function findWcagCitationViolations(output: WritingPassOutput): WcagCitationViolation[] {
   const fields: ProseField[] = [
     { field: 'executiveSummary', text: output.executiveSummary },
     { field: 'notes', text: output.notes },
     ...output.themes.flatMap((theme, i) => [
+      { field: `themes[${i}](${theme.themeKey}).title`, text: theme.title },
       { field: `themes[${i}](${theme.themeKey}).businessImpact`, text: theme.businessImpact },
       ...theme.recommendedActions.map((action, j) => ({
         field: `themes[${i}](${theme.themeKey}).recommendedActions[${j}]`,

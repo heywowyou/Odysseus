@@ -88,7 +88,9 @@ export function findLegalConsequenceViolationsInFields(
 
 /** Mirrors findSeverityVocabularyViolations' shape and covers the same
  *  prose fields, which are exactly the fields a real report rendered a
- *  sanction claim in. */
+ *  sanction claim in, plus theme titles: a title renders as a heading on
+ *  the executive summary and the theme card, so a sanction word in one is
+ *  as client-visible as a sanction word in prose. */
 export function findLegalConsequenceViolations(
   output: WritingPassOutput,
   language: ReportLanguage,
@@ -97,6 +99,7 @@ export function findLegalConsequenceViolations(
     { field: 'executiveSummary', text: output.executiveSummary },
     { field: 'notes', text: output.notes },
     ...output.themes.flatMap((theme, i) => [
+      { field: `themes[${i}](${theme.themeKey}).title`, text: theme.title },
       { field: `themes[${i}](${theme.themeKey}).businessImpact`, text: theme.businessImpact },
       ...theme.recommendedActions.map((action, j) => ({
         field: `themes[${i}](${theme.themeKey}).recommendedActions[${j}]`,

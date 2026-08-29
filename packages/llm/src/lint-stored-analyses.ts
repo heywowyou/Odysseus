@@ -22,7 +22,7 @@ import { findWcagCitationViolationsInFields } from './wcag-citation-guard.js';
 interface StoredAnalysisShape {
   executiveSummary?: unknown;
   notes?: unknown;
-  themes?: Array<{ businessImpact?: unknown; recommendedActions?: unknown }>;
+  themes?: Array<{ title?: unknown; businessImpact?: unknown; recommendedActions?: unknown }>;
 }
 
 const ANALYSIS_FILENAME_PATTERN = /^\d{4}-\d{2}-\d{2}T[\d-]+Z-(fr|en)\.json$/;
@@ -36,6 +36,9 @@ function proseFieldsOf(analysis: StoredAnalysisShape): ProseField[] {
     fields.push({ field: 'notes', text: analysis.notes });
   }
   (analysis.themes ?? []).forEach((theme, i) => {
+    if (typeof theme.title === 'string') {
+      fields.push({ field: `themes[${i}].title`, text: theme.title });
+    }
     if (typeof theme.businessImpact === 'string') {
       fields.push({ field: `themes[${i}].businessImpact`, text: theme.businessImpact });
     }

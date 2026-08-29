@@ -115,6 +115,15 @@ function buildUnhedgedBusinessClaimOutput(): WritingPassOutput {
   return output;
 }
 
+function buildViolatingThemeTitleOutput(): WritingPassOutput {
+  // The title is model-written prose like every other field: the same
+  // guard table that rejects a sanction claim in businessImpact rejects
+  // it in the title the report renders as a heading.
+  const output = buildCleanFrenchOutput();
+  output.themes[0]!.title = 'Contraste : des risques juridiques évitables';
+  return output;
+}
+
 describe('analyzeWriting', () => {
   it('returns the output on a clean pass', async () => {
     vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
@@ -241,6 +250,27 @@ describe('analyzeWriting', () => {
     vi.mocked(callMistralForWriting)
       .mockReset()
       .mockResolvedValue({ output: buildDigitInSummaryOutput() });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
+    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+  });
+
+  it('retries once when the first response puts a legal claim in a theme title, then succeeds', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildViolatingThemeTitleOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(result.output.themes[0]!.title).toBe('Contraste des couleurs insuffisant');
+    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws after exhausting retries when every attempt puts a legal claim in a theme title', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValue({ output: buildViolatingThemeTitleOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
     expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);

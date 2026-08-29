@@ -21,6 +21,27 @@ function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOut
 }
 
 describe('findSeverityVocabularyViolations', () => {
+  it('flags a banned synonym in a theme title', () => {
+    // The title renders as a heading beside the stats box and the annex,
+    // which both use the canonical word, so a synonym in a label reads as
+    // a second classification system just as a synonym in prose does.
+    const output = buildOutput({
+      themes: [
+        {
+          themeKey: 't1',
+          title: 'Erreurs majeures de contraste',
+          businessImpact:
+            'Vos visiteurs les plus âgés risquent de ne pas lire votre contenu correctement.',
+          recommendedActions: ['Augmenter le contraste des couleurs sur les boutons et le texte.'],
+        },
+      ],
+    });
+
+    const violations = findSeverityVocabularyViolations(output, 'fr');
+
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toMatchObject({ field: 'themes[0](t1).title', matched: 'majeures' });
+  });
   it('flags "majeur" used instead of the canonical "sérieux" (report-feedback-haaitza.md B3)', () => {
     // Verbatim from artifacts/haaitza.com/2026-08-08T11-07-43Z/analyses/
     // 2026-08-08T11-23-48Z-fr.json, where the stats box and annex both

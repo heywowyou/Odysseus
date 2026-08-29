@@ -116,10 +116,13 @@ export function findBusinessClaimViolationsInFields(
 }
 
 /** Same prose-field surface as the legal-consequence and severity
- *  vocabulary guards: executiveSummary, notes, businessImpact, and
- *  recommendedActions. Theme titles are excluded for the same reason as
- *  there: a superlative ranking inside a short label has no data to
- *  check against and the label's claim surfaces in the fields anyway. */
+ *  vocabulary guards: executiveSummary, notes, businessImpact,
+ *  recommendedActions, and theme titles. Titles were excluded until the
+ *  2026-08-30 pass on the reasoning that a label's claim surfaces in the
+ *  fields anyway; the reverse leak is just as real (a title asserting a
+ *  ranking renders as a heading with no prose beside it to check), and
+ *  the measured stored titles matched nothing, so titles are guarded
+ *  like every other model-written field. */
 export function findBusinessClaimViolations(
   output: WritingPassOutput,
   language: ReportLanguage,
@@ -128,6 +131,7 @@ export function findBusinessClaimViolations(
     { field: 'executiveSummary', text: output.executiveSummary },
     { field: 'notes', text: output.notes },
     ...output.themes.flatMap((theme, i) => [
+      { field: `themes[${i}](${theme.themeKey}).title`, text: theme.title },
       { field: `themes[${i}](${theme.themeKey}).businessImpact`, text: theme.businessImpact },
       ...theme.recommendedActions.map((action, j) => ({
         field: `themes[${i}](${theme.themeKey}).recommendedActions[${j}]`,

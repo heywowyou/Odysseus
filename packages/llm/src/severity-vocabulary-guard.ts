@@ -88,7 +88,9 @@ function checkField(
  *  scans every writing-pass prose field for a severity-word synonym that
  *  would drift from the canonical critique/sérieux/modéré/mineur (or
  *  critical/serious/moderate/minor) vocabulary used everywhere else in
- *  the report - the stats box, the annex, and the WCAG criteria table. */
+ *  the report - the stats box, the annex, the WCAG criteria table, and
+ *  the theme titles, which the language guard has always covered and
+ *  which render as headings beside that same canonical vocabulary. */
 export function findSeverityVocabularyViolations(
   output: WritingPassOutput,
   language: ReportLanguage,
@@ -98,6 +100,7 @@ export function findSeverityVocabularyViolations(
   checkField('executiveSummary', output.executiveSummary, language, violations);
   checkField('notes', output.notes, language, violations);
   output.themes.forEach((theme, i) => {
+    checkField(`themes[${i}](${theme.themeKey}).title`, theme.title, language, violations);
     checkField(
       `themes[${i}](${theme.themeKey}).businessImpact`,
       theme.businessImpact,
