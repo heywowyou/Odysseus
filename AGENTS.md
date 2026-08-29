@@ -75,3 +75,8 @@ you changed, what you verified, and any remaining risk in a form the other
 agent can continue from without inference. If completed work remains
 uncommitted, leave the session log with status `ready-for-commit`; the log is
 removed only after the working tree no longer needs that provenance.
+
+A verified defect this session will not fix is logged as a GitHub issue
+before the session ends, and a fixed one is closed with its commit hash and
+verification evidence. The full lifecycle, including uniqueness and labeling
+rules, is binding on every agent: `docs/agents/issue-tracker.md`.

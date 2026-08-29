@@ -22,7 +22,11 @@ what each of those places is for instead).
 
 1. **Log it the moment it is deferred.** When work surfaces a real defect
    that will not be fixed in the current session, create the issue before
-   the session ends, labelled `needs-triage`. The body must be
+   the session ends, labelled `needs-triage`. One issue per finding, and
+   the finding must be unique: search open issues first
+   (`gh issue list --state open --search "..."`); if an issue for the same
+   defect already exists, add the new evidence to it as a comment instead
+   of opening a duplicate. The body must be
    self-contained for a fresh session or another LLM: what is wrong, the
    file and line pointers, the reproduction or verification evidence, the
    user-visible impact, and a suggested fix direction. A finding audited as
