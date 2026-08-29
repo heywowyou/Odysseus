@@ -42,6 +42,12 @@ jobs:
       - name: Build and typecheck
         run: pnpm --filter @odysseus/cli... run build
 
+      # The marketing site is not a dependency of the CLI, so the filter
+      # above never builds it. Its only CI exercise is here: a broken
+      # build used to surface first as a failed Vercel deploy.
+      - name: Build site
+        run: pnpm --filter @odysseus/site run build
+
       - name: Test
         run: pnpm run test
         env:
