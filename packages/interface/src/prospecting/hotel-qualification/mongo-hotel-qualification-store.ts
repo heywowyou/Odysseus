@@ -16,6 +16,7 @@ import {
   type HotelCandidateDocument,
   type RecordHotelQualificationInput,
 } from '@odysseus/store';
+import type { BackfillSireneStorePort } from './backfill-sirene.js';
 import type { HotelQualificationStorePort } from './qualify-hotels.js';
 import type { ReconcileRedirectsStorePort } from './reconcile-redirects.js';
 
@@ -40,6 +41,18 @@ export function createMongoReconcileRedirectsStore(
     countCandidatesByOwnDomain: (options) => countCandidatesByOwnDomain(connection, options),
     getCandidates: (candidateIds) => getHotelCandidatesByIds(connection, candidateIds),
     applyReclassifications: (inputs) => applyRedirectReclassifications(connection, inputs),
+    record: (inputs) => recordHotelQualifications(connection, inputs),
+  };
+}
+
+/** The Sirene backfill reads a stored generation and writes a new one. It
+ *  needs no probe and no reclassification, so it gets three of the five
+ *  operations the reconciliation port carries rather than borrowing that port
+ *  whole. */
+export function createMongoBackfillSireneStore(connection: Connection): BackfillSireneStorePort {
+  return {
+    listQualifications: (options) => listQualificationsByCandidate(connection, options),
+    getCandidates: (candidateIds) => getHotelCandidatesByIds(connection, candidateIds),
     record: (inputs) => recordHotelQualifications(connection, inputs),
   };
 }

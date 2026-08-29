@@ -335,7 +335,13 @@ means numbered entry 24, not a literal Markdown heading anchor.
     is now `v3`, and scoring reads `effectifBandCode` from there. Do not call
     the joiner with `undefined`, and do not read `stock-file-unavailable` as a
     fact about a hotel. `hotel-outreach-v1` is unchanged - its `effectif`
-    weight always read this field and was merely starved of input.
+    weight always read this field and was merely starved of input. Amended
+    2026-08-29: apply the stock file with `backfillSirene`, which contacts
+    nobody, never by re-running `qualifyHotels`, which would re-probe 13,301
+    live sites to attach data already stored on every row. It re-decides only
+    rows whose join returned a band, recovers `domainAdoptedAfterRedirect` from
+    the stored notes when it does, refuses to run without the stock file, and
+    takes no `--limit` because a partial generation is never correct.
     → trade-offs.md#41
 
 42. The outreach preview is a separate document kind, never a tier of the paid

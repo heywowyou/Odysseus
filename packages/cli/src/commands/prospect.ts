@@ -65,6 +65,8 @@ import {
   createHotelSireneJoiner,
   createMongoHotelQualificationStore,
   createMongoReconcileRedirectsStore,
+  createMongoBackfillSireneStore,
+  backfillSirene,
   qualifyHotels,
   reconcileRedirects,
   createMongoHotelCandidateStore,
@@ -446,6 +448,92 @@ export function registerProspectCommand(program: Command): void {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           console.error(`odysseus prospect hotel-qualify reconcile-redirects: failed\n${message}`);
+          process.exitCode = 1;
+        } finally {
+          if (mongoConnection) await disconnectFromMongo(mongoConnection);
+        }
+      },
+    );
+
+  qualify
+    .command('backfill-sirene')
+    .description(
+      'Attach the INSEE join to an already-qualified generation and write the result as a new ' +
+        'complete generation. Contacts nobody: the identifier is already stored on every row, ' +
+        "so this needs the stock file and the database, not the catalogue's websites.",
+    )
+    .option(
+      '--resolution-version <version>',
+      'Resolution generation the verdicts belong to',
+      CURRENT_RESOLUTION_VERSION,
+    )
+    .requiredOption('--from-version <version>', 'Qualification generation to read')
+    .option(
+      '--to-version <version>',
+      'Qualification generation to write',
+      CURRENT_QUALIFICATION_VERSION,
+    )
+    .option('--dry-run', 'Report the verdicts it would write, writing nothing', false)
+    .action(
+      async (opts: {
+        resolutionVersion: string;
+        fromVersion: string;
+        toVersion: string;
+        dryRun: boolean;
+      }) => {
+        // No --limit, unlike reconcile-redirects. That option exists there to
+        // bound the only part that contacts anybody; nothing here does, and a
+        // partial generation is never the right answer.
+
+        // Built before connecting, so an operator who has not placed the stock
+        // file is told so immediately rather than after a database round trip.
+        // `backfillSirene` refuses the same case itself; this only moves the
+        // message earlier.
+        const sireneJoiner = await createHotelSireneJoiner(
+          getSireneStockPath(),
+          getSireneStockIndexCachePath(),
+        );
+        if (sireneJoiner.stockVersion === null) {
+          console.error(
+            `odysseus prospect hotel-qualify backfill-sirene: no INSEE stock file at ` +
+              `${getSireneStockPath()}. This pass has nothing else to write, so it would ` +
+              'produce a generation recording stock-file-unavailable for every hotel. ' +
+              'Download the stock file or set ODYSSEUS_SIRENE_STOCK_PATH.',
+          );
+          process.exitCode = 1;
+          return;
+        }
+
+        let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+        try {
+          mongoConnection = await connectToMongo();
+          const report = await backfillSirene({
+            store: createMongoBackfillSireneStore(mongoConnection),
+            sireneJoiner,
+            resolutionVersion: opts.resolutionVersion,
+            fromVersion: opts.fromVersion,
+            toVersion: opts.toVersion,
+            dryRun: opts.dryRun,
+            onProgress: (rowsProcessed: number) => {
+              process.stderr.write(`processed ${rowsProcessed} rows\n`);
+            },
+          });
+          console.log(JSON.stringify(report, null, 2));
+
+          // Same completeness check reconcile-redirects makes, for the same
+          // reason: listCandidatesToPrescan filters on the version, so a short
+          // generation silently shrinks the prescan population.
+          if (!opts.dryRun && report.rowsWritten !== report.rowsRead) {
+            console.error(
+              `odysseus prospect hotel-qualify backfill-sirene: wrote ${report.rowsWritten} ` +
+                `rows against ${report.rowsRead} read. Generation '${opts.toVersion}' is ` +
+                'incomplete and must not be used for selection.',
+            );
+            process.exitCode = 1;
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`odysseus prospect hotel-qualify backfill-sirene: failed\n${message}`);
           process.exitCode = 1;
         } finally {
           if (mongoConnection) await disconnectFromMongo(mongoConnection);

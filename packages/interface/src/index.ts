@@ -73,7 +73,17 @@ export type {
 export {
   createMongoHotelQualificationStore,
   createMongoReconcileRedirectsStore,
+  createMongoBackfillSireneStore,
 } from './prospecting/hotel-qualification/mongo-hotel-qualification-store.js';
+export {
+  backfillSirene,
+  BACKFILL_BATCH_SIZE,
+} from './prospecting/hotel-qualification/backfill-sirene.js';
+export type {
+  BackfillSireneStorePort,
+  BackfillSireneOptions,
+  BackfillSireneReport,
+} from './prospecting/hotel-qualification/backfill-sirene.js';
 export {
   reconcileRedirects,
   RECONCILE_BATCH_SIZE,

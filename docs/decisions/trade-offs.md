@@ -2011,6 +2011,46 @@ Until then every join reports `stock-file-unavailable`, which is a fact about th
 operator's inputs and must never be read as a fact about a hotel - which is
 exactly why that status stays distinct from a miss.
 
+**Amended 2026-08-29: the backfill is offline, and re-running the qualification
+pass to apply the stock file would be a mistake.** `qualifyHotels` probes every
+candidate's live site, so applying a newly downloaded stock file through it
+would spend hours of third-party requests on 13,301 hotels. None of that traffic
+buys anything: INSEE's answer depends only on the SIREN, the SIREN is already
+stored on every row as `siteFacts.siren`, the candidate carries the rest of the
+decision, and both `joinSireneFor` and `qualifyHotelCandidate` are pure. So the
+join is applied by `backfillSirene`, which contacts nobody and is a sibling of
+`reconcileRedirects` rather than a mode of it or a flag on the qualification
+pass.
+
+Three rules it inherits or adds, each of which was a way to get this wrong:
+
+- **Re-decide only rows whose join returned an `effectifBandCode`**, and copy
+  everything else forward verbatim, exactly as the reconciliation does. This is
+  not an optimization. `domainAdoptedAfterRedirect` is passed into
+  `qualifyHotelCandidate` by the reconciliation and is never stored as a field;
+  it only adds a note and can never move an outcome, but re-deciding blindly
+  would erase, for every adopted hotel, the record that the campaign is about to
+  contact them at an address their catalogue never published. Rows that are
+  re-decided recover it from their own stored notes.
+- **Refuse to run without the stock file**, unlike `qualifyHotels`, whose joiner
+  degrades to `stock-file-unavailable` on purpose because that run has site
+  verdicts to protect. This pass has no other output: without the file it would
+  write a complete generation answering "we asked and got nothing" for every
+  hotel, indistinguishable in shape from a real one. The CLI checks before
+  opening a database connection so the operator is told immediately.
+- **No `--limit`.** The reconciliation has one because it bounds the only part
+  that contacts anybody. Nothing here does, and a partial generation silently
+  shrinks the prescan population, which is the failure `listCandidatesToPrescan`
+  filtering on the version already makes look like a correct filter.
+
+Its dry run reports real projected outcomes, which `qualifyHotels` deliberately
+refuses to do. That rule exists because that pass once reported 9,545 rejections
+computed from a synthetic "not attempted" site fact - it is a rule against
+inventing observations. This pass observes nothing at all: every input is stored,
+the decision is pure, and dry versus wet differs only in whether rows are
+persisted. Seeing how many hotels the effectif rule newly rejects before
+committing a generation is the entire point of dry-running it.
+
 
 ### 42. The outreach preview is a separate document kind, and its safety is structural
 
