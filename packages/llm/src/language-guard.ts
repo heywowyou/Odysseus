@@ -1,5 +1,6 @@
 import { franc } from 'franc-min';
 import type { ReportLanguage } from '@odysseus/core';
+import type { ProseField } from './prose-fields.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
 const MIN_CHECKED_LENGTH = 20;
@@ -10,7 +11,8 @@ const EXPECTED_FRANC_CODE: Record<ReportLanguage, 'fra' | 'eng'> = {
 };
 
 /** The pre-franc regex heuristic, kept around solely as the second vote
- *  in `checkDualDetector` below - see that function's comment for why. */
+ *  in the dual detector below - see `findLanguageComplianceViolationsInFields`
+ *  for why. */
 const FRENCH_ACCENT_CHARS = /[éèêàçùôîâœÉÈÊÀÇÙÔÎÂŒ]/;
 const FRENCH_STOPWORDS = /\b(le|la|les|de|des|un|une|et|pour|dans|avec|votre|vous|sur)\b/i;
 
@@ -24,105 +26,96 @@ export interface LanguageComplianceViolation {
 }
 
 /**
- * Language-compliance guard for the writing pass output, backed by real
- * language detection (`franc-min`'s `franc()`) for most fields, with a
- * second, independent vote required on `title` and `recommendedActions`
- * specifically - see `checkDualDetector` below for why those two need
- * it and the others don't.
+ * Language-compliance guard over a flat list of prose fields, backed by real
+ * language detection (`franc-min`'s `franc()`), with an optional second,
+ * independent vote via `options.dualDetect` - see the doc comment this
+ * carried before extraction, preserved on `findLanguageComplianceViolations`
+ * below, for why the writing pass needs the dual vote on some fields and not
+ * others. Outreach prose is uniformly short, which is exactly the franc weak
+ * spot the dual detector exists for, so every outreach field requests it.
  *
  * `franc()` is called with `only: ['fra', 'eng']` rather than its default
- * 82-language candidate set. Restricting the candidates improves
- * accuracy specifically on short strings like theme titles, which franc's
- * own documentation flags as a known weak spot under roughly 50
- * characters - narrowing the field to just the two languages this tool
- * ever writes in reduces how often a short string is misclassified as a
- * third, irrelevant language.
- *
- * Only fields >= MIN_CHECKED_LENGTH characters are checked; below that,
- * franc itself has too little signal to call reliably, so a short field
- * is skipped rather than passed to the detector.
- *
- * `franc()` returns `'und'` when it cannot confidently pick between the
- * two candidates; that is treated as no signal rather than a violation.
- *
- * `legalRelevance` is not checked at all. It's a formulaic citation
- * ("WCAG 2.2 criterion X.X.X (Name)"), confirmed on a live en analysis
- * of almamia.fr to carry near-tied fra/eng scores (0.92-0.98) regardless
- * of correctness - a citation has no language of its own to detect, so
- * any score it gets is noise. Exemption is the correct response to a
- * field with no reliable signal, not a workaround.
+ * 82-language candidate set, which measurably improves accuracy on short
+ * strings. Fields under `MIN_CHECKED_LENGTH` characters are skipped, and a
+ * `'und'` result (franc could not confidently pick) is treated as no signal
+ * rather than a violation.
  */
-export function findLanguageComplianceViolations(
-  output: WritingPassOutput,
+export function findLanguageComplianceViolationsInFields(
+  fields: readonly ProseField[],
   language: ReportLanguage,
+  options: { dualDetect: boolean },
 ): LanguageComplianceViolation[] {
   const violations: LanguageComplianceViolation[] = [];
   const expected = EXPECTED_FRANC_CODE[language];
 
-  function check(field: string, text: string): void {
-    if (text.length < MIN_CHECKED_LENGTH) return;
+  for (const { field, text } of fields) {
+    if (text.length < MIN_CHECKED_LENGTH) continue;
     const detected = franc(text, { only: FRANC_CANDIDATES });
-    if (detected === 'und') return;
-    if (detected !== expected) violations.push({ field, text });
-  }
+    if (detected === 'und') continue;
+    if (detected === expected) continue;
 
-  /**
-   * `title` and `recommendedActions` entries are often short and generic
-   * ("Missing image descriptions", "Unstable page layout"), and franc's
-   * accuracy on short strings is exactly the weak spot its own docs
-   * warn about. A live en analysis of almamia.fr confirmed this for
-   * real: ten genuinely-correct short titles and action sentences were
-   * flagged, with franc's confidence in the correct language ranging
-   * 0.44 to 0.997 against the (wrong) winner's normalized 1 - too wide a
-   * spread to separate from a real leak with a confidence threshold. The
-   * same run's regression fixture for the original production bug (a
-   * fully English title in a French report) scored 0.655 on that same
-   * scale, sitting *inside* that false-positive range rather than below
-   * it, which is what ruled out a threshold: no single cutoff keeps the
-   * real leak flagged while suppressing the false positives.
-   *
-   * Anchoring these fields to the theme's businessImpact text (an
-   * earlier attempt at fixing this) was also rejected: concatenating a
-   * short wrong-language title with a longer correct-language
-   * businessImpact let the businessImpact's length dominate the
-   * combined detection, silently un-flagging a genuine title-only leak -
-   * exactly the failure this guard exists to catch.
-   *
-   * What does separate the two classes on every real example collected
-   * across all three diagnosis rounds (see language-guard.test.ts) is
-   * requiring franc and the pre-franc regex heuristic (`looksFrench`,
-   * `FRENCH_ACCENT_CHARS` / `FRENCH_STOPWORDS`) to independently agree
-   * a field is wrong-language before it's flagged. The two detectors
-   * fail in different, uncorrelated ways: franc misreads short or
-   * generic strings; the regex misses fluent prose with no accented
-   * character or listed stopword. A false positive from one detector
-   * essentially never survives a second, differently-shaped detector
-   * also getting it wrong. `businessImpact`, `executiveSummary`, and
-   * `notes` are always full sentences or paragraphs, never
-   * length-floor-limited, so they don't show this failure mode and stay
-   * on the plain franc-only `check`.
-   */
-  function checkDualDetector(field: string, text: string): void {
-    if (text.length < MIN_CHECKED_LENGTH) return;
-    const detected = franc(text, { only: FRANC_CANDIDATES });
-    if (detected === 'und') return;
-    if (detected === expected) return;
+    if (!options.dualDetect) {
+      violations.push({ field, text });
+      continue;
+    }
 
     const isFrench = looksFrench(text);
     const regexMismatch = language === 'fr' ? !isFrench : isFrench;
     if (regexMismatch) violations.push({ field, text });
   }
 
-  check('executiveSummary', output.executiveSummary);
-  check('notes', output.notes);
-  output.themes.forEach((theme, i) => {
-    checkDualDetector(`themes[${i}](${theme.themeKey}).title`, theme.title);
-    check(`themes[${i}](${theme.themeKey}).businessImpact`, theme.businessImpact);
-    // legalRelevance is intentionally not checked - see the doc comment above.
-    theme.recommendedActions.forEach((action, j) => {
-      checkDualDetector(`themes[${i}](${theme.themeKey}).recommendedActions[${j}]`, action);
-    });
-  });
-
   return violations;
+}
+
+/**
+ * Language-compliance guard for the writing pass output. Most fields use
+ * plain franc detection; `title` and `recommendedActions` entries require a
+ * second, independent vote - a live en analysis of almamia.fr found franc
+ * misreads short, generic strings ("Missing image descriptions") often
+ * enough that no confidence threshold separates a real leak from a false
+ * positive on those two field shapes. `businessImpact`, `executiveSummary`,
+ * and `notes` are always full sentences or paragraphs and don't show that
+ * failure mode, so they stay on the plain detector.
+ *
+ * The two detectors fail in different, uncorrelated ways: franc misreads
+ * short or generic strings; the regex misses fluent prose with no accented
+ * character or listed stopword. A false positive from one essentially never
+ * survives a second, differently-shaped detector also getting it wrong.
+ * Anchoring short fields to a longer field's text was tried and rejected
+ * too: it let the longer field's length dominate the combined detection,
+ * silently un-flagging a genuine title-only leak.
+ *
+ * `legalRelevance` is not checked at all. It's a formulaic citation ("WCAG
+ * 2.2 criterion X.X.X (Name)"), confirmed on a live en analysis to carry
+ * near-tied fra/eng scores regardless of correctness - a citation has no
+ * language of its own to detect, so any score it gets is noise.
+ */
+export function findLanguageComplianceViolations(
+  output: WritingPassOutput,
+  language: ReportLanguage,
+): LanguageComplianceViolation[] {
+  const singleDetectFields: ProseField[] = [
+    { field: 'executiveSummary', text: output.executiveSummary },
+    { field: 'notes', text: output.notes },
+    ...output.themes.map((theme, i) => ({
+      field: `themes[${i}](${theme.themeKey}).businessImpact`,
+      text: theme.businessImpact,
+    })),
+  ];
+
+  const dualDetectFields: ProseField[] = output.themes.flatMap((theme, i) => [
+    { field: `themes[${i}](${theme.themeKey}).title`, text: theme.title },
+    // legalRelevance is intentionally not checked - see the doc comment above.
+    ...theme.recommendedActions.map((action, j) => ({
+      field: `themes[${i}](${theme.themeKey}).recommendedActions[${j}]`,
+      text: action,
+    })),
+  ]);
+
+  return [
+    ...findLanguageComplianceViolationsInFields(singleDetectFields, language, {
+      dualDetect: false,
+    }),
+    ...findLanguageComplianceViolationsInFields(dualDetectFields, language, { dualDetect: true }),
+  ];
 }

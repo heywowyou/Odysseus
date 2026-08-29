@@ -1,4 +1,5 @@
 import type { ReportLanguage } from '@odysseus/core';
+import type { ProseField } from './prose-fields.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
 /**
@@ -27,7 +28,11 @@ import type { WritingPassOutput } from './writing-schema.js';
  * severity-vocabulary-guard.ts's reasoning: an audit report has no
  * legitimate reason to reach for this vocabulary, since the only place
  * legal consequence may be discussed is the deterministic splice in
- * section 03, which the model never writes.
+ * section 03, which the model never writes. Reused by the outreach path
+ * with the same regex table and one-per-field early return, on the same
+ * reasoning: the outreach prompt withholds the pen from legal content
+ * entirely (docs/outreach-rules.md section 5), so the model has no more
+ * legitimate reason to reach for this vocabulary there than it does here.
  */
 const LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {
   fr: [
@@ -62,19 +67,23 @@ export interface LegalConsequenceViolation {
   matched: string;
 }
 
-function checkField(
-  field: string,
-  text: string,
+/** At most one violation per field - the first pattern to match is the one
+ *  reported, mirroring findSeverityVocabularyViolations' shape. */
+export function findLegalConsequenceViolationsInFields(
+  fields: readonly ProseField[],
   language: ReportLanguage,
-  violations: LegalConsequenceViolation[],
-): void {
-  for (const pattern of LEGAL_CONSEQUENCE_PATTERNS[language]) {
-    const match = text.match(pattern);
-    if (match) {
-      violations.push({ field, text, matched: match[0] });
-      return;
+): LegalConsequenceViolation[] {
+  const violations: LegalConsequenceViolation[] = [];
+  for (const { field, text } of fields) {
+    for (const pattern of LEGAL_CONSEQUENCE_PATTERNS[language]) {
+      const match = text.match(pattern);
+      if (match) {
+        violations.push({ field, text, matched: match[0] });
+        break;
+      }
     }
   }
+  return violations;
 }
 
 /** Mirrors findSeverityVocabularyViolations' shape and covers the same
@@ -84,26 +93,17 @@ export function findLegalConsequenceViolations(
   output: WritingPassOutput,
   language: ReportLanguage,
 ): LegalConsequenceViolation[] {
-  const violations: LegalConsequenceViolation[] = [];
+  const fields: ProseField[] = [
+    { field: 'executiveSummary', text: output.executiveSummary },
+    { field: 'notes', text: output.notes },
+    ...output.themes.flatMap((theme, i) => [
+      { field: `themes[${i}](${theme.themeKey}).businessImpact`, text: theme.businessImpact },
+      ...theme.recommendedActions.map((action, j) => ({
+        field: `themes[${i}](${theme.themeKey}).recommendedActions[${j}]`,
+        text: action,
+      })),
+    ]),
+  ];
 
-  checkField('executiveSummary', output.executiveSummary, language, violations);
-  checkField('notes', output.notes, language, violations);
-  output.themes.forEach((theme, i) => {
-    checkField(
-      `themes[${i}](${theme.themeKey}).businessImpact`,
-      theme.businessImpact,
-      language,
-      violations,
-    );
-    theme.recommendedActions.forEach((action, j) => {
-      checkField(
-        `themes[${i}](${theme.themeKey}).recommendedActions[${j}]`,
-        action,
-        language,
-        violations,
-      );
-    });
-  });
-
-  return violations;
+  return findLegalConsequenceViolationsInFields(fields, language);
 }
