@@ -143,7 +143,6 @@ const hotelCandidateSchema = new Schema<HotelCandidateDocument>(
     },
     groupDomain: { type: String },
     groupSize: { type: Number },
-    sireneJoin: { type: Schema.Types.Mixed },
     qualification: { type: qualificationStateSchema },
     prescan: { type: prescanStateSchema },
     conflicts: { type: [conflictSchema], required: true },

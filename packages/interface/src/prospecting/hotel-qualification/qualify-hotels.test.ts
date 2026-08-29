@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { HotelSiteFacts } from '@odysseus/core';
+import type { HotelSireneJoin, HotelSiteFacts } from '@odysseus/core';
 import type { HotelCandidateDocument, RecordHotelQualificationInput } from '@odysseus/store';
+import type { HotelSireneJoiner } from '../hotel-identity/hotel-sirene-join.js';
 import {
   qualifyHotels,
   QUALIFY_BATCH_SIZE,
@@ -44,6 +45,22 @@ function healthy(overrides: Partial<HotelSiteFacts> = {}): HotelSiteFacts {
     mentionsLegalesUrl: 'https://example.fr/mentions-legales',
     redirectedWithinSite: false,
     ...overrides,
+  };
+}
+
+/** Records what it was asked about, so a test can assert the pass only spends
+ *  an INSEE lookup when the site probe actually came back with an identifier. */
+function fakeJoiner(join: (siren: string | undefined) => HotelSireneJoin): HotelSireneJoiner & {
+  readonly asked: Array<string | undefined>;
+} {
+  const asked: Array<string | undefined> = [];
+  return {
+    asked,
+    stockVersion: 'stock-test',
+    join: (siren) => {
+      asked.push(siren);
+      return join(siren);
+    },
   };
 }
 
@@ -289,6 +306,81 @@ describe('qualifyHotels', () => {
     const store = new FakeStore([candidate(), candidate()]);
     await run(store, async () => healthy(), { onProgress });
     expect(onProgress).toHaveBeenCalledWith(2);
+  });
+
+  describe('the Sirene join', () => {
+    it('asks INSEE with the identifier this probe read off the page', async () => {
+      const joiner = fakeJoiner(() => ({
+        status: 'matched',
+        stockVersion: 'stock-test',
+        denomination: 'HOTEL EXEMPLE',
+        naf: '55.10Z',
+        effectifBandCode: '21',
+        etatAdministratif: 'A',
+        checkedAt: new Date(),
+      }));
+      const store = new FakeStore([candidate({ candidateId: 'a' })]);
+      await run(store, async () => healthy({ siren: '552100554' }), { sireneJoiner: joiner });
+
+      expect(joiner.asked).toEqual(['552100554']);
+      expect(store.recorded[0]?.sireneJoin?.status).toBe('matched');
+    });
+
+    it('does not ask when the probe recovered no identifier', async () => {
+      const joiner = fakeJoiner(() => ({
+        status: 'no-identifier',
+        stockVersion: 'stock-test',
+        checkedAt: new Date(),
+      }));
+      const store = new FakeStore([candidate({ candidateId: 'a' })]);
+      await run(store, async () => healthy({ siren: null }), { sireneJoiner: joiner });
+
+      // Not "asked and told there is none": nobody was asked at all, and the
+      // record says so by carrying no join rather than an absent-looking one.
+      expect(joiner.asked).toEqual([]);
+      expect(store.recorded[0]?.sireneJoin).toBeUndefined();
+    });
+
+    it('records no join at all when the run has no joiner', async () => {
+      const store = new FakeStore([candidate({ candidateId: 'a' })]);
+      await run(store, async () => healthy());
+      expect(store.recorded[0]?.sireneJoin).toBeUndefined();
+    });
+
+    it('feeds the matched size band into the verdict', async () => {
+      // The effectif rule needs both halves, and before the join reached this
+      // pass the band was always absent, so it could never fire.
+      const joiner = fakeJoiner(() => ({
+        status: 'matched',
+        stockVersion: 'stock-test',
+        denomination: 'HOTEL EXEMPLE',
+        naf: '55.10Z',
+        effectifBandCode: '02',
+        etatAdministratif: 'A',
+        checkedAt: new Date(),
+      }));
+      const store = new FakeStore([candidate({ candidateId: 'a', capacity: 6 })]);
+      const report = await run(store, async () => healthy(), { sireneJoiner: joiner });
+
+      expect(store.recorded[0]?.reasons).toContain('microenterprise-scope-unresolved');
+      expect(report.byOutcome.parked).toBe(1);
+    });
+
+    it('leaves the verdict unchanged when the company is not in the qualifying set', async () => {
+      const joiner = fakeJoiner(() => ({
+        status: 'siren-not-in-qualifying-sirene-set',
+        stockVersion: 'stock-test',
+        checkedAt: new Date(),
+      }));
+      const store = new FakeStore([candidate({ candidateId: 'a', capacity: 6 })]);
+      const report = await run(store, async () => healthy(), { sireneJoiner: joiner });
+
+      // A join that found nothing is not evidence of size, so the effectif rule
+      // stays silent rather than reading the miss as "small".
+      expect(store.recorded[0]?.reasons).not.toContain('microenterprise-scope-unresolved');
+      expect(report.byOutcome.qualified).toBe(1);
+      expect(store.recorded[0]?.sireneJoin?.status).toBe('siren-not-in-qualifying-sirene-set');
+    });
   });
 
   it('stores the site evidence alongside the verdict', async () => {

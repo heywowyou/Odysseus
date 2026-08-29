@@ -20,6 +20,7 @@ import type {
   HotelQualificationNote,
   HotelQualificationOutcome,
   HotelQualificationReason,
+  HotelSireneJoin,
   HotelSiteFacts,
 } from '@odysseus/core';
 import {
@@ -39,6 +40,10 @@ export interface RecordHotelQualificationInput {
   reasons: HotelQualificationReason[];
   notes: HotelQualificationNote[];
   siteFacts: HotelSiteFacts;
+  /** Omitted when no join was attempted, which is not the same as a join that
+   *  found nothing - `HotelSireneJoin.status` already distinguishes the ways a
+   *  join can come back empty. */
+  sireneJoin?: HotelSireneJoin;
   evaluatedAt: Date;
 }
 
@@ -84,6 +89,7 @@ export async function recordHotelQualifications(
             reasons: input.reasons,
             notes: input.notes,
             siteFacts: input.siteFacts,
+            ...(input.sireneJoin !== undefined ? { sireneJoin: input.sireneJoin } : {}),
             evaluatedAt: input.evaluatedAt,
             expiresAt,
           },

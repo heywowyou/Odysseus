@@ -31,7 +31,7 @@ import type {
   PrescanDocument,
   RecordHotelScoreInput,
 } from '@odysseus/store';
-import type { HotelSiteFacts } from '@odysseus/core';
+import type { HotelSireneJoin, HotelSiteFacts } from '@odysseus/core';
 
 /** Bumped by hand when the weights or the components change, never edited in
  *  place - the same discipline, and the same reason, as
@@ -51,8 +51,15 @@ export interface HotelScoringStorePort {
     domain?: string;
   }): Promise<HotelCandidateDocument[]>;
   getPrescan(prescanId: string): Promise<PrescanDocument | null>;
-  /** The stored verdict, for the site facts a score's ability side reads. */
-  getSiteFacts(qualificationVersion: string, candidateId: string): Promise<HotelSiteFacts | null>;
+  /** The stored verdict, for the facts a score's ability side reads. Both come
+   *  from the same qualification document because both are that generation's:
+   *  the site probe observed them together, and reading the effectif band from
+   *  the candidate instead would pair one generation's company facts with
+   *  another's site facts. */
+  getQualificationFacts(
+    qualificationVersion: string,
+    candidateId: string,
+  ): Promise<QualificationFacts | null>;
   findScoredCandidateIds(
     scoringVersion: string,
     candidateIds: readonly string[],
@@ -144,11 +151,17 @@ function evidenceFacts(prescan: PrescanDocument): HotelScoreEvidenceFacts {
 /** Assembles the facts the pure score reads. Kept separate, and exported, for
  *  the reason `factsFor` is in qualify-hotels.ts: what the decision was given
  *  should be inspectable rather than assembled inline inside a loop. */
+export interface QualificationFacts {
+  site: HotelSiteFacts;
+  sireneJoin?: HotelSireneJoin;
+}
+
 export function scoreInputFor(
   candidate: HotelCandidateDocument,
   prescan: PrescanDocument,
-  site: HotelSiteFacts | null,
+  qualification: QualificationFacts | null,
 ): HotelOutreachScoreInput {
+  const site = qualification?.site ?? null;
   return {
     candidateId: candidate.candidateId,
     pages: pageFacts(prescan),
@@ -157,7 +170,7 @@ export function scoreInputFor(
     capacity: candidate.capacity ?? null,
     roomCount: candidate.roomCount ?? null,
     groupStatus: candidate.groupStatus,
-    effectifBandCode: candidate.sireneJoin?.effectifBandCode ?? null,
+    effectifBandCode: qualification?.sireneJoin?.effectifBandCode ?? null,
     reservationUrl: site?.reservationUrl ?? null,
     offsiteBookingCount: site?.bookingVendors?.length ?? prescan.offsiteBookingLinks.length,
   };
@@ -241,12 +254,12 @@ export async function scoreHotels(options: ScoreHotelsOptions): Promise<ScoreHot
         continue;
       }
 
-      const site = await options.store.getSiteFacts(
+      const qualification = await options.store.getQualificationFacts(
         options.qualificationVersion,
         candidate.candidateId,
       );
       const score: HotelOutreachScore = computeHotelOutreachScore(
-        scoreInputFor(candidate, prescan, site),
+        scoreInputFor(candidate, prescan, qualification),
         config,
       );
 

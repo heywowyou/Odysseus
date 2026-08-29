@@ -18,21 +18,27 @@ import {
   recordScoreCohort,
   type RecordHotelScoreInput,
 } from '@odysseus/store';
-import type { HotelSiteFacts, OutreachSelection } from '@odysseus/core';
-import type { HotelScoringStorePort } from './score-hotels.js';
+import type { HotelSireneJoin, HotelSiteFacts, OutreachSelection } from '@odysseus/core';
+import type { HotelScoringStorePort, QualificationFacts } from './score-hotels.js';
 import type { CohortSelectionStorePort } from './select-cohort.js';
 
 export function createMongoHotelScoringStore(connection: Connection): HotelScoringStorePort {
   return {
     listCandidatesToScore: (options) => listCandidatesToScore(connection, options),
     getPrescan: (prescanId) => getPrescan(connection, prescanId),
-    getSiteFacts: async (qualificationVersion, candidateId): Promise<HotelSiteFacts | null> => {
+    getQualificationFacts: async (
+      qualificationVersion,
+      candidateId,
+    ): Promise<QualificationFacts | null> => {
       const qualification = await getHotelQualification(
         connection,
         qualificationVersion,
         candidateId,
       );
-      return (qualification?.siteFacts as HotelSiteFacts | undefined) ?? null;
+      const site = qualification?.siteFacts as HotelSiteFacts | undefined;
+      if (site === undefined) return null;
+      const sireneJoin = qualification?.sireneJoin as HotelSireneJoin | undefined;
+      return { site, ...(sireneJoin !== undefined ? { sireneJoin } : {}) };
     },
     findScoredCandidateIds: (scoringVersion, candidateIds) =>
       findScoredCandidateIds(connection, scoringVersion, candidateIds),

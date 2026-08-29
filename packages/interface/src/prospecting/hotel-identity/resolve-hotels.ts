@@ -37,11 +37,9 @@ import {
   type HotelGroupStatus,
   type HotelIdentityCandidateIndexEntry,
   type HotelIdentityStatus,
-  type HotelSireneJoinStatus,
   type HotelWebsiteCandidate,
 } from '@odysseus/core';
 import type { HotelCandidateDocument, HotelSourceRecordDocument } from '@odysseus/store';
-import type { HotelSireneJoiner } from './hotel-sirene-join.js';
 
 /**
  * The persistence this pass needs, and nothing more.
@@ -90,7 +88,6 @@ export interface ResolveHotelsReport {
     largestGroup: { domain: string; size: number } | null;
   };
   review: { queued: number; byReason: Record<string, number> };
-  sirene: Partial<Record<HotelSireneJoinStatus, number>>;
   /** Eligible, independent, and holding a domain no other establishment in the
    *  run holds. The number this milestone is measured on. */
   campaignReady: number;
@@ -106,8 +103,6 @@ export interface ResolveHotelsOptions {
   limit?: number;
   /** Classify and count without writing anything. */
   dryRun?: boolean;
-  /** Omitted means no Sirene facts are attempted at all. */
-  sireneJoiner?: HotelSireneJoiner;
 }
 
 interface Classified {
@@ -264,7 +259,6 @@ export async function resolveHotels(options: ResolveHotelsOptions): Promise<Reso
       largestGroup: null,
     },
     review: { queued: 0, byReason: {} },
-    sirene: {},
     campaignReady: 0,
     created: 0,
     updated: 0,
@@ -378,11 +372,6 @@ export async function resolveHotels(options: ResolveHotelsOptions): Promise<Reso
       report.review.byReason[queuedReason] = (report.review.byReason[queuedReason] ?? 0) + 1;
     }
 
-    const sireneJoin = options.sireneJoiner?.join(undefined);
-    if (sireneJoin !== undefined) {
-      report.sirene[sireneJoin.status] = (report.sirene[sireneJoin.status] ?? 0) + 1;
-    }
-
     const candidateId = identity.candidateId ?? randomUUID();
 
     const candidate: HotelCandidate = {
@@ -413,7 +402,6 @@ export async function resolveHotels(options: ResolveHotelsOptions): Promise<Reso
       groupStatus,
       ...(classified?.groupDomain !== undefined ? { groupDomain: classified.groupDomain } : {}),
       ...(classified?.groupSize !== undefined ? { groupSize: classified.groupSize } : {}),
-      ...(sireneJoin !== undefined ? { sireneJoin } : {}),
       conflicts: identity.conflicts,
       review,
     };

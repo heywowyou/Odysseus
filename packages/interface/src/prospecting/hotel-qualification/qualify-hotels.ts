@@ -35,7 +35,9 @@ import {
   type HotelSiteFacts,
   type OverpassDecision,
 } from '@odysseus/core';
+import type { HotelSireneJoin } from '@odysseus/core';
 import type { HotelCandidateDocument } from '@odysseus/store';
+import type { HotelSireneJoiner } from '../hotel-identity/hotel-sirene-join.js';
 import type { RecordHotelQualificationInput } from '@odysseus/store';
 
 /** Bumped by hand when a qualification rule changes, never edited in place -
@@ -47,8 +49,15 @@ import type { RecordHotelQualificationInput } from '@odysseus/store';
  *  `reconcile-redirects`, which is where the rename-versus-chain count lives
  *  because only it sees the whole run. A v2 generation that has not been
  *  reconciled still carries v1's redirect verdicts, so do not read one as
- *  final until the reconciliation has written it. */
-export const CURRENT_QUALIFICATION_VERSION = 'v2';
+ *  final until the reconciliation has written it.
+ *
+ *  v3 asks INSEE about the SIREN this pass reads off the site. Until v3 the
+ *  question was asked with an empty hand at resolve time, before any page had
+ *  been fetched, so `effectifBandCode` was null for every hotel and the
+ *  effectif rejection in `qualifyHotelCandidate` could never fire. Supplying
+ *  it changes who qualifies, which is exactly why this is a new generation and
+ *  not a v2 re-run. */
+export const CURRENT_QUALIFICATION_VERSION = 'v3';
 
 export const QUALIFY_BATCH_SIZE = 200;
 
@@ -79,6 +88,11 @@ export interface QualifyHotelsOptions {
   /** Maximum candidates to evaluate this run. Undefined means the whole run. */
   limit?: number;
   concurrency: number;
+  /** Asks INSEE about the SIREN the site probe recovered. Optional because a
+   *  run without the operator-placed stock file must still produce verdicts:
+   *  the joiner then reports `stock-file-unavailable` and the effectif rule
+   *  stays silent, which is the honest outcome of not having looked. */
+  sireneJoiner?: HotelSireneJoiner;
   /** Skip candidates already carrying a verdict at this qualification version,
    *  so an interrupted batch continues rather than restarting. */
   resume: boolean;
@@ -154,16 +168,33 @@ function toLanes<T>(items: readonly T[], laneCount: number): T[][] {
 export function factsFor(
   candidate: HotelCandidateDocument,
   site: HotelSiteFacts,
+  sireneJoin?: HotelSireneJoin,
 ): Parameters<typeof qualifyHotelCandidate>[0] {
   return {
     starRating: candidate.starRating ?? null,
     groupStatus: candidate.groupStatus,
     ownRegistrableDomain: candidate.ownRegistrableDomain ?? null,
     reviewState: candidate.review.state,
-    effectifBandCode: candidate.sireneJoin?.effectifBandCode ?? null,
+    effectifBandCode: sireneJoin?.effectifBandCode ?? null,
     capacity: candidate.capacity ?? null,
     site,
   };
+}
+
+/** Asks INSEE only when this probe actually recovered an identifier.
+ *
+ *  Calling the joiner with nothing would record `no-identifier` against every
+ *  hotel whose page we never fetched, which reads as "we looked and it has
+ *  none" when nobody looked. An absent join says that better than a join that
+ *  reports an absence. */
+export function joinSireneFor(
+  site: HotelSiteFacts,
+  joiner: HotelSireneJoiner | undefined,
+): HotelSireneJoin | undefined {
+  if (joiner === undefined) return undefined;
+  const siren = site.siren ?? undefined;
+  if (siren === undefined || siren === '') return undefined;
+  return joiner.join(siren);
 }
 
 /** A candidate with no own domain is decided without a request. Checking it
@@ -259,7 +290,10 @@ export async function qualifyHotels(
       continue;
     }
 
-    const results = new Map<string, { site: HotelSiteFacts; result: HotelQualificationResult }>();
+    const results = new Map<
+      string,
+      { site: HotelSiteFacts; sireneJoin?: HotelSireneJoin; result: HotelQualificationResult }
+    >();
 
     await Promise.all(
       toLanes(page, options.concurrency).map(async (lane) => {
@@ -271,9 +305,11 @@ export async function qualifyHotels(
               : isWorthChecking(candidate)
                 ? await options.checkSite(domain as string)
                 : NOT_CHECKED;
+          const sireneJoin = joinSireneFor(site, options.sireneJoiner);
           results.set(candidate.candidateId, {
             site,
-            result: qualifyHotelCandidate(factsFor(candidate, site)),
+            ...(sireneJoin !== undefined ? { sireneJoin } : {}),
+            result: qualifyHotelCandidate(factsFor(candidate, site, sireneJoin)),
           });
         }
       }),
@@ -283,7 +319,7 @@ export async function qualifyHotels(
     for (const candidate of page) {
       const entry = results.get(candidate.candidateId);
       if (entry === undefined) continue;
-      const { site, result } = entry;
+      const { site, sireneJoin, result } = entry;
       byOutcome[result.outcome] += 1;
       for (const reason of result.reasons) byReason[reason] = (byReason[reason] ?? 0) + 1;
       for (const note of result.notes) byNote[note] = (byNote[note] ?? 0) + 1;
@@ -300,6 +336,7 @@ export async function qualifyHotels(
         reasons: result.reasons,
         notes: result.notes,
         siteFacts: site,
+        ...(sireneJoin !== undefined ? { sireneJoin } : {}),
         evaluatedAt,
       });
     }

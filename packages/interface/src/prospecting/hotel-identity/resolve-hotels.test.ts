@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import type { HotelCandidate } from '@odysseus/core';
 import type { HotelCandidateDocument, HotelSourceRecordDocument } from '@odysseus/store';
 import { resolveHotels, type HotelCandidateStorePort } from './resolve-hotels.js';
-import type { HotelSireneJoiner } from './hotel-sirene-join.js';
 
 /**
  * In-memory stand-in for the Mongo-backed store. It reproduces exactly the
@@ -282,26 +281,6 @@ describe('resolveHotels', () => {
     });
     expect(report.sourceRecordsRead).toBe(2);
     expect(store.list(resolutionVersion)).toHaveLength(2);
-  });
-
-  it('records that there was no identifier to join Sirene with, rather than a miss', async () => {
-    // The distinction plan 003 depends on: "we never had an identifier" is
-    // fixable, "this company is not in the qualifying set" is a rejection.
-    const joiner: HotelSireneJoiner = {
-      stockVersion: 'test',
-      join: (siren) => ({
-        status: siren === undefined ? 'no-identifier' : 'siren-not-in-qualifying-sirene-set',
-        checkedAt: new Date(),
-      }),
-    };
-    seed([sourceRow({ sourceId: 'a', declaredWebsite: 'https://www.hotel-a.fr/' })]);
-    const report = await resolveHotels({
-      store,
-      ingestRunId: runId,
-      resolutionVersion,
-      sireneJoiner: joiner,
-    });
-    expect(report.sirene).toEqual({ 'no-identifier': 1 });
   });
 
   it('does not let a row match the candidate built from that same row', async () => {

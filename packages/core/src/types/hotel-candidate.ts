@@ -126,7 +126,14 @@ export interface HotelCandidateReview {
  *  facts the catalogue supplies so a reader can always tell which register
  *  said what. `status` is present even when nothing matched, because "we
  *  looked and found nothing" and "we never had an identifier to look with"
- *  are different states and only one of them is fixable by plan 003. */
+ *  are different states.
+ *
+ *  Lives on the qualification, not on the candidate. The identifier is read
+ *  off the hotel's own page, which does not happen until the qualification
+ *  pass runs, so the join is that generation's fact. It was briefly a
+ *  candidate field, asked at resolve time with no identifier in hand, which
+ *  meant it could only ever answer "no identifier" and the effectif rule could
+ *  never fire. */
 export type HotelSireneJoinStatus =
   'matched' | 'no-identifier' | 'siren-not-in-qualifying-sirene-set' | 'stock-file-unavailable';
 
@@ -214,7 +221,6 @@ export interface HotelCandidate {
    *  groupStatus is `group-member` or `vendor-hosted`. */
   groupDomain?: string;
   groupSize?: number;
-  sireneJoin?: HotelSireneJoin;
   /** Set by plan 003's qualification pass. Absent means never evaluated,
    *  which is different from evaluated and rejected. */
   qualification?: HotelCandidateQualificationState;

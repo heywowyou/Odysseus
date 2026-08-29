@@ -268,8 +268,9 @@ means numbered entry 24, not a literal Markdown heading anchor.
     and never treats one as exact. Page roles order on
     path depth before lexicographic, so a translated subtree never displaces the
     page it translates. A prescan is inserted, never upserted, and emits no
-    `prospects` event - that collection is the AFNIC funnel's, and hotels carry
-    no SIREN. → trade-offs.md#35
+    `prospects` event - that collection is the AFNIC funnel's, and the Atout
+    France export carries no SIREN column (a hotel's own site often publishes
+    one; see trade-off 41). → trade-offs.md#35
 36. Hotel outreach evidence is a strict contract over two logical assets - a
     raw/rendered composite and a measured failure crop - plus three to five
     allowlisted summaries. Its schema has no place for selectors, exact URLs,
@@ -321,6 +322,18 @@ means numbered entry 24, not a literal Markdown heading anchor.
     fixture's provenance rather than copying the source's, and the Lighthouse
     failure line names a translated cause, never the tool's own message.
     → trade-offs.md#40
+
+41. The Sirene join runs in the qualification pass, not identity resolution: the
+    SIREN comes from the hotel's own published identification, which only the
+    site probe has read, so asking earlier could only ever answer
+    `no-identifier` (measured: it did, for all 13,301 candidates, while 3,482
+    had an identifier on their qualification row). The join is written onto the
+    qualification generation and never back onto the candidate, qualification
+    is now `v3`, and scoring reads `effectifBandCode` from there. Do not call
+    the joiner with `undefined`, and do not read `stock-file-unavailable` as a
+    fact about a hotel. `hotel-outreach-v1` is unchanged - its `effectif`
+    weight always read this field and was merely starved of input.
+    → trade-offs.md#41
 
 ## Stack
 

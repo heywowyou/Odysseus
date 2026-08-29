@@ -13,7 +13,7 @@ cross-category items (`packages/interface/src/server.ts`,
 categories (Security, Performance, Tech Debt & Architecture, Dependencies &
 Migrations, DX & Tooling, Docs, Direction) are reproduced here as reported by
 their subagents, each already self-checked against the 32 documented
-trade-offs that existed in `CLAUDE.md` at the time — there are 40 as of
+trade-offs that existed in `CLAUDE.md` at the time — there are 41 as of
 2026-08-29, so an entry may now conflict with a trade-off nobody checked it
 against. Full independent re-verification of every `file:line` in those
 categories has not yet been done. Treat those as strong leads, not yet fully

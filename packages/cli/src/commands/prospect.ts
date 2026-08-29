@@ -212,17 +212,11 @@ export function registerProspectCommand(program: Command): void {
             return;
           }
 
-          const sireneJoiner = await createHotelSireneJoiner(
-            getSireneStockPath(),
-            getSireneStockIndexCachePath(),
-          );
-
           const report = await resolveHotels({
             store: createMongoHotelCandidateStore(mongoConnection),
             ingestRunId,
             resolutionVersion: opts.resolutionVersion,
             dryRun: opts.dryRun,
-            sireneJoiner,
             ...(opts.limit !== undefined ? { limit: opts.limit } : {}),
           });
 
@@ -306,9 +300,28 @@ export function registerProspectCommand(program: Command): void {
             timeoutMs: DEFAULT_PROSPECT_FETCH_TIMEOUT_MS,
           };
 
+          // Built here rather than inside qualifyHotels so a missing stock
+          // file is reported once, at startup, instead of per candidate. The
+          // joiner itself degrades to `stock-file-unavailable` rather than
+          // throwing, because a run's verdicts must not be lost for want of an
+          // optional input.
+          const sireneJoiner = await createHotelSireneJoiner(
+            getSireneStockPath(),
+            getSireneStockIndexCachePath(),
+          );
+          if (sireneJoiner.stockVersion === null) {
+            console.error(
+              `odysseus prospect hotel-qualify: no INSEE stock file at ${getSireneStockPath()}. ` +
+                'Company size will be unknown for every hotel, so the effectif rule cannot ' +
+                'reject anyone and the effectif score component stays at zero. Download the ' +
+                'stock file or set ODYSSEUS_SIRENE_STOCK_PATH to run this pass fully.',
+            );
+          }
+
           const report = await qualifyHotels({
             store: createMongoHotelQualificationStore(mongoConnection),
             checkSite: (domain: string) => checkHotelSite(domain, originLock, checkOptions),
+            sireneJoiner,
             resolutionVersion: opts.resolutionVersion,
             qualificationVersion: opts.qualificationVersion,
             concurrency: opts.concurrency,

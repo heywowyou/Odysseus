@@ -56,7 +56,6 @@ const REFRESHABLE_FIELDS = [
   'groupStatus',
   'groupDomain',
   'groupSize',
-  'sireneJoin',
   // Derived, and the one derived field a re-run is meant to change: the point
   // of re-qualifying is that a dead domain may have come back.
   'qualification',

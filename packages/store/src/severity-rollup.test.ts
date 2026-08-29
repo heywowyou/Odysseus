@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { FINDINGS_SCHEMA_VERSION, type Finding } from '@odysseus/core';
 import { createFindingModel } from './schemas/finding.schema.js';
 import { getSeverityRollup, getSeverityRollups } from './severity-rollup.js';
@@ -9,9 +9,24 @@ const { available: mongoAvailable, connection } = await probeMongoAvailability()
 // No dropDatabase here: persist-audit.test.ts already owns dropping the
 // shared odysseus_test database in its afterAll. A second concurrent
 // dropper races against other Docker-gated test files still mid-run
-// against the same database. Unique auditId/dedupeKey values per test
-// keep this file's assertions valid without exclusive DB ownership.
+// against the same database.
+const TEST_AUDIT_IDS = ['rollup-1', 'rollup-2', 'rollup-3', 'rollup-missing'];
+
+/** Worker databases are reused between runs and never dropped, and every
+ *  finding here gets a random findingId and dedupeKey, so nothing stops a
+ *  second run inserting a second copy: the counts this file asserts grew by a
+ *  factor of the number of runs. Uniqueness is what lets them accumulate, not
+ *  what protects them. Clear before asserting as well as after, so a run
+ *  aborted mid-suite does not leave the next one counting its leftovers. */
+async function deleteTestFindings(): Promise<void> {
+  if (!connection) return;
+  await createFindingModel(connection).deleteMany({ auditId: { $in: TEST_AUDIT_IDS } });
+}
+
+beforeAll(deleteTestFindings);
+
 afterAll(async () => {
+  await deleteTestFindings();
   if (connection) await connection.close();
 });
 

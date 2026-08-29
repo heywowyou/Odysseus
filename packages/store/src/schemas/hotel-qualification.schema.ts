@@ -31,6 +31,7 @@ import type {
   HotelQualificationNote,
   HotelQualificationOutcome,
   HotelQualificationReason,
+  HotelSireneJoin,
   HotelSiteFacts,
 } from '@odysseus/core';
 
@@ -53,6 +54,13 @@ export interface HotelQualificationDocumentFields {
    *  cannot be audited: "rejected, parked-domain-page" is a claim, and the
    *  final URL and the signature that matched are the evidence for it. */
   siteFacts: HotelSiteFacts;
+  /** What INSEE said about the SIREN this probe read off the site, when there
+   *  was one to ask about. It belongs here rather than on the candidate
+   *  because the identifier does not exist until this pass has fetched the
+   *  page: a candidate is a resolution-generation document, and writing a
+   *  later pass's fact back onto it would leave two generations disagreeing
+   *  about one hotel. Absent means no join was attempted at all. */
+  sireneJoin?: HotelSireneJoin;
   evaluatedAt: Date;
   createdAt: Date;
   expiresAt: Date;
@@ -80,6 +88,7 @@ const hotelQualificationSchema = new Schema<HotelQualificationDocument>(
     reasons: { type: [String], required: true, default: [] },
     notes: { type: [String], required: true, default: [] },
     siteFacts: { type: Schema.Types.Mixed, required: true },
+    sireneJoin: { type: Schema.Types.Mixed },
     evaluatedAt: { type: Date, required: true },
     createdAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true },

@@ -5,7 +5,7 @@ import type {
   RecordHotelScoreInput,
 } from '@odysseus/store';
 import { HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION } from '@odysseus/core';
-import type { HotelPrescanEvidence, HotelSiteFacts } from '@odysseus/core';
+import type { HotelPrescanEvidence, HotelSireneJoin, HotelSiteFacts } from '@odysseus/core';
 import {
   CURRENT_SCORING_VERSION,
   scoreHotels,
@@ -149,6 +149,7 @@ interface StubOptions {
   candidates: HotelCandidateDocument[];
   prescans?: Record<string, PrescanDocument | null>;
   siteFacts?: HotelSiteFacts | null;
+  sireneJoin?: HotelSireneJoin;
   alreadyScored?: string[];
 }
 
@@ -173,7 +174,13 @@ function stubStore(options: StubOptions): {
       }
       return prescan(prescanId.replace('prescan-', ''));
     },
-    getSiteFacts: async () => options.siteFacts ?? null,
+    getQualificationFacts: async () =>
+      options.siteFacts === undefined || options.siteFacts === null
+        ? null
+        : {
+            site: options.siteFacts,
+            ...(options.sireneJoin !== undefined ? { sireneJoin: options.sireneJoin } : {}),
+          },
     findScoredCandidateIds: async () => new Set(options.alreadyScored ?? []),
     recordScores: async (inputs) => {
       recorded.push(...inputs);
@@ -215,6 +222,26 @@ describe('scoreHotels', () => {
     });
     await scoreHotels({ ...baseOptions, store });
     expect(recorded[0]?.score.ability.total).toBe(30 + 20 + 15 + 15);
+  });
+
+  it('reads the company size band from the stored qualification, not the candidate', async () => {
+    // The identifier only exists once the qualification pass has fetched the
+    // hotel's own page, so this is the only document that can carry it.
+    const { store, recorded } = stubStore({
+      candidates: [candidate('1')],
+      siteFacts: { reachability: 'ok' },
+      sireneJoin: {
+        status: 'matched',
+        stockVersion: 'stock-test',
+        denomination: 'HOTEL EXEMPLE',
+        naf: '55.10Z',
+        effectifBandCode: '21',
+        etatAdministratif: 'A',
+        checkedAt: new Date(),
+      },
+    });
+    await scoreHotels({ ...baseOptions, store });
+    expect(recorded[0]?.score.ability.total).toBe(20 + 15 + 20 + 15);
   });
 
   it('writes nothing on a dry run and reports the population it would score', async () => {

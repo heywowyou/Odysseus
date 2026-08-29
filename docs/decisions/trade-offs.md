@@ -1936,6 +1936,59 @@ cap instead; that decision is the operator's.
     a message shape nobody has seen yet must degrade to plain language, not leak.
 
 
+### 41. The Sirene join belongs to the qualification pass, not to identity resolution
+
+**Context.** The hotel funnel has a rule that parks an establishment too small
+to plausibly be in scope: fewer than ten employees *and* a small capacity. The
+employee half comes from INSEE, and INSEE is asked by SIREN. Identity resolution
+was the pass calling the joiner, and identity resolution runs before anything has
+visited the hotel's website. The Atout France export carries no SIREN column, so
+that call could only ever be made with `undefined`.
+
+**Measured 2026-08-29 against the live catalogue.** Every one of the 13,301
+candidates carried `sireneJoin.status = 'stock-file-unavailable'`, and 3,482 of
+them - 3,472 of the 5,995 qualified, 58 percent - already had a SIREN sitting on
+their qualification row, read off their own published identification by the site
+probe. So the identifier existed for well over half the population, and nothing
+had ever been asked about any of it. The effectif rule had never fired for a
+single hotel, and the `effectif` scoring component had been zero for the whole
+cohort. Two separate defects, not one: the join was called with nothing to look
+with, and there is no INSEE stock file on this machine to look in.
+
+**Decision.** The join moves onto the qualification generation, and the
+qualification version bumps to `v3`.
+
+- `qualify-hotels.ts` asks INSEE only when its own probe recovered an
+  identifier, and writes the answer onto the qualification record. It does not
+  call the joiner with `undefined`: "we never had anything to look with" is said
+  better by an absent join than by a join reporting an absence.
+- The join is *not* written back onto the candidate. A candidate is a
+  resolution-generation document; a fact discovered by a later pass does not
+  belong to an earlier generation, and writing it there would leave two
+  generations disagreeing about one hotel. `HotelSireneJoin` and its Mixed
+  schema field moved from the candidate to the qualification accordingly, and
+  `sireneJoin` left `REFRESHABLE_FIELDS`.
+- `score-hotels.ts` reads `effectifBandCode` from the qualification through
+  `getQualificationFacts`, which now returns the site facts and the join
+  together.
+- The joiner is built once in the CLI rather than per candidate, so a missing
+  stock file is reported at startup with what its absence costs, not silently.
+
+**Not a new scoring version.** The `hotel-outreach-v1` `effectif` weight always
+read `effectifBandCode`; it was specified correctly and starved of input.
+Supplying the input it was written to read is not the "broadening what a weight
+reads" that trade-off 38 forbids. Scores are insert-only, so a re-score is a new
+generation under the same approved weights.
+
+**Parked, deliberately.** `data/sirene/` is empty on this machine, so the v3
+backfill and the re-score cannot run yet. The code is wired and tested with an
+injected joiner; the run waits on the operator placing
+`data/sirene/stock-unite-legale.csv` (or setting `ODYSSEUS_SIRENE_STOCK_PATH`).
+Until then every join reports `stock-file-unavailable`, which is a fact about the
+operator's inputs and must never be read as a fact about a hotel - which is
+exactly why that status stays distinct from a miss.
+
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

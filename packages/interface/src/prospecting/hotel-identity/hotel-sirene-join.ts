@@ -8,18 +8,23 @@
  * the active-establishment filter, and a parallel implementation would drift
  * from those rules silently.
  *
- * **This join matches almost nothing today, and that is expected rather than a
- * defect.** The Atout France export carries no SIRET and no SIREN column
- * (measured, see advisor-plans/README.md), so a candidate reaches this stage
- * with no identifier at all. The identifier arrives in plan 003, from the
- * hotel's own published identification via the shipped mentions-legales path.
- * The seam is built now so that plan is a drop-in rather than a refactor.
+ * **Called from the qualification pass, not from identity resolution.** The
+ * Atout France export carries no SIRET and no SIREN column (measured, see
+ * advisor-plans/README.md); the identifier comes from the hotel's own
+ * published identification, which the qualification site probe reads. Asking
+ * before that page has been fetched can only ever answer `no-identifier`,
+ * which is what happened for the whole of v1 and v2 and is why the effectif
+ * rule never fired for a single hotel.
  *
- * Because of that, `no-identifier` is a first-class status rather than a
- * flavour of "not found". "We never had anything to look with" is fixable by
- * plan 003; "we looked and this company is not in the qualifying set" is a real
- * disqualification. Collapsing the two would make the first look like the
- * second and hide the entire reason the population is small.
+ * `no-identifier` remains a first-class status rather than a flavour of "not
+ * found". "We never had anything to look with" and "we looked and this company
+ * is not in the qualifying set" are different facts, and only the second is a
+ * disqualification. Collapsing them would hide why a population is small.
+ *
+ * `stock-file-unavailable` is a third such fact and the loudest one: it means
+ * the operator has not placed the INSEE stock file, so nobody has been asked
+ * about anything. Treating it as a miss would report every hotel as failing a
+ * check that was never run.
  */
 
 import { existsSync } from 'node:fs';
