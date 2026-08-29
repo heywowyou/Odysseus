@@ -1,5 +1,5 @@
 import type { Connection } from 'mongoose';
-import { isValidSiren } from '@odysseus/core';
+import { isHttpUrlWithoutCredentials, isValidSiren } from '@odysseus/core';
 import {
   createJob,
   getJob,
@@ -10,19 +10,6 @@ import {
 import type { Router } from '../router.js';
 import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
-
-/** Without the protocol check, any string that merely parses as a URL
- *  (including file:// and javascript:) was accepted and could reach the
- *  scanner's own navigation. */
-function isValidUrl(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
 
 /** Minimal glob shape check, not a compiler: routes/scans.ts's boundary
  *  only needs to reject garbage early (rule: fail fast at the boundary,
@@ -89,7 +76,7 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
 
   const rawSeeds = record['seeds'];
   if (Array.isArray(rawSeeds) && rawSeeds.length > 0) {
-    if (!rawSeeds.every(isValidUrl)) {
+    if (!rawSeeds.every(isHttpUrlWithoutCredentials)) {
       throw new OptionsValidationError('seeds must be an array of valid URLs');
     }
     options.seeds = rawSeeds;
@@ -105,7 +92,7 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
 
   const rawBookingEngineUrl = record['bookingEngineUrl'];
   if (typeof rawBookingEngineUrl === 'string' && rawBookingEngineUrl.trim() !== '') {
-    if (!isValidUrl(rawBookingEngineUrl)) {
+    if (!isHttpUrlWithoutCredentials(rawBookingEngineUrl)) {
       throw new OptionsValidationError('bookingEngineUrl must be a valid URL');
     }
     options.bookingEngineUrl = rawBookingEngineUrl;
@@ -139,8 +126,8 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
 
     if (parsed['type'] === 'full-audit') {
       const url = parsed['url'];
-      if (!isValidUrl(url)) {
-        sendError(res, 400, 'url must be a valid URL');
+      if (!isHttpUrlWithoutCredentials(url)) {
+        sendError(res, 400, 'url must be an absolute http(s) URL without embedded credentials');
         return;
       }
       let options: JobOptionsSnapshot;
@@ -163,7 +150,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
 
     if (parsed['type'] === 'prospecting') {
       const urls = parsed['urls'];
-      if (!Array.isArray(urls) || urls.length === 0 || !urls.every(isValidUrl)) {
+      if (!Array.isArray(urls) || urls.length === 0 || !urls.every(isHttpUrlWithoutCredentials)) {
         sendError(res, 400, 'urls must be a non-empty array of valid URLs');
         return;
       }

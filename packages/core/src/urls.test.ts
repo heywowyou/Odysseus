@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findContactPageUrl } from './urls.js';
+import { findContactPageUrl, isHttpUrlWithoutCredentials } from './urls.js';
 
 describe('findContactPageUrl', () => {
   it.each([
@@ -27,5 +27,30 @@ describe('findContactPageUrl', () => {
 
   it('is null for an empty list', () => {
     expect(findContactPageUrl([])).toBeNull();
+  });
+});
+
+describe('isHttpUrlWithoutCredentials', () => {
+  it.each([
+    'https://hotel-exemple.fr',
+    'http://hotel-exemple.fr/chambres',
+    'https://www.hotel-exemple.fr/reservation?nuit=2',
+  ])('accepts %s', (url) => {
+    expect(isHttpUrlWithoutCredentials(url)).toBe(true);
+  });
+
+  it.each([
+    'https://user:pass@hotel-exemple.fr',
+    'https://user@hotel-exemple.fr',
+    'https://:pass@hotel-exemple.fr',
+    'ftp://hotel-exemple.fr',
+    'file:///etc/hostname',
+    'javascript:alert(1)',
+    'not a url',
+    '',
+    42,
+    null,
+  ])('rejects %s', (value) => {
+    expect(isHttpUrlWithoutCredentials(value)).toBe(false);
   });
 });

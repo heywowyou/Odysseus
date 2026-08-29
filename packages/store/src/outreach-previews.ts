@@ -12,6 +12,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { Connection } from 'mongoose';
+import { normalizeDomainForHash } from '@odysseus/core';
 import {
   createOutreachPreviewModel,
   type OutreachPreviewDocument,
@@ -147,12 +148,17 @@ export async function listOutreachPreviews(
 
 /** Every preview for a domain that is still live. This is what an objection
  *  acts on: suppression stops future contact, and this stops the link that is
- *  already in someone's inbox. */
+ *  already in someone's inbox. The domain is normalized through the same
+ *  core function the suppression collection uses on both of its paths (see
+ *  ../suppression.ts), so the two halves of one `prospect object` run can
+ *  never disagree about the spelling of the host: an objection arriving as
+ *  `https://www.hotel-a.fr/` must both suppress and revoke against the bare
+ *  registrable domain a prescan records. */
 export async function listLivePreviewsForDomain(
   connection: Connection,
   domain: string,
 ): Promise<OutreachPreviewDocument[]> {
   return createOutreachPreviewModel(connection)
-    .find({ domain, status: 'live' })
+    .find({ domain: normalizeDomainForHash(domain), status: 'live' })
     .lean<OutreachPreviewDocument[]>();
 }

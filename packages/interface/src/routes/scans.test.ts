@@ -165,6 +165,19 @@ describe('POST /api/scans URL scheme validation', () => {
     expect(createJob).not.toHaveBeenCalled();
   });
 
+  it('rejects a url carrying embedded credentials, never creating a job', async () => {
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+
+    const req = fakeReq({ type: 'full-audit', url: 'https://user:pass@example.com/' });
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body ?? '{}').error).toMatch(/credentials/i);
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
   it('accepts an https:// url', async () => {
     const router = new Router();
     registerScanRoutes(router, fakeConnection, fakeQueue);

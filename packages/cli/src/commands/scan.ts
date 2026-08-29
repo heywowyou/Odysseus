@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
 import { buildAuditDir, getArtifactsRoot, launchBrowser, scanSite } from '@odysseus/scanner';
+import { isHttpUrlWithoutCredentials } from '@odysseus/core';
 import { parseSirenOption } from '../parse-siren-option.js';
 import { parseBooleanOption } from '../parse-boolean-option.js';
 
@@ -49,10 +50,10 @@ export function registerScanCommand(program: Command): void {
           overrideTransactionalFlowReason?: string;
         },
       ) => {
-        try {
-          new URL(url);
-        } catch {
-          console.error(`odysseus scan: "${url}" is not a valid URL`);
+        if (!isHttpUrlWithoutCredentials(url)) {
+          console.error(
+            `odysseus scan: "${url}" must be an absolute http(s) URL without embedded credentials`,
+          );
           process.exitCode = 1;
           return;
         }

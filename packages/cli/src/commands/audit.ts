@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
 import { runAuditStage } from '@odysseus/interface';
-import type { SiteSignalOverrides } from '@odysseus/core';
+import { isHttpUrlWithoutCredentials, type SiteSignalOverrides } from '@odysseus/core';
 import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
 import { parseSirenOption } from '../parse-siren-option.js';
 import { parseBooleanOption } from '../parse-boolean-option.js';
@@ -52,10 +52,10 @@ export function registerAuditCommand(program: Command): void {
           overrideTransactionalFlowReason?: string;
         },
       ) => {
-        try {
-          new URL(url);
-        } catch {
-          console.error(`odysseus audit: "${url}" is not a valid URL`);
+        if (!isHttpUrlWithoutCredentials(url)) {
+          console.error(
+            `odysseus audit: "${url}" must be an absolute http(s) URL without embedded credentials`,
+          );
           process.exitCode = 1;
           return;
         }

@@ -33,3 +33,24 @@ export const CONTACT_PATH_PATTERN = /(nous-contacter|contactez|coordonnees|\bcon
 export function findContactPageUrl(pageUrls: readonly string[]): string | null {
   return pageUrls.find((url) => CONTACT_PATH_PATTERN.test(url)) ?? null;
 }
+
+/**
+ * True for an absolute http(s) URL that carries no embedded credentials.
+ * This is the shape every entry point that feeds the crawler must accept:
+ * without the protocol check, any string that merely parses as a URL
+ * (including file:// and javascript:) could reach the scanner's own
+ * navigation, and credentials in a URL are a phishing shape for the same
+ * reason the outreach preview link schema states (`https://user:pass@host`
+ * points somewhere other than the visible host suggests). One definition in
+ * core, so the dashboard boundary and the CLI commands cannot disagree.
+ */
+export function isHttpUrlWithoutCredentials(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    return parsed.username === '' && parsed.password === '';
+  } catch {
+    return false;
+  }
+}

@@ -139,6 +139,28 @@ describe.skipIf(!mongoAvailable)('outreach previews', () => {
     expect(rows.map((row) => row.previewId)).toEqual([live.previewId]);
   });
 
+  it('canonicalizes the objection domain the same way suppression does', async () => {
+    if (!connection) return;
+    const live = await recordOutreachPreview(connection, input({ domain: 'hotel-a.fr' }));
+
+    // An objection can arrive as whatever the hotel or their agency copied
+    // out of an email. Each of these must land on the same record the bare
+    // domain reaches, or the command would report `suppressed: true` while
+    // the link stayed served.
+    for (const spelling of [
+      'https://www.hotel-a.fr/',
+      'WWW.HOTEL-A.FR',
+      'www.hotel-a.fr/chambres',
+      'hotel-a.fr.',
+    ]) {
+      const rows = await listLivePreviewsForDomain(connection, spelling);
+      expect(
+        rows.map((row) => row.previewId),
+        spelling,
+      ).toEqual([live.previewId]);
+    }
+  });
+
   it('filters and orders the operator listing newest first', async () => {
     if (!connection) return;
     const older = await recordOutreachPreview(
