@@ -37,6 +37,8 @@ export {
   // visible From line on every draft - and plan 012's mailbox reconciliation
   // needs it to tell our own confirmed sends from inbound replies, so it is
   // exported alongside the canonical touch spacing it also needs.
+  // MAILBOX_ENV_VARS is the matching list of names only, never values.
+  MAILBOX_ENV_VARS,
   isMailboxConfigured,
   missingMailboxEnvVars,
   getMailboxSenderAddress,

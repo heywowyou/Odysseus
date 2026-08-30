@@ -14,6 +14,7 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { MAILBOX_ENV_VARS } from '@odysseus/interface';
 import { findWorkspaceRoot } from '@odysseus/scanner';
 
 const WORKSPACE_ROOT = findWorkspaceRoot();
@@ -30,11 +31,13 @@ interface SpawnResult {
 
 function runCli(args: string[]): Promise<SpawnResult> {
   const env: NodeJS.ProcessEnv = { ...process.env, MONGODB_URI: UNREACHABLE_MONGO };
-  // No mailbox is provisioned yet, and these tests must describe that state
-  // rather than whatever happens to be in the developer's shell.
-  for (const key of Object.keys(env)) {
-    if (key.startsWith('ODYSSEUS_MAILBOX_')) delete env[key];
-  }
+  // These tests must describe a machine with no mailbox rather than whatever
+  // happens to be in the developer's shell or checkout. Every mailbox
+  // variable is planted as an empty string instead of deleted: the config
+  // layer's process.loadEnvFile does not override variables that are already
+  // present, so deletion stopped being enough once a live mailbox was
+  // provisioned into .env, and an empty string counts as unset in config.ts.
+  for (const name of MAILBOX_ENV_VARS) env[name] = '';
   return new Promise((resolve, reject) => {
     const child = spawn(TSX_BIN, [CLI_ENTRY, ...args], { cwd: WORKSPACE_ROOT, env });
     let stdout = '';
