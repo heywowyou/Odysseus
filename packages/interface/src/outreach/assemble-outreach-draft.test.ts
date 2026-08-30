@@ -45,6 +45,19 @@ function touch3ExpectedFacts(): OutreachFactsBlock {
   });
 }
 
+/** The greeting belongs to the assembler alone. The model's own fields are
+ *  kept clear of one upstream, by outreach-vocabulary-guard's
+ *  leading-salutation rule; this asserts the visible consequence, which is
+ *  what a real touch 1 read-through caught failing: the recipient saw
+ *  "Bonjour," and then "Bonjour, nous avons regarde...". */
+const LEADING_GREETING = /^\s*(?:bonjour|bonsoir|salut|madame|monsieur|hello|hi|hey|dear)\b/iu;
+
+function assertGreetsExactlyOnce(body: string): void {
+  const paragraphs = body.split('\n\n');
+  expect(paragraphs.filter((paragraph) => LEADING_GREETING.test(paragraph))).toHaveLength(1);
+  expect(paragraphs[0]).toMatch(LEADING_GREETING);
+}
+
 describe('assembleOutreachDraft - touch 1', () => {
   it('assembles a complete draft', () => {
     const result = assembleOutreachDraft({
@@ -59,6 +72,7 @@ describe('assembleOutreachDraft - touch 1', () => {
 
     expect(result.subject).toBe(TOUCH1_PROSE.subject);
     expect(result.body).toContain('Bonjour,');
+    assertGreetsExactlyOnce(result.body);
     expect(result.body).toContain(TOUCH1_PROSE.opening);
     expect(result.body).toContain(TOUCH1_PROSE.evidenceSentence);
     expect(result.body).toContain(TOUCH1_PROSE.question);

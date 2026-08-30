@@ -25,7 +25,7 @@ function touch1Output(
     touch: 1,
     evidenceRef: 'e1',
     subject: 'Un point rapide sur votre site',
-    opening: 'Bonjour, nous avons regardé la version publique de votre site.',
+    opening: 'Nous avons regardé la version publique de votre site.',
     evidenceSentence: "Une partie du contenu ne s'affiche pas sans JavaScript.",
     question: 'Est-ce que cela correspond à ce que vos visiteurs voient ?',
     ...overrides,

@@ -84,18 +84,52 @@ describe('findOutreachVocabularyViolations', () => {
     expect(violations).toContainEqual(expect.objectContaining({ rule: 'predates-2025-answer' }));
   });
 
-  it('flags a named salutation but not a generic one', () => {
+  it('flags a named salutation, and only that rule, for an invented proper name', () => {
     const named = findOutreachVocabularyViolations(
-      field('Cher Jean, nous avons remarqué...'),
+      field('Nous avons remarqué, cher Jean, un point sur votre site.'),
       'fr',
     );
     expect(named).toContainEqual(expect.objectContaining({ rule: 'named-salutation' }));
 
     const generic = findOutreachVocabularyViolations(
-      field('Cher Monsieur, nous avons remarqué...'),
+      field('Nous avons remarqué, cher Monsieur, un point sur votre site.'),
       'fr',
     );
     expect(generic.some((v) => v.rule === 'named-salutation')).toBe(false);
+  });
+
+  // The assembler splices its own greeting above the prose, so a field that
+  // opens with one gives the reader two - the defect a real touch 1
+  // read-through surfaced.
+  it('flags a generic greeting at the head of a field', () => {
+    for (const opening of [
+      'Bonjour, nous avons regardé la version publique de votre site.',
+      'Bonsoir, un point rapide sur votre site.',
+      'Madame, nous avons regardé votre site.',
+      'Cher Monsieur, nous avons regardé votre site.',
+    ]) {
+      expect(findOutreachVocabularyViolations(field(opening), 'fr')).toContainEqual(
+        expect.objectContaining({ rule: 'leading-salutation' }),
+      );
+    }
+
+    for (const opening of [
+      'Hello, we had a look at the public version of your site.',
+      'Hi there, one quick point about your site.',
+      'Good morning, we had a look at your site.',
+    ]) {
+      expect(findOutreachVocabularyViolations(field(opening), 'en')).toContainEqual(
+        expect.objectContaining({ rule: 'leading-salutation' }),
+      );
+    }
+  });
+
+  it('leaves a greeting word alone when it is not the opening of the field', () => {
+    const violations = findOutreachVocabularyViolations(
+      field('Un visiteur qui arrive ne voit aucun bonjour, seulement une page vide.'),
+      'fr',
+    );
+    expect(violations.some((v) => v.rule === 'leading-salutation')).toBe(false);
   });
 
   it('flags the same categories in English', () => {

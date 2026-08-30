@@ -66,14 +66,14 @@ describe('normalizeOutreachOutputTypography', () => {
       touch: 1,
       evidenceRef: 'e1',
       subject: 'Un « point rapide »',
-      opening: 'Bonjour – nous avons regardé votre site.',
+      opening: 'Un point – nous avons regardé votre site.',
       evidenceSentence: 'Une partie du contenu « ne s’affiche pas ».',
       question: 'Est-ce voulu ?',
     };
     const out = normalizeOutreachOutputTypography(output, 'fr');
     if (out.touch !== 1) throw new Error('expected touch 1');
     expect(out.subject).toBe(`Un «${NBSP}point rapide${NBSP}»`);
-    expect(out.opening).toBe('Bonjour - nous avons regardé votre site.');
+    expect(out.opening).toBe('Un point - nous avons regardé votre site.');
     expect(out.evidenceSentence).toContain(`«${NBSP}ne s’affiche pas${NBSP}»`);
     expect(out.question).toBe('Est-ce voulu ?');
   });

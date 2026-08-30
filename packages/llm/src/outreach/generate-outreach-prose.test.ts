@@ -56,7 +56,7 @@ function cleanTouch1Output(overrides: Partial<Extract<OutreachProseOutput, { tou
     evidenceRef: 'e1' as const,
     subject: "Un point sur l'affichage de votre site",
     opening:
-      "Bonjour, nous avons regardé la version publique de votre site il y a quelques jours dans le cadre d'un test rapide sur la manière dont elle s'affiche pour un nouveau visiteur.",
+      "Nous avons regardé la version publique de votre site il y a quelques jours dans le cadre d'un test rapide sur la manière dont elle s'affiche pour un nouveau visiteur.",
     evidenceSentence:
       "Une partie du contenu de la page ne s'affiche pas correctement sans JavaScript, ce qui peut gêner certains visiteurs qui découvrent votre établissement pour la première fois.",
     question:
@@ -126,7 +126,7 @@ describe('generateOutreachProse - clean pass across touches', () => {
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
           opening:
-            "Bonjour – nous avons regardé la version publique de votre site il y a quelques jours dans le cadre d'un test rapide sur la manière dont elle s'affiche pour un nouveau visiteur.",
+            "Nous avons – rapidement – regardé la version publique de votre site il y a quelques jours dans le cadre d'un test rapide sur la manière dont elle s'affiche pour un nouveau visiteur.",
         }),
       });
 

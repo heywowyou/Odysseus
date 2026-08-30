@@ -11,7 +11,7 @@ function touch1Output(evidenceSentence: string): OutreachProseOutput {
     touch: 1,
     evidenceRef: 'e1',
     subject: 'Un point rapide sur votre site',
-    opening: 'Bonjour, nous avons regardé la version publique de votre site.',
+    opening: 'Nous avons regardé la version publique de votre site.',
     evidenceSentence,
     question: 'Est-ce que cela correspond à ce que vos visiteurs voient ?',
   };

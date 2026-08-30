@@ -10,12 +10,13 @@ import type { ProseField } from '../../prose-fields.js';
  * section 4 (statistics), section 9 (conformity claim, competitor, free-mail,
  * price/offer, "predates 2025" answer), and this plan's own doctrine
  * decisions (meeting/phone ask keeps the automation boundary at the draft,
- * never the send or a call; named salutation because the salutation itself
- * is spliced by the assembler, never generated; curiosity-gap subject lines
+ * never the send or a call; both salutation rules because the salutation
+ * itself is spliced by the assembler, never generated; curiosity-gap subject
+ * lines
  * read as mass-mail tooling, the opposite of the one-verifiable-fact posture
  * argument A depends on).
  *
- * OUTREACH_PROHIBITED_EXAMPLES is the same nine categories restated as
+ * OUTREACH_PROHIBITED_EXAMPLES is the same ten categories restated as
  * concrete example strings for the system prompt (outreach-prompt.ts), kept
  * in this module so the two cannot drift apart the way SEVERITY_VOCABULARY
  * and the report's own severity strings are kept paired in one file.
@@ -78,6 +79,30 @@ const PREDATES_2025_PATTERNS: Record<ReportLanguage, RegExp[]> = {
   en: [/\bpredates june 2025\b/i, /\bbefore june 2025\b/i],
 };
 
+/**
+ * The assembler always opens the body with its own greeting paragraph
+ * (`copy.salutation` in outreach-draft-copy.ts), so any greeting the model
+ * puts at the head of a field becomes the reader's *second* one. That is
+ * exactly what a touch 1 read-through produced: "Bonjour," followed by
+ * "Bonjour, nous avons regarde la version publique de votre site." - a first
+ * line that reads like a broken mail merge, on a message whose argument is
+ * that we notice details others miss.
+ *
+ * Anchored at the start of the field on purpose. The rule is about who owns
+ * the opening line, not about the words themselves: "bonjour" mid-sentence is
+ * ordinary prose, and there is no legitimate reason for a field to begin with
+ * a form of address. Stating it here rather than in the prompt keeps it an
+ * enforcement instead of a request (trade-off 11), and stating it once here
+ * rather than half here and half in the assembler is why the guard now
+ * rejects the generic case it used to permit.
+ */
+const LEADING_SALUTATION_PATTERNS: Record<ReportLanguage, RegExp[]> = {
+  fr: [
+    /^\s*(?:bonjour|bonsoir|salut|coucou|madame|monsieur|mesdames|messieurs|cher|chers|chère|chères)\b/iu,
+  ],
+  en: [/^\s*(?:hello|hi|hey|greetings|dear|good (?:morning|afternoon|evening))\b/iu],
+};
+
 /** madame/monsieur/sir/team etc are generic forms of address, not a name the
  *  model invented - a salutation is spliced by the assembler, so the model
  *  should not write one at all, but only an invented proper name is worth a
@@ -137,6 +162,13 @@ export function findOutreachVocabularyViolations(
     pushIfMatch(violations, field, text, 'free-mail', FREE_MAIL_PATTERNS);
     pushIfMatch(violations, field, text, 'price-or-offer', PRICE_PATTERNS[language]);
     pushIfMatch(violations, field, text, 'predates-2025-answer', PREDATES_2025_PATTERNS[language]);
+    pushIfMatch(
+      violations,
+      field,
+      text,
+      'leading-salutation',
+      LEADING_SALUTATION_PATTERNS[language],
+    );
 
     const salutation = checkNamedSalutation(text);
     if (salutation !== null) {
@@ -163,6 +195,7 @@ export const OUTREACH_PROHIBITED_EXAMPLES: Record<ReportLanguage, string[]> = {
     'Vos concurrents ont déjà corrigé ce point',
     'Un rapide appel téléphonique pour en discuter ?',
     'Cher Jean,',
+    'Bonjour, nous avons regardé votre site',
     'Notre audit RGAA officiel de votre site',
     'Contactez-nous à contact@gmail.com',
     'Notre offre à 1 600 EUR HT',
@@ -174,6 +207,7 @@ export const OUTREACH_PROHIBITED_EXAMPLES: Record<ReportLanguage, string[]> = {
     'Your competitors have already fixed this',
     'A quick phone call to discuss?',
     'Dear John,',
+    'Hello, we had a look at your site',
     'Our official RGAA audit of your site',
     'Reach us at contact@gmail.com',
     'Our offer at EUR 1,600',

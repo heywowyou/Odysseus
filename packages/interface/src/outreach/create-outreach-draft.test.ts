@@ -90,7 +90,7 @@ function prose(): { output: unknown; model: string; temperature: number } {
     output: {
       touch: 1,
       subject: 'Votre site et vos réservations',
-      opening: 'Bonjour, je me permets de vous écrire au sujet de votre site.',
+      opening: 'Je me permets de vous écrire au sujet de votre site.',
       evidenceSentence: 'Un point de votre parcours de réservation ne se termine pas correctement.',
       question: 'Souhaitez-vous que je vous montre ce que nous avons observé ?',
     },

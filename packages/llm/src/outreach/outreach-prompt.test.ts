@@ -64,7 +64,7 @@ describe('buildOutreachSystemPrompt - touch 1', () => {
     const prompt = buildOutreachSystemPrompt(touch1Input());
     expect(prompt).toContain('Any mention of a competitor');
     expect(prompt).toContain('phone call or a meeting');
-    expect(prompt).toContain('named salutation');
+    expect(prompt).toContain('A greeting of any kind');
     expect(prompt).toContain('free-mail address');
     expect(prompt).toContain('offer price');
     expect(prompt).toContain('curiosity-gap subject line');

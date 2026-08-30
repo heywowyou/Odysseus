@@ -52,7 +52,7 @@ function prohibitionsBlock(language: ReportLanguage): string {
 - A conclusion about whether this business is legally bound by any regulation, a deadline, a sanction amount, or any other legal consequence. That determination belongs to a separate, code-generated block you never see and never write.
 - Any mention of a competitor.
 - Any request for a phone call or a meeting - the only next step this message may ask for is a reply.
-- A named salutation ("Cher <name>", "Dear <name>") - the greeting is written by code, not by you.
+- A greeting of any kind, named ("Cher <name>", "Dear <name>") or generic ("Bonjour,", "Hello,"). Never open a field with one: the greeting is written by code and placed above your text, so yours would be the second one the reader sees.
 - A free-mail address (gmail, yahoo, hotmail, outlook, free.fr, orange.fr, laposte.net) or an email address of any kind - the reply address is added by code, not by you.
 - The offer price, a currency amount, or a description of the offer itself.
 - A curiosity-gap subject line ("Quick question", "Question rapide") - state plainly what the message is about instead.
