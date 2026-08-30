@@ -96,7 +96,7 @@ function useAuditDetail(auditId: string | undefined): AuditDetailState {
 
 function DetectedHint({ visible, label }: { visible: boolean; label: string }): JSX.Element | null {
   if (!visible) return null;
-  return <p className="mt-1.5 text-xs text-accent">{label}</p>;
+  return <p className="mt-1.5 text-xs text-accent-bright">{label}</p>;
 }
 
 const FRESHNESS_TONES: Record<ReportFreshness, BadgeTone> = {
@@ -376,7 +376,7 @@ function EnrichmentCard(props: {
     : sirenCheck.kind === 'resolved'
       ? {
           text: `${strings.auditDetail.sirenResolvedPrefix} ${sirenCheck.denomination}`,
-          tone: 'text-accent',
+          tone: 'text-accent-bright',
         }
       : sirenCheck.kind === 'unresolved'
         ? { text: strings.auditDetail.sirenNotResolvedMessage, tone: 'text-ink-muted' }
@@ -565,15 +565,20 @@ export function AuditDetailPage(): JSX.Element {
         }
       />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {SEVERITIES.map((severity) => (
-          <KpiTile
+        {SEVERITIES.map((severity, slot) => (
+          <div
             key={severity}
-            label={strings.common.severityLabels[severity]}
-            value={data.severityRollup[severity]}
-            tone={
-              severity === 'critical' && data.severityRollup.critical > 0 ? 'critical' : 'default'
-            }
-          />
+            style={{ animationDelay: `${slot * 50}ms` }}
+            className="animate-page-in"
+          >
+            <KpiTile
+              label={strings.common.severityLabels[severity]}
+              value={data.severityRollup[severity]}
+              tone={
+                severity === 'critical' && data.severityRollup.critical > 0 ? 'critical' : 'default'
+              }
+            />
+          </div>
         ))}
       </div>
       <div className="mt-6 flex flex-col gap-6">

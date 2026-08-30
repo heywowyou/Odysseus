@@ -23,7 +23,11 @@
   operator; that read is what flips this plan to `DONE`). One deviation from
   the plan text: slices 3-6 were built by four agents working concurrently in
   one tree, so their commits collapse into the single `0c12feb`. The durable
-  stack boundary is trade-off 59.
+  stack boundary is trade-off 59. After the operator's first review, the
+  palette moved from the report-inspired violet to a Linear-faithful one
+  (neutral near-black surfaces, indigo accent; the severity palette stays the
+  report-brand exception) and entrance, shimmer, drawer, and dialog
+  animations were added; all checks re-run green.
 
 ## Why this matters
 

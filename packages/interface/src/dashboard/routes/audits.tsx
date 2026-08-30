@@ -158,7 +158,7 @@ export function AuditsPage(): JSX.Element {
                             the row target; the row click is the mouse shortcut. */}
                         <Link
                           to={target}
-                          className="font-medium text-ink hover:text-accent"
+                          className="font-medium text-ink hover:text-accent-bright"
                           onClick={(event) => event.stopPropagation()}
                         >
                           {site === '' ? strings.common.unknownSite : site}
@@ -219,15 +219,29 @@ export function AuditsPage(): JSX.Element {
         }
       />
 
+      {/* Staggered entrance: each tile starts 50 ms after the previous one,
+          with the animation's backwards fill keeping late tiles invisible
+          until their turn. */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiTile label={strings.audits.kpiRunning} value={kpis.running} />
-        <KpiTile label={strings.audits.kpiComplete} value={kpis.complete} />
-        <KpiTile label={strings.audits.kpiFailed} value={kpis.failed} />
-        <KpiTile
-          label={strings.audits.kpiCritical}
-          value={kpis.critical}
-          tone={kpis.critical > 0 ? 'critical' : 'default'}
-        />
+        {[
+          <KpiTile key="running" label={strings.audits.kpiRunning} value={kpis.running} />,
+          <KpiTile key="complete" label={strings.audits.kpiComplete} value={kpis.complete} />,
+          <KpiTile key="failed" label={strings.audits.kpiFailed} value={kpis.failed} />,
+          <KpiTile
+            key="critical"
+            label={strings.audits.kpiCritical}
+            value={kpis.critical}
+            tone={kpis.critical > 0 ? 'critical' : 'default'}
+          />,
+        ].map((tile, slot) => (
+          <div
+            key={tile.key}
+            style={{ animationDelay: `${slot * 50}ms` }}
+            className="animate-page-in"
+          >
+            {tile}
+          </div>
+        ))}
       </div>
 
       <Card className="mb-4">

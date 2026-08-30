@@ -5,9 +5,9 @@ import { cn } from '../../lib/cn';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md';
 
-/* Dark text on the violet primary keeps the label at WCAG AA contrast. */
+/* White on Linear indigo keeps the label at WCAG AA contrast (4.7:1). */
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-[#101117] hover:bg-[#9d99f6]',
+  primary: 'bg-accent text-[#f7f8f8] hover:bg-accent-strong',
   secondary: 'border border-line-strong bg-raised text-ink hover:bg-overlay',
   ghost: 'text-ink-soft hover:bg-raised hover:text-ink',
   danger: 'border border-danger/40 bg-transparent text-danger hover:bg-danger/10',
@@ -21,7 +21,8 @@ const SIZE_STYLES: Record<ButtonSize, string> = {
 export function buttonStyles(variant?: ButtonVariant, size?: ButtonSize): string {
   return cn(
     'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium',
-    'transition-colors disabled:pointer-events-none disabled:opacity-50',
+    'transition-all duration-150 active:scale-[0.98]',
+    'disabled:pointer-events-none disabled:opacity-50',
     VARIANT_STYLES[variant ?? 'primary'],
     SIZE_STYLES[size ?? 'md'],
   );

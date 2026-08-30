@@ -77,8 +77,11 @@ export function AppShell() {
 
       {menuOpen ? (
         <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMenuOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-line bg-panel">
+          <div
+            className="absolute inset-0 animate-overlay-in bg-black/60"
+            onClick={() => setMenuOpen(false)}
+          />
+          <aside className="absolute inset-y-0 left-0 flex w-64 animate-drawer-in flex-col border-r border-line bg-panel">
             <div className="flex items-center justify-between px-4 py-3">
               <Brand layout="topbar" />
               <button
@@ -99,7 +102,12 @@ export function AppShell() {
       ) : null}
 
       <div className="md:pl-60">
-        <main className="mx-auto w-full max-w-5xl px-4 pb-16 pt-16 md:px-8 md:pt-10">
+        {/* Keyed by pathname so each navigation remounts the page container
+            and replays the entrance animation. */}
+        <main
+          key={pathname}
+          className="mx-auto w-full max-w-5xl animate-page-in px-4 pb-16 pt-16 md:px-8 md:pt-10"
+        >
           <Outlet />
         </main>
       </div>
