@@ -13,18 +13,28 @@
 - **Depends on**: plans 001-012
 - **Category**: direction
 - **Planned at**: `f7ef7cf`, 2026-08-27
+- **Rebased 2026-08-30** onto the React dashboard SPA that plan 017 shipped
+  (operator-approved at plan approval time): the pages below are dashboard
+  routes in `packages/interface/src/dashboard/` backed by JSON API routes in
+  `packages/interface/src/routes/`, not server-rendered Nocturne templates.
+  Basis: plan 017 states plans 013 and 016 "must be able to build their
+  surfaces on what this plan leaves behind". Everything else in this plan
+  (scope, verify clauses, stop conditions) is unchanged. `axe-core` and
+  `vitest-axe` devDependencies were approved for Step 5.
 
 ## Why this matters
 
 The supplied technical design correctly identifies the missing human review
 surface: source conflicts, qualification reasons, score breakdowns, evidence,
 drafts, replies, suppressions, and outcomes must be inspectable without raw
-Mongo queries. The interface remains private and server-rendered.
+Mongo queries. The interface remains private and served only by the existing
+127.0.0.1-bound CLI HTTP surface.
 
 ## Current state
 
-- `packages/interface` uses the existing `node:http` router, server-rendered
-  templates, bilingual strings, and Nocturne tokens.
+- `packages/interface` serves the React dashboard SPA (plan 017) plus JSON
+  API routes over the existing `node:http` router, with typed FR/EN strings
+  and the dashboard theme tokens.
 - Plans 001-012 expose store helpers/deep interfaces; routes must call them
   rather than query Mongoose models directly.
 - The public Next.js `site` remains separate and is not the operator UI.
@@ -34,7 +44,7 @@ Mongo queries. The interface remains private and server-rendered.
 | Purpose | Command | Expected |
 | --- | --- | --- |
 | Route tests | `pnpm exec vitest run packages/interface/src/routes/prospects.test.ts packages/interface/src/routes/outreach.test.ts` | all pass |
-| UI tests | `pnpm exec vitest run packages/interface/src/public/prospecting` | all pass |
+| UI tests | `pnpm exec vitest run packages/interface/src/dashboard` | all pass |
 | Validation | `pnpm run check` | exit 0 |
 
 ## Scope
@@ -96,15 +106,16 @@ no raw permanent address storage.
 
 ### Step 5: Add bilingual accessibility and mobile checks
 
-Use typed FR/EN strings and Nocturne tokens. Test keyboard operation, focus,
-tables at narrow width, empty/loading/error states, and axe on representative
-pages. Mobile is responsive web only; do not add Tailscale provisioning.
+Use typed FR/EN strings and the dashboard theme tokens. Test keyboard
+operation, focus, tables at narrow width, empty/loading/error states, and axe
+on representative pages. Mobile is responsive web only; do not add Tailscale
+provisioning.
 
 **Verify**: language parity/leak tests and axe report zero violations.
 
 ## Test plan
 
-Store projections, route validation/actions, HTML escaping, FR/EN, axe,
+Store projections, route validation/actions, output escaping, FR/EN, axe,
 pagination/empty/error states, and static absence of send/provider endpoints.
 
 ## Done criteria
