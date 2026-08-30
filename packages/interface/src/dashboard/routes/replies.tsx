@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
+import { vocabularyLabel } from '../lib/vocabulary';
 import { fetchJson, postEmpty } from '../lib/api';
 import { formatDateTime, formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
@@ -115,7 +116,9 @@ export function RepliesPage(): JSX.Element {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge tone="neutral">{reply.state}</Badge>
+                    <Badge tone="neutral">
+                      {vocabularyLabel(strings.labels.thread, reply.state)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="max-w-72 text-sm text-ink-soft">
                     {reply.reviewReason}

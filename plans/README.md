@@ -342,7 +342,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [011](archive/011-gmail-drafts-without-send.md) | Create reviewed Gmail drafts without sending | P1 | L | 007, 009, 010 | DONE |
 | [012](archive/012-replies-suppressions-outcomes.md) | Reconcile replies, suppressions, and outcomes | P2 | L | 011 | DONE |
 | [017](archive/017-dashboard-ui-overhaul.md) | Overhaul the operator dashboard UI to shippable quality | P2 | L | 001-012 | DONE |
-| [013](./013-outreach-operator-interface.md) | Add the private outreach operator interface | P2 | L | 001-012 | TODO |
+| [013](./013-outreach-operator-interface.md) | Add the private outreach operator interface | P2 | L | 001-012 | IMPLEMENTED |
 | [016](./016-hosted-operator-dashboard.md) | Host the operator dashboard on a public EU server | P2 | M | 001-013 | TODO |
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013, 016 | TODO |
 | [015](archive/015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |

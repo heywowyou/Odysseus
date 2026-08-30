@@ -122,7 +122,7 @@ export function DraftsPage(): JSX.Element {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge tone="accent">pending</Badge>
+                    <Badge tone="accent">{strings.labels.review.pending}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

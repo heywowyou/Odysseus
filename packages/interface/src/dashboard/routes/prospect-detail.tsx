@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
+import { vocabularyLabel } from '../lib/vocabulary';
 import { ApiError, fetchJson, sendJson } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
@@ -187,11 +188,7 @@ export function ProspectDetailPage(): JSX.Element {
         actions={
           <>
             <Badge tone={reviewBadgeTone(data.reviewState)}>
-              {data.reviewState === 'accepted'
-                ? strings.operator.accepted
-                : data.reviewState === 'rejected'
-                  ? strings.operator.rejected
-                  : data.reviewState}
+              {vocabularyLabel(strings.labels.review, data.reviewState)}
             </Badge>
             <Button size="sm" onClick={() => setPendingAction('accept')}>
               {strings.operator.accept}
@@ -240,21 +237,15 @@ export function ProspectDetailPage(): JSX.Element {
             <div>
               <DefinitionRow
                 label={strings.prospectDetail.sections.identity}
-                value={data.identityStatus}
+                value={vocabularyLabel(strings.labels.identity, data.identityStatus)}
               />
               <DefinitionRow
                 label={strings.prospects.columns.qualification}
-                value={data.qualificationOutcome}
+                value={vocabularyLabel(strings.labels.qualification, data.qualificationOutcome)}
               />
               <DefinitionRow
                 label={strings.prospects.columns.review}
-                value={
-                  data.reviewState === 'accepted'
-                    ? strings.operator.accepted
-                    : data.reviewState === 'rejected'
-                      ? strings.operator.rejected
-                      : data.reviewState
-                }
+                value={vocabularyLabel(strings.labels.review, data.reviewState)}
               />
               <DefinitionRow label="candidateId" value={data.candidateId} />
             </div>

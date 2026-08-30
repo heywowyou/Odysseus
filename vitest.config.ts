@@ -9,6 +9,12 @@ import { defineConfig } from 'vitest/config';
  * yet, so the suite is intentionally empty at this point in the build.
  */
 export default defineConfig({
+  /** The dashboard tsconfig's react-jsx setting is invisible to esbuild
+   *  (it only reads files named tsconfig.json), so rendering tests need
+   *  the automatic JSX runtime spelled out here. */
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
     include: ['packages/**/*.{test,spec}.ts'],
     passWithNoTests: true,

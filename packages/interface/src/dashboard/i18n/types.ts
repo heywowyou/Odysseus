@@ -404,4 +404,48 @@ export interface DashboardStrings {
     optOut: string;
     empty: string;
   };
+  /** FR and EN labels for the closed store vocabularies the operator
+   *  pages render. A value missing from a map falls back to the raw
+   *  code (lib/vocabulary.ts). */
+  labels: {
+    identity: Record<'resolved' | 'needs-review' | 'ambiguous' | 'unmatched', string>;
+    group: Record<'independent' | 'group-member' | 'vendor-hosted' | 'unknown', string>;
+    review: Record<'not-required' | 'pending' | 'accepted' | 'rejected', string>;
+    qualification: Record<
+      'qualified' | 'parked' | 'rejected' | 'already-engaged' | 'group-routed',
+      string
+    >;
+    contact: Record<'found' | 'parked' | 'rejected' | 'suppressed', string>;
+    thread: Record<
+      | 'open'
+      | 'e1-drafted'
+      | 'e1-sent'
+      | 'e2-drafted'
+      | 'e2-sent'
+      | 'e3-drafted'
+      | 'e3-sent'
+      | 'replied'
+      | 'bounced'
+      | 'opted-out'
+      | 'sequence-complete'
+      | 'closed',
+      string
+    >;
+    outcome: Record<
+      | 'no-reply'
+      | 'reply-positive'
+      | 'reply-not-now'
+      | 'reply-negative'
+      | 'opt-out'
+      | 'call'
+      | 'quoted'
+      | 'won'
+      | 'lost',
+      string
+    >;
+    lostReason: Record<
+      'budget' | 'timing' | 'not-a-priority' | 'existing-provider' | 'scope-mismatch' | 'other',
+      string
+    >;
+  };
 }

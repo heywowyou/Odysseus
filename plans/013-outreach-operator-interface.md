@@ -21,6 +21,19 @@
   surfaces on what this plan leaves behind". Everything else in this plan
   (scope, verify clauses, stop conditions) is unchanged. `axe-core` and
   `vitest-axe` devDependencies were approved for Step 5.
+- **IMPLEMENTED 2026-08-30** at the working tree of the "Operator interface
+  (slice 5)" commit, built in five slices (store view models, then slices
+  2-4 built by three agents concurrently on disjoint files, then the
+  accessibility and bilingual integration). `pnpm run check` exits 0 and
+  the full suite is green (317 files, 3036 tests, including the store
+  view-model, route, dashboard, parity, and axe suites). Deviations from
+  the plan text: pages are dashboard SPA routes over JSON API routes per
+  the rebasing note above; accessibility is pinned by vitest-axe (with
+  jsdom, part of the approved axe dependency set) on representative pages,
+  with keyboard, focus, and narrow-width table behavior left to the
+  operator's live review; prescan page roles and vendor row kinds render
+  as their closed-vocabulary codes, column headers are bilingual; the
+  operator's read of real output remains the last step before DONE.
 
 ## Why this matters
 
@@ -120,9 +133,9 @@ pagination/empty/error states, and static absence of send/provider endpoints.
 
 ## Done criteria
 
-- [ ] Operator can review the whole source-to-outcome funnel and every reason.
-- [ ] Score why/version and source provenance are visible.
-- [ ] Interface is bounded, bilingual, accessible, private, and cannot send.
+- [x] Operator can review the whole source-to-outcome funnel and every reason.
+- [x] Score why/version and source provenance are visible.
+- [x] Interface is bounded, bilingual, accessible, private, and cannot send.
 - [ ] Tests/check pass; plan 013 is `DONE`.
 
 ## STOP conditions

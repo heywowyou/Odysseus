@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
+import { vocabularyLabel } from '../lib/vocabulary';
 import { fetchJson, postEmpty } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
@@ -117,9 +118,13 @@ export function OutcomesPage(): JSX.Element {
                     <span className="font-medium text-ink">{event.candidateId}</span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-ink">{event.outcome}</span>
+                    <span className="text-ink">
+                      {vocabularyLabel(strings.labels.outcome, event.outcome)}
+                    </span>
                     {event.lostReason !== null ? (
-                      <span className="ml-2 text-xs text-ink-muted">({event.lostReason})</span>
+                      <span className="ml-2 text-xs text-ink-muted">
+                        ({vocabularyLabel(strings.labels.lostReason, event.lostReason)})
+                      </span>
                     ) : null}
                   </TableCell>
                   <TableCell>{formatDateTime(event.recordedAt, language)}</TableCell>
@@ -181,12 +186,21 @@ export function OutcomesPage(): JSX.Element {
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <KpiTile label={strings.score.totalLabel} value={summary.total} />
               {outcomeCounts.map((count) => (
-                <KpiTile key={count.outcome} label={count.outcome} value={count.count} />
+                <KpiTile
+                  key={count.outcome}
+                  label={vocabularyLabel(strings.labels.outcome, count.outcome)}
+                  value={count.count}
+                />
               ))}
             </div>
             {lostReasonCounts.length > 0 ? (
               <p className="mt-3 text-xs text-ink-muted">
-                {lostReasonCounts.map((count) => `${count.reason}: ${count.count}`).join(', ')}
+                {lostReasonCounts
+                  .map(
+                    (count) =>
+                      `${vocabularyLabel(strings.labels.lostReason, count.reason)}: ${count.count}`,
+                  )
+                  .join(', ')}
               </p>
             ) : null}
           </>

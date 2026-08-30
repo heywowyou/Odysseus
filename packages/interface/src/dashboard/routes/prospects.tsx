@@ -22,6 +22,7 @@ import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
 import { fetchJson } from '../lib/api';
 import { usePolling } from '../lib/use-polling';
+import { vocabularyLabel } from '../lib/vocabulary';
 import {
   GROUP_STATUS_VALUES,
   IDENTITY_STATUS_VALUES,
@@ -53,12 +54,8 @@ import type {
 const POLL_INTERVAL_MS = 8000;
 const SKELETON_ROW_COUNT = 8;
 
-/** Existing translated labels where the operator tables have them; the
- *  remaining enum states render as their raw API values. */
 function reviewLabel(reviewState: string, strings: DashboardStrings): string {
-  if (reviewState === 'accepted') return strings.operator.accepted;
-  if (reviewState === 'rejected') return strings.operator.rejected;
-  return reviewState;
+  return vocabularyLabel(strings.labels.review, reviewState);
 }
 
 function detailTarget(row: ProspectRow): string {
@@ -161,11 +158,15 @@ export function ProspectsPage(): JSX.Element {
                     </Link>
                   </TableCell>
                   <TableCell>{locationLabel(row)}</TableCell>
-                  <TableCell className="text-xs text-ink-soft">{row.identityStatus}</TableCell>
-                  <TableCell className="text-xs text-ink-soft">{row.groupStatus}</TableCell>
+                  <TableCell className="text-xs text-ink-soft">
+                    {vocabularyLabel(strings.labels.identity, row.identityStatus)}
+                  </TableCell>
+                  <TableCell className="text-xs text-ink-soft">
+                    {vocabularyLabel(strings.labels.group, row.groupStatus)}
+                  </TableCell>
                   <TableCell>
                     <Badge tone={qualificationBadgeTone(row.qualificationOutcome)}>
-                      {row.qualificationOutcome}
+                      {vocabularyLabel(strings.labels.qualification, row.qualificationOutcome)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -174,9 +175,15 @@ export function ProspectsPage(): JSX.Element {
                     </Badge>
                   </TableCell>
                   <TableCell className="tabular-nums">{scoreLabel(row)}</TableCell>
-                  <TableCell className="text-xs text-ink-soft">{row.contactState ?? ''}</TableCell>
-                  <TableCell className="text-xs text-ink-soft">{row.threadState ?? ''}</TableCell>
-                  <TableCell className="text-xs text-ink-soft">{row.outcome ?? ''}</TableCell>
+                  <TableCell className="text-xs text-ink-soft">
+                    {vocabularyLabel(strings.labels.contact, row.contactState)}
+                  </TableCell>
+                  <TableCell className="text-xs text-ink-soft">
+                    {vocabularyLabel(strings.labels.thread, row.threadState)}
+                  </TableCell>
+                  <TableCell className="text-xs text-ink-soft">
+                    {vocabularyLabel(strings.labels.outcome, row.outcome)}
+                  </TableCell>
                   <TableCell className="text-right">
                     <ChevronRight className="ml-auto size-4 text-ink-muted" aria-hidden="true" />
                   </TableCell>
@@ -246,7 +253,7 @@ export function ProspectsPage(): JSX.Element {
               <option value="">{strings.prospects.filters.all}</option>
               {IDENTITY_STATUS_VALUES.map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {vocabularyLabel(strings.labels.identity, value)}
                 </option>
               ))}
             </Select>
@@ -265,7 +272,7 @@ export function ProspectsPage(): JSX.Element {
               <option value="">{strings.prospects.filters.all}</option>
               {GROUP_STATUS_VALUES.map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {vocabularyLabel(strings.labels.group, value)}
                 </option>
               ))}
             </Select>
@@ -284,7 +291,7 @@ export function ProspectsPage(): JSX.Element {
               <option value="">{strings.prospects.filters.all}</option>
               {REVIEW_STATE_VALUES.map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {vocabularyLabel(strings.labels.review, value)}
                 </option>
               ))}
             </Select>
@@ -303,7 +310,7 @@ export function ProspectsPage(): JSX.Element {
               <option value="">{strings.prospects.filters.all}</option>
               {QUALIFICATION_VALUES.map((value) => (
                 <option key={value} value={value}>
-                  {value}
+                  {vocabularyLabel(strings.labels.qualification, value)}
                 </option>
               ))}
             </Select>
