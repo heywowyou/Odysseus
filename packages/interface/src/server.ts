@@ -4,6 +4,9 @@ import { Router } from './router.js';
 import { registerScanRoutes } from './routes/scans.js';
 import { registerAuditRoutes } from './routes/audits.js';
 import { registerProspectingRoutes } from './routes/prospecting.js';
+import { registerProspectRoutes } from './routes/prospects.js';
+import { registerProspectInsightRoutes } from './routes/prospect-insights.js';
+import { registerOutreachRoutes } from './routes/outreach.js';
 import { registerStaticFallback } from './routes/static.js';
 import { JobQueue } from './queue/job-queue.js';
 import { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
@@ -41,6 +44,9 @@ export async function startInterfaceServer(connection: Connection): Promise<Inte
   registerScanRoutes(router, connection, queue);
   registerAuditRoutes(router, connection);
   registerProspectingRoutes(router, connection, queue);
+  registerProspectRoutes(router, connection);
+  registerProspectInsightRoutes(router, connection);
+  registerOutreachRoutes(router, connection);
   registerStaticFallback(router);
 
   const server = createServer((req, res) => {

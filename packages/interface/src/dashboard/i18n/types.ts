@@ -12,6 +12,8 @@ export interface DashboardStrings {
   nav: {
     audits: string;
     newScan: string;
+    prospects: string;
+    outreach: string;
   };
   shell: {
     tagline: string;
@@ -202,5 +204,204 @@ export interface DashboardStrings {
     /** Shown when the findings table has no rows, overall or at the
      *  selected severity. */
     findingsEmpty: string;
+  };
+  /** Shared operator-interface strings (plan 013): pagination, review
+   *  actions, and detail-page navigation used by several pages. */
+  operator: {
+    paginationPrevious: string;
+    paginationNext: string;
+    /** {page} and {pages} are replaced with counts by the page. */
+    paginationPageOf: string;
+    accept: string;
+    reject: string;
+    accepted: string;
+    rejected: string;
+    confirmAcceptTitle: string;
+    confirmAcceptBody: string;
+    confirmRejectTitle: string;
+    confirmRejectBody: string;
+    /** Shown when a prospect action fails. */
+    actionError: string;
+    provenanceLabel: string;
+    notFound: string;
+    backToProspects: string;
+  };
+  prospects: {
+    title: string;
+    description: string;
+    queueLabel: string;
+    queues: Record<
+      'all' | 'joinReview' | 'parked' | 'rejected' | 'alreadyEngaged' | 'groups',
+      string
+    >;
+    filters: {
+      identityStatus: string;
+      groupStatus: string;
+      reviewState: string;
+      qualification: string;
+      all: string;
+    };
+    columns: {
+      name: string;
+      city: string;
+      identity: string;
+      group: string;
+      qualification: string;
+      review: string;
+      score: string;
+      contact: string;
+      thread: string;
+      outcome: string;
+    };
+    openDetail: string;
+    filterEmpty: string;
+  };
+  prospectDetail: {
+    /** The page title is the hotel name; this stands in while the name
+     *  is loading and on the placeholder page. */
+    fallbackTitle: string;
+    description: string;
+    sections: Record<
+      | 'catalogue'
+      | 'identity'
+      | 'qualification'
+      | 'prescan'
+      | 'score'
+      | 'evidence'
+      | 'contact'
+      | 'preview'
+      | 'thread'
+      | 'outcome',
+      string
+    >;
+    openPrescan: string;
+    openScore: string;
+    openEvidence: string;
+    openPreview: string;
+    sourcesHeading: string;
+    sources: {
+      field: string;
+      value: string;
+      source: string;
+      status: string;
+      chosen: string;
+    };
+    qualificationHeading: string;
+    qualification: { outcome: string; reason: string; events: string };
+    threadHeading: string;
+    thread: { state: string; touch: string; lastEventAt: string };
+    outcomeHeading: string;
+    outcomeNone: string;
+    catalogue: {
+      name: string;
+      city: string;
+      department: string;
+      ownDomain: string;
+      groupId: string;
+    };
+  };
+  prescan: {
+    title: string;
+    description: string;
+    statusLabel: string;
+    scannedAtLabel: string;
+    vendorLabel: string;
+    pagesHeading: string;
+    columns: { url: string; role: string; status: string };
+    empty: string;
+  };
+  score: {
+    title: string;
+    description: string;
+    totalLabel: string;
+    versionLabel: string;
+    computedAtLabel: string;
+    breakdownHeading: string;
+    breakdownColumns: { component: string; value: string; weight: string; why: string };
+    diffHeading: string;
+    diffColumns: { field: string; before: string; after: string };
+    diffFromLabel: string;
+    diffToLabel: string;
+    empty: string;
+  };
+  evidence: {
+    title: string;
+    description: string;
+    assetNames: { homepage: string; contact: string };
+    columns: { asset: string; capturedAt: string; sourceUrl: string; status: string };
+    empty: string;
+  };
+  preview: {
+    title: string;
+    description: string;
+    statusLabel: string;
+    publishedLabel: string;
+    expiresLabel: string;
+    states: Record<'live' | 'revoked' | 'expired' | 'none', string>;
+    openPublic: string;
+    rendererNote: string;
+    empty: string;
+  };
+  vendors: {
+    title: string;
+    description: string;
+    columns: { vendor: string; candidates: string; failures: string; failureRate: string };
+    empty: string;
+  };
+  outreachIndex: {
+    title: string;
+    description: string;
+    cards: {
+      draftsTitle: string;
+      draftsDescription: string;
+      repliesTitle: string;
+      repliesDescription: string;
+      suppressionsTitle: string;
+      suppressionsDescription: string;
+      outcomesTitle: string;
+      outcomesDescription: string;
+    };
+  };
+  drafts: {
+    title: string;
+    description: string;
+    columns: {
+      hotel: string;
+      touch: string;
+      createdAt: string;
+      providerState: string;
+      reviewState: string;
+    };
+    approve: string;
+    skip: string;
+    neverSendNote: string;
+    empty: string;
+  };
+  replies: {
+    title: string;
+    description: string;
+    columns: { hotel: string; receivedAt: string; state: string; reason: string };
+    markReviewed: string;
+    metadataNote: string;
+    empty: string;
+  };
+  suppressions: {
+    title: string;
+    description: string;
+    addressLabel: string;
+    addressPlaceholder: string;
+    checkButton: string;
+    clearButton: string;
+    resultSuppressed: string;
+    resultNotSuppressed: string;
+    hashNote: string;
+  };
+  outcomes: {
+    title: string;
+    description: string;
+    summaryHeading: string;
+    columns: { hotel: string; outcome: string; setAt: string };
+    optOut: string;
+    empty: string;
   };
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ListChecks, Menu, Radar, X } from 'lucide-react';
+import { Building2, ListChecks, Mail, Menu, Radar, X } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { Brand } from './brand';
 import { LanguageSwitcher } from './language-switcher';
@@ -14,6 +14,8 @@ export function AppShell() {
   const navItems = [
     { to: '/audits', label: strings.nav.audits, icon: ListChecks },
     { to: '/scans/new', label: strings.nav.newScan, icon: Radar },
+    { to: '/prospects', label: strings.nav.prospects, icon: Building2 },
+    { to: '/outreach', label: strings.nav.outreach, icon: Mail },
   ];
 
   useEffect(() => {
