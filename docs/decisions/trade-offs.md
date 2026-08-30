@@ -2533,6 +2533,51 @@ Full preflight list, without secret values, is `docs/outreach-rules.md`
 section 10.
 
 
+### 57. Structured-data reading is owned in the scanner, not delegated to an unmaintained preset
+
+The structured-data check called `structured-data-testing-tool@4.5.0`, whose
+reading half was `web-auto-extractor@1.0.17` on `cheerio@0.22.0`, from 2016,
+dragging in the lodash micro-package long tail (`lodash.pick` among them,
+which is what an advisory surfaced). None of that chain has an upstream
+maintainer, so nothing found in it was ever going to be fixed there.
+
+Pinning or ignoring the advisory was the cheap option and was rejected: the
+problem is not one flagged package, it is that the code reading a client's
+markup is abandoned, and the quality of what this check can say was capped by
+a nine-year-old parser.
+
+What made replacement small was reading the preset instead of assuming it was
+large. Of everything the Google preset declares - fourteen files - only the
+Article family, `BlogPosting` and `ClaimReview` carry any required field.
+`WebPage` and `Organization` mark every field optional, and the "simple
+article" types test only that the type is present. So the entire failure
+surface of a 4.5.0 dependency is two lists of field paths, now written out in
+`packages/scanner/src/checks/structured-data.ts` where they can be read.
+
+Extraction moved to `packages/scanner/src/checks/structured-data-extract.ts`,
+covering JSON-LD, microdata and RDFa, using `html-validate`'s public `Parser`
+and `Config` - already a scanner dependency for the HTML structural-validity
+check, so nothing new was installed. Microdata is not optional coverage here:
+the only occurrence of this rule in the repository's own saved real-site
+audits (haaitza.com, 21 pages) was microdata, and a JSON-LD-only replacement
+would have silently deleted the rule's only demonstrated real-world hit.
+
+One deliberate output change. The old library resolved each test against
+whichever markup form answered it first, which let one page report the same
+missing field under two markup types and count it twice in the client-facing
+"missing N fields" sentence - visible in the stored haaitza evidence, where
+`publisher.logo` and `publisher.logo.url` appear once as `jsonld` and once as
+`microdata`. Each markup form a schema is declared in is now validated in its
+own right, so a field is reported once per form that is genuinely missing it.
+This changes what a new scan produces, not how a stored scan is re-normalized:
+`normalize <dir>` reads the recorded check result out of `scan.json`, so no
+stored audit, fixture stamp or finding ID moves.
+
+Not verified against a live re-scan. No saved audit stores page HTML, so the
+real-site evidence available offline is the recorded failure list, which the
+microdata test reproduces. A live re-scan of a site declaring Article-family
+markup is the remaining confirmation.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.
