@@ -135,7 +135,7 @@ export interface PublishPreviewResult {
  *  decides scope, and `buildOutreachFactsBlock` reads only `registrySnapshot`
  *  and never a verdict (trade-off 42), so running a scope determination here
  *  would compute a conclusion this document is forbidden from stating. */
-function registryAssessment(
+export function registryAssessment(
   sirene: PreviewSireneFacts | undefined,
 ): ObligationAssessment | undefined {
   if (sirene === undefined || sirene.denomination === '') return undefined;

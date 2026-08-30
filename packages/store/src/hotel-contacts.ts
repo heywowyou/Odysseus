@@ -239,3 +239,46 @@ export async function listHotelContacts(
     .limit(options.limit)
     .lean<HotelContactDocument[]>();
 }
+
+export interface ContactableCohortMember {
+  candidateId: string;
+  cohortId: string;
+  domain: string;
+  address: string;
+}
+
+/**
+ * Cohort members that actually have a usable address, milestone 9c plan 011.
+ *
+ * The mirror image of `listCohortMembersToContact`, which finds members still
+ * needing evaluation. This one finds the ones evaluation succeeded for, which
+ * is the population a bounded drafting batch may draw from. Rows in any of
+ * plan 007's four typed absences are not returned at all rather than returned
+ * with an empty address, so a caller cannot iterate them by accident.
+ *
+ * Sorted by candidate id rather than by score: ordering a batch by
+ * attractiveness would quietly make "the first ten" mean something different
+ * on every run, and a bounded batch has to be reproducible to be reviewable.
+ */
+export async function listContactableCohortMembers(
+  connection: Connection,
+  options: { contactVersion: string; limit?: number; candidateId?: string },
+): Promise<ContactableCohortMember[]> {
+  const query: Record<string, unknown> = {
+    contactVersion: options.contactVersion,
+    state: 'found',
+    address: { $exists: true, $ne: '' },
+  };
+  if (options.candidateId !== undefined) query['candidateId'] = options.candidateId;
+
+  const cursor = createHotelContactModel(connection).find(query).sort({ candidateId: 1 });
+  if (options.limit !== undefined) cursor.limit(options.limit);
+  const rows = await cursor.lean<HotelContactDocument[]>();
+
+  return rows.map((row) => ({
+    candidateId: row.candidateId,
+    cohortId: row.cohortId,
+    domain: row.domain,
+    address: row.address ?? '',
+  }));
+}

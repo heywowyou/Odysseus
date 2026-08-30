@@ -248,3 +248,59 @@ produces a draft that could be sent by reflex.
 - Any statement about what a competitor of theirs is doing
 - Any description of the offer as an audit RGAA or as producing an
   official conformity rate
+
+---
+
+## 10. Mailbox preflight, before the first draft
+
+Milestone 9c plan 011 creates drafts in a real mailbox through the Gmail API.
+The tool refuses to do anything at all until the four `ODYSSEUS_MAILBOX_*`
+variables in `.env.example` are set, so an unprovisioned mailbox fails loudly
+rather than silently drafting nowhere. What has to exist first:
+
+1. **A Google Workspace account on the sending domain.** Section 8's rule
+   stands: cold volume does not leave the domain carrying invoices and client
+   correspondence. A sender reputation problem attaches to the domain, and
+   `odysseusaudit.com` also serves the marketing site and the preview links
+   prospects click, so a hit there degrades everything at once. The sender is
+   a single environment variable, so this is reversible, but it is cheaper to
+   get right before warmup than after.
+
+   **Interim state, recorded 2026-08-30 so it does not become permanent by
+   forgetting.** `contact@odysseusaudit.fr` is the intended sending address
+   and could not be provisioned yet, so the Workspace account is being set up
+   as `contact@odysseusaudit.com` and that is what the mailbox variables point
+   at for now. This is a knowing, temporary deviation from section 8, not a
+   revision of it.
+
+   The distinction that makes the interim safe is what the mailbox is used
+   for. Creating drafts, and plan 011 step 6's synthetic draft to an address
+   the operator controls, put nothing in front of a stranger and cannot earn a
+   spam complaint, so the domain is not at risk. The risk begins at the first
+   real prospect send, because that is when a recipient can mark the message
+   as spam and attach that judgement to the domain.
+
+   **The trigger is therefore the first send to a real prospect, not a date.**
+   Before it, move to `odysseusaudit.fr`: SPF, DKIM and DMARC verified on that
+   domain, the mailbox warmed per section 8, and
+   `ODYSSEUS_MAILBOX_SENDER_ADDRESS` repointed. Nothing in the code needs to
+   change; the sender is configuration precisely so that this switch stays a
+   one-line change rather than a migration. The `.fr` 308 redirect is retained
+   either way, and adding mail records to it does not disturb it.
+2. **An OAuth client of user type Internal.** This is the load-bearing
+   setting. An External client left in Testing is issued refresh tokens that
+   expire after seven days, and moving it out of Testing means Google
+   verification, which `gmail.compose` being a restricted scope makes
+   expensive. Internal avoids both.
+3. **Two scopes, no more:** `https://www.googleapis.com/auth/gmail.compose`
+   for drafts and `https://www.googleapis.com/auth/gmail.metadata` for thread
+   reads. Note plainly that no Gmail scope grants draft creation without also
+   granting send. The guarantee that this tool cannot send is a property of
+   the adapter's shape, enforced by test, and has no permission backstop.
+4. **SPF, DKIM and DMARC** configured and verified on the sending domain.
+5. **A monitored reply address.** Every draft invites a reply, and section 7's
+   opt-out promise cannot be kept by a mailbox nobody reads.
+6. **Mailbox warmup**, two to three weeks before volume, per section 8.
+
+No secret value belongs in this repository. The four variables are read from
+the environment and are never printed by any command, including on failure.

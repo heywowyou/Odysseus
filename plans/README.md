@@ -339,7 +339,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [008](./008-safe-outreach-preview-html.md) | Generate safe outreach preview HTML | P1 | L | 005 | DONE |
 | [009](./009-expiring-preview-publication.md) | Publish expiring previews and compliance pages | P1 | L | 008 | DONE |
 | [010](./010-validated-outreach-prose.md) | Generate and validate outreach prose | P1 | L | 006, 008 | DONE |
-| [011](./011-gmail-drafts-without-send.md) | Create reviewed Gmail drafts without sending | P1 | L | 007, 009, 010 | TODO |
+| [011](./011-gmail-drafts-without-send.md) | Create reviewed Gmail drafts without sending | P1 | L | 007, 009, 010 | IMPLEMENTED |
 | [012](./012-replies-suppressions-outcomes.md) | Reconcile replies, suppressions, and outcomes | P2 | L | 011 | TODO |
 | [013](./013-outreach-operator-interface.md) | Add the private outreach operator interface | P2 | L | 001-012 | TODO |
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013 | TODO |
@@ -398,6 +398,15 @@ Each kind of work has exactly one home:
   contactable at all, and one of those two is `reservation@`, an inbox the
   plan-007 caution flags as often automated. Reach is a third of the cohort,
   not the cohort.
+- Plan 011 is `IMPLEMENTED` rather than `DONE`, on purpose. Steps 1 through 5
+  are built and tested against an in-memory mailbox: the capability-limited
+  port, the Gmail adapter over built-in `fetch`, thread and draft collections
+  with 90-day TTL and a one-live-draft-per-touch index, suppression-gated
+  orchestration, and the `prospect draft` commands. Step 6, a live synthetic
+  draft, needs a provisioned Google Workspace mailbox and a person to read the
+  result, and neither existed when the work was done. Preflight list is
+  `docs/outreach-rules.md` section 10; the reasoning behind the no-send design
+  is trade-off 56.
 
 ## Verification baseline
 

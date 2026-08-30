@@ -30,6 +30,12 @@ export {
   // credentials stay private to createConfiguredPreviewPublisher: a caller that
   // could read them would be a caller that could build its own adapter.
   getPreviewPublicBaseUrl,
+  // Whether a mailbox is configured, and which variables are missing if not.
+  // The client secret, refresh token and sender address stay private to
+  // createConfiguredMailboxDraftAdapter, on the same reasoning as the bucket
+  // credentials above.
+  isMailboxConfigured,
+  missingMailboxEnvVars,
 } from './config.js';
 export { computeCrawlEtaMs, computeScanEtaMs } from './queue/eta.js';
 export type { CrawlEtaInput, ScanEtaInput } from './queue/eta.js';
@@ -206,3 +212,46 @@ export type {
 } from './outreach/publish-preview.js';
 export { createMongoOutreachPreviewStore } from './outreach/mongo-outreach-preview-store.js';
 export type { MongoOutreachPreviewStoreOptions } from './outreach/mongo-outreach-preview-store.js';
+
+// Milestone 9c plan 011: the mailbox port, its adapters, and draft creation.
+export {
+  MAILBOX_DRAFT_ADAPTER_METHODS,
+  FORBIDDEN_MAILBOX_CAPABILITIES,
+} from './outreach/mailbox-draft-adapter.js';
+export type {
+  MailboxDraftAdapter,
+  CreateMailboxDraftInput,
+  MailboxDraft,
+  MailboxThreadMetadata,
+} from './outreach/mailbox-draft-adapter.js';
+export { createInMemoryMailboxDraftAdapter } from './outreach/in-memory-mailbox-draft-adapter.js';
+export type {
+  InMemoryMailboxDraftAdapter,
+  InMemoryMailboxDraftAdapterOptions,
+  RecordedDraft,
+} from './outreach/in-memory-mailbox-draft-adapter.js';
+export {
+  createGmailDraftAdapter,
+  GMAIL_ENDPOINTS,
+  GMAIL_REQUIRED_SCOPES,
+} from './outreach/gmail-draft-adapter.js';
+export type { GmailDraftAdapterOptions } from './outreach/gmail-draft-adapter.js';
+export { createConfiguredMailboxDraftAdapter } from './outreach/configured-mailbox-draft-adapter.js';
+export { buildDraftMime, encodeDraftMimeForTransport } from './outreach/draft-mime.js';
+export type { BuildDraftMimeInput } from './outreach/draft-mime.js';
+export {
+  createOutreachDraft,
+  CURRENT_OUTREACH_PROMPT_VERSION,
+  FIRST_TOUCH,
+} from './outreach/create-outreach-draft.js';
+export type {
+  CreateOutreachDraftOptions,
+  CreateOutreachDraftResult,
+  CreateOutreachDraftRefusal,
+  OutreachDraftRow,
+  OutreachDraftStorePort,
+  OutreachPreviewPort,
+  PublishedPreviewRef,
+} from './outreach/create-outreach-draft.js';
+export { createMongoOutreachDraftStore } from './outreach/mongo-outreach-draft-store.js';
+export type { MongoOutreachDraftStoreOptions } from './outreach/mongo-outreach-draft-store.js';

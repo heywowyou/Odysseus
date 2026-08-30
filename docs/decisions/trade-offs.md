@@ -2459,6 +2459,80 @@ only), and read `unsupported` on businessImpact fields as "states
 consequences" until the bias is re-measured as gone.
 
 
+### 56. The tool cannot send, and the only thing making that true is the shape of the port
+
+Milestone 9c plan 011 creates outreach drafts in a real mailbox. Binding
+decision 14 says automation stops at the draft and the human keeps the review
+and the send. The natural way to enforce that would be to request a permission
+that allows drafting and forbids sending, and there is no such permission:
+`gmail.compose` is the narrowest scope that can create a draft at all, and
+Google documents it as "Manage drafts and send emails". `gmail.modify` is
+broader still. So the no-send guarantee has no permission backstop anywhere
+behind it. It is entirely a property of code we wrote.
+
+That is why the design is shaped the way it is, and why each of these is
+load-bearing rather than tidiness:
+
+`MailboxDraftAdapter` has exactly four methods (`createDraft`, `getDraft`,
+`deleteDraft`, `getThreadMetadata`), no generic request method, and no
+caller-supplied URL or path. The Gmail adapter constructs URLs in exactly one
+place, a frozen `GMAIL_ENDPOINTS` table of four entries. A static capability
+test asserts the method set exactly, asserts no forbidden verb appears in a
+method name or an endpoint path, asserts the adapter source contains no
+`drafts/send`, `messages/send` or `sendAs` string, and asserts the transport
+contacts no path outside the allowlist. Built-in `fetch` was chosen over
+`googleapis` for this reason and no other: that package hands us a client
+carrying `users.messages.send` and `users.drafts.send`, so the guarantee would
+rest on not calling a method that exists rather than on no such method
+existing. If the capability test is ever weakened, nothing else catches a send
+path. Do not weaken it, and do not add a fifth method without asking.
+
+The port carries no sender field. A caller names a recipient, a subject and a
+body; who the message is from is adapter configuration
+(`ODYSSEUS_MAILBOX_SENDER_ADDRESS`). An earlier draft of the port did accept a
+`from`, which meant any caller could forge one, and the orchestrator was
+passing an empty string into it. Removed, with a test that a caller supplying a
+sender is ignored.
+
+Two suppression checks, not one. `createOutreachDraft` checks suppression
+immediately before the model call and again immediately before the provider
+call. The first protects the spend, the second protects the prospect: an
+objection arriving during generation must still stop the draft. Tests assert no
+model call after the first gate refuses and no provider draft after the second.
+
+The orchestrator publishes the preview itself rather than looking one up.
+Plan 009 deliberately stores only a token hash and returns the raw URL exactly
+once, so an existing preview's link is unrecoverable by design. A draft that
+needs a link therefore has to make one.
+
+Drafts are insert-only and a partial unique index over (`threadId`, `touch`)
+among `created` rows is what makes "one live draft per touch" a database fact
+rather than a checked condition. Both new collections use the precomputed
+`expiresAt` 90-day TTL pattern already used by previews and contacts, not a raw
+TTL on `createdAt`. A provider draft that is created but cannot be recorded is
+withdrawn from the mailbox rather than left orphaned, and the failure is
+recorded with empty subject and body (a conditional Mongoose validator, since
+`required: true` rejects an empty string).
+
+An objection now closes threads as well as revoking previews and writing
+suppression, in the one `prospect object` command. A suppressed domain with an
+open thread is a conversation the next batch would try to continue.
+
+**Deferred with reasons, not silently.** `List-Unsubscribe` headers: the opt-out
+page is live (trade-off 43), but a draft sent by hand from a mail client is not
+guaranteed to preserve custom headers, and RFC 8058 one-click needs a `POST`
+handler the site does not have. The in-body opt-out line section 7 requires is
+unaffected and ships. Plan step 6, a live synthetic draft, needs a provisioned
+mailbox and a person; plan 011 is therefore `IMPLEMENTED`, not `DONE`.
+
+**Provisioning is an operator step with one load-bearing setting.** A Google
+Workspace OAuth client of user type **Internal**. External clients left in
+Testing are issued refresh tokens that expire after seven days, and moving out
+of Testing means Google verification, which a restricted scope makes expensive.
+Full preflight list, without secret values, is `docs/outreach-rules.md`
+section 10.
+
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

@@ -217,6 +217,7 @@ export {
   recordHotelContacts,
   getHotelContact,
   getHotelContactSummary,
+  listContactableCohortMembers,
   listHotelContacts,
 } from './hotel-contacts.js';
 export type {
@@ -252,3 +253,50 @@ export type {
   RevokeOutreachPreviewResult,
   ListOutreachPreviewsOptions,
 } from './outreach-previews.js';
+
+// Milestone 9c plan 011: outreach threads and draft attempts.
+export { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
+export type {
+  OutreachThreadDocument,
+  OutreachThreadStatus,
+  OutreachLanguageSource,
+} from './schemas/outreach-thread.schema.js';
+export {
+  openOutreachThread,
+  findOutreachThreadById,
+  findOutreachThreadByCandidate,
+  attachProviderThreadId,
+  advanceThreadTouch,
+  closeOutreachThreadsForDomain,
+  listOutreachThreads,
+  OUTREACH_THREAD_RETENTION_DAYS,
+} from './outreach-threads.js';
+export type {
+  OpenOutreachThreadInput,
+  OpenedOutreachThread,
+  CloseOutreachThreadsResult,
+  ListOutreachThreadsOptions,
+} from './outreach-threads.js';
+
+export { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
+export type {
+  OutreachDraftDocument,
+  OutreachDraftStatus,
+} from './schemas/outreach-draft.schema.js';
+export {
+  recordOutreachDraft,
+  recordFailedOutreachDraft,
+  findLiveOutreachDraft,
+  findOutreachDraftById,
+  markOutreachDraftDeleted,
+  listOutreachDrafts,
+  DuplicateLiveDraftError,
+  OUTREACH_DRAFT_RETENTION_DAYS,
+} from './outreach-drafts.js';
+export type {
+  RecordOutreachDraftInput,
+  RecordFailedOutreachDraftInput,
+  MarkOutreachDraftDeletedResult,
+  ListOutreachDraftsOptions,
+} from './outreach-drafts.js';
+export type { ContactableCohortMember } from './hotel-contacts.js';

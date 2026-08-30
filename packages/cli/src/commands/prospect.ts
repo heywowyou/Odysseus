@@ -30,6 +30,11 @@ import {
   createJob,
   disconnectFromMongo,
   addSuppressionEntry,
+  closeOutreachThreadsForDomain,
+  findOutreachDraftById,
+  listContactableCohortMembers,
+  listOutreachDrafts,
+  markOutreachDraftDeleted,
   getLatestHotelIngestRunId,
   getHotelCandidateYield,
   listHotelCandidates,
@@ -95,6 +100,13 @@ import {
   getPreviewPublicBaseUrl,
   publishPreview,
   revokePreviewsForDomain,
+  CURRENT_OUTREACH_PROMPT_VERSION,
+  createConfiguredMailboxDraftAdapter,
+  type MailboxDraftAdapter,
+  createInMemoryMailboxDraftAdapter,
+  createMongoOutreachDraftStore,
+  createOutreachDraft,
+  missingMailboxEnvVars,
 } from '@odysseus/interface';
 
 /** Read ceiling for a prescan dry run, which takes no --limit because it
@@ -1498,6 +1510,372 @@ export function registerProspectCommand(program: Command): void {
       }
     });
 
+  // Milestone 9c plan 011. Preparing a message is automated; deciding to send
+  // it is not, and there is deliberately no command below that could.
+  const draft = prospect
+    .command('draft')
+    .description(
+      'Milestone 9c: prepare, review and withdraw outreach drafts. Drafts are created in the ' +
+        'mailbox for a person to read and send by hand. Nothing here sends anything.',
+    );
+
+  /** One shared factory, so `create` and `batch` cannot disagree about when a
+   *  real mailbox is used. A dry run never touches the provider; a real run
+   *  refuses rather than silently drafting into a double, because an operator
+   *  told "draft created" must be able to find it in their mailbox. */
+  function mailboxFor(dryRun: boolean, command: string): MailboxDraftAdapter | null {
+    if (dryRun) return createInMemoryMailboxDraftAdapter();
+    const configured = createConfiguredMailboxDraftAdapter();
+    if (configured === null) {
+      console.error(
+        `odysseus prospect draft ${command}: no mailbox is configured, so no draft can be ` +
+          `created. Set ${missingMailboxEnvVars().join(', ')}, or re-run with --dry-run.`,
+      );
+      process.exitCode = 1;
+      return null;
+    }
+    return configured;
+  }
+
+  draft
+    .command('create <candidateId>')
+    .description(
+      'Prepare the first outreach draft for one candidate: publish its preview, generate and ' +
+        'validate the prose, and create the draft in the mailbox for review. Never sends.',
+    )
+    .option('--language <fr|en>', 'Language of the draft', 'fr')
+    .option('--prescan-version <version>', 'Prescan generation to read', CURRENT_PRESCAN_VERSION)
+    .option(
+      '--qualification-version <version>',
+      'Qualification generation whose registry facts may be quoted',
+      CURRENT_QUALIFICATION_VERSION,
+    )
+    .option('--contact-version <version>', 'Contact generation to read', CURRENT_CONTACT_VERSION)
+    .option(
+      '--dry-run',
+      'Report what would be drafted, calling no model, publishing no preview and creating no draft',
+      false,
+    )
+    .action(
+      async (
+        candidateId: string,
+        opts: {
+          language: string;
+          prescanVersion: string;
+          qualificationVersion: string;
+          contactVersion: string;
+          dryRun: boolean;
+        },
+      ) => {
+        if (opts.language !== 'fr' && opts.language !== 'en') {
+          console.error('odysseus prospect draft create: --language must be fr or en');
+          process.exitCode = 1;
+          return;
+        }
+        const mailbox = mailboxFor(opts.dryRun, 'create');
+        if (mailbox === null) return;
+
+        let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+        try {
+          mongoConnection = await connectToMongo();
+          const result = await createOutreachDraft({
+            store: createMongoOutreachDraftStore(mongoConnection, {
+              prescanVersion: opts.prescanVersion,
+              qualificationVersion: opts.qualificationVersion,
+              contactVersion: opts.contactVersion,
+            }),
+            mailbox,
+            preview: {
+              publish: async (id, language) => {
+                const published = await publishPreview({
+                  store: createMongoOutreachPreviewStore(mongoConnection!, {
+                    prescanVersion: opts.prescanVersion,
+                    qualificationVersion: opts.qualificationVersion,
+                  }),
+                  publisher: opts.dryRun
+                    ? createInMemoryPreviewPublisher()
+                    : createConfiguredPreviewPublisher(),
+                  publicBaseUrl: getPreviewPublicBaseUrl(),
+                  candidateId: id,
+                  language,
+                  dryRun: false,
+                });
+                if (!published.published || published.url === undefined) {
+                  return { refusal: published.refusal ?? 'unknown' };
+                }
+                return {
+                  previewId: published.previewId as string,
+                  url: published.url,
+                  publicExpiresAt: published.publicExpiresAt as Date,
+                };
+              },
+            },
+            publicBaseUrl: getPreviewPublicBaseUrl(),
+            candidateId,
+            language: opts.language,
+            dryRun: opts.dryRun,
+          });
+
+          console.log(
+            JSON.stringify({ promptVersion: CURRENT_OUTREACH_PROMPT_VERSION, ...result }, null, 2),
+          );
+
+          if (!result.created && !opts.dryRun) {
+            // A refusal is a correct outcome, not a crash, but it must not read
+            // as success to a script or to a person skimming the output.
+            console.error(
+              `odysseus prospect draft create: nothing drafted (${result.refusal ?? 'unknown reason'})`,
+            );
+            process.exitCode = 1;
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`odysseus prospect draft create: failed\n${message}`);
+          process.exitCode = 1;
+        } finally {
+          if (mongoConnection) await disconnectFromMongo(mongoConnection);
+        }
+      },
+    );
+
+  draft
+    .command('batch')
+    .description(
+      'Prepare first drafts for up to --limit contactable cohort members, stopping on the ' +
+        'first authentication or provider error. Never sends, and does not pace anything.',
+    )
+    .requiredOption('--limit <n>', 'Maximum drafts to prepare', parsePositiveInt)
+    .option('--language <fr|en>', 'Language of the drafts', 'fr')
+    .option('--prescan-version <version>', 'Prescan generation to read', CURRENT_PRESCAN_VERSION)
+    .option(
+      '--qualification-version <version>',
+      'Qualification generation whose registry facts may be quoted',
+      CURRENT_QUALIFICATION_VERSION,
+    )
+    .option('--contact-version <version>', 'Contact generation to read', CURRENT_CONTACT_VERSION)
+    .option('--dry-run', 'Report what would be drafted, observing nothing', false)
+    .action(
+      async (opts: {
+        limit: number;
+        language: string;
+        prescanVersion: string;
+        qualificationVersion: string;
+        contactVersion: string;
+        dryRun: boolean;
+      }) => {
+        if (opts.language !== 'fr' && opts.language !== 'en') {
+          console.error('odysseus prospect draft batch: --language must be fr or en');
+          process.exitCode = 1;
+          return;
+        }
+        const mailbox = mailboxFor(opts.dryRun, 'batch');
+        if (mailbox === null) return;
+
+        let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+        try {
+          mongoConnection = await connectToMongo();
+          const connection = mongoConnection;
+          const members = await listContactableCohortMembers(connection, {
+            contactVersion: opts.contactVersion,
+            limit: opts.limit,
+          });
+
+          const store = createMongoOutreachDraftStore(connection, {
+            prescanVersion: opts.prescanVersion,
+            qualificationVersion: opts.qualificationVersion,
+            contactVersion: opts.contactVersion,
+          });
+
+          const outcomes: { candidateId: string; created: boolean; refusal?: string }[] = [];
+          for (const member of members) {
+            const result = await createOutreachDraft({
+              store,
+              mailbox,
+              preview: {
+                publish: async (id, language) => {
+                  const published = await publishPreview({
+                    store: createMongoOutreachPreviewStore(connection, {
+                      prescanVersion: opts.prescanVersion,
+                      qualificationVersion: opts.qualificationVersion,
+                    }),
+                    publisher: opts.dryRun
+                      ? createInMemoryPreviewPublisher()
+                      : createConfiguredPreviewPublisher(),
+                    publicBaseUrl: getPreviewPublicBaseUrl(),
+                    candidateId: id,
+                    language,
+                    dryRun: false,
+                  });
+                  if (!published.published || published.url === undefined) {
+                    return { refusal: published.refusal ?? 'unknown' };
+                  }
+                  return {
+                    previewId: published.previewId as string,
+                    url: published.url,
+                    publicExpiresAt: published.publicExpiresAt as Date,
+                  };
+                },
+              },
+              publicBaseUrl: getPreviewPublicBaseUrl(),
+              candidateId: member.candidateId,
+              language: opts.language,
+              dryRun: opts.dryRun,
+            });
+            outcomes.push({
+              candidateId: member.candidateId,
+              created: result.created,
+              ...(result.refusal === undefined ? {} : { refusal: result.refusal }),
+            });
+          }
+
+          console.log(
+            JSON.stringify(
+              {
+                promptVersion: CURRENT_OUTREACH_PROMPT_VERSION,
+                considered: members.length,
+                created: outcomes.filter((outcome) => outcome.created).length,
+                outcomes,
+              },
+              null,
+              2,
+            ),
+          );
+        } catch (error) {
+          // Stops the whole batch, per plan 011: an authentication or provider
+          // failure repeated across a run is how a mailbox gets rate limited.
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`odysseus prospect draft batch: stopped\n${message}`);
+          process.exitCode = 1;
+        } finally {
+          if (mongoConnection) await disconnectFromMongo(mongoConnection);
+        }
+      },
+    );
+
+  draft
+    .command('list')
+    .description('List drafts awaiting a human review, newest first.')
+    .option('--status <created|deleted|failed>', 'Which drafts to list', 'created')
+    .option('--limit <n>', 'Maximum rows', parsePositiveInt, 50)
+    .action(async (opts: { status: string; limit: number }) => {
+      if (opts.status !== 'created' && opts.status !== 'deleted' && opts.status !== 'failed') {
+        console.error('odysseus prospect draft list: --status must be created, deleted or failed');
+        process.exitCode = 1;
+        return;
+      }
+      let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+      try {
+        mongoConnection = await connectToMongo();
+        const rows = await listOutreachDrafts(mongoConnection, {
+          status: opts.status,
+          limit: opts.limit,
+        });
+        console.log(
+          JSON.stringify(
+            rows.map((row) => ({
+              draftId: row.draftId,
+              candidateId: row.candidateId,
+              touch: row.touch,
+              language: row.language,
+              roleAddress: row.roleAddress,
+              subject: row.subject,
+              providerDraftId: row.providerDraftId,
+              status: row.status,
+              failureReason: row.failureReason,
+              createdAt: row.createdAt,
+            })),
+            null,
+            2,
+          ),
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`odysseus prospect draft list: failed\n${message}`);
+        process.exitCode = 1;
+      } finally {
+        if (mongoConnection) await disconnectFromMongo(mongoConnection);
+      }
+    });
+
+  draft
+    .command('show <draftId>')
+    .description(
+      'Print one draft exactly as it will be read: subject, body, preview link and the ' +
+        'contract versions behind it. This is the per-draft review the operator performs.',
+    )
+    .action(async (draftId: string) => {
+      let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+      try {
+        mongoConnection = await connectToMongo();
+        const row = await findOutreachDraftById(mongoConnection, draftId);
+        if (row === null) {
+          console.error(`odysseus prospect draft show: no draft ${draftId}`);
+          process.exitCode = 1;
+          return;
+        }
+        console.log(
+          JSON.stringify(
+            {
+              draftId: row.draftId,
+              candidateId: row.candidateId,
+              touch: row.touch,
+              language: row.language,
+              roleAddress: row.roleAddress,
+              previewUrl: row.previewUrl,
+              prescanVersion: row.prescanVersion,
+              evidenceVersion: row.evidenceVersion,
+              outreachPromptVersion: row.outreachPromptVersion,
+              providerDraftId: row.providerDraftId,
+              status: row.status,
+              subject: row.subject,
+            },
+            null,
+            2,
+          ),
+        );
+        console.log(`\n--- body ---\n${row.body}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`odysseus prospect draft show: failed\n${message}`);
+        process.exitCode = 1;
+      } finally {
+        if (mongoConnection) await disconnectFromMongo(mongoConnection);
+      }
+    });
+
+  draft
+    .command('delete <draftId>')
+    .description(
+      'Withdraw a draft the operator has rejected: removed from the mailbox first, so a ' +
+        'record can never read deleted while the draft is still sitting there.',
+    )
+    .action(async (draftId: string) => {
+      const mailbox = mailboxFor(false, 'delete');
+      if (mailbox === null) return;
+
+      let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
+      try {
+        mongoConnection = await connectToMongo();
+        const row = await findOutreachDraftById(mongoConnection, draftId);
+        if (row === null) {
+          console.error(`odysseus prospect draft delete: no draft ${draftId}`);
+          process.exitCode = 1;
+          return;
+        }
+        if (row.providerDraftId !== undefined) {
+          await mailbox.deleteDraft(row.providerDraftId);
+        }
+        const result = await markOutreachDraftDeleted(mongoConnection, draftId);
+        console.log(JSON.stringify({ draftId, ...result }, null, 2));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`odysseus prospect draft delete: failed\n${message}`);
+        process.exitCode = 1;
+      } finally {
+        if (mongoConnection) await disconnectFromMongo(mongoConnection);
+      }
+    });
+
   // Milestone 9c plan 009. What /desinscription promises, as one command.
   //
   // The two halves are separate collections and separate concerns - suppression
@@ -1529,13 +1907,23 @@ export function registerProspectCommand(program: Command): void {
           reason: opts.reason,
         });
 
+        // Threads close alongside the preview: a suppressed domain with an
+        // open thread is a conversation the next batch would try to continue.
+        const threads = await closeOutreachThreadsForDomain(mongoConnection, domain, opts.reason);
+
         await addSuppressionEntry(mongoConnection, {
           domain,
           ...(opts.address !== undefined ? { address: opts.address } : {}),
           reason: opts.reason,
         });
 
-        console.log(JSON.stringify({ domain, ...revocation, suppressed: true }, null, 2));
+        console.log(
+          JSON.stringify(
+            { domain, ...revocation, threadsClosed: threads.closed, suppressed: true },
+            null,
+            2,
+          ),
+        );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error(`odysseus prospect object: failed\n${message}`);

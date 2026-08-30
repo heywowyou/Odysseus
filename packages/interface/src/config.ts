@@ -186,3 +186,69 @@ export function getPreviewBucketAccessKeyId(): string {
 export function getPreviewBucketSecretKey(): string {
   return requiredPreviewEnv('ODYSSEUS_PREVIEW_BUCKET_SECRET_KEY');
 }
+
+/**
+ * Milestone 9c plan 011: the mailbox outreach drafts are prepared in.
+ *
+ * Four values, none with a default, and `isMailboxConfigured` reports on all
+ * four together rather than letting a caller test one. With nothing
+ * provisioned at the time this shipped, that is what makes production draft
+ * creation structurally unreachable instead of merely unconfigured: the
+ * factory cannot build a Gmail adapter, so the CLI falls back to the in-memory
+ * one and says so, rather than constructing a half-credentialled client that
+ * fails at Google with a message about tokens.
+ *
+ * The sending address is deliberately separate from `odysseusaudit.com`, per
+ * plan 011's operator preflight. Nothing here enforces that, because the check
+ * belongs where a person can see the answer: the preflight checklist in
+ * `docs/outreach-rules.md`.
+ */
+export const MAILBOX_ENV_VARS = [
+  'ODYSSEUS_MAILBOX_CLIENT_ID',
+  'ODYSSEUS_MAILBOX_CLIENT_SECRET',
+  'ODYSSEUS_MAILBOX_REFRESH_TOKEN',
+  'ODYSSEUS_MAILBOX_SENDER_ADDRESS',
+] as const;
+
+export function isMailboxConfigured(): boolean {
+  ensureEnvLoaded();
+  return MAILBOX_ENV_VARS.every((name) => {
+    const value = process.env[name];
+    return value !== undefined && value !== '';
+  });
+}
+
+/** Which of the four are missing, so the operator is told what to set rather
+ *  than that "the mailbox" is unconfigured. Never reports a value. */
+export function missingMailboxEnvVars(): string[] {
+  ensureEnvLoaded();
+  return MAILBOX_ENV_VARS.filter((name) => {
+    const value = process.env[name];
+    return value === undefined || value === '';
+  });
+}
+
+function requiredMailboxEnv(name: string): string {
+  ensureEnvLoaded();
+  const value = process.env[name];
+  if (value === undefined || value === '') {
+    throw new Error(`${name} is not set; outreach draft creation needs it`);
+  }
+  return value;
+}
+
+export function getMailboxClientId(): string {
+  return requiredMailboxEnv('ODYSSEUS_MAILBOX_CLIENT_ID');
+}
+
+export function getMailboxClientSecret(): string {
+  return requiredMailboxEnv('ODYSSEUS_MAILBOX_CLIENT_SECRET');
+}
+
+export function getMailboxRefreshToken(): string {
+  return requiredMailboxEnv('ODYSSEUS_MAILBOX_REFRESH_TOKEN');
+}
+
+export function getMailboxSenderAddress(): string {
+  return requiredMailboxEnv('ODYSSEUS_MAILBOX_SENDER_ADDRESS');
+}
