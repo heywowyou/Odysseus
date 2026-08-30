@@ -2616,6 +2616,32 @@ building tracking that the approved design omits. Plan 014 therefore drops its
 preview-load gate and evaluates replies, bounces, objections and operator-set
 outcomes instead.
 
+### 59. The operator dashboard is a Vite React app on hand-written report CSS, and the two stacks stay separate
+
+Plan 017 rebuilt the dashboard (previously four server-static HTML pages with
+`innerHTML` template strings) as a React 19 + Vite + Tailwind CSS 4 single-page
+app inside `packages/interface`, with Radix primitives owned as in-repo
+component source and no UI framework beyond that: still no Next.js dashboard
+and no Express API, the `node:http` router and its CSRF posture are untouched,
+and the SPA ships as static files from the same `dist/public` the old pages
+used.
+
+This is the recorded boundary against trade-off 9, which bans a Tailwind build
+step for `packages/report`. That ban stands: the report's print-tested CSS is
+hand-maintained and untouched. The dashboard keeps its own token layer
+(`src/dashboard/theme.css`), derived from the report brand (Inter, the violet
+accent family, the WCAG-adjusted severity palette) but re-expressed as its own
+dark theme, so the two surfaces can evolve independently while reading as one
+product. The only shared assets are the Inter woff2 files, copied at build time
+from the report package's canonical source so font versions cannot drift.
+
+The browser bundle imports no workspace package: response shapes are declared
+in dashboard-local type files, and small pure validators (URL, SIREN checksum)
+are duplicated by value with why-comments rather than pulling `@odysseus/core`
+into client code. API field names remain the server's persisted contract. FR/EN
+parity for dashboard copy is enforced by a key-parity test over the string
+tables, mirroring the report's strings-parity test.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

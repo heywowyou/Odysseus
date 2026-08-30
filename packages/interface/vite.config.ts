@@ -17,7 +17,7 @@ function copyInterFonts(): Plugin {
     apply: 'build',
     closeBundle() {
       const sourceDir = resolve(packageRoot, '../report/src/fonts');
-      const targetDir = resolve(packageRoot, 'dist/public/dashboard/fonts');
+      const targetDir = resolve(packageRoot, 'dist/public/fonts');
       mkdirSync(targetDir, { recursive: true });
       for (const fileName of readdirSync(sourceDir)) {
         if (fileName.endsWith('.woff2')) {
@@ -30,11 +30,11 @@ function copyInterFonts(): Plugin {
 
 export default defineConfig({
   root: 'src/dashboard',
-  base: '/dashboard/',
+  base: '/',
   publicDir: false,
   plugins: [react(), tailwindcss(), copyInterFonts()],
   build: {
-    outDir: '../../dist/public/dashboard',
+    outDir: '../../dist/public',
     emptyOutDir: true,
   },
   server: {

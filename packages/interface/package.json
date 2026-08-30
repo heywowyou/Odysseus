@@ -13,8 +13,8 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "dev:dashboard": "vite",
-    "build": "tsc -b && tsc -p tsconfig.public.json && mkdir -p dist/public/styles dist/public/fonts && cp src/public/*.html src/public/*.css dist/public/ && cp ../report/src/styles/nocturne.css dist/public/styles/nocturne.css && cp ../report/src/fonts/*.woff2 dist/public/fonts/ && vite build",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.public.json --noEmit && tsc -p tsconfig.dashboard.json --noEmit"
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.dashboard.json --noEmit"
   },
   "dependencies": {
     "@odysseus/core": "workspace:*",

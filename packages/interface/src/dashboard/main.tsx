@@ -13,7 +13,7 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <BrowserRouter basename="/dashboard">
+    <BrowserRouter>
       <I18nProvider>
         <App />
         <Toaster

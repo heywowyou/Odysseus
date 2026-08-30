@@ -5,7 +5,7 @@
     "rootDir": "./src"
   },
   "include": ["src"],
-  "exclude": ["src/public", "src/dashboard"],
+  "exclude": ["src/dashboard"],
   "references": [
     { "path": "../core" },
     { "path": "../scanner" },

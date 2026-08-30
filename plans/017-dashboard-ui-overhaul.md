@@ -15,6 +15,15 @@
 - **Category**: direction
 - **Planned at**: working tree of `350fe2a`, 2026-08-30, operator-approved with
   the binding decisions below recorded in the approving session.
+- **IMPLEMENTED 2026-08-30** at the working tree of `0c12feb` (slices 1-2 and
+  3-6) plus the cutover commit. `pnpm run check` and the interface suite are
+  green; all four pages verified in a headless browser at desktop and mobile
+  widths in FR and EN against a scratch server (no store/queue infrastructure
+  in this session, so no page has yet been read against live scan data by the
+  operator; that read is what flips this plan to `DONE`). One deviation from
+  the plan text: slices 3-6 were built by four agents working concurrently in
+  one tree, so their commits collapse into the single `0c12feb`. The durable
+  stack boundary is trade-off 59.
 
 ## Why this matters
 

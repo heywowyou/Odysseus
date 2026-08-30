@@ -161,8 +161,8 @@ export function getOutreachReplyWindowDays(): number {
 /** Anchored to the workspace root (not to this module's own depth on
  *  disk), so it resolves identically whether the server runs via `tsx
  *  src/index.ts` (dev) or the compiled `dist/index.js` (prod) - both sit
- *  at different depths relative to `src/public`, but findWorkspaceRoot
- *  doesn't care which one is running. */
+ *  at different depths relative to the built dashboard, but
+ *  findWorkspaceRoot doesn't care which one is running. */
 export function getPublicDir(): string {
   return path.join(findWorkspaceRoot(), 'packages', 'interface', 'dist', 'public');
 }

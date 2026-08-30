@@ -12,7 +12,7 @@ const CONTENT_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
-const DASHBOARD_PREFIX = '/dashboard';
+const APP_ROUTE_PATTERN = /^\/(audits|scans)(\/|$)/;
 
 export type StaticResolution =
   | { kind: 'file'; filePath: string }
@@ -40,14 +40,15 @@ async function isFile(candidate: string): Promise<boolean> {
 /** Pure path resolution for the static fallback, split from the stream
  *  plumbing so the routing decision is unit-testable without a server.
  *
- *  Exact files under publicDir win first (the pre-rebuild pages and every
- *  built dashboard asset). Client-side routes under /dashboard/ have no file
- *  on disk, so a refresh or deep link like /dashboard/audits/x must serve the
- *  dashboard entry and let the SPA router render the route; the prefix is
- *  scoped to the dashboard so everything else keeps plain 404 semantics.
- *  /api/* never reaches this resolver, the router matches those routes first.
- *  Any path that resolves outside publicDir is refused outright (traversal),
- *  so a request URL's own '..' segments can never escape publicDir. */
+ *  Exact files under publicDir win first (the built SPA's index.html and
+ *  hashed assets). Client-side routes have no file on disk, so anything
+ *  under /audits or /scans serves the SPA entry and lets the client router
+ *  render the route; the prefix list is deliberate so anything else
+ *  (bookmarks to the removed pre-rebuild pages, stray paths) keeps plain
+ *  404 semantics. /api/* never reaches this resolver, the router matches
+ *  those routes first. Any path that resolves outside publicDir is refused
+ *  outright (traversal), so a request URL's own '..' segments can never
+ *  escape publicDir. */
 export async function resolveStaticPath(
   publicDir: string,
   requestedPath: string,
@@ -58,9 +59,8 @@ export async function resolveStaticPath(
   if (primary === null) return { kind: 'forbidden' };
   if (await isFile(primary)) return { kind: 'file', filePath: primary };
 
-  const withSlash = normalized === DASHBOARD_PREFIX ? `${DASHBOARD_PREFIX}/` : normalized;
-  if (withSlash.startsWith(`${DASHBOARD_PREFIX}/`)) {
-    const entryPath = resolveWithin(publicDir, '/dashboard/index.html');
+  if (APP_ROUTE_PATTERN.test(normalized)) {
+    const entryPath = resolveWithin(publicDir, '/index.html');
     if (entryPath !== null && (await isFile(entryPath))) {
       return { kind: 'spa-fallback', filePath: entryPath };
     }
@@ -69,9 +69,9 @@ export async function resolveStaticPath(
   return { kind: 'not-found' };
 }
 
-/** Serves the compiled dashboard (dist/public: the pre-rebuild pages today,
- *  the built SPA under dashboard/ alongside them) as the router's fallback,
- *  for any request that matched no /api/* route. */
+/** Serves the compiled dashboard SPA (dist/public: index.html, hashed
+ *  assets, self-hosted fonts) as the router's fallback, for any request
+ *  that matched no /api/* route. */
 export function registerStaticFallback(router: Router): void {
   router.setFallback(async ({ req, res }) => {
     const publicDir = getPublicDir();
