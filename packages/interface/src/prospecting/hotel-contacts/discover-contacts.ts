@@ -31,6 +31,7 @@ import {
 import type { CohortMemberToContact, RecordHotelContactInput } from '@odysseus/store';
 import type { ContactPagesFetch } from './fetch-contact-pages.js';
 import type { MailDomainVerifier } from './verify-mail-domain.js';
+import { toLanes } from '../to-lanes.js';
 
 /** Bumped by hand when a contact rule changes, never edited in place - the
  *  discipline CURRENT_QUALIFICATION_VERSION records, and for the same reason: a
@@ -86,14 +87,6 @@ export interface DiscoverContactsReport {
 
 /** Three requests per site: homepage, mentions legales, contact page. */
 const MAX_REQUESTS_PER_SITE = 3;
-
-function toLanes<T>(items: readonly T[], laneCount: number): T[][] {
-  const lanes: T[][] = Array.from({ length: Math.max(1, laneCount) }, () => []);
-  items.forEach((item, index) => {
-    lanes[index % lanes.length]?.push(item);
-  });
-  return lanes;
-}
 
 function emptyStates(): Record<HotelContactState, number> {
   return { found: 0, parked: 0, rejected: 0, suppressed: 0 };

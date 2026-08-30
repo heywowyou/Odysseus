@@ -38,6 +38,7 @@ import {
 import type { HotelSireneJoin } from '@odysseus/core';
 import type { HotelCandidateDocument } from '@odysseus/store';
 import type { HotelSireneJoiner } from '../hotel-identity/hotel-sirene-join.js';
+import { toLanes } from '../to-lanes.js';
 import type { RecordHotelQualificationInput } from '@odysseus/store';
 
 /** Bumped by hand when a qualification rule changes, never edited in place -
@@ -149,17 +150,6 @@ export interface HotelQualificationPlan {
 
 function emptyOutcomes(): Record<HotelQualificationOutcome, number> {
   return { qualified: 0, parked: 0, rejected: 0, 'already-engaged': 0, 'group-routed': 0 };
-}
-
-/** Splits a list into `laneCount` round-robin lanes, the shape scan-site.ts
- *  uses. Round-robin rather than contiguous chunks so a run whose candidates
- *  arrive sorted by name does not put one region's slow hosts in one lane. */
-function toLanes<T>(items: readonly T[], laneCount: number): T[][] {
-  const lanes: T[][] = Array.from({ length: Math.max(1, laneCount) }, () => []);
-  items.forEach((item, index) => {
-    lanes[index % lanes.length]?.push(item);
-  });
-  return lanes;
 }
 
 /** Assembles the facts the pure decision reads. Kept separate so what the

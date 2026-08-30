@@ -44,6 +44,7 @@ import type {
   RedirectReclassification,
 } from '@odysseus/store';
 import { factsFor, type HotelSiteChecker } from './qualify-hotels.js';
+import { toLanes } from '../to-lanes.js';
 
 export const RECONCILE_BATCH_SIZE = 200;
 
@@ -135,15 +136,6 @@ interface RedirectRow {
 
 function emptyOutcomes(): Record<HotelQualificationOutcome, number> {
   return { qualified: 0, parked: 0, rejected: 0, 'already-engaged': 0, 'group-routed': 0 };
-}
-
-/** Round-robin lanes, the shape qualify-hotels.ts and prescan-hotels.ts use. */
-function toLanes<T>(items: readonly T[], laneCount: number): T[][] {
-  const lanes: T[][] = Array.from({ length: Math.max(1, laneCount) }, () => []);
-  items.forEach((item, index) => {
-    lanes[index % lanes.length]?.push(item);
-  });
-  return lanes;
 }
 
 function hasRedirectReason(row: HotelQualificationDocument): boolean {

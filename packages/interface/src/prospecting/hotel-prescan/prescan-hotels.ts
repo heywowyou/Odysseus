@@ -25,6 +25,7 @@
 
 import type { HotelCandidateDocument, RecordPrescanInput } from '@odysseus/store';
 import type { HotelEvidenceStatus, HotelPrescanStatus } from '@odysseus/core';
+import { toLanes } from '../to-lanes.js';
 
 /** Bumped by hand when what a prescan measures changes, never edited in
  *  place - the same discipline, and the same reason, as
@@ -130,17 +131,6 @@ function emptyStatuses(): Record<HotelPrescanStatus, number> {
 
 function emptyEvidenceStatuses(): Record<HotelEvidenceStatus | 'missing', number> {
   return { complete: 0, incomplete: 0, missing: 0 };
-}
-
-/** Round-robin lanes, the shape scan-site.ts and qualify-hotels.ts both use:
- *  a candidate list sorted by id must not put one slow host's neighbours all
- *  in one lane. */
-function toLanes<T>(items: readonly T[], laneCount: number): T[][] {
-  const lanes: T[][] = Array.from({ length: Math.max(1, laneCount) }, () => []);
-  items.forEach((item, index) => {
-    lanes[index % lanes.length]?.push(item);
-  });
-  return lanes;
 }
 
 export async function prescanHotels(options: PrescanHotelsOptions): Promise<HotelPrescanReport> {
