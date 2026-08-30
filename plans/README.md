@@ -407,6 +407,19 @@ Each kind of work has exactly one home:
   result, and neither existed when the work was done. Preflight list is
   `docs/outreach-rules.md` section 10; the reasoning behind the no-send design
   is trade-off 56.
+  **Update 2026-08-30.** The mailbox is now provisioned: Google Workspace
+  account `contact@odysseusaudit.com`, a Cloud project with an Internal OAuth
+  consent screen scoped to exactly `gmail.compose` and `gmail.metadata`, a
+  refresh token, and SPF/DKIM/DMARC all verified. All four
+  `ODYSSEUS_MAILBOX_*` variables are set. Step 6 itself was attempted against
+  a synthetic candidate seeded directly into an isolated database (never a
+  real prospect) and failed before reaching the mailbox: the writing pass's
+  touch-1 word-count guard rejected all 3 retries on the live Mistral API,
+  twice, six generations landing at 31 to 38 words against a required 60 to
+  90. Filed as issue #12 rather than worked around, since relaxing that
+  guard would silently reverse the shape stated in `docs/outreach-rules.md`
+  section 6. Plan 011 stays `IMPLEMENTED` until #12 is resolved and Step 6 is
+  re-run to completion.
 
 ## Verification baseline
 
