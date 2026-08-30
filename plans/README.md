@@ -339,7 +339,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [008](./008-safe-outreach-preview-html.md) | Generate safe outreach preview HTML | P1 | L | 005 | DONE |
 | [009](./009-expiring-preview-publication.md) | Publish expiring previews and compliance pages | P1 | L | 008 | DONE |
 | [010](./010-validated-outreach-prose.md) | Generate and validate outreach prose | P1 | L | 006, 008 | DONE |
-| [011](./011-gmail-drafts-without-send.md) | Create reviewed Gmail drafts without sending | P1 | L | 007, 009, 010 | IMPLEMENTED |
+| [011](./011-gmail-drafts-without-send.md) | Create reviewed Gmail drafts without sending | P1 | L | 007, 009, 010 | DONE |
 | [012](./012-replies-suppressions-outcomes.md) | Reconcile replies, suppressions, and outcomes | P2 | L | 011 | TODO |
 | [013](./013-outreach-operator-interface.md) | Add the private outreach operator interface | P2 | L | 001-012 | TODO |
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013 | TODO |
@@ -420,6 +420,21 @@ Each kind of work has exactly one home:
   guard would silently reverse the shape stated in `docs/outreach-rules.md`
   section 6. Plan 011 stays `IMPLEMENTED` until #12 is resolved and Step 6 is
   re-run to completion.
+  **Update 2026-08-30 (second).** #12 was fixed in commit `b5410e3` and
+  Step 6 was re-run to completion against the live mailbox. One synthetic
+  candidate (domain and contact both the operator-owned
+  `odysseusaudit.com` mailbox, evidence a copied measurement image) was
+  seeded into the isolated database `odysseus_011_smoke` on the test Mongo
+  service, never a real prospect. `prospect draft create` produced one live
+  Gmail draft (`providerDraftId` `r6748644109893378026`), verified plain
+  text, one preview link, and full disclosures via `draft show` and
+  `getDraft`; it was then deleted at the provider and in the store, and the
+  preview object was revoked. Nothing was sent; no send capability exists on
+  the adapter. One residual defect was measured and filed as issue #14: the
+  first live run still exhausted all three retries at 56 to 58 words against
+  the 60 floor, and the second succeeded only via the retry feedback path,
+  so run-level failure remains possible. Plan 011 is `DONE`; #14 tracks the
+  reliability gap for the real campaign.
 
 ## Verification baseline
 
