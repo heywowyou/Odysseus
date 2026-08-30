@@ -25,6 +25,7 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
+import type { OutreachEvidenceSlot } from '@odysseus/core';
 
 /** `failed` records an attempt that never reached the provider, so a run that
  *  refused for a good reason leaves evidence instead of nothing. */
@@ -41,8 +42,14 @@ export interface OutreachDraftDocumentFields {
   body: string;
   subjectHash: string;
   bodyHash: string;
-  previewId: string;
-  previewUrl: string;
+  /** Which deterministic evidence family opened touch 1. Absent on follow-ups
+   * and historical touch-1 rows created before plan 012. */
+  touch1EvidenceSlot?: OutreachEvidenceSlot;
+  /** Touch 1 only. Touches 2 and 3 publish no preview and add no link (a
+   *  reply-based opt-out instead, trade-off 54), so there is nothing honest
+   *  to store here for them - absent, never an empty-string sentinel. */
+  previewId?: string;
+  previewUrl?: string;
   /** The contract versions behind this exact text, so a draft can be told
    *  apart from one produced before a prompt or evidence change without
    *  re-deriving anything. */
@@ -84,8 +91,12 @@ const outreachDraftSchema = new Schema<OutreachDraftDocument>(
     body: { type: String, required: requiredWhenCreated, default: '' },
     subjectHash: { type: String, required: true },
     bodyHash: { type: String, required: true },
-    previewId: { type: String, required: true },
-    previewUrl: { type: String, required: true },
+    touch1EvidenceSlot: {
+      type: String,
+      enum: ['render-comparison', 'specific-failure', 'summary'],
+    },
+    previewId: { type: String },
+    previewUrl: { type: String },
     prescanVersion: { type: String, required: true },
     evidenceVersion: { type: String, required: true },
     outreachPromptVersion: { type: String, required: true },

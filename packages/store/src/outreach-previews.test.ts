@@ -106,7 +106,11 @@ describe.skipIf(!mongoAvailable)('outreach previews', () => {
 
   it('refuses and self-revokes a record that lands once the domain is suppressed', async () => {
     if (!connection) return;
-    await addSuppressionEntry(connection, { domain: 'hotel-a.fr', reason: 'objection received' });
+    await addSuppressionEntry(connection, {
+      domain: 'hotel-a.fr',
+      reasonCode: 'objection',
+      reason: 'objection received',
+    });
 
     const outcome = await recordOutreachPreview(connection, input({ domain: 'hotel-a.fr' }));
     expect(outcome.outcome).toBe('refused-suppressed');

@@ -2521,8 +2521,9 @@ open thread is a conversation the next batch would try to continue.
 page is live (trade-off 43), but a draft sent by hand from a mail client is not
 guaranteed to preserve custom headers, and RFC 8058 one-click needs a `POST`
 handler the site does not have. The in-body opt-out line section 7 requires is
-unaffected and ships. Plan step 6, a live synthetic draft, needs a provisioned
-mailbox and a person; plan 011 is therefore `IMPLEMENTED`, not `DONE`.
+unaffected and ships. Plan 011's live synthetic draft was completed and deleted
+without sending on 2026-08-30, so plan 011 is `DONE`; issue #14 separately
+tracks the measured touch-1 generation reliability gap.
 
 **Provisioning is an operator step with one load-bearing setting.** A Google
 Workspace OAuth client of user type **Internal**. External clients left in
@@ -2576,6 +2577,44 @@ Not verified against a live re-scan. No saved audit stores page HTML, so the
 real-site evidence available offline is the recorded failure list, which the
 microdata test reproduces. A live re-scan of a site declaring Article-family
 markup is the remaining confirmation.
+
+### 58. Manual outreach reconciliation is metadata-only, suppression-first, and operator-scored
+
+The outreach thread uses one explicit state machine in `core`, with provider
+facts (confirmed sends, replies, bounces and review flags) kept separate from
+operator-set outcome events. Follow-up spacing and the final reply window are
+snapshotted when the thread opens. A later configuration change therefore
+cannot make an existing conversation due earlier or later.
+
+Mailbox reconciliation reads message identifiers, dates, sender addresses,
+labels and the minimum headers needed for classification. It stores no message
+body and infers no sentiment. The existing `getThreadMetadata` result was
+widened to carry per-message metadata; `MailboxDraftAdapter` still has exactly
+the four methods protected by trade-off 56, so plan 012 added neither a fifth
+method nor a broader Gmail capability. Ambiguous disappearance and automated
+responses block follow-ups with a review flag.
+
+A metadata-detected bounce closes its thread but does not create a permanent
+suppression. Under `gmail.metadata`, the detail that distinguishes a dead
+address from a temporary mailbox failure lives in content the tool deliberately
+does not read. Permanent hard-bounce suppression therefore requires the
+operator's separate `bounce-confirm` action. Completed three-touch sequences
+are different: after the thread's 14-day reply window, reconciliation writes
+the hash-only `sequence-complete` suppression first and then makes the thread
+terminal. No fourth touch exists.
+
+Campaign outcomes are insert-only operator events with a closed vocabulary,
+actor and date, retained for 90 days. The thread points at the current event;
+earlier events remain auditable. Aggregate reads expose counts by score band,
+touch-1 evidence slot and categorical outcome only. They expose no address,
+subject or body.
+
+The preview-load metric is unavailable. The public preview route deliberately
+logs no visitor behavior, stores no raw token, IP address or user agent, and the
+standalone site has no database access. Producing an open signal would require
+building tracking that the approved design omits. Plan 014 therefore drops its
+preview-load gate and evaluates replies, bounces, objections and operator-set
+outcomes instead.
 
 ## Build order milestone notes (8.5a through 9c)
 

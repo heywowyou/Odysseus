@@ -26,6 +26,7 @@ import type {
   CreateMailboxDraftInput,
   MailboxDraft,
   MailboxDraftAdapter,
+  MailboxMessageMetadata,
   MailboxThreadMetadata,
 } from './mailbox-draft-adapter.js';
 
@@ -48,6 +49,23 @@ export interface InMemoryMailboxDraftAdapter extends MailboxDraftAdapter {
    *  where the provider accepts a draft and the caller then fails to persist
    *  it. */
   failNextCreate(error: Error): void;
+  /** Test-only: simulates the operator sending a draft by hand. Drops the
+   *  `DRAFT` label, adds `SENT`, and removes it from `getDraft`'s reach -
+   *  matching Gmail's own behaviour, where a sent draft stops being a draft.
+   *  Throws if the draft is unknown. */
+  markDraftSent(providerDraftId: string, at?: Date): void;
+  /** Test-only: injects an inbound message into a thread (a reply, a bounce,
+   *  or an automated response), so `classifyMailboxThread` fixtures do not
+   *  need a real mailbox. Returns the synthetic `providerMessageId`. */
+  injectInboundMessage(
+    providerThreadId: string,
+    input: {
+      fromAddress: string;
+      at?: Date;
+      autoSubmitted?: boolean;
+      inReplyTo?: string;
+    },
+  ): string;
 }
 
 export interface InMemoryMailboxDraftAdapterOptions {
@@ -61,7 +79,7 @@ export function createInMemoryMailboxDraftAdapter(
 ): InMemoryMailboxDraftAdapter {
   const senderAddress = options.senderAddress ?? 'drafts@example.test';
   const drafts = new Map<string, RecordedDraft>();
-  const threadMessageIds = new Map<string, string[]>();
+  const threadMessages = new Map<string, MailboxMessageMetadata[]>();
   let sequence = 0;
   let pendingFailure: Error | undefined;
 
@@ -107,9 +125,15 @@ export function createInMemoryMailboxDraftAdapter(
         createdAt: new Date(),
       });
 
-      const onThread = threadMessageIds.get(providerThreadId) ?? [];
-      onThread.push(providerMessageId);
-      threadMessageIds.set(providerThreadId, onThread);
+      const onThread = threadMessages.get(providerThreadId) ?? [];
+      onThread.push({
+        providerMessageId,
+        at: new Date(),
+        fromAddress: senderAddress,
+        labelIds: ['DRAFT'],
+        autoSubmitted: false,
+      });
+      threadMessages.set(providerThreadId, onThread);
 
       return { providerDraftId, providerMessageId, providerThreadId };
     },
@@ -128,24 +152,25 @@ export function createInMemoryMailboxDraftAdapter(
       const stored = drafts.get(providerDraftId);
       if (stored === undefined) return Promise.resolve();
       drafts.delete(providerDraftId);
-      const remaining = (threadMessageIds.get(stored.providerThreadId) ?? []).filter(
-        (id) => id !== stored.providerMessageId,
+      // An unsent draft that is deleted disappears from the thread entirely,
+      // matching Gmail: nothing was ever sent, so no message remains.
+      const remaining = (threadMessages.get(stored.providerThreadId) ?? []).filter(
+        (message) => message.providerMessageId !== stored.providerMessageId,
       );
-      if (remaining.length === 0) threadMessageIds.delete(stored.providerThreadId);
-      else threadMessageIds.set(stored.providerThreadId, remaining);
+      if (remaining.length === 0) threadMessages.delete(stored.providerThreadId);
+      else threadMessages.set(stored.providerThreadId, remaining);
       return Promise.resolve();
     },
 
     getThreadMetadata(providerThreadId: string): Promise<MailboxThreadMetadata | null> {
-      const onThread = threadMessageIds.get(providerThreadId);
+      const onThread = threadMessages.get(providerThreadId);
       if (onThread === undefined || onThread.length === 0) return Promise.resolve(null);
-      const times = [...drafts.values()]
-        .filter((draft) => draft.providerThreadId === providerThreadId)
-        .map((draft) => draft.createdAt.getTime());
+      const sorted = [...onThread].sort((a, b) => a.at.getTime() - b.at.getTime());
       return Promise.resolve({
         providerThreadId,
-        messageCount: onThread.length,
-        lastMessageAt: new Date(Math.max(...times)),
+        messageCount: sorted.length,
+        lastMessageAt: sorted[sorted.length - 1]?.at ?? new Date(0),
+        messages: sorted,
       });
     },
 
@@ -157,6 +182,41 @@ export function createInMemoryMailboxDraftAdapter(
 
     failNextCreate(error: Error): void {
       pendingFailure = error;
+    },
+
+    markDraftSent(providerDraftId: string, at?: Date): void {
+      const stored = drafts.get(providerDraftId);
+      if (stored === undefined) throw new Error(`markDraftSent: unknown draft ${providerDraftId}`);
+      const onThread = threadMessages.get(stored.providerThreadId) ?? [];
+      const message = onThread.find(
+        (entry) => entry.providerMessageId === stored.providerMessageId,
+      );
+      if (message === undefined) {
+        throw new Error(`markDraftSent: message for draft ${providerDraftId} not found on thread`);
+      }
+      message.labelIds = ['SENT'];
+      message.at = at ?? new Date();
+      // A sent draft stops being a draft, on the port's own documented
+      // contract: `getDraft` must return null for it from this point on.
+      drafts.delete(providerDraftId);
+    },
+
+    injectInboundMessage(
+      providerThreadId: string,
+      input: { fromAddress: string; at?: Date; autoSubmitted?: boolean; inReplyTo?: string },
+    ): string {
+      const providerMessageId = nextId('message');
+      const onThread = threadMessages.get(providerThreadId) ?? [];
+      onThread.push({
+        providerMessageId,
+        at: input.at ?? new Date(),
+        fromAddress: input.fromAddress,
+        labelIds: ['INBOX'],
+        autoSubmitted: input.autoSubmitted ?? false,
+        ...(input.inReplyTo === undefined ? {} : { inReplyTo: input.inReplyTo }),
+      });
+      threadMessages.set(providerThreadId, onThread);
+      return providerMessageId;
     },
   };
 }

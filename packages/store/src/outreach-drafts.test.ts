@@ -33,6 +33,7 @@ function input(overrides: Partial<RecordOutreachDraftInput> = {}): RecordOutreac
     roleAddress: 'direction@hotel-exemple.fr',
     subject: 'Votre site web',
     body: BODY,
+    touch1EvidenceSlot: 'render-comparison',
     previewId: randomUUID(),
     previewUrl: 'https://www.odysseusaudit.com/apercu/token',
     prescanVersion: 'v3',
@@ -66,6 +67,13 @@ describe.skipIf(!mongoAvailable)('outreach drafts', () => {
     const draft = await recordOutreachDraft(connection, input());
     expect(draft.bodyHash).toBe(createHash('sha256').update(BODY, 'utf8').digest('hex'));
     expect(draft.body).toBe(BODY);
+  });
+
+  it('stores the touch-1 evidence slot used by the campaign opener', async () => {
+    if (!connection) return;
+    const draft = await recordOutreachDraft(connection, input());
+    const stored = await findOutreachDraftById(connection, draft.draftId);
+    expect(stored?.touch1EvidenceSlot).toBe('render-comparison');
   });
 
   it('refuses a second live draft for the same thread and touch', async () => {

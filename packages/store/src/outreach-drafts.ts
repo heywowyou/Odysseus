@@ -24,6 +24,7 @@ import {
   createOutreachDraftModel,
   type OutreachDraftDocument,
 } from './schemas/outreach-draft.schema.js';
+import type { OutreachEvidenceSlot } from '@odysseus/core';
 
 /** Operational retention, per docs/rules/prospect-qualification.md section 7. */
 export const OUTREACH_DRAFT_RETENTION_DAYS = 90;
@@ -45,8 +46,11 @@ export interface RecordOutreachDraftInput {
   roleAddress: string;
   subject: string;
   body: string;
-  previewId: string;
-  previewUrl: string;
+  /** Present on touch 1 only; follow-ups do not replace the opener variant. */
+  touch1EvidenceSlot?: OutreachEvidenceSlot;
+  /** Touch 1 only - see the schema's own note. */
+  previewId?: string;
+  previewUrl?: string;
   prescanVersion: string;
   evidenceVersion: string;
   outreachPromptVersion: string;
@@ -90,8 +94,11 @@ export async function recordOutreachDraft(
     body: input.body,
     subjectHash: hash(input.subject),
     bodyHash: hash(input.body),
-    previewId: input.previewId,
-    previewUrl: input.previewUrl,
+    ...(input.touch1EvidenceSlot === undefined
+      ? {}
+      : { touch1EvidenceSlot: input.touch1EvidenceSlot }),
+    ...(input.previewId !== undefined ? { previewId: input.previewId } : {}),
+    ...(input.previewUrl !== undefined ? { previewUrl: input.previewUrl } : {}),
     prescanVersion: input.prescanVersion,
     evidenceVersion: input.evidenceVersion,
     outreachPromptVersion: input.outreachPromptVersion,
@@ -122,8 +129,9 @@ export interface RecordFailedOutreachDraftInput {
   touch: number;
   language: 'fr' | 'en';
   roleAddress: string;
-  previewId: string;
-  previewUrl: string;
+  /** Touch 1 only - see the schema's own note. */
+  previewId?: string;
+  previewUrl?: string;
   prescanVersion: string;
   evidenceVersion: string;
   outreachPromptVersion: string;
@@ -157,8 +165,8 @@ export async function recordFailedOutreachDraft(
     body: '',
     subjectHash: hash(''),
     bodyHash: hash(''),
-    previewId: input.previewId,
-    previewUrl: input.previewUrl,
+    ...(input.previewId !== undefined ? { previewId: input.previewId } : {}),
+    ...(input.previewUrl !== undefined ? { previewUrl: input.previewUrl } : {}),
     prescanVersion: input.prescanVersion,
     evidenceVersion: input.evidenceVersion,
     outreachPromptVersion: input.outreachPromptVersion,

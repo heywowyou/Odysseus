@@ -29,6 +29,7 @@ import {
   openOutreachThread,
   recordFailedOutreachDraft,
   recordOutreachDraft,
+  transitionOutreachThread,
 } from '@odysseus/store';
 import type {
   OutreachDraftRow,
@@ -100,7 +101,7 @@ export function createMongoOutreachDraftStore(
       const { thread } = await openOutreachThread(connection, input);
       return {
         threadId: thread.threadId,
-        status: thread.status,
+        state: thread.state,
         currentTouch: thread.currentTouch,
         ...(thread.providerThreadId === undefined
           ? {}
@@ -128,6 +129,17 @@ export function createMongoOutreachDraftStore(
 
     advanceTouch(threadId: string, touch: number): Promise<void> {
       return advanceThreadTouch(connection, threadId, touch);
+    },
+
+    async transition(input): Promise<boolean> {
+      const result = await transitionOutreachThread(connection, {
+        threadId: input.threadId,
+        from: input.from,
+        to: input.to,
+        at: input.at,
+        ...(input.reason === undefined ? {} : { reason: input.reason }),
+      });
+      return result.changed;
     },
   };
 }

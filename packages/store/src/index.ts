@@ -254,12 +254,17 @@ export type {
   ListOutreachPreviewsOptions,
 } from './outreach-previews.js';
 
-// Milestone 9c plan 011: outreach threads and draft attempts.
-export { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
+// Milestone 9c plans 011 and 012: outreach threads and draft attempts.
+export {
+  createOutreachThreadModel,
+  OUTREACH_THREAD_STATES,
+} from './schemas/outreach-thread.schema.js';
 export type {
   OutreachThreadDocument,
-  OutreachThreadStatus,
   OutreachLanguageSource,
+  OutreachThreadTouchRecord,
+  OutreachThreadReviewFlag,
+  OutreachThreadSpacing,
 } from './schemas/outreach-thread.schema.js';
 export {
   openOutreachThread,
@@ -267,15 +272,28 @@ export {
   findOutreachThreadByCandidate,
   attachProviderThreadId,
   advanceThreadTouch,
+  transitionOutreachThread,
+  recordOutreachThreadTouchSent,
+  markOutreachThreadSynced,
+  setOutreachThreadOutcome,
   closeOutreachThreadsForDomain,
   listOutreachThreads,
+  listThreadsDueForFollowUp,
+  completeOutreachSequence,
+  listThreadsToSync,
   OUTREACH_THREAD_RETENTION_DAYS,
 } from './outreach-threads.js';
 export type {
   OpenOutreachThreadInput,
   OpenedOutreachThread,
+  TransitionOutreachThreadInput,
+  TransitionOutreachThreadResult,
   CloseOutreachThreadsResult,
   ListOutreachThreadsOptions,
+  ListThreadsDueForFollowUpOptions,
+  CompleteOutreachSequenceInput,
+  CompleteOutreachSequenceResult,
+  ListThreadsToSyncOptions,
 } from './outreach-threads.js';
 
 export { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
@@ -299,4 +317,26 @@ export type {
   MarkOutreachDraftDeletedResult,
   ListOutreachDraftsOptions,
 } from './outreach-drafts.js';
+
+export { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
+export type {
+  OutreachOutcomeDocument,
+  OutreachOutcomeDocumentFields,
+} from './schemas/outreach-outcome.schema.js';
+export {
+  recordOutreachOutcome,
+  listOutreachOutcomes,
+  OUTREACH_OUTCOME_RETENTION_DAYS,
+} from './outreach-outcomes.js';
+export type {
+  RecordOutreachOutcomeInput,
+  RecordOutreachOutcomeResult,
+  ListOutreachOutcomesOptions,
+} from './outreach-outcomes.js';
+export { getOutreachCampaignAggregate } from './outreach-campaign-aggregate.js';
+export type {
+  GetOutreachCampaignAggregateOptions,
+  OutreachCampaignAggregate,
+  OutreachCampaignAggregateRow,
+} from './outreach-campaign-aggregate.js';
 export type { ContactableCohortMember } from './hotel-contacts.js';

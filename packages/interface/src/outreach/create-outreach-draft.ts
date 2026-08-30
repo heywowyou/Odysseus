@@ -34,11 +34,19 @@
 import {
   HOTEL_EVIDENCE_MIN_SUMMARIES,
   HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
+  isTerminalOutreachThreadState,
   selectOutreachEvidence,
   type HotelPrescanEvidence,
+  type OutreachEvidenceSlot,
+  type OutreachThreadState,
 } from '@odysseus/core';
 import { buildOutreachProseInput, type OutreachProseOutput } from '@odysseus/llm';
 import { generateOutreachProse } from '@odysseus/llm';
+import {
+  getOutreachReplyWindowDays,
+  getOutreachTouch2AfterDays,
+  getOutreachTouch3AfterDays,
+} from '../config.js';
 import { assembleOutreachDraft, type OutreachDataOrigin } from './assemble-outreach-draft.js';
 import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import { previewLinks, registryAssessment, type PreviewSireneFacts } from './publish-preview.js';
@@ -94,7 +102,7 @@ export interface OutreachDraftRow {
 
 export interface OutreachThreadRef {
   threadId: string;
-  status: 'open' | 'closed';
+  state: OutreachThreadState;
   currentTouch: number;
   providerThreadId?: string;
 }
@@ -107,6 +115,7 @@ export interface RecordDraftFacts {
   roleAddress: string;
   subject: string;
   body: string;
+  touch1EvidenceSlot: OutreachEvidenceSlot;
   previewId: string;
   previewUrl: string;
   prescanVersion: string;
@@ -144,12 +153,28 @@ export interface OutreachDraftStorePort {
     roleAddress: string;
     language: 'fr' | 'en';
     openedAt: Date;
+    spacing: {
+      touch2AfterDays: number;
+      touch3AfterDays: number;
+      replyWindowDays: number;
+    };
   }): Promise<OutreachThreadRef>;
   findLiveDraft(threadId: string, touch: number): Promise<{ draftId: string } | null>;
   recordDraft(facts: RecordDraftFacts): Promise<{ draftId: string }>;
   recordFailure(facts: RecordFailureFacts): Promise<void>;
   attachProviderThreadId(threadId: string, providerThreadId: string): Promise<boolean>;
   advanceTouch(threadId: string, touch: number): Promise<void>;
+  /** Moves the thread into its "drafted" state once the provider has actually
+   *  accepted the draft. Without this, `listThreadsToSync` (which reads only
+   *  drafted/sent states) would never pick the thread up, and a confirmed send
+   *  would have nothing to transition from. */
+  transition(input: {
+    threadId: string;
+    from: readonly OutreachThreadState[];
+    to: OutreachThreadState;
+    at: Date;
+    reason?: string;
+  }): Promise<boolean>;
 }
 
 export interface PublishedPreviewRef {
@@ -297,8 +322,13 @@ export async function createOutreachDraft(
     roleAddress: row.contact.address,
     language: options.language,
     openedAt: now,
+    spacing: {
+      touch2AfterDays: getOutreachTouch2AfterDays(),
+      touch3AfterDays: getOutreachTouch3AfterDays(),
+      replyWindowDays: getOutreachReplyWindowDays(),
+    },
   });
-  if (thread.status === 'closed') return refuse('thread-closed');
+  if (isTerminalOutreachThreadState(thread.state)) return refuse('thread-closed');
   if ((await options.store.findLiveDraft(thread.threadId, touch)) !== null) {
     return refuse('draft-already-live');
   }
@@ -355,6 +385,7 @@ export async function createOutreachDraft(
       ...failureFacts,
       subject: assembled.subject,
       body: assembled.body,
+      touch1EvidenceSlot: selection.touch1.slot,
       providerDraftId: providerDraft.providerDraftId,
       providerMessageId: providerDraft.providerMessageId,
       providerThreadId: providerDraft.providerThreadId,
@@ -373,6 +404,13 @@ export async function createOutreachDraft(
 
   await options.store.attachProviderThreadId(thread.threadId, providerDraft.providerThreadId);
   await options.store.advanceTouch(thread.threadId, touch);
+  await options.store.transition({
+    threadId: thread.threadId,
+    from: ['open'],
+    to: 'e1-drafted',
+    at: now,
+    reason: 'draft-created',
+  });
 
   return {
     created: true,

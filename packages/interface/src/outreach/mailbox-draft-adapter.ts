@@ -60,6 +60,23 @@ export interface MailboxDraft {
   providerThreadId: string;
 }
 
+/** One message's metadata, for plan 012's reply reconciliation. There is no
+ *  subject and no body field: `gmail.metadata` cannot read either, and this
+ *  shape is what keeps that limit visible to callers instead of leaving it as
+ *  a property of a scope string in a config file. `fromAddress` is not a new
+ *  privacy category - the thread already stores `roleAddress` raw for its 90
+ *  days, and the sender of a reply is the same class of fact. */
+export interface MailboxMessageMetadata {
+  providerMessageId: string;
+  at: Date;
+  fromAddress: string;
+  labelIds: readonly string[];
+  /** From the `Auto-Submitted` header (RFC 3834): a vacation responder or
+   *  other automated reply, never a person answering. */
+  autoSubmitted: boolean;
+  inReplyTo?: string;
+}
+
 /** Metadata only, for plan 012's reply reconciliation. There is no field for
  *  message content: `gmail.metadata` cannot read a body, and this shape is
  *  what keeps that limit visible to callers instead of leaving it as a
@@ -68,6 +85,11 @@ export interface MailboxThreadMetadata {
   providerThreadId: string;
   messageCount: number;
   lastMessageAt: Date;
+  /** Per-message metadata, oldest first. Added in plan 012 so
+   *  `classifyMailboxThread` can tell a manual send from a reply from a bounce
+   *  without reading a body - `messageCount` and `lastMessageAt` alone cannot
+   *  distinguish those. */
+  messages: readonly MailboxMessageMetadata[];
 }
 
 export interface MailboxDraftAdapter {

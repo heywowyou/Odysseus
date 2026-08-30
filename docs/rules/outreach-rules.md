@@ -153,7 +153,14 @@ The deterministic facts block appears on touch 3 only. Assembly refuses it on
 touches 1 and 2, so legal context cannot be front-loaded into the cold opener.
 
 Follow-ups generate only if no reply is detected on the thread. Spacing
-is a setting, not a constant in a prompt.
+is a setting, not a constant in a prompt. Canonical defaults, added with
+milestone 9c plan 012 (`ODYSSEUS_OUTREACH_TOUCH2_DAYS` /
+`_TOUCH3_DAYS` / `_REPLY_WINDOW_DAYS`, snapshotted onto each thread at
+open so a later setting change never retroactively redates a live
+thread): touch 2 no earlier than day +4 after touch 1 is confirmed sent,
+touch 3 no earlier than day +11. A thread with no reply 14 days after
+touch 3 is confirmed sent moves to `sequence-complete` and is
+suppressed; no fourth touch exists.
 
 **Touch shape**, added with milestone 9c plan 010. Each row is what
 `packages/llm/src/outreach/outreach-limits.ts` enforces, so a change here
@@ -231,6 +238,14 @@ deadline in that window, and it is direct competition for attention.
 
 **Suppression checked at draft time**, so a suppressed prospect never
 produces a draft that could be sent by reflex.
+
+**Reconciling "no sequencer" with automated follow-up scheduling**, added
+with milestone 9c plan 012. `plans/README.md` binding decision 14 forbids
+"automatic follow-ups"; read together with the automation boundary above,
+that means a system that sends on a timer, which this is not. Scheduling
+and drafting a follow-up are automated (bounded, operator-invoked, and
+gated on a confirmed send, elapsed spacing, and no reply); the send stays
+manual, exactly as it does for touch 1. There is still no sequencer.
 
 ---
 

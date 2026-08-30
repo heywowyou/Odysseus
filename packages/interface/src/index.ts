@@ -31,11 +31,18 @@ export {
   // could read them would be a caller that could build its own adapter.
   getPreviewPublicBaseUrl,
   // Whether a mailbox is configured, and which variables are missing if not.
-  // The client secret, refresh token and sender address stay private to
+  // The client secret and refresh token stay private to
   // createConfiguredMailboxDraftAdapter, on the same reasoning as the bucket
-  // credentials above.
+  // credentials above. The sender address is not a credential - it is the
+  // visible From line on every draft - and plan 012's mailbox reconciliation
+  // needs it to tell our own confirmed sends from inbound replies, so it is
+  // exported alongside the canonical touch spacing it also needs.
   isMailboxConfigured,
   missingMailboxEnvVars,
+  getMailboxSenderAddress,
+  getOutreachTouch2AfterDays,
+  getOutreachTouch3AfterDays,
+  getOutreachReplyWindowDays,
 } from './config.js';
 export { computeCrawlEtaMs, computeScanEtaMs } from './queue/eta.js';
 export type { CrawlEtaInput, ScanEtaInput } from './queue/eta.js';
@@ -223,6 +230,7 @@ export type {
   CreateMailboxDraftInput,
   MailboxDraft,
   MailboxThreadMetadata,
+  MailboxMessageMetadata,
 } from './outreach/mailbox-draft-adapter.js';
 export { createInMemoryMailboxDraftAdapter } from './outreach/in-memory-mailbox-draft-adapter.js';
 export type {
@@ -255,3 +263,34 @@ export type {
 } from './outreach/create-outreach-draft.js';
 export { createMongoOutreachDraftStore } from './outreach/mongo-outreach-draft-store.js';
 export type { MongoOutreachDraftStoreOptions } from './outreach/mongo-outreach-draft-store.js';
+
+// Milestone 9c plan 012: reconciling replies, sends and bounces from mailbox
+// metadata only.
+export { reconcileMailbox } from './outreach/reconcile-mailbox.js';
+export type {
+  ReconcileMailboxOptions,
+  ReconcileMailboxResult,
+  ReconcileMailboxThreadResult,
+  MailboxReconciliationStorePort,
+  ThreadToSync,
+} from './outreach/reconcile-mailbox.js';
+export { createMongoMailboxReconciliationStore } from './outreach/mongo-mailbox-reconciliation-store.js';
+
+// Milestone 9c plan 012 step 4: drafting due follow-ups (touches 2 and 3).
+export {
+  createFollowUpDraft,
+  CURRENT_OUTREACH_PROMPT_VERSION as FOLLOW_UP_PROMPT_VERSION,
+  SECOND_TOUCH,
+  THIRD_TOUCH,
+} from './outreach/create-follow-up-draft.js';
+export type {
+  CreateFollowUpDraftOptions,
+  CreateFollowUpDraftResult,
+  CreateFollowUpDraftRefusal,
+  CreateFollowUpDraftStorePort,
+  FollowUpDraftRow,
+  RecordFollowUpDraftFacts,
+  RecordFollowUpFailureFacts,
+} from './outreach/create-follow-up-draft.js';
+export { createMongoFollowUpDraftStore } from './outreach/mongo-follow-up-draft-store.js';
+export type { MongoFollowUpDraftStoreOptions } from './outreach/mongo-follow-up-draft-store.js';

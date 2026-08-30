@@ -333,6 +333,7 @@ describe.skipIf(!mongoAvailable)(
       await addSuppressionEntry(connection!, {
         domain,
         address: `contact@${domain}`,
+        reasonCode: 'operator-request',
         reason: 'unsubscribe',
       });
 

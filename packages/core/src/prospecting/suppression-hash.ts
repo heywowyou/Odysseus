@@ -8,6 +8,17 @@
 
 import { createHash } from 'node:crypto';
 
+/**
+ * Milestone 9c plan 012. A suppression row's `reason` was free text with at
+ * least five ad-hoc spellings in the tree ('objection received', 'requested
+ * removal', 'unsubscribed', 'unsubscribe', 'operator request'), which makes
+ * counting suppressions by cause impossible. `reasonCode` is the closed
+ * vocabulary a caller picks from; `reason` stays as free-text detail alongside
+ * it, never instead of it.
+ */
+export type SuppressionReasonCode =
+  'objection' | 'hard-bounce' | 'sequence-complete' | 'operator-request';
+
 export function normalizeDomainForHash(domain: string): string {
   return domain
     .trim()

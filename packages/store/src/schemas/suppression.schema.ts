@@ -17,11 +17,13 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
+import type { SuppressionReasonCode } from '@odysseus/core';
 
 export interface SuppressionDocumentFields {
   suppressionId: string;
   domainHash: string;
   addressHash?: string;
+  reasonCode: SuppressionReasonCode;
   reason: string;
   createdAt: Date;
 }
@@ -33,6 +35,11 @@ const suppressionSchema = new Schema<SuppressionDocument>(
     suppressionId: { type: String, required: true, unique: true },
     domainHash: { type: String, required: true },
     addressHash: { type: String },
+    reasonCode: {
+      type: String,
+      required: true,
+      enum: ['objection', 'hard-bounce', 'sequence-complete', 'operator-request'],
+    },
     reason: { type: String, required: true },
     createdAt: { type: Date, required: true },
   },
@@ -41,6 +48,19 @@ const suppressionSchema = new Schema<SuppressionDocument>(
 
 suppressionSchema.index({ domainHash: 1 });
 suppressionSchema.index({ addressHash: 1 }, { sparse: true });
+// Idempotency: a retried objection or bounce-confirm for the same cause must
+// not write a second row. addressHash sits in a placeholder field rather than
+// a sparse partial key, so a domain-only suppression and a later
+// domain+address suppression for the same reasonCode still collide correctly
+// (both use the same literal placeholder when no address is given).
+suppressionSchema.index(
+  { domainHash: 1, addressHash: 1, reasonCode: 1 },
+  { unique: true, partialFilterExpression: { addressHash: { $exists: true } } },
+);
+suppressionSchema.index(
+  { domainHash: 1, reasonCode: 1 },
+  { unique: true, partialFilterExpression: { addressHash: { $exists: false } } },
+);
 
 export function createSuppressionModel(connection: Connection): Model<SuppressionDocument> {
   return (

@@ -12,15 +12,23 @@ import {
   hashSuppressionValue,
   normalizeAddressForHash,
   normalizeDomainForHash,
+  type SuppressionReasonCode,
 } from '@odysseus/core';
 import { createSuppressionModel } from './schemas/suppression.schema.js';
 
 export interface AddSuppressionEntryInput {
   domain: string;
   address?: string;
+  reasonCode: SuppressionReasonCode;
   reason: string;
 }
 
+/**
+ * Idempotent: an upsert keyed on the same (domainHash, addressHash,
+ * reasonCode) the schema's partial unique indexes enforce, so a retried
+ * objection or bounce-confirm writes nothing a second time rather than
+ * accumulating duplicate rows for the same cause.
+ */
 export async function addSuppressionEntry(
   connection: Connection,
   input: AddSuppressionEntryInput,
@@ -31,13 +39,24 @@ export async function addSuppressionEntry(
     input.address !== undefined
       ? hashSuppressionValue(normalizeAddressForHash(input.address))
       : undefined;
-  await SuppressionModel.create({
-    suppressionId: randomUUID(),
-    domainHash,
-    ...(addressHash !== undefined ? { addressHash } : {}),
-    reason: input.reason,
-    createdAt: new Date(),
-  });
+  const filter: Record<string, unknown> = { domainHash, reasonCode: input.reasonCode };
+  if (addressHash !== undefined) filter['addressHash'] = addressHash;
+  else filter['addressHash'] = { $exists: false };
+
+  await SuppressionModel.updateOne(
+    filter,
+    {
+      $setOnInsert: {
+        suppressionId: randomUUID(),
+        domainHash,
+        ...(addressHash !== undefined ? { addressHash } : {}),
+        reasonCode: input.reasonCode,
+        reason: input.reason,
+        createdAt: new Date(),
+      },
+    },
+    { upsert: true },
+  );
 }
 
 export async function isSuppressed(

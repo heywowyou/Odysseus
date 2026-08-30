@@ -36,6 +36,7 @@ import type {
   CreateMailboxDraftInput,
   MailboxDraft,
   MailboxDraftAdapter,
+  MailboxMessageMetadata,
   MailboxThreadMetadata,
 } from './mailbox-draft-adapter.js';
 
@@ -80,9 +81,36 @@ interface GmailDraftResponse {
   message?: { id?: string; threadId?: string };
 }
 
+interface GmailMessageHeader {
+  name?: string;
+  value?: string;
+}
+
+interface GmailMessageResponse {
+  id?: string;
+  internalDate?: string;
+  labelIds?: string[];
+  payload?: { headers?: GmailMessageHeader[] };
+}
+
 interface GmailThreadResponse {
   id?: string;
-  messages?: { internalDate?: string }[];
+  messages?: GmailMessageResponse[];
+}
+
+function headerValue(
+  headers: readonly GmailMessageHeader[] | undefined,
+  name: string,
+): string | undefined {
+  const lower = name.toLowerCase();
+  return headers?.find((header) => header.name?.toLowerCase() === lower)?.value;
+}
+
+/** Strips a display name from a `From` header (`"Name <addr@example.com>"`),
+ *  since only the address itself matters for sender comparison. */
+function extractEmailAddress(fromHeader: string): string {
+  const angleMatch = /<([^>]+)>/.exec(fromHeader);
+  return (angleMatch?.[1] ?? fromHeader).trim().toLowerCase();
 }
 
 /** Refresh a little before the token actually dies, so a long batch does not
@@ -230,17 +258,37 @@ export function createGmailDraftAdapter(options: GmailDraftAdapterOptions): Mail
       if (!response.ok) await failed(response, 'thread read');
 
       const payload = (await response.json()) as GmailThreadResponse;
-      const messages = payload.messages ?? [];
-      if (typeof payload.id !== 'string' || messages.length === 0) return null;
+      const rawMessages = payload.messages ?? [];
+      if (typeof payload.id !== 'string' || rawMessages.length === 0) return null;
 
-      const times = messages
-        .map((message) => Number(message.internalDate))
-        .filter((value) => Number.isFinite(value));
+      const messages: MailboxMessageMetadata[] = rawMessages
+        .filter(
+          (message): message is GmailMessageResponse & { id: string; internalDate: string } =>
+            typeof message.id === 'string' && typeof message.internalDate === 'string',
+        )
+        .map((message) => {
+          const headers = message.payload?.headers;
+          const from = headerValue(headers, 'From') ?? '';
+          const inReplyTo = headerValue(headers, 'In-Reply-To');
+          const autoSubmitted = (headerValue(headers, 'Auto-Submitted') ?? 'no').toLowerCase();
+          return {
+            providerMessageId: message.id,
+            // Gmail reports `internalDate` as epoch milliseconds in a string.
+            at: new Date(Number(message.internalDate)),
+            fromAddress: extractEmailAddress(from),
+            labelIds: message.labelIds ?? [],
+            autoSubmitted: autoSubmitted !== 'no',
+            ...(inReplyTo === undefined ? {} : { inReplyTo }),
+          };
+        })
+        .sort((a, b) => a.at.getTime() - b.at.getTime());
+
+      const times = messages.map((message) => message.at.getTime());
       return {
         providerThreadId: payload.id,
-        messageCount: messages.length,
-        // Gmail reports `internalDate` as epoch milliseconds in a string.
+        messageCount: rawMessages.length,
         lastMessageAt: new Date(times.length === 0 ? 0 : Math.max(...times)),
+        messages,
       };
     },
   };

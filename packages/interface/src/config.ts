@@ -127,6 +127,37 @@ export function getProspectBatchSize(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_PROSPECT_BATCH_SIZE;
 }
 
+/** Milestone 9c plan 012: the canonical touch spacing, per
+ *  `docs/rules/outreach-rules.md` section 6 (E1 day 0, E2 no earlier than day
+ *  +4, E3 no earlier than day +11) and the 14-day reply window before a
+ *  completed sequence is closed. Written onto each thread as a snapshot when
+ *  it opens (`OutreachThreadSpacing`), never read live at due-date check time,
+ *  so a later change to these defaults cannot retroactively redate a thread
+ *  already in flight. */
+export const DEFAULT_OUTREACH_TOUCH2_AFTER_DAYS = 4;
+export const DEFAULT_OUTREACH_TOUCH3_AFTER_DAYS = 11;
+export const DEFAULT_OUTREACH_REPLY_WINDOW_DAYS = 14;
+
+function positiveIntEnv(name: string, fallback: number): number {
+  ensureEnvLoaded();
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function getOutreachTouch2AfterDays(): number {
+  return positiveIntEnv('ODYSSEUS_OUTREACH_TOUCH2_DAYS', DEFAULT_OUTREACH_TOUCH2_AFTER_DAYS);
+}
+
+export function getOutreachTouch3AfterDays(): number {
+  return positiveIntEnv('ODYSSEUS_OUTREACH_TOUCH3_DAYS', DEFAULT_OUTREACH_TOUCH3_AFTER_DAYS);
+}
+
+export function getOutreachReplyWindowDays(): number {
+  return positiveIntEnv('ODYSSEUS_OUTREACH_REPLY_WINDOW_DAYS', DEFAULT_OUTREACH_REPLY_WINDOW_DAYS);
+}
+
 /** Anchored to the workspace root (not to this module's own depth on
  *  disk), so it resolves identically whether the server runs via `tsx
  *  src/index.ts` (dev) or the compiled `dist/index.js` (prod) - both sit

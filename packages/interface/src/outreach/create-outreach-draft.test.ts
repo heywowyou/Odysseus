@@ -27,6 +27,7 @@ import {
   type RecordDraftFacts,
   type RecordFailureFacts,
 } from './create-outreach-draft.js';
+import type { OutreachThreadState } from '@odysseus/core';
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
 
 const OBSERVATIONS = Object.values(HOTEL_EVIDENCE_OBSERVATIONS);
@@ -99,11 +100,18 @@ function prose(): { output: unknown; model: string; temperature: number } {
   };
 }
 
+interface RecordedTransition {
+  threadId: string;
+  from: readonly OutreachThreadState[];
+  to: OutreachThreadState;
+}
+
 interface Harness {
   options: CreateOutreachDraftOptions;
   store: OutreachDraftStorePort;
   recordedDrafts: RecordDraftFacts[];
   recordedFailures: RecordFailureFacts[];
+  transitions: RecordedTransition[];
   mailbox: ReturnType<typeof createInMemoryMailboxDraftAdapter>;
   generate: ReturnType<typeof vi.fn>;
   suppressed: Set<string>;
@@ -114,7 +122,7 @@ function harness(
   overrides: {
     draftRow?: OutreachDraftRow | null;
     suppressAfterFirstCheck?: boolean;
-    threadStatus?: 'open' | 'closed';
+    threadState?: OutreachThreadState;
     liveDraft?: boolean;
     previewRefusal?: string;
     recordThrows?: Error;
@@ -123,6 +131,7 @@ function harness(
 ): Harness {
   const recordedDrafts: RecordDraftFacts[] = [];
   const recordedFailures: RecordFailureFacts[] = [];
+  const transitions: RecordedTransition[] = [];
   const suppressed = new Set<string>();
   const mailbox = createInMemoryMailboxDraftAdapter({
     senderAddress: 'contact@example-sending-domain.fr',
@@ -145,7 +154,7 @@ function harness(
     openThread: () =>
       Promise.resolve({
         threadId: 'thread-1',
-        status: overrides.threadStatus ?? 'open',
+        state: overrides.threadState ?? 'open',
         currentTouch: 0,
       }),
     findLiveDraft: () =>
@@ -161,6 +170,10 @@ function harness(
     },
     attachProviderThreadId: () => Promise.resolve(true),
     advanceTouch: () => Promise.resolve(),
+    transition: (input) => {
+      transitions.push({ threadId: input.threadId, from: input.from, to: input.to });
+      return Promise.resolve(true);
+    },
   };
 
   const preview: OutreachPreviewPort = {
@@ -192,6 +205,7 @@ function harness(
     store,
     recordedDrafts,
     recordedFailures,
+    transitions,
     mailbox,
     generate,
     suppressed,
@@ -211,6 +225,12 @@ describe('createOutreachDraft, happy path', () => {
     expect(h.mailbox.recorded()).toHaveLength(1);
     expect(h.recordedDrafts).toHaveLength(1);
     expect(h.recordedFailures).toHaveLength(0);
+  });
+
+  it('records which evidence slot opened touch 1', async () => {
+    const h = harness();
+    await createOutreachDraft(h.options);
+    expect(h.recordedDrafts[0]?.touch1EvidenceSlot).toBe('specific-failure');
   });
 
   it('addresses the approved role contact and nobody else', async () => {
@@ -242,6 +262,12 @@ describe('createOutreachDraft, happy path', () => {
     const withoutRegistry = await createOutreachDraft(harness().options);
     // No `assessment` on the row, so no registry origin may be claimed.
     expect(withoutRegistry.body).not.toContain('registre');
+  });
+
+  it('moves the thread from open to e1-drafted once the draft is recorded', async () => {
+    const h = harness();
+    await createOutreachDraft(h.options);
+    expect(h.transitions).toEqual([{ threadId: 'thread-1', from: ['open'], to: 'e1-drafted' }]);
   });
 });
 
@@ -330,7 +356,7 @@ describe('createOutreachDraft, refusals before anything is spent', () => {
   });
 
   it('refuses a closed thread', async () => {
-    const h = harness({ threadStatus: 'closed' });
+    const h = harness({ threadState: 'closed' });
     await expect(createOutreachDraft(h.options)).resolves.toMatchObject({
       refusal: 'thread-closed',
     });

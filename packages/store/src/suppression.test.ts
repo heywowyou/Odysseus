@@ -18,6 +18,7 @@ describe.skipIf(!mongoAvailable)('suppression', () => {
   it('suppresses a domain by hash and finds it regardless of formatting', async () => {
     await addSuppressionEntry(connection!, {
       domain: 'https://www.Opt-Out.fr/',
+      reasonCode: 'operator-request',
       reason: 'requested removal',
     });
     expect(await isSuppressed(connection!, 'opt-out.fr')).toBe(true);
@@ -28,6 +29,7 @@ describe.skipIf(!mongoAvailable)('suppression', () => {
     await addSuppressionEntry(connection!, {
       domain: 'address-suppress.fr',
       address: 'contact@address-suppress.fr',
+      reasonCode: 'operator-request',
       reason: 'unsubscribed',
     });
     expect(
@@ -44,6 +46,7 @@ describe.skipIf(!mongoAvailable)('suppression', () => {
     await addSuppressionEntry(connection!, {
       domain: 'no-raw-value.fr',
       address: 'reservation@no-raw-value.fr',
+      reasonCode: 'objection',
       reason: 'objection received',
     });
     const stored = await createSuppressionModel(connection!)
@@ -52,6 +55,39 @@ describe.skipIf(!mongoAvailable)('suppression', () => {
     const serialized = JSON.stringify(stored);
     expect(serialized).not.toContain('no-raw-value.fr');
     expect(serialized).not.toContain('reservation@');
+  });
+
+  it('is idempotent: repeating the same domain and reasonCode writes no second row', async () => {
+    await addSuppressionEntry(connection!, {
+      domain: 'retried-objection.fr',
+      reasonCode: 'objection',
+      reason: 'first attempt',
+    });
+    await addSuppressionEntry(connection!, {
+      domain: 'retried-objection.fr',
+      reasonCode: 'objection',
+      reason: 'retried attempt',
+    });
+    const rows = await createSuppressionModel(connection!).find({}).lean();
+    const matching = rows.filter((row) => row.reason === 'first attempt');
+    expect(matching).toHaveLength(1);
+  });
+
+  it('records a distinct row per reasonCode for the same domain', async () => {
+    await addSuppressionEntry(connection!, {
+      domain: 'multi-reason.fr',
+      reasonCode: 'objection',
+      reason: 'objected',
+    });
+    await addSuppressionEntry(connection!, {
+      domain: 'multi-reason.fr',
+      reasonCode: 'hard-bounce',
+      reason: 'bounced',
+    });
+    const rows = await createSuppressionModel(connection!)
+      .find({ reason: { $in: ['objected', 'bounced'] } })
+      .lean();
+    expect(rows).toHaveLength(2);
   });
 
   it('as a regression guard, the suppression collection has no TTL index at all', async () => {

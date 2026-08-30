@@ -1,7 +1,7 @@
 /**
  * Read/write helpers around the `outreach_threads` collection, milestone 9c
- * plan 011. Callers never issue their own operations against it, for the
- * reason `outreach-previews.ts` gives about its own: retention and the
+ * plans 011 and 012. Callers never issue their own operations against it, for
+ * the reason `outreach-previews.ts` gives about its own: retention and the
  * one-thread-per-candidate rule live here, and a caller writing directly would
  * have to reimplement both.
  *
@@ -11,15 +11,28 @@
  * Opening one twice must return the same thread rather than fail, because the
  * second call is what a retried batch does, and the alternative is a command
  * that cannot be safely re-run. Drafts, which are attempts, are insert-only.
+ *
+ * **`transitionOutreachThread` is the one path that changes `state`.**
+ * Legality is decided by `@odysseus/core`'s `canTransitionOutreachThread`
+ * before the query ever reaches Mongo, and the query itself still guards on
+ * the expected current state, so a race that already moved the thread loses
+ * cleanly rather than double-applying a transition.
  */
 
 import { randomUUID } from 'node:crypto';
 import type { Connection } from 'mongoose';
-import { normalizeDomainForHash } from '@odysseus/core';
+import {
+  canTransitionOutreachThread,
+  normalizeDomainForHash,
+  type OutreachThreadState,
+} from '@odysseus/core';
 import {
   createOutreachThreadModel,
   type OutreachThreadDocument,
+  type OutreachThreadSpacing,
+  type OutreachThreadTouchRecord,
 } from './schemas/outreach-thread.schema.js';
+import { addSuppressionEntry } from './suppression.js';
 
 /** Operational retention, per docs/rules/prospect-qualification.md section 7. */
 export const OUTREACH_THREAD_RETENTION_DAYS = 90;
@@ -34,6 +47,7 @@ export interface OpenOutreachThreadInput {
   roleAddress: string;
   language: 'fr' | 'en';
   openedAt: Date;
+  spacing: OutreachThreadSpacing;
 }
 
 export interface OpenedOutreachThread {
@@ -66,7 +80,10 @@ export async function openOutreachThread(
     language: input.language,
     languageSource: 'operator',
     currentTouch: 0,
-    status: 'open',
+    state: 'open',
+    stateEnteredAt: input.openedAt,
+    touches: [],
+    spacing: input.spacing,
     createdAt: input.openedAt,
     updatedAt: input.openedAt,
     expiresAt: new Date(input.openedAt.getTime() + OUTREACH_THREAD_RETENTION_DAYS * DAY_MS),
@@ -141,12 +158,118 @@ export async function advanceThreadTouch(
   );
 }
 
+export interface TransitionOutreachThreadInput {
+  threadId: string;
+  /** States the thread must currently be in for the move to apply. Rejecting
+   *  a state not in this list, or one the state machine itself refuses, both
+   *  read as `changed: false` - the caller does not need to distinguish an
+   *  illegal move from a race it lost. */
+  from: readonly OutreachThreadState[];
+  to: OutreachThreadState;
+  at: Date;
+  reason?: string;
+}
+
+export interface TransitionOutreachThreadResult {
+  changed: boolean;
+  thread: OutreachThreadDocument | null;
+}
+
+/**
+ * The one path that changes `state`. Every `from` candidate is checked
+ * against the state machine before the query runs, so a caller cannot ask for
+ * a move the table refuses even if some `from` value happens to match what is
+ * stored.
+ */
+export async function transitionOutreachThread(
+  connection: Connection,
+  input: TransitionOutreachThreadInput,
+): Promise<TransitionOutreachThreadResult> {
+  const legalFrom = input.from.filter((state) => canTransitionOutreachThread(state, input.to));
+  if (legalFrom.length === 0) return { changed: false, thread: null };
+
+  const ThreadModel = createOutreachThreadModel(connection);
+  const result = await ThreadModel.findOneAndUpdate(
+    { threadId: input.threadId, state: { $in: legalFrom } },
+    {
+      $set: {
+        state: input.to,
+        stateEnteredAt: input.at,
+        updatedAt: input.at,
+        ...(input.reason !== undefined ? { stateReason: input.reason } : {}),
+      },
+    },
+    { returnDocument: 'after' },
+  ).lean();
+
+  if (result === null) {
+    const current = await findOutreachThreadById(connection, input.threadId);
+    return { changed: false, thread: current };
+  }
+  return { changed: true, thread: result };
+}
+
+/**
+ * Record a provider-confirmed send, once per touch. `touches` accumulates
+ * rather than replaces, since a thread may carry up to three.
+ */
+export async function recordOutreachThreadTouchSent(
+  connection: Connection,
+  threadId: string,
+  touch: OutreachThreadTouchRecord,
+): Promise<boolean> {
+  const ThreadModel = createOutreachThreadModel(connection);
+  const result = await ThreadModel.updateOne(
+    { threadId, 'touches.touch': { $ne: touch.touch } },
+    { $push: { touches: touch }, $set: { updatedAt: new Date() } },
+  );
+  return result.modifiedCount === 1;
+}
+
+/** Sets `lastSyncedAt` and clears or sets `needsReview`, independent of any
+ *  state transition: a sync that found nothing new still recorded that it
+ *  ran. */
+export async function markOutreachThreadSynced(
+  connection: Connection,
+  threadId: string,
+  syncedAt: Date,
+  needsReview?: { reason: string; detectedAt: Date },
+): Promise<void> {
+  const ThreadModel = createOutreachThreadModel(connection);
+  await ThreadModel.updateOne(
+    { threadId },
+    {
+      $set: {
+        lastSyncedAt: syncedAt,
+        updatedAt: syncedAt,
+        ...(needsReview !== undefined ? { needsReview } : {}),
+      },
+      ...(needsReview === undefined ? { $unset: { needsReview: '' } } : {}),
+    },
+  );
+}
+
+/** Written by an operator action only (see `packages/store/src/outreach-outcomes.ts`),
+ *  never by a sync. */
+export async function setOutreachThreadOutcome(
+  connection: Connection,
+  threadId: string,
+  outcomeId: string,
+): Promise<boolean> {
+  const ThreadModel = createOutreachThreadModel(connection);
+  const result = await ThreadModel.updateOne(
+    { threadId },
+    { $set: { currentOutcome: outcomeId, updatedAt: new Date() } },
+  );
+  return result.matchedCount === 1;
+}
+
 export interface CloseOutreachThreadsResult {
   closed: number;
 }
 
 /**
- * Close every open thread for a domain.
+ * Close every active thread for a domain, whatever active state each is in.
  *
  * Called on objection and on suppression, alongside preview revocation, so the
  * two halves of one `prospect object` run cannot disagree: the domain is
@@ -159,17 +282,26 @@ export async function closeOutreachThreadsForDomain(
   reason: string,
 ): Promise<CloseOutreachThreadsResult> {
   const ThreadModel = createOutreachThreadModel(connection);
+  const now = new Date();
   const result = await ThreadModel.updateMany(
-    { domain: normalizeDomainForHash(domain), status: 'open' },
     {
-      $set: { status: 'closed', closedAt: new Date(), closedReason: reason, updatedAt: new Date() },
+      domain: normalizeDomainForHash(domain),
+      state: { $nin: ['replied', 'bounced', 'opted-out', 'sequence-complete', 'closed'] },
+    },
+    {
+      $set: {
+        state: 'closed',
+        stateEnteredAt: now,
+        stateReason: reason,
+        updatedAt: now,
+      },
     },
   );
   return { closed: result.modifiedCount };
 }
 
 export interface ListOutreachThreadsOptions {
-  status?: 'open' | 'closed';
+  state?: OutreachThreadState;
   domain?: string;
   limit?: number;
 }
@@ -180,9 +312,128 @@ export async function listOutreachThreads(
 ): Promise<OutreachThreadDocument[]> {
   const ThreadModel = createOutreachThreadModel(connection);
   const query: Record<string, unknown> = {};
-  if (options.status !== undefined) query['status'] = options.status;
+  if (options.state !== undefined) query['state'] = options.state;
   if (options.domain !== undefined) query['domain'] = normalizeDomainForHash(options.domain);
   const cursor = ThreadModel.find(query).sort({ createdAt: -1 });
+  if (options.limit !== undefined) cursor.limit(options.limit);
+  return cursor.lean();
+}
+
+export interface ListThreadsDueForFollowUpOptions {
+  now: Date;
+  limit?: number;
+}
+
+/**
+ * Threads whose prior touch is provider-confirmed sent, whose due date (that
+ * touch's `sentAt` plus the thread's own spacing snapshot) has passed, and
+ * which carry no reply/bounce/opt-out/review flag. Suppression is rechecked by
+ * the caller immediately before drafting, per plan 012 step 4 - this query
+ * answers "who is due", not "who may still be contacted".
+ */
+export async function listThreadsDueForFollowUp(
+  connection: Connection,
+  options: ListThreadsDueForFollowUpOptions,
+): Promise<OutreachThreadDocument[]> {
+  const ThreadModel = createOutreachThreadModel(connection);
+  const candidates = await ThreadModel.find({
+    state: { $in: ['e1-sent', 'e2-sent'] },
+    needsReview: { $exists: false },
+  })
+    .sort({ createdAt: 1 })
+    .lean();
+
+  const due: OutreachThreadDocument[] = [];
+  for (const thread of candidates) {
+    const lastTouch = thread.state === 'e1-sent' ? 1 : 2;
+    const sentRecord = thread.touches.find((touch) => touch.touch === lastTouch);
+    if (sentRecord === undefined) continue;
+    const afterDays =
+      lastTouch === 1 ? thread.spacing.touch2AfterDays : thread.spacing.touch3AfterDays;
+    const dueAt = new Date(new Date(sentRecord.sentAt).getTime() + afterDays * DAY_MS);
+    if (dueAt.getTime() <= options.now.getTime()) due.push(thread);
+    if (options.limit !== undefined && due.length >= options.limit) break;
+  }
+  return due;
+}
+
+export interface CompleteOutreachSequenceInput {
+  threadId: string;
+  at: Date;
+}
+
+export interface CompleteOutreachSequenceResult {
+  changed: boolean;
+}
+
+/**
+ * Permanently suppress a three-touch sequence whose own reply window elapsed,
+ * then move it to its terminal state. The irreversible safety write comes
+ * first: a failure or race after it may conservatively leave a replied thread
+ * suppressed, but can never leave a completed thread eligible for ingestion.
+ */
+export async function completeOutreachSequence(
+  connection: Connection,
+  input: CompleteOutreachSequenceInput,
+): Promise<CompleteOutreachSequenceResult> {
+  const ThreadModel = createOutreachThreadModel(connection);
+  const thread = await ThreadModel.findOne({
+    threadId: input.threadId,
+    state: 'e3-sent',
+    needsReview: { $exists: false },
+  }).lean();
+  if (thread === null) return { changed: false };
+
+  const thirdTouch = thread.touches.find((touch) => touch.touch === 3);
+  if (thirdTouch === undefined) return { changed: false };
+  const dueAt = new Date(thirdTouch.sentAt).getTime() + thread.spacing.replyWindowDays * DAY_MS;
+  if (dueAt > input.at.getTime()) return { changed: false };
+
+  await addSuppressionEntry(connection, {
+    domain: thread.domain,
+    address: thread.roleAddress,
+    reasonCode: 'sequence-complete',
+    reason: 'three-touch outreach sequence completed with no reply',
+  });
+  const transition = await transitionOutreachThread(connection, {
+    threadId: input.threadId,
+    from: ['e3-sent'],
+    to: 'sequence-complete',
+    at: input.at,
+    reason: 'reply-window-elapsed',
+  });
+  return { changed: transition.changed };
+}
+
+/** States worth asking the mailbox about: a touch has been drafted (so a send
+ *  could confirm at any time) or already sent (so a reply or bounce could
+ *  arrive at any time). A thread with no `providerThreadId` yet has nothing to
+ *  ask the mailbox about, since no message has ever been created for it. */
+const SYNCABLE_OUTREACH_THREAD_STATES: readonly OutreachThreadState[] = [
+  'e1-drafted',
+  'e1-sent',
+  'e2-drafted',
+  'e2-sent',
+  'e3-drafted',
+  'e3-sent',
+];
+
+export interface ListThreadsToSyncOptions {
+  limit?: number;
+  threadId?: string;
+}
+
+export async function listThreadsToSync(
+  connection: Connection,
+  options: ListThreadsToSyncOptions = {},
+): Promise<OutreachThreadDocument[]> {
+  const ThreadModel = createOutreachThreadModel(connection);
+  const query: Record<string, unknown> = {
+    state: { $in: SYNCABLE_OUTREACH_THREAD_STATES },
+    providerThreadId: { $exists: true },
+  };
+  if (options.threadId !== undefined) query['threadId'] = options.threadId;
+  const cursor = ThreadModel.find(query).sort({ createdAt: 1 });
   if (options.limit !== undefined) cursor.limit(options.limit);
   return cursor.lean();
 }
