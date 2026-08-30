@@ -60,6 +60,8 @@ export const fr: DashboardStrings = {
     kpiFailed: 'Échecs',
     kpiCritical: 'Constats critiques',
     updatedAt: 'Actualisé à {time}',
+    emptyFilter: 'Aucun audit ne correspond à ces filtres.',
+    sortLabel: 'Trier',
   },
   newScan: {
     title: 'Nouveau scan',
@@ -69,6 +71,8 @@ export const fr: DashboardStrings = {
     typeProspecting: 'Prospection',
     urlLabel: 'Adresse du site',
     urlPlaceholder: 'https://exemple.fr',
+    urlInvalidError:
+      'Cette adresse doit être une URL http(s) absolue, sans identifiants incorporés',
     urlsLabel: 'Adresses des sites (une par ligne)',
     urlsPlaceholder: 'https://exemple1.fr\nhttps://exemple2.fr',
     sirenLabel: 'SIREN (facultatif)',
@@ -153,6 +157,7 @@ export const fr: DashboardStrings = {
     sirenCheckingMessage: 'Vérification en cours…',
     sirenResolvedPrefix: 'Entreprise identifiée :',
     sirenNotResolvedMessage: 'Ce SIREN n’a pas pu être confirmé auprès du répertoire Sirene.',
+    sirenInvalidError: 'Ce SIREN ne passe pas la clé de contrôle INSEE',
     sirenSourceUrlLabel: 'Page où le SIREN est affiché',
     raisonSocialeLabel: 'Dénomination sociale',
     detectedFieldHint: 'Détecté automatiquement, à confirmer.',
@@ -173,5 +178,8 @@ export const fr: DashboardStrings = {
     confirmApproveBody:
       'L’approbation autorise la livraison des deux rapports PDF (français et anglais) au client. Vérifiez les deux aperçus avant de continuer.',
     notFound: 'Audit introuvable.',
+    languageLabels: { fr: 'Français', en: 'English' },
+    findingsFilterAll: 'Toutes les gravités',
+    findingsEmpty: 'Aucun constat pour cet audit.',
   },
 };

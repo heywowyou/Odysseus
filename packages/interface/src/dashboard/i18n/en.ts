@@ -60,6 +60,8 @@ export const en: DashboardStrings = {
     kpiFailed: 'Failed',
     kpiCritical: 'Critical findings',
     updatedAt: 'Updated at {time}',
+    emptyFilter: 'No audits match these filters.',
+    sortLabel: 'Sort',
   },
   newScan: {
     title: 'New scan',
@@ -69,6 +71,7 @@ export const en: DashboardStrings = {
     typeProspecting: 'Prospecting',
     urlLabel: 'Site URL',
     urlPlaceholder: 'https://example.co.uk',
+    urlInvalidError: 'This address must be an absolute http(s) URL without embedded credentials',
     urlsLabel: 'Site URLs (one per line)',
     urlsPlaceholder: 'https://example1.co.uk\nhttps://example2.co.uk',
     sirenLabel: 'SIREN (optional)',
@@ -157,6 +160,7 @@ export const en: DashboardStrings = {
     sirenCheckingMessage: 'Checking…',
     sirenResolvedPrefix: 'Company identified:',
     sirenNotResolvedMessage: 'This SIREN could not be confirmed against the Sirene register.',
+    sirenInvalidError: 'This SIREN fails the INSEE check-digit control',
     sirenSourceUrlLabel: 'Page where the SIREN is displayed',
     raisonSocialeLabel: 'Legal name',
     detectedFieldHint: 'Detected automatically, to be confirmed.',
@@ -177,5 +181,8 @@ export const en: DashboardStrings = {
     confirmApproveBody:
       'Approval authorises delivery of both PDF reports (French and English) to the client. Review both previews before continuing.',
     notFound: 'Audit not found.',
+    languageLabels: { fr: 'Français', en: 'English' },
+    findingsFilterAll: 'All severities',
+    findingsEmpty: 'No findings for this audit.',
   },
 };

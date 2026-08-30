@@ -1,0 +1,84 @@
+import type { DashboardStrings } from '../i18n/types';
+import type { JobStatus, ScanJobDetail } from '../lib/api-types';
+
+/** Phase values the copy table covers. Anything outside this list
+ *  (afnic-scan, fetch-qualify, prescanning, ...) has no dashboard copy yet
+ *  and renders as its raw value, so a new pipeline phase degrades to a
+ *  technical label instead of a blank line. */
+const PHASE_KEYS = [
+  'queued',
+  'crawl',
+  'scan',
+  'normalize',
+  'analyze-fr',
+  'analyze-en',
+  'report-fr',
+  'report-en',
+  'scanning',
+  'complete',
+  'failed',
+] as const;
+
+export type ProgressPhase = (typeof PHASE_KEYS)[number];
+
+export type ProgressPhaseLabels = DashboardStrings['progress']['phaseLabels'];
+
+export function isKnownPhase(phase: string): phase is ProgressPhase {
+  return (PHASE_KEYS as readonly string[]).includes(phase);
+}
+
+/** Current phase as operator copy; an unknown phase falls back to its raw
+ *  value so the status line never goes blank. */
+export function currentPhaseLabel(phase: string, labels: ProgressPhaseLabels): string {
+  return isKnownPhase(phase) ? labels[phase] : phase;
+}
+
+/** A terminal document can no longer change, so polling stops. */
+export function isTerminal(status: JobStatus | undefined): boolean {
+  return status === 'complete' || status === 'failed';
+}
+
+function clampPercent(value: number): number {
+  return Math.min(100, Math.max(0, value));
+}
+
+/** Crawl bar percentage, ported from app-progress.ts renderFullAudit:
+ *  visited over target capped at 100. A missing or non-positive target is
+ *  0 rather than Infinity, matching the old page's target > 0 guard. */
+export function crawlProgress(job: ScanJobDetail): number {
+  const crawl = job.progress.crawl;
+  if (crawl === undefined || crawl.target <= 0) return 0;
+  return clampPercent((crawl.visited / crawl.target) * 100);
+}
+
+/** Scan bar percentage, ported from app-progress.ts renderFullAudit. The
+ *  old page pins the scan bar to 100 once the job leaves the crawl phase
+ *  before scan counters exist, so the bar never sits empty through the
+ *  normalize and report phases. */
+export function scanProgress(job: ScanJobDetail): number {
+  const scan = job.progress.scan;
+  if (scan !== undefined) {
+    return scan.target > 0 ? clampPercent((scan.scanned / scan.target) * 100) : 0;
+  }
+  return job.phase === 'queued' || job.phase === 'crawl' ? 0 : 100;
+}
+
+/** Remaining-time text, ported from app-progress.ts formatEtaMs (whole
+ *  minutes via Math.ceil). Sub-minute estimates render as whole seconds so
+ *  the tail of a phase counts down instead of reading as stuck. */
+export function formatEta(etaMs: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(etaMs / 1000));
+  if (totalSeconds < 60) return `${totalSeconds} s`;
+  return `${Math.ceil(etaMs / 60_000)} min`;
+}
+
+/** Badge state of one prospecting URL row, ported from app-progress.ts
+ *  renderProspecting: complete is success, error is failure, every other
+ *  status (pending, scanning, skipped-non-html) is still in flight. */
+export type UrlResultState = 'complete' | 'failed' | 'running';
+
+export function urlResultState(status: string): UrlResultState {
+  if (status === 'complete') return 'complete';
+  if (status === 'error') return 'failed';
+  return 'running';
+}

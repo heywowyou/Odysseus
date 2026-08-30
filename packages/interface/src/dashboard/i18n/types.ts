@@ -66,6 +66,11 @@ export interface DashboardStrings {
     kpiCritical: string;
     /** {time} is replaced by a formatted clock time (lib/format.ts). */
     updatedAt: string;
+    /** Shown when audits exist but no row survives search and filters. */
+    emptyFilter: string;
+    /** Accessible name of the sort select; the options carry the visible
+     *  copy. */
+    sortLabel: string;
   };
   newScan: {
     title: string;
@@ -75,6 +80,9 @@ export interface DashboardStrings {
     typeProspecting: string;
     urlLabel: string;
     urlPlaceholder: string;
+    /** Shown when a non-empty URL is not an absolute http(s) URL without
+     *  embedded credentials, the shape routes/scans.ts accepts. */
+    urlInvalidError: string;
     urlsLabel: string;
     urlsPlaceholder: string;
     /** Full-audit only (single-audit input, no bulk equivalent for
@@ -165,6 +173,9 @@ export interface DashboardStrings {
     sirenCheckingMessage: string;
     sirenResolvedPrefix: string;
     sirenNotResolvedMessage: string;
+    /** Same copy as newScan's field of the same name, kept per section so
+     *  each page's table stays self-contained. */
+    sirenInvalidError: string;
     sirenSourceUrlLabel: string;
     raisonSocialeLabel: string;
     nomCommercialLabel: string;
@@ -184,5 +195,12 @@ export interface DashboardStrings {
     confirmApproveTitle: string;
     confirmApproveBody: string;
     notFound: string;
+    /** Report rows show the language's endonym, never a locale code. */
+    languageLabels: Record<'fr' | 'en', string>;
+    /** Default option of the findings severity filter. */
+    findingsFilterAll: string;
+    /** Shown when the findings table has no rows, overall or at the
+     *  selected severity. */
+    findingsEmpty: string;
   };
 }

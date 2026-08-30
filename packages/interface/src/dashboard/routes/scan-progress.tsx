@@ -1,14 +1,258 @@
+import { useCallback, useEffect, useState } from 'react';
+import type { JSX, ReactNode } from 'react';
+import { Link, useParams } from 'react-router';
 import { PageHeader } from '../components/page-header';
+import { Badge, badgeStyles, type BadgeTone } from '../components/ui/badge';
+import { Button, buttonStyles } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { EmptyState } from '../components/ui/empty-state';
+import { ProgressBar } from '../components/ui/progress-bar';
+import { Spinner } from '../components/ui/spinner';
 import { useI18n } from '../i18n/provider';
+import { ApiError, fetchJson } from '../lib/api';
+import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
+import { cn } from '../lib/cn';
+import { usePolling } from '../lib/use-polling';
+import {
+  crawlProgress,
+  currentPhaseLabel,
+  formatEta,
+  isTerminal,
+  scanProgress,
+  urlResultState,
+  type UrlResultState,
+} from './scan-progress-model';
 
-export function ScanProgressPage() {
+const POLL_INTERVAL_MS = 3000;
+
+/** Old page badge colors: success green for a done URL, red for a failed
+ *  one, accent violet while still in flight. */
+const URL_STATE_TONES: Record<UrlResultState, BadgeTone> = {
+  complete: 'minor',
+  failed: 'critical',
+  running: 'accent',
+};
+
+export function ScanProgressPage(): JSX.Element {
   const { strings } = useI18n();
+  const params = useParams<{ jobId: string }>();
+  const jobId = params.jobId;
+
+  // A 404 can never recover, and a terminal document can no longer change;
+  // either one disables the poll. Both are learned from fetch responses, so
+  // they live in state the fetcher writes instead of in the polled data
+  // (which cannot gate its own fetch). Reset on jobId so navigating between
+  // jobs starts clean, matching the state reset usePolling does on a key
+  // change.
+  const [missing, setMissing] = useState(false);
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    setMissing(false);
+    setSettled(false);
+  }, [jobId]);
+
+  const fetcher = useCallback((): Promise<ScanJobDetail | null> => {
+    if (jobId === undefined) return Promise.resolve(null);
+    return fetchJson<ScanJobDetail>(`/api/scans/${jobId}`)
+      .then((job) => {
+        setSettled(isTerminal(job.status));
+        return job;
+      })
+      .catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) {
+          setMissing(true);
+          return null;
+        }
+        throw error;
+      });
+  }, [jobId]);
+
+  const { data, error, refresh } = usePolling<ScanJobDetail | null>(fetcher, POLL_INTERVAL_MS, {
+    enabled: jobId !== undefined && !missing && !settled,
+    key: jobId ?? 'none',
+  });
+
+  const job = data ?? undefined;
+
+  let body: ReactNode;
+  if (data === null) {
+    // Unknown job: a quiet dead end on purpose, no retry action.
+    body = <EmptyState title={strings.progress.notFound} />;
+  } else if (job === undefined) {
+    body =
+      error !== undefined ? (
+        <EmptyState
+          title={strings.common.error}
+          description={error}
+          action={
+            <Button variant="secondary" size="sm" onClick={refresh}>
+              {strings.common.retry}
+            </Button>
+          }
+        />
+      ) : (
+        <Card>
+          <div className="flex items-center justify-center gap-2 py-8 text-sm text-ink-muted">
+            <Spinner />
+            {strings.common.loading}
+          </div>
+        </Card>
+      );
+  } else {
+    body = <JobView job={job} />;
+  }
+
   return (
     <article>
       <PageHeader title={strings.progress.title} description={strings.progress.description} />
-      <div className="rounded-xl border border-line bg-panel p-10 text-center text-sm text-ink-muted">
-        {strings.common.comingSoon}
-      </div>
+      {body}
     </article>
+  );
+}
+
+/** Live view of one job document. The phase line mirrors the old page's
+ *  phase status text for full audits; for prospecting the spinner card
+ *  carries the phase copy instead, so the label never shows twice. */
+function JobView({ job }: { job: ScanJobDetail }): JSX.Element {
+  const { strings } = useI18n();
+  const terminal = isTerminal(job.status);
+  const prospecting = job.type === 'prospecting';
+  return (
+    <div className="flex flex-col gap-4">
+      {!terminal && !prospecting ? (
+        <p className="text-sm text-ink-muted">
+          {currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
+        </p>
+      ) : null}
+      {prospecting ? (
+        <ProspectingView job={job} terminal={terminal} />
+      ) : (
+        <FullAuditView job={job} terminal={terminal} />
+      )}
+    </div>
+  );
+}
+
+function FullAuditView({ job, terminal }: { job: ScanJobDetail; terminal: boolean }): JSX.Element {
+  const { strings } = useI18n();
+  // The old page swaps the phase bars for the result card once terminal.
+  if (terminal) {
+    return job.status === 'failed' ? <FailedCard job={job} /> : <CompleteCard job={job} />;
+  }
+
+  // ETA lines follow the old page: each bar shows its estimate only while
+  // its own phase is the current one, and only the scan estimate carries
+  // the rough suffix.
+  const crawlEta = job.phase === 'crawl' ? job.progress.crawl?.etaMs : undefined;
+  const scanEta = job.phase === 'scan' ? job.progress.scan?.etaMs : undefined;
+
+  return (
+    <>
+      <Card title={strings.progress.crawlPhaseLabel}>
+        <ProgressBar value={crawlProgress(job)} ariaLabel={strings.progress.crawlPhaseLabel} />
+        {crawlEta !== undefined ? (
+          <p className="mt-2 text-xs text-ink-muted">
+            {strings.progress.etaLabel}: {formatEta(crawlEta)}
+          </p>
+        ) : null}
+      </Card>
+      <Card title={strings.progress.scanPhaseLabel}>
+        <ProgressBar value={scanProgress(job)} ariaLabel={strings.progress.scanPhaseLabel} />
+        {scanEta !== undefined ? (
+          <p className="mt-2 text-xs text-ink-muted">
+            {strings.progress.etaLabel}: {formatEta(scanEta)} {strings.progress.etaRoughSuffix}
+          </p>
+        ) : null}
+      </Card>
+    </>
+  );
+}
+
+function ProspectingView({
+  job,
+  terminal,
+}: {
+  job: ScanJobDetail;
+  terminal: boolean;
+}): JSX.Element {
+  const { strings } = useI18n();
+  return (
+    <>
+      {!terminal ? (
+        <Card>
+          <div className="flex items-center gap-2 text-sm text-ink-muted">
+            <Spinner />
+            {strings.progress.phaseLabels.scanning}
+          </div>
+          {job.progress.message !== undefined ? (
+            <p className="mt-2 text-xs text-ink-muted">{job.progress.message}</p>
+          ) : null}
+        </Card>
+      ) : null}
+      <Card title={strings.progress.urlResultsHeading}>
+        <ul className="divide-y divide-line">
+          {(job.urlResults ?? []).map((row) => (
+            <UrlRow key={row.url} row={row} linked={job.status === 'complete'} />
+          ))}
+        </ul>
+      </Card>
+      {terminal ? (
+        job.status === 'failed' ? (
+          <FailedCard job={job} />
+        ) : (
+          <CompleteCard job={job} />
+        )
+      ) : null}
+    </>
+  );
+}
+
+/** One per-URL row of a prospecting batch. Completed rows link to their
+ *  audit (the per-URL report access the old page exposed); the job's
+ *  auditIds aggregate exactly the ids the rows carry. */
+function UrlRow({ row, linked }: { row: ScanUrlResult; linked: boolean }): JSX.Element {
+  const state = urlResultState(row.status);
+  const auditId = linked ? row.auditId : undefined;
+  return (
+    <li className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
+      <span className="min-w-0 font-mono text-[13px] break-all text-ink-soft">{row.url}</span>
+      {auditId !== undefined ? (
+        <Link
+          to={`/audits/${auditId}`}
+          className={cn(
+            badgeStyles(URL_STATE_TONES[state]),
+            'shrink-0 transition-colors hover:bg-overlay',
+          )}
+        >
+          {row.status}
+        </Link>
+      ) : (
+        <Badge tone={URL_STATE_TONES[state]} className="shrink-0">
+          {row.status}
+        </Badge>
+      )}
+    </li>
+  );
+}
+
+function CompleteCard({ job }: { job: ScanJobDetail }): JSX.Element {
+  const { strings } = useI18n();
+  return (
+    <Card title={strings.progress.completeHeading} className="border-sev-minor/40">
+      {job.auditId !== undefined ? (
+        <Link to={`/audits/${job.auditId}`} className={buttonStyles('primary', 'sm')}>
+          {strings.progress.viewDetailLink}
+        </Link>
+      ) : null}
+    </Card>
+  );
+}
+
+function FailedCard({ job }: { job: ScanJobDetail }): JSX.Element {
+  const { strings } = useI18n();
+  return (
+    <Card title={strings.progress.failedHeading} className="border-danger/40">
+      {job.error !== undefined ? <p className="text-sm text-ink-soft">{job.error}</p> : null}
+    </Card>
   );
 }

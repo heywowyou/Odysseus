@@ -1,0 +1,160 @@
+/**
+ * Pure model for the audit detail page: everything the route component
+ * renders or sends is computed here so it stays unit-testable without a
+ * component tree, the same split as the other rebuilt dashboard routes.
+ */
+
+import type { FindingResponse, ManualFieldsResponse, Severity } from './audit-detail-types';
+
+/** Display order for severities, most severe first. */
+export const SEVERITIES: readonly Severity[] = ['critical', 'serious', 'moderate', 'minor'];
+
+export type SectorChoice = '' | 'general' | 'hospitality';
+
+/** One string per enrichment form field; '' means "not set", which the
+ *  patch builder must never send (an absent key leaves the stored value
+ *  untouched). */
+export interface ManualFieldValues {
+  siren: string;
+  sirenSourceUrl: string;
+  raisonSociale: string;
+  nomCommercial: string;
+  sector: SectorChoice;
+  revenueBand: string;
+  declarationContactEmail: string;
+  recipientName: string;
+}
+
+export type ManualFieldKey = keyof ManualFieldValues;
+
+/** Manual fields whose value is a free string (siren included); sector is
+ *  excluded because it is a constrained choice with its own setter. */
+export type TextManualFieldKey = Exclude<ManualFieldKey, 'sector'>;
+
+/** PATCH /manual-fields body: plain non-empty strings, keys the server
+ *  recognizes (routes/audits.ts). The client never sends provenance. */
+export type ManualFieldsPatch = Partial<Record<ManualFieldKey, string>>;
+
+const SEVERITY_ORDER: Record<Severity, number> = {
+  critical: 0,
+  serious: 1,
+  moderate: 2,
+  minor: 3,
+};
+
+export function isSeverity(value: string): value is Severity {
+  return value === 'critical' || value === 'serious' || value === 'moderate' || value === 'minor';
+}
+
+/** The page title is the site's bare hostname. A stored siteUrl is always
+ *  a valid URL in practice, but the fallback keeps a malformed row
+ *  readable instead of crashing a purely presentational value. */
+export function hostnameOf(siteUrl: string): string {
+  try {
+    return new URL(siteUrl).hostname;
+  } catch {
+    return siteUrl;
+  }
+}
+
+/** Most severe first; Array.prototype.sort is stable, so findings of the
+ *  same severity keep the server's order. Returns a new array. */
+export function sortFindings(findings: readonly FindingResponse[]): FindingResponse[] {
+  return [...findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+}
+
+/** The scanner's precomputed total (a site-wide issue is one row with a
+ *  count, not 400 rows); elements only carry a capped sample. */
+export function countOccurrences(finding: FindingResponse): number {
+  return finding.occurrences;
+}
+
+/** pageUrls is already deduped by the locked findings contract, but the
+ *  column promises unique pages, so defend here rather than trust the
+ *  writer. */
+export function countPages(finding: FindingResponse): number {
+  return new Set(finding.pageUrls).size;
+}
+
+export function normalizeSiren(value: string): string {
+  return value.replace(/\s/g, '');
+}
+
+/** Ported by value from @odysseus/core's isValidSiren (via the old page's
+ *  app-new-scan.ts, which does the same): the dashboard project does not
+ *  read workspace packages. Client-side checksum is a UX nicety only; the
+ *  server re-validates with the real implementation on both the preview
+ *  and the PATCH route. Luhn over the 9 digits. */
+export function isValidSiren(value: string): boolean {
+  const cleaned = normalizeSiren(value);
+  if (!/^\d{9}$/.test(cleaned)) return false;
+  let sum = 0;
+  for (let i = 0; i < cleaned.length; i++) {
+    let digit = Number(cleaned.charAt(cleaned.length - 1 - i));
+    if (i % 2 === 1) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+  }
+  return sum % 10 === 0;
+}
+
+/** Form seed from the API's optional provenanced fields: absent fields
+ *  become '' (the "not set" the patch builder never sends), and an
+ *  out-of-contract sector value degrades to '' instead of poisoning the
+ *  select. */
+export function manualFieldValuesFromResponse(
+  manualFields: ManualFieldsResponse | null | undefined,
+): ManualFieldValues {
+  const text = (field: { value: string } | undefined): string => field?.value ?? '';
+  const sector = manualFields?.sector?.value;
+  return {
+    siren: text(manualFields?.siren),
+    sirenSourceUrl: text(manualFields?.sirenSourceUrl),
+    raisonSociale: text(manualFields?.raisonSociale),
+    nomCommercial: text(manualFields?.nomCommercial),
+    sector: sector === 'general' || sector === 'hospitality' ? sector : '',
+    revenueBand: text(manualFields?.revenueBand),
+    declarationContactEmail: text(manualFields?.declarationContactEmail),
+    recipientName: text(manualFields?.recipientName),
+  };
+}
+
+/** The PATCH body: only keys the operator actually changed, only non-empty
+ *  values, so a save can never erase a stored field by sending '' and
+ *  never re-sends unchanged data (which would needlessly rewrite
+ *  provenance on the server). Text values are trimmed and the SIREN is
+ *  stripped of spaces, matching what the server stores; sector is only
+ *  ever sent as 'general' or 'hospitality'. */
+export function buildManualFieldsPatch(
+  values: ManualFieldValues,
+  baseline: ManualFieldValues,
+): ManualFieldsPatch {
+  const patch: ManualFieldsPatch = {};
+  const textCandidates: ReadonlyArray<[TextManualFieldKey, string, string]> = [
+    ['siren', normalizeSiren(values.siren), normalizeSiren(baseline.siren)],
+    ['sirenSourceUrl', values.sirenSourceUrl.trim(), baseline.sirenSourceUrl],
+    ['raisonSociale', values.raisonSociale.trim(), baseline.raisonSociale],
+    ['nomCommercial', values.nomCommercial.trim(), baseline.nomCommercial],
+    ['revenueBand', values.revenueBand.trim(), baseline.revenueBand],
+    [
+      'declarationContactEmail',
+      values.declarationContactEmail.trim(),
+      baseline.declarationContactEmail,
+    ],
+    ['recipientName', values.recipientName.trim(), baseline.recipientName],
+  ];
+  for (const [key, value, base] of textCandidates) {
+    if (value !== '' && value !== base) {
+      patch[key] = value;
+    }
+  }
+  if (
+    (values.sector === 'general' || values.sector === 'hospitality') &&
+    values.sector !== baseline.sector
+  ) {
+    patch.sector = values.sector;
+  }
+  return patch;
+}
