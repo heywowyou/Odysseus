@@ -162,12 +162,16 @@ Respond with structured JSON matching the required schema only. No prose outside
  *
  * A word-count shortfall gets its own arithmetic because the model cannot
  * reliably count its own words but can follow an addition instruction: the
- * target is the doctrine floor plus a two-word margin, stated both as an
- * absolute and as a delta from what was just rejected.
+ * ask is stated both as an absolute and as a delta from what was just
+ * rejected. The ask defaults to the doctrine floor plus a two-word margin;
+ * the retry loop escalates it across repeated shortfalls (issue #14) by
+ * passing an explicit target. The floor itself is doctrine and never moves.
  */
 export interface OutreachWordShortfall {
   count: number;
   min: number;
+  /** The word total this retry asks for. Absent, the ask is min + 2. */
+  target?: number;
 }
 
 export function buildOutreachRetryFeedback(
@@ -175,7 +179,7 @@ export function buildOutreachRetryFeedback(
   wordShortfall?: OutreachWordShortfall,
 ): string {
   if (wordShortfall) {
-    const target = wordShortfall.min + 2;
+    const target = wordShortfall.target ?? wordShortfall.min + 2;
     return `Your previous response was rejected by the automated guard: ${reason}. opening + evidenceSentence + question together contained ${wordShortfall.count} words, below the required minimum of ${wordShortfall.min}. Write a new response whose three fields together contain at least ${target} words, which is at least ${target - wordShortfall.count} more words than last time. Every other requirement still applies.`;
   }
   return `Your previous response was rejected by the automated guard: ${reason}. Write a new response that fixes exactly this problem. Every other requirement still applies.`;

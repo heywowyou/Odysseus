@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { MAX_RETRIES, MISTRAL_MODEL, MISTRAL_TEMPERATURE } from '../constants.js';
+import { WORD_SHORTFALL_EXTRA_ATTEMPTS } from './generate-outreach-prose.js';
 import type { OutreachProseInput } from './outreach-input.js';
 import type { OutreachProseOutput } from './outreach-schema.js';
 
@@ -384,7 +385,55 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     expect(result.output.touch).toBe(1);
   });
 
-  it('throws after exhausting retries when every attempt misses the word budget', async () => {
+  it('lands within the extra word-shortfall attempts after the base budget is spent', async () => {
+    // Issue #14's run 1: 53 words (fixture equivalent of the live 56) on every
+    // base attempt. The extras exist so a fourth attempt can clear the floor
+    // instead of the run dying at three.
+    const short = () =>
+      cleanTouch1Output({
+        evidenceSentence: "Une partie du contenu ne s'affiche pas sans JavaScript.",
+      });
+    vi.mocked(callMistralForOutreach)
+      .mockReset()
+      .mockResolvedValueOnce({ output: short() })
+      .mockResolvedValueOnce({ output: short() })
+      .mockResolvedValueOnce({ output: short() })
+      .mockResolvedValue({ output: cleanTouch1Output() });
+
+    const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
+
+    expect(result.output.touch).toBe(1);
+    expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1 + 1);
+  });
+
+  it('escalates the word ask by the undershoot across repeated shortfalls', async () => {
+    // The fixture's short output counts 53 words. The first retry is asked
+    // for the floor plus two; the next ask grows by the model's own
+    // undershoot (62 + 9 + 2 = 73), capped at the band midpoint, so the ask
+    // outruns the observed 56-58 landing zone instead of meeting it again.
+    const short = () =>
+      cleanTouch1Output({
+        evidenceSentence: "Une partie du contenu ne s'affiche pas sans JavaScript.",
+      });
+    vi.mocked(callMistralForOutreach)
+      .mockReset()
+      .mockResolvedValueOnce({ output: short() })
+      .mockResolvedValueOnce({ output: short() })
+      .mockResolvedValueOnce({ output: short() })
+      .mockResolvedValue({ output: cleanTouch1Output() });
+
+    await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
+
+    const feedbackFor = (attemptIndex: number) =>
+      vi.mocked(callMistralForOutreach).mock.calls[attemptIndex]?.[1] ?? '';
+    expect(feedbackFor(1)).toContain('at least 62 words');
+    expect(feedbackFor(2)).toContain('at least 73 words');
+    expect(feedbackFor(3)).toContain('at least 75 words');
+    // The floor stated to the model never moves.
+    expect(feedbackFor(2)).toContain('below the required minimum of 60');
+  });
+
+  it('throws after spending every attempt, including the extras, on shortfalls', async () => {
     vi.mocked(callMistralForOutreach)
       .mockReset()
       .mockResolvedValue({
@@ -395,7 +444,36 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     await expect(
       generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
-    ).rejects.toThrow(/exhausted \d+ attempts/);
+    ).rejects.toThrow(/exhausted 5 attempts/);
+    expect(callMistralForOutreach).toHaveBeenCalledTimes(
+      MAX_RETRIES + 1 + WORD_SHORTFALL_EXTRA_ATTEMPTS,
+    );
+  });
+
+  it('ends at the base budget when the last base attempt fails on something other than length', async () => {
+    // Two short attempts, then a vocabulary leak: the extras exist only for
+    // pure word-count shortfalls, so the third rejection ends the run.
+    vi.mocked(callMistralForOutreach)
+      .mockReset()
+      .mockResolvedValueOnce({
+        output: cleanTouch1Output({
+          evidenceSentence: "Une partie du contenu ne s'affiche pas sans JavaScript.",
+        }),
+      })
+      .mockResolvedValueOnce({
+        output: cleanTouch1Output({
+          evidenceSentence: "Une partie du contenu ne s'affiche pas sans JavaScript.",
+        }),
+      })
+      .mockResolvedValue({
+        output: cleanTouch1Output({
+          evidenceSentence: cleanTouch1Output().evidenceSentence + ' (voir e1)',
+        }),
+      });
+
+    await expect(
+      generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
+    ).rejects.toThrow(/exhausted 3 attempts/);
     expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 

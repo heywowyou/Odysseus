@@ -263,6 +263,16 @@ describe('buildOutreachRetryFeedback', () => {
     expect(feedback).toContain('at least 62 words');
     expect(feedback).toContain('at least 6 more words than last time');
   });
+
+  it('carries an escalated ask so a repeated shortfall is asked for more than the floor', () => {
+    const feedback = buildOutreachRetryFeedback(
+      'structure violation in field(s): touch1-body (too-few-words: 56)',
+      { count: 56, min: 60, target: 70 },
+    );
+    expect(feedback).toContain('below the required minimum of 60');
+    expect(feedback).toContain('at least 70 words');
+    expect(feedback).toContain('at least 14 more words than last time');
+  });
 });
 
 describe('buildOutreachUserPrompt', () => {
