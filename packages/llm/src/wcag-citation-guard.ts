@@ -8,7 +8,7 @@ export const REQUIRED_WCAG_VERSION = '2.2';
 
 /**
  * The scanner runs axe against the WCAG 2.2 AA tag set, so every version
- * citation in the report must say 2.2 (docs/llm-layer-rules.md section 6,
+ * citation in the report must say 2.2 (docs/rules/llm-layer-rules.md section 6,
  * "Cite WCAG 2.2"). The first live run mixed 2.1 and 2.2 citations: 10
  * "WCAG 2.1" strings against 520 "WCAG 2.2" strings across stored
  * analyses, all 10 in the two 2026-08-02 sas-fernande.fr files. Criterion
@@ -61,7 +61,7 @@ export function findWcagCitationViolationsInFields(
 
 /** Scans the writing pass's prose fields. legalRelevance is excluded: it
  *  has been built entirely in code (legal-relevance.ts) since
- *  docs/report-v2-refactor.md 4.3, so the model cannot write a version
+ *  docs/archive/report-v2-refactor.md 4.3, so the model cannot write a version
  *  citation there and the code-built text cites 2.2 by construction.
  *  Theme titles are included like every other model-written field since
  *  the 2026-08-30 pass: their earlier exclusion ("no reader-visible

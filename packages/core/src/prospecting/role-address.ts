@@ -1,5 +1,5 @@
 /**
- * Role-address local parts, per docs/prospect-qualification.md section 6:
+ * Role-address local parts, per docs/rules/prospect-qualification.md section 6:
  * "Role addresses only: contact@, info@, commercial@ and equivalents."
  * A plain TS constant, not JSON, unlike the NAF/free-mail lists - this is
  * a small, linguistically stable set closer in kind to

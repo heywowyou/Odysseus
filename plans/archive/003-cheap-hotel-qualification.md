@@ -3,7 +3,7 @@
 > **Executor instructions**: Complete plan 002. This stage performs bounded
 > HTTP/DNS/TLS checks only. It never launches Chromium or contacts a recipient.
 >
-> **Drift check**: `git diff --stat f7ef7cf..HEAD -- packages/core/src/prospecting packages/interface/src/prospecting packages/scanner/src/robots.ts packages/store/src/hotel* packages/store/src/prospects.ts docs/prospect-qualification.md`
+> **Drift check**: `git diff --stat f7ef7cf..HEAD -- packages/core/src/prospecting packages/interface/src/prospecting packages/scanner/src/robots.ts packages/store/src/hotel* packages/store/src/prospects.ts docs/rules/prospect-qualification.md`
 
 ## Status
 

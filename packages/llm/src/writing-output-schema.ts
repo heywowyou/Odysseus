@@ -2,7 +2,7 @@
  * A hand-built JSON Schema mirroring writingPassOutputSchema
  * (writing-schema.ts), for the Mistral API's response_format json_schema
  * shape hint only. See structure-output-schema.ts and
- * docs/llm-layer-rules.md section 8 for why this is hand-built rather
+ * docs/rules/llm-layer-rules.md section 8 for why this is hand-built rather
  * than derived with responseFormatFromZodObject.
  *
  * NOT the validation authority - writingPassOutputSchema.parse() in

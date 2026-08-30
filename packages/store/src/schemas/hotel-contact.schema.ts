@@ -20,7 +20,7 @@
  * What this schema deliberately has no place for: a named contact, a phone
  * number, a free-mail address, a catch-all verdict, or any field a verification
  * vendor would populate. The absence is the design - see
- * docs/prospect-qualification.md section 6.
+ * docs/rules/prospect-qualification.md section 6.
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';

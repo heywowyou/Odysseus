@@ -31,14 +31,14 @@ historical, and research documents.
 
 | Work concerns | Read before changing it |
 | --- | --- |
-| Any structural or cross-package change | `CLAUDE.md`, `docs/odysseus-project-brief-v2.md`, and relevant `docs/decisions/trade-offs.md` entries |
-| Normalization, dedupe, IDs, artifacts | `docs/normalization-rules.md` |
-| Model inputs, prompts, output guards, analysis | `docs/llm-layer-rules.md` |
-| Client-facing legal/compliance content | `docs/obligation-basis.md`, `docs/operator-obligations.md` |
-| Prospect sourcing, qualification, or contact data | `docs/prospect-qualification.md` |
-| Outreach previews or emails | `docs/outreach-rules.md`, `plans/README.md`, and the relevant numbered plan |
-| Offer, pricing, or sales claims | `docs/offer-positioning.md` |
-| Report design or PDF layout | `docs/report-design-system.md`, `docs/report-design-tokens.md`, canonical flat sources in `docs/design/` |
+| Any structural or cross-package change | `CLAUDE.md`, `docs/product/odysseus-project-brief.md`, and relevant `docs/decisions/trade-offs.md` entries |
+| Normalization, dedupe, IDs, artifacts | `docs/rules/normalization-rules.md` |
+| Model inputs, prompts, output guards, analysis | `docs/rules/llm-layer-rules.md` |
+| Client-facing legal/compliance content | `docs/rules/obligation-basis.md`, `docs/rules/operator-obligations.md` |
+| Prospect sourcing, qualification, or contact data | `docs/rules/prospect-qualification.md` |
+| Outreach previews or emails | `docs/rules/outreach-rules.md`, `plans/README.md`, and the relevant numbered plan |
+| Offer, pricing, or sales claims | `docs/rules/offer-positioning.md` |
+| Report design or PDF layout | `docs/report/report-design-system.md`, `docs/report/report-design-tokens.md`, canonical flat sources in `docs/report/design/` |
 | Package vocabulary or architectural decisions | `docs/agents/domain.md`, relevant `CONTEXT.md` / ADRs if present |
 | GitHub issues | `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` |
 | Code style, naming, tests, comments, or product prose | `docs/agents/coding-conventions.md` |

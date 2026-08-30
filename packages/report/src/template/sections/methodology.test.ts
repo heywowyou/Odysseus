@@ -10,7 +10,7 @@ describe('renderMethodology against the real small-site.test manifest', () => {
     const manifest = await loadSmallSiteManifest();
     const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
 
-    // 11 pages, docs/normalization-rules.md section 7. item 3.6: "pages
+    // 11 pages, docs/rules/normalization-rules.md section 7. item 3.6: "pages
     // analysées" is the standardized term everywhere ("scannées" on the
     // cover and "explorées" here used to disagree with the stats page).
     expect(html).toContain('11 pages analysées');

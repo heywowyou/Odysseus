@@ -13,7 +13,6 @@ coverage/
 .vitest/
 *.tsbuildinfo
 .playwright-mcp/
-/docs/GlassWire/
 
 # Crash-recovery session log. Ephemeral by design: written continuously from
 # docs/agents/session-template.md, folded into canonical docs, and retained

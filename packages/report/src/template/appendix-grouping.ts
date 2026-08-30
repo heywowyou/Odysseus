@@ -2,7 +2,7 @@ import { compareCriteria, SEVERITY_ORDER, type Finding, type Severity } from '@o
 
 /** Pure grouping/sorting over Finding[], no schema change - the fix for
  *  B11-B13 and D28. Rows for one rule are adjacent, groups ordered by
- *  severity then total occurrences, per docs/report-v2-refactor.md 3.3.
+ *  severity then total occurrences, per docs/archive/report-v2-refactor.md 3.3.
  *  Reuses @odysseus/core's own SEVERITY_ORDER (critical highest) rather
  *  than a second, locally-scoped severity ordering. */
 export interface RuleGroup {

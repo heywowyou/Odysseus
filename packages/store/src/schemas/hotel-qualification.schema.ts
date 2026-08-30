@@ -4,7 +4,7 @@
  * version.
  *
  * Its own collection rather than an emission into `prospects` (execution
- * decision 2 in advisor-plans/003-cheap-hotel-qualification.md): a prospect
+ * decision 2 in advisor-plans/archive/003-cheap-hotel-qualification.md): a prospect
  * document requires a `scanJobId`, and at this stage no scan exists or should.
  * Widening `prospects` to make that field optional would leave the collection
  * meaning two different things depending on which fields happen to be present,

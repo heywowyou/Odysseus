@@ -4,7 +4,7 @@
  * A public DNS record read through a resolver, and nothing more. It is a fact
  * about the *domain*, never proof that the mailbox exists - establishing that
  * would mean an SMTP conversation, which plan 007 and
- * docs/prospect-qualification.md both forbid outright, along with catch-all
+ * docs/rules/prospect-qualification.md both forbid outright, along with catch-all
  * classification and verification vendors.
  *
  * A resolver failure is `unknown`, never `no-mx`. The two look similar from

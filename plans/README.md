@@ -329,21 +329,21 @@ plainly wherever plan 014's results are interpreted rather than described as
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 | --- | --- | --- | --- | --- | --- |
-| [001](./001-hotel-catalogue-ingestion.md) | Ingest the national hotel catalogue | P1 | L | none | DONE |
-| [002](./002-hotel-identity-and-groups.md) | Resolve identities, own domains, and groups | P1 | L | 001 | DONE |
-| [003](./003-cheap-hotel-qualification.md) | Qualify hotel websites without a browser | P1 | L | 002 | DONE |
-| [004](./004-distinct-hotel-prescan.md) | Build the distinct three-page hotel prescan | P1 | L | 003 | DONE |
-| [005](./005-hotel-evidence-capture.md) | Capture the two outreach evidence assets | P1 | L | 004 | DONE |
-| [006](./006-versioned-hotel-scoring.md) | Score candidates with immutable breakdowns | P1 | L | 001-005 | DONE |
-| [007](./007-role-contact-discovery.md) | Discover approved own-domain role contacts | P1 | M | 006 | DONE |
-| [008](./008-safe-outreach-preview-html.md) | Generate safe outreach preview HTML | P1 | L | 005 | DONE |
-| [009](./009-expiring-preview-publication.md) | Publish expiring previews and compliance pages | P1 | L | 008 | DONE |
-| [010](./010-validated-outreach-prose.md) | Generate and validate outreach prose | P1 | L | 006, 008 | DONE |
-| [011](./011-gmail-drafts-without-send.md) | Create reviewed Gmail drafts without sending | P1 | L | 007, 009, 010 | DONE |
+| [001](archive/001-hotel-catalogue-ingestion.md) | Ingest the national hotel catalogue | P1 | L | none | DONE |
+| [002](archive/002-hotel-identity-and-groups.md) | Resolve identities, own domains, and groups | P1 | L | 001 | DONE |
+| [003](archive/003-cheap-hotel-qualification.md) | Qualify hotel websites without a browser | P1 | L | 002 | DONE |
+| [004](archive/004-distinct-hotel-prescan.md) | Build the distinct three-page hotel prescan | P1 | L | 003 | DONE |
+| [005](archive/005-hotel-evidence-capture.md) | Capture the two outreach evidence assets | P1 | L | 004 | DONE |
+| [006](archive/006-versioned-hotel-scoring.md) | Score candidates with immutable breakdowns | P1 | L | 001-005 | DONE |
+| [007](archive/007-role-contact-discovery.md) | Discover approved own-domain role contacts | P1 | M | 006 | DONE |
+| [008](archive/008-safe-outreach-preview-html.md) | Generate safe outreach preview HTML | P1 | L | 005 | DONE |
+| [009](archive/009-expiring-preview-publication.md) | Publish expiring previews and compliance pages | P1 | L | 008 | DONE |
+| [010](archive/010-validated-outreach-prose.md) | Generate and validate outreach prose | P1 | L | 006, 008 | DONE |
+| [011](archive/011-gmail-drafts-without-send.md) | Create reviewed Gmail drafts without sending | P1 | L | 007, 009, 010 | DONE |
 | [012](./012-replies-suppressions-outcomes.md) | Reconcile replies, suppressions, and outcomes | P2 | L | 011 | TODO |
 | [013](./013-outreach-operator-interface.md) | Add the private outreach operator interface | P2 | L | 001-012 | TODO |
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013 | TODO |
-| [015](./015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |
+| [015](archive/015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done
@@ -405,7 +405,7 @@ Each kind of work has exactly one home:
   orchestration, and the `prospect draft` commands. Step 6, a live synthetic
   draft, needs a provisioned Google Workspace mailbox and a person to read the
   result, and neither existed when the work was done. Preflight list is
-  `docs/outreach-rules.md` section 10; the reasoning behind the no-send design
+  `docs/rules/outreach-rules.md` section 10; the reasoning behind the no-send design
   is trade-off 56.
   **Update 2026-08-30.** The mailbox is now provisioned: Google Workspace
   account `contact@odysseusaudit.com`, a Cloud project with an Internal OAuth
@@ -417,7 +417,7 @@ Each kind of work has exactly one home:
   touch-1 word-count guard rejected all 3 retries on the live Mistral API,
   twice, six generations landing at 31 to 38 words against a required 60 to
   90. Filed as issue #12 rather than worked around, since relaxing that
-  guard would silently reverse the shape stated in `docs/outreach-rules.md`
+  guard would silently reverse the shape stated in `docs/rules/outreach-rules.md`
   section 6. Plan 011 stays `IMPLEMENTED` until #12 is resolved and Step 6 is
   re-run to completion.
   **Update 2026-08-30 (second).** #12 was fixed in commit `b5410e3` and

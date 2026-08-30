@@ -10,7 +10,7 @@ import type { FindingsProvenance, ReportLanguage } from '@odysseus/core';
 
 /** Milestone 8 addendum introduced a paid screening tier alongside the
  *  full audit, and a stored report recorded which of the two it was.
- *  Dropped 2026-08-16 (docs/offer-positioning.md): the commercial model
+ *  Dropped 2026-08-16 (docs/rules/offer-positioning.md): the commercial model
  *  is single-tier now, so there is nothing left to disambiguate.
  *  Historical documents in the `reports` collection still carry a
  *  `tier` field from before this change; it is simply no longer read or

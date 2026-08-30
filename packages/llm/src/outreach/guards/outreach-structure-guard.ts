@@ -2,7 +2,7 @@ import { OUTREACH_TOUCH_LIMITS } from '../outreach-limits.js';
 import type { OutreachProseOutput } from '../outreach-schema.js';
 
 /**
- * The shape doctrine states in words (docs/outreach-rules.md section 6) and
+ * The shape doctrine states in words (docs/rules/outreach-rules.md section 6) and
  * outreach-limits.ts states as numbers: word count, sentence count, subject
  * length, and which touches may ask a question. Zod's own max-length bounds
  * catch a wildly overlong field, but a word or sentence count is not a

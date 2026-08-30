@@ -6,7 +6,7 @@
  * guard in `generateOutreachProse` before it reaches here - this module
  * never calls the model and never repairs anything. Its own job is narrower
  * and entirely deterministic: splice the touch's fixed content around that
- * prose in the order `docs/outreach-rules.md` sections 6 and 7 require, and
+ * prose in the order `docs/rules/outreach-rules.md` sections 6 and 7 require, and
  * refuse rather than send if a required input is missing or a splice does not
  * check out.
  *
@@ -63,7 +63,7 @@ export interface AssembleOutreachDraftOptions {
    *  composed here into `Re: <that>`, idempotently. */
   previousSubject?: string;
   /** Touch 1 only. Never a fixed list: a hotel with no Sirene match discloses
-   *  fewer origins than one with a registry hit (docs/outreach-rules.md
+   *  fewer origins than one with a registry hit (docs/rules/outreach-rules.md
    *  section 7). */
   dataOrigins?: OutreachDataOrigin[];
   privacyUrl?: string;

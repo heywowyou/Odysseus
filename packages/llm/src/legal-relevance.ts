@@ -132,7 +132,7 @@ const WCAG_CRITERION_NAMES: Record<ReportLanguage, Record<string, string>> = {
   },
 };
 
-/** Exported for packages/report's conformance rollup (docs/report-v2-refactor.md
+/** Exported for packages/report's conformance rollup (docs/archive/report-v2-refactor.md
  *  3.5), which needs the same official criterion name shown per row -
  *  one canonical table, not a second copy in another package. Returns
  *  undefined for an unmapped code rather than a guess. */
@@ -154,7 +154,7 @@ function joinWithConjunction(parts: readonly string[], conjunction: string): str
 /**
  * The fixed-shape legalRelevance sentence, built entirely in code from
  * deterministic wcagCriteria data. The model never sees or writes any
- * part of this - see docs/report-v2-refactor.md 4.3 ("The model chooses
+ * part of this - see docs/archive/report-v2-refactor.md 4.3 ("The model chooses
  * no part of this sentence"). Fixes C19 (the legal framing is invisible)
  * without inviting the model to overstate a legal obligation, which
  * CLAUDE.md rule 6 forbids outright.

@@ -17,7 +17,7 @@ export default defineConfig(
     'artifacts/**',
     'data/**',
     'reports/**',
-    'docs/design/**',
+    'docs/report/design/**',
   ]),
   {
     files: sourceFiles,

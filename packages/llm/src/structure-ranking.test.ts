@@ -16,7 +16,7 @@ import type { StructureThemeWithKey } from './structure-schema.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-/** Real scan behind docs/report-v2-refactor.md A5/A6: f039 (meta-viewport,
+/** Real scan behind docs/archive/report-v2-refactor.md A5/A6: f039 (meta-viewport,
  *  blocked zoom, WCAG 1.4.4) sits on 18 of 20 pages - the exact site-wide
  *  floor case - and f017/f037 (link-name on the sitemap, crawlable-anchors
  *  in the footer) are the 180- and 203-occurrence findings the v1 report
@@ -115,7 +115,7 @@ const lowVolumeMinorId = (findings: Finding[]): string => findByRule(findings, '
 const confinedAccessibilityId = (findings: Finding[]): string =>
   findByRule(findings, 'image-alt', (f) => f.pageUrls.length === 1);
 /** is-crawlable, confined to the CGU/cookies/privacy pages - entirely legal,
- *  entirely diverted per docs/report-v2-refactor.md A3. */
+ *  entirely diverted per docs/archive/report-v2-refactor.md A3. */
 const divertedSeoId = (findings: Finding[]): string => findByRule(findings, 'is-crawlable');
 
 /** Three findings that are interchangeable for a test that does not care
@@ -429,7 +429,7 @@ describe('logContainmentWarnings', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     // f013 (is-crawlable) is confined to the CGU/cookies/privacy pages -
-    // entirely legal, entirely diverted per docs/report-v2-refactor.md A3.
+    // entirely legal, entirely diverted per docs/archive/report-v2-refactor.md A3.
     const themes: StructureThemeWithKey[] = [
       theme('t1', [divertedSeoId(findings)], { category: 'seo' }),
     ];

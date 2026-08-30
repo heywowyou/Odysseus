@@ -14,7 +14,7 @@ export const DEFAULT_INTERFACE_HOST = '127.0.0.1';
  *  machine known to have the memory to spare. */
 export const DEFAULT_QUEUE_CONCURRENCY = 1;
 /** Milestone 9b: raised from the milestone-7 homepage-only pass (1 page,
- *  depth 0) to 3 pages at depth 1, per docs/odysseus-project-brief-v2.md's
+ *  depth 0) to 3 pages at depth 1, per docs/product/odysseus-project-brief.md's
  *  9b description ("home, one listing page, one transactional page, the
  *  last retained because the flow detector needs it"). This is a page
  *  *count* ceiling, not a page-role classifier: the crawl still discovers
@@ -201,7 +201,7 @@ export function getPreviewBucketSecretKey(): string {
  * The sending address is deliberately separate from `odysseusaudit.com`, per
  * plan 011's operator preflight. Nothing here enforces that, because the check
  * belongs where a person can see the answer: the preflight checklist in
- * `docs/outreach-rules.md`.
+ * `docs/rules/outreach-rules.md`.
  */
 export const MAILBOX_ENV_VARS = [
   'ODYSSEUS_MAILBOX_CLIENT_ID',

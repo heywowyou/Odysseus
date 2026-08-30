@@ -199,7 +199,7 @@ describe('RF-03: client-specific EAA sanctions are never rendered', () => {
 
   // Revised 2026-08-18 (B9/item 1.14): the Lille/Caen case-law sentence
   // was removed from client-facing output. Its source in
-  // docs/obligation-basis.md is tagged Status: secondary ("internal use
+  // docs/rules/obligation-basis.md is tagged Status: secondary ("internal use
   // only"), sourced from press summaries rather than the ordonnances
   // themselves, so it was never eligible to reach a client under the
   // doc's own primary-only rule despite having shipped here.

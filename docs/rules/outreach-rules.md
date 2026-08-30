@@ -3,11 +3,11 @@
 Messaging doctrine for prospecting. Governs milestone 9c and the
 outreach prompt in `packages/llm`. Written 2026-08-15.
 
-Companions: `docs/obligation-basis.md` for what may be claimed about the
-client, `docs/operator-obligations.md` for what binds us,
-`docs/prospect-qualification.md` for who may be contacted,
-`docs/offer-positioning.md` for what is being sold,
-`docs/llm-layer-rules.md` section 10 for when the model is called.
+Companions: `docs/rules/obligation-basis.md` for what may be claimed about the
+client, `docs/rules/operator-obligations.md` for what binds us,
+`docs/rules/prospect-qualification.md` for who may be contacted,
+`docs/rules/offer-positioning.md` for what is being sold,
+`docs/rules/llm-layer-rules.md` section 10 for when the model is called.
 
 ---
 
@@ -54,7 +54,7 @@ in five minutes, and a confident determination we cannot defend costs
 more than the confidence buys.
 
 **We may not be permitted to make it.** See
-`docs/operator-obligations.md` section 2.
+`docs/rules/operator-obligations.md` section 2.
 
 **Permitted formulations.** The criteria as the texts set them out. The
 company's own registry data. Whether the two exemption conditions appear
@@ -104,14 +104,14 @@ numeric prevalence claim attached, and not as a generic opener in every
 email.
 
 In the paid report, statistics are permitted only from
-`docs/obligation-basis.md` section 8, with source and date, never inline
+`docs/rules/obligation-basis.md` section 8, with source and date, never inline
 in a template. That list is currently empty.
 
 ---
 
 ## 5. Deterministic splice: the model makes no legal statements
 
-`docs/llm-layer-rules.md` forbids the model from asserting that the EAA
+`docs/rules/llm-layer-rules.md` forbids the model from asserting that the EAA
 applies to a specific business. Unchanged and absolute, and now wider:
 the model writes no part of argument B at all.
 
@@ -180,7 +180,7 @@ person. Every first-contact message states:
 - the purpose
 - a simple, free means of objecting
 
-The origin disclosure is why `docs/prospect-qualification.md` section 7
+The origin disclosure is why `docs/rules/prospect-qualification.md` section 7
 stores data origin per record rather than relying on a boilerplate line.
 
 The prospect's site language is not yet stored on `HotelCandidate` or
@@ -221,7 +221,7 @@ costs the review step that keeps the evidence honest.
 optimise volume, the one variable we have decided not to optimise.
 
 **Telephone is closed** since 11 August 2026. See
-`docs/operator-obligations.md` section 5. Phone is a follow-up channel
+`docs/rules/operator-obligations.md` section 5. Phone is a follow-up channel
 for people who replied, never a prospecting channel.
 
 **Timing.** Avoid landing the first wave in the last week of August or
@@ -236,7 +236,7 @@ produces a draft that could be sent by reflex.
 
 ## 9. Prohibited in outreach
 
-- Any figure from `docs/obligation-basis.md` whose status is not `primary`
+- Any figure from `docs/rules/obligation-basis.md` whose status is not `primary`
 - The EUR 50,000 amount in any EAA-regime context
 - Any population or prevalence percentage
 - Any claim that the recipient will be fined, inspected or sued

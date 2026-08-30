@@ -1,6 +1,6 @@
 /**
  * Plain-HTTP-only page fetch for the prospecting qualification stage, per
- * docs/prospect-qualification.md section 5: "The plain HTTP stage must
+ * docs/rules/prospect-qualification.md section 5: "The plain HTTP stage must
  * not use Chromium." No HTML-parsing dependency added, matching
  * @odysseus/scanner's own extract-text.ts hand-rolled precedent -
  * htmlToText is deliberately crude, since it only needs to preserve

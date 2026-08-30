@@ -5,7 +5,7 @@ import {
   type Finding,
 } from '@odysseus/core';
 
-/** Per-criterion rollup for the conformance summary (docs/report-v2-refactor.md
+/** Per-criterion rollup for the conformance summary (docs/archive/report-v2-refactor.md
  *  C20/C21): a WCAG failure is a different kind of fact from a slow
  *  image, and this is the page that can be handed to a lawyer or agency
  *  as-is. A finding carrying more than one criterion is counted under

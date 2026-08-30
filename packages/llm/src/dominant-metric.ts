@@ -3,7 +3,7 @@ import type { AuditManifest, CoreWebVitalMeasurement } from '@odysseus/core';
 /** "Poor" thresholds per the standard Core Web Vitals bands, matching
  *  packages/report's own performance-table rating (core-web-vitals-table.ts).
  *  Duplicated rather than shared via @odysseus/core because it's six
- *  numbers, not shared logic - see docs/report-v2-refactor.md 4.3. Keep
+ *  numbers, not shared logic - see docs/archive/report-v2-refactor.md 4.3. Keep
  *  the two in sync by hand if either changes. */
 const POOR_THRESHOLDS = {
   lcp: 4000,
@@ -25,7 +25,7 @@ function metricValues(manifest: AuditManifest, metric: MetricKey): number[] {
 /** Which Core Web Vital dominates the site's performance problem, so the
  *  writing pass can be told to lead performance recommendedActions with
  *  it rather than defaulting to image/CSS advice regardless of cause
- *  (docs/report-v2-refactor.md A4: 16,490ms of TBT is a JavaScript
+ *  (docs/archive/report-v2-refactor.md A4: 16,490ms of TBT is a JavaScript
  *  execution problem, not an image-weight problem).
  *
  *  Ranks metrics with at least one page rated "poor" by their average

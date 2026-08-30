@@ -14,7 +14,7 @@
  *
  * `optOutLink` (a URL, first contact only) and `optOutByReply` (text only, every
  * later touch) are deliberately two different sentences, not one templated on
- * whether a link is present - `docs/outreach-rules.md` section 6 forbids a new
+ * whether a link is present - `docs/rules/outreach-rules.md` section 6 forbids a new
  * link on touch 2 or 3, and the objection mechanism on those touches has to
  * exist without introducing one.
  */

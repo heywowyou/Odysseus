@@ -16,8 +16,7 @@ reports/**
 skills-lock.json
 
 # Canonical or generated design artifacts are not formatter-owned source.
-docs/design/*.flat.html
-docs/mockups/**
+docs/report/design/*.flat.html
 
 # Prose is governed by docs/agents/coding-conventions.md and docs:check.
 **/*.md

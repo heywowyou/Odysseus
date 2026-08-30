@@ -5,7 +5,7 @@ import type { CATEGORY_ORDER } from './design-tokens.js';
 import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
 import { isThirdPartyFinding } from './third-party-attribution.js';
 
-/** Deterministic counts for the statistics page (docs/report-v2-refactor.md
+/** Deterministic counts for the statistics page (docs/archive/report-v2-refactor.md
  *  B10): nowhere in v1 did the document state pages scanned, finding
  *  totals, or the severity breakdown before asking the reader to work
  *  through eleven themes. Verified against the real haaitza scan: 20

@@ -5,7 +5,7 @@
 > until the operator approves them. Update plan 011 in the index when complete.
 >
 > **Drift check (run first)**:
-> `git diff --stat f7ef7cf..HEAD -- packages/interface/src packages/store/src packages/cli/src/commands packages/core/src/prospecting docs/outreach-rules.md docs/operator-obligations.md packages/site/app`
+> `git diff --stat f7ef7cf..HEAD -- packages/interface/src packages/store/src packages/cli/src/commands packages/core/src/prospecting docs/rules/outreach-rules.md docs/rules/operator-obligations.md packages/site/app`
 > Stop if suppression, manual-send, required-disclosure, or role-address rules
 > changed.
 

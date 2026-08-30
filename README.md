@@ -13,7 +13,7 @@ for its repository entry point; the cross-agent handoff protocol is
 planned, backlog, historical, and research material. The
 [shared conventions](docs/agents/coding-conventions.md) keep code and product
 writing consistent between agents. Read the charter and
-`docs/odysseus-project-brief-v2.md` before making architectural changes.
+`docs/product/odysseus-project-brief.md` before making architectural changes.
 
 ## Prerequisites
 

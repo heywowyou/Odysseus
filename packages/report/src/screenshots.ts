@@ -2,11 +2,11 @@
  * Render-diff evidence selection for the report's section 08. Must reuse
  * selectPageDirsToKeep from @odysseus/scanner rather than reimplement the
  * selection rule, or this could pick a page the scan already pruned
- * (docs/normalization-rules.md section 6) - even though this module no
+ * (docs/rules/normalization-rules.md section 6) - even though this module no
  * longer reads screenshot files off disk at all (see below), the same
  * pruning decision still governs which pages are legitimate evidence.
  *
- * docs/report-design-system.md section 3: section 08 carries no
+ * docs/report/report-design-system.md section 3: section 08 carries no
  * screenshots, only two proportional bars (raw vs rendered visible-text
  * length) and a one-line caption, capped at the 3 worst pages by
  * missingPercent. Screenshots stay in the technical export; this module
@@ -37,7 +37,7 @@ export interface RenderDiffEvidencePage {
    *  threshold (20%, higher than this section's 5% *inclusion* threshold),
    *  since no text-missing-from-raw-html finding exists to read the
    *  lengths from in that band - never guessed, rendered as "not
-   *  measured" instead. See docs/report-v2-refactor.md B17. */
+   *  measured" instead. See docs/archive/report-v2-refactor.md B17. */
   rawTextLength: number | null;
   renderedTextLength: number | null;
   /** The render-diff finding's representative element selector for this
@@ -64,7 +64,7 @@ function prunePageInfoFromManifest(manifest: AuditManifest): PrunePageInfo[] {
 }
 
 /** rawEvidence is typed Record<string, unknown> on the locked Finding
- *  shape; perPage's real shape (docs/normalization-rules.md section 4)
+ *  shape; perPage's real shape (docs/rules/normalization-rules.md section 4)
  *  is a per-page RenderDiffResult keyed by URL, cast and guarded here
  *  rather than trusted. */
 function renderDiffDetailsForPage(

@@ -13,8 +13,7 @@ the same excluded sources again.
 
 ## Why hospitality has its own file
 
-`docs/research/Odysseus Business-Impact Statistics Reference Database
-Accessibility SEO & GEO.md` is the original, general-purpose research
+`docs/research/business-impact-statistics.md` is the original, general-purpose research
 pass (milestone 8.5b). It already noted, honestly, that hospitality-
 specific *quantified* data was thin for both accessibility and SEO. This
 directory exists to hold the deeper, sector-targeted follow-up research

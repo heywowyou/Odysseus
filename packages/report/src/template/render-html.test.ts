@@ -23,7 +23,7 @@ describe('renderHtml against the real small-site.test audit', () => {
     expect(html).toContain('<html lang="fr">');
     expect(html).toContain('<style>');
     // nocturne.css is the locked design-system stylesheet
-    // (docs/report-design-system.md).
+    // (docs/report/report-design-system.md).
     expect(html).toContain('class="sheet"');
     expect(html).not.toContain('undefined');
     expect(html).not.toContain('http://localhost'); // no CDN/external reference
@@ -153,7 +153,7 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   const METHODOLOGY_POINTER = 'figure dans la section';
   // "Confirmé" / "relève de l'obligation suivante" (a settled conclusion)
   // was reworded to this hedged, criteria-based phrasing after a real
-  // report review found it violated docs/obligation-basis.md section 7
+  // report review found it violated docs/rules/obligation-basis.md section 7
   // ("any scope statement presented as settled" is not permitted).
   const PUBLISHED_CRITERIA_PHRASE = 'Critères publiés pour';
 

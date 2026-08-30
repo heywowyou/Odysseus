@@ -51,7 +51,7 @@ cap instead; that decision is the operator's.
    has been confirmed against real scanner output, not assumed.
 
    This is why `heading-order` (documented in
-   `docs/manual-accessibility-checklist.md` as a confirmed axe detection
+   `docs/rules/manual-accessibility-checklist.md` as a confirmed axe detection
    gap, tagged best-practice rather than WCAG) remains a real gap rather
    than something a future session should "fix" by re-adding Lighthouse's
    accessibility category. `best-practices` gets a deliberate per-audit-id
@@ -116,7 +116,7 @@ cap instead; that decision is the operator's.
    prospecting worthiness gate before spending a call on outreach
    generation (at least one critical finding, or two serious, or a page
    with render diff missing 50 percent or more). Full thresholds and
-   reasoning in `docs/llm-layer-rules.md` section 10. Both gates score
+   reasoning in `docs/rules/llm-layer-rules.md` section 10. Both gates score
    findings using the existing `SEVERITY_ORDER` weights rather than a new
    scale, and count distinct findings rather than occurrences. Do not
    remove either gate to "always get a full analysis" without revisiting
@@ -156,19 +156,19 @@ cap instead; that decision is the operator's.
    WCAG criterion name table, never written by the writing pass (which
    has no field for it at all) — the model choosing zero words of a legal
    claim is the point. Full defect list and reasoning in
-   `docs/report-v2-refactor.md`.
+   `docs/archive/report-v2-refactor.md`.
 
 9. **`packages/report`'s template is hand-maintained CSS, not Tailwind**,
    since the 2026-08-07 refactor. The compiled-Tailwind approach from
    milestone 6 is gone: no `tailwind-input.css`, no `build:css` script, no
    `tailwindcss`/`@tailwindcss/cli` dependency. `report.css` is written
    directly. It went through two dark-theme generations: a
-   GlassWire-inspired reskin on 2026-08-07 (`docs/odysseus-project-brief-v2.md`,
+   GlassWire-inspired reskin on 2026-08-07 (`docs/product/odysseus-project-brief.md`,
    "Post-7.1: scan concurrency and reskin"), then a full retokening on
    2026-08-16 to match the full-audit and outreach-preview designs. The
    readable flattened sources now live at
-   `docs/design/report-mockup-standalone.flat.html` and
-   `docs/design/report-mockup-preview.flat.html`; they supersede the opaque
+   `docs/report/design/report-mockup-standalone.flat.html` and
+   `docs/report/design/report-mockup-preview.flat.html`; they supersede the opaque
    self-decoding bundles and generated PDFs that were removed in the docs
    consolidation. If the designs are revised, re-derive tokens from their
    literal source CSS, not from pixel sampling or assumption. Do not reintroduce a
@@ -196,8 +196,8 @@ cap instead; that decision is the operator's.
 
 11. **Argument B (the legal content) is a deterministic splice, in both
     the report and outreach, never model prose**, decided 2026-08-15
-    alongside `docs/obligation-basis.md`, `docs/operator-obligations.md`,
-    and `docs/outreach-rules.md`. `assessObligations()` produces the
+    alongside `docs/rules/obligation-basis.md`, `docs/rules/operator-obligations.md`,
+    and `docs/rules/outreach-rules.md`. `assessObligations()` produces the
     criteria, the company's registry data, and the case-law position as
     fixed text; the compliance section of the report and milestone 9c's
     outreach draft both splice that text in unmodified rather than asking
@@ -213,7 +213,7 @@ cap instead; that decision is the operator's.
 
 12. **Single-tier commercial model: no paid screening tier, flat full-audit
     price, free outreach preview instead**, decided 2026-08-16
-    (`docs/offer-positioning.md`). The paid EUR 290 screening tier from
+    (`docs/rules/offer-positioning.md`). The paid EUR 290 screening tier from
     milestone 8 is dropped entirely, not narrowed or renamed. The full
     audit is now the only paid deliverable, at a flat, published price
     (EUR 1,600 HT as of trade-off 13 below; originally EUR 300 HT on
@@ -226,18 +226,18 @@ cap instead; that decision is the operator's.
     links), and from `packages/cli` (no `--tier` flag).
 
     In its place, a free, pre-purchase **outreach preview** document is
-    sent to cold prospects (milestone 9c, `docs/outreach-rules.md`). It is
+    sent to cold prospects (milestone 9c, `docs/rules/outreach-rules.md`). It is
     not a lighter tier of the full report and must not be built as one: it
     has its own content rules, and in particular never contains selectors,
     finding IDs, or exact page locations, the way the old screening tier
     did. Give it its own render path rather than a new branch on
     `renderHtml`. It is also a likely first-contact artifact under RGPD
     article 14, so it must carry the same identity/data-origin/purpose/
-    opt-out disclosures `docs/outreach-rules.md` section 7 requires of any
+    opt-out disclosures `docs/rules/outreach-rules.md` section 7 requires of any
     first-contact message, not assume an accompanying email carries them.
 
 13. **Full audit price raised from EUR 300 HT to EUR 1,600 HT**, decided
-    2026-08-16, same day as trade-off 12 (`docs/offer-positioning.md`,
+    2026-08-16, same day as trade-off 12 (`docs/rules/offer-positioning.md`,
     canonical pricing source). Pricing decision only, not a scope change:
     the product and deliverables are unchanged; milestone 8.5 will add
     substance to justify the tier separately. Reasoning: EUR 300 HT read
@@ -249,9 +249,9 @@ cap instead; that decision is the operator's.
     paid tier no longer needs to be priced as an entry point; market-rate
     credibility is the goal instead. The Stripe payment link amount is
     updated separately by hand, not by code or by this change. Current-
-    price mentions in `docs/odysseus-project-brief-v2.md` were updated to
+    price mentions in `docs/product/odysseus-project-brief.md` were updated to
     EUR 1,600 HT along with the canonical source; only the "why the
-    prices are not being raised" reasoning in `docs/offer-positioning.md`
+    prices are not being raised" reasoning in `docs/rules/offer-positioning.md`
     section 1 is deliberately left describing the superseded EUR 300 HT
     figure, kept as history of how that number was reached, not the
     current price.
@@ -299,8 +299,7 @@ cap instead; that decision is the operator's.
     (operator-editable, versioned config read via `readFileSync` at
     runtime) - a citation's exact wording is content someone edits
     deliberately, not a knob an operator flips. The table encodes only
-    the rows `docs/research/Odysseus Business-Impact Statistics
-    Reference Database Accessibility SEO & GEO.md` tags "SAFE TO CITE BY
+    the rows `docs/research/business-impact-statistics.md` tags "SAFE TO CITE BY
     NAME," plus, for GEO only, its "emerging / cite only as early data
     suggests" tier; every row that doc marks "directionally useful but
     not citable" or "not citable" is skipped entirely, not encoded
@@ -319,7 +318,7 @@ cap instead; that decision is the operator's.
     (`reference-stats/sector.ts`, NAF prefixes `55.`/`56.` to
     `hospitality`) is a small table deliberately independent from
     `prospecting/config/naf-sector-allowlist.json`, which
-    `docs/prospect-qualification.md` section 4 forbids citing to a
+    `docs/rules/prospect-qualification.md` section 4 forbids citing to a
     prospect as evidence of anything - conflating the two would let an
     edit made for prospecting recall silently change what a paid report
     cites, or vice versa. Several source-doc years are left unset
@@ -394,7 +393,7 @@ cap instead; that decision is the operator's.
     The reference-stats module remains report-only. Milestone 9c's
     outreach generation (not yet built) must never import
     `@odysseus/core`'s `selectReferenceStats`/`REFERENCE_STAT_TABLE` -
-    `docs/llm-layer-rules.md` section 11's "No statistics" rule for
+    `docs/rules/llm-layer-rules.md` section 11's "No statistics" rule for
     outreach is deliberately stricter than the report path (a report has
     a methodology section and a paying client, an email has neither).
     `estimateRevenueImpact` remains unwired in both paths; a numeric
@@ -832,7 +831,7 @@ cap instead; that decision is the operator's.
     worth recording before the implementation itself.
 
     First: `computeBrokennessScore`, `isAuditFallbackEligible`, and
-    `isProspectingWorthy` (`docs/llm-layer-rules.md` section 10, CLAUDE.md
+    `isProspectingWorthy` (`docs/rules/llm-layer-rules.md` section 10, CLAUDE.md
     rule 6) were documented as decided, shipped policy - "do not remove
     either gate" - but did not exist anywhere in the codebase before this
     milestone; `git log -S` on each symbol name only ever turns up the
@@ -852,10 +851,10 @@ cap instead; that decision is the operator's.
 
     Second: enabling hospitality NAF codes for prospecting (an explicit
     ask this session, alongside the throughput work) surfaced that
-    `docs/prospect-qualification.md` section 4 had gone stale relative to
-    `docs/obligation-basis.md`. Section 4 originally excluded hotels from
+    `docs/rules/prospect-qualification.md` section 4 had gone stale relative to
+    `docs/rules/obligation-basis.md`. Section 4 originally excluded hotels from
     the first wave because "accommodation booking is a reading rather than
-    a settled position" - true when written, but `docs/obligation-basis.md`'s
+    a settled position" - true when written, but `docs/rules/obligation-basis.md`'s
     own "Hotels and accommodation" entry was later upgraded from
     `disputed` to `secondary` and now states hotels are "on comparable
     legal footing to a standard online shop" for outreach purposes, with
@@ -863,7 +862,7 @@ cap instead; that decision is the operator's.
     not legal weakness. `naf-sector-allowlist.json` now enables 55.10Z
     (hôtels) and 55.20Z (hébergement touristique de courte durée,
     covering chambres d'hôtes) at `definitional` confidence on that basis;
-    `docs/prospect-qualification.md` section 4 was updated to match rather
+    `docs/rules/prospect-qualification.md` section 4 was updated to match rather
     than left contradicting the doc it defers to. Restaurants (56.10A) are
     listed but deliberately left disabled: the accommodation-specific
     legal reading does not automatically transfer to a table reservation,
@@ -1043,7 +1042,7 @@ cap instead; that decision is the operator's.
     complete, client-facing-quality LCEN regime since it was written, and
     nothing anywhere read it - `grep` for `LCEN_MENTIONS_LEGALES_REGIME_ID`
     returned the definition site and nothing else. `assessObligations()`
-    emits only EAA and article 47. Meanwhile `docs/obligation-basis.md`, the
+    emits only EAA and article 47. Meanwhile `docs/rules/obligation-basis.md`, the
     file that governs every legal claim in the product, had no LCEN entry at
     all, so the regime was simultaneously unauthorised to state and unread.
     The scanner has detected the breach since milestone 8
@@ -1064,7 +1063,7 @@ cap instead; that decision is the operator's.
     scope turns on headcount, turnover and sector and the courts are split.
     LCEN has no size threshold, no sector list and no contested case law, so
     stating the criterion and what the scan observed is a report, not a
-    conclusion. `docs/obligation-basis.md` section 8bis carries the verified
+    conclusion. `docs/rules/obligation-basis.md` section 8bis carries the verified
     text and this reasoning at status `primary`.
 
     Implementation follows trade-off 11: `renderLcenBlock`
@@ -1809,7 +1808,7 @@ cap instead; that decision is the operator's.
     `packages/core/src/prospecting/discover-role-contact.ts` can only ever
     return a local part from `role-address.ts`'s allowlist, so a named address
     such as `prenom.nom@` has no code path to a return value at all. That is a
-    stronger reading of docs/prospect-qualification.md section 6's "not
+    stronger reading of docs/rules/prospect-qualification.md section 6's "not
     collected, stored or used" than capturing an address and discarding it
     later, and it is why the function returns an allowlisted local part rather
     than an arbitrary string. `hotel_contacts` correspondingly has no field a
@@ -2062,7 +2061,7 @@ with things removed.
 
 **Decision: start from nothing.** `OutreachPreviewInput`
 (`packages/core/src/types/outreach-preview.ts`) shares no type with the paid
-report and admits only what `docs/outreach-rules.md` permits. Every object is
+report and admits only what `docs/rules/outreach-rules.md` permits. Every object is
 `.strict()`, and that is what actually rejects a finding ID, a selector, an
 exact URL or a statistic: they have nowhere to be put, so no scrubbing pass has
 to be correct. A preview built by projecting the report input would be one
@@ -2104,7 +2103,7 @@ in this repository can produce a webp; accepting one would create a code path
 with no producer and widen a contract trade-off 36 says not to widen.
 
 **Argument B is enabled for hotels, as a general reading.**
-`docs/obligation-basis.md` carries hotels at `secondary` and states the facts
+`docs/rules/obligation-basis.md` carries hotels at `secondary` and states the facts
 block may be used with them on the same terms as any other online shop, which
 supersedes plan 008's older "argument A only" text. It stays behind
 `OutreachSourceCapabilities.argumentB` so a sector whose sources have not been
@@ -2289,7 +2288,7 @@ scan reproduces it.
 ### 45. Argument B ships for hotels under the general e-commerce rule
 
 Plan 010 inherited an obsolete hotel-specific hold on the deterministic legal
-facts block. The source review in `docs/obligation-basis.md` now permits hotels
+facts block. The source review in `docs/rules/obligation-basis.md` now permits hotels
 on the same terms as any other e-commerce prospect, and the preview path already
 sets `argumentB: true`. Outreach draft assembly follows that current doctrine.
 
@@ -2529,7 +2528,7 @@ mailbox and a person; plan 011 is therefore `IMPLEMENTED`, not `DONE`.
 Workspace OAuth client of user type **Internal**. External clients left in
 Testing are issued refresh tokens that expire after seven days, and moving out
 of Testing means Google verification, which a restricted scope makes expensive.
-Full preflight list, without secret values, is `docs/outreach-rules.md`
+Full preflight list, without secret values, is `docs/rules/outreach-rules.md`
 section 10.
 
 
@@ -2716,7 +2715,7 @@ rather than the redirect rows alone, and why the parked `domain-moved` state was
 removed rather than relabelled are all in numbered entry 37.
 
 Legal copy remains source-gated: hotel-specific material in
-`docs/obligation-basis.md` cannot enter a real draft until it reaches primary
+`docs/rules/obligation-basis.md` cannot enter a real draft until it reaches primary
 status. Source schemas/licences, score weights, preview storage, Gmail OAuth,
 mailbox setup, live deployment, and every named-site scan remain explicit STOP
 gates in the relevant numbered plans. The first real wave cannot land before

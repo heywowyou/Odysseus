@@ -1,7 +1,7 @@
 # Operator obligations
 
 Odysseus's own regulatory position, as distinct from the client's, which
-is in `docs/obligation-basis.md`. Written 2026-08-15.
+is in `docs/rules/obligation-basis.md`. Written 2026-08-15.
 
 This file exists because two of these have hard dates inside the next
 month and one of them constrains what the product may say.
@@ -38,7 +38,7 @@ personalised opinion on a specific question intended to guide a
 decision. Close enough to the prohibited perimeter that it must not be
 the differentiator the offer rests on.
 
-**Operating rule** is in `docs/obligation-basis.md` section 7 and binds
+**Operating rule** is in `docs/rules/obligation-basis.md` section 7 and binds
 report templates directly.
 
 **Optional upgrade, worth pricing once revenue exists.** A lawyer
@@ -138,7 +138,7 @@ the message relates to the recipient's professional activity, the
 recipient is informed at first contact per RGPD article 14 including
 where the data came from, and every message carries a simple free means
 of objecting. Free-mail addresses used for business are treated as
-personal and are excluded. Full rules in `docs/outreach-rules.md`.
+personal and are excluded. Full rules in `docs/rules/outreach-rules.md`.
 
 **Telephone. Closed.** Since 11 August 2026 unsolicited telephone
 prospecting is prohibited without prior explicit consent or an existing
@@ -164,7 +164,7 @@ of crossing. So track cumulative revenue continuously rather than
 discovering it in January.
 
 **All prices displayed HT from the first day**, per
-`docs/offer-positioning.md`. Clients are businesses and recover VAT, so
+`docs/rules/offer-positioning.md`. Clients are businesses and recover VAT, so
 this is neutral for them and avoids a price that silently rises later.
 
 ---

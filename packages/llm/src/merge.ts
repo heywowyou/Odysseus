@@ -33,11 +33,11 @@ function themeWcagCriteria(
  *  is structurally impossible to leak into the merged output, and the
  *  trailing llmOutputSchema.parse() (the real, locked schema, not a
  *  JSON-schema mirror) would reject it anyway since themeSchema is not
- *  .passthrough(). See docs/llm-layer-rules.md section 9.
+ *  .passthrough(). See docs/rules/llm-layer-rules.md section 9.
  *
  *  legalRelevance is built here, deterministically, from filteredFindings
  *  rather than trusted from the writing pass (which no longer has a field
- *  for it at all as of docs/report-v2-refactor.md 4.3) - the model
+ *  for it at all as of docs/archive/report-v2-refactor.md 4.3) - the model
  *  chooses no part of this sentence. */
 export function mergeAnalysisPasses(
   structureDoc: Pick<StructureDocument, 'themes' | 'quickWins' | 'overallRisk'>,

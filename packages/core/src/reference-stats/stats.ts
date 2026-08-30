@@ -37,7 +37,7 @@
  * fully deterministically - see CLAUDE.md trade-off 16. It remains
  * report-only: milestone 9c's outreach generation, not yet built, must
  * never import this table or selectReferenceStats/estimateRevenueImpact.
- * docs/llm-layer-rules.md section 11's "No statistics" rule for outreach
+ * docs/rules/llm-layer-rules.md section 11's "No statistics" rule for outreach
  *
  * 2026-08-22: the hospitality-tagged rows below `phocuswright-ai-trip-
  * planning-2026` come from a second, sector-targeted research pass,

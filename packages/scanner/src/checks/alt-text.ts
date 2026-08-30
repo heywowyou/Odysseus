@@ -7,7 +7,7 @@
  * alt text that IS present, plus enough context (src, decorative
  * markers, rendered size) for core to judge quality - see
  * normalize-alt-text.ts for why this stays a heuristic, never a
- * definitive detection, per docs/manual-accessibility-checklist.md.
+ * definitive detection, per docs/rules/manual-accessibility-checklist.md.
  */
 
 import type { Page } from 'playwright';

@@ -11,7 +11,7 @@ published price, not a risk-banded EUR 1,200 to 1,900 range set per
 client after the scan. In its place, a free, pre-purchase **outreach
 preview** document now exists, sent to cold prospects before they buy
 anything. It is not a smaller version of the paid report and is not a
-"tier" of it: it has its own content rules in `docs/outreach-rules.md`,
+"tier" of it: it has its own content rules in `docs/rules/outreach-rules.md`,
 and in particular never contains selectors, finding IDs, or exact page
 locations, the way the old screening tier did. Every "two tiers" / "both
 tiers" reference below and in brief section 3.2, and every mention of a
@@ -28,13 +28,13 @@ Reasoning: EUR 300 HT read as a low-credibility, comparison-shopping
 price rather than a considered one, and undercut every published market
 floor by a wide enough margin to raise doubt about the offer's quality
 rather than remove it. The free outreach preview (section 1, and
-`docs/outreach-rules.md`) now carries the trust-building, low-risk
+`docs/rules/outreach-rules.md`) now carries the trust-building, low-risk
 first-contact job that the low flat price was originally covering, so
 the paid tier no longer needs to be priced as an entry point. Section
 1's "why the prices are not being raised" argument and section 2's price
 comparison below describe the EUR 300 HT reasoning and are superseded by
 this note; read them as history of how EUR 300 HT was arrived at, not as
-the current position. `docs/odysseus-project-brief-v2.md`'s references
+the current position. `docs/product/odysseus-project-brief.md`'s references
 to EUR 300 HT are likewise superseded here, the canonical source.
 
 ---
@@ -43,7 +43,7 @@ to EUR 300 HT are likewise superseded here, the canonical source.
 
 | Deliverable | Price | Delivery |
 |---|---|---|
-| Outreach preview | Free | automated, sent to cold prospects before purchase, see `docs/outreach-rules.md` |
+| Outreach preview | Free | automated, sent to cold prospects before purchase, see `docs/rules/outreach-rules.md` |
 | Full audit | EUR 1,600 HT flat, published | automated PDF, no risk band, no freehand quote |
 | Re-audit | EUR 450 HT flat | 5 business days, a verification pass narrower in scope than a full re-scan |
 
@@ -65,7 +65,7 @@ version. The Stripe link amount is still updated by hand (trade-off 13).
 
 **Displayed HT everywhere from the first day.** Reasoning and the VAT
 threshold that makes this urgent are in
-`docs/operator-obligations.md` section 6.
+`docs/rules/operator-obligations.md` section 6.
 
 **Why the price was not being raised (superseded 2026-08-16, see the
 note above; kept as history of the EUR 300 HT reasoning).** Published
@@ -172,11 +172,11 @@ as a diagnostic, because that is the product.
 summary and risk badge, ranked priorities with effort and impact
 framing, full selector detail and affected pages, render diff evidence,
 the code-level appendix, the criteria-and-registry-data section per
-`docs/obligation-basis.md` section 7, and a draft accessibility
+`docs/rules/obligation-basis.md` section 7, and a draft accessibility
 statement skeleton. No manual verification step of any kind: the report
 is fully automated, full stop. Still not a conformity rate. No video.
 
-The free outreach preview sent before purchase (`docs/outreach-rules.md`)
+The free outreach preview sent before purchase (`docs/rules/outreach-rules.md`)
 is a different, deliberately thinner document, not a lighter tier of
 this one: it never contains selectors, finding IDs, or exact page
 locations, and its content rules are governed separately.
@@ -186,7 +186,7 @@ locations, and its content rules are governed separately.
 ## 4. The compliance section states facts
 
 Binds the report template. Full rule in
-`docs/obligation-basis.md` section 7. In short: reproduce the criteria,
+`docs/rules/obligation-basis.md` section 7. In short: reproduce the criteria,
 state this company's registry data, state whether the exemption
 conditions appear met on that data, describe where the case law stands
 including the Lille and Caen split, recommend confirming scope with a
@@ -233,7 +233,7 @@ later. This is exactly why the offer does not sell a determination.
 services have until 2030. The transitional provisions concern service
 contracts rather than a website's age and the commercial sources garble
 it. Say it is a question for their lawyer and do not claim either way.
-See `docs/obligation-basis.md` section 3.
+See `docs/rules/obligation-basis.md` section 3.
 
 **"I run a hotel, does this even apply to me?"** Yes, on the same
 footing as any online shop: a booking flow that concludes a consumer

@@ -7,7 +7,7 @@ haaitza.com fixtures were checked (page count, file size, `pdfinfo`-style
 tag/outline verification via raw PDF inspection, since `pdfinfo` itself
 was unavailable in that session), and `packages/report`'s new axe-core
 self-test (3.5/R8) passes with zero violations against the real rendered
-HTML. See `docs/odysseus-project-brief-v2.md` milestone 6.2 for the
+HTML. See `docs/product/odysseus-project-brief.md` milestone 6.2 for the
 summary. This document is kept as the defect record and the design
 rationale, not rewritten into past tense throughout.
 
@@ -15,12 +15,12 @@ Source document: `2026-08-06T21-15-31Z-fr.pdf`, the first client-facing report, 
 against haaitza.com on 6 August 2026. 30 pages, 30.7 MB, French, 20 pages scanned,
 103 findings.
 
-Suggested repo path: `docs/report-v2-refactor.md`.
+Suggested repo path: `docs/archive/report-v2-refactor.md`.
 
 Companion artifact (removed 2026-08-16): `report-v2-prototype-haaitza-fr.html`, a working
 prototype of the target output built from the real haaitza data, rendering to a 20 page,
 670 KB, tagged PDF. It was a light-theme design and was deleted once the report's dark,
-GlassWire-inspired reskin (`docs/odysseus-project-brief-v2.md`, "Post-7.1: scan
+GlassWire-inspired reskin (`docs/product/odysseus-project-brief.md`, "Post-7.1: scan
 concurrency and reskin") superseded it; `packages/report/src/template/report.css` is the
 current design source of truth. The numbers below were verified against that prototype
 at the time, not asserted: see "Verification performed" at the end.

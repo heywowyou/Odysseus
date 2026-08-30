@@ -8,7 +8,7 @@
  * run-prospect-ingestion-job.ts), the same way obligation-stage.ts
  * resolves a SIREN and calls assessObligations with a plain profile.
  *
- * Conditions 1-3 of docs/prospect-qualification.md section 3
+ * Conditions 1-3 of docs/rules/prospect-qualification.md section 3
  * (etatAdministratif active, headcount >=10, NAF in the allowlist)
  * collapse into one check here - sireneMatch !== null - because the
  * Sirene index that produces SireneIndexEntry values is already filtered
@@ -16,7 +16,7 @@
  * construction (see packages/interface's sirene-stock-index.ts). NAF is
  * a recall filter narrowing which stock rows ever get indexed, never
  * evidence of "has a checkout" by itself - see naf-allowlist.ts's own
- * doc comment and docs/prospect-qualification.md section 4.
+ * doc comment and docs/rules/prospect-qualification.md section 4.
  */
 
 import type {

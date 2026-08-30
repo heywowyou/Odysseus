@@ -98,7 +98,7 @@ describe('P4: the writing prompt avoids asserting causation the scanner did not 
   });
 });
 
-// docs/llm-layer-rules.md section 6: the first live run mixed WCAG 2.1
+// docs/rules/llm-layer-rules.md section 6: the first live run mixed WCAG 2.1
 // and 2.2 citations, and wrote "la page la plus rentable du site" with no
 // traffic or revenue data in the input. Both notes are paired with
 // guards (wcag-citation-guard.ts, business-claim-guard.ts); these tests

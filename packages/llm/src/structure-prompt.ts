@@ -3,7 +3,7 @@ import type { StructureInput } from './structure-schema.js';
 /** System prompt for the structure pass: grouping and prioritization
  *  only, no prose, no language. usedFallbackContext tells the model
  *  whether siteContext is real intake data or the minimal placeholder
- *  built by buildFallbackSiteContext, per docs/llm-layer-rules.md
+ *  built by buildFallbackSiteContext, per docs/rules/llm-layer-rules.md
  *  section 4.
  *
  *  2026-08-24: this prompt used to carry a paragraph explaining that numeric

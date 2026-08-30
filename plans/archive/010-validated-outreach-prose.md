@@ -6,7 +6,7 @@
 > evidence or legal content. Update plan 010 in the index when complete.
 >
 > **Drift check (run first)**:
-> `git diff --stat f7ef7cf..HEAD -- packages/llm/src packages/core/src/compliance packages/interface/src docs/llm-layer-rules.md docs/outreach-rules.md docs/obligation-basis.md`
+> `git diff --stat f7ef7cf..HEAD -- packages/llm/src packages/core/src/compliance packages/interface/src docs/rules/llm-layer-rules.md docs/rules/outreach-rules.md docs/rules/obligation-basis.md`
 > Stop if the model client, guard pipeline, or outreach doctrine changed.
 
 ## Status
@@ -33,9 +33,9 @@ rejecting guards, retry, then deterministic assembly.
 - `analyzeWriting` rejects theme-key mismatches, language drift, non-canonical
   severity, legal-consequence claims, invented page counts, and disallowed
   digits. Failed output is discarded, not repaired.
-- `docs/llm-layer-rules.md` requires the outreach call to reuse that posture and
+- `docs/rules/llm-layer-rules.md` requires the outreach call to reuse that posture and
   says language follows the prospect's site.
-- `docs/outreach-rules.md` defines three touches: E1 is 60 to 90 words with one
+- `docs/rules/outreach-rules.md` defines three touches: E1 is 60 to 90 words with one
   preview link; E2 is two sentences with different evidence and no new link;
   E3 closes the loop and offers deletion. First contact requires identity,
   per-prospect data origin, purpose, and free opt-out.

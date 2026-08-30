@@ -208,7 +208,7 @@ function renderTransactionalFlowScopeNote(strings: ReportStrings, manifest: Audi
  *
  *  Revised 2026-08-18 (B9/item 1.14): eaaCaseLawStateSentence() (the
  *  Lille/Caen paragraph) was removed from this block. Its source,
- *  docs/obligation-basis.md's route-3 case-law entries, is explicitly
+ *  docs/rules/obligation-basis.md's route-3 case-law entries, is explicitly
  *  tagged `Status: secondary` ("internal use only" per the doc's own
  *  section 0 verification convention), sourced from press summaries, not
  *  the ordonnances themselves - section 9's own remaining-verification
@@ -259,7 +259,7 @@ const EAA_APPLICATION_DATE = new Date('2025-06-28');
  *  Legifrance) or from a fixed string, never written by the model. The
  *  criterion may be stated where EAA scope may not, because it is not
  *  size-dependent, sector-dependent or contested - see
- *  docs/obligation-basis.md section 8bis. No sanction amount is stated,
+ *  docs/rules/obligation-basis.md section 8bis. No sanction amount is stated,
  *  which CLAUDE.md rule 6 forbids for a specific client and which section
  *  8bis independently marks unverified after the SREN restructuring.
  *

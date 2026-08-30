@@ -13,19 +13,19 @@ Internal tooling for a productized web audit service sold to French small
 and mid-size businesses. Two audit types share one engine: technical /
 SPA-SEO, and accessibility against WCAG 2.2 AA and EN 301 549.
 
-Full context: `docs/odysseus-project-brief-v2.md`. Read it before
+Full context: `docs/product/odysseus-project-brief.md`. Read it before
 proposing any architecture. Normalization behaviour and the reasoning
-behind it: `docs/normalization-rules.md`. What the model may see, must
-return, and how failures are handled: `docs/llm-layer-rules.md`.
+behind it: `docs/rules/normalization-rules.md`. What the model may see, must
+return, and how failures are handled: `docs/rules/llm-layer-rules.md`.
 
-Client-facing legal claims are governed by `docs/obligation-basis.md`;
+Client-facing legal claims are governed by `docs/rules/obligation-basis.md`;
 nothing legal may be stated anywhere in the product unless it appears
 there with status `primary`. Odysseus's own regulatory position (AI Act,
 electronic invoicing, the perimeter of legal advice, prospecting channel
-rules) is `docs/operator-obligations.md`. Prospecting is governed by
-`docs/prospect-qualification.md` (who may be scanned and contacted) and
-`docs/outreach-rules.md` (what may be said). Pricing and offer framing:
-`docs/offer-positioning.md`.
+rules) is `docs/rules/operator-obligations.md`. Prospecting is governed by
+`docs/rules/prospect-qualification.md` (who may be scanned and contacted) and
+`docs/rules/outreach-rules.md` (what may be said). Pricing and offer framing:
+`docs/rules/offer-positioning.md`.
 
 ## Non-negotiable rules
 
@@ -60,7 +60,7 @@ rules) is `docs/operator-obligations.md`. Prospecting is governed by
    never give a deadline, never state a sanction amount for that client,
    never present scope as settled. Binds report templates and the
    outreach LLM prompt equally. Full rule and legal basis:
-   `docs/obligation-basis.md` section 7 and `docs/operator-obligations.md`
+   `docs/rules/obligation-basis.md` section 7 and `docs/rules/operator-obligations.md`
    section 2.
 
 ## Locked contracts, do not modify without asking
@@ -106,7 +106,7 @@ means numbered entry 24, not a literal Markdown heading anchor.
 6. Two cost gates control LLM calls: a conservative audit fallback and a
    stricter prospecting-worthiness gate, both scoring on `SEVERITY_ORDER`
    over distinct findings. Do not remove either without revisiting
-   `docs/llm-layer-rules.md` section 10. → trade-offs.md#6
+   `docs/rules/llm-layer-rules.md` section 10. → trade-offs.md#6
 7. `structure-output-schema.ts`/`writing-output-schema.ts` are hand-
    mirrored Zod-v3 copies needed only because the SDK helper requires
    zod v4. Never treat them as the validation authority — the real Zod
@@ -119,7 +119,7 @@ means numbered entry 24, not a literal Markdown heading anchor.
    function, never duplicate the predicate. `legalRelevance` is built in
    code, never written by the model. → trade-offs.md#8
 9. `packages/report`'s CSS is hand-maintained from the readable flat
-   design sources in `docs/design/`, not Tailwind. Do not reintroduce a
+   design sources in `docs/report/design/`, not Tailwind. Do not reintroduce a
    Tailwind build step without checking the existing design system first;
    derive tokens from source CSS, never invent them. → trade-offs.md#9
 10. Render-diff/axe/Lighthouse run across `SCAN_CONCURRENCY` lanes; the

@@ -1,6 +1,6 @@
 /**
  * Contact-address extraction for the AFNIC funnel, per
- * docs/prospect-qualification.md section 6: role addresses only, on the
+ * docs/rules/prospect-qualification.md section 6: role addresses only, on the
  * company's own domain, never a named-individual address.
  *
  * Since milestone 9c plan 007 this is an adapter, not an implementation. The

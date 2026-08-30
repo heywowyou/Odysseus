@@ -1,6 +1,6 @@
 /**
  * INSEE's trancheEffectifsUniteLegale nomenclature, restricted to the
- * question docs/prospect-qualification.md section 3 actually needs
+ * question docs/rules/prospect-qualification.md section 3 actually needs
  * answered: does this band mean 10 or more salaried employees. A plain
  * TS constant, not JSON - this is a fixed external nomenclature, not an
  * operator judgment call, matching the existing precedent of
@@ -24,7 +24,7 @@ export const EFFECTIF_QUALIFYING_CODES: ReadonlySet<string> = new Set([
   '53',
 ]);
 
-/** A blank/missing code fails, per docs/prospect-qualification.md
+/** A blank/missing code fails, per docs/rules/prospect-qualification.md
  *  section 3: "Empty or missing trancheEffectifs fails the test rather
  *  than counting as unknown-and-worth-scanning." */
 export function meetsEffectifThreshold(code: string | null | undefined): boolean {

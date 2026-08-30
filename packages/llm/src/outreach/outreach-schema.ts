@@ -21,7 +21,7 @@ const MAX_SENTENCE_CHARS = 300;
  * declaration of which supplied alias it wrote about, checked by
  * alias-guard.ts against what selection actually supplied. Touch 3 has
  * neither `evidenceRef` nor any evidence-shaped field at all, because it
- * carries no scan evidence (docs/outreach-rules.md section 6, touch 3 is the
+ * carries no scan evidence (docs/rules/outreach-rules.md section 6, touch 3 is the
  * facts block, spliced in by the assembler, never described to the model).
  */
 export const outreachTouch1OutputSchema = z

@@ -1,6 +1,6 @@
 /**
  * Prints the fully composed, self-contained HTML (render-html.ts) to PDF
- * via a real paged-media engine, per docs/report-design-system.md section
+ * via a real paged-media engine, per docs/report/report-design-system.md section
  * 2: Chromium's own print CSS ignores @page margin boxes, which is where
  * paged.css's footer string and page counter live, so Paged.js runs
  * inside the page first and lays out real .pagedjs_page fragments -

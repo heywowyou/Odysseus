@@ -87,7 +87,7 @@ function buildNonCanonicalSeverityWordOutput(): WritingPassOutput {
   // Verbatim from the real observed failure, artifacts/haaitza.com/
   // 2026-08-08T11-07-43Z/analyses/2026-08-08T11-23-48Z-fr.json, except for
   // the word this asserts against: report-feedback-haaitza.md B3 found the
-  // canonical label is "Sérieux" (docs/report-design-system.md), not
+  // canonical label is "Sérieux" (docs/report/report-design-system.md), not
   // "majeur" - the guard's banned word flipped accordingly.
   const output = buildCleanFrenchOutput();
   output.executiveSummary =

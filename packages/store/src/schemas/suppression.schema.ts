@@ -1,7 +1,7 @@
 /**
  * Mongoose schema for the `suppression` collection: opt-outs, permanent,
  * never subject to the 90 day retention policy that applies to
- * prospects.schema.ts. See docs/prospect-qualification.md section 7: "An
+ * prospects.schema.ts. See docs/rules/prospect-qualification.md section 7: "An
  * opt-out must survive deletion of everything else about that prospect,
  * or the deletion policy silently resurrects them."
  *

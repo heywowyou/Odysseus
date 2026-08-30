@@ -106,11 +106,11 @@ const REGIME_DEFINITIONS: Record<string, RegimeDefinition> = {
    *  commercial sources online still give the old number. Nothing had ever
    *  rendered this regime, which is the only reason the wrong citation never
    *  reached a client. Full verified text and reasoning:
-   *  docs/obligation-basis.md section 8bis.
+   *  docs/rules/obligation-basis.md section 8bis.
    *
    *  sanctionCeiling stays deliberately unverified and has no render path.
    *  The pre-SREN penalty sat in article 6-VI-2 and this pass did not
-   *  confirm where it now sits; docs/obligation-basis.md section 9 tracks
+   *  confirm where it now sits; docs/rules/obligation-basis.md section 9 tracks
    *  that. Stating a sanction amount for a specific client is separately
    *  forbidden by CLAUDE.md rule 6 regardless, so nothing is blocked on it. */
   [LCEN_MENTIONS_LEGALES_REGIME_ID]: {

@@ -1,6 +1,6 @@
 /**
  * Orchestrates the "one or two requests" cheap stage of
- * docs/prospect-qualification.md section 5: homepage, then (if found) the
+ * docs/rules/prospect-qualification.md section 5: homepage, then (if found) the
  * mentions-legales page, both plain HTTP, both behind the same
  * per-origin politeness the rest of the tool applies. Reuses
  * @odysseus/scanner's findMentionsLegalesUrl verbatim (not a
@@ -11,7 +11,7 @@
  * audit crawler: a disallowed path is skipped instead of fetched, and the
  * declared Crawl-delay (if any) raises the floor on the delay between
  * requests. Prospect ingestion drives this against large unsolicited
- * batches of sites (docs/prospect-qualification.md's own batching), so
+ * batches of sites (docs/rules/prospect-qualification.md's own batching), so
  * skipping the check here would be a real politeness gap even though the
  * scanner's own crawler always applied it - non-negotiable rule 5 in
  * CLAUDE.md governs this fetch just as much as a full audit's crawl.
@@ -63,7 +63,7 @@ export async function fetchMentionsLegalesData(
     }
 
     // Politeness applies to both requests, not only the first - per
-    // docs/prospect-qualification.md section 5, "two requests is not an
+    // docs/rules/prospect-qualification.md section 5, "two requests is not an
     // excuse to skip identification."
     await sleep(effectiveDelayMs);
     const mentionsLegales = await fetchPageText(

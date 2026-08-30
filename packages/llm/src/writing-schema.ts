@@ -25,9 +25,9 @@ const businessImpactSchema = z
  *  all - those are decided by the structure pass and are not optional-
  *  and-ignored here, they do not exist in this schema, which removes a
  *  whole class of potential hallucination rather than guarding against
- *  it. See docs/llm-layer-rules.md section 9.
+ *  it. See docs/rules/llm-layer-rules.md section 9.
  *
- *  legalRelevance is also absent as of docs/report-v2-refactor.md 4.3:
+ *  legalRelevance is also absent as of docs/archive/report-v2-refactor.md 4.3:
  *  it is now built entirely in code (legal-relevance.ts) from
  *  deterministic wcagCriteria data during merge, not written by the
  *  model - "the model chooses no part of this sentence." */
@@ -62,7 +62,7 @@ export interface WritingThemeInput {
 }
 
 /** Deterministic counts the executive summary must cite verbatim rather
- *  than estimate, per docs/report-v2-refactor.md B10/4.3. Computed once
+ *  than estimate, per docs/archive/report-v2-refactor.md B10/4.3. Computed once
  *  from the audit's unfiltered findings, not the severity-filtered set
  *  the model otherwise sees, so the summary reports the true scope. */
 export interface WritingSiteStats {
@@ -82,6 +82,6 @@ export interface WritingInput {
   /** Which Core Web Vital dominates the site's performance problem, so
    *  performance recommendedActions lead with the actual cause rather
    *  than defaulting to image/CSS advice. null when no page is rated
-   *  poor on any metric. See docs/report-v2-refactor.md A4. */
+   *  poor on any metric. See docs/archive/report-v2-refactor.md A4. */
   dominantPerformanceMetric: 'lcp' | 'cls' | 'tbt' | null;
 }

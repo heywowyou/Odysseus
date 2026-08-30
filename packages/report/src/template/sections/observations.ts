@@ -10,7 +10,7 @@ import {
 } from '../html-utils.js';
 import { accessibilityStatementGuidance } from '../accessibility-statement-guidance.js';
 
-/** Renders the diverted findings (docs/report-v2-refactor.md 4.1) into
+/** Renders the diverted findings (docs/archive/report-v2-refactor.md 4.1) into
  *  fixed, deterministic copy - never LLM prose, since the whole point of
  *  diversion is that these findings never reach the model.
  *

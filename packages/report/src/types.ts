@@ -48,11 +48,11 @@ export interface ReportRenderMetadata {
 
 /** Milestone 8 introduced a paid screening tier alongside the full audit,
  *  both rendered from the same findings.json with tier only affecting
- *  report depth. Dropped 2026-08-16 (docs/offer-positioning.md): the
+ *  report depth. Dropped 2026-08-16 (docs/rules/offer-positioning.md): the
  *  commercial model is now single-tier, the full audit is the only paid
  *  deliverable, so there is no longer a tier to select at generation
  *  time. The free, pre-purchase outreach preview introduced the same day
- *  (docs/outreach-rules.md) is a deliberately separate document kind,
+ *  (docs/rules/outreach-rules.md) is a deliberately separate document kind,
  *  not a smaller tier of this one - see generateOutreachPreviewHtml. It
  *  produces HTML, never a PDF: nothing about it launches Chromium. */
 export interface GenerateReportInput {

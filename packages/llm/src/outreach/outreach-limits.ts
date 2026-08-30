@@ -1,5 +1,5 @@
 /**
- * The shape doctrine gives each outreach touch. `docs/outreach-rules.md`
+ * The shape doctrine gives each outreach touch. `docs/rules/outreach-rules.md`
  * section 6 names the touch sequence's content ("one new piece of
  * information per touch") but did not, as of milestone 9c plan 010, carry
  * the word/sentence/link numbers below - those existed only in the plan

@@ -5,7 +5,7 @@
  * the locked LlmOutput/Theme shape those functions are typed for. Same
  * precedent as output-schema.ts and config.ts in this package, both of
  * which hand-duplicate logic next to a file they are not allowed to
- * touch. Keep in sync by hand. See docs/llm-layer-rules.md section 9.
+ * touch. Keep in sync by hand. See docs/rules/llm-layer-rules.md section 9.
  */
 import type { StructurePassOutput } from './structure-schema.js';
 

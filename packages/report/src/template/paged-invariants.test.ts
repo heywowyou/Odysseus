@@ -1,5 +1,5 @@
 /**
- * Asserts docs/report-design-system.md section 4's invariants against the
+ * Asserts docs/report/report-design-system.md section 4's invariants against the
  * real Paged.js pipeline (the same one pdf.ts runs), using the stress
  * fixture (section 5) rather than a real scan - "layout is never iterated
  * against a real client scan" is the doc's own working rule, and this is
@@ -104,7 +104,7 @@ async function buildStressHtml(): Promise<string> {
   });
 }
 
-describe('Paged.js invariants against the stress fixture (docs/report-design-system.md section 4)', () => {
+describe('Paged.js invariants against the stress fixture (docs/report/report-design-system.md section 4)', () => {
   let browser: Browser;
   let pagedjsSource: string;
   let doc: PaginatedDocument;

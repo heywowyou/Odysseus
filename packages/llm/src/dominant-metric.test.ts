@@ -53,7 +53,7 @@ function buildManifest(pages: AuditManifest['pages']): AuditManifest {
 
 describe('computeDominantPerformanceMetric', () => {
   it('picks TBT for the real multi-page scan, where LCP and TBT are both poor on every page but TBT runs further past its threshold', () => {
-    // Verified by hand against docs/report-v2-refactor.md A4's own claim
+    // Verified by hand against docs/archive/report-v2-refactor.md A4's own claim
     // ("Total Blocking Time runs to 16,490 ms on the homepage. That is a
     // JavaScript execution problem."): average LCP/threshold ratio ~8.3,
     // average TBT/threshold ratio ~18.2, CLS never poor (all ~0).

@@ -206,7 +206,7 @@ function refuse(refusal: CreateOutreachDraftRefusal): CreateOutreachDraftResult 
 }
 
 /** Every origin the data behind this draft actually came from, per
- *  `docs/outreach-rules.md` section 7. Built per hotel rather than as a fixed
+ *  `docs/rules/outreach-rules.md` section 7. Built per hotel rather than as a fixed
  *  list: a hotel with no registry match must not disclose an origin it has
  *  none of. */
 function dataOriginsFor(row: OutreachDraftRow): OutreachDataOrigin[] {

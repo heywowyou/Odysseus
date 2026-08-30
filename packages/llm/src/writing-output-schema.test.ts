@@ -23,7 +23,7 @@ describe('WRITING_OUTPUT_JSON_SCHEMA mirrors writingPassOutputSchema', () => {
 
   it('has none of the structure-decided fields, or legalRelevance, at the theme level', () => {
     // legalRelevance is built deterministically in legal-relevance.ts as
-    // of docs/report-v2-refactor.md 4.3 - the model no longer has a field
+    // of docs/archive/report-v2-refactor.md 4.3 - the model no longer has a field
     // for it at all, "the model chooses no part of this sentence."
     const shape = describeZodShape(writingThemeSchema);
     expect(shape.keys).not.toContain('findingIds');

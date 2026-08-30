@@ -109,7 +109,7 @@ Qualifies when all hold:
 5. Domain not on the suppression list
 6. Contact address available and not on a free-mail domain (section 6)
 
-**On the headcount test.** Per `docs/obligation-basis.md` section 3, the
+**On the headcount test.** Per `docs/rules/obligation-basis.md` section 3, the
 exemption needs fewer than 10 persons AND turnover or balance sheet
 under EUR 2M, so 10 or more establishes scope on the size prong alone
 and turnover is never needed. The inverse does not hold: a company under
@@ -137,7 +137,7 @@ at the time, a reading rather than a settled position, and the legal
 context should be proven where it is firmest before being tested where
 it is not.
 
-**Wave 2, 2026-08-22.** `docs/obligation-basis.md`'s "Hotels and
+**Wave 2, 2026-08-22.** `docs/rules/obligation-basis.md`'s "Hotels and
 accommodation" entry was upgraded from `disputed` to `secondary`: a
 booking flow concluding a consumer contract online is now read as
 generally treated as electronic commerce, corroborated across
@@ -168,7 +168,7 @@ kind of review hotels received, not by analogy.
 | SIREN extraction | negligible | fetched pages |
 | Sirene join | negligible, local | extracted SIREN |
 | Prospecting scan, Chromium | seconds to a minute | qualified only |
-| LLM outreach draft | one call | worthy only, per `docs/llm-layer-rules.md` §10 |
+| LLM outreach draft | one call | worthy only, per `docs/rules/llm-layer-rules.md` §10 |
 
 The plain HTTP stage must not use Chromium. It fetches two URLs and
 parses HTML for a SIREN pattern. Using the browser there would make the

@@ -9,7 +9,7 @@ export type SiteContextInput = StructureInput['siteContext'];
  *  severity filter happens; the returned array must be passed to
  *  buildStructureInput/buildWritingInput and to the guard functions in
  *  the retry loops, never the full unfiltered set to one and the
- *  filtered set to the other. See docs/llm-layer-rules.md section 1. */
+ *  filtered set to the other. See docs/rules/llm-layer-rules.md section 1. */
 export function filterFindingsForLlm(findings: readonly Finding[]): Finding[] {
   return findings.filter((finding) => LLM_SEVERITY_FLOOR.includes(finding.severity));
 }
@@ -99,7 +99,7 @@ export function buildWritingInput(
 /** Deterministic counts for the writing pass's executiveSummary to cite,
  *  computed from the audit's unfiltered findings (not the severity- and
  *  diversion-filtered set the model otherwise sees), so the summary
- *  reports the true scope of the scan. See docs/report-v2-refactor.md
+ *  reports the true scope of the scan. See docs/archive/report-v2-refactor.md
  *  B10. pagesScanned counts visited pages only, matching the crawled-page
  *  count structure-ranking.ts uses for the site-wide accessibility floor. */
 export function computeSiteStats(
@@ -120,7 +120,7 @@ export function computeSiteStats(
  *  Placeholder values are chosen so the model can recognize them as
  *  absent rather than as real input; the system prompts instruct the
  *  model to say so rather than invent a business type or primary goal.
- *  See docs/llm-layer-rules.md section 4. */
+ *  See docs/rules/llm-layer-rules.md section 4. */
 export function buildFallbackSiteContext(): SiteContextInput {
   return {
     businessType: 'unknown (no intake context provided)',

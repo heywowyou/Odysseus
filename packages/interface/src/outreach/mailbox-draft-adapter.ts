@@ -2,7 +2,7 @@
  * The `MailboxDraftAdapter` port, milestone 9c plan 011.
  *
  * Four methods, and the absence of a fifth is the point. Binding decision 14
- * (`plans/README.md`, and `docs/outreach-rules.md`) stops automation at a
+ * (`plans/README.md`, and `docs/rules/outreach-rules.md`) stops automation at a
  * draft: the program prepares, a person reads, and a person sends. This port
  * is where that stops being a policy anyone could forget and becomes a shape
  * the code does not have.

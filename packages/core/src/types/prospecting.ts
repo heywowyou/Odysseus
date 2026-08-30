@@ -4,7 +4,7 @@
  * SIREN's live-API-resolved profile for the paid-audit obligation engine,
  * while these types model the bulk, stock-file-derived candidate funnel
  * that feeds packages/store's prospects collection. See
- * docs/prospect-qualification.md for the governing spec.
+ * docs/rules/prospect-qualification.md for the governing spec.
  */
 
 import type { EffectifBand } from './entity.js';
@@ -38,7 +38,7 @@ export interface ContactAddress {
   /** Full address, lowercased. */
   value: string;
   localPart: string;
-  /** Must equal the site's own domain - see docs/prospect-qualification.md
+  /** Must equal the site's own domain - see docs/rules/prospect-qualification.md
    *  section 6, "role addresses only, on the company's own domain". */
   domain: string;
 }

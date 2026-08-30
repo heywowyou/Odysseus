@@ -31,7 +31,7 @@ export interface AnalyzeStructureResult {
  *  deterministic scanners detect, the LLM explains - any response
  *  referencing a finding ID absent from its input is rejected, logged,
  *  and retried, then fails loudly rather than shipping a partial or
- *  untraceable grouping. See docs/llm-layer-rules.md sections 2 and 9.
+ *  untraceable grouping. See docs/rules/llm-layer-rules.md sections 2 and 9.
  *
  *  filteredFindings must be the exact array passed into
  *  buildStructureInput to produce `input` - the guard functions must see

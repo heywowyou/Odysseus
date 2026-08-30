@@ -10,7 +10,7 @@ import {
  *  embed, for example), not a page whose own content can be improved.
  *  Higher than the render-diff emission threshold (20%, in @odysseus/core)
  *  deliberately: most client-rendered pages are not wrapper pages, this
- *  only catches the near-total case. See docs/report-v2-refactor.md A1-A3. */
+ *  only catches the near-total case. See docs/archive/report-v2-refactor.md A1-A3. */
 export const WRAPPER_PAGE_MISSING_PERCENT_THRESHOLD = 95;
 
 export type DiversionReason = 'wrapper' | 'legal' | 'regime-dependent';
@@ -72,7 +72,7 @@ export function classifyDiversion(
   return null;
 }
 
-/** The governing rule of docs/report-v2-refactor.md Part 4.1: divert, do
+/** The governing rule of docs/archive/report-v2-refactor.md Part 4.1: divert, do
  *  not instruct. Wrapper-page and legal-noindex findings never reach the
  *  model, so the model cannot recommend indexing a noindex legal page or
  *  SEO work on a Meta embed, because it never sees the finding. Called

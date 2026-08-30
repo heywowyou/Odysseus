@@ -5,7 +5,7 @@
 > before reviewing appearance. Update plan 008 in the index when complete.
 >
 > **Drift check (run first)**:
-> `git diff --stat f7ef7cf..HEAD -- packages/core/src/compliance packages/core/src/types/compliance.ts packages/report/src packages/report/package.json docs/outreach-rules.md docs/offer-positioning.md docs/report-design-system.md docs/report-design-tokens.md docs/obligation-basis.md`
+> `git diff --stat f7ef7cf..HEAD -- packages/core/src/compliance packages/core/src/types/compliance.ts packages/report/src packages/report/package.json docs/rules/outreach-rules.md docs/rules/offer-positioning.md docs/report/report-design-system.md docs/report/report-design-tokens.md docs/rules/obligation-basis.md`
 > Stop if the offer price, public evidence contract, or obligation-source
 > status differs from this plan.
 
@@ -38,11 +38,11 @@ escaped HTML implementation.
   must return HTML and must not launch Chromium for delivery.
 - The current offer is one full audit at EUR 1,600 HT. There is no screening
   tier and no preview price.
-- `docs/outreach-rules.md` permits criteria, verified registry facts, and
+- `docs/rules/outreach-rules.md` permits criteria, verified registry facts, and
   observations, but forbids a conclusion, population statistics, penalties,
   competitor claims, and report-only technical detail.
 - Hotel-specific legal source material is still `secondary` in
-  `docs/obligation-basis.md`. Until primary-source promotion, preview work may
+  `docs/rules/obligation-basis.md`. Until primary-source promotion, preview work may
   use argument A and generic criteria only, not a hotel-sector conclusion.
 
 ## Commands you will need

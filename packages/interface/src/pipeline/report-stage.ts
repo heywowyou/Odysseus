@@ -142,7 +142,7 @@ export interface AllReportsStageResult {
 
 /**
  * Commercial-planning addendum, 2026-08-10, superseded 2026-08-16
- * (docs/offer-positioning.md): this used to render four (language, tier)
+ * (docs/rules/offer-positioning.md): this used to render four (language, tier)
  * combinations for the two-tier commercial model. The paid screening
  * tier is dropped; every completed audit already has one StoredAnalysis
  * per language (analysis-stage.ts runs once per language), so this now

@@ -9,7 +9,7 @@
  * and citation are spliced from regimes.ts rather than written anywhere in
  * the report layer, no sanction amount is ever printed, and the block is
  * silent unless the finding is actually present. See
- * docs/obligation-basis.md section 8bis.
+ * docs/rules/obligation-basis.md section 8bis.
  */
 import { describe, expect, it } from 'vitest';
 import {

@@ -6,7 +6,7 @@ import type { StructureThemeWithKey } from './structure-schema.js';
  *  least one WCAG criterion, may not be ranked in the bottom quartile of
  *  themes, and its theme's impact may not be below 'medium'. This is what
  *  put blocked zoom (18 of 20 pages) at position 11 in the v1 report.
- *  See docs/report-v2-refactor.md A5. */
+ *  See docs/archive/report-v2-refactor.md A5. */
 export const SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD = 80;
 const BOTTOM_QUARTILE_FRACTION = 0.75;
 
@@ -74,10 +74,10 @@ export function enforceSiteWideAccessibilityFloor(
 }
 
 /** occurrences already means "pages" for a page-scoped finding and
- *  "nodes" for an element-scoped one (docs/normalization-rules.md
+ *  "nodes" for an element-scoped one (docs/rules/normalization-rules.md
  *  section 3), so summing it per theme is a single volume signal that
  *  already reflects page count as well as raw occurrence count -
- *  matching docs/report-v2-refactor.md A6's "rank by occurrence volume
+ *  matching docs/archive/report-v2-refactor.md A6's "rank by occurrence volume
  *  as well as page count" without a second, potentially contradictory
  *  page-count factor (a single-page, 180-occurrence finding and a
  *  17-page, 203-occurrence finding are both exactly the kind of finding
@@ -96,7 +96,7 @@ function totalOccurrences(
  *  independent of theme count (unlike a fixed multiplier against the
  *  median, which is unstable with few themes), and mirrors
  *  enforceSiteWideAccessibilityFloor's own promote-to-the-boundary shape.
- *  See docs/report-v2-refactor.md A6 - the one rule in 4.2 with prose but
+ *  See docs/archive/report-v2-refactor.md A6 - the one rule in 4.2 with prose but
  *  no exact formula, most likely to need tuning once run against more
  *  than the two real fixtures on hand (sas-fernande, haaitza). */
 export function applyOccurrenceWeighting(
@@ -271,7 +271,7 @@ export function enforceQuickWinFloor(
 }
 
 /** Applies all post-structure-pass ranking rules in order, per
- *  docs/report-v2-refactor.md 4.2 plus B9's quick-win floor. Enforced in
+ *  docs/archive/report-v2-refactor.md 4.2 plus B9's quick-win floor. Enforced in
  *  code after the structure pass returns, not asked of the model, since a
  *  model cannot be trusted to remember a numeric threshold rule across
  *  every response.

@@ -68,7 +68,7 @@ report, in a deterministic "Observations" section built by
 the same `findings.json` and `manifest.json` the analysis used, so the
 report can never describe a different diversion decision than the one the
 model actually experienced. Full defect record in
-`docs/report-v2-refactor.md` part 4.1 (A1-A3).
+`docs/archive/report-v2-refactor.md` part 4.1 (A1-A3).
 
 **Post-structure-pass ranking rules, also added 2026-08-07, correct for
 two things a model cannot be trusted to weigh consistently: coverage and
@@ -86,7 +86,7 @@ post-processing over the model's own output, not re-prompting: the model
 still decides which findings belong together and why, these two rules
 only correct its ranking of what it already grouped. Full reasoning,
 including why occurrence weighting has no exact formula and is expected
-to need tuning against more real reports, in `docs/report-v2-refactor.md`
+to need tuning against more real reports, in `docs/archive/report-v2-refactor.md`
 part 4.2 (A5, A6).
 
 ---
@@ -502,7 +502,7 @@ Both gates reuse `SEVERITY_ORDER` (critical 4, serious 3, moderate 2,
 minor 1) as the weight, rather than inventing a second scale to justify
 separately. The score sums this weight across distinct findings, not
 occurrences, since occurrences are already collapsed per finding by the
-normalization layer (section 1 above, and `docs/normalization-rules.md`
+normalization layer (section 1 above, and `docs/rules/normalization-rules.md`
 section 2), so counting findings avoids double-counting template-driven
 issues.
 
@@ -561,7 +561,7 @@ produces real distribution data across many scanned sites, not before.
 ## 11. Outreach generation, additional constraints
 
 Section 10 governs whether the model is called for a prospect. This
-section governs what it may write once called. `docs/outreach-rules.md`
+section governs what it may write once called. `docs/rules/outreach-rules.md`
 is the full doctrine; the constraints binding the prompt are here.
 
 **The model writes no part of the legal content.** The criteria, the
@@ -620,7 +620,7 @@ never teach a shape the retry loop then rejects.
 
 **The benchmark study may be model-generated.** Milestone 10 prose is
 not required to be hand-written. Generate it normally and add the
-one-line disclosure specified in `docs/operator-obligations.md` section 3
+one-line disclosure specified in `docs/rules/operator-obligations.md` section 3
 to the published page.
 
 **Language follows the prospect's site**, unchanged.

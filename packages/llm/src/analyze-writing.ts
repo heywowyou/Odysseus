@@ -23,7 +23,7 @@ export interface AnalyzeWritingResult {
  *  guard needed to merge prose back onto the right structural theme),
  *  and rejects a response that fails the language-compliance heuristic.
  *  Both are treated exactly like an invented finding ID: rejected,
- *  logged, retried, then fail loudly. See docs/llm-layer-rules.md
+ *  logged, retried, then fail loudly. See docs/rules/llm-layer-rules.md
  *  sections 2, 6, and 9. */
 export async function analyzeWriting(
   input: WritingInput,

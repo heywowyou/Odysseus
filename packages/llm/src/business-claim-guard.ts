@@ -15,7 +15,7 @@ export const BUSINESS_CLAIM_EXAMPLES: Record<ReportLanguage, string> = {
  * it can never know which page is the most commercially valuable one.
  * The first live run still wrote "la page la plus rentable du site"
  * (sas-fernande.fr, 2026-08-02), a reasonable-sounding ranking asserted
- * as knowledge. docs/llm-layer-rules.md section 6 draws the exact line:
+ * as knowledge. docs/rules/llm-layer-rules.md section 6 draws the exact line:
  * the model may say a page appears commercially important, which is
  * inference the client can weigh, but not assert relative page value.
  *

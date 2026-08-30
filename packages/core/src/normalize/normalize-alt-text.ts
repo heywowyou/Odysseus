@@ -3,13 +3,13 @@
  * alt-text quality heuristic. Same scanner-extracts/core-decides split
  * as every other custom check, with one deliberate difference from the
  * rest of this table: this is explicitly a heuristic red-flag check,
- * not a definitive detection, per docs/manual-accessibility-checklist.md.
+ * not a definitive detection, per docs/rules/manual-accessibility-checklist.md.
  * Judging whether alt text is genuinely *meaningful* is an
  * editorial call this codebase's governing rule does not let a scanner
  * or the LLM make - so this only catches the specific, checkable
  * patterns the checklist names, and the report methodology section must
  * say plainly that clearing this heuristic is not the same as a human
- * review (see docs/report-v2-refactor.md's precedent for how that kind
+ * review (see docs/archive/report-v2-refactor.md's precedent for how that kind
  * of caveat gets worded).
  *
  * Never flags a missing alt attribute (axe's image-alt rule already

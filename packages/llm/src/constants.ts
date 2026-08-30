@@ -3,12 +3,12 @@ import type { Severity } from '@odysseus/core';
 /** Severity floor for what the model sees. 'minor' findings are real and
  *  still appear in the report's findings appendix (Milestone 6 reads the
  *  unfiltered findings.json for that), but are excluded from the themed
- *  narrative sent to the model. See docs/llm-layer-rules.md section 1. */
+ *  narrative sent to the model. See docs/rules/llm-layer-rules.md section 1. */
 export const LLM_SEVERITY_FLOOR: readonly Severity[] = ['critical', 'serious', 'moderate'];
 
 /** Hard rejection retry budget. After this many failed attempts
  *  (schema-invalid response or invented finding IDs), the analyze command
- *  fails loudly. See docs/llm-layer-rules.md section 2. */
+ *  fails loudly. See docs/rules/llm-layer-rules.md section 2. */
 export const MAX_RETRIES = 2;
 
 /** Temporary, 2026-08-29: the configured API key's subscription tier
@@ -28,7 +28,7 @@ export const MISTRAL_MODEL = 'mistral-medium-latest';
  *  Claude Opus 5 (which rejected the temperature parameter outright with
  *  an HTTP 400), Mistral accepts it normally, so this is a real sampling
  *  knob, not just a label. Revisit with real cost/quality data. Recorded
- *  on every persisted analysis (see docs/llm-layer-rules.md section 3) so
+ *  on every persisted analysis (see docs/rules/llm-layer-rules.md section 3) so
  *  a temperature change never gets mistaken for the client's site
  *  changing. */
 export const MISTRAL_TEMPERATURE = 0.2;

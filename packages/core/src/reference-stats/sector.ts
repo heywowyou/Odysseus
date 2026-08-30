@@ -4,7 +4,7 @@ import type { StatSector } from './types.js';
  * Hospitality NAF-code classification for reference-stat selection
  * only. Deliberately independent from
  * prospecting/config/naf-sector-allowlist.json, which
- * docs/prospect-qualification.md section 4 forbids citing to a
+ * docs/rules/prospect-qualification.md section 4 forbids citing to a
  * prospect as evidence of anything - that table drives recall
  * filtering for outreach targeting; this one drives which citation
  * text a paid report shows. Conflating them would let an edit made for

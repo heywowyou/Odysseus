@@ -253,7 +253,7 @@ describe('item 1.10: the critical-findings driver is named when concentrated in 
     const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, manifest);
 
     // small-site's own critical findings span more than 3 distinct
-    // rules (docs/normalization-rules.md section 7); the fixture is used
+    // rules (docs/rules/normalization-rules.md section 7); the fixture is used
     // rather than hand-asserting a specific count, so this test does not
     // silently drift if the fixture is ever regenerated with fewer.
     const criticalRuleCount = new Set(

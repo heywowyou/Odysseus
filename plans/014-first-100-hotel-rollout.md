@@ -6,7 +6,7 @@
 > named site. Every send is manual. Update the index and session log daily.
 >
 > **Drift check (run first)**:
-> `git diff --stat f7ef7cf..HEAD -- CLAUDE.md plans/README.md docs/outreach-rules.md docs/operator-obligations.md docs/obligation-basis.md docs/prospect-qualification.md docs/offer-positioning.md packages/interface/src/outreach packages/store/src/outreach* packages/site/app`
+> `git diff --stat f7ef7cf..HEAD -- CLAUDE.md plans/README.md docs/rules/outreach-rules.md docs/rules/operator-obligations.md docs/rules/obligation-basis.md docs/rules/prospect-qualification.md docs/rules/offer-positioning.md packages/interface/src/outreach packages/store/src/outreach* packages/site/app`
 > Reconcile any drift before rollout; legal/product conflicts are STOP
 > conditions, not copy choices.
 

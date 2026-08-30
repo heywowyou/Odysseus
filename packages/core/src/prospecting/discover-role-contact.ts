@@ -8,7 +8,7 @@
  * **A named address is never captured, rather than captured and filtered.**
  * The allowlist in role-address.ts is the only way a local part can leave this
  * function, so `prenom.nom@` has no code path to a return value at all. That is
- * the strongest available form of docs/prospect-qualification.md section 6's
+ * the strongest available form of docs/rules/prospect-qualification.md section 6's
  * "not collected, stored or used", and it is why this returns a `localPart`
  * from the allowlist rather than an arbitrary string.
  *

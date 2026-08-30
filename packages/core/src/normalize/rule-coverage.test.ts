@@ -10,7 +10,7 @@
  *
  *   Recall     - does the scanner detect an issue that is really there.
  *                Bounded by what automated detection can reach at all, which
- *                docs/manual-accessibility-checklist.md puts at roughly 30 to
+ *                docs/rules/manual-accessibility-checklist.md puts at roughly 30 to
  *                40 percent of WCAG criteria. No amount of fixture work moves
  *                that ceiling, and the report says so in its own methodology.
  *

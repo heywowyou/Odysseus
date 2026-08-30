@@ -1,6 +1,6 @@
 /**
  * Streams AFNIC Fichier A ("Noms de domaine en point fr"), per
- * docs/prospect-qualification.md section 2: semicolon-separated,
+ * docs/rules/prospect-qualification.md section 2: semicolon-separated,
  * ISO-8859-1 encoded. ISO-8859-1 maps 1:1 onto Node's built-in `latin1`
  * buffer encoding, so decoding needs no extra dependency beyond Node
  * core - only the Sirene stock file (UTF-8, see sirene-stock-index.ts)
@@ -13,7 +13,7 @@
  * is persisted (see @odysseus/store's ProspectIngestionCheckpoint) and
  * reused on every subsequent resumed call via the headerColumns param.
  *
- * Flag for implementation time: docs/prospect-qualification.md section 2
+ * Flag for implementation time: docs/rules/prospect-qualification.md section 2
  * gives AFNIC's columns semantically (domain name, registrar geo/name,
  * subdomain, titulaire type, titulaire country/department, IDN flag,
  * creation date, withdrawal date), not as verified literal header
@@ -64,7 +64,7 @@ function toAfnicRow(record: Record<string, string>): AfnicRow | null {
   };
 }
 
-/** The AFNIC-level filter, per docs/prospect-qualification.md section 1
+/** The AFNIC-level filter, per docs/rules/prospect-qualification.md section 1
  *  and 2: drop domains with a populated withdrawal date (no longer
  *  exist), keep only ORG-type holders (personne physique holder data is
  *  restricted/excluded by design). */

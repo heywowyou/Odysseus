@@ -20,7 +20,7 @@
  * exactly. Normalizing to U+00A0 fixes both problems at once.
  */
 
-/** EUR, excluding VAT. Flat and published; see `docs/offer-positioning.md`
+/** EUR, excluding VAT. Flat and published; see `docs/rules/offer-positioning.md`
  *  section 1, and trade-off 13 for why it is not a range or a risk band. */
 export const ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT = 1600;
 

@@ -3,7 +3,7 @@
 > **Executor instructions**: Complete plan 006. Contacts are own-domain role
 > addresses only. Named, guessed, free-mail, and telephone data are prohibited.
 >
-> **Drift check**: `git diff --stat f7ef7cf..HEAD -- packages/core/src/prospecting packages/interface/src/prospecting packages/store/src/prospects.ts packages/store/src/suppression.ts docs/prospect-qualification.md`
+> **Drift check**: `git diff --stat f7ef7cf..HEAD -- packages/core/src/prospecting packages/interface/src/prospecting packages/store/src/prospects.ts packages/store/src/suppression.ts docs/rules/prospect-qualification.md`
 
 ## Status
 

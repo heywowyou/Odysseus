@@ -95,7 +95,7 @@ export interface LighthouseExcludedCategoryScores {
 /** A single Lighthouse metric audit's score plus the raw measurement
  *  behind it. Score is a normalized ranking; numericValue/displayValue
  *  are the actual measurement a report needs to show ("your homepage
- *  takes 4.2 seconds"), per docs/normalization-rules.md section 4. */
+ *  takes 4.2 seconds"), per docs/rules/normalization-rules.md section 4. */
 export interface CoreWebVitalMeasurement {
   score: number | null;
   numericValue: number | null;
@@ -104,7 +104,7 @@ export interface CoreWebVitalMeasurement {
 
 /** LCP and CLS, TBT as the lab-available proxy for responsiveness, plus
  *  FCP and Speed Index (added for the report's aggregated performance
- *  section, docs/report-design-system.md section 3: 5 medians, not 3).
+ *  section, docs/report/report-design-system.md section 3: 5 medians, not 3).
  *  Both are read from Lighthouse audits ('first-contentful-paint',
  *  'speed-index') already present in every navigation-mode LHR, the same
  *  way lcp/cls/tbt are - no new scan-time work. INP is still deliberately

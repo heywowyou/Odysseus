@@ -7,7 +7,7 @@
 > `plans/`; after the move, update its status row in `plans/README.md`.
 >
 > **Drift check (run first)**:
-> `git diff --stat 24350ca..HEAD -- AGENTS.md CLAUDE.md README.md advisor-plans plans docs/agents/documentation-map.md docs/odysseus-project-brief-v2.md docs/decisions/trade-offs.md docs/report/report-feedback-deferred-items.md scripts/check-agent-docs.mjs`
+> `git diff --stat 24350ca..HEAD -- AGENTS.md CLAUDE.md README.md advisor-plans plans docs/agents/documentation-map.md docs/product/odysseus-project-brief.md docs/decisions/trade-offs.md docs/report/report-feedback-deferred-items.md scripts/check-agent-docs.mjs`
 > If any in-scope file changed since this plan was written, compare the
 > "Current state" facts against the live files before proceeding. A semantic
 > mismatch is a STOP condition.
@@ -86,7 +86,7 @@ Applicable conventions:
 - `CLAUDE.md`
 - `README.md`
 - `docs/agents/documentation-map.md`
-- `docs/odysseus-project-brief-v2.md`
+- `docs/product/odysseus-project-brief.md`
 - `docs/decisions/trade-offs.md`
 - `docs/report/report-feedback-deferred-items.md`
 - `scripts/check-agent-docs.mjs`

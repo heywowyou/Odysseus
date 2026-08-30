@@ -13,7 +13,7 @@
  * **Two expiries, deliberately.** `publicExpiresAt` at 30 days is when the
  * document stops being served - the lifetime the recipient was promised.
  * `expiresAt` at 90 days is the operational retention this milestone applies to
- * everything (`docs/prospect-qualification.md` section 7), enforced by the same
+ * everything (`docs/rules/prospect-qualification.md` section 7), enforced by the same
  * precomputed-`expiresAt` TTL pattern the sibling 9c collections use rather
  * than a raw TTL on `createdAt`. The private record therefore outlives the
  * public document by design: revocation and objection handling need to know a

@@ -25,7 +25,7 @@ import {
   type OutreachDraftDocument,
 } from './schemas/outreach-draft.schema.js';
 
-/** Operational retention, per docs/prospect-qualification.md section 7. */
+/** Operational retention, per docs/rules/prospect-qualification.md section 7. */
 export const OUTREACH_DRAFT_RETENTION_DAYS = 90;
 
 const DAY_MS = 24 * 60 * 60 * 1000;

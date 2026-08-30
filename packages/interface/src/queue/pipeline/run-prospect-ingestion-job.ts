@@ -1,7 +1,7 @@
 /**
  * Milestone 9a: one bounded batch of AFNIC candidates, filtered against
  * the Sirene stock index, fetched via plain HTTP (never Chromium - see
- * docs/prospect-qualification.md: "Chromium never runs on an unqualified
+ * docs/rules/prospect-qualification.md: "Chromium never runs on an unqualified
  * domain"), qualified deterministically, and persisted to the prospects
  * collection. Mirrors run-prospecting-job.ts's structure (progress
  * updates, per-candidate result tracking) applied to a different funnel

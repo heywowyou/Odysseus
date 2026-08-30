@@ -6,7 +6,7 @@ import type { OutreachTouch1Output } from './outreach-schema.js';
 
 /**
  * Every prohibition here is stated directly, never left to be inherited from
- * the audit prompt (docs/outreach-rules.md section 5) - this is a different
+ * the audit prompt (docs/rules/outreach-rules.md section 5) - this is a different
  * document read by a different call, and doctrine requires the outreach
  * prompt to be self-contained. OUTREACH_TOUCH_LIMITS and
  * OUTREACH_PROHIBITED_EXAMPLES are imported rather than restated so the

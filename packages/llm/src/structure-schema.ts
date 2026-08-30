@@ -4,7 +4,7 @@ import type { LlmInput } from '@odysseus/core';
 
 /** Everything the structure pass sees: findings and site context, no
  *  language. Grouping and prioritizing findings is language-independent;
- *  see docs/llm-layer-rules.md section 9. */
+ *  see docs/rules/llm-layer-rules.md section 9. */
 export type StructureInput = Pick<LlmInput, 'siteContext' | 'findings'>;
 
 /** New, non-locked schema (unlike the locked themeSchema in
@@ -12,7 +12,7 @@ export type StructureInput = Pick<LlmInput, 'siteContext' | 'findings'>;
  *  field is a hard Zod rejection - feeding the retry loop - rather than
  *  a silent strip. This is deliberately not a subset of the locked
  *  themeSchema: it has no prose fields at all, per
- *  docs/llm-layer-rules.md section 9. */
+ *  docs/rules/llm-layer-rules.md section 9. */
 export const structureThemeSchema = z
   .object({
     findingIds: z.array(z.string()).min(1),

@@ -3,7 +3,7 @@
 > **Executor instructions**: Complete plans 001 through 012. This is a private
 > operator surface in the existing interface, not a public CRM or site feature.
 >
-> **Drift check**: `git diff --stat f7ef7cf..HEAD -- packages/interface/src/public packages/interface/src/router.ts packages/interface/src/routes packages/store/src docs/report-design-tokens.md`
+> **Drift check**: `git diff --stat f7ef7cf..HEAD -- packages/interface/src/public packages/interface/src/router.ts packages/interface/src/routes packages/store/src docs/report/report-design-tokens.md`
 
 ## Status
 

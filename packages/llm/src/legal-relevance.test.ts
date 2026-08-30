@@ -15,7 +15,7 @@ describe('getCriterionName', () => {
 describe('buildLegalRelevance', () => {
   // Exact strings verified in docs/report-v2-prototype-haaitza-fr.html
   // against the real haaitza.com scan - the acceptance test for this
-  // function per docs/report-v2-refactor.md 4.3.
+  // function per docs/archive/report-v2-refactor.md 4.3.
   it('reproduces the prototype single-criterion sentences verbatim, French', () => {
     expect(buildLegalRelevance(['1.4.4'], 'fr')).toBe(
       'Critère 1.4.4 (Redimensionnement du texte), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.',

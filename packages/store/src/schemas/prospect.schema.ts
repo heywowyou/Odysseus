@@ -5,7 +5,7 @@
  * ingestion pass is a legitimately distinct qualification event with its
  * own evaluatedAt, not a correction of an earlier one.
  *
- * Subject to the 90 day retention policy at docs/prospect-qualification.md
+ * Subject to the 90 day retention policy at docs/rules/prospect-qualification.md
  * section 7 - see the TTL index below. Contrast schemas/suppression.schema.ts,
  * which is architecturally exempt from that policy.
  */
@@ -55,7 +55,7 @@ export interface ProspectDocumentFields {
    *  persisted. */
   contactAddress?: ProspectContactAddress;
   dataOrigin: ProspectDataOrigin;
-  // Reserved, not populated by 9a - see docs/llm-layer-rules.md section 10
+  // Reserved, not populated by 9a - see docs/rules/llm-layer-rules.md section 10
   // / milestones 9b, 9c.
   brokennessScore?: number | null;
   outreachState?: string;

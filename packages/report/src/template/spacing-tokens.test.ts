@@ -7,7 +7,7 @@
  * every margin/padding site here), so those five sites silently produced
  * zero spacing - the visible cause of a cramped section 01. Fixed by
  * replacing every site with `var(--space-6)`, the token the approved
- * mockup (docs/design/report-mockup-standalone.flat.html) actually uses
+ * mockup (docs/report/design/report-mockup-standalone.flat.html) actually uses
  * for the same "separate this block from
  * the next heading" role, confirmed by reading its computed styles via
  * the playwright MCP rather than inventing a new token.

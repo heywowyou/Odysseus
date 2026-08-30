@@ -6,7 +6,7 @@
 > the index only after production choice and tests are recorded.
 >
 > **Drift check (run first)**:
-> `git diff --stat f7ef7cf..HEAD -- packages/interface/src packages/store/src packages/site/app packages/site/next.config.ts packages/site/package.json docs/operator-obligations.md docs/prospect-qualification.md docs/outreach-rules.md`
+> `git diff --stat f7ef7cf..HEAD -- packages/interface/src packages/store/src packages/site/app packages/site/next.config.ts packages/site/package.json docs/rules/operator-obligations.md docs/rules/prospect-qualification.md docs/rules/outreach-rules.md`
 > Stop if the standalone-site isolation, retention, or opt-out doctrine changed.
 
 ## Status

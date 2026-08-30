@@ -1,7 +1,7 @@
 /**
  * Loader for config/naf-sector-allowlist.json: the versioned,
  * operator-editable NAF sector recall filter, per
- * docs/prospect-qualification.md section 4's three constraints (ship as
+ * docs/rules/prospect-qualification.md section 4's three constraints (ship as
  * JSON, not a TS constant; split every entry definitional vs inferred;
  * gate what's actually active behind `enabled`).
  *
@@ -16,7 +16,7 @@
  * NAF is a recall filter, never evidence: it narrows which Sirene stock
  * rows are worth an HTTP fetch, but a matching NAF code alone never
  * qualifies a prospect (see qualify-prospect.ts) and must never be cited
- * to a prospect as the basis of anything (docs/prospect-qualification.md
+ * to a prospect as the basis of anything (docs/rules/prospect-qualification.md
  * section 4).
  */
 

@@ -1,5 +1,5 @@
 /**
- * Stress fixture for the report design, per docs/report-design-system.md
+ * Stress fixture for the report design, per docs/report/report-design-system.md
  * section 5: layout is iterated against this, never against a real client
  * scan, because a real scan (haaitza, sas-fernande) has never been the
  * thing that broke the layout - a mock dataset that never grew past its

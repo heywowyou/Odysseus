@@ -103,7 +103,7 @@ export const ODYSSEUS_REGISTRATION_NUMBER =
  *  price, a verification pass being narrower in scope than a full
  *  re-scan. Confirmed by Jules 2026-08-19 as the canonical re-audit
  *  price and lead time; documented alongside the full-audit price in
- *  docs/offer-positioning.md section 1. No longer a placeholder. */
+ *  docs/rules/offer-positioning.md section 1. No longer a placeholder. */
 export const ODYSSEUS_REAUDIT_PRICE_EUR_HT = 450;
 export const ODYSSEUS_REAUDIT_LEAD_TIME_DAYS = 5;
 

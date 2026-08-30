@@ -124,7 +124,7 @@ if (!existsSync(resolve(repoRoot, 'plans/README.md'))) {
 const advisorPlansReference = /advisor-plans\//;
 // plan 015 is the migration record itself: its body names the old location to
 // describe the move, which is history, not a live pointer.
-const migrationRecordPath = resolve(repoRoot, 'plans/015-consolidate-work-tracking.md');
+const migrationRecordPath = resolve(repoRoot, 'plans/archive/015-consolidate-work-tracking.md');
 for (const markdownPath of markdownFiles) {
   if (markdownPath === resolve(repoRoot, 'docs/session/current-session.md')) {
     continue;

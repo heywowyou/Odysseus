@@ -9,7 +9,7 @@ export interface ThemeKeyMismatch {
 /** Correlation guard for the writing pass: every themeKey shown to the
  *  model must come back exactly once, verbatim. A non-empty mismatch is
  *  treated exactly like an invented finding ID - rejected, logged,
- *  retried. See docs/llm-layer-rules.md section 9. */
+ *  retried. See docs/rules/llm-layer-rules.md section 9. */
 export function findThemeKeyMismatches(
   expectedThemeKeys: readonly string[],
   writingOutput: WritingPassOutput,

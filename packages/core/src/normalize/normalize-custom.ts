@@ -3,7 +3,7 @@
  * mentions-legales check. Establishes the pattern the still-deferred
  * Milestone 8 custom checks (meta, canonical, JSON-LD, sitemap, hreflang,
  * heading hierarchy, redirect chains - a separate, unrelated set, see
- * docs/odysseus-project-brief-v2.md) will later reuse.
+ * docs/product/odysseus-project-brief.md) will later reuse.
  *
  * Page-scoped, like normalize-renderdiff.ts's pattern: emits nothing when
  * compliant (any of siren/rcs/tva present), one finding when none of the

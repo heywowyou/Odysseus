@@ -13,7 +13,7 @@
  * already cover the missing case today. Duplicating it here would
  * recreate the exact axe/Lighthouse-accessibility duplicate-finding
  * mistake CLAUDE.md already documents once, just for SEO instead of
- * accessibility. See docs/manual-accessibility-checklist.md
+ * accessibility. See docs/rules/manual-accessibility-checklist.md
  * for the full Lighthouse-overlap audit this was checked against.
  */
 
@@ -25,7 +25,7 @@ export interface JsonLdBlock {
   /** Selector for the specific <script> block, computed the same way
    *  detectTransactionalFlow's checkout-form matcher already does (#id
    *  when present, else an nth-of-type positional selector) - never a
-   *  sentinel like "script" or "body", per docs/normalization-rules.md
+   *  sentinel like "script" or "body", per docs/rules/normalization-rules.md
    *  §3. */
   selector: string;
   parseError?: string;

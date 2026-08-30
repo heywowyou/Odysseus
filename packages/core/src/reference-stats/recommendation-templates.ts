@@ -20,7 +20,7 @@
  * Not yet wired into packages/llm or packages/report. Report wiring
  * needs a design decision this module does not make on its own: adding
  * a per-finding "Suggested next steps" block interacts with
- * docs/report-design-system.md's locked per-section data contract and
+ * docs/report/report-design-system.md's locked per-section data contract and
  * page-count invariants (section 12 Annexe's fixed shape, the 18-26
  * page stress-fixture bound), which is not this table's call to make
  * unilaterally.

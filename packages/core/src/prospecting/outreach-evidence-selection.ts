@@ -2,7 +2,7 @@
  * Milestone 9c plan 010: which two pieces of evidence the outreach prose
  * generator is shown, chosen without a model.
  *
- * Touch 1 is doctrinally the render diff (docs/outreach-rules.md section 6),
+ * Touch 1 is doctrinally the render diff (docs/rules/outreach-rules.md section 6),
  * but evidence schema v2 made the render composite a bonus rather than a
  * requirement (hotel-prescan-evidence.ts): a server-rendered site has no
  * render gap to photograph, measured at 17 of 25 real hotels with genuine

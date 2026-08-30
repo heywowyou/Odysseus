@@ -3,7 +3,7 @@ import type { ProseField } from './prose-fields.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
 /**
- * CLAUDE.md rule 6 and docs/obligation-basis.md section 7 forbid stating
+ * CLAUDE.md rule 6 and docs/rules/obligation-basis.md section 7 forbid stating
  * a legal consequence for a specific client: no verdict on whether a law
  * binds them, no deadline, no sanction. Trade-off 11 settled the same
  * question for Argument B by withholding the pen entirely, and trade-off
@@ -31,7 +31,7 @@ import type { WritingPassOutput } from './writing-schema.js';
  * section 03, which the model never writes. Reused by the outreach path
  * with the same regex table and one-per-field early return, on the same
  * reasoning: the outreach prompt withholds the pen from legal content
- * entirely (docs/outreach-rules.md section 5), so the model has no more
+ * entirely (docs/rules/outreach-rules.md section 5), so the model has no more
  * legitimate reason to reach for this vocabulary there than it does here.
  */
 const LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {

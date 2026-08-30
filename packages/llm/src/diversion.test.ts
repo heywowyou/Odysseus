@@ -13,7 +13,7 @@ import {
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-/** Real committed scan behind docs/report-v2-refactor.md itself: two
+/** Real committed scan behind docs/archive/report-v2-refactor.md itself: two
  *  /social/ wrapper pages at 100% missing content, and three legal pages
  *  (CGU, cookie policy, privacy policy) under noindex. This is exactly
  *  the A1-A3 case the diversion filter exists to fix. */

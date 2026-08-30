@@ -5,7 +5,7 @@
  * This is the same discipline trade-off 11 established for the paid report:
  * where a sentence could be read as a legal position, we withhold the pen
  * rather than instruct a model to be careful. The preview is a colder document
- * than the report and `docs/outreach-rules.md` is correspondingly stricter, so
+ * than the report and `docs/rules/outreach-rules.md` is correspondingly stricter, so
  * this block is narrower than `legal-exposure.ts` rather than a copy of it.
  *
  * **What it may say.** The criterion, verbatim from `regimes.ts` - the one
@@ -17,7 +17,7 @@
  * **What it may never say.** That this business is bound. A deadline. A
  * sanction amount - `Regime.sanctionCeiling` exists and is deliberately never
  * read here. A population statistic. Case law, which
- * `docs/outreach-rules.md` excludes from outreach independently of anything
+ * `docs/rules/outreach-rules.md` excludes from outreach independently of anything
  * this file decides.
  *
  * **Turnover is not rendered, on purpose.** Rule 6 permits stating a company's
@@ -38,7 +38,7 @@ import { EAA_REGIME_ID, getRegime } from './regimes.js';
 
 /** What the source material currently supports saying to this kind of prospect.
  *
- *  Argument B is the obligation-criteria argument. `docs/obligation-basis.md`
+ *  Argument B is the obligation-criteria argument. `docs/rules/obligation-basis.md`
  *  now carries hotels at `secondary` and states the block may be used with them
  *  on the same terms as any other online shop, which is why this defaults on.
  *  It stays a capability rather than a hardcoded yes so that a sector whose

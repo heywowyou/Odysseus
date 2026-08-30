@@ -6,7 +6,7 @@ claim made in outreach. Nothing legal may be stated anywhere in the
 product unless it appears here with status `primary`.
 
 Odysseus's own regulatory obligations are in
-`docs/operator-obligations.md`, which is a separate subject.
+`docs/rules/operator-obligations.md`, which is a separate subject.
 
 Created and revised 2026-08-15 across four passes. Section 10 records
 what earlier passes got wrong.
@@ -74,7 +74,7 @@ decree text itself.
 
 Headcount of 10 or more therefore establishes scope on the size prong
 alone. Headcount under 10 does not establish exemption.
-`docs/prospect-qualification.md` qualifies on headcount only.
+`docs/rules/prospect-qualification.md` qualifies on headcount only.
 
 **Prong B, sector.** Electronic commerce, consumer banking, electronic
 communications, passenger transport, audiovisual media access services,
@@ -229,7 +229,7 @@ since taking the money closes that door.
 
 ## 7. Operating rule: we report, we do not conclude
 
-Underlying legal basis in `docs/operator-obligations.md` section 2. The
+Underlying legal basis in `docs/rules/operator-obligations.md` section 2. The
 rule that binds report templates and outreach:
 
 Permitted:
@@ -359,7 +359,7 @@ until it is resolved that sentence is simply not written.
    50(4). The actual requirement is a one-line disclosure, not a change
    of authorship, and the LLM report and outreach pipelines were never
    in scope for 50(4) at all since they are private, single-recipient
-   documents. See `docs/operator-obligations.md` section 3.
+   documents. See `docs/rules/operator-obligations.md` section 3.
 8. **LCEN cited by its pre-SREN article number, and absent from this
    file entirely.** `regimes.ts` has held a fully written LCEN regime
    citing `article 6-III et 6-VI-2` since it was created. That citation

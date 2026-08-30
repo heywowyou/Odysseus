@@ -98,10 +98,10 @@ export interface RenderHtmlInput {
 }
 
 /** Single-tier report body, since the 2026-08-16 commercial model drop of
- *  the paid screening tier (docs/offer-positioning.md): the full audit is
+ *  the paid screening tier (docs/rules/offer-positioning.md): the full audit is
  *  now the only paid deliverable this package renders. The free,
  *  pre-purchase outreach preview introduced the same day
- *  (docs/outreach-rules.md) is a deliberately separate document kind with
+ *  (docs/rules/outreach-rules.md) is a deliberately separate document kind with
  *  its own render path (see outreach-preview/render-html.ts), not a lighter tier of
  *  this function. Section order matches report.reference.html's 14
  *  numbered sheets plus the cover and table of contents. */

@@ -43,7 +43,7 @@ export type HotelContactReason =
  * Whether the address's domain publishes mail exchangers. A public DNS record,
  * read through a resolver: it is a fact about the domain and never proof that
  * the mailbox exists. Establishing the latter would mean an SMTP conversation,
- * which docs/prospect-qualification.md and plan 007 both forbid outright.
+ * which docs/rules/prospect-qualification.md and plan 007 both forbid outright.
  *
  * `unknown` is a real and common outcome - a resolver timeout is not evidence
  * of anything - and must never be treated as `no-mx`.

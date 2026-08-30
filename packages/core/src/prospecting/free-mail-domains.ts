@@ -1,7 +1,7 @@
 /**
  * Loader for config/free-mail-domains.json. Same load/validate/memoize
  * pattern as naf-allowlist.ts, and for the same reason: this list is
- * compliance-adjacent (docs/prospect-qualification.md section 6) and
+ * compliance-adjacent (docs/rules/prospect-qualification.md section 6) and
  * needs occasional additions - a new French ISP, a new consumer webmail
  * brand - without a code change.
  */

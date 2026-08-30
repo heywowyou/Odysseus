@@ -11,7 +11,7 @@
  *
  * Presence is checked against exact substrings of the code-owned copy, never
  * a regex - a regex passes on a paraphrase, which is the failure this exists
- * to catch (`docs/outreach-rules.md` section 7).
+ * to catch (`docs/rules/outreach-rules.md` section 7).
  */
 
 import type { OutreachDraftCopy } from './outreach-draft-copy.js';

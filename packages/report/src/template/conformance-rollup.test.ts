@@ -11,7 +11,7 @@ import {
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-/** Real scan behind docs/report-v2-refactor.md itself. The doc's own
+/** Real scan behind docs/archive/report-v2-refactor.md itself. The doc's own
  *  Part 1 prose cites "7 criteria failing on 18 of 20 pages", but that
  *  figure came from a hand-transcription of the v1 PDF, not from
  *  recomputing against findings.json - recomputed here, the real data

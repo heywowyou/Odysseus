@@ -1,18 +1,18 @@
 /**
  * Fixed, deterministic enforcement facts for the EAA/SMB route (regime 1
- * in docs/obligation-basis.md), spliced into the report the same way
+ * in docs/rules/obligation-basis.md), spliced into the report the same way
  * regimes.ts's Regime rows are - never generated, never asked of the
  * LLM (CLAUDE.md rule 6, trade-off 11).
  *
  * report-feedback-palais-gallien.md item 18: the "Exposition légale"
  * section stated which obligation applies but never the actual exposure
  * (the consequence of non-compliance) - no fine amount, no case-law
- * state. Both facts below are checked against docs/obligation-basis.md
+ * state. Both facts below are checked against docs/rules/obligation-basis.md
  * section 5 and carry only status `primary` content, per that doc's own
  * rule ("only these may reach a client or a prospect").
  *
  * Deliberately excluded: a description of the "mise en demeure"
- * procedure the acceptance check also asked for. docs/obligation-basis.md
+ * procedure the acceptance check also asked for. docs/rules/obligation-basis.md
  * documents mise en demeure only as one fact about one case (Picard
  * Surgelés), status secondary - it does not describe the mechanism
  * itself with primary sourcing, so stating a generic procedural
@@ -26,7 +26,7 @@ import type { ReportLanguage } from '../types/llm-output.js';
 /** Art. R451-4 code de la consommation: the fine for a contravention de
  *  5e classe applied to breaches of the D412-49 et seq. provisions,
  *  EUR 7,500 for a legal person, cumulable. Status: primary
- *  (docs/obligation-basis.md section 5). Distinct from, and never
+ *  (docs/rules/obligation-basis.md section 5). Distinct from, and never
  *  conflated with, the EUR 50,000 ARCOM figure that belongs to route 2
  *  (article 47) alone - obligation-basis.md is explicit that this
  *  figure "is quoted throughout this market as though it applied to an
@@ -44,7 +44,7 @@ function bilingual(fr: string, en: string): Bilingual {
 }
 
 /** Neutral case-law state naming both 2026 référé outcomes
- *  (docs/obligation-basis.md section 5), never only the one favorable to
+ *  (docs/rules/obligation-basis.md section 5), never only the one favorable to
  *  urgency: Lille dismissed the claim (appeal pending), Caen granted an
  *  injunction the same reasoning would not obviously extend to an SMB
  *  under the EAA/SMB route rather than article 47. Mirrors the doc's own
@@ -73,7 +73,7 @@ export function eaaSanctionFigureSentence(language: ReportLanguage): string {
 }
 
 /** Not currently called from packages/report (removed 2026-08-18, B9/item
- *  1.14): its source, docs/obligation-basis.md's route-3 case-law
+ *  1.14): its source, docs/rules/obligation-basis.md's route-3 case-law
  *  entries, is tagged `Status: secondary`, which that doc's own section 0
  *  reserves for internal use only, never something that reaches a
  *  client. Kept here, not deleted, since the underlying fact (the

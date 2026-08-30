@@ -1,5 +1,5 @@
 /**
- * Milestone 9b. `docs/llm-layer-rules.md` section 10 and CLAUDE.md rule 6
+ * Milestone 9b. `docs/rules/llm-layer-rules.md` section 10 and CLAUDE.md rule 6
  * describe two cost gates as already-decided policy - decided
  * 2026-08-03, "do not remove either gate" - but neither the scoring
  * function nor either predicate existed anywhere in the codebase before
@@ -10,7 +10,7 @@
  * Both gates reuse SEVERITY_ORDER as the weight rather than inventing a
  * second scale, and both score distinct findings, not occurrences -
  * occurrences are already collapsed per finding by the normalization
- * layer (`docs/normalization-rules.md` section 2), so counting findings
+ * layer (`docs/rules/normalization-rules.md` section 2), so counting findings
  * avoids double-counting one template-driven issue that recurs across a
  * site.
  *
@@ -30,7 +30,7 @@ export function computeBrokennessScore(findings: readonly Finding[]): number {
   return findings.reduce((sum, finding) => sum + SEVERITY_ORDER[finding.severity], 0);
 }
 
-/** Audit fallback gate (docs/llm-layer-rules.md section 10). A paying
+/** Audit fallback gate (docs/rules/llm-layer-rules.md section 10). A paying
  *  client always receives a report regardless of findings volume; this
  *  only decides whether the report's content comes from an LLM call or a
  *  static "no significant issues found" template. Skip the LLM (this
@@ -50,7 +50,7 @@ export function isAuditFallbackEligible(findings: readonly Finding[]): boolean {
   return moderateCount < 5;
 }
 
-/** Prospecting worthiness gate (docs/llm-layer-rules.md section 10).
+/** Prospecting worthiness gate (docs/rules/llm-layer-rules.md section 10).
  *  Decides whether a scanned prospect is worth an LLM call at all - the
  *  single-sentence hook and, once milestone 9c exists, the personalized
  *  outreach email. Intentionally stricter than the audit fallback gate: a

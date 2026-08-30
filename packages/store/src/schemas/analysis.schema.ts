@@ -3,7 +3,7 @@
  * collection intentionally allows multiple documents per auditId: the
  * same audit can be analysed more than once (once per language, and
  * again if the analysis is re-run after a prompt change). See
- * persist-analysis.ts and docs/llm-layer-rules.md section 5.
+ * persist-analysis.ts and docs/rules/llm-layer-rules.md section 5.
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
@@ -28,7 +28,7 @@ export interface AnalysisDocumentFields {
   /** Mistral's temperature parameter at the time this analysis was
    *  generated. Unlike Claude Opus 5 (which rejected temperature
    *  outright), Mistral accepts it normally, so this is a real sampling
-   *  knob, not just a label. See docs/llm-layer-rules.md section 3. */
+   *  knob, not just a label. See docs/rules/llm-layer-rules.md section 3. */
   temperature: number;
   generatedAt: Date;
   executiveSummary: string;

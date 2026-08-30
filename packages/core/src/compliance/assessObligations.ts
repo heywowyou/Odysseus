@@ -18,7 +18,7 @@
  * the live Sirene API, the stock file INSEE publishes doesn't carry it.
  * That's safe for 9a's own population by construction: every prospect
  * this function might ever be called with already has headcount >=10
- * (docs/prospect-qualification.md qualifies on headcount only), and
+ * (docs/rules/prospect-qualification.md qualifies on headcount only), and
  * checkSmeExemption below returns not-exempt from the headcount branch
  * alone, without ever inspecting turnover, whenever headcount is 10+. A
  * future milestone that reused the stock-join path for a headcount-under-

@@ -116,7 +116,7 @@ function cell(html: string, extra = '', width?: string): string {
 
 /** item 25: every finding row states a page count ("9 pages") and never
  *  the actual URLs - the largest gap between what a paid full-audit
- *  client is promised (docs/odysseus-project-brief-v2.md 3.3: "Full page
+ *  client is promised (docs/product/odysseus-project-brief.md 3.3: "Full page
  *  and selector detail for every finding") and what the appendix
  *  delivers. Rendered as a full-width line under each finding's own row
  *  (grid-column spans every column of the 4-column layout above it), a

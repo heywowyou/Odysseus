@@ -37,7 +37,7 @@ export const FINDING_NOUN_VOCABULARY: Record<ReportLanguage, { singular: string;
  * classification systems to a legal reader comparing the two.
  *
  * report-feedback-haaitza.md B3 (2026-08-17) traced this the rest of the
- * way: the report's own canonical label (docs/report-design-system.md,
+ * way: the report's own canonical label (docs/report/report-design-system.md,
  * strings/fr.ts) had already been corrected to "Sérieux", so this guard
  * was banning the correct word and permitting the wrong one - the exact
  * inverse of what it was built to catch. "Majeur" is now the banned

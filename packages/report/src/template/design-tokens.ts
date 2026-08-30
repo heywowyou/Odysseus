@@ -2,7 +2,7 @@ import type { FindingCategory, Severity } from '@odysseus/core';
 
 /**
  * Canonical badge/tile colour maps, taken verbatim from
- * docs/report-design-system.md section 3. These hex values are the doc's
+ * docs/report/report-design-system.md section 3. These hex values are the doc's
  * own source of truth for this specific per-badge palette (distinct from
  * nocturne.css's own token set) and are inlined into markup the same way
  * report.reference.html's own {{ s.bg }}/{{ s.color }} placeholders are -
@@ -31,7 +31,7 @@ export const SEVERITY: Record<Severity, { color: string; bg: string }> = {
  *  flag.
  *
  *  geo.color/geo.bg (added milestone 8.5c) has no mockup entry to
- *  re-derive from - geo postdates docs/report-design-system.md's
+ *  re-derive from - geo postdates docs/report/report-design-system.md's
  *  canonical mockups entirely (trade-off 14 added the FindingCategory
  *  value the same day the mockups were finalized). Rather than invent a
  *  one-off hex, it reuses nocturne.css's second, otherwise-unused accent

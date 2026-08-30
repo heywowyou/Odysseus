@@ -43,7 +43,7 @@ import { renderPdfFromHtml } from './pdf.js';
 /** Chromium is launched once for the whole report and used solely for the
  *  final Paged.js print (pdf.ts) - resolveRenderDiffEvidence no longer
  *  needs a browser at all since section 08 stopped embedding screenshots
- *  (docs/report-design-system.md section 3). */
+ *  (docs/report/report-design-system.md section 3). */
 /** `--font-render-hinting=none`: a real La Corniche PDF (this session,
  *  2026-08-22) showed glyph-run splitting in the extracted text layer at
  *  font-weight 500+ combined with certain fractional sizes (e.g.

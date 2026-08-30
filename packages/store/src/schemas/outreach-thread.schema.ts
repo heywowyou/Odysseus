@@ -13,13 +13,13 @@
  *
  * **The role address is stored raw, and that is deliberate.** It lives here
  * for the 90 days of operational retention
- * (`docs/prospect-qualification.md` section 7) because the operator has to be
+ * (`docs/rules/prospect-qualification.md` section 7) because the operator has to be
  * able to see who a draft is addressed to. Permanent suppression stays
  * hash-only in its own collection and is not touched by this one: the two
  * answer different questions, and merging them would mean a permanent record
  * of every address ever contacted.
  *
- * **`languageSource` is recorded, not assumed.** `docs/outreach-rules.md`
+ * **`languageSource` is recorded, not assumed.** `docs/rules/outreach-rules.md`
  * section 7 is explicit that the prospect's site language has no deterministic
  * source yet, so the operator supplies it and the record says so. A future
  * detector must be versioned and reviewed before it can write anything other

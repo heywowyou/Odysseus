@@ -11,7 +11,7 @@ describe('groupAppendix', () => {
     const colorContrast = groups.find((g) => g.ruleId === 'color-contrast');
     if (!colorContrast) throw new Error('expected a color-contrast group');
 
-    // Known-good numbers, docs/normalization-rules.md section 7 and
+    // Known-good numbers, docs/rules/normalization-rules.md section 7 and
     // CLAUDE.md: 4 findings, 35 occurrences (11+11+2+11).
     expect(colorContrast.findings).toHaveLength(4);
     expect(colorContrast.totalOccurrences).toBe(35);

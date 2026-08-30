@@ -34,17 +34,17 @@ canonical document says was superseded.
 | Document | Owns |
 | --- | --- |
 | `CLAUDE.md` | Non-negotiable rules, locked contracts, package boundaries, compact trade-off index, testing policy, and current milestone order |
-| `docs/odysseus-project-brief-v2.md` | Product purpose, offer, architecture, end-to-end workflow, and long-term roadmap; explicit supersession notes inside it must be respected |
+| `docs/product/odysseus-project-brief.md` | Product purpose, offer, architecture, end-to-end workflow, and long-term roadmap; explicit supersession notes inside it must be respected |
 | `docs/decisions/trade-offs.md` | Full evidence and rejected alternatives behind the numbered charter guardrails |
-| `docs/normalization-rules.md` | Scanner-output normalization, dedupe, finding identity, evidence, and artifact behavior |
-| `docs/llm-layer-rules.md` | Model visibility, structured output, retries, guards, language, provenance, and cost gates |
-| `docs/obligation-basis.md` | Approved client-facing legal facts and their evidence status |
-| `docs/operator-obligations.md` | Odysseus's own regulatory and operating obligations |
-| `docs/prospect-qualification.md` | Who may be sourced, scanned, qualified, retained, and contacted |
-| `docs/outreach-rules.md` | What outreach and preview material may say and how it must be assembled |
-| `docs/offer-positioning.md` | Current pricing, scope, sales claims, and offer framing |
-| `docs/report-design-system.md` and `docs/report-design-tokens.md` | Report visual language and implementation tokens; readable canonical design sources are under `docs/design/` |
-| `docs/manual-accessibility-checklist.md` | Known limits of automated accessibility detection |
+| `docs/rules/normalization-rules.md` | Scanner-output normalization, dedupe, finding identity, evidence, and artifact behavior |
+| `docs/rules/llm-layer-rules.md` | Model visibility, structured output, retries, guards, language, provenance, and cost gates |
+| `docs/rules/obligation-basis.md` | Approved client-facing legal facts and their evidence status |
+| `docs/rules/operator-obligations.md` | Odysseus's own regulatory and operating obligations |
+| `docs/rules/prospect-qualification.md` | Who may be sourced, scanned, qualified, retained, and contacted |
+| `docs/rules/outreach-rules.md` | What outreach and preview material may say and how it must be assembled |
+| `docs/rules/offer-positioning.md` | Current pricing, scope, sales claims, and offer framing |
+| `docs/report/report-design-system.md` and `docs/report/report-design-tokens.md` | Report visual language and implementation tokens; readable canonical design sources are under `docs/report/design/` |
+| `docs/rules/manual-accessibility-checklist.md` | Known limits of automated accessibility detection |
 | `docs/adr/` and package ADR directories | Accepted architectural decisions at their documented scope |
 | `docs/agents/coding-conventions.md` | Shared source formatting, lint, naming, testing, commenting, and product-writing conventions |
 
@@ -52,7 +52,7 @@ canonical document says was superseded.
 
 | Document | Status and use |
 | --- | --- |
-| `plans/README.md` and the numbered plans `001` through `015` | Approved, execution-ready plans; the index owns order, status, dependencies, and rejected proposal choices. Only selected, execution-ready work lives here; raw findings are never stored as plans |
+| `plans/README.md` and the active plans it indexes | Approved, execution-ready plans; the index owns order, status, dependencies, and rejected proposal choices. Only selected, execution-ready work lives at the `plans/` root; completed plans move to `plans/archive/` and raw findings are never stored as plans |
 | GitHub issues on `heywowyou/Odysseus` | Intake for newly verified defects, requests, and decisions; resolved issues are closed with the commit and verification evidence (`docs/agents/issue-tracker.md`) |
 | `docs/report/report-feedback-deferred-items.md` | Canonical queue for report work with a current reproduction or an explicit future trigger; fixed items are removed once verified |
 
@@ -66,10 +66,11 @@ linked issue without checking both.
   promoted into `docs/report/report-feedback-deferred-items.md` and durable
   engineering rationale is promoted into `docs/decisions/trade-offs.md`. Git
   history retains the original review evidence.
-- `docs/report-v2-refactor.md` is implementation history and rationale for the
+- `docs/archive/report-v2-refactor.md` is implementation history and rationale for the
   shipped report-v2 work, not the current task queue.
-- `docs/research/Odysseus Business-Impact Statistics Reference Database Accessibility SEO & GEO.md`
-  and `docs/research/sector-reference-stats/` retain vetted source research.
+- `docs/research/business-impact-statistics.md`,
+  `docs/research/sector-reference-stats/`, and
+  `docs/research/llm-provider-alternatives.md` retain vetted source research.
   Only facts promoted through the canonical legal, outreach, offer, or
   reference-stat rules may reach product output.
 

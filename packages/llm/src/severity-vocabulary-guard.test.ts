@@ -45,7 +45,7 @@ describe('findSeverityVocabularyViolations', () => {
   it('flags "majeur" used instead of the canonical "sérieux" (report-feedback-haaitza.md B3)', () => {
     // Verbatim from artifacts/haaitza.com/2026-08-08T11-07-43Z/analyses/
     // 2026-08-08T11-23-48Z-fr.json, where the stats box and annex both
-    // said "majeurs" while docs/report-design-system.md's canonical label
+    // said "majeurs" while docs/report/report-design-system.md's canonical label
     // is "Sérieux" - the guard used to ban the correct word instead.
     const output = buildOutput({
       executiveSummary:

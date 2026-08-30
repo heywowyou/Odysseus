@@ -21,7 +21,7 @@ import {
 /** The lifetime promised to the recipient: the link stops working after this. */
 export const PREVIEW_PUBLIC_LIFETIME_DAYS = 30;
 /** Operational retention for the private record, per
- *  docs/prospect-qualification.md section 7. Longer than the public lifetime on
+ *  docs/rules/prospect-qualification.md section 7. Longer than the public lifetime on
  *  purpose: handling an objection about a preview needs to know it existed
  *  after it stopped being served. */
 export const PREVIEW_RETENTION_DAYS = 90;

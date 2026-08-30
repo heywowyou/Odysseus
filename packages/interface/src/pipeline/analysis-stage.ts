@@ -49,7 +49,7 @@ export interface RunAnalysisStageOptions {
   language: ReportLanguage;
   /** Omitted means "use the fallback context" - the intake questionnaire
    *  this would otherwise come from doesn't exist yet (see
-   *  docs/llm-layer-rules.md section 4). */
+   *  docs/rules/llm-layer-rules.md section 4). */
   siteContext?: SiteContextInput;
   regenerateStructure?: boolean;
   /** Computed once per audit by runAuditStage and passed through by the
@@ -112,7 +112,7 @@ async function findLatestStructureFile(analysesDir: string): Promise<string | un
  *  re-checked against the current filtered findings: a stale structure
  *  file (written before findings.json was re-normalized) fails loudly
  *  rather than silently regenerating or silently proceeding with a
- *  finding that may no longer exist. See docs/llm-layer-rules.md
+ *  finding that may no longer exist. See docs/rules/llm-layer-rules.md
  *  sections 2 and 9. */
 async function loadOrGenerateStructure(
   analysesDir: string,
@@ -186,7 +186,7 @@ export async function runAnalysisStage(
   assertFindingsProvenance(manifest.findingsProvenance, findingsProvenance, 'legacy manifest');
   const usedFallbackContext = options.siteContext === undefined;
   const siteContext = options.siteContext ?? buildFallbackSiteContext();
-  // Diversion (docs/report-v2-refactor.md 4.1) runs after the severity
+  // Diversion (docs/archive/report-v2-refactor.md 4.1) runs after the severity
   // floor, on the same set: forModel must be exactly what reaches the
   // structure and writing passes and their guards, never allFindings.
   const severityFiltered = filterFindingsForLlm(allFindings);
@@ -206,7 +206,7 @@ export async function runAnalysisStage(
 
   // siteStats is computed from allFindings (unfiltered), not forModel, so
   // the executive summary cites the audit's true scope rather than only
-  // what the model was shown. See docs/report-v2-refactor.md B10.
+  // what the model was shown. See docs/archive/report-v2-refactor.md B10.
   const siteStats = computeSiteStats(allFindings, manifest);
   const dominantPerformanceMetric = computeDominantPerformanceMetric(manifest);
   const writingInput = buildWritingInput(
@@ -289,7 +289,7 @@ export async function runAnalysisStage(
       : {}),
   });
 
-  // Shadow reviewer (docs/llm-layer-rules.md section 12): runs after the
+  // Shadow reviewer (docs/rules/llm-layer-rules.md section 12): runs after the
   // analysis is fully written and persisted, and its whole body is
   // wrapped so a reviewer failure of any kind can never block, fail, or
   // delay the analysis it reviews. One extra Mistral call per analysis

@@ -57,7 +57,7 @@ describe.skipIf(!mongoAvailable)('outreach threads', () => {
   it('records the language source as operator, never as detected', async () => {
     if (!connection) return;
     const { thread } = await openOutreachThread(connection, input());
-    // docs/outreach-rules.md section 7: the prospect's site language has no
+    // docs/rules/outreach-rules.md section 7: the prospect's site language has no
     // deterministic source yet, so the record must not imply one was used.
     expect(thread.languageSource).toBe('operator');
   });

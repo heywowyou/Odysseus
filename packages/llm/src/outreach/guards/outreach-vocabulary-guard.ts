@@ -6,7 +6,7 @@ import type { ProseField } from '../../prose-fields.js';
  * scanned with plain patterns rather than a second model call, on
  * severity-vocabulary-guard.ts's reasoning: cold outreach prose has no
  * legitimate reason to use any of it, so a match is a rejection, not a
- * maybe. Each rule traces to a named prohibition in docs/outreach-rules.md:
+ * maybe. Each rule traces to a named prohibition in docs/rules/outreach-rules.md:
  * section 4 (statistics), section 9 (conformity claim, competitor, free-mail,
  * price/offer, "predates 2025" answer), and this plan's own doctrine
  * decisions (meeting/phone ask keeps the automation boundary at the draft,

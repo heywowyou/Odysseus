@@ -145,7 +145,7 @@ describe('findLanguageComplianceViolations', () => {
   });
 
   // legalRelevance is no longer a writing-pass field at all as of
-  // docs/report-v2-refactor.md 4.3 (built deterministically in
+  // docs/archive/report-v2-refactor.md 4.3 (built deterministically in
   // legal-relevance.ts instead), so there is nothing left for this guard
   // to exempt - the field's own type no longer permits constructing it
   // here. The exemption reasoning that used to be tested is preserved in

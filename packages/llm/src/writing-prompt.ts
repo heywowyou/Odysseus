@@ -16,7 +16,7 @@ const DOMINANT_METRIC_LABEL: Record<'lcp' | 'cls' | 'tbt', string> = {
 };
 
 /** System prompt for the writing pass: prose only, grouping decisions
- *  are already final. usedFallbackContext per docs/llm-layer-rules.md
+ *  are already final. usedFallbackContext per docs/rules/llm-layer-rules.md
  *  section 4. */
 export function buildWritingSystemPrompt(
   language: ReportLanguage,

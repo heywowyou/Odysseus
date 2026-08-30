@@ -21,7 +21,7 @@ import {
   type OutreachThreadDocument,
 } from './schemas/outreach-thread.schema.js';
 
-/** Operational retention, per docs/prospect-qualification.md section 7. */
+/** Operational retention, per docs/rules/prospect-qualification.md section 7. */
 export const OUTREACH_THREAD_RETENTION_DAYS = 90;
 
 const DAY_MS = 24 * 60 * 60 * 1000;

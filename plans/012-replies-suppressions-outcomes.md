@@ -5,7 +5,7 @@
 > never sent automatically. Update plan 012 in the index when complete.
 >
 > **Drift check (run first)**:
-> `git diff --stat f7ef7cf..HEAD -- packages/interface/src/outreach packages/store/src packages/cli/src/commands/outreach.ts docs/outreach-rules.md docs/prospect-qualification.md`
+> `git diff --stat f7ef7cf..HEAD -- packages/interface/src/outreach packages/store/src packages/cli/src/commands/outreach.ts docs/rules/outreach-rules.md docs/rules/prospect-qualification.md`
 > Stop if manual-send, touch spacing, suppression, or retention rules changed.
 
 ## Status
