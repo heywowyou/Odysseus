@@ -410,4 +410,62 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
   });
+
+  it('passes no rejection reason on the first attempt', async () => {
+    vi.mocked(callMistralForOutreach)
+      .mockReset()
+      .mockResolvedValueOnce({ output: cleanTouch1Output() });
+
+    await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
+
+    expect(vi.mocked(callMistralForOutreach).mock.calls[0]?.[1]).toBeUndefined();
+  });
+
+  it('feeds the guard rejection reason back into the retry attempt', async () => {
+    vi.mocked(callMistralForOutreach)
+      .mockReset()
+      .mockResolvedValueOnce({
+        output: cleanTouch1Output({
+          evidenceSentence: "Une partie du contenu ne s'affiche pas sans JavaScript.",
+        }),
+      })
+      .mockResolvedValueOnce({ output: cleanTouch1Output() });
+
+    const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
+
+    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(result.output.touch).toBe(1);
+    const retryFeedback = vi.mocked(callMistralForOutreach).mock.calls[1]?.[1];
+    expect(retryFeedback).toContain('too-few-words');
+    expect(retryFeedback).toContain('below the required minimum of 60');
+    expect(retryFeedback).toContain('more words than last time');
+  });
+
+  it('feeds a generic guard rejection back without word arithmetic', async () => {
+    vi.mocked(callMistralForOutreach)
+      .mockReset()
+      .mockResolvedValueOnce({
+        output: cleanTouch1Output({
+          evidenceSentence: cleanTouch1Output().evidenceSentence + ' (voir e1)',
+        }),
+      })
+      .mockResolvedValueOnce({ output: cleanTouch1Output() });
+
+    await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
+
+    const retryFeedback = vi.mocked(callMistralForOutreach).mock.calls[1]?.[1];
+    expect(retryFeedback).toContain('alias violation');
+    expect(retryFeedback).not.toContain('more words than last time');
+  });
+
+  it('feeds an API failure reason back into the retry attempt too', async () => {
+    vi.mocked(callMistralForOutreach)
+      .mockReset()
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockResolvedValueOnce({ output: cleanTouch1Output() });
+
+    await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
+
+    expect(vi.mocked(callMistralForOutreach).mock.calls[1]?.[1]).toContain('network error');
+  });
 });

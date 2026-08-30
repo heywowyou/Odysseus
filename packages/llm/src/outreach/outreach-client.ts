@@ -31,9 +31,14 @@ export interface RawOutreachCallResult {
  * schema/JSON-mirror pair rather than sending a single discriminated-union
  * response format - see outreach-schema.ts's doc comment for why a union
  * response format is not used here.
+ *
+ * previousRejection is undefined on the first attempt and carries the guard's
+ * failure reason thereafter, so a retry is a correction rather than a
+ * rerun of the identical conversation (issue #12).
  */
 export async function callMistralForOutreach(
   input: OutreachProseInput,
+  previousRejection?: string,
 ): Promise<RawOutreachCallResult> {
   const client = createClient();
 
@@ -52,7 +57,7 @@ export async function callMistralForOutreach(
     // identical comment in client.ts.
     messages: [
       { role: 'system', content: buildOutreachSystemPrompt(input) },
-      { role: 'user', content: buildOutreachUserPrompt(input) },
+      { role: 'user', content: buildOutreachUserPrompt(input, previousRejection) },
     ],
     responseFormat: {
       type: 'json_schema',

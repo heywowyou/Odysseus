@@ -602,6 +602,22 @@ attached.
 booking flow the same as any other e-commerce checkout; do not soften
 argument B for hospitality prospects.
 
+**Retries carry the rejection reason.** Added 2026-08-30 (issue #12).
+Unlike the audit passes, whose retry attempts re-send the identical
+conversation, the outreach loop feeds each rejection reason back into the
+next attempt's user message via `buildOutreachRetryFeedback`, and a
+word-count shortfall is stated as arithmetic (what was counted, what the
+floor is, the delta to write). Measured on live Mistral: three identical
+prompts at the configured low temperature produced three near identical
+undershoots of the touch-1 floor, while the arithmetic feedback recovered
+a 59-word rejection to 70 words on the next attempt. Touch 1's system
+prompt also states hard per-field word bounds derived from
+`OUTREACH_TOUCH_LIMITS` and a worked length example per language
+(`TOUCH1_LENGTH_EXAMPLES`); the prompt tests hold those examples inside
+the enforced 60 to 90 word range and clean against every guard, including
+the observation-scope guard for every selectable key, so the example can
+never teach a shape the retry loop then rejects.
+
 **The benchmark study may be model-generated.** Milestone 10 prose is
 not required to be hand-written. Generate it normally and add the
 one-line disclosure specified in `docs/operator-obligations.md` section 3

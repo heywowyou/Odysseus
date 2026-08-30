@@ -9,7 +9,9 @@ import { findOutreachNumberViolations } from './guards/outreach-number-guard.js'
 import { findOutreachStructureViolations } from './guards/outreach-structure-guard.js';
 import { findOutreachVocabularyViolations } from './guards/outreach-vocabulary-guard.js';
 import { callMistralForOutreach } from './outreach-client.js';
+import { OUTREACH_TOUCH_LIMITS } from './outreach-limits.js';
 import type { OutreachProseInput } from './outreach-input.js';
+import { buildOutreachRetryFeedback } from './outreach-prompt.js';
 import { outreachProseFields, type OutreachProseOutput } from './outreach-schema.js';
 
 export interface GenerateOutreachProseResult {
@@ -21,7 +23,11 @@ export interface GenerateOutreachProseResult {
 /**
  * Retry-and-guard orchestration for one outreach touch, independent of the
  * paid structure/writing passes' own retry budgets (analyze-writing.ts,
- * analyze-structure.ts) - same MAX_RETRIES constant, separate loop.
+ * analyze-structure.ts) - same MAX_RETRIES constant, separate loop. Unlike
+ * those passes, a rejected attempt's reason is fed back into the next
+ * call (issue #12): three identical prompts at the configured low
+ * temperature produced three near identical undershoots on live Mistral,
+ * so a retry must be a correction, not a rerun.
  *
  * selectedObservationKey comes from SelectedOutreachEvidence
  * (packages/core/src/prospecting/outreach-evidence-selection.ts), never from
@@ -41,19 +47,21 @@ export async function generateOutreachProse(
   selectedObservationKey: string | undefined,
 ): Promise<GenerateOutreachProseResult> {
   let lastFailureReason = '';
+  let previousRejection: string | undefined;
 
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
     const logPrefix = `odysseus outreach (touch ${input.touch}, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1}`;
 
     let result: Awaited<ReturnType<typeof callMistralForOutreach>>;
     try {
-      result = await callMistralForOutreach(input);
+      result = await callMistralForOutreach(input, previousRejection);
     } catch (error) {
       // Same posture as analyzeWriting/analyzeStructure: a parse/validation
       // failure is retried like any other rejected attempt, including
       // refusal-like model behavior, since Mistral has no distinct refusal
       // signal.
       lastFailureReason = error instanceof Error ? error.message : String(error);
+      previousRejection = buildOutreachRetryFeedback(lastFailureReason);
       console.error(`${logPrefix} failed - ${lastFailureReason}`);
       continue;
     }
@@ -63,6 +71,7 @@ export async function generateOutreachProse(
     const aliasViolations = findAliasViolations(input, result.output);
     if (aliasViolations.length > 0) {
       lastFailureReason = `alias violation in field(s): ${aliasViolations.map((v) => `${v.field} (${v.reason})`).join(', ')}`;
+      previousRejection = buildOutreachRetryFeedback(lastFailureReason);
       console.error(`${logPrefix} rejected - ${lastFailureReason}`);
       continue;
     }
@@ -70,6 +79,7 @@ export async function generateOutreachProse(
     const scopeViolations = findObservationScopeViolations(result.output, selectedObservationKey);
     if (scopeViolations.length > 0) {
       lastFailureReason = `observation scope violation in field(s): ${scopeViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildOutreachRetryFeedback(lastFailureReason);
       console.error(`${logPrefix} rejected - ${lastFailureReason}`);
       continue;
     }
@@ -77,6 +87,7 @@ export async function generateOutreachProse(
     const vocabularyViolations = findOutreachVocabularyViolations(fields, input.language);
     if (vocabularyViolations.length > 0) {
       lastFailureReason = `vocabulary violation in field(s): ${vocabularyViolations.map((v) => `${v.field} (${v.rule}: "${v.matched}")`).join(', ')}`;
+      previousRejection = buildOutreachRetryFeedback(lastFailureReason);
       console.error(`${logPrefix} rejected - ${lastFailureReason}`);
       continue;
     }
@@ -84,6 +95,7 @@ export async function generateOutreachProse(
     const legalViolations = findLegalConsequenceViolationsInFields(fields, input.language);
     if (legalViolations.length > 0) {
       lastFailureReason = `legal-consequence claim in field(s): ${legalViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildOutreachRetryFeedback(lastFailureReason);
       console.error(`${logPrefix} rejected - ${lastFailureReason}`);
       continue;
     }
@@ -91,6 +103,7 @@ export async function generateOutreachProse(
     const numberViolations = findOutreachNumberViolations(fields);
     if (numberViolations.length > 0) {
       lastFailureReason = `digit in field(s): ${numberViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildOutreachRetryFeedback(lastFailureReason);
       console.error(`${logPrefix} rejected - ${lastFailureReason}`);
       continue;
     }
@@ -98,6 +111,7 @@ export async function generateOutreachProse(
     const formatViolations = findOutreachFormatViolations(fields);
     if (formatViolations.length > 0) {
       lastFailureReason = `format violation in field(s): ${formatViolations.map((v) => `${v.field} (${v.rule}: "${v.matched}")`).join(', ')}`;
+      previousRejection = buildOutreachRetryFeedback(lastFailureReason);
       console.error(`${logPrefix} rejected - ${lastFailureReason}`);
       continue;
     }
@@ -107,6 +121,7 @@ export async function generateOutreachProse(
     });
     if (languageViolations.length > 0) {
       lastFailureReason = `language compliance violations in field(s): ${languageViolations.map((v) => v.field).join(', ')}`;
+      previousRejection = buildOutreachRetryFeedback(lastFailureReason);
       console.error(`${logPrefix} rejected - ${lastFailureReason}`);
       continue;
     }
@@ -114,6 +129,19 @@ export async function generateOutreachProse(
     const structureViolations = findOutreachStructureViolations(result.output);
     if (structureViolations.length > 0) {
       lastFailureReason = `structure violation in field(s): ${structureViolations.map((v) => `${v.field} (${v.reason}${v.detail !== undefined ? `: ${v.detail}` : ''})`).join(', ')}`;
+      // A word-count shortfall is the one rejection the model demonstrably
+      // cannot fix from the reason string alone (issue #12: 56 -> 57 -> 59
+      // across three told-apart attempts), so it gets the arithmetic spelled
+      // out: what was counted, what the floor is, what to write instead.
+      const shortfall = structureViolations.find((v) => v.reason === 'too-few-words');
+      const wordShortfall =
+        shortfall?.detail !== undefined
+          ? {
+              count: Number(shortfall.detail),
+              min: OUTREACH_TOUCH_LIMITS[input.touch].minWords,
+            }
+          : undefined;
+      previousRejection = buildOutreachRetryFeedback(lastFailureReason, wordShortfall);
       console.error(`${logPrefix} rejected - ${lastFailureReason}`);
       continue;
     }
