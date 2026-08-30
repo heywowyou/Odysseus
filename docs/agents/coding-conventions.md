@@ -47,7 +47,8 @@ safe.
   expressions when the inferred type is clear.
 - Use `import type` when an import is used only by the type system. Preserve the
   repository's ESM `.js` suffix on relative imports compiled by NodeNext. The
-  Next.js site and Vite fixture may follow their bundler conventions.
+  Next.js site, the Vite fixture, and the interface dashboard app (a Vite build
+  with bundler resolution) may follow their bundler conventions.
 - Validate untrusted input at the edge. Existing Zod schemas remain the runtime
   authority where the charter requires validation.
 - Keep public package imports at the package entry point. Do not deep-import
