@@ -1,9 +1,10 @@
 # Plan 014: Run the controlled first 100 hotel sends and evaluate the model
 
 > **Executor instructions**: This is an operator-controlled rollout, not a
-> coding batch. Complete plan 013 and every preflight gate before touching a
-> real prospect. Each real hotel scan requires current permission for that
-> named site. Every send is manual. Update the index and session log daily.
+> coding batch. Complete plans 013 and 016 and every preflight gate before
+> touching a real prospect. Each real hotel scan requires current permission
+> for that named site. Every send is manual. Update the index and session log
+> daily.
 >
 > **Drift check (run first)**:
 > `git diff --stat f7ef7cf..HEAD -- CLAUDE.md plans/README.md docs/rules/outreach-rules.md docs/rules/operator-obligations.md docs/rules/obligation-basis.md docs/rules/prospect-qualification.md docs/rules/offer-positioning.md packages/interface/src/outreach packages/store/src/outreach* packages/site/app`
@@ -15,7 +16,9 @@
 - **Priority**: P2
 - **Effort**: M engineering, at least 6 weeks calendar time
 - **Risk**: HIGH
-- **Depends on**: plans 001 through 013
+- **Depends on**: plans 001 through 013, plus 016 (hosted operator dashboard,
+  planned 2026-08-30 so the rollout is operable from anywhere; amending this
+  line was the operator's explicit sequencing decision)
 - **Category**: direction
 - **Planned at**: commit `f7ef7cf`, 2026-08-27
 
@@ -62,7 +65,7 @@ than reaching 100 quickly.
 - An explicitly authorized 10-hotel pilot, then gated cohorts totaling at most
   100 manually sent E1 messages
 - Deterministic 50/50 evidence-variant assignment
-- Daily bounce/reply/preview-load (if lawfully available) monitoring
+- Daily bounce and reply monitoring; preview-load measurement is unavailable
 - Manual thread review, categorical outcomes, and final aggregate analysis
 - Score/evidence version recommendation after results
 
@@ -169,8 +172,8 @@ After the pilot observation window, proceed in bounded cohorts such as 10, 20,
 - reconcile replies before creating follow-ups
 - verify hard bounce rate remains below 2 percent
 - inspect complaints/provider reputation and stop on any degradation
-- if approved preview-load measurement exists, require at least 10 percent;
-  otherwise omit this gate and record the metric unavailable
+- omit the preview-load gate: plan 012 records the metric unavailable because
+  the approved preview route keeps no visitor-behavior log
 - manually review every draft and keep total daily volume within the warmed
   mailbox ceiling, including follow-ups
 - never accelerate just to reach 100

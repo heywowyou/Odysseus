@@ -342,8 +342,14 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [011](archive/011-gmail-drafts-without-send.md) | Create reviewed Gmail drafts without sending | P1 | L | 007, 009, 010 | DONE |
 | [012](./012-replies-suppressions-outcomes.md) | Reconcile replies, suppressions, and outcomes | P2 | L | 011 | DONE |
 | [013](./013-outreach-operator-interface.md) | Add the private outreach operator interface | P2 | L | 001-012 | TODO |
-| [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013 | TODO |
+| [016](./016-hosted-operator-dashboard.md) | Host the operator dashboard on a public EU server | P2 | M | 001-013 | TODO |
+| [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013, 016 | TODO |
 | [015](archive/015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |
+
+Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
+the hosted operator dashboard goes live before the rollout campaign so the
+operator can run drafts, replies, and suppressions from anywhere. It was
+planned against `dbba6ba` with the decisions recorded in its own header.
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done
