@@ -13,6 +13,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Connection } from 'mongoose';
 import { normalizeDomainForHash } from '@odysseus/core';
+import { isSuppressed } from './suppression.js';
 import {
   createOutreachPreviewModel,
   type OutreachPreviewDocument,
@@ -47,10 +48,17 @@ export interface RecordedOutreachPreview {
   expiresAt: Date;
 }
 
+/** The two ways a record can end. `refused-suppressed` means the domain was
+ *  suppressed by the time the row landed: the row this call created is already
+ *  revoked again, and the caller must take the object it uploaded back down. */
+export type OutreachPreviewRecordOutcome =
+  | ({ outcome: 'recorded' } & RecordedOutreachPreview)
+  | { outcome: 'refused-suppressed'; previewId: string };
+
 export async function recordOutreachPreview(
   connection: Connection,
   input: RecordOutreachPreviewInput,
-): Promise<RecordedOutreachPreview> {
+): Promise<OutreachPreviewRecordOutcome> {
   const PreviewModel = createOutreachPreviewModel(connection);
   await PreviewModel.init();
 
@@ -78,7 +86,21 @@ export async function recordOutreachPreview(
     createdAt: new Date(),
   });
 
-  return { previewId, publicExpiresAt, expiresAt };
+  // The publish path checks suppression before it uploads anything, but a
+  // check that early cannot cover a record that lands after an objection's
+  // suppression write. Re-checking here, after the insert, is the half of the
+  // race this side of the boundary can close: a preview recorded once the
+  // domain is suppressed is revoked in the same breath and reported as
+  // refused. Insert-then-recheck is deliberate - conditioning the insert on
+  // another collection would need a transaction - and is airtight only
+  // combined with the objection path writing suppression before its sweep,
+  // which catches everything recorded before the write.
+  if (await isSuppressed(connection, input.domain)) {
+    await revokeOutreachPreview(connection, previewId, 'domain-suppressed');
+    return { outcome: 'refused-suppressed', previewId };
+  }
+
+  return { outcome: 'recorded', previewId, publicExpiresAt, expiresAt };
 }
 
 /** For private operator tooling only. The public site never reaches Mongo, and

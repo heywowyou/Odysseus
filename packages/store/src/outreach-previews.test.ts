@@ -11,7 +11,9 @@ import {
   revokeOutreachPreview,
   type RecordOutreachPreviewInput,
 } from './outreach-previews.js';
+import { addSuppressionEntry } from './suppression.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
+import { createSuppressionModel } from './schemas/suppression.schema.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -50,12 +52,23 @@ function input(overrides: Partial<RecordOutreachPreviewInput> = {}): RecordOutre
 
 describe.skipIf(!mongoAvailable)('outreach previews', () => {
   beforeEach(async () => {
-    if (connection) await createOutreachPreviewModel(connection).deleteMany({});
+    if (!connection) return;
+    await createOutreachPreviewModel(connection).deleteMany({});
+    await createSuppressionModel(connection).deleteMany({});
   });
+
+  /** Unwraps the accepted outcome. The refusal path is exercised directly by
+   *  the suppression test below. */
+  async function recordLivePreview(overrides: Partial<RecordOutreachPreviewInput> = {}) {
+    if (!connection) throw new Error('mongo unavailable');
+    const outcome = await recordOutreachPreview(connection, input(overrides));
+    if (outcome.outcome !== 'recorded') throw new Error('expected the record to be accepted');
+    return outcome;
+  }
 
   it('records a preview live, with a 30 day public and 90 day private expiry', async () => {
     if (!connection) return;
-    const recorded = await recordOutreachPreview(connection, input());
+    const recorded = await recordLivePreview();
 
     expect(recorded.publicExpiresAt.getTime() - PUBLISHED_AT.getTime()).toBe(
       PREVIEW_PUBLIC_LIFETIME_DAYS * DAY_MS,
@@ -75,7 +88,7 @@ describe.skipIf(!mongoAvailable)('outreach previews', () => {
   it('stores no raw token anywhere in the document', async () => {
     if (!connection) return;
     const raw = token();
-    const recorded = await recordOutreachPreview(connection, input({ tokenHash: hashOf(raw) }));
+    const recorded = await recordLivePreview({ tokenHash: hashOf(raw) });
 
     const stored = await getOutreachPreview(connection, recorded.previewId);
     expect(stored).not.toBeNull();
@@ -91,10 +104,27 @@ describe.skipIf(!mongoAvailable)('outreach previews', () => {
     await expect(recordOutreachPreview(connection, input({ tokenHash }))).rejects.toThrow();
   });
 
+  it('refuses and self-revokes a record that lands once the domain is suppressed', async () => {
+    if (!connection) return;
+    await addSuppressionEntry(connection, { domain: 'hotel-a.fr', reason: 'objection received' });
+
+    const outcome = await recordOutreachPreview(connection, input({ domain: 'hotel-a.fr' }));
+    expect(outcome.outcome).toBe('refused-suppressed');
+
+    // The refusal is not a quiet leak: the row the insert created must end
+    // revoked, or a publication losing this race would leave a working link
+    // on a domain that has objected.
+    if (outcome.outcome !== 'refused-suppressed') return;
+    const stored = await getOutreachPreview(connection, outcome.previewId);
+    expect(stored?.status).toBe('revoked');
+    expect(stored?.revokedReason).toBe('domain-suppressed');
+    await expect(listLivePreviewsForDomain(connection, 'hotel-a.fr')).resolves.toEqual([]);
+  });
+
   it('resolves a preview by token hash for private tooling', async () => {
     if (!connection) return;
     const raw = token();
-    const recorded = await recordOutreachPreview(connection, input({ tokenHash: hashOf(raw) }));
+    const recorded = await recordLivePreview({ tokenHash: hashOf(raw) });
 
     const found = await findOutreachPreviewByTokenHash(connection, hashOf(raw));
     expect(found?.previewId).toBe(recorded.previewId);
@@ -103,7 +133,7 @@ describe.skipIf(!mongoAvailable)('outreach previews', () => {
 
   it('revokes once and treats a second revoke as a no-op', async () => {
     if (!connection) return;
-    const recorded = await recordOutreachPreview(connection, input());
+    const recorded = await recordLivePreview();
 
     const first = await revokeOutreachPreview(connection, recorded.previewId, 'objection');
     expect(first.changed).toBe(true);
@@ -130,9 +160,9 @@ describe.skipIf(!mongoAvailable)('outreach previews', () => {
 
   it('lists only the live previews for a domain, which is what an objection acts on', async () => {
     if (!connection) return;
-    const live = await recordOutreachPreview(connection, input({ domain: 'hotel-a.fr' }));
-    const revoked = await recordOutreachPreview(connection, input({ domain: 'hotel-a.fr' }));
-    await recordOutreachPreview(connection, input({ domain: 'hotel-b.fr' }));
+    const live = await recordLivePreview({ domain: 'hotel-a.fr' });
+    const revoked = await recordLivePreview({ domain: 'hotel-a.fr' });
+    await recordLivePreview({ domain: 'hotel-b.fr' });
     await revokeOutreachPreview(connection, revoked.previewId, 'objection');
 
     const rows = await listLivePreviewsForDomain(connection, 'hotel-a.fr');
@@ -141,7 +171,7 @@ describe.skipIf(!mongoAvailable)('outreach previews', () => {
 
   it('canonicalizes the objection domain the same way suppression does', async () => {
     if (!connection) return;
-    const live = await recordOutreachPreview(connection, input({ domain: 'hotel-a.fr' }));
+    const live = await recordLivePreview({ domain: 'hotel-a.fr' });
 
     // An objection can arrive as whatever the hotel or their agency copied
     // out of an email. Each of these must land on the same record the bare
@@ -163,15 +193,15 @@ describe.skipIf(!mongoAvailable)('outreach previews', () => {
 
   it('filters and orders the operator listing newest first', async () => {
     if (!connection) return;
-    const older = await recordOutreachPreview(
-      connection,
-      input({ domain: 'hotel-a.fr', publishedAt: new Date('2026-08-01T09:00:00.000Z') }),
-    );
-    const newer = await recordOutreachPreview(
-      connection,
-      input({ domain: 'hotel-a.fr', publishedAt: new Date('2026-08-20T09:00:00.000Z') }),
-    );
-    await recordOutreachPreview(connection, input({ domain: 'hotel-b.fr' }));
+    const older = await recordLivePreview({
+      domain: 'hotel-a.fr',
+      publishedAt: new Date('2026-08-01T09:00:00.000Z'),
+    });
+    const newer = await recordLivePreview({
+      domain: 'hotel-a.fr',
+      publishedAt: new Date('2026-08-20T09:00:00.000Z'),
+    });
+    await recordLivePreview({ domain: 'hotel-b.fr' });
 
     const rows = await listOutreachPreviews(connection, { domain: 'hotel-a.fr' });
     expect(rows.map((row) => row.previewId)).toEqual([newer.previewId, older.previewId]);

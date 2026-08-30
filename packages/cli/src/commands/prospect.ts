@@ -1881,9 +1881,13 @@ export function registerProspectCommand(program: Command): void {
   // The two halves are separate collections and separate concerns - suppression
   // stops the next contact, revocation stops the link already sitting in
   // somebody's inbox - and doing them as two commands is doing one of them and
-  // forgetting the other on the day it matters. Revocation runs first: if the
-  // bucket is unreachable, the objection is not recorded as handled while a
-  // preview is still being served.
+  // forgetting the other on the day it matters. Suppression is written before
+  // the sweep: the store refuses and self-revokes a preview record that lands
+  // once it is in place, and the sweep then catches everything recorded before
+  // it, so no interleaving of an in-flight publication with this command can
+  // leave a live link on a suppressed domain. If the bucket is unreachable the
+  // sweep fails loudly and re-runs safely; a repeat suppression entry is
+  // harmless, since suppression reads any matching entry.
   prospect
     .command('object <domain>')
     .description(
@@ -1896,6 +1900,12 @@ export function registerProspectCommand(program: Command): void {
       let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
       try {
         mongoConnection = await connectToMongo();
+
+        await addSuppressionEntry(mongoConnection, {
+          domain,
+          ...(opts.address !== undefined ? { address: opts.address } : {}),
+          reason: opts.reason,
+        });
 
         const revocation = await revokePreviewsForDomain({
           store: createMongoOutreachPreviewStore(mongoConnection, {
@@ -1910,12 +1920,6 @@ export function registerProspectCommand(program: Command): void {
         // Threads close alongside the preview: a suppressed domain with an
         // open thread is a conversation the next batch would try to continue.
         const threads = await closeOutreachThreadsForDomain(mongoConnection, domain, opts.reason);
-
-        await addSuppressionEntry(mongoConnection, {
-          domain,
-          ...(opts.address !== undefined ? { address: opts.address } : {}),
-          reason: opts.reason,
-        });
 
         console.log(
           JSON.stringify(

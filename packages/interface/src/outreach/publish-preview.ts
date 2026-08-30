@@ -96,7 +96,12 @@ export interface RecordPreviewInput {
 export interface OutreachPreviewStorePort {
   findPublicationRow(candidateId: string): Promise<PreviewPublicationRow | null>;
   isSuppressed(domain: string): Promise<boolean>;
-  recordPreview(input: RecordPreviewInput): Promise<{ previewId: string; publicExpiresAt: Date }>;
+  /** `recorded: false` means the domain was suppressed between the gate below
+   *  and this write: the store has already revoked the row it created, and the
+   *  publisher must take the uploaded object back down. */
+  recordPreview(
+    input: RecordPreviewInput,
+  ): Promise<{ recorded: true; previewId: string; publicExpiresAt: Date } | { recorded: false }>;
   listLivePreviews(domain: string): Promise<LivePreviewRef[]>;
   revokePreview(previewId: string, reason: string): Promise<{ changed: boolean }>;
 }
@@ -295,7 +300,7 @@ export async function publishPreview(
 
   await options.publisher.put({ objectKey, html, publicExpiresAt });
 
-  let recorded: { previewId: string; publicExpiresAt: Date };
+  let recorded: { recorded: true; previewId: string; publicExpiresAt: Date } | { recorded: false };
   try {
     recorded = await options.store.recordPreview({
       tokenHash,
@@ -320,6 +325,20 @@ export async function publishPreview(
       logger.error({ objectKey, candidateId: row.candidateId }, 'orphaned preview object');
     }
     throw error;
+  }
+
+  if (!recorded.recorded) {
+    // An objection landed between the suppression gate and this write. The
+    // store refused and revoked the row it had inserted, so the object it
+    // would have served must not outlive that row. If the delete fails the
+    // key is named loudly enough to be swept by hand, exactly as the orphan
+    // path above: the key, never the token and never the document.
+    try {
+      await options.publisher.delete(objectKey);
+    } catch {
+      logger.error({ objectKey, candidateId: row.candidateId }, 'orphaned preview object');
+    }
+    return refuse('suppressed');
   }
 
   return {

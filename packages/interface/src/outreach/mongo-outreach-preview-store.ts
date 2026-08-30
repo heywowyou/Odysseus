@@ -87,9 +87,11 @@ export function createMongoOutreachPreviewStore(
 
     async recordPreview(
       input: RecordPreviewInput,
-    ): Promise<{ previewId: string; publicExpiresAt: Date }> {
-      const recorded = await recordOutreachPreview(connection, input);
-      return { previewId: recorded.previewId, publicExpiresAt: recorded.publicExpiresAt };
+    ): Promise<{ recorded: true; previewId: string; publicExpiresAt: Date } | { recorded: false }> {
+      const outcome = await recordOutreachPreview(connection, input);
+      return outcome.outcome === 'recorded'
+        ? { recorded: true, previewId: outcome.previewId, publicExpiresAt: outcome.publicExpiresAt }
+        : { recorded: false };
     },
 
     async listLivePreviews(domain: string): Promise<LivePreviewRef[]> {

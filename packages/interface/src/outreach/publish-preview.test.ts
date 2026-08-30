@@ -112,6 +112,9 @@ function fakeStore(options: {
   suppressed?: boolean;
   live?: LivePreviewRef[];
   onRecord?: () => void;
+  /** Simulates an objection's suppression write landing between the publish
+   *  path's own gate and the record: the store refuses and self-revokes. */
+  recordRefusedSuppressed?: boolean;
 }): FakeStore {
   const recorded: RecordPreviewInput[] = [];
   const revoked: { previewId: string; reason: string }[] = [];
@@ -126,7 +129,9 @@ function fakeStore(options: {
     recordPreview: (input) => {
       options.onRecord?.();
       recorded.push(input);
+      if (options.recordRefusedSuppressed === true) return Promise.resolve({ recorded: false });
       return Promise.resolve({
+        recorded: true,
         previewId: 'preview-1',
         publicExpiresAt: new Date(input.publishedAt.getTime() + 30 * 24 * 60 * 60 * 1000),
       });
@@ -242,6 +247,31 @@ describe('publishPreview', () => {
     expect(result.refusal).toBe(refusal);
     expect(publisher.keys()).toEqual([]);
     expect(store.recorded).toEqual([]);
+  });
+
+  it('refuses as suppressed and takes the object back down when the record lands after an objection', async () => {
+    // The gate at the top of publishPreview passed, so this is the window the
+    // store-level recheck exists for: an objection's suppression write landed
+    // between it and the record, the store refused and self-revoked the row,
+    // and the uploaded object must not outlive that row.
+    const store = fakeStore({ recordRefusedSuppressed: true });
+    const publisher = createInMemoryPreviewPublisher();
+
+    const result = await publishPreview({
+      store,
+      publisher,
+      publicBaseUrl: BASE_URL,
+      candidateId: 'candidate-1',
+      language: 'fr',
+      dryRun: false,
+      now: NOW,
+    });
+
+    expect(result.published).toBe(false);
+    expect(result.refusal).toBe('suppressed');
+    // The record was attempted, and the object it would have served is gone.
+    expect(store.recorded).toHaveLength(1);
+    expect(publisher.keys()).toEqual([]);
   });
 
   it.each([
