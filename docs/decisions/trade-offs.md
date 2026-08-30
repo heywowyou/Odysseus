@@ -2629,10 +2629,10 @@ used.
 This is the recorded boundary against trade-off 9, which bans a Tailwind build
 step for `packages/report`. That ban stands: the report's print-tested CSS is
 hand-maintained and untouched. The dashboard keeps its own token layer
-(`src/dashboard/theme.css`): a Linear-faithful dark theme (near-black neutral
-surfaces, Linear's indigo accent with a brighter text-safe variant, and the
-operator-requested palette change of 2026-08-30 away from the initial
-report-inspired violet), plus the severity palette carried over from the
+(`src/dashboard/theme.css`): a monochrome dark theme (near-black neutral
+surfaces, white accent with dark text on primary buttons, per the operator's
+2026-08-30 direction away from the initial report-inspired violet and then
+from a Linear-indigo accent), plus the severity palette carried over from the
 report so a severity reads as the same shade in both surfaces. The only
 shared assets are the Inter woff2 files, copied at build time from the report
 package's canonical source so font versions cannot drift.

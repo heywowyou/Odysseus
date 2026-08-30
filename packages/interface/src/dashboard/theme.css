@@ -33,13 +33,12 @@
   src: url('/dashboard/fonts/Inter-Bold.woff2') format('woff2');
 }
 
-/* Dashboard theme, faithful to Linear's dark UI. Layered near-black neutral
-   surfaces with hairline borders; the accent is Linear's indigo, reserved for
-   primary actions, focus and active states. accent (#5e6ad2) carries white
-   text on buttons (4.7:1); accent-bright (#98a2f5) is the text-safe variant
-   for small indigo text on the near-black base (accent itself is 4.1:1, too
-   low for text). Severity colors are the one report-brand exception: a
-   severity reads as the same shade here and in the PDF report. */
+/* Dashboard theme, Linear-grade monochrome dark. Layered near-black neutral
+   surfaces with hairline borders; the accent is white: primary buttons draw
+   a white surface with dark text (AA contrast), active states use a faint
+   white tint, and --color-accent-bright is the accent-as-text value. The one
+   color exception is severity: a severity reads as the same shade here and
+   in the PDF report. */
 @theme {
   --color-base: #08090a;
   --color-panel: #101112;
@@ -50,10 +49,10 @@
   --color-ink: #f7f8f8;
   --color-ink-soft: #9fa5ae;
   --color-ink-muted: #7b808a;
-  --color-accent: #5e6ad2;
-  --color-accent-strong: #6e79e0;
-  --color-accent-bright: #98a2f5;
-  --color-accent-tint: rgb(94 106 210 / 0.16);
+  --color-accent: #f2f3f5;
+  --color-accent-strong: #d3d6db;
+  --color-accent-bright: #f7f8f8;
+  --color-accent-tint: rgb(255 255 255 / 0.09);
   --color-danger: #eb5757;
   --color-sev-critical: #f2555f;
   --color-sev-serious: #f08b3c;
