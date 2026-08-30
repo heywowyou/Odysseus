@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type Finding } from '@odysseus/core';
 import { persistAudit } from './persist-audit.js';
 import {
@@ -8,6 +8,8 @@ import {
   prefillAuditManualFields,
   setAuditManualFields,
 } from './audits.js';
+import { createAuditModel } from './schemas/audit.schema.js';
+import { createFindingModel } from './schemas/finding.schema.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -75,6 +77,20 @@ function buildFinding(auditId: string, dedupeKey: string): Finding {
 }
 
 describe.skipIf(!mongoAvailable)('audits read helpers', () => {
+  // These tests write fixed audit ids and assert on first-write behaviour, so
+  // documents surviving a previous run make prefill find its field already set
+  // and return nothing. Left uncleaned, the file passes once on a fresh
+  // database and is red on every run after, which reads as a code regression.
+  // Scoped to this file's own `audits-` id prefix rather than emptying the
+  // collections, because other store test files share the database.
+  const OWN_IDS = /^audits-/;
+
+  beforeEach(async () => {
+    if (!connection) return;
+    await createAuditModel(connection).deleteMany({ auditId: OWN_IDS });
+    await createFindingModel(connection).deleteMany({ auditId: OWN_IDS });
+  });
+
   it('getAudit returns the stored audit, and null for an unknown auditId', async () => {
     await persistAudit(connection!, buildManifest('audits-read-1'), []);
 
