@@ -16,6 +16,9 @@
 - **Depends on**: plan 011
 - **Category**: direction
 - **Planned at**: commit `f7ef7cf`, 2026-08-27
+- **DONE 2026-08-30** at commit `19a1d03`, which implemented the reconcile
+  loop and marked plan 012 DONE in the index, verifying `pnpm run check`
+  clean and the full suite green (300 files).
 
 ## Why this matters
 
@@ -185,13 +188,13 @@ open-rate gate cannot be used.
 
 ## Done criteria
 
-- [ ] Manual sends and external replies reconcile without storing bodies.
-- [ ] Ambiguity blocks follow-ups and surfaces review.
-- [ ] Objection/hard-bounce flows suppress, revoke, and close idempotently.
-- [ ] E2/E3 drafts are due-only, reply-safe, suppression-safe, and never sent.
-- [ ] Three touches is a hard maximum and completed sequences are suppressed.
-- [ ] Outcomes are operator-set and available as privacy-safe aggregates.
-- [ ] Focused tests and `pnpm run check` pass; plan 012 is `DONE`.
+- [x] Manual sends and external replies reconcile without storing bodies.
+- [x] Ambiguity blocks follow-ups and surfaces review.
+- [x] Objection/hard-bounce flows suppress, revoke, and close idempotently.
+- [x] E2/E3 drafts are due-only, reply-safe, suppression-safe, and never sent.
+- [x] Three touches is a hard maximum and completed sequences are suppressed.
+- [x] Outcomes are operator-set and available as privacy-safe aggregates.
+- [x] Focused tests and `pnpm run check` pass; plan 012 is `DONE`.
 
 ## STOP conditions
 
