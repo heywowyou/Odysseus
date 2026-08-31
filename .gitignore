@@ -14,9 +14,8 @@ coverage/
 *.tsbuildinfo
 .playwright-mcp/
 
-# Operator-local files the deploy wizard and the runbook's local smoke
-# create: wizard state (VPS IP) and the smoke env with its stub secrets.
-/deploy/.provision.env
+# The runbook's local smoke (section 10) copies its stub-secret env to the
+# repo root; it must never be committed.
 /.env.smoke
 
 # Crash-recovery session log. Ephemeral by design: written continuously from

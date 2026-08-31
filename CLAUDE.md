@@ -738,9 +738,6 @@ documents and guardrails directly.
   to `core`'s locked-contract boundaries.
 - **resolving-merge-conflicts** — an in-progress git merge or rebase has
   conflicts to resolve.
-- **wizard** — a step needs a human (provisioning infrastructure,
-  credentials, CI secrets, an unfamiliar dashboard, a one-off migration) —
-  never for a step the agent can perform itself.
 - **improve** (shadcn) — asked to audit the codebase read-only and produce
   prioritized, self-contained plans for another agent to execute later;
   never implements anything itself, unlike `improve-codebase-architecture`

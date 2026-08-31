@@ -5,7 +5,8 @@
 > code slice is small (password session auth in `packages/interface`), and the
 > rest is deploy assets, one provisioning session with the operator, backups,
 > and documentation. Provisioning steps that need a human (VPS account, DNS,
-> Atlas allowlist, secrets) go through the `wizard` skill, never silently.
+> Atlas allowlist, secrets) are walked through interactively with the
+> operator present, never silently; `deploy/runbook.md` is the script.
 
 > **Drift check**: `git diff --stat dbba6ba..HEAD -- packages/interface/src docker-compose.yml deploy docs/decisions docs/product plans`
 
@@ -151,7 +152,7 @@ through the dashboard completes and the fixture PDF renders with intact
 glyphs inside the container; everything torn down afterwards and `pgrep`
 confirms no fixture server survived.
 
-### Step 3: Provisioning with the operator (wizard-assisted)
+### Step 3: Provisioning with the operator (walked through live)
 
 Scaleway VPS (Debian 12, 2 to 4 GB RAM), SSH key-only, ufw allowing only SSH,
 80, 443, unattended-upgrades, non-root deploy user, Docker, repo plus
@@ -208,8 +209,10 @@ scratch.
 **Implemented 2026-08-31: steps 1 and 2 complete, step 5's code half
 complete.** Commits `c00ab4e` (auth), `aa7e01a` (login page), `14d947c`
 (deploy assets), and the same-day documentation commit. Steps 3 and 4
-(provisioning, restore drill) remain an operator session through the
-`wizard` skill; `deploy/runbook.md` is the prepared checklist. Executor
+(provisioning, restore drill) remain an operator session walked through
+live with the agent; `deploy/runbook.md` is the script. Amended same day:
+the `wizard` skill was removed at the operator's request, so provisioning
+is walked through interactively instead. Executor
 notes:
 
 - Drift adaptation: plan 017 rebuilt the dashboard as a Vite React SPA
