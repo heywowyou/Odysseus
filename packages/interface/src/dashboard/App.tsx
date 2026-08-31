@@ -4,6 +4,7 @@ import { AuditDetailPage } from './routes/audit-detail';
 import { AuditsPage } from './routes/audits';
 import { DraftsPage } from './routes/drafts';
 import { EvidencePage } from './routes/evidence';
+import { LoginPage } from './routes/login';
 import { NewScanPage } from './routes/new-scan';
 import { OutcomesPage } from './routes/outcomes';
 import { PrescanPage } from './routes/prescan';
@@ -20,6 +21,9 @@ import { OutreachIndexPage } from './routes/outreach-index';
 export function App() {
   return (
     <Routes>
+      {/* Shown before authentication, so it sits outside the AppShell and
+          renders without the operator navigation. */}
+      <Route path="login" element={<LoginPage />} />
       <Route element={<AppShell />}>
         <Route index element={<Navigate to="/audits" replace />} />
         <Route path="audits" element={<AuditsPage />} />

@@ -400,6 +400,19 @@ export const fr: DashboardStrings = {
     optOut: 'Retirer',
     empty: 'Aucun résultat enregistré pour l’instant.',
   },
+  login: {
+    title: 'Connexion',
+    passwordLabel: 'Mot de passe',
+    submit: 'Se connecter',
+    submitting: 'Connexion…',
+    errorInvalid: 'Mot de passe incorrect.',
+    errorLocked: 'Trop de tentatives échouées. Réessayez dans {wait}.',
+    waitMinutes: '{minutes} min',
+    waitMinutesSeconds: '{minutes} min {seconds} s',
+    waitSeconds: '{seconds} s',
+    errorNotConfigured: 'Cette console fonctionne actuellement sans mot de passe.',
+    errorNetwork: 'Impossible de joindre le serveur. Réessayez.',
+  },
   labels: {
     identity: {
       resolved: 'Résolu',

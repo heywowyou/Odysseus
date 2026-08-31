@@ -396,6 +396,19 @@ export const en: DashboardStrings = {
     optOut: 'Opt out',
     empty: 'No outcomes recorded yet.',
   },
+  login: {
+    title: 'Sign in',
+    passwordLabel: 'Password',
+    submit: 'Sign in',
+    submitting: 'Signing in…',
+    errorInvalid: 'Incorrect password.',
+    errorLocked: 'Too many failed attempts. Try again in {wait}.',
+    waitMinutes: '{minutes} min',
+    waitMinutesSeconds: '{minutes} min {seconds} s',
+    waitSeconds: '{seconds} s',
+    errorNotConfigured: 'This dashboard currently runs without a password.',
+    errorNetwork: 'Could not reach the server. Try again.',
+  },
   labels: {
     identity: {
       resolved: 'Resolved',

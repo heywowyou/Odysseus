@@ -404,6 +404,25 @@ export interface DashboardStrings {
     optOut: string;
     empty: string;
   };
+  /** Pre-authentication page: one shared password, no username. */
+  login: {
+    title: string;
+    passwordLabel: string;
+    submit: string;
+    submitting: string;
+    errorInvalid: string;
+    /** {wait} is replaced with a human duration built from the server's
+     *  retryAfterSeconds by the page. */
+    errorLocked: string;
+    /** Unit strings of the {wait} duration, same placeholder style as
+     *  common.relativeTime. */
+    waitMinutes: string;
+    waitMinutesSeconds: string;
+    waitSeconds: string;
+    /** Shown when the server runs without a password configured. */
+    errorNotConfigured: string;
+    errorNetwork: string;
+  };
   /** FR and EN labels for the closed store vocabularies the operator
    *  pages render. A value missing from a map falls back to the raw
    *  code (lib/vocabulary.ts). */

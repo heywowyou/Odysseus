@@ -11,9 +11,21 @@ export class ApiError extends Error {
   }
 }
 
+/** Any 401 on a dashboard API call means the session is absent or expired,
+ *  so the whole app reloads at the pre-auth page. A module flag keeps
+ *  concurrent fetches from stacking identical navigations. */
+let isRedirectingToLogin = false;
+
+function redirectToLogin(): void {
+  if (isRedirectingToLogin) return;
+  isRedirectingToLogin = true;
+  window.location.assign('/login');
+}
+
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   if (!response.ok) {
+    if (response.status === 401) redirectToLogin();
     const body: unknown = await response.json().catch(() => ({}));
     const message =
       body !== null &&

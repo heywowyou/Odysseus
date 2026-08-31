@@ -12,7 +12,7 @@ const CONTENT_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
-const APP_ROUTE_PATTERN = /^\/(audits|scans)(\/|$)/;
+const APP_ROUTE_PATTERN = /^\/(audits|scans|login)(\/|$)/;
 
 export type StaticResolution =
   | { kind: 'file'; filePath: string }
@@ -42,9 +42,9 @@ async function isFile(candidate: string): Promise<boolean> {
  *
  *  Exact files under publicDir win first (the built SPA's index.html and
  *  hashed assets). Client-side routes have no file on disk, so anything
- *  under /audits or /scans serves the SPA entry and lets the client router
- *  render the route; the prefix list is deliberate so anything else
- *  (bookmarks to the removed pre-rebuild pages, stray paths) keeps plain
+ *  under /audits, /scans, or /login serves the SPA entry and lets the
+ *  client router render the route; the prefix list is deliberate so anything
+ *  else (bookmarks to the removed pre-rebuild pages, stray paths) keeps plain
  *  404 semantics. /api/* never reaches this resolver, the router matches
  *  those routes first. Any path that resolves outside publicDir is refused
  *  outright (traversal), so a request URL's own '..' segments can never
