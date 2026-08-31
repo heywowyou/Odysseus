@@ -34,6 +34,8 @@
   operator's live review; prescan page roles and vendor row kinds render
   as their closed-vocabulary codes, column headers are bilingual; the
   operator's read of real output remains the last step before DONE.
+- **DONE 2026-08-31**. The operator reviewed the completed interface and
+  approved it ("it's perfect"), closing the plan's human-verification step.
 
 ## Why this matters
 
@@ -136,7 +138,7 @@ pagination/empty/error states, and static absence of send/provider endpoints.
 - [x] Operator can review the whole source-to-outcome funnel and every reason.
 - [x] Score why/version and source provenance are visible.
 - [x] Interface is bounded, bilingual, accessible, private, and cannot send.
-- [ ] Tests/check pass; plan 013 is `DONE`.
+- [x] Tests/check pass; plan 013 is `DONE`.
 
 ## STOP conditions
 
