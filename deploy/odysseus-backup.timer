@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Odysseus artifacts backup nightly
+
+[Timer]
+# 04:20 Europe/Paris, deliberately inside the quietest hours; Persistent
+# catches up after the server was off or asleep at the scheduled time.
+OnCalendar=*-*-* 04:20:00 Europe/Paris
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,50 @@
+# Keeps the build context lean and secrets out of the image. Everything the
+# build or runtime actually needs stays in: pnpm-workspace.yaml, all
+# package.json manifests (pnpm install --frozen-lockfile needs every
+# workspace importer, including fixtures/spa-demo and packages/site), the
+# full source trees, fixtures/spa-demo and fixtures/test-audits, and
+# packages/report/src/fonts (the report reads src/styles and src/fonts from
+# its own dist location at render time).
+
+# Secrets: never enter the image, not even in a builder layer.
+.env
+.env.*
+!.env.example
+!.env.smoke.example
+
+# Version control and agent/CI metadata.
+.git
+.github
+.agents
+.claude
+.codex
+.zcode
+.mcp.json
+.playwright-mcp
+.vscode
+.idea
+
+# Dependencies: installed inside the image, never copied from the host.
+node_modules
+**/node_modules
+
+# Operator-local output and multi-gigabyte inputs; the container keeps its
+# own artifacts in a volume (ODYSSEUS_ARTIFACTS_ROOT=/data/artifacts).
+artifacts
+data
+reports
+coverage
+.vitest
+*.tsbuildinfo
+*.log
+
+# Docs and plans: nothing runtime or build needs them.
+docs
+plans
+*.md
+!README.md
+
+# packages/site is deployed on Vercel, not in this image. Its package.json
+# must stay: the workspace importer list and the lockfile include it.
+packages/site/*
+!packages/site/package.json

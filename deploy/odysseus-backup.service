@@ -1,0 +1,13 @@
+[Unit]
+Description=Odysseus nightly artifacts backup (tar + rclone to Scaleway)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Runs as the deploy user, which is in the docker group (to stream the tar
+# out of the app container) and owns the rclone config for the scaleway
+# remote.
+User=deploy
+Group=deploy
+ExecStart=/srv/odysseus/deploy/backup-artifacts.sh

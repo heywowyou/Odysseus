@@ -1,0 +1,68 @@
+# Production deploy stack: app + Caddy on one host. Mongo is NOT here - the
+# app always uses the Atlas cluster named in MONGODB_URI (see .env).
+#
+# Run everything from the repo root on the server:
+#   docker compose -f deploy/compose.yaml up -d --build
+# Compose resolves relative paths (env_file, the Caddyfile bind) against
+# this file's directory, so the command works from anywhere; the runbook
+# uses /srv/odysseus.
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: odysseus-app
+    # Server deployments create /srv/odysseus/.env (runbook section 4). The
+    # smoke file, when present next to it, is applied last and wins, which
+    # is what the runbook's local smoke procedure relies on. Both optional
+    # so the same file serves the server and the local smoke.
+    env_file:
+      - path: ../.env
+        required: false
+      - path: ../.env.smoke
+        required: false
+    environment:
+      # Loopback (the local-dev default) would be unreachable from the
+      # caddy container; inside the compose network 0.0.0.0 is private to
+      # it, and Caddy remains the only path in from the internet.
+      ODYSSEUS_INTERFACE_HOST: 0.0.0.0
+      ODYSSEUS_ARTIFACTS_ROOT: /data/artifacts
+      # Rootless container Chromium cannot create its sandbox namespaces.
+      # Deployment flags arrive via this env hook (parsed in
+      # packages/scanner/src/browser.ts) so none are baked into the image.
+      ODYSSEUS_CHROMIUM_EXTRA_ARGS: --no-sandbox --disable-dev-shm-usage
+    volumes:
+      - artifacts:/data/artifacts
+    # Never published. Publishing 4600 would let the world reach the app
+    # directly over plain HTTP, skipping TLS and every Caddy header; Caddy
+    # is the only front (see deploy/Caddyfile).
+    expose:
+      - '4600'
+    restart: unless-stopped
+    # tini as PID 1: reaps Chromium children (node does not) and forwards
+    # signals, so the queue's SIGTERM shutdown actually runs.
+    init: true
+    # Local smoke only (deploy/runbook.md section 10): lets the container
+    # reach the repo's test Mongo on host port 27018 through
+    # host.docker.internal. Keep commented out on the server.
+    # extra_hosts:
+    #   - 'host.docker.internal:host-gateway'
+
+  caddy:
+    image: caddy:2
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      - app
+
+volumes:
+  artifacts:
+  caddy_data:
+  caddy_config:

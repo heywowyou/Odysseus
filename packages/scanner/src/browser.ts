@@ -63,13 +63,33 @@ export interface LaunchBrowserOptions {
   extraArgs?: readonly string[];
 }
 
+/**
+ * Rootless container Chromium cannot create its sandbox namespaces, which
+ * needs flags like --no-sandbox, but those are deployment concerns rather
+ * than scanner behavior, so they arrive through ODYSSEUS_CHROMIUM_EXTRA_ARGS
+ * (space separated, compose supplies them) instead of being hardcoded here.
+ * Parsed at launch time and appended after extraArgs, so a deployment can
+ * never override the report's own --font-render-hinting=none.
+ */
+export function parseChromiumExtraArgs(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(' ')
+    .map((arg) => arg.trim())
+    .filter((arg) => arg.length > 0);
+}
+
 export async function launchBrowser(options: LaunchBrowserOptions = {}): Promise<LaunchedBrowser> {
   let lastError: unknown;
   for (let attempt = 0; attempt < LAUNCH_PORT_ATTEMPTS; attempt++) {
     const debugPort = await getFreePort();
     try {
       const browser = await chromium.launch({
-        args: [`--remote-debugging-port=${debugPort}`, ...(options.extraArgs ?? [])],
+        args: [
+          `--remote-debugging-port=${debugPort}`,
+          ...(options.extraArgs ?? []),
+          ...parseChromiumExtraArgs(process.env['ODYSSEUS_CHROMIUM_EXTRA_ARGS']),
+        ],
       });
       return { browser, debugPort };
     } catch (error) {

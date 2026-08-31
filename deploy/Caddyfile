@@ -1,0 +1,19 @@
+# Minimal reverse proxy: automatic HTTPS with a managed certificate for the
+# dashboard host, proxied to the app service over the compose network.
+#
+# Caddy passes the client's Host header through unchanged and sets
+# X-Forwarded-For / X-Forwarded-Proto by default. The app depends on both:
+# its CSRF check compares the request's Origin against Host, and the
+# session cookie's Secure flag is set from X-Forwarded-Proto: https.
+
+app.odysseusaudit.com {
+	reverse_proxy app:4600
+}
+
+# Local smoke only (deploy/runbook.md section 10): plain HTTP for the stack
+# on a dev machine. On the server no real session can travel through it,
+# because a browser's Host: localhost never resolves to the VPS; only
+# hand-crafted requests reach it, and the app's own guard still applies.
+http://localhost {
+	reverse_proxy app:4600
+}
