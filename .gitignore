@@ -14,6 +14,11 @@ coverage/
 *.tsbuildinfo
 .playwright-mcp/
 
+# Operator-local files the deploy wizard and the runbook's local smoke
+# create: wizard state (VPS IP) and the smoke env with its stub secrets.
+/deploy/.provision.env
+/.env.smoke
+
 # Crash-recovery session log. Ephemeral by design: written continuously from
 # docs/agents/session-template.md, folded into canonical docs, and retained
 # while uncommitted work still needs provenance.
