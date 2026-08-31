@@ -65,6 +65,21 @@ export const PROSPECT_CHECKPOINT_WRITE_INTERVAL = 100;
  *  to progress telemetry instead of resume state. */
 export const PROSPECTING_PROGRESS_WRITE_INTERVAL = 10;
 
+/** Plan 016: the dashboard's single password, configured only as a scrypt
+ *  `<hexSalt>:<hexHash>` string produced by
+ *  scripts/hash-dashboard-password.mjs; the plaintext never enters the
+ *  environment. Blank means no auth: the server then keeps its historical
+ *  no-auth behaviour but refuses any non-loopback bind (see
+ *  startInterfaceServer). */
+export const DASHBOARD_PASSWORD_HASH_ENV_VAR = 'ODYSSEUS_DASHBOARD_PASSWORD_HASH';
+
+export function getDashboardPasswordHash(): string | null {
+  ensureEnvLoaded();
+  const raw = process.env[DASHBOARD_PASSWORD_HASH_ENV_VAR];
+  const trimmed = raw?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export function getInterfacePort(): number {
   ensureEnvLoaded();
   const raw = process.env['ODYSSEUS_INTERFACE_PORT'];

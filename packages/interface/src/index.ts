@@ -57,7 +57,41 @@ export { registerProspectingRoutes } from './routes/prospecting.js';
 export { Router } from './router.js';
 export type { RouteContext, RouteHandler } from './router.js';
 export { startInterfaceServer } from './server.js';
-export type { InterfaceServerHandle } from './server.js';
+export type { InterfaceServerHandle, InterfaceAuthOptions } from './server.js';
+export { refusesUnprotectedNonLoopbackBind } from './server.js';
+// Plan 016: password session auth for the operator dashboard. The password
+// hash getter is exported so the deploy runbook can check configuration, and
+// the store, limiter and guard seams so tests can inject fakes without
+// process.env races or a real listen.
+export { DASHBOARD_PASSWORD_HASH_ENV_VAR, getDashboardPasswordHash } from './config.js';
+export {
+  parseDashboardPasswordHash,
+  verifyDashboardPassword,
+  SCRYPT_KEY_LENGTH_BYTES,
+} from './auth/password.js';
+export type { ParsedDashboardPasswordHash } from './auth/password.js';
+export {
+  createInMemorySessionStore,
+  readSessionCookieToken,
+  SESSION_COOKIE_NAME,
+  SESSION_TTL_MS,
+} from './auth/session-store.js';
+export type { SessionStore } from './auth/session-store.js';
+export {
+  createLoginRateLimiter,
+  lockoutSecondsForFailures,
+  MAX_LOCKOUT_SECONDS,
+} from './auth/rate-limit.js';
+export type { LoginRateLimiter, LoginRateLimitDecision } from './auth/rate-limit.js';
+export {
+  registerSessionRoutes,
+  clientIpFor,
+  LOGIN_PATH,
+  LOGOUT_PATH,
+} from './auth/session-routes.js';
+export type { SessionRouteOptions } from './auth/session-routes.js';
+export { createAuthGuard } from './auth/auth-guard.js';
+export type { AuthGuard } from './auth/auth-guard.js';
 export { createAtoutFranceSource } from './prospecting/hotel-sources/atout-france-reader.js';
 export type { HotelCatalogueSource } from './prospecting/hotel-sources/hotel-catalogue-source.js';
 export { ingestHotelCatalogue } from './prospecting/hotel-sources/ingest-hotel-catalogue.js';
