@@ -346,6 +346,9 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [016](./016-hosted-operator-dashboard.md) | Host the operator dashboard on a public EU server | P2 | M | 001-013 | IMPLEMENTED |
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013, 016 | TODO |
 | [015](archive/015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |
+| [018](./018-report-executive-readability.md) | Make the paid report readable as an executive decision document | P1 | L | none | TODO |
+| [019](./019-report-preparation-and-personalization.md) | Prepare and personalize the paid report safely | P1 | L | 018 | TODO |
+| [020](./020-report-financial-evidence-and-legal-reference.md) | Add defensible financial evidence and the general legal reference | P1 | L | 019 | TODO |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
@@ -356,6 +359,17 @@ verified, including the Docker smoke and the in-container PDF glyph check);
 steps 3 and 4, provisioning and the restore drill, await the operator
 through `deploy/runbook.md`, so the status is `IMPLEMENTED`, not `DONE`.
 
+Plans 018 through 020 (rewritten 2026-08-31, operator-approved) are **not 9c
+slices**. They are report-deliverable work arising from a consulting review of
+a real client report, recorded in
+`docs/report/feedback/2026-08-30-conseil-papa.md`. Execute them in order: 018
+first makes the report readable with safe generic copy; 019 adds the preparation
+workflow, personalization, evidence-bound journeys, and candidate writing; 020
+adds strictly eligible financial evidence and the bounded general legal
+reference. Plan 018 depends on nothing in this roadmap and may run in parallel
+with 014 or the remaining 016 operator work, but 019 depends on 018 and 020
+depends on 019. They are listed here because `plans/` is the single home for
+approved execution-ready plans.
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done
@@ -382,6 +396,9 @@ Each kind of work has exactly one home:
 
 ## Dependency notes
 
+- Plans 018 through 020 form a strict report sequence. Do not begin 019 until
+  018's section order and pagination contract are verified, and do not begin
+  020 until 019's single preparation aggregate and interface are verified.
 - Plans 001 through 007 establish the candidate funnel in order. Plan 003 is
   also the mandatory coverage checkpoint for deciding whether an Overpass
   adapter becomes a new, separately planned ingestion task.
