@@ -379,7 +379,14 @@ module, Mongoose 9, Zod, Commander, Vitest, pino, `@mistralai/mistralai`.
 
 No Redis, no BullMQ, no Express API, no Next.js dashboard, no public web
 interface to the audit engine itself. Those are later phases and are
-deliberately not being built. `packages/site` (added 2026-08-07) is not
+deliberately not being built.
+
+**Amended 2026-08-31, plan 016.** The single-user operator dashboard is now
+served from a hosted EU VPS at `app.odysseusaudit.com`, behind Caddy and a
+built-in password session (`packages/interface` auth). It stays a private
+single-user interface and gains no public client surface; previews remain
+hash-token gated on the standalone site. Decision and rejected
+alternatives: trade-offs.md#60. `packages/site` (added 2026-08-07) is not
 an exception to this: it is a standalone Next.js marketing/bot-info site
 with no access to the queue, the database, or any other package, not a
 public front end for the tool.

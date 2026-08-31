@@ -204,3 +204,35 @@ scratch.
 
 - Registered 2026-08-30 at `dbba6ba`, operator-approved same day. Status
   `TODO` until plan 013 completes.
+
+**Implemented 2026-08-31: steps 1 and 2 complete, step 5's code half
+complete.** Commits `c00ab4e` (auth), `aa7e01a` (login page), `14d947c`
+(deploy assets), and the same-day documentation commit. Steps 3 and 4
+(provisioning, restore drill) remain an operator session through the
+`wizard` skill; `deploy/runbook.md` is the prepared checklist. Executor
+notes:
+
+- Drift adaptation: plan 017 rebuilt the dashboard as a Vite React SPA
+  after this plan was written, so the login page is a `/login` SPA route
+  over the `dashboard/i18n` string tables (parity-tested), registered
+  outside the app shell, and `APP_ROUTE_PATTERN` in `routes/static.ts`
+  gained `/login`. The plan's "existing `public/` page pattern" line
+  described the pre-017 stack.
+- The session routes are always registered: with no hash configured, a
+  login attempt answers 400 `auth-not-configured`, the guard is not
+  installed, and every pre-existing path behaves unchanged. Malformed
+  login bodies count as failed attempts for lockout.
+- The cookie's `Secure` flag follows `X-Forwarded-Proto: https`, so the
+  local plain-HTTP compose smoke exercises the same code as production
+  behind Caddy.
+- `packages/scanner/src/browser.ts` gained the
+  `ODYSSEUS_CHROMIUM_EXTRA_ARGS` env hook for container-only Chromium
+  flags; the report's hinting flag (trade-off 19) is untouched and stays
+  report-only.
+- Verified 2026-08-31: `pnpm run check` exit 0; full suite 3101 tests
+  passing with the Mongo test service up; Docker image build clean; local
+  compose smoke through Caddy (unauthenticated 302 to `/login`, login 204
+  with the stated cookie flags, wrong password 401, no secrets in logs);
+  in-container PDF glyph smoke intact. Not yet exercised on a real host:
+  ACME issuance, the rclone upload, and the systemd timer.
+

@@ -455,6 +455,14 @@ prescan, evidence, versioned scoring, role contacts, safe previews, validated
 prose, Gmail drafts without send, reply/suppression handling, operator views,
 and the controlled first-100 rollout.
 
+**9c plan 016: hosted operator dashboard.** Implemented 2026-08-31 for the
+code and deploy assets; the provisioning session and the backup restore
+drill remain an operator step through `deploy/runbook.md`. The dashboard
+serves from a Scaleway VPS behind Caddy and a password session at
+`app.odysseusaudit.com`; Mongo stays on Atlas and drafting stays local, so
+mailbox credentials never move. Decision and rejected alternatives:
+`docs/decisions/trade-offs.md` entry 60.
+
 **Milestone 10: benchmark study and percentile.** Batch scan of a bounded
 e-commerce cohort, aggregate percentile over stored findings, surface the
 percentile in the paid report, and publish the study in French on
@@ -491,6 +499,8 @@ never in parallel with it.
 The question to answer: what must the interface do before the first outreach email is sent, and what is explicitly a later addition? Anything not on the first list waits, no matter how appealing it looks mid-build.
 
 **Updated 2026-08-03, ahead of milestone 7 starting.** Private single-user tool, so no auth, multi-tenancy, or permissions layer of any kind is needed anywhere in this. That simplifies the scope meaningfully relative to a multi-client dashboard.
+
+**Updated 2026-08-31, plan 016.** The dashboard alone now carries a password session and is hosted at `app.odysseusaudit.com` on an EU VPS, so the rollout can be run from anywhere. The tool stays single-user: no multi-tenancy, no roles, no public client surface. Decision and rejected alternatives: `docs/decisions/trade-offs.md` entry 60.
 
 - URL input field, scan/search button, and a collapsed-by-default advanced options section (max crawl depth, max pages, delay override).
 - A progress indicator with an estimated time to completion. Two segments, since the two phases have different predictability: crawling has a reasonably accurate live estimate from `maxPages` and `effectiveDelayMs`, scanning is looser since Lighthouse's navigation mode adds its own extra page load. One combined number across both phases would be false precision.
