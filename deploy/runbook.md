@@ -284,8 +284,14 @@ a pass. Clean up with `rm -rf /tmp/odysseus-restore-drill`.
 
 Restore drill log (add one dated line per drill, never delete old ones):
 
-- YYYY-MM-DD: OPERATOR, archive ARCHIVE_NAME, manifest and screenshot checks
-  passed or failed, notes.
+- 2026-08-31: operator + ZCode, archive odysseus-artifacts-20260831-140943.tar.gz,
+  manifest and screenshot checks passed (manifest parsed as JSON, a 1.4 MB
+  screenshot verified as a real PNG, 16 files in the restored tree). First
+  drill, on the fresh deployment: the artifacts volume was still empty, so
+  one real reference audit was seeded under `_restore-drill.local/` for the
+  drill and removed from the live volume afterwards; the drill archive stays
+  in the bucket as evidence. Re-run after every backup-path change and once
+  real VPS artifacts exist.
 
 ## 9. In-container PDF glyph smoke
 

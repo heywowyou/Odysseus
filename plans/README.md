@@ -343,7 +343,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [012](archive/012-replies-suppressions-outcomes.md) | Reconcile replies, suppressions, and outcomes | P2 | L | 011 | DONE |
 | [017](archive/017-dashboard-ui-overhaul.md) | Overhaul the operator dashboard UI to shippable quality | P2 | L | 001-012 | DONE |
 | [013](archive/013-outreach-operator-interface.md) | Add the private outreach operator interface | P2 | L | 001-012 | DONE |
-| [016](./016-hosted-operator-dashboard.md) | Host the operator dashboard on a public EU server | P2 | M | 001-013 | IMPLEMENTED |
+| [016](./016-hosted-operator-dashboard.md) | Host the operator dashboard on a public EU server | P2 | M | 001-013 | DONE |
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013, 016 | TODO |
 | [015](archive/015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |
 | [018](./018-report-executive-readability.md) | Make the paid report readable as an executive decision document | P1 | L | none | TODO |
@@ -354,10 +354,13 @@ Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
 operator can run drafts, replies, and suppressions from anywhere. It was
 planned against `dbba6ba` with the decisions recorded in its own header.
-Implemented 2026-08-31 through step 2 and step 5's code half (steps 1 and 2
-verified, including the Docker smoke and the in-container PDF glyph check);
-steps 3 and 4, provisioning and the restore drill, await the operator
-through `deploy/runbook.md`, so the status is `IMPLEMENTED`, not `DONE`.
+`DONE` 2026-08-31: steps 1, 2, and 5's code half landed that morning, and
+the live operator walkthrough completed steps 3 and 4 the same day (VPS at
+`app.odysseusaudit.com`, login and wrong-password lockout verified in the
+browser, reboot proof, nightly backups with a passed restore drill, and the
+in-container PDF glyph check confirmed by the operator). One defect found
+during the live run is filed as issue #18 (crawl progress bar on uncapped
+full audits); it does not gate the deployment.
 
 Plans 018 through 020 (rewritten 2026-08-31, operator-approved) are **not 9c
 slices**. They are report-deliverable work arising from a consulting review of
