@@ -81,10 +81,16 @@ Get the repo onto the server at `/srv/odysseus`. From your LOCAL checkout
 (adjust the path to your clone), rsync is the simplest exact route:
 
 ```sh
-rsync -a --delete --exclude .git --exclude node_modules --exclude artifacts \
-  --exclude data --exclude .env \
+rsync -a --delete --exclude .git --exclude node_modules --exclude /artifacts \
+  --exclude /data --exclude .env \
   /path/to/your/odysseus/ deploy@VPS_IP:/srv/odysseus/
 ```
+
+The two output directories are anchored with a leading slash on purpose:
+an unanchored `--exclude artifacts` also matches
+`packages/scanner/src/artifacts/`, which is scanner source code, and a
+sync that drops it fails to build with `TS2307: Cannot find module
+'./artifacts/paths.js'`.
 
 Alternatively, `git clone` the repository to `/srv/odysseus` as `deploy`.
 
