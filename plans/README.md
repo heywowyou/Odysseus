@@ -349,6 +349,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [018](./018-report-executive-readability.md) | Make the paid report readable as an executive decision document | P1 | L | none | TODO |
 | [019](./019-report-preparation-and-personalization.md) | Prepare and personalize the paid report safely | P1 | L | 018 | TODO |
 | [020](./020-report-financial-evidence-and-legal-reference.md) | Add defensible financial evidence and the general legal reference | P1 | L | 019 | TODO |
+| [021](./021-complete-audits-without-template-repetition.md) | Keep full-site audits complete without repeating template work | P1 | L | 018-020 | TODO |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
@@ -379,6 +380,16 @@ with 014 or the remaining 016 operator work, but 019 depends on 018 and 020
 depends on 019. They are listed here because `plans/` is the single home for
 approved execution-ready plans.
 
+Plan 021 (added 2026-09-01, operator-approved direction) resolves issue #20
+without restoring a silent page cap or turning the paid audit into a small
+sample. It inventories the full site, keeps content-sensitive checks on every
+successfully crawled HTML page (including listings), selects only the serialized
+Lighthouse work by deterministic page family and measured outliers, records
+pass-specific outcomes, and reports one distinct finding separately from its
+affected pages and occurrences. It follows plans 018 through 020 because it
+changes their final report coverage language and must not be layered over their
+in-flight files.
+
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done
 criterion is met and the suite is green, but a verification step still needs a
@@ -407,6 +418,10 @@ Each kind of work has exactly one home:
 - Plans 018 through 020 form a strict report sequence. Do not begin 019 until
   018's section order and pagination contract are verified, and do not begin
   020 until 019's single preparation aggregate and interface are verified.
+- Plan 021 follows plan 020. Its scanner work and report coverage semantics are
+  one corrective slice; do not start its report half against an unfinished
+  report sequence or split it into a scanner behavior that the PDF cannot yet
+  disclose truthfully.
 - Plans 001 through 007 establish the candidate funnel in order. Plan 003 is
   also the mandatory coverage checkpoint for deciding whether an Overpass
   adapter becomes a new, separately planned ingestion task.
