@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Finding } from '@odysseus/core';
+import type { Finding, PreparationPreviewLanguage } from '@odysseus/core';
 import { renderReportIntro } from './report-intro.js';
 import { getStrings } from '../strings/i18n.js';
 import { fr } from '../strings/fr.js';
@@ -376,5 +376,131 @@ describe('renderReportIntro', () => {
     expect(html).toContain(en.reportIntro.audienceHeading);
     expect(html).not.toContain(fr.reportIntro.audienceHeading);
     expect(html).not.toContain(fr.reportIntro.heading);
+  });
+});
+
+// Plan 019 step 7: with a preparation preview, the opening question and
+// hook are the preview's already-resolved values, the audience rows carry
+// optional stakeholder names, and confirmed journeys render with exactly
+// the three approved tri-state wordings. Without one, nothing changes.
+describe('plan 019: renderReportIntro consumes the preparation preview', () => {
+  const frPreview: PreparationPreviewLanguage = {
+    language: 'fr',
+    coverQuestion: { value: 'Question personnalisée sur le rapport ?', source: 'custom' },
+    hook: {
+      family: 'accessibility',
+      value: "L'accessibilité est le sujet le plus urgent de ce rapport.",
+      evidenceUnavailable: false,
+    },
+    stakeholders: [{ role: 'management', roleLabel: 'Direction', name: 'Jeanne Dupont' }],
+    journeys: [
+      {
+        journeyId: 'transaction-booking',
+        label: 'Réservation et transaction',
+        description: "Ce parcours vérifie ce qu'un visiteur voit.",
+        steps: [
+          {
+            stepId: 'booking-page',
+            label: 'Page de réservation',
+            description: 'Ce que la page affiche.',
+            state: 'issue-observed',
+            stateLabel: 'Problème constaté',
+          },
+          {
+            stepId: 'booking-form',
+            label: 'Formulaire de réservation',
+            description: 'Ce que le formulaire révèle.',
+            state: 'not-evaluated',
+            stateLabel: 'Non évalué',
+            notEvaluatedReason: 'detector-failed',
+          },
+        ],
+      },
+    ],
+  };
+
+  it('replaces the question with the preview value in this language only', () => {
+    const html = renderReportIntro(
+      getStrings('fr'),
+      1,
+      buildAnalysis([]) as never,
+      [],
+      undefined,
+      frPreview,
+    );
+    expect(html).toContain('Question personnalisée sur le rapport ?');
+    expect(html).not.toContain(resolveGenericDecisionQuestion('fr'));
+  });
+
+  it('renders the automatic hook when it carries findings evidence', () => {
+    const html = renderReportIntro(
+      getStrings('fr'),
+      1,
+      buildAnalysis([]) as never,
+      [],
+      undefined,
+      frPreview,
+    );
+    expect(html).toContain(
+      escapeHtml("L'accessibilité est le sujet le plus urgent de ce rapport."),
+    );
+  });
+
+  it('never renders the hook when the evidence was unavailable', () => {
+    const html = renderReportIntro(getStrings('fr'), 1, buildAnalysis([]) as never, [], undefined, {
+      ...frPreview,
+      hook: { ...frPreview.hook, evidenceUnavailable: true },
+    });
+    expect(html).not.toContain(
+      escapeHtml("L'accessibilité est le sujet le plus urgent de ce rapport."),
+    );
+  });
+
+  it('personalizes the matching audience row with the stakeholder name', () => {
+    const html = renderReportIntro(
+      getStrings('fr'),
+      1,
+      buildAnalysis([]) as never,
+      [],
+      undefined,
+      frPreview,
+    );
+    expect(html).toContain('La direction (Jeanne Dupont)');
+    // The other rows keep their bare role labels.
+    expect(html).toContain(getStrings('fr').reportIntro.roleTechnicalLabel);
+  });
+
+  it('renders only the confirmed journeys, every step in one of the three approved states', () => {
+    const html = renderReportIntro(
+      getStrings('fr'),
+      1,
+      buildAnalysis([]) as never,
+      [],
+      undefined,
+      frPreview,
+    );
+    expect(html).toContain('Parcours visiteurs vérifiés');
+    expect(html).toContain('Réservation et transaction');
+    expect(html).toContain('Problème constaté');
+    expect(html).toContain('Non évalué');
+    // The disapproved tri-state and the other journey's copy are absent.
+    expect(html).not.toContain('Aucun problème détecté');
+    expect(html).not.toContain('Découverte et navigation');
+  });
+
+  it('renders no journeys block when no journey was confirmed', () => {
+    const html = renderReportIntro(getStrings('fr'), 1, buildAnalysis([]) as never, [], undefined, {
+      ...frPreview,
+      journeys: [],
+    });
+    expect(html).not.toContain('Parcours visiteurs vérifiés');
+  });
+
+  it('leaves the generic opening untouched without preparation', () => {
+    const strings = getStrings('fr');
+    const html = renderReportIntro(strings, 1, buildAnalysis([]) as never, []);
+    expect(html).toContain(resolveGenericDecisionQuestion('fr'));
+    expect(html).not.toContain('Parcours visiteurs vérifiés');
+    expect(html).toContain(strings.reportIntro.roleManagementLabel);
   });
 });

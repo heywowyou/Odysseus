@@ -1,8 +1,13 @@
-import type { AuditManifest, AuditManualFields, Finding } from '@odysseus/core';
+import type {
+  AuditManifest,
+  AuditManualFields,
+  Finding,
+  PreparationPreviewLanguage,
+} from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, formatDate, sheet } from '../html-utils.js';
-import { resolveGenericDecisionQuestion } from '../generic-question.js';
+import { resolveDecisionQuestion } from '../generic-question.js';
 import { hasMeasuredCoreWebVitals } from './core-web-vitals-table.js';
 
 /** Second identity fallback for the cover headline (plan 018 step 4:
@@ -63,6 +68,7 @@ export function renderCover(
   // underscore marks it deliberately unused for the lint rule.
   _findings: readonly Finding[] = [],
   manualFields?: AuditManualFields,
+  preparation?: PreparationPreviewLanguage,
 ): string {
   // Manual-input-layer milestone, rule 5: every field absent must produce
   // a correctly rendering report - the headline identity falls through
@@ -85,7 +91,7 @@ export function renderCover(
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-4)">
       <div style="font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(strings.cover.kicker)}</div>
       <h1 style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(headline)}</h1>
-      <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(resolveGenericDecisionQuestion(analysis.language))}</div>
+      <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(resolveDecisionQuestion(analysis.language, preparation))}</div>
     </div>
     <div>
       <div style="height:1px;background:linear-gradient(to right,var(--color-accent) 0,var(--color-accent) 120px,transparent 120px);margin-bottom:var(--space-8)"></div>

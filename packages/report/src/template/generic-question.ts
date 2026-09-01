@@ -1,4 +1,4 @@
-import type { ReportLanguage } from '@odysseus/core';
+import type { PreparationPreviewLanguage, ReportLanguage } from '@odysseus/core';
 
 /**
  * The canonical generic decision question, plan 018 step 4. French bytes are
@@ -10,11 +10,13 @@ import type { ReportLanguage } from '@odysseus/core';
  *
  * This module is the ONLY place these strings exist in the package. The
  * minimal cover (sections/cover.ts) renders the resolver's output below,
- * report-intro.ts binds to the same resolver in step 5, and plan 019 must
- * EXTEND this resolver's input (manual fields, a custom question, an
- * operator situation) so the personalized answer replaces the generic one
- * at every render site at once. It must not fork the copy into a second
- * string table - that is the exact drift this seam exists to prevent.
+ * report-intro.ts binds to the same resolver in step 5, and plan 019
+ * EXTENDED the resolver's input exactly as this docblock anticipated: the
+ * preparation preview's resolved question (custom override, situational
+ * automatic, or per-language generic fallback, all decided in core) replaces
+ * the generic one at every render site at once. It has never forked the copy
+ * into a second string table - that is the exact drift this seam exists to
+ * prevent.
  *
  * Pure and report-owned on purpose: no manifest, no analysis, no I/O - the
  * generic question is safe copy that cannot assert anything about the
@@ -31,4 +33,17 @@ const GENERIC_DECISION_QUESTION_EN =
 
 export function resolveGenericDecisionQuestion(language: ReportLanguage): string {
   return language === 'fr' ? GENERIC_DECISION_QUESTION_FR : GENERIC_DECISION_QUESTION_EN;
+}
+
+/**
+ * Plan 019 step 7: the one question resolver both render sites call. With
+ * a preparation preview, the preview's coverQuestion bytes are used
+ * verbatim (they are already resolved, escaped-at-render data); without
+ * one, the report renders exactly the plan 018 generic bytes as before.
+ */
+export function resolveDecisionQuestion(
+  language: ReportLanguage,
+  preparation?: PreparationPreviewLanguage,
+): string {
+  return preparation?.coverQuestion.value ?? resolveGenericDecisionQuestion(language);
 }

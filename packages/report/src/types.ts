@@ -5,6 +5,7 @@ import type {
   FindingsProvenance,
   LlmOutput,
   ObligationAssessment,
+  PreparationPreviewLanguage,
   ReportLanguage,
 } from '@odysseus/core';
 
@@ -74,4 +75,10 @@ export interface GenerateReportInput {
    *  with no saved manual fields; every consuming section must render
    *  its existing fallback in that case (rule 5). */
   manualFields?: AuditManualFields;
+  /** Plan 019: the bounded preparation preview for THIS analysis's
+   *  language, resolved by the orchestration layer (never queried or
+   *  derived here). Contains only render-ready strings and typed states;
+   *  absent means the report renders its safe generic fallbacks
+   *  unchanged. */
+  preparation?: PreparationPreviewLanguage;
 }

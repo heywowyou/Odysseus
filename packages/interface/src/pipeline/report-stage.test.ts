@@ -17,6 +17,12 @@ vi.mock('@odysseus/report', async (importOriginal) => {
 vi.mock('@odysseus/store', () => ({
   persistReport: vi.fn(),
   getAuditManualFields: vi.fn().mockResolvedValue(undefined),
+  getReportPreparation: vi.fn().mockResolvedValue({
+    context: {},
+    stakeholders: {},
+    journeyDecisions: [],
+    updatedAt: '2026-09-01T00:00:00.000Z',
+  }),
 }));
 vi.mock('@odysseus/scanner', () => ({ readOdysseusBuildId: vi.fn(() => 'render-build') }));
 

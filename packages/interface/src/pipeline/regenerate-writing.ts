@@ -12,8 +12,6 @@
  * run that never finishes simply leaves no candidate behind.
  */
 
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import type { Connection } from 'mongoose';
 import type { AnalysisPairRef, AuditManifest, Finding } from '@odysseus/core';
 import {
@@ -27,8 +25,8 @@ import {
   recordReadyWritingCandidate,
   type AuditDocument,
 } from '@odysseus/store';
-import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import { runAnalysisStage } from './analysis-stage.js';
+import { readAuditEvidence } from './audit-evidence.js';
 
 /** Thrown when regeneration cannot start: the cost confirmation is
  *  missing, a run is already in flight, or the warning acknowledgement is
@@ -68,25 +66,6 @@ export class WritingRegenerationFailedError extends Error {
     super(message);
     this.name = 'WritingRegenerationFailedError';
   }
-}
-
-async function readAuditEvidence(
-  audit: AuditDocument,
-): Promise<{ auditDir: string; manifest: AuditManifest; findings: Finding[] }> {
-  const auditDir = buildAuditDir(
-    getArtifactsRoot(),
-    new URL(audit.siteUrl).hostname,
-    audit.startedAt,
-  );
-  let manifest: AuditManifest;
-  let findings: Finding[];
-  try {
-    manifest = JSON.parse(await fs.readFile(path.join(auditDir, 'manifest.json'), 'utf-8'));
-    findings = JSON.parse(await fs.readFile(path.join(auditDir, 'findings.json'), 'utf-8'));
-  } catch {
-    throw new RegenerationConflictError('audit artifacts not found on disk');
-  }
-  return { auditDir, manifest, findings };
 }
 
 function currentWarningDigest(

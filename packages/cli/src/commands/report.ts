@@ -2,10 +2,21 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
-import type { AuditManifest, Finding, LlmOutput, ReportLanguage } from '@odysseus/core';
-import type { StoredAnalysis } from '@odysseus/report';
+import type {
+  AuditManifest,
+  Finding,
+  FindingsProvenance,
+  LlmOutput,
+  ReportLanguage,
+} from '@odysseus/core';
+import { pickLegacyLatestPair } from '@odysseus/core';
+import type { StoredAnalysis, VerifiedStoredAnalysis } from '@odysseus/report';
 import { runAllReportsStage, runReportStage } from '@odysseus/interface';
-import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
+import {
+  connectToMongo,
+  disconnectFromMongo,
+  resolveSelectedAnalysisPairForAudit,
+} from '@odysseus/store';
 
 function parseLanguage(value: string): ReportLanguage {
   if (value !== 'fr' && value !== 'en') {
@@ -35,7 +46,9 @@ async function findLatestAnalysisFile(
 async function readAnalysis(analysisPath: string): Promise<StoredAnalysis> {
   const raw = await fs.readFile(analysisPath, 'utf-8');
   const parsed = JSON.parse(raw) as LlmOutput & {
+    analysisId: string;
     auditId: string;
+    findingsProvenance: FindingsProvenance;
     language: ReportLanguage;
     model: string;
     temperature: number;
@@ -56,18 +69,23 @@ async function loadManifestAndFindings(
   return { manifest, findings };
 }
 
-async function loadLatestAnalysis(
-  resolvedDir: string,
-  language: ReportLanguage,
-): Promise<StoredAnalysis> {
-  const analysisPath = await findLatestAnalysisFile(path.join(resolvedDir, 'analyses'), language);
-  if (!analysisPath) {
-    throw new Error(
-      `No analysis found for language "${language}" under ${resolvedDir}/analyses. ` +
-        'Run "odysseus analyze" first.',
-    );
+/** Every complete per-language analysis document on disk for this audit,
+ *  for the offline legacy fallback of `--all`. */
+async function loadAllDiskAnalyses(resolvedDir: string): Promise<StoredAnalysis[]> {
+  const analysesDir = path.join(resolvedDir, 'analyses');
+  let entries: string[];
+  try {
+    entries = await fs.readdir(analysesDir);
+  } catch {
+    return [];
   }
-  return readAnalysis(analysisPath);
+  const documents: StoredAnalysis[] = [];
+  for (const name of entries
+    .filter((entry) => entry.endsWith('-fr.json') || entry.endsWith('-en.json'))
+    .sort()) {
+    documents.push(await readAnalysis(path.join(analysesDir, name)));
+  }
+  return documents;
 }
 
 function logPageCountWarning(warning: { pageCount: number; threshold: number }): void {
@@ -110,12 +128,39 @@ export function registerReportCommand(program: Command): void {
             }
 
             const { manifest, findings } = await loadManifestAndFindings(resolvedDir);
-            const [fr, en] = await Promise.all([
-              loadLatestAnalysis(resolvedDir, 'fr'),
-              loadLatestAnalysis(resolvedDir, 'en'),
-            ]);
 
             mongoConnection = await connectToMongo();
+            // Plan 019: the paid pair is the audit's selected pair, or the
+            // legacy latest complete pair through the one centralized
+            // fallback (core's pickLegacyLatestPair over the on-disk
+            // documents when the database holds no analyses for it).
+            const resolution = await resolveSelectedAnalysisPairForAudit(
+              mongoConnection,
+              manifest.auditId,
+            );
+            let fr: StoredAnalysis;
+            let en: StoredAnalysis;
+            if (resolution.kind !== 'none') {
+              fr = { ...resolution.fr };
+              en = { ...resolution.en };
+            } else {
+              // Legacy artifacts without analysisId or provenance are not
+              // eligible for the paid pair at all.
+              const diskAnalyses = (await loadAllDiskAnalyses(resolvedDir)).filter(
+                (analysis): analysis is VerifiedStoredAnalysis =>
+                  analysis.analysisId !== undefined && analysis.findingsProvenance !== undefined,
+              );
+              const diskPair = pickLegacyLatestPair(diskAnalyses);
+              if (!diskPair) {
+                throw new Error(
+                  'No complete bilingual analysis pair found in the database or on disk. ' +
+                    'Run "odysseus analyze" first.',
+                );
+              }
+              fr = diskPair.fr;
+              en = diskPair.en;
+            }
+
             const results = await runAllReportsStage(
               resolvedDir,
               manifest,

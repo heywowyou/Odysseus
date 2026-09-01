@@ -15,7 +15,12 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { partitionFindings } from '@odysseus/llm';
-import type { AuditManifest, AuditManualFields, Finding } from '@odysseus/core';
+import type {
+  AuditManifest,
+  AuditManualFields,
+  Finding,
+  PreparationPreviewLanguage,
+} from '@odysseus/core';
 import type { ReportRenderMetadata, StoredAnalysis } from '../types.js';
 import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
@@ -96,6 +101,10 @@ export interface RenderHtmlInput {
    *  about why the section has nothing else to show. */
   renderDiffWrapperOrLegalExcludedCount?: number;
   manualFields?: AuditManualFields;
+  /** Plan 019: the bounded, render-ready preparation preview for this
+   *  language, resolved by the orchestration layer. Absent means every
+   *  personalized site renders its safe generic fallback unchanged. */
+  preparation?: PreparationPreviewLanguage;
 }
 
 /** Single-tier report body, since the 2026-08-16 commercial model drop of
@@ -120,6 +129,7 @@ function renderBody(
   renderDiffWrapperOrLegalExcludedCount: number,
   manualFields: AuditManualFields | undefined,
   renderMetadata: ReportRenderMetadata | undefined,
+  preparation: PreparationPreviewLanguage | undefined,
 ): string {
   // B1: one Set shared by every reference-stat citation render site
   // (renderThemes, then renderFindingsAppendix's geo section), so the same
@@ -168,13 +178,20 @@ function renderBody(
   const ord = (id: SectionId): number => n.get(id)!;
 
   return [
-    renderCover(strings, manifest, analysis, resolvedFindings, manualFields),
+    renderCover(strings, manifest, analysis, resolvedFindings, manualFields, preparation),
     // Second physical page (plan 018 step 4): audit facts and the risk
     // scale on their own sheet, before the TOC. Unnumbered chrome, like
     // the cover - it takes no ordinal and stays out of the registry.
     renderMetadataSheet(strings, manifest, analysis, resolvedFindings, manualFields),
     renderToc(strings, includedSectionIds),
-    renderReportIntro(strings, ord('section-00'), analysis, resolvedFindings, renderedPriorities),
+    renderReportIntro(
+      strings,
+      ord('section-00'),
+      analysis,
+      resolvedFindings,
+      renderedPriorities,
+      preparation,
+    ),
     renderExecutiveSummary(
       strings,
       ord('section-01'),
@@ -288,8 +305,15 @@ function renderBody(
 }
 
 export async function renderHtml(input: RenderHtmlInput): Promise<string> {
-  const { manifest, findings, analysis, renderDiffEvidencePages, manualFields, renderMetadata } =
-    input;
+  const {
+    manifest,
+    findings,
+    analysis,
+    renderDiffEvidencePages,
+    manualFields,
+    renderMetadata,
+    preparation,
+  } = input;
   const renderDiffTotalEligible = input.renderDiffTotalEligible ?? renderDiffEvidencePages.length;
   const renderDiffWrapperOrLegalExcludedCount = input.renderDiffWrapperOrLegalExcludedCount ?? 0;
   const strings = getStrings(analysis.language);
@@ -305,6 +329,7 @@ export async function renderHtml(input: RenderHtmlInput): Promise<string> {
     renderDiffWrapperOrLegalExcludedCount,
     manualFields,
     renderMetadata,
+    preparation,
   );
 
   return `<!doctype html>

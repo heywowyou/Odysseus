@@ -12,6 +12,7 @@ import type { Connection } from 'mongoose';
 import {
   assertFindingsProvenance,
   buildFindingsProvenance,
+  buildReportPreparationPreview,
   type AuditManifest,
   type Finding,
   type ReportLanguage,
@@ -24,7 +25,7 @@ import {
   type StoredAnalysis,
 } from '@odysseus/report';
 import { readOdysseusBuildId } from '@odysseus/scanner';
-import { getAuditManualFields, persistReport } from '@odysseus/store';
+import { getAuditManualFields, getReportPreparation, persistReport } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 
 export interface ReportStageResult {
@@ -100,6 +101,18 @@ export async function runReportStage(
     ? await runObligationStage(manifest, connection, manualFields.siren.value)
     : analysis.obligationAssessment;
 
+  // Plan 019: resolve the bounded preparation preview here, at the
+  // orchestration boundary, so render-html.ts never queries storage or
+  // derives preparation policy. Evidence-unavailable artifacts degrade the
+  // preview inside core instead of failing the render.
+  const preparationAggregate = await getReportPreparation(connection, manifest.auditId);
+  const preparationPreview = buildReportPreparationPreview({
+    preparation: preparationAggregate,
+    commercialName: manualFields?.nomCommercial?.value,
+    manifest,
+    findings,
+  });
+
   const { pdf, pageCount } = await generateReportPdf({
     auditDir,
     manifest,
@@ -110,6 +123,7 @@ export async function runReportStage(
       ...(obligationAssessment !== undefined ? { obligationAssessment } : {}),
     },
     ...(manualFields !== undefined ? { manualFields } : {}),
+    preparation: preparationPreview[analysis.language],
   });
 
   const pdfDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;

@@ -6,6 +6,7 @@
  * the minimal cover and the metadata sheet.
  */
 import { describe, expect, it } from 'vitest';
+import type { PreparationPreviewLanguage } from '@odysseus/core';
 import { hostnameFromSiteUrl, renderCover } from './cover.js';
 import { renderMetadataSheet } from './metadata-sheet.js';
 import { fr } from '../strings/fr.js';
@@ -154,5 +155,34 @@ describe('the cover carries the canonical generic decision question, byte for by
     const analysis = await loadSmallSiteAnalysis('en');
     const html = renderCover(en, manifest, analysis);
     expect(html).toContain(resolveGenericDecisionQuestion('en'));
+  });
+});
+
+// Plan 019 step 7: the cover's decision question is the preparation
+// preview's resolved value for this language when a preview is passed in,
+// and exactly the plan 018 generic bytes when it is not.
+describe('renderCover decision question (plan 019)', () => {
+  const frPreview: PreparationPreviewLanguage = {
+    language: 'fr',
+    coverQuestion: { value: 'Question personnalisée ?', source: 'custom' },
+    hook: { family: 'mixed', value: 'Phrase.', evidenceUnavailable: true },
+    stakeholders: [],
+    journeys: [],
+  };
+
+  it('renders the preview question when preparation is supplied', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const html = renderCover(fr, manifest, analysis, [], undefined, frPreview);
+    expect(html).toContain('Question personnalisée ?');
+    expect(html).not.toContain(resolveGenericDecisionQuestion('fr'));
+  });
+
+  it('renders the generic question bytes without preparation', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const analysis = await loadSmallSiteAnalysis('fr');
+    const html = renderCover(fr, manifest, analysis);
+    expect(html).toContain(resolveGenericDecisionQuestion('fr'));
+    expect(html).not.toContain('Question personnalisée ?');
   });
 });

@@ -1,4 +1,4 @@
-import type { Finding } from '@odysseus/core';
+import type { Finding, PreparationPreviewLanguage } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
@@ -9,7 +9,7 @@ import {
   sheet,
   stripInlineMarkdown,
 } from '../html-utils.js';
-import { resolveGenericDecisionQuestion } from '../generic-question.js';
+import { resolveDecisionQuestion } from '../generic-question.js';
 import { sectionTitle, type SectionId } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
@@ -81,6 +81,7 @@ export function renderReportIntro(
   analysis: StoredAnalysis,
   findings: readonly Finding[],
   priorities?: readonly RenderedPriority[],
+  preparation?: PreparationPreviewLanguage,
 ): string {
   const r = strings.reportIntro;
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
@@ -107,21 +108,39 @@ export function renderReportIntro(
     methodologySection: sectionTitle('section-11', strings),
   });
 
-  // The question is the resolver's exact bytes, the same sentence the
-  // cover renders - plan 019 extends the resolver's input, it must never
-  // fork the copy into a second string table.
-  const question = resolveGenericDecisionQuestion(analysis.language);
+  // The question is the shared resolver's exact bytes (plan 018 step 5),
+  // which with preparation present are the preview's already-resolved
+  // question - never a forked copy (plan 019).
+  const question = resolveDecisionQuestion(analysis.language, preparation);
 
-  // Role labels only, one row per audience, ids listed in the canonical
-  // reading order (plan 018: section-14 before section-02, the legal
-  // section after the synthesis). Titles resolve live, so a future order
-  // change cannot leave a stale number here.
+  // Plan 019: the automatic opening hook, only when preparation resolved
+  // it from real findings evidence. Evidence-unavailable mixed copy stays
+  // unrendered: it would read as a measured conclusion when it is not.
+  const hookBlock =
+    preparation && !preparation.hook.evidenceUnavailable
+      ? `<p style="font-size:14px;font-weight:500;margin:0 0 var(--space-4);max-width:52ch">${escapeHtml(preparation.hook.value)}</p>`
+      : '';
+
+  // Role labels from the canonical audience map, personalized with the
+  // operator's optional stakeholder names where one exists (plan 019). A
+  // name is data, escaped here like every other operator-supplied string;
+  // it never adds an assertion, only an addressee.
+  const stakeholderName = (label: string, role: string): string => {
+    const named = preparation?.stakeholders.find((entry) => entry.role === role);
+    return named ? `${label} (${named.name})` : label;
+  };
   const audienceRows = (
     [
-      [r.roleManagementLabel, ['section-01', 'section-04', 'section-14']],
-      [r.roleTechnicalLabel, ['section-04', 'section-05', 'section-12']],
-      [r.roleCommunicationsLabel, ['section-04', 'section-08']],
-      [r.roleLegalLabel, ['section-02', 'section-11']],
+      [
+        stakeholderName(r.roleManagementLabel, 'management'),
+        ['section-01', 'section-04', 'section-14'],
+      ],
+      [
+        stakeholderName(r.roleTechnicalLabel, 'technical'),
+        ['section-04', 'section-05', 'section-12'],
+      ],
+      [stakeholderName(r.roleCommunicationsLabel, 'communications'), ['section-04', 'section-08']],
+      [stakeholderName(r.roleLegalLabel, 'legal'), ['section-02', 'section-11']],
     ] as const satisfies readonly (readonly [string, readonly SectionId[]])[]
   )
     .map(([label, ids]) => {
@@ -151,9 +170,31 @@ export function renderReportIntro(
     })
     .join('');
 
+  // Plan 019: confirmed, evidence-resolved journeys only. The preview
+  // carries no journey the operator did not confirm and the evidence can
+  // no longer support, so rendering is a straight projection; every step's
+  // state is one of the three approved wordings and nothing else.
+  const journeysBlock =
+    preparation && preparation.journeys.length > 0
+      ? `<h5>${escapeHtml(r.journeysHeading)}</h5>${preparation.journeys
+          .map(
+            (journey) => `
+      <p style="font-size:12.5px;font-weight:500;margin:var(--space-4) 0 var(--space-1)">${escapeHtml(journey.label)}</p>
+      <p style="font-size:11.5px;opacity:0.7;margin:0 0 var(--space-2)">${escapeHtml(journey.description)}</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:var(--space-2)"><tbody>${journey.steps
+        .map(
+          (step) =>
+            `<tr><td style="padding:4px 12px 4px 0;font-size:12px;vertical-align:top">${escapeHtml(step.label)}</td><td style="padding:4px 0;font-size:12px;opacity:0.85;text-align:right;white-space:nowrap">${escapeHtml(step.stateLabel)}</td></tr>`,
+        )
+        .join('')}</tbody></table>`,
+          )
+          .join('')}`
+      : '';
+
   return sheet(
     `
     ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
+    ${hookBlock}
     <h5>${escapeHtml(r.situationHeading)}</h5>
     <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-4)">${escapeHtml(r.situationBody)}</p>
     <h5>${escapeHtml(r.complicationHeading)}</h5>
@@ -163,6 +204,7 @@ export function renderReportIntro(
     <p style="font-size:17px;opacity:0.9;margin:0 0 var(--space-6);max-width:38ch">${escapeHtml(question)}</p>
     <h5>${escapeHtml(r.audienceHeading)}</h5>
     <table style="width:100%;border-collapse:collapse;margin-bottom:var(--space-6)"><tbody>${audienceRows}</tbody></table>
+    ${journeysBlock}
     ${
       actionsList
         ? `<h5>${escapeHtml(r.nextActionsHeading)}</h5><ol style="margin:0 0 var(--space-4);padding-left:1.2em;font-size:12.5px;opacity:0.9">${actionsList}</ol>`

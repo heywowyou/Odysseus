@@ -8,20 +8,19 @@ import {
   type AuditManualFields,
   type Finding,
   type FindingsProvenance,
-  type LlmOutput,
   type ReportLanguage,
   type StatSector,
 } from '@odysseus/core';
 import {
   getAudit,
   getFindingsForAudit,
-  getLatestAnalysis,
   getLatestReport,
   getLatestReportApproval,
   getSeverityRollup,
   approvalMatchesReportPair,
   listReportLanguages,
   persistReportApproval,
+  resolveSelectedAnalysisPairForAudit,
   setAuditManualFields,
   type ReportDocument,
 } from '@odysseus/store';
@@ -35,39 +34,6 @@ import type { Router } from '../router.js';
 import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { runAllReportsStage } from '../pipeline/report-stage.js';
-
-/** analyses/<timestamp>-<lang>.json filenames sort lexicographically in
- *  chronological order, so the last match is the latest analysis for the
- *  requested language - same idiom the CLI's `odysseus report` command
- *  already uses (packages/cli/src/commands/report.ts), duplicated here
- *  rather than shared: both are small, boundary-local helpers reading off
- *  disk, not logic either package should depend on the other for. */
-async function findLatestAnalysisFile(
-  analysesDir: string,
-  language: ReportLanguage,
-): Promise<string | undefined> {
-  let entries: string[];
-  try {
-    entries = await fs.readdir(analysesDir);
-  } catch {
-    return undefined;
-  }
-  const matching = entries.filter((name) => name.endsWith(`-${language}.json`)).sort();
-  const latest = matching.at(-1);
-  return latest ? path.join(analysesDir, latest) : undefined;
-}
-
-async function readAnalysis(analysisPath: string): Promise<StoredAnalysis> {
-  const raw = await fs.readFile(analysisPath, 'utf-8');
-  const parsed = JSON.parse(raw) as LlmOutput & {
-    auditId: string;
-    language: ReportLanguage;
-    model: string;
-    temperature: number;
-    generatedAt: string;
-  };
-  return { ...parsed, generatedAt: new Date(parsed.generatedAt) };
-}
 
 function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
@@ -113,15 +79,17 @@ async function getFreshVerifiedPair(
     getLatestReport(connection, auditId, 'fr'),
     getLatestReport(connection, auditId, 'en'),
   ]);
-  const [frAnalysis, enAnalysis] = await Promise.all([
-    getLatestAnalysis(connection, auditId, 'fr'),
-    getLatestAnalysis(connection, auditId, 'en'),
-  ]);
+  // Plan 019: the current analysis pair is the selected one (or, for a
+  // legacy audit without a selection, the latest complete pair from the
+  // one centralized selector), never simply the newest persisted analysis
+  // - a finished candidate must not become effective before approval.
+  const resolution = await resolveSelectedAnalysisPairForAudit(connection, auditId);
+  if (resolution.kind === 'none') return undefined;
+  const frAnalysis = resolution.fr;
+  const enAnalysis = resolution.en;
   if (
     !fr ||
     !en ||
-    !frAnalysis ||
-    !enAnalysis ||
     !fr.reportId ||
     !en.reportId ||
     fr.analysisId !== frAnalysis.analysisId ||
@@ -191,15 +159,13 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const [findings, severityRollup, reportLanguages, frAnalysis, enAnalysis, approval] =
-      await Promise.all([
-        getFindingsForAudit(connection, auditId),
-        getSeverityRollup(connection, auditId),
-        listReportLanguages(connection, auditId),
-        getLatestAnalysis(connection, auditId, 'fr'),
-        getLatestAnalysis(connection, auditId, 'en'),
-        getLatestReportApproval(connection, auditId),
-      ]);
+    const [findings, severityRollup, reportLanguages, selectedPair, approval] = await Promise.all([
+      getFindingsForAudit(connection, auditId),
+      getSeverityRollup(connection, auditId),
+      listReportLanguages(connection, auditId),
+      resolveSelectedAnalysisPairForAudit(connection, auditId),
+      getLatestReportApproval(connection, auditId),
+    ]);
     const reports = await Promise.all(
       (['fr', 'en'] as const).map(async (language) => {
         const report = await getLatestReport(connection, auditId, language);
@@ -224,10 +190,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       audit.findingsProvenance,
     );
     const analysed = Boolean(
-      frAnalysis &&
-      enAnalysis &&
-      provenanceMatches(frAnalysis.findingsProvenance, audit.findingsProvenance) &&
-      provenanceMatches(enAnalysis.findingsProvenance, audit.findingsProvenance),
+      selectedPair.kind !== 'none' &&
+      provenanceMatches(selectedPair.fr.findingsProvenance, audit.findingsProvenance) &&
+      provenanceMatches(selectedPair.en.findingsProvenance, audit.findingsProvenance),
     );
     const approved = Boolean(
       verifiedPair && approvalMatchesReportPair(approval, verifiedPair.reports),
@@ -374,7 +339,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
   });
 
   // Manual-input-layer milestone: re-renders both language reports from
-  // each language's already-existing latest analysis, exactly what
+  // the audit's selected analysis pair (plan 019), exactly what
   // `odysseus report <dir> --all` does - no rescan, no new LLM call. The
   // saved manualFields (siren included) are picked up automatically by
   // runReportStage's own fresh-recompute step, not passed explicitly here.
@@ -399,20 +364,20 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const analysesDir = path.join(auditDir, 'analyses');
-    const [frPath, enPath] = await Promise.all([
-      findLatestAnalysisFile(analysesDir, 'fr'),
-      findLatestAnalysisFile(analysesDir, 'en'),
-    ]);
-    if (!frPath || !enPath) {
+    // Selection-aware resolution (plan 019): the selected exact pair, or
+    // the legacy latest complete pair for audits without a selection. A
+    // ready-but-unapproved candidate is never rendered as the paid report.
+    const resolution = await resolveSelectedAnalysisPairForAudit(connection, auditId);
+    if (resolution.kind === 'none') {
       sendError(
         res,
         409,
-        'both fr and en analyses must already exist before a report can be regenerated',
+        'a complete bilingual analysis pair is required before a report can be regenerated',
       );
       return;
     }
-    const [fr, en] = await Promise.all([readAnalysis(frPath), readAnalysis(enPath)]);
+    const fr: StoredAnalysis = { ...resolution.fr };
+    const en: StoredAnalysis = { ...resolution.en };
 
     try {
       const results = await runAllReportsStage(

@@ -35,6 +35,7 @@ export const fr: ReportStrings = {
       "Ce que ce rapport n'est pas : un avis juridique (voir la section « {legalSection} ») ; un audit exhaustif, la détection automatique couvrant environ 30 à 40 % des critères d'accessibilité (voir « {methodologySection} »).",
     questionHeading: 'La question à laquelle ce rapport répond',
     audienceHeading: 'Qui utilise ce rapport',
+    journeysHeading: 'Parcours visiteurs vérifiés',
     roleManagementLabel: 'La direction',
     roleTechnicalLabel: 'Prestataire technique ou service informatique',
     roleCommunicationsLabel: 'Communication',

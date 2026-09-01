@@ -42,6 +42,11 @@ import {
   isWritingRegenerationInFlight,
   WritingRegenerationFailedError,
 } from '../pipeline/regenerate-writing.js';
+import { renderCandidatePreview } from '../pipeline/candidate-preview.js';
+
+function isReportLanguage(value: string): value is 'fr' | 'en' {
+  return value === 'fr' || value === 'en';
+}
 
 export interface PreparationView {
   preparation: ReportPreparation;
@@ -207,6 +212,35 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
           return;
         }
         sendError(res, 500, 'could not regenerate writing');
+      }
+    },
+  );
+
+  // Renders the ready candidate's report for one language WITHOUT
+  // persisting anything: previewing can never alter the selected paid
+  // report, and approval remains a separate explicit action.
+  router.get(
+    '/api/audits/:auditId/report-preparation/candidate/:language/preview',
+    async ({ res, params }) => {
+      const auditId = params['auditId']!;
+      const language = params['language']!;
+      if (!isReportLanguage(language)) {
+        sendError(res, 400, 'language must be "fr" or "en"');
+        return;
+      }
+      const audit = await readAudit(connection, auditId, res);
+      if (!audit) return;
+      try {
+        const pdf = await renderCandidatePreview(connection, audit, language);
+        res.statusCode = 200;
+        res.setHeader('content-type', 'application/pdf');
+        res.end(pdf);
+      } catch (error) {
+        if (error instanceof RegenerationConflictError) {
+          sendError(res, 409, error.message);
+          return;
+        }
+        sendError(res, 500, 'could not render the candidate preview');
       }
     },
   );

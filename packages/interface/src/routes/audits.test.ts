@@ -10,8 +10,8 @@ vi.mock('@odysseus/store', () => ({
   getFindingsForAudit: vi.fn(),
   getSeverityRollup: vi.fn(),
   getLatestReport: vi.fn(),
-  getLatestAnalysis: vi.fn(),
   getLatestReportApproval: vi.fn(),
+  resolveSelectedAnalysisPairForAudit: vi.fn(),
   approvalMatchesReportPair: vi.fn(() => false),
   persistReportApproval: vi.fn(),
   listReportLanguages: vi.fn(),
@@ -26,8 +26,8 @@ import {
   getAudit,
   getFindingsForAudit,
   getLatestReport,
-  getLatestAnalysis,
   getLatestReportApproval,
+  resolveSelectedAnalysisPairForAudit,
   persistReportApproval,
   getSeverityRollup,
   listReportLanguages,
@@ -78,7 +78,10 @@ beforeEach(() => {
   vi.mocked(getSeverityRollup).mockResolvedValue({} as never);
   vi.mocked(listReportLanguages).mockResolvedValue(['fr', 'en']);
   vi.mocked(getLatestReport).mockResolvedValue(null);
-  vi.mocked(getLatestAnalysis).mockResolvedValue(null);
+  vi.mocked(resolveSelectedAnalysisPairForAudit).mockResolvedValue({
+    kind: 'none',
+    reason: 'no-analyses',
+  } as never);
   vi.mocked(getLatestReportApproval).mockResolvedValue(null);
 });
 
@@ -106,13 +109,24 @@ describe('POST /api/audits/:auditId/approve-reports', () => {
       fs.writeFile('/tmp/fake-audit-dir/reports/fr.pdf', pdf),
       fs.writeFile('/tmp/fake-audit-dir/reports/en.pdf', pdf),
     ]);
-    vi.mocked(getLatestAnalysis).mockImplementation(
-      async (_connection, _auditId, language) =>
+    vi.mocked(resolveSelectedAnalysisPairForAudit).mockImplementation(
+      async () =>
         ({
-          analysisId: `analysis-${language}`,
-          auditId: 'audit-1',
-          language,
-          findingsProvenance,
+          kind: 'selected',
+          fr: {
+            analysisId: 'analysis-fr',
+            auditId: 'audit-1',
+            language: 'fr',
+            findingsProvenance,
+            generatedAt: new Date(),
+          },
+          en: {
+            analysisId: 'analysis-en',
+            auditId: 'audit-1',
+            language: 'en',
+            findingsProvenance,
+            generatedAt: new Date(),
+          },
         }) as never,
     );
     vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) => ({

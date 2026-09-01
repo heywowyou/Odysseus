@@ -34,6 +34,7 @@ export const en: ReportStrings = {
       'What this report is not: legal advice (see the "{legalSection}" section); an exhaustive audit, since automated detection covers roughly 30 to 40 percent of accessibility criteria (see "{methodologySection}").',
     questionHeading: 'The question this report answers',
     audienceHeading: 'Who uses this report',
+    journeysHeading: 'Verified visitor journeys',
     roleManagementLabel: 'Management',
     roleTechnicalLabel: 'Technical provider or IT',
     roleCommunicationsLabel: 'Communications',

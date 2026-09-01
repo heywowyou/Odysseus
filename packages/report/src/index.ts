@@ -103,6 +103,7 @@ export async function generateReportPdf(
       renderDiffTotalEligible,
       renderDiffWrapperOrLegalExcludedCount,
       ...(input.manualFields !== undefined ? { manualFields: input.manualFields } : {}),
+      ...(input.preparation !== undefined ? { preparation: input.preparation } : {}),
     });
 
     const lintViolations = findRenderLintViolations(html);

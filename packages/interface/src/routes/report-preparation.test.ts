@@ -24,6 +24,8 @@ vi.mock('@odysseus/store', () => {
     approveWritingCandidate: vi.fn(),
     recordReadyWritingCandidate: vi.fn(),
     recordFailedWritingCandidate: vi.fn(),
+    getAnalysisById: vi.fn(),
+    getAuditManualFields: vi.fn(),
     WritingSelectionConflictError,
   };
 });
@@ -31,6 +33,12 @@ vi.mock('@odysseus/store', () => {
 vi.mock('@odysseus/scanner', () => ({
   buildAuditDir: vi.fn(() => '/tmp/fake-prep-audit'),
   getArtifactsRoot: vi.fn(() => '/tmp'),
+  readOdysseusBuildId: vi.fn(() => 'test-build'),
+}));
+
+vi.mock('@odysseus/report', () => ({
+  generateReportPdf: vi.fn(),
+  REPORT_TEMPLATE_VERSION: 3,
 }));
 
 vi.mock('../pipeline/analysis-stage.js', () => ({
@@ -47,6 +55,8 @@ import {
   WritingSelectionConflictError,
 } from '@odysseus/store';
 import { runAnalysisStage } from '../pipeline/analysis-stage.js';
+import { generateReportPdf } from '@odysseus/report';
+import { getAnalysisById, getAuditManualFields } from '@odysseus/store';
 import { Router } from '../router.js';
 import { registerReportPreparationRoutes } from './report-preparation.js';
 
@@ -474,5 +484,83 @@ describe('POST /api/audits/:auditId/report-preparation/approve-candidate', () =>
     const body = JSON.parse(res.body!);
     expect(body.preparation.writingSelection.selected.frAnalysisId).toBe('fr-1');
     expect(body.preparation.writingSelection.candidate.status).toBe('selected');
+  });
+});
+
+describe('GET /api/audits/:auditId/report-preparation/candidate/:language/preview', () => {
+  const pairProvenance = {
+    findingsSchemaVersion: 1 as const,
+    normalizationFingerprint: 'fp',
+    findingsDigest: 'sha256:digest',
+  };
+
+  function seedReadyCandidate(): void {
+    storedPreparation = {
+      ...emptyReportPreparation(),
+      writingSelection: {
+        candidate: {
+          status: 'ready',
+          pair: {
+            frAnalysisId: 'analysis-fr',
+            enAnalysisId: 'analysis-en',
+            findingsProvenance: pairProvenance,
+          },
+          createdAt: '2026-09-01T12:00:00.000Z',
+        },
+      },
+    };
+  }
+
+  it('returns 409 when there is no ready candidate', async () => {
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(
+      fakeReq('/api/audits/audit-1/report-preparation/candidate/fr/preview'),
+      res,
+    );
+    expect(res.statusCode).toBe(409);
+    expect(generateReportPdf).not.toHaveBeenCalled();
+  });
+
+  it('renders the candidate PDF for the requested language without persisting anything', async () => {
+    seedReadyCandidate();
+    await writeEvidence();
+    vi.mocked(getAnalysisById).mockImplementation(async (_connection, _auditId, analysisId) => {
+      return {
+        analysisId,
+        auditId: 'audit-1',
+        language: analysisId.endsWith('-fr') ? 'fr' : 'en',
+      } as never;
+    });
+    vi.mocked(getAuditManualFields).mockResolvedValue(undefined);
+    vi.mocked(generateReportPdf).mockResolvedValue({
+      pdf: Buffer.from('%PDF-candidate'),
+      pageCount: 12,
+    } as never);
+
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(
+      fakeReq('/api/audits/audit-1/report-preparation/candidate/fr/preview'),
+      res,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(generateReportPdf).toHaveBeenCalledTimes(1);
+    const input = vi.mocked(generateReportPdf).mock.calls[0]![0]!;
+    expect(input.analysis.analysisId).toBe('analysis-fr');
+    expect(input.preparation?.language).toBe('fr');
+  });
+
+  it('rejects an unknown language with 400', async () => {
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(
+      fakeReq('/api/audits/audit-1/report-preparation/candidate/es/preview'),
+      res,
+    );
+    expect(res.statusCode).toBe(400);
   });
 });
