@@ -129,7 +129,21 @@ export function resolveSelectedAnalysisPair<A extends AnalysisRecordLike>(
   }
 
   if (analyses.length === 0) return { kind: 'none', reason: 'no-analyses' };
-  const legacy = pickLegacyLatestPair(analyses);
+  // A ready candidate must never become the current pair through this
+  // fallback: for a legacy audit without explicit selection, the newest
+  // analyses after a regeneration ARE the candidate's, and the fallback
+  // would silently make the candidate effective before approval (the
+  // exact failure the plan forbids, found live during the operator
+  // review). Exclude the ready candidate's pair from the ranking.
+  const candidate = selection?.candidate;
+  const excluded =
+    candidate?.status === 'ready'
+      ? new Set<string>([candidate.pair.frAnalysisId, candidate.pair.enAnalysisId])
+      : undefined;
+  const eligible = excluded
+    ? analyses.filter((analysis) => !excluded.has(analysis.analysisId))
+    : analyses;
+  const legacy = pickLegacyLatestPair(eligible);
   if (!legacy) return { kind: 'none', reason: 'no-complete-pair' };
   return { kind: 'legacy-latest', fr: legacy.fr, en: legacy.en };
 }

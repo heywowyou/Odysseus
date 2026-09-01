@@ -249,8 +249,11 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
     expect(preparation.writingSelection?.candidate?.status).toBe('ready');
     expect(preparation.writingSelection?.selected).toBeUndefined();
 
+    // The candidate's analyses are the only ones on record, and the
+    // fallback must never adopt them: without approval there is no
+    // current pair at all (plan 019's candidate-before-selection rule).
     const resolution = await resolveSelectedAnalysisPairForAudit(connection!, 'prep-candidate');
-    expect(resolution.kind).toBe('legacy-latest');
+    expect(resolution).toEqual({ kind: 'none', reason: 'no-complete-pair' });
   });
 
   it('approves a ready candidate exactly once, atomically', async () => {
@@ -408,6 +411,31 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
     if (mixed.kind === 'legacy-latest') {
       expect(mixed.fr.analysisId).toBe(fr.analysisId);
       expect(mixed.en.analysisId).toBe(en.analysisId);
+    }
+  });
+
+  it('never resolves a ready candidate as the current pair before approval', async () => {
+    await insertAudit('prep-candidate-fallback');
+    // The pre-existing pair the reports were rendered from.
+    const oldFr = await insertAnalysis('prep-candidate-fallback', 'fr', '2026-09-01T00:00:00Z');
+    const oldEn = await insertAnalysis('prep-candidate-fallback', 'en', '2026-09-01T06:00:00Z');
+    // Regeneration creates the newest pair and records it as a candidate.
+    const newFr = await insertAnalysis('prep-candidate-fallback', 'fr', '2026-09-02T00:00:00Z');
+    const newEn = await insertAnalysis('prep-candidate-fallback', 'en', '2026-09-02T06:00:00Z');
+    await recordReadyWritingCandidate(connection!, 'prep-candidate-fallback', {
+      frAnalysisId: newFr.analysisId,
+      enAnalysisId: newEn.analysisId,
+      findingsProvenance: provenance('sha256:run-a'),
+    });
+
+    const resolution = await resolveSelectedAnalysisPairForAudit(
+      connection!,
+      'prep-candidate-fallback',
+    );
+    expect(resolution.kind).toBe('legacy-latest');
+    if (resolution.kind === 'legacy-latest') {
+      expect(resolution.fr.analysisId).toBe(oldFr.analysisId);
+      expect(resolution.en.analysisId).toBe(oldEn.analysisId);
     }
   });
 

@@ -171,3 +171,66 @@ describe('legacy analyses without a provenance stamp (trade-off 40)', () => {
     ).toEqual({ kind: 'none', reason: 'selection-incomplete' });
   });
 });
+
+describe('a ready candidate never becomes current through the fallback', () => {
+  it('keeps the legacy pair while the candidate is only ready', () => {
+    // Found live during the operator review: regeneration creates the
+    // newest analyses, and the legacy fallback adopted them as the
+    // current pair before approval, making the persisted reports read
+    // stale and blocking every preview.
+    const oldFr = analysis('old-fr', 'fr', '2026-09-01T00:00:00Z');
+    const oldEn = analysis('old-en', 'en', '2026-09-01T06:00:00Z');
+    const candidateFr = analysis('cand-fr', 'fr', '2026-09-02T00:00:00Z');
+    const candidateEn = analysis('cand-en', 'en', '2026-09-02T06:00:00Z');
+    const resolution = resolveSelectedAnalysisPair(
+      {
+        candidate: {
+          status: 'ready',
+          pair: analysisPairRefOf(candidateFr, candidateEn),
+          createdAt: '2026-09-02T12:00:00Z',
+        },
+      },
+      [oldFr, oldEn, candidateFr, candidateEn],
+    );
+    expect(resolution.kind).toBe('legacy-latest');
+    if (resolution.kind === 'legacy-latest') {
+      expect(resolution.fr.analysisId).toBe('old-fr');
+      expect(resolution.en.analysisId).toBe('old-en');
+    }
+  });
+
+  it('keeps an explicit selection ahead of both the candidate and newer analyses', () => {
+    const oldFr = analysis('old-fr', 'fr', '2026-09-01T00:00:00Z');
+    const oldEn = analysis('old-en', 'en', '2026-09-01T06:00:00Z');
+    const candidateFr = analysis('cand-fr', 'fr', '2026-09-02T00:00:00Z');
+    const candidateEn = analysis('cand-en', 'en', '2026-09-02T06:00:00Z');
+    const resolution = resolveSelectedAnalysisPair(
+      {
+        selected: analysisPairRefOf(oldFr, oldEn),
+        candidate: {
+          status: 'ready',
+          pair: analysisPairRefOf(candidateFr, candidateEn),
+          createdAt: '2026-09-02T12:00:00Z',
+        },
+      },
+      [oldFr, oldEn, candidateFr, candidateEn],
+    );
+    expect(resolution.kind).toBe('selected');
+  });
+
+  it('reports no complete pair when only the ready candidate exists', () => {
+    const candidateFr = analysis('cand-fr', 'fr', '2026-09-02T00:00:00Z');
+    const candidateEn = analysis('cand-en', 'en', '2026-09-02T06:00:00Z');
+    const resolution = resolveSelectedAnalysisPair(
+      {
+        candidate: {
+          status: 'ready',
+          pair: analysisPairRefOf(candidateFr, candidateEn),
+          createdAt: '2026-09-02T12:00:00Z',
+        },
+      },
+      [candidateFr, candidateEn],
+    );
+    expect(resolution).toEqual({ kind: 'none', reason: 'no-complete-pair' });
+  });
+});
