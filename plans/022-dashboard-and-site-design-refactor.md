@@ -46,6 +46,16 @@ lands the fixes it justifies. It deliberately excludes
 `packages/report`: the report design is locked (trade-off 9) and any report
 revision belongs to plan 023.
 
+The dashboard also has a problem the visual pass alone will not fix: its
+section names, labels, and buttons were named by the agents that built each
+milestone, in that milestone's own vocabulary (scanner terms, finding
+categories, pipeline stage names), not in words a first-time, non-technical
+operator would recognize. The operator has found themselves lost on what a
+given screen or control actually does. This plan therefore runs a naming and
+information-architecture pass over the dashboard as its own tracked activity,
+not as an incidental side effect of visual polish, so that renaming decisions
+get the same evidence-and-approval treatment as everything else here.
+
 ## Binding decisions
 
 1. **Impeccable owns design method, not product rules.** The executor loads
@@ -105,6 +115,20 @@ revision belongs to plan 023.
    the automated release runbook stay intact; no deploy belongs to this plan).
 10. **Every step ends green.** Focused vitest suites, typecheck, and lint pass
     at each step boundary; the full gate runs once at the end.
+11. **Naming and information architecture are a first-class pass, not
+    incidental copy polish.** The bar is comprehension by a first-time,
+    non-technical user with no auditing, SEO, or accessibility background:
+    every section, route, label, button, status, and empty state must be
+    understandable on sight, in the operator's own words, not the vocabulary
+    the pipeline uses internally (no bare "findings," "dedupe," "prospecting
+    worthiness," "LLM structure pass," or similar surfaced without either a
+    plain-language rename or an inline explanation). This produces a written
+    rename inventory (current name, proposed name, reason) reviewed by the
+    operator through the same scope-pick gate as visual findings (step 5),
+    never renamed silently. Renames land through the centralized i18n sources
+    in both languages with `strings-parity` green; a rename is not "done"
+    until both the French and English strings read as plainly to a
+    non-technical reader.
 
 ## Commands you will need
 
@@ -162,8 +186,12 @@ Write `.impeccable/surfaces/` briefs via `surface-brief.mjs write`:
 
 - dashboard brief: primary target
   `packages/interface/src/dashboard/App.tsx`; mode Operate; audience is the
-  single operator; job is running audits, preparations, previews, and drafts;
-  constraints: bilingual, single-user, keyboard-first where practical;
+  single operator, framed as a first-time, non-technical user with no
+  auditing, SEO, or accessibility background, since that is the comprehension
+  bar binding decision 11 sets; job is running audits, preparations,
+  previews, and drafts; constraints: bilingual, single-user, keyboard-first
+  where practical, no unexplained internal/pipeline vocabulary in any
+  user-facing label;
 - site brief: primary target `packages/site/app/page.tsx` with the offre,
   bot, and compliance routes as related targets; mode Persuade; audience is
   French SMB owners; constraints: legal pages fenced per binding decision 5.
@@ -184,20 +212,35 @@ log. Screenshots for evidence come from the repo's own Playwright
 tooling against a locally started dev server; stop the server afterwards and
 confirm with `pgrep`.
 
+For the dashboard only, also walk every route and component under
+`packages/interface/src/dashboard` and build the rename inventory required by
+binding decision 11: for each section name, route label, button, status
+string, and empty/error state, record what it currently says, whether a
+first-time non-technical user would understand it unaided, and if not, a
+proposed plain-language replacement with a one-line reason. Read the strings
+from `packages/interface/src/dashboard/i18n/en.ts` and `fr.ts` directly rather
+than guessing from the component tree, since that is where the shipped
+wording actually lives.
+
 **Verify**: snapshots exist for both surfaces; every detector finding in the
 reports was verified in source or explicitly called out as a false positive;
-baseline scores recorded.
+baseline scores recorded; the dashboard rename inventory covers every route
+and component under the dashboard target, not a sample.
 
 ### Step 5: Operator picks the slice scope
 
 Present both surfaces' priority issues (P0 through P2) to the operator in one
-table with each issue's suggested command. The operator marks which issues this
-refactor takes. Everything unmarked is recorded as deferred, not silently
+table with each issue's suggested command, and present the dashboard rename
+inventory from step 4 as its own table (current name, proposed name, reason)
+in the same sitting. The operator marks which visual issues this refactor
+takes and which proposed renames they approve, reject, or want reworded.
+Everything unmarked, on either table, is recorded as deferred, not silently
 dropped. A proposed visual-world replacement for the site's public pages, if
 the operator wants one, is scheduled as its own new-work session with the
 direction contract and decision page, not folded into these slices.
 
-**Verify**: the chosen scope exists in writing before any fix command runs.
+**Verify**: the chosen visual scope and the approved rename inventory both
+exist in writing before any fix or rename command runs.
 
 ### Step 6: Dashboard refinement slices (Operate)
 
@@ -210,13 +253,24 @@ sources only), and one closing `polish` over the whole surface. Respect the
 operate-mode depth reference: consistency over surprise, no decorative motion,
 motion only as state feedback at 150 to 250ms with reduced-motion paths.
 
+The copy pass is where the step-5-approved rename inventory ships: apply
+every approved rename in `packages/interface/src/dashboard/i18n/en.ts` and
+`fr.ts` together (never one language ahead of the other), keep both strings
+at the same comprehension level rather than translating literally, and update
+any component that reads the old key name rather than leaving a stale
+reference. Where a term cannot be renamed without losing precision the
+operator needs (a scanner rule ID, a severity level), keep the term but add a
+short inline explanation instead of assuming the operator already knows it.
+
 Each slice is one component family or route so commits stay small.
 
 **Verify**: `pnpm exec vitest run --project unit packages/interface/src/dashboard`
 passes, including `accessibility.test.ts` and `strings-parity.test.ts`;
 `pnpm run typecheck` exits 0; one batched screenshot round (desktop and
 mobile) captured to `.impeccable/review/` with at most one confirm round;
-hook and detector findings for edited files are clean or explicitly disposed.
+hook and detector findings for edited files are clean or explicitly disposed;
+every string touched by an approved rename matches the rename inventory in
+both languages, and no unapproved rename landed alongside it.
 
 ### Step 7: Site refinement slices (Persuade)
 
@@ -304,6 +358,8 @@ Stop and report instead of improvising if:
 
 - the operator is not available for `init`'s interview or step 5's scope pick
   and the session needs answers that only they can give;
+- a rename would ship without an approve/reject/reword decision recorded
+  against it in the step 5 inventory;
 - a fix requires a new dependency, a CSP change without consent, or an edit
   under `packages/report` or `docs/report`;
 - the direction that would fix a finding is a visual-world replacement and
@@ -323,6 +379,9 @@ Stop and report instead of improvising if:
 - [ ] Both surface briefs exist with correct modes and constraints.
 - [ ] Baseline critique snapshots and audit scores are recorded, and the
       operator-selected issues are fixed or explicitly deferred in writing.
+- [ ] The dashboard rename inventory covers every route and component, the
+      operator's approve/reject/reword decisions are recorded in writing, and
+      every approved rename shipped bilingually with `strings-parity` green.
 - [ ] Dashboard and site suites, typecheck, both builds, format, check, and
       `test:all` are green.
 - [ ] All copy changes are bilingual with parity tests green, and compliance

@@ -442,7 +442,11 @@ scoped to: the operator dashboard in Operate mode and the public site in
 Persuade mode. It has no file overlap with the report sequence and may be
 scheduled between 019 and 021 sessions, but never concurrently with another
 active plan in the same tree. The report and its docs stay excluded through
-`.impeccable/config.json`.
+`.impeccable/config.json`. Alongside the visual pass, it runs a dedicated
+naming and information-architecture audit of the dashboard, since the
+operator has found its section names, labels, and buttons unclear: every
+proposed rename is recorded in an inventory the operator approves, rejects,
+or reworks before it ships bilingually.
 
 Plan 023 (added 2026-09-01, operator-approved direction) is the only plan
 allowed to revise the report's visual design, and only as a gated,
