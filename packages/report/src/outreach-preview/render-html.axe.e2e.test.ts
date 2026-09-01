@@ -1,13 +1,14 @@
 /**
  * The preview is the first thing a prospect ever sees from an accessibility
  * auditor. A preview that fails its own audit is not a document we can send, so
- * this holds it to the same WCAG 2.2 AA bar `render-html.axe.test.ts` holds the
- * paid report to, in both languages and at both ends of the viewport range.
+ * this holds it to the same WCAG 2.2 AA bar `render-html.axe.e2e.test.ts` holds
+ * the paid report to, in both languages and at both ends of the viewport range.
  *
  * Needs real Chromium, like its sibling.
  */
 import { AxeBuilder } from '@axe-core/playwright';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Browser } from 'playwright';
 import { launchBrowser } from '@odysseus/scanner';
 import { buildOutreachFactsBlock } from '@odysseus/core';
 import { generateOutreachPreviewHtml } from './render-html.js';
@@ -39,10 +40,19 @@ function render(language: 'fr' | 'en', withComposite: boolean): string {
 }
 
 describe('the rendered preview passes its own axe-core audit', () => {
+  let browser: Browser;
+
+  beforeAll(async () => {
+    ({ browser } = await launchBrowser());
+  }, 30_000);
+
+  afterAll(async () => {
+    await browser?.close();
+  });
+
   it('has zero WCAG 2.2 AA violations in both languages, at both viewports, with and without the composite', async () => {
-    const { browser } = await launchBrowser();
+    const context = await browser.newContext();
     try {
-      const context = await browser.newContext();
       const page = await context.newPage();
 
       for (const language of ['fr', 'en'] as const) {
@@ -67,14 +77,13 @@ describe('the rendered preview passes its own axe-core audit', () => {
         }
       }
     } finally {
-      await browser.close();
+      await context.close();
     }
   }, 120_000);
 
   it('never scrolls sideways at 320px, which is what WCAG 1.4.10 actually asks', async () => {
-    const { browser } = await launchBrowser();
+    const context = await browser.newContext();
     try {
-      const context = await browser.newContext();
       const page = await context.newPage();
       await page.setViewportSize({ width: 320, height: 640 });
       for (const language of ['fr', 'en'] as const) {
@@ -85,14 +94,13 @@ describe('the rendered preview passes its own axe-core audit', () => {
         expect(overflows, language).toBe(false);
       }
     } finally {
-      await browser.close();
+      await context.close();
     }
   }, 60_000);
 
   it('gives every link a visible focus style, in document order', async () => {
-    const { browser } = await launchBrowser();
+    const context = await browser.newContext();
     try {
-      const context = await browser.newContext();
       const page = await context.newPage();
       await page.setContent(render('fr', true), { waitUntil: 'load' });
 
@@ -121,7 +129,7 @@ describe('the rendered preview passes its own axe-core audit', () => {
       expect(outline).not.toBe(null);
       expect(outline).not.toMatch(/^none/u);
     } finally {
-      await browser.close();
+      await context.close();
     }
   }, 60_000);
 });

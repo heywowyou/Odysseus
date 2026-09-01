@@ -105,6 +105,12 @@ safe.
   rules in `CLAUDE.md` when normalization changes.
 - A snapshot or fixture update is evidence only after its semantic change has
   been reviewed; do not accept a bulk update merely because a command offers it.
+- Vitest runs two projects: `pnpm test` covers the unit tier (every suite that
+  does not need a real browser or spawned process), `pnpm run test:e2e` covers
+  the `*.e2e.test.ts` browser and CLI suites, and `pnpm run test:all` runs
+  both. Name any test that launches Chromium, a dev server, or a child CLI
+  `*.e2e.test.ts` so the fast local loop stays browser-free; CI gates on
+  `test:all`, so tiering never removes coverage.
 
 ## Product writing
 
@@ -151,4 +157,5 @@ pnpm run test <affected test paths>
 
 Before handing off, record which commands passed, failed, or were not run.
 `pnpm run check` covers agent documentation, formatting, lint, and workspace
-typechecking. CI also runs the full test suite.
+typechecking. CI also runs the full suite via `pnpm run test:all`; use it
+locally before a handoff that touched e2e suites or cross-package behavior.

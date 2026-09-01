@@ -32,12 +32,22 @@ function startStaticServer(
   });
 }
 
+// One Chromium per file: each call opens its own context, so sharing the
+// browser across the suites below cannot leak state.
+let browser: Browser;
+
+beforeAll(async () => {
+  ({ browser } = await launchBrowser());
+}, 30_000);
+
+afterAll(async () => {
+  await browser?.close();
+});
+
 describe('findDelegatedBookingRedirectChecks against real pages', () => {
-  let browser: Browser;
   let destination: { server: Server; origin: string };
 
   beforeAll(async () => {
-    ({ browser } = await launchBrowser());
     destination = await startStaticServer({
       '/single-property': `<title>Hotel La Coorniche | Réserver votre séjour</title>
         <body>4 Avenue de la Coorniche, 64600 Anglet. Vos dates ont été conservées.</body>`,
@@ -48,7 +58,6 @@ describe('findDelegatedBookingRedirectChecks against real pages', () => {
   }, 30_000);
 
   afterAll(async () => {
-    await browser?.close();
     destination?.server.close();
   });
 
@@ -135,16 +144,6 @@ describe('findDelegatedBookingRedirectChecks against real pages', () => {
 });
 
 describe('findDelegatedBookingRedirectChecks with a shared RedirectHostCache', () => {
-  let browser: Browser;
-
-  beforeAll(async () => {
-    ({ browser } = await launchBrowser());
-  }, 30_000);
-
-  afterAll(async () => {
-    await browser?.close();
-  });
-
   /** Counts requests per path, the same real-page shape as the single-
    *  property fixture above, to prove a second page linking to the same
    *  host reuses the cached check instead of navigating again - this is

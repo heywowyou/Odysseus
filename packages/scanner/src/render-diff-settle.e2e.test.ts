@@ -19,12 +19,12 @@ import { renderDiff } from './render-diff.js';
  * The fixture here reproduces the shape that mattered (a page whose text
  * is complete long before its network is) rather than the specific widget.
  */
-/** Bound to port 0 and read back, rather than joining the fixed-port
- *  convention the fixtures/spa-demo e2e suites use. Those ports are
- *  hand-allocated, and this file originally collided with crawl.e2e's
+/** Bound to port 0 and read back, so this server is private to this file
+ *  and needs no agreed number. (The spa-demo e2e suites once ran on
+ *  hand-allocated fixed ports and this file collided with crawl.e2e's
  *  5187 - an EADDRINUSE that surfaced only when both happened to run
- *  concurrently. This server is private to this file, so it needs no
- *  agreed number. */
+ *  concurrently. Those suites now share one server provided by
+ *  scripts/vitest-e2e-global-setup.mjs.) */
 let testUrl: string;
 
 const PAGE_HTML = `<!doctype html><html><body>

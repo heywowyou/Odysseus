@@ -73,7 +73,7 @@ pixels, now that the source is plain CSS).
 `--crit` (`#d97b82`) clear 4.5:1 against plain `--bg` but drop to
 3.97:1 / 4.31:1 respectively when used as badge/tag text on a tinted
 `--panel` background (e.g. `.legal-tag`, `.sev-critical`) - a real
-combination this template renders. Caught by `render-html.axe.test.ts`,
+combination this template renders. Caught by `render-html.axe.e2e.test.ts`,
 the report's own axe-core self-test against WCAG 2.2 AA. Both tokens are
 lightened just enough to clear 4.5:1 against that worst case with a
 small margin (visually indistinguishable from the mockup at normal

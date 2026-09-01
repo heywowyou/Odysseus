@@ -58,17 +58,19 @@ describe('classifyTrackerUrl', () => {
   });
 });
 
+// One Chromium per file: every check call builds its own fresh context,
+// so sharing the browser across the suites below cannot leak state.
+let browser: Browser;
+
+beforeAll(async () => {
+  ({ browser } = await launchBrowser());
+}, 30_000);
+
+afterAll(async () => {
+  await browser?.close();
+});
+
 describe('checkCookieConsent against a real page', () => {
-  let browser: Browser;
-
-  beforeAll(async () => {
-    ({ browser } = await launchBrowser());
-  }, 30_000);
-
-  afterAll(async () => {
-    await browser?.close();
-  });
-
   async function run(html: string, cookies: string[]) {
     const { server, origin } = await startServer(html, cookies);
     try {
@@ -129,16 +131,6 @@ describe('checkCookieConsent against a real page', () => {
 });
 
 describe('C5: third-party origin inventory', () => {
-  let browser: Browser;
-
-  beforeAll(async () => {
-    ({ browser } = await launchBrowser());
-  }, 30_000);
-
-  afterAll(async () => {
-    await browser?.close();
-  });
-
   it('records every distinct third-party origin, and no first-party one', async () => {
     const { server, origin } = await startServer(
       `<img src="https://fonts.gstatic.com/a.woff2" alt="">

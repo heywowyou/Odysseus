@@ -80,3 +80,11 @@ A verified defect this session will not fix is logged as a GitHub issue
 before the session ends, and a fixed one is closed with its commit hash and
 verification evidence. The full lifecycle, including uniqueness and labeling
 rules, is binding on every agent: `docs/agents/issue-tracker.md`.
+
+## Agent concurrency (ZCode only)
+
+ZCode may dispatch as many concurrent subagents as the work needs; parallelism
+is preferred whenever the file ownership or the research fan-out allows it.
+ZCode must not delegate work to Claude Code or Codex sessions: their usage
+limits are far lower than ZCode's, so they are reserved for the operator's own
+direct requests.

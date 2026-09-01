@@ -3,12 +3,12 @@
  * product. axe-core and Playwright are already dependencies (of
  * packages/scanner and now this package); this is the one test that
  * actually points them at the report's own rendered HTML. Needs real
- * Chromium, matching this repo's *.e2e.test.ts convention, though it
- * isn't named that way since it belongs next to render-html.ts rather
- * than in the browser-heavy screenshots tests.
+ * Chromium, so it carries the *.e2e.test.ts name and runs with the e2e
+ * project while staying next to render-html.ts.
  */
 import { AxeBuilder } from '@axe-core/playwright';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Browser } from 'playwright';
 import { launchBrowser } from '@odysseus/scanner';
 import { renderHtml } from './render-html.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
@@ -26,6 +26,16 @@ import type { StoredAnalysis } from '../types.js';
 const WCAG22AA_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 describe('the rendered report HTML passes its own axe-core audit', () => {
+  let browser: Browser;
+
+  beforeAll(async () => {
+    ({ browser } = await launchBrowser());
+  }, 30_000);
+
+  afterAll(async () => {
+    await browser?.close();
+  });
+
   it('has zero WCAG 2.2 AA violations on the real small-site.test French report', async () => {
     const [manifest, findings, analysis] = await Promise.all([
       loadSmallSiteManifest(),
@@ -35,12 +45,11 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
     const { pages: renderDiffEvidencePages } = resolveRenderDiffEvidence(manifest, findings);
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
 
-    const { browser } = await launchBrowser();
+    // AxeBuilder requires a page created from a full BrowserContext
+    // (its script-injection mechanism rejects a bare browser.newPage()
+    // page with "Please use browser.newContext()").
+    const context = await browser.newContext();
     try {
-      // AxeBuilder requires a page created from a full BrowserContext
-      // (its script-injection mechanism rejects a bare browser.newPage()
-      // page with "Please use browser.newContext()").
-      const context = await browser.newContext();
       const page = await context.newPage();
       await page.setContent(html, { waitUntil: 'load' });
       const results = await new AxeBuilder({ page }).withTags(WCAG22AA_TAGS).analyze();
@@ -53,7 +62,7 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
       }
       expect(results.violations).toEqual([]);
     } finally {
-      await browser.close();
+      await context.close();
     }
     // Measured at ~28s on an idle machine, so a 30s budget left a 7 percent
     // margin and this test failed as a timeout, not a violation, whenever
@@ -88,9 +97,8 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
 
     expect(html).toContain('style="background:#332a19;color:#e5c07b"');
 
-    const { browser } = await launchBrowser();
+    const context = await browser.newContext();
     try {
-      const context = await browser.newContext();
       const page = await context.newPage();
       await page.setContent(html, { waitUntil: 'load' });
       const results = await new AxeBuilder({ page }).withTags(WCAG22AA_TAGS).analyze();
@@ -107,7 +115,7 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
       }
       expect(results.violations).toEqual([]);
     } finally {
-      await browser.close();
+      await context.close();
     }
   }, 60_000);
 });

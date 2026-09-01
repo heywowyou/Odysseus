@@ -17,17 +17,19 @@ function startStaticServer(html: string): Promise<{ server: Server; origin: stri
   });
 }
 
+// One Chromium per file: each call opens its own context, so sharing the
+// browser across the suites below cannot leak state.
+let browser: Browser;
+
+beforeAll(async () => {
+  ({ browser } = await launchBrowser());
+}, 30_000);
+
+afterAll(async () => {
+  await browser?.close();
+});
+
 describe('extractAltTextFacts against real pages', () => {
-  let browser: Browser;
-
-  beforeAll(async () => {
-    ({ browser } = await launchBrowser());
-  }, 30_000);
-
-  afterAll(async () => {
-    await browser?.close();
-  });
-
   async function checkHtml(html: string) {
     const { server, origin } = await startStaticServer(html);
     const context = await browser.newContext();
@@ -94,16 +96,6 @@ describe('extractAltTextFacts against real pages', () => {
  * document usually names an element that does not exist.
  */
 describe('B5: selectors actually resolve to the element they name', () => {
-  let browser: Browser;
-
-  beforeAll(async () => {
-    ({ browser } = await launchBrowser());
-  }, 30_000);
-
-  afterAll(async () => {
-    await browser?.close();
-  });
-
   /** Keeps the page open so each emitted selector can be run back against
    *  the very document it was derived from - the only check that actually
    *  proves a selector resolves. */

@@ -104,20 +104,26 @@ async function buildStressHtml(): Promise<string> {
   });
 }
 
+// One Chromium and one Paged.js source read per file: the describes below
+// only paginate different documents against the same browser.
+let browser: Browser;
+let pagedjsSource: string;
+
+beforeAll(async () => {
+  [{ browser }, pagedjsSource] = await Promise.all([launchBrowser(), readPagedjsSource()]);
+}, 60_000);
+
+afterAll(async () => {
+  await browser?.close();
+});
+
 describe('Paged.js invariants against the stress fixture (docs/report/report-design-system.md section 4)', () => {
-  let browser: Browser;
-  let pagedjsSource: string;
   let doc: PaginatedDocument;
 
   beforeAll(async () => {
-    [{ browser }, pagedjsSource] = await Promise.all([launchBrowser(), readPagedjsSource()]);
     const html = await buildStressHtml();
     doc = await paginate(browser, html, pagedjsSource);
   }, 60_000);
-
-  afterAll(async () => {
-    await browser.close();
-  });
 
   // report-feedback-palais-gallien.md item 26: minor findings now render
   // with the same full page/selector detail as every other severity
@@ -350,17 +356,6 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
 });
 
 describe("Paged.js invariants against doc §5's two empty-branch variants", () => {
-  let browser: Browser;
-  let pagedjsSource: string;
-
-  beforeAll(async () => {
-    [{ browser }, pagedjsSource] = await Promise.all([launchBrowser(), readPagedjsSource()]);
-  }, 30_000);
-
-  afterAll(async () => {
-    await browser.close();
-  });
-
   it('renders and paginates the zero-WCAG-failures variant without error', async () => {
     const { manifest, findings, analysis } = buildStressFixtureNoWcagFailures();
     const { pages: renderDiffEvidencePages, totalEligible } = resolveRenderDiffEvidence(
