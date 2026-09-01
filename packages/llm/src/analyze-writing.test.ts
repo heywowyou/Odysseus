@@ -276,3 +276,73 @@ describe('analyzeWriting', () => {
     expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 });
+
+function buildGravesSummaryOutput(): WritingPassOutput {
+  // The observed failure from issue #21: the French writing pass for
+  // lacoorniche.com (2026-09-01) deterministically wrote "graves" in
+  // executiveSummary; eight consecutive attempts across three runs were
+  // all rejected because the rejection reason never reached the model.
+  const output = buildCleanFrenchOutput();
+  output.executiveSummary =
+    'Votre site présente des défauts graves qui pénalisent son efficacité commerciale.';
+  return output;
+}
+
+describe('analyzeWriting retry feedback (issue #21)', () => {
+  it('sends no rejection feedback on the first attempt', async () => {
+    vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
+      output: buildCleanFrenchOutput(),
+    });
+
+    await analyzeWriting(input, ['t1'], false);
+
+    expect(vi.mocked(callMistralForWriting).mock.calls[0]![2]).toBeUndefined();
+  });
+
+  it('feeds the severity guard rejection into the next attempt, then succeeds', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildGravesSummaryOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(result.output.executiveSummary).not.toMatch(/grave/i);
+    const calls = vi.mocked(callMistralForWriting).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[1]![2]).toContain('rejected by the automated guard');
+    expect(calls[1]![2]).toContain('"graves"');
+    expect(calls[1]![2]).toContain('fixes exactly this problem');
+  });
+
+  it('carries the latest failure reason across a thrown attempt', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildGravesSummaryOutput() })
+      .mockRejectedValueOnce(new Error('429 rate limit exceeded'))
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(result.model).toBe(MISTRAL_MODEL);
+    const calls = vi.mocked(callMistralForWriting).mock.calls;
+    expect(calls).toHaveLength(3);
+    // The feedback always names the most recent failure, not the first.
+    expect(calls[1]![2]).toContain('"graves"');
+    expect(calls[2]![2]).toContain('429 rate limit exceeded');
+    expect(calls[2]![2]).not.toContain('"graves"');
+  });
+
+  it('feeds a legal-consequence rejection into the next attempt', async () => {
+    vi.mocked(callMistralForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildViolatingThemeTitleOutput() })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    await analyzeWriting(input, ['t1'], false);
+
+    const calls = vi.mocked(callMistralForWriting).mock.calls;
+    expect(calls[1]![2]).toContain('rejected by the automated guard');
+    expect(calls[1]![2]).toContain('risques juridiques');
+  });
+});

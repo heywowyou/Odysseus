@@ -125,6 +125,21 @@ describe('callMistralForWriting', () => {
     expect(result.output).toEqual(validWritingOutput);
   });
 
+  it('appends the previous rejection to the user message so a retry is a correction (issue #21)', async () => {
+    completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingOutput) }));
+    await callMistralForWriting(
+      writingInput,
+      false,
+      'Your previous response was rejected by the automated guard: test reason.',
+    );
+
+    const messages = completeMock.mock.calls[0]![0].messages;
+    expect(messages).toHaveLength(2);
+    expect(messages[1].content).toContain(
+      'Your previous response was rejected by the automated guard: test reason.',
+    );
+  });
+
   it('throws when the response has no choices', async () => {
     completeMock.mockResolvedValue({ choices: [] });
     await expect(callMistralForWriting(writingInput, false)).rejects.toThrow(

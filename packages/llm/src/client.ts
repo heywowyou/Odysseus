@@ -110,10 +110,16 @@ export async function callMistralForStructure(
 
 /** Single call to Mistral for the writing pass. Same posture as
  *  callMistralForStructure, against writingPassOutputSchema and
- *  WRITING_OUTPUT_JSON_SCHEMA instead. */
+ *  WRITING_OUTPUT_JSON_SCHEMA instead.
+ *
+ *  previousRejection is undefined on the first attempt and carries the
+ *  guard's failure reason thereafter, appended to the user prompt so a
+ *  retry is a correction rather than a rerun of the identical conversation
+ *  (issue #21, same fix shape as callMistralForOutreach for issue #12). */
 export async function callMistralForWriting(
   input: WritingInput,
   usedFallbackContext: boolean,
+  previousRejection?: string,
 ): Promise<RawWritingCallResult> {
   const client = createClient();
 
@@ -131,7 +137,7 @@ export async function callMistralForWriting(
           input.dominantPerformanceMetric,
         ),
       },
-      { role: 'user', content: buildWritingUserPrompt(input) },
+      { role: 'user', content: buildWritingUserPrompt(input, previousRejection) },
     ],
     responseFormat: {
       type: 'json_schema',

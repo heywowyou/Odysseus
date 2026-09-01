@@ -1,6 +1,10 @@
 import type { ReportLanguage } from '@odysseus/core';
 import { BUSINESS_CLAIM_EXAMPLES } from './business-claim-guard.js';
-import { FINDING_NOUN_VOCABULARY, SEVERITY_VOCABULARY } from './severity-vocabulary-guard.js';
+import {
+  BANNED_SEVERITY_SYNONYMS,
+  FINDING_NOUN_VOCABULARY,
+  SEVERITY_VOCABULARY,
+} from './severity-vocabulary-guard.js';
 import type { WritingInput } from './writing-schema.js';
 import { REQUIRED_WCAG_VERSION } from './wcag-citation-guard.js';
 
@@ -32,7 +36,12 @@ export function buildWritingSystemPrompt(
     : '';
 
   const v = SEVERITY_VOCABULARY[language];
-  const severityVocabularyNote = `\n\nWhen referring to a severity level anywhere in your prose (a theme title, executiveSummary, notes, businessImpact, or recommendedActions), use exactly one of these four words, never a synonym: "${v.critical}", "${v.serious}", "${v.moderate}", "${v.minor}". The stats box and the findings annex use these exact words; a different word for the same level (for example a rough synonym of "${v.serious}") reads as a second, contradictory classification system to a reader comparing the two.`;
+  // issue #21: the note used to present only the four canonical words, so
+  // the model avoided the banned synonyms by luck; at the configured low
+  // temperature a French run reached for "graves" on eight consecutive
+  // attempts and every retry was rejected. The note now names the banned
+  // words themselves, from the same table the guard enforces.
+  const severityVocabularyNote = `\n\nWhen referring to a severity level anywhere in your prose (a theme title, executiveSummary, notes, businessImpact, or recommendedActions), use exactly one of these four words, never a synonym: "${v.critical}", "${v.serious}", "${v.moderate}", "${v.minor}". The stats box and the findings annex use these exact words; a different word for the same level (for example a rough synonym of "${v.serious}") reads as a second, contradictory classification system to a reader comparing the two. These synonyms are banned outright and their presence rejects the response: ${BANNED_SEVERITY_SYNONYMS[language].join(', ')}.`;
 
   // item 3.7 (La Corniche pass): a real report's template-bound sentence
   // said "constats" while the model's own executiveSummary prose right
@@ -83,6 +92,26 @@ ${LANGUAGE_INSTRUCTION[language]}${fallbackNote}
 Respond with structured JSON matching the required schema only. No prose outside the JSON fields, no markdown fences.`;
 }
 
-export function buildWritingUserPrompt(input: WritingInput): string {
-  return `Here is the site context and the themes to write about:\n\n${JSON.stringify(input, null, 2)}`;
+/**
+ * previousRejection carries the guard's failure reason from the immediately
+ * preceding attempt, on retries only (see buildWritingRetryFeedback).
+ */
+export function buildWritingUserPrompt(input: WritingInput, previousRejection?: string): string {
+  const correction = previousRejection ? `\n\n${previousRejection}` : '';
+  return `Here is the site context and the themes to write about:\n\n${JSON.stringify(input, null, 2)}${correction}`;
+}
+
+/**
+ * The correction text appended to the next attempt's user prompt after a
+ * rejection. Issue #21: analyzeWriting used to re-send the identical
+ * conversation on every attempt, and at the configured low temperature a
+ * rejected response reproduced identically (measured live: eight
+ * consecutive French rejections for the same word, zero passes), so a
+ * retry must be a correction, not a rerun. Same shape and wording as
+ * buildOutreachRetryFeedback (issue #12), whose arithmetic-variant is not
+ * needed here: no writing-pass guard enforces a count the model could
+ * undershoot.
+ */
+export function buildWritingRetryFeedback(reason: string): string {
+  return `Your previous response was rejected by the automated guard: ${reason}. Write a new response that fixes exactly this problem. Every other requirement still applies.`;
 }

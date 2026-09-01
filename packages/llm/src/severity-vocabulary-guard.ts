@@ -47,8 +47,12 @@ export const FINDING_NOUN_VOCABULARY: Record<ReportLanguage, { singular: string;
  * accessibility/SEO audit report has no legitimate reason to use these
  * words, so a match is treated as a vocabulary violation the same way an
  * invented finding ID is treated as a rejection, not a maybe.
+ *
+ * Exported for severity-vocabulary-guard.test.ts's sync test with
+ * BANNED_SEVERITY_SYNONYMS below; the prompt reads only the display-word
+ * table.
  */
-const BANNED_SYNONYMS: Record<ReportLanguage, RegExp[]> = {
+export const BANNED_SYNONYMS: Record<ReportLanguage, RegExp[]> = {
   fr: [
     /\bmajeur\b/i,
     /\bmajeurs\b/i,
@@ -61,6 +65,35 @@ const BANNED_SYNONYMS: Record<ReportLanguage, RegExp[]> = {
     /\banodine?s?\b/i,
   ],
   en: [/\bmajor\b/i, /\bsevere\b/i, /\btrivial\b/i, /\bnegligible\b/i],
+};
+
+/**
+ * The same synonyms in display form, for the writing prompt to name
+ * explicitly (issue #21: a French run was rejected for "graves" eight
+ * consecutive attempts that never saw which words are banned, so the
+ * model could only avoid them by luck). The guard's rejecting behaviour
+ * is unchanged by these exports. severity-vocabulary-guard.test.ts holds
+ * the two tables together in both directions: every word in
+ * BANNED_SEVERITY_SYNONYMS is matched by a BANNED_SYNONYMS pattern (so
+ * the prompt never names a word the guard permits), and every pattern
+ * matches at least one listed word (so no banned shape goes unmentioned).
+ */
+export const BANNED_SEVERITY_SYNONYMS: Record<ReportLanguage, string[]> = {
+  fr: [
+    'majeur',
+    'majeurs',
+    'majeure',
+    'majeures',
+    'grave',
+    'graves',
+    'sévère',
+    'sévères',
+    'anodin',
+    'anodins',
+    'anodine',
+    'anodines',
+  ],
+  en: ['major', 'severe', 'trivial', 'negligible'],
 };
 
 export interface SeverityVocabularyViolation {

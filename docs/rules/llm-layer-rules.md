@@ -119,6 +119,22 @@ drop the offending theme. An audit that fails to analyse is a problem to
 fix; an audit that quietly ships an untraceable finding, a mismatched
 theme, or the wrong language is the failure mode that ends the business.
 
+**Amended 2026-09-01 (issue #21): the writing pass's retries carry the
+rejection reason.** Each retry appends the previous attempt's failure
+reason to its user message (`buildWritingRetryFeedback`), so a retry is a
+correction rather than a rerun of the identical conversation. The defect
+this fixes was measured, not hypothetical: at `MISTRAL_TEMPERATURE` 0.2 a
+French writing pass produced an `executiveSummary` containing "graves" on
+eight consecutive attempts across three runs and two regenerated structure
+files, all rejected by the severity-vocabulary guard the model never saw.
+The mechanism is the outreach loop's, already measured there (section 11,
+issue #12); it strengthens every guard in the loop, not only the severity
+one. The guard itself is unchanged - rejection before render is the
+behavior that held the line - and the structure pass still re-sends an
+identical conversation: its only guards are invented-ID and schema shape
+over dense, short output, and it has no observed failure, so it keeps its
+blind retry until one appears.
+
 ---
 
 ## 3. Determinism and provenance
@@ -341,7 +357,14 @@ every prose field for a small set of known synonyms
 trivial/negligible in English) and is run inside `analyzeWriting`'s retry
 loop alongside the language guard and the theme-key guard (section 9),
 same retry-then-fail-loud treatment as an invented finding ID or a
-language leak.
+language leak. **Amended 2026-09-01 (issue #21):** the prompt originally
+presented only the four canonical words, so avoiding the banned ones was
+luck, and at the configured low temperature a French run reached for
+"graves" on every attempt (see the section 2 amendment). The
+`severityVocabularyNote` now names the banned words explicitly, read from
+the guard's own `BANNED_SEVERITY_SYNONYMS` table; a two-direction test
+holds that table against the guard's enforcement patterns so neither can
+drift from the other, and the guard's rejecting behaviour is unchanged.
 
 ---
 
@@ -603,11 +626,14 @@ booking flow the same as any other e-commerce checkout; do not soften
 argument B for hospitality prospects.
 
 **Retries carry the rejection reason.** Added 2026-08-30 (issue #12).
-Unlike the audit passes, whose retry attempts re-send the identical
+Unlike the structure pass, whose retry attempts re-send the identical
 conversation, the outreach loop feeds each rejection reason back into the
 next attempt's user message via `buildOutreachRetryFeedback`, and a
 word-count shortfall is stated as arithmetic (what was counted, what the
-floor is, the delta to write). Measured on live Mistral: three identical
+floor is, the delta to write). The writing pass adopted the same
+mechanism on 2026-09-01 (issue #21, section 2), with `buildWritingRetryFeedback`
+and no arithmetic variant, since none of its guards enforces a count the
+model could undershoot. Measured on live Mistral: three identical
 prompts at the configured low temperature produced three near identical
 undershoots of the touch-1 floor, while the arithmetic feedback recovered
 a 59-word rejection to 70 words on the next attempt. Touch 1's system

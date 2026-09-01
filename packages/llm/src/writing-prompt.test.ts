@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildWritingSystemPrompt } from './writing-prompt.js';
+import { BANNED_SEVERITY_SYNONYMS } from './severity-vocabulary-guard.js';
+import {
+  buildWritingRetryFeedback,
+  buildWritingSystemPrompt,
+  buildWritingUserPrompt,
+} from './writing-prompt.js';
 
 // item 43: the executive summary led with the raw total findings count
 // ("98 problèmes"), of which most were minor - rhetorically inflated
@@ -117,5 +122,63 @@ describe('the writing prompt states the WCAG version and business-claim rules th
   it('names the English fault phrase the business-claim guard rejects', () => {
     const prompt = buildWritingSystemPrompt('en', false, null);
     expect(prompt).toContain('the most profitable page');
+  });
+});
+
+// issue #21: the severity-vocabulary note used to present only the four
+// canonical words, so the model avoided the banned synonyms by luck; a
+// French run reached for "graves" on eight consecutive attempts and every
+// retry was rejected because the guard's reason never reached the model.
+// These tests pin the instruction side: the prompt names the banned words
+// (from the same table the guard enforces), and retries append the
+// rejection reason as a correction.
+describe('issue #21: the writing prompt names the banned severity synonyms', () => {
+  it('lists every banned French synonym in the system prompt', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    for (const word of BANNED_SEVERITY_SYNONYMS.fr) {
+      expect(prompt).toContain(word);
+    }
+    expect(prompt).toContain('banned outright');
+  });
+
+  it('lists every banned English synonym in the system prompt', () => {
+    const prompt = buildWritingSystemPrompt('en', false, null);
+    for (const word of BANNED_SEVERITY_SYNONYMS.en) {
+      expect(prompt).toContain(word);
+    }
+  });
+});
+
+describe('buildWritingRetryFeedback and the user-prompt correction', () => {
+  const input = {
+    language: 'fr' as const,
+    siteContext: {
+      businessType: 'e-commerce',
+      primaryGoal: 'sales',
+      languagesServed: ['fr'],
+      targetMarkets: ['fr'],
+    },
+    themes: [],
+    siteStats: {
+      pagesScanned: 1,
+      totalFindings: 0,
+      critical: 0,
+      serious: 0,
+      moderate: 0,
+      minor: 0,
+    },
+    dominantPerformanceMetric: null,
+  };
+
+  it('appends the rejection reason to the user prompt on retries only', () => {
+    const reason = 'severity vocabulary violations in field(s): executiveSummary ("graves")';
+    const base = buildWritingUserPrompt(input);
+    expect(base).not.toContain('rejected by the automated guard');
+
+    const corrected = buildWritingUserPrompt(input, buildWritingRetryFeedback(reason));
+    expect(corrected.startsWith(base)).toBe(true);
+    expect(corrected).toContain('rejected by the automated guard');
+    expect(corrected).toContain('"graves"');
+    expect(corrected).toContain('fixes exactly this problem');
   });
 });

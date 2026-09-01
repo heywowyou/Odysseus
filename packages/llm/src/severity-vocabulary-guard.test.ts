@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js';
+import {
+  BANNED_SEVERITY_SYNONYMS,
+  BANNED_SYNONYMS,
+  findSeverityVocabularyViolations,
+} from './severity-vocabulary-guard.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
 function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOutput {
@@ -108,5 +112,42 @@ describe('findSeverityVocabularyViolations', () => {
     });
 
     expect(findSeverityVocabularyViolations(output, 'en')).toEqual([]);
+  });
+});
+
+// issue #21: the writing prompt now names the banned synonyms explicitly,
+// so the model can avoid them by instruction rather than by luck. The
+// prompt reads BANNED_SEVERITY_SYNONYMS, the guard enforces
+// BANNED_SYNONYMS; these tests hold the two tables together in both
+// directions so neither can drift from the other.
+describe('BANNED_SEVERITY_SYNONYMS stays in sync with BANNED_SYNONYMS', () => {
+  it('lists only words the guard actually rejects, for every language', () => {
+    for (const language of ['fr', 'en'] as const) {
+      for (const word of BANNED_SEVERITY_SYNONYMS[language]) {
+        const output = buildOutput({
+          executiveSummary: `Ce texte contient le mot ${word} au milieu d'une phrase assez longue.`,
+        });
+
+        const violations = findSeverityVocabularyViolations(output, language);
+
+        expect(
+          violations,
+          `"${word}" (${language}) is named in the prompt but not rejected by the guard`,
+        ).toHaveLength(1);
+        expect(violations[0]!.matched.toLowerCase()).toBe(word.toLowerCase());
+      }
+    }
+  });
+
+  it('covers every banned pattern with at least one listed word', () => {
+    for (const language of ['fr', 'en'] as const) {
+      for (const pattern of BANNED_SYNONYMS[language]) {
+        const covered = BANNED_SEVERITY_SYNONYMS[language].some((word) => pattern.test(word));
+        expect(
+          covered,
+          `pattern ${pattern} (${language}) rejects something the prompt never names`,
+        ).toBe(true);
+      }
+    }
   });
 });

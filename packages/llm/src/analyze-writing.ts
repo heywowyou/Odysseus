@@ -6,6 +6,7 @@ import { findLanguageComplianceViolations } from './language-guard.js';
 import { findLegalConsequenceViolations } from './legal-consequence-guard.js';
 import { findPageCountViolations } from './page-count-guard.js';
 import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js';
+import { buildWritingRetryFeedback } from './writing-prompt.js';
 import { normalizeWritingOutputTypography } from './typography.js';
 import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
 import { findWcagCitationViolations } from './wcag-citation-guard.js';
@@ -24,24 +25,32 @@ export interface AnalyzeWritingResult {
  *  and rejects a response that fails the language-compliance heuristic.
  *  Both are treated exactly like an invented finding ID: rejected,
  *  logged, retried, then fail loudly. See docs/rules/llm-layer-rules.md
- *  sections 2, 6, and 9. */
+ *  sections 2, 6, and 9.
+ *
+ *  Unlike the structure pass, each retry carries the previous attempt's
+ *  rejection reason into the next call (issue #21): at the configured
+ *  low temperature an identical conversation reproduced the same
+ *  violation on every attempt, so a retry has to be a correction. Same
+ *  mechanism as the outreach loop (issue #12). */
 export async function analyzeWriting(
   input: WritingInput,
   expectedThemeKeys: readonly string[],
   usedFallbackContext: boolean,
 ): Promise<AnalyzeWritingResult> {
   let lastFailureReason = '';
+  let previousRejection: string | undefined;
 
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
     let result: Awaited<ReturnType<typeof callMistralForWriting>>;
     try {
-      result = await callMistralForWriting(input, usedFallbackContext);
+      result = await callMistralForWriting(input, usedFallbackContext, previousRejection);
     } catch (error) {
       // See analyzeStructure's identical comment - a parse/validation
       // failure is retried like any other rejected attempt, including
       // refusal-like model behavior since Mistral has no distinct refusal
       // signal.
       lastFailureReason = error instanceof Error ? error.message : String(error);
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} failed - ${lastFailureReason}`,
       );
@@ -51,6 +60,7 @@ export async function analyzeWriting(
     const mismatch = findThemeKeyMismatches(expectedThemeKeys, result.output);
     if (!isThemeKeyMismatchEmpty(mismatch)) {
       lastFailureReason = `theme key mismatch - missing: [${mismatch.missing.join(', ')}], extra: [${mismatch.extra.join(', ')}], duplicate: [${mismatch.duplicate.join(', ')}]`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );
@@ -60,6 +70,7 @@ export async function analyzeWriting(
     const violations = findLanguageComplianceViolations(result.output, input.language);
     if (violations.length > 0) {
       lastFailureReason = `language compliance violations in field(s): ${violations.map((v) => v.field).join(', ')}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );
@@ -69,6 +80,7 @@ export async function analyzeWriting(
     const severityViolations = findSeverityVocabularyViolations(result.output, input.language);
     if (severityViolations.length > 0) {
       lastFailureReason = `severity vocabulary violations in field(s): ${severityViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );
@@ -81,6 +93,7 @@ export async function analyzeWriting(
     const legalViolations = findLegalConsequenceViolations(result.output, input.language);
     if (legalViolations.length > 0) {
       lastFailureReason = `legal-consequence claim in field(s): ${legalViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );
@@ -90,6 +103,7 @@ export async function analyzeWriting(
     const pageCountViolations = findPageCountViolations(result.output, input.language);
     if (pageCountViolations.length > 0) {
       lastFailureReason = `invented page count in field(s): ${pageCountViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );
@@ -99,6 +113,7 @@ export async function analyzeWriting(
     const wcagViolations = findWcagCitationViolations(result.output);
     if (wcagViolations.length > 0) {
       lastFailureReason = `outdated WCAG version citation in field(s): ${wcagViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );
@@ -108,6 +123,7 @@ export async function analyzeWriting(
     const businessViolations = findBusinessClaimViolations(result.output, input.language);
     if (businessViolations.length > 0) {
       lastFailureReason = `unhedged business-value claim in field(s): ${businessViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );
@@ -117,6 +133,7 @@ export async function analyzeWriting(
     const digitViolations = findExecutiveSummaryDigitViolations(result.output);
     if (digitViolations.length > 0) {
       lastFailureReason = `executiveSummary contains a digit, which the report template now owns: "${digitViolations[0]!.text}"`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );
