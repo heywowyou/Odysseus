@@ -59,8 +59,9 @@ export function renderCover(
   analysis: StoredAnalysis,
   // The minimal cover no longer consumes findings (the risk scale moved to
   // the metadata sheet), but the parameter stays so renderBody's positional
-  // call and every existing test call keep their shape in this slice.
-  findings: readonly Finding[] = [],
+  // call and every existing test call keep their shape in this slice. The
+  // underscore marks it deliberately unused for the lint rule.
+  _findings: readonly Finding[] = [],
   manualFields?: AuditManualFields,
 ): string {
   // Manual-input-layer milestone, rule 5: every field absent must produce

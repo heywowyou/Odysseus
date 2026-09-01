@@ -1,0 +1,251 @@
+{
+  "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+  "analysisId": "88048b10-8872-4a01-8efa-72cbb319f633",
+  "language": "fr",
+  "model": "mistral-medium-latest",
+  "temperature": 0.2,
+  "generatedAt": "2026-09-01T14:06:26.715Z",
+  "reviews": {
+    "themes": [
+      {
+        "themeKey": "t1",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Generic commercial consequences and accessibility impact are supported. Claims about images lacking alt text are supported by findings f001, f003, f006, f007, f008, f010, f012, f013, f014, f015, f016, f017."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      },
+      {
+        "themeKey": "t2",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Generic commercial consequences and accessibility impact are supported. Claims about buttons lacking discernible text are supported by findings f002, f004, f005, f009, f011."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      },
+      {
+        "themeKey": "t3",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Generic commercial consequences and accessibility impact are supported. Claims about links lacking discernible text are supported by findings f020, f027, f028, f030, f033, f038, f039, f040, f041."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      },
+      {
+        "themeKey": "t4",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Generic commercial consequences and accessibility impact are supported. Claims about frames lacking accessible names are supported by findings f018, f026, f032, f035."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      },
+      {
+        "themeKey": "t5",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Generic commercial consequences and accessibility impact are supported. Claims about videos lacking captions are supported by findings f021, f031."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      },
+      {
+        "themeKey": "t6",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Generic commercial consequences and accessibility impact are supported. Claims about insufficient color contrast are supported by findings f024, f029."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      },
+      {
+        "themeKey": "t7",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Generic commercial consequences and accessibility impact are supported. Claims about small touch targets are supported by finding f036."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      },
+      {
+        "themeKey": "t8",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Generic commercial consequences and accessibility impact are supported. Claims about heading hierarchy skips are supported by findings f042, f044."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      },
+      {
+        "themeKey": "t9",
+        "businessImpact": {
+          "verdict": "supported",
+          "reason": "Generic commercial consequences and accessibility impact are supported. Claims about disabled zoom/scaling are supported by finding f043."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      },
+      {
+        "themeKey": "t10",
+        "businessImpact": {
+          "verdict": "unsupported",
+          "reason": "The claim 'Les moteurs de recherche et certains utilisateurs ne voient qu’une page quasi vide' asserts a specific effect on search engines' perception of the site, which is not supported by the input. The input only states that a non-JavaScript crawler sees a near-empty page, not that search engines do."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      },
+      {
+        "themeKey": "t11",
+        "businessImpact": {
+          "verdict": "unsupported",
+          "reason": "The claim 'ce qui limite la visibilité du site dans les résultats enrichis' asserts a specific effect on the site's visibility in search results, which is not supported by the input. The input only states that invalid JSON-LD provides no benefit, not that it limits visibility."
+        },
+        "recommendedActions": [
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          },
+          {
+            "verdict": "supported",
+            "reason": "Generic advice with no site-specific factual claims."
+          }
+        ]
+      }
+    ],
+    "executiveSummary": {
+      "verdict": "unsupported",
+      "reason": "The claim 'des données structurées invalides limitent votre visibilité dans les moteurs de recherche' asserts a specific effect on the site's visibility in search results, which is not supported by the input. The input only states that invalid JSON-LD provides no benefit, not that it limits visibility."
+    },
+    "notes": {
+      "verdict": "supported",
+      "reason": "The note accurately reflects the lack of site context provided in the input."
+    }
+  }
+}

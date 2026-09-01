@@ -346,7 +346,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [016](./016-hosted-operator-dashboard.md) | Host the operator dashboard on a public EU server | P2 | M | 001-013 | DONE |
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013, 016 | TODO |
 | [015](archive/015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |
-| [018](./018-report-executive-readability.md) | Make the paid report readable as an executive decision document | P1 | L | none | TODO |
+| [018](./018-report-executive-readability.md) | Make the paid report readable as an executive decision document | P1 | L | none | IMPLEMENTED |
 | [019](./019-report-preparation-and-personalization.md) | Prepare and personalize the paid report safely | P1 | L | 018 | TODO |
 | [020](./020-report-financial-evidence-and-legal-reference.md) | Add defensible financial evidence and the general legal reference | P1 | L | 019 | TODO |
 | [021](./021-complete-audits-without-template-repetition.md) | Keep full-site audits complete without repeating template work | P1 | L | 018-020 | TODO |
@@ -367,6 +367,26 @@ Routine dashboard releases were automated 2026-09-01 without changing plan
 016's hosting boundary: an operator-triggered workflow verifies successful CI
 for the exact main commit, then deploys it immutably with a live check and
 rollback. See `deploy/runbook.md` section 7A and trade-off 61.
+
+Plan 018 `IMPLEMENTED` 2026-09-01: all nine steps landed in six commits
+(`cc6e39f` canonical design and pagination, `82326f1` section order and the
+minimal cover plus metadata sheet, `4e70093` outcomes-first cards and the
+synthesis ending, `c2442c5` the page-count warning, `efada91` the completed
+pagination-invariant rewrite, `7a41759` the Complexity vocabulary the
+rendered-output review caught). Trade-off 44 records the compact-flow
+retirement. The suite is green and rendered PDFs were reviewed page by page
+against the plan's checklist: the English La Coorniche report (34 pages,
+from the current 2026-09-01 analysis), both de-identified fixture pairs
+(33-34 pages), and the stress fixture through the invariant suite. `DONE`
+awaits one gate: the French La Coorniche report, blocked because the
+French writing pass fails all retries on the severity-vocabulary guard
+(filed as issue #21 with the full diagnosis; the English pass on the same
+structure succeeds). Residuals from the review for a later pass: the
+La Coorniche and fixture checklists have minor group-header orphans at
+appendix page breaks, the FR cover question wraps its "?" onto its own
+line, and the small-site stored EN analysis still carries pre-plan model
+prose (WCAG 2.1 wording, priority order and Complexity ratings that differ
+from its FR twin) until its analyses are regenerated under plan 019.
 
 Plans 018 through 020 (rewritten 2026-08-31, operator-approved) are **not 9c
 slices**. They are report-deliverable work arising from a consulting review of

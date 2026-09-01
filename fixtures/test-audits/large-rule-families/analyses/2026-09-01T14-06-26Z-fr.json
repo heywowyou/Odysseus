@@ -1,0 +1,209 @@
+{
+  "executiveSummary": "Les constats les plus critiques concernent l’accessibilité, avec des images sans texte alternatif, des boutons et des liens non descriptifs, ainsi que des vidéos sans sous-titres. Ces problèmes empêchent une partie importante de votre audience d’accéder pleinement à votre contenu, ce qui peut entraîner une perte de clients et de confiance. D’autres constats sérieux, comme le contraste insuffisant ou les cibles tactiles trop petites, affectent également l’expérience utilisateur, tandis que des données structurées invalides limitent votre visibilité dans les moteurs de recherche. L’ensemble de ces constats nécessite une attention prioritaire pour améliorer l’accessibilité et la performance commerciale du site.",
+  "overallRisk": "high",
+  "themes": [
+    {
+      "title": "Images sans texte alternatif",
+      "category": "accessibility",
+      "businessImpact": "Les visiteurs utilisant des technologies d’assistance ne peuvent pas comprendre le contenu des images, ce qui réduit l’accessibilité et peut entraîner une perte de confiance.",
+      "legalRelevance": "Critère 1.1.1 (Contenu non textuel), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 1,
+      "findingIds": [
+        "f001",
+        "f003",
+        "f006",
+        "f007",
+        "f008",
+        "f010",
+        "f012",
+        "f013",
+        "f014",
+        "f015",
+        "f016",
+        "f017"
+      ],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique d’ajouter un texte alternatif descriptif à toutes les images porteuses de sens sur les pages concernées.",
+        "Pour les images purement décoratives, demandez à votre prestataire technique de leur attribuer un rôle `presentation` ou `none`.",
+        "Vérifiez avec votre prestataire technique que les images dynamiques (chargées via JavaScript) incluent également un texte alternatif."
+      ]
+    },
+    {
+      "title": "Boutons sans libellé lisible",
+      "category": "accessibility",
+      "businessImpact": "Les boutons sans texte clair empêchent les utilisateurs de technologies d’assistance de comprendre leur fonction, ce qui nuit à l’expérience utilisateur et peut décourager les visiteurs.",
+      "legalRelevance": "Critère 4.1.2 (Nom, rôle et valeur), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 2,
+      "findingIds": ["f002", "f004", "f005", "f009", "f011"],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique d’ajouter un texte visible ou un attribut `aria-label` à tous les boutons sur les pages concernées.",
+        "Remplacez les icônes seules par un texte descriptif ou un libellé caché accessible aux lecteurs d’écran.",
+        "Vérifiez avec votre prestataire technique que les boutons dynamiques (créés via JavaScript) sont également accessibles."
+      ]
+    },
+    {
+      "title": "Liens sans texte descriptif",
+      "category": "accessibility",
+      "businessImpact": "Les liens sans texte clair ou répétitif rendent la navigation confuse pour les utilisateurs de lecteurs d’écran, ce qui peut les inciter à quitter le site.",
+      "legalRelevance": "Critères 2.4.4 (Fonction du lien selon le contexte) et 4.1.2 (Nom, rôle et valeur), WCAG 2.2 niveau AA, référencés par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 3,
+      "findingIds": ["f027", "f028", "f030", "f033", "f038", "f039", "f040", "f041", "f020"],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique de remplacer les liens du type « cliquez ici » ou « en savoir plus » par un texte explicite décrivant la destination.",
+        "Ajoutez un attribut `aria-label` aux liens dont le texte seul n’est pas suffisant pour en comprendre le but.",
+        "Vérifiez avec votre prestataire technique que les liens générés dynamiquement sont accessibles."
+      ]
+    },
+    {
+      "title": "Hiérarchie des titres incohérente",
+      "category": "accessibility",
+      "businessImpact": "Une structure de titres mal organisée complique la navigation pour les utilisateurs de technologies d’assistance, ce qui peut nuire à la compréhension du contenu.",
+      "legalRelevance": "Critère 1.3.1 (Information et relations), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 4,
+      "findingIds": ["f042", "f044"],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique de corriger la hiérarchie des titres pour éviter les sauts de niveau (par exemple, passer directement d’un h1 à un h3).",
+        "Assurez-vous que chaque page commence par un titre h1 unique et descriptif.",
+        "Vérifiez avec votre prestataire technique que les titres ajoutés dynamiquement suivent cette hiérarchie."
+      ]
+    },
+    {
+      "title": "Cadres sans nom accessible",
+      "category": "accessibility",
+      "businessImpact": "Les cadres (iframes) sans nom accessible empêchent les utilisateurs de technologies d’assistance de comprendre leur contenu, ce qui limite l’accès à des parties importantes du site.",
+      "legalRelevance": "Critère 4.1.2 (Nom, rôle et valeur), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 5,
+      "findingIds": ["f018", "f026", "f032", "f035"],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique d’ajouter un attribut `title` descriptif à chaque iframe sur les pages concernées.",
+        "Si le cadre contient un contenu interactif, assurez-vous que son nom reflète sa fonction ou son contenu.",
+        "Vérifiez avec votre prestataire technique que les cadres chargés dynamiquement sont également nommés."
+      ]
+    },
+    {
+      "title": "Zoom et mise à l’échelle désactivés",
+      "category": "accessibility",
+      "businessImpact": "Empêcher le zoom ou la mise à l’échelle du texte prive les utilisateurs, notamment ceux ayant une vision réduite, d’ajuster l’affichage selon leurs besoins.",
+      "legalRelevance": "Critère 1.4.4 (Redimensionnement du texte), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 6,
+      "findingIds": ["f043"],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique de supprimer toute restriction de zoom dans la balise `<meta name=\"viewport\">` sur les pages concernées.",
+        "Testez l’affichage sur différents appareils pour confirmer que le zoom fonctionne correctement.",
+        "Vérifiez avec votre prestataire technique que les pages dynamiques ne désactivent pas le zoom."
+      ]
+    },
+    {
+      "title": "Données structurées JSON-LD invalides",
+      "category": "seo",
+      "businessImpact": "Les données structurées non valides ne sont pas prises en compte par les moteurs de recherche, ce qui limite la visibilité du site dans les résultats enrichis.",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 7,
+      "findingIds": ["f022", "f025", "f034"],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique de corriger la syntaxe JSON des blocs de données structurées sur les pages concernées.",
+        "Validez les données structurées à l’aide d’outils comme le test des résultats enrichis de Google.",
+        "Vérifiez avec votre prestataire technique que les données structurées dynamiques sont également valides."
+      ]
+    },
+    {
+      "title": "Vidéos sans sous-titres",
+      "category": "accessibility",
+      "businessImpact": "Les visiteurs malentendants ou sourds ne peuvent pas accéder au contenu audio des vidéos, ce qui exclut une partie de votre audience et peut nuire à votre image.",
+      "legalRelevance": "Critère 1.2.2 (Sous-titres (enregistré)), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 8,
+      "findingIds": ["f021", "f031"],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique d’ajouter des pistes de sous-titres (`kind=\"captions\"`) ou de sous-titres (`kind=\"subtitles\"`) à toutes les vidéos sur les pages concernées.",
+        "Si les vidéos sont hébergées sur une plateforme externe, configurez les sous-titres directement dans cette plateforme.",
+        "Vérifiez avec votre prestataire technique que les vidéos chargées dynamiquement incluent également des sous-titres."
+      ]
+    },
+    {
+      "title": "Contraste des couleurs insuffisant",
+      "category": "accessibility",
+      "businessImpact": "Un contraste insuffisant rend le texte difficile à lire pour les personnes malvoyantes ou dans des conditions de faible luminosité, ce qui peut réduire l’engagement.",
+      "legalRelevance": "Critère 1.4.3 (Contraste minimum), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 9,
+      "findingIds": ["f029", "f024"],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique d’ajuster les couleurs du texte et de l’arrière-plan pour respecter un ratio de contraste minimum de 4,5:1 pour le texte normal (WCAG 2.2 AA).",
+        "Utilisez des outils de vérification de contraste pour valider les modifications apportées.",
+        "Vérifiez avec votre prestataire technique que les éléments dynamiques (comme les menus déroulants) respectent également ces normes."
+      ]
+    },
+    {
+      "title": "Cibles tactiles trop petites",
+      "category": "accessibility",
+      "businessImpact": "Des cibles tactiles trop petites ou trop proches rendent l’utilisation difficile sur mobile, surtout pour les personnes ayant des troubles moteurs.",
+      "legalRelevance": "Critère 2.5.8 (Taille de la cible, minimum), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 10,
+      "findingIds": ["f036"],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique d’agrandir les boutons et liens tactiles à au moins 24x24 pixels.",
+        "Ajoutez un espacement suffisant entre les cibles tactiles pour éviter les clics accidentels.",
+        "Vérifiez avec votre prestataire technique que les éléments interactifs ajoutés dynamiquement respectent ces dimensions."
+      ]
+    },
+    {
+      "title": "Contenu invisible sans JavaScript",
+      "category": "rendering",
+      "businessImpact": "Les moteurs de recherche et certains utilisateurs ne voient qu’une page quasi vide, ce qui réduit la visibilité et l’accessibilité du site.",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 11,
+      "findingIds": ["f019"],
+      "recommendedActions": [
+        "Demandez à votre prestataire technique d’implémenter un rendu côté serveur (SSR) ou un pré-rendu pour les pages concernées.",
+        "Ajoutez un contenu de repli dans le HTML statique pour les éléments dépendants de JavaScript.",
+        "Vérifiez avec votre prestataire technique que les pages dynamiques affichent un contenu accessible sans JavaScript."
+      ]
+    }
+  ],
+  "quickWins": ["f001", "f002", "f027", "f028", "f043", "f022", "f025"],
+  "notes": "Aucun contexte sur le site (type d’entreprise, objectifs principaux, marchés cibles ou langues servies) n’a été fourni. Les priorités reflètent donc uniquement la gravité des constats détectés, et non des objectifs métiers déclarés.",
+  "analysisId": "88048b10-8872-4a01-8efa-72cbb319f633",
+  "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "3c929f623820fd02",
+    "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+  },
+  "language": "fr",
+  "model": "mistral-medium-latest",
+  "temperature": 0.2,
+  "generatedAt": "2026-09-01T14:06:26.715Z",
+  "obligationAssessment": {
+    "status": "undetermined",
+    "basis": [
+      {
+        "regimeId": "eaa-loi-2023-171",
+        "facts": [
+          {
+            "kind": "siren-missing"
+          }
+        ]
+      }
+    ],
+    "sector": "general"
+  }
+}

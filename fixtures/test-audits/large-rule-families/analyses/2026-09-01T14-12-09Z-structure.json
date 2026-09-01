@@ -1,0 +1,116 @@
+{
+  "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+  "themes": [
+    {
+      "findingIds": [
+        "f001",
+        "f003",
+        "f006",
+        "f007",
+        "f008",
+        "f010",
+        "f012",
+        "f013",
+        "f014",
+        "f015",
+        "f016",
+        "f017"
+      ],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 1,
+      "themeKey": "t1"
+    },
+    {
+      "findingIds": ["f002", "f004", "f005", "f009", "f011"],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 2,
+      "themeKey": "t2"
+    },
+    {
+      "findingIds": ["f027", "f028", "f030", "f033", "f038", "f039", "f040", "f041", "f020"],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "high",
+      "priorityRank": 3,
+      "themeKey": "t3"
+    },
+    {
+      "findingIds": ["f043"],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "medium",
+      "priorityRank": 4,
+      "themeKey": "t11"
+    },
+    {
+      "findingIds": ["f018", "f026", "f032", "f035"],
+      "category": "accessibility",
+      "effort": "medium",
+      "impact": "high",
+      "priorityRank": 5,
+      "themeKey": "t4"
+    },
+    {
+      "findingIds": ["f021", "f031"],
+      "category": "accessibility",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 6,
+      "themeKey": "t5"
+    },
+    {
+      "findingIds": ["f029", "f024"],
+      "category": "accessibility",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 7,
+      "themeKey": "t6"
+    },
+    {
+      "findingIds": ["f036"],
+      "category": "accessibility",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 8,
+      "themeKey": "t7"
+    },
+    {
+      "findingIds": ["f019"],
+      "category": "rendering",
+      "effort": "high",
+      "impact": "high",
+      "priorityRank": 9,
+      "themeKey": "t8"
+    },
+    {
+      "findingIds": ["f022", "f025", "f034"],
+      "category": "seo",
+      "effort": "medium",
+      "impact": "medium",
+      "priorityRank": 10,
+      "themeKey": "t9"
+    },
+    {
+      "findingIds": ["f042", "f044"],
+      "category": "accessibility",
+      "effort": "low",
+      "impact": "low",
+      "priorityRank": 11,
+      "themeKey": "t10"
+    }
+  ],
+  "quickWins": ["f001", "f002", "f027", "f028", "f030", "f039", "f040", "f043"],
+  "overallRisk": "high",
+  "model": "mistral-medium-latest",
+  "temperature": 0.2,
+  "generatedAt": "2026-09-01T14:12:09.165Z",
+  "findingsProvenance": {
+    "findingsSchemaVersion": 1,
+    "normalizationFingerprint": "3c929f623820fd02",
+    "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+  }
+}
