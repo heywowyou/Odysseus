@@ -9,7 +9,7 @@
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
-import type { AuditManifest, AuditManualFields } from '@odysseus/core';
+import type { AuditManifest, AuditManualFields, ReportPreparation } from '@odysseus/core';
 
 export interface AuditDocumentFields extends Omit<
   AuditManifest,
@@ -23,6 +23,13 @@ export interface AuditDocumentFields extends Omit<
    *  AuditManualFields's own doc comment in @odysseus/core). Absent for
    *  every audit until the operator saves at least one field. */
   manualFields?: AuditManualFields;
+  /** Plan 019: bounded report-preparation aggregate, DB-only like
+   *  manualFields. The stored shape is core's ReportPreparation verbatim
+   *  (all timestamps ISO strings, no Date conversion needed because
+   *  nothing queries preparation by time). Absent until the operator
+   *  first saves preparation input. All writes go through the store
+   *  service functions; handlers never issue raw updates. */
+  reportPreparation?: ReportPreparation;
 }
 
 export type AuditDocument = AuditDocumentFields;
@@ -175,6 +182,125 @@ const findingsProvenanceSchema = new Schema(
   { _id: false },
 );
 
+// Report preparation (plan 019). The enum validators mirror core's closed
+// vocabularies the same way analysis.schema.ts mirrors Theme['category'].
+const localizedOptionalTextSchema = new Schema(
+  {
+    fr: { type: String },
+    en: { type: String },
+  },
+  { _id: false },
+);
+
+const analysisPairRefSchema = new Schema(
+  {
+    frAnalysisId: { type: String, required: true },
+    enAnalysisId: { type: String, required: true },
+    findingsProvenance: { type: findingsProvenanceSchema, required: true },
+  },
+  { _id: false },
+);
+
+const writingCandidateStateSchema = new Schema(
+  {
+    // Discriminated union in core; Mongoose stores the union's fields
+    // flatly with only the ones the status requires populated.
+    status: {
+      type: String,
+      required: true,
+      enum: ['ready', 'failed', 'selected'],
+    },
+    pair: { type: analysisPairRefSchema },
+    createdAt: { type: String },
+    approvedAt: { type: String },
+    reason: { type: String },
+  },
+  { _id: false },
+);
+
+const writingSelectionSchema = new Schema(
+  {
+    selected: { type: analysisPairRefSchema },
+    candidate: { type: writingCandidateStateSchema },
+  },
+  { _id: false },
+);
+
+const journeyDecisionSchema = new Schema(
+  {
+    journeyId: {
+      type: String,
+      required: true,
+      enum: ['discovery-navigation', 'transaction-booking'],
+    },
+    decision: {
+      type: String,
+      required: true,
+      enum: ['confirmed', 'removed'],
+    },
+  },
+  { _id: false },
+);
+
+const reportPreparationSchema = new Schema(
+  {
+    context: {
+      _id: false,
+      type: {
+        situation: {
+          type: String,
+          enum: [
+            'no-work-started',
+            'redesign-underway',
+            'corrections-underway',
+            'accessibility-programme',
+            'periodic-review',
+            'unknown',
+          ],
+        },
+        trigger: {
+          type: String,
+          enum: [
+            'legal-question',
+            'customer-complaint',
+            'booking-or-conversion',
+            'search-visibility',
+            'redesign',
+            'procurement',
+            'commercial-discussion',
+            'proactive-review',
+            'other',
+          ],
+        },
+        triggerOther: { type: localizedOptionalTextSchema },
+      },
+      default: {},
+    },
+    customCoverQuestion: { type: localizedOptionalTextSchema },
+    stakeholders: {
+      _id: false,
+      type: {
+        management: { type: String },
+        technical: { type: String },
+        communications: { type: String },
+        legal: { type: String },
+      },
+      default: {},
+    },
+    journeyDecisions: { type: [journeyDecisionSchema], default: [] },
+    warningAcknowledgement: {
+      _id: false,
+      type: {
+        digest: { type: String, required: true },
+        acknowledgedAt: { type: String, required: true },
+      },
+    },
+    writingSelection: { type: writingSelectionSchema },
+    updatedAt: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const auditSchema = new Schema<AuditDocument>(
   {
     auditId: { type: String, required: true, unique: true },
@@ -189,6 +315,7 @@ const auditSchema = new Schema<AuditDocument>(
     crawl: { type: crawlStatsSchema, required: true },
     pages: { type: [manifestPageEntrySchema], default: [] },
     manualFields: { type: manualFieldsSchema },
+    reportPreparation: { type: reportPreparationSchema },
   },
   { collection: 'audits' },
 );

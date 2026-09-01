@@ -1,0 +1,386 @@
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  FINDINGS_SCHEMA_VERSION,
+  parseReportPreparationPatch,
+  type AnalysisPairRef,
+  type AuditManifest,
+  type FindingsProvenance,
+} from '@odysseus/core';
+import { persistAnalysis } from './persist-analysis.js';
+import { persistAudit } from './persist-audit.js';
+import { createAnalysisModel } from './schemas/analysis.schema.js';
+import { createAuditModel } from './schemas/audit.schema.js';
+import {
+  approveWritingCandidate,
+  clearStaleWarningAcknowledgement,
+  getAnalysisById,
+  getReportPreparation,
+  patchReportPreparationInputs,
+  recordFailedWritingCandidate,
+  recordReadyWritingCandidate,
+  resolveSelectedAnalysisPairForAudit,
+  setWarningAcknowledgement,
+  WritingSelectionConflictError,
+} from './report-preparations.js';
+import type { AnalysisDocumentFields } from './schemas/analysis.schema.js';
+import { probeMongoAvailability } from './test-support.js';
+
+const { available: mongoAvailable, connection } = await probeMongoAvailability();
+
+afterAll(async () => {
+  if (connection) await connection.close();
+});
+
+function buildManifest(auditId: string): AuditManifest {
+  return {
+    auditId,
+    kind: 'audit',
+    siteUrl: 'https://example.com/',
+    startedAt: '2026-08-02T00:00:00.000Z',
+    finishedAt: '2026-08-02T00:05:00.000Z',
+    tool: {
+      odysseusVersion: '0.1.0',
+      findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
+      axeCoreVersion: '4.12.1',
+      lighthouseVersion: '12.8.2',
+      playwrightVersion: '1.49.0',
+      chromiumVersion: '130.0.0.0',
+    },
+    config: {
+      maxPages: 20,
+      maxDepth: 5,
+      crawlDelayMs: 1000,
+      pageTimeoutMs: 30_000,
+      lighthouseTimeoutMs: 60_000,
+      userAgent: 'OdysseusAuditBot/0.1',
+      scanConcurrency: 3,
+    },
+    crawl: {
+      startUrl: 'https://example.com/',
+      visitedCount: 1,
+      maxPages: 20,
+      maxDepth: 5,
+      robotsTxtFound: true,
+      effectiveDelayMs: 1000,
+    },
+    pages: [],
+  };
+}
+
+function provenance(digest: string): FindingsProvenance {
+  return {
+    findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
+    normalizationFingerprint: 'fp-test',
+    findingsDigest: digest,
+  };
+}
+
+let nextAnalysisId = 0;
+
+async function insertAnalysis(
+  auditId: string,
+  language: 'fr' | 'en',
+  generatedAt: string,
+  digest = 'sha256:run-a',
+): Promise<AnalysisDocumentFields> {
+  nextAnalysisId += 1;
+  const fields: AnalysisDocumentFields = {
+    analysisId: `prep-an-${nextAnalysisId}`,
+    auditId,
+    findingsProvenance: provenance(digest),
+    language,
+    model: 'mistral-medium-latest',
+    temperature: 0.2,
+    generatedAt: new Date(generatedAt),
+    executiveSummary: 'Summary.',
+    overallRisk: 'medium',
+    themes: [],
+    quickWins: [],
+    notes: 'Notes.',
+  };
+  await persistAnalysis(connection!, fields);
+  return fields;
+}
+
+async function insertAudit(auditId: string): Promise<void> {
+  await persistAudit(connection!, buildManifest(auditId), []);
+}
+
+describe.skipIf(!mongoAvailable)('report preparation persistence', () => {
+  const OWN_IDS = /^prep-/;
+
+  beforeEach(async () => {
+    if (!connection) return;
+    await createAuditModel(connection).deleteMany({ auditId: OWN_IDS });
+    await createAnalysisModel(connection).deleteMany({ auditId: OWN_IDS });
+  });
+
+  it('returns an empty preparation for an audit that never saved one', async () => {
+    await insertAudit('prep-empty');
+    const preparation = await getReportPreparation(connection!, 'prep-empty');
+    expect(preparation).toEqual({
+      context: {},
+      stakeholders: {},
+      journeyDecisions: [],
+      updatedAt: expect.any(String),
+    });
+  });
+
+  it('round-trips every operator input without accepting unknown vocabulary values', async () => {
+    await insertAudit('prep-roundtrip');
+    const patch = parseReportPreparationPatch({
+      context: {
+        situation: 'corrections-underway',
+        trigger: 'other',
+        triggerOther: { fr: 'Note française', en: 'English note' },
+      },
+      customCoverQuestion: { fr: 'Question ?', en: null },
+      stakeholders: { management: 'Jeanne Dupont', technical: 'Sam Martin' },
+      journeyDecisions: [{ journeyId: 'discovery-navigation', decision: 'confirmed' }],
+    });
+    await patchReportPreparationInputs(connection!, 'prep-roundtrip', patch);
+
+    const round = await getReportPreparation(connection!, 'prep-roundtrip');
+    expect(round.context.situation).toBe('corrections-underway');
+    expect(round.context.trigger).toBe('other');
+    expect(round.context.triggerOther).toEqual({ fr: 'Note française', en: 'English note' });
+    expect(round.customCoverQuestion).toEqual({ fr: 'Question ?' });
+    expect(round.stakeholders.management).toBe('Jeanne Dupont');
+    expect(round.journeyDecisions).toEqual([
+      { journeyId: 'discovery-navigation', decision: 'confirmed' },
+    ]);
+
+    // Unknown values are rejected by the parse boundary long before the
+    // store; the closed vocabulary is core-owned.
+    expect(() =>
+      parseReportPreparationPatch({ context: { situation: 'not-a-situation' } }),
+    ).toThrow();
+  });
+
+  it('clears a null value and records the clear', async () => {
+    await insertAudit('prep-clear');
+    await patchReportPreparationInputs(
+      connection!,
+      'prep-clear',
+      parseReportPreparationPatch({ stakeholders: { legal: 'Tmp' } }),
+    );
+    await patchReportPreparationInputs(
+      connection!,
+      'prep-clear',
+      parseReportPreparationPatch({ stakeholders: { legal: null } }),
+    );
+    const round = await getReportPreparation(connection!, 'prep-clear');
+    expect(round.stakeholders.legal).toBeUndefined();
+  });
+
+  it('remembers a warning acknowledgement only while the digest matches', async () => {
+    await insertAudit('prep-ack');
+    await setWarningAcknowledgement(connection!, 'prep-ack', 'sha256:current');
+    let preparation = await getReportPreparation(connection!, 'prep-ack');
+    expect(preparation.warningAcknowledgement?.digest).toBe('sha256:current');
+
+    const unchanged = await clearStaleWarningAcknowledgement(
+      connection!,
+      'prep-ack',
+      'sha256:current',
+    );
+    expect(unchanged.warningAcknowledgement?.digest).toBe('sha256:current');
+
+    const pruned = await clearStaleWarningAcknowledgement(connection!, 'prep-ack', 'sha256:new');
+    expect(pruned.warningAcknowledgement).toBeUndefined();
+    preparation = await getReportPreparation(connection!, 'prep-ack');
+    expect(preparation.warningAcknowledgement).toBeUndefined();
+  });
+});
+
+describe.skipIf(!mongoAvailable)('exact analysis reads', () => {
+  const OWN_IDS = /^prep-/;
+
+  beforeEach(async () => {
+    if (!connection) return;
+    await createAnalysisModel(connection).deleteMany({ auditId: OWN_IDS });
+  });
+
+  it('scopes exact-ID reads to the audit that owns the analysis', async () => {
+    const analysis = await insertAnalysis('prep-scope-a', 'fr', '2026-09-01T00:00:00Z');
+    expect(
+      (await getAnalysisById(connection!, 'prep-scope-a', analysis.analysisId))?.analysisId,
+    ).toBe(analysis.analysisId);
+    expect(await getAnalysisById(connection!, 'prep-scope-b', analysis.analysisId)).toBeNull();
+  });
+});
+
+describe.skipIf(!mongoAvailable)('writing selection', () => {
+  const OWN_IDS = /^prep-/;
+
+  beforeEach(async () => {
+    if (!connection) return;
+    await createAuditModel(connection).deleteMany({ auditId: OWN_IDS });
+    await createAnalysisModel(connection).deleteMany({ auditId: OWN_IDS });
+  });
+
+  async function seedSelectedPair(auditId: string, digest: string): Promise<AnalysisPairRef> {
+    await insertAudit(auditId);
+    const fr = await insertAnalysis(auditId, 'fr', '2026-09-01T00:00:00Z', digest);
+    const en = await insertAnalysis(auditId, 'en', '2026-09-01T06:00:00Z', digest);
+    await recordReadyWritingCandidate(connection!, auditId, {
+      frAnalysisId: fr.analysisId,
+      enAnalysisId: en.analysisId,
+      findingsProvenance: provenance(digest),
+    });
+    return approveWritingCandidate(connection!, auditId).then((preparation) => {
+      const selected = preparation.writingSelection?.selected;
+      if (!selected) throw new Error('odysseus: selection missing after approval');
+      return selected;
+    });
+  }
+
+  it('records a ready candidate without changing selection or legacy resolution', async () => {
+    await insertAudit('prep-candidate');
+    const fr = await insertAnalysis('prep-candidate', 'fr', '2026-09-01T00:00:00Z');
+    const en = await insertAnalysis('prep-candidate', 'en', '2026-09-01T06:00:00Z');
+    await recordReadyWritingCandidate(connection!, 'prep-candidate', {
+      frAnalysisId: fr.analysisId,
+      enAnalysisId: en.analysisId,
+      findingsProvenance: provenance('sha256:run-a'),
+    });
+
+    const preparation = await getReportPreparation(connection!, 'prep-candidate');
+    expect(preparation.writingSelection?.candidate?.status).toBe('ready');
+    expect(preparation.writingSelection?.selected).toBeUndefined();
+
+    const resolution = await resolveSelectedAnalysisPairForAudit(connection!, 'prep-candidate');
+    expect(resolution.kind).toBe('legacy-latest');
+  });
+
+  it('approves a ready candidate exactly once, atomically', async () => {
+    const selected = await seedSelectedPair('prep-approve', 'sha256:old-run');
+    const newer = 'sha256:new-run';
+    const fr = await insertAnalysis('prep-approve', 'fr', '2026-09-02T00:00:00Z', newer);
+    const en = await insertAnalysis('prep-approve', 'en', '2026-09-02T06:00:00Z', newer);
+    await recordReadyWritingCandidate(connection!, 'prep-approve', {
+      frAnalysisId: fr.analysisId,
+      enAnalysisId: en.analysisId,
+      findingsProvenance: provenance(newer),
+    });
+
+    const preparation = await approveWritingCandidate(connection!, 'prep-approve');
+    expect(preparation.writingSelection?.candidate?.status).toBe('selected');
+    expect(preparation.writingSelection?.selected?.frAnalysisId).toBe(fr.analysisId);
+    expect(preparation.writingSelection?.selected?.enAnalysisId).toBe(en.analysisId);
+    expect(selected.frAnalysisId).not.toBe(fr.analysisId);
+
+    const resolution = await resolveSelectedAnalysisPairForAudit(connection!, 'prep-approve');
+    expect(resolution.kind).toBe('selected');
+    if (resolution.kind === 'selected') {
+      expect(resolution.fr.analysisId).toBe(fr.analysisId);
+    }
+
+    // A second approval attempt finds no ready candidate and conflicts.
+    await expect(approveWritingCandidate(connection!, 'prep-approve')).rejects.toBeInstanceOf(
+      WritingSelectionConflictError,
+    );
+  });
+
+  it('refuses to select an incomplete or incompatible pair', async () => {
+    await insertAudit('prep-incompatible');
+    const fr = await insertAnalysis(
+      'prep-incompatible',
+      'fr',
+      '2026-09-01T00:00:00Z',
+      'sha256:run-x',
+    );
+    const en = await insertAnalysis(
+      'prep-incompatible',
+      'en',
+      '2026-09-01T06:00:00Z',
+      'sha256:run-y',
+    );
+    await recordReadyWritingCandidate(connection!, 'prep-incompatible', {
+      frAnalysisId: fr.analysisId,
+      enAnalysisId: en.analysisId,
+      findingsProvenance: provenance('sha256:run-x'),
+    });
+
+    await expect(approveWritingCandidate(connection!, 'prep-incompatible')).rejects.toBeInstanceOf(
+      WritingSelectionConflictError,
+    );
+    const preparation = await getReportPreparation(connection!, 'prep-incompatible');
+    expect(preparation.writingSelection?.selected).toBeUndefined();
+    expect(preparation.writingSelection?.candidate?.status).toBe('ready');
+  });
+
+  it('conflicts when the ready candidate disappeared before approval', async () => {
+    await insertAudit('prep-race');
+    const fr = await insertAnalysis('prep-race', 'fr', '2026-09-01T00:00:00Z');
+    const en = await insertAnalysis('prep-race', 'en', '2026-09-01T06:00:00Z');
+    await recordReadyWritingCandidate(connection!, 'prep-race', {
+      frAnalysisId: fr.analysisId,
+      enAnalysisId: en.analysisId,
+      findingsProvenance: provenance('sha256:run-a'),
+    });
+    // A concurrent process removed the analyses after the candidate was
+    // recorded; approval must fail closed instead of selecting nothing.
+    await createAnalysisModel(connection!).deleteMany({ auditId: OWN_IDS });
+
+    await expect(approveWritingCandidate(connection!, 'prep-race')).rejects.toBeInstanceOf(
+      WritingSelectionConflictError,
+    );
+    const untouched = await getReportPreparation(connection!, 'prep-race');
+    expect(untouched.writingSelection?.selected).toBeUndefined();
+    expect(untouched.writingSelection?.candidate?.status).toBe('ready');
+  });
+
+  it('keeps the selected pair when a regeneration fails', async () => {
+    const seeded = await seedSelectedPair('prep-failure', 'sha256:kept');
+    await recordReadyWritingCandidate(connection!, 'prep-failure', {
+      frAnalysisId: 'fr-new',
+      enAnalysisId: 'en-new',
+      findingsProvenance: provenance('sha256:kept'),
+    });
+    const preparation = await recordFailedWritingCandidate(
+      connection!,
+      'prep-failure',
+      'mistral: exhausted retries',
+    );
+    expect(preparation.writingSelection?.candidate).toEqual({
+      status: 'failed',
+      reason: 'mistral: exhausted retries',
+      createdAt: expect.any(String),
+    });
+    expect(preparation.writingSelection?.selected).toEqual(seeded);
+
+    const resolution = await resolveSelectedAnalysisPairForAudit(connection!, 'prep-failure');
+    expect(resolution.kind).toBe('selected');
+    if (resolution.kind === 'selected') {
+      expect(resolution.fr.analysisId).toBe(seeded.frAnalysisId);
+      expect(resolution.en.analysisId).toBe(seeded.enAnalysisId);
+    }
+  });
+
+  it('resolves the legacy latest complete pair deterministically', async () => {
+    await insertAudit('prep-legacy');
+    // Newest overall: a run whose English half never arrived. Must be ignored.
+    await insertAnalysis('prep-legacy', 'fr', '2026-09-05T00:00:00Z', 'sha256:orphan');
+    // Older complete run: the expected fallback.
+    await insertAnalysis('prep-legacy', 'fr', '2026-09-01T00:00:00Z', 'sha256:run-a');
+    const enA1 = await insertAnalysis('prep-legacy', 'en', '2026-09-01T06:00:00Z', 'sha256:run-a');
+    const frA2 = await insertAnalysis('prep-legacy', 'fr', '2026-09-02T00:00:00Z', 'sha256:run-a');
+    // Even older complete run from a different structural generation. Ignored.
+    await insertAnalysis('prep-legacy', 'fr', '2026-08-30T00:00:00Z', 'sha256:run-0');
+    await insertAnalysis('prep-legacy', 'en', '2026-08-30T06:00:00Z', 'sha256:run-0');
+
+    const resolution = await resolveSelectedAnalysisPairForAudit(connection!, 'prep-legacy');
+    expect(resolution.kind).toBe('legacy-latest');
+    if (resolution.kind === 'legacy-latest') {
+      expect(resolution.fr.analysisId).toBe(frA2.analysisId);
+      expect(resolution.en.analysisId).toBe(enA1.analysisId);
+    }
+  });
+
+  it('reports none when an audit has no analyses at all', async () => {
+    await insertAudit('prep-nothing');
+    const resolution = await resolveSelectedAnalysisPairForAudit(connection!, 'prep-nothing');
+    expect(resolution).toEqual({ kind: 'none', reason: 'no-analyses' });
+  });
+});

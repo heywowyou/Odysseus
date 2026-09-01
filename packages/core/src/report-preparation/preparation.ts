@@ -199,16 +199,18 @@ export function applyPreparationPatch(
   patch: ReportPreparationPatch,
   now: string,
 ): ReportPreparation {
+  // Optional chaining throughout: a preparation read back from persistence
+  // can lack keys whose subdocuments were empty when stored.
   const situation =
     patch.context?.situation === undefined
-      ? current.context.situation
+      ? current.context?.situation
       : (patch.context.situation ?? undefined);
   const trigger =
     patch.context?.trigger === undefined
-      ? current.context.trigger
+      ? current.context?.trigger
       : (patch.context.trigger ?? undefined);
   const triggerOther = applyLocalizedText(
-    current.context.triggerOther,
+    current.context?.triggerOther,
     patch.context?.triggerOther,
   );
   const customCoverQuestion = applyLocalizedText(
@@ -216,7 +218,9 @@ export function applyPreparationPatch(
     patch.customCoverQuestion,
   );
 
-  const stakeholders: Partial<Record<ReportStakeholderRole, string>> = { ...current.stakeholders };
+  const stakeholders: Partial<Record<ReportStakeholderRole, string>> = {
+    ...(current.stakeholders ?? {}),
+  };
   for (const role of REPORT_STAKEHOLDER_ROLES) {
     const value = patch.stakeholders?.[role];
     if (value === undefined) continue;
@@ -232,7 +236,7 @@ export function applyPreparationPatch(
     },
     ...(customCoverQuestion !== undefined ? { customCoverQuestion } : {}),
     stakeholders,
-    journeyDecisions: applyJourneyDecisions(current.journeyDecisions, patch.journeyDecisions),
+    journeyDecisions: applyJourneyDecisions(current.journeyDecisions ?? [], patch.journeyDecisions),
     ...(current.warningAcknowledgement
       ? { warningAcknowledgement: current.warningAcknowledgement }
       : {}),

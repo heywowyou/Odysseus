@@ -70,6 +70,23 @@ export {
   setAuditManualFields,
   prefillAuditManualFields,
 } from './audits.js';
+
+// Plan 019: report preparation and exact-ID writing selection. All writes
+// go through these service functions; handlers never issue raw updates.
+export {
+  approveWritingCandidate,
+  clearStaleWarningAcknowledgement,
+  getAnalysisById,
+  getReportPreparation,
+  listAnalysesForAudit,
+  patchReportPreparationInputs,
+  recordFailedWritingCandidate,
+  recordReadyWritingCandidate,
+  resolveSelectedAnalysisPairForAudit,
+  setWarningAcknowledgement,
+  WritingSelectionConflictError,
+} from './report-preparations.js';
+export type { SelectedAuditAnalysisPairResolution } from './report-preparations.js';
 export { getLatestReport, listReportLanguages } from './reports.js';
 export { createProspectModel } from './schemas/prospect.schema.js';
 export type {
