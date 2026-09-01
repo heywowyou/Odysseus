@@ -5,14 +5,17 @@
  * against a real client scan" is the doc's own working rule, and this is
  * the one place that rule is enforced as a test rather than a convention.
  *
- * Needs real Chromium, matching this repo's *.e2e.test.ts convention,
- * though it isn't named that way since it belongs next to render-html.ts.
+ * Needs real Chromium, matching this repo's *.e2e.test.ts convention.
  *
- * Per the plan correction that preceded this rebuild: axe-core runs
- * against the POST-PAGINATION DOM (after Paged.js's preview() resolves),
- * not the pre-pagination source - Paged.js clones and fragments the DOM
- * to lay out pages, which can duplicate landmarks or reorder reading
- * order even when the source markup is clean.
+ * Plan 018 (2026-08-30 executive review) replaced compact flow with the
+ * one-section-per-page contract: every numbered .sheet starts on a fresh
+ * physical page, sparse pages are an accepted executive-reading choice,
+ * and there is no page-count range to assert anymore. Per the plan
+ * correction that preceded the axe rebuild: axe-core runs against the
+ * POST-PAGINATION DOM (after Paged.js's preview() resolves), not the
+ * pre-pagination source - Paged.js clones and fragments the DOM to lay
+ * out pages, which can duplicate landmarks or reorder reading order even
+ * when the source markup is clean.
  */
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -51,12 +54,12 @@ interface PaginatedDocument {
    *  with its last several pages missing this way, with no error
    *  surfaced anywhere - the PDF byte stream was completely well-formed,
    *  just truncated. Neither variant of the stress fixture happened to
-   *  trigger it (confirmed: it is sensitive to a specific document
-   *  shape this generator's 29-page run does not reproduce), so this is
-   *  asserted generically against every pagination test in this file
-   *  instead of chasing one narrow synthetic repro - the same
-   *  console-error detection pdf.ts's renderPdfFromHtml now performs
-   *  before ever returning a PDF to a caller. */
+   *  trigger it (confirmed: it is sensitive to a specific document shape
+   *  the stress fixture does not reproduce), so this is asserted
+   *  generically against every pagination test in this file instead of
+   *  chasing one narrow synthetic repro - the same console-error
+   *  detection pdf.ts's renderPdfFromHtml now performs before ever
+   *  returning a PDF to a caller. */
   consoleErrors: string[];
 }
 
@@ -104,6 +107,39 @@ async function buildStressHtml(): Promise<string> {
   });
 }
 
+/** Every sheet eyebrow in source document order. html-utils.ts's sheet()
+ *  helper, toc.ts, and metadata-sheet.ts are the only h6 emitters in the
+ *  package (verified by plan 018's step-2 work), so each h6 marks exactly
+ *  one sheet start: the metadata sheet, the TOC, and every included
+ *  numbered section, cover excluded (it renders no h6). Comparing this
+ *  source sequence against the paginated DOM's first appearances asserts
+ *  the whole reading order without hardcoding section ids, so section
+ *  reorders and conditional suppressions (section-06, section-10) cannot
+ *  stale this file. */
+function sheetEyebrowsFromSource(html: string): string[] {
+  return [...html.matchAll(/<h6[^>]*>([\s\S]*?)<\/h6>/g)].map((m) =>
+    m[1]
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .trim(),
+  );
+}
+
+/** The id of every numbered section in source document order (cover and
+ *  TOC pass no id to sheet(); every numbered section passes exactly one).
+ *  Same extraction shape as section-registry.test.ts's DOM-order check,
+ *  but applied to the pre-pagination source so the paginated-DOM order
+ *  assertion below stays independent of the registry's runtime state. */
+function sectionIdsFromSource(html: string): string[] {
+  return [...html.matchAll(/<section class="sheet[^"]*" id="(section-[^"]+)">/g)].map(
+    (match) => match[1],
+  );
+}
+
 // One Chromium and one Paged.js source read per file: the describes below
 // only paginate different documents against the same browser.
 let browser: Browser;
@@ -119,28 +155,22 @@ afterAll(async () => {
 
 describe('Paged.js invariants against the stress fixture (docs/report/report-design-system.md section 4)', () => {
   let doc: PaginatedDocument;
+  let stressHtml: string;
 
   beforeAll(async () => {
-    const html = await buildStressHtml();
-    doc = await paginate(browser, html, pagedjsSource);
+    stressHtml = await buildStressHtml();
+    doc = await paginate(browser, stressHtml, pagedjsSource);
   }, 60_000);
 
-  // report-feedback-palais-gallien.md item 26: minor findings now render
-  // with the same full page/selector detail as every other severity
-  // (appendix-grouping.ts's groupAppendix, no more condensed per-rule
-  // summary), which genuinely grows the appendix - the stress fixture
-  // moved from 18-26 pages to 29. This is the expected cost of shipping
-  // what the full-audit tier's own spec already promised, not a
-  // regression to compensate for; the ceiling was raised rather than the
-  // content trimmed back to fit the old range.
   it('Paged.js never hits its own layout-repeated bailout while paginating the stress fixture', () => {
     expect(doc.consoleErrors).toEqual([]);
   });
 
-  it('invariant 7: total page count for the stress fixture stays within 18 to 32', () => {
-    expect(doc.pageCount).toBeGreaterThanOrEqual(18);
-    expect(doc.pageCount).toBeLessThanOrEqual(32);
-  });
+  // Plan 018 retired the 18-to-32 page-count range along with compact
+  // flow: one numbered section per page genuinely grows the document
+  // (the stress fixture paginates to ~35 pages), and the contract now
+  // carries no length failure at all - above 60 pages the report stage
+  // attaches a non-blocking warning instead (report-stage.ts).
 
   it('invariant 5: the DOM page count matches what Paged.js itself resolved counter(pages) to', async () => {
     const domPageCount = await doc.page.evaluate(
@@ -160,10 +190,7 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
   // page, including the cover, whose @page cover rule (paged.css)
   // deliberately sets `@top-right { content: ""; }` (documented right
   // there: "the page counter is dropped for this page only rather than
-  // repositioned over the gradient with its own contrast rules"). The
-  // cover is already exempted from invariant 2's fill-ratio check for an
-  // unrelated reason; it gets the same exemption here, for its own
-  // documented reason, not carried over from that one.
+  // repositioned over the gradient with its own contrast rules").
   it('invariant 4: every non-cover page carries the footer string and a page-counter rule in its margin boxes', async () => {
     const marginInfo = await doc.page.evaluate(() =>
       Array.from(document.querySelectorAll('.pagedjs_page')).map((p) => {
@@ -237,38 +264,51 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     expect(overflowing).toBe(0);
   });
 
-  // item 34 revised this invariant: sections used to force a hard page
-  // break on both sides unconditionally, which is exactly what produced
-  // pages more than half empty (a three-row table or a couple of short
-  // paragraphs, alone, under a break on both sides). Sections now flow
-  // freely by default and may share a physical page with their
-  // neighbours; only .sheet-standalone sections (TOC, checklist, findings
-  // appendix) still force their own boundaries. The stress fixture's
-  // shortest run of sections (a real combination: observations with
-  // nothing diverted, the render-diff evidence positive-statement
-  // fallback, and a short core-web-vitals table) packs 3 section starts
-  // onto one physical page - genuinely short content flowing as
-  // intended, not a pagination bug, so the cap is 3, not the original
-  // 1 (or a stricter 2 that would still fail here). A page holding 4 or
-  // more distinct sections would be a real red flag worth investigating,
-  // which this still catches.
-  it('invariant 3: no more than 3 distinct sections ever share one physical page', async () => {
-    const eyebrowsPerPage = await doc.page.evaluate(() =>
-      Array.from(document.querySelectorAll('.pagedjs_page')).map((p) =>
-        Array.from(p.querySelectorAll('h6')).map((h) => h.textContent?.trim()),
-      ),
+  // Plan 018's replacement for the retired three-per-page cap: every
+  // numbered .sheet starts on a fresh physical page, so a page carries at
+  // most one sheet eyebrow (the metadata sheet, the TOC, and every
+  // included numbered section; the cover renders no h6). The first
+  // appearance order of those eyebrows across pages must equal the
+  // source document's h6 sequence, which asserts every included sheet is
+  // represented exactly once, in reading order, with the technical
+  // appendix last. Sparse continuation pages (a sheet's second, third...
+  // page carries no eyebrow) are the accepted executive-reading choice,
+  // so no fill-ratio is asserted anywhere in this file anymore.
+  it('invariant 3: exactly one sheet start per physical page, and every included sheet appears exactly once in source order', async () => {
+    const pagesInfo = await doc.page.evaluate(() =>
+      Array.from(document.querySelectorAll('.pagedjs_page')).map((p) => ({
+        h6s: Array.from(p.querySelectorAll('h6')).map((h) => (h.textContent ?? '').trim()),
+        // A section element carrying an h6 descendant is that section's
+        // start fragment; Paged.js continuation shells clone the section
+        // element but not its heading, so the h6 filter is what makes
+        // this a start detector rather than a presence detector.
+        sectionStarts: Array.from(p.querySelectorAll('section[id^="section-"]'))
+          .filter((el) => el.querySelector('h6') !== null)
+          .map((el) => el.id),
+      })),
     );
-    for (const eyebrows of eyebrowsPerPage) {
-      const distinct = new Set(eyebrows.filter((e): e is string => !!e));
-      expect(distinct.size).toBeLessThanOrEqual(3);
+
+    const firstAppearances: string[] = [];
+    for (const { h6s } of pagesInfo) {
+      const distinct = new Set(h6s.filter((t) => t.length > 0));
+      expect(distinct.size).toBeLessThanOrEqual(1);
+      for (const eyebrow of distinct) {
+        if (!firstAppearances.includes(eyebrow)) firstAppearances.push(eyebrow);
+      }
     }
+    expect(firstAppearances).toEqual(sheetEyebrowsFromSource(stressHtml));
+
+    const sectionStartOrder = pagesInfo.flatMap((p) => p.sectionStarts);
+    expect(sectionStartOrder).toEqual(sectionIdsFromSource(stressHtml));
+    // Trade-off 44: the technical appendix is always the final section.
+    const sectionIds = sectionIdsFromSource(stressHtml);
+    expect(sectionIds[sectionIds.length - 1]).toBe('section-12');
   });
 
-  // The standalone sheets (the metadata sheet, the TOC, the checklist, the
-  // findings appendix) must never share their own opening page with
-  // anything else - the metadata sheet joined them in plan 018 step 4 as
-  // the second physical page.
-  it('invariant 3b: the standalone sheets (metadata sheet, TOC, checklist, findings appendix) never share a page with another section', async () => {
+  // Belt and braces on top of invariant 3 for the sheets whose isolation
+  // matters most: the metadata sheet, the checklist, and the findings
+  // appendix must never share their opening page with another sheet.
+  it('invariant 3b: the metadata sheet, checklist, and findings appendix never share their opening page with another section', async () => {
     const standaloneEyebrows = await doc.page.evaluate(() => {
       const result: string[][] = [];
       for (const p of Array.from(document.querySelectorAll('.pagedjs_page'))) {
@@ -288,43 +328,12 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     }
   });
 
-  it('invariant 2: no sheet is more than 80 percent empty, except the cover and final appendix continuation', async () => {
-    const fillRatios = await doc.page.evaluate(() =>
-      Array.from(document.querySelectorAll('.pagedjs_page')).map((p, index) => {
-        const pageRect = p.getBoundingClientRect();
-        const contentEls = Array.from(p.querySelectorAll('.pagedjs_page_content *')).filter(
-          (el) => {
-            const r = el.getBoundingClientRect();
-            return r.height > 0 && r.width > 0;
-          },
-        );
-        const maxBottom = contentEls.reduce(
-          (max, el) => Math.max(max, el.getBoundingClientRect().bottom),
-          pageRect.top,
-        );
-        const usedHeight = maxBottom - pageRect.top;
-        return {
-          index,
-          ratio: usedHeight / pageRect.height,
-          hasAppendix: Boolean(p.querySelector('#section-12')),
-        };
-      }),
-    );
-
-    for (const { index, ratio, hasAppendix } of fillRatios) {
-      if (index === 0) continue; // cover is exempt from the 80%-empty rule itself
-      if (index === fillRatios.length - 1 && hasAppendix) continue;
-      expect(ratio).toBeGreaterThan(0.2);
-    }
-  });
-
-  it("the cover page (exempt from invariant 2's fill ratio) still carries its own real content, not a blank sheet", async () => {
+  it('the cover page still carries its own real content, not a blank sheet', async () => {
     // A real regression this test would have caught: an earlier version
     // of paged.css's named `cover` page interacting with a `.footer-source`
     // node placed before the document flow pushed the cover's entire
     // content onto page 2, leaving page 1 blank apart from the footer/
-    // counter margin boxes - invariant 2's blind "skip index 0" exemption
-    // let it through silently. This checks page 1 actually contains the
+    // counter margin boxes. This checks page 1 actually contains the
     // cover's own title, not merely that some page somewhere does.
     const coverText = await doc.page.evaluate(
       () => document.querySelector('.pagedjs_page')?.querySelector('h1')?.textContent ?? '',
