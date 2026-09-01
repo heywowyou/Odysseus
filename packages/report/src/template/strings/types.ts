@@ -23,13 +23,21 @@ export interface ReportStrings {
    *  feedback-palais-gallien.md item 3): section-registry.ts's
    *  sectionTitle() reads each row's label from that section's own
    *  `eyebrow` field below, so introducing a fourth independent copy of a
-   *  section's name is impossible, not just discouraged. */
+   *  section's name is impossible, not just discouraged.
+   *
+   *  The six narrative group labels bind to the canonical tocGroups data in
+   *  docs/report/design/report-mockup-standalone.flat.html (the reference
+   *  template's TOC loop iterates the same data), plan 018 step 3. The
+   *  French labels are the mockup's own wording, unchanged. */
   toc: {
     eyebrow: string;
     heading: string;
-    decisionGroupLabel: string;
-    referenceGroupLabel: string;
-    technicalAnnexGroupLabel: string;
+    executiveContextGroupLabel: string;
+    decisionsActionsGroupLabel: string;
+    detailedEvidenceGroupLabel: string;
+    legalReferenceGroupLabel: string;
+    methodVocabularyGroupLabel: string;
+    technicalAppendixGroupLabel: string;
   };
   /** P3 (2026-08-21 La Corniche feedback pass): section-00, a new
    *  non-technical intro page before the résumé. Structural/navigational,
@@ -127,11 +135,13 @@ export interface ReportStrings {
      *  elsewhere). */
     /** Points the reader at the section that does treat obligation status.
      *  Template: {section}, the referenced section's own canonical title.
-     *  It used to hardcode "section 2", which named the wrong section: the
-     *  registry id `section-02` renders as ordinal 3, so the note pointed
-     *  at "Resume". Referencing by title, the way accessibility-statement.ts
-     *  already does, cannot drift when a section is suppressed and the
-     *  ordinals shift. */
+     *  It used to hardcode "section 2", which named the wrong section:
+     *  registry ids are stable keys, not ordinals, so a hand-typed number
+     *  points wherever that section happens to sit that day (plan 018 moved
+     *  `section-02` behind the evidence and the action synthesis).
+     *  Referencing by title, the way accessibility-statement.ts already
+     *  does, cannot drift when a section is suppressed and the ordinals
+     *  shift. */
     scopeNote: string;
     criterionColumnLabel: string;
     criterionNameColumnLabel: string;
@@ -181,42 +191,71 @@ export interface ReportStrings {
     /** Fixed note under the heading, stating what this section is not. */
     scopeNote: string;
   };
+  /** The minimal cover (plan 018 step 4): kicker, commercial-name headline,
+   *  the generic decision question, the report-type line, the audit date and
+   *  the Odysseus signature. Everything the old cover used to carry (site,
+   *  date, scope, language, referential, legal name, risk scale) moved to
+   *  the metadata group below, which renders as the second physical page. */
   cover: {
     kicker: string;
+    /** The document title fallback: the headline identity is nomCommercial,
+     *  then the manifest hostname, then this. Also the <title> tag's first
+     *  half (render-html.ts). */
     reportTitle: string;
-    subtitle: string;
-    /** Used instead of subtitle when hasMeasuredCoreWebVitals(manifest) is
-     *  false, so the cover never advertises a performance pillar the
-     *  report has no data for. */
-    subtitleNoPerformance: string;
+    /** The concise report-type line. item 3.8's reasoning carries over from
+     *  the old referential field: this product always audits all four
+     *  categories, and a clean category is still part of what was checked.
+     *  Performance is the only one a scanner-level failure can remove for a
+     *  whole run (see metadata.wcagReferentialValue's note), so it is the
+     *  one category with its own drop variant. */
+    reportType: string;
+    /** Same line with "Performance" removed, shown instead when
+     *  core-web-vitals-table.ts's hasMeasuredCoreWebVitals is false. */
+    reportTypeNoPerformance: string;
+    /** item 3.9: no longer rendered anywhere (the old cover's "Préparé
+     *  pour" line printed the client's company name a third time next to
+     *  the H1 and the legal-name row, with no distinct contact-person field
+     *  to hold instead). Kept in ReportStrings only because
+     *  AuditManualFields.recipientName itself is left in place for a future
+     *  session to wire to a real contact-person input; unused until that
+     *  input exists. */
+    recipientLabel: string;
+  };
+  /** The second physical page, between the cover and the table of contents
+   *  (plan 018 step 4): audit identity and scope as a plain fact sheet, plus
+   *  the risk scale the minimal cover no longer carries. Unnumbered chrome
+   *  like the cover and the TOC: no SECTION_IDS entry, no live ordinal. */
+  metadata: {
+    eyebrow: string;
+    heading: string;
     siteLabel: string;
     dateLabel: string;
     pagesScannedLabel: string;
     /** Template: {count}. */
     pagesScannedValueTemplate: string;
     languageLabel: string;
-    wcagReferentialLabel: string;
-    /** item 3.8: the cover's "RÉFÉRENTIEL AUDITÉ" field used to hardcode
-     *  the literal "WCAG 2.2 AA" regardless of scope, even though 76 of
-     *  98 findings in a real report were performance/SEO/GEO - a client
-     *  reading the cover expected an accessibility-only audit. States all
-     *  four categories this product always audits (CATEGORY_ORDER,
-     *  statistics.ts), not conditioned on whether findings exist in each -
-     *  a clean category is still part of what was checked.
+    /** item 3.8: states all four categories this product always audits
+     *  (CATEGORY_ORDER, statistics.ts), not conditioned on whether findings
+     *  exist in each - a clean category is still part of what was checked.
      *
      *  report-feedback-la-corniche.md item 0.3: "always audits" stopped
      *  being true for Performance the moment a real site made Lighthouse
-     *  fail on every page - the cover still claimed Performance while
+     *  fail on every page - the sheet still claimed Performance while
      *  section 09 printed nothing but "Non mesuré" rows. Performance is
      *  the only one of the four categories a scanner-level failure can
      *  remove entirely for a whole run (accessibility/SEO/GEO come from
      *  axe and custom checks, which don't share Lighthouse's failure
      *  mode), so this is the one category with its own drop variant
      *  rather than a general N-of-4 combinator. */
+    wcagReferentialLabel: string;
     wcagReferentialValue: string;
     /** Same value with "Performance" removed, shown instead when
-     *  core-web-vitals-table.ts's hasMeasuredCoreWebVitals is false. */
+     *  hasMeasuredCoreWebVitals is false. */
     wcagReferentialValueNoPerformance: string;
+    /** Rendered as its own row only when AuditManualFields.raisonSociale is
+     *  present - the legal identity lives here, on the fact sheet, never
+     *  above the trading name on the cover. */
+    legalNameLabel: string;
     riskSmallLabel: string;
     riskLevels: { low: string; medium: string; high: string };
     /** item 42: the badge showed no scale and no stated basis for how it
@@ -235,17 +274,6 @@ export interface ReportStrings {
     criticalFindingPlural: string;
     seriousFindingSingular: string;
     seriousFindingPlural: string;
-    /** item 3.9: no longer rendered on the cover (cover.ts no longer
-     *  reads AuditManualFields.recipientName at all) - the "Préparé pour"
-     *  field printed the client's company name a third time next to the
-     *  H1 and "Dénomination sociale", with no distinct contact-person
-     *  field to hold instead. Kept in ReportStrings only because removing
-     *  it would be a locale-file structural change unrelated to this
-     *  fix; unused until a real contact-person input field exists. */
-    recipientLabel: string;
-    /** Rendered as a secondary line under the headline company identity
-     *  only when AuditManualFields.raisonSociale is present. */
-    legalNameLabel: string;
   };
   executiveSummary: {
     eyebrow: string;

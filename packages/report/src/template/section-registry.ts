@@ -8,7 +8,11 @@ import type { ReportStrings } from './strings/i18n.js';
 export const SECTION_IDS = [
   'section-00',
   'section-01',
-  'section-02',
+  // section-02 (legal exposure) deliberately renders after the evidence and
+  // the action synthesis (plan 018): the executive story comes first, the
+  // full legal reference follows it. These ids are stable keys and DOM
+  // anchors, not ordinals - the number a reader sees is computed live by
+  // computeSectionNumbers, so reordering never renumbered anything.
   'section-03',
   'section-04',
   'section-05',
@@ -23,9 +27,12 @@ export const SECTION_IDS = [
   'section-08',
   'section-09',
   'section-10',
+  'section-14',
+  'section-02',
   'section-11',
   'section-13',
-  'section-14',
+  // The technical appendix is always the final section (trade-off 44), and
+  // glossary (section-13) immediately precedes it.
   'section-12',
 ] as const;
 

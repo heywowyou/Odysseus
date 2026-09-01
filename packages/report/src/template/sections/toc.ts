@@ -12,33 +12,32 @@ import { computeSectionNumbers, sectionTitle, type SectionId } from '../section-
  *  than leaving a gap or a dead anchor. */
 export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<SectionId>): string {
   const numbers = computeSectionNumbers(includedIds);
+  // Six narrative groups, plan 018 step 3. Labels and membership bind to the
+  // canonical tocGroups data in docs/report/design/report-mockup-standalone.flat.html
+  // (the reference template's TOC loop iterates the same data); ids are the
+  // mockup's display positions mapped back to stable registry ids via
+  // docs/report/report-design-system.md's section table. Rows inside a group
+  // stay in registry order, and every group keeps only the ids actually
+  // included, so a suppressed section drops its whole row, not its group.
   const groups: Array<{ label: string; ids: readonly SectionId[] }> = [
     {
-      label: strings.toc.decisionGroupLabel,
-      ids: [
-        'section-00',
-        'section-01',
-        'section-02',
-        'section-03',
-        'section-04',
-        'section-05',
-        'section-05b',
-      ],
+      label: strings.toc.executiveContextGroupLabel,
+      ids: ['section-00', 'section-01', 'section-03'],
     },
     {
-      label: strings.toc.referenceGroupLabel,
-      ids: [
-        'section-06',
-        'section-07',
-        'section-08',
-        'section-09',
-        'section-10',
-        'section-11',
-        'section-13',
-        'section-14',
-      ],
+      label: strings.toc.decisionsActionsGroupLabel,
+      ids: ['section-04', 'section-05', 'section-05b', 'section-14'],
     },
-    { label: strings.toc.technicalAnnexGroupLabel, ids: ['section-12'] },
+    {
+      label: strings.toc.detailedEvidenceGroupLabel,
+      ids: ['section-06', 'section-07', 'section-08', 'section-09', 'section-10'],
+    },
+    { label: strings.toc.legalReferenceGroupLabel, ids: ['section-02'] },
+    {
+      label: strings.toc.methodVocabularyGroupLabel,
+      ids: ['section-11', 'section-13'],
+    },
+    { label: strings.toc.technicalAppendixGroupLabel, ids: ['section-12'] },
   ];
   const rows = groups
     .map(({ label: groupLabel, ids }) => {

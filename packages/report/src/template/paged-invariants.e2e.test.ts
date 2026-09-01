@@ -264,14 +264,15 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     }
   });
 
-  // The .sheet-standalone sections (TOC, checklist, findings appendix)
-  // must still never share their own opening page with anything else -
-  // the part of the old invariant item 34 did not relax.
-  it('invariant 3b: the standalone sections (TOC, checklist, findings appendix) never share a page with another section', async () => {
+  // The standalone sheets (the metadata sheet, the TOC, the checklist, the
+  // findings appendix) must never share their own opening page with
+  // anything else - the metadata sheet joined them in plan 018 step 4 as
+  // the second physical page.
+  it('invariant 3b: the standalone sheets (metadata sheet, TOC, checklist, findings appendix) never share a page with another section', async () => {
     const standaloneEyebrows = await doc.page.evaluate(() => {
       const result: string[][] = [];
       for (const p of Array.from(document.querySelectorAll('.pagedjs_page'))) {
-        const standalone = p.querySelector('#section-05 h6, #section-12 h6');
+        const standalone = p.querySelector('#report-metadata h6, #section-05 h6, #section-12 h6');
         if (!standalone) continue;
         result.push(
           Array.from(p.querySelectorAll('h6'))

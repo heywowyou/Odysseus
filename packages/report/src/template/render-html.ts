@@ -22,6 +22,7 @@ import { getStrings } from './strings/i18n.js';
 import { resolveLcenFinding } from './lcen-resolution.js';
 import { SECTION_IDS, computeSectionNumbers, type SectionId } from './section-registry.js';
 import { renderCover } from './sections/cover.js';
+import { renderMetadataSheet } from './sections/metadata-sheet.js';
 import { renderToc } from './sections/toc.js';
 import { renderStatistics } from './sections/statistics.js';
 import { renderExecutiveSummary } from './sections/executive-summary.js';
@@ -103,8 +104,12 @@ export interface RenderHtmlInput {
  *  pre-purchase outreach preview introduced the same day
  *  (docs/rules/outreach-rules.md) is a deliberately separate document kind with
  *  its own render path (see outreach-preview/render-html.ts), not a lighter tier of
- *  this function. Section order matches report.reference.html's 14
- *  numbered sheets plus the cover and table of contents. */
+ *  this function. Section order is SECTION_IDS's registry order, which is the
+ *  canonical executive reading order of plan 018
+ *  (docs/report/report-design-system.md section 3): 16 numbered sheets plus
+ *  the cover, the metadata sheet and the table of contents, the technical
+ *  appendix always last.
+ *  The registry and the render calls below must stay in the same order. */
 function renderBody(
   strings: ReturnType<typeof getStrings>,
   manifest: AuditManifest,
@@ -164,6 +169,10 @@ function renderBody(
 
   return [
     renderCover(strings, manifest, analysis, resolvedFindings, manualFields),
+    // Second physical page (plan 018 step 4): audit facts and the risk
+    // scale on their own sheet, before the TOC. Unnumbered chrome, like
+    // the cover - it takes no ordinal and stays out of the registry.
+    renderMetadataSheet(strings, manifest, analysis, resolvedFindings, manualFields),
     renderToc(strings, includedSectionIds),
     renderReportIntro(strings, ord('section-00'), analysis, resolvedFindings, renderedPriorities),
     renderExecutiveSummary(
@@ -173,16 +182,6 @@ function renderBody(
       resolvedFindings,
       manifest,
       renderedPriorities,
-    ),
-    renderLegalExposure(
-      strings,
-      ord('section-02'),
-      analysis.language,
-      analysis.obligationAssessment,
-      analysis.generatedAt,
-      manifest,
-      resolvedFindings,
-      manualFields,
     ),
     renderStatistics(
       strings,
@@ -243,6 +242,17 @@ function renderBody(
           manualFields,
         )
       : '',
+    renderNextSteps(strings, ord('section-14'), manifest, analysis.language, renderMetadata),
+    renderLegalExposure(
+      strings,
+      ord('section-02'),
+      analysis.language,
+      analysis.obligationAssessment,
+      analysis.generatedAt,
+      manifest,
+      resolvedFindings,
+      manualFields,
+    ),
     renderMethodology(
       strings,
       ord('section-11'),
@@ -258,7 +268,6 @@ function renderBody(
       transactionalFlowEvaluated: manifest.siteSignals?.hasTransactionalFlow !== undefined,
       hasMeasuredCoreWebVitals: hasMeasuredCoreWebVitals(manifest),
     }),
-    renderNextSteps(strings, ord('section-14'), manifest, analysis.language, renderMetadata),
     renderFindingsAppendix(
       strings,
       ord('section-12'),

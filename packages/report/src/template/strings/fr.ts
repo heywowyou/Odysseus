@@ -13,9 +13,12 @@ export const fr: ReportStrings = {
   toc: {
     eyebrow: 'Sommaire',
     heading: 'Contenu du rapport',
-    decisionGroupLabel: 'Décision et actions',
-    referenceGroupLabel: 'Références et méthode',
-    technicalAnnexGroupLabel: 'Annexe technique',
+    executiveContextGroupLabel: 'Contexte exécutif',
+    decisionsActionsGroupLabel: 'Décisions et actions',
+    detailedEvidenceGroupLabel: 'Preuves détaillées',
+    legalReferenceGroupLabel: 'Référence légale',
+    methodVocabularyGroupLabel: 'Méthode et vocabulaire',
+    technicalAppendixGroupLabel: 'Annexe technique',
   },
   reportIntro: {
     eyebrow: 'À propos de ce rapport',
@@ -142,26 +145,31 @@ export const fr: ReportStrings = {
   cover: {
     kicker: 'Odysseus · Audit numérique',
     reportTitle: "Rapport d'audit",
-    // item D8 (P4): "Rapport d'audit" alone (reused here as the subtitle
-    // line whenever a company name occupies the H1, see cover.ts) reads as
-    // generic against the four-category scope C9 already states lower on
-    // this same page (WCAG 2.2 AA · Performance · SEO · GEO).
-    subtitle: 'Audit bilingue accessibilité, performance, SEO, GEO, vie privée et sécurité',
-    subtitleNoPerformance: 'Audit bilingue accessibilité, SEO, GEO, vie privée et sécurité',
+    // Report-type line (plan 018 step 4). Same convention as the
+    // referential value below: a no-break space after each separator (never
+    // before), so wrapping can only happen between complete terms.
+    reportType: 'Accessibilité · Performance · SEO · GEO',
+    reportTypeNoPerformance: 'Accessibilité · SEO · GEO',
+    recipientLabel: 'Préparé pour',
+  },
+  metadata: {
+    eyebrow: "Métadonnées de l'audit",
+    heading: "Fiche d'audit et échelle de sévérité",
     siteLabel: 'Site audité',
     dateLabel: "Date de l'audit",
     pagesScannedLabel: 'Périmètre analysé',
     pagesScannedValueTemplate: '{count} pages analysées',
     languageLabel: 'Langue du rapport',
     wcagReferentialLabel: 'Référentiel audité',
-    // item 2.5 (La Corniche pass): a plain space after "·" let the cover's
-    // narrow value column wrap right after the separator, leaving it
-    // dangling alone at the end of a line with the next term starting a
+    // item 2.5 (La Corniche pass): a plain space after "·" let the old
+    // cover's narrow value column wrap right after the separator, leaving
+    // it dangling alone at the end of a line with the next term starting a
     // new one ("WCAG 2.2 AA · Performance · SEO ·" / "GEO"). A non-
     // breaking space after "·" (not before) keeps each "· Term" pair
     // together, so wrapping can only happen between complete terms.
     wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO · Vie privée · Sécurité',
     wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO · Vie privée · Sécurité',
+    legalNameLabel: 'Dénomination sociale',
     riskSmallLabel: 'Niveau de criticité des constats',
     riskLevels: { low: 'Faible', medium: 'Moyen', high: 'Élevé' },
     riskBasisTemplate: 'Basé sur {critical} {criticalWord} et {serious} {seriousWord}',
@@ -178,8 +186,6 @@ export const fr: ReportStrings = {
     criticalFindingPlural: 'constats critiques',
     seriousFindingSingular: 'constat sérieux',
     seriousFindingPlural: 'constats sérieux',
-    recipientLabel: 'Préparé pour',
-    legalNameLabel: 'Dénomination sociale',
   },
   executiveSummary: {
     eyebrow: 'Résumé',

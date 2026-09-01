@@ -12,9 +12,12 @@ export const en: ReportStrings = {
   toc: {
     eyebrow: 'Contents',
     heading: "What's in this report",
-    decisionGroupLabel: 'Decision and action',
-    referenceGroupLabel: 'Reference and method',
-    technicalAnnexGroupLabel: 'Technical annex',
+    executiveContextGroupLabel: 'Executive context',
+    decisionsActionsGroupLabel: 'Decisions and actions',
+    detailedEvidenceGroupLabel: 'Detailed evidence',
+    legalReferenceGroupLabel: 'Legal reference',
+    methodVocabularyGroupLabel: 'Method and vocabulary',
+    technicalAppendixGroupLabel: 'Technical appendix',
   },
   reportIntro: {
     eyebrow: 'About this report',
@@ -126,27 +129,46 @@ export const en: ReportStrings = {
   cover: {
     kicker: 'Odysseus · Digital audit',
     reportTitle: 'Audit report',
-    subtitle: 'Bilingual accessibility, performance, SEO, GEO, privacy and security audit',
-    subtitleNoPerformance: 'Bilingual accessibility, SEO, GEO, privacy and security audit',
+    // Report-type line (plan 018 step 4). Same convention as the
+    // referential value in the metadata group below: a no-break space after
+    // each separator (never before), so wrapping can only happen between
+    // complete terms.
+    reportType: 'Accessibility · Performance · SEO · GEO',
+    reportTypeNoPerformance: 'Accessibility · SEO · GEO',
+    recipientLabel: 'Prepared for',
+  },
+  metadata: {
+    eyebrow: 'Audit metadata',
+    heading: 'Audit sheet and severity scale',
     siteLabel: 'Site audited',
     dateLabel: 'Audit date',
     pagesScannedLabel: 'Scope analyzed',
     pagesScannedValueTemplate: '{count} pages analyzed',
     languageLabel: 'Report language',
     wcagReferentialLabel: 'Standard audited',
+    // item 2.5 (La Corniche pass): a plain space after the separator let
+    // the old cover's narrow value column wrap right after it, leaving it
+    // dangling alone at the end of a line with the next term starting a new
+    // one. A no-break space after the separator (not before) keeps each
+    // pair together, so wrapping can only happen between complete terms.
     wcagReferentialValue: 'WCAG 2.2 AA · Performance · SEO · GEO · Privacy · Security',
     wcagReferentialValueNoPerformance: 'WCAG 2.2 AA · SEO · GEO · Privacy · Security',
+    legalNameLabel: 'Legal name',
     riskSmallLabel: 'Technical findings severity',
     riskLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     riskBasisTemplate: 'Based on {critical} {criticalWord} and {serious} {seriousWord}',
+    // item P4 (La Corniche pass): the scale had no stated basis for what
+    // separates one level from the next. overallRisk is a holistic judgment
+    // from the structure pass (severity mix and reach across the site), not
+    // a single numeric cutoff - stated honestly as that, rather than
+    // inventing specific thresholds that don't actually exist in how the
+    // level is decided.
     riskScaleBasisNote:
       'This level reflects a holistic assessment of the severity and reach of findings across the site, not a single numeric threshold.',
     criticalFindingSingular: 'critical finding',
     criticalFindingPlural: 'critical findings',
     seriousFindingSingular: 'serious finding',
     seriousFindingPlural: 'serious findings',
-    recipientLabel: 'Prepared for',
-    legalNameLabel: 'Legal name',
   },
   executiveSummary: {
     eyebrow: 'Summary',

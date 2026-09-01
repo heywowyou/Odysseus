@@ -1,11 +1,12 @@
 /**
- * B7 regression: the cover risk badge must never read as a legal
- * conclusion, and an 'undetermined' obligation status must always carry
- * a resolving action rather than leaving the client with nothing to do.
+ * B7 regression: the severity/risk badge (metadata sheet since plan 018
+ * step 4, cover before that) must never read as a legal conclusion, and an
+ * 'undetermined' obligation status must always carry a resolving action
+ * rather than leaving the client with nothing to do.
  */
 import { describe, expect, it } from 'vitest';
 import type { AuditManifest, ObligationAssessment } from '@odysseus/core';
-import { renderCover } from './cover.js';
+import { renderMetadataSheet } from './metadata-sheet.js';
 import { renderLegalExposure } from './legal-exposure.js';
 import { fr } from '../strings/fr.js';
 import { en } from '../strings/en.js';
@@ -39,31 +40,36 @@ function fakeManifest(overrides: Partial<AuditManifest> = {}): AuditManifest {
   };
 }
 
-describe('B7: cover badge never contradicts an undetermined obligation status', () => {
-  it('the fr cover badge label contains no legal-risk wording', () => {
-    expect(fr.cover.riskSmallLabel.toLowerCase()).not.toContain('risque');
+// Plan 018 step 4 moved the risk badge off the cover onto the metadata
+// sheet; these guards moved with it. The scale must still never read as a
+// legal conclusion, and an 'undetermined' obligation status must still
+// always carry a resolving action rather than leaving the client with
+// nothing to do.
+describe('B7: the metadata-sheet badge never contradicts an undetermined obligation status', () => {
+  it('the fr badge label contains no legal-risk wording', () => {
+    expect(fr.metadata.riskSmallLabel.toLowerCase()).not.toContain('risque');
   });
 
-  it('the en cover badge label contains no legal-risk wording', () => {
-    expect(en.cover.riskSmallLabel.toLowerCase()).not.toContain('risk');
+  it('the en badge label contains no legal-risk wording', () => {
+    expect(en.metadata.riskSmallLabel.toLowerCase()).not.toContain('risk');
   });
 
   it('renders the same risk value/colour regardless of the relabel', async () => {
     const manifest = await loadSmallSiteManifest();
     const analysis = await loadSmallSiteAnalysis('fr');
-    const html = renderCover(fr, manifest, { ...analysis, overallRisk: 'high' });
-    expect(html).toContain(fr.cover.riskLevels.high);
+    const html = renderMetadataSheet(fr, manifest, { ...analysis, overallRisk: 'high' });
+    expect(html).toContain(fr.metadata.riskLevels.high);
   });
 });
 
-// item 42: the risk badge showed no scale and no stated basis for how it
+// item 42: the badge showed no scale and no stated basis for how it
 // was derived - the reader had no way to calibrate "Élevé" or verify how
 // the tool got there.
-describe('item 42: the cover risk badge shows its scale and its basis', () => {
+describe('item 42: the metadata-sheet badge shows its scale and its basis', () => {
   it('shows all three scale labels (Faible/Moyen/Élevé), not just the current level', async () => {
     const manifest = await loadSmallSiteManifest();
     const analysis = await loadSmallSiteAnalysis('fr');
-    const html = renderCover(fr, manifest, { ...analysis, overallRisk: 'high' });
+    const html = renderMetadataSheet(fr, manifest, { ...analysis, overallRisk: 'high' });
     expect(html).toContain('Faible');
     expect(html).toContain('Moyen');
     expect(html).toContain('Élevé');
@@ -73,7 +79,7 @@ describe('item 42: the cover risk badge shows its scale and its basis', () => {
     const manifest = await loadSmallSiteManifest();
     const findings = await loadSmallSiteFindings();
     const analysis = await loadSmallSiteAnalysis('fr');
-    const html = renderCover(fr, manifest, { ...analysis, overallRisk: 'high' }, findings);
+    const html = renderMetadataSheet(fr, manifest, { ...analysis, overallRisk: 'high' }, findings);
     expect(html).toContain('Basé sur');
     expect(html).toMatch(/Basé sur \d+ constats critiques et \d+ constats sérieux/);
   });
