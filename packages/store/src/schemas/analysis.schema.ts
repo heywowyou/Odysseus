@@ -124,9 +124,16 @@ const obligationAssessmentSchemaMongo = new Schema(
   { _id: false },
 );
 
+// findingsSchemaVersion must be Number here: core's FindingsProvenance
+// carries a numeric literal, the audits and reports collections store it
+// as a number, and freshness/selection comparisons are strict. Typing this
+// mirror String made Mongoose cast every stored analysis' stamp to "1",
+// which never equals the audit row's 1 and silently kept every audit from
+// reaching a fresh verified pair. Found live on the La Coorniche audit
+// during the plan 019 operator review (2026-09-01).
 const findingsProvenanceSchemaMongo = new Schema(
   {
-    findingsSchemaVersion: { type: String, required: true },
+    findingsSchemaVersion: { type: Number, required: true },
     normalizationFingerprint: { type: String, required: true },
     findingsDigest: { type: String, required: true },
   },

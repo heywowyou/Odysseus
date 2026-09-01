@@ -105,4 +105,26 @@ describe.skipIf(!mongoAvailable)('persistAnalysis', () => {
     expect(stored).not.toBeNull();
     expect(stored?.obligationAssessment).toBeUndefined();
   });
+
+  it('round-trips findingsSchemaVersion as a number, never a string (live-found defect)', async () => {
+    // The Mongo mirror typed this field String, so Mongoose cast the
+    // numeric stamp to "1" on write and every strict comparison against
+    // the audit row's numeric 1 failed, keeping audits from ever reaching
+    // a fresh verified pair. Found live on the La Coorniche audit during
+    // the plan 019 operator review (2026-09-01).
+    await persistAnalysis(
+      connection!,
+      buildFields(
+        '00000000-0000-4000-8000-000000000004',
+        'persist-analysis-test-3',
+        'fr',
+        new Date('2026-08-02T00:00:00.000Z'),
+      ),
+    );
+
+    const AnalysisModel = createAnalysisModel(connection!);
+    const stored = await AnalysisModel.findOne({ auditId: 'persist-analysis-test-3' });
+    expect(stored?.findingsProvenance.findingsSchemaVersion).toBe(FINDINGS_SCHEMA_VERSION);
+    expect(typeof stored?.findingsProvenance.findingsSchemaVersion).toBe('number');
+  });
 });
