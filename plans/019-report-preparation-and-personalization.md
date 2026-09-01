@@ -1,6 +1,7 @@
 # Plan 019: Prepare and personalize the paid report safely
 
-- **Status:** TODO
+- **Status:** IMPLEMENTED (2026-09-01; DONE awaits the plan's manual
+  operator review with one legacy audit and one new audit)
 - **Priority:** P1
 - **Effort:** L
 - **Risk:** HIGH

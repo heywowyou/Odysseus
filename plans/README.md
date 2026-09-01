@@ -347,7 +347,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013, 016 | TODO |
 | [015](archive/015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |
 | [018](./018-report-executive-readability.md) | Make the paid report readable as an executive decision document | P1 | L | none | IMPLEMENTED |
-| [019](./019-report-preparation-and-personalization.md) | Prepare and personalize the paid report safely | P1 | L | 018 | TODO |
+| [019](./019-report-preparation-and-personalization.md) | Prepare and personalize the paid report safely | P1 | L | 018 | IMPLEMENTED |
 | [020](./020-report-financial-evidence-and-legal-reference.md) | Add defensible financial evidence and the general legal reference | P1 | L | 019 | TODO |
 | [021](./021-complete-audits-without-template-repetition.md) | Keep full-site audits complete without repeating template work | P1 | L | 018-020 | TODO |
 | [022](./022-dashboard-and-site-design-refactor.md) | Refactor the operator dashboard and public site UI with the Impeccable workflow | P2 | L | none | TODO |
@@ -369,6 +369,21 @@ Routine dashboard releases were automated 2026-09-01 without changing plan
 016's hosting boundary: an operator-triggered workflow verifies successful CI
 for the exact main commit, then deploys it immutably with a live check and
 rollback. See `deploy/runbook.md` section 7A and trade-off 61.
+
+Plan 019 `IMPLEMENTED` 2026-09-01: all eight steps landed in five commits
+(`b219e43` the canonical contract, trade-off 62, and the core
+report-preparation module, `0310e26` store persistence and the one
+selected-pair selector, `a9878df` the Prepare report endpoints and
+candidate-first regeneration plus the outcome-oriented title instruction,
+`836f561` selector-bound rendering, the bilingual personalization in the
+cover and opening, and the persistless candidate preview, `ffc1632` the
+Prepare report dashboard card). The suite is green: the plan's five-package
+validation sweep passes at the unit tier (2863 tests) with the report e2e
+tier green in isolation, and typecheck, formatting, and `pnpm run check`
+pass. `DONE` awaits the plan's own manual operator review: one legacy audit
+and one new audit through the Prepare report card, including a live writing
+regeneration, candidate preview and approval, and reading the rendered
+cover, opening, and journeys in both languages as a client would.
 
 Plan 018 `IMPLEMENTED` 2026-09-01: all nine steps landed in six commits
 (`cc6e39f` canonical design and pagination, `82326f1` section order and the
