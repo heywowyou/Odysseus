@@ -372,6 +372,13 @@ means numbered entry 24, not a literal Markdown heading anchor.
     ever blocking; it is not promotable to a gate on the current medium model,
     which flags required generic commercial consequences as unsupported.
     → trade-offs.md#55
+61. Production deployment starts only when the operator manually dispatches it
+    for `main`, and it must verify successful CI for that exact commit. Deploy
+    the commit as a release directory and commit-tagged image, keep Compose
+    project name `deploy`, require the live 302-to-login check, and use only the
+    forced, shell-restricted VPS key. Never replace this with push-to-live, a
+    moving server-side `git pull`, or a general-purpose Actions SSH key.
+    → trade-offs.md#61
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node

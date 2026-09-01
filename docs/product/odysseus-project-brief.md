@@ -455,13 +455,14 @@ prescan, evidence, versioned scoring, role contacts, safe previews, validated
 prose, Gmail drafts without send, reply/suppression handling, operator views,
 and the controlled first-100 rollout.
 
-**9c plan 016: hosted operator dashboard.** Implemented 2026-08-31 for the
-code and deploy assets; the provisioning session and the backup restore
-drill remain an operator step through `deploy/runbook.md`. The dashboard
-serves from a Scaleway VPS behind Caddy and a password session at
+**9c plan 016: hosted operator dashboard.** Completed 2026-08-31, including
+the live provisioning and backup restore drill. The dashboard serves from a
+Scaleway VPS behind Caddy and a password session at
 `app.odysseusaudit.com`; Mongo stays on Atlas and drafting stays local, so
-mailbox credentials never move. Decision and rejected alternatives:
-`docs/decisions/trade-offs.md` entry 60.
+mailbox credentials never move. Routine releases added 2026-09-01 are manually
+triggered and verify successful CI for the exact commit, use immutable commit
+releases, and retain a one-step rollback. Decisions and rejected alternatives:
+`docs/decisions/trade-offs.md` entries 60 and 61.
 
 **Milestone 10: benchmark study and percentile.** Batch scan of a bounded
 e-commerce cohort, aggregate percentile over stored findings, surface the

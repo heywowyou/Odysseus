@@ -7,12 +7,18 @@
 # this file's directory, so the command works from anywhere; the runbook
 # uses /srv/odysseus.
 
+# Release directories change on every deployment. Pinning the project name is
+# what keeps the artifacts and Caddy certificate volumes stable across them.
+name: deploy
+
 services:
   app:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: odysseus-app
+    # Automated releases set this to the verified Git commit. Local and legacy
+    # deployments keep the existing latest tag.
+    image: odysseus-app:${ODYSSEUS_IMAGE_TAG:-latest}
     # Server deployments create /srv/odysseus/.env (runbook section 4). The
     # smoke file, when present next to it, is applied last and wins, which
     # is what the runbook's local smoke procedure relies on. Both optional

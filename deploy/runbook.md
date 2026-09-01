@@ -1,9 +1,9 @@
 # Odysseus deploy runbook
 
-Every command below is meant to be run as shown, in order, by the operator
-with an assistant walking through it. Do not skip the STOP boxes. Nothing in
-this document is automated away on purpose: each step touches a secret, a
-DNS record, or a machine that faces the internet.
+Initial provisioning commands are meant to be run as shown, in order, by the
+operator with an assistant walking through them. Do not skip the STOP boxes.
+Once provisioning is complete, section 7A replaces routine source syncing and
+rebuilds with a CI-verified, operator-triggered deployment.
 
 ## 1. What this stack is
 
@@ -208,6 +208,101 @@ curl -sI https://app.odysseusaudit.com/
 Both services `Up`, and the 302 to `/login` again: `restart: unless-stopped`
 and the timer stack came back on their own.
 
+## 7A. Configure controlled production releases
+
+Routine releases start only when the operator runs the `Deploy production`
+workflow on `main`. The workflow refuses to deploy unless that exact commit has
+a successful `CI` push run. It does not pull whatever happens to be at the tip
+of a branch later.
+
+The VPS keeps releases under `/srv/odysseus/releases/<full-commit-sha>` and
+points `/srv/odysseus/current` at the live one. Docker images carry the same
+commit SHA. Compose's project name is pinned to `deploy`, so moving between
+release directories continues to use the existing `deploy_artifacts`,
+`deploy_caddy_data`, and `deploy_caddy_config` volumes. The production `.env`
+stays at `/srv/odysseus/.env` and is symlinked into each release; it is never
+included in a release archive.
+
+### Install the restricted command on the VPS
+
+From the checked-out repository already on the VPS:
+
+```sh
+cd /srv/odysseus
+chmod 0755 deploy/release.sh deploy/github-deploy-command.sh \
+  deploy/install-github-deploy-key.sh
+```
+
+Generate a dedicated key on the operator's local machine. It is not the
+operator's normal SSH key:
+
+```sh
+ssh-keygen -t ed25519 -f /tmp/odysseus-github-deploy -N '' \
+  -C 'github-actions-production-deploy'
+```
+
+Install the public key from the operator's local machine. The installer handles
+an existing `authorized_keys` file that does not end in a newline and refuses
+non-Ed25519 input:
+
+```sh
+ssh deploy@VPS_IP /srv/odysseus/deploy/install-github-deploy-key.sh \
+  < /tmp/odysseus-github-deploy.pub
+```
+
+`restrict` disables port, agent, X11, and terminal forwarding. The forced
+command accepts only `deploy <40-character-sha>` with an archive on standard
+input, or `rollback`. It cannot open a shell or print `/srv/odysseus/.env`.
+
+### Configure the GitHub production environment
+
+The repository is private on a GitHub plan that does not provide required
+environment reviewers for private repositories. The manual workflow dispatch
+is therefore the approval action; a push cannot start the deployment job. Add
+these repository-level values:
+
+| Kind | Name | Value |
+| --- | --- | --- |
+| Variable | `PRODUCTION_DEPLOY_ENABLED` | `true`, added last |
+| Variable | `PRODUCTION_HOST` | the VPS IPv4 address |
+| Variable | `PRODUCTION_USER` | `deploy` |
+| Secret | `PRODUCTION_SSH_PRIVATE_KEY` | complete private deployment key |
+| Secret | `PRODUCTION_SSH_KNOWN_HOSTS` | trusted VPS `known_hosts` line |
+
+Obtain the host line from an already trusted operator connection. Do not accept
+a new host key blindly merely because `ssh-keyscan` returned it. Add
+the repository-level `PRODUCTION_DEPLOY_ENABLED=true` only after all other
+values and the forced VPS key are in place. Until then, the workflow is
+deliberately skipped. A future GitHub plan upgrade may add a required reviewer
+to the `production` environment as a second gate without changing the workflow.
+
+Delete `/tmp/odysseus-github-deploy` and its `.pub` file from the operator's
+machine after the private key is stored in the GitHub repository and one
+deployment has passed. The GitHub copy then becomes the only private-key copy.
+
+### Normal deployment and rollback
+
+After a successful `CI` run on `main`, open Actions, `Deploy production`, Run
+workflow, keep branch `main`, and choose `deploy`. Documentation-only pushes
+need no deployment. The release controller serializes deployments, builds the
+commit-tagged app image, restarts Compose, and requires the public unauthenticated
+request to return a 302 redirect to `/login`. A failed live check restores the
+previous release automatically.
+
+To roll back intentionally, open Actions, `Deploy production`, Run workflow,
+and choose `rollback`. From a normal operator SSH session, the equivalent
+recovery command is:
+
+```sh
+/srv/odysseus/deploy/release.sh rollback
+```
+
+Rollback swaps the current and previous pointers, so it can be reversed by
+running it again. Five recent releases are retained in addition to whichever
+older release is the active rollback target. Every deployment restarts the app,
+which logs out the in-memory dashboard session. A job interrupted during the
+restart is returned to the persistent queue when the new process starts.
+
 ## 8. Backups
 
 The nightly job tars the artifacts volume and copies it to the existing
@@ -408,6 +503,9 @@ Stop the stack while KEEPING all data:
 cd /srv/odysseus
 docker compose -f deploy/compose.yaml down
 ```
+
+For a routine bad release, use the section 7A rollback instead. This section is
+for stopping or dismantling the whole stack.
 
 Safe to delete after that:
 

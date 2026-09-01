@@ -1,0 +1,272 @@
+#!/usr/bin/env bash
+# Installs one immutable Git archive and switches the production Compose stack
+# to it. This script runs on the VPS as the unprivileged deploy user.
+set -Eeuo pipefail
+
+DEPLOY_ROOT="${ODYSSEUS_DEPLOY_ROOT:-/srv/odysseus}"
+RELEASES_DIR="$DEPLOY_ROOT/releases"
+CURRENT_LINK="$DEPLOY_ROOT/current"
+PREVIOUS_FILE="$DEPLOY_ROOT/previous-release"
+LOCK_FILE="$DEPLOY_ROOT/.deploy.lock"
+HEALTH_URL="${ODYSSEUS_DEPLOY_HEALTH_URL:-https://app.odysseusaudit.com/}"
+HEALTH_ATTEMPTS="${ODYSSEUS_DEPLOY_HEALTH_ATTEMPTS:-30}"
+HEALTH_DELAY_SECONDS="${ODYSSEUS_DEPLOY_HEALTH_DELAY_SECONDS:-2}"
+COMPOSE_PROJECT_NAME=deploy
+
+log() {
+  printf '%s odysseus-deploy: %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
+}
+
+fail() {
+  log "error: $*"
+  exit 1
+}
+
+is_release_id() {
+  [[ "$1" =~ ^[0-9a-f]{40}$ ]]
+}
+
+release_tag_for() {
+  local release_path="$1"
+  local candidate
+  candidate="$(basename "$release_path")"
+  if is_release_id "$candidate"; then
+    printf '%s\n' "$candidate"
+  else
+    printf '%s\n' latest
+  fi
+}
+
+compose() {
+  local release_path="$1"
+  local image_tag="$2"
+  shift 2
+  ODYSSEUS_IMAGE_TAG="$image_tag" docker compose \
+    --project-name "$COMPOSE_PROJECT_NAME" \
+    --env-file "$DEPLOY_ROOT/.env" \
+    -f "$release_path/deploy/compose.yaml" "$@"
+}
+
+health_is_ready() {
+  local response code redirect_url
+  response="$(curl --silent --show-error --output /dev/null \
+    --connect-timeout 5 --max-time 10 \
+    --write-out '%{http_code} %{redirect_url}' "$HEALTH_URL")" || return 1
+  read -r code redirect_url <<<"$response"
+  [[ "$code" == 302 && "$redirect_url" == */login ]]
+}
+
+wait_until_ready() {
+  local attempt
+  for ((attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt += 1)); do
+    if health_is_ready; then
+      log "health check passed ($HEALTH_URL redirects to /login)"
+      return 0
+    fi
+    if ((attempt < HEALTH_ATTEMPTS)); then
+      sleep "$HEALTH_DELAY_SECONDS"
+    fi
+  done
+  return 1
+}
+
+set_current_link() {
+  local target="$1"
+  local pending_link="$DEPLOY_ROOT/.current.$$"
+  ln -s "$target" "$pending_link"
+  mv -Tf "$pending_link" "$CURRENT_LINK"
+}
+
+write_previous_release() {
+  local target="$1"
+  local pending_file="$DEPLOY_ROOT/.previous-release.$$"
+  printf '%s\n' "$target" >"$pending_file"
+  mv -f "$pending_file" "$PREVIOUS_FILE"
+}
+
+validate_release_path() {
+  local target="$1"
+  if [[ "$target" == "$DEPLOY_ROOT" ]]; then
+    return 0
+  fi
+  local target_parent target_name
+  target_parent="$(dirname "$target")"
+  target_name="$(basename "$target")"
+  [[ "$target_parent" == "$RELEASES_DIR" ]] || fail "release is outside $RELEASES_DIR"
+  is_release_id "$target_name" || fail "invalid release directory: $target"
+}
+
+validate_archive_members() {
+  local archive="$1"
+  local member
+  while IFS= read -r member; do
+    case "$member" in
+      /* | ../* | */../* | */..)
+        fail "archive contains an unsafe path: $member"
+        ;;
+    esac
+  done < <(tar -tzf "$archive")
+}
+
+prepare_release() {
+  local archive="$1"
+  local release_id="$2"
+  local release_path="$RELEASES_DIR/$release_id"
+
+  if [[ -d "$release_path" ]]; then
+    [[ "$(<"$release_path/.odysseus-release")" == "$release_id" ]] ||
+      fail "existing release has no matching identity marker: $release_path"
+    printf '%s\n' "$release_path"
+    return 0
+  fi
+
+  local staging="$RELEASES_DIR/.incoming-$release_id-$$"
+  mkdir -p "$staging"
+  trap 'rm -rf -- "$staging"' RETURN
+  validate_archive_members "$archive"
+  tar -xzf "$archive" -C "$staging"
+
+  [[ -f "$staging/Dockerfile" ]] || fail 'release has no Dockerfile'
+  [[ -f "$staging/deploy/compose.yaml" ]] || fail 'release has no Compose file'
+  [[ -f "$staging/deploy/Caddyfile" ]] || fail 'release has no Caddyfile'
+  [[ -f "$staging/deploy/release.sh" ]] || fail 'release has no release controller'
+  [[ -f "$staging/deploy/github-deploy-command.sh" ]] || fail 'release has no forced command'
+  [[ -f "$staging/deploy/install-github-deploy-key.sh" ]] || fail 'release has no key installer'
+  [[ ! -e "$staging/.env" ]] || fail 'release archive unexpectedly contains .env'
+  ln -s "$DEPLOY_ROOT/.env" "$staging/.env"
+  printf '%s\n' "$release_id" >"$staging/.odysseus-release"
+  mv "$staging" "$release_path"
+  trap - RETURN
+  printf '%s\n' "$release_path"
+}
+
+current_release_path() {
+  if [[ -L "$CURRENT_LINK" ]]; then
+    readlink -f "$CURRENT_LINK"
+  else
+    # The first automated deployment starts from the original synced tree.
+    printf '%s\n' "$DEPLOY_ROOT"
+  fi
+}
+
+restore_release() {
+  local target="$1"
+  local target_tag
+  validate_release_path "$target"
+  target_tag="$(release_tag_for "$target")"
+  log "restoring $(basename "$target")"
+  compose "$target" "$target_tag" up -d --no-build --remove-orphans
+  wait_until_ready
+}
+
+install_controllers() {
+  local release_path="$1"
+  # The forced SSH command lives outside release directories. Refresh it only
+  # after the new app has passed its live check, so a broken release cannot
+  # replace the recovery path used by the next deployment.
+  install -m 0755 "$release_path/deploy/release.sh" "$DEPLOY_ROOT/deploy/release.sh"
+  install -m 0755 "$release_path/deploy/github-deploy-command.sh" \
+    "$DEPLOY_ROOT/deploy/github-deploy-command.sh"
+  install -m 0755 "$release_path/deploy/install-github-deploy-key.sh" \
+    "$DEPLOY_ROOT/deploy/install-github-deploy-key.sh"
+}
+
+prune_old_releases() {
+  local current_path previous_path path name retained=0
+  current_path="$(readlink -f "$CURRENT_LINK")"
+  previous_path="$(<"$PREVIOUS_FILE")"
+
+  while IFS= read -r path; do
+    name="$(basename "$path")"
+    is_release_id "$name" || continue
+    if [[ "$path" == "$current_path" || "$path" == "$previous_path" || $retained -lt 5 ]]; then
+      retained=$((retained + 1))
+      continue
+    fi
+    log "pruning old release $name"
+    rm -rf -- "$path"
+    docker image rm "odysseus-app:$name" >/dev/null 2>&1 || true
+  done < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' |
+    sort -nr | cut -d' ' -f2-)
+}
+
+deploy_release() {
+  local archive="$1"
+  local release_id="$2"
+  is_release_id "$release_id" || fail 'release id must be a full lowercase Git commit SHA'
+  [[ -r "$archive" ]] || fail "release archive is not readable: $archive"
+  [[ -r "$DEPLOY_ROOT/.env" ]] || fail "production environment is missing: $DEPLOY_ROOT/.env"
+  mkdir -p "$RELEASES_DIR"
+
+  local release_path previous_path
+  release_path="$(prepare_release "$archive" "$release_id")"
+  previous_path="$(current_release_path)"
+  validate_release_path "$previous_path"
+
+  log "building release $release_id"
+  compose "$release_path" "$release_id" build app
+  log "starting release $release_id"
+  compose "$release_path" "$release_id" up -d --remove-orphans
+
+  if ! wait_until_ready; then
+    log "release $release_id failed its live check; restoring $(basename "$previous_path")"
+    restore_release "$previous_path" ||
+      fail 'new release and automatic restore both failed; inspect the Compose logs now'
+    fail "release $release_id failed its live check; the previous release is running"
+  fi
+
+  if [[ "$previous_path" != "$release_path" ]]; then
+    write_previous_release "$previous_path"
+  fi
+  set_current_link "$release_path"
+  install_controllers "$release_path"
+  prune_old_releases
+  log "release $release_id is current"
+}
+
+rollback_release() {
+  [[ -r "$PREVIOUS_FILE" ]] || fail 'no previous release has been recorded yet'
+  local current_path target target_tag
+  current_path="$(current_release_path)"
+  target="$(<"$PREVIOUS_FILE")"
+  validate_release_path "$target"
+  [[ -f "$target/deploy/compose.yaml" ]] || fail "previous release is incomplete: $target"
+  target_tag="$(release_tag_for "$target")"
+
+  if ! docker image inspect "odysseus-app:$target_tag" >/dev/null 2>&1; then
+    log "image odysseus-app:$target_tag is missing; rebuilding it before rollback"
+    compose "$target" "$target_tag" build app
+  fi
+
+  restore_release "$target" || fail 'rollback failed its live check; inspect the Compose logs now'
+  write_previous_release "$current_path"
+  set_current_link "$target"
+  log "rollback complete; $(basename "$target") is current"
+}
+
+usage() {
+  printf 'usage: %s deploy ARCHIVE FULL_COMMIT_SHA | rollback\n' "$0" >&2
+  exit 2
+}
+
+main() {
+  mkdir -p "$DEPLOY_ROOT"
+  exec 9>"$LOCK_FILE"
+  flock -n 9 || fail 'another production deployment is already running'
+
+  case "${1:-}" in
+    deploy)
+      [[ $# -eq 3 ]] || usage
+      deploy_release "$2" "$3"
+      ;;
+    rollback)
+      [[ $# -eq 1 ]] || usage
+      rollback_release
+      ;;
+    *)
+      usage
+      ;;
+  esac
+}
+
+main "$@"

@@ -362,6 +362,11 @@ in-container PDF glyph check confirmed by the operator). One defect found
 during the live run is filed as issue #18 (crawl progress bar on uncapped
 full audits); it does not gate the deployment.
 
+Routine dashboard releases were automated 2026-09-01 without changing plan
+016's hosting boundary: an operator-triggered workflow verifies successful CI
+for the exact main commit, then deploys it immutably with a live check and
+rollback. See `deploy/runbook.md` section 7A and trade-off 61.
+
 Plans 018 through 020 (rewritten 2026-08-31, operator-approved) are **not 9c
 slices**. They are report-deliverable work arising from a consulting review of
 a real client report, recorded in

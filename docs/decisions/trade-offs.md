@@ -2701,6 +2701,42 @@ act in this plan; only a future plan that makes drafting server-side may
 move them, with the operator present. The provisioning steps, the Atlas
 allowlist caution, and the restore drill live in `deploy/runbook.md`.
 
+### 61. Production releases are CI-verified, operator-triggered, immutable, and driven by a shell-restricted VPS key
+
+Routine updates to `app.odysseusaudit.com` now start only when the operator
+manually dispatches the production workflow on `main`. The workflow refuses to
+deploy unless that exact commit has a successful `CI` push run, then streams
+its Git archive to the VPS. It never asks the server to pull a moving branch.
+Documentation-only pushes need no production action.
+
+The VPS extracts each archive into
+`/srv/odysseus/releases/<full-commit-sha>`, builds an
+`odysseus-app:<full-commit-sha>` image, and changes the `current` pointer only
+after the public unauthenticated request returns the expected 302 redirect to
+`/login`. A failed live check restores the previous Compose release
+automatically. Manual rollback is the same dispatched workflow and swaps the
+current and previous pointers. Compose is pinned to project name `deploy`, so
+release directories cannot create replacement artifact or Caddy volumes.
+
+The repository is private on a GitHub plan that does not support required
+environment reviewers for private repositories. Manual workflow dispatch is
+therefore the approval gate, and no push or `workflow_run` event can start the
+deployment job. A future plan upgrade may add a reviewer as a second gate.
+
+The Actions credential is a dedicated Ed25519 key with OpenSSH `restrict` and
+a forced command. It can stream one deployment archive or request one rollback;
+it cannot get a shell, forward a port, or read the production `.env`. The
+repository's `PRODUCTION_DEPLOY_ENABLED` variable is the final enable switch,
+added only after the secrets, host trust, and forced key exist.
+
+Rejected: deploy directly on every push, because a documentation change or an
+accidental merge would restart a live queue with no operator decision; run
+`git pull` on the VPS, because the provisioned server is intentionally a source
+sync without Git metadata and a moving branch is not a release identity; use a
+general-purpose SSH key, because compromise would expose production secrets;
+and rebuild only one mutable working tree, because rollback would require
+reconstructing the prior source and image during an incident.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.
