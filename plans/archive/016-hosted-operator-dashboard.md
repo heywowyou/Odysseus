@@ -20,6 +20,13 @@
 - **Blocks**: plan 014 (the first-100 rollout is when anywhere-access matters)
 - **Category**: direction
 - **Planned at**: `dbba6ba`, 2026-08-30
+- **DONE 2026-08-31**. Steps 1, 2, and 5's code half landed that morning, and
+  the live operator walkthrough completed steps 3 and 4 the same day: the VPS
+  at `app.odysseusaudit.com`, login and wrong-password lockout verified in the
+  browser, reboot proof, nightly backups with a passed restore drill, and the
+  in-container PDF glyph check confirmed by the operator. One defect found
+  during the live run is filed as issue #18 (crawl progress bar on uncapped
+  full audits); it does not gate the deployment.
 
 ## Why this matters
 
