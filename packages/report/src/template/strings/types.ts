@@ -399,6 +399,10 @@ export interface ReportStrings {
      *  facts (fine figure + neutral case-law state), rendered only when
      *  the resolved regime is EAA (methodology.ts's pickPrimaryBasis). */
     exposureHeading: string;
+    /** Plan 020: labels the one deterministic general EAA reference.
+     *  The sentence below it comes unchanged from core and is never
+     *  presented as this client's exposure. */
+    generalEaaReferenceHeading: string;
     /** item 24: prints the SIREN the headcount band's Sirene lookup was
      *  based on, so a lawyer or auditor can independently verify which
      *  entity the determination concerns. Template: {siren}, {date} (the

@@ -115,6 +115,20 @@ section IDs do not encode reading order.
 | 15 | Glossaire | 9 entries | 1 sheet |
 | 16 | Annexe technique finale | all finding, URL, selector, occurrence, and provenance detail | flows |
 
+Plan 020 adds two bounded blocks without changing this order or the visual
+tokens:
+
+- Section 02 may contain one conditional **indicative improvement
+  opportunity** after the decision prose and before the priority links. The
+  block contains one conservative amount and its adjacent citation. It is
+  absent, with no placeholder, when strict eligibility is not met. No priority
+  card contains a euro estimate.
+- Section 13 may contain one conditional **general legal reference** after the
+  client facts and criteria. It reproduces the existing deterministic EUR
+  7,500 EAA sentence only when the EAA context is present and keeps it visually
+  separate from client facts, finding counts, commercial opportunity, and
+  prices. It is absent in LCEN-only and otherwise non-applicable contexts.
+
 Four decisions worth stating explicitly, because the previous output diverged on
 each of them:
 

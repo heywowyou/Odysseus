@@ -7,6 +7,7 @@
 import type {
   JourneyDecisionKind,
   JourneyVocab,
+  ManualTurnoverSourceResponse,
   PreparationViewResponse,
 } from './prepare-report-types';
 
@@ -28,10 +29,89 @@ export interface PreparationFormValues {
   stakeholderCommunications: string;
   stakeholderLegal: string;
   journeyDecisions: Partial<Record<JourneyVocab, JourneyDecisionKind>>;
+  turnoverUseReplacement: boolean;
+  turnoverKind: 'exact' | 'range';
+  turnoverAmountEur: string;
+  turnoverLowerEur: string;
+  turnoverUpperEur: string;
+  turnoverYear: string;
+  turnoverSource: '' | ManualTurnoverSourceResponse;
+  turnoverSourceNote: string;
+}
+
+export type TurnoverFormPreview =
+  | {
+      status: 'available';
+      amountEur: number;
+      rangeUpperEur?: number;
+      year: number;
+      provenance: 'detected' | 'replacement';
+      inputKind: 'exact' | 'range';
+    }
+  | { status: 'omitted'; reason: 'missing-turnover' | 'missing-replacement' };
+
+function positiveInteger(value: string): number | undefined {
+  if (value.trim() === '') return undefined;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+export function resolveTurnoverFormPreview(
+  values: PreparationFormValues,
+  detected: { amountEur: number; year: number; source: 'sirene-api' } | undefined,
+): TurnoverFormPreview {
+  if (!values.turnoverUseReplacement) {
+    return detected
+      ? {
+          status: 'available',
+          amountEur: detected.amountEur,
+          year: detected.year,
+          provenance: 'detected',
+          inputKind: 'exact',
+        }
+      : { status: 'omitted', reason: 'missing-turnover' };
+  }
+
+  const year = positiveInteger(values.turnoverYear);
+  const sourceIsComplete =
+    values.turnoverSource !== '' &&
+    (values.turnoverSource !== 'other-documented' || values.turnoverSourceNote.trim() !== '');
+  if (year === undefined || !sourceIsComplete) {
+    return { status: 'omitted', reason: 'missing-replacement' };
+  }
+
+  if (values.turnoverKind === 'range') {
+    const lowerEur = positiveInteger(values.turnoverLowerEur);
+    const upperEur = positiveInteger(values.turnoverUpperEur);
+    if (lowerEur === undefined || upperEur === undefined || lowerEur > upperEur) {
+      return { status: 'omitted', reason: 'missing-replacement' };
+    }
+    return {
+      status: 'available',
+      amountEur: lowerEur,
+      rangeUpperEur: upperEur,
+      year,
+      provenance: 'replacement',
+      inputKind: 'range',
+    };
+  }
+
+  const amountEur = positiveInteger(values.turnoverAmountEur);
+  return amountEur === undefined
+    ? { status: 'omitted', reason: 'missing-replacement' }
+    : {
+        status: 'available',
+        amountEur,
+        year,
+        provenance: 'replacement',
+        inputKind: 'exact',
+      };
 }
 
 export function formValuesFromView(view: PreparationViewResponse): PreparationFormValues {
   const { preparation } = view;
+  const turnover = preparation.turnover ?? { useReplacement: false };
+  const replacement = turnover.replacement;
   return {
     situation: preparation.context.situation ?? '',
     trigger: preparation.context.trigger ?? '',
@@ -46,6 +126,14 @@ export function formValuesFromView(view: PreparationViewResponse): PreparationFo
     journeyDecisions: Object.fromEntries(
       preparation.journeyDecisions.map((decision) => [decision.journeyId, decision.decision]),
     ),
+    turnoverUseReplacement: turnover.useReplacement,
+    turnoverKind: replacement?.kind ?? 'exact',
+    turnoverAmountEur: replacement?.kind === 'exact' ? replacement.amountEur.toString() : '',
+    turnoverLowerEur: replacement?.kind === 'range' ? replacement.lowerEur.toString() : '',
+    turnoverUpperEur: replacement?.kind === 'range' ? replacement.upperEur.toString() : '',
+    turnoverYear: replacement?.year.toString() ?? '',
+    turnoverSource: replacement?.source ?? '',
+    turnoverSourceNote: replacement?.sourceNote ?? '',
   };
 }
 
@@ -130,6 +218,58 @@ export function buildPreparationPatch(
       )
       .map((journeyId) => ({ journeyId, decision: values.journeyDecisions[journeyId] }));
   }
+
+  const turnoverFieldsChanged =
+    values.turnoverKind !== baseline.turnoverKind ||
+    values.turnoverAmountEur !== baseline.turnoverAmountEur ||
+    values.turnoverLowerEur !== baseline.turnoverLowerEur ||
+    values.turnoverUpperEur !== baseline.turnoverUpperEur ||
+    values.turnoverYear !== baseline.turnoverYear ||
+    values.turnoverSource !== baseline.turnoverSource ||
+    values.turnoverSourceNote !== baseline.turnoverSourceNote;
+  const turnoverPatch: Record<string, unknown> = {};
+  if (values.turnoverUseReplacement !== baseline.turnoverUseReplacement) {
+    turnoverPatch['useReplacement'] = values.turnoverUseReplacement;
+  }
+  if (
+    turnoverFieldsChanged &&
+    values.turnoverKind === 'exact' &&
+    values.turnoverAmountEur !== '' &&
+    values.turnoverYear !== '' &&
+    values.turnoverSource !== ''
+  ) {
+    turnoverPatch['replacement'] = {
+      kind: 'exact',
+      amountEur: Number(values.turnoverAmountEur),
+      year: Number(values.turnoverYear),
+      source: values.turnoverSource,
+      ...(values.turnoverSource === 'other-documented' && values.turnoverSourceNote.trim() !== ''
+        ? { sourceNote: values.turnoverSourceNote.trim() }
+        : {}),
+    };
+  } else if (
+    turnoverFieldsChanged &&
+    values.turnoverKind === 'range' &&
+    values.turnoverLowerEur !== '' &&
+    values.turnoverUpperEur !== '' &&
+    values.turnoverYear !== '' &&
+    values.turnoverSource !== ''
+  ) {
+    turnoverPatch['replacement'] = {
+      kind: 'range',
+      lowerEur: Number(values.turnoverLowerEur),
+      upperEur: Number(values.turnoverUpperEur),
+      year: Number(values.turnoverYear),
+      source: values.turnoverSource,
+      ...(values.turnoverSource === 'other-documented' && values.turnoverSourceNote.trim() !== ''
+        ? { sourceNote: values.turnoverSourceNote.trim() }
+        : {}),
+    };
+  }
+  if (turnoverFieldsChanged && !('replacement' in turnoverPatch)) {
+    turnoverPatch['replacement'] = null;
+  }
+  if (Object.keys(turnoverPatch).length > 0) patch['turnover'] = turnoverPatch;
 
   return patch;
 }

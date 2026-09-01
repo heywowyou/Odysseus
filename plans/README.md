@@ -346,12 +346,14 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [016](archive/016-hosted-operator-dashboard.md) | Host the operator dashboard on a public EU server | P2 | M | 001-013 | DONE |
 | [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013, 016 | TODO |
 | [015](archive/015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |
-| [018](./018-report-executive-readability.md) | Make the paid report readable as an executive decision document | P1 | L | none | IMPLEMENTED |
-| [019](./019-report-preparation-and-personalization.md) | Prepare and personalize the paid report safely | P1 | L | 018 | DONE |
-| [020](./020-report-financial-evidence-and-legal-reference.md) | Add defensible financial evidence and the general legal reference | P1 | L | 019 | TODO |
+| [018](archive/018-report-executive-readability.md) | Make the paid report readable as an executive decision document | P1 | L | none | DONE |
+| [019](archive/019-report-preparation-and-personalization.md) | Prepare and personalize the paid report safely | P1 | L | 018 | DONE |
+| [020](archive/020-report-financial-evidence-and-legal-reference.md) | Add defensible financial evidence and the general legal reference | P1 | L | 019 | DONE (financial-opportunity feature explicitly deferred) |
 | [021](./021-complete-audits-without-template-repetition.md) | Keep full-site audits complete without repeating template work | P1 | L | 018-020 | TODO |
 | [022](./022-dashboard-and-site-design-refactor.md) | Refactor the operator dashboard and public site UI with the Impeccable workflow | P2 | L | none | TODO |
 | [023](./023-report-visual-design-refactor.md) | Revise the report visual design as a gated, operator-directed redesign | P2 | L | 018-021, operator-approved direction | TODO |
+| [024](./024-report-feedback-followups.md) | Close three small gaps between the report and Conseil papa | P2 | S | 018, 019 | TODO |
+| [025](./025-llm-provider-switch.md) | Switch the LLM provider from Mistral to OpenAI gpt-4.1-mini | P1 | M | none | TODO |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
@@ -393,7 +395,7 @@ provider rate limits burning all retry attempts with no pacing (`f9cbca5`),
 and the legacy fallback adopting a ready candidate's or a failed run's
 partial analyses as the current pair (`6600749`).
 
-Plan 018 `IMPLEMENTED` 2026-09-01: all nine steps landed in six commits
+Plan 018 `DONE` 2026-09-01: all nine steps landed in six commits
 (`cc6e39f` canonical design and pagination, `82326f1` section order and the
 minimal cover plus metadata sheet, `4e70093` outcomes-first cards and the
 synthesis ending, `c2442c5` the page-count warning, `efada91` the completed
@@ -402,12 +404,11 @@ rendered-output review caught). Trade-off 44 records the compact-flow
 retirement. The suite is green and rendered PDFs were reviewed page by page
 against the plan's checklist: the English La Coorniche report (34 pages,
 from the current 2026-09-01 analysis), both de-identified fixture pairs
-(33-34 pages), and the stress fixture through the invariant suite. `DONE`
-awaits one gate: the French La Coorniche report, blocked because the
-French writing pass fails all retries on the severity-vocabulary guard
-(filed as issue #21 with the full diagnosis; the English pass on the same
-structure succeeds). Residuals from the review for a later pass: the
-La Coorniche and fixture checklists have minor group-header orphans at
+(33-34 pages), and the stress fixture through the invariant suite. The French
+La Coorniche gate passed during plan 019's operator review after the
+severity-vocabulary retry defect was fixed. Residuals from the review for a
+later pass include minor group-header orphans in the La Coorniche and fixture
+checklists at
 appendix page breaks, the FR cover question wraps its "?" onto its own
 line, and the small-site stored EN analysis still carries pre-plan model
 prose (WCAG 2.1 wording, priority order and Complexity ratings that differ
@@ -481,6 +482,14 @@ Each kind of work has exactly one home:
    holds only in-flight recovery state and never becomes a backlog.
 
 ## Dependency notes
+
+- Plan 025 is independent of the 018 through 021 report sequence and of 022
+  through 024, and may run as a separate session. Its `CLAUDE.md`,
+  llm-layer-rules, trade-offs, and operator-obligations edits are part of the
+  plan itself, not drift, and its live-call step is standing-authorized only
+  after its own `CLAUDE.md` amendment lands in the same plan. The operator
+  must supply `OPENAI_API_KEY` before its live smoke and A/B calls. It must
+  not fold or revert the plan 020 session's uncommitted changes.
 
 - Plans 018 through 020 form a strict report sequence. Do not begin 019 until
   018's section order and pagination contract are verified, and do not begin

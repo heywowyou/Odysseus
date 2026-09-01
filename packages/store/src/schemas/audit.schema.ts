@@ -246,6 +246,41 @@ const journeyDecisionSchema = new Schema(
   { _id: false },
 );
 
+const detectedTurnoverSchema = new Schema(
+  {
+    amountEur: { type: Number, required: true },
+    year: { type: Number, required: true },
+    source: { type: String, required: true, enum: ['sirene-api'] },
+  },
+  { _id: false },
+);
+
+const manualTurnoverSchema = new Schema(
+  {
+    kind: { type: String, required: true, enum: ['exact', 'range'] },
+    amountEur: { type: Number },
+    lowerEur: { type: Number },
+    upperEur: { type: Number },
+    year: { type: Number, required: true },
+    source: {
+      type: String,
+      required: true,
+      enum: ['official-annual-accounts', 'client-stated', 'other-documented'],
+    },
+    sourceNote: { type: String },
+  },
+  { _id: false },
+);
+
+const turnoverChoiceSchema = new Schema(
+  {
+    detected: { type: detectedTurnoverSchema },
+    replacement: { type: manualTurnoverSchema },
+    useReplacement: { type: Boolean, required: true },
+  },
+  { _id: false },
+);
+
 const reportPreparationSchema = new Schema(
   {
     context: {
@@ -292,6 +327,7 @@ const reportPreparationSchema = new Schema(
       default: {},
     },
     journeyDecisions: { type: [journeyDecisionSchema], default: [] },
+    turnover: { type: turnoverChoiceSchema, default: { useReplacement: false } },
     warningAcknowledgement: {
       _id: false,
       type: {

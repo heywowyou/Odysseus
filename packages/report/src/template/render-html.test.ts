@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { ObligationAssessment } from '@odysseus/core';
+import {
+  EAA_REGIME_ID,
+  LCEN_MENTIONS_LEGALES_RULE_ID,
+  eaaSanctionFigureSentence,
+  type ObligationAssessment,
+} from '@odysseus/core';
 import { renderHtml } from './render-html.js';
 import { escapeHtml } from './html-utils.js';
 import { findRenderLintViolations } from './render-lint.js';
@@ -204,5 +209,56 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
     expect(html.split(DATA_AVAILABLE).length - 1).toBe(1);
     expect(html).toContain(METHODOLOGY_POINTER);
     expect(html.split(CONFORMANCE_SCOPE_NOTE).length - 1).toBe(1);
+  });
+});
+
+describe('plan 020 general EAA reference placement', () => {
+  it.each(['fr', 'en'] as const)(
+    'renders the unchanged %s sentence exactly once inside detailed legal content',
+    async (language) => {
+      const manifest = await loadSmallSiteManifest();
+      const findings = await loadSmallSiteFindings();
+      const analysis = {
+        ...(await loadSmallSiteAnalysis(language)),
+        obligationAssessment: {
+          status: 'likely_in_scope' as const,
+          basis: [{ regimeId: EAA_REGIME_ID, facts: [{ kind: 'siren-missing' as const }] }],
+        },
+      };
+
+      const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
+      const sentence = escapeHtml(eaaSanctionFigureSentence(language));
+      const legalStart = html.indexOf('id="section-02"');
+      const legalEnd = html.indexOf('id="section-11"', legalStart);
+      const legalSection = html.slice(legalStart, legalEnd);
+
+      expect(html.split(sentence)).toHaveLength(2);
+      expect(legalSection).toContain(sentence);
+      expect(html.slice(0, legalStart)).not.toContain(sentence);
+      expect(html.slice(legalEnd)).not.toContain(sentence);
+    },
+  );
+
+  it('omits the EAA amount from LCEN-only content', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const findings = await loadSmallSiteFindings();
+    const lcenFinding = {
+      ...findings[0]!,
+      findingId: 'lcen-only',
+      ruleId: LCEN_MENTIONS_LEGALES_RULE_ID,
+      category: 'seo' as const,
+    };
+    const loaded = await loadSmallSiteAnalysis('fr');
+    const { obligationAssessment: _drop, ...analysis } = loaded;
+
+    const html = await renderHtml({
+      manifest,
+      findings: [lcenFinding],
+      analysis,
+      renderDiffEvidencePages: [],
+    });
+
+    expect(html).toContain('Obligation d&#39;identification de l&#39;éditeur');
+    expect(html).not.toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
   });
 });

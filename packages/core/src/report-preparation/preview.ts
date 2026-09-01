@@ -10,6 +10,7 @@ import {
   type ResolvedJourney,
 } from './journeys.js';
 import type { ReportPreparation } from './preparation.js';
+import { resolveEffectiveTurnover, type EffectiveTurnover } from './turnover.js';
 import {
   HOOK_FAMILY_COPY,
   JOURNEY_COPY,
@@ -96,6 +97,9 @@ export interface ReportPreparationPreview {
   warnings: readonly MissingContextField[];
   warningDigest: string;
   excludedJourneys: readonly PreviewExcludedJourney[];
+  /** Operator-only effective basis. Client report rendering receives no
+   *  placeholder or estimate from this preparation preview. */
+  turnover: EffectiveTurnover;
 }
 
 export interface BuildPreviewInput {
@@ -207,5 +211,6 @@ export function buildReportPreparationPreview(input: BuildPreviewInput): ReportP
     warnings,
     warningDigest,
     excludedJourneys,
+    turnover: resolveEffectiveTurnover(preparation.turnover ?? { useReplacement: false }),
   };
 }

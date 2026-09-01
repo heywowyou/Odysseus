@@ -215,6 +215,7 @@ export const en: ReportStrings = {
         'The business identifier or Sirene data needed to compare observed facts with the cited thresholds was unavailable.',
     },
     exposureHeading: 'Exposure if non-compliant',
+    generalEaaReferenceHeading: 'General legal reference',
     sirenLabel: 'SIREN',
     sirenTemplate: 'SIREN {siren}, as found during this audit ({date}).',
     sirenUnavailable: 'No SIREN number could be identified for this site during this audit.',

@@ -388,6 +388,21 @@ means numbered entry 24, not a literal Markdown heading anchor.
     on-disk manifest, not the Mongo audit document, whose schema does not
     persist `siteSignals`. → trade-offs.md#62
 
+63. Client-specific financial estimates are denied by default. Canonical
+    policy describes a report-owned opportunity resolver requiring an
+    explicitly opted-in primary reference, exact sector and measured-problem
+    evidence, and a traceable effective turnover, returning at most one
+    conservative opportunity or a typed omission; broad `scales-down` status
+    never grants estimate permission. **That resolver is not implemented**
+    (amended 2026-09-02): the only candidate source, Deloitte's per-0.1-second
+    "mobile site speed" conversion lift, has no explicit mapping to one of the
+    tool's measured Core Web Vital metrics, and the operator chose to defer
+    rather than approve a metric substitution. Turnover input shipped anyway
+    as groundwork with no financial consumer yet. The EUR 7,500 EAA sentence
+    is a separate deterministic general reference, rendered once in detailed
+    legal content only when the EAA context is included, never as this
+    client's exposure. → trade-offs.md#63
+
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
 module, Mongoose 9, Zod, Commander, Vitest, pino, `@mistralai/mistralai`.

@@ -29,17 +29,27 @@ import {
   buildPreparationPatch,
   exclusionLabel,
   formValuesFromView,
+  resolveTurnoverFormPreview,
   showsTriggerOtherNotes,
   type PreparationFormValues,
 } from './prepare-report-model';
 import type {
   JourneyVocab,
+  ManualTurnoverSourceResponse,
   PreparationViewResponse,
   TriggerVocab,
   SituationVocab,
 } from './prepare-report-types';
 
 type PreviewLanguage = 'fr' | 'en';
+
+function formatEur(amount: number, language: 'fr' | 'en'): string {
+  return new Intl.NumberFormat(language === 'fr' ? 'fr-FR' : 'en-GB', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
 
 function situationOptions(strings: DashboardStrings): { value: SituationVocab; label: string }[] {
   return (Object.entries(strings.prepareReport.situationOptions) as [SituationVocab, string][]).map(
@@ -111,7 +121,7 @@ function PreviewPane(props: {
 
 export function PrepareReportCard(props: { auditId: string }): JSX.Element {
   const { auditId } = props;
-  const { strings } = useI18n();
+  const { language, strings } = useI18n();
   const basePath = `/api/audits/${encodeURIComponent(auditId)}/report-preparation`;
   const { data, error, refresh } = useApi<PreparationViewResponse>(basePath);
 
@@ -230,6 +240,16 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
 
   const candidate = data.preparation.writingSelection?.candidate;
   const selected = data.preparation.writingSelection?.selected;
+  const detectedTurnover = data.preparation.turnover?.detected;
+  const turnoverPreview = resolveTurnoverFormPreview(values, detectedTurnover);
+  const turnoverSourceOptions: { value: ManualTurnoverSourceResponse; label: string }[] = [
+    {
+      value: 'official-annual-accounts',
+      label: strings.prepareReport.turnoverSourceOfficialAccounts,
+    },
+    { value: 'client-stated', label: strings.prepareReport.turnoverSourceClient },
+    { value: 'other-documented', label: strings.prepareReport.turnoverSourceOther },
+  ];
 
   return (
     <Card
@@ -315,6 +335,186 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
           />
         </Field>
       </div>
+
+      <section className="mt-6 border-t border-line pt-5" aria-labelledby="prep-turnover-heading">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="max-w-[65ch]">
+            <h3 id="prep-turnover-heading" className="text-[13px] font-medium">
+              {strings.prepareReport.turnoverHeading}
+            </h3>
+            <p className="mt-1 text-xs text-ink-muted">
+              {strings.prepareReport.turnoverDescription}
+            </p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-pressed={values.turnoverUseReplacement}
+            onClick={() => set({ turnoverUseReplacement: !values.turnoverUseReplacement })}
+          >
+            {values.turnoverUseReplacement
+              ? strings.prepareReport.useOfficialTurnoverLabel
+              : strings.prepareReport.useDifferentTurnoverLabel}
+          </Button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-lg bg-raised px-3 py-3">
+          <span className="text-xs text-ink-muted">
+            {strings.prepareReport.detectedTurnoverLabel}
+          </span>
+          {detectedTurnover ? (
+            <span className="text-[13px] font-medium tabular-nums text-ink">
+              {formatEur(detectedTurnover.amountEur, language)} · {detectedTurnover.year}
+            </span>
+          ) : (
+            <span className="text-[13px] text-ink-soft">
+              {strings.prepareReport.detectedTurnoverUnavailable}
+            </span>
+          )}
+        </div>
+
+        {values.turnoverUseReplacement ? (
+          <div className="mt-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[13px] font-medium text-ink-soft">
+                {strings.prepareReport.turnoverKindLabel}
+              </span>
+              <SegmentedControl
+                value={values.turnoverKind}
+                onValueChange={(turnoverKind) => set({ turnoverKind })}
+                options={[
+                  { value: 'exact', label: strings.prepareReport.turnoverExactOption },
+                  { value: 'range', label: strings.prepareReport.turnoverRangeOption },
+                ]}
+                ariaLabel={strings.prepareReport.turnoverKindLabel}
+              />
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+              {values.turnoverKind === 'exact' ? (
+                <Field
+                  label={strings.prepareReport.turnoverAmountLabel}
+                  htmlFor="prep-turnover-amount"
+                >
+                  <Input
+                    id="prep-turnover-amount"
+                    type="number"
+                    min="1"
+                    max="1000000000000"
+                    step="1"
+                    inputMode="numeric"
+                    value={values.turnoverAmountEur}
+                    onChange={(event) => set({ turnoverAmountEur: event.target.value })}
+                  />
+                </Field>
+              ) : (
+                <>
+                  <Field
+                    label={strings.prepareReport.turnoverLowerLabel}
+                    htmlFor="prep-turnover-lower"
+                  >
+                    <Input
+                      id="prep-turnover-lower"
+                      type="number"
+                      min="1"
+                      max="1000000000000"
+                      step="1"
+                      inputMode="numeric"
+                      value={values.turnoverLowerEur}
+                      onChange={(event) => set({ turnoverLowerEur: event.target.value })}
+                    />
+                  </Field>
+                  <Field
+                    label={strings.prepareReport.turnoverUpperLabel}
+                    htmlFor="prep-turnover-upper"
+                  >
+                    <Input
+                      id="prep-turnover-upper"
+                      type="number"
+                      min="1"
+                      max="1000000000000"
+                      step="1"
+                      inputMode="numeric"
+                      value={values.turnoverUpperEur}
+                      onChange={(event) => set({ turnoverUpperEur: event.target.value })}
+                    />
+                  </Field>
+                </>
+              )}
+              <Field label={strings.prepareReport.turnoverYearLabel} htmlFor="prep-turnover-year">
+                <Input
+                  id="prep-turnover-year"
+                  type="number"
+                  min="2000"
+                  max="2026"
+                  step="1"
+                  inputMode="numeric"
+                  value={values.turnoverYear}
+                  onChange={(event) => set({ turnoverYear: event.target.value })}
+                />
+              </Field>
+              <Field
+                label={strings.prepareReport.turnoverSourceLabel}
+                htmlFor="prep-turnover-source"
+              >
+                <Select
+                  id="prep-turnover-source"
+                  value={values.turnoverSource}
+                  onChange={(event) =>
+                    set({
+                      turnoverSource: event.target.value as '' | ManualTurnoverSourceResponse,
+                    })
+                  }
+                >
+                  <option value="">{strings.prepareReport.automaticOption}</option>
+                  {turnoverSourceOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              {values.turnoverSource === 'other-documented' ? (
+                <Field
+                  label={strings.prepareReport.turnoverSourceNoteLabel}
+                  htmlFor="prep-turnover-source-note"
+                >
+                  <Input
+                    id="prep-turnover-source-note"
+                    maxLength={120}
+                    value={values.turnoverSourceNote}
+                    onChange={(event) => set({ turnoverSourceNote: event.target.value })}
+                  />
+                </Field>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-4 rounded-lg bg-accent-tint px-3 py-3" aria-live="polite">
+          <p className="text-xs text-ink-muted">{strings.prepareReport.turnoverEffectiveLabel}</p>
+          {turnoverPreview.status === 'available' ? (
+            <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1">
+              <p className="text-sm font-semibold tabular-nums text-ink">
+                {formatEur(turnoverPreview.amountEur, language)} · {turnoverPreview.year}
+              </p>
+              <p className="text-xs text-ink-soft">
+                {turnoverPreview.inputKind === 'range'
+                  ? strings.prepareReport.turnoverRangeBasis
+                  : turnoverPreview.provenance === 'detected'
+                    ? strings.prepareReport.turnoverDetectedBasis
+                    : strings.prepareReport.turnoverReplacementBasis}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-1 text-[13px] text-ink-soft">
+              {turnoverPreview.reason === 'missing-replacement'
+                ? strings.prepareReport.turnoverReplacementMissing
+                : strings.prepareReport.turnoverMissing}
+            </p>
+          )}
+        </div>
+      </section>
 
       <h3 className="mt-5 text-[13px] font-medium">{strings.prepareReport.stakeholdersHeading}</h3>
       <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">

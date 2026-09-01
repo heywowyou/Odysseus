@@ -238,6 +238,11 @@ Permitted:
   sector, and whether the two exemption conditions appear met on that
   data
 - describing the current state of the case law including the split
+- reproducing the existing primary-sourced, deterministic EUR 7,500 EAA
+  sentence as a general legal reference, only in the detailed legal section
+  when the report includes the EAA context. It remains grammatically general,
+  is separated from client facts and finding counts, and is never described as
+  this client's sanction or exposure
 - recommending that scope be confirmed by a lawyer
 
 Not permitted:
@@ -245,6 +250,13 @@ Not permitted:
 - "you must do X by date Y"
 - any statement of what a sanction would be in this client's case
 - any scope statement presented as settled
+
+The general EAA reference is a narrow exception to the presentation rule, not
+to the legal-advice rule. It uses `eaaSanctionFigureSentence(...)` unchanged,
+appears at most once, and permits no arithmetic, procedural claim, client name,
+possessive wording, deadline, or conclusion about whether the amount could
+apply to this company. The EUR 50,000 article 47 figure remains prohibited in
+an EAA context. LCEN sanctions remain unverified and never render.
 
 The distinction is between informing and advising, and it is thinner
 than it looks, which is why the wording lives in template code rather

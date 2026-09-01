@@ -173,6 +173,44 @@ describe('buildReportPreparationPreview', () => {
     ]);
   });
 
+  it('exposes the conservative lower-bound basis for a selected turnover range', () => {
+    const preview = buildReportPreparationPreview({
+      preparation: preparationWith({
+        turnover: {
+          detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
+          replacement: {
+            kind: 'range',
+            lowerEur: 6_500_000,
+            upperEur: 7_000_000,
+            year: 2023,
+            source: 'client-stated',
+          },
+          useReplacement: true,
+        },
+      }),
+    });
+
+    expect(preview.turnover).toEqual({
+      status: 'available',
+      amountEur: 6_500_000,
+      calculationAmountEur: 6_500_000,
+      rangeUpperEur: 7_000_000,
+      year: 2023,
+      source: 'client-stated',
+      provenance: 'replacement',
+      inputKind: 'range',
+    });
+  });
+
+  it('treats a preparation document missing turnover as no replacement, matching legacy documents', () => {
+    const { turnover: _turnover, ...legacyPreparation } = preparationWith({});
+    const preview = buildReportPreparationPreview({
+      preparation: legacyPreparation as ReportPreparation,
+    });
+
+    expect(preview.turnover).toEqual({ status: 'omitted', reason: 'missing-turnover' });
+  });
+
   it('round-trips provenance through a selected pair reference shape', () => {
     // The preview digest only guarantees stability; this guards the
     // provenance fixture shape used by store tests too.

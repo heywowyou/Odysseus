@@ -1,4 +1,6 @@
 import {
+  EAA_REGIME_ID,
+  eaaSanctionFigureSentence,
   getRegime,
   LCEN_MENTIONS_LEGALES_REGIME_ID,
   LCEN_MENTIONS_LEGALES_RULE_ID,
@@ -19,7 +21,7 @@ import {
   renderSheetHeader,
   sheet,
 } from '../html-utils.js';
-import { renderLegalCitationParagraph } from './methodology.js';
+import { pickPrimaryBasis, renderLegalCitationParagraph } from './methodology.js';
 import { SEVERITY } from '../design-tokens.js';
 import { detectVendor } from '../third-party-attribution.js';
 import { effectifCodeFromAssessment, translateEffectifLabel } from '../effectif-label.js';
@@ -307,6 +309,27 @@ function renderLcenBlock(
   `;
 }
 
+function renderGeneralEaaReference(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  obligationAssessment: ObligationAssessment | undefined,
+): string {
+  if (
+    !obligationAssessment ||
+    (obligationAssessment.status !== 'in_scope' &&
+      obligationAssessment.status !== 'likely_in_scope') ||
+    pickPrimaryBasis(obligationAssessment)?.regimeId !== EAA_REGIME_ID
+  )
+    return '';
+
+  return `
+    <div class="card elev-sm" style="margin-top:var(--space-6)" data-general-eaa-reference>
+      <div class="card-kicker">${escapeHtml(strings.legalExposure.generalEaaReferenceHeading)}</div>
+      <div class="card-body">${escapeHtml(eaaSanctionFigureSentence(language))}</div>
+    </div>
+  `;
+}
+
 export function renderLegalExposure(
   strings: ReportStrings,
   ordinal: number,
@@ -335,6 +358,7 @@ export function renderLegalExposure(
       : '';
 
   const lcenBlock = renderLcenBlock(strings, language, findings);
+  const generalEaaReference = renderGeneralEaaReference(strings, language, obligationAssessment);
 
   return sheet(
     `
@@ -357,6 +381,7 @@ export function renderLegalExposure(
     ${renderTransactionalFlowConflictNote(strings, obligationAssessment)}
     ${lcenBlock}
     ${renderSirenNote(strings, language, manifest, manualFields, obligationAssessment, lcenBlock !== '')}
+    ${generalEaaReference}
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">${escapeHtml(l.disclaimerNote)}</p>
   `,
     '',

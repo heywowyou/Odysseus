@@ -2799,6 +2799,57 @@ restart could strand, so in-flight generation is tracked in memory and a
 failed or interrupted run simply leaves the selected pair unchanged with no
 candidate record.
 
+### 63. Financial opportunity is deny-by-default, singular, and separate from the general EAA reference (plan 020)
+
+The broad `ReferenceStat.scalability` field remains an editorial property, not
+permission to calculate client money. Canonical policy (this trade-off,
+CLAUDE.md, `docs/rules/offer-positioning.md`) describes a single opportunity
+module: an explicit opt-in policy returning either one conservative
+`RevenueOpportunity` or a typed omission, requiring a traceable effective
+turnover plus an exact match on sector, measured metric and unit, successful
+deterministic measurement, qualifying performance condition, stat ID, and
+citation ID, with every statistic ineligible by default even when marked
+`scales-down`.
+
+**Amended 2026-09-02: this module is not implemented.** The only candidate
+allowlist entry, the structured Deloitte conversion-uplift-per-0.1-second
+rows, reports a lift per 0.1-second improvement in "mobile site speed," a
+term its methodology never decomposes into one of the tool's five measured
+Core Web Vital metrics (LCP, TBT, FCP, Speed Index, CLS). Picking one as a
+stand-in would be an interpretive choice the primary source does not make,
+exactly the case plan 020 requires stopping for rather than resolving from
+prose. Given that gate, the operator chose to defer the entire
+financial-opportunity feature rather than approve a specific metric
+substitution. No eligibility catalogue extension, resolver, or report
+rendering exists; the policy above states what a future implementation would
+be bound by, not what currently runs. Turnover input (below) shipped anyway
+as approved groundwork, with no client-facing financial consumer yet.
+
+Turnover extends plan 019's preparation aggregate. The detected official value
+stays the default; a replacement becomes effective only through an explicit
+choice and carries exact or range shape, year, and typed source. A range uses
+its lower bound. The private operator preview explains typed absence or
+rejection reasons, while the client report renders no empty financial block.
+The opportunity appears once in the executive summary with its citation, and
+the former per-theme euro notes are removed. It is never described as loss,
+cost, exposure, guaranteed gain, return on investment, or a comparison with an
+Odysseus price.
+
+The legal amount is a separate view and section. When deterministic legal
+context includes the EAA, the detailed legal section reproduces
+`eaaSanctionFigureSentence(...)` unchanged once under a general-reference
+heading. It is never adjacent to client findings, arithmetic, opportunity
+money, or prices and never states this client's exposure. LCEN-only and other
+contexts omit it; the EUR 50,000 article 47 figure and unverified procedure
+claims remain prohibited.
+
+Rejected: treating `scales-down` as estimate permission, because Baymard, Pew,
+average-order-value, visibility, and accessibility ratios do not prove a
+client-specific annual opportunity; rendering money per theme, because one
+study then looks like several independent impacts; using model output for
+eligibility or wording; and applying the legal amount to the client rather than
+presenting the narrow primary-sourced general fact.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

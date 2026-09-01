@@ -5,9 +5,14 @@
  * rather than leaving the client with nothing to do.
  */
 import { describe, expect, it } from 'vitest';
-import type { AuditManifest, ObligationAssessment } from '@odysseus/core';
+import {
+  eaaSanctionFigureSentence,
+  type AuditManifest,
+  type ObligationAssessment,
+} from '@odysseus/core';
 import { renderMetadataSheet } from './metadata-sheet.js';
 import { renderLegalExposure } from './legal-exposure.js';
+import { escapeHtml } from '../html-utils.js';
 import { fr } from '../strings/fr.js';
 import { en } from '../strings/en.js';
 import {
@@ -189,7 +194,7 @@ describe('RF-03: client-specific EAA sanctions are never rendered', () => {
     ],
   };
 
-  it('does not state sanction amounts for an EAA assessment', () => {
+  it('renders only the approved general EAA reference for an EAA assessment', () => {
     const html = renderLegalExposure(
       fr,
       2,
@@ -199,7 +204,8 @@ describe('RF-03: client-specific EAA sanctions are never rendered', () => {
       fakeManifest(),
       [],
     );
-    expect(html).not.toContain('7 500');
+    expect(html.split(escapeHtml(eaaSanctionFigureSentence('fr')))).toHaveLength(2);
+    expect(html).toContain('data-general-eaa-reference');
     expect(html).not.toContain('50 000');
   });
 
@@ -228,12 +234,20 @@ describe('RF-03: client-specific EAA sanctions are never rendered', () => {
       fr,
       2,
       'fr',
-      { status: 'out_of_scope', basis: [] },
+      {
+        status: 'out_of_scope',
+        basis: [
+          {
+            regimeId: 'eaa-loi-2023-171',
+            facts: [{ kind: 'sme-exemption', effectifCode: '02', turnoverEur: 500_000 }],
+          },
+        ],
+      },
       new Date('2026-08-17'),
       fakeManifest(),
       [],
     );
-    expect(html).not.toContain('7 500');
+    expect(html).not.toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
   });
 
   it('renders nothing for an undetermined status', () => {
@@ -246,7 +260,7 @@ describe('RF-03: client-specific EAA sanctions are never rendered', () => {
       fakeManifest(),
       [],
     );
-    expect(html).not.toContain('7 500');
+    expect(html).not.toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
   });
 
   it('renders nothing when article 47, not EAA, is the resolved regime', () => {
@@ -275,7 +289,7 @@ describe('RF-03: client-specific EAA sanctions are never rendered', () => {
       fakeManifest(),
       [],
     );
-    expect(html).not.toContain('7 500');
+    expect(html).not.toContain(escapeHtml(eaaSanctionFigureSentence('fr')));
   });
 });
 
@@ -337,8 +351,13 @@ describe('RF-03: every assessment state is presented as observed inputs', () => 
           [],
         );
         expect(html).not.toMatch(
-          /Critères réunis|Criteria met|Hors champ|Out of scope|remplit les critères|meets the criteria|relève probablement|likely falls|does not fall|ne relève pas|Démarches Simplifiées|7(?:[  ,.]?)500/i,
+          /Critères réunis|Criteria met|Hors champ|Out of scope|remplit les critères|meets the criteria|relève probablement|likely falls|does not fall|ne relève pas|Démarches Simplifiées/i,
         );
+
+        const sentence = escapeHtml(eaaSanctionFigureSentence(language));
+        const shouldRenderGeneralReference =
+          assessment.status === 'in_scope' || assessment.status === 'likely_in_scope';
+        expect(html.split(sentence)).toHaveLength(shouldRenderGeneralReference ? 2 : 1);
       }
     },
   );

@@ -235,6 +235,7 @@ export const fr: ReportStrings = {
         "L'identifiant d'entreprise ou les données Sirene nécessaires n'étaient pas disponibles pour comparer les faits observés aux seuils cités.",
     },
     exposureHeading: 'Exposition en cas de manquement',
+    generalEaaReferenceHeading: 'Référence légale générale',
     sirenLabel: 'SIREN',
     sirenTemplate: 'SIREN {siren}, tel que constaté lors de cet audit ({date}).',
     sirenUnavailable: "Aucun numéro SIREN n'a pu être identifié pour ce site lors de cet audit.",

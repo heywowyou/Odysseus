@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  applyPreparationPatch,
   buildReportPreparationPreview,
   emptyReportPreparation,
   type ReportPreparation,
@@ -95,8 +96,7 @@ beforeEach(() => {
   );
   vi.mocked(patchReportPreparationInputs).mockImplementation(
     async (_connection, _auditId, patch) => {
-      // Enough merge behaviour for assertions; the real merge is core-tested.
-      storedPreparation = { ...storedPreparation, ...patch } as ReportPreparation;
+      storedPreparation = applyPreparationPatch(storedPreparation, patch, new Date().toISOString());
       return storedPreparation;
     },
   );
@@ -277,6 +277,130 @@ describe('PATCH /api/audits/:auditId/report-preparation', () => {
     const body = JSON.parse(res.body!);
     expect(body.preparation.context.situation).toBe('periodic-review');
     expect(body.acknowledgementCurrent).toBe(false);
+  });
+
+  it('round-trips a replacement while retaining the detected official turnover', async () => {
+    storedPreparation = {
+      ...emptyReportPreparation(),
+      turnover: {
+        detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
+        useReplacement: false,
+      },
+    };
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    const res = fakeRes();
+
+    await router.handle(
+      fakeReq(
+        '/api/audits/audit-1/report-preparation',
+        {
+          turnover: {
+            useReplacement: true,
+            replacement: {
+              kind: 'range',
+              lowerEur: 7_000_000,
+              upperEur: 7_500_000,
+              year: 2024,
+              source: 'client-stated',
+            },
+          },
+        },
+        'PATCH',
+      ),
+      res,
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body!).preparation.turnover).toEqual({
+      detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
+      replacement: {
+        kind: 'range',
+        lowerEur: 7_000_000,
+        upperEur: 7_500_000,
+        year: 2024,
+        source: 'client-stated',
+      },
+      useReplacement: true,
+    });
+    expect(JSON.parse(res.body!).preview.turnover).toEqual({
+      status: 'available',
+      amountEur: 7_000_000,
+      calculationAmountEur: 7_000_000,
+      rangeUpperEur: 7_500_000,
+      year: 2024,
+      source: 'client-stated',
+      provenance: 'replacement',
+      inputKind: 'range',
+    });
+  });
+
+  it('rejects forged detected provenance and unknown manual sources', async () => {
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+
+    for (const turnover of [
+      {
+        detected: { amountEur: 99_000_000, year: 2025, source: 'sirene-api' },
+        useReplacement: false,
+      },
+      {
+        replacement: {
+          kind: 'exact',
+          amountEur: 7_200_000,
+          year: 2024,
+          source: 'operator-guess',
+        },
+        useReplacement: true,
+      },
+    ]) {
+      const res = fakeRes();
+      await router.handle(
+        fakeReq('/api/audits/audit-1/report-preparation', { turnover }, 'PATCH'),
+        res,
+      );
+      expect(res.statusCode).toBe(400);
+    }
+
+    expect(patchReportPreparationInputs).not.toHaveBeenCalled();
+  });
+
+  it('does not invalidate the missing-context acknowledgement when only turnover changes', async () => {
+    const warningDigest = buildReportPreparationPreview({
+      preparation: emptyReportPreparation(),
+    }).warningDigest;
+    storedPreparation = {
+      ...emptyReportPreparation(),
+      warningAcknowledgement: {
+        digest: warningDigest,
+        acknowledgedAt: '2026-09-01T00:00:00.000Z',
+      },
+    };
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    const res = fakeRes();
+
+    await router.handle(
+      fakeReq(
+        '/api/audits/audit-1/report-preparation',
+        {
+          turnover: {
+            useReplacement: true,
+            replacement: {
+              kind: 'exact',
+              amountEur: 7_200_000,
+              year: 2024,
+              source: 'official-annual-accounts',
+            },
+          },
+        },
+        'PATCH',
+      ),
+      res,
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body!).acknowledgementCurrent).toBe(true);
   });
 });
 

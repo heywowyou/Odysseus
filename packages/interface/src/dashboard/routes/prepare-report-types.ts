@@ -38,6 +38,45 @@ export interface AnalysisPairRefResponse {
   enAnalysisId: string;
 }
 
+export type ManualTurnoverSourceResponse =
+  'official-annual-accounts' | 'client-stated' | 'other-documented';
+
+export type ManualTurnoverResponse =
+  | {
+      kind: 'exact';
+      amountEur: number;
+      year: number;
+      source: ManualTurnoverSourceResponse;
+      sourceNote?: string;
+    }
+  | {
+      kind: 'range';
+      lowerEur: number;
+      upperEur: number;
+      year: number;
+      source: ManualTurnoverSourceResponse;
+      sourceNote?: string;
+    };
+
+export interface TurnoverChoiceResponse {
+  detected?: { amountEur: number; year: number; source: 'sirene-api' };
+  replacement?: ManualTurnoverResponse;
+  useReplacement: boolean;
+}
+
+export type EffectiveTurnoverResponse =
+  | {
+      status: 'available';
+      amountEur: number;
+      calculationAmountEur: number;
+      rangeUpperEur?: number;
+      year: number;
+      source: 'sirene-api' | ManualTurnoverSourceResponse;
+      provenance: 'detected' | 'replacement';
+      inputKind: 'exact' | 'range';
+    }
+  | { status: 'omitted'; reason: 'missing-turnover' | 'missing-replacement' };
+
 export type WritingCandidateResponse =
   | { status: 'ready'; pair: AnalysisPairRefResponse; createdAt: string }
   | { status: 'failed'; reason: string; createdAt: string }
@@ -52,6 +91,7 @@ export interface PreparationResponse {
   customCoverQuestion?: LocalizedTextResponse;
   stakeholders: Partial<Record<'management' | 'technical' | 'communications' | 'legal', string>>;
   journeyDecisions: { journeyId: JourneyVocab; decision: JourneyDecisionKind }[];
+  turnover: TurnoverChoiceResponse;
   warningAcknowledgement?: { digest: string; acknowledgedAt: string };
   writingSelection?: {
     selected?: AnalysisPairRefResponse;
@@ -110,6 +150,7 @@ export interface PreparationViewResponse {
     warnings: ('commercial-name' | 'situation' | 'trigger' | 'journey-scope')[];
     warningDigest: string;
     excludedJourneys: { journeyId: string; reason: string }[];
+    turnover: EffectiveTurnoverResponse;
   };
   suggestions: JourneySuggestionResponse[];
   acknowledgementCurrent: boolean;

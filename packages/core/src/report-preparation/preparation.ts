@@ -15,6 +15,7 @@ import {
   type ReportStakeholderRole,
   type ReportTrigger,
 } from './vocabulary.js';
+import { MANUAL_TURNOVER_SOURCES, type ManualTurnover, type TurnoverChoice } from './turnover.js';
 
 /**
  * The report-preparation aggregate, plan 019 step 1 (trade-off 62). One
@@ -77,6 +78,7 @@ export interface ReportPreparation {
   customCoverQuestion?: LocalizedOptionalText;
   stakeholders: Partial<Record<ReportStakeholderRole, string>>;
   journeyDecisions: readonly JourneyDecision[];
+  turnover: TurnoverChoice;
   warningAcknowledgement?: {
     digest: string;
     acknowledgedAt: string;
@@ -91,6 +93,7 @@ export function emptyReportPreparation(): ReportPreparation {
     context: {},
     stakeholders: {},
     journeyDecisions: [],
+    turnover: { useReplacement: false },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -119,6 +122,53 @@ export const reportTriggerSchema = z.enum(REPORT_TRIGGERS);
 export const journeyIdSchema = z.enum(JOURNEY_IDS);
 export const journeyDecisionKindSchema = z.enum(JOURNEY_DECISIONS);
 export const reportStakeholderRoleSchema = z.enum(REPORT_STAKEHOLDER_ROLES);
+
+export const MIN_TURNOVER_YEAR = 2000;
+export const MAX_TURNOVER_YEAR = 2026;
+export const MAX_TURNOVER_EUR = 1_000_000_000_000;
+export const MAX_TURNOVER_SOURCE_NOTE_LENGTH = 120;
+
+const turnoverAmountSchema = z.number().int().positive().max(MAX_TURNOVER_EUR);
+const turnoverYearSchema = z.number().int().min(MIN_TURNOVER_YEAR).max(MAX_TURNOVER_YEAR);
+const manualTurnoverSourceSchema = z.enum(MANUAL_TURNOVER_SOURCES);
+const turnoverSourceNoteSchema = boundedText(MAX_TURNOVER_SOURCE_NOTE_LENGTH);
+
+const manualTurnoverBase = {
+  year: turnoverYearSchema,
+  source: manualTurnoverSourceSchema,
+  sourceNote: turnoverSourceNoteSchema.optional(),
+};
+
+const manualTurnoverSchema = z
+  .discriminatedUnion('kind', [
+    z
+      .object({ kind: z.literal('exact'), amountEur: turnoverAmountSchema, ...manualTurnoverBase })
+      .strict(),
+    z
+      .object({
+        kind: z.literal('range'),
+        lowerEur: turnoverAmountSchema,
+        upperEur: turnoverAmountSchema,
+        ...manualTurnoverBase,
+      })
+      .strict(),
+  ])
+  .superRefine((value, ctx) => {
+    if (value.kind === 'range' && value.lowerEur > value.upperEur) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['upperEur'],
+        message: 'turnover range upper bound must be at least the lower bound',
+      });
+    }
+    if (value.source === 'other-documented' && !value.sourceNote) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sourceNote'],
+        message: 'other documented turnover sources require a note',
+      });
+    }
+  });
 
 /**
  * The bounded operator inputs, and the only body a preparation patch
@@ -156,6 +206,13 @@ export const reportPreparationPatchSchema = z
           .strict(),
       )
       .max(JOURNEY_IDS.length)
+      .optional(),
+    turnover: z
+      .object({
+        useReplacement: z.boolean().optional(),
+        replacement: manualTurnoverSchema.nullable().optional(),
+      })
+      .strict()
       .optional(),
   })
   .strict();
@@ -237,6 +294,17 @@ export function applyPreparationPatch(
     else stakeholders[role] = value;
   }
 
+  const currentTurnover = current.turnover ?? { useReplacement: false };
+  const replacement: ManualTurnover | undefined =
+    patch.turnover?.replacement === undefined
+      ? currentTurnover.replacement
+      : (patch.turnover.replacement ?? undefined);
+  const turnover: TurnoverChoice = {
+    ...(currentTurnover.detected ? { detected: currentTurnover.detected } : {}),
+    ...(replacement ? { replacement } : {}),
+    useReplacement: patch.turnover?.useReplacement ?? currentTurnover.useReplacement,
+  };
+
   return {
     context: {
       ...(situation !== undefined ? { situation } : {}),
@@ -246,6 +314,7 @@ export function applyPreparationPatch(
     ...(customCoverQuestion !== undefined ? { customCoverQuestion } : {}),
     stakeholders,
     journeyDecisions: applyJourneyDecisions(current.journeyDecisions ?? [], patch.journeyDecisions),
+    turnover,
     ...(current.warningAcknowledgement
       ? { warningAcknowledgement: current.warningAcknowledgement }
       : {}),

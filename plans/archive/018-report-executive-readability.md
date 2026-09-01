@@ -491,3 +491,9 @@ Stop and report if:
 
 - Rewritten 2026-08-31 after the operator completed and confirmed a 50-decision
   review of the original draft. Status `TODO`.
+- **DONE 2026-09-01.** All nine implementation steps landed in six commits and
+  the automated suite plus de-identified and La Coorniche rendered-output
+  reviews passed. The remaining French-output gate was subsequently satisfied
+  during plan 019's operator review after the severity-vocabulary retry defect
+  was fixed. The minor appendix-orphan and cover-wrap observations remain
+  non-gating follow-up evidence rather than incomplete plan work.

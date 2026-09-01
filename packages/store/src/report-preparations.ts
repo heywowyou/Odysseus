@@ -47,6 +47,7 @@ function withStoredDefaults(raw: ReportPreparation | undefined): ReportPreparati
     ...(raw?.customCoverQuestion ? { customCoverQuestion: raw.customCoverQuestion } : {}),
     stakeholders: raw?.stakeholders ?? {},
     journeyDecisions: raw?.journeyDecisions ?? [],
+    turnover: raw?.turnover ?? { useReplacement: false },
     ...(raw?.warningAcknowledgement ? { warningAcknowledgement: raw.warningAcknowledgement } : {}),
     ...(raw?.writingSelection ? { writingSelection: raw.writingSelection } : {}),
     updatedAt: raw?.updatedAt ?? new Date(0).toISOString(),
@@ -73,7 +74,7 @@ async function persistPreparation(
   const updated = await AuditModel.findOneAndUpdate(
     { auditId },
     { $set: { reportPreparation: next } },
-    { returnDocument: 'after', projection: { reportPreparation: 1 } },
+    { returnDocument: 'after', projection: { reportPreparation: 1 }, runValidators: true },
   ).lean<Pick<AuditDocument, 'reportPreparation'>>();
   if (!updated) {
     throw new Error(`odysseus: audit ${auditId} not found`);

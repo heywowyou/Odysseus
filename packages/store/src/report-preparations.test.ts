@@ -122,6 +122,7 @@ describe.skipIf(!mongoAvailable)('report preparation persistence', () => {
       context: {},
       stakeholders: {},
       journeyDecisions: [],
+      turnover: { useReplacement: false },
       updatedAt: expect.any(String),
     });
   });
@@ -155,6 +156,86 @@ describe.skipIf(!mongoAvailable)('report preparation persistence', () => {
     expect(() =>
       parseReportPreparationPatch({ context: { situation: 'not-a-situation' } }),
     ).toThrow();
+  });
+
+  it('round-trips a manual turnover replacement without dropping the detected official value', async () => {
+    await insertAudit('prep-turnover');
+    await createAuditModel(connection!).collection.updateOne(
+      { auditId: 'prep-turnover' },
+      {
+        $set: {
+          reportPreparation: {
+            context: {},
+            stakeholders: {},
+            journeyDecisions: [],
+            turnover: {
+              detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
+              useReplacement: false,
+            },
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        },
+      },
+    );
+
+    await patchReportPreparationInputs(
+      connection!,
+      'prep-turnover',
+      parseReportPreparationPatch({
+        turnover: {
+          useReplacement: true,
+          replacement: {
+            kind: 'exact',
+            amountEur: 7_200_000,
+            year: 2024,
+            source: 'official-annual-accounts',
+          },
+        },
+      }),
+    );
+
+    expect(await getReportPreparation(connection!, 'prep-turnover')).toMatchObject({
+      turnover: {
+        detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
+        replacement: {
+          kind: 'exact',
+          amountEur: 7_200_000,
+          year: 2024,
+          source: 'official-annual-accounts',
+        },
+        useReplacement: true,
+      },
+    });
+
+    await patchReportPreparationInputs(
+      connection!,
+      'prep-turnover',
+      parseReportPreparationPatch({
+        turnover: {
+          replacement: {
+            kind: 'range',
+            lowerEur: 6_500_000,
+            upperEur: 7_000_000,
+            year: 2023,
+            source: 'client-stated',
+          },
+        },
+      }),
+    );
+
+    expect(await getReportPreparation(connection!, 'prep-turnover')).toMatchObject({
+      turnover: {
+        detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
+        replacement: {
+          kind: 'range',
+          lowerEur: 6_500_000,
+          upperEur: 7_000_000,
+          year: 2023,
+          source: 'client-stated',
+        },
+        useReplacement: true,
+      },
+    });
   });
 
   it('clears a null value and records the clear', async () => {

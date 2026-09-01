@@ -330,6 +330,16 @@
         </div>
         <h2 style="margin-bottom: var(--space-4)">Résumé exécutif & priorités</h2>
         <p style="font-size: 15px; max-width: 66ch; opacity: 0.9">{{ execSummary }}</p>
+        {{#if revenueOpportunity}}
+        <div class="card elev-sm" style="margin-top: var(--space-4)">
+          <div class="card-kicker">Opportunité d'amélioration indicative</div>
+          <div class="card-title">{{ revenueOpportunity.amount }}</div>
+          <div class="card-body">{{ revenueOpportunity.disclaimer }}</div>
+          <p style="font-size: 11px; opacity: 0.5; margin: var(--space-2) 0 0">
+            {{ revenueOpportunity.citation }}
+          </p>
+        </div>
+        {{/if}}
         <div
           style="
             margin-top: var(--space-6);
@@ -1156,6 +1166,12 @@
           </div>
         </div>
         <p style="font-size: 13.5px; opacity: 0.85; max-width: 66ch">{{ legal.paragraphText }}</p>
+        {{#if legal.generalEaaReference}}
+        <div class="card elev-sm" style="margin-top: var(--space-6)">
+          <div class="card-kicker">Référence légale générale</div>
+          <div class="card-body">{{ legal.generalEaaReference }}</div>
+        </div>
+        {{/if}}
         <p style="font-size: 11px; opacity: 0.5; margin-top: var(--space-4)">
           Généré à partir de l'évaluation d'obligations existante ; aucune interprétation juridique
           supplémentaire n'a été ajoutée. Une revue par un conseil juridique reste nécessaire.

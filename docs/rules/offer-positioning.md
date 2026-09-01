@@ -196,6 +196,29 @@ This is a template wording change, not an architectural one.
 `assessObligations()` runs unchanged on the same inputs; it outputs
 facts rather than a verdict.
 
+**Plan 020 boundary.** When the deterministic assessment includes the EAA
+context, the detailed legal section may reproduce the one primary-sourced
+general EUR 7,500 sentence owned by `eaaSanctionFigureSentence(...)`. It is not
+placed beside client facts, findings, opportunity estimates, or prices, and it
+never states what this client faces. No other sanction amount or enforcement
+procedure is added.
+
+## 4bis. Financial opportunity is optional, singular, and evidence-bound
+
+The executive summary may show at most one **indicative improvement
+opportunity**. It is not a loss estimate, forecast, return on investment, or
+comparison with the audit price. It renders only when one explicitly opted-in
+primary reference matches the recorded sector, measured metric, successful
+deterministic evidence, qualifying performance problem, and traceable annual
+turnover. Broad editorial `scales-down` status alone is never permission to
+calculate money.
+
+The amount uses one conservative bounded calculation and appears once with its
+adjacent citation. It is never repeated on priority themes and is never summed
+across findings, pages, occurrences, or references. When any required fact is
+missing or mismatched, the client report omits the financial block entirely;
+only the private operator preview explains the typed omission reason.
+
 ---
 
 ## 5. Second channel: sell to the auditors

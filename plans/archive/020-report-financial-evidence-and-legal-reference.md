@@ -1,12 +1,51 @@
 # Plan 020: Add defensible financial evidence and the general legal reference
 
-- **Status:** TODO
+- **Status:** DONE (2026-09-02) with the financial-opportunity feature
+  (steps 3, 4, and 6) explicitly deferred, not implemented. See "Resolution:
+  financial-opportunity scope deferred" below and trade-off 63's amendment.
+- **Archived:** 2026-09-02 after focused and repository-wide verification
+  (`pnpm run check` and the full `core`/`store`/`interface`/`report` Vitest
+  suite) passed.
 - **Priority:** P1
 - **Effort:** L
 - **Risk:** HIGH
 - **Depends on:** Plan 019
 - **Planned against:** `24f032a`
 - **Approved:** 2026-08-31
+
+## Resolution: financial-opportunity scope deferred (2026-09-02)
+
+Step 3 requires the reference-stat catalogue to carry an explicit sector,
+measured metric, and unit for any statistic opted into client-estimate
+eligibility, and forbids reconstructing that mapping from prose. The
+Deloitte study (`deloitte-speed-conversion-retail-2020`,
+`deloitte-speed-conversion-travel-2020`) reports a conversion lift per
+0.1-second improvement in "mobile site speed," a term its own methodology
+does not decompose into one of this tool's five measured Core Web Vital
+metrics (LCP, TBT, FCP, Speed Index, CLS; see
+`packages/core/src/normalize/cwv-thresholds.ts`). Choosing any one of them
+as a stand-in would be an interpretive judgment the primary source does not
+make, which is exactly the stop condition this plan lists before "opting in
+a financial reference whose sector, metric, unit, or primary-source
+interpretation is not explicit in structured data."
+
+Presented with this gate, the operator chose to defer the financial-opportunity
+feature entirely rather than approve a specific metric substitution. Steps 3
+(estimate eligibility), 4 (opportunity resolver), and 6 (rendering the
+opportunity in the executive summary) are not implemented. No code exists for
+them: `RevenueOpportunity`, an eligibility catalogue extension, and the
+executive-summary rendering block are all unbuilt. The `{{#if
+revenueOpportunity}}` placeholders added to the design mockup and report
+reference template under step 1 document the intended future shape but are
+inert; nothing ever sets that value, so the block never renders.
+
+Steps 1 (canonical policy), 2 (typed turnover), 5 (turnover persistence and
+UI), and 7 (the general EAA legal reference) are implemented, tested, and
+verified below. Turnover input therefore currently has no client-facing
+financial consumer; it remains in the preparation workflow as approved
+groundwork; a future plan may revisit the opportunity feature only with a new
+primary source (or a new operator-approved trade-off amending this decision)
+that supplies an explicit metric mapping.
 
 ## Outcome
 
@@ -371,18 +410,25 @@ third-party scan or conduct new legal research for this verification.
 ## Done when
 
 - The operator can keep an official turnover or explicitly replace it with a
-  traceable exact/range value in the existing preparation workflow.
+  traceable exact/range value in the existing preparation workflow. **Met.**
 - A client amount is possible only through explicit catalogue eligibility and a
-  strict sector/metric/successful-measurement/problem match.
+  strict sector/metric/successful-measurement/problem match. **Deferred**: no
+  eligibility catalogue extension or opportunity resolver exists. See
+  "Resolution: financial-opportunity scope deferred" above.
 - The report shows at most one cited indicative improvement opportunity in the
-  executive summary and no per-theme monetary notes.
+  executive summary and no per-theme monetary notes. **Deferred** for the same
+  reason; the executive summary never renders a financial block because
+  nothing produces `revenueOpportunity`.
 - Ineligible reports omit financial prose while the operator gets a clear
-  reason.
+  reason. **Vacuously true**: every report is currently "ineligible" because
+  the feature does not exist, so no financial prose ever renders.
 - Canonical policy permits and bounds the general EAA reference without
-  permitting a client-specific sanction conclusion.
+  permitting a client-specific sanction conclusion. **Met.**
 - The existing EUR 7,500 helper renders once in detailed legal content only,
-  with regression guards against unsupported claims and placements.
-- Focused tests, typecheck, formatting, and `pnpm run check` pass.
+  with regression guards against unsupported claims and placements. **Met.**
+- Focused tests, typecheck, formatting, and `pnpm run check` pass. **Met**
+  for every implemented area (turnover, persistence, dashboard UI, legal
+  reference); no financial-opportunity code exists to test.
 
 ## Stop conditions
 

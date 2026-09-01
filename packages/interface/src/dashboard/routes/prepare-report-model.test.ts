@@ -3,6 +3,7 @@ import {
   buildPreparationPatch,
   exclusionLabel,
   formValuesFromView,
+  resolveTurnoverFormPreview,
   showsTriggerOtherNotes,
   warningRelevantInputsChanged,
   type PreparationFormValues,
@@ -15,6 +16,7 @@ function buildView(overrides: Partial<PreparationViewResponse> = {}): Preparatio
       context: {},
       stakeholders: {},
       journeyDecisions: [],
+      turnover: { useReplacement: false },
       updatedAt: '2026-09-01T00:00:00.000Z',
       ...overrides['preparation'],
     },
@@ -58,6 +60,14 @@ function emptyValues(): PreparationFormValues {
     stakeholderCommunications: '',
     stakeholderLegal: '',
     journeyDecisions: {},
+    turnoverUseReplacement: false,
+    turnoverKind: 'exact',
+    turnoverAmountEur: '',
+    turnoverLowerEur: '',
+    turnoverUpperEur: '',
+    turnoverYear: '',
+    turnoverSource: '',
+    turnoverSourceNote: '',
   };
 }
 
@@ -69,6 +79,7 @@ describe('formValuesFromView', () => {
         customCoverQuestion: { en: 'Custom?' },
         stakeholders: { management: 'Jeanne Dupont' },
         journeyDecisions: [{ journeyId: 'discovery-navigation', decision: 'confirmed' }],
+        turnover: { useReplacement: false },
         updatedAt: '2026-09-01T00:00:00.000Z',
       },
     });
@@ -80,6 +91,54 @@ describe('formValuesFromView', () => {
     expect(values.customQuestionEn).toBe('Custom?');
     expect(values.stakeholderManagement).toBe('Jeanne Dupont');
     expect(values.journeyDecisions).toEqual({ 'discovery-navigation': 'confirmed' });
+  });
+
+  it('keeps detected turnover distinct while seeding an exact replacement', () => {
+    const view = buildView({
+      preparation: {
+        context: {},
+        stakeholders: {},
+        journeyDecisions: [],
+        turnover: {
+          detected: { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
+          replacement: {
+            kind: 'exact',
+            amountEur: 7_200_000,
+            year: 2024,
+            source: 'official-annual-accounts',
+          },
+          useReplacement: true,
+        },
+        updatedAt: '2026-09-01T00:00:00.000Z',
+      } as PreparationViewResponse['preparation'],
+    });
+
+    const values = formValuesFromView(view);
+    expect(values).toMatchObject({
+      turnoverUseReplacement: true,
+      turnoverKind: 'exact',
+      turnoverAmountEur: '7200000',
+      turnoverLowerEur: '',
+      turnoverUpperEur: '',
+      turnoverYear: '2024',
+      turnoverSource: 'official-annual-accounts',
+      turnoverSourceNote: '',
+    });
+
+    const changed = {
+      ...values,
+      turnoverAmountEur: '7300000',
+    } as PreparationFormValues;
+    expect(buildPreparationPatch(changed, values)).toEqual({
+      turnover: {
+        replacement: {
+          kind: 'exact',
+          amountEur: 7_300_000,
+          year: 2024,
+          source: 'official-annual-accounts',
+        },
+      },
+    });
   });
 });
 
@@ -128,6 +187,49 @@ describe('buildPreparationPatch', () => {
       { journeyId: 'transaction-booking', decision: 'confirmed' },
     ]);
   });
+
+  it('sends a documented turnover range without collapsing its bounds', () => {
+    const baseline = emptyValues();
+    const values: PreparationFormValues = {
+      ...baseline,
+      turnoverUseReplacement: true,
+      turnoverKind: 'range',
+      turnoverLowerEur: '6500000',
+      turnoverUpperEur: '7000000',
+      turnoverYear: '2023',
+      turnoverSource: 'other-documented',
+      turnoverSourceNote: 'Board-approved accounts',
+    };
+
+    expect(buildPreparationPatch(values, baseline)).toEqual({
+      turnover: {
+        useReplacement: true,
+        replacement: {
+          kind: 'range',
+          lowerEur: 6_500_000,
+          upperEur: 7_000_000,
+          year: 2023,
+          source: 'other-documented',
+          sourceNote: 'Board-approved accounts',
+        },
+      },
+    });
+  });
+
+  it('explicitly clears a saved replacement when its edited value becomes incomplete', () => {
+    const baseline: PreparationFormValues = {
+      ...emptyValues(),
+      turnoverUseReplacement: true,
+      turnoverAmountEur: '7200000',
+      turnoverYear: '2024',
+      turnoverSource: 'official-annual-accounts',
+    };
+    const values: PreparationFormValues = { ...baseline, turnoverAmountEur: '' };
+
+    expect(buildPreparationPatch(values, baseline)).toEqual({
+      turnover: { replacement: null },
+    });
+  });
 });
 
 describe('warningRelevantInputsChanged', () => {
@@ -154,6 +256,41 @@ describe('warningRelevantInputsChanged', () => {
       journeyDecisions: { 'discovery-navigation': 'confirmed' },
     };
     expect(warningRelevantInputsChanged(journey, acknowledged)).toBe(true);
+  });
+});
+
+describe('resolveTurnoverFormPreview', () => {
+  it('shows the selected range lower bound and a typed missing-replacement state', () => {
+    const range: PreparationFormValues = {
+      ...emptyValues(),
+      turnoverUseReplacement: true,
+      turnoverKind: 'range',
+      turnoverLowerEur: '6500000',
+      turnoverUpperEur: '7000000',
+      turnoverYear: '2023',
+      turnoverSource: 'client-stated',
+    };
+    expect(
+      resolveTurnoverFormPreview(range, {
+        amountEur: 8_400_000,
+        year: 2025,
+        source: 'sirene-api',
+      }),
+    ).toEqual({
+      status: 'available',
+      amountEur: 6_500_000,
+      rangeUpperEur: 7_000_000,
+      year: 2023,
+      provenance: 'replacement',
+      inputKind: 'range',
+    });
+
+    expect(
+      resolveTurnoverFormPreview(
+        { ...emptyValues(), turnoverUseReplacement: true },
+        { amountEur: 8_400_000, year: 2025, source: 'sirene-api' },
+      ),
+    ).toEqual({ status: 'omitted', reason: 'missing-replacement' });
   });
 });
 
