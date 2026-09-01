@@ -185,7 +185,7 @@ describe('item 3.5: the 8 previously-missing glossary terms', () => {
       'Pages concernées',
       'Rendu',
       'Sirene',
-      'Effort',
+      'Complexité',
       'Impact commercial',
     ]) {
       expect(html).toContain(term);

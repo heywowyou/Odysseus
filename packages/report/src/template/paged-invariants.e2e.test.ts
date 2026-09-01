@@ -118,7 +118,7 @@ async function buildStressHtml(): Promise<string> {
  *  stale this file. */
 function sheetEyebrowsFromSource(html: string): string[] {
   return [...html.matchAll(/<h6[^>]*>([\s\S]*?)<\/h6>/g)].map((m) =>
-    m[1]
+    (m[1] ?? '')
       .replace(/<[^>]+>/g, '')
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
@@ -136,7 +136,7 @@ function sheetEyebrowsFromSource(html: string): string[] {
  *  assertion below stays independent of the registry's runtime state. */
 function sectionIdsFromSource(html: string): string[] {
   return [...html.matchAll(/<section class="sheet[^"]*" id="(section-[^"]+)">/g)].map(
-    (match) => match[1],
+    (match) => match[1] ?? '',
   );
 }
 

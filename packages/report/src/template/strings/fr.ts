@@ -201,9 +201,9 @@ export const fr: ReportStrings = {
       "Ce site présente peu de constats SEO et GEO significatifs par rapport à l'accessibilité : l'essentiel des priorités ci-dessous concerne l'accessibilité.",
     jumpLinkLabelTemplate: 'Voir priorité {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
-      "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport effort/impact. Les priorités rattachées à un critère d'accessibilité figurent en position {legalRank}. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale ».",
+      "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Les priorités rattachées à un critère d'accessibilité figurent en position {legalRank}. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale ».",
     topPriorityIsNotLegalNoPointer:
-      "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport effort/impact. Aucune des priorités retenues dans ce rapport n'est rattachée à un critère d'accessibilité. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale » pour le détail.",
+      "La priorité 1 ci-dessus n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Aucune des priorités retenues dans ce rapport n'est rattachée à un critère d'accessibilité. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Exposition légale » pour le détail.",
     summaryCountsTemplate:
       "L'audit a identifié {total} constats au total, dont {actionable} critiques ou sérieux ({critical} critiques et {serious} sérieux).",
     coveredByPrioritiesTemplate:
@@ -298,7 +298,7 @@ export const fr: ReportStrings = {
       "Page pensée pour être imprimée ou capturée seule, sans prose, uniquement l'essentiel. À transmettre à votre prestataire technique.",
     rankColumnLabel: '#',
     priorityColumnLabel: 'Priorité',
-    effortColumnLabel: 'Effort',
+    complexityColumnLabel: 'Complexité',
     impactColumnLabel: 'Impact',
     pagesColumnLabel: 'Pages',
     findingsColumnLabel: 'Constats',
@@ -307,7 +307,7 @@ export const fr: ReportStrings = {
   },
   themes: {
     eyebrow: 'Priorités',
-    headingTemplate: '{count} chantiers, classés par effort et par impact',
+    headingTemplate: '{count} chantiers, classés par complexité et par impact',
     // P1.5 (2026-08-21 La Corniche feedback pass): a coarse, deterministic
     // band, not a precise quote - stated as such rather than implying
     // false precision. Template: {min}, {max}, {count}.
@@ -512,7 +512,7 @@ export const fr: ReportStrings = {
       {
         id: 'quick-win',
         term: 'Gain rapide',
-        definition: 'Correctif à faible effort et fort impact, à traiter en priorité.',
+        definition: 'Correctif à faible complexité et fort impact, à traiter en priorité.',
       },
       {
         id: 'lcp',
@@ -616,10 +616,10 @@ export const fr: ReportStrings = {
           "Répertoire officiel des entreprises et établissements en France (INSEE), utilisé ici pour vérifier la taille de l'entreprise et confirmer à quelle entité un constat se rapporte.",
       },
       {
-        id: 'effort',
-        term: 'Effort',
+        id: 'complexity',
+        term: 'Complexité',
         definition:
-          'Estimation qualitative (Faible / Moyen / Élevé) de la charge de travail nécessaire pour corriger un chantier prioritaire, dérivée de la famille de règles et de la concentration des occurrences.',
+          "Estimation qualitative (Faible / Moyen / Élevé) de la complexité de correction d'un chantier prioritaire, dérivée de la famille de règles et de la concentration des occurrences.",
       },
       {
         id: 'impact-commercial',
@@ -640,7 +640,7 @@ export const fr: ReportStrings = {
     synthesisStake:
       "Votre site est un canal direct de réservation et d'information : son accessibilité, sa visibilité dans les moteurs de recherche et les assistants IA, et sa vitesse conditionnent ce que vos visiteurs peuvent y faire. Ce rapport en dresse les constats mesurés ; leur correction relève des rôles ci-dessous.",
     synthesisCoverageTemplate:
-      'Priorités classées : {priorities}. Couvrant au moins un constat critique ou sérieux : {seriousCritical}. Gains rapides, effort faible pour un impact moyen ou élevé : {quickWins}.',
+      'Priorités classées : {priorities}. Couvrant au moins un constat critique ou sérieux : {seriousCritical}. Gains rapides, faible complexité pour un impact moyen ou élevé : {quickWins}.',
     synthesisCoverageFallback:
       "La répartition des constats par gravité figure plus haut dans ce rapport, dans les priorités classées et les chiffres de l'audit.",
     synthesisRoles:

@@ -482,7 +482,7 @@ export interface ReportStrings {
     intro: string;
     rankColumnLabel: string;
     priorityColumnLabel: string;
-    effortColumnLabel: string;
+    complexityColumnLabel: string;
     impactColumnLabel: string;
     pagesColumnLabel: string;
     /** item 35: the printable checklist was a near-exact restatement of

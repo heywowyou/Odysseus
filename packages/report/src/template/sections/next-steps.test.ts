@@ -238,7 +238,7 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
     expect(html).toContain('section-14');
     expect(html).toContain('canal direct de réservation');
     expect(html).toContain(
-      'Priorités classées : 3. Couvrant au moins un constat critique ou sérieux : 2. Gains rapides, effort faible pour un impact moyen ou élevé : 1.',
+      'Priorités classées : 3. Couvrant au moins un constat critique ou sérieux : 2. Gains rapides, faible complexité pour un impact moyen ou élevé : 1.',
     );
     expect(html).toContain('la direction');
     expect(html).toContain('le prestataire technique ou le service informatique');
@@ -263,7 +263,7 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
     const html = renderNextSteps(getStrings('en'), 14, fakeManifest(), 'en', undefined, priorities);
     expect(html).toContain('direct booking and information channel');
     expect(html).toContain(
-      'Ranked priorities: 4. Covering at least one critical or serious finding: 3. Quick wins, low effort for a medium or high impact: 2.',
+      'Ranked priorities: 4. Covering at least one critical or serious finding: 3. Quick wins, low complexity for a medium or high impact: 2.',
     );
     expect(html).toContain('management');
     expect(html).toContain('technical provider or IT');

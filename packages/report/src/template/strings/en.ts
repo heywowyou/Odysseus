@@ -60,7 +60,7 @@ export const en: ReportStrings = {
       // numbered section rather than the sub-heading alone.
       '{percent}% of these occurrences come from third-party components (forms, popups, booking widget) - see "To address with your third-party providers", in the technical appendix.',
     priorityOwnershipTemplate:
-      'Priorities: {firstParty} direct fixes, {thirdParty} third-party escalations, {verifyIntent} intent checks.',
+      'Priorities: {firstParty} to fix directly, {thirdParty} to pass on, {verifyIntent} to verify by intent.',
     pagesWithCriticalTileLabel: 'pages with at least one critical finding',
     criticalTileLabel: 'critical',
     seriousTileLabel: 'serious',
@@ -171,7 +171,7 @@ export const en: ReportStrings = {
     eyebrow: 'Summary',
     heading: 'What to take away',
     priorityOwnershipTemplate:
-      'Within the priorities: {firstParty} direct fixes, {thirdParty} third-party escalations and {verifyIntent} intent checks.',
+      'Within the priorities: {firstParty} to fix directly, {thirdParty} to pass on, and {verifyIntent} to verify by intent.',
     startHereKicker: 'Where to start',
     glossaryPointerSentence:
       'Technical terms used in this report are defined in the "Glossary" section.',
@@ -181,9 +181,9 @@ export const en: ReportStrings = {
       'This site has few significant SEO and GEO findings relative to accessibility: most of the priorities below concern accessibility.',
     jumpLinkLabelTemplate: 'See priority {rank}',
     topPriorityIsNotLegalWithPointerTemplate:
-      'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its effort-to-impact ratio. The priorities tied to an accessibility criterion rank at position {legalRank}. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section.',
+      'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its complexity-to-impact ratio. The priorities tied to an accessibility criterion rank at position {legalRank}. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section.',
     topPriorityIsNotLegalNoPointer:
-      'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its effort-to-impact ratio. None of the priorities in this report are tied to an accessibility criterion. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section for the detail.',
+      'Priority 1 above is not tied to any accessibility criterion: it was ranked first based on its complexity-to-impact ratio. None of the priorities in this report are tied to an accessibility criterion. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section for the detail.',
     summaryCountsTemplate:
       'The audit identified {total} findings in total, including {actionable} that are critical or serious ({critical} critical and {serious} serious).',
     coveredByPrioritiesTemplate:
@@ -251,7 +251,7 @@ export const en: ReportStrings = {
       'Page designed to be printed or captured on its own, no prose, just the essentials. Pass this on to your technical provider.',
     rankColumnLabel: '#',
     priorityColumnLabel: 'Priority',
-    effortColumnLabel: 'Effort',
+    complexityColumnLabel: 'Complexity',
     impactColumnLabel: 'Impact',
     pagesColumnLabel: 'Pages',
     findingsColumnLabel: 'Findings',
@@ -260,7 +260,7 @@ export const en: ReportStrings = {
   },
   themes: {
     eyebrow: 'Priorities',
-    headingTemplate: '{count} priorities, ranked by effort and impact',
+    headingTemplate: '{count} priorities, ranked by complexity and impact',
     aggregateEffortEstimateTemplate:
       "Overall estimate: {min} to {max} development days for all {count} priorities below (a broad, non-contractual estimate). A priority involving a third-party component additionally depends on its provider's own timeline.",
     effortLabel: 'Effort',
@@ -280,7 +280,7 @@ export const en: ReportStrings = {
     recommendedActionsLabel: 'Recommended actions',
     reviewedRemediationLabel: 'Reviewed technical remediation',
     ownershipCountsTemplate:
-      'Ownership: {firstParty} direct fixes, {thirdParty} third-party escalations, {verifyIntent} intent checks.',
+      'Ownership: {firstParty} to fix directly, {thirdParty} to pass on, {verifyIntent} to verify by intent.',
     effortImpactLevels: { low: 'Low', medium: 'Medium', high: 'High' },
     pagesOfTotalTemplate: '{pages} {pageWord} of {totalPages}',
     refsLabel: 'Findings',
@@ -429,7 +429,7 @@ export const en: ReportStrings = {
       {
         id: 'quick-win',
         term: 'Quick win',
-        definition: 'Low-effort, high-impact fix, worth prioritizing.',
+        definition: 'Low-complexity, high-impact fix, worth prioritizing.',
       },
       {
         id: 'lcp',
@@ -530,10 +530,10 @@ export const en: ReportStrings = {
           "France's official business registry (INSEE), used here to verify company size and confirm which entity a finding concerns.",
       },
       {
-        id: 'effort',
-        term: 'Effort',
+        id: 'complexity',
+        term: 'Complexity',
         definition:
-          'Qualitative estimate (Low / Medium / High) of the work needed to fix a priority, derived from the rule family and occurrence concentration.',
+          'Qualitative estimate (Low / Medium / High) of how complex it is to fix a priority, derived from the rule family and occurrence concentration.',
       },
       {
         id: 'impact-commercial',
@@ -551,7 +551,7 @@ export const en: ReportStrings = {
     synthesisStake:
       'Your site is a direct booking and information channel: its accessibility, its visibility in search engines and AI assistants, and its speed shape what your visitors can actually do there. This report states the measured facts; fixing them is the job of the roles below.',
     synthesisCoverageTemplate:
-      'Ranked priorities: {priorities}. Covering at least one critical or serious finding: {seriousCritical}. Quick wins, low effort for a medium or high impact: {quickWins}.',
+      'Ranked priorities: {priorities}. Covering at least one critical or serious finding: {seriousCritical}. Quick wins, low complexity for a medium or high impact: {quickWins}.',
     synthesisCoverageFallback:
       'The breakdown of findings by severity appears earlier in this report, in the ranked priorities and the audit figures.',
     synthesisRoles:

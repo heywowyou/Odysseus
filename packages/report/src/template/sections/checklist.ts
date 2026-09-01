@@ -112,7 +112,7 @@ export function renderChecklist(
     <div style="display:grid;grid-template-columns:30px 1fr 70px 70px 60px 110px 80px;font-size:12.5px">
       ${headCell(c.rankColumnLabel)}
       ${headCell(c.priorityColumnLabel)}
-      ${headCell(c.effortColumnLabel)}
+      ${headCell(c.complexityColumnLabel)}
       ${headCell(c.impactColumnLabel)}
       ${headCell(c.pagesColumnLabel)}
       ${headCell(c.findingsColumnLabel)}
