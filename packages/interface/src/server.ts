@@ -3,6 +3,7 @@ import type { Connection } from 'mongoose';
 import { Router } from './router.js';
 import { registerScanRoutes } from './routes/scans.js';
 import { registerAuditRoutes } from './routes/audits.js';
+import { registerReportPreparationRoutes } from './routes/report-preparation.js';
 import { registerProspectingRoutes } from './routes/prospecting.js';
 import { registerProspectRoutes } from './routes/prospects.js';
 import { registerProspectInsightRoutes } from './routes/prospect-insights.js';
@@ -97,6 +98,7 @@ export async function startInterfaceServer(
 
   registerScanRoutes(router, connection, queue);
   registerAuditRoutes(router, connection);
+  registerReportPreparationRoutes(router, connection);
   registerProspectingRoutes(router, connection, queue);
   registerProspectRoutes(router, connection);
   registerProspectInsightRoutes(router, connection);

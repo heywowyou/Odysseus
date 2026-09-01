@@ -1,0 +1,187 @@
+/**
+ * Candidate-first writing regeneration, plan 019 step 6. Reuses the
+ * audit's existing structural analysis (runAnalysisStage reuses the newest
+ * compatible `-structure.json` by default), regenerates the French and
+ * English writing passes, persists both as new immutable analyses, and
+ * records the exact pair as a ready candidate. Selection changes only
+ * through the separate approval endpoint; failure leaves the selected pair
+ * untouched.
+ *
+ * The in-flight registry is deliberately in-memory only (trade-off 62): a
+ * persisted `generating` state could be stranded by a server restart, so a
+ * run that never finishes simply leaves no candidate behind.
+ */
+
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import type { Connection } from 'mongoose';
+import type { AnalysisPairRef, AuditManifest, Finding } from '@odysseus/core';
+import {
+  buildReportPreparationPreview,
+  isAcknowledgementCurrent,
+  type MissingContextField,
+} from '@odysseus/core';
+import {
+  getReportPreparation,
+  recordFailedWritingCandidate,
+  recordReadyWritingCandidate,
+  type AuditDocument,
+} from '@odysseus/store';
+import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
+import { runAnalysisStage } from './analysis-stage.js';
+
+/** Thrown when regeneration cannot start: the cost confirmation is
+ *  missing, a run is already in flight, or the warning acknowledgement is
+ *  missing or stale. Routes map these to 409. */
+export class RegenerationConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RegenerationConflictError';
+  }
+}
+
+/** Thrown when the stored warning acknowledgement does not match the
+ *  current inputs; carries the typed warnings the client must show before
+ *  the operator can confirm them. */
+export class MissingAcknowledgementError extends Error {
+  readonly warnings: readonly MissingContextField[];
+
+  constructor(warnings: readonly MissingContextField[]) {
+    super(
+      'odysseus: the current missing-context warnings must be confirmed before regenerating writing',
+    );
+    this.name = 'MissingAcknowledgementError';
+    this.warnings = warnings;
+  }
+}
+
+const inFlight = new Set<string>();
+
+export function isWritingRegenerationInFlight(auditId: string): boolean {
+  return inFlight.has(auditId);
+}
+
+/** Thrown when the regeneration itself fails after starting; the failed
+ *  candidate is already recorded when this propagates. */
+export class WritingRegenerationFailedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WritingRegenerationFailedError';
+  }
+}
+
+async function readAuditEvidence(
+  audit: AuditDocument,
+): Promise<{ auditDir: string; manifest: AuditManifest; findings: Finding[] }> {
+  const auditDir = buildAuditDir(
+    getArtifactsRoot(),
+    new URL(audit.siteUrl).hostname,
+    audit.startedAt,
+  );
+  let manifest: AuditManifest;
+  let findings: Finding[];
+  try {
+    manifest = JSON.parse(await fs.readFile(path.join(auditDir, 'manifest.json'), 'utf-8'));
+    findings = JSON.parse(await fs.readFile(path.join(auditDir, 'findings.json'), 'utf-8'));
+  } catch {
+    throw new RegenerationConflictError('audit artifacts not found on disk');
+  }
+  return { auditDir, manifest, findings };
+}
+
+function currentWarningDigest(
+  audit: AuditDocument,
+  preparation: Awaited<ReturnType<typeof getReportPreparation>>,
+  manifest: AuditManifest,
+  findings: Finding[],
+): { digest: string; warnings: readonly MissingContextField[] } {
+  const preview = buildReportPreparationPreview({
+    preparation,
+    commercialName: audit.manualFields?.nomCommercial?.value,
+    manifest,
+    findings,
+  });
+  return { digest: preview.warningDigest, warnings: preview.warnings };
+}
+
+export interface RegenerateWritingResult {
+  candidate: { status: 'ready'; pair: AnalysisPairRef; createdAt: string };
+  analyses: { fr: string; en: string };
+}
+
+/**
+ * Run one candidate-first regeneration to completion. The route awaits
+ * this; a client that disconnects mid-request still gets the finished
+ * candidate persisted, so reopening the card shows it ready for approval.
+ */
+export async function regenerateWriting(
+  connection: Connection,
+  audit: AuditDocument,
+  costWarningConfirmed: boolean,
+): Promise<RegenerateWritingResult> {
+  const auditId = audit.auditId;
+  if (!costWarningConfirmed) {
+    throw new RegenerationConflictError(
+      'odysseus: the model-call and cost warning must be explicitly confirmed',
+    );
+  }
+  if (inFlight.has(auditId)) {
+    throw new RegenerationConflictError(
+      'odysseus: a writing regeneration is already running for this audit',
+    );
+  }
+
+  const { auditDir, manifest, findings } = await readAuditEvidence(audit);
+  const preparation = await getReportPreparation(connection, auditId);
+  const { digest, warnings } = currentWarningDigest(audit, preparation, manifest, findings);
+  if (!isAcknowledgementCurrent(preparation.warningAcknowledgement, digest)) {
+    throw new MissingAcknowledgementError(warnings);
+  }
+
+  inFlight.add(auditId);
+  try {
+    const frStage = await runAnalysisStage(
+      auditDir,
+      manifest,
+      findings,
+      { language: 'fr' },
+      connection,
+    );
+    const enStage = await runAnalysisStage(
+      auditDir,
+      manifest,
+      findings,
+      { language: 'en' },
+      connection,
+    );
+
+    const pair: AnalysisPairRef = {
+      frAnalysisId: frStage.analysis.analysisId,
+      enAnalysisId: enStage.analysis.analysisId,
+      findingsProvenance: frStage.analysis.findingsProvenance,
+    };
+    const updated = await recordReadyWritingCandidate(connection, auditId, pair);
+    const candidate = updated.writingSelection?.candidate;
+    if (!candidate || candidate.status !== 'ready') {
+      throw new WritingRegenerationFailedError(
+        'odysseus: the ready writing candidate could not be recorded',
+      );
+    }
+    return {
+      candidate: { status: 'ready', pair, createdAt: candidate.createdAt },
+      analyses: { fr: frStage.analysis.analysisId, en: enStage.analysis.analysisId },
+    };
+  } catch (error) {
+    if (
+      error instanceof RegenerationConflictError ||
+      error instanceof MissingAcknowledgementError
+    ) {
+      throw error;
+    }
+    const reason = error instanceof Error ? error.message : String(error);
+    await recordFailedWritingCandidate(connection, auditId, reason);
+    throw new WritingRegenerationFailedError(reason);
+  } finally {
+    inFlight.delete(auditId);
+  }
+}

@@ -149,6 +149,33 @@ describe('issue #21: the writing prompt names the banned severity synonyms', () 
   });
 });
 
+// plan 019 step 6: new writing runs should produce outcome-oriented theme
+// titles, not bare topic labels. The instruction must not reopen the door
+// to invented claims: the outcome stated has to come from the theme's own
+// findings, with no numbers or business facts the input does not contain.
+describe('plan 019: the writing prompt requests outcome-oriented titles without inviting claims', () => {
+  it('asks the title to state the useful outcome or decision, not just the topic', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain(
+      'states the useful outcome or the decision it supports, not just the topic',
+    );
+  });
+
+  it('gives one outcome-oriented example per language', () => {
+    const fr = buildWritingSystemPrompt('fr', false, null);
+    expect(fr).toContain('Corriger les contrastes pour rendre les textes lisibles');
+    const en = buildWritingSystemPrompt('en', false, null);
+    expect(en).toContain('Fix contrast so text becomes readable');
+  });
+
+  it('forbids adding claims, numbers, or business facts the input does not contain', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain(
+      'do not add a number, a business fact, a benefit figure, or any other claim the input data does not contain',
+    );
+  });
+});
+
 describe('buildWritingRetryFeedback and the user-prompt correction', () => {
   const input = {
     language: 'fr' as const,

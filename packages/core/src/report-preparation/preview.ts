@@ -101,7 +101,7 @@ export interface ReportPreparationPreview {
 export interface BuildPreviewInput {
   preparation: ReportPreparation;
   /** The confirmed commercial name, when manual fields carry one. */
-  commercialName?: string;
+  commercialName?: string | undefined;
   /** On-disk artifacts; absent means journeys and the hook have no evidence. */
   manifest?: AuditManifest;
   findings?: readonly Finding[];
