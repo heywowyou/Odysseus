@@ -1,0 +1,54 @@
+Conseil de mon pere qui travail dans un cabinet de conseils
+Page de garde
+Sous titre plus engagent
+seo geo etc trop technique
+Livrable final avoir un titre accrocheur et comprehensible par celui qui paye, adapter au profil du lecteur, si pour x raison la personne a recu d'autre rapport de diagnostic different, lui permetre de tout de suite savoir la prestation qu'il est en train de lire.
+peut etre plus un titre sous forme d'une phrase sur l'enjeu du diagnorstic "exemple comment securiser l'acces de votre site par les moteurs de recherches moteur ia et l'accessibilité de la clitentele". toujours partir du principe de faciliter la tache au maximum au lecteur.
+Mettre plutot le nom de la société en haut et liberer la plage centrale pour l'accroche de l'audit, la formaliser sous forme de question "comment ... ?" réponse à la problématique du client, ce pourquoi il a payé un diagnostic.
+Garder Audit accessibilité, performance, SEO et GEO en sous signature en dessous de l'enjeu sur la plage principale.
+Alleger la page de garde en deplacent "SITE AUDITÉ DATE DE L'AUDIT
+PÉRIMÈTRE ANALYSÉ LANGUE DU RAPPORT
+RÉFÉRENTIEL AUDITÉ NIVEAU DE CRITICITÉ DES CONSTATS
+Faible Moyen Basé sur 36 constats critiques et 38 constats sérieux Ce niveau reflète une évaluation d'ensemble de la gravité et de la
+portée des constats sur le site, pas un seuil numérique unique." et tout sur une deuxieme page.
+Sommaire : meme idée de confort du lecteur, qu'il sache ce qu'il va trouver dans le rapport et lui donner envie de lire le rapport, utiliser des titres qui ne soit pas des titres scolaires, des titres accrocheur comme dans un roman, tou tne restant explicit. Que les titres soient aussi accrocheur que leur contenues. Pour se singulariser et faire en sorte que le lecteur soit tout de suite accrocher (l'attention d'un lecteur étant aussi faible que sur les reseaux sociaux il faut l'accrocher direct).
+Toujours l'image du roman, ques qu'il va pousser a passer a la seconde page, le sommaire etant une histoire en soit, le lecteur comprends la valeur ajouter rien qu'avec le sommaire. Lui permettre d'avoir envie de lire de rapport plutot que ce soit un corver pour le lecteur.
+01 · À PROPOS DE CE RAPPORT
+par exemple :Comment lire ce rapport
+est trop rendondant, il nous faut un titre punchy et impliquant. Si le lecteur a 10 sec a consacrer a cette pas il a deja des elements.
+À qui s'adresse chaque partie du rapport potentiellemnt rajouter un responsable it ou equipe com. ajouter des fileds modifiable en fonction l'entreprise quand au differentes cibles du rapport.
+Ce que cet audit mesure: dabord les enjeux et ensuite la solution, la presentation parait egocentré, expliquer les enjeux. Lister les enjeux reel est très important pour. 
+S situation C complication Q questionement de maquisey (IMPORTANT). Rappeler la situation de l'entreprise, éléments capté lors des échanges avec l'entreprise etc, l'evolution qui va faire qu'un chef d'entreprise va choisir de resoudre un probleme (exemple la mise en place de la nouvel reglementation ad'acceibilité, un peu comme la facturation electronique en france). La question qui a été posé a la fin de l'introduction serait la meme que celle présente en page de garde.
+Ce qui change concrètement pour vous et pas "Ce que ça change concrètement pour vous". Des clients qui ne peuvent pas terminer une réservation est une problématique et pas un changement. Pareil pour Des clients qui ne peuvent pas terminer une réservation.
+Une exposition réglementaire déjà documentée (voir la section « Exposition légale »).
+Une visibilité réduite dans les résultats de recherche et les assistants IA.
+Vos trois prochaines actions arrive trop rapidement. Si l'interlocuteur veux agir on peu en effet annoncer la couleur mais plus clairement, cette parti est trop technique pour un dirigent, trop technique. Plutot expliquer simplement comme ameliorer la navigation de votre site par les personnes handicapé grace a ... pareil Boutons sans texte identifiable, à transmettre à : votre agence et l'éditeur du composant tiers concerné
+(effort : Faible).
+2. Données structurées JSON-LD invalides, à transmettre à : votre agence (effort : Faible).
+3. Contraste insuffisant des couleurs, à transmettre à : votre agence (effort : Faible)./ Un dirigent n'a aucune idée de ce quoi on parle et nous avons perdu son attention.
+Vos trois prochaines actions. Si le lecteur est le chef d'entreprise le VOS n'a aucun sens comme ce n'est pas lui qui va executer ça.
+Mon pere preconise d'entamer des réponse comme vous pouvez régler ce soucis en faisant ça ça ça. Question fermé.
+La valeur apporter du dossier est là mais l'introduction du rapport est beaucoup trop technique. La premier parti doit etre axé pour le dirigent qui ni connait rien en technique.
+Pareil pour Ce qu'il faut retenir, les chiffres arrivent avant les explications de ce qu'il impliques. par exemple Les constats dominants concernent laccessibilité et la performance du site.
+ ça avant. Le quanti est la pour justifier ce qui a d'abord été avancer. mon pére conseil de carrément inverser le bloc. Logique.
+TOUJOURS AVOIR DS PHRASES AVEC VERBES SUJET COMPLEMENTS ET des VIRGULES POUR QUE LA LECTURES SOIT AGREABLE, REGLES LLM.
+Le contenu du dossier est là mais la forme n'est pas encore bonne. Le client doit passer une lecture aussi confortable que possible. la technique et le legale arrive plus tard dans le rapport.
+Ordre d'importance ET de lecture : Executif > Technique > Légale.
+Exposition légale doit avoir un rappelle dans l'introduction SCQ (une phrase ou deux) et bien séparer la partie d'introduction de quand est ce que le document commence a rentrer dans le détail, comme Exposition légale. bien séparer les parties.
+Mettre en avant un enjeux financier pour la partie executif ( Diagnostique en fonction du chiffre d'affaire, estimation conservative des couts financier par rapport aux enjeux). Je sais que nous avions mis ça de coté mais cela me parais imporant.
+Il faut que le dirigant comprenne ce que ça implique en terme de chiffre d'affaires. Meme si ce x milliers d'euros est un porucentage faible il sera toujours superieur au prix du rapport d'audit.
+Le client peux quantifier la valeur perdu actuel.
+Aussi un exemepleExposition légale,  a titre d'exemple si il y a 7 manquement sur votre site l'amande serait de 7500€ x 7. cela créer une comrpéhension concrete des risques légaux. C'est juste un exemple mais c'est très éfficace. 7500€ c'est déjà beaucoup d'argent mais tout cela est cummulable. Peut etre un simulation d'un parcour classique d'un client, au regard du diagnostique réalisé, il y a tant de manquement et cela représenterai une amanque de tant d'€.
+Il faudrait simboliser deux exemples de parcours clients classiques avec des estimation de la somme perdu que ce soit légalement ou seo ou geo .
+
+CE QUE J'AVAIS DIT A LA BASE, UTILISER DS SAUT D PAGE ENTRE LES CHAPITRES ET PARTIES. LE DOCUMENT SERA PLUS LISIBLE. TOUTES LES PARTIES COMMENCENT SUR UNE NOUVELLES PAGES.
+Concernant les chantiers, rajouter de maniere plus clair un rappelle de l'enjeu dans les blocs. Utiliser des phrases. par exemple avant Ces boutons invisibles pour les lecteurs décran empêchent les visiteurs malvoyants de naviguer ou
+d’effectuer des réservations, réduisant ainsi les conversions. Rappelle de l'enjeu puis constant pui actions recommandé.
+
+Utiliser complexité a la place effort dans les blocks.
+
+Glossaire doit toujours etre en dernier dans le document.
+
+14 · PROCHAINES ÉTAPES
+Prochaines étapes & contact, / Plus en faire une conclusion, rappler les enjeux, les problèmatiques a regler, et les solutions, les gains rapides, .Donc potentiellment changer cette partie en synthese et juste  oublier Vérification après correction et ré audits. Juste garder Une question ?. 
+Exemple vous avez tout les éléments pour agir dès maintenant, nous préconison un réaudit d'ici 3 à 6 mois en utilisant des indicateur que nous aurions séléctionner au préalable comme le tot de transformation etc, cela necessite de peut etre les utiliser dans le rapport, à débatre.
