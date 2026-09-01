@@ -63,6 +63,18 @@ export function sortFindings(findings: readonly FindingResponse[]): FindingRespo
   return [...findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 }
 
+/** By-value mirror of @odysseus/report's REPORT_PAGE_COUNT_WARNING_THRESHOLD:
+ *  this project reads no workspace packages, the same discipline as
+ *  audit-detail-types.ts. A report above it is still previewable and
+ *  deliverable; its row only gains a non-blocking warning. */
+export const REPORT_PAGE_COUNT_WARNING_THRESHOLD = 60;
+
+/** Pure warning decision for a report row (plan 018). A legacy row with
+ *  no measured page count never warns: absence is not read as a value. */
+export function hasPageCountWarning(pageCount: number | undefined): pageCount is number {
+  return pageCount !== undefined && pageCount > REPORT_PAGE_COUNT_WARNING_THRESHOLD;
+}
+
 /** The scanner's precomputed total (a site-wide issue is one row with a
  *  count, not 400 rows); elements only carry a capped sample. */
 export function countOccurrences(finding: FindingResponse): number {

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   analyzePagedjsPages,
   describePagedjsStructuralFailure,
+  REPORT_PAGE_COUNT_WARNING_THRESHOLD,
+  reportPageCountWarning,
   type PagedPageModel,
 } from './pdf.js';
 
@@ -62,5 +64,23 @@ describe('analyzePagedjsPages / describePagedjsStructuralFailure', () => {
     ];
 
     expect(check(pages)).toBeUndefined();
+  });
+});
+
+describe('reportPageCountWarning', () => {
+  it('stays silent at or below the 60 page threshold', () => {
+    expect(reportPageCountWarning(REPORT_PAGE_COUNT_WARNING_THRESHOLD)).toBeUndefined();
+    expect(reportPageCountWarning(1)).toBeUndefined();
+  });
+
+  it('warns above the threshold and carries the measured count with it', () => {
+    expect(reportPageCountWarning(REPORT_PAGE_COUNT_WARNING_THRESHOLD + 1)).toEqual({
+      pageCount: 61,
+      threshold: 60,
+    });
+  });
+
+  it('never warns for a legacy document without a measured page count', () => {
+    expect(reportPageCountWarning(undefined)).toBeUndefined();
   });
 });

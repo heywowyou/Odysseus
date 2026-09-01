@@ -167,6 +167,7 @@ export const en: DashboardStrings = {
     reportsHeading: 'Reports',
     noReportsYet: 'No report generated yet.',
     reportFreshness: { fresh: 'Fresh', stale: 'Stale', unverified: 'Unverified' },
+    reportPageCountWarning: 'Long report: {count} pages. It remains complete and deliverable.',
     lifecycleLabel: 'Life cycle',
     lifecycle: {
       scanned: 'Scanned',

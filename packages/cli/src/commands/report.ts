@@ -70,6 +70,13 @@ async function loadLatestAnalysis(
   return readAnalysis(analysisPath);
 }
 
+function logPageCountWarning(warning: { pageCount: number; threshold: number }): void {
+  console.warn(
+    `  Warning: ${warning.pageCount} pages, above the ${warning.threshold}-page guideline. ` +
+      'The report was generated and persisted normally.',
+  );
+}
+
 export function registerReportCommand(program: Command): void {
   program
     .command('report <artifacts-dir>')
@@ -120,6 +127,9 @@ export function registerReportCommand(program: Command): void {
             console.log(`Reports for ${manifest.auditId} complete (2 of 2: fr/en)`);
             for (const result of results) {
               console.log(`  ${result.language}: ${result.reportPath}`);
+              if (result.pageCountWarning !== undefined) {
+                logPageCountWarning(result.pageCountWarning);
+              }
             }
             return;
           }
@@ -153,6 +163,9 @@ export function registerReportCommand(program: Command): void {
           console.log(`Report for ${manifest.auditId} complete (${opts.language})`);
           console.log(`  Analysis used: ${path.relative(resolvedDir, analysisPath)}`);
           console.log(`  Written: ${result.reportPath}`);
+          if (result.pageCountWarning !== undefined) {
+            logPageCountWarning(result.pageCountWarning);
+          }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           console.error(

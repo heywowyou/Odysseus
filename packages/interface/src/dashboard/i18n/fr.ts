@@ -169,6 +169,7 @@ export const fr: DashboardStrings = {
     reportsHeading: 'Rapports',
     noReportsYet: 'Aucun rapport généré pour le moment.',
     reportFreshness: { fresh: 'À jour', stale: 'Obsolète', unverified: 'Non vérifié' },
+    reportPageCountWarning: 'Rapport long : {count} pages. Il reste complet et livrable.',
     lifecycleLabel: 'Cycle de vie',
     lifecycle: { scanned: 'Scanné', analysed: 'Analysé', rendered: 'Rendu', approved: 'Approuvé' },
     approveReportsButton: 'Approuver la paire bilingue',

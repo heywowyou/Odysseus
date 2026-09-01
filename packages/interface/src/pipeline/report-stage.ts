@@ -16,7 +16,13 @@ import {
   type Finding,
   type ReportLanguage,
 } from '@odysseus/core';
-import { generateReportPdf, REPORT_TEMPLATE_VERSION, type StoredAnalysis } from '@odysseus/report';
+import {
+  generateReportPdf,
+  reportPageCountWarning,
+  REPORT_TEMPLATE_VERSION,
+  type ReportPageCountWarning,
+  type StoredAnalysis,
+} from '@odysseus/report';
 import { readOdysseusBuildId } from '@odysseus/scanner';
 import { getAuditManualFields, persistReport } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
@@ -27,6 +33,14 @@ export interface ReportStageResult {
   provenancePath: string;
   pdfDigest: string;
   generatedAt: Date;
+  /** Measured Paged.js page count of the generated PDF (plan 018); read
+   *  off the post-pagination DOM, never parsed back out of the PDF. */
+  pageCount: number;
+  /** Present only when pageCount exceeds REPORT_PAGE_COUNT_WARNING_
+   *  THRESHOLD. The report above it is still persisted and deliverable;
+   *  this only carries the length to the CLI and the dashboard, it is not
+   *  a freshness or approval state. */
+  pageCountWarning?: ReportPageCountWarning;
 }
 
 function timestampForFilename(date: Date): string {
@@ -86,7 +100,7 @@ export async function runReportStage(
     ? await runObligationStage(manifest, connection, manualFields.siren.value)
     : analysis.obligationAssessment;
 
-  const pdf = await generateReportPdf({
+  const { pdf, pageCount } = await generateReportPdf({
     auditDir,
     manifest,
     findings,
@@ -116,6 +130,7 @@ export async function runReportStage(
     rendererBuild,
     reportTemplateVersion: REPORT_TEMPLATE_VERSION,
     pdfDigest,
+    pageCount,
   };
   await fs.writeFile(
     provenancePath,
@@ -131,13 +146,25 @@ export async function runReportStage(
     generatedAt,
   });
 
-  return { reportId, reportPath, provenancePath, pdfDigest, generatedAt };
+  const pageCountWarning = reportPageCountWarning(pageCount);
+  return {
+    reportId,
+    reportPath,
+    provenancePath,
+    pdfDigest,
+    generatedAt,
+    pageCount,
+    ...(pageCountWarning !== undefined ? { pageCountWarning } : {}),
+  };
 }
 
 export interface AllReportsStageResult {
   language: ReportLanguage;
   reportPath: string;
   generatedAt: Date;
+  /** Same measured page count and warning semantics as ReportStageResult. */
+  pageCount: number;
+  pageCountWarning?: ReportPageCountWarning;
 }
 
 /**
@@ -166,14 +193,20 @@ export async function runAllReportsStage(
   const results: AllReportsStageResult[] = [];
 
   for (const language of ['fr', 'en'] as const) {
-    const { reportPath, generatedAt } = await runReportStage(
+    const { reportPath, generatedAt, pageCount, pageCountWarning } = await runReportStage(
       auditDir,
       manifest,
       findings,
       analyses[language],
       connection,
     );
-    results.push({ language, reportPath, generatedAt });
+    results.push({
+      language,
+      reportPath,
+      generatedAt,
+      pageCount,
+      ...(pageCountWarning !== undefined ? { pageCountWarning } : {}),
+    });
   }
 
   return results;

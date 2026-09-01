@@ -79,8 +79,18 @@ beforeEach(() => {
     fakeAnalysisResult((options as { language: 'fr' | 'en' }).language),
   );
   vi.mocked(runAllReportsStage).mockResolvedValue([
-    { language: 'fr', reportPath: '/dir/reports/x.pdf', generatedAt: new Date() },
-    { language: 'en', reportPath: '/dir/reports/x.pdf', generatedAt: new Date() },
+    {
+      language: 'fr',
+      reportPath: '/dir/reports/x.pdf',
+      generatedAt: new Date(),
+      pageCount: 44,
+    },
+    {
+      language: 'en',
+      reportPath: '/dir/reports/x.pdf',
+      generatedAt: new Date(),
+      pageCount: 44,
+    },
   ]);
   vi.mocked(completeJob).mockResolvedValue(undefined);
   vi.mocked(updateJobProgress).mockResolvedValue(undefined);

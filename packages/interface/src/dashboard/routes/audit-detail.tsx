@@ -32,6 +32,7 @@ import {
   buildManualFieldsPatch,
   countOccurrences,
   countPages,
+  hasPageCountWarning,
   hostnameOf,
   isSeverity,
   isValidSiren,
@@ -123,6 +124,16 @@ function ReportsCard({ detail }: { detail: AuditDetailResponse }): JSX.Element {
               <Badge tone={FRESHNESS_TONES[report.status]}>
                 {strings.auditDetail.reportFreshness[report.status]}
               </Badge>
+              {/* Non-blocking length warning (plan 018): the report stays
+                  previewable and deliverable, the row only grows a badge. */}
+              {hasPageCountWarning(report.pageCount) ? (
+                <Badge tone="moderate">
+                  {strings.auditDetail.reportPageCountWarning.replace(
+                    '{count}',
+                    String(report.pageCount),
+                  )}
+                </Badge>
+              ) : null}
               <a
                 className={buttonStyles('ghost', 'sm')}
                 href={`${reportBase}/${report.language}/preview`}

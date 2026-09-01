@@ -208,6 +208,10 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
           status: (report
             ? classifyReportFreshness(report, audit.findingsProvenance)
             : 'unverified') as ReportFreshness,
+          // Optional measured page count (plan 018), omitted entirely for
+          // a legacy document without one: the dashboard's length warning
+          // must never be derived from an inferred value.
+          ...(report?.pageCount !== undefined ? { pageCount: report.pageCount } : {}),
         };
       }),
     );

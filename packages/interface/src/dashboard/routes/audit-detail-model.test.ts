@@ -3,11 +3,13 @@ import {
   buildManualFieldsPatch,
   countOccurrences,
   countPages,
+  hasPageCountWarning,
   hostnameOf,
   isSeverity,
   isValidSiren,
   manualFieldValuesFromResponse,
   normalizeSiren,
+  REPORT_PAGE_COUNT_WARNING_THRESHOLD,
   sortFindings,
 } from './audit-detail-model';
 import type { ManualFieldValues } from './audit-detail-model';
@@ -84,6 +86,22 @@ describe('sortFindings', () => {
     const sorted = sortFindings(rows);
     expect(sorted.map((row) => row.findingId)).toEqual(['first', 'second']);
     expect(sorted).not.toBe(rows);
+  });
+});
+
+describe('hasPageCountWarning', () => {
+  it('stays silent at or below the 60 page threshold', () => {
+    expect(hasPageCountWarning(REPORT_PAGE_COUNT_WARNING_THRESHOLD)).toBe(false);
+    expect(hasPageCountWarning(1)).toBe(false);
+  });
+
+  it('warns above the threshold', () => {
+    expect(hasPageCountWarning(REPORT_PAGE_COUNT_WARNING_THRESHOLD + 1)).toBe(true);
+    expect(hasPageCountWarning(120)).toBe(true);
+  });
+
+  it('never warns for a legacy row without a measured page count', () => {
+    expect(hasPageCountWarning(undefined)).toBe(false);
   });
 });
 

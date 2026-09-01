@@ -188,6 +188,10 @@ export interface DashboardStrings {
     reportsHeading: string;
     noReportsYet: string;
     reportFreshness: Record<'fresh' | 'stale' | 'unverified', string>;
+    /** Non-blocking warning on a report row whose measured page count is
+     *  above the report package's threshold; {count} is replaced with the
+     *  page count by the page. */
+    reportPageCountWarning: string;
     lifecycleLabel: string;
     lifecycle: Record<'scanned' | 'analysed' | 'rendered' | 'approved', string>;
     approveReportsButton: string;

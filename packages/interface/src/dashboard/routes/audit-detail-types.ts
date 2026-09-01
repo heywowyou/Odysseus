@@ -93,6 +93,9 @@ export interface ManualFieldsResponse {
 export interface ReportStatusResponse {
   language: ReportLanguage;
   status: ReportFreshness;
+  /** Measured Paged.js page count of the stored PDF (plan 018); absent on
+   *  legacy reports generated before it was recorded. */
+  pageCount?: number;
 }
 
 export interface ApprovedReportRefResponse {

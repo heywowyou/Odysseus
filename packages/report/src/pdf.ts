@@ -136,7 +136,11 @@ export function describePagedjsStructuralFailure(
   return undefined;
 }
 
-async function detectPagedjsStructuralFailure(page: Page): Promise<string | undefined> {
+/** Extracts the real post-pagination page model off the live Paged.js DOM
+ *  and reduces it to the structural check result, whose pageCount is the
+ *  only measured page count this package ever produces: the final PDF is
+ *  never parsed to rediscover it. */
+async function analyzePagedjsPagesInBrowser(page: Page): Promise<PagedjsStructuralCheckResult> {
   const pages = await page.evaluate((selector) => {
     return Array.from(document.querySelectorAll('.pagedjs_page')).map((p) => ({
       text: p.textContent ?? '',
@@ -146,10 +150,44 @@ async function detectPagedjsStructuralFailure(page: Page): Promise<string | unde
     }));
   }, ATOMIC_BLOCK_SELECTOR);
 
-  return describePagedjsStructuralFailure(analyzePagedjsPages(pages));
+  return analyzePagedjsPages(pages);
 }
 
-export async function renderPdfFromHtml(html: string, browser: Browser): Promise<Buffer> {
+/** Plan 018: there is deliberately no hard page-count maximum. A document
+ *  above this many measured pages is still generated, persisted, and
+ *  deliverable; only a non-blocking warning travels with it (CLI output
+ *  and the dashboard report row). The threshold lives beside the code
+ *  that measures the count so interface and CLI share one source, and the
+ *  dashboard mirrors it by value because it reads no workspace packages. */
+export const REPORT_PAGE_COUNT_WARNING_THRESHOLD = 60;
+
+export interface ReportPageCountWarning {
+  pageCount: number;
+  threshold: number;
+}
+
+/** Pure warning decision over the measured count, shared by report-stage
+ *  and the CLI. A document with no recorded pageCount (a legacy report
+ *  generated before it was measured) warns about nothing: absence is
+ *  never read as a value. */
+export function reportPageCountWarning(
+  pageCount: number | undefined,
+): ReportPageCountWarning | undefined {
+  if (pageCount === undefined || pageCount <= REPORT_PAGE_COUNT_WARNING_THRESHOLD) {
+    return undefined;
+  }
+  return { pageCount, threshold: REPORT_PAGE_COUNT_WARNING_THRESHOLD };
+}
+
+export interface RenderedPdfWithPageCount {
+  pdf: Buffer;
+  pageCount: number;
+}
+
+export async function renderPdfWithPageCountFromHtml(
+  html: string,
+  browser: Browser,
+): Promise<RenderedPdfWithPageCount> {
   const pagedjsSource = await readPagedjsSource();
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -208,12 +246,13 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
       );
     }
 
-    const structuralFailure = await detectPagedjsStructuralFailure(page);
+    const structure = await analyzePagedjsPagesInBrowser(page);
+    const structuralFailure = describePagedjsStructuralFailure(structure);
     if (structuralFailure !== undefined) {
       throw new Error(`Report generation aborted: ${structuralFailure} Never shipped to a client.`);
     }
 
-    return await page.pdf({
+    const pdf = await page.pdf({
       printBackground: true,
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
       // Without this, Chromium ignores the page's own @page { size: A4 }
@@ -225,7 +264,15 @@ export async function renderPdfFromHtml(html: string, browser: Browser): Promise
       tagged: true, // fixes E31: an accessibility audit must not ship an untagged PDF
       outline: true, // fixes D26: a bookmark tree derived from the heading hierarchy
     });
+    return { pdf, pageCount: structure.pageCount };
   } finally {
     await context.close();
   }
+}
+
+/** Compatibility wrapper for callers that only need the bytes (the two
+ *  template e2e suites): the page count is measured either way, they just
+ *  drop it. */
+export async function renderPdfFromHtml(html: string, browser: Browser): Promise<Buffer> {
+  return (await renderPdfWithPageCountFromHtml(html, browser)).pdf;
 }

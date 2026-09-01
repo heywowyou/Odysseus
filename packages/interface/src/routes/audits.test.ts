@@ -194,6 +194,7 @@ describe('GET /api/audits/:auditId', () => {
       analysisGeneratedAt: new Date(),
       fileRef: `reports/${language}.pdf`,
       generatedAt: new Date(),
+      pageCount: 44,
     }));
 
     const router = new Router();
@@ -203,9 +204,41 @@ describe('GET /api/audits/:auditId', () => {
     await router.handle(req, res);
 
     expect(JSON.parse(res.body ?? '{}').reports).toEqual([
-      { language: 'fr', status: 'fresh' },
-      { language: 'en', status: 'stale' },
+      { language: 'fr', status: 'fresh', pageCount: 44 },
+      { language: 'en', status: 'stale', pageCount: 44 },
     ]);
+  });
+
+  it('carries the optional measured page count and omits it for a legacy document', async () => {
+    vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) => ({
+      reportId: `report-${language}`,
+      auditId: 'audit-1',
+      analysisId: `analysis-${language}`,
+      findingsProvenance,
+      rendererVersion: 2,
+      pdfDigest: `sha256:${'1'.repeat(64)}`,
+      language,
+      reportTemplateVersion: 2,
+      analysisGeneratedAt: new Date(),
+      fileRef: `reports/${language}.pdf`,
+      generatedAt: new Date(),
+      // The French document records a measured page count above the
+      // warning threshold; the English one predates the field entirely.
+      ...(language === 'fr' ? { pageCount: 61 } : {}),
+    }));
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.reports).toEqual([
+      { language: 'fr', status: 'fresh', pageCount: 61 },
+      { language: 'en', status: 'fresh' },
+    ]);
+    expect(body.reports[1]).not.toHaveProperty('pageCount');
   });
 });
 

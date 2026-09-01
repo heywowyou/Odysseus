@@ -7,6 +7,10 @@ export type {
 } from './types.js';
 export { classifyReportFreshness } from './freshness.js';
 export type { ReportFreshness, ReportFreshnessMetadata } from './freshness.js';
+/** Plan 018 page-count warning decision shared with interface (report
+ *  stage) and the CLI; the count itself is measured in pdf.ts. */
+export { REPORT_PAGE_COUNT_WARNING_THRESHOLD, reportPageCountWarning } from './pdf.js';
+export type { ReportPageCountWarning, RenderedPdfWithPageCount } from './pdf.js';
 /** Re-exported so packages/interface's job-completion gate (P0.1, 2026-08-21
  *  La Corniche feedback pass) can ask the same question the report itself
  *  asks, rather than re-deriving "was performance measured" from the
@@ -38,7 +42,8 @@ import { resolveRenderDiffEvidence } from './screenshots.js';
 import { renderHtml } from './template/render-html.js';
 import { findRenderLintViolations } from './template/render-lint.js';
 import { findUnconfirmedIdentityFields } from './template/unconfirmed-fields.js';
-import { renderPdfFromHtml } from './pdf.js';
+import { renderPdfWithPageCountFromHtml } from './pdf.js';
+import type { RenderedPdfWithPageCount } from './pdf.js';
 
 /** Chromium is launched once for the whole report and used solely for the
  *  final Paged.js print (pdf.ts) - resolveRenderDiffEvidence no longer
@@ -63,7 +68,9 @@ import { renderPdfFromHtml } from './pdf.js';
  *  which never renders to PDF and has no reason to change. */
 export const REPORT_PDF_CHROMIUM_ARGS = ['--font-render-hinting=none'];
 
-export async function generateReportPdf(input: GenerateReportInput): Promise<Buffer> {
+export async function generateReportPdf(
+  input: GenerateReportInput,
+): Promise<RenderedPdfWithPageCount> {
   // D8: refuse before doing any work, not after rendering - the operator
   // needs to be told to confirm the name, not handed a PDF with a guess on
   // its cover.
@@ -106,7 +113,7 @@ export async function generateReportPdf(input: GenerateReportInput): Promise<Buf
       );
     }
 
-    return await renderPdfFromHtml(html, browser);
+    return await renderPdfWithPageCountFromHtml(html, browser);
   } finally {
     await browser.close();
   }

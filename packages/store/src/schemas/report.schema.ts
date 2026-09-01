@@ -38,6 +38,10 @@ export interface ReportDocumentFields {
   /** Path relative to the audit directory, e.g. "reports/2026-...-full-fr.pdf". */
   fileRef: string;
   generatedAt: Date;
+  /** Measured Paged.js page count recorded at generation time (plan 018).
+   *  Optional: documents generated before it was recorded simply lack it,
+   *  and the length warning must never infer a value for them. */
+  pageCount?: number;
 }
 
 type LegacyOptionalFields =
@@ -46,7 +50,8 @@ type LegacyOptionalFields =
   | 'findingsProvenance'
   | 'rendererVersion'
   | 'rendererBuild'
-  | 'pdfDigest';
+  | 'pdfDigest'
+  | 'pageCount';
 export type ReportDocument = Omit<ReportDocumentFields, LegacyOptionalFields> &
   Partial<Pick<ReportDocumentFields, LegacyOptionalFields>>;
 
@@ -72,6 +77,10 @@ const reportSchema = new Schema<ReportDocument>(
     analysisGeneratedAt: { type: Date, required: true },
     fileRef: { type: String, required: true },
     generatedAt: { type: Date, required: true },
+    // Not required: legacy documents predate the measured page count and
+    // strict mode strips the key on write when it is absent, so a lean
+    // read simply returns undefined for them.
+    pageCount: { type: Number },
   },
   { collection: 'reports' },
 );

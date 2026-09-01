@@ -36,7 +36,13 @@ function reportFields(
   };
 }
 
-const TEST_AUDIT_IDS = ['reports-read-1', 'reports-read-2', 'reports-read-missing'];
+const TEST_AUDIT_IDS = [
+  'reports-read-1',
+  'reports-read-2',
+  'reports-read-missing',
+  'reports-read-page-count',
+  'reports-read-legacy-page-count',
+];
 
 /** Worker databases are reused between runs and never dropped, and reportId is
  *  unique, so a file that only inserts can pass exactly once per database. Clear
@@ -114,5 +120,43 @@ describe.skipIf(!mongoAvailable)('reports read helpers', () => {
 
     const languages = await listReportLanguages(connection!, 'reports-read-2');
     expect([...languages].sort()).toEqual(['en', 'fr']);
+  });
+
+  it('persists the optional measured pageCount and reads it back', async () => {
+    await persistReport(
+      connection!,
+      reportFields({
+        auditId: 'reports-read-page-count',
+        language: 'fr',
+        reportTemplateVersion: 1,
+        analysisGeneratedAt: new Date('2026-08-04T00:00:00.000Z'),
+        fileRef: 'reports/counted-fr.pdf',
+        generatedAt: new Date('2026-08-04T00:00:00.000Z'),
+        pageCount: 61,
+      }),
+    );
+
+    const latest = await getLatestReport(connection!, 'reports-read-page-count', 'fr');
+    expect(latest?.fileRef).toBe('reports/counted-fr.pdf');
+    expect(latest?.pageCount).toBe(61);
+  });
+
+  it('reads a legacy document without pageCount as undefined, never as an inferred value', async () => {
+    await persistReport(
+      connection!,
+      reportFields({
+        auditId: 'reports-read-legacy-page-count',
+        language: 'fr',
+        reportTemplateVersion: 1,
+        analysisGeneratedAt: new Date('2026-08-04T00:00:00.000Z'),
+        fileRef: 'reports/legacy-fr.pdf',
+        generatedAt: new Date('2026-08-04T00:00:00.000Z'),
+      }),
+    );
+
+    const latest = await getLatestReport(connection!, 'reports-read-legacy-page-count', 'fr');
+    expect(latest).not.toBeNull();
+    expect(latest?.fileRef).toBe('reports/legacy-fr.pdf');
+    expect(latest?.pageCount).toBeUndefined();
   });
 });

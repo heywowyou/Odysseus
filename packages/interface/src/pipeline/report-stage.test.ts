@@ -3,10 +3,17 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@odysseus/report', () => ({
-  generateReportPdf: vi.fn(),
-  REPORT_TEMPLATE_VERSION: 3,
-}));
+/** Only generateReportPdf is faked; the page-count warning helper is the
+ *  real pure function, so the stage's threshold behavior is exercised
+ *  against the report package's own implementation. */
+vi.mock('@odysseus/report', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@odysseus/report')>();
+  return {
+    ...actual,
+    generateReportPdf: vi.fn(),
+    REPORT_TEMPLATE_VERSION: 3,
+  };
+});
 vi.mock('@odysseus/store', () => ({
   persistReport: vi.fn(),
   getAuditManualFields: vi.fn().mockResolvedValue(undefined),
@@ -81,7 +88,10 @@ let auditDir: string;
 beforeEach(async () => {
   vi.clearAllMocks();
   auditDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-report-stage-'));
-  vi.mocked(generateReportPdf).mockResolvedValue(Buffer.from('%PDF-fake'));
+  vi.mocked(generateReportPdf).mockResolvedValue({
+    pdf: Buffer.from('%PDF-fake'),
+    pageCount: 44,
+  });
   vi.mocked(persistReport).mockResolvedValue(undefined);
 });
 
@@ -117,6 +127,8 @@ describe('runReportStage', () => {
     expect(result.reportPath.endsWith('-fr.pdf')).toBe(true);
     expect(result.reportId).toEqual(expect.any(String));
     expect(result.pdfDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(result.pageCount).toBe(44);
+    expect(result.pageCountWarning).toBeUndefined();
 
     const sidecar = JSON.parse(await fs.readFile(result.provenancePath, 'utf-8'));
     expect(sidecar).toEqual(
@@ -128,6 +140,7 @@ describe('runReportStage', () => {
         rendererBuild: 'render-build',
         reportTemplateVersion: 3,
         pdfDigest: result.pdfDigest,
+        pageCount: 44,
       }),
     );
 
@@ -139,12 +152,50 @@ describe('runReportStage', () => {
       rendererVersion: 3,
       rendererBuild: 'render-build',
       pdfDigest: result.pdfDigest,
+      pageCount: 44,
       language: 'fr',
       reportTemplateVersion: 3,
       analysisGeneratedAt: analysis.generatedAt,
       fileRef: path.relative(auditDir, result.reportPath),
       generatedAt: result.generatedAt,
     });
+  });
+
+  it('carries no length warning at exactly the 60 page threshold', async () => {
+    vi.mocked(generateReportPdf).mockResolvedValue({
+      pdf: Buffer.from('%PDF-fake'),
+      pageCount: 60,
+    });
+
+    const result = await runReportStage(
+      auditDir,
+      fakeManifest(),
+      [],
+      fakeAnalysis(),
+      fakeConnection,
+    );
+
+    expect(result.pageCount).toBe(60);
+    expect(result.pageCountWarning).toBeUndefined();
+  });
+
+  it('warns above 60 pages while still persisting the report and its page count', async () => {
+    vi.mocked(generateReportPdf).mockResolvedValue({
+      pdf: Buffer.from('%PDF-fake'),
+      pageCount: 61,
+    });
+    const analysis = fakeAnalysis();
+
+    const result = await runReportStage(auditDir, fakeManifest(), [], analysis, fakeConnection);
+
+    expect(result.pageCount).toBe(61);
+    expect(result.pageCountWarning).toEqual({ pageCount: 61, threshold: 60 });
+
+    const persisted = vi.mocked(persistReport).mock.calls[0]?.[1];
+    expect(persisted?.pageCount).toBe(61);
+
+    const sidecar = JSON.parse(await fs.readFile(result.provenancePath, 'utf-8'));
+    expect(sidecar['pageCount']).toBe(61);
   });
 
   it('rejects stale analysis provenance before Chromium report generation starts', async () => {
@@ -188,6 +239,8 @@ describe('runAllReportsStage', () => {
     expect(results.map((r) => r.language)).toEqual(['fr', 'en']);
     for (const result of results) {
       expect(path.basename(result.reportPath).endsWith(`-${result.language}.pdf`)).toBe(true);
+      expect(result.pageCount).toBe(44);
+      expect(result.pageCountWarning).toBeUndefined();
     }
     expect(generateReportPdf).toHaveBeenCalledTimes(2);
   });
