@@ -214,7 +214,10 @@ export function renderExecutiveSummary(
   priorities?: readonly RenderedPriority[],
 ): string {
   const e = strings.executiveSummary;
-  // item 0.4: counts are bound here, from the same resolvedFindings the
+  // Plan 018 step 6: the model's qualitative summary is rendered first and
+  // these counts follow beneath it, so a director reads the decision story
+  // before the scale. item 0.4's digit guard is unchanged: counts are bound
+  // here, from the same resolvedFindings the
   // stats tile (section 03) and every other count in the report reads,
   // never from the writing pass's own prose - see this template's own
   // doc comment. The writing pass ran before render-time finding
@@ -243,7 +246,8 @@ export function renderExecutiveSummary(
   return sheet(
     `
     ${renderSheetHeader(ordinal, e.eyebrow, e.heading)}
-    <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeHtml(countsSentence)} ${escapeProse(analysis.executiveSummary)}</p>
+    <p style="font-size:15px;max-width:66ch;opacity:0.9">${escapeProse(analysis.executiveSummary)}</p>
+    <p style="font-size:12.5px;opacity:0.75;margin-top:var(--space-2);max-width:66ch">${escapeHtml(countsSentence)}</p>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.glossaryPointerSentence)}</p>
     ${renderCoveredByPrioritiesNote(strings, analysis, findings, findingsById, priorities)}
     ${ownershipNote}

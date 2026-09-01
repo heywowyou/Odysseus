@@ -242,7 +242,14 @@ function renderBody(
           manualFields,
         )
       : '',
-    renderNextSteps(strings, ord('section-14'), manifest, analysis.language, renderMetadata),
+    renderNextSteps(
+      strings,
+      ord('section-14'),
+      manifest,
+      analysis.language,
+      renderMetadata,
+      renderedPriorities,
+    ),
     renderLegalExposure(
       strings,
       ord('section-02'),

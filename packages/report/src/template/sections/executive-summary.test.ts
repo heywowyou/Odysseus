@@ -272,6 +272,55 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
       'L&#39;audit a identifié 4 constats au total, dont 3 critiques ou sérieux (2 critiques et 1 sérieux)',
     );
   });
+
+  // Plan 018 step 6: the model's qualitative summary leads the section and
+  // the template-owned counts follow beneath it. The digit guard is
+  // unchanged: both sentences are still bound from the findings passed in,
+  // never from the model's own prose (item 0.4 above pins that binding).
+  it('plan 018 step 6: renders the model prose before the counts sentence, in French and English', () => {
+    const findings = [
+      { severity: 'critical' } as const,
+      { severity: 'critical' } as const,
+      { severity: 'serious' } as const,
+      { severity: 'minor' } as const,
+    ].map((overrides, i) => ({
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'axe' as const,
+      findingId: `f${i}`,
+      ruleId: 'rule',
+      category: 'accessibility' as const,
+      wcagCriteria: [],
+      title: 'title',
+      description: 'description',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: `dk-${i}`,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    }));
+
+    const frAnalysis = { ...buildAnalysis([nonLegalTheme]) };
+    frAnalysis.executiveSummary = 'Le site montre des signes de vieillissement.';
+    const frHtml = renderExecutiveSummary(getStrings('fr'), 1, frAnalysis, findings, emptyManifest);
+    const frProseIndex = frHtml.indexOf('Le site montre des signes de vieillissement.');
+    const frCountsIndex = frHtml.indexOf('4 constats au total');
+    expect(frProseIndex).toBeGreaterThan(-1);
+    expect(frCountsIndex).toBeGreaterThan(-1);
+    expect(frProseIndex).toBeLessThan(frCountsIndex);
+
+    const enAnalysis = { ...buildAnalysis([nonLegalTheme]), language: 'en' as const };
+    enAnalysis.executiveSummary = 'The site shows its age.';
+    const enHtml = renderExecutiveSummary(getStrings('en'), 1, enAnalysis, findings, emptyManifest);
+    const enProseIndex = enHtml.indexOf('The site shows its age.');
+    const enCountsIndex = enHtml.indexOf('4 findings in total');
+    expect(enProseIndex).toBeGreaterThan(-1);
+    expect(enCountsIndex).toBeGreaterThan(-1);
+    expect(enProseIndex).toBeLessThan(enCountsIndex);
+  });
 });
 
 describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging sentence', () => {

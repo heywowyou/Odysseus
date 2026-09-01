@@ -23,6 +23,7 @@ import {
   fillTemplate,
   formatCappedFindingIdLinks,
   formatNumber,
+  pluralize,
   renderSheetHeader,
   sheet,
 } from '../html-utils.js';
@@ -30,7 +31,12 @@ import { CATEGORY, LEVEL_COLOR, SEVERITY } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 import { sectionTitle } from '../section-registry.js';
-import { type RenderedPriority, selectRenderedThemes } from '../rendered-priorities.js';
+import {
+  buildLegacyPriority,
+  type PriorityEvidence,
+  type RenderedPriority,
+  selectRenderedThemes,
+} from '../rendered-priorities.js';
 
 export { MAX_RENDERED_THEMES, selectRenderedThemes } from '../rendered-priorities.js';
 
@@ -59,6 +65,45 @@ const QUICK_WIN_ICON =
 
 function pageWord(strings: ReportStrings, count: number): string {
   return count === 1 ? strings.findingsAppendix.pageSingular : strings.findingsAppendix.pagePlural;
+}
+
+/** Plan 018 step 6, card block 3: the "What we observed" block. Never
+ *  counts alone - the deterministic defect label always leads the sentence
+ *  and the representative page and exact counts follow as that defect's
+ *  scale. The label and the representative page come from the priority's
+ *  own evidence selection (rendered-priorities.ts), so this card and the
+ *  findings appendix cannot disagree about what the defect is called.
+ *  overflow-wrap:anywhere keeps a long representative URL from pushing the
+ *  card wider instead of wrapping. */
+function renderObservationBox(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  evidence: PriorityEvidence,
+): string {
+  const t = strings.themes;
+  const appendixStrings = strings.findingsAppendix;
+  const sharedParams = {
+    defect: evidence.representativeLabel,
+    pages: formatNumber(evidence.uniquePageCount, language),
+    pageWord: pageWord(strings, evidence.uniquePageCount),
+    occurrences: formatNumber(evidence.occurrenceCount, language),
+    occurrenceWord: pluralize(
+      evidence.occurrenceCount,
+      appendixStrings.occurrenceSingular,
+      appendixStrings.occurrencePlural,
+    ),
+  };
+  const text =
+    evidence.representativePageUrl !== undefined
+      ? fillTemplate(t.observationWithPageTemplate, {
+          ...sharedParams,
+          page: evidence.representativePageUrl,
+        })
+      : fillTemplate(t.observationNoPageTemplate, sharedParams);
+  return `<div style="margin-top:4px">
+          <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.observationLabel)}</div>
+          <p style="font-size:12.5px;opacity:0.9;margin:0;overflow-wrap:anywhere;word-break:normal;hyphens:none">${escapeHtml(text)}</p>
+        </div>`;
 }
 
 const RATIO_KINDS_PER_TENTH_SECOND: ReadonlySet<string> = new Set([
@@ -354,7 +399,12 @@ function renderTheme(
   const themeFindings = theme.findingIds
     .map((id) => findingsById.get(id))
     .filter((f): f is Finding => f !== undefined);
-  const uniquePages = new Set(themeFindings.flatMap((f) => f.pageUrls)).size;
+  // Plan 018 step 6: the page count comes from the priority's own evidence
+  // when one is attached, so the footer metadata and the observation block
+  // are computed from the same selection by construction.
+  const uniquePages = priority
+    ? priority.evidence.uniquePageCount
+    : new Set(themeFindings.flatMap((f) => f.pageUrls)).size;
 
   const category = CATEGORY[theme.category];
   const categoryTag = `<span class="tag" style="background:${category.bg};color:${category.color}">${escapeHtml(strings.findingsAppendix.categoryLabels[theme.category])}</span>`;
@@ -440,6 +490,35 @@ function renderTheme(
     totalPages: formatNumber(totalPagesScanned, language),
   });
 
+  // Plan 018 step 6 fixes the card's reading order, outcome first:
+  //   1. rank, category, quick-win marker, stored title (header, below);
+  //   2. "Why it matters", the model's own businessImpact;
+  //   3. "What we observed", deterministic defect label + representative
+  //      page + exact page and occurrence counts from the priority evidence;
+  //   4. "What you can do", the existing recommended and reviewed
+  //      remediation plus the ownership notes that qualify the ask;
+  //   5. legal and citation context (unchanged content sources);
+  //   6. footer metadata: Complexity (the plan renames the card's effort
+  //      item and confines the word to this one detailed card), commercial
+  //      impact, affected pages, conformity, finding references.
+  // The stored technical title is kept as is in this plan; presentation
+  // order is the only change.
+  const whyItMattersBox = `
+        <div style="margin-top:4px">
+          <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.whyItMattersLabel)}</div>
+          <p class="card-body" style="opacity:0.9">${escapeProse(theme.businessImpact)}</p>
+        </div>`;
+  const observationBox = priority ? renderObservationBox(strings, language, priority.evidence) : '';
+  const whatYouCanDoBox = `
+        <div style="margin-top:4px">
+          <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.whatYouCanDoLabel)}</div>
+          ${recommendedActionsBox}
+          ${deterministicActionsBox}
+          ${ownershipBox}
+          ${renderOwnershipSplitNote(strings, language, themeFindings)}
+          ${renderThirdPartyOnlyNote(strings, themeFindings)}
+        </div>`;
+
   return `
     <div class="card elev-sm theme-card" style="margin-bottom:var(--space-4);gap:var(--space-3)" id="theme-${displayRank}" data-model-priority-rank="${theme.priorityRank}">
       <div style="display:flex;align-items:flex-start;gap:var(--space-3)">
@@ -452,17 +531,14 @@ function renderTheme(
           <div class="card-title">${escapeProse(theme.title)}</div>
         </div>
       </div>
-      <p class="card-body" style="opacity:0.9">${escapeProse(theme.businessImpact)}</p>
+      ${whyItMattersBox}
+      ${observationBox}
+      ${whatYouCanDoBox}
       ${legalBox}
       ${citationBox}
-      ${recommendedActionsBox}
-      ${deterministicActionsBox}
-      ${ownershipBox}
-      ${renderOwnershipSplitNote(strings, language, themeFindings)}
-      ${renderThirdPartyOnlyNote(strings, themeFindings)}
       ${renderLcenCrossReferenceNote(strings, themeFindings)}
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.4fr);gap:var(--space-3);font-size:12px;margin-top:4px">
-        <span class="text-muted">${escapeHtml(t.effortLabel)} : <strong style="color:var(--color-text)">${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
+        <span class="text-muted">${escapeHtml(t.complexityLabel)} : <strong style="color:var(--color-text)">${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
         <span class="text-muted">${escapeHtml(t.impactLabel)} : <strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
         <span class="text-muted">${escapeHtml(t.affectedPagesLabel)} : <strong style="color:var(--color-text)">${escapeHtml(pagesText)}</strong></span>
         <span class="text-muted">${escapeHtml(t.conformityLabel)} : <strong style="color:${isNonConformant ? SEVERITY.critical.color : 'var(--color-neutral-500)'}">${escapeHtml(conformityValue)}</strong>${!isNonConformant && showConformityGloss ? ` <span style="font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</span>
@@ -591,21 +667,14 @@ export function renderThemes(
 ): string {
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
+  // Plan 018 step 6: the fallback path goes through buildLegacyPriority so
+  // even test/compatibility priorities carry the deterministic evidence the
+  // observation block renders.
   const renderedPriorities =
     priorities ??
-    selectRenderedThemes(analysis.themes, findingsById).map((theme, index): RenderedPriority => ({
-      theme,
-      displayRank: index + 1,
-      findings: theme.findingIds
-        .map((id) => findingsById.get(id))
-        .filter((finding): finding is Finding => finding !== undefined),
-      ownershipCounts: {
-        'first-party-action': 0,
-        'third-party-escalation': 0,
-        'verify-intent': 0,
-      },
-      remediations: [],
-    }));
+    selectRenderedThemes(analysis.themes, findingsById).map((theme, index) =>
+      buildLegacyPriority(theme, index + 1, findingsById, analysis.language),
+    );
   const sortedThemes = renderedPriorities.map((priority) => priority.theme);
   const sector = sectorOverride ?? analysis.obligationAssessment?.sector ?? 'general';
 

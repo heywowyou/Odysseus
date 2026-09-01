@@ -16,7 +16,7 @@ import {
 } from '../../test-fixtures.js';
 
 describe('renderThemes against the real small-site.test analysis', () => {
-  it('renders only the top 6 themes by rank (doc §3 sections 04/05 cap), with a compact findingId reference and never a raw page URL (F38)', async () => {
+  it('renders only the top 6 themes by rank (doc §3 sections 04/05 cap), with a compact findingId reference and exactly one representative page URL per card (F38, as amended by plan 018 step 6)', async () => {
     const [analysis, findings, manifest] = await Promise.all([
       loadSmallSiteAnalysis('fr'),
       loadSmallSiteFindings(),
@@ -37,9 +37,32 @@ describe('renderThemes against the real small-site.test analysis', () => {
       ]!;
       expect(html).not.toContain(`id="theme-${dropped.priorityRank}"`);
     }
-    // No raw page URL anywhere in a theme card - only counts and refs.
-    const somePageUrl = findingsById.get(rendered[0]!.findingIds[0]!)?.pageUrls[0];
-    if (somePageUrl) expect(html).not.toContain(somePageUrl);
+    // F38 used to ban every raw page URL from a theme card. Plan 018 step 6
+    // supersedes that: block 3 of each card ("What we observed") names one
+    // representative page selected by the priority's own evidence
+    // (rendered-priorities.ts: the deduplicated page union, lexicographically
+    // first). The surviving invariant: no page URL other than each rendered
+    // priority's representative one may appear anywhere in the section.
+    const representativeUrls = new Set(
+      rendered
+        .map(
+          (theme) =>
+            [
+              ...new Set(theme.findingIds.flatMap((id) => findingsById.get(id)?.pageUrls ?? [])),
+            ].sort()[0],
+        )
+        .filter((url): url is string => url !== undefined),
+    );
+    for (const finding of findings) {
+      for (const url of finding.pageUrls) {
+        if (representativeUrls.has(url)) continue;
+        expect(html).not.toContain(url);
+        expect(html).not.toContain(escapeHtml(url));
+      }
+    }
+    for (const url of representativeUrls) {
+      expect(html).toContain(url);
+    }
   });
 
   it('marks a theme as a quick win only when effort is low and impact is not low', async () => {
@@ -1424,13 +1447,15 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
     expect(html).toMatch(/Impact commercial : <strong style="color:#d97b82">Élevé<\/strong>/);
   });
 
-  it('never colours "Effort : Élevé" the same way, since high effort is expensive, not urgent', () => {
+  it('never colours "Complexité : Élevé" the same way, since high complexity is expensive, not urgent', () => {
     const findings = [buildFinding('f001')];
     const analysis = buildAnalysis('high', 'accessibility');
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
-    expect(html).toMatch(/Effort : <strong style="color:var\(--color-text\)">Élevé<\/strong>/);
-    expect(html).not.toMatch(/Effort : <strong style="color:#d97b82">/);
+    // Plan 018 step 6 renamed the card footer's effort item "Complexity"
+    // (and confines the word to this one detailed card).
+    expect(html).toMatch(/Complexité : <strong style="color:var\(--color-text\)">Élevé<\/strong>/);
+    expect(html).not.toMatch(/Complexité : <strong style="color:#d97b82">/);
   });
 
   it('colours "Conformité : Non conforme" red for an accessibility theme with legal relevance', () => {
@@ -1810,5 +1835,191 @@ describe('D7: the measured gap names the metric the priority is actually about',
 
     expect(html).not.toContain('Écart mesuré sur ce site');
     expect(html).not.toContain('LCP, contenu principal');
+  });
+});
+
+// Plan 018 step 6: each priority card reads outcome first and carries a
+// concrete deterministic observation. The six blocks in order:
+//   1. rank, category, quick-win marker, stored technical title;
+//   2. "Why it matters" (theme.businessImpact);
+//   3. "What we observed" (defect label, representative page, exact counts,
+//      from the priority's own evidence, never counts alone);
+//   4. "What you can do" (recommended + reviewed remediation + ownership);
+//   5. legal and citation context;
+//   6. footer metadata: Complexity, commercial impact, affected pages,
+//      conformity, finding references.
+// The stored technical title is kept as is in this plan; presentation order
+// is the only change.
+describe('plan 018 step 6: priority card order and the deterministic observation block', () => {
+  function buildFinding(overrides: Partial<Finding> & Pick<Finding, 'findingId'>): Finding {
+    return {
+      auditId: 'a1',
+      schemaVersion: 1,
+      source: 'axe',
+      ruleId: 'color-contrast',
+      category: 'accessibility',
+      severity: 'serious',
+      wcagCriteria: ['1.4.3'],
+      title: 't',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: overrides.findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  function buildTheme(findingIds: string[], overrides: Partial<Theme> = {}): Theme {
+    return {
+      title: 'Contraste insuffisant sur les pages clés',
+      category: 'accessibility',
+      businessImpact: 'Des visiteurs ne peuvent pas lire les prix.',
+      effort: 'low',
+      impact: 'high',
+      priorityRank: 1,
+      findingIds,
+      legalRelevance: 'Critère 1.4.3 (Contraste minimum), WCAG 2.2 niveau AA',
+      recommendedActions: ['Augmentez le contraste des textes concernés.'],
+      ...overrides,
+    };
+  }
+
+  function buildAnalysis(themes: Theme[]) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes,
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const manifest = { pages: [{ url: 'https://example.com/', status: 'visited' }] } as never;
+
+  it('renders the six blocks in the plan order, outcome first, with the stored technical title', () => {
+    const analysis = buildAnalysis([
+      buildTheme(['f002', 'f001']),
+      buildTheme(['f003'], {
+        title: 'Structure ARIA incorrecte',
+        effort: 'medium',
+        impact: 'medium',
+        priorityRank: 2,
+        legalRelevance: undefined,
+      }),
+    ]);
+    const findings = [
+      buildFinding({ findingId: 'f001' }),
+      buildFinding({ findingId: 'f002', severity: 'critical' }),
+      buildFinding({ findingId: 'f003' }),
+    ];
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
+
+    // The quick-win badge is suppressed when every rendered theme is one
+    // (item 1.5), so the second theme is deliberately not a quick win: the
+    // badge on card 1 becomes an assertable block-1 marker.
+    const markers = [
+      'id="theme-1"', // 1. rank
+      'Accessibilité', // 1. category tag
+      'class="tag qw"', // 1. quick-win marker
+      'Contraste insuffisant sur les pages clés', // 1. stored technical title
+      'Pourquoi c&#39;est important', // 2 (escapeHtml turns the apostrophe)
+      'Ce que nous avons observé', // 3
+      'Ce que vous pouvez faire', // 4
+      'Exigence de conformité', // 5
+      'Complexité :', // 6. footer metadata
+      'id="theme-2"', // the second card follows the first card's blocks
+    ];
+    let last = -1;
+    for (const marker of markers) {
+      const index = html.indexOf(marker);
+      expect(index, `marker not found: ${marker}`).toBeGreaterThan(-1);
+      expect(index, `marker out of order: ${marker}`).toBeGreaterThan(last);
+      last = index;
+    }
+  });
+
+  it('grounds the observation in the evidence: defect label first, then the representative page and the exact page and occurrence counts', () => {
+    const analysis = buildAnalysis([buildTheme(['f001', 'f002'])]);
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        severity: 'serious',
+        occurrences: 2,
+        pageUrls: ['https://example.com/zones/visiteur', 'https://example.com/a-propos'],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        severity: 'critical',
+        occurrences: 3,
+        pageUrls: ['https://example.com/a-propos'],
+      }),
+    ];
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
+
+    // Representative finding: the critical f002, so its reviewed French
+    // label leads the sentence. Representative page: the lexicographically
+    // first entry of the deduplicated page union. Counts: 2 distinct pages,
+    // 2 + 3 = 5 occurrences, exact and never approximate. French guillemets
+    // carry U+00A0 (never U+202F), per the canonical strings rule.
+    expect(html).toContain(
+      'Constat représentatif : «\u00a0Le contraste des couleurs est insuffisant\u00a0», relevé par exemple sur la page https://example.com/a-propos. Ce chantier concerne 2 pages et 5 occurrences.',
+    );
+  });
+
+  it('renders the zero-page variant when no finding in the priority carries a page URL', () => {
+    const analysis = buildAnalysis([buildTheme(['f001'])]);
+    const findings = [buildFinding({ findingId: 'f001', pageUrls: [], occurrences: 4 })];
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
+
+    expect(html).toContain(
+      'Constat représentatif : «\u00a0Le contraste des couleurs est insuffisant\u00a0». Ce chantier concerne 0 pages et 4 occurrences.',
+    );
+  });
+
+  it('escapes the observation: a markup-bearing scanner title and a URL ampersand cannot inject', () => {
+    const analysis = buildAnalysis([buildTheme(['f001'])]);
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'rule-not-in-the-translations',
+        title: '<script>alert(1)</script>',
+        pageUrls: ['https://example.com/recherche?q=1&tri=prix'],
+      }),
+    ];
+
+    const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
+
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).not.toContain('q=1&tri=prix');
+    expect(html).toContain('q=1&amp;tri=prix');
+  });
+
+  it('renders the same blocks in English for an English report', () => {
+    const analysis = { ...buildAnalysis([buildTheme(['f001'])]), language: 'en' as const };
+    const findings = [buildFinding({ findingId: 'f001' })];
+
+    const html = renderThemes(getStrings('en'), 4, analysis as never, findings, manifest);
+
+    for (const marker of ['Why it matters', 'What we observed', 'What you can do']) {
+      expect(html).toContain(marker);
+    }
+    expect(html).toContain('Complexity :');
+    // The English report resolves the label to the scanner's own English
+    // title through the same shared helper.
+    expect(html).toContain('observed for example on the page https://example.com/.');
+    expect(html).toContain('This priority covers 1 page and 1 occurrence.');
   });
 });

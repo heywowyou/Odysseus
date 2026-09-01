@@ -1,3 +1,5 @@
+import type { ReportLanguage } from '@odysseus/core';
+
 /**
  * item 38 [REGRESSION]: automated-tool rule names ("Certain ARIA roles
  * must contain particular children," "Total Blocking Time",
@@ -1077,3 +1079,23 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
       'Plusieurs constats Lighthouse distincts (poids, format, dimensionnement, chargement) qui décrivent le même chantier de travail : optimiser les images du site.',
   },
 };
+
+/** Plan 018 step 6: one shared display-label resolver for a finding's rule,
+ *  extracted from the label logic the findings appendix used to inline, so
+ *  the appendix and the deterministic priority evidence (rendered-priorities.ts)
+ *  read the same table through the same function and cannot disagree about
+ *  what a defect is called. Reviewed French rule label in a French report;
+ *  the scanner's own English title otherwise (already the right language for
+ *  an English report); the rule id as the last resort when even the scanner
+ *  title is missing. */
+export function resolveFindingDisplayLabel(
+  language: ReportLanguage,
+  ruleId: string,
+  scannerTitle: string | undefined,
+): string {
+  if (language === 'fr') {
+    const translation = RULE_TRANSLATIONS_FR[ruleId];
+    if (translation !== undefined) return translation.label;
+  }
+  return scannerTitle ?? ruleId;
+}

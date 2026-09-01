@@ -77,7 +77,7 @@ export const CATEGORY_ORDER: readonly FindingCategory[] = [
  *  report review) so themes.ts's "Impact commercial" column reuses the
  *  exact same mapping instead of a second, drifting copy - both read the
  *  identical three French words (strings/fr.ts's effortImpactLevels.low/
- *  medium/high and cover.riskLevels.low/medium/high). References SEVERITY
+ *  medium/high and metadata.riskLevels.low/medium/high). References SEVERITY
  *  directly rather than repeating its hex values, so the two can never
  *  drift out of sync.
  *

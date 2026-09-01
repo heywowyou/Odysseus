@@ -40,27 +40,47 @@ export interface ReportStrings {
     technicalAppendixGroupLabel: string;
   };
   /** P3 (2026-08-21 La Corniche feedback pass): section-00, a new
-   *  non-technical intro page before the résumé. Structural/navigational,
-   *  not analytical - template-driven, no new LLM pass. */
+   *  non-technical intro page before the résumé. Plan 018 step 5 reshaped
+   *  it into a Situation, Complication, Question opening: the situation
+   *  states the diagnostic's purpose, the complication states
+   *  deterministic pages/findings/priorities facts plus the legal
+   *  reminder, and the question renders the shared generic decision
+   *  question (generic-question.ts), never a paraphrase of it. Nothing
+   *  here may assert the client's bookings, traffic, growth, or legal
+   *  obligations: criteria and verified inputs only. */
   reportIntro: {
     eyebrow: string;
     heading: string;
-    audienceHeading: string;
-    audienceYouLabel: string;
-    audienceAgencyLabel: string;
-    audienceCounselLabel: string;
-    measuresHeading: string;
-    measuresAccessibility: string;
-    measuresSeo: string;
-    measuresGeo: string;
-    measuresRendering: string;
-    consequencesHeading: string;
-    consequenceBooking: string;
+    situationHeading: string;
+    situationBody: string;
+    complicationHeading: string;
+    /** The deterministic complication facts. Counts arrive pre-formatted
+     *  (formatNumber); the "at least" wording accounts for site-wide
+     *  findings that carry no page URL. Template: {findings},
+     *  {criticalSerious}, {pages}, {priorities}. */
+    complicationBodyTemplate: string;
+    /** The legal reminder, pointing at the later legal section. Kept
+     *  conditional ("peuvent s'appliquer" / "may apply") and deferring to
+     *  counsel: client-claims.test.ts pins both properties. Template:
+     *  {legalSection}, resolved through sectionTitle('section-02') and
+     *  never a hardcoded number. */
     consequenceRegulatory: string;
-    consequenceVisibility: string;
+    /** The deterministic limitation statement offer-positioning.md
+     *  requires, kept verbatim inside the sentence. Template:
+     *  {legalSection}, {methodologySection}, both resolved through
+     *  sectionTitle. */
     notALegalOpinionNote: string;
+    questionHeading: string;
+    audienceHeading: string;
+    /** Role labels only: stakeholder names arrive in plan 019. Matches
+     *  the role vocabulary next-steps' synthesisRoles restates. */
+    roleManagementLabel: string;
+    roleTechnicalLabel: string;
+    roleCommunicationsLabel: string;
+    roleLegalLabel: string;
     nextActionsHeading: string;
-    /** Template: {title}, {contact}, {effort}. */
+    /** Template: {title}, {contact}. Effort deliberately left to the
+     *  detailed card's "Complexity" metadata, not this sentence. */
     nextActionItemTemplate: string;
     contactAgency: string;
     contactAgencyAndVendor: string;
@@ -328,8 +348,9 @@ export interface ReportStrings {
      *  (the LCEN manual-resolution removal, most concretely) changed the
      *  finding set after the writing pass had already run. Template:
      *  {actionable} (critical + serious count), {critical}, {serious},
-     *  {total} (distinct findings). Rendered before the model's now
-     *  purely qualitative executiveSummary prose. */
+     *  {total} (distinct findings). Since plan 018 step 6, rendered
+     *  beneath the model's qualitative prose: the summary leads, the
+     *  template-owned counts follow. */
     summaryCountsTemplate: string;
     /** Fix #1, 2026-08-25 report review: bridges the site-wide count in
      *  summaryCountsTemplate to the 6-card Priorities section, which does
@@ -559,6 +580,32 @@ export interface ReportStrings {
      *  Template: {legalSection} (section-02's own title, via
      *  sectionTitle). */
     lcenCrossReferenceTemplate: string;
+    /** Plan 018 step 6, card block 2: label over theme.businessImpact,
+     *  so the card reads outcome ("why it matters") before evidence. */
+    whyItMattersLabel: string;
+    /** Plan 018 step 6, card block 3: label over the deterministic
+     *  observation. The block is never counts alone: the representative
+     *  defect label always leads the sentence, and the representative
+     *  page plus the exact page and occurrence counts state that
+     *  defect's scale. */
+    observationLabel: string;
+    /** Card block 3 body when the priority's evidence carries at least
+     *  one page URL. Template: {defect} (the representative finding's
+     *  shared-helper display label), {page} (the representative page
+     *  URL), {pages}, {pageWord}, {occurrences}, {occurrenceWord}. */
+    observationWithPageTemplate: string;
+    /** Card block 3 body for zero-page evidence: no finding in the
+     *  priority carries a page URL, so no page can be named. Template:
+     *  same params as observationWithPageTemplate minus {page}. */
+    observationNoPageTemplate: string;
+    /** Plan 018 step 6, card block 4: label over the existing recommended
+     *  and reviewed remediation lists and the ownership notes. */
+    whatYouCanDoLabel: string;
+    /** Plan 018 step 6, card block 6: footer metadata label over
+     * theme.effort. The plan renames this footer item "Complexity" and
+     * confines the word to this one detailed card (plan 018 step 5
+     * removes effort from the opening's action sentence). */
+    complexityLabel: string;
   };
   /** Doc §3: bars only, no screenshots - two proportional-width bars
    *  (raw vs rendered visible-text length) plus a one-line caption, never
@@ -731,22 +778,50 @@ export interface ReportStrings {
   nextSteps: {
     eyebrow: string;
     heading: string;
+    /** Plan 018 step 7: one compact synthesis before the full legal
+     *  reference replaces the former three sales cards. */
+    /** Stake recap. States what the report is about in business terms and
+     *  never invents a financial amount; any approved financial view is
+     *  Plan 020's, inserted once in the executive summary. */
+    synthesisStake: string;
+    /** Deterministic coverage recap. Template: {priorities},
+     *  {seriousCritical}, {quickWins}, all counts derived in next-steps.ts
+     *  from the same RenderedPriority view the priority and checklist
+     *  sections consume. Rendered only when that view is supplied;
+     *  otherwise synthesisCoverageFallback renders instead, so no figure
+     *  is ever invented here. */
+    synthesisCoverageTemplate: string;
+    /** Number-free fallback for synthesisCoverageTemplate, rendered when
+     *  no rendered-priorities view reaches this section. */
+    synthesisCoverageFallback: string;
+    /** Next responsible roles, role labels only (management, technical
+     *  provider or IT, communications, legal), consistent with the
+     *  reading-guide roles in reportIntro. */
+    synthesisRoles: string;
+    /** Re-audit recommendation: after priority corrections, normally
+     *  within three to six months. */
+    synthesisReauditRecommendation: string;
+    /** What a re-audit comparison covers when the manifest carries CrUX
+     *  field data (manifest.cruxFieldData.available). Scanner-computable
+     *  facts only; must never promise a conversion or revenue change. */
+    synthesisComparisonWithFieldData: string;
+    /** Same comparison when no CrUX field data exists for the origin: must
+     *  never name field data that does not exist. */
+    synthesisComparisonWithoutFieldData: string;
+    /** Names the client's own conversion rate strictly as their separate
+     *  measurement, never as something this report estimates or promises. */
+    synthesisConversionNote: string;
     questionTitle: string;
     /** Template: {email}. item 30 [REGRESSION]: previously said requests
      *  could go "directly to the Odysseus team" with no stated address -
      *  flagged once already, recurred once. */
     questionBodyTemplate: string;
-    reauditTitle: string;
-    reauditBody: string;
-    /** item 3.12: the re-audit card described the offer with no price, no
-     *  lead time, and no way to order it - the one page in the report
-     *  with commercial upside converting nothing. Template: {price},
-     *  {days}, {email}. Placeholder figures pending confirmation, see
-     *  ODYSSEUS_REAUDIT_PRICE_EUR_HT / ODYSSEUS_REAUDIT_LEAD_TIME_DAYS in
-     *  html-utils.ts. */
+    /** item 3.12: the re-audit offer must state a price, a lead time, and
+     *  a way to order it - the one page in the report with commercial
+     *  upside converting nothing. Template: {price}, {days}, {email}.
+     *  Figures come only from ODYSSEUS_REAUDIT_PRICE_EUR_HT /
+     *  ODYSSEUS_REAUDIT_LEAD_TIME_DAYS in html-utils.ts, never from copy. */
     reauditPricingTemplate: string;
-    postFixTitle: string;
-    postFixBody: string;
     /** item 31: no authorship, terms, or liability block anywhere in a
      *  paid deliverable that may be forwarded to counsel. Template:
      *  {producer}, {renderDate}, {renderBuild}, {templateVersion},

@@ -26,7 +26,7 @@ import { renderSeverityBadge } from '../severity-badge.js';
 import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { groupAppendix, type RuleGroup } from '../appendix-grouping.js';
-import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
+import { resolveFindingDisplayLabel, RULE_TRANSLATIONS_FR } from '../rule-translations.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 
 function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: RuleGroup): string {
@@ -381,13 +381,18 @@ function renderRuleGroup(
     ? `<span class="tag" style="background:var(--color-surface);opacity:0.75;font-size:10.5px">${escapeHtml(vendorLabel)}</span>`
     : '';
   // item 38 [REGRESSION]: rule titles and codes rendered in English inside
-  // a French report - translated here for fr, left as the scanner's own
-  // English title for en (already correct in that language). The gloss
-  // (a short plain-language explanation) is fr-only, shown under the
+  // a French report - the label is resolved through the shared helper in
+  // rule-translations.ts (plan 018 step 6) so this section and the
+  // priority cards' evidence cannot disagree about a defect's name. The
+  // gloss (a short plain-language explanation) is fr-only, shown under the
   // machine-readable rule code for the cryptic "-insight" style codes a
   // non-technical reader can't otherwise decode.
   const translation = language === 'fr' ? RULE_TRANSLATIONS_FR[group.ruleId] : undefined;
-  const representativeTitle = translation?.label ?? group.findings[0]?.title ?? group.ruleId;
+  const representativeTitle = resolveFindingDisplayLabel(
+    language,
+    group.ruleId,
+    group.findings[0]?.title,
+  );
   const gloss = translation
     ? `<span style="font-size:10px;opacity:0.5">- ${escapeHtml(translation.gloss)}</span>`
     : '';

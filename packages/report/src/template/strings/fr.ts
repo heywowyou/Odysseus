@@ -22,29 +22,25 @@ export const fr: ReportStrings = {
   },
   reportIntro: {
     eyebrow: 'À propos de ce rapport',
-    heading: 'Comment lire ce rapport',
-    audienceHeading: "À qui s'adresse chaque partie du rapport",
-    audienceYouLabel: 'Vous (dirigeant)',
-    audienceAgencyLabel: 'Votre prestataire / agence web',
-    audienceCounselLabel: 'Votre conseil juridique',
-    measuresHeading: 'Ce que cet audit mesure',
-    measuresAccessibility:
-      'Accessibilité : vos clients en situation de handicap peuvent-ils réserver et naviguer sur votre site ?',
-    measuresSeo: 'Référencement (SEO) : Google comprend-il correctement vos pages ?',
-    measuresGeo:
-      'Visibilité IA (GEO) : les assistants IA (ChatGPT et équivalents) peuvent-ils comprendre et recommander votre établissement ?',
-    measuresRendering:
-      "Rendu : votre contenu existe-t-il même sans JavaScript, pour les robots et lecteurs d'écran les plus basiques ?",
-    consequencesHeading: 'Ce que ça change concrètement pour vous',
-    consequenceBooking: 'Des clients qui ne peuvent pas terminer une réservation.',
+    heading: 'Situation, constats et question',
+    situationHeading: 'La situation',
+    situationBody:
+      "Ce rapport répond à un besoin simple : disposer d'un état des lieux factuel du site, établi par des tests automatisés et reproductibles, pour décider quoi corriger et dans quel ordre. Des outils déterministes ont visité le périmètre analysé et comparé chaque page à des critères publics : accessibilité (WCAG 2.2 niveau AA), référencement naturel (SEO), visibilité auprès des assistants IA (GEO), et rendu sans JavaScript. Chaque constat listé dans ce rapport provient d'un de ces tests : rien n'est inventé, rien n'est deviné.",
+    complicationHeading: 'Ce que le diagnostic relève',
+    complicationBodyTemplate:
+      "L'analyse a relevé {findings} constats distincts, dont {criticalSerious} critiques ou sérieux, présents sur au moins {pages} pages du périmètre analysé. Ces constats sont regroupés en {priorities} priorités classées, qui indiquent par où commencer.",
     consequenceRegulatory:
-      "Des obligations légales qui peuvent s'appliquer à votre établissement : la section « Exposition légale » décrit les critères et les faits enregistrés, à faire confirmer par votre conseil juridique.",
-    consequenceVisibility:
-      'Une visibilité réduite dans les résultats de recherche et les assistants IA.',
+      "Des obligations légales peuvent s'appliquer à votre établissement : la section « {legalSection} » décrit les critères publiés et les faits enregistrés, à faire confirmer par votre conseil juridique.",
     notALegalOpinionNote:
-      "Ce que ce rapport n'est pas : un avis juridique (voir la section « Exposition légale ») ; un audit exhaustif, la détection automatique couvrant environ 30 à 40 % des critères d'accessibilité (voir « Méthodologie et limites »).",
+      "Ce que ce rapport n'est pas : un avis juridique (voir la section « {legalSection} ») ; un audit exhaustif, la détection automatique couvrant environ 30 à 40 % des critères d'accessibilité (voir « {methodologySection} »).",
+    questionHeading: 'La question à laquelle ce rapport répond',
+    audienceHeading: 'Qui utilise ce rapport',
+    roleManagementLabel: 'La direction',
+    roleTechnicalLabel: 'Prestataire technique ou service informatique',
+    roleCommunicationsLabel: 'Communication',
+    roleLegalLabel: 'Juridique',
     nextActionsHeading: 'Vos trois prochaines actions',
-    nextActionItemTemplate: '{title}, à transmettre à : {contact} (effort : {effort}).',
+    nextActionItemTemplate: '{title}, à transmettre à : {contact}.',
     contactAgency: 'votre agence',
     contactAgencyAndVendor: "votre agence et l'éditeur du composant tiers concerné",
     contactUnknownVendor: "l'éditeur du composant tiers concerné",
@@ -365,6 +361,17 @@ export const fr: ReportStrings = {
       'Ce chantier relève entièrement de {vendor} : la correction doit passer par son éditeur, pas par votre agence web.',
     lcenCrossReferenceTemplate:
       'Ce constat relève de l’obligation légale d’identification détaillée dans « {legalSection} ».',
+    // Plan 018 step 6: each priority card reads outcome first (why it
+    // matters), then the deterministic observation (what we observed,
+    // never counts alone: the defect label leads), then the actions.
+    whyItMattersLabel: "Pourquoi c'est important",
+    observationLabel: 'Ce que nous avons observé',
+    observationWithPageTemplate:
+      'Constat représentatif : « {defect} », relevé par exemple sur la page {page}. Ce chantier concerne {pages} {pageWord} et {occurrences} {occurrenceWord}.',
+    observationNoPageTemplate:
+      'Constat représentatif : « {defect} ». Ce chantier concerne {pages} {pageWord} et {occurrences} {occurrenceWord}.',
+    whatYouCanDoLabel: 'Ce que vous pouvez faire',
+    complexityLabel: 'Complexité',
   },
   renderDiffEvidence: {
     eyebrow: 'Preuve de rendu',
@@ -628,25 +635,33 @@ export const fr: ReportStrings = {
     // matches the section's own heading below now.
     eyebrow: 'Prochaines étapes',
     heading: 'Prochaines étapes & contact',
+    // Plan 018 step 7: one compact synthesis before the full legal
+    // reference replaces the former three sales cards.
+    synthesisStake:
+      "Votre site est un canal direct de réservation et d'information : son accessibilité, sa visibilité dans les moteurs de recherche et les assistants IA, et sa vitesse conditionnent ce que vos visiteurs peuvent y faire. Ce rapport en dresse les constats mesurés ; leur correction relève des rôles ci-dessous.",
+    synthesisCoverageTemplate:
+      'Priorités classées : {priorities}. Couvrant au moins un constat critique ou sérieux : {seriousCritical}. Gains rapides, effort faible pour un impact moyen ou élevé : {quickWins}.',
+    synthesisCoverageFallback:
+      "La répartition des constats par gravité figure plus haut dans ce rapport, dans les priorités classées et les chiffres de l'audit.",
+    synthesisRoles:
+      'Qui agit ensuite : la direction arbitre et suit ; le prestataire technique ou le service informatique corrige ; la communication vérifie les contenus publiés ; le juridique confirme les obligations applicables.',
+    synthesisReauditRecommendation:
+      'Après la correction des priorités, un ré-audit du même périmètre est recommandé, normalement dans un délai de trois à six mois, une fois les correctifs en ligne.',
+    synthesisComparisonWithFieldData:
+      'La comparaison porte uniquement sur ce que le scan recalcule : les constats par gravité, les critères WCAG 2.2 AA en échec et les données réelles du Chrome UX Report.',
+    synthesisComparisonWithoutFieldData:
+      'La comparaison porte uniquement sur ce que le scan recalcule : les constats par gravité et les critères WCAG 2.2 AA en échec.',
+    synthesisConversionNote:
+      "Votre propre taux de conversion, suivi avec vos outils, reste une mesure distincte : le ré-audit ne l'estime pas.",
     questionTitle: 'Une question ?',
     questionBodyTemplate:
       "Toute demande de clarification sur un constat ou une priorité peut être adressée à l'équipe Odysseus à {email}, en citant l'identifiant du constat concerné.",
-    reauditTitle: 'Ré-audits',
-    reauditBody:
-      'Un ré-audit relance le même périmètre et compare les résultats au rapport précédent, constat par constat, pour mesurer la progression.',
-    // item 3.12: no price, no lead time, no way to order - placeholder
-    // figures pending confirmation (see ODYSSEUS_REAUDIT_PRICE_EUR_HT /
-    // ODYSSEUS_REAUDIT_LEAD_TIME_DAYS, html-utils.ts). Template:
-    // {price}, {days}, {email}.
+    // item 3.12: the offer must state a price, a lead time, and a way to
+    // order it. Figures come only from ODYSSEUS_REAUDIT_PRICE_EUR_HT /
+    // ODYSSEUS_REAUDIT_LEAD_TIME_DAYS (html-utils.ts), never from copy.
+    // Template: {price}, {days}, {email}.
     reauditPricingTemplate:
       'Tarif indicatif : {price} € HT, sous {days} jours ouvrés après confirmation des correctifs. Pour en faire la demande, écrivez à {email}.',
-    // item 2.6: "Vérification post-correctifs" wrapped to two lines while
-    // its sibling card titles didn't, misaligning the three card bodies
-    // below it. Shortened rather than given a min-height, which would
-    // still misalign a future longer title.
-    postFixTitle: 'Vérification après correction',
-    postFixBody:
-      'Une fois les priorités traitées, une vérification ciblée confirme que les constats corrigés le sont bien, sans relancer un audit complet.',
     authorshipTemplate:
       'Rapport produit par {producer}, rendu le {renderDate} (build de rendu {renderBuild}, modèle {templateVersion}), à partir du scan achevé le {scanDate} (build de scan {scanBuild}), identifiant de rapport {reportId}.',
     issuerBlockTemplate: 'Signataire : {signatory}. SIRET : {registrationNumber}.',

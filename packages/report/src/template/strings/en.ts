@@ -21,28 +21,25 @@ export const en: ReportStrings = {
   },
   reportIntro: {
     eyebrow: 'About this report',
-    heading: 'How to read this report',
-    audienceHeading: 'Who each part of this report is for',
-    audienceYouLabel: 'You (director)',
-    audienceAgencyLabel: 'Your provider / web agency',
-    audienceCounselLabel: 'Your legal counsel',
-    measuresHeading: 'What this audit measures',
-    measuresAccessibility:
-      'Accessibility: can customers with disabilities book and navigate your site?',
-    measuresSeo: 'SEO: does Google correctly understand your pages?',
-    measuresGeo:
-      'AI visibility (GEO): can AI assistants (ChatGPT and equivalents) understand and recommend your business?',
-    measuresRendering:
-      'Rendering: does your content exist even without JavaScript, for the most basic crawlers and screen readers?',
-    consequencesHeading: 'What this concretely changes for you',
-    consequenceBooking: 'Customers who cannot complete a booking.',
+    heading: 'Situation, findings, and question',
+    situationHeading: 'The situation',
+    situationBody:
+      'This report answers one simple need: a factual picture of the site, established by automated, reproducible tests, so you can decide what to fix and in what order. Deterministic tools visited the analyzed scope and compared every page against public criteria: accessibility (WCAG 2.2 level AA), search engine optimization (SEO), visibility to AI assistants (GEO), and rendering without JavaScript. Every finding listed in this report comes from one of those tests: nothing is invented, nothing is guessed.',
+    complicationHeading: 'What the diagnostic found',
+    complicationBodyTemplate:
+      'The analysis raised {findings} distinct findings, {criticalSerious} of them critical or serious, present on at least {pages} pages of the analyzed scope. These findings are grouped into {priorities} ranked priorities, which indicate where to start.',
     consequenceRegulatory:
-      'Legal obligations that may apply to your establishment: the "Legal exposure" section sets out the criteria and the recorded facts, to be confirmed with your legal adviser.',
-    consequenceVisibility: 'Reduced visibility in search results and AI assistants.',
+      'Legal obligations may apply to your establishment: the "{legalSection}" section sets out the published criteria and the recorded facts, to be confirmed with your legal adviser.',
     notALegalOpinionNote:
-      'What this report is not: legal advice (see the "Legal exposure" section); an exhaustive audit, since automated detection covers roughly 30 to 40 percent of accessibility criteria (see "Methodology and limits").',
+      'What this report is not: legal advice (see the "{legalSection}" section); an exhaustive audit, since automated detection covers roughly 30 to 40 percent of accessibility criteria (see "{methodologySection}").',
+    questionHeading: 'The question this report answers',
+    audienceHeading: 'Who uses this report',
+    roleManagementLabel: 'Management',
+    roleTechnicalLabel: 'Technical provider or IT',
+    roleCommunicationsLabel: 'Communications',
+    roleLegalLabel: 'Legal',
     nextActionsHeading: 'Your three next actions',
-    nextActionItemTemplate: '{title}, pass on to: {contact} (effort: {effort}).',
+    nextActionItemTemplate: '{title}, pass on to: {contact}.',
     contactAgency: 'your agency',
     contactAgencyAndVendor: 'your agency and the relevant third-party provider',
     contactUnknownVendor: 'the relevant third-party provider',
@@ -294,6 +291,17 @@ export const en: ReportStrings = {
       'This priority is entirely inside {vendor}: it has to go through their provider, not your web agency.',
     lcenCrossReferenceTemplate:
       'This finding is part of the legal identification obligation detailed in "{legalSection}".',
+    // Plan 018 step 6: each priority card reads outcome first (why it
+    // matters), then the deterministic observation (what we observed,
+    // never counts alone: the defect label leads), then the actions.
+    whyItMattersLabel: 'Why it matters',
+    observationLabel: 'What we observed',
+    observationWithPageTemplate:
+      'Representative finding: "{defect}", observed for example on the page {page}. This priority covers {pages} {pageWord} and {occurrences} {occurrenceWord}.',
+    observationNoPageTemplate:
+      'Representative finding: "{defect}". This priority covers {pages} {pageWord} and {occurrences} {occurrenceWord}.',
+    whatYouCanDoLabel: 'What you can do',
+    complexityLabel: 'Complexity',
   },
   renderDiffEvidence: {
     eyebrow: 'Render evidence',
@@ -538,17 +546,33 @@ export const en: ReportStrings = {
   nextSteps: {
     eyebrow: 'Next steps',
     heading: 'Next steps & contact',
+    // Plan 018 step 7: one compact synthesis before the full legal
+    // reference replaces the former three sales cards.
+    synthesisStake:
+      'Your site is a direct booking and information channel: its accessibility, its visibility in search engines and AI assistants, and its speed shape what your visitors can actually do there. This report states the measured facts; fixing them is the job of the roles below.',
+    synthesisCoverageTemplate:
+      'Ranked priorities: {priorities}. Covering at least one critical or serious finding: {seriousCritical}. Quick wins, low effort for a medium or high impact: {quickWins}.',
+    synthesisCoverageFallback:
+      'The breakdown of findings by severity appears earlier in this report, in the ranked priorities and the audit figures.',
+    synthesisRoles:
+      'Who acts next: management arbitrates and follows up; the technical provider or IT applies the fixes; communications reviews published content; legal confirms the applicable obligations.',
+    synthesisReauditRecommendation:
+      'Once the priorities are fixed, a re-audit of the same scope is recommended, normally within three to six months, after the fixes are live.',
+    synthesisComparisonWithFieldData:
+      'The comparison covers only what the scan recomputes: findings by severity, failed WCAG 2.2 AA criteria, and Chrome UX Report real-user data.',
+    synthesisComparisonWithoutFieldData:
+      'The comparison covers only what the scan recomputes: findings by severity and failed WCAG 2.2 AA criteria.',
+    synthesisConversionNote:
+      'Your own conversion rate, tracked with your own tools, remains a separate measurement: the re-audit does not estimate it.',
     questionTitle: 'Questions?',
     questionBodyTemplate:
       'Any request for clarification about a finding or a priority can be sent to the Odysseus team at {email}, citing the relevant finding ID.',
-    reauditTitle: 'Re-audits',
-    reauditBody:
-      'A re-audit re-runs the same scope and compares results against the previous report, finding by finding, to measure progress.',
+    // item 3.12: the offer must state a price, a lead time, and a way to
+    // order it. Figures come only from ODYSSEUS_REAUDIT_PRICE_EUR_HT /
+    // ODYSSEUS_REAUDIT_LEAD_TIME_DAYS (html-utils.ts), never from copy.
+    // Template: {price}, {days}, {email}.
     reauditPricingTemplate:
       'Indicative price: EUR {price} excl. VAT, within {days} business days of confirming fixes are live. To request one, write to {email}.',
-    postFixTitle: 'Post-fix verification',
-    postFixBody:
-      'Once priorities are addressed, a targeted check confirms the fixed findings are genuinely resolved, without re-running a full audit.',
     authorshipTemplate:
       'Report produced by {producer}, rendered on {renderDate} (render build {renderBuild}, template {templateVersion}), from the scan completed on {scanDate} (scan build {scanBuild}), report ID {reportId}.',
     issuerBlockTemplate: 'Signatory: {signatory}. SIRET: {registrationNumber}.',
