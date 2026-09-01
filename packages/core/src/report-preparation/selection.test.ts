@@ -233,4 +233,26 @@ describe('a ready candidate never becomes current through the fallback', () => {
     );
     expect(resolution).toEqual({ kind: 'none', reason: 'no-complete-pair' });
   });
+
+  it("excludes a failed run's partial analyses from the fallback", () => {
+    const oldFr = analysis('old-fr', 'fr', '2026-09-01T00:00:00Z');
+    const oldEn = analysis('old-en', 'en', '2026-09-01T06:00:00Z');
+    const orphanFr = analysis('orphan-fr', 'fr', '2026-09-02T00:00:00Z');
+    const resolution = resolveSelectedAnalysisPair(
+      {
+        candidate: {
+          status: 'failed',
+          reason: 'mistral: exhausted retries',
+          createdAt: '2026-09-02T12:00:00Z',
+          partialPair: { frAnalysisId: 'orphan-fr' },
+        },
+      },
+      [oldFr, oldEn, orphanFr],
+    );
+    expect(resolution.kind).toBe('legacy-latest');
+    if (resolution.kind === 'legacy-latest') {
+      expect(resolution.fr.analysisId).toBe('old-fr');
+      expect(resolution.en.analysisId).toBe('old-en');
+    }
+  });
 });

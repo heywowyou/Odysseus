@@ -214,6 +214,10 @@ const writingCandidateStateSchema = new Schema(
     createdAt: { type: String },
     approvedAt: { type: String },
     reason: { type: String },
+    // A failed run may have persisted one language before failing; the
+    // selection fallback must be able to exclude those partials.
+    partialFrAnalysisId: { type: String },
+    partialEnAnalysisId: { type: String },
   },
   { _id: false },
 );

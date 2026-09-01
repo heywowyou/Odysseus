@@ -152,11 +152,15 @@ export async function recordReadyWritingCandidate(
 }
 
 /** Persist a failed regeneration as a failed candidate. The previously
- *  selected references survive untouched, so the paid report is unchanged. */
+ *  selected references survive untouched, so the paid report is unchanged.
+ *  When one language succeeded before the failure, its analysis id is
+ *  recorded as a partial so the selection fallback can exclude the
+ *  half-generated content. */
 export async function recordFailedWritingCandidate(
   connection: Connection,
   auditId: string,
   reason: string,
+  partialPair: { frAnalysisId?: string; enAnalysisId?: string } = {},
 ): Promise<ReportPreparation> {
   const current = await getReportPreparation(connection, auditId);
   const next: ReportPreparation = {
@@ -165,7 +169,12 @@ export async function recordFailedWritingCandidate(
       ...(current.writingSelection?.selected
         ? { selected: current.writingSelection.selected }
         : {}),
-      candidate: { status: 'failed', reason, createdAt: new Date().toISOString() },
+      candidate: {
+        status: 'failed',
+        reason,
+        createdAt: new Date().toISOString(),
+        ...(partialPair.frAnalysisId || partialPair.enAnalysisId ? { partialPair } : {}),
+      },
     },
     updatedAt: new Date().toISOString(),
   };

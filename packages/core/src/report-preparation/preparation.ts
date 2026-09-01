@@ -48,10 +48,19 @@ export interface AnalysisPairRef {
  * unrepresentable. `generating` is deliberately not persistable: it lives
  * only in the interface process while a regeneration request is in flight,
  * so a server restart can never strand a stuck generating candidate.
+ * A `failed` candidate may carry the partial analyses its run managed to
+ * persist before failing (one language succeeding while the other hits a
+ * provider error, for example); the selection fallback must never adopt
+ * them, exactly as it must never adopt a ready pair.
  */
 export type WritingCandidateState =
   | { status: 'ready'; pair: AnalysisPairRef; createdAt: string }
-  | { status: 'failed'; reason: string; createdAt: string }
+  | {
+      status: 'failed';
+      reason: string;
+      createdAt: string;
+      partialPair?: Partial<AnalysisPairRef> | undefined;
+    }
   | { status: 'selected'; pair: AnalysisPairRef; approvedAt: string };
 
 export interface WritingSelection {

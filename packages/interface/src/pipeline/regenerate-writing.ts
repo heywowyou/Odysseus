@@ -118,6 +118,7 @@ export async function regenerateWriting(
   }
 
   inFlight.add(auditId);
+  let partialPair: { frAnalysisId?: string; enAnalysisId?: string } = {};
   try {
     const frStage = await runAnalysisStage(
       auditDir,
@@ -126,6 +127,7 @@ export async function regenerateWriting(
       { language: 'fr' },
       connection,
     );
+    partialPair = { frAnalysisId: frStage.analysis.analysisId };
     const enStage = await runAnalysisStage(
       auditDir,
       manifest,
@@ -133,6 +135,10 @@ export async function regenerateWriting(
       { language: 'en' },
       connection,
     );
+    partialPair = {
+      frAnalysisId: frStage.analysis.analysisId,
+      enAnalysisId: enStage.analysis.analysisId,
+    };
 
     const pair: AnalysisPairRef = {
       frAnalysisId: frStage.analysis.analysisId,
@@ -158,7 +164,10 @@ export async function regenerateWriting(
       throw error;
     }
     const reason = error instanceof Error ? error.message : String(error);
-    await recordFailedWritingCandidate(connection, auditId, reason);
+    // One language may have succeeded before the failure; recording the
+    // partial lets the selection fallback exclude the half-generated
+    // content instead of adopting it as current.
+    await recordFailedWritingCandidate(connection, auditId, reason, partialPair);
     throw new WritingRegenerationFailedError(reason);
   } finally {
     inFlight.delete(auditId);

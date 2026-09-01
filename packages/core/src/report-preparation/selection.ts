@@ -134,15 +134,23 @@ export function resolveSelectedAnalysisPair<A extends AnalysisRecordLike>(
   // analyses after a regeneration ARE the candidate's, and the fallback
   // would silently make the candidate effective before approval (the
   // exact failure the plan forbids, found live during the operator
-  // review). Exclude the ready candidate's pair from the ranking.
+  // review). The partial analyses of a failed run are excluded for the
+  // same reason: one language succeeding while the other fails must not
+  // leave a half-generated pair looking current.
   const candidate = selection?.candidate;
-  const excluded =
-    candidate?.status === 'ready'
-      ? new Set<string>([candidate.pair.frAnalysisId, candidate.pair.enAnalysisId])
-      : undefined;
-  const eligible = excluded
-    ? analyses.filter((analysis) => !excluded.has(analysis.analysisId))
-    : analyses;
+  const excluded = new Set<string>();
+  if (candidate?.status === 'ready') {
+    excluded.add(candidate.pair.frAnalysisId);
+    excluded.add(candidate.pair.enAnalysisId);
+  }
+  if (candidate?.status === 'failed' && candidate.partialPair) {
+    if (candidate.partialPair.frAnalysisId) excluded.add(candidate.partialPair.frAnalysisId);
+    if (candidate.partialPair.enAnalysisId) excluded.add(candidate.partialPair.enAnalysisId);
+  }
+  const eligible =
+    excluded.size > 0
+      ? analyses.filter((analysis) => !excluded.has(analysis.analysisId))
+      : analyses;
   const legacy = pickLegacyLatestPair(eligible);
   if (!legacy) return { kind: 'none', reason: 'no-complete-pair' };
   return { kind: 'legacy-latest', fr: legacy.fr, en: legacy.en };
