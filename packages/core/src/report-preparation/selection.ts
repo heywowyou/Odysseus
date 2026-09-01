@@ -38,11 +38,30 @@ function provenanceKey(provenance: FindingsProvenance): string {
   ].join('\u0000');
 }
 
+/**
+ * Trade-off 40 fail-closed, applied to the selector: analysis documents
+ * written before the provenance milestone carry no stamp at all (the TS
+ * type says required, but Mongoose only validates on write, so old rows in
+ * a real database predate it). Such an analysis is never trusted and never
+ * selectable; it is skipped, not crashed on. Found live on a real audit
+ * whose stored analyses predated the stamp.
+ */
+function hasCompleteProvenance(analysis: AnalysisRecordLike): boolean {
+  const provenance = analysis.findingsProvenance as FindingsProvenance | undefined;
+  return (
+    provenance !== undefined &&
+    provenance.findingsSchemaVersion !== undefined &&
+    typeof provenance.normalizationFingerprint === 'string' &&
+    typeof provenance.findingsDigest === 'string'
+  );
+}
+
 export function isCompleteCompatiblePair<A extends AnalysisRecordLike>(
   fr: A | undefined,
   en: A | undefined,
 ): boolean {
   if (!fr || !en) return false;
+  if (!hasCompleteProvenance(fr) || !hasCompleteProvenance(en)) return false;
   if (fr.auditId !== en.auditId) return false;
   if (fr.language !== 'fr' || en.language !== 'en') return false;
   return provenanceKey(fr.findingsProvenance) === provenanceKey(en.findingsProvenance);
@@ -53,13 +72,16 @@ export function isCompleteCompatiblePair<A extends AnalysisRecordLike>(
  * newest complete compatible pair, grouped by structural run. Within a
  * provenance group the latest French and English analyses are paired; the
  * group whose pair is newest wins, ties broken by provenance digest for
- * determinism. Returns null when no complete pair exists at all.
+ * determinism. Analyses without a provenance stamp are skipped (they can
+ * never form a compatible pair). Returns null when no complete pair exists
+ * at all.
  */
 export function pickLegacyLatestPair<A extends AnalysisRecordLike>(
   analyses: readonly A[],
 ): { fr: A; en: A } | null {
   const groups = new Map<string, { fr?: A; en?: A; latest: number }>();
   for (const analysis of analyses) {
+    if (!hasCompleteProvenance(analysis)) continue;
     const key = provenanceKey(analysis.findingsProvenance);
     const group = groups.get(key) ?? { latest: 0 };
     if (analysis.language === 'fr') {

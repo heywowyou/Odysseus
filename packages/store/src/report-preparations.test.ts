@@ -378,6 +378,39 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
     }
   });
 
+  it('skips analyses stored before the provenance stamp instead of failing', async () => {
+    await insertAudit('prep-noprovenance');
+    // A pre-trade-off-40 document exactly as legacy rows sit in the real
+    // database: no findingsProvenance at all. Written straight through the
+    // raw collection because persistAnalysis validates the field.
+    await createAnalysisModel(connection!).collection.insertOne({
+      analysisId: 'prep-an-legacy-1',
+      auditId: 'prep-noprovenance',
+      language: 'fr',
+      model: 'mistral-medium-latest',
+      temperature: 0.2,
+      generatedAt: new Date('2026-08-01T00:00:00Z'),
+      executiveSummary: 'Summary.',
+      overallRisk: 'low',
+      themes: [],
+      quickWins: [],
+      notes: 'Notes.',
+    });
+
+    const onlyLegacy = await resolveSelectedAnalysisPairForAudit(connection!, 'prep-noprovenance');
+    expect(onlyLegacy).toEqual({ kind: 'none', reason: 'no-complete-pair' });
+
+    // The operator's actual case: a stamped pair coexists with legacy rows.
+    const fr = await insertAnalysis('prep-noprovenance', 'fr', '2026-09-01T00:00:00Z');
+    const en = await insertAnalysis('prep-noprovenance', 'en', '2026-09-01T06:00:00Z');
+    const mixed = await resolveSelectedAnalysisPairForAudit(connection!, 'prep-noprovenance');
+    expect(mixed.kind).toBe('legacy-latest');
+    if (mixed.kind === 'legacy-latest') {
+      expect(mixed.fr.analysisId).toBe(fr.analysisId);
+      expect(mixed.en.analysisId).toBe(en.analysisId);
+    }
+  });
+
   it('reports none when an audit has no analyses at all', async () => {
     await insertAudit('prep-nothing');
     const resolution = await resolveSelectedAnalysisPairForAudit(connection!, 'prep-nothing');
