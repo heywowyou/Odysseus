@@ -380,6 +380,14 @@ means numbered entry 24, not a literal Markdown heading anchor.
     moving server-side `git pull`, or a general-purpose Actions SSH key.
     → trade-offs.md#61
 
+62. Report preparation (plan 019) is one deep core module with typed
+    vocabularies, evidence-bound tri-state journeys, candidate-before-selection
+    writing, and per-language fallbacks; handlers and rendering consume its
+    bounded outputs and never reimplement preparation policy. `no-issue-detected`
+    requires positive evidence the detector ran; journey evidence reads the
+    on-disk manifest, not the Mongo audit document, whose schema does not
+    persist `siteSignals`. → trade-offs.md#62
+
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
 module, Mongoose 9, Zod, Commander, Vitest, pino, `@mistralai/mistralai`.

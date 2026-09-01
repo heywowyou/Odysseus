@@ -2741,6 +2741,64 @@ general-purpose SSH key, because compromise would expose production secrets;
 and rebuild only one mutable working tree, because rollback would require
 reconstructing the prior source and image during an incident.
 
+### 62. Report preparation is one bounded aggregate with typed vocabularies, evidence-bound journeys, and candidate-before-selection writing (plan 019)
+
+Personalizing the paid report is owned by one deep module,
+`packages/core/src/report-preparation/`, reached through one operator
+workflow, the **Prepare report** card. It owns the vocabularies, validation,
+fallback rules, evidence resolution, warning digest, preview view models, and
+writing selection. HTTP handlers and report rendering consume its bounded
+outputs; neither reimplements preparation policy.
+
+The operator's context is typed, not free: fixed situation, trigger, and
+stakeholder-role vocabularies with bilingual copy tables, plus bounded
+localized optional text. Free prompt fragments are rejected at the boundary.
+Stored operator text is data only: trimmed, length-bounded, escaped at render
+time, and never routed into a model or system instruction. Trigger `other`
+notes exist per language; a missing language falls back to safe generic copy
+independently, never machine translated and never copied from the other
+language.
+
+Journeys are evidence-bound with tri-state steps. A displayed step is exactly
+one of **issue observed**, **no issue detected**, or **not evaluated**.
+`no-issue-detected` requires positive evidence that the relevant deterministic
+check ran successfully against the applicable captured page; absence of a
+finding is never a pass. The catalogue is closed (initially
+discovery/navigation and transaction/booking), suggestions are computed from
+captured evidence with typed exclusion reasons, and the operator may only
+confirm or remove suggestions. Journey evidence reads the on-disk
+`manifest.json` and findings artifacts, not the Mongo audit document, because
+the Mongoose audit schema deliberately does not persist `siteSignals`,
+`translationClusters`, or `cruxFieldData` even though the TS manifest type
+carries them.
+
+Writing versions are candidate-before-selection. Regeneration reuses the
+existing structural analysis, creates immutable analyses, and records the
+exact pair as a candidate; only explicit operator approval atomically changes
+selection, and the old pair stays persisted. Selection refers to a complete
+French/English pair of the same audit sharing one `findingsProvenance`
+(compatible structural run); the store service enforces this before an atomic
+selection update. Legacy audits without selection resolve deterministically
+to the latest complete pre-feature pair from one centralized selector, and
+callers must not recover the old latest-record behaviour ad hoc.
+
+Validation at the interface boundary uses the preparation module's Zod
+schemas, exported as parse functions from `core` (where Zod is already a
+dependency) rather than adding Zod to the `interface` package, which keeps
+its existing hand-rolled handler convention and acquires no new dependency.
+
+Rejected: extending `AuditManualFields` with every preparation decision, a
+shallow grab bag with no policy boundary; free-text prompt input, which
+reopens the door to unreviewed model-facing text and unreviewed report copy;
+custom operator-drawn journeys and free-form stakeholder roles, which cannot
+be bound to deterministic evidence; treating a missing finding as a passed
+check, which turns untested pages into claimed passes; auto-selecting a
+finished candidate, which makes regeneration effective before the operator
+has read it; and a persisted `generating` candidate state, which a server
+restart could strand, so in-flight generation is tracked in memory and a
+failed or interrupted run simply leaves the selected pair unchanged with no
+candidate record.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

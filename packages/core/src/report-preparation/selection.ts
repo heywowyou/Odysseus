@@ -1,0 +1,122 @@
+import type { FindingsProvenance } from '../normalize/findings-provenance.js';
+import type { ReportLanguage } from '../types/llm-output.js';
+import type { AnalysisPairRef, WritingSelection } from './preparation.js';
+
+/**
+ * Selected-analysis resolution, plan 019 step 2. One centralized decision:
+ * an explicit selection is honoured when it still refers to a complete
+ * compatible pair, otherwise selection fails closed with a typed reason;
+ * only a legacy record with no explicit selection falls back to the latest
+ * complete pair. Callers (store, CLI, report orchestration) must not
+ * recover the old latest-record behaviour ad hoc.
+ */
+
+export interface AnalysisRecordLike {
+  analysisId: string;
+  auditId: string;
+  language: ReportLanguage;
+  findingsProvenance: FindingsProvenance;
+  generatedAt: Date | string;
+}
+
+export type SelectedAnalysisPairResolution<A extends AnalysisRecordLike> =
+  | { kind: 'selected'; fr: A; en: A }
+  | { kind: 'legacy-latest'; fr: A; en: A }
+  | { kind: 'none'; reason: 'no-analyses' | 'no-complete-pair' | 'selection-incomplete' };
+
+function timestampOf(analysis: AnalysisRecordLike): number {
+  return analysis.generatedAt instanceof Date
+    ? analysis.generatedAt.getTime()
+    : Date.parse(analysis.generatedAt);
+}
+
+function provenanceKey(provenance: FindingsProvenance): string {
+  return [
+    provenance.findingsSchemaVersion,
+    provenance.normalizationFingerprint,
+    provenance.findingsDigest,
+  ].join('\u0000');
+}
+
+export function isCompleteCompatiblePair<A extends AnalysisRecordLike>(
+  fr: A | undefined,
+  en: A | undefined,
+): boolean {
+  if (!fr || !en) return false;
+  if (fr.auditId !== en.auditId) return false;
+  if (fr.language !== 'fr' || en.language !== 'en') return false;
+  return provenanceKey(fr.findingsProvenance) === provenanceKey(en.findingsProvenance);
+}
+
+/**
+ * The legacy fallback for audits created before explicit selection: the
+ * newest complete compatible pair, grouped by structural run. Within a
+ * provenance group the latest French and English analyses are paired; the
+ * group whose pair is newest wins, ties broken by provenance digest for
+ * determinism. Returns null when no complete pair exists at all.
+ */
+export function pickLegacyLatestPair<A extends AnalysisRecordLike>(
+  analyses: readonly A[],
+): { fr: A; en: A } | null {
+  const groups = new Map<string, { fr?: A; en?: A; latest: number }>();
+  for (const analysis of analyses) {
+    const key = provenanceKey(analysis.findingsProvenance);
+    const group = groups.get(key) ?? { latest: 0 };
+    if (analysis.language === 'fr') {
+      const current = group.fr;
+      if (!current || timestampOf(analysis) > timestampOf(current)) group.fr = analysis;
+    } else {
+      const current = group.en;
+      if (!current || timestampOf(analysis) > timestampOf(current)) group.en = analysis;
+    }
+    groups.set(key, group);
+  }
+
+  let best: { fr: A; en: A; completedAt: number; key: string } | null = null;
+  for (const [key, group] of groups) {
+    const { fr, en } = group;
+    if (!isCompleteCompatiblePair(fr, en) || !fr || !en) continue;
+    const completedAt = Math.max(timestampOf(fr), timestampOf(en));
+    if (
+      !best ||
+      completedAt > best.completedAt ||
+      (completedAt === best.completedAt && key > best.key)
+    ) {
+      best = { fr, en, completedAt, key };
+    }
+  }
+  return best ? { fr: best.fr, en: best.en } : null;
+}
+
+export function resolveSelectedAnalysisPair<A extends AnalysisRecordLike>(
+  selection: WritingSelection | undefined,
+  analyses: readonly A[],
+): SelectedAnalysisPairResolution<A> {
+  const selected = selection?.selected;
+  if (selected) {
+    const fr = analyses.find(
+      (analysis) => analysis.analysisId === selected.frAnalysisId && analysis.language === 'fr',
+    );
+    const en = analyses.find(
+      (analysis) => analysis.analysisId === selected.enAnalysisId && analysis.language === 'en',
+    );
+    if (!isCompleteCompatiblePair(fr, en) || !fr || !en) {
+      return { kind: 'none', reason: 'selection-incomplete' };
+    }
+    return { kind: 'selected', fr, en };
+  }
+
+  if (analyses.length === 0) return { kind: 'none', reason: 'no-analyses' };
+  const legacy = pickLegacyLatestPair(analyses);
+  if (!legacy) return { kind: 'none', reason: 'no-complete-pair' };
+  return { kind: 'legacy-latest', fr: legacy.fr, en: legacy.en };
+}
+
+/** The pair reference a ready candidate or an approval stores. */
+export function analysisPairRefOf<A extends AnalysisRecordLike>(fr: A, en: A): AnalysisPairRef {
+  return {
+    frAnalysisId: fr.analysisId,
+    enAnalysisId: en.analysisId,
+    findingsProvenance: fr.findingsProvenance,
+  };
+}

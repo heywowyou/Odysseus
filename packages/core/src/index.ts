@@ -86,3 +86,14 @@ export * from './normalize/normalize-geo.js';
 export * from './normalize/normalize-video-captions.js';
 export * from './normalize/normalize-alt-text.js';
 export { languagePrefixOf } from './normalize/normalize-hreflang.js';
+
+// Report preparation, plan 019: bounded personalization vocabularies,
+// evidence-bound journeys, warning digest, and analysis-pair selection
+// (trade-off 62).
+export * from './report-preparation/vocabulary.js';
+export * from './report-preparation/preparation.js';
+export * from './report-preparation/warning-digest.js';
+export * from './report-preparation/hook-family.js';
+export * from './report-preparation/journeys.js';
+export * from './report-preparation/selection.js';
+export * from './report-preparation/preview.js';

@@ -95,10 +95,10 @@ section IDs do not encode reading order.
 
 | # | Section | Rule | Cap |
 | --- | --- | --- | --- |
-| cover | Couverture | minimal: commercial identity, generic decision question, report type, audit date, Odysseus signature | 1 sheet |
+| cover | Couverture | minimal: commercial identity, decision question (resolved preparation question; safe generic fallback when no preparation exists), report type, audit date, Odysseus signature | 1 sheet |
 | metadata | Fiche méta et sévérité | site audited, audit date, pages visited, report language, audited standard and scope, legal name when present, severity scale with basis note | 1 sheet |
 | toc | Sommaire | one row per section, grouped under six narrative groups: executive context, decisions and actions, detailed evidence, legal reference, method and vocabulary, technical appendix | 16 rows |
-| 01 | Ouverture (situation, complication, question) | generic opening and reading guide, no client-specific claim | fixed |
+| 01 | Ouverture (situation, complication, question) | opening and reading guide; the question is the resolved preparation question or the safe generic fallback, no client-specific claim beyond what preparation explicitly provides | fixed |
 | 02 | Résumé exécutif | prose + jump links | 3 links |
 | 03 | L'audit en chiffres | 4 tiles + severity split + category split | fixed |
 | 04 | Priorités classées | one card per theme | 6 themes, may flow to 2 sheets |
@@ -202,7 +202,41 @@ must contain, at minimum:
 If the stress fixture renders correctly, haaitza and hotel-palais-gallien render
 correctly. The reverse has never been true.
 
-## 6. Working rule
+## 6. Report preparation and personalization (plan 019)
+
+One preparation aggregate (`packages/core/src/report-preparation/`) and one
+operator workflow, the dashboard's **Prepare report** card, own everything
+personalized in this report. Rendering consumes a bounded, render-ready
+preview; it never queries storage or derives preparation policy.
+
+- **Typed vocabularies, not free text.** Situation, trigger, stakeholder
+  role, hook family, journey, and journey-step state are closed vocabularies
+  with French and English copy tables. Stored operator text is trimmed,
+  length-bounded data, escaped at render time, and never becomes a model or
+  system instruction.
+- **Bilingual fallbacks are independent per language.** A missing custom
+  question, `other` note, or any other localized value falls back to the safe
+  generic copy for that language only; nothing is machine translated and
+  nothing is copied from the other language. Without preparation data the
+  report renders exactly as before (the byte-identical generic question).
+- **The opening question** on the cover and in section 01 is the resolved
+  preparation question: typed context plus safe copy, replaced per language
+  by an operator override where one exists.
+- **Journeys are evidence-bound and tri-state.** Every rendered journey step
+  reads exactly one of **issue observed**, **no issue detected**, or **not
+  evaluated**; `no-issue-detected` requires positive evidence the relevant
+  deterministic check ran. Only confirmed journeys render; unsupported or
+  removed journeys do not.
+- **Writing versions are candidate-first.** A paid report renders the
+  selected French/English analysis pair resolved by the store selector;
+  regeneration produces a previewable candidate and selection changes only on
+  explicit approval. Existing stored titles are unchanged until that explicit
+  regeneration.
+
+The full trade-off record, including rejected alternatives, is
+`docs/decisions/trade-offs.md` entry 62.
+
+## 7. Working rule
 
 Do not iterate on this design by comparing PDF screenshots. If output diverges
 from `report.reference.html`, diff the DOM, not the pixels.
