@@ -10,6 +10,7 @@ import { buildWritingRetryFeedback } from './writing-prompt.js';
 import { normalizeWritingOutputTypography } from './typography.js';
 import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
 import { findWcagCitationViolations } from './wcag-citation-guard.js';
+import { paceRateLimitedRetry } from './rate-limit-pacing.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 
 export interface AnalyzeWritingResult {
@@ -54,6 +55,7 @@ export async function analyzeWriting(
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} failed - ${lastFailureReason}`,
       );
+      await paceRateLimitedRetry(attempt, lastFailureReason);
       continue;
     }
 

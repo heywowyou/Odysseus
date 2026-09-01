@@ -319,7 +319,7 @@ describe('analyzeWriting retry feedback (issue #21)', () => {
     vi.mocked(callMistralForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildGravesSummaryOutput() })
-      .mockRejectedValueOnce(new Error('429 rate limit exceeded'))
+      .mockRejectedValueOnce(new Error('connection reset by peer'))
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
 
     const result = await analyzeWriting(input, ['t1'], false);
@@ -329,7 +329,7 @@ describe('analyzeWriting retry feedback (issue #21)', () => {
     expect(calls).toHaveLength(3);
     // The feedback always names the most recent failure, not the first.
     expect(calls[1]![2]).toContain('"graves"');
-    expect(calls[2]![2]).toContain('429 rate limit exceeded');
+    expect(calls[2]![2]).toContain('connection reset by peer');
     expect(calls[2]![2]).not.toContain('"graves"');
   });
 

@@ -270,6 +270,7 @@ export interface DashboardStrings {
     warningTrigger: string;
     warningJourneyScope: string;
     confirmWarningsButton: string;
+    confirmWarningsFirstHint: string;
     warningsConfirmedLabel: string;
     previewHeading: string;
     previewAutomaticLabel: string;

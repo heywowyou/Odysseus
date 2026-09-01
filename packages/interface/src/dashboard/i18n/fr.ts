@@ -240,6 +240,8 @@ export const fr: DashboardStrings = {
     warningJourneyScope:
       'Aucun parcours confirmé : la section parcours ne sera pas présente dans le rapport.',
     confirmWarningsButton: 'Confirmer et continuer',
+    confirmWarningsFirstHint:
+      "Confirmez d'abord les avertissements de contexte manquant ci-dessus, puis régénérez.",
     warningsConfirmedLabel: 'Avertissements confirmés pour ces choix.',
     previewHeading: 'Aperçu en direct',
     previewAutomaticLabel: 'automatique',

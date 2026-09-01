@@ -16,6 +16,7 @@ import {
   type StructureInput,
   type StructureThemeWithKey,
 } from './structure-schema.js';
+import { paceRateLimitedRetry } from './rate-limit-pacing.js';
 
 export interface AnalyzeStructureResult {
   themes: StructureThemeWithKey[];
@@ -68,6 +69,7 @@ export async function analyzeStructure(
       console.error(
         `odysseus analyze (structure pass): attempt ${attempt}/${MAX_RETRIES + 1} failed - ${lastFailureReason}`,
       );
+      await paceRateLimitedRetry(attempt, lastFailureReason);
       continue;
     }
 

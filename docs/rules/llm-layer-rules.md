@@ -135,6 +135,17 @@ identical conversation: its only guards are invented-ID and schema shape
 over dense, short output, and it has no observed failure, so it keeps its
 blind retry until one appears.
 
+**Amended 2026-09-01 (plan 019 operator review): rate-limit errors are
+paced, not burned through.** An API-error retry in either pass now waits
+before re-calling when the failure is a provider rate limit (HTTP 429,
+Mistral code 1300): 20 seconds after the first failure, 40 after the
+second, scaling with the attempt number. The retry budget (`MAX_RETRIES`)
+and every guard are unchanged, and guard rejections still retry
+immediately. Measured live: regenerating writing for a real audit, the
+French pass succeeded and the English pass then exhausted all three
+immediate attempts inside one rate-limit window; with pacing the same
+flow completes. (`rate-limit-pacing.ts`, shared by both passes.)
+
 ---
 
 ## 3. Determinism and provenance

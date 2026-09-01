@@ -241,6 +241,7 @@ export const en: DashboardStrings = {
     warningTrigger: 'The trigger is not set.',
     warningJourneyScope: 'No journey is confirmed, so no journey section will render.',
     confirmWarningsButton: 'Confirm and continue',
+    confirmWarningsFirstHint: 'Confirm the missing-context warnings above first, then regenerate.',
     warningsConfirmedLabel: 'Warnings confirmed for the current choices.',
     previewHeading: 'Live preview',
     previewAutomaticLabel: 'automatic',

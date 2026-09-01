@@ -195,10 +195,15 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
 
   const handleRegenerate = async (): Promise<void> => {
     setIsConfirmRegenerateOpen(false);
+    // UX pre-check only; the server re-verifies and is the authority.
+    if (!data.acknowledgementCurrent && data.preview.warnings.length > 0) {
+      toast.info(strings.prepareReport.confirmWarningsFirstHint);
+      return;
+    }
     setIsRegenerating(true);
-    toast.info(strings.prepareReport.regeneratingMessage);
     try {
       await sendJson(`${basePath}/regenerate-writing`, 'POST', { costWarningConfirmed: true });
+      toast.success(strings.prepareReport.candidateReadyLabel);
       refresh();
     } catch (regenerateError) {
       toast.error(
