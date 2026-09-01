@@ -3253,64 +3253,114 @@ const __ds_scope = {};
 
 <!-- COVER -->
 <section style="min-height:297mm;box-sizing:border-box;background:radial-gradient(ellipse 900px 560px at 50% 0%, var(--color-section-glow) 0%, var(--color-section) 45%, var(--color-bg) 85%);padding:18mm;margin-bottom:28px;display:flex;flex-direction:column;break-after:page;position:relative">
-  <span style="position:absolute;top:18mm;right:18mm;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.45">Page 1 / 16</span>
+  <span style="position:absolute;top:18mm;right:18mm;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.45">Page 1 / 19</span>
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-4)">
     <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--color-accent-200)">Odysseus - Audit numérique</div>
-    <h1 style="font-size:52px;max-width:13ch;margin:0">{{ meta.title }}</h1>
-    <div style="font-size:17px;opacity:0.8;max-width:38ch">{{ meta.subtitle }}</div>
+    <h1 style="font-size:52px;max-width:13ch;margin:0">{{ meta.client }}</h1>
+    <div style="font-size:17px;opacity:0.8;max-width:38ch">{{ meta.question }}</div>
   </div>
   <div>
     <div style="height:1px;background:linear-gradient(to right,var(--color-accent) 0,var(--color-accent) 120px,transparent 120px);margin-bottom:var(--space-8)"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;row-gap:var(--space-8);column-gap:var(--space-8);font-size:13px">
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Client</div>
-        <div style="font-size:18px">{{ meta.client }}</div>
-      </div>
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Date de l'audit</div>
-        <div style="font-size:18px">{{ meta.auditDate }}</div>
-      </div>
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Périmètre analysé</div>
-        <div style="font-size:18px">{{ meta.pagesScanned }} pages scannées</div>
-      </div>
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Langue du rapport</div>
-        <div style="font-size:18px">{{ meta.language }}</div>
-      </div>
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Norme auditée</div>
-        <div style="font-size:18px">{{ meta.standard }}</div>
-      </div>
-      <div>
-        <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Niveau de risque global</div>
-        <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:calc(var(--radius-md)*0.75);font-size:14px;font-weight:500;background:{{ meta.riskBg }};color:{{ meta.riskColor }}">{{ meta.riskLabel }}</div>
-      </div>
+    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--space-2)">
+      <div style="font-size:13px;text-transform:uppercase;letter-spacing:0.08em;opacity:0.7">{{ meta.reportType }}</div>
+      <div style="font-size:13px;opacity:0.5">{{ meta.auditDate }} · Odysseus</div>
     </div>
   </div>
+</section>
+
+<!-- METADATA SHEET -->
+<section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
+    <h6 style="color:var(--color-accent-300);margin:0">Métadonnées de l'audit</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 2 / 19</span>
+  </div>
+  <h2 style="margin-bottom:var(--space-6)">Fiche d'audit et échelle de sévérité</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;row-gap:var(--space-8);column-gap:var(--space-8);font-size:13px">
+    <div>
+      <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Site audité</div>
+      <div style="font-size:18px">{{ meta.client }}</div>
+    </div>
+    <div>
+      <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Date de l'audit</div>
+      <div style="font-size:18px">{{ meta.auditDate }}</div>
+    </div>
+    <div>
+      <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Périmètre analysé</div>
+      <div style="font-size:18px">{{ meta.pagesScanned }} pages scannées</div>
+    </div>
+    <div>
+      <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Langue du rapport</div>
+      <div style="font-size:18px">{{ meta.language }}</div>
+    </div>
+    <div>
+      <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Norme auditée</div>
+      <div style="font-size:18px">{{ meta.standard }}</div>
+    </div>
+    <div>
+      <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Raison sociale</div>
+      <div style="font-size:18px">{{ meta.raisonSociale }}</div>
+    </div>
+    <div>
+      <div style="text-transform:uppercase;letter-spacing:0.08em;font-size:10px;opacity:0.5;margin-bottom:8px">Niveau de risque global</div>
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:calc(var(--radius-md)*0.75);font-size:14px;font-weight:500;background:{{ meta.riskBg }};color:{{ meta.riskColor }}">{{ meta.riskLabel }}</div>
+    </div>
+  </div>
+  <h5 style="margin-top:var(--space-8)">Échelle de sévérité</h5>
+  <sc-for list="{{ severityLegend }}" as="s" hint-placeholder-count="4">
+    <div style="display:flex;align-items:baseline;gap:var(--space-3);padding:9px 0;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
+      <span style="width:8px;height:8px;border-radius:50%;background:{{ s.color }};flex:none"></span>
+      <span style="font-size:14px;font-weight:500;color:{{ s.color }};flex:none">{{ s.label }}</span>
+      <span style="font-size:13.5px;opacity:0.85">{{ s.meaning }}</span>
+    </div>
+  </sc-for>
+  <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">{{ severityBasisNote }}</p>
 </section>
 
 <!-- TOC -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
     <h6 style="color:var(--color-accent-300);margin:0">Sommaire</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 2 / 16</span>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 3 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-6)">Table des matières</h2>
-  <sc-for list="{{ toc }}" as="item" hint-placeholder-count="14">
-    <div style="display:flex;align-items:baseline;gap:var(--space-3);padding:9px 0;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
-      <span style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">{{ item.n }}</span>
-      <span style="font-size:14.5px">{{ item.title }}</span>
-    </div>
+  <sc-for list="{{ tocGroups }}" as="group" hint-placeholder-count="6">
+    <h5 style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-accent-300);margin:var(--space-4) 0 var(--space-1)">{{ group.label }}</h5>
+    <sc-for list="{{ group.items }}" as="item">
+      <div style="display:flex;align-items:baseline;gap:var(--space-3);padding:9px 0;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px">
+        <span style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">{{ item.n }}</span>
+        <span style="font-size:14.5px">{{ item.title }}</span>
+      </div>
+    </sc-for>
   </sc-for>
   <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">Les signets du PDF exporté reprennent cette structure ; les numéros de page réels apparaissent en pied de page à l'impression.</p>
+</section>
+
+<!-- OPENING (SITUATION, COMPLICATION, QUESTION) -->
+<section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
+    <h6 style="color:var(--color-accent-300);margin:0">01 · Ouverture</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 4 / 19</span>
+  </div>
+  <h2 style="margin-bottom:var(--space-6)">Situation, complication, question</h2>
+  <div style="margin-bottom:var(--space-6)">
+    <h5>Situation</h5>
+    <p style="font-size:13.5px;opacity:0.85;max-width:64ch">{{ opening.situationText }}</p>
+  </div>
+  <div style="margin-bottom:var(--space-6)">
+    <h5>Complication</h5>
+    <p style="font-size:13.5px;opacity:0.85;max-width:64ch">{{ opening.complicationText }}</p>
+  </div>
+  <div>
+    <h5>Question</h5>
+    <p style="font-size:15px;opacity:0.9;max-width:64ch">{{ meta.question }}</p>
+  </div>
 </section>
 
 <!-- EXEC SUMMARY -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">01 · Résumé</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 3 / 16</span>
+    <h6 style="color:var(--color-accent-300);margin:0">02 · Résumé</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 5 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-4)">Résumé exécutif &amp; priorités</h2>
   <p style="font-size:15px;max-width:66ch;opacity:0.9">{{ execSummary }}</p>
@@ -3326,34 +3376,11 @@ const __ds_scope = {};
   </div>
 </section>
 
-<!-- LEGAL EXPOSURE -->
-<section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">02 · Exposition légale</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 4 / 16</span>
-  </div>
-  <h2 style="margin-bottom:var(--space-4)">Exposition légale</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-6)">
-    <div class="card elev-sm">
-      <div class="card-kicker">Échéance EAA</div>
-      <div class="card-title">28 juin 2025</div>
-      <div class="card-body">Date d'entrée en application des obligations de l'European Accessibility Act, fixée par la directive elle-même.</div>
-    </div>
-    <div class="card elev-sm">
-      <div class="card-kicker">Statut d'obligation</div>
-      <div class="card-title">{{ legal.statusLabel }}</div>
-      <div class="card-body">{{ legal.statusNote }}</div>
-    </div>
-  </div>
-  <p style="font-size:13.5px;opacity:0.85;max-width:66ch">{{ legal.paragraphText }}</p>
-  <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">Généré à partir de l'évaluation d'obligations existante ; aucune interprétation juridique supplémentaire n'a été ajoutée. Une revue par un conseil juridique reste nécessaire.</p>
-</section>
-
 <!-- AUDIT IN NUMBERS -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
     <h6 style="color:var(--color-accent-300);margin:0">03 · Chiffres clés</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 5 / 16</span>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 6 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-6)">L'audit en chiffres</h2>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-6)">
@@ -3394,7 +3421,7 @@ const __ds_scope = {};
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
     <h6 style="color:var(--color-accent-300);margin:0">04 · Priorités</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 6 / 16</span>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 7 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-2)">Priorités classées</h2>
   <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">{{ themeCountHeading }}</p>
@@ -3431,7 +3458,7 @@ const __ds_scope = {};
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
     <h6 style="color:var(--color-accent-300);margin:0">05 · Check-list imprimable</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 7 / 16</span>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 8 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-2)">Check-list des priorités</h2>
   <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">Page pensée pour être imprimée ou capturée seule, sans prose, uniquement l'essentiel.</p>
@@ -3453,11 +3480,28 @@ const __ds_scope = {};
   </div>
 </section>
 
+<!-- REMAINING WORK -->
+<section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
+    <h6 style="color:var(--color-accent-300);margin:0">06 · Reste à traiter</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 9 / 19</span>
+  </div>
+  <h2 style="margin-bottom:var(--space-4)">Les autres constats, groupés par thème</h2>
+  <p style="font-size:13.5px;opacity:0.85;max-width:64ch">{{ remainingWork.introText }}</p>
+  <sc-for list="{{ remainingWork.groups }}" as="grp" hint-placeholder-count="2">
+    <div style="margin-bottom:var(--space-4)">
+      <h5>{{ grp.domainLabel }}</h5>
+      <p style="font-size:13px;opacity:0.8;max-width:64ch">{{ grp.summaryText }}</p>
+    </div>
+  </sc-for>
+  <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">{{ remainingWork.scopeNote }}</p>
+</section>
+
 <!-- OBSERVATIONS -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">06 · Observations</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 8 / 16</span>
+    <h6 style="color:var(--color-accent-300);margin:0">07 · Observations</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 10 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-6)">Observations hors classement</h2>
   <div style="margin-bottom:var(--space-6)">
@@ -3473,8 +3517,8 @@ const __ds_scope = {};
 <!-- ACCESSIBILITY CONFORMANCE -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">07 · Conformité</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 9 / 16</span>
+    <h6 style="color:var(--color-accent-300);margin:0">08 · Conformité</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 11 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-3)">Conformité d'accessibilité</h2>
   <p style="font-size:13.5px;opacity:0.85;max-width:66ch;margin-bottom:var(--space-2)">Un critère en échec est un écart de conformité, pas une préférence esthétique. Cette page peut être transmise directement à un développeur, une agence ou un conseil juridique.</p>
@@ -3502,8 +3546,8 @@ const __ds_scope = {};
 <!-- RENDER EVIDENCE -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">08 · Preuves de rendu</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 10 / 16</span>
+    <h6 style="color:var(--color-accent-300);margin:0">09 · Preuves de rendu</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 12 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-2)">Preuves de rendu (brut vs affiché)</h2>
   <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">{{ renderHealthyText }}</p>
@@ -3528,8 +3572,8 @@ const __ds_scope = {};
 <!-- PERFORMANCE -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">09 · Performance</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 11 / 16</span>
+    <h6 style="color:var(--color-accent-300);margin:0">10 · Performance</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 13 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-2)">Mesures de performance</h2>
   <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">Valeurs médianes agrégées sur les 20 pages (Lighthouse), à titre illustratif.</p>
@@ -3552,8 +3596,8 @@ const __ds_scope = {};
 <!-- ACCESSIBILITY STATEMENT -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">10 · Déclaration</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 12 / 16</span>
+    <h6 style="color:var(--color-accent-300);margin:0">11 · Déclaration</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 14 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-2)">Projet de déclaration d'accessibilité</h2>
   <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-6)">Squelette généré à partir des constats, à compléter par le client avant publication.</p>
@@ -3579,11 +3623,56 @@ const __ds_scope = {};
   </div>
 </section>
 
+<!-- NEXT STEPS -->
+<section style="background:var(--color-bg);padding:18mm">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
+    <h6 style="color:var(--color-accent-300);margin:0">12 · Suite</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 15 / 19</span>
+  </div>
+  <h2 style="margin-bottom:var(--space-6)">Prochaines étapes &amp; contact</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-4)">
+    <div class="card elev-sm">
+      <div class="card-title">Une question ?</div>
+      <div class="card-body">Toute demande de clarification sur un constat ou une priorité peut être adressée directement à l'équipe Odysseus, en citant l'identifiant du constat concerné.</div>
+    </div>
+    <div class="card elev-sm">
+      <div class="card-title">Ré-audits</div>
+      <div class="card-body">Un ré-audit relance le même périmètre et compare les résultats au rapport précédent, constat par constat, pour mesurer la progression.</div>
+    </div>
+    <div class="card elev-sm">
+      <div class="card-title">Vérification post-correctifs</div>
+      <div class="card-body">Une fois les correctifs déployés, une vérification ciblée confirme la résolution des constats concernés avant clôture.</div>
+    </div>
+  </div>
+</section>
+<!-- LEGAL EXPOSURE -->
+<section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
+    <h6 style="color:var(--color-accent-300);margin:0">13 · Exposition légale</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 16 / 19</span>
+  </div>
+  <h2 style="margin-bottom:var(--space-4)">Exposition légale</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-6)">
+    <div class="card elev-sm">
+      <div class="card-kicker">Échéance EAA</div>
+      <div class="card-title">28 juin 2025</div>
+      <div class="card-body">Date d'entrée en application des obligations de l'European Accessibility Act, fixée par la directive elle-même.</div>
+    </div>
+    <div class="card elev-sm">
+      <div class="card-kicker">Statut d'obligation</div>
+      <div class="card-title">{{ legal.statusLabel }}</div>
+      <div class="card-body">{{ legal.statusNote }}</div>
+    </div>
+  </div>
+  <p style="font-size:13.5px;opacity:0.85;max-width:66ch">{{ legal.paragraphText }}</p>
+  <p style="font-size:11px;opacity:0.5;margin-top:var(--space-4)">Généré à partir de l'évaluation d'obligations existante ; aucune interprétation juridique supplémentaire n'a été ajoutée. Une revue par un conseil juridique reste nécessaire.</p>
+</section>
+
 <!-- METHODOLOGY -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">11 · Méthodologie</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 13 / 16</span>
+    <h6 style="color:var(--color-accent-300);margin:0">14 · Méthodologie</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 17 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-4)">Méthodologie et limites</h2>
   <p style="font-size:13.5px;opacity:0.85;max-width:68ch">{{ methodologyText }}</p>
@@ -3593,11 +3682,26 @@ const __ds_scope = {};
   <p style="font-size:13.5px;opacity:0.85;max-width:68ch">{{ legal.paragraphText }}</p>
 </section>
 
+<!-- GLOSSARY -->
+<section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
+    <h6 style="color:var(--color-accent-300);margin:0">15 · Glossaire</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 18 / 19</span>
+  </div>
+  <h2 style="margin-bottom:var(--space-6)">Glossaire</h2>
+  <sc-for list="{{ glossary }}" as="g" hint-placeholder-count="9">
+    <div style="margin-bottom:var(--space-4)">
+      <div style="font-size:14px;font-weight:500;color:var(--color-accent-300)">{{ g.term }}</div>
+      <div style="font-size:13px;opacity:0.8">{{ g.def }}</div>
+    </div>
+  </sc-for>
+</section>
+
 <!-- APPENDIX -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">12 · Annexe</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 14 / 16</span>
+    <h6 style="color:var(--color-accent-300);margin:0">16 · Annexe</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 19 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-2)">Annexe - liste complète des constats</h2>
   <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-6)">Groupés par catégorie puis par règle. Chaque constat individuel apparaît nommément ; aucun n'est renvoyé "sur demande".</p>
@@ -3651,43 +3755,6 @@ const __ds_scope = {};
   </sc-for>
 </section>
 
-<!-- GLOSSARY -->
-<section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">13 · Glossaire</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 15 / 16</span>
-  </div>
-  <h2 style="margin-bottom:var(--space-6)">Glossaire</h2>
-  <sc-for list="{{ glossary }}" as="g" hint-placeholder-count="9">
-    <div style="margin-bottom:var(--space-4)">
-      <div style="font-size:14px;font-weight:500;color:var(--color-accent-300)">{{ g.term }}</div>
-      <div style="font-size:13px;opacity:0.8">{{ g.def }}</div>
-    </div>
-  </sc-for>
-</section>
-
-<!-- NEXT STEPS -->
-<section style="background:var(--color-bg);padding:18mm">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">14 · Suite</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 16 / 16</span>
-  </div>
-  <h2 style="margin-bottom:var(--space-6)">Prochaines étapes &amp; contact</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-4)">
-    <div class="card elev-sm">
-      <div class="card-title">Une question ?</div>
-      <div class="card-body">Toute demande de clarification sur un constat ou une priorité peut être adressée directement à l'équipe Odysseus, en citant l'identifiant du constat concerné.</div>
-    </div>
-    <div class="card elev-sm">
-      <div class="card-title">Ré-audits</div>
-      <div class="card-body">Un ré-audit relance le même périmètre et compare les résultats au rapport précédent, constat par constat, pour mesurer la progression.</div>
-    </div>
-    <div class="card elev-sm">
-      <div class="card-title">Vérification post-correctifs</div>
-      <div class="card-body">Une fois les correctifs déployés, une vérification ciblée confirme la résolution des constats concernés avant clôture.</div>
-    </div>
-  </div>
-</section>
 
 </div>
 </doc-page>
@@ -3826,15 +3893,39 @@ class Component extends DCLogic {
         title: 'Rapport d’audit numérique', subtitle: 'Accessibilité, SEO et performance - analyse complète du site.',
         client: 'Hôtel Exemple', auditDate: '16 août 2026', pagesScanned: TOTAL_PAGES, language: 'Français',
         standard: 'WCAG 2.2 AA · EN 301 549', riskLabel: 'Risque élevé', riskColor: SEVERITY.critical.color, riskBg: SEVERITY.critical.bg,
+        raisonSociale: 'Hôtel Exemple SAS',
+        question: 'Quel est l’état actuel du site, et par où commencer ?',
+        reportType: 'Accessibilité · Performance · SEO · GEO',
       },
-      toc: [
-        { n: '01', title: 'Résumé exécutif & priorités' }, { n: '02', title: 'Exposition légale' },
-        { n: '03', title: 'L’audit en chiffres' }, { n: '04', title: 'Priorités classées' },
-        { n: '05', title: 'Check-list des priorités (imprimable)' }, { n: '06', title: 'Observations hors classement' },
-        { n: '07', title: 'Conformité d’accessibilité' }, { n: '08', title: 'Preuves de rendu' },
-        { n: '09', title: 'Mesures de performance' }, { n: '10', title: 'Projet de déclaration d’accessibilité' },
-        { n: '11', title: 'Méthodologie et limites' }, { n: '12', title: 'Annexe - liste complète des constats' },
-        { n: '13', title: 'Glossaire' }, { n: '14', title: 'Prochaines étapes & contact' },
+      tocGroups: [
+        { label: 'Contexte exécutif', items: [
+          { n: '01', title: 'Situation, complication, question' },
+          { n: '02', title: 'Résumé exécutif & priorités' },
+          { n: '03', title: 'L’audit en chiffres' },
+        ] },
+        { label: 'Décisions et actions', items: [
+          { n: '04', title: 'Priorités classées' },
+          { n: '05', title: 'Check-list des priorités (imprimable)' },
+          { n: '06', title: 'Reste à traiter' },
+          { n: '12', title: 'Prochaines étapes & contact' },
+        ] },
+        { label: 'Preuves détaillées', items: [
+          { n: '07', title: 'Observations hors classement' },
+          { n: '08', title: 'Conformité d’accessibilité' },
+          { n: '09', title: 'Preuves de rendu' },
+          { n: '10', title: 'Mesures de performance' },
+          { n: '11', title: 'Projet de déclaration d’accessibilité' },
+        ] },
+        { label: 'Référence légale', items: [
+          { n: '13', title: 'Exposition légale' },
+        ] },
+        { label: 'Méthode et vocabulaire', items: [
+          { n: '14', title: 'Méthodologie et limites' },
+          { n: '15', title: 'Glossaire' },
+        ] },
+        { label: 'Annexe technique', items: [
+          { n: '16', title: 'Annexe - liste complète des constats' },
+        ] },
       ],
       execSummary: 'L’audit a analysé 20 pages du site et identifié 14 constats distincts, dont 6 critiques. Les principaux blocages concernent l’accessibilité des pages chambres (composants ARIA mal structurés et contraste insuffisant) et les performances (blocage du navigateur par des scripts JavaScript). Ces problèmes peuvent impacter l’expérience utilisateur, la conversion et la conformité légale. Les correctifs prioritaires sont détaillés ci-dessous.',
       topThemes: themes.slice(0, 3),
@@ -3871,6 +3962,20 @@ class Component extends DCLogic {
       methodologyText: 'Analyse conduite avec axe-core 4.12.1 et Lighthouse 12.8.2 sur un rendu Chromium 151 (via Playwright 1.62.1), profil desktop. La comparaison de rendu confronte le HTML brut de chaque page à sa version rendue en navigateur. Norme auditée : WCAG 2.2 AA / EN 301 549. Périmètre : ' + TOTAL_PAGES + ' pages, profondeur de crawl maximale 5, scan réalisé le 16 août 2026.',
       appendixCategories,
       glossary: GLOSSARY,
+      severityLegend: ['critical', 'serious', 'moderate', 'minor'].map(k => ({ ...SEVERITY[k] })),
+      severityBasisNote: 'Sévérités évaluées par règle à partir des constats du scan ; cette échelle est la même dans tout le rapport, du résumé à l’annexe technique.',
+      opening: {
+        situationText: 'Ce rapport décrit l’état constaté du site à la date de l’audit : ce qui a été mesuré, ce qui fonctionne, et ce qui présente des écarts.',
+        complicationText: 'L’audit a relevé des constats de plusieurs niveaux de sévérité sur les pages visitées. Les priorités classées présentent quoi traiter en premier, et la section Exposition légale recense les critères concernés, à faire confirmer par un conseil juridique.',
+      },
+      remainingWork: {
+        introText: 'Les priorités classées couvrent les corrections à mener en premier. Les autres constats sont regroupés ci-dessous par domaine et par règle ; chaque groupe renvoie aux numéros de constats de l’annexe.',
+        groups: [
+          { domainLabel: 'Performance', summaryText: '1 règle concernée, 20 occurrences au total. Constats : f009.' },
+          { domainLabel: 'Accessibilité', summaryText: '1 règle concernée, 8 occurrences au total. Constats : f010.' },
+        ],
+        scopeNote: 'Les actions indiquées décrivent la correction attendue par la règle détectée ; elles ne remplacent pas l’appréciation de la personne qui interviendra sur le site.',
+      },
     };
   }
 }

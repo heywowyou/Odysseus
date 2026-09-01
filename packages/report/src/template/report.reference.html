@@ -34,8 +34,8 @@
           >
             Odysseus - Audit numérique
           </div>
-          <h1 style="font-size: 52px; max-width: 13ch; margin: 0">{{ meta.title }}</h1>
-          <div style="font-size: 17px; opacity: 0.8; max-width: 38ch">{{ meta.subtitle }}</div>
+          <h1 style="font-size: 52px; max-width: 13ch; margin: 0">{{ meta.client }}</h1>
+          <div style="font-size: 17px; opacity: 0.8; max-width: 38ch">{{ meta.question }}</div>
         </div>
         <div>
           <div
@@ -52,103 +52,183 @@
           ></div>
           <div
             style="
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              row-gap: var(--space-8);
-              column-gap: var(--space-8);
-              font-size: 13px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              text-align: center;
+              gap: var(--space-2);
             "
           >
-            <div>
-              <div
-                style="
-                  text-transform: uppercase;
-                  letter-spacing: 0.08em;
-                  font-size: 10px;
-                  opacity: 0.5;
-                  margin-bottom: 8px;
-                "
-              >
-                Client
-              </div>
-              <div style="font-size: 18px">{{ meta.client }}</div>
+            <div
+              style="
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                opacity: 0.7;
+              "
+            >
+              {{ meta.reportType }}
             </div>
-            <div>
-              <div
-                style="
-                  text-transform: uppercase;
-                  letter-spacing: 0.08em;
-                  font-size: 10px;
-                  opacity: 0.5;
-                  margin-bottom: 8px;
-                "
-              >
-                Date de l'audit
-              </div>
-              <div style="font-size: 18px">{{ meta.auditDate }}</div>
+            <div style="font-size: 13px; opacity: 0.5">{{ meta.auditDate }} · Odysseus</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- METADATA SHEET -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">Métadonnées de l'audit</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-6)">Fiche d'audit et échelle de sévérité</h2>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            row-gap: var(--space-8);
+            column-gap: var(--space-8);
+            font-size: 13px;
+          "
+        >
+          <div>
+            <div
+              style="
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                font-size: 10px;
+                opacity: 0.5;
+                margin-bottom: 8px;
+              "
+            >
+              Site audité
             </div>
-            <div>
-              <div
-                style="
-                  text-transform: uppercase;
-                  letter-spacing: 0.08em;
-                  font-size: 10px;
-                  opacity: 0.5;
-                  margin-bottom: 8px;
-                "
-              >
-                Périmètre analysé
-              </div>
-              <div style="font-size: 18px">{{ meta.pagesScanned }} pages scannées</div>
+            <div style="font-size: 18px">{{ meta.client }}</div>
+          </div>
+          <div>
+            <div
+              style="
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                font-size: 10px;
+                opacity: 0.5;
+                margin-bottom: 8px;
+              "
+            >
+              Date de l'audit
             </div>
-            <div>
-              <div
-                style="
-                  text-transform: uppercase;
-                  letter-spacing: 0.08em;
-                  font-size: 10px;
-                  opacity: 0.5;
-                  margin-bottom: 8px;
-                "
-              >
-                Langue du rapport
-              </div>
-              <div style="font-size: 18px">{{ meta.language }}</div>
+            <div style="font-size: 18px">{{ meta.auditDate }}</div>
+          </div>
+          <div>
+            <div
+              style="
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                font-size: 10px;
+                opacity: 0.5;
+                margin-bottom: 8px;
+              "
+            >
+              Périmètre analysé
             </div>
-            <div>
-              <div
-                style="
-                  text-transform: uppercase;
-                  letter-spacing: 0.08em;
-                  font-size: 10px;
-                  opacity: 0.5;
-                  margin-bottom: 8px;
-                "
-              >
-                Norme auditée
-              </div>
-              <div style="font-size: 18px">{{ meta.standard }}</div>
+            <div style="font-size: 18px">{{ meta.pagesScanned }} pages scannées</div>
+          </div>
+          <div>
+            <div
+              style="
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                font-size: 10px;
+                opacity: 0.5;
+                margin-bottom: 8px;
+              "
+            >
+              Langue du rapport
             </div>
-            <div>
-              <div
-                style="
-                  text-transform: uppercase;
-                  letter-spacing: 0.08em;
-                  font-size: 10px;
-                  opacity: 0.5;
-                  margin-bottom: 8px;
-                "
-              >
-                Niveau de risque global
-              </div>
-              <div
-                style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:calc(var(--radius-md)*0.75);font-size:14px;font-weight:500;background:{{ meta.riskBg }};color:{{ meta.riskColor }}"
-              >
-                {{ meta.riskLabel }}
-              </div>
+            <div style="font-size: 18px">{{ meta.language }}</div>
+          </div>
+          <div>
+            <div
+              style="
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                font-size: 10px;
+                opacity: 0.5;
+                margin-bottom: 8px;
+              "
+            >
+              Norme auditée
+            </div>
+            <div style="font-size: 18px">{{ meta.standard }}</div>
+          </div>
+          <div>
+            <div
+              style="
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                font-size: 10px;
+                opacity: 0.5;
+                margin-bottom: 8px;
+              "
+            >
+              Raison sociale
+            </div>
+            <div style="font-size: 18px">{{ meta.raisonSociale }}</div>
+          </div>
+          <div>
+            <div
+              style="
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                font-size: 10px;
+                opacity: 0.5;
+                margin-bottom: 8px;
+              "
+            >
+              Niveau de risque global
+            </div>
+            <div
+              style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:calc(var(--radius-md)*0.75);font-size:14px;font-weight:500;background:{{ meta.riskBg }};color:{{ meta.riskColor }}"
+            >
+              {{ meta.riskLabel }}
             </div>
           </div>
         </div>
+        <h5 style="margin-top: var(--space-8)">Échelle de sévérité</h5>
+        {{#each severityLegend as |s|}}
+        <div
+          style="
+            display: flex;
+            align-items: baseline;
+            gap: var(--space-3);
+            padding: 9px 0;
+            background: linear-gradient(
+                to right,
+                transparent,
+                var(--color-divider) 0,
+                var(--color-divider) 100%,
+                transparent
+              )
+              no-repeat bottom/100% 1px;
+          "
+        >
+          <span
+            style="width: 8px; height: 8px; border-radius: 50%; background: {{ s.color }}; flex: none"
+          ></span>
+          <span style="font-size: 14px; font-weight: 500; color: {{ s.color }}; flex: none"
+            >{{ s.label }}</span
+          >
+          <span style="font-size: 13.5px; opacity: 0.85">{{ s.meaning }}</span>
+        </div>
+        {{/each}}
+        <p style="font-size: 11px; opacity: 0.5; margin-top: var(--space-4)">
+          {{ severityBasisNote }}
+        </p>
       </section>
 
       <!-- TOC -->
@@ -164,7 +244,19 @@
           <h6 style="color: var(--color-accent-300); margin: 0">Sommaire</h6>
         </div>
         <h2 style="margin-bottom: var(--space-6)">Table des matières</h2>
-        {{#each toc as |item|}}
+        {{#each tocGroups as |group|}}
+        <h5
+          style="
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--color-accent-300);
+            margin: var(--space-4) 0 var(--space-1);
+          "
+        >
+          {{ group.label }}
+        </h5>
+        {{#each group.items as |item|}}
         <div
           style="
             display: flex;
@@ -186,11 +278,42 @@
           >
           <span style="font-size: 14.5px">{{ item.title }}</span>
         </div>
-        {{/each}}
+        {{/each}} {{/each}}
         <p style="font-size: 11px; opacity: 0.5; margin-top: var(--space-4)">
           Les signets du PDF exporté reprennent cette structure ; les numéros de page réels
           apparaissent en pied de page à l'impression.
         </p>
+      </section>
+
+      <!-- OPENING (SITUATION, COMPLICATION, QUESTION) -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">01 · Ouverture</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-6)">Situation, complication, question</h2>
+        <div style="margin-bottom: var(--space-6)">
+          <h5>Situation</h5>
+          <p style="font-size: 13.5px; opacity: 0.85; max-width: 64ch">
+            {{ opening.situationText }}
+          </p>
+        </div>
+        <div style="margin-bottom: var(--space-6)">
+          <h5>Complication</h5>
+          <p style="font-size: 13.5px; opacity: 0.85; max-width: 64ch">
+            {{ opening.complicationText }}
+          </p>
+        </div>
+        <div>
+          <h5>Question</h5>
+          <p style="font-size: 15px; opacity: 0.9; max-width: 64ch">{{ meta.question }}</p>
+        </div>
       </section>
 
       <!-- EXEC SUMMARY -->
@@ -203,7 +326,7 @@
             margin-bottom: var(--space-2);
           "
         >
-          <h6 style="color: var(--color-accent-300); margin: 0">01 · Résumé</h6>
+          <h6 style="color: var(--color-accent-300); margin: 0">02 · Résumé</h6>
         </div>
         <h2 style="margin-bottom: var(--space-4)">Résumé exécutif & priorités</h2>
         <p style="font-size: 15px; max-width: 66ch; opacity: 0.9">{{ execSummary }}</p>
@@ -266,48 +389,6 @@
           </a>
           {{/each}}
         </div>
-      </section>
-
-      <!-- LEGAL EXPOSURE -->
-      <section class="sheet">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: var(--space-2);
-          "
-        >
-          <h6 style="color: var(--color-accent-300); margin: 0">02 · Exposition légale</h6>
-        </div>
-        <h2 style="margin-bottom: var(--space-4)">Exposition légale</h2>
-        <div
-          style="
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--space-4);
-            margin-bottom: var(--space-6);
-          "
-        >
-          <div class="card elev-sm">
-            <div class="card-kicker">Échéance EAA</div>
-            <div class="card-title">28 juin 2025</div>
-            <div class="card-body">
-              Date d'entrée en application des obligations de l'European Accessibility Act, fixée
-              par la directive elle-même.
-            </div>
-          </div>
-          <div class="card elev-sm">
-            <div class="card-kicker">Statut d'obligation</div>
-            <div class="card-title">{{ legal.statusLabel }}</div>
-            <div class="card-body">{{ legal.statusNote }}</div>
-          </div>
-        </div>
-        <p style="font-size: 13.5px; opacity: 0.85; max-width: 66ch">{{ legal.paragraphText }}</p>
-        <p style="font-size: 11px; opacity: 0.5; margin-top: var(--space-4)">
-          Généré à partir de l'évaluation d'obligations existante ; aucune interprétation juridique
-          supplémentaire n'a été ajoutée. Une revue par un conseil juridique reste nécessaire.
-        </p>
       </section>
 
       <!-- AUDIT IN NUMBERS -->
@@ -598,6 +679,33 @@
         </div>
       </section>
 
+      <!-- REMAINING WORK -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">06 · Reste à traiter</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-4)">Les autres constats, groupés par thème</h2>
+        <p style="font-size: 13.5px; opacity: 0.85; max-width: 64ch">
+          {{ remainingWork.introText }}
+        </p>
+        {{#each remainingGroups as |grp|}}
+        <div style="margin-bottom: var(--space-4)">
+          <h5>{{ grp.domainLabel }}</h5>
+          <p style="font-size: 13px; opacity: 0.8; max-width: 64ch">{{ grp.summaryText }}</p>
+        </div>
+        {{/each}}
+        <p style="font-size: 11px; opacity: 0.5; margin-top: var(--space-4)">
+          {{ remainingWork.scopeNote }}
+        </p>
+      </section>
+
       <!-- OBSERVATIONS -->
       <section class="sheet">
         <div
@@ -608,7 +716,7 @@
             margin-bottom: var(--space-2);
           "
         >
-          <h6 style="color: var(--color-accent-300); margin: 0">06 · Observations</h6>
+          <h6 style="color: var(--color-accent-300); margin: 0">07 · Observations</h6>
         </div>
         <h2 style="margin-bottom: var(--space-6)">Observations hors classement</h2>
         <div style="margin-bottom: var(--space-6)">
@@ -631,7 +739,7 @@
             margin-bottom: var(--space-2);
           "
         >
-          <h6 style="color: var(--color-accent-300); margin: 0">07 · Conformité</h6>
+          <h6 style="color: var(--color-accent-300); margin: 0">08 · Conformité</h6>
         </div>
         <h2 style="margin-bottom: var(--space-3)">Conformité d'accessibilité</h2>
         <p style="font-size: 13.5px; opacity: 0.85; max-width: 66ch; margin-bottom: var(--space-2)">
@@ -745,7 +853,7 @@
             margin-bottom: var(--space-2);
           "
         >
-          <h6 style="color: var(--color-accent-300); margin: 0">08 · Preuves de rendu</h6>
+          <h6 style="color: var(--color-accent-300); margin: 0">09 · Preuves de rendu</h6>
         </div>
         <h2 style="margin-bottom: var(--space-2)">Preuves de rendu (brut vs affiché)</h2>
         <p style="font-size: 13px; opacity: 0.6; margin-bottom: var(--space-6)">
@@ -817,7 +925,7 @@
             margin-bottom: var(--space-2);
           "
         >
-          <h6 style="color: var(--color-accent-300); margin: 0">09 · Performance</h6>
+          <h6 style="color: var(--color-accent-300); margin: 0">10 · Performance</h6>
         </div>
         <h2 style="margin-bottom: var(--space-2)">Mesures de performance</h2>
         <p style="font-size: 12px; opacity: 0.55; margin-bottom: var(--space-4)">
@@ -903,7 +1011,7 @@
             margin-bottom: var(--space-2);
           "
         >
-          <h6 style="color: var(--color-accent-300); margin: 0">10 · Déclaration</h6>
+          <h6 style="color: var(--color-accent-300); margin: 0">11 · Déclaration</h6>
         </div>
         <h2 style="margin-bottom: var(--space-2)">Projet de déclaration d'accessibilité</h2>
         <p style="font-size: 12px; opacity: 0.55; margin-bottom: var(--space-6)">
@@ -975,6 +1083,85 @@
         </div>
       </section>
 
+      <!-- NEXT STEPS -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">12 · Suite</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-6)">Prochaines étapes & contact</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-4)">
+          <div class="card elev-sm">
+            <div class="card-title">Une question ?</div>
+            <div class="card-body">
+              Toute demande de clarification sur un constat ou une priorité peut être adressée
+              directement à l'équipe Odysseus, en citant l'identifiant du constat concerné.
+            </div>
+          </div>
+          <div class="card elev-sm">
+            <div class="card-title">Ré-audits</div>
+            <div class="card-body">
+              Un ré-audit relance le même périmètre et compare les résultats au rapport précédent,
+              constat par constat, pour mesurer la progression.
+            </div>
+          </div>
+          <div class="card elev-sm">
+            <div class="card-title">Vérification post-correctifs</div>
+            <div class="card-body">
+              Une fois les correctifs déployés, une vérification ciblée confirme la résolution des
+              constats concernés avant clôture.
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- LEGAL EXPOSURE -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">13 · Exposition légale</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-4)">Exposition légale</h2>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-4);
+            margin-bottom: var(--space-6);
+          "
+        >
+          <div class="card elev-sm">
+            <div class="card-kicker">Échéance EAA</div>
+            <div class="card-title">28 juin 2025</div>
+            <div class="card-body">
+              Date d'entrée en application des obligations de l'European Accessibility Act, fixée
+              par la directive elle-même.
+            </div>
+          </div>
+          <div class="card elev-sm">
+            <div class="card-kicker">Statut d'obligation</div>
+            <div class="card-title">{{ legal.statusLabel }}</div>
+            <div class="card-body">{{ legal.statusNote }}</div>
+          </div>
+        </div>
+        <p style="font-size: 13.5px; opacity: 0.85; max-width: 66ch">{{ legal.paragraphText }}</p>
+        <p style="font-size: 11px; opacity: 0.5; margin-top: var(--space-4)">
+          Généré à partir de l'évaluation d'obligations existante ; aucune interprétation juridique
+          supplémentaire n'a été ajoutée. Une revue par un conseil juridique reste nécessaire.
+        </p>
+      </section>
+
       <!-- METHODOLOGY -->
       <section class="sheet">
         <div
@@ -985,7 +1172,7 @@
             margin-bottom: var(--space-2);
           "
         >
-          <h6 style="color: var(--color-accent-300); margin: 0">11 · Méthodologie</h6>
+          <h6 style="color: var(--color-accent-300); margin: 0">14 · Méthodologie</h6>
         </div>
         <h2 style="margin-bottom: var(--space-4)">Méthodologie et limites</h2>
         <p style="font-size: 13.5px; opacity: 0.85; max-width: 68ch">{{ methodologyText }}</p>
@@ -1001,6 +1188,29 @@
         <p style="font-size: 13.5px; opacity: 0.85; max-width: 68ch">{{ legal.paragraphText }}</p>
       </section>
 
+      <!-- GLOSSARY -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">15 · Glossaire</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-6)">Glossaire</h2>
+        {{#each glossary as |g|}}
+        <div class="glossary-entry" style="margin-bottom: var(--space-4)">
+          <div style="font-size: 14px; font-weight: 500; color: var(--color-accent-300)">
+            {{ g.term }}
+          </div>
+          <div style="font-size: 13px; opacity: 0.8">{{ g.def }}</div>
+        </div>
+        {{/each}}
+      </section>
+
       <!-- APPENDIX -->
       <section class="sheet">
         <div
@@ -1011,7 +1221,7 @@
             margin-bottom: var(--space-2);
           "
         >
-          <h6 style="color: var(--color-accent-300); margin: 0">12 · Annexe</h6>
+          <h6 style="color: var(--color-accent-300); margin: 0">16 · Annexe</h6>
         </div>
         <h2 style="margin-bottom: var(--space-2)">Annexe - liste complète des constats</h2>
         <p style="font-size: 12px; opacity: 0.55; margin-bottom: var(--space-6)">
@@ -1214,67 +1424,6 @@
           {{/if}}
         </div>
         {{/each}}
-      </section>
-
-      <!-- GLOSSARY -->
-      <section class="sheet">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: var(--space-2);
-          "
-        >
-          <h6 style="color: var(--color-accent-300); margin: 0">13 · Glossaire</h6>
-        </div>
-        <h2 style="margin-bottom: var(--space-6)">Glossaire</h2>
-        {{#each glossary as |g|}}
-        <div class="glossary-entry" style="margin-bottom: var(--space-4)">
-          <div style="font-size: 14px; font-weight: 500; color: var(--color-accent-300)">
-            {{ g.term }}
-          </div>
-          <div style="font-size: 13px; opacity: 0.8">{{ g.def }}</div>
-        </div>
-        {{/each}}
-      </section>
-
-      <!-- NEXT STEPS -->
-      <section class="sheet">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: var(--space-2);
-          "
-        >
-          <h6 style="color: var(--color-accent-300); margin: 0">14 · Suite</h6>
-        </div>
-        <h2 style="margin-bottom: var(--space-6)">Prochaines étapes & contact</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-4)">
-          <div class="card elev-sm">
-            <div class="card-title">Une question ?</div>
-            <div class="card-body">
-              Toute demande de clarification sur un constat ou une priorité peut être adressée
-              directement à l'équipe Odysseus, en citant l'identifiant du constat concerné.
-            </div>
-          </div>
-          <div class="card elev-sm">
-            <div class="card-title">Ré-audits</div>
-            <div class="card-body">
-              Un ré-audit relance le même périmètre et compare les résultats au rapport précédent,
-              constat par constat, pour mesurer la progression.
-            </div>
-          </div>
-          <div class="card elev-sm">
-            <div class="card-title">Vérification post-correctifs</div>
-            <div class="card-body">
-              Une fois les correctifs déployés, une vérification ciblée confirme la résolution des
-              constats concernés avant clôture.
-            </div>
-          </div>
-        </div>
       </section>
     </div>
   </body>

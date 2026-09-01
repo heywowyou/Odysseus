@@ -140,42 +140,37 @@ html {
   box-sizing: border-box;
 }
 
-/* item 34: every section used to force a hard page break both before and
-   after itself (belt-and-suspenders, see the removed rule this comment
-   used to sit under), which is exactly what produced pages that were
-   more than half empty - a three-row table or a couple of short
-   paragraphs, alone, under a hard break on both sides. Sections now flow
-   naturally by default (no break forced either side) and only
-   .sheet-standalone sections force their own page boundaries on both
-   sides: the cover (via its own `page: cover` context switch, which
-   forces an implicit break on its own - see .sheet-cover below,
-   unaffected by this class), the TOC, the printable checklist
-   (section-05, which item 36 also specifically inverts for printing and
-   needs to stand alone on its own page for that to read correctly), and
-   the findings appendix (section-12, the start of a many-page block that
-   should never share its opening page with whatever precedes it).
-   Every other section is free to end mid-page with the next section's
-   heading continuing right below it. h2/h4/h5's existing break-after:
-   avoid (below) keeps a section's own heading from being orphaned alone
-   at the bottom of a page when this happens. */
-.sheet-standalone {
-  break-before: page;
-  break-after: page;
-}
-.sheet-standalone:last-child {
-  break-after: auto;
-}
+/* Plan 018 (2026-08-30 executive review): every numbered section's
+   .sheet starts on a fresh physical page - exactly one numbered section
+   start per page (docs/report/report-design-system.md section 2). This
+   replaces item 34's compact-flow default, where sections packed
+   together to keep pages from being half empty: sparse numbered pages
+   are now an accepted executive-reading choice, not a defect.
 
-/* Scoped with :not(.sheet-cover) rather than :first-child: Paged.js's
+   break-before only, never a forced break-after: each sheet's own
+   break-before supplies every interior boundary, so no sheet can push
+   a blank page out ahead of its successor and the document's last sheet
+   cannot create a trailing blank page (the reason the old
+   .sheet-standalone rule needed a :last-child unwind).
+
+   Scoped with :not(.sheet-cover) rather than :first-child: Paged.js's
    selector matching does not reliably support :first-child in break
    rules (confirmed against a real render - it produced a blank first
    page, the cover's content pushed entirely onto page 2), but a plain
    class-based :not() is a simple attribute check with no DOM-position
-   awareness required. Stated explicitly rather than left as the
-   (identical) default, so the intent reads directly from this rule
-   rather than from the absence of one. */
-.sheet:not(.sheet-cover):not(.sheet-standalone) {
-  break-before: auto;
+   awareness required. The cover is excluded because it is the
+   document's first sheet: its `page: cover` context switch (.sheet-cover
+   below) forces its own implicit break onto page 1, and stacking a
+   forced break on top of the document's first element is exactly the
+   shape that produced the blank first page above. */
+.sheet:not(.sheet-cover) {
+  break-before: page;
+}
+
+/* Stated explicitly rather than left as the (identical) default, so the
+   no-forced-break-after intent above reads directly from a rule instead
+   of from the absence of one. */
+.sheet {
   break-after: auto;
 }
 

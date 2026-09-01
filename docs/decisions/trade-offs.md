@@ -2250,17 +2250,21 @@ Paris (eu-west-3) alongside Scaleway's Paris region.
 last, and approve an exact French and English pair before delivery. The report
 remains a single evidence-bearing artifact: finding IDs, URLs, selectors,
 occurrences, and provenance are not split into a second export. The table of
-contents groups decision and action material, reference and method material,
-and the final technical annex. Cover, contents, printable checklist, and annex
-are standalone; compatible short sections flow together under tested fill and
-section-mixing bounds.
+contents groups the reading order into six narrative groups: executive
+context, decisions and actions, detailed evidence, legal reference, method and
+vocabulary, and the technical appendix. The cover, the metadata and
+severity-scale sheet, the contents, the printable checklist, and the appendix
+opening are standalone; every numbered section starts a fresh page, and the
+appendix stays final and flows continuously after its opening page.
 
 **Why:** splitting the appendix would make the director's document shorter but
 would create a second deliverable whose identity, approval, and retention could
 drift. Keeping it last preserves traceability while putting decisions first.
-Blanket page breaks caused sparse pages and contradicted the current renderer,
-so the canonical pagination contract now describes compact flow rather than an
-obsolete one-section-per-page rule.
+After the 2026-08-30 executive review the operator deliberately replaced
+compact flow with new-page section starts: sparse numbered pages are an
+accepted cost of executive readability, not a defect, and there is no
+page-count failure range (a report above 60 pages renders and returns a
+warning instead of failing).
 
 **Approval and provenance:** reports receive their report ID, render timestamp,
 renderer build, and template version before Chromium starts. Those same values

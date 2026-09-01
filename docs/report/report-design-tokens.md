@@ -23,8 +23,13 @@ already uses (mm for spacing, pt for type), not re-eyeballed.
 ## Port status
 
 - **Cover**: ported directly from the flat file's own markup and CSS
-  (2026-08-16, second pass). Classes, structure, and tokens below for
-  this section are current.
+  (2026-08-16, second pass), then restructured on 2026-09-01 (plan 018,
+  executive-readability slice): the cover sheet is now minimal (kicker,
+  commercial-name headline, generic decision question, report type, audit
+  date, Odysseus signature) and the former six-field cover grid and risk
+  pill moved to a new second metadata sheet. That restructure changed
+  structure only; every visual token below is unchanged, and classes,
+  structure, and tokens for these two sheets are current.
 - **Everything else** (TOC, executive summary, legal exposure, stat
   tiles, priority cards, checklist, appendix, glossary, next steps):
   still reflects the original PDF-pixel-sampling pass and has not been
@@ -126,63 +131,77 @@ this document.
   checked (severity badges, quick-win, legal-tag, risk badge, `.chip`,
   `.obs-tag`).
 
-## Components confirmed against the mockup, page by page
+## Components confirmed against the mockup source
+
+Placement below is determined by section order, not by fixed PDF page
+numbers: since plan 018 every numbered section starts its own physical page,
+so the page a section lands on depends on which sections are included.
 
 - **Cover**: ported structurally from the flat file's own COVER section.
   A `radial-gradient(ellipse 238mm 148mm at 50% 0%, ...)` ground
   (`--section-glow` → `--section` → `--bg`) behind the whole `.cover`
   box, no wordmark (the mockup has none - a small uppercase kicker
-  "Odysseus · Audit numérique" stands in for it). Kicker, `h1`, and a
-  subtitle line sit centered in the flex-1 upper block; a short accent
-  rule (`.cover-rule`) then a six-field two-column grid (`.cover-grid`,
-  `.cover-field`) sit in the flex-bottom block: site audited (this
-  template has no separate "client name" field, so the mockup's `CLIENT`
-  slot became `SITE AUDITÉ` / the audit's own `siteUrl`), audit date,
-  pages scanned, report language, standard audited, and overall risk as
-  a `.risk-badge` pill (solid fill, no border, no glyph - the previous
+  "Odysseus · Audit numérique" stands in for it). Kicker, the
+  commercial-name `h1`, and a generic decision question line sit centered
+  in the flex-1 upper block; a short accent rule (`.cover-rule`), then
+  the concise report type line and an audit date plus Odysseus signature
+  line, close the flex-bottom block. Restructured on 2026-09-01
+  (plan 018): the six-field grid and risk pill described below moved to
+  the metadata sheet, leaving the cover minimal by contract. The
+  mockup's own "Page 1 / N" corner label is deck-viewer chrome with no
+  equivalent here and was not ported. The 18mm section padding *was*
+  ported: `.cover` cancels this template's shared Playwright print
+  margin on itself (negative margin) and fills exactly one physical A4
+  page, so the radial gradient bleeds to every page edge the way the
+  mockup's own `margin="0"` doc-page does, while the 18mm comes back as
+  `.cover`'s own padding so the content sits exactly where it would have
+  under the old margin-only layout - see the `.cover` comment in
+  `report.css`.
+- **Metadata sheet** (second physical page, added 2026-09-01, plan 018):
+  carries the cover's former six-field two-column grid (`.cover-grid`,
+  `.cover-field`): site audited (this template has no separate "client
+  name" field, so the mockup's `CLIENT` slot is `SITE AUDITÉ` / the
+  audit's own `siteUrl`), audit date, pages scanned, report language, and
+  standard audited, plus a legal-name field and the overall risk as a
+  `.risk-badge` pill (solid fill, no border, no glyph - the previous
   bordered-outline treatment and severity glyph were mockup-mismatched
-  and dropped). The mockup's own "Page 1 / 16" corner label is
-  deck-viewer chrome with no equivalent here and was not ported. The
-  18mm section padding *was* ported: `.cover` cancels this template's
-  shared Playwright print margin on itself (negative margin) and fills
-  exactly one physical A4 page, so the radial gradient bleeds to every
-  page edge the way the mockup's own `margin="0"` doc-page does, while
-  the 18mm comes back as `.cover`'s own padding so the content sits
-  exactly where it would have under the old margin-only layout - see
-  the `.cover` comment in `report.css`.
-- **TOC** (PDF p3): eyebrow `SOMMAIRE`, numbered rows with a hairline
-  divider under each, accent-colored index numbers.
+  and dropped). Below the grid sits the severity scale (dot, label, and
+  meaning rows) with its basis note. It reuses the existing cover-grid
+  and tile vocabulary; no new tokens were introduced.
+- **TOC**: eyebrow `SOMMAIRE`, numbered rows with a hairline
+  divider under each, accent-colored index numbers, grouped under six
+  narrative group labels.
 - **Section header pattern** (every content page): eyebrow reads
   `NN · SECTION NAME`, immediately followed by a large `h1`/`h2`-style
   title and a one-line intro paragraph. Confirmed on every page checked
   (Résumé, Exposition légale, Priorités, Check-list, Annexe, Glossaire,
   Prochaines étapes).
-- **"Par où commencer" list** (Résumé page, PDF p4): a `--panel`-toned
+- **"Par où commencer" list** (Résumé section): a `--panel`-toned
   box with numbered accent-outlined circles, item text, right-aligned
   "Voir →" links, hairline dividers between rows.
-- **Legal exposure tiles** (PDF p5): two side-by-side bordered tiles,
+- **Legal exposure tiles**: two side-by-side bordered tiles,
   small label + large value + short description each.
-- **Stat tiles + severity/category tiles** (PDF p6): a plain 4-up tile
+- **Stat tiles + severity/category tiles**: a plain 4-up tile
   row (big number + label, `--panel` fill, no border color), then a
   4-up severity row (colored dot + label, big number, description, tile
   fill = that severity's own tint), then a 4-up category row (label +
   count, `--panel` fill).
-- **Priority/theme cards** (PDF p7-8): `--panel-2` rounded card, accent-
+- **Priority/theme cards**: `--panel-2` rounded card, accent-
   outlined rank circle, category chip + optional green "Quick win" chip,
   bold title, body paragraph, legal-relevance line in muted text, then a
   meta row (`Effort`/`Impact`/`Pages affectées`/`Conformité`/`Réf.`).
-- **Checklist table** (PDF p9): plain table, uppercase small header row,
+- **Checklist table**: plain table, uppercase small header row,
   hairline row dividers, no zebra striping, generous row padding.
-- **Findings appendix** (PDF p14-16): category heading in accent color,
+- **Findings appendix**: category heading in accent color,
   then per-rule blocks - severity badge, rule title, monospace rule-id
   tag, summary line (`N constats · N occurrences · jusqu'à N pages ·
   WCAG X.X.X`), then a sub-table (`ID`/`PAGES`/`OCCURRENCES`/`SÉLECTEUR`).
   Every finding appears individually or in a per-rule aggregate - the
   mockup's own intro line says so explicitly ("aucun n'est renvoyé "sur
   demande""), matching this template's existing behavior.
-- **Glossary** (PDF p18): accent-colored bold term + plain-text
+- **Glossary**: accent-colored bold term + plain-text
   definition pairs, generously spaced.
-- **Next steps / footer** (PDF p19): three bordered cards in a row
+- **Next steps / footer**: three bordered cards in a row
   (title + short paragraph each) - "Une question ?", "Ré-audits",
   "Vérification post-correctifs".
 

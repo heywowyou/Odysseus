@@ -70,7 +70,7 @@ flow continuously; they do not each start a page.
 - `packages/report/src/template/render-html.ts:165-271` duplicates that order in
   its render calls. The registry and render order must always agree.
 - `packages/report/src/styles/paged.css:143-167` deliberately implements compact
-  flow. `paged-invariants.test.ts:234-312` asserts up to three numbered sections
+  flow. `paged-invariants.e2e.test.ts:234-312` asserts up to three numbered sections
   per page and rejects pages more than 80 percent empty. These tests and
   `docs/report/report-design-system.md` conflict with the operator's newly
   approved one-section-per-page rule and must change together.
@@ -217,7 +217,7 @@ Change `paged.css` so every numbered `.sheet` starts a page. Preserve the cover
 named-page behavior, footer margin boxes, checklist print inversion, heading
 orphan protection, row-level atomicity, and appendix fragmentation rules.
 
-Update `paged-invariants.test.ts` before changing templates:
+Update `paged-invariants.e2e.test.ts` before changing templates:
 
 - replace the three-sections-per-page assertion with exactly one numbered
   section start per physical page;
@@ -231,7 +231,7 @@ Update `paged-invariants.test.ts` before changing templates:
 Do not force every appendix finding to a page. Do not add `break-inside: avoid`
 to an appendix group.
 
-**Verify**: `pnpm exec vitest run packages/report/src/template/paged-invariants.test.ts`
+**Verify**: `pnpm exec vitest run packages/report/src/template/paged-invariants.e2e.test.ts`
 passes with the revised assertions.
 
 ### Step 3: Reorder sections while preserving stable IDs
@@ -284,7 +284,7 @@ Update the flat/reference sources first, then template code. Add FR/EN and
 manual-field tests for commercial-name precedence, legal-name placement,
 missing fields, performance-not-measured copy, and metadata-sheet order.
 
-**Verify**: `pnpm exec vitest run packages/report/src/template/sections/cover-manual-fields.test.ts packages/report/src/template/sections/cover-performance-referential.test.ts packages/report/src/template/render-html.axe.test.ts`
+**Verify**: `pnpm exec vitest run packages/report/src/template/sections/cover-manual-fields.test.ts packages/report/src/template/sections/cover-performance-referential.test.ts packages/report/src/template/render-html.axe.e2e.test.ts`
 passes.
 
 ### Step 5: Turn the opening into a safe generic SCQ narrative
@@ -426,7 +426,7 @@ paths, page counts, warnings, and human-review result in the session log.
 
 ## Test plan
 
-- Update `paged-invariants.test.ts` to the new canonical contract.
+- Update `paged-invariants.e2e.test.ts` to the new canonical contract.
 - Add registry/render-order assertions using the real rendered DOM.
 - Extend cover tests for commercial identity and the metadata sheet.
 - Extend report-intro tests for SCQ structure and shared question bytes.
@@ -435,7 +435,7 @@ paths, page counts, warnings, and human-review result in the session log.
 - Extend `pdf.test.ts`, report-stage, store, route, and dashboard-model tests for
   page-count warnings.
 - Keep `spacing-tokens.test.ts`, `guillemet-spacing.test.ts`,
-  `letter-spacing.test.ts`, `render-html.axe.test.ts`, and the tagged-PDF outline
+  `letter-spacing.test.ts`, `render-html.axe.e2e.test.ts`, and the tagged-PDF outline
   assertion green.
 
 ## Done criteria
