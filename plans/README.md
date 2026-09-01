@@ -350,6 +350,8 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [019](./019-report-preparation-and-personalization.md) | Prepare and personalize the paid report safely | P1 | L | 018 | TODO |
 | [020](./020-report-financial-evidence-and-legal-reference.md) | Add defensible financial evidence and the general legal reference | P1 | L | 019 | TODO |
 | [021](./021-complete-audits-without-template-repetition.md) | Keep full-site audits complete without repeating template work | P1 | L | 018-020 | TODO |
+| [022](./022-dashboard-and-site-design-refactor.md) | Refactor the operator dashboard and public site UI with the Impeccable workflow | P2 | L | none | TODO |
+| [023](./023-report-visual-design-refactor.md) | Revise the report visual design as a gated, operator-directed redesign | P2 | L | 018-021, operator-approved direction | TODO |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
@@ -410,6 +412,24 @@ affected pages and occurrences. It follows plans 018 through 020 because it
 changes their final report coverage language and must not be layered over their
 in-flight files.
 
+Plan 022 (added 2026-09-01, operator-approved) runs the installed Impeccable
+workflow (skill 4.1.2, decision record in
+`docs/research/design-skill-alternatives.md`) over the two surfaces it is
+scoped to: the operator dashboard in Operate mode and the public site in
+Persuade mode. It has no file overlap with the report sequence and may be
+scheduled between 019 and 021 sessions, but never concurrently with another
+active plan in the same tree. The report and its docs stay excluded through
+`.impeccable/config.json`.
+
+Plan 023 (added 2026-09-01, operator-approved direction) is the only plan
+allowed to revise the report's visual design, and only as a gated,
+operator-directed redesign: plans 018 through 021 must be `DONE`, the
+operator picks the direction from an evidence pack in which the Impeccable
+skill is read-only input, and the canonical design documents, flat sources,
+and `nocturne.css` move together with the report's own invariant suites as
+the acceptance gate. It must not start while 019 through 021 have
+uncommitted report files.
+
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, or `REJECTED: <reason>`. `IMPLEMENTED` means every done
 criterion is met and the suite is green, but a verification step still needs a
@@ -438,6 +458,14 @@ Each kind of work has exactly one home:
 - Plans 018 through 020 form a strict report sequence. Do not begin 019 until
   018's section order and pagination contract are verified, and do not begin
   020 until 019's single preparation aggregate and interface are verified.
+- Plan 022 needs no report-sequence file and may run in parallel with 019
+  through 021 as separate sessions. Its scope is exactly the two surfaces in
+  its briefs; the report exclusion in `.impeccable/config.json` is part of its
+  contract.
+- Plan 023 follows plan 021 and adds its own operator gate: no design work
+  before the evidence pack and the recorded direction pick. It is the only
+  instrument that may revise the report visual design, and it moves the
+  canonical documents and the stylesheet in one slice.
 - Plan 021 follows plan 020. Its scanner work and report coverage semantics are
   one corrective slice; do not start its report half against an unfinished
   report sequence or split it into a scanner behavior that the PDF cannot yet
