@@ -223,6 +223,17 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
   });
 
   it('cancelQueuedJobs cancels every queued job and leaves running ones alone', async () => {
+    // The running job must genuinely be running before the clear: it is
+    // created first and claimed while it is the only queued document, so
+    // the claim cannot hit one of the queued jobs created below.
+    const running = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://l.example/',
+      options: {},
+    });
+    const claimed = await claimNextQueuedJob(connection!);
+    expect(claimed?.jobId).toBe(running.jobId);
+
     const queuedA = await createJob(connection!, {
       type: 'full-audit',
       siteUrl: 'https://j.example/',
@@ -233,11 +244,6 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
       urls: ['https://k.example/'],
       options: {},
     });
-    const running = await createJob(connection!, {
-      type: 'full-audit',
-      siteUrl: 'https://l.example/',
-      options: {},
-    });
 
     const clearedCount = await cancelQueuedJobs(connection!, 'queue cleared by operator');
     expect(clearedCount).toBeGreaterThanOrEqual(2);
@@ -246,7 +252,7 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect((await getJob(connection!, queuedB.jobId))?.status).toBe('cancelled');
     // The running job keeps its status: a stop request for it goes through
     // cancelJob, which matches queued-or-running documents.
-    expect((await getJob(connection!, running.jobId))?.status).toBe('queued');
+    expect((await getJob(connection!, running.jobId))?.status).toBe('running');
     await completeJob(connection!, running.jobId);
   });
 
