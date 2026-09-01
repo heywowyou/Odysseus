@@ -42,6 +42,29 @@ The likely fix is a section-level wrapper around the opener and first content
 unit, followed by pagination regression tests. Do not make the structural
 change based only on the hypothetical case.
 
+### Checklist group header can orphan at an appendix page break
+
+Real rendered reviews (La Coorniche and the large fixture, plan 018 era)
+showed a checklist group header starting a page with its rows left on the
+previous page. The bounded fix would extend the `.remaining-category-head`
+wrapper pattern rather than a generic `break-after: avoid` on headings
+(trade-off 32 forbids the generic form).
+
+Trigger: a committed fixture or real report reproduces the orphan. Do not
+restructure checklist markup from memory of the review alone.
+
+### LCEN and EAA citation wording needs a legal read at render size
+
+A rendered-output review flagged the LCEN/EAA citation wording on page 21
+of the large fixture, but the review was run at 60 DPI and the flag was
+uncertain, so the wording may already be correct per
+`docs/rules/obligation-basis.md`.
+
+Trigger: the next full-size rendered review of a report carrying the LCEN
+block re-reads those sentences against obligation-basis section 7 before
+any wording change. Legal copy is deterministic where the charter says it
+is; this is a review gate, not a copy suggestion.
+
 ### Annex URL row can separate from its finding row
 
 Paged.js may place an appendix URL sub-row at the start of the page after its

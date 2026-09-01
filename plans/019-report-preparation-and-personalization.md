@@ -1,7 +1,9 @@
 # Plan 019: Prepare and personalize the paid report safely
 
-- **Status:** IMPLEMENTED (2026-09-01; DONE awaits the plan's manual
-  operator review with one legacy audit and one new audit)
+- **Status:** DONE (2026-09-01; implemented in `b219e43`, `0310e26`,
+  `a9878df`, `836f561`, `ffc1632`, `f7ced66` plus the four live-found defect
+  fixes `1e87b24`, `6b7fb51`, `f9cbca5`, `6600749`; the operator's manual
+  review completed the same day)
 - **Priority:** P1
 - **Effort:** L
 - **Risk:** HIGH
