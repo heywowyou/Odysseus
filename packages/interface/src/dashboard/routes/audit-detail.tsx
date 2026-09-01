@@ -23,6 +23,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
+import { PrepareReportCard } from './prepare-report-card';
 import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
 import { cn } from '../lib/cn';
 import { formatDateTime } from '../lib/format';
@@ -594,6 +595,7 @@ export function AuditDetailPage(): JSX.Element {
       </div>
       <div className="mt-6 flex flex-col gap-6">
         <ReportsCard detail={data} />
+        <PrepareReportCard auditId={data.auditId} />
         <EnrichmentCard
           auditId={data.auditId}
           manualFields={data.manualFields ?? null}

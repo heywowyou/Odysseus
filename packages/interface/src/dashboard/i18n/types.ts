@@ -238,6 +238,80 @@ export interface DashboardStrings {
      *  selected severity. */
     findingsEmpty: string;
   };
+
+  /** Plan 019: the Prepare report card. The closed vocabulary option
+   *  labels are duplicated by value from @odysseus/core's copy tables
+   *  because the dashboard TypeScript project reads no workspace packages;
+   *  the strings-parity test keeps both languages aligned. */
+  prepareReport: {
+    title: string;
+    description: string;
+    situationLabel: string;
+    triggerLabel: string;
+    /** Shown only when the trigger 'other' is selected. */
+    triggerOtherNotesLabel: string;
+    customQuestionLabel: string;
+    frenchFieldLabel: string;
+    englishFieldLabel: string;
+    automaticOption: string;
+    stakeholdersHeading: string;
+    journeysHeading: string;
+    journeyConfirm: string;
+    journeyRemove: string;
+    journeyConfirmedLabel: string;
+    journeyRemovedLabel: string;
+    exclusionNoVisitedPages: string;
+    exclusionNoTransactionalFlow: string;
+    exclusionNoTransactionalPageVisited: string;
+    exclusionEvidenceUnavailable: string;
+    warningsHeading: string;
+    warningCommercialName: string;
+    warningSituation: string;
+    warningTrigger: string;
+    warningJourneyScope: string;
+    confirmWarningsButton: string;
+    warningsConfirmedLabel: string;
+    previewHeading: string;
+    previewAutomaticLabel: string;
+    previewCustomLabel: string;
+    previewFallbackLabel: string;
+    saveButton: string;
+    savedMessage: string;
+    writingHeading: string;
+    selectedWritingLabel: string;
+    candidateReadyLabel: string;
+    candidateFailedLabel: string;
+    candidateSelectedLabel: string;
+    candidatePreviewLabel: string;
+    approveCandidateButton: string;
+    regenerateButton: string;
+    confirmRegenerateTitle: string;
+    confirmRegenerateBody: string;
+    regeneratingMessage: string;
+    approvedMessage: string;
+    situationOptions: Record<
+      | 'no-work-started'
+      | 'redesign-underway'
+      | 'corrections-underway'
+      | 'accessibility-programme'
+      | 'periodic-review'
+      | 'unknown',
+      string
+    >;
+    triggerOptions: Record<
+      | 'legal-question'
+      | 'customer-complaint'
+      | 'booking-or-conversion'
+      | 'search-visibility'
+      | 'redesign'
+      | 'procurement'
+      | 'commercial-discussion'
+      | 'proactive-review'
+      | 'other',
+      string
+    >;
+    journeyLabels: Record<'discovery-navigation' | 'transaction-booking', string>;
+  };
   /** Shared operator-interface strings (plan 013): pagination, review
    *  actions, and detail-page navigation used by several pages. */
   operator: {
