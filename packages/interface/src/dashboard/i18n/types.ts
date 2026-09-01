@@ -73,6 +73,25 @@ export interface DashboardStrings {
     /** Accessible name of the sort select; the options carry the visible
      *  copy. */
     sortLabel: string;
+    /** Job controls of the audits table: stop, delete, clear queue, and
+     *  their confirmation dialogs and toasts. */
+    stopAction: string;
+    deleteAction: string;
+    confirmStopTitle: string;
+    confirmStopBody: string;
+    /** {site} is replaced with the deleted scan's site URL by the page. */
+    confirmDeleteTitle: string;
+    confirmDeleteBody: string;
+    clearQueue: string;
+    confirmClearQueueTitle: string;
+    /** {count} is replaced with the number of queued scans by the page. */
+    confirmClearQueueBody: string;
+    stoppedMessage: string;
+    deletedMessage: string;
+    /** {count} is replaced with the number of cancelled queued scans. */
+    queueClearedMessage: string;
+    /** Shown when a stop, delete, or clear-queue mutation fails. */
+    actionFailed: string;
   };
   newScan: {
     title: string;
@@ -107,6 +126,9 @@ export interface DashboardStrings {
     transactionalFlowReasonPlaceholder: string;
     advancedOptions: string;
     maxPagesLabel: string;
+    /** Stands under the max-pages input: empty means the whole site, which
+     *  can take hours on a large site. */
+    maxPagesHint: string;
     maxDepthLabel: string;
     delayLabel: string;
     seedsLabel: string;
@@ -143,6 +165,13 @@ export interface DashboardStrings {
     failedHeading: string;
     urlResultsHeading: string;
     notFound: string;
+    /** Stop control of the live progress page and its confirmation and
+     *  terminal states (a cancelled job keeps finished phases). */
+    stopButton: string;
+    confirmStopTitle: string;
+    confirmStopBody: string;
+    stoppedHeading: string;
+    cancelledNote: string;
   };
   auditDetail: {
     title: string;
@@ -278,6 +307,8 @@ export interface DashboardStrings {
     openScore: string;
     openEvidence: string;
     openPreview: string;
+    openSite: string;
+    launchAudit: string;
     sourcesHeading: string;
     sources: {
       field: string;
@@ -466,5 +497,18 @@ export interface DashboardStrings {
       'budget' | 'timing' | 'not-a-priority' | 'existing-provider' | 'scope-mismatch' | 'other',
       string
     >;
+  };
+  /** One-line plain-language hints of the pipeline stages, shown next to
+   *  the vocabulary by InfoTip on operator pages. Each key names the stage
+   *  it explains, in pipeline order. */
+  hints: {
+    crawl: string;
+    scan: string;
+    prescan: string;
+    score: string;
+    evidence: string;
+    preview: string;
+    qualification: string;
+    review: string;
   };
 }

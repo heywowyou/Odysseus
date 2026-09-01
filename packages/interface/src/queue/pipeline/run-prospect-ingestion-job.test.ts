@@ -24,6 +24,7 @@ import {
 import { OriginLock } from '@odysseus/scanner';
 import { runProspectIngestionJob } from './run-prospect-ingestion-job.js';
 import type { PipelineContext } from '../job-queue.js';
+import { CancellationRegistry } from '../cancellation.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.join(moduleDir, '..', '..', '..', '..', '..');
@@ -81,7 +82,11 @@ const originalFetch = global.fetch;
 beforeEach(async () => {
   vi.clearAllMocks();
   await rm(cachePath, { force: true }); // force a fresh index build per test
-  ctx = { connection: fakeConnection, originLock: new OriginLock() };
+  ctx = {
+    connection: fakeConnection,
+    originLock: new OriginLock(),
+    cancellation: new CancellationRegistry(),
+  };
 
   vi.mocked(getCheckpoint).mockResolvedValue(null);
   vi.mocked(isSuppressed).mockImplementation(

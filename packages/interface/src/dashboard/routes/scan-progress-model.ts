@@ -33,9 +33,16 @@ export function currentPhaseLabel(phase: string, labels: ProgressPhaseLabels): s
   return isKnownPhase(phase) ? labels[phase] : phase;
 }
 
-/** A terminal document can no longer change, so polling stops. */
+/** The dashboard TypeScript project reads no workspace packages, so
+ *  @odysseus/scanner's UNLIMITED_MAX_PAGES sentinel (packages/scanner/
+ *  src/config.ts) is duplicated here by value. */
+const UNLIMITED_MAX_PAGES = Number.MAX_SAFE_INTEGER;
+
+/** A terminal document can no longer change, so polling stops. Cancelled
+ *  counts: the stop takes effect at the end of the page in flight and no
+ *  counter moves afterwards. */
 export function isTerminal(status: JobStatus | undefined): boolean {
-  return status === 'complete' || status === 'failed';
+  return status === 'complete' || status === 'failed' || status === 'cancelled';
 }
 
 function clampPercent(value: number): number {
@@ -44,10 +51,18 @@ function clampPercent(value: number): number {
 
 /** Crawl bar percentage, ported from app-progress.ts renderFullAudit:
  *  visited over target capped at 100. A missing or non-positive target is
- *  0 rather than Infinity, matching the old page's target > 0 guard. */
-export function crawlProgress(job: ScanJobDetail): number {
+ *  0 rather than Infinity, matching the old page's target > 0 guard. An
+ *  uncapped crawl reports null (the bar renders indeterminate) while the
+ *  job is queued or crawling: the sentinel target is not a real page
+ *  count, so any determinate width would be a lie (GitHub issue 18). Once
+ *  the job moves past the crawl it pins to 100, mirroring the scan bar's
+ *  pin convention. */
+export function crawlProgress(job: ScanJobDetail): number | null {
   const crawl = job.progress.crawl;
   if (crawl === undefined || crawl.target <= 0) return 0;
+  if (crawl.target >= UNLIMITED_MAX_PAGES) {
+    return job.phase === 'queued' || job.phase === 'crawl' ? null : 100;
+  }
   return clampPercent((crawl.visited / crawl.target) * 100);
 }
 

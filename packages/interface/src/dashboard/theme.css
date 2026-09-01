@@ -65,6 +65,7 @@
   --animate-overlay-in: overlay-in 0.2s ease-out both;
   --animate-content-in: content-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-drawer-in: drawer-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-progress-indeterminate: progress-indeterminate 1.4s ease-in-out infinite;
 
   @keyframes page-in {
     from {
@@ -108,6 +109,16 @@
     }
     to {
       transform: none;
+    }
+  }
+  /* Indeterminate progress bar: a one-third-wide segment slides across the
+     full track (300% of its own width reaches the far edge). */
+  @keyframes progress-indeterminate {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
     }
   }
 }

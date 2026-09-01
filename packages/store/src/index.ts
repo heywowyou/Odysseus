@@ -46,9 +46,12 @@ export type {
   UrlResultStatus,
 } from './schemas/job.schema.js';
 export {
+  cancelJob,
+  cancelQueuedJobs,
   claimNextQueuedJob,
   completeJob,
   createJob,
+  deleteJob,
   failJob,
   getJob,
   listJobs,
@@ -56,6 +59,8 @@ export {
   updateJobProgress,
 } from './jobs.js';
 export type { CompleteJobPatch, JobProgressPatch, NewJobInput } from './jobs.js';
+export { deleteAuditCascade } from './delete-audit.js';
+export type { AuditCascadeCounts } from './delete-audit.js';
 export { getSeverityRollup, getSeverityRollups } from './severity-rollup.js';
 export type { SeverityRollup } from './severity-rollup.js';
 export {

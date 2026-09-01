@@ -45,9 +45,10 @@ describe('isTerminal', () => {
     expect(isTerminal('running')).toBe(false);
   });
 
-  it('is true once the job reached complete or failed', () => {
+  it('is true once the job reached complete, failed, or cancelled', () => {
     expect(isTerminal('complete')).toBe(true);
     expect(isTerminal('failed')).toBe(true);
+    expect(isTerminal('cancelled')).toBe(true);
   });
 });
 
@@ -81,6 +82,36 @@ describe('crawlProgress', () => {
     expect(
       crawlProgress(job({ phase: 'scan', progress: { crawl: { visited: -3, target: 10 } } })),
     ).toBe(0);
+  });
+
+  it('is null while an uncapped crawl is queued or crawling', () => {
+    // Sentinel target of an uncapped crawl, the same value the scanner
+    // stores when no page limit was set.
+    const uncapped = Number.MAX_SAFE_INTEGER;
+    expect(
+      crawlProgress(
+        job({ phase: 'queued', progress: { crawl: { visited: 0, target: uncapped } } }),
+      ),
+    ).toBe(null);
+    expect(
+      crawlProgress(
+        job({ phase: 'crawl', progress: { crawl: { visited: 120, target: uncapped } } }),
+      ),
+    ).toBe(null);
+  });
+
+  it('pins an uncapped crawl to 100 once the job moved past it', () => {
+    const uncapped = Number.MAX_SAFE_INTEGER;
+    expect(
+      crawlProgress(
+        job({ phase: 'scan', progress: { crawl: { visited: 120, target: uncapped } } }),
+      ),
+    ).toBe(100);
+    expect(
+      crawlProgress(
+        job({ phase: 'report-en', progress: { crawl: { visited: 120, target: uncapped } } }),
+      ),
+    ).toBe(100);
   });
 });
 

@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
+import { InfoTip } from '../components/ui/info-tip';
 import { SegmentedControl } from '../components/ui/segmented';
 import { Select } from '../components/ui/select';
 import { Skeleton } from '../components/ui/skeleton';
@@ -60,6 +61,20 @@ function reviewLabel(reviewState: string, strings: DashboardStrings): string {
 
 function detailTarget(row: ProspectRow): string {
   return `/prospects/${encodeURIComponent(row.candidateId)}`;
+}
+
+/** Header cell whose column name carries an inline info tip, for columns
+ *  whose meaning one line of copy can settle (how the score, the
+ *  qualification outcome, or the review state are produced). */
+function HeaderWithTip(props: { label: string; hint: string }): JSX.Element {
+  return (
+    <TableHeaderCell>
+      <span className="inline-flex items-center gap-1">
+        {props.label}
+        <InfoTip label={props.label} hint={props.hint} />
+      </span>
+    </TableHeaderCell>
+  );
 }
 
 export function ProspectsPage(): JSX.Element {
@@ -134,9 +149,15 @@ export function ProspectsPage(): JSX.Element {
                 <TableHeaderCell>{strings.prospects.columns.city}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.identity}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.group}</TableHeaderCell>
-                <TableHeaderCell>{strings.prospects.columns.qualification}</TableHeaderCell>
-                <TableHeaderCell>{strings.prospects.columns.review}</TableHeaderCell>
-                <TableHeaderCell>{strings.prospects.columns.score}</TableHeaderCell>
+                <HeaderWithTip
+                  label={strings.prospects.columns.qualification}
+                  hint={strings.hints.qualification}
+                />
+                <HeaderWithTip
+                  label={strings.prospects.columns.review}
+                  hint={strings.hints.review}
+                />
+                <HeaderWithTip label={strings.prospects.columns.score} hint={strings.hints.score} />
                 <TableHeaderCell>{strings.prospects.columns.contact}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.thread}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.outcome}</TableHeaderCell>

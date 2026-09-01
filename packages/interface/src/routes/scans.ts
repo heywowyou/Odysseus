@@ -1,12 +1,19 @@
 import type { Connection } from 'mongoose';
+import { promises as fs } from 'node:fs';
 import { isHttpUrlWithoutCredentials, isValidSiren } from '@odysseus/core';
 import {
+  cancelJob,
+  cancelQueuedJobs,
   createJob,
+  deleteAuditCascade,
+  deleteJob,
+  getAudit,
   getJob,
   getSeverityRollups,
   listJobs,
   type JobOptionsSnapshot,
 } from '@odysseus/store';
+import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
@@ -199,5 +206,87 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       return;
     }
     sendJson(res, 200, job);
+  });
+
+  /** Operator clear of every queued job at once. Running and terminal
+   *  jobs are untouched; a stop for a running job goes through the
+   *  per-job cancel route below. */
+  router.post('/api/scans/queue/clear', async ({ res }) => {
+    const cleared = await cancelQueuedJobs(connection, 'cancelled by operator');
+    sendJson(res, 200, { cleared });
+  });
+
+  /** Operator stop for one job. The document is terminal from this moment
+   *  (so the dashboard and the claim filter both react at once); a running
+   *  job's in-flight pipeline work aborts at its next page boundary via
+   *  the queue's cancellation registry. Job types without cooperative
+   *  cancellation (hotel-prescan, prospect-ingestion) refuse the request
+   *  rather than pretending: they would keep running to completion. */
+  router.post('/api/scans/:jobId/cancel', async ({ res, params }) => {
+    const jobId = params['jobId']!;
+    const job = await getJob(connection, jobId);
+    if (!job) {
+      sendError(res, 404, 'job not found');
+      return;
+    }
+    if (job.status !== 'queued' && job.status !== 'running') {
+      sendError(res, 409, `job is already ${job.status}`);
+      return;
+    }
+    if (job.status === 'running' && job.type !== 'full-audit' && job.type !== 'prospecting') {
+      sendError(
+        res,
+        409,
+        `running ${job.type} jobs cannot be stopped and will finish on their own`,
+      );
+      return;
+    }
+    if (job.status === 'running') {
+      queue.requestCancel(jobId);
+    }
+    await cancelJob(connection, jobId, 'cancelled by operator');
+    sendJson(res, 200, { jobId, status: 'cancelled' });
+  });
+
+  /** Deletes one job row and, when the job produced audits, every audit it
+   *  produced: documents across all five audit-linked collections plus the
+   *  artifacts directory. Running jobs are refused (stop first), so a
+   *  deleted job can never keep consuming the server invisibly. */
+  router.delete('/api/scans/:jobId', async ({ res, params }) => {
+    const jobId = params['jobId']!;
+    const job = await getJob(connection, jobId);
+    if (!job) {
+      sendError(res, 404, 'job not found');
+      return;
+    }
+    if (job.status === 'running') {
+      sendError(res, 409, 'a running job must be stopped before it can be deleted');
+      return;
+    }
+
+    const auditIds = new Set<string>();
+    if (job.auditId !== undefined) auditIds.add(job.auditId);
+    for (const id of job.auditIds ?? []) auditIds.add(id);
+    for (const row of job.urlResults ?? []) {
+      if (row.auditId !== undefined) auditIds.add(row.auditId);
+    }
+
+    for (const auditId of auditIds) {
+      const audit = await getAudit(connection, auditId);
+      if (audit !== null) {
+        const auditDir = buildAuditDir(
+          getArtifactsRoot(),
+          new URL(audit.siteUrl).hostname,
+          audit.startedAt,
+        );
+        // force: artifacts may already be gone (retention sweep, or the
+        // pre-move audits that never left the old machine).
+        await fs.rm(auditDir, { recursive: true, force: true });
+      }
+      await deleteAuditCascade(connection, auditId);
+    }
+
+    const deleted = await deleteJob(connection, jobId);
+    sendJson(res, 200, { jobId, deleted, auditsDeleted: auditIds.size });
   });
 }

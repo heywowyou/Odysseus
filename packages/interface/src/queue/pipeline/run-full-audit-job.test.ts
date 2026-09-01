@@ -10,6 +10,7 @@ import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import { completeJob, updateJobProgress } from '@odysseus/store';
 import { runFullAuditJob } from './run-full-audit-job.js';
+import { CancellationRegistry } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
 
 const fakeConnection = {} as never;
@@ -70,6 +71,7 @@ beforeEach(() => {
   ctx = {
     connection: fakeConnection,
     originLock: { acquire: vi.fn().mockResolvedValue(release) } as never,
+    cancellation: new CancellationRegistry(),
   };
 
   vi.mocked(runAuditStage).mockResolvedValue(fakeAuditResult());

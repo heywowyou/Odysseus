@@ -115,6 +115,46 @@ export async function failJob(connection: Connection, jobId: string, error: stri
   );
 }
 
+/** Operator stop request, written immediately so the dashboard reflects it
+ *  and the claim filter (status 'queued') can never pick the job up again.
+ *  A running job's runner learns about the stop through the interface
+ *  package's in-process registry and throws at the next page boundary; the
+ *  terminal write is idempotent against this one because it only matches
+ *  documents still queued or running. Returns false when the job was
+ *  already terminal, so the route layer can answer 409 instead of lying. */
+export async function cancelJob(
+  connection: Connection,
+  jobId: string,
+  error: string,
+): Promise<boolean> {
+  const JobModel = createJobModel(connection);
+  const result = await JobModel.updateOne(
+    { jobId, status: { $in: ['queued', 'running'] } },
+    { $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error } },
+  );
+  return result.modifiedCount > 0;
+}
+
+/** Bulk operator clear of every queued job at once. Same semantics as
+ *  cancelJob for each of them; running and terminal jobs are untouched. */
+export async function cancelQueuedJobs(connection: Connection, error: string): Promise<number> {
+  const JobModel = createJobModel(connection);
+  const result = await JobModel.updateMany(
+    { status: 'queued' },
+    { $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error } },
+  );
+  return result.modifiedCount;
+}
+
+/** Removes one job document outright (audits-page delete). Callers decide
+ *  whether the job's linked audits are cascaded first; this only unlinks
+ *  the queue history row itself. */
+export async function deleteJob(connection: Connection, jobId: string): Promise<boolean> {
+  const JobModel = createJobModel(connection);
+  const result = await JobModel.deleteOne({ jobId });
+  return result.deletedCount > 0;
+}
+
 export async function listJobs(connection: Connection, limit = 200): Promise<JobDocument[]> {
   const JobModel = createJobModel(connection);
   return JobModel.find().sort({ createdAt: -1 }).limit(limit).lean<JobDocument[]>();

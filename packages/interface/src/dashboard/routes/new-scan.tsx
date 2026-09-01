@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import { PageHeader } from '../components/page-header';
@@ -19,6 +19,7 @@ import {
   buildScanRequest,
   createEmptyFormValues,
   isValidAbsoluteHttpUrl,
+  prefillUrlFromQuery,
   validateSiren,
 } from './new-scan-model';
 import type { NewScanFormValues } from './new-scan-model';
@@ -31,7 +32,13 @@ export function NewScanPage() {
   const { strings } = useI18n();
   const copy = strings.newScan;
   const navigate = useNavigate();
-  const [form, setForm] = useState<NewScanFormValues>(createEmptyFormValues);
+  const [searchParams] = useSearchParams();
+  // ?url= prefill from the prospect page's launch-audit link, read once as
+  // the initial state; the route boundary revalidates the submitted value.
+  const [form, setForm] = useState<NewScanFormValues>(() => ({
+    ...createEmptyFormValues(),
+    url: prefillUrlFromQuery(searchParams.get('url')),
+  }));
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -172,7 +179,11 @@ export function NewScanPage() {
               {advancedOpen ? (
                 <div className="mt-4 flex flex-col gap-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <Field label={copy.maxPagesLabel} htmlFor="new-scan-max-pages">
+                    <Field
+                      label={copy.maxPagesLabel}
+                      htmlFor="new-scan-max-pages"
+                      hint={copy.maxPagesHint}
+                    >
                       <Input
                         id="new-scan-max-pages"
                         type="number"

@@ -13,7 +13,7 @@ import { Schema, type Connection, type Model } from 'mongoose';
 import type { ProspectQualificationReason } from './prospect.schema.js';
 
 export type JobType = 'full-audit' | 'prospecting' | 'prospect-ingestion' | 'hotel-prescan';
-export type JobStatus = 'queued' | 'running' | 'complete' | 'failed';
+export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled';
 export type JobPhase =
   | 'queued'
   | 'crawl'
@@ -28,7 +28,8 @@ export type JobPhase =
   | 'fetch-qualify'
   | 'prescanning'
   | 'complete'
-  | 'failed';
+  | 'failed'
+  | 'cancelled';
 
 export interface JobOptionsSnapshot {
   maxPages?: number;
@@ -280,7 +281,11 @@ const jobSchema = new Schema<JobDocument>(
       required: true,
       enum: ['full-audit', 'prospecting', 'prospect-ingestion', 'hotel-prescan'],
     },
-    status: { type: String, required: true, enum: ['queued', 'running', 'complete', 'failed'] },
+    status: {
+      type: String,
+      required: true,
+      enum: ['queued', 'running', 'complete', 'failed', 'cancelled'],
+    },
     phase: {
       type: String,
       required: true,
@@ -299,6 +304,7 @@ const jobSchema = new Schema<JobDocument>(
         'prescanning',
         'complete',
         'failed',
+        'cancelled',
       ],
     },
     siteUrl: { type: String },

@@ -1,4 +1,4 @@
-export type JobStatus = 'queued' | 'running' | 'complete' | 'failed';
+export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled';
 export type JobType = 'full-audit' | 'prospecting';
 
 export interface SeverityRollup {

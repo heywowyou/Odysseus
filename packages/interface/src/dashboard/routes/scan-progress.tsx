@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/page-header';
 import { Badge, badgeStyles, type BadgeTone } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
+import { InfoTip } from '../components/ui/info-tip';
 import { ProgressBar } from '../components/ui/progress-bar';
 import { Spinner } from '../components/ui/spinner';
 import { useI18n } from '../i18n/provider';
-import { ApiError, fetchJson } from '../lib/api';
+import { ApiError, fetchJson, postEmpty } from '../lib/api';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
+import { canStop } from '../lib/job-actions';
 import { cn } from '../lib/cn';
 import { usePolling } from '../lib/use-polling';
 import {
@@ -74,6 +78,28 @@ export function ScanProgressPage(): JSX.Element {
 
   const job = data ?? undefined;
 
+  // A live job can be stopped; the confirm dialog carries the consequence,
+  // so the header control itself stays quiet.
+  const [confirmStopOpen, setConfirmStopOpen] = useState(false);
+  const stoppable =
+    job !== undefined &&
+    !isTerminal(job.status) &&
+    (job.type === 'full-audit' || job.type === 'prospecting') &&
+    canStop(job.status);
+
+  const stopJob = async (): Promise<void> => {
+    if (jobId === undefined) return;
+    try {
+      await postEmpty(`/api/scans/${encodeURIComponent(jobId)}/cancel`);
+      // Once the fetched document reads terminal the fetcher settles and
+      // polling stops; refresh surfaces the cancelled card on this tick
+      // instead of waiting for a poll that will no longer happen.
+      refresh();
+    } catch {
+      toast.error(strings.audits.actionFailed);
+    }
+  };
+
   let body: ReactNode;
   if (data === null) {
     // Unknown job: a quiet dead end on purpose, no retry action.
@@ -104,8 +130,27 @@ export function ScanProgressPage(): JSX.Element {
 
   return (
     <article>
-      <PageHeader title={strings.progress.title} description={strings.progress.description} />
+      <PageHeader
+        title={strings.progress.title}
+        description={strings.progress.description}
+        actions={
+          stoppable ? (
+            <Button variant="secondary" size="sm" onClick={() => setConfirmStopOpen(true)}>
+              {strings.progress.stopButton}
+            </Button>
+          ) : undefined
+        }
+      />
       {body}
+      <ConfirmDialog
+        open={confirmStopOpen}
+        onOpenChange={setConfirmStopOpen}
+        title={strings.progress.confirmStopTitle}
+        description={strings.progress.confirmStopBody}
+        confirmLabel={strings.progress.stopButton}
+        cancelLabel={strings.common.cancel}
+        onConfirm={stopJob}
+      />
     </article>
   );
 }
@@ -135,9 +180,13 @@ function JobView({ job }: { job: ScanJobDetail }): JSX.Element {
 
 function FullAuditView({ job, terminal }: { job: ScanJobDetail; terminal: boolean }): JSX.Element {
   const { strings } = useI18n();
-  // The old page swaps the phase bars for the result card once terminal.
+  // The old page swaps the phase bars for the result card once terminal;
+  // cancelled keeps its own quiet card so a stopped job never reads as
+  // failed or complete.
   if (terminal) {
-    return job.status === 'failed' ? <FailedCard job={job} /> : <CompleteCard job={job} />;
+    if (job.status === 'failed') return <FailedCard job={job} />;
+    if (job.status === 'cancelled') return <CancelledCard />;
+    return <CompleteCard job={job} />;
   }
 
   // ETA lines follow the old page: each bar shows its estimate only while
@@ -148,7 +197,13 @@ function FullAuditView({ job, terminal }: { job: ScanJobDetail; terminal: boolea
 
   return (
     <>
-      <Card title={strings.progress.crawlPhaseLabel}>
+      <Card>
+        <div className="mb-3 flex items-center gap-1.5">
+          <h2 className="text-sm font-semibold text-ink">{strings.progress.crawlPhaseLabel}</h2>
+          <InfoTip label={strings.progress.crawlPhaseLabel} hint={strings.hints.crawl} />
+        </div>
+        {/* A null crawl progress is an uncapped crawl (issue 18): the bar
+            renders indeterminate instead of pretending to know a percentage. */}
         <ProgressBar value={crawlProgress(job)} ariaLabel={strings.progress.crawlPhaseLabel} />
         {crawlEta !== undefined ? (
           <p className="mt-2 text-xs text-ink-muted">
@@ -156,7 +211,11 @@ function FullAuditView({ job, terminal }: { job: ScanJobDetail; terminal: boolea
           </p>
         ) : null}
       </Card>
-      <Card title={strings.progress.scanPhaseLabel}>
+      <Card>
+        <div className="mb-3 flex items-center gap-1.5">
+          <h2 className="text-sm font-semibold text-ink">{strings.progress.scanPhaseLabel}</h2>
+          <InfoTip label={strings.progress.scanPhaseLabel} hint={strings.hints.scan} />
+        </div>
         <ProgressBar value={scanProgress(job)} ariaLabel={strings.progress.scanPhaseLabel} />
         {scanEta !== undefined ? (
           <p className="mt-2 text-xs text-ink-muted">
@@ -199,6 +258,8 @@ function ProspectingView({
       {terminal ? (
         job.status === 'failed' ? (
           <FailedCard job={job} />
+        ) : job.status === 'cancelled' ? (
+          <CancelledCard />
         ) : (
           <CompleteCard job={job} />
         )
@@ -253,6 +314,17 @@ function FailedCard({ job }: { job: ScanJobDetail }): JSX.Element {
   return (
     <Card title={strings.progress.failedHeading} className="border-danger/40">
       {job.error !== undefined ? <p className="text-sm text-ink-soft">{job.error}</p> : null}
+    </Card>
+  );
+}
+
+/** A stopped job is an operator decision, not a failure: quiet card, no
+ *  danger styling. */
+function CancelledCard(): JSX.Element {
+  const { strings } = useI18n();
+  return (
+    <Card title={strings.progress.stoppedHeading}>
+      <p className="text-sm text-ink-soft">{strings.progress.cancelledNote}</p>
     </Card>
   );
 }

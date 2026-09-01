@@ -13,6 +13,7 @@
 import type { Connection } from 'mongoose';
 import { OriginLock } from '@odysseus/scanner';
 import {
+  cancelJob,
   claimNextQueuedJob,
   failJob,
   resetOrphanedRunningJobs,
@@ -21,10 +22,13 @@ import {
 } from '@odysseus/store';
 import { DEFAULT_QUEUE_CONCURRENCY } from '../config.js';
 import { logger } from '../logger.js';
+import { CancellationRegistry, JobCancelledError } from './cancellation.js';
 
 export interface PipelineContext {
   connection: Connection;
   originLock: OriginLock;
+  /** Shared stop-request registry; runners check it at page boundaries. */
+  cancellation: CancellationRegistry;
 }
 
 export type PipelineFn = (job: JobDocument, ctx: PipelineContext) => Promise<void>;
@@ -51,6 +55,7 @@ export class JobQueue {
   private readonly concurrency: number;
   private readonly pollIntervalMs: number;
   private readonly originLock = new OriginLock();
+  private readonly cancellation = new CancellationRegistry();
   private readonly runners: Record<JobType, PipelineFn>;
 
   private activeCount = 0;
@@ -91,6 +96,15 @@ export class JobQueue {
    *  a submitted scan starts promptly instead of on the next tick. */
   notify(): void {
     this.wake?.();
+  }
+
+  /** Registers an operator stop request for an in-flight job. The job
+   *  document's 'cancelled' status is written by the cancel route; this
+   *  registry is only the in-process signal the runner observes. Forgetting
+   *  the entry once the runner has acted keeps the set bounded over the
+   *  process's life. */
+  requestCancel(jobId: string): void {
+    this.cancellation.request(jobId);
   }
 
   private async sleep(ms: number): Promise<void> {
@@ -134,10 +148,24 @@ export class JobQueue {
   private async runJob(job: JobDocument): Promise<void> {
     const runner = this.runners[job.type];
     try {
-      await runner(job, { connection: this.connection, originLock: this.originLock });
+      await runner(job, {
+        connection: this.connection,
+        originLock: this.originLock,
+        cancellation: this.cancellation,
+      });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      await failJob(this.connection, job.jobId, message);
+      if (error instanceof JobCancelledError) {
+        // The cancel route already wrote the terminal state; this write is
+        // the safety net for the restart path where the runner observes the
+        // registry but the document write raced. failJob would mislabel a
+        // stopped scan as a failure, so it must not run for this case.
+        await cancelJob(this.connection, job.jobId, 'cancelled by operator');
+      } else {
+        const message = error instanceof Error ? error.message : String(error);
+        await failJob(this.connection, job.jobId, message);
+      }
+    } finally {
+      this.cancellation.forget(job.jobId);
     }
   }
 }

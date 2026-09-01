@@ -25,6 +25,7 @@
 
 import { completeJob, updateJobProgress, type JobDocument, type UrlResult } from '@odysseus/store';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
+import { JobCancelledError } from '../cancellation.js';
 import {
   PROSPECTING_JOB_CONCURRENCY,
   PROSPECTING_MAX_DEPTH,
@@ -34,7 +35,7 @@ import {
 import type { PipelineContext } from '../job-queue.js';
 
 export async function runProspectingJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
-  const { connection, originLock } = ctx;
+  const { connection, originLock, cancellation } = ctx;
   const urls = job.urls ?? [];
   if (urls.length === 0) {
     throw new Error(`odysseus interface: prospecting job ${job.jobId} has no urls`);
@@ -107,9 +108,13 @@ export async function runProspectingJob(job: JobDocument, ctx: PipelineContext):
   // than owning a fixed slice, so a worker that finishes an early URL
   // quickly (or a failed one) immediately picks up more work instead of
   // sitting idle while a slower worker's slice still has entries left.
+  // A stop request stops workers from pulling new URLs. The per-URL
+  // audits already in flight are each bounded by PROSPECTING_MAX_PAGES,
+  // so they finish on their own rather than aborting mid-audit; only the
+  // remaining queue is cut.
   let nextIndex = 0;
   async function worker(): Promise<void> {
-    while (nextIndex < urls.length) {
+    while (nextIndex < urls.length && !cancellation.isRequested(job.jobId)) {
       const index = nextIndex;
       nextIndex += 1;
       await scanOne(index);
@@ -118,6 +123,10 @@ export async function runProspectingJob(job: JobDocument, ctx: PipelineContext):
 
   const workerCount = Math.min(PROSPECTING_JOB_CONCURRENCY, urls.length);
   await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+  if (cancellation.isRequested(job.jobId)) {
+    throw new JobCancelledError(job.jobId);
+  }
 
   await completeJob(connection, job.jobId, { auditIds, urlResults });
 }

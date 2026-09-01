@@ -57,3 +57,9 @@ export function postEmpty<T>(url: string): Promise<T> {
     body: '{}',
   });
 }
+
+/** DELETE mutations (cancel a scan, clear the queue, delete a scan). The
+ *  body-less sibling of postEmpty, so pages never hand-roll fetch calls. */
+export function sendDelete<T>(url: string): Promise<T> {
+  return fetchJson<T>(url, { method: 'DELETE' });
+}

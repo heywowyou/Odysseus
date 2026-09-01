@@ -30,7 +30,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
   const release = await originLock.acquire(origin);
 
   try {
-    const onProgress = createScanProgressReporter(connection, job.jobId);
+    const onProgress = createScanProgressReporter(connection, job.jobId, ctx.cancellation);
 
     const siteSignalOverrides: SiteSignalOverrides | undefined =
       job.options.transactionalFlow !== undefined

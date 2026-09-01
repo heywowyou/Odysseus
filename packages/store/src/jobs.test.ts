@@ -1,8 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  cancelJob,
+  cancelQueuedJobs,
   claimNextQueuedJob,
   completeJob,
   createJob,
+  deleteJob,
   failJob,
   getJob,
   listJobs,
@@ -159,5 +162,102 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect(after?.orphaned).toBe(true);
     expect(new Date(after!.createdAt).getTime()).toBe(new Date(before!.createdAt).getTime());
     void job;
+  });
+
+  it('cancelJob cancels a queued job so the claim filter never picks it up', async () => {
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://g.example/',
+      options: {},
+    });
+
+    const cancelled = await cancelJob(connection!, job.jobId, 'cancelled by operator');
+    expect(cancelled).toBe(true);
+
+    const stored = await getJob(connection!, job.jobId);
+    expect(stored?.status).toBe('cancelled');
+    expect(stored?.phase).toBe('cancelled');
+    expect(stored?.finishedAt).toBeInstanceOf(Date);
+    expect(stored?.error).toBe('cancelled by operator');
+
+    // The cancelled job must never be claimable again, whatever else is
+    // queued beside it: drain the queue and watch for its jobId.
+    for (;;) {
+      const claimed = await claimNextQueuedJob(connection!);
+      if (!claimed) break;
+      expect(claimed.jobId).not.toBe(job.jobId);
+      await completeJob(connection!, claimed.jobId);
+    }
+    const requeued = await getJob(connection!, job.jobId);
+    expect(requeued?.status).toBe('cancelled');
+  });
+
+  it('cancelJob reports false on an already terminal job instead of overwriting it', async () => {
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://h.example/',
+      options: {},
+    });
+    await completeJob(connection!, job.jobId);
+
+    const cancelled = await cancelJob(connection!, job.jobId, 'late stop request');
+    expect(cancelled).toBe(false);
+
+    const stored = await getJob(connection!, job.jobId);
+    expect(stored?.status).toBe('complete');
+  });
+
+  it('cancelJob cancels a running job (the runner notices through the registry)', async () => {
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://i.example/',
+      options: {},
+    });
+    await claimNextQueuedJob(connection!);
+
+    const cancelled = await cancelJob(connection!, job.jobId, 'cancelled by operator');
+    expect(cancelled).toBe(true);
+
+    const stored = await getJob(connection!, job.jobId);
+    expect(stored?.status).toBe('cancelled');
+  });
+
+  it('cancelQueuedJobs cancels every queued job and leaves running ones alone', async () => {
+    const queuedA = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://j.example/',
+      options: {},
+    });
+    const queuedB = await createJob(connection!, {
+      type: 'prospecting',
+      urls: ['https://k.example/'],
+      options: {},
+    });
+    const running = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://l.example/',
+      options: {},
+    });
+
+    const clearedCount = await cancelQueuedJobs(connection!, 'queue cleared by operator');
+    expect(clearedCount).toBeGreaterThanOrEqual(2);
+
+    expect((await getJob(connection!, queuedA.jobId))?.status).toBe('cancelled');
+    expect((await getJob(connection!, queuedB.jobId))?.status).toBe('cancelled');
+    // The running job keeps its status: a stop request for it goes through
+    // cancelJob, which matches queued-or-running documents.
+    expect((await getJob(connection!, running.jobId))?.status).toBe('queued');
+    await completeJob(connection!, running.jobId);
+  });
+
+  it('deleteJob removes the document and reports whether it existed', async () => {
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://m.example/',
+      options: {},
+    });
+    expect(await deleteJob(connection!, job.jobId)).toBe(true);
+    expect(await getJob(connection!, job.jobId)).toBeNull();
+    expect(await deleteJob(connection!, job.jobId)).toBe(false);
   });
 });

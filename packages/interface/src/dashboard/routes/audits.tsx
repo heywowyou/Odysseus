@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import type { JSX } from 'react';
-import { ChevronRight, Radar } from 'lucide-react';
+import { ChevronRight, Radar, Square, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import type { BadgeTone } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { KpiTile } from '../components/ui/kpi';
@@ -23,8 +25,9 @@ import {
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
-import { fetchJson } from '../lib/api';
+import { fetchJson, postEmpty, sendDelete } from '../lib/api';
 import type { JobStatus, ScanSummary } from '../lib/api-types';
+import { canDelete, canStop } from '../lib/job-actions';
 import { formatDateTime, formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import {
@@ -41,7 +44,20 @@ import type { SeverityBadge, SortOrder, StatusFilter } from './audits-model';
 const POLL_INTERVAL_MS = 5000;
 const SKELETON_ROW_COUNT = 8;
 
-const STATUS_OPTIONS: readonly JobStatus[] = ['queued', 'running', 'complete', 'failed'];
+const STATUS_OPTIONS: readonly JobStatus[] = [
+  'queued',
+  'running',
+  'complete',
+  'failed',
+  'cancelled',
+];
+
+/** The one confirm dialog this page can open: at most a single action is
+ *  ever pending, so a row button replaces whatever the dialog showed. */
+interface PendingScanAction {
+  kind: 'stop' | 'delete' | 'clear-queue';
+  row?: ScanSummary;
+}
 
 function typeBadge(
   summary: ScanSummary,
@@ -67,6 +83,7 @@ export function AuditsPage(): JSX.Element {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
+  const [pendingAction, setPendingAction] = useState<PendingScanAction | null>(null);
 
   const visible = useMemo(
     () =>
@@ -79,6 +96,43 @@ export function AuditsPage(): JSX.Element {
     [data, statusFilter, search, sortOrder],
   );
   const kpis = useMemo(() => computeKpis(data ?? []), [data]);
+  const queuedCount = useMemo(
+    () => (data ?? []).filter((summary) => summary.status === 'queued').length,
+    [data],
+  );
+
+  /** One mutation wrapper for stop and delete: the distinction between a 409
+   *  (the job just went terminal) and a network blip carries no different
+   *  copy, and the refreshed list carries the truth either way. */
+  const runRowAction = async (row: ScanSummary, kind: 'stop' | 'delete'): Promise<void> => {
+    try {
+      if (kind === 'stop') {
+        await postEmpty(`/api/scans/${encodeURIComponent(row.jobId)}/cancel`);
+        toast.success(strings.audits.stoppedMessage);
+      } else {
+        await sendDelete(`/api/scans/${encodeURIComponent(row.jobId)}`);
+        toast.success(strings.audits.deletedMessage);
+      }
+      // The poll keeps last good data for seconds; refresh shows the new
+      // status now.
+      refresh();
+    } catch {
+      toast.error(strings.audits.actionFailed);
+    }
+  };
+
+  const clearQueue = async (): Promise<void> => {
+    try {
+      const result = await postEmpty<{ cleared: number }>('/api/scans/queue/clear');
+      toast.success(strings.audits.queueClearedMessage.replace('{count}', String(result.cleared)));
+      refresh();
+    } catch {
+      toast.error(strings.audits.actionFailed);
+    }
+  };
+
+  const pendingRow = pendingAction?.row;
+  const pendingSite = pendingRow === undefined ? '' : siteLabel(pendingRow);
 
   let body: JSX.Element;
   if (data === undefined && error !== undefined) {
@@ -183,10 +237,42 @@ export function AuditsPage(): JSX.Element {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <ChevronRight
-                          className="ml-auto size-4 text-ink-muted"
-                          aria-hidden="true"
-                        />
+                        {/* Row mutations stop the row click so pointing at
+                            stop or delete never navigates by accident; the
+                            chevron stays the row's own navigation affordance. */}
+                        <div className="flex items-center justify-end gap-1">
+                          {canStop(summary.status) ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="px-2"
+                              aria-label={strings.audits.stopAction}
+                              title={strings.audits.stopAction}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setPendingAction({ kind: 'stop', row: summary });
+                              }}
+                            >
+                              <Square className="size-4" aria-hidden="true" />
+                            </Button>
+                          ) : null}
+                          {canDelete(summary.status) ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="px-2"
+                              aria-label={strings.audits.deleteAction}
+                              title={strings.audits.deleteAction}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setPendingAction({ kind: 'delete', row: summary });
+                              }}
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                            </Button>
+                          ) : null}
+                          <ChevronRight className="size-4 text-ink-muted" aria-hidden="true" />
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -213,9 +299,19 @@ export function AuditsPage(): JSX.Element {
         title={strings.audits.title}
         description={strings.audits.description}
         actions={
-          <Link to="/scans/new" className={buttonStyles('primary')}>
-            {strings.nav.newScan}
-          </Link>
+          <>
+            {/* Only worth showing while something is actually waiting: an
+                always-on clear button invites clearing a queue that is
+                empty. */}
+            {queuedCount > 0 ? (
+              <Button variant="secondary" onClick={() => setPendingAction({ kind: 'clear-queue' })}>
+                {strings.audits.clearQueue}
+              </Button>
+            ) : null}
+            <Link to="/scans/new" className={buttonStyles('primary')}>
+              {strings.nav.newScan}
+            </Link>
+          </>
         }
       />
 
@@ -282,6 +378,47 @@ export function AuditsPage(): JSX.Element {
       </Card>
 
       {body}
+
+      <ConfirmDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingAction(null);
+        }}
+        title={
+          pendingAction?.kind === 'stop'
+            ? strings.audits.confirmStopTitle
+            : pendingAction?.kind === 'delete'
+              ? strings.audits.confirmDeleteTitle
+              : strings.audits.confirmClearQueueTitle
+        }
+        description={
+          pendingAction?.kind === 'stop'
+            ? strings.audits.confirmStopBody
+            : pendingAction?.kind === 'delete'
+              ? strings.audits.confirmDeleteBody.replace(
+                  '{site}',
+                  pendingSite === '' ? strings.common.unknownSite : pendingSite,
+                )
+              : strings.audits.confirmClearQueueBody.replace('{count}', String(queuedCount))
+        }
+        confirmLabel={
+          pendingAction?.kind === 'stop'
+            ? strings.audits.stopAction
+            : pendingAction?.kind === 'delete'
+              ? strings.audits.deleteAction
+              : strings.audits.clearQueue
+        }
+        cancelLabel={strings.common.cancel}
+        onConfirm={async () => {
+          const action = pendingAction;
+          if (action === null) return;
+          if ((action.kind === 'stop' || action.kind === 'delete') && action.row !== undefined) {
+            await runRowAction(action.row, action.kind);
+            return;
+          }
+          await clearQueue();
+        }}
+      />
     </article>
   );
 }

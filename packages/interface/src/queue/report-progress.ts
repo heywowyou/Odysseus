@@ -8,11 +8,13 @@
 import type { Connection } from 'mongoose';
 import type { ScanProgressEvent } from '@odysseus/scanner';
 import { updateJobProgress } from '@odysseus/store';
+import { JobCancelledError, type CancellationRegistry } from './cancellation.js';
 import { computeCrawlEtaMs, computeScanEtaMs } from './eta.js';
 
 export function createScanProgressReporter(
   connection: Connection,
   jobId: string,
+  cancellation?: CancellationRegistry,
 ): (event: ScanProgressEvent) => void {
   let effectiveDelayMs = 0;
   let scanStartedAtMs: number | undefined;
@@ -92,6 +94,13 @@ export function createScanProgressReporter(
   }
 
   return (event: ScanProgressEvent) => {
+    // The stop check is synchronous and throws into the crawler/scanner's
+    // own call frame, which is what actually aborts the pipeline: every
+    // onProgress call site sits between pages, so a stop lands within one
+    // page of work. Errors inside handle() stay best-effort.
+    if (cancellation?.isRequested(jobId)) {
+      throw new JobCancelledError(jobId);
+    }
     void handle(event).catch(() => {
       // Best-effort: progress display is not the source of truth for job success.
     });

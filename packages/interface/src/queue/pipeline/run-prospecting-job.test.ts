@@ -7,6 +7,7 @@ import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { completeJob, updateJobProgress } from '@odysseus/store';
 import { runProspectingJob } from './run-prospecting-job.js';
 import { PROSPECTING_MAX_DEPTH, PROSPECTING_MAX_PAGES } from '../../config.js';
+import { CancellationRegistry, JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
 
 const fakeConnection = {} as never;
@@ -26,12 +27,15 @@ function fakeJob(urls: string[], jobId = 'job-1') {
 
 let releaseFns: Array<ReturnType<typeof vi.fn>>;
 let ctx: PipelineContext;
+let cancellation: CancellationRegistry;
 
 beforeEach(() => {
   vi.clearAllMocks();
   releaseFns = [];
+  cancellation = new CancellationRegistry();
   ctx = {
     connection: fakeConnection,
+    cancellation,
     originLock: {
       acquire: vi.fn().mockImplementation(async () => {
         const release = vi.fn();
@@ -236,5 +240,47 @@ describe('runProspectingJob', () => {
         }),
       );
     });
+  });
+
+  it('a stop request before the run leaves every URL unscanned and completes nothing', async () => {
+    cancellation.request('job-1');
+
+    await expect(
+      runProspectingJob(
+        fakeJob(['https://a.example/', 'https://b.example/', 'https://c.example/']),
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(JobCancelledError);
+
+    expect(runAuditStage).not.toHaveBeenCalled();
+    expect(completeJob).not.toHaveBeenCalled();
+    // The one write that did happen is the initial "0 of N" progress write;
+    // nothing else may run after the stop was observed.
+    expect(updateJobProgress).toHaveBeenCalledTimes(1);
+  });
+
+  it('a stop request after one URL finished keeps its audit and completes nothing further', async () => {
+    vi.mocked(runAuditStage).mockImplementation(async (url) => {
+      if (url === 'https://a.example/') {
+        // The stop lands while the first URL is in flight; the shared cursor
+        // must hand out no further work once the current audit returns.
+        cancellation.request('job-1');
+      }
+      return {
+        auditId: `audit-${String(url)}`,
+        manifest: {} as never,
+        findings: [] as never,
+        auditDir: '/dir',
+        visitedCount: 1,
+        prunedPageDirCount: 0,
+        obligationAssessment: { status: 'undetermined', basis: [] } as never,
+      };
+    });
+
+    await expect(
+      runProspectingJob(fakeJob(['https://a.example/', 'https://b.example/']), ctx),
+    ).rejects.toBeInstanceOf(JobCancelledError);
+
+    expect(completeJob).not.toHaveBeenCalled();
   });
 });

@@ -26,6 +26,7 @@ export const en: DashboardStrings = {
       running: 'Running',
       complete: 'Complete',
       failed: 'Failed',
+      cancelled: 'Cancelled',
     },
     typeLabels: { fullAudit: 'Full audit', prospecting: 'Prospecting' },
     downloadReport: 'Download report',
@@ -64,6 +65,22 @@ export const en: DashboardStrings = {
     updatedAt: 'Updated at {time}',
     emptyFilter: 'No audits match these filters.',
     sortLabel: 'Sort',
+    stopAction: 'Stop',
+    deleteAction: 'Delete',
+    confirmStopTitle: 'Stop this scan?',
+    confirmStopBody:
+      'The scan will be marked as stopped. Work in progress finishes at the end of the current page.',
+    confirmDeleteTitle: 'Delete this scan?',
+    confirmDeleteBody:
+      'This permanently deletes the scan {site}: findings, analyses, reports and related files. It cannot be undone.',
+    clearQueue: 'Clear queue',
+    confirmClearQueueTitle: 'Clear the queue?',
+    confirmClearQueueBody:
+      '{count} queued scan(s) will be cancelled. Running scans are not affected.',
+    stoppedMessage: 'Scan stopped. The stop takes effect at the end of the current page.',
+    deletedMessage: 'Scan deleted.',
+    queueClearedMessage: '{count} queued scan(s) cancelled.',
+    actionFailed: 'The action failed. Try again.',
   },
   newScan: {
     title: 'New scan',
@@ -90,6 +107,8 @@ export const en: DashboardStrings = {
       'E.g. redirects to a dedicated booking engine, confirmed manually',
     advancedOptions: 'Advanced options',
     maxPagesLabel: 'Maximum pages',
+    maxPagesHint:
+      'Leave empty to explore the whole site: a large site can take several hours. For a quick trial, set a page limit.',
     maxDepthLabel: 'Maximum link depth',
     delayLabel: 'Delay between requests (ms)',
     seedsLabel: 'Extra seed URLs to include (one per line)',
@@ -126,6 +145,12 @@ export const en: DashboardStrings = {
     failedHeading: 'The scan failed',
     urlResultsHeading: 'Per-site results',
     notFound: 'Scan not found.',
+    stopButton: 'Stop the scan',
+    confirmStopTitle: 'Stop this scan?',
+    confirmStopBody:
+      'The stop takes effect at the end of the current page. Phases already finished are kept and the scan will not resume.',
+    stoppedHeading: 'Scan stopped',
+    cancelledNote: 'This scan was stopped at the operator’s request.',
   },
   auditDetail: {
     title: 'Audit detail',
@@ -259,6 +284,8 @@ export const en: DashboardStrings = {
     openScore: 'Open score',
     openEvidence: 'Open evidence',
     openPreview: 'Open preview',
+    openSite: 'Open the site in a new tab',
+    launchAudit: 'Run an audit',
     sourcesHeading: 'Source records',
     sources: {
       field: 'Field',
@@ -474,5 +501,22 @@ export const en: DashboardStrings = {
       'scope-mismatch': 'Scope mismatch',
       other: 'Other',
     },
+  },
+  hints: {
+    crawl:
+      'Discovering the site’s pages: the crawler lists the reachable URLs and loads each page one by one, with a polite delay between each request.',
+    scan: 'Full analysis of every page found: rendering, accessibility and performance. This is the longest phase.',
+    prescan:
+      'A quick measurement of three key pages of the hotel’s site, without a full audit: performance, blocking defects and evidence.',
+    score:
+      'A versioned score combining how serious the measured problems are and how able the establishment is to fix them.',
+    evidence:
+      'Timestamped screenshots of the problems found, meant to illustrate the work to the hotel.',
+    preview:
+      'A public preview of the work: one page dedicated to the hotel, published behind a private link that expires automatically.',
+    qualification:
+      'An automatic eligibility decision: qualified, parked, rejected, already engaged, or routed to the group.',
+    review:
+      'A human review is requested when the hotel’s identity stays ambiguous after matching against the catalogue.',
   },
 };

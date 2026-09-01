@@ -4,6 +4,7 @@ import {
   createEmptyFormValues,
   isValidAbsoluteHttpUrl,
   isValidSiren,
+  prefillUrlFromQuery,
   validateSiren,
 } from './new-scan-model';
 import type { NewScanFormValues } from './new-scan-model';
@@ -35,6 +36,34 @@ describe('isValidAbsoluteHttpUrl', () => {
   it('rejects URLs with embedded credentials', () => {
     expect(isValidAbsoluteHttpUrl('https://user:pass@exemple.fr')).toBe(false);
     expect(isValidAbsoluteHttpUrl('https://user@exemple.fr')).toBe(false);
+  });
+});
+
+describe('prefillUrlFromQuery', () => {
+  it('returns the trimmed value when the query is a valid absolute https URL', () => {
+    expect(prefillUrlFromQuery(' https://exemple.fr ')).toBe('https://exemple.fr');
+    expect(prefillUrlFromQuery('https://exemple.fr/hebergement?a=1')).toBe(
+      'https://exemple.fr/hebergement?a=1',
+    );
+  });
+
+  it('returns the empty string for a null query', () => {
+    expect(prefillUrlFromQuery(null)).toBe('');
+  });
+
+  it('returns the empty string for an empty or blank query', () => {
+    expect(prefillUrlFromQuery('')).toBe('');
+    expect(prefillUrlFromQuery('   ')).toBe('');
+  });
+
+  it('returns the empty string for garbage input', () => {
+    expect(prefillUrlFromQuery('https://user:pass@exemple.fr')).toBe('');
+    expect(prefillUrlFromQuery('::')).toBe('');
+  });
+
+  it('returns the empty string for a relative URL', () => {
+    expect(prefillUrlFromQuery('/blog')).toBe('');
+    expect(prefillUrlFromQuery('exemple.fr/page')).toBe('');
   });
 });
 

@@ -26,6 +26,7 @@ export const fr: DashboardStrings = {
       running: 'En cours',
       complete: 'Terminé',
       failed: 'Échoué',
+      cancelled: 'Arrêté',
     },
     typeLabels: { fullAudit: 'Audit complet', prospecting: 'Prospection' },
     downloadReport: 'Télécharger le rapport',
@@ -64,6 +65,22 @@ export const fr: DashboardStrings = {
     updatedAt: 'Actualisé à {time}',
     emptyFilter: 'Aucun audit ne correspond à ces filtres.',
     sortLabel: 'Trier',
+    stopAction: 'Arrêter',
+    deleteAction: 'Supprimer',
+    confirmStopTitle: 'Arrêter ce scan ?',
+    confirmStopBody:
+      'Le scan sera marqué comme arrêté. Le travail en cours s’achève à la fin de la page en cours.',
+    confirmDeleteTitle: 'Supprimer ce scan ?',
+    confirmDeleteBody:
+      'Cette action supprime définitivement le scan {site} : constats, analyses, rapports et fichiers associés. Elle est irréversible.',
+    clearQueue: 'Vider la file',
+    confirmClearQueueTitle: 'Vider la file d’attente ?',
+    confirmClearQueueBody:
+      '{count} scan(s) en attente seront annulés. Les scans en cours ne sont pas affectés.',
+    stoppedMessage: 'Scan arrêté. L’arrêt prend effet à la fin de la page en cours.',
+    deletedMessage: 'Scan supprimé.',
+    queueClearedMessage: '{count} scan(s) en attente annulés.',
+    actionFailed: 'L’action a échoué. Réessayez.',
   },
   newScan: {
     title: 'Nouveau scan',
@@ -92,6 +109,8 @@ export const fr: DashboardStrings = {
       'Ex. redirige vers un moteur de réservation dédié, confirmé manuellement',
     advancedOptions: 'Options avancées',
     maxPagesLabel: 'Nombre maximum de pages',
+    maxPagesHint:
+      'Laisser vide signifie que tout le site est exploré : un grand site peut demander plusieurs heures. Pour un essai rapide, fixez une limite de pages.',
     maxDepthLabel: 'Profondeur maximale des liens',
     delayLabel: 'Délai entre les requêtes (ms)',
     seedsLabel: 'URL supplémentaires à inclure (une par ligne)',
@@ -128,6 +147,12 @@ export const fr: DashboardStrings = {
     failedHeading: 'L’analyse a échoué',
     urlResultsHeading: 'Résultat par site',
     notFound: 'Scan introuvable.',
+    stopButton: 'Arrêter le scan',
+    confirmStopTitle: 'Arrêter ce scan ?',
+    confirmStopBody:
+      'L’arrêt prend effet à la fin de la page en cours. Les phases déjà terminées sont conservées et le scan ne reprendra pas.',
+    stoppedHeading: 'Scan arrêté',
+    cancelledNote: 'Ce scan a été arrêté à la demande de l’opérateur.',
   },
   auditDetail: {
     title: 'Détail de l’audit',
@@ -256,6 +281,8 @@ export const fr: DashboardStrings = {
     openScore: 'Ouvrir le score',
     openEvidence: 'Ouvrir les preuves',
     openPreview: 'Ouvrir l’aperçu',
+    openSite: 'Ouvrir le site dans un nouvel onglet',
+    launchAudit: 'Lancer un audit',
     sourcesHeading: 'Enregistrements sources',
     sources: {
       field: 'Champ',
@@ -478,5 +505,22 @@ export const fr: DashboardStrings = {
       'scope-mismatch': 'Hors périmètre',
       other: 'Autre',
     },
+  },
+  hints: {
+    crawl:
+      'Découverte des pages du site : le robot liste les URLs accessibles et charge chaque page une par une, avec un délai de politesse entre chaque requête.',
+    scan: 'Analyse complète de chaque page trouvée : rendu, accessibilité et performance. C’est la phase la plus longue.',
+    prescan:
+      'Mesure rapide de trois pages clés du site de l’hôtel, sans audit complet : performances, défauts bloquants et preuves.',
+    score:
+      'Score versionné combinant la sévérité des problèmes mesurés et la capacité de l’établissement à les corriger.',
+    evidence:
+      'Captures d’écran horodatées des problèmes constatés, destinées à illustrer la démarche auprès de l’hôtel.',
+    preview:
+      'Aperçu public de démarche : une page dédiée à l’hôtel, publiée derrière un lien privé qui expire automatiquement.',
+    qualification:
+      'Décision automatique d’éligibilité : qualifié, parqué, rejeté, déjà démarché ou routé au groupe.',
+    review:
+      'Revue humaine demandée quand l’identité de l’hôtel est ambiguë après rapprochement du catalogue.',
   },
 };

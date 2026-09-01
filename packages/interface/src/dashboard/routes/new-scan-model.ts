@@ -83,6 +83,17 @@ export function isValidAbsoluteHttpUrl(value: string): boolean {
   }
 }
 
+/** Initial url field value from the ?url= query parameter (the prospect
+ *  detail page's launch-audit link). The prefill is a convenience, not a
+ *  gate: the route boundary (routes/scans.ts) revalidates whatever is
+ *  finally submitted, so a query the form cannot use simply starts empty
+ *  instead of pre-filling an error. */
+export function prefillUrlFromQuery(raw: string | null): string {
+  if (raw === null) return '';
+  const trimmed = raw.trim();
+  return isValidAbsoluteHttpUrl(trimmed) ? trimmed : '';
+}
+
 /** Ported unchanged from the old public/app-new-scan.ts (itself a copy of
  *  core's isValidSiren): spaces are ignored, then exactly 9 digits must pass
  *  the Luhn style INSEE checksum over the digits read right to left. */

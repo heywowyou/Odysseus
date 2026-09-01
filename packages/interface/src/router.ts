@@ -8,7 +8,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { sendError } from './http-utils.js';
 
-const STATE_CHANGING_METHODS = new Set(['POST', 'PATCH']);
+const STATE_CHANGING_METHODS = new Set(['POST', 'PATCH', 'DELETE']);
 
 /** The dashboard binds to 127.0.0.1 by design, which stops a remote
  *  attacker but not a malicious page open in the same browser while
@@ -100,6 +100,10 @@ export class Router {
 
   patch(pattern: string, handler: RouteHandler): void {
     this.routes.push({ method: 'PATCH', segments: splitPath(pattern), handler });
+  }
+
+  delete(pattern: string, handler: RouteHandler): void {
+    this.routes.push({ method: 'DELETE', segments: splitPath(pattern), handler });
   }
 
   /** Handles every request that matches no route above - the static

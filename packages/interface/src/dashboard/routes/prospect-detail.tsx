@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { useParams, Link } from 'react-router';
 import { toast } from 'sonner';
 import { PageHeader } from '../components/page-header';
@@ -8,6 +8,7 @@ import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
+import { InfoTip } from '../components/ui/info-tip';
 import { Skeleton } from '../components/ui/skeleton';
 import {
   Table,
@@ -69,9 +70,17 @@ function useProspectDetail(candidateId: string | undefined): ProspectDetailState
   return { ...polling, isNotFound };
 }
 
+/** href for a raw websites value: the value when it already carries a
+ *  scheme, https-prefixed otherwise, so 'www.exemple.fr' opens as a site
+ *  instead of resolving as a path relative to the dashboard. */
+function websiteHref(raw: string): string {
+  return /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(raw) ? raw : `https://${raw}`;
+}
+
 /** A labelled catalogue row: label from the strings table, value from the
- *  payload, rendered only when the value exists. */
-function DefinitionRow(props: { label: string; value: string }): JSX.Element {
+ *  payload, rendered only when the value exists. The value is a node so a
+ *  row can carry a link (the hotel's own domain). */
+function DefinitionRow(props: { label: string; value: ReactNode }): JSX.Element {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line py-1.5 last:border-b-0">
       <span className="text-xs text-ink-muted">{props.label}</span>
@@ -224,7 +233,18 @@ export function ProspectDetailPage(): JSX.Element {
               {data.ownRegistrableDomain !== null ? (
                 <DefinitionRow
                   label={strings.prospectDetail.catalogue.ownDomain}
-                  value={data.ownRegistrableDomain}
+                  value={
+                    <a
+                      href={`https://${data.ownRegistrableDomain}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={strings.prospectDetail.openSite}
+                      aria-label={strings.prospectDetail.openSite}
+                      className="hover:text-accent-bright"
+                    >
+                      {data.ownRegistrableDomain}
+                    </a>
+                  }
                 />
               ) : null}
               {data.groupDomain !== null ? (
@@ -301,7 +321,17 @@ export function ProspectDetailPage(): JSX.Element {
                     className="font-mono text-xs text-ink-soft"
                     title={website.unusableReason ?? undefined}
                   >
-                    {website.raw} [{website.kind}
+                    <a
+                      href={websiteHref(website.raw)}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={strings.prospectDetail.openSite}
+                      aria-label={strings.prospectDetail.openSite}
+                      className="hover:text-accent-bright"
+                    >
+                      {website.raw}
+                    </a>{' '}
+                    [{website.kind}
                     {website.registrableDomain !== null ? ` → ${website.registrableDomain}` : ''}]
                   </li>
                 ))}
@@ -432,18 +462,35 @@ export function ProspectDetailPage(): JSX.Element {
         </Card>
 
         <Card>
-          <div className="flex flex-wrap gap-2">
-            {prospectSubPages(data.candidateId).map((page) => (
-              <Link key={page.key} to={page.path} className={buttonStyles('secondary', 'sm')}>
-                {page.key === 'prescan'
+          <div className="flex flex-wrap items-center gap-2">
+            {/* The audit link pre-fills the scan form with the hotel's own
+                site; it only exists when the prospect resolved to one. */}
+            {data.ownRegistrableDomain !== null ? (
+              <Link
+                to={`/scans/new?url=${encodeURIComponent(`https://${data.ownRegistrableDomain}`)}`}
+                className={buttonStyles('secondary', 'sm')}
+              >
+                {strings.prospectDetail.launchAudit}
+              </Link>
+            ) : null}
+            {prospectSubPages(data.candidateId).map((page) => {
+              const label =
+                page.key === 'prescan'
                   ? strings.prospectDetail.openPrescan
                   : page.key === 'score'
                     ? strings.prospectDetail.openScore
                     : page.key === 'evidence'
                       ? strings.prospectDetail.openEvidence
-                      : strings.prospectDetail.openPreview}
-              </Link>
-            ))}
+                      : strings.prospectDetail.openPreview;
+              return (
+                <span key={page.key} className="inline-flex items-center gap-1">
+                  <Link to={page.path} className={buttonStyles('secondary', 'sm')}>
+                    {label}
+                  </Link>
+                  <InfoTip label={label} hint={strings.hints[page.key]} />
+                </span>
+              );
+            })}
           </div>
         </Card>
       </div>
