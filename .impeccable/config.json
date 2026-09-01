@@ -1,0 +1,10 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [
+      "packages/report/**",
+      "docs/report/**"
+    ],
+    "ignoreValues": []
+  }
+}

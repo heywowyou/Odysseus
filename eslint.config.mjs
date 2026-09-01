@@ -19,6 +19,12 @@ export default defineConfig(
     'data/**',
     'reports/**',
     'docs/report/design/**',
+    // Agent skill trees are vendored by external installers, never maintained
+    // source; the same policy .prettierignore applies to them.
+    '.agents/**',
+    '.claude/**',
+    '.codex/**',
+    '.impeccable/**',
   ]),
   {
     files: sourceFiles,

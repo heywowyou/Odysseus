@@ -761,6 +761,23 @@ documents and guardrails directly.
   wants a capability none of the skills above cover; verify install count
   and source reputation before recommending one, and read its full
   generated output before treating it as authoritative.
+- **impeccable** (pbakaus/impeccable, skill bundle 4.1.2, added 2026-09-01
+  via its native installer at project scope for the claude and codex
+  providers, so it is deliberately not in `skills-lock.json`; `npx
+  impeccable doctor` and `npx impeccable update` own freshness) — UI
+  design and review work on the `packages/site` and `packages/interface`
+  surfaces: `/impeccable init`, `document`, `critique`, `audit`,
+  `polish`, and its other commands, plus a deterministic detector hook
+  (Claude Code via gitignored `.claude/settings.local.json`, Codex via
+  committed `.codex/hooks.json`, which needs the operator's `/hooks`
+  trust; ZCode loads the skill from `.agents/skills/` but gets no hook).
+  `packages/report/**` and `docs/report/**` are excluded in
+  `.impeccable/config.json`: the report design system is locked
+  (trade-off 9), and any report redesign goes through a numbered plan,
+  never through this skill. Until upstream fixes the bundle download's
+  double redirect (CLI 3.6.0), updates need `IMPECCABLE_BUNDLE_PATH`
+  pointed at the release zip. Decision record:
+  `docs/research/design-skill-alternatives.md`.
 
 ## Style
 
