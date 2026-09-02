@@ -2244,6 +2244,8 @@
   --space-4: 11.2px;
   --space-6: 16.8px;
   --space-8: 22.4px;
+  --space-12: 33.6px; /* sheet-level rhythm step (section-head cushions, appendix
+     category blocks, cover rule gap; plan 023, not in the original mockup) */
 
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -3267,7 +3269,7 @@ const __ds_scope = {};
 <div style="padding:14mm 18mm 18mm">
 
   <!-- SNAPSHOT -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-3);margin-bottom:var(--space-8)">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4);margin-bottom:var(--space-8)">
     <sc-for list="{{ snapshotTiles }}" as="s" hint-placeholder-count="3">
       <div style="padding:var(--space-4);border-radius:var(--radius-lg);background:{{ s.gradient }};border:1px solid {{ s.border }}">
         <div style="font-size:34px;font-family:var(--font-heading);font-weight:500;color:{{ s.color }}">{{ s.value }}</div>

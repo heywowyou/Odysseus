@@ -12,8 +12,10 @@ reliable pass. The companion
 the same tokens rather than getting its own pass, since it is the same
 design system applied to a shorter document.
 
-Applied to `packages/report/src/template/report.css` on the existing A4
-print pipeline (mm-based spacing, page-break rules, print margins) - the
+Applied to `packages/report/src/styles/nocturne.css` (tokens and the
+generic component layer) and `packages/report/src/styles/paged.css` (the
+paged-media layer) on the A4 print pipeline (mm-based page geometry,
+page-break rules, print margins) - the
 mockup's own proportions come from a slide/deck export (`<doc-page>`,
 originally sized for Letter, not A4) and are not a layout to copy
 directly; CSS values are converted with the standard 1px = 0.75pt =
@@ -22,25 +24,44 @@ already uses (mm for spacing, pt for type), not re-eyeballed.
 
 ## Port status
 
-- **Cover**: ported directly from the flat file's own markup and CSS
-  (2026-08-16, second pass), then restructured on 2026-09-01 (plan 018,
-  executive-readability slice): the cover sheet is now minimal (kicker,
-  commercial-name headline, generic decision question, report type, audit
-  date, Odysseus signature) and the former six-field cover grid and risk
-  pill moved to a new second metadata sheet. That restructure changed
-  structure only; every visual token below is unchanged, and classes,
-  structure, and tokens for these two sheets are current.
-- **Everything else** (TOC, executive summary, legal exposure, stat
-  tiles, priority cards, checklist, appendix, glossary, next steps):
-  still reflects the original PDF-pixel-sampling pass and has not been
-  re-verified against the flat file. Do this the same way the cover was
-  done - pull markup/CSS straight from the flat file's own source for
-  each section, not by reading rendered pixels - before trusting those
-  bullet points as current.
+Re-verified in full against the flat file on 2026-09-02 (plan 023 evidence
+step): every section below now reflects a source-to-source comparison, not
+sampled pixels. The earlier caveat (only the cover and metadata sheet
+verified) is discharged. What the verification found, and what this
+document now records:
+
+- **Match.** Tokens, generic component layer, cover skeleton, TOC rows,
+  executive summary and its start-here list, stat/severity/category
+  tiles, legal exposure tiles, glossary, and the severity/category color
+  maps match the flat source within the documented conversion rules.
+- **Documented intentional deviations, not drift** (each recorded in code
+  and listed here once): 0.02em uppercase tracking everywhere (item 6,
+  Chromium text-run fix); `--accent`/`--crit` lightened for WCAG; missing
+  unicode-range font subsets; zero-count tile filtering (D7); theme-card
+  labelled boxes and meta grid (plan 018); checklist 7-column layout
+  (items 35/2.7); appendix real table, merged rule summaries, removed
+  minor-groups sub-table, per-finding URL rows (items 26/25/2.4/2.6);
+  next-steps prose synthesis (plan 018 step 7); TOC target-counter page
+  numbers (B8); underlined relabelled jump links (item 5); page numbers
+  in `@page` margin boxes instead of markup; mm-based page geometry.
+- **Deliberate departures from the flat source, recorded where they
+  live:** the metadata sheet's risk scale replaces the flat's single risk
+  pill and severity legend (item 42, plan 018 step 4); the flat's TOC
+  footnote is dropped (page numbers print since B8, making it stale) and
+  the flat's conditional revenue-opportunity card is not ported (financial
+  wording moved to theme-card citations, plan 020). The plan 023
+  refinement then recomposed the cover's closing group and the metadata
+  sheet's risk band (see the cover and metadata bullets below) and
+  restored the per-section heading rhythm the live template had
+  flattened (see Spacing).
+- **Print-medium decision with no flat basis:** the checklist's light
+  `@media print` inversion (`#f7f7f5`, paged.css). The flat mockup's
+  checklist is dark; the inversion is guarded by the item 36 and item 0.1
+  suites and documented in the design-system document, section 2.
 
 ## Color
 
-All values are the ones actually shipped in `report.css`'s `:root`
+All values are the ones actually shipped in `nocturne.css`'s `:root`
 block. Two (`--accent`, `--crit`) are deliberately lightened a few
 percent from the literal mockup pixel values - see "Contrast note" below.
 
@@ -90,7 +111,7 @@ re-running that test.
 Font: **Inter**, self-hosted as base64-embedded woff2, taken byte-for-byte
 from the flat mockup's own "latin" unicode-range `@font-face` blocks
 (weights 400/500/600/700) rather than re-sourced from `@fontsource/inter`
-separately - see the `@font-face` comment at the top of `report.css`.
+separately - see the `@font-face` block at the top of `nocturne.css`.
 The mockup ships six other unicode-range subsets per weight (cyrillic,
 greek, vietnamese, etc.) that were left out: neither French nor English
 (this template's only two supported languages) needs them, and embedding
@@ -131,43 +152,67 @@ this document.
   checked (severity badges, quick-win, legal-tag, risk badge, `.chip`,
   `.obs-tag`).
 
+## Spacing
+
+The ladder is a role assignment, decided 2026-09-02 (plan 023) so no
+single value dominates the document's vertical rhythm (the detector's
+monotonous-spacing finding). The two upper steps are 2x steps of the base
+unit, matching the mockup's own arithmetic:
+
+| Token | Value | Role |
+| --- | --- | --- |
+| `--space-1` | 2.8px | tight: micro gaps inside one group |
+| `--space-2` | 5.6px | tight: row-density tier, table cells, card interiors |
+| `--space-3` | 8.4px | medium: label-to-value, sibling gaps inside a component |
+| `--space-4` | 11.2px | medium: tile-to-tile gaps, prose-lead section h2 gap |
+| `--space-6` | 16.8px | generous: card-to-card, airy section h2 gap |
+| `--space-8` | 22.4px | generous: block separations, grid row gaps |
+| `--space-12` | 33.6px | sheet-level: section-head cushion, appendix category blocks, cover rule gap (added by plan 023; not in the mockup) |
+
+Two conventions outside the token ladder stay as designed: the 4px/6px
+bare micro-literals inside cards and badges, and the mm-based page
+geometry in `paged.css` (`@page` margins, the 18mm sheet padding). The
+per-section h2 gap assignment (which section gets which step) is in the
+design-system document, section 2; the flat source is the origin of the
+per-section values.
+
 ## Components confirmed against the mockup source
 
 Placement below is determined by section order, not by fixed PDF page
 numbers: since plan 018 every numbered section starts its own physical page,
 so the page a section lands on depends on which sections are included.
 
-- **Cover**: ported structurally from the flat file's own COVER section.
-  A `radial-gradient(ellipse 238mm 148mm at 50% 0%, ...)` ground
-  (`--section-glow` → `--section` → `--bg`) behind the whole `.cover`
-  box, no wordmark (the mockup has none - a small uppercase kicker
-  "Odysseus · Audit numérique" stands in for it). Kicker, the
-  commercial-name `h1`, and a generic decision question line sit centered
-  in the flex-1 upper block; a short accent rule (`.cover-rule`), then
-  the concise report type line and an audit date plus Odysseus signature
-  line, close the flex-bottom block. Restructured on 2026-09-01
-  (plan 018): the six-field grid and risk pill described below moved to
-  the metadata sheet, leaving the cover minimal by contract. The
-  mockup's own "Page 1 / N" corner label is deck-viewer chrome with no
-  equivalent here and was not ported. The 18mm section padding *was*
-  ported: `.cover` cancels this template's shared Playwright print
-  margin on itself (negative margin) and fills exactly one physical A4
-  page, so the radial gradient bleeds to every page edge the way the
-  mockup's own `margin="0"` doc-page does, while the 18mm comes back as
-  `.cover`'s own padding so the content sits exactly where it would have
-  under the old margin-only layout - see the `.cover` comment in
-  `report.css`.
-- **Metadata sheet** (second physical page, added 2026-09-01, plan 018):
-  carries the cover's former six-field two-column grid (`.cover-grid`,
-  `.cover-field`): site audited (this template has no separate "client
-  name" field, so the mockup's `CLIENT` slot is `SITE AUDITÉ` / the
-  audit's own `siteUrl`), audit date, pages scanned, report language, and
-  standard audited, plus a legal-name field and the overall risk as a
-  `.risk-badge` pill (solid fill, no border, no glyph - the previous
-  bordered-outline treatment and severity glyph were mockup-mismatched
-  and dropped). Below the grid sits the severity scale (dot, label, and
-  meaning rows) with its basis note. It reuses the existing cover-grid
-  and tile vocabulary; no new tokens were introduced.
+- **Cover**: the radial-gradient ground (`ellipse 900px 560px at 50% 0%`,
+  `--section-glow` → `--section` → `--bg`) is painted by `.sheet-cover`
+  in `paged.css`, which also gives the sheet its flex column and 279mm
+  min-height (`@page cover` carries the single 18mm bottom margin, so the
+  gradient bleeds to the top edge). No wordmark: a small uppercase kicker
+  "Odysseus · Audit numérique" stands in for one. Kicker, the
+  commercial-name `h1`, and the generic decision question sit centered in
+  the hero block (`flex: 1.4`, `--space-6` gap); the closing group, a
+  centered 160px symmetric-fade accent rule (`--space-12` below it), the
+  concise report type line, and an audit date plus Odysseus signature
+  line, follows at roughly two-thirds page height and is closed by a
+  `flex: 1` quiet spacer (plan 023 recomposition: the closing group is
+  deliberately not pinned to the sheet bottom, and the rule is centered
+  above centered text). Minimal by contract: no fact fields return here.
+  The mockup's "Page 1 / N" corner label is deck-viewer chrome and was
+  not ported; page numbers live in `@page` margin boxes and the cover
+  suppresses its own counter.
+- **Metadata sheet** (second physical page, added 2026-09-01, plan 018;
+  recomposed 2026-09-02, plan 023): the audit identity fact grid (site
+  audited, audit date, pages scanned, report language, audited standard,
+  plus the legal name when the operator supplied one) as a two-column
+  grid, 10px uppercase labels (`opacity: 0.5`, `--space-3` below) over
+  18px values, `--space-8` row and column gaps. The sheet renders as a
+  flex column (`min-height: 261mm`): the risk scale, the full three-level
+  scale with the current level highlighted plus its two basis notes
+  (item 42), is the sheet's closing band, full width under a fading
+  hairline, pulled to roughly two-thirds page height by
+  `margin-top: auto` with a fixed quiet spacer after it, so the page
+  reads as composed rather than ending where the grid ran out. The flat
+  source's single risk pill and four-row severity legend were
+  deliberately replaced by this scale (item 42, plan 018 step 4).
 - **TOC**: eyebrow `SOMMAIRE`, numbered rows with a hairline
   divider under each, accent-colored index numbers, grouped under six
   narrative group labels.
@@ -191,7 +236,14 @@ so the page a section lands on depends on which sections are included.
   bold title, body paragraph, legal-relevance line in muted text, then a
   meta row (`Effort`/`Impact`/`Pages affectées`/`Conformité`/`Réf.`).
 - **Checklist table**: plain table, uppercase small header row,
-  hairline row dividers, no zebra striping, generous row padding.
+  hairline row dividers, no zebra striping, generous row padding. Under
+  print media this one page inverts to `#f7f7f5` ground with `#161826`
+  ink (a print-medium decision with no flat-source basis; rationale and
+  guard tests in the design-system document, section 2). The severity
+  level colors get their own print-safe dark pairings in the
+  `@media print` block of `paged.css`, each re-derived against
+  `#f7f7f5` at 4.5:1+; those pairings are the values of record for
+  print, not the dark-ground `LEVEL_COLOR` values.
 - **Findings appendix**: category heading in accent color,
   then per-rule blocks - severity badge, rule title, monospace rule-id
   tag, summary line (`N constats · N occurrences · jusqu'à N pages ·

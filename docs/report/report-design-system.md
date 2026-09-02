@@ -5,16 +5,49 @@ Read this before touching anything under `packages/report/src/template` or
 `packages/report/src/styles`.
 
 The visual design is not open for reinterpretation. It exists as source, not as
-a screenshot to approximate:
+a screenshot to approximate. The current baseline is the 2026-09-02 plan 023
+refinement (operator-picked direction "Refine Nocturne": keep the dark
+executive world and Inter; recompose the front matter, document the checklist's
+print mode, and restore spacing rhythm). A future revision re-runs plan 023's
+gate; it does not happen inline:
 
 | Artifact | Path | Status |
 | --- | --- | --- |
-| Design system CSS | `packages/report/src/styles/nocturne.css` | locked, do not edit |
+| Design system CSS | `packages/report/src/styles/nocturne.css` | token source of truth; revise only per this document, plan 023 baseline |
 | Paged media layer | `packages/report/src/styles/paged.css` | edit only per this doc |
 | Reference template | `packages/report/src/template/report.reference.html` | structural source of truth |
 
 If output does not match the reference, the template binding is wrong. Do not
 fix it by changing colours, sizes, spacing or inline styles.
+
+## Direction contract (plan 023, recorded 2026-09-02)
+
+- **Thesis**: the report keeps the Nocturne identity; the refinement changes
+  completion, not character: composed front matter, one documented print-first
+  page, and real spacing rhythm.
+- **Own-world**: a dark, quiet executive dossier: `#161826` ground, panel and
+  hairline dividers, violet accent, muted severity pastels, Inter self-hosted
+  (400/500/600/700 plus the kept 400 italic). The one deliberate exception
+  stays: section 05's print inversion to `#f7f7f5`.
+- **Story**: a client opens a calm dark cover whose lower half ends
+  deliberately instead of trailing into void, reads a metadata sheet that
+  fills its page with intent, works through evenly spaced sections, and can
+  pull out the checklist to print or capture alone, the only light page, on
+  purpose.
+- **First viewport (cover)**: the radial glow and the mid-page title block
+  stay; the closing composition (accent rule, report type, date, Odysseus
+  signature) sits at roughly two-thirds page height, followed by quiet ground,
+  so the sheet ends by design. No new world elements.
+- **Form**: A4 paged PDF via Paged.js; one numbered section start per page;
+  dark everywhere except the documented print-inverted checklist; footers and
+  counters unchanged; no section-order or structure change.
+
+Consciously kept from the Impeccable skill's bans (recorded per the plan):
+Inter stays as the print face, so the detector's `overused-font` findings on
+Inter declarations are known noise for report HTML; the dark ground stays, so
+detector families that penalize dark grounds are expected noise. The
+`monotonous-spacing` finding was not kept: the rhythm rules in section 2 are
+its fix.
 
 ## 1. Why the previous approach failed
 
@@ -32,7 +65,7 @@ match the render visually fixed one page and broke another.
 Two things fix it permanently, and both are below: a real paged media engine,
 and an explicit per section data contract.
 
-## 2. Pagination
+## 2. Pagination and page composition
 
 Paged.js, run in the Playwright page before printing. Not Chromium print CSS
 alone: Chromium ignores `@page` margin boxes, which is where the footer and the
@@ -49,7 +82,10 @@ Rules:
 - No page number may appear in markup. `counter(page)` and `counter(pages)` in
   the `@top-right` margin box only.
 - The footer text comes from `.footer-source` via `string-set`, once.
-- `margin: 0` in the pdf options. All page padding is `.sheet { padding: 18mm }`.
+- `margin: 0` in the pdf options. Horizontal page padding is
+  `.sheet { padding: 0 18mm }`; the vertical 18mm lives on `@page` margins
+  (the cover's `@page cover` carries a bottom margin only, so its gradient
+  bleeds to the top edge).
 - `printBackground: true` and `print-color-adjust: exact`, or the dark ground
   does not print.
 - Inter is self-hosted in `packages/report/src/fonts` with `font-display: block`.
@@ -74,6 +110,64 @@ Rules:
   successfully and returns a warning to the CLI and dashboard; no page count
   fails the render. Blank interior pages and duplicated fragments remain hard
   failures.
+
+Front matter is composed, not packed (plan 023). Both sheets read as
+two-act pages: the content act, then a deliberately placed closing act,
+then quiet ground. A front-matter sheet that ends when its last field runs
+out is a defect, not minimalism:
+
+- **Cover**: the radial glow and the centered kicker/title/question block
+  own the upper half (hero block `flex:1.4`); the closing group (centered
+  symmetric-fade accent rule, report type line, date and Odysseus
+  signature) sits at roughly two-thirds page height; a `flex:1` quiet
+  spacer closes the sheet. The closing group is never pinned to the sheet
+  bottom, and the accent rule is centered above the centered text, never
+  left-anchored. The cover stays minimal by contract: no fields return
+  from the metadata sheet.
+- **Metadata sheet**: the fact grid carries the audit identity fields;
+  the risk scale is the sheet's closing band, full width below a fading
+  hairline, pulled down by `margin-top:auto` in a flex column with a
+  fixed quiet spacer after it, so it lands around two-thirds page height
+  regardless of how tall the grid wrapped.
+- The sparse-pages rule below covers numbered sections only. Front matter
+  is governed by this composition rule instead.
+
+Vertical rhythm is a role ladder, not one dominant value (the plan 023 fix
+for the detector's monotonous-spacing finding; values in
+`report-design-tokens.md`):
+
+- **Tight** (`--space-1`/`--space-2` and the 4px/6px micro literals):
+  inside a related group - badge paddings, card-internal gaps, table cell
+  tiers.
+- **Medium** (`--space-3`/`--space-4`): between siblings of one component
+  - field label to value, tile-to-tile gaps, TOC rows.
+- **Generous** (`--space-6`/`--space-8`): between sibling components -
+  card-to-card, tile-block separations, TOC group labels.
+- **Sheet-level** (`--space-12`): between major blocks on one sheet -
+  the section-head cushion above a section start, appendix category
+  blocks, the cover's rule-to-type gap.
+- The section-head h2 carries a **per-section** gap, not a uniform one:
+  tight (`--space-2`) over table-led sections (priorités, check-list,
+  preuves, performance, déclaration, annexe) so the heading binds to its
+  table, `--space-3` for conformité, medium (`--space-4`) over prose-led
+  sections (résumé, reste à traiter, exposition légale, méthodologie),
+  generous (`--space-6`) over the airy sections (ouverture, chiffres,
+  observations, prochaines étapes, glossaire). The values come from the
+  flat design source per section.
+
+The printable checklist is a deliberate dual-mode page, not drift. On
+screen and in the document's own dark ground, section 05 renders like
+every other sheet. Under print media, `paged.css` inverts that one
+physical page to a `#f7f7f5` ground with `#161826` ink: the page labels
+itself as one meant to be printed or captured alone, and a dark page
+would either consume a full page of toner or fall to invisible
+white-on-white under a printer driver that strips backgrounds. The
+inversion has no basis in the flat mockup (whose checklist is dark) and
+claims none: it is a print-medium decision. `print-inversion.e2e.test.ts`
+(item 36) and `checklist-visual-regression.e2e.test.ts` (item 0.1 pixel
+baseline) guard it; the print-safe severity-level color pairings live in
+the `@media print` block and are re-derived against `#f7f7f5` at 4.5:1+
+if the palette ever moves.
 
 ## 3. Per section data contract
 
