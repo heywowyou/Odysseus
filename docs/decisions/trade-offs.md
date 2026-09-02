@@ -2967,6 +2967,47 @@ and restoring a global page cap, which entry "Non-negotiable rule 5
 amendment" above already rejected for a different, still-valid reason (silent
 under-reporting).
 
+### 65. The report's visual design is the 2026-09-02 Nocturne refinement, and a render-identity change re-keys approvals (plan 023)
+
+The report's visual layer had never been revised by anyone since the Nocturne
+mockup was ported; plans 018 through 021 reshaped its content on top of it.
+Plan 023 built an evidence pack over rendered fixtures (page images, a
+degraded-mode Impeccable detector run classified per finding, a
+design-director review, and the collected residuals) and the operator picked
+the direction from it: **refine the incumbent Nocturne world**, with the two
+skill bans the plan allows keeping recorded consciously - Inter stays as the
+print face (so the detector's `overused-font` findings on Inter are known
+noise for report HTML) and the dark ground stays. The retired look's defects
+were specific, not a failed world: the cover's closing group sat pinned to
+the sheet bottom behind a dead band, the metadata sheet ended where its grid
+ran out (about two-thirds void), the per-section heading rhythm had been
+flattened to one uniform medium gap (the single undocumented drift a full
+flat-source re-verification found, now the per-section map in the
+design-system document), and the checklist's light print page was
+undocumented. The refinement recomposes the front matter as two-act pages
+(cover closing act and metadata risk band at roughly two-thirds page height),
+adds the `--space-12` sheet-level step to the spacing ladder, moves the
+section-head cushion onto it, documents the checklist's `@media print`
+inversion as the deliberate print-medium decision it always was, and
+re-stamps the design documents' reinterpretation clause on this baseline.
+Canonical documents, flat sources, and the stylesheets moved in one slice,
+docs first.
+
+Section order, the section registry, pagination contract meaning, strings,
+and every locked contract are unchanged; page counts are unchanged
+(34/33/33/33 across both fixtures and languages). Trade-off 44's
+appendix-last reading order stands until plan 024 lands its recorded,
+operator-confirmed glossary-last reversal.
+
+**Approval consequence (deliberate, not silent).** This plan changes render
+identity, because the stylesheet is part of what a render digest verifies.
+Previously approved reports keep their stored digests untouched; any
+deliverable rendered after this change needs a fresh approval round over its
+new digest. Nothing is migrated. At landing time no stored client artifact
+was identified for re-approval (the reference audit's render is still pending
+its `raisonSociale` confirmation); the operator confirms per deliverable at
+render time.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

@@ -22,8 +22,3 @@ coverage/
 # docs/agents/session-template.md, folded into canonical docs, and retained
 # while uncommitted work still needs provenance.
 /docs/session/current-session.md
-
-# Concurrent session logs, one per plan running in this checkout at the same
-# time (023 while 022 wraps, 2026-09-02). Same lifecycle as above; a session
-# adds its own entry when it starts and drops it when its work is committed.
-/docs/session/current-session-023.md
