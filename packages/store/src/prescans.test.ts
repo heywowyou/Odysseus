@@ -237,6 +237,10 @@ describe.skipIf(!mongoAvailable)('prescans', () => {
     expect(latest?.prescanId).toBe(second.prescanId);
   });
 
+  // Two inserts plus two pointer writes can contend with the shared Docker
+  // Mongo container's single WiredTiger checkpoint when the store suite
+  // runs in parallel; the default 5000ms budget is otherwise too tight
+  // under that load (issue #17).
   it('moves the candidate pointer to the newest prescan', async () => {
     const candidateId = randomUUID();
     await upsertHotelCandidates(connection!, [candidate(candidateId)]);
@@ -257,7 +261,7 @@ describe.skipIf(!mongoAvailable)('prescans', () => {
     stored = await getHotelCandidate(connection!, candidateId);
     expect(stored?.prescan?.prescanId).toBe(second.prescanId);
     expect(stored?.prescan?.status).toBe('blocked-by-robots');
-  });
+  }, 15_000);
 
   it('reports a pointer it could not write rather than swallowing it', async () => {
     const result = await recordPrescan(connection!, prescan({ candidateId: randomUUID() }));
