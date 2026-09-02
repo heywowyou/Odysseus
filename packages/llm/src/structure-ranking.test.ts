@@ -164,6 +164,49 @@ function theme(
 }
 
 describe('enforceSiteWideAccessibilityFloor', () => {
+  it('uses completed axe pages as the denominator for a current manifest', () => {
+    const sourceFindings = loadMultiPageFindings();
+    const sourceManifest = loadMultiPageManifest();
+    const sourceFinding = findFinding(sourceFindings, siteWideWcagId(sourceFindings));
+    const axeCompletedUrls = sourceManifest.pages.slice(0, 5).map((page) => page.url);
+    const finding = { ...sourceFinding, pageUrls: axeCompletedUrls.slice(0, 4) };
+    const manifest: AuditManifest = {
+      ...sourceManifest,
+      pages: sourceManifest.pages.map((page, index) =>
+        index < 5
+          ? {
+              ...page,
+              analysisCoverage: {
+                plannerVersion: 'v1' as const,
+                role: 'content' as const,
+                confidence: 'high' as const,
+                reasonCodes: [],
+                passes: {
+                  rendered: { outcome: 'completed' as const },
+                  axe: { outcome: 'completed' as const },
+                  extended: { outcome: 'completed' as const },
+                  lighthouse: { outcome: 'not-planned' as const },
+                },
+              },
+            }
+          : page,
+      ),
+    };
+    const themes: StructureThemeWithKey[] = [
+      theme('t1', [fillerA], { priorityRank: 1, impact: 'high' }),
+      theme('t2', [fillerB], { priorityRank: 2, impact: 'high' }),
+      theme('t3', [fillerC], { priorityRank: 3, impact: 'low' }),
+      theme('t4', [finding.findingId], { priorityRank: 4, impact: 'low' }),
+    ];
+
+    const result = enforceSiteWideAccessibilityFloor(themes, [finding], manifest);
+
+    expect(result.find((candidate) => candidate.themeKey === 't4')).toMatchObject({
+      impact: 'medium',
+      priorityRank: 3,
+    });
+  });
+
   it('bumps impact and promotes a bottom-quartile theme containing a site-wide WCAG finding', () => {
     const findings = loadMultiPageFindings();
     const manifest = loadMultiPageManifest();

@@ -3,10 +3,13 @@ import { en } from '../i18n/en';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import {
   crawlProgress,
+  contentScanProgress,
   currentPhaseLabel,
   formatEta,
   isKnownPhase,
   isTerminal,
+  hasStagedAnalysisProgress,
+  lighthouseProgress,
   scanProgress,
   urlResultState,
 } from './scan-progress-model';
@@ -142,6 +145,45 @@ describe('scanProgress', () => {
   });
 });
 
+describe('staged analysis progress', () => {
+  it('tracks content and Lighthouse independently and handles a zero-page audit', () => {
+    expect(
+      contentScanProgress(
+        job({ phase: 'content-scan', progress: { contentScan: { completed: 2, target: 4 } } }),
+      ),
+    ).toBe(50);
+    expect(
+      lighthouseProgress(
+        job({ phase: 'lighthouse', progress: { lighthouse: { completed: 1, target: 4 } } }),
+      ),
+    ).toBe(25);
+    expect(
+      contentScanProgress(
+        job({ phase: 'normalize', progress: { contentScan: { completed: 0, target: 0 } } }),
+      ),
+    ).toBe(100);
+    expect(
+      lighthouseProgress(
+        job({ phase: 'normalize', progress: { lighthouse: { completed: 0, target: 0 } } }),
+      ),
+    ).toBe(100);
+  });
+
+  it('keeps legacy scan counters on the legacy model path', () => {
+    const legacy = job({ phase: 'scan', progress: { scan: { scanned: 3, target: 6 } } });
+    expect(hasStagedAnalysisProgress(legacy)).toBe(false);
+    expect(scanProgress(legacy)).toBe(50);
+    expect(
+      hasStagedAnalysisProgress(
+        job({
+          phase: 'select-performance',
+          progress: { contentScan: { completed: 6, target: 6 } },
+        }),
+      ),
+    ).toBe(true);
+  });
+});
+
 describe('formatEta', () => {
   it('renders sub-minute estimates as whole seconds', () => {
     expect(formatEta(45_000)).toBe('45 s');
@@ -163,6 +205,7 @@ describe('phase label mapping', () => {
   it('maps every copy-table phase', () => {
     expect(currentPhaseLabel('queued', labels)).toBe(labels.queued);
     expect(currentPhaseLabel('report-fr', labels)).toBe(labels['report-fr']);
+    expect(currentPhaseLabel('select-performance', labels)).toBe(labels['select-performance']);
     expect(currentPhaseLabel('complete', labels)).toBe(labels.complete);
   });
 

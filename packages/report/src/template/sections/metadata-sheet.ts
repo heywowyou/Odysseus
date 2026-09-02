@@ -5,6 +5,7 @@ import { escapeHtml, fillTemplate, formatDate, formatNumber, sheet } from '../ht
 import { LEVEL_COLOR } from '../design-tokens.js';
 import { computeStatistics } from '../statistics.js';
 import { hasMeasuredCoreWebVitals } from './core-web-vitals-table.js';
+import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
 /** Stable DOM id of the metadata sheet. The reference template
  *  (report.reference.html) leaves this section without an id, so a stable,
@@ -114,6 +115,10 @@ export function renderMetadataSheet(
   manualFields?: AuditManualFields,
 ): string {
   const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
+  const coverage = buildCoverageDisclosure(strings, manifest, analysis.language);
+  const scopeValue = manifest.pages.some((page) => page.analysisCoverage !== undefined)
+    ? coverage.summary
+    : fillTemplate(strings.metadata.pagesScannedValueTemplate, { count: pagesScanned });
   const raisonSociale = manualFields?.raisonSociale?.value;
 
   return sheet(
@@ -125,7 +130,7 @@ export function renderMetadataSheet(
     <div style="display:grid;grid-template-columns:1fr 1fr;row-gap:var(--space-8);column-gap:var(--space-8);font-size:13px">
       ${field(strings.metadata.siteLabel, escapeHtml(manifest.siteUrl))}
       ${field(strings.metadata.dateLabel, escapeHtml(formatDate(new Date(manifest.startedAt), analysis.language)))}
-      ${field(strings.metadata.pagesScannedLabel, escapeHtml(fillTemplate(strings.metadata.pagesScannedValueTemplate, { count: pagesScanned })))}
+      ${field(strings.metadata.pagesScannedLabel, escapeHtml(scopeValue))}
       ${field(strings.metadata.languageLabel, escapeHtml(LANGUAGE_SELF_NAME[analysis.language]))}
       ${field(
         strings.metadata.wcagReferentialLabel,

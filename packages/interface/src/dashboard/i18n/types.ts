@@ -145,12 +145,20 @@ export interface DashboardStrings {
     description: string;
     crawlPhaseLabel: string;
     scanPhaseLabel: string;
+    contentScanPhaseLabel: string;
+    lighthousePhaseLabel: string;
+    contentProgressMessage: string;
+    performanceSelectionMessage: string;
+    lighthouseProgressMessage: string;
     etaLabel: string;
     etaRoughSuffix: string;
     phaseLabels: {
       queued: string;
       crawl: string;
       scan: string;
+      'content-scan': string;
+      'select-performance': string;
+      lighthouse: string;
       normalize: string;
       'analyze-fr': string;
       'analyze-en': string;

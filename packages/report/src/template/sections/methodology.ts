@@ -7,6 +7,7 @@ import {
   FORM_ERROR_NOT_ASSOCIATED_RULE_ID,
   VIDEO_MISSING_CAPTIONS_RULE_ID,
   getRegime,
+  summarizeAuditCoverage,
   type AuditManifest,
   type Finding,
   type ObligationAssessment,
@@ -26,6 +27,7 @@ import {
   sheet,
 } from '../html-utils.js';
 import { translateEffectifLabel } from '../effectif-label.js';
+import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
 /** Sirene's own effectif-band labels (see packages/interface's
  *  sirene-client.ts) are French-only, since they come from an INSEE
@@ -414,7 +416,11 @@ export function renderMethodology(
   const eyebrow = m.eyebrow;
   const axeVersion = manifest.tool.axeCoreVersion ?? '-';
   const lighthouseVersion = manifest.tool.lighthouseVersion ?? '-';
-  const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
+  const auditCoverage = summarizeAuditCoverage(manifest);
+  const pagesScanned =
+    auditCoverage.kind === 'current'
+      ? auditCoverage.content.completed + auditCoverage.content.partial
+      : manifest.pages.filter((page) => page.status === 'visited').length;
 
   const toolingParagraph = fillTemplate(m.toolingParagraphTemplate, {
     axeVersion,
@@ -422,6 +428,10 @@ export function renderMethodology(
     pages: pagesScanned,
     date: formatDate(new Date(manifest.startedAt), language),
   });
+  const reportCoverage = buildCoverageDisclosure(strings, manifest, language);
+  const coverageNote = `<p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(
+    [reportCoverage.summary, ...reportCoverage.details].join(' '),
+  )}</p>`;
 
   // 2026-08-25 Lagnonu review, item 1.3's remaining half: state the language
   // coverage actually achieved, so "65 pages analysees" can never again be
@@ -519,6 +529,7 @@ export function renderMethodology(
     `
     ${renderSheetHeader(ordinal, eyebrow, m.heading)}
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(toolingParagraph)}</p>
+    ${coverageNote}
     ${languageCoverageNote}
     ${sitemapCoverageNote}
     ${sitemapIncompleteNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(sitemapIncompleteNote)}</p>` : ''}

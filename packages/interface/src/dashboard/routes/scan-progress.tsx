@@ -18,16 +18,26 @@ import { canStop } from '../lib/job-actions';
 import { cn } from '../lib/cn';
 import { usePolling } from '../lib/use-polling';
 import {
+  contentScanProgress,
   crawlProgress,
   currentPhaseLabel,
   formatEta,
+  hasStagedAnalysisProgress,
   isTerminal,
+  lighthouseProgress,
   scanProgress,
   urlResultState,
   type UrlResultState,
 } from './scan-progress-model';
 
 const POLL_INTERVAL_MS = 3000;
+
+function fillProgressCopy(template: string, values: Record<string, number>): string {
+  return Object.entries(values).reduce(
+    (copy, [key, value]) => copy.replace(`{${key}}`, String(value)),
+    template,
+  );
+}
 
 /** Old page badge colors: success green for a done URL, red for a failed
  *  one, accent violet while still in flight. */
@@ -194,6 +204,28 @@ function FullAuditView({ job, terminal }: { job: ScanJobDetail; terminal: boolea
   // the rough suffix.
   const crawlEta = job.phase === 'crawl' ? job.progress.crawl?.etaMs : undefined;
   const scanEta = job.phase === 'scan' ? job.progress.scan?.etaMs : undefined;
+  const contentEta = job.phase === 'content-scan' ? job.progress.contentScan?.etaMs : undefined;
+  const lighthouseEta = job.phase === 'lighthouse' ? job.progress.lighthouse?.etaMs : undefined;
+  const staged = hasStagedAnalysisProgress(job);
+  const content = job.progress.contentScan;
+  const lighthouse = job.progress.lighthouse;
+  const stagedSummary =
+    job.phase === 'select-performance' && content !== undefined
+      ? fillProgressCopy(strings.progress.performanceSelectionMessage, {
+          target: content.target,
+        })
+      : job.phase === 'lighthouse' && content !== undefined && lighthouse !== undefined
+        ? fillProgressCopy(strings.progress.lighthouseProgressMessage, {
+            content: content.completed,
+            completed: lighthouse.completed,
+            target: lighthouse.target,
+          })
+        : content !== undefined
+          ? fillProgressCopy(strings.progress.contentProgressMessage, {
+              completed: content.completed,
+              target: content.target,
+            })
+          : undefined;
 
   return (
     <>
@@ -211,18 +243,62 @@ function FullAuditView({ job, terminal }: { job: ScanJobDetail; terminal: boolea
           </p>
         ) : null}
       </Card>
-      <Card>
-        <div className="mb-3 flex items-center gap-1.5">
-          <h2 className="text-sm font-semibold text-ink">{strings.progress.scanPhaseLabel}</h2>
-          <InfoTip label={strings.progress.scanPhaseLabel} hint={strings.hints.scan} />
-        </div>
-        <ProgressBar value={scanProgress(job)} ariaLabel={strings.progress.scanPhaseLabel} />
-        {scanEta !== undefined ? (
-          <p className="mt-2 text-xs text-ink-muted">
-            {strings.progress.etaLabel}: {formatEta(scanEta)} {strings.progress.etaRoughSuffix}
-          </p>
-        ) : null}
-      </Card>
+      {staged ? (
+        <>
+          <Card>
+            <div className="mb-3 flex items-center gap-1.5">
+              <h2 className="text-sm font-semibold text-ink">
+                {strings.progress.contentScanPhaseLabel}
+              </h2>
+              <InfoTip label={strings.progress.contentScanPhaseLabel} hint={strings.hints.scan} />
+            </div>
+            <ProgressBar
+              value={contentScanProgress(job)}
+              ariaLabel={strings.progress.contentScanPhaseLabel}
+            />
+            {contentEta !== undefined ? (
+              <p className="mt-2 text-xs text-ink-muted">
+                {strings.progress.etaLabel}: {formatEta(contentEta)}{' '}
+                {strings.progress.etaRoughSuffix}
+              </p>
+            ) : null}
+          </Card>
+          <Card>
+            <div className="mb-3 flex items-center gap-1.5">
+              <h2 className="text-sm font-semibold text-ink">
+                {strings.progress.lighthousePhaseLabel}
+              </h2>
+              <InfoTip label={strings.progress.lighthousePhaseLabel} hint={strings.hints.scan} />
+            </div>
+            <ProgressBar
+              value={lighthouseProgress(job)}
+              ariaLabel={strings.progress.lighthousePhaseLabel}
+            />
+            {lighthouseEta !== undefined ? (
+              <p className="mt-2 text-xs text-ink-muted">
+                {strings.progress.etaLabel}: {formatEta(lighthouseEta)}{' '}
+                {strings.progress.etaRoughSuffix}
+              </p>
+            ) : null}
+            {stagedSummary !== undefined ? (
+              <p className="mt-2 text-xs text-ink-muted">{stagedSummary}</p>
+            ) : null}
+          </Card>
+        </>
+      ) : (
+        <Card>
+          <div className="mb-3 flex items-center gap-1.5">
+            <h2 className="text-sm font-semibold text-ink">{strings.progress.scanPhaseLabel}</h2>
+            <InfoTip label={strings.progress.scanPhaseLabel} hint={strings.hints.scan} />
+          </div>
+          <ProgressBar value={scanProgress(job)} ariaLabel={strings.progress.scanPhaseLabel} />
+          {scanEta !== undefined ? (
+            <p className="mt-2 text-xs text-ink-muted">
+              {strings.progress.etaLabel}: {formatEta(scanEta)} {strings.progress.etaRoughSuffix}
+            </p>
+          ) : null}
+        </Card>
+      )}
     </>
   );
 }

@@ -97,6 +97,23 @@ export const en: ReportStrings = {
     multiCriterionNote:
       "A finding mapped to more than one WCAG criterion is counted under each row: the Occurrences column's total can therefore exceed the accessibility-occurrences count stated elsewhere in this report.",
   },
+  coverage: {
+    summaryTemplate:
+      '{inventory} URLs inventoried; content-sensitive results on {content} pages ({contentCompleted} completed, {contentPartial} partial, {contentFailed} failed); Lighthouse: {lighthouse} measured, {lighthousePartial} partial, {lighthouseFailed} failed, {lighthouseNotPlanned} not planned.',
+    legacyUnknownTemplate:
+      '{inventory} URLs inventoried. Pass-by-pass coverage is unavailable for this historical audit.',
+    withoutContentTemplate: 'Pages without content analysis: {reasons}.',
+    guardedOmissionsTemplate:
+      '{count} additional continuation URLs were omitted by the repetition guard.',
+    reasonLabels: {
+      'discovered-not-scanned': 'discovered but not scanned',
+      'skipped-robots': 'blocked by robots.txt',
+      'skipped-non-html': 'non-HTML resource',
+      'skipped-external-redirect': 'external redirect',
+      error: 'crawl error',
+      'coverage-missing': 'coverage record unavailable',
+    },
+  },
   observations: {
     eyebrow: 'Observations',
     heading: 'Findings outside the ranking',

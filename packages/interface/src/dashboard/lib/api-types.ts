@@ -37,6 +37,9 @@ export interface ScanCreated {
 export interface ScanJobProgress {
   crawl?: { visited: number; target: number; etaMs?: number };
   scan?: { scanned: number; target: number; etaMs?: number };
+  contentScan?: { completed: number; target: number; etaMs?: number };
+  lighthouse?: { completed: number; target: number; etaMs?: number };
+  continuationGuard?: { omittedUrlCount: number; omittedFamilyCount: number };
   message?: string;
 }
 

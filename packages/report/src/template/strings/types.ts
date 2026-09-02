@@ -183,6 +183,27 @@ export interface ReportStrings {
      *  explained rather than left for an agency to puzzle out. */
     multiCriterionNote: string;
   };
+  coverage: {
+    /** Templates: {inventory}, {content}, {contentCompleted},
+     *  {contentPartial}, {contentFailed}, {lighthouse}, {lighthousePartial},
+     *  {lighthouseFailed}, {lighthouseNotPlanned}. */
+    summaryTemplate: string;
+    /** Template: {inventory}. */
+    legacyUnknownTemplate: string;
+    /** Template: {reasons}. */
+    withoutContentTemplate: string;
+    /** Template: {count}. */
+    guardedOmissionsTemplate: string;
+    reasonLabels: Record<
+      | 'discovered-not-scanned'
+      | 'skipped-robots'
+      | 'skipped-non-html'
+      | 'skipped-external-redirect'
+      | 'error'
+      | 'coverage-missing',
+      string
+    >;
+  };
   observations: {
     eyebrow: string;
     heading: string;

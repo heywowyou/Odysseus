@@ -125,12 +125,22 @@ export const en: DashboardStrings = {
     description: 'Crawl and analysis phases, per-URL results.',
     crawlPhaseLabel: 'Crawling the site',
     scanPhaseLabel: 'Analysing pages',
+    contentScanPhaseLabel: 'Content and accessibility checks',
+    lighthousePhaseLabel: 'Performance measurement',
+    contentProgressMessage: 'Content pages checked: {completed}/{target}.',
+    performanceSelectionMessage:
+      '{target} pages scheduled for content checks. Performance selection in progress.',
+    lighthouseProgressMessage:
+      '{content} content pages checked. Performance representatives measured: {completed}/{target}.',
     etaLabel: 'Estimated time remaining',
     etaRoughSuffix: '(rough estimate)',
     phaseLabels: {
       queued: 'Queued',
       crawl: 'Crawling the site',
       scan: 'Analysing pages',
+      'content-scan': 'Checking content and accessibility',
+      'select-performance': 'Selecting performance representatives',
+      lighthouse: 'Measuring performance',
       normalize: 'Processing results',
       'analyze-fr': 'Writing the report (French)',
       'analyze-en': 'Writing the report (English)',
@@ -605,7 +615,7 @@ export const en: DashboardStrings = {
   hints: {
     crawl:
       'Discovering the site’s pages: the crawler lists the reachable URLs and loads each page one by one, with a polite delay between each request.',
-    scan: 'Full analysis of every page found: rendering, accessibility and performance. This is the longest phase.',
+    scan: 'Content and accessibility checks cover every page. Performance is measured separately on selected representatives.',
     prescan:
       'A quick measurement of three key pages of the hotel’s site, without a full audit: performance, blocking defects and evidence.',
     score:

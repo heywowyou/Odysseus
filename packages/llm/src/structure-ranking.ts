@@ -1,4 +1,4 @@
-import type { AuditManifest, Finding } from '@odysseus/core';
+import { summarizeAuditCoverage, type AuditManifest, type Finding } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from './diversion.js';
 import type { StructureThemeWithKey } from './structure-schema.js';
 
@@ -11,7 +11,10 @@ export const SITE_WIDE_FINDING_PAGE_PERCENT_THRESHOLD = 80;
 const BOTTOM_QUARTILE_FRACTION = 0.75;
 
 function crawledPageCount(manifest: AuditManifest): number {
-  return manifest.pages.filter((page) => page.status === 'visited').length;
+  const coverage = summarizeAuditCoverage(manifest);
+  return coverage.kind === 'current'
+    ? coverage.passes.axe.completed
+    : manifest.pages.filter((page) => page.status === 'visited').length;
 }
 
 function isSiteWideAccessibilityFinding(finding: Finding, crawledPages: number): boolean {

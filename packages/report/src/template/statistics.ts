@@ -1,5 +1,9 @@
 import type { AuditManifest, Finding } from '@odysseus/core';
-import { HEURISTIC_RULE_IDS, RENDER_DIFF_EMISSION_THRESHOLD_PERCENT } from '@odysseus/core';
+import {
+  HEURISTIC_RULE_IDS,
+  RENDER_DIFF_EMISSION_THRESHOLD_PERCENT,
+  summarizeAuditCoverage,
+} from '@odysseus/core';
 import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rollup.js';
 import type { CATEGORY_ORDER } from './design-tokens.js';
 import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
@@ -75,7 +79,11 @@ export function computeStatistics(
   findings: readonly Finding[],
   manifest: AuditManifest,
 ): ReportStatistics {
-  const pagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
+  const coverage = summarizeAuditCoverage(manifest);
+  const pagesScanned =
+    coverage.kind === 'current'
+      ? coverage.content.completed + coverage.content.partial
+      : manifest.pages.filter((page) => page.status === 'visited').length;
 
   let accessibilityOccurrences = 0;
   let accessibilityHeuristicOccurrences = 0;

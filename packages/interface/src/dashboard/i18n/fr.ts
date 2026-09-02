@@ -127,12 +127,22 @@ export const fr: DashboardStrings = {
     description: 'Phases de crawl et d’analyse, résultats par URL.',
     crawlPhaseLabel: 'Exploration du site',
     scanPhaseLabel: 'Analyse des pages',
+    contentScanPhaseLabel: 'Vérifications du contenu et de l’accessibilité',
+    lighthousePhaseLabel: 'Mesure des performances',
+    contentProgressMessage: 'Pages de contenu vérifiées : {completed}/{target}.',
+    performanceSelectionMessage:
+      '{target} pages prévues pour les vérifications du contenu. Sélection des pages de performance en cours.',
+    lighthouseProgressMessage:
+      '{content} pages de contenu vérifiées. Représentantes mesurées pour les performances : {completed}/{target}.',
     etaLabel: 'Temps restant estimé',
     etaRoughSuffix: '(estimation approximative)',
     phaseLabels: {
       queued: 'En attente',
       crawl: 'Exploration du site',
       scan: 'Analyse des pages',
+      'content-scan': 'Vérification du contenu et de l’accessibilité',
+      'select-performance': 'Sélection des pages représentatives pour les performances',
+      lighthouse: 'Mesure des performances',
       normalize: 'Traitement des résultats',
       'analyze-fr': 'Rédaction du rapport (français)',
       'analyze-en': 'Rédaction du rapport (anglais)',
@@ -614,7 +624,7 @@ export const fr: DashboardStrings = {
   hints: {
     crawl:
       'Découverte des pages du site : le robot liste les URLs accessibles et charge chaque page une par une, avec un délai de politesse entre chaque requête.',
-    scan: 'Analyse complète de chaque page trouvée : rendu, accessibilité et performance. C’est la phase la plus longue.',
+    scan: 'Les vérifications du contenu et de l’accessibilité couvrent chaque page. Les performances sont mesurées séparément sur des pages représentatives sélectionnées.',
     prescan:
       'Mesure rapide de trois pages clés du site de l’hôtel, sans audit complet : performances, défauts bloquants et preuves.',
     score:

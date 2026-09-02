@@ -34,6 +34,22 @@ export interface ScanEtaInput {
   elapsedMs: number;
 }
 
+export interface StageEtaInput {
+  completed: number;
+  target: number;
+  elapsedMs: number;
+}
+
+/** Running-average ETA for one homogeneous stage. Callers keep separate
+ * clocks for rendered/content work and serialized Lighthouse work so their
+ * very different costs are never blended. */
+export function computeStageEtaMs(input: StageEtaInput): number | undefined {
+  if (input.completed <= 0) return undefined;
+  const avgMsPerItem = input.elapsedMs / input.completed;
+  const remaining = Math.max(input.target - input.completed, 0);
+  return avgMsPerItem * remaining;
+}
+
 /** Empirical: there is no config value for how long a Lighthouse
  *  navigation-mode pass takes per page, so this is a running average of
  *  pages actually scanned so far, projected across the remaining pages.
@@ -41,8 +57,9 @@ export interface ScanEtaInput {
  *  is expected, showing nothing is more honest than showing a number
  *  built from zero data. */
 export function computeScanEtaMs(input: ScanEtaInput): number | undefined {
-  if (input.scanned <= 0) return undefined;
-  const avgMsPerPage = input.elapsedMs / input.scanned;
-  const remaining = Math.max(input.target - input.scanned, 0);
-  return avgMsPerPage * remaining;
+  return computeStageEtaMs({
+    completed: input.scanned,
+    target: input.target,
+    elapsedMs: input.elapsedMs,
+  });
 }

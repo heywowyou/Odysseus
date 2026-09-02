@@ -9,7 +9,7 @@ import type { Connection } from 'mongoose';
 import type { ScanProgressEvent } from '@odysseus/scanner';
 import { updateJobProgress } from '@odysseus/store';
 import { JobCancelledError, type CancellationRegistry } from './cancellation.js';
-import { computeCrawlEtaMs, computeScanEtaMs } from './eta.js';
+import { computeCrawlEtaMs, computeScanEtaMs, computeStageEtaMs } from './eta.js';
 
 export function createScanProgressReporter(
   connection: Connection,
@@ -18,6 +18,8 @@ export function createScanProgressReporter(
 ): (event: ScanProgressEvent) => void {
   let effectiveDelayMs = 0;
   let scanStartedAtMs: number | undefined;
+  let contentScanStartedAtMs: number | undefined;
+  let lighthouseStartedAtMs: number | undefined;
 
   async function handle(event: ScanProgressEvent): Promise<void> {
     if (event.type === 'crawl-start') {
@@ -63,6 +65,88 @@ export function createScanProgressReporter(
           },
         },
       });
+      return;
+    }
+
+    if (event.type === 'continuation-guard') {
+      await updateJobProgress(connection, jobId, {
+        progress: {
+          continuationGuard: {
+            omittedUrlCount: event.omittedUrlCount,
+            omittedFamilyCount: event.omittedFamilyCount,
+          },
+        },
+      });
+      return;
+    }
+
+    if (event.type === 'content-scan-start') {
+      contentScanStartedAtMs = Date.now();
+      await updateJobProgress(connection, jobId, {
+        phase: 'content-scan',
+        progress: { contentScan: { completed: 0, target: event.totalPages } },
+      });
+      return;
+    }
+
+    if (event.type === 'content-scan-page') {
+      const elapsedMs =
+        contentScanStartedAtMs !== undefined ? Date.now() - contentScanStartedAtMs : 0;
+      const etaMs = computeStageEtaMs({
+        completed: event.completed,
+        target: event.totalPages,
+        elapsedMs,
+      });
+      await updateJobProgress(connection, jobId, {
+        phase: 'content-scan',
+        progress: {
+          contentScan: {
+            completed: event.completed,
+            target: event.totalPages,
+            ...(etaMs !== undefined ? { etaMs } : {}),
+          },
+        },
+      });
+      return;
+    }
+
+    if (event.type === 'select-performance') {
+      await updateJobProgress(connection, jobId, { phase: 'select-performance' });
+      return;
+    }
+
+    if (event.type === 'lighthouse-start') {
+      lighthouseStartedAtMs = Date.now();
+      await updateJobProgress(connection, jobId, {
+        phase: 'lighthouse',
+        progress: { lighthouse: { completed: 0, target: event.totalPages } },
+      });
+      return;
+    }
+
+    if (event.type === 'lighthouse-page') {
+      const elapsedMs =
+        lighthouseStartedAtMs !== undefined ? Date.now() - lighthouseStartedAtMs : 0;
+      const etaMs = computeStageEtaMs({
+        completed: event.completed,
+        target: event.totalPages,
+        elapsedMs,
+      });
+      await updateJobProgress(connection, jobId, {
+        phase: 'lighthouse',
+        progress: {
+          lighthouse: {
+            completed: event.completed,
+            target: event.totalPages,
+            ...(etaMs !== undefined ? { etaMs } : {}),
+          },
+        },
+      });
+      return;
+    }
+
+    if (event.type === 'analysis-complete') {
+      await updateJobProgress(connection, jobId, { phase: 'normalize' });
       return;
     }
 

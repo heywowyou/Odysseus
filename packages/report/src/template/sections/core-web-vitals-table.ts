@@ -10,6 +10,7 @@ import { CORE_WEB_VITAL_THRESHOLDS, rateCoreWebVital } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
 import { SEVERITY } from '../design-tokens.js';
+import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
 /** No "good" tone exists in design-tokens.ts's SEVERITY map (every entry
  *  there is bad-to-worse); reuses the same green already used for the
@@ -276,6 +277,7 @@ export function renderCoreWebVitalsTable(
   // aggregate over.
   const pagesScanned = manifest.pages.filter((page) => page.coreWebVitals !== undefined).length;
   const c = strings.coreWebVitals;
+  const coverage = buildCoverageDisclosure(strings, manifest, language);
   const metricLabels: Record<CoreWebVitalMetricKey, string> = {
     lcp: c.lcpLabel,
     tbt: c.tbtLabel,
@@ -296,6 +298,7 @@ export function renderCoreWebVitalsTable(
       `
       ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
       <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(c.allUnmeasuredNote)}</p>
+      <p style="font-size:12px;opacity:0.65;max-width:64ch">${escapeHtml(coverage.summary)}</p>
       ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, false)}
     `,
       '',
@@ -356,6 +359,7 @@ export function renderCoreWebVitalsTable(
     `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.introTemplate, { pages: formatNumber(pagesScanned, language) }))}</p>
+    <p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(coverage.summary)}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <thead>
         <tr>

@@ -10,6 +10,7 @@ import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
 import { type RenderedPriority, summarizePriorityOwnership } from '../rendered-priorities.js';
 import { computeStatistics } from '../statistics.js';
 import { RULE_TRANSLATIONS_FR } from '../rule-translations.js';
+import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
 /** item 1.10 (La Corniche pass): "N/N pages avec au moins un constat
  *  critique" reads as an alarming, broad finding, but on a real report
@@ -95,6 +96,7 @@ export function renderStatistics(
   const stats = computeStatistics(findings, manifest);
   const s = strings.statistics;
   const n = (value: number): string => formatNumber(value, language);
+  const coverage = buildCoverageDisclosure(strings, manifest, language);
 
   const numberTiles = [
     renderNumberTile(n(stats.pagesScanned), s.pagesTileLabel),
@@ -226,6 +228,9 @@ export function renderStatistics(
   return sheet(
     `
     ${renderSheetHeader(ordinal, s.eyebrow, s.heading)}
+    <p style="font-size:12px;opacity:0.65;margin-bottom:var(--space-3)">${escapeHtml(
+      [coverage.summary, ...coverage.details].join(' '),
+    )}</p>
     <div class="stat-tile-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-3)">
       ${numberTiles}
     </div>

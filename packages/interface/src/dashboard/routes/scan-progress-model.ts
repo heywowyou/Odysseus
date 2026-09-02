@@ -9,6 +9,9 @@ const PHASE_KEYS = [
   'queued',
   'crawl',
   'scan',
+  'content-scan',
+  'select-performance',
+  'lighthouse',
   'normalize',
   'analyze-fr',
   'analyze-en',
@@ -76,6 +79,53 @@ export function scanProgress(job: ScanJobDetail): number {
     return scan.target > 0 ? clampPercent((scan.scanned / scan.target) * 100) : 0;
   }
   return job.phase === 'queued' || job.phase === 'crawl' ? 0 : 100;
+}
+
+const AFTER_CONTENT_PHASES = new Set([
+  'select-performance',
+  'lighthouse',
+  'normalize',
+  'analyze-fr',
+  'analyze-en',
+  'report-fr',
+  'report-en',
+  'complete',
+]);
+
+const AFTER_LIGHTHOUSE_PHASES = new Set([
+  'normalize',
+  'analyze-fr',
+  'analyze-en',
+  'report-fr',
+  'report-en',
+  'complete',
+]);
+
+function stagedProgress(
+  bucket: { completed: number; target: number } | undefined,
+  phaseIsPast: boolean,
+): number {
+  if (bucket === undefined) return phaseIsPast ? 100 : 0;
+  if (bucket.target <= 0) return phaseIsPast ? 100 : 0;
+  return clampPercent((bucket.completed / bucket.target) * 100);
+}
+
+export function contentScanProgress(job: ScanJobDetail): number {
+  return stagedProgress(job.progress.contentScan, AFTER_CONTENT_PHASES.has(job.phase));
+}
+
+export function lighthouseProgress(job: ScanJobDetail): number {
+  return stagedProgress(job.progress.lighthouse, AFTER_LIGHTHOUSE_PHASES.has(job.phase));
+}
+
+export function hasStagedAnalysisProgress(job: ScanJobDetail): boolean {
+  return (
+    job.progress.contentScan !== undefined ||
+    job.progress.lighthouse !== undefined ||
+    job.phase === 'content-scan' ||
+    job.phase === 'select-performance' ||
+    job.phase === 'lighthouse'
+  );
 }
 
 /** Remaining-time text, ported from app-progress.ts formatEtaMs (whole

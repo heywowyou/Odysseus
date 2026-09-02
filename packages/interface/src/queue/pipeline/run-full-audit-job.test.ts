@@ -47,6 +47,20 @@ function fakeAuditResult() {
     auditDir: '/artifacts/example.com/dir',
     visitedCount: 2,
     prunedPageDirCount: 0,
+    coverageSummary: {
+      kind: 'current' as const,
+      inventoriedUrlCount: 2,
+      continuationOmittedUrlCount: 0,
+      content: { completed: 2, partial: 0, failed: 0 },
+      passes: {
+        rendered: { completed: 2, partial: 0, failed: 0, notPlanned: 0 },
+        axe: { completed: 2, partial: 0, failed: 0, notPlanned: 0 },
+        extended: { completed: 2, partial: 0, failed: 0, notPlanned: 0 },
+        lighthouse: { completed: 1, partial: 0, failed: 0, notPlanned: 1 },
+      },
+      pagesWithoutContentAnalysis: {},
+      templateFamilyCount: 1,
+    },
     obligationAssessment: { status: 'undetermined', basis: [] } as never,
   };
 }

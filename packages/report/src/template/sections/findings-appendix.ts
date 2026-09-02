@@ -28,6 +28,7 @@ import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { groupAppendix, type RuleGroup } from '../appendix-grouping.js';
 import { resolveFindingDisplayLabel, RULE_TRANSLATIONS_FR } from '../rule-translations.js';
 import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
+import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
 function renderRuleSum(strings: ReportStrings, language: ReportLanguage, group: RuleGroup): string {
   const a = strings.findingsAppendix;
@@ -674,10 +675,21 @@ export function renderFindingsAppendix(
   // actually explored). Also feeds item 3.1's "toutes les pages
   // analysées" collapse below: the same total used on the cover and in
   // methodology.
+  const hasCurrentCoverage = manifest.pages.some((page) => page.analysisCoverage !== undefined);
   const crawledPages = manifest.pages
-    .filter((page) => page.status === 'visited')
+    .filter((page) => {
+      if (!hasCurrentCoverage) return page.status === 'visited';
+      const passes = page.analysisCoverage?.passes;
+      return (
+        passes !== undefined &&
+        [passes.rendered, passes.axe, passes.extended].some(
+          (pass) => pass.outcome === 'completed' || pass.outcome === 'partial',
+        )
+      );
+    })
     .map((page) => page.url)
     .sort();
+  const coverage = buildCoverageDisclosure(strings, manifest, language);
 
   // item 1.4: split once, up front, so every downstream section (the
   // four category listings plus the new third-party block) reads from
@@ -746,6 +758,9 @@ export function renderFindingsAppendix(
     `
     ${renderSheetHeader(ordinal, strings.findingsAppendix.eyebrow, strings.findingsAppendix.heading)}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(strings.findingsAppendix.intro)}</p>
+    <p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(
+      [coverage.summary, ...coverage.details].join(' '),
+    )}</p>
     ${legend}
     ${crawledPagesBlock}
     ${sections}

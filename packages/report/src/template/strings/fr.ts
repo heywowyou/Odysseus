@@ -112,6 +112,23 @@ export const fr: ReportStrings = {
     multiCriterionNote:
       "Un constat associé à plusieurs critères WCAG est compté dans chaque ligne concernée : la somme de la colonne « Occurrences » peut donc dépasser le nombre total d'occurrences d'accessibilité indiqué ailleurs dans ce rapport.",
   },
+  coverage: {
+    summaryTemplate:
+      '{inventory} URL inventoriées ; résultats sensibles au contenu sur {content} pages ({contentCompleted} terminés, {contentPartial} partiels, {contentFailed} en échec) ; Lighthouse : {lighthouse} mesurées, {lighthousePartial} partielles, {lighthouseFailed} en échec, {lighthouseNotPlanned} non planifiées.',
+    legacyUnknownTemplate:
+      '{inventory} URL inventoriées. La couverture passe par passe n’est pas disponible pour cet audit historique.',
+    withoutContentTemplate: 'Pages sans analyse du contenu : {reasons}.',
+    guardedOmissionsTemplate:
+      '{count} URL de continuation supplémentaires ont été omises par le garde-fou de répétition.',
+    reasonLabels: {
+      'discovered-not-scanned': 'découvertes mais non analysées',
+      'skipped-robots': 'bloquées par robots.txt',
+      'skipped-non-html': 'ressources non HTML',
+      'skipped-external-redirect': 'redirections externes',
+      error: 'erreurs d’exploration',
+      'coverage-missing': 'données de couverture indisponibles',
+    },
+  },
   observations: {
     eyebrow: 'Observations',
     heading: 'Constats hors classement',

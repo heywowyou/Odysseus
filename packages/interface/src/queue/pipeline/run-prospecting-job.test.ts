@@ -11,6 +11,11 @@ import { CancellationRegistry, JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
 
 const fakeConnection = {} as never;
+const legacyCoverageSummary = {
+  kind: 'legacy-unknown' as const,
+  inventoriedUrlCount: 0,
+  continuationOmittedUrlCount: 0,
+};
 
 function fakeJob(urls: string[], jobId = 'job-1') {
   return {
@@ -57,6 +62,7 @@ describe('runProspectingJob', () => {
       auditDir: '/dir',
       visitedCount: 1,
       prunedPageDirCount: 0,
+      coverageSummary: legacyCoverageSummary,
       obligationAssessment: { status: 'undetermined', basis: [] } as never,
     });
 
@@ -96,6 +102,7 @@ describe('runProspectingJob', () => {
       auditDir: '/dir',
       visitedCount: 1,
       prunedPageDirCount: 0,
+      coverageSummary: legacyCoverageSummary,
       obligationAssessment: { status: 'undetermined', basis: [] } as never,
     });
 
@@ -118,6 +125,7 @@ describe('runProspectingJob', () => {
         auditDir: '/dir',
         visitedCount: 1,
         prunedPageDirCount: 0,
+        coverageSummary: legacyCoverageSummary,
         obligationAssessment: { status: 'undetermined', basis: [] } as never,
       });
 
@@ -156,6 +164,7 @@ describe('runProspectingJob', () => {
         auditDir: '/dir',
         visitedCount: 1,
         prunedPageDirCount: 0,
+        coverageSummary: legacyCoverageSummary,
         obligationAssessment: { status: 'undetermined', basis: [] } as never,
       });
 
@@ -195,6 +204,7 @@ describe('runProspectingJob', () => {
           auditDir: '/dir',
           visitedCount: 1,
           prunedPageDirCount: 0,
+          coverageSummary: legacyCoverageSummary,
           obligationAssessment: { status: 'undetermined', basis: [] } as never,
         };
       });
@@ -225,6 +235,7 @@ describe('runProspectingJob', () => {
           auditDir: '/dir',
           visitedCount: 1,
           prunedPageDirCount: 0,
+          coverageSummary: legacyCoverageSummary,
           obligationAssessment: { status: 'undetermined', basis: [] } as never,
         };
       });
@@ -273,6 +284,7 @@ describe('runProspectingJob', () => {
         auditDir: '/dir',
         visitedCount: 1,
         prunedPageDirCount: 0,
+        coverageSummary: legacyCoverageSummary,
         obligationAssessment: { status: 'undetermined', basis: [] } as never,
       };
     });
