@@ -350,7 +350,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [019](archive/019-report-preparation-and-personalization.md) | Prepare and personalize the paid report safely | P1 | L | 018 | DONE |
 | [020](archive/020-report-financial-evidence-and-legal-reference.md) | Add defensible financial evidence and the general legal reference | P1 | L | 019 | DONE (financial-opportunity feature explicitly deferred) |
 | [021](./021-complete-audits-without-template-repetition.md) | Keep full-site audits complete without repeating template work | P1 | L | 018-020 | IMPLEMENTED |
-| [022](./022-dashboard-and-site-design-refactor.md) | Refactor the operator dashboard and public site UI with the Impeccable workflow | P2 | L | none | IMPLEMENTED (og:image and 4 unproposed inventory rows deferred) |
+| [022](archive/022-dashboard-and-site-design-refactor.md) | Refactor the operator dashboard and public site UI with the Impeccable workflow | P2 | L | none | DONE (og:image and 4 unproposed inventory rows deferred) |
 | [023](./023-report-visual-design-refactor.md) | Revise the report visual design as a gated, operator-directed redesign | P2 | L | 018-021, operator-approved direction | TODO |
 | [024](./024-report-feedback-followups.md) | Close three small gaps between the report and Conseil papa | P2 | S | 018, 019 | TODO |
 | [025](./025-llm-provider-switch.md) | Switch the LLM provider from Mistral to OpenAI gpt-4.1-mini | P1 | M | none | TODO |

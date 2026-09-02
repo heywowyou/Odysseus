@@ -23,9 +23,7 @@ coverage/
 # while uncommitted work still needs provenance.
 /docs/session/current-session.md
 
-# Second and third concurrent session logs. Same lifecycle as above; exist
-# only while multiple agents work in this checkout at once (022 in one
-# session, 023 in another), so each keeps its own crash-recovery provenance
-# instead of overwriting another's.
-/docs/session/current-session-022.md
+# Concurrent session logs, one per plan running in this checkout at the same
+# time (023 while 022 wraps, 2026-09-02). Same lifecycle as above; a session
+# adds its own entry when it starts and drops it when its work is committed.
 /docs/session/current-session-023.md
