@@ -1,0 +1,161 @@
+import { describe, expect, it } from 'vitest';
+import {
+  buildPageAuditProfile,
+  classifyPageRoleSignals,
+  hashTemplateFamily,
+  type RawPageAuditFacts,
+} from './page-audit-profile.js';
+
+function facts(overrides: Partial<RawPageAuditFacts> = {}): RawPageAuditFacts {
+  return {
+    metaRobotsNoindex: false,
+    jsonLdTypes: [],
+    paginationRelNext: false,
+    paginationRelPrev: false,
+    numberedPaginationControlCount: 0,
+    bodyClassTokens: [],
+    transactionalFormSignalCount: 0,
+    repeatedTeaserLinkGroupSize: 0,
+    structuralTokens: [],
+    ...overrides,
+  };
+}
+
+describe('classifyPageRoleSignals', () => {
+  it('returns no signals for a bare page', () => {
+    expect(classifyPageRoleSignals(facts())).toEqual([]);
+  });
+
+  it('detects a transactional form regardless of other signals', () => {
+    const signals = classifyPageRoleSignals(facts({ transactionalFormSignalCount: 1 }));
+    expect(signals).toEqual([{ kind: 'transactional-form', detail: '1 form(s)' }]);
+  });
+
+  it('deduplicates repeated listing class tokens into one signal', () => {
+    const signals = classifyPageRoleSignals(
+      facts({ bodyClassTokens: ['archive', 'category-archive', 'listing'] }),
+    );
+    expect(signals.filter((s) => s.kind === 'listing-structural-class')).toHaveLength(1);
+  });
+
+  it('reports both listing and content JSON-LD types when both are present', () => {
+    const signals = classifyPageRoleSignals(
+      facts({ jsonLdTypes: ['CollectionPage', 'Article', 'Organization'] }),
+    );
+    expect(signals).toContainEqual({ kind: 'listing-json-ld-type', detail: 'CollectionPage' });
+    expect(signals).toContainEqual({ kind: 'content-json-ld-type', detail: 'Article' });
+  });
+
+  it('requires the repeated-teaser threshold before signaling', () => {
+    expect(classifyPageRoleSignals(facts({ repeatedTeaserLinkGroupSize: 5 }))).not.toContainEqual(
+      expect.objectContaining({ kind: 'repeated-teaser-links' }),
+    );
+    expect(classifyPageRoleSignals(facts({ repeatedTeaserLinkGroupSize: 6 }))).toContainEqual({
+      kind: 'repeated-teaser-links',
+      detail: '6',
+    });
+  });
+
+  it('signals noindex robots', () => {
+    expect(classifyPageRoleSignals(facts({ metaRobotsNoindex: true }))).toContainEqual({
+      kind: 'noindex-robots',
+      detail: 'noindex',
+    });
+  });
+
+  it('signals pagination relations combined into one signal', () => {
+    const signals = classifyPageRoleSignals(
+      facts({ paginationRelNext: true, paginationRelPrev: true }),
+    );
+    expect(signals).toEqual([{ kind: 'pagination-relation', detail: 'next,prev' }]);
+  });
+});
+
+describe('hashTemplateFamily', () => {
+  it('returns undefined for an empty structural token stream', () => {
+    expect(hashTemplateFamily([])).toBeUndefined();
+  });
+
+  it('is stable and deterministic for the same token stream', () => {
+    const tokens = ['HEADER.site-header', 'MAIN.article-body', 'FOOTER.site-footer'];
+    expect(hashTemplateFamily(tokens)).toBe(hashTemplateFamily([...tokens]));
+  });
+
+  it('differs for a different token stream', () => {
+    expect(hashTemplateFamily(['HEADER.a'])).not.toBe(hashTemplateFamily(['HEADER.b']));
+  });
+
+  it('is versioned', () => {
+    expect(hashTemplateFamily(['HEADER.a'])).toMatch(/^v1:/);
+  });
+});
+
+describe('buildPageAuditProfile', () => {
+  const baseContext = {
+    url: 'https://example.com/post-1',
+    isHomepage: false,
+    isOperatorSeed: false,
+  };
+
+  it('carries the profile version and language', () => {
+    const profile = buildPageAuditProfile(facts({ htmlLang: 'fr' }), baseContext);
+    expect(profile.profileVersion).toBe('v1');
+    expect(profile.language).toBe('fr');
+    expect(profile.url).toBe('https://example.com/post-1');
+  });
+
+  it('omits language when the page declares none', () => {
+    const profile = buildPageAuditProfile(facts(), baseContext);
+    expect(profile).not.toHaveProperty('language');
+  });
+
+  it('marks the homepage with a leading signal', () => {
+    const profile = buildPageAuditProfile(facts(), { ...baseContext, isHomepage: true });
+    expect(profile.roleSignals[0]).toEqual({
+      kind: 'homepage-url',
+      detail: baseContext.url,
+    });
+  });
+
+  it('marks an operator seed', () => {
+    const profile = buildPageAuditProfile(facts(), { ...baseContext, isOperatorSeed: true });
+    expect(profile.roleSignals).toContainEqual({
+      kind: 'operator-seed',
+      detail: baseContext.url,
+    });
+  });
+
+  it('flags a canonical pointing elsewhere', () => {
+    const profile = buildPageAuditProfile(
+      facts({ canonicalHref: 'https://example.com/post-1-canonical' }),
+      baseContext,
+    );
+    expect(profile.roleSignals).toContainEqual({
+      kind: 'canonical-elsewhere',
+      detail: 'https://example.com/post-1-canonical',
+    });
+  });
+
+  it('does not flag a self-referencing canonical, ignoring a trailing slash', () => {
+    const profile = buildPageAuditProfile(
+      facts({ canonicalHref: 'https://example.com/post-1/' }),
+      baseContext,
+    );
+    expect(profile.roleSignals).not.toContainEqual(
+      expect.objectContaining({ kind: 'canonical-elsewhere' }),
+    );
+  });
+
+  it('computes a template family id from structural tokens', () => {
+    const profile = buildPageAuditProfile(
+      facts({ structuralTokens: ['HEADER.a', 'MAIN.article'] }),
+      baseContext,
+    );
+    expect(profile.templateFamilyId).toBeDefined();
+  });
+
+  it('omits template family id when there is no structural evidence', () => {
+    const profile = buildPageAuditProfile(facts(), baseContext);
+    expect(profile).not.toHaveProperty('templateFamilyId');
+  });
+});

@@ -62,6 +62,65 @@ without an argued change.
 
 ---
 
+## 1a. Coverage: which pages get which passes (plan 021)
+
+Section 1 above says which scanner output becomes a finding once a page has
+been scanned. This section says which passes actually ran on a given page,
+since a full audit no longer runs an identical tool set against every
+successfully crawled URL. Full reasoning: `docs/decisions/trade-offs.md`
+entry 64.
+
+**Every successfully crawled HTML page keeps render diff, axe, and the
+extended accessibility pass**, regardless of page role or template family.
+This includes every reached listing and archive page: template equality does
+not prove content equality, so a shared-layout page can still carry a unique
+title, canonical, heading structure, alt text, structured-data block, or
+form. Reducing these three passes for any crawled HTML page is out of scope
+for v1 and requires a separately measured plan.
+
+**Only Lighthouse is family-stratified.** A deterministic two-stage planner
+(`buildContentAuditPlan`, then `finalizeLighthousePlan` once rendered-cost
+facts exist) always selects the homepage, every transactional page, every
+operator seed, every unknown/fallback page, and every unique-family page for
+Lighthouse, plus a stable representative and a measured cost outlier per
+repeated non-listing family and language. A family with one member runs
+Lighthouse once. A repeated high-confidence listing family is content-checked
+on every member but does not run Lighthouse unless another mandatory-selection
+rule also selects a given member.
+
+**Page-status vocabulary**, matching CLAUDE.md rule 5's coverage glossary:
+
+- **inventoried URL**: successfully navigated, or explicitly recorded with a
+  failure or planned-skip reason.
+- **omitted continuation URL**: bound by the continuation-family guard on the
+  link frontier, counted separately, never folded into the inventoried
+  total, and never applied to a seed or an eligible sitemap-declared URL.
+- **content-checked page**: completed render diff, axe, and the extended
+  pass.
+- **performance-measured page**: selected for Lighthouse.
+- **performance representative**: one family member actually selected for
+  Lighthouse; a scheduling fact, not a claim that its siblings were
+  measured or that they are byte-identical.
+
+**Pass outcomes are explicit, not inferred.** Each planned pass on an
+inventoried page records `completed`, `partial` (a composite pass produced
+usable results but one or more registered subchecks failed), `failed` (no
+usable result), or `not-planned` (valid only for Lighthouse). A zero-finding
+result is still `completed`. Do not read the crawl-level `visited` manifest
+status as proof that every scanner pass on that page completed; it is a
+navigation fact, not an analysis fact. A planned skip is not a scanner
+failure.
+
+**No propagation.** A finding observed on a performance representative, or
+on any single family member, must never be attributed to an untested sibling
+page. Distinct finding, affected page, and occurrence keep their existing
+meaning from section 2 below: a genuinely shared defect is still reported as
+one finding with many affected pages when the evidence supports that merge,
+never invented by copying a sampled result onto a page no scanner actually
+ran on.
+
+---
+
 ## 2. Dedupe and aggregation: two passes, deliberately
 
 This is the rule most likely to be broken by a future session, because the

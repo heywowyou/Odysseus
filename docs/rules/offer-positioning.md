@@ -154,6 +154,18 @@ findings alongside accessibility ones. Commercial framing aimed at a
 non-technical decision maker. Lead with these rather than with what is
 missing.
 
+**Amended 2026-09-02, plan 021 (`docs/decisions/trade-offs.md` entry 64).**
+"Whole-site crawl" means the inventory is not capped or template-sampled the
+way an audit RGAA's own methodology is: every eligible declared page is
+resolved and every successfully crawled HTML page, including every listing,
+receives content-sensitive analysis (render diff, axe, the extended pass). It
+does not mean every tool runs identically on every URL. Performance
+measurement (Lighthouse) is a disclosed deterministic sample stratified by
+page role, template family, and language, because it is the expensive,
+serialized, re-navigating check, not the content-defect check. Do not answer
+"does every page get scanned?" with an unqualified yes; answer with content
+coverage being total and performance coverage being sampled and disclosed.
+
 **This is the primary justification for the price gap, not a side
 note.** The market's own position is that starting with automated
 detection reduces expert audit time and therefore cost: Odysseus is that
@@ -175,6 +187,18 @@ the code-level appendix, the criteria-and-registry-data section per
 `docs/rules/obligation-basis.md` section 7, and a draft accessibility
 statement skeleton. No manual verification step of any kind: the report
 is fully automated, full stop. Still not a conformity rate. No video.
+
+**Amended 2026-09-02, plan 021 (`docs/decisions/trade-offs.md` entry 64).**
+Content-sensitive analysis (render diff, axe, the extended accessibility
+pass) covers every successfully crawled HTML page, including every listing
+and archive page, with no page-count sampling or per-template shortcut.
+Performance measurement (Lighthouse, and the Core Web Vitals it reports) is a
+disclosed deterministic sample: always the homepage, every transactional and
+seeded page, every unique page, and a stable representative plus a measured
+cost outlier per repeated template family and language, never the full page
+count. The report states inventoried, content-checked, and
+performance-measured counts separately rather than one undifferentiated
+"pages scanned" figure.
 
 The free outreach preview sent before purchase (`docs/rules/outreach-rules.md`)
 is a different, deliberately thinner document, not a lighter tier of

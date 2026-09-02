@@ -2850,6 +2850,123 @@ study then looks like several independent impacts; using model output for
 eligibility or wording; and applying the legal amount to the client rather than
 presenting the narrow primary-sourced general fact.
 
+### 64. A full audit's tool coverage is pass-specific, decided by a staged deterministic planner, not uniform per URL (plan 021)
+
+An uncapped audit of `hotelpointfrance.com` (issue #20) explored 672 URLs and
+prepared roughly 670 for the full render-diff/axe/extended/Lighthouse
+pipeline. The count was real: the public sitemap declared 521 eligible URLs,
+including 375 canonical blog posts sharing one template and 69 taxonomy or
+listing pages, and the link graph exposed further author, date, and category
+pagination. The defect was never the inventory being large; a client is not
+better served by an audit that silently caps or samples the pages it lists as
+covered (the same instinct behind entry 9b.5 below). The defect was treating
+every successfully loaded HTML URL as requiring the same expensive, serialized
+Lighthouse work, which is what turned a real site into a multi-hour scan.
+
+**The correction is narrow and asymmetric across passes.** Render diff, axe,
+and the extended accessibility pass stay on every successfully crawled HTML
+page in v1, including every reached listing and archive page, because
+template equality does not prove content equality: titles, canonicals,
+headings, alt text, structured data, embeds, and forms can all differ inside
+one template. Only Lighthouse is family-stratified, because it is the
+repeated, serialized, re-navigating cost, and a rendered-page cost profile
+(DOM node count, image count, resource count, transfer bytes) can pick a real
+outlier instead of an arbitrary first member.
+
+Planning is deterministic and staged in two parts, because a cost-based
+outlier cannot be chosen before rendered analysis produces the cost facts.
+`buildContentAuditPlan` runs first, before any rendered work, and schedules
+render diff, axe, and extended checks on every eligible page; role, family,
+seed, and confidence facts are recorded on the decision but cannot remove any
+of those three passes. `finalizeLighthousePlan` runs after rendered results
+exist and adds the homepage, every transactional page, every operator seed,
+every unknown/fallback page, every unique-family page, and two representatives
+per repeated non-listing family and language: the stable first URL and the
+measured cost outlier, using the descending tuple `(resourceCount,
+imageCount, domNodeCount, knownTransferBytes, unknownTransferSizeCount)` then
+URL ascending. Resource count is compared before known bytes so an unreported
+transfer size is never read as evidence a resource was free. Classification
+itself never decides whether render diff, axe, or extended checks run in v1;
+a `listing` role requires at least two independent structural signals, never
+URL text alone, and an unknown or contradictory page profile falls back to
+fuller Lighthouse coverage rather than reduced coverage. Repeated
+high-confidence listing families are content-checked on every member but do
+not run Lighthouse unless another mandatory-selection rule also selects a
+given member.
+
+Page profiles are extracted from the crawler's existing post-`load` snapshot
+(canonical/robots signals, declared language, CMS page-type classes, JSON-LD
+top-level types, pagination relations, form/transactional markers, and a
+versioned structural-token hash for template-family grouping) with no
+additional navigation and no raw HTML, body text, or full link list retained;
+only a normalized structural token stream is hashed, dropping volatile IDs,
+inline styles, text, URLs, dates, and attribute values.
+
+A separate, disclosed continuation-family guard protects the link frontier
+from an unbounded generated calendar, filter, or pagination family, since a
+page-family planner alone does not do that. It classifies a continuation only
+from structural facts on the source page (`rel=next`, a numbered pagination
+control, a repeated query-key family inside a confirmed listing), never from a
+date-looking or numeric path alone, and it is immune by construction for the
+homepage, every operator seed, and every eligible sitemap-declared URL
+including taxonomy/listing pages: the guard bounds link-discovered
+continuation depth, not declared site inventory. When it binds, it persists
+bounded family/count summaries (at most 100 sorted families, three sorted
+examples each) rather than the full omitted-URL list, and omitted URLs are
+counted separately from the inventoried-URL total, never silently folded into
+it.
+
+Coverage is persisted per pass and by outcome, because the existing `visited`
+manifest status is a crawl fact that report code had started reading as an
+analysis fact. Each planned pass (`rendered`, `axe`, `extended`, `lighthouse`)
+records `completed`, `partial` (composite pass produced usable results but a
+registered subcheck failed), `failed` (no usable result), or `not-planned`
+(valid only for Lighthouse); a zero-finding result is still `completed`. A
+compiled check-scope registry assigns every existing detector result and
+companion error field to exactly one pass and scope, so a future check added
+without an explicit scope decision fails a coverage test rather than silently
+inheriting ambiguous provenance. Historical manifests without these optional
+fields remain valid, rendering with an explicit legacy/unknown coverage state
+rather than an invented pass count.
+
+Reach and work stay separate in the report. A shared-template correction
+affecting many pages remains high leverage and is still reported as one
+distinct finding under the existing two-pass dedupe design (entry 2 above and
+`docs/rules/normalization-rules.md` section 2), but its reach is disclosed
+separately from that count, and no sampled finding is ever propagated onto a
+page no scanner actually ran on. `enforceSiteWideAccessibilityFloor`'s
+denominator changes from every inventoried/visited URL to pages with a
+completed axe pass, since axe now runs on every content-checked page rather
+than a Lighthouse-style sample; the existing 80 percent threshold and
+occurrence-weighting behavior are otherwise unchanged.
+
+`docs/rules/offer-positioning.md` section 3 and
+`docs/product/odysseus-project-brief.md`'s milestone 9b.5 write-up (below) are
+amended alongside this entry, since the "whole-site crawl" claim that sells
+the diagnostic now means content-sensitive analysis covers every successfully
+crawled HTML page while performance measurement is a disclosed deterministic
+sample, not that every tool runs on every URL. The 9b.5 decision that sitemap
+reachability and scan coverage are different facts is preserved and extended,
+not reversed: coverage is now further split by pass rather than treated as a
+single scanned/not-scanned fact.
+
+Locked contracts are unchanged: `Finding` v1, the two-pass dedupe design,
+translation clusters, resource identities, and the allowlisted axe
+element-shape identities. No selector normalization or universal remediation
+key was added. Template family IDs are scheduling provenance for the planner
+and continuation guard, not finding identity and not a client-facing claim
+that family members are byte-identical.
+
+Rejected: sampling render diff, axe, or the extended pass in v1, because their
+DOM-level findings mix shared-template defects with content-specific ones that
+existing normalization is already equipped to tell apart, and doing so would
+require a second high-risk identity seam on top of an already large scanner
+change; a URL-path allowlist for listing classification, because it cannot
+generalize past the motivating CMS and silently breaks on an unfamiliar one;
+and restoring a global page cap, which entry "Non-negotiable rule 5
+amendment" above already rejected for a different, still-valid reason (silent
+under-reporting).
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.
@@ -2931,6 +3048,17 @@ graph, so it correctly produced zero sitemap-only pages and no orphan
 finding. Both French and English methodology renders were checked against
 that manifest. The larger scan time is accepted deliberately for paid
 full-site coverage.
+
+**Amended 2026-09-02, plan 021 (entry 64 above).** "Analyzed" here described
+one undifferentiated scan fact; it now needs to be read as "inventoried."
+Reachability and scan coverage remain the two decoupled facts this milestone
+established, but coverage itself is no longer a single scanned/not-scanned
+bit: every successfully crawled HTML page, sitemap-supplemented or
+link-discovered, still receives render diff, axe, and the extended pass, while
+only Lighthouse is family-stratified. That split is the correction, not a
+reversal; a sitemap-only page still gets full content-sensitive analysis, and
+`sitemap-orphan-page`/`sitemap-stale` still receive only the link-discovered
+set exactly as decided above.
 
 **9c: hotel prospecting and outreach.** The operator's two 2026-08-25
 proposal drafts were reconciled against shipped 9a/9b/9b.5 code, canonical

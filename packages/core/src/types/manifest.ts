@@ -23,10 +23,56 @@ export type PageDiscoveryMethod = 'link' | 'seed' | 'sitemap-only';
 export interface SitemapCoverageSummary {
   declaredPageCount: number;
   eligiblePageCount: number;
+  /** @deprecated Legacy crawl-era name. This remains the historical count
+   *  of sitemap-eligible pages whose crawl status was `visited`; use
+   *  `PageAnalysisCoverage` for current pass-specific work. */
   scannedPageCount: number;
   filteredPageCount: number;
   capOmittedPageCount: number;
   failedSitemapCount: number;
+}
+
+export type AuditPageRole = 'content' | 'transactional' | 'listing' | 'utility' | 'unknown';
+
+export type AuditPass = 'rendered' | 'axe' | 'extended' | 'lighthouse';
+
+export type AuditPassOutcome = 'completed' | 'partial' | 'failed' | 'not-planned';
+
+export interface AuditPassCoverage {
+  outcome: AuditPassOutcome;
+  /** Stable identifiers from the scanner check-scope registry. Raw error
+   *  text remains in the existing page `errors` fields. */
+  failedCheckIds?: string[];
+}
+
+export interface PageAnalysisCoverage {
+  plannerVersion: 'v1';
+  role: AuditPageRole;
+  confidence: 'high' | 'fallback';
+  templateFamilyId?: string;
+  reasonCodes: string[];
+  passes: Record<AuditPass, AuditPassCoverage>;
+}
+
+export type ContinuationBasis = 'rel-next' | 'numbered-pagination-control' | 'query-key-family';
+
+export interface ContinuationFamilyOmission {
+  familyKey: string;
+  basis: ContinuationBasis;
+  enqueuedCount: number;
+  omittedCount: number;
+  /** At most three deterministic examples, sorted by URL. */
+  omittedExampleUrls: string[];
+}
+
+export interface ContinuationGuardSummary {
+  guardVersion: 'v1';
+  familyMaxEnqueued: number;
+  /** At most 100 families, sorted by familyKey. */
+  families: ContinuationFamilyOmission[];
+  additionalFamiliesOmittedCount: number;
+  /** Includes omissions from families beyond the bounded detail list. */
+  totalOmittedUrlCount: number;
 }
 
 export interface ToolVersions {
@@ -189,6 +235,10 @@ export interface ManifestPageEntry {
    *  the in-memory crawl result, so `normalize <dir>` can re-derive that
    *  finding offline from stored artifacts alone. */
   discoveredFrom?: string;
+  /** Plan 021. Optional for historical manifests; absence on a current
+   *  inventory-only page means no content analysis was planned because the
+   *  page was not successfully crawled HTML. */
+  analysisCoverage?: PageAnalysisCoverage;
   errors: {
     renderDiff?: string;
     axe?: string;
@@ -259,6 +309,9 @@ export interface AuditManifest {
     sitemapCoverage?: SitemapCoverageSummary;
   };
   pages: ManifestPageEntry[];
+  /** Plan 021. Bounded crawl-frontier omissions, stored separately from
+   *  inventoried pages so an omitted URL is never presented as visited. */
+  continuationGuardSummary?: ContinuationGuardSummary;
   siteSignals?: AuditManifestSiteSignals;
   /** Milestone 8.6. Optional so manifests from before this milestone,
    *  and audits where CRUX_API_KEY was not configured, still parse -

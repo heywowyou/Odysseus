@@ -50,6 +50,46 @@ rules) is `docs/rules/operator-obligations.md`. Prospecting is governed by
    by more than a third. Politeness is otherwise unchanged. Do not
    silently reintroduce a default cap. Full incident and reasoning:
    `docs/decisions/trade-offs.md`, "Non-negotiable rule 5 amendment".
+
+   **Amended 2026-09-02, plan 021.** A separate, disclosed
+   continuation-family guard may stop a proven runaway link-discovered
+   continuation (an infinite calendar, filter, or pagination family). It
+   is explicit, reason-coded, counted separately from inventoried URLs,
+   and disclosed in the report. It is not a global cap: it never drops an
+   operator seed or any eligible sitemap-declared URL, including a
+   taxonomy or listing URL, and it applies only to same-family URLs
+   discovered through links, never to sitemap-declared ones. Full
+   reasoning: `docs/decisions/trade-offs.md` entry 64.
+
+   **Coverage vocabulary, plan 021.** A full audit no longer runs an
+   identical set of tools on every URL; these terms distinguish what
+   actually happened on a page from what was merely reached:
+   - **inventoried URL**: successfully navigated, or explicitly recorded
+     with a failure or planned-skip reason. Never includes an omitted
+     continuation URL.
+   - **omitted continuation URL**: discovered behind the bound
+     continuation-family guard above and counted in its summary, not
+     silently folded into the inventoried-URL total.
+   - **content-checked page**: received render diff, axe, and the
+     extended accessibility pass. Every successfully crawled HTML page is
+     content-checked, regardless of role or family.
+   - **performance-measured page**: selected to run Lighthouse. Only
+     Lighthouse is family-stratified; a repeated template contributes at
+     most a stable representative and a measured cost outlier per
+     family and language, never every member.
+   - **performance representative**: one family member actually selected
+     for Lighthouse. It is a performance-measurement provenance fact,
+     never a substitute for content checks on its siblings and never a
+     claim that they are byte-identical.
+   - **distinct finding**, **affected page**, and **occurrence** keep
+     their existing normalization meaning (`docs/rules/normalization-rules.md`
+     section 2): one finding can name many affected pages and many
+     occurrences without being copied onto a page no scanner actually
+     ran on.
+   - **planned skip** (recorded pass outcome `not-planned`, valid only
+     for Lighthouse) is not a **scanner failure** (`failed`); a
+     `visited` page status is a crawl fact, not proof that every
+     scanner pass on it completed.
 6. Never overstate legal exposure in any generated text. Accessibility
    obligations depend on company size and sector. State the criterion,
    not a verdict on whether a law applies to a given client. This is the
@@ -402,6 +442,22 @@ means numbered entry 24, not a literal Markdown heading anchor.
     is a separate deterministic general reference, rendered once in detailed
     legal content only when the EAA context is included, never as this
     client's exposure. → trade-offs.md#63
+
+64. A full audit's tool coverage is pass-specific, not uniform per URL
+    (plan 021). Every successfully crawled HTML page, including every
+    listing/archive page, keeps render diff, axe, and the extended pass;
+    only Lighthouse is family-stratified, chosen by a two-stage
+    deterministic planner (`buildContentAuditPlan`, then
+    `finalizeLighthousePlan` once rendered-cost facts exist). Page role
+    and template-family classification never remove rendered, axe, or
+    extended checks in v1, never come from URL text alone, and fall back
+    to fuller coverage on any ambiguity. A sampled finding is never
+    propagated to an untested page; reach and work are reported
+    separately. `docs/rules/offer-positioning.md` and
+    `docs/product/odysseus-project-brief.md`'s 9b.5 write-up are amended
+    alongside this contract, since the offer is sold on inventory
+    completeness, not on every tool running everywhere.
+    → trade-offs.md#64
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node

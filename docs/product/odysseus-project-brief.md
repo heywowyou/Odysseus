@@ -427,8 +427,15 @@ it found links there. For a flat EUR 1,600 full audit, the report needs
 to do two separate jobs rather than pick one: state discoverability
 honestly (an internal-navigation-unreachable page is itself a real
 defect, and the existing orphan/stale checks depend on a separate link
-set) and scan every eligible declared page for real defects regardless
-of whether navigation reaches it.
+set) and give every eligible declared page real defect coverage
+regardless of whether navigation reaches it. **Amended 2026-09-02, plan
+021 (`docs/decisions/trade-offs.md` entry 64).** "Coverage" is no longer
+one scanned/not-scanned fact: every successfully crawled HTML page,
+sitemap-supplemented or link-discovered, keeps render diff, axe, and the
+extended accessibility pass, while only Lighthouse is a disclosed
+deterministic sample stratified by page role, template family, and
+language. A sitemap-only page still gets full content-sensitive
+analysis; it is never merely represented by a sampled sibling's finding.
 
 Shipped with `none`, `inspect`, and `supplement` sitemap modes, recursive
 index traversal, exact-host plus www/apex authorization, page discovery
