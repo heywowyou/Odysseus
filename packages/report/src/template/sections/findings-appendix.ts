@@ -568,7 +568,7 @@ function renderThirdPartySection(
     .join('');
 
   return `
-    <div style="margin-bottom:var(--space-8)">
+    <div style="margin-bottom:var(--space-12)">
       <h4>${escapeHtml(strings.findingsAppendix.thirdPartyHeading)}</h4>
       <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-2);max-width:70ch">${escapeHtml(strings.findingsAppendix.thirdPartyIntro)}</p>
       <p style="font-size:11px;opacity:0.5;margin-bottom:var(--space-4);max-width:70ch">${escapeHtml(strings.findingsAppendix.thirdPartyCountedInTotalsNote)}</p>
@@ -641,7 +641,7 @@ function renderCategorySection(
       : '';
 
   return `
-    <div style="margin-bottom:var(--space-8)">
+    <div style="margin-bottom:var(--space-12)">
       <h4 style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h4>
       ${groupBlocks}
       ${citationBlock}
@@ -747,7 +747,7 @@ export function renderFindingsAppendix(
   const crawledPagesBlock =
     crawledPages.length > 0
       ? `
-        <div style="margin-bottom:var(--space-8)">
+        <div style="margin-bottom:var(--space-12)">
           <h4>${escapeHtml(fillTemplate(strings.findingsAppendix.crawledPagesHeadingTemplate, { count: crawledPages.length }))}</h4>
           <p class="url-cell" style="font-size:11px;opacity:0.65;max-width:none">${escapeHtml(crawledPages.join(', '))}</p>
         </div>
@@ -756,7 +756,7 @@ export function renderFindingsAppendix(
 
   return sheet(
     `
-    ${renderSheetHeader(ordinal, strings.findingsAppendix.eyebrow, strings.findingsAppendix.heading)}
+    ${renderSheetHeader(ordinal, strings.findingsAppendix.eyebrow, strings.findingsAppendix.heading, 'var(--space-2)')}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(strings.findingsAppendix.intro)}</p>
     <p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(
       [coverage.summary, ...coverage.details].join(' '),

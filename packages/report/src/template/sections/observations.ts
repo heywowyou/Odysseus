@@ -71,7 +71,7 @@ export function renderObservations(
 
   return sheet(
     `
-    ${renderSheetHeader(ordinal, o.eyebrow, o.heading)}
+    ${renderSheetHeader(ordinal, o.eyebrow, o.heading, 'var(--space-6)')}
     ${wrapperBlock}
     ${legalBlock}
     ${regimeDependentBlock}

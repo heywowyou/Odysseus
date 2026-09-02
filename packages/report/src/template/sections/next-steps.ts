@@ -128,7 +128,7 @@ export function renderNextSteps(
   // starts on its own fresh page, same reasoning as Priorités above.
   return sheet(
     `
-    ${renderSheetHeader(ordinal, n.eyebrow, n.heading)}
+    ${renderSheetHeader(ordinal, n.eyebrow, n.heading, 'var(--space-6)')}
     ${synthesisParagraphs}
     <div class="hr"></div>
     <p style="font-size:12.5px;opacity:0.85;margin-top:var(--space-4);max-width:78ch"><strong>${escapeHtml(n.questionTitle)}</strong> ${escapeHtml(questionBody)}</p>

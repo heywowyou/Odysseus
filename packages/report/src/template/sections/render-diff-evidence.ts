@@ -87,7 +87,7 @@ export function renderRenderDiffEvidence(
     const wrapperNote = wrapperOrLegalExcludedCount > 0 ? ` ${r.positiveStatementWrapperNote}` : '';
     return sheet(
       `
-      ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
+      ${renderSheetHeader(ordinal, r.eyebrow, r.heading, 'var(--space-2)')}
       <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">${escapeHtml(r.intro)}</p>
       <p style="font-size:13.5px;opacity:0.85">${escapeHtml(r.positiveStatementTemplate)}${escapeHtml(wrapperNote)}</p>
     `,
@@ -108,7 +108,7 @@ export function renderRenderDiffEvidence(
 
   return sheet(
     `
-    ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
+    ${renderSheetHeader(ordinal, r.eyebrow, r.heading, 'var(--space-2)')}
     <p style="font-size:13px;opacity:0.6;margin-bottom:var(--space-6)">${escapeHtml(r.intro)}</p>
     ${cards}
     ${overflowText ? `<p style="font-size:12px;opacity:0.55;margin-top:var(--space-4)">${escapeHtml(overflowText)}</p>` : ''}

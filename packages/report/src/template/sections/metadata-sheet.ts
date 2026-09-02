@@ -29,7 +29,7 @@ const LANGUAGE_SELF_NAME: Record<StoredAnalysis['language'], string> = {
 function field(label: string, valueHtml: string): string {
   return `
     <div>
-      <div style="text-transform:uppercase;letter-spacing:0.02em;font-size:10px;opacity:0.5;margin-bottom:8px">${escapeHtml(label)}</div>
+      <div style="text-transform:uppercase;letter-spacing:0.02em;font-size:10px;opacity:0.5;margin-bottom:var(--space-3)">${escapeHtml(label)}</div>
       <div style="font-size:18px">${valueHtml}</div>
     </div>
   `;
@@ -106,7 +106,16 @@ function renderRiskBadge(
  *  Unnumbered chrome like the cover and the TOC: a plain `.sheet` with no
  *  section-head ordinal. paged.css already forces `break-before: page` on
  *  every non-cover sheet, so this section is its own physical page and the
- *  TOC starts on the next one with no extra class. */
+ *  TOC starts on the next one with no extra class.
+ *
+ *  Plan 023 recomposition: the sheet renders as a flex column
+ *  (.sheet-metadata, paged.css) and the risk scale is the closing band -
+ *  full width under a fading hairline, margin-top:auto pulling it to
+ *  roughly two-thirds page height with a fixed quiet spacer after it -
+ *  so the page reads as composed instead of ending where the grid ran
+ *  out. No field moves between languages and no wording changes: the
+ *  scale keeps its exact field anatomy, just full width below the grid
+ *  instead of as the grid's last cell. */
 export function renderMetadataSheet(
   strings: ReportStrings,
   manifest: AuditManifest,
@@ -141,10 +150,14 @@ export function renderMetadataSheet(
         ),
       )}
       ${raisonSociale ? field(strings.metadata.legalNameLabel, escapeHtml(raisonSociale)) : ''}
+    </div>
+    <div style="margin-top:auto">
+      <div class="hr"></div>
       ${field(strings.metadata.riskSmallLabel, renderRiskBadge(strings, analysis, findings, manifest))}
     </div>
+    <div style="min-height:60mm"></div>
   `,
-    '',
+    'sheet-metadata',
     METADATA_SHEET_ID,
   );
 }

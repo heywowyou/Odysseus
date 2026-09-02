@@ -106,7 +106,7 @@ export function renderChecklist(
 
   return sheet(
     `
-    ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
+    ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
     <p style="font-size:12px;opacity:0.7;margin-bottom:4px">${escapeHtml(identifier)}</p>
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(c.intro)}</p>
     <div style="display:grid;grid-template-columns:30px 1fr 70px 70px 60px 110px 80px;font-size:12.5px">

@@ -105,7 +105,7 @@ export function renderGlossary(
 
   return sheet(
     `
-    ${renderSheetHeader(ordinal, g.eyebrow, g.heading)}
+    ${renderSheetHeader(ordinal, g.eyebrow, g.heading, 'var(--space-6)')}
     ${items}
   `,
     '',

@@ -25,7 +25,7 @@ import type { AuditManifest } from '@odysseus/core';
 function fieldLabelsInOrder(html: string): string[] {
   return [
     ...html.matchAll(
-      /letter-spacing:0\.02em;font-size:10px;opacity:0\.5;margin-bottom:8px">([^<]*)<\/div>/g,
+      /letter-spacing:0\.02em;font-size:10px;opacity:0\.5;margin-bottom:var\(--space-3\)">([^<]*)<\/div>/g,
     ),
   ].map((match) => match[1] ?? '');
 }

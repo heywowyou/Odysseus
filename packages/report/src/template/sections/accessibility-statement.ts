@@ -105,7 +105,7 @@ export function renderAccessibilityStatement(
 
   return sheet(
     `
-    ${renderSheetHeader(ordinal, a.eyebrow, a.heading)}
+    ${renderSheetHeader(ordinal, a.eyebrow, a.heading, 'var(--space-2)')}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-6)">${escapeHtml(a.intro)}</p>
     <div style="display:grid;grid-template-columns:1fr 220px;font-size:14px;margin-bottom:var(--space-6)">
       ${headCell(a.criterionColumnLabel)}

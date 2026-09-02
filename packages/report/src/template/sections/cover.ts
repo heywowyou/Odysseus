@@ -25,9 +25,17 @@ export function hostnameFromSiteUrl(siteUrl: string): string | null {
 
 /** Cover layout ported from report.reference.html's COVER section: a
  *  centered kicker/title/question block over the radial-gradient ground
- *  (painted by the .sheet-cover class in paged.css), then a short accent
- *  rule and the report-type line plus the audit date and the Odysseus
- *  signature.
+ *  (painted by the .sheet-cover class in paged.css), then a centered
+ *  accent rule and the report-type line plus the audit date and the
+ *  Odysseus signature.
+ *
+ *  Plan 023 recomposition: the closing group is not pinned to the sheet
+ *  bottom. The hero block takes flex:1.4 and a trailing flex:1 quiet
+ *  spacer follows the closing group, so the rule/type/date signature
+ *  lands at roughly two-thirds page height and the sheet ends with
+ *  deliberate quiet ground instead of a dead band between title and
+ *  imprint (docs/report/report-design-system.md section 2, front-matter
+ *  composition).
  *
  *  Minimal by contract (plan 018 step 4): the six-field grid, the risk
  *  scale, and the raisonSociale line moved off this page - audit facts and
@@ -88,18 +96,19 @@ export function renderCover(
   return sheet(
     `
     <div class="footer-source">${escapeHtml(strings.footer.confidentialityLabel.toUpperCase())} &middot; ${escapeHtml(manifest.siteUrl)}</div>
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-4)">
+    <div style="flex:1.4;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--space-6)">
       <div style="font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:var(--color-accent-200)">${escapeHtml(strings.cover.kicker)}</div>
       <h1 style="font-size:52px;max-width:13ch;margin:0">${escapeHtml(headline)}</h1>
       <div style="font-size:17px;opacity:0.8;max-width:38ch">${escapeHtml(resolveDecisionQuestion(analysis.language, preparation))}</div>
     </div>
     <div>
-      <div style="height:1px;background:linear-gradient(to right,var(--color-accent) 0,var(--color-accent) 120px,transparent 120px);margin-bottom:var(--space-8)"></div>
+      <div style="height:1px;width:160px;margin:0 auto var(--space-12);background:linear-gradient(to right,transparent,var(--color-accent),transparent)"></div>
       <div style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--space-2)">
         <div style="font-size:13px;text-transform:uppercase;letter-spacing:0.02em;opacity:0.7">${escapeHtml(reportType)}</div>
         <div style="font-size:13px;opacity:0.5">${escapeHtml(formatDate(new Date(manifest.startedAt), analysis.language))} &middot; Odysseus</div>
       </div>
     </div>
+    <div style="flex:1"></div>
   `,
     'sheet-cover',
   );

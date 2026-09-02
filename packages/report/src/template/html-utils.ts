@@ -232,14 +232,26 @@ export function formatFindingIdLinks(findingIds: readonly string[]): string {
  *  stranding the "01 · Constats" eyebrow alone with the real heading
  *  pushed to the next page. Wrapping both in one `.section-head` element
  *  (break-inside:avoid, paged.css) makes that break location illegal too. */
-export function renderSheetHeader(ordinal: number, eyebrow: string, heading: string): string {
+/** `headingGap` is the plan 023 per-section rhythm: the flat design
+ *  source varies the h2's margin-bottom by what follows it - tight
+ *  (--space-2) over table-led sections so the heading binds to its
+ *  table, medium/generous over prose-led and airy sections (the map
+ *  lives in docs/report/report-design-system.md section 2, values in
+ *  report-design-tokens.md). The old uniform --space-4 was the one
+ *  undocumented drift the 2026-09-02 flat re-verification found. */
+export function renderSheetHeader(
+  ordinal: number,
+  eyebrow: string,
+  heading: string,
+  headingGap: string = 'var(--space-4)',
+): string {
   const numbered = `${String(ordinal).padStart(2, '0')} · ${eyebrow}`;
   return `
     <div class="section-head">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
         <h6 style="color:var(--color-accent-300);margin:0">${escapeHtml(numbered)}</h6>
       </div>
-      <h2 style="margin-bottom:var(--space-4)">${escapeHtml(heading)}</h2>
+      <h2 style="margin-bottom:${headingGap}">${escapeHtml(heading)}</h2>
     </div>
   `;
 }

@@ -520,7 +520,7 @@ function renderTheme(
         </div>`;
 
   return `
-    <div class="card elev-sm theme-card" style="margin-bottom:var(--space-4);gap:var(--space-3)" id="theme-${displayRank}" data-model-priority-rank="${theme.priorityRank}">
+    <div class="card elev-sm theme-card" style="margin-bottom:var(--space-6);gap:var(--space-3)" id="theme-${displayRank}" data-model-priority-rank="${theme.priorityRank}">
       <div style="display:flex;align-items:flex-start;gap:var(--space-3)">
         <span style="width:26px;height:26px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:12px;display:flex;align-items:center;justify-content:center">${displayRank}</span>
         <div style="flex:1">
@@ -763,7 +763,7 @@ export function renderThemes(
   // applied to the checklist/annexe/glossaire sections.
   return sheet(
     `
-    ${renderSheetHeader(ordinal, strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }))}
+    ${renderSheetHeader(ordinal, strings.themes.eyebrow, fillTemplate(strings.themes.headingTemplate, { count: sortedThemes.length }), 'var(--space-2)')}
     ${themeBlocks}
   `,
     '',

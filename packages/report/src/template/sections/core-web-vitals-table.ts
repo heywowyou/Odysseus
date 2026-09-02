@@ -296,7 +296,7 @@ export function renderCoreWebVitalsTable(
   if (!hasMeasuredCoreWebVitals(manifest)) {
     return sheet(
       `
-      ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
+      ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
       <p style="font-size:13.5px;opacity:0.85;max-width:64ch">${escapeHtml(c.allUnmeasuredNote)}</p>
       <p style="font-size:12px;opacity:0.65;max-width:64ch">${escapeHtml(coverage.summary)}</p>
       ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, false)}
@@ -357,7 +357,7 @@ export function renderCoreWebVitalsTable(
   // with.
   return sheet(
     `
-    ${renderSheetHeader(ordinal, c.eyebrow, c.heading)}
+    ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.introTemplate, { pages: formatNumber(pagesScanned, language) }))}</p>
     <p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(coverage.summary)}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">

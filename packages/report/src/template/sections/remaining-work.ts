@@ -206,7 +206,7 @@ export function renderRemainingWork(
       // D1 stat-tile reasoning) keeps the same "never orphan the heading"
       // intent without the iterative mechanism that looped.
       return `
-        <div class="remaining-category" style="margin-bottom:var(--space-6)">
+        <div class="remaining-category" style="margin-bottom:var(--space-8)">
           <div class="remaining-category-head">
             <h5 style="color:${CATEGORY[category].color}">${escapeHtml(strings.findingsAppendix.categoryLabels[category])}</h5>
             ${firstBlock ? renderRuleBlock(strings, language, firstBlock, analysis) : ''}

@@ -7,32 +7,31 @@
     <link rel="stylesheet" href="../styles/paged.css" />
   </head>
   <body>
-    <!-- Lifted into the @bottom-center margin box of every page by string-set. -->
-    <div class="footer-source">Rapport confidentiel &middot; {{ meta.client }}</div>
-
     <div style="font-family: var(--font-body); color: var(--color-text)">
       <!-- COVER -->
       <section class="sheet sheet-cover">
+        <!-- Lifted into the @bottom-center margin box of every page by string-set. -->
+        <div class="footer-source">RAPPORT CONFIDENTIEL &middot; {{ meta.siteUrl }}</div>
         <div
           style="
-            flex: 1;
+            flex: 1.4;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            gap: var(--space-4);
+            gap: var(--space-6);
           "
         >
           <div
             style="
               font-size: 11px;
-              letter-spacing: 0.14em;
+              letter-spacing: 0.02em;
               text-transform: uppercase;
               color: var(--color-accent-200);
             "
           >
-            Odysseus - Audit numérique
+            Odysseus · Audit numérique
           </div>
           <h1 style="font-size: 52px; max-width: 13ch; margin: 0">{{ meta.client }}</h1>
           <div style="font-size: 17px; opacity: 0.8; max-width: 38ch">{{ meta.question }}</div>
@@ -41,13 +40,9 @@
           <div
             style="
               height: 1px;
-              background: linear-gradient(
-                to right,
-                var(--color-accent) 0,
-                var(--color-accent) 120px,
-                transparent 120px
-              );
-              margin-bottom: var(--space-8);
+              width: 160px;
+              margin: 0 auto var(--space-12);
+              background: linear-gradient(to right, transparent, var(--color-accent), transparent);
             "
           ></div>
           <div
@@ -63,7 +58,7 @@
               style="
                 font-size: 13px;
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.02em;
                 opacity: 0.7;
               "
             >
@@ -72,10 +67,11 @@
             <div style="font-size: 13px; opacity: 0.5">{{ meta.auditDate }} · Odysseus</div>
           </div>
         </div>
+        <div style="flex: 1"></div>
       </section>
 
       <!-- METADATA SHEET -->
-      <section class="sheet">
+      <section class="sheet sheet-metadata" id="report-metadata">
         <div
           style="
             display: flex;
@@ -100,24 +96,24 @@
             <div
               style="
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.02em;
                 font-size: 10px;
                 opacity: 0.5;
-                margin-bottom: 8px;
+                margin-bottom: var(--space-3);
               "
             >
               Site audité
             </div>
-            <div style="font-size: 18px">{{ meta.client }}</div>
+            <div style="font-size: 18px">{{ meta.siteUrl }}</div>
           </div>
           <div>
             <div
               style="
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.02em;
                 font-size: 10px;
                 opacity: 0.5;
-                margin-bottom: 8px;
+                margin-bottom: var(--space-3);
               "
             >
               Date de l'audit
@@ -128,24 +124,24 @@
             <div
               style="
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.02em;
                 font-size: 10px;
                 opacity: 0.5;
-                margin-bottom: 8px;
+                margin-bottom: var(--space-3);
               "
             >
               Périmètre analysé
             </div>
-            <div style="font-size: 18px">{{ meta.pagesScanned }} pages scannées</div>
+            <div style="font-size: 18px">{{ meta.pagesScanned }} pages analysées</div>
           </div>
           <div>
             <div
               style="
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.02em;
                 font-size: 10px;
                 opacity: 0.5;
-                margin-bottom: 8px;
+                margin-bottom: var(--space-3);
               "
             >
               Langue du rapport
@@ -156,13 +152,13 @@
             <div
               style="
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.02em;
                 font-size: 10px;
                 opacity: 0.5;
-                margin-bottom: 8px;
+                margin-bottom: var(--space-3);
               "
             >
-              Norme auditée
+              Référentiel audité
             </div>
             <div style="font-size: 18px">{{ meta.standard }}</div>
           </div>
@@ -170,65 +166,80 @@
             <div
               style="
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.02em;
                 font-size: 10px;
                 opacity: 0.5;
-                margin-bottom: 8px;
+                margin-bottom: var(--space-3);
               "
             >
-              Raison sociale
+              Dénomination sociale
             </div>
             <div style="font-size: 18px">{{ meta.raisonSociale }}</div>
           </div>
+        </div>
+        <div style="margin-top: auto">
+          <div class="hr"></div>
           <div>
             <div
               style="
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.02em;
                 font-size: 10px;
                 opacity: 0.5;
-                margin-bottom: 8px;
+                margin-bottom: var(--space-3);
               "
             >
-              Niveau de risque global
+              Niveau de criticité des constats
             </div>
-            <div
-              style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:calc(var(--radius-md)*0.75);font-size:14px;font-weight:500;background:{{ meta.riskBg }};color:{{ meta.riskColor }}"
-            >
-              {{ meta.riskLabel }}
+            <div style="font-size: 18px">
+              <div>
+                <div style="display: inline-flex; align-items: center; gap: 4px">
+                  <span
+                    style="
+                      padding: 4px 10px;
+                      border-radius: calc(var(--radius-md) * 0.75);
+                      font-size: 11px;
+                      font-weight: 400;
+                      background: transparent;
+                      color: color-mix(in srgb, var(--color-text) 55%, transparent);
+                    "
+                    >Faible</span
+                  >
+                  <span
+                    style="
+                      padding: 4px 10px;
+                      border-radius: calc(var(--radius-md) * 0.75);
+                      font-size: 11px;
+                      font-weight: 400;
+                      background: transparent;
+                      color: color-mix(in srgb, var(--color-text) 55%, transparent);
+                    "
+                    >Moyen</span
+                  >
+                  <span
+                    style="
+                      padding: 4px 10px;
+                      border-radius: calc(var(--radius-md) * 0.75);
+                      font-size: 14px;
+                      font-weight: 500;
+                      background: {{ meta.riskBg }};
+                      color: {{ meta.riskColor }};
+                    "
+                    >Élevé</span
+                  >
+                </div>
+                <div style="font-size: 11px; opacity: 0.55; margin-top: 6px">
+                  Basé sur 2 constats critiques et 5 constats sérieux
+                </div>
+                <div style="font-size: 10px; opacity: 0.55; margin-top: 2px">
+                  Ce niveau reflète une évaluation d'ensemble de la gravité et de la portée des
+                  constats sur le site, pas un seuil numérique unique.
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <h5 style="margin-top: var(--space-8)">Échelle de sévérité</h5>
-        {{#each severityLegend as |s|}}
-        <div
-          style="
-            display: flex;
-            align-items: baseline;
-            gap: var(--space-3);
-            padding: 9px 0;
-            background: linear-gradient(
-                to right,
-                transparent,
-                var(--color-divider) 0,
-                var(--color-divider) 100%,
-                transparent
-              )
-              no-repeat bottom/100% 1px;
-          "
-        >
-          <span
-            style="width: 8px; height: 8px; border-radius: 50%; background: {{ s.color }}; flex: none"
-          ></span>
-          <span style="font-size: 14px; font-weight: 500; color: {{ s.color }}; flex: none"
-            >{{ s.label }}</span
-          >
-          <span style="font-size: 13.5px; opacity: 0.85">{{ s.meaning }}</span>
-        </div>
-        {{/each}}
-        <p style="font-size: 11px; opacity: 0.5; margin-top: var(--space-4)">
-          {{ severityBasisNote }}
-        </p>
+        <div style="min-height: 60mm"></div>
       </section>
 
       <!-- TOC -->
@@ -251,7 +262,7 @@
             text-transform: uppercase;
             letter-spacing: 0.04em;
             color: var(--color-accent-300);
-            margin: var(--space-4) 0 var(--space-1);
+            margin: var(--space-8) 0 var(--space-1);
           "
         >
           {{ group.label }}
@@ -262,7 +273,7 @@
             display: flex;
             align-items: baseline;
             gap: var(--space-3);
-            padding: 9px 0;
+            padding: var(--space-3) 0;
             background: linear-gradient(
                 to right,
                 transparent,
@@ -368,7 +379,7 @@
               gap: var(--space-3);
               text-decoration: none;
               color: var(--color-text);
-              padding: 8px 0;
+              padding: var(--space-3) 0;
               background: linear-gradient(
                   to right,
                   transparent,
@@ -418,8 +429,8 @@
           style="
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: var(--space-3);
-            margin-bottom: var(--space-6);
+            gap: var(--space-4);
+            margin-bottom: var(--space-8);
           "
         >
           {{#each numberTiles as |n|}}
@@ -442,8 +453,8 @@
           style="
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: var(--space-3);
-            margin-bottom: var(--space-6);
+            gap: var(--space-4);
+            margin-bottom: var(--space-8);
           "
         >
           {{#each severityTiles as |s|}}
@@ -462,8 +473,8 @@
           style="
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: var(--space-3);
-            margin-bottom: var(--space-6);
+            gap: var(--space-4);
+            margin-bottom: var(--space-8);
           "
         >
           {{#each categorySplit as |c|}}
@@ -508,7 +519,7 @@
         {{#each themes as |t|}}
         <div
           class="card elev-sm theme-card"
-          style="margin-bottom: var(--space-4); gap: var(--space-3)"
+          style="margin-bottom: var(--space-6); gap: var(--space-3)"
           id="theme-{{ t.priorityRank }}"
           class="theme-card"
         >
@@ -1245,7 +1256,7 @@
           n'est renvoyé "sur demande".
         </p>
         {{#each appendixCategories as |cat|}}
-        <div style="margin-bottom: var(--space-8)">
+        <div style="margin-bottom: var(--space-12)">
           <h4 style="color:{{ cat.color }}">{{ cat.label }}</h4>
           {{#each cat.nonMinorGroups as |grp|}}
           <div class="appendix-group" style="margin-bottom: var(--space-4)">

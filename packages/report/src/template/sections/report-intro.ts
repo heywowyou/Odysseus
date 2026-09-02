@@ -193,7 +193,7 @@ export function renderReportIntro(
 
   return sheet(
     `
-    ${renderSheetHeader(ordinal, r.eyebrow, r.heading)}
+    ${renderSheetHeader(ordinal, r.eyebrow, r.heading, 'var(--space-6)')}
     ${hookBlock}
     <h5>${escapeHtml(r.situationHeading)}</h5>
     <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-4)">${escapeHtml(r.situationBody)}</p>

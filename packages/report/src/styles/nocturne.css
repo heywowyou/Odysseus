@@ -1,8 +1,9 @@
 /* Odysseus report design system - "Nocturne"
-   Extracted verbatim from the approved Claude Design artifact.
-   LOCKED FILE. Do not edit values here. If a colour, size or spacing value
-   is needed in a template, reference the token, never a literal hex.
-   Inter is self-hosted in packages/report/src/fonts. No CDN. */
+   Token source of truth. Revise only per
+   docs/report/report-design-system.md's plan 023 baseline (2026-09-02,
+   direction "Refine Nocturne"); templates reference tokens, never
+   literal hex values. Inter is self-hosted in packages/report/src/fonts.
+   No CDN. */
 
 @font-face {
   font-family: 'Inter';
@@ -86,6 +87,10 @@
   --space-4: 11.2px;
   --space-6: 16.8px;
   --space-8: 22.4px;
+  /* sheet-level rhythm step (plan 023): section-head cushions, appendix
+     category blocks, the cover's rule-to-type gap. Same 1.4x-per-two-steps
+     arithmetic as the rest of the ladder; not in the flat mockup. */
+  --space-12: 33.6px;
 
   --radius-sm: 4px;
   --radius-md: 8px;

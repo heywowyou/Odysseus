@@ -191,6 +191,20 @@ html {
   );
 }
 
+/* Plan 023: the metadata sheet composes like the cover - a flex column
+   so its risk-scale closing band can sit at roughly two-thirds page
+   height (margin-top: auto in metadata-sheet.ts) with a fixed quiet
+   spacer after it, instead of the page ending where the fact grid runs
+   out. 261mm is the non-cover content box (297mm minus 18mm top and
+   bottom @page margins); content is fixed audit fields, never flowing
+   findings, so the sheet never fragments and the flex container is safe
+   (the .sheet-cover precedent). */
+.sheet-metadata {
+  min-height: 261mm;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ---- break control ----
    The artifact never needed these because its mock content always fit.
    Real audits overflow, so every atomic block declares itself atomic. */
@@ -223,7 +237,11 @@ html {
    infinite-loop guard (pdf.ts's own detection caught it, no broken PDF
    shipped, but generation failed outright). */
 .sheet:not(.sheet-standalone) .section-head {
-  margin-top: var(--space-8);
+  /* plan 023 rhythm: the cushion is the sheet-level step (--space-12),
+     one tier above where it sat, so a section start separates from the
+     previous sheet's tail (or reads as intentional top margin) the way
+     the ladder's generous/sheet-level tiers intend. */
+  margin-top: var(--space-12);
 }
 
 /* P4.6 (2026-08-21 La Corniche feedback pass): extended from h2/h4/h5 to
