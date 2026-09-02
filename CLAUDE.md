@@ -836,6 +836,13 @@ documents and guardrails directly.
   double redirect (CLI 3.6.0), updates need `IMPECCABLE_BUNDLE_PATH`
   pointed at the release zip. Decision record:
   `docs/research/design-skill-alternatives.md`.
+- **audit-rehearsal** — asked to "dogfood a hotel" or "run an audit
+  rehearsal": audits a real, not-yet-scanned catalogue hotel end to end,
+  then critiques the bilingual report in character as the hotel's
+  owner/GM before a real client ever sees it. Genuine defects become
+  GitHub issues; cosmetic nits go to
+  `docs/report/audit-rehearsal-notes.md`. Scoped to the paid full-audit
+  report only, not the outreach preview or dashboard.
 
 ## Style
 
