@@ -19,6 +19,25 @@ If there is no session log but the tree is dirty, do not infer ownership or
 completion from the diff alone. Use history and ask the user when provenance
 cannot be established safely.
 
+## Keeping entry-point documents lean
+
+`CLAUDE.md` and `AGENTS.md` are loaded into every session automatically,
+not read on demand like the focused documents below — their size is a
+per-turn cost every agent pays, every time. Both must hold only what is
+actually load-bearing at that altitude: non-negotiable rules, locked
+contracts, package boundaries, the one-line trade-off imperative (never its
+full root-cause story), and pointers to where the rest lives. Root-cause
+narrative, measured evidence, rejected alternatives, and amendment history
+belong in the linked focused document (`docs/decisions/trade-offs.md`,
+`docs/rules/*`, `docs/research/*`) and must not be duplicated back into
+either entry point once they are there — that duplication is exactly what
+made several `CLAUDE.md` trade-off entries drift long before this rule
+existed (trade-offs.md#66 records the 2026-09-03 cleanup that prompted it).
+`AGENTS.md` is capped at 24 KiB and
+`CLAUDE.md` at the ratcheted ceiling in `scripts/check-agent-docs.mjs`;
+`pnpm run docs:check` fails the build if either grows past its ceiling, so
+raising it is a deliberate choice, not a side effect of an unrelated edit.
+
 ## Authority and conflicts
 
 The current charter and focused canonical document govern intent. The code and

@@ -299,33 +299,21 @@ means numbered entry 24, not a literal Markdown heading anchor.
     `artifacts/` directories. The site-agnostic observed-rule inventory is
     rebuilt with `pnpm fixtures:rules`; it must never encode which audit
     emitted a rule. → trade-offs.md#34
-35. The hotel prescan is a distinct path over shared scanner primitives:
-    `prescanSite` never calls `runAuditStage`, `scanSite`, `scanPage`, or
-    Lighthouse, and its artifacts live under a separate `prescans/` root.
-    Metrics come from buffered `PerformanceObserver`s plus Playwright
-    `response` events, never Resource Timing; every metric is approximate on
-    a real site (measured: request counts, bytes, CLS, blocking time and LCP
-    all drift between runs, while axe facts do not), so scoring bands metrics
-    and never treats one as exact. Captured evidence bytes are approximate for
-    the same reason (amended 2026-08-29): assert that two runs select the same
-    failure and that each ref matches its own hash, never that they produce
-    identical pixels. Page roles order on
-    path depth before lexicographic, so a translated subtree never displaces the
-    page it translates. A prescan is inserted, never upserted, and emits no
-    `prospects` event - that collection is the AFNIC funnel's, and the Atout
-    France export carries no SIREN column (a hotel's own site often publishes
-    one; see trade-off 41). → trade-offs.md#35
-36. Hotel outreach evidence is a strict contract over two logical assets - a
-    raw/rendered composite and a measured failure crop - plus three to five
-    allowlisted summaries. Its schema has no place for selectors, exact URLs,
-    rule or finding IDs, free prose, legal conclusions, or statistics. Do not
-    widen the contract to expose scanner output. **Amended 2026-08-28 (evidence
-    schema v2, prescan v3):** `complete` requires the measured failure crop and
-    three summaries; the composite is a bonus, because a server-rendered site
-    cannot produce one and the old rule discarded 17 of 25 real hotels that had
-    real photographed failures. Do not re-require the composite, and do not
-    lower the 20 percent render-gap threshold that governs when one is made.
-    → trade-offs.md#36
+35. `prescanSite` never calls `runAuditStage`, `scanSite`, `scanPage`, or
+    Lighthouse; its artifacts live under a separate `prescans/` root, never
+    `artifacts/`. Every prescan metric (bytes, CLS, blocking time, LCP,
+    request counts) is approximate on a real site and must be banded, never
+    treated as exact; only axe facts are exact. Evidence bytes get the same
+    banding. Page roles order on path depth before lexicographic. A prescan
+    is inserted, never upserted, and emits no `prospects` event. The Atout
+    France export carries no SIREN column. → trade-offs.md#35
+36. Hotel outreach evidence is a strict contract over two logical assets (a
+    raw/rendered composite, a measured failure crop) plus three to five
+    allowlisted summaries — no selectors, exact URLs, rule/finding IDs, free
+    prose, legal conclusions, or statistics. `complete` requires the failure
+    crop plus three summaries; the composite is a bonus, not required (v2).
+    Do not widen the contract, do not re-require the composite, and do not
+    lower the 20 percent render-gap threshold. → trade-offs.md#36
 37. A redirect off the declared domain is classified by counting
     establishments at the target, never by comparing domain names: a target
     several establishments reach or declare is a chain, one exactly one
@@ -367,23 +355,15 @@ means numbered entry 24, not a literal Markdown heading anchor.
     failure line names a translated cause, never the tool's own message.
     → trade-offs.md#40
 
-41. The Sirene join runs in the qualification pass, not identity resolution: the
-    SIREN comes from the hotel's own published identification, which only the
-    site probe has read, so asking earlier could only ever answer
-    `no-identifier` (measured: it did, for all 13,301 candidates, while 3,482
-    had an identifier on their qualification row). The join is written onto the
-    qualification generation and never back onto the candidate, qualification
-    is now `v3`, and scoring reads `effectifBandCode` from there. Do not call
-    the joiner with `undefined`, and do not read `stock-file-unavailable` as a
-    fact about a hotel. `hotel-outreach-v1` is unchanged - its `effectif`
-    weight always read this field and was merely starved of input. Amended
-    2026-08-29: apply the stock file with `backfillSirene`, which contacts
-    nobody, never by re-running `qualifyHotels`, which would re-probe 13,301
-    live sites to attach data already stored on every row. It re-decides only
-    rows whose join returned a band, recovers `domainAdoptedAfterRedirect` from
-    the stored notes when it does, refuses to run without the stock file, and
-    takes no `--limit` because a partial generation is never correct.
-    → trade-offs.md#41
+41. The Sirene join runs in the qualification pass (never identity
+    resolution) and is written onto the qualification generation, never back
+    onto the candidate; qualification is `v3`, scoring reads
+    `effectifBandCode` from there. Do not call the joiner with `undefined`,
+    and do not read `stock-file-unavailable` as a fact about a hotel. Apply
+    a fresh stock file with `backfillSirene` (contacts nobody), never by
+    re-running `qualifyHotels` (would re-probe every live site);
+    `backfillSirene` refuses to run without the stock file and takes no
+    `--limit`. → trade-offs.md#41
 
 42. The outreach preview is a separate document kind, never a tier of the paid
     report: its input contract (`packages/core/src/types/outreach-preview.ts`)
@@ -430,20 +410,14 @@ means numbered entry 24, not a literal Markdown heading anchor.
     on-disk manifest, not the Mongo audit document, whose schema does not
     persist `siteSignals`. → trade-offs.md#62
 
-63. Client-specific financial estimates are denied by default. Canonical
-    policy describes a report-owned opportunity resolver requiring an
-    explicitly opted-in primary reference, exact sector and measured-problem
-    evidence, and a traceable effective turnover, returning at most one
-    conservative opportunity or a typed omission; broad `scales-down` status
-    never grants estimate permission. **That resolver is not implemented**
-    (amended 2026-09-02): the only candidate source, Deloitte's per-0.1-second
-    "mobile site speed" conversion lift, has no explicit mapping to one of the
-    tool's measured Core Web Vital metrics, and the operator chose to defer
-    rather than approve a metric substitution. Turnover input shipped anyway
-    as groundwork with no financial consumer yet. The EUR 7,500 EAA sentence
-    is a separate deterministic general reference, rendered once in detailed
-    legal content only when the EAA context is included, never as this
-    client's exposure. → trade-offs.md#63
+63. Client-specific financial estimates are denied by default; broad
+    `scales-down` status never grants estimate permission. The canonical
+    opportunity resolver (opt-in primary reference, exact sector and
+    measured-problem evidence, traceable turnover) is **not implemented** —
+    the only candidate source has no mapping to a measured Core Web Vital
+    metric. Turnover input exists with no financial consumer yet. The EUR
+    7,500 EAA sentence is a separate deterministic general reference, never
+    this client's exposure. → trade-offs.md#63
 
 64. A full audit's tool coverage is pass-specific, not uniform per URL
     (plan 021). Every successfully crawled HTML page, including every
@@ -460,6 +434,17 @@ means numbered entry 24, not a literal Markdown heading anchor.
     alongside this contract, since the offer is sold on inventory
     completeness, not on every tool running everywhere.
     → trade-offs.md#64
+
+66. `CLAUDE.md` and `AGENTS.md` are loaded into every session, not read on
+    demand; keep both to load-bearing content only (rules, locked
+    contracts, package boundaries, the one-line trade-off imperative) and
+    push root-cause narrative, measured evidence, and amendment history to
+    the linked focused document instead — see
+    `docs/agents/documentation-map.md`'s "Keeping entry-point documents
+    lean". `CLAUDE.md`'s size is capped in `scripts/check-agent-docs.mjs`,
+    same mechanism as `AGENTS.md`'s existing 24 KiB limit; raise the
+    ceiling only as a deliberate choice, never as a side effect.
+    → trade-offs.md#66
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node

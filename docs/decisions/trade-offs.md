@@ -3018,6 +3018,44 @@ was identified for re-approval (the reference audit's render is still pending
 its `raisonSociale` confirmation); the operator confirms per deliverable at
 render time.
 
+### 66. `CLAUDE.md` and `AGENTS.md` hold only load-bearing content; a byte ceiling enforces it
+
+A dangling Markdown link (issue closed 2026-09-02, `plans/025-llm-provider-switch.md`
+authored but never committed) failed CI on three consecutive pushes before
+anyone ran `pnpm run check` locally, which prompted adding a
+`.githooks/pre-push` hook. Auditing `CLAUDE.md` for the same session
+surfaced a second, slower problem: several numbered trade-off entries had
+drifted from the section's own stated discipline (CLAUDE.md's trade-offs
+intro: each line is "the one governing imperative," full detail lives
+here) into re-narrating measured evidence and amendment history this file
+already owns in full. Entries 35, 36, 41, and 63 were the clearest cases -
+each had grown to 11-17 lines restating root-cause detail word-for-word
+close to its `trade-offs.md` counterpart, rather than staying a pointer to
+it. They were trimmed back to the imperative core; nothing was removed
+from this file, since it already held the complete version of each.
+
+**Why this matters beyond one cleanup.** `CLAUDE.md` and `AGENTS.md` are
+not read on demand like this file - they are loaded into every agent
+session automatically, so their size is a per-turn cost paid by every
+session, not just the one editing them. Nothing stopped `CLAUDE.md`
+specifically from regrowing the same way `AGENTS.md` was already guarded
+against (trade-off precedent: `AGENTS.md`'s 24 KiB lean-entry-point limit,
+enforced in `scripts/check-agent-docs.mjs`). `CLAUDE.md` gets the same
+mechanism, ratcheted rather than arbitrarily chosen: the ceiling is set
+just above its post-cleanup size, so it can still grow when a genuinely
+new non-negotiable rule, locked contract, or trade-off earns a place there,
+but a future session cannot silently let narrative drift back in the way
+these four entries did. The rule itself - what belongs at this altitude
+versus what belongs in a linked focused document - is written once in
+`docs/agents/documentation-map.md`'s "Keeping entry-point documents lean"
+section, not duplicated into `CLAUDE.md`, in keeping with the rule's own
+content.
+
+Do not raise the `CLAUDE.md` ceiling in `check-agent-docs.mjs` as a side
+effect of an unrelated change; raising it is only ever a deliberate choice
+made because new content earned its place at this altitude, the same
+standard the file already applies to its own trade-off entries.
+
 ## Build order milestone notes (8.5a through 9c)
 
 Full narrative detail behind the compact "Build order" table in CLAUDE.md.

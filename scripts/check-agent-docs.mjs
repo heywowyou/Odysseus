@@ -75,6 +75,20 @@ if (existsSync(agentsPath) && statSync(agentsPath).size > 24 * 1024) {
   errors.push('AGENTS.md exceeds the project lean-entry-point limit of 24 KiB.');
 }
 
+// Ratcheted just above the post-cleanup size (trade-off 66), the same way
+// fixture-freshness/rule-coverage ratchet elsewhere in this repo: growth is
+// still possible for content that earns a place at this altitude, but it is
+// a deliberate ceiling raise, not something that regrows silently.
+const claudePath = resolve(repoRoot, 'CLAUDE.md');
+if (existsSync(claudePath) && statSync(claudePath).size > 56 * 1024) {
+  errors.push(
+    'CLAUDE.md exceeds its entry-point size ceiling of 56 KiB (trade-offs.md#66). ' +
+      'Move root-cause narrative and amendment history to the linked focused document ' +
+      'instead of raising this ceiling, unless the new content genuinely earns a place ' +
+      'at this altitude.',
+  );
+}
+
 const requiredReferences = [
   ['AGENTS.md', 'CLAUDE.md'],
   ['AGENTS.md', 'docs/agents/documentation-map.md'],
