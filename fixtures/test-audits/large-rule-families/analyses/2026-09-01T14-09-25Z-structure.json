@@ -122,7 +122,7 @@
   "generatedAt": "2026-09-01T14:09:25.487Z",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "3c929f623820fd02",
+    "normalizationFingerprint": "5caf9d184d538f8b",
     "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
   }
 }

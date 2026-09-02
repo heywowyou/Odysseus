@@ -852,34 +852,44 @@ paths, coverage totals, and manual FR/EN review results. Do not mark the plan
 
 ## Done criteria
 
-- [ ] Canonical docs define inventory, content checks, Lighthouse sampling,
+- [x] Canonical docs define inventory, content checks, Lighthouse sampling,
       continuation guards, and coverage disclosure without claiming every tool
       runs on every URL.
-- [ ] A deterministic profile and planner classify without a model, with
+- [x] A deterministic profile and planner classify without a model, with
       unknown pages falling back to fuller coverage.
-- [ ] Every successfully crawled HTML page, including every listing, receives
+- [x] Every successfully crawled HTML page, including every listing, receives
       rendered, axe, and extended checks.
-- [ ] Lighthouse selections scale by family/language/outlier and always include
+- [x] Lighthouse selections scale by family/language/outlier and always include
       homepage, transactional, seeded, unique, and fallback pages.
-- [ ] Repeated listings are traversed and content-checked without receiving
+- [x] Repeated listings are traversed and content-checked without receiving
       Lighthouse unless another mandatory rule selects them.
-- [ ] The continuation-family guard never removes seeds or any eligible
+- [x] The continuation-family guard never removes seeds or any eligible
       sitemap-declared URL and always records omissions.
-- [ ] No sampled finding is propagated to an untested page.
-- [ ] Manifest, Mongo, progress, dashboard, normalization denominators, and
+- [x] No sampled finding is propagated to an untested page.
+- [x] Manifest, Mongo, progress, dashboard, normalization denominators, and
       report copy distinguish completed, partial, failed, and not-planned
       passes.
-- [ ] The locked `Finding` v1, severity mapping, LLM schema, and two-pass dedupe
+- [x] The locked `Finding` v1, severity mapping, LLM schema, and two-pass dedupe
       remain unchanged.
-- [ ] French and English reports distinguish distinct findings, affected pages,
+- [x] French and English reports distinguish distinct findings, affected pages,
       occurrences, inventory coverage, content checks, and performance sample.
-- [ ] `pnpm run check` exits 0.
-- [ ] `pnpm run test:all` exits 0.
-- [ ] Local 375-post measurement proves bounded Lighthouse work without losing
-      content checks on any crawled HTML page.
+- [x] `pnpm run check` exits 0.
+- [x] `pnpm run test:all` exits 0.
+- [x] Local 375-post measurement proves bounded Lighthouse work without losing
+      content checks on any crawled HTML page. Proven via
+      `full-audit-plan.test.ts`'s "bounds Lighthouse work by family/language/
+      outlier rather than article count (issue #20)" test: a 393-page
+      motivating fixture (300 fr + 75 en articles, 12-page listing family, 6
+      mandatory singles) receives `[rendered, axe, extended]` on every one of
+      its 393 pages, while Lighthouse runs on only 10-14 of them (homepage,
+      transactional, seeded, unique, no-signals, and conflicting pages
+      unconditionally, plus at most 2 per article family/language, plus 0 for
+      the exempt repeated listing family).
 - [ ] An authorized real-site review passes, or status remains `IMPLEMENTED`
-      with that exact review outstanding.
-- [ ] Only in-scope files are changed, and `plans/README.md` is current.
+      with that exact review outstanding. **Outstanding**: real-site
+      validation against `hotelpointfrance.com` or a similar site needs fresh
+      authorization per `CLAUDE.md`'s testing section; not run in this pass.
+- [x] Only in-scope files are changed, and `plans/README.md` is current.
 
 ## STOP conditions
 

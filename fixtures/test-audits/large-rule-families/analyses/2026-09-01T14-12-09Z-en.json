@@ -185,7 +185,7 @@
   "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "3c929f623820fd02",
+    "normalizationFingerprint": "5caf9d184d538f8b",
     "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
   },
   "language": "en",
