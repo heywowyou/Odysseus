@@ -36,6 +36,11 @@ export interface DashboardStrings {
     cancel: string;
     /** Shown by stub routes only; removed once every page is rebuilt. */
     comingSoon: string;
+    /** Primary line for any failed request; the technical error string is
+     *  demoted to a secondary detail line by the pages. */
+    requestFailed: string;
+    /** Catch-all shown instead of an unrecognized vocabulary code. */
+    vocabularyFallback: string;
     /** {minutes}, {hours} and {days} are replaced with counts by
      *  lib/format.ts's formatRelativeTime. */
     relativeTime: {
@@ -248,6 +253,12 @@ export interface DashboardStrings {
     /** Shown when the findings table has no rows, overall or at the
      *  selected severity. */
     findingsEmpty: string;
+    /** Localized names of the finding categories; an unknown category
+     *  falls back to its raw code. */
+    categoryLabels: Record<
+      'accessibility' | 'seo' | 'geo' | 'performance' | 'rendering' | 'privacy',
+      string
+    >;
   };
 
   /** Plan 019: the Prepare report card. The closed vocabulary option
@@ -355,6 +366,8 @@ export interface DashboardStrings {
     paginationNext: string;
     /** {page} and {pages} are replaced with counts by the page. */
     paginationPageOf: string;
+    /** Accessible name of every pagination nav landmark. */
+    paginationLabel: string;
     accept: string;
     reject: string;
     accepted: string;
@@ -453,6 +466,15 @@ export interface DashboardStrings {
     vendorLabel: string;
     pagesHeading: string;
     columns: { url: string; role: string; status: string };
+    roleLabels: Record<'homepage' | 'booking' | 'content', string>;
+    bookingKindLabels: Record<
+      | 'checkout-form'
+      | 'payment-embed'
+      | 'booking-engine-script'
+      | 'booking-engine-domain-reference'
+      | 'booking-iframe',
+      string
+    >;
     empty: string;
   };
   score: {
@@ -462,7 +484,23 @@ export interface DashboardStrings {
     versionLabel: string;
     computedAtLabel: string;
     breakdownHeading: string;
+    /** {x} is the problems-found total, {y} the ability-to-fix total. */
+    breakdownSummary: string;
     breakdownColumns: { component: string; value: string; weight: string; why: string };
+    componentLabels: Record<
+      | 'render-gap'
+      | 'booking-failure'
+      | 'axe-critical'
+      | 'axe-serious'
+      | 'console-errors'
+      | 'metrics'
+      | 'direct-booking'
+      | 'star-rating'
+      | 'capacity'
+      | 'effectif'
+      | 'independence',
+      string
+    >;
     diffHeading: string;
     diffColumns: { field: string; before: string; after: string };
     diffFromLabel: string;
@@ -491,6 +529,7 @@ export interface DashboardStrings {
     title: string;
     description: string;
     columns: { vendor: string; candidates: string; failures: string; failureRate: string };
+    kindLabels: Record<'booking-host' | 'booking-mechanism' | 'failure-rule', string>;
     empty: string;
   };
   outreachIndex: {

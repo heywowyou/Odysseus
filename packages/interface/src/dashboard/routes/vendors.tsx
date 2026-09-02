@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
+import { vocabularyLabel } from '../lib/vocabulary';
 import { formatFailureRate, useInsightView, vendorRows } from './insights-model';
 import type { VendorAggregateResponse } from './insights-model';
 
@@ -25,7 +26,7 @@ export function VendorsPage(): JSX.Element {
   if (error !== undefined && data === undefined) {
     body = (
       <EmptyState
-        title={strings.common.error}
+        title={strings.common.requestFailed}
         description={error}
         action={
           <Button variant="secondary" onClick={refresh}>
@@ -74,7 +75,7 @@ export function VendorsPage(): JSX.Element {
                 <TableRow key={`${row.kind}-${row.value}`}>
                   <TableCell>
                     <Badge tone={row.kind === 'failure-rule' ? 'serious' : 'neutral'}>
-                      {row.kind}
+                      {vocabularyLabel(strings.vendors.kindLabels, row.kind, row.kind)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-ink">{row.value}</TableCell>

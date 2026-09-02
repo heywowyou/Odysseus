@@ -61,7 +61,9 @@ export function NewScanPage() {
       navigate(`/scans/${created.jobId}`);
     } catch (error) {
       const message = error instanceof ApiError ? error.message : String(error);
-      toast.error(`${copy.submitError}: ${message}`);
+      // The technical string rides as the toast's detail line; the headline
+      // stays the localized product copy.
+      toast.error(copy.submitError, { description: message });
       setIsSubmitting(false);
     }
   };

@@ -57,7 +57,7 @@ export function OutreachIndexPage(): JSX.Element {
       count: hubCount(replies),
     },
     {
-      to: '/outreach/suppressions',
+      to: '/outreach/do-not-contact',
       title: strings.outreachIndex.cards.suppressionsTitle,
       description: strings.outreachIndex.cards.suppressionsDescription,
       count: { kind: 'none' } as HubCount,

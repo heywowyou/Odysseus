@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
+import { Field } from '../components/ui/field';
 import { InfoTip } from '../components/ui/info-tip';
 import { SegmentedControl } from '../components/ui/segmented';
 import { Select } from '../components/ui/select';
@@ -56,7 +57,7 @@ const POLL_INTERVAL_MS = 8000;
 const SKELETON_ROW_COUNT = 8;
 
 function reviewLabel(reviewState: string, strings: DashboardStrings): string {
-  return vocabularyLabel(strings.labels.review, reviewState);
+  return vocabularyLabel(strings.labels.review, reviewState, strings.common.vocabularyFallback);
 }
 
 function detailTarget(row: ProspectRow): string {
@@ -118,7 +119,8 @@ export function ProspectsPage(): JSX.Element {
     body = (
       <Card>
         <div className="flex flex-col items-start gap-3">
-          <p className="text-sm text-danger">{page.error}</p>
+          <p className="text-sm text-danger">{strings.common.requestFailed}</p>
+          <p className="text-xs text-ink-muted">{page.error}</p>
           <Button variant="secondary" onClick={page.refresh}>
             {strings.common.retry}
           </Button>
@@ -180,14 +182,26 @@ export function ProspectsPage(): JSX.Element {
                   </TableCell>
                   <TableCell>{locationLabel(row)}</TableCell>
                   <TableCell className="text-xs text-ink-soft">
-                    {vocabularyLabel(strings.labels.identity, row.identityStatus)}
+                    {vocabularyLabel(
+                      strings.labels.identity,
+                      row.identityStatus,
+                      strings.common.vocabularyFallback,
+                    )}
                   </TableCell>
                   <TableCell className="text-xs text-ink-soft">
-                    {vocabularyLabel(strings.labels.group, row.groupStatus)}
+                    {vocabularyLabel(
+                      strings.labels.group,
+                      row.groupStatus,
+                      strings.common.vocabularyFallback,
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge tone={qualificationBadgeTone(row.qualificationOutcome)}>
-                      {vocabularyLabel(strings.labels.qualification, row.qualificationOutcome)}
+                      {vocabularyLabel(
+                        strings.labels.qualification,
+                        row.qualificationOutcome,
+                        strings.common.vocabularyFallback,
+                      )}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -197,13 +211,25 @@ export function ProspectsPage(): JSX.Element {
                   </TableCell>
                   <TableCell className="tabular-nums">{scoreLabel(row)}</TableCell>
                   <TableCell className="text-xs text-ink-soft">
-                    {vocabularyLabel(strings.labels.contact, row.contactState)}
+                    {vocabularyLabel(
+                      strings.labels.contact,
+                      row.contactState,
+                      strings.common.vocabularyFallback,
+                    )}
                   </TableCell>
                   <TableCell className="text-xs text-ink-soft">
-                    {vocabularyLabel(strings.labels.thread, row.threadState)}
+                    {vocabularyLabel(
+                      strings.labels.thread,
+                      row.threadState,
+                      strings.common.vocabularyFallback,
+                    )}
                   </TableCell>
                   <TableCell className="text-xs text-ink-soft">
-                    {vocabularyLabel(strings.labels.outcome, row.outcome)}
+                    {vocabularyLabel(
+                      strings.labels.outcome,
+                      row.outcome,
+                      strings.common.vocabularyFallback,
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <ChevronRight className="ml-auto size-4 text-ink-muted" aria-hidden="true" />
@@ -237,9 +263,10 @@ export function ProspectsPage(): JSX.Element {
           </Button>
         </div>
         {page.error !== undefined ? (
-          <p className="mt-3 text-xs text-ink-muted" role="alert">
-            {page.error}
-          </p>
+          <div className="mt-3 text-xs text-ink-muted" role="alert">
+            <p>{strings.common.requestFailed}</p>
+            <p>{page.error}</p>
+          </div>
         ) : null}
       </>
     );
@@ -261,80 +288,116 @@ export function ProspectsPage(): JSX.Element {
       <Card className="mb-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="w-44">
-            <Select
-              value={filters.identityStatus}
-              onChange={(event) => {
-                const next = event.target.value;
-                if (isIdentityStatusValue(next)) {
-                  applyFilters({ ...filters, identityStatus: next });
-                }
-              }}
-              aria-label={strings.prospects.filters.identityStatus}
+            <Field
+              label={strings.prospects.filters.identityStatus}
+              htmlFor="prospects-filter-identity-status"
             >
-              <option value="">{strings.prospects.filters.all}</option>
-              {IDENTITY_STATUS_VALUES.map((value) => (
-                <option key={value} value={value}>
-                  {vocabularyLabel(strings.labels.identity, value)}
-                </option>
-              ))}
-            </Select>
+              <Select
+                id="prospects-filter-identity-status"
+                value={filters.identityStatus}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (isIdentityStatusValue(next)) {
+                    applyFilters({ ...filters, identityStatus: next });
+                  }
+                }}
+              >
+                <option value="">{strings.prospects.filters.all}</option>
+                {IDENTITY_STATUS_VALUES.map((value) => (
+                  <option key={value} value={value}>
+                    {vocabularyLabel(
+                      strings.labels.identity,
+                      value,
+                      strings.common.vocabularyFallback,
+                    )}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
           <div className="w-44">
-            <Select
-              value={filters.groupStatus}
-              onChange={(event) => {
-                const next = event.target.value;
-                if (isGroupStatusValue(next)) {
-                  applyFilters({ ...filters, groupStatus: next });
-                }
-              }}
-              aria-label={strings.prospects.filters.groupStatus}
+            <Field
+              label={strings.prospects.filters.groupStatus}
+              htmlFor="prospects-filter-group-status"
             >
-              <option value="">{strings.prospects.filters.all}</option>
-              {GROUP_STATUS_VALUES.map((value) => (
-                <option key={value} value={value}>
-                  {vocabularyLabel(strings.labels.group, value)}
-                </option>
-              ))}
-            </Select>
+              <Select
+                id="prospects-filter-group-status"
+                value={filters.groupStatus}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (isGroupStatusValue(next)) {
+                    applyFilters({ ...filters, groupStatus: next });
+                  }
+                }}
+              >
+                <option value="">{strings.prospects.filters.all}</option>
+                {GROUP_STATUS_VALUES.map((value) => (
+                  <option key={value} value={value}>
+                    {vocabularyLabel(
+                      strings.labels.group,
+                      value,
+                      strings.common.vocabularyFallback,
+                    )}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
           <div className="w-44">
-            <Select
-              value={filters.reviewState}
-              onChange={(event) => {
-                const next = event.target.value;
-                if (isReviewStateValue(next)) {
-                  applyFilters({ ...filters, reviewState: next });
-                }
-              }}
-              aria-label={strings.prospects.filters.reviewState}
+            <Field
+              label={strings.prospects.filters.reviewState}
+              htmlFor="prospects-filter-review-state"
             >
-              <option value="">{strings.prospects.filters.all}</option>
-              {REVIEW_STATE_VALUES.map((value) => (
-                <option key={value} value={value}>
-                  {vocabularyLabel(strings.labels.review, value)}
-                </option>
-              ))}
-            </Select>
+              <Select
+                id="prospects-filter-review-state"
+                value={filters.reviewState}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (isReviewStateValue(next)) {
+                    applyFilters({ ...filters, reviewState: next });
+                  }
+                }}
+              >
+                <option value="">{strings.prospects.filters.all}</option>
+                {REVIEW_STATE_VALUES.map((value) => (
+                  <option key={value} value={value}>
+                    {vocabularyLabel(
+                      strings.labels.review,
+                      value,
+                      strings.common.vocabularyFallback,
+                    )}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
           <div className="w-44">
-            <Select
-              value={filters.qualificationOutcome}
-              onChange={(event) => {
-                const next = event.target.value;
-                if (isQualificationValue(next)) {
-                  applyFilters({ ...filters, qualificationOutcome: next });
-                }
-              }}
-              aria-label={strings.prospects.filters.qualification}
+            <Field
+              label={strings.prospects.filters.qualification}
+              htmlFor="prospects-filter-qualification"
             >
-              <option value="">{strings.prospects.filters.all}</option>
-              {QUALIFICATION_VALUES.map((value) => (
-                <option key={value} value={value}>
-                  {vocabularyLabel(strings.labels.qualification, value)}
-                </option>
-              ))}
-            </Select>
+              <Select
+                id="prospects-filter-qualification"
+                value={filters.qualificationOutcome}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (isQualificationValue(next)) {
+                    applyFilters({ ...filters, qualificationOutcome: next });
+                  }
+                }}
+              >
+                <option value="">{strings.prospects.filters.all}</option>
+                {QUALIFICATION_VALUES.map((value) => (
+                  <option key={value} value={value}>
+                    {vocabularyLabel(
+                      strings.labels.qualification,
+                      value,
+                      strings.common.vocabularyFallback,
+                    )}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
         </div>
       </Card>

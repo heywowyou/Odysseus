@@ -118,7 +118,7 @@ export function ScanProgressPage(): JSX.Element {
     body =
       error !== undefined ? (
         <EmptyState
-          title={strings.common.error}
+          title={strings.common.requestFailed}
           description={error}
           action={
             <Button variant="secondary" size="sm" onClick={refresh}>
@@ -346,9 +346,13 @@ function ProspectingView({
 
 /** One per-URL row of a prospecting batch. Completed rows link to their
  *  audit (the per-URL report access the old page exposed); the job's
- *  auditIds aggregate exactly the ids the rows carry. */
+ *  auditIds aggregate exactly the ids the rows carry. The status badge
+ *  speaks in localized status copy keyed on the row's three display
+ *  states; the raw job status code never reaches the operator. */
 function UrlRow({ row, linked }: { row: ScanUrlResult; linked: boolean }): JSX.Element {
+  const { strings } = useI18n();
   const state = urlResultState(row.status);
+  const label = strings.common.statusLabels[state];
   const auditId = linked ? row.auditId : undefined;
   return (
     <li className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
@@ -361,11 +365,11 @@ function UrlRow({ row, linked }: { row: ScanUrlResult; linked: boolean }): JSX.E
             'shrink-0 transition-colors hover:bg-overlay',
           )}
         >
-          {row.status}
+          {label}
         </Link>
       ) : (
         <Badge tone={URL_STATE_TONES[state]} className="shrink-0">
-          {row.status}
+          {label}
         </Badge>
       )}
     </li>

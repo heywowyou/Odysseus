@@ -61,7 +61,8 @@ export function RepliesPage(): JSX.Element {
     body = (
       <Card>
         <div className="flex flex-col items-start gap-3">
-          <p className="text-sm text-danger">{error}</p>
+          <p className="text-sm text-danger">{strings.common.requestFailed}</p>
+          <p className="text-xs text-ink-muted">{error}</p>
           <Button variant="secondary" onClick={refresh}>
             {strings.common.retry}
           </Button>
@@ -117,7 +118,11 @@ export function RepliesPage(): JSX.Element {
                   </TableCell>
                   <TableCell>
                     <Badge tone="neutral">
-                      {vocabularyLabel(strings.labels.thread, reply.state)}
+                      {vocabularyLabel(
+                        strings.labels.thread,
+                        reply.state,
+                        strings.common.vocabularyFallback,
+                      )}
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-72 text-sm text-ink-soft">
@@ -142,7 +147,10 @@ export function RepliesPage(): JSX.Element {
           </Table>
         </div>
         {pages.hasPrevious || pages.hasNext ? (
-          <nav className="mt-4 flex items-center justify-between" aria-label="pagination">
+          <nav
+            className="mt-4 flex items-center justify-between"
+            aria-label={strings.operator.paginationLabel}
+          >
             <Button
               variant="secondary"
               size="sm"

@@ -62,7 +62,8 @@ export function DraftsPage(): JSX.Element {
     body = (
       <Card>
         <div className="flex flex-col items-start gap-3">
-          <p className="text-sm text-danger">{error}</p>
+          <p className="text-sm text-danger">{strings.common.requestFailed}</p>
+          <p className="text-xs text-ink-muted">{error}</p>
           <Button variant="secondary" onClick={refresh}>
             {strings.common.retry}
           </Button>
@@ -155,7 +156,10 @@ export function DraftsPage(): JSX.Element {
           </Table>
         </div>
         {pages.hasPrevious || pages.hasNext ? (
-          <nav className="mt-4 flex items-center justify-between" aria-label="pagination">
+          <nav
+            className="mt-4 flex items-center justify-between"
+            aria-label={strings.operator.paginationLabel}
+          >
             <Button
               variant="secondary"
               size="sm"

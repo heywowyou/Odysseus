@@ -145,7 +145,8 @@ export function AuditsPage(): JSX.Element {
     body = (
       <Card>
         <div className="flex flex-col items-start gap-3">
-          <p className="text-sm text-danger">{error}</p>
+          <p className="text-sm text-danger">{strings.common.requestFailed}</p>
+          <p className="text-xs text-ink-muted">{error}</p>
           <Button variant="secondary" onClick={refresh}>
             {strings.common.retry}
           </Button>
@@ -178,9 +179,10 @@ export function AuditsPage(): JSX.Element {
     body = (
       <>
         {error !== undefined ? (
-          <p className="mb-3 text-xs text-ink-muted" role="alert">
-            {error}
-          </p>
+          <div className="mb-3 text-xs text-ink-muted" role="alert">
+            <p>{strings.common.requestFailed}</p>
+            <p>{error}</p>
+          </div>
         ) : null}
         {visible.length === 0 ? (
           <EmptyState title={strings.audits.emptyFilter} />

@@ -39,7 +39,7 @@ export function EvidencePage(): JSX.Element {
   } else if (error !== undefined && data === undefined) {
     body = (
       <EmptyState
-        title={strings.common.error}
+        title={strings.common.requestFailed}
         description={error}
         action={
           <Button variant="secondary" onClick={refresh}>

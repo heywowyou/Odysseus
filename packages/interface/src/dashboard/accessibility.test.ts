@@ -148,7 +148,7 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
   it('audits list has no axe violations in its loaded empty state', async () => {
     stubRoutes({ '/api/scans?limit=200': [] });
     const { container, root } = await renderPage(createElement(AuditsPage));
-    await settle(container, 'Aucune analyse pour le moment');
+    await settle(container, 'Aucun scan pour le moment');
     await expectNoAxeViolations(container);
     root.unmount();
   });
@@ -278,7 +278,7 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
       path: '/prospects/cand-1/prescan',
       pattern: 'prospects/:candidateId/prescan',
     });
-    await settle(container, 'Pré-scan');
+    await settle(container, 'Contrôle rapide');
     await expectNoAxeViolations(container);
     root.unmount();
   });
@@ -371,7 +371,7 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
       },
     });
     const { container, root } = await renderPage(createElement(VendorsPage));
-    await settle(container, 'Aucune donnée de serveur');
+    await settle(container, 'Aucune donnée de contrôle rapide');
     await expectNoAxeViolations(container);
     root.unmount();
   });

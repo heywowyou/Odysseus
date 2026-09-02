@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
+import { vocabularyLabel } from '../lib/vocabulary';
 import { formatDateTime } from '../lib/format';
 import {
   diffVersionOptions,
@@ -63,7 +64,7 @@ export function ScorePage(): JSX.Element {
   } else if (score.error !== undefined && score.data === undefined) {
     body = (
       <EmptyState
-        title={strings.common.error}
+        title={strings.common.requestFailed}
         description={score.error}
         action={
           <Button variant="secondary" onClick={score.refresh}>
@@ -102,7 +103,9 @@ export function ScorePage(): JSX.Element {
         <Card
           title={strings.score.breakdownHeading}
           className="mb-4"
-          description={`brokenness ${data.brokenness.total} · ability ${data.ability.total}`}
+          description={strings.score.breakdownSummary
+            .replace('{x}', String(data.brokenness.total))
+            .replace('{y}', String(data.ability.total))}
         >
           <Table>
             <TableHead>
@@ -117,7 +120,11 @@ export function ScorePage(): JSX.Element {
             <TableBody>
               {scoreComponentRows(data).map(({ group, component }) => (
                 <TableRow key={`${group}-${component.id}`}>
-                  <TableCell className="text-ink">{component.id}</TableCell>
+                  <TableCell className="text-ink">
+                    {/* An unknown component id keeps its raw code: the id is
+                        the precise handle the report and the store share. */}
+                    {vocabularyLabel(strings.score.componentLabels, component.id, component.id)}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{component.points}</TableCell>
                   <TableCell className="text-ink-muted">{component.reason}</TableCell>
                 </TableRow>

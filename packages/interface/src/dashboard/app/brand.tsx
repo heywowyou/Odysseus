@@ -7,7 +7,7 @@ export function Brand({ layout }: { layout: 'sidebar' | 'topbar' }) {
       to="/audits"
       className={
         layout === 'sidebar'
-          ? 'px-2 text-[15px] font-semibold tracking-tight text-ink'
+          ? 'px-2 text-sm font-semibold tracking-tight text-ink'
           : 'text-sm font-semibold tracking-tight text-ink'
       }
     >

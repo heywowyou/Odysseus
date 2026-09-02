@@ -48,7 +48,13 @@
   --color-line-strong: rgb(255 255 255 / 0.13);
   --color-ink: #f7f8f8;
   --color-ink-soft: #9fa5ae;
-  --color-ink-muted: #7b808a;
+  /* One step lighter than the historical #7b808a: that value missed the 4.5:1
+     body-text floor on raised surfaces (4.48:1) and on the accent-tint box in
+     the report preparation card (3.81:1 composited). #898e96 clears 4.5:1 on
+     every surface the class sits on (base 6.05, panel 5.74, raised 5.39,
+     table row hover 5.60, accent tint over panel 4.59) while staying visibly
+     below ink-soft. */
+  --color-ink-muted: #898e96;
   --color-accent: #f2f3f5;
   --color-accent-strong: #d3d6db;
   --color-accent-bright: #f7f8f8;

@@ -156,7 +156,7 @@ export function ProspectDetailPage(): JSX.Element {
     return (
       <article>
         <EmptyState
-          title={strings.common.error}
+          title={strings.common.requestFailed}
           description={error}
           action={
             <Button variant="secondary" onClick={refresh}>
@@ -197,7 +197,11 @@ export function ProspectDetailPage(): JSX.Element {
         actions={
           <>
             <Badge tone={reviewBadgeTone(data.reviewState)}>
-              {vocabularyLabel(strings.labels.review, data.reviewState)}
+              {vocabularyLabel(
+                strings.labels.review,
+                data.reviewState,
+                strings.common.vocabularyFallback,
+              )}
             </Badge>
             <Button size="sm" onClick={() => setPendingAction('accept')}>
               {strings.operator.accept}
@@ -257,15 +261,27 @@ export function ProspectDetailPage(): JSX.Element {
             <div>
               <DefinitionRow
                 label={strings.prospectDetail.sections.identity}
-                value={vocabularyLabel(strings.labels.identity, data.identityStatus)}
+                value={vocabularyLabel(
+                  strings.labels.identity,
+                  data.identityStatus,
+                  strings.common.vocabularyFallback,
+                )}
               />
               <DefinitionRow
                 label={strings.prospects.columns.qualification}
-                value={vocabularyLabel(strings.labels.qualification, data.qualificationOutcome)}
+                value={vocabularyLabel(
+                  strings.labels.qualification,
+                  data.qualificationOutcome,
+                  strings.common.vocabularyFallback,
+                )}
               />
               <DefinitionRow
                 label={strings.prospects.columns.review}
-                value={vocabularyLabel(strings.labels.review, data.reviewState)}
+                value={vocabularyLabel(
+                  strings.labels.review,
+                  data.reviewState,
+                  strings.common.vocabularyFallback,
+                )}
               />
               <DefinitionRow label="candidateId" value={data.candidateId} />
             </div>

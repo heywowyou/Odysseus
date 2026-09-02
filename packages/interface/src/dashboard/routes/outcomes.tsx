@@ -73,7 +73,8 @@ export function OutcomesPage(): JSX.Element {
     body = (
       <Card>
         <div className="flex flex-col items-start gap-3">
-          <p className="text-sm text-danger">{error}</p>
+          <p className="text-sm text-danger">{strings.common.requestFailed}</p>
+          <p className="text-xs text-ink-muted">{error}</p>
           <Button variant="secondary" onClick={refresh}>
             {strings.common.retry}
           </Button>
@@ -119,11 +120,21 @@ export function OutcomesPage(): JSX.Element {
                   </TableCell>
                   <TableCell>
                     <span className="text-ink">
-                      {vocabularyLabel(strings.labels.outcome, event.outcome)}
+                      {vocabularyLabel(
+                        strings.labels.outcome,
+                        event.outcome,
+                        strings.common.vocabularyFallback,
+                      )}
                     </span>
                     {event.lostReason !== null ? (
                       <span className="ml-2 text-xs text-ink-muted">
-                        ({vocabularyLabel(strings.labels.lostReason, event.lostReason)})
+                        (
+                        {vocabularyLabel(
+                          strings.labels.lostReason,
+                          event.lostReason,
+                          strings.common.vocabularyFallback,
+                        )}
+                        )
                       </span>
                     ) : null}
                   </TableCell>
@@ -143,7 +154,10 @@ export function OutcomesPage(): JSX.Element {
           </Table>
         </div>
         {pages.hasPrevious || pages.hasNext ? (
-          <nav className="mt-4 flex items-center justify-between" aria-label="pagination">
+          <nav
+            className="mt-4 flex items-center justify-between"
+            aria-label={strings.operator.paginationLabel}
+          >
             <Button
               variant="secondary"
               size="sm"
@@ -188,7 +202,11 @@ export function OutcomesPage(): JSX.Element {
               {outcomeCounts.map((count) => (
                 <KpiTile
                   key={count.outcome}
-                  label={vocabularyLabel(strings.labels.outcome, count.outcome)}
+                  label={vocabularyLabel(
+                    strings.labels.outcome,
+                    count.outcome,
+                    strings.common.vocabularyFallback,
+                  )}
                   value={count.count}
                 />
               ))}

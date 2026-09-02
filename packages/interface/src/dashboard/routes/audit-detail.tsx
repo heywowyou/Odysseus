@@ -23,6 +23,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
+import { vocabularyLabel } from '../lib/vocabulary';
 import { PrepareReportCard } from './prepare-report-card';
 import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
 import { cn } from '../lib/cn';
@@ -217,7 +218,13 @@ function FindingsCard({ findings }: { findings: FindingResponse[] }): JSX.Elemen
                     {strings.common.severityLabels[finding.severity]}
                   </Badge>
                 </TableCell>
-                <TableCell>{finding.category}</TableCell>
+                <TableCell>
+                  {vocabularyLabel(
+                    strings.auditDetail.categoryLabels,
+                    finding.category,
+                    finding.category,
+                  )}
+                </TableCell>
                 <TableCell className="text-ink">{finding.title}</TableCell>
                 <TableCell className="text-right tabular-nums">
                   {countOccurrences(finding)}
@@ -330,7 +337,11 @@ function EnrichmentCard(props: {
           : { kind: 'unresolved' },
       );
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : strings.auditDetail.actionError);
+      // The raw error string stays as the secondary detail line; the toast
+      // headline is always localized product copy.
+      toast.error(strings.auditDetail.actionError, {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsCheckingSiren(false);
     }
@@ -360,7 +371,9 @@ function EnrichmentCard(props: {
       toast.success(strings.auditDetail.savedMessage);
       refresh();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : strings.auditDetail.actionError);
+      toast.error(strings.auditDetail.actionError, {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -480,7 +493,9 @@ export function AuditDetailPage(): JSX.Element {
       toast.success(strings.auditDetail.regeneratedMessage);
       refresh();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : strings.auditDetail.actionError);
+      toast.error(strings.auditDetail.actionError, {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsRegenerating(false);
     }
@@ -494,12 +509,10 @@ export function AuditDetailPage(): JSX.Element {
       refresh();
     } catch (error) {
       // A 409 means an unmet precondition (no fresh verified pair yet) and
-      // its message explains which; anything else is a plain failure.
-      if (error instanceof ApiError && error.status === 409) {
-        toast.error(error.message);
-      } else {
-        toast.error(strings.auditDetail.actionError);
-      }
+      // its message explains which; it stays as the toast's detail line.
+      toast.error(strings.auditDetail.actionError, {
+        description: error instanceof Error ? error.message : undefined,
+      });
     }
   };
 
@@ -515,7 +528,7 @@ export function AuditDetailPage(): JSX.Element {
     return (
       <article>
         <EmptyState
-          title={strings.common.error}
+          title={strings.common.requestFailed}
           description={error}
           action={
             <Button variant="secondary" onClick={refresh}>

@@ -40,7 +40,7 @@ export function App() {
         <Route path="outreach" element={<OutreachIndexPage />} />
         <Route path="outreach/drafts" element={<DraftsPage />} />
         <Route path="outreach/replies" element={<RepliesPage />} />
-        <Route path="outreach/suppressions" element={<SuppressionsPage />} />
+        <Route path="outreach/do-not-contact" element={<SuppressionsPage />} />
         <Route path="outreach/outcomes" element={<OutcomesPage />} />
         <Route path="*" element={<Navigate to="/audits" replace />} />
       </Route>

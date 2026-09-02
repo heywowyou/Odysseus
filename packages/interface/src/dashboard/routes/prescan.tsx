@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
+import { vocabularyLabel } from '../lib/vocabulary';
 import { formatDateTime } from '../lib/format';
 import { distinctBookingKinds, prescanRows, useInsightView } from './insights-model';
 import type { PrescanResponse, PrescanStatus } from './insights-model';
@@ -39,7 +40,7 @@ export function PrescanPage(): JSX.Element {
   } else if (error !== undefined && data === undefined) {
     body = (
       <EmptyState
-        title={strings.common.error}
+        title={strings.common.requestFailed}
         description={error}
         action={
           <Button variant="secondary" onClick={refresh}>
@@ -84,7 +85,7 @@ export function PrescanPage(): JSX.Element {
                 ) : (
                   bookingKinds.map((kind) => (
                     <Badge key={kind} tone="neutral">
-                      {kind}
+                      {vocabularyLabel(strings.prescan.bookingKindLabels, kind, kind)}
                     </Badge>
                   ))
                 )}
@@ -103,7 +104,9 @@ export function PrescanPage(): JSX.Element {
             <TableBody>
               {prescanRows(data).map((row) => (
                 <TableRow key={row.role}>
-                  <TableCell className="text-ink">{row.role}</TableCell>
+                  <TableCell className="text-ink">
+                    {vocabularyLabel(strings.prescan.roleLabels, row.role, row.role)}
+                  </TableCell>
                   {row.page !== null ? (
                     <TableCell className="tabular-nums">{row.page.httpStatus ?? '-'}</TableCell>
                   ) : (

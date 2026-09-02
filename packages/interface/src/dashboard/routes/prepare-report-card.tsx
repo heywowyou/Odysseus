@@ -23,7 +23,7 @@ import { SegmentedControl } from '../components/ui/segmented';
 import { ConfirmDialog } from '../components/ui/dialog';
 import { Skeleton } from '../components/ui/skeleton';
 import { useApi } from '../lib/use-api';
-import { ApiError, sendJson } from '../lib/api';
+import { sendJson } from '../lib/api';
 import { toast } from 'sonner';
 import {
   buildPreparationPatch,
@@ -143,7 +143,10 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
   if (error !== undefined && data === undefined) {
     return (
       <Card title={strings.prepareReport.title}>
-        <p className="text-[13px] text-ink-muted">{error}</p>
+        <div className="flex flex-col gap-1">
+          <p className="text-[13px] text-ink-soft">{strings.common.requestFailed}</p>
+          <p className="text-[13px] text-ink-muted">{error}</p>
+        </div>
       </Card>
     );
   }
@@ -183,9 +186,9 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
       toast.success(strings.prepareReport.savedMessage);
       refresh();
     } catch (saveError) {
-      toast.error(
-        saveError instanceof ApiError ? saveError.message : strings.auditDetail.actionError,
-      );
+      toast.error(strings.auditDetail.actionError, {
+        description: saveError instanceof Error ? saveError.message : undefined,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -197,9 +200,9 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
       toast.success(strings.prepareReport.warningsConfirmedLabel);
       refresh();
     } catch (confirmError) {
-      toast.error(
-        confirmError instanceof ApiError ? confirmError.message : strings.auditDetail.actionError,
-      );
+      toast.error(strings.auditDetail.actionError, {
+        description: confirmError instanceof Error ? confirmError.message : undefined,
+      });
     }
   };
 
@@ -216,11 +219,9 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
       toast.success(strings.prepareReport.candidateReadyLabel);
       refresh();
     } catch (regenerateError) {
-      toast.error(
-        regenerateError instanceof ApiError
-          ? regenerateError.message
-          : strings.auditDetail.actionError,
-      );
+      toast.error(strings.auditDetail.actionError, {
+        description: regenerateError instanceof Error ? regenerateError.message : undefined,
+      });
     } finally {
       setIsRegenerating(false);
     }
@@ -232,9 +233,9 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
       toast.success(strings.prepareReport.approvedMessage);
       refresh();
     } catch (approveError) {
-      toast.error(
-        approveError instanceof ApiError ? approveError.message : strings.auditDetail.actionError,
-      );
+      toast.error(strings.auditDetail.actionError, {
+        description: approveError instanceof Error ? approveError.message : undefined,
+      });
     }
   };
 
