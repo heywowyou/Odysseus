@@ -38,7 +38,7 @@ describe('section-registry order (plan 018 step 3)', () => {
     expect(domOrder).toEqual([...expectedOrder]);
   });
 
-  it('closes with section-13 immediately before section-12, and section-12 last', async () => {
+  it('closes with section-12 immediately before section-13, and section-13 last', async () => {
     const manifest = await loadSmallSiteManifest();
     const findings = await loadSmallSiteFindings();
     const analysis = await loadSmallSiteAnalysis('fr');
@@ -47,10 +47,11 @@ describe('section-registry order (plan 018 step 3)', () => {
     const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages });
     const domOrder = sectionIdsInDomOrder(html);
 
-    // Trade-off 44: the technical appendix is always the final section, and
-    // the glossary immediately precedes it, whatever is suppressed upstream.
-    expect(domOrder[domOrder.length - 1]).toBe('section-12');
-    expect(domOrder[domOrder.length - 2]).toBe('section-13');
+    // Trade-off 44 as amended 2026-09-01 (plan 024): the glossary is always
+    // the final section, and the technical appendix immediately precedes it,
+    // whatever is suppressed upstream.
+    expect(domOrder[domOrder.length - 1]).toBe('section-13');
+    expect(domOrder[domOrder.length - 2]).toBe('section-12');
   });
 
   it('numbers every included id contiguously in registry order, so display ordinals follow the reorder', () => {
@@ -58,11 +59,12 @@ describe('section-registry order (plan 018 step 3)', () => {
     expect([...all.values()]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
     // Stable ids keep their identity, not their old number: section-02 now
     // renders after the evidence sections and the action synthesis (plan
-    // 018), the appendix carries the last number, and the opening carries 1.
+    // 018), the glossary carries the last number (plan 024's glossary-last
+    // reversal), and the opening carries 1.
     expect(all.get('section-00')).toBe(1);
     expect(all.get('section-02')).toBe(13);
-    expect(all.get('section-13')).toBe(15);
-    expect(all.get('section-12')).toBe(16);
+    expect(all.get('section-12')).toBe(15);
+    expect(all.get('section-13')).toBe(16);
 
     // Suppressing a mid-document section shifts only what follows it.
     const withoutObservations = computeSectionNumbers(
@@ -73,6 +75,6 @@ describe('section-registry order (plan 018 step 3)', () => {
     ]);
     expect(withoutObservations.get('section-05b')).toBe(6);
     expect(withoutObservations.get('section-07')).toBe(7);
-    expect(withoutObservations.get('section-12')).toBe(15);
+    expect(withoutObservations.get('section-13')).toBe(15);
   });
 });

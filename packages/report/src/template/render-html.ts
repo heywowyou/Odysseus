@@ -116,8 +116,9 @@ export interface RenderHtmlInput {
  *  this function. Section order is SECTION_IDS's registry order, which is the
  *  canonical executive reading order of plan 018
  *  (docs/report/report-design-system.md section 3): 16 numbered sheets plus
- *  the cover, the metadata sheet and the table of contents, the technical
- *  appendix always last.
+ *  the cover, the metadata sheet and the table of contents; the glossary
+ *  is always last and the technical appendix second to last (trade-off 44
+ *  as amended 2026-09-01, plan 024).
  *  The registry and the render calls below must stay in the same order. */
 function renderBody(
   strings: ReturnType<typeof getStrings>,
@@ -286,12 +287,6 @@ function renderBody(
       resolvedFindings,
       resolvedSirenSourceUrl,
     ),
-    renderGlossary(strings, ord('section-13'), {
-      findings: resolvedFindings,
-      obligationAssessment: analysis.obligationAssessment,
-      transactionalFlowEvaluated: manifest.siteSignals?.hasTransactionalFlow !== undefined,
-      hasMeasuredCoreWebVitals: hasMeasuredCoreWebVitals(manifest),
-    }),
     renderFindingsAppendix(
       strings,
       ord('section-12'),
@@ -301,6 +296,12 @@ function renderBody(
       sectorOverride ?? analysis.obligationAssessment?.sector ?? 'general',
       citedStatIds,
     ),
+    renderGlossary(strings, ord('section-13'), {
+      findings: resolvedFindings,
+      obligationAssessment: analysis.obligationAssessment,
+      transactionalFlowEvaluated: manifest.siteSignals?.hasTransactionalFlow !== undefined,
+      hasMeasuredCoreWebVitals: hasMeasuredCoreWebVitals(manifest),
+    }),
   ].join('\n');
 }
 

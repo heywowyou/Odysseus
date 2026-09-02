@@ -99,10 +99,14 @@ Rules:
 - Sparse numbered pages are an accepted executive-reading choice, not a
   defect. The former 80-percent-empty and three-sections-per-page invariants
   are retired (2026-08-30 executive review).
-- The technical appendix is the final section in the PDF, and its rows flow
-  continuously after its opening page: findings do not each start a page, and
-  no group-level `break-inside: avoid` is added (trade-off 17). Stable DOM
-  section IDs do not encode reading order.
+- The glossary is the final section in the PDF and the technical appendix is
+  second to last, the appendix's rows flowing continuously after its opening
+  page: findings do not each start a page, and no group-level
+  `break-inside: avoid` is added (trade-off 17). This reverses the 2026-08-30
+  appendix-last call, on the operator's 2026-09-01 decision that a glossary
+  is a reference the reader reaches for last, after the technical detail
+  (trade-off 44 as amended; plan 024). Stable DOM section IDs do not encode
+  reading order.
 - A section heading and introduction stay with the first bounded content item.
   This protects a heading inside its own page; it never merges two numbered
   sections onto one page.
@@ -179,7 +183,8 @@ minimal cover; metadata and severity-scale sheet; table of contents; situation,
 complication, question opening; executive summary; audit scale and ranked
 priorities; printable checklist and remaining work; detailed evidence sections;
 action synthesis and re-audit recommendation; full legal reference;
-methodology and glossary; technical appendix, always last. The cover is
+methodology; technical appendix; glossary, always last (plan 024's 2026-09-01
+reversal of the original appendix-last call). The cover is
 minimal: commercial identity, the generic decision question, the concise
 report type (accessibility, performance, SEO, GEO), the audit date, and the
 Odysseus signature. Site metadata, the legal name, and the severity scale live
@@ -191,7 +196,7 @@ section IDs do not encode reading order.
 | --- | --- | --- | --- |
 | cover | Couverture | minimal: commercial identity, decision question (resolved preparation question; safe generic fallback when no preparation exists), report type, audit date, Odysseus signature | 1 sheet |
 | metadata | Fiche méta et sévérité | site audited, audit date, pages visited, report language, audited standard and scope, legal name when present, severity scale with basis note | 1 sheet |
-| toc | Sommaire | one row per section, grouped under six narrative groups: executive context, decisions and actions, detailed evidence, legal reference, method and vocabulary, technical appendix | 16 rows |
+| toc | Sommaire | one row per section, grouped under seven narrative groups: executive context, decisions and actions, detailed evidence, legal reference, method and vocabulary, technical appendix, glossary | 16 rows |
 | 01 | Ouverture (situation, complication, question) | opening and reading guide; the question is the resolved preparation question or the safe generic fallback, no client-specific claim beyond what preparation explicitly provides | fixed |
 | 02 | Résumé exécutif | prose + jump links | 3 links |
 | 03 | L'audit en chiffres | 4 tiles + severity split + category split | fixed |
@@ -206,8 +211,8 @@ section IDs do not encode reading order.
 | 12 | Prochaines étapes | action synthesis, responsible roles, and re-audit recommendation | 1 sheet |
 | 13 | Exposition légale | 2 cards + paragraph, from `assessObligations()` only | fixed |
 | 14 | Méthodologie | fixed prose | 1 sheet |
-| 15 | Glossaire | 9 entries | 1 sheet |
-| 16 | Annexe technique finale | all finding, URL, selector, occurrence, and provenance detail | flows |
+| 15 | Annexe technique | all finding, URL, selector, occurrence, and provenance detail | flows |
+| 16 | Glossaire, section finale | 9 entries | 1 sheet |
 
 Plan 020 adds two bounded blocks without changing this order or the visual
 tokens:

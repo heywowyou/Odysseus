@@ -38,6 +38,7 @@ export interface ReportStrings {
     legalReferenceGroupLabel: string;
     methodVocabularyGroupLabel: string;
     technicalAppendixGroupLabel: string;
+    glossaryGroupLabel: string;
   };
   /** P3 (2026-08-21 La Corniche feedback pass): section-00, a new
    *  non-technical intro page before the résumé. Plan 018 step 5 reshaped

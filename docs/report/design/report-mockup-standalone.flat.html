@@ -3700,26 +3700,11 @@ const __ds_scope = {};
   <p style="font-size:13.5px;opacity:0.85;max-width:68ch">{{ legal.paragraphText }}</p>
 </section>
 
-<!-- GLOSSARY -->
-<section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">15 · Glossaire</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 18 / 19</span>
-  </div>
-  <h2 style="margin-bottom:var(--space-6)">Glossaire</h2>
-  <sc-for list="{{ glossary }}" as="g" hint-placeholder-count="9">
-    <div style="margin-bottom:var(--space-4)">
-      <div style="font-size:14px;font-weight:500;color:var(--color-accent-300)">{{ g.term }}</div>
-      <div style="font-size:13px;opacity:0.8">{{ g.def }}</div>
-    </div>
-  </sc-for>
-</section>
-
 <!-- APPENDIX -->
 <section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
-    <h6 style="color:var(--color-accent-300);margin:0">16 · Annexe</h6>
-    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 19 / 19</span>
+    <h6 style="color:var(--color-accent-300);margin:0">15 · Annexe</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 18 / 19</span>
   </div>
   <h2 style="margin-bottom:var(--space-2)">Annexe - liste complète des constats</h2>
   <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-6)">Groupés par catégorie puis par règle. Chaque constat individuel apparaît nommément ; aucun n'est renvoyé "sur demande".</p>
@@ -3769,6 +3754,21 @@ const __ds_scope = {};
           </div>
         </div>
       </sc-if>
+    </div>
+  </sc-for>
+</section>
+
+<!-- GLOSSARY, always the final section (trade-off 44 as amended 2026-09-01, plan 024) -->
+<section style="break-after:page;background:var(--color-bg);padding:18mm;margin-bottom:28px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2)">
+    <h6 style="color:var(--color-accent-300);margin:0">16 · Glossaire</h6>
+    <span style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.4">Page 19 / 19</span>
+  </div>
+  <h2 style="margin-bottom:var(--space-6)">Glossaire</h2>
+  <sc-for list="{{ glossary }}" as="g" hint-placeholder-count="9">
+    <div style="margin-bottom:var(--space-4)">
+      <div style="font-size:14px;font-weight:500;color:var(--color-accent-300)">{{ g.term }}</div>
+      <div style="font-size:13px;opacity:0.8">{{ g.def }}</div>
     </div>
   </sc-for>
 </section>
@@ -3939,10 +3939,12 @@ class Component extends DCLogic {
         ] },
         { label: 'Méthode et vocabulaire', items: [
           { n: '14', title: 'Méthodologie et limites' },
-          { n: '15', title: 'Glossaire' },
         ] },
         { label: 'Annexe technique', items: [
-          { n: '16', title: 'Annexe - liste complète des constats' },
+          { n: '15', title: 'Annexe - liste complète des constats' },
+        ] },
+        { label: 'Glossaire', items: [
+          { n: '16', title: 'Glossaire' },
         ] },
       ],
       execSummary: 'L’audit a analysé 20 pages du site et identifié 14 constats distincts, dont 6 critiques. Les principaux blocages concernent l’accessibilité des pages chambres (composants ARIA mal structurés et contraste insuffisant) et les performances (blocage du navigateur par des scripts JavaScript). Ces problèmes peuvent impacter l’expérience utilisateur, la conversion et la conformité légale. Les correctifs prioritaires sont détaillés ci-dessous.',

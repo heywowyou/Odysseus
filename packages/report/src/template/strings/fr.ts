@@ -19,6 +19,7 @@ export const fr: ReportStrings = {
     legalReferenceGroupLabel: 'Référence légale',
     methodVocabularyGroupLabel: 'Méthode et vocabulaire',
     technicalAppendixGroupLabel: 'Annexe technique',
+    glossaryGroupLabel: 'Glossaire',
   },
   reportIntro: {
     eyebrow: 'À propos de ce rapport',
@@ -40,7 +41,7 @@ export const fr: ReportStrings = {
     roleTechnicalLabel: 'Prestataire technique ou service informatique',
     roleCommunicationsLabel: 'Communication',
     roleLegalLabel: 'Juridique',
-    nextActionsHeading: 'Vos trois prochaines actions',
+    nextActionsHeading: 'Les trois actions à lancer en priorité',
     nextActionItemTemplate: '{title}, à transmettre à : {contact}.',
     contactAgency: 'votre agence',
     contactAgencyAndVendor: "votre agence et l'éditeur du composant tiers concerné",

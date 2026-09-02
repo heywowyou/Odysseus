@@ -399,11 +399,13 @@ means numbered entry 24, not a literal Markdown heading anchor.
 44. A paid deliverable is the exact current French and English report pair:
     render identity is created before PDF generation, approval is insert-only
     over both verified digests, previews require freshness, and delivery also
-    requires the matching current approval. Keep one PDF per language with the
-    technical appendix last; priorities use contiguous display ranks,
-    deterministic remediation, and ownership context without changing raw
-    severity or the locked LLM schema. Numeric effort estimates and Lighthouse
-    successor-family dedupe remain deferred until their recorded triggers.
+    requires the matching current approval. Keep one PDF per language with
+    the glossary last and the technical appendix second to last (reversed
+    from appendix-last on 2026-09-01, plan 024); priorities use contiguous
+    display ranks, deterministic remediation, and ownership context without
+    changing raw severity or the locked LLM schema. Numeric effort estimates
+    and Lighthouse successor-family dedupe remain deferred until their
+    recorded triggers.
     → trade-offs.md#44
 
 55. WCAG-citation and business-claim guards run in the writing pass's retry

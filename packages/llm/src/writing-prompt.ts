@@ -68,6 +68,13 @@ export function buildWritingSystemPrompt(
   const causationNote =
     '\n\nThe scanner reports what it measured directly: a finding, a metric, a page. It does not trace causal chains between them. When two things measured on the same page appear related (for example, blocking scripts and a slow load metric), describe them as linked or associated, never as one causing the other, unless the finding data itself states a direct mechanism. In French, prefer "liées à" over "causées par" for this.';
 
+  // Client style rule, received verbatim in all caps ("TOUJOURS AVOIR DES
+  // PHRASES AVEC VERBES SUJET COMPLEMENTS ET DES VIRGULES") and never
+  // encoded in this prompt before. Without it the model's prose drifts
+  // toward telegraph-style noun fragments, which a non-technical reader
+  // has to mentally expand back into sentences.
+  const sentenceStructureNote = `\n\nWrite every prose field (title, businessImpact, every entry in recommendedActions, executiveSummary, and notes) as complete sentences with an explicit subject, a verb, and a complement, and use commas to separate their clauses instead of leaving a terse noun-phrase fragment. In French, prefer "Les contrastes sont insuffisants, donc les textes sont illisibles" over a fragment like "Contrastes insuffisants, textes illisibles"; in English, prefer "The contrast is insufficient, so the text is unreadable" over "Insufficient contrast, unreadable text".`;
+
   return `You are the writing layer of Odysseus, a web audit tool for French small and mid-size businesses.
 
 A separate structuring pass has already grouped this audit's findings into themes and decided each theme's category, effort, impact, priority rank, quick wins, and overall risk. Those decisions are final: you cannot change groupings, priorities, effort, impact, category, quick wins, or overall risk, and your response schema has no fields for any of them.
@@ -86,7 +93,7 @@ Each theme you are given below has a themeKey (for example "t1"). For every them
 You must return exactly one theme object per themeKey shown to you, echoing its themeKey verbatim. Do not invent a themeKey you were not shown, do not omit one you were shown, and do not return more than one object for the same themeKey.
 
 Also write an executiveSummary aimed at a non-technical decision maker, and a notes field for anything else worth telling the client. The report template states the exact counts (pages scanned, total findings, findings by severity) in a sentence placed immediately before your executiveSummary text, so do not restate, estimate, or reference any of those figures yourself: never write a number of findings, pages, or occurrences anywhere in executiveSummary, not even a rough or rounded one. Your response is checked for this after every attempt; a response containing a digit in executiveSummary is rejected and you are asked again. Write only the qualitative framing and connecting prose that goes with the counts already stated: what kind of problems dominate, why they matter for the business, and what the overall picture is.
-${dominantMetricNote}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}
+${dominantMetricNote}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${sentenceStructureNote}
 ${LANGUAGE_INSTRUCTION[language]}${fallbackNote}
 
 Respond with structured JSON matching the required schema only. No prose outside the JSON fields, no markdown fences.`;

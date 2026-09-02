@@ -103,6 +103,27 @@ describe('P4: the writing prompt avoids asserting causation the scanner did not 
   });
 });
 
+// plan 024 step 2: the client gave a stylistic rule, verbatim and in all
+// caps: "TOUJOURS AVOIR DES PHRASES AVEC VERBES SUJET COMPLEMENTS ET DES
+// VIRGULES". It was never encoded in the prompt, so nothing stopped the
+// model from writing terse noun-phrase fragments in the prose fields.
+describe('the writing prompt requires full subject-verb-complement sentences with commas', () => {
+  it('requires every prose field to be written as complete sentences with an explicit subject, verb, and complement', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain(
+      'as complete sentences with an explicit subject, a verb, and a complement',
+    );
+    expect(prompt).toContain('use commas to separate their clauses');
+  });
+
+  it('gives one full-sentence example per language against the fragment form', () => {
+    const fr = buildWritingSystemPrompt('fr', false, null);
+    expect(fr).toContain('Les contrastes sont insuffisants, donc les textes sont illisibles');
+    const en = buildWritingSystemPrompt('en', false, null);
+    expect(en).toContain('The contrast is insufficient, so the text is unreadable');
+  });
+});
+
 // docs/rules/llm-layer-rules.md section 6: the first live run mixed WCAG 2.1
 // and 2.2 citations, and wrote "la page la plus rentable du site" with no
 // traffic or revenue data in the input. Both notes are paired with

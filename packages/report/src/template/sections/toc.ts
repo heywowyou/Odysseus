@@ -12,7 +12,9 @@ import { computeSectionNumbers, sectionTitle, type SectionId } from '../section-
  *  than leaving a gap or a dead anchor. */
 export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<SectionId>): string {
   const numbers = computeSectionNumbers(includedIds);
-  // Six narrative groups, plan 018 step 3. Labels and membership bind to the
+  // Narrative groups, plan 018 step 3; the trailing split into methodology,
+  // appendix, then glossary is plan 024's glossary-last reversal. Labels and
+  // membership bind to the
   // canonical tocGroups data in docs/report/design/report-mockup-standalone.flat.html
   // (the reference template's TOC loop iterates the same data); ids are the
   // mockup's display positions mapped back to stable registry ids via
@@ -35,9 +37,10 @@ export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<Secti
     { label: strings.toc.legalReferenceGroupLabel, ids: ['section-02'] },
     {
       label: strings.toc.methodVocabularyGroupLabel,
-      ids: ['section-11', 'section-13'],
+      ids: ['section-11'],
     },
     { label: strings.toc.technicalAppendixGroupLabel, ids: ['section-12'] },
+    { label: strings.toc.glossaryGroupLabel, ids: ['section-13'] },
   ];
   const rows = groups
     .map(({ label: groupLabel, ids }) => {

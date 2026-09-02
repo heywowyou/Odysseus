@@ -30,10 +30,12 @@ export const SECTION_IDS = [
   'section-14',
   'section-02',
   'section-11',
-  'section-13',
-  // The technical appendix is always the final section (trade-off 44), and
-  // glossary (section-13) immediately precedes it.
   'section-12',
+  // The glossary is always the final section (trade-off 44, amended
+  // 2026-09-01 by operator decision: a glossary is a reference the reader
+  // reaches for last, after the technical detail), and the technical
+  // appendix (section-12) immediately precedes it.
+  'section-13',
 ] as const;
 
 export type SectionId = (typeof SECTION_IDS)[number];

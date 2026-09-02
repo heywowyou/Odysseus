@@ -270,8 +270,9 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
   // included numbered section; the cover renders no h6). The first
   // appearance order of those eyebrows across pages must equal the
   // source document's h6 sequence, which asserts every included sheet is
-  // represented exactly once, in reading order, with the technical
-  // appendix last. Sparse continuation pages (a sheet's second, third...
+  // represented exactly once, in reading order, with the glossary last
+  // (plan 024's glossary-last reversal of trade-off 44). Sparse
+  // continuation pages (a sheet's second, third...
   // page carries no eyebrow) are the accepted executive-reading choice,
   // so no fill-ratio is asserted anywhere in this file anymore.
   it('invariant 3: exactly one sheet start per physical page, and every included sheet appears exactly once in source order', async () => {
@@ -300,9 +301,11 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
 
     const sectionStartOrder = pagesInfo.flatMap((p) => p.sectionStarts);
     expect(sectionStartOrder).toEqual(sectionIdsFromSource(stressHtml));
-    // Trade-off 44: the technical appendix is always the final section.
+    // Trade-off 44 as amended 2026-09-01 (plan 024): the glossary is
+    // always the final section, the technical appendix second to last.
     const sectionIds = sectionIdsFromSource(stressHtml);
-    expect(sectionIds[sectionIds.length - 1]).toBe('section-12');
+    expect(sectionIds[sectionIds.length - 1]).toBe('section-13');
+    expect(sectionIds[sectionIds.length - 2]).toBe('section-12');
   });
 
   // Belt and braces on top of invariant 3 for the sheets whose isolation

@@ -2246,20 +2246,30 @@ Paris (eu-west-3) alongside Scaleway's Paris region.
 
 ### 44. A deliverable is an approved bilingual report pair, and the same PDF serves both audiences
 
-**Decision:** keep one complete PDF per language, put the technical appendix
-last, and approve an exact French and English pair before delivery. The report
-remains a single evidence-bearing artifact: finding IDs, URLs, selectors,
-occurrences, and provenance are not split into a second export. The table of
-contents groups the reading order into six narrative groups: executive
-context, decisions and actions, detailed evidence, legal reference, method and
-vocabulary, and the technical appendix. The cover, the metadata and
-severity-scale sheet, the contents, the printable checklist, and the appendix
-opening are standalone; every numbered section starts a fresh page, and the
-appendix stays final and flows continuously after its opening page.
+**Decision:** keep one complete PDF per language, put the glossary last with
+the technical appendix immediately before it, and approve an exact French and
+English pair before delivery. The report remains a single evidence-bearing
+artifact: finding IDs, URLs, selectors, occurrences, and provenance are not
+split into a second export. The table of contents groups the reading order
+into seven narrative groups: executive context, decisions and actions,
+detailed evidence, legal reference, method and vocabulary, the technical
+appendix, and the glossary. The cover, the metadata and severity-scale sheet,
+the contents, the printable checklist, and the appendix opening are
+standalone; every numbered section starts a fresh page, and the appendix flows
+continuously after its opening page while the glossary stays final.
+
+**Amended 2026-09-01, plan 024.** The operator confirmed the glossary goes
+last and the technical appendix second to last, reversing this entry's
+original appendix-last call from the 2026-08-30 review: a glossary is a
+reference the reader reaches for last, after the technical detail. The
+traceability and single-artifact reasoning below is unchanged; only the
+stated physical order moved.
 
 **Why:** splitting the appendix would make the director's document shorter but
 would create a second deliverable whose identity, approval, and retention could
-drift. Keeping it last preserves traceability while putting decisions first.
+drift. Keeping the evidence-bearing appendix at the document's tail, with only
+the glossary reference after it, preserves traceability while putting
+decisions first.
 After the 2026-08-30 executive review the operator deliberately replaced
 compact flow with new-page section starts: sparse numbered pages are an
 accepted cost of executive readability, not a defect, and there is no

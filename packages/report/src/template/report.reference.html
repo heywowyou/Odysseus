@@ -1215,29 +1215,6 @@
         <p style="font-size: 13.5px; opacity: 0.85; max-width: 68ch">{{ legal.paragraphText }}</p>
       </section>
 
-      <!-- GLOSSARY -->
-      <section class="sheet">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: var(--space-2);
-          "
-        >
-          <h6 style="color: var(--color-accent-300); margin: 0">15 · Glossaire</h6>
-        </div>
-        <h2 style="margin-bottom: var(--space-6)">Glossaire</h2>
-        {{#each glossary as |g|}}
-        <div class="glossary-entry" style="margin-bottom: var(--space-4)">
-          <div style="font-size: 14px; font-weight: 500; color: var(--color-accent-300)">
-            {{ g.term }}
-          </div>
-          <div style="font-size: 13px; opacity: 0.8">{{ g.def }}</div>
-        </div>
-        {{/each}}
-      </section>
-
       <!-- APPENDIX -->
       <section class="sheet">
         <div
@@ -1248,7 +1225,7 @@
             margin-bottom: var(--space-2);
           "
         >
-          <h6 style="color: var(--color-accent-300); margin: 0">16 · Annexe</h6>
+          <h6 style="color: var(--color-accent-300); margin: 0">15 · Annexe</h6>
         </div>
         <h2 style="margin-bottom: var(--space-2)">Annexe - liste complète des constats</h2>
         <p style="font-size: 12px; opacity: 0.55; margin-bottom: var(--space-6)">
@@ -1449,6 +1426,30 @@
             </div>
           </div>
           {{/if}}
+        </div>
+        {{/each}}
+      </section>
+
+      <!-- GLOSSARY, always the final section (trade-off 44 as amended
+           2026-09-01, plan 024) -->
+      <section class="sheet">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--space-2);
+          "
+        >
+          <h6 style="color: var(--color-accent-300); margin: 0">16 · Glossaire</h6>
+        </div>
+        <h2 style="margin-bottom: var(--space-6)">Glossaire</h2>
+        {{#each glossary as |g|}}
+        <div class="glossary-entry" style="margin-bottom: var(--space-4)">
+          <div style="font-size: 14px; font-weight: 500; color: var(--color-accent-300)">
+            {{ g.term }}
+          </div>
+          <div style="font-size: 13px; opacity: 0.8">{{ g.def }}</div>
         </div>
         {{/each}}
       </section>
