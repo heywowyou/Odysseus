@@ -83,8 +83,12 @@ rules, is binding on every agent: `docs/agents/issue-tracker.md`.
 
 ## Agent concurrency (ZCode only)
 
-ZCode may dispatch as many concurrent subagents as the work needs; parallelism
-is preferred whenever the file ownership or the research fan-out allows it.
-ZCode must not delegate work to Claude Code or Codex sessions: their usage
-limits are far lower than ZCode's, so they are reserved for the operator's own
-direct requests.
+ZCode is expected to use subagents by default, not as an exception: whenever
+subagents can usefully speed up or parallelize the work (research fan-outs,
+independent file-owned implementation slices, verification passes) without
+sacrificing quality, ZCode must dispatch them rather than doing everything in
+the main thread. The main thread coordinates, integrates, and decides; subagents
+carry the parallel work. ZCode may dispatch as many concurrent subagents as the
+work needs. ZCode must not delegate work to Claude Code or Codex sessions:
+their usage limits are far lower than ZCode's, so they are reserved for the
+operator's own direct requests.
