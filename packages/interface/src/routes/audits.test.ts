@@ -307,6 +307,27 @@ describe('GET /api/audits/:auditId', () => {
     ]);
     expect(body.reports[1]).not.toHaveProperty('pageCount');
   });
+
+  it('reads each report and the analysis-pair resolution only once per request (issue #4)', async () => {
+    vi.mocked(getLatestReport).mockResolvedValue(null);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(200);
+    // Previously getLatestReport was called once to build `reports` and
+    // again inside getFreshVerifiedPair for the same language, and
+    // resolveSelectedAnalysisPairForAudit was called once directly and
+    // again inside getFreshVerifiedPair - four redundant Mongo reads per
+    // dashboard open. One call per language, one resolution call.
+    expect(getLatestReport).toHaveBeenCalledTimes(2);
+    expect(getLatestReport).toHaveBeenCalledWith(fakeConnection, 'audit-1', 'fr');
+    expect(getLatestReport).toHaveBeenCalledWith(fakeConnection, 'audit-1', 'en');
+    expect(resolveSelectedAnalysisPairForAudit).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('GET /api/audits/:auditId/report/:language', () => {

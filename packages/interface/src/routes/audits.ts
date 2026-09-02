@@ -24,6 +24,7 @@ import {
   resolveSelectedAnalysisPairForAudit,
   setAuditManualFields,
   type ReportDocument,
+  type SelectedAuditAnalysisPairResolution,
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import {
@@ -70,21 +71,20 @@ async function readVerifiedReport(
   return digest === report.pdfDigest ? pdf : undefined;
 }
 
-async function getFreshVerifiedPair(
-  connection: Connection,
-  auditId: string,
+/** Pure over already-fetched reports and resolution, so a caller that has
+ *  already paid for those reads (the dashboard's GET handler, which needs
+ *  them for other fields anyway) does not pay for them twice. */
+async function verifyFreshPair(
+  fr: ReportDocument | null,
+  en: ReportDocument | null,
+  resolution: SelectedAuditAnalysisPairResolution,
   auditDir: string,
   currentFindings: OptionalFindingsProvenance,
 ): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en: Buffer } } | undefined> {
-  const [fr, en] = await Promise.all([
-    getLatestReport(connection, auditId, 'fr'),
-    getLatestReport(connection, auditId, 'en'),
-  ]);
   // Plan 019: the current analysis pair is the selected one (or, for a
   // legacy audit without a selection, the latest complete pair from the
   // one centralized selector), never simply the newest persisted analysis
   // - a finished candidate must not become effective before approval.
-  const resolution = await resolveSelectedAnalysisPairForAudit(connection, auditId);
   if (resolution.kind === 'none') return undefined;
   const frAnalysis = resolution.fr;
   const enAnalysis = resolution.en;
@@ -107,6 +107,25 @@ async function getFreshVerifiedPair(
   ]);
   if (!frPdf || !enPdf) return undefined;
   return { reports: { fr, en }, pdfs: { fr: frPdf, en: enPdf } };
+}
+
+/** Live-fetching wrapper for callers that need a fresh read on every call
+ *  (the approve-reports transaction re-verifies the pair has not changed
+ *  since it was first checked, so it cannot reuse an earlier fetch). The
+ *  dashboard's GET handler calls verifyFreshPair directly instead, over
+ *  reads it already made for other fields in the same response. */
+async function getFreshVerifiedPair(
+  connection: Connection,
+  auditId: string,
+  auditDir: string,
+  currentFindings: OptionalFindingsProvenance,
+): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en: Buffer } } | undefined> {
+  const [fr, en, resolution] = await Promise.all([
+    getLatestReport(connection, auditId, 'fr'),
+    getLatestReport(connection, auditId, 'en'),
+    resolveSelectedAnalysisPairForAudit(connection, auditId),
+  ]);
+  return verifyFreshPair(fr, en, resolution, auditDir, currentFindings);
 }
 
 const MANUAL_TEXT_FIELDS = [
@@ -160,33 +179,35 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const [findings, severityRollup, reportLanguages, selectedPair, approval] = await Promise.all([
-      getFindingsForAudit(connection, auditId),
-      getSeverityRollup(connection, auditId),
-      listReportLanguages(connection, auditId),
-      resolveSelectedAnalysisPairForAudit(connection, auditId),
-      getLatestReportApproval(connection, auditId),
-    ]);
-    const reports = await Promise.all(
-      (['fr', 'en'] as const).map(async (language) => {
-        const report = await getLatestReport(connection, auditId, language);
-        return {
-          language,
-          status: (report
-            ? classifyReportFreshness(report, audit.findingsProvenance)
-            : 'unverified') as ReportFreshness,
-          // Optional measured page count (plan 018), omitted entirely for
-          // a legacy document without one: the dashboard's length warning
-          // must never be derived from an inferred value.
-          ...(report?.pageCount !== undefined ? { pageCount: report.pageCount } : {}),
-        };
-      }),
-    );
+    const [findings, severityRollup, reportLanguages, selectedPair, approval, frReport, enReport] =
+      await Promise.all([
+        getFindingsForAudit(connection, auditId),
+        getSeverityRollup(connection, auditId),
+        listReportLanguages(connection, auditId),
+        resolveSelectedAnalysisPairForAudit(connection, auditId),
+        getLatestReportApproval(connection, auditId),
+        getLatestReport(connection, auditId, 'fr'),
+        getLatestReport(connection, auditId, 'en'),
+      ]);
+    const reports = (['fr', 'en'] as const).map((language) => {
+      const report = language === 'fr' ? frReport : enReport;
+      return {
+        language,
+        status: (report
+          ? classifyReportFreshness(report, audit.findingsProvenance)
+          : 'unverified') as ReportFreshness,
+        // Optional measured page count (plan 018), omitted entirely for
+        // a legacy document without one: the dashboard's length warning
+        // must never be derived from an inferred value.
+        ...(report?.pageCount !== undefined ? { pageCount: report.pageCount } : {}),
+      };
+    });
     const hostname = new URL(audit.siteUrl).hostname;
     const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
-    const verifiedPair = await getFreshVerifiedPair(
-      connection,
-      auditId,
+    const verifiedPair = await verifyFreshPair(
+      frReport,
+      enReport,
+      selectedPair,
       auditDir,
       audit.findingsProvenance,
     );
