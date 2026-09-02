@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { copyFileSync, createReadStream, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
@@ -6,24 +6,41 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 
 const packageRoot = dirname(fileURLToPath(import.meta.url));
+const fontSourceDir = resolve(packageRoot, '../report/src/fonts');
 
 /** The dashboard shares the client report's self-hosted Inter files. The
- *  canonical source stays packages/report/src/fonts and is copied at build
- *  time, the same discipline the previous page stack used for nocturne.css,
- *  so the two surfaces can never drift onto different font versions. */
+ *  canonical source stays packages/report/src/fonts: copied to dist/public
+ *  at build time, and served from that same source directory by the dev
+ *  middleware below, so both serving modes answer /fonts/Inter-*.woff2 from
+ *  the same files and the two surfaces can never drift onto font versions.
+ *  theme.css requests exactly these paths. */
+const FONT_REQUEST_PATTERN = /^\/fonts\/(Inter-(?:Regular|Medium|SemiBold|Bold)\.woff2)$/;
+
 function copyInterFonts(): Plugin {
   return {
     name: 'copy-inter-fonts',
-    apply: 'build',
     closeBundle() {
-      const sourceDir = resolve(packageRoot, '../report/src/fonts');
       const targetDir = resolve(packageRoot, 'dist/public/fonts');
       mkdirSync(targetDir, { recursive: true });
-      for (const fileName of readdirSync(sourceDir)) {
+      for (const fileName of readdirSync(fontSourceDir)) {
         if (fileName.endsWith('.woff2')) {
-          copyFileSync(resolve(sourceDir, fileName), resolve(targetDir, fileName));
+          copyFileSync(resolve(fontSourceDir, fileName), resolve(targetDir, fileName));
         }
       }
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const requestPath = new URL(req.url ?? '/', 'http://localhost').pathname;
+        // The pattern admits exactly the four canonical file names, so the
+        // matched name can never carry path segments.
+        const fileName = FONT_REQUEST_PATTERN.exec(requestPath)?.[1];
+        if (fileName === undefined || !existsSync(resolve(fontSourceDir, fileName))) {
+          next();
+          return;
+        }
+        res.setHeader('content-type', 'font/woff2');
+        createReadStream(resolve(fontSourceDir, fileName)).pipe(res);
+      });
     },
   };
 }

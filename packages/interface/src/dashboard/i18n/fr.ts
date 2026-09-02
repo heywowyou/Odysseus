@@ -43,6 +43,7 @@ export const fr: DashboardStrings = {
       daysAgo: 'il y a {days} j',
     },
     unknownSite: 'Site inconnu',
+    valueUnavailable: 'Indisponible',
   },
   audits: {
     title: 'Audits',

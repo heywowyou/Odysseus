@@ -1,36 +1,36 @@
 @import 'tailwindcss';
 
 /* Inter is self-hosted and shared with the client report; the woff2 files are
-   the canonical ones in packages/report/src/fonts, copied next to the built
-   app by the vite config so the two surfaces never drift onto different font
-   versions. */
+   the canonical ones in packages/report/src/fonts, served at /fonts by the
+   vite config (copied next to the built app at build time, dev middleware in
+   serve mode) so the two surfaces never drift onto different font versions. */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/dashboard/fonts/Inter-Regular.woff2') format('woff2');
+  src: url('/fonts/Inter-Regular.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/dashboard/fonts/Inter-Medium.woff2') format('woff2');
+  src: url('/fonts/Inter-Medium.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('/dashboard/fonts/Inter-SemiBold.woff2') format('woff2');
+  src: url('/fonts/Inter-SemiBold.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/dashboard/fonts/Inter-Bold.woff2') format('woff2');
+  src: url('/fonts/Inter-Bold.woff2') format('woff2');
 }
 
 /* Dashboard theme, Linear-grade monochrome dark. Layered near-black neutral

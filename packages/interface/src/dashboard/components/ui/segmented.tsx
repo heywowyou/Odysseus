@@ -19,7 +19,10 @@ export function SegmentedControl<T extends string>(props: {
       type="single"
       value={value}
       aria-label={ariaLabel}
-      className="inline-flex items-center gap-1 rounded-lg bg-raised p-1"
+      /* max-w-full plus wrap keeps long label sets inside their container:
+         the row hugs its content on wide screens and wraps to extra lines on
+         narrow ones, so a long localized label can never widen the page. */
+      className="inline-flex max-w-full flex-wrap items-center gap-1 rounded-lg bg-raised p-1"
       onValueChange={(next: string) => {
         if (next) onValueChange(next as T);
       }}

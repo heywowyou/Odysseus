@@ -12,6 +12,7 @@ import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { KpiTile } from '../components/ui/kpi';
+import type { KpiValueState } from '../components/ui/kpi';
 import { Select } from '../components/ui/select';
 import { Skeleton } from '../components/ui/skeleton';
 import { StatusDot } from '../components/ui/status-dot';
@@ -96,6 +97,11 @@ export function AuditsPage(): JSX.Element {
     [data, statusFilter, search, sortOrder],
   );
   const kpis = useMemo(() => computeKpis(data ?? []), [data]);
+  // A count is only trustworthy once data exists: while the first load is in
+  // flight the tiles show a skeleton, and a failed load shows an explicit
+  // unavailable marker, never a zero that would read as "nothing ran".
+  const kpiState: KpiValueState =
+    data !== undefined ? 'loaded' : error !== undefined ? 'unavailable' : 'loading';
   const queuedCount = useMemo(
     () => (data ?? []).filter((summary) => summary.status === 'queued').length,
     [data],
@@ -319,23 +325,41 @@ export function AuditsPage(): JSX.Element {
           with the animation's backwards fill keeping late tiles invisible
           until their turn. */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          <KpiTile key="running" label={strings.audits.kpiRunning} value={kpis.running} />,
-          <KpiTile key="complete" label={strings.audits.kpiComplete} value={kpis.complete} />,
-          <KpiTile key="failed" label={strings.audits.kpiFailed} value={kpis.failed} />,
-          <KpiTile
-            key="critical"
-            label={strings.audits.kpiCritical}
-            value={kpis.critical}
-            tone={kpis.critical > 0 ? 'critical' : 'default'}
-          />,
-        ].map((tile, slot) => (
+        {(
+          [
+            {
+              key: 'running',
+              label: strings.audits.kpiRunning,
+              value: kpis.running,
+              tone: 'default',
+            },
+            {
+              key: 'complete',
+              label: strings.audits.kpiComplete,
+              value: kpis.complete,
+              tone: 'default',
+            },
+            { key: 'failed', label: strings.audits.kpiFailed, value: kpis.failed, tone: 'default' },
+            {
+              key: 'critical',
+              label: strings.audits.kpiCritical,
+              value: kpis.critical,
+              tone: kpis.critical > 0 ? 'critical' : 'default',
+            },
+          ] as const
+        ).map((tile, slot) => (
           <div
             key={tile.key}
             style={{ animationDelay: `${slot * 50}ms` }}
             className="animate-page-in"
           >
-            {tile}
+            <KpiTile
+              label={tile.label}
+              value={tile.value}
+              state={kpiState}
+              unavailableLabel={strings.common.valueUnavailable}
+              tone={tile.tone}
+            />
           </div>
         ))}
       </div>

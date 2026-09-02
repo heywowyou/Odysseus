@@ -47,6 +47,9 @@ export interface DashboardStrings {
     /** List rows for prospecting jobs have no single site; this stands in
      *  for the site column. */
     unknownSite: string;
+    /** Marker rendered in place of a count whose backing data failed to
+     *  load, so unknown never reads as a confident zero. */
+    valueUnavailable: string;
   };
   audits: {
     title: string;
