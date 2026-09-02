@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-02T16:05:00Z",
+  "generatedAt": "2026-09-02T16:20:12Z",
   "title": "Design System: Odysseus",
   "extensions": {
     "colorMeta": {
@@ -127,7 +127,7 @@
       "ink-muted": {
         "role": "neutral",
         "displayName": "Muted Slate Grey",
-        "canonical": "#7b808a",
+        "canonical": "#898e96",
         "tonalRamp": [
           "oklch(15.0% 0.016 264.4)",
           "oklch(26.4% 0.016 264.4)",
@@ -324,11 +324,11 @@
       },
       "site-title": {
         "displayName": "Site Title",
-        "purpose": "Marketing site h1 headings in the system Arial stack, 24px bold."
+        "purpose": "Marketing site h1 headings, 24px bold in Inter (next/font/local)."
       },
       "site-body": {
         "displayName": "Site Body",
-        "purpose": "Marketing site document text at browser-default 16px Arial."
+        "purpose": "Marketing site document text, 16px Inter."
       }
     },
     "shadows": [
@@ -442,7 +442,7 @@
       "refersTo": "input",
       "description": "36px raised graphite field with hairline border; focus brightens the border and adds a soft white ring.",
       "html": "<input class=\"ds-input\" placeholder=\"example.com\" />",
-      "css": ".ds-input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--color-line, rgb(255 255 255 / 0.07)); border-radius: 8px; background: var(--color-raised, #17181a); color: var(--color-ink, #f7f8f8); font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 400; outline: none; transition: color 150ms, border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: var(--color-ink-muted, #7b808a); } .ds-input:focus { border-color: rgb(242 243 245 / 0.7); box-shadow: 0 0 0 2px rgb(242 243 245 / 0.25); } .ds-input:disabled { opacity: 0.5; }"
+      "css": ".ds-input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--color-line, rgb(255 255 255 / 0.07)); border-radius: 8px; background: var(--color-raised, #17181a); color: var(--color-ink, #f7f8f8); font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 400; outline: none; transition: color 150ms, border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: var(--color-ink-muted, #898e96); } .ds-input:focus { border-color: rgb(242 243 245 / 0.7); box-shadow: 0 0 0 2px rgb(242 243 245 / 0.25); } .ds-input:disabled { opacity: 0.5; }"
     },
     {
       "name": "Severity Badge",
@@ -458,21 +458,21 @@
       "refersTo": "card",
       "description": "Panel charcoal container on the near-black base, separated by a 7 percent hairline and no shadow.",
       "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">Recent audits</h2><p class=\"ds-card-desc\">Scans run in the last 30 days.</p></section>",
-      "css": ".ds-card { border: 1px solid var(--color-line, rgb(255 255 255 / 0.07)); border-radius: 12px; background: var(--color-panel, #101112); padding: 20px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--color-ink, #f7f8f8); } .ds-card-title { margin: 0 0 4px; font-size: 14px; font-weight: 600; line-height: 1.43; } .ds-card-desc { margin: 0; font-size: 12px; line-height: 1.33; color: var(--color-ink-muted, #7b808a); }"
+      "css": ".ds-card { border: 1px solid var(--color-line, rgb(255 255 255 / 0.07)); border-radius: 12px; background: var(--color-panel, #101112); padding: 20px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--color-ink, #f7f8f8); } .ds-card-title { margin: 0 0 4px; font-size: 14px; font-weight: 600; line-height: 1.43; } .ds-card-desc { margin: 0; font-size: 12px; line-height: 1.33; color: var(--color-ink-muted, #898e96); }"
     },
     {
       "name": "KPI Tile",
       "kind": "custom",
       "description": "Signature dashboard primitive: muted label over a large tight-tracked value inside a bordered panel tile.",
       "html": "<div class=\"ds-kpi\"><p class=\"ds-kpi-label\">Critical findings</p><p class=\"ds-kpi-value\">14</p></div>",
-      "css": ".ds-kpi { border: 1px solid var(--color-line, rgb(255 255 255 / 0.07)); border-radius: 12px; background: var(--color-panel, #101112); padding: 12px 16px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; } .ds-kpi-label { margin: 0; font-size: 12px; line-height: 1.33; color: var(--color-ink-muted, #7b808a); } .ds-kpi-value { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.4; letter-spacing: -0.025em; color: var(--color-ink, #f7f8f8); }"
+      "css": ".ds-kpi { border: 1px solid var(--color-line, rgb(255 255 255 / 0.07)); border-radius: 12px; background: var(--color-panel, #101112); padding: 12px 16px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; } .ds-kpi-label { margin: 0; font-size: 12px; line-height: 1.33; color: var(--color-ink-muted, #898e96); } .ds-kpi-value { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.4; letter-spacing: -0.025em; color: var(--color-ink, #f7f8f8); }"
     },
     {
       "name": "Segmented Control",
       "kind": "custom",
       "description": "Raised pill container of flat segments; the selected segment gains the white tint, not a filled background.",
       "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"Filter\"><button class=\"ds-seg-item ds-seg-on\">All</button><button class=\"ds-seg-item\">Running</button><button class=\"ds-seg-item\">Failed</button></div>",
-      "css": ".ds-seg { display: inline-flex; align-items: center; gap: 4px; border-radius: 8px; background: var(--color-raised, #17181a); padding: 4px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; } .ds-seg-item { border: none; border-radius: 6px; padding: 4px 12px; background: transparent; font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--color-ink-muted, #7b808a); cursor: pointer; transition: color 150ms; } .ds-seg-item:hover { color: var(--color-ink-soft, #9fa5ae); } .ds-seg-on, .ds-seg-on:hover { background: var(--color-accent-tint, rgb(255 255 255 / 0.09)); color: var(--color-ink, #f7f8f8); } .ds-seg-item:focus-visible { outline: 2px solid var(--color-accent, #f2f3f5); outline-offset: 2px; }"
+      "css": ".ds-seg { display: inline-flex; align-items: center; gap: 4px; border-radius: 8px; background: var(--color-raised, #17181a); padding: 4px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; } .ds-seg-item { border: none; border-radius: 6px; padding: 4px 12px; background: transparent; font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--color-ink-muted, #898e96); cursor: pointer; transition: color 150ms; } .ds-seg-item:hover { color: var(--color-ink-soft, #9fa5ae); } .ds-seg-on, .ds-seg-on:hover { background: var(--color-accent-tint, rgb(255 255 255 / 0.09)); color: var(--color-ink, #f7f8f8); } .ds-seg-item:focus-visible { outline: 2px solid var(--color-accent, #f2f3f5); outline-offset: 2px; }"
     },
     {
       "name": "Dropdown Menu",
@@ -484,11 +484,11 @@
   ],
   "narrative": {
     "northStar": "The Evidence Desk",
-    "overview": "Odysseus sells findings a client can check, so both surfaces are places evidence is examined: the operator reads it in the dashboard, the prospect reads it on the site. That is what the North Star asks of any new screen: show what is actually known, never a number nobody can stand behind, and state the limit before the strength. A blank where a value failed to load is honest; a confident zero is not.\n\nThe dashboard looks the part of a single-operator tool: a near-black, layered monochrome interface in the same family as Linear or Vercel's consoles. Surfaces stack from base through panel, raised, and overlay, separated by 7 percent white hairlines rather than shadows. The accent is white. Primary actions are the brightest object on screen, which means hierarchy is carried by brightness steps and typography, never by brand color. The only chromatic colors in the product are the four severity shades shared with the PDF report, plus a danger red for destructive and error states.\n\nThe marketing site is a different, deliberately spartan world. It is a standalone Next.js deploy with no component library and no webfonts: white or near-black pages (switched by the OS color scheme preference) typeset in the system Arial stack, single-column legal and informational documents. The site intentionally depends on nothing in the workspace, so it shares no tokens with the dashboard; it is recorded here as its own minimal surface.\n\nMotion is decoration only. Entrances use short, decelerating fades and slides (0.2 to 0.3 seconds, cubic-bezier(0.16, 1, 0.3, 1)), a prefers-reduced-motion rule collapses all of it, and every state stays fully readable without animation. Accessibility posture is visible in the base layer: a global 2px white focus outline, AA-contrast text pairs in both directions of the monochrome theme, and dark color-scheme declared at the root.",
+    "overview": "Odysseus sells findings a client can check, so both surfaces are places evidence is examined: the operator reads it in the dashboard, the prospect reads it on the site. That is what the North Star asks of any new screen: show what is actually known, never a number nobody can stand behind, and state the limit before the strength. A blank where a value failed to load is honest; a confident zero is not.\n\nThe dashboard looks the part of a single-operator tool: a near-black, layered monochrome interface in the same family as Linear or Vercel's consoles. Surfaces stack from base through panel, raised, and overlay, separated by 7 percent white hairlines rather than shadows. The accent is white. Primary actions are the brightest object on screen, which means hierarchy is carried by brightness steps and typography, never by brand color. The only chromatic colors in the product are the four severity shades shared with the PDF report, plus a danger red for destructive and error states.\n\nThe marketing site is a different, deliberately spartan world. It is a standalone Next.js deploy with no component library: white or near-black pages (switched by the OS color scheme preference), single-column documents, and, since plan 022, the same self-hosted Inter as the dashboard, loaded through next/font/local from the canonical woff2 files copied into packages/site/app/fonts. A plain persistent frame (text wordmark, three-item nav, footer with the compliance links, a skip link) wraps every public page; the preview route handler still answers with standalone documents outside the frame. The site intentionally depends on nothing in the workspace, so it shares no tokens with the dashboard; it is recorded here as its own minimal surface.\n\nMotion is decoration only. Entrances use short, decelerating fades and slides (0.2 to 0.3 seconds, cubic-bezier(0.16, 1, 0.3, 1)), a prefers-reduced-motion rule collapses all of it, and every state stays fully readable without animation. Accessibility posture is visible in the base layer: a global 2px white focus outline, AA-contrast text pairs in both directions of the monochrome theme, and dark color-scheme declared at the root. The site carries the same posture in its own idioms: a global 2px focus outline in the foreground color with a 2px offset, its own prefers-reduced-motion collapse (nothing on the site animates), and AA-contrast pairs computed in both schemes.",
     "keyCharacteristics": [
       "Layered near-black monochrome surfaces with hairline borders; depth by lightness, not shadow.",
       "The accent is white; color appears only as severity, at small sizes or 15 percent tints.",
-      "One typeface, typeset small: 14px body baseline, 20px page titles as the ceiling. Inter is the intended face and is self-hosted, but the built dashboard currently 404s its woff2 files and falls back to the system stack (see Observed Inconsistencies 5).",
+      "One typeface on both surfaces (self-hosted Inter), typeset small: 14px dashboard body baseline, 20px titles as the ceiling, 16px site body.",
       "Genuinely flat: shadow belongs only to floating layers (dialogs, dropdown menus, toasts).",
       "Radius ladder: 12px containers, 8px controls, 6px chips, full pills only for progress and dots.",
       "Short decelerating motion, decoration only, killed entirely under reduced motion."
@@ -526,14 +526,16 @@
       "Do reserve severity color for text, 8px dots, and 15 percent tinted badges; match the PDF report's shade exactly.",
       "Do give floating layers (dialog, dropdown) both a line-strong border and the shadow preset; they never appear separately.",
       "Do use the named keyframe animations (page-in, overlay-in, content-in, drawer-in) with the cubic-bezier(0.16, 1, 0.3, 1) curve for entrances, and keep state readable with animations disabled.",
-      "Do keep the focus system: global 2px accent outline with 2px offset; inputs add the 70 percent border plus 25 percent ring."
+      "Do keep the focus system: global 2px accent outline with 2px offset; inputs add the 70 percent border plus 25 percent ring.",
+      "Do render unknown data as the unavailable state (the localized Indisponible marker, or a skeleton while loading), never as a confident zero; a zero means loaded and genuinely empty.",
+      "Do keep every public site page inside the shared frame with its skip link; only the preview route handler answers bare."
     ],
     "donts": [
       "Don't introduce a brand hue into dashboard chrome; white is the accent and severity is the only color.",
       "Don't put shadows on resting surfaces (cards, tiles, buttons, tables); shadow means floating.",
       "Don't typeset above 20px; below 14px the steps are 13, 12, and the single 11px micro-label in the report preparation card.",
       "Don't fill large areas with severity colors; full-strength chroma belongs to text and dots only.",
-      "Don't import dashboard tokens into the site or treat the site as themed; it is deliberately standalone with its own two-color scheme-swap system.",
+      "Don't import dashboard tokens into the site or treat the site as themed; it is deliberately standalone with its own two-color scheme-swap system. Sharing the Inter font files (plan 022) is not token sharing.",
       "Don't replace the wordmark with a logo mark; the brand is the name, set in semibold Inter."
     ]
   }

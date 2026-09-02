@@ -1,6 +1,6 @@
 ---
 name: Odysseus
-description: Monochrome dark audit dashboard and a bare typographic marketing site, recorded exactly as implemented today.
+description: Monochrome dark audit dashboard and a typographic marketing site, recorded exactly as implemented today.
 colors:
   base: "#08090a"
   panel: "#101112"
@@ -10,7 +10,7 @@ colors:
   line-strong: "rgb(255 255 255 / 0.13)"
   ink: "#f7f8f8"
   ink-soft: "#9fa5ae"
-  ink-muted: "#7b808a"
+  ink-muted: "#898e96"
   accent: "#f2f3f5"
   accent-strong: "#d3d6db"
   accent-bright: "#f7f8f8"
@@ -58,13 +58,13 @@ typography:
     lineHeight: 1.5
     letterSpacing: "normal"
   site-title:
-    fontFamily: "Arial, Helvetica, sans-serif"
+    fontFamily: "Inter, Arial, Helvetica, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 700
     lineHeight: 1.33
     letterSpacing: "normal"
   site-body:
-    fontFamily: "Arial, Helvetica, sans-serif"
+    fontFamily: "Inter, Arial, Helvetica, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.5
@@ -144,16 +144,16 @@ Odysseus sells findings a client can check, so both surfaces are places evidence
 
 The dashboard looks the part of a single-operator tool: a near-black, layered monochrome interface in the same family as Linear or Vercel's consoles. Surfaces stack from base through panel, raised, and overlay, separated by 7 percent white hairlines rather than shadows. The accent is white. Primary actions are the brightest object on screen, which means hierarchy is carried by brightness steps and typography, never by brand color. The only chromatic colors in the product are the four severity shades shared with the PDF report, plus a danger red for destructive and error states.
 
-The marketing site is a different, deliberately spartan world. It is a standalone Next.js deploy with no component library and no webfonts: white or near-black pages (switched by the OS color scheme preference) typeset in the system Arial stack, single-column legal and informational documents. The site intentionally depends on nothing in the workspace, so it shares no tokens with the dashboard; it is recorded here as its own minimal surface.
+The marketing site is a different, deliberately spartan world. It is a standalone Next.js deploy with no component library: white or near-black pages (switched by the OS color scheme preference), single-column documents, and, since plan 022, the same self-hosted Inter as the dashboard, loaded through next/font/local from the canonical woff2 files copied into `packages/site/app/fonts`. A plain persistent frame (text wordmark, three-item nav, footer with the compliance links, a skip link) wraps every public page; the preview route handler still answers with standalone documents outside the frame. The site intentionally depends on nothing in the workspace, so it shares no tokens with the dashboard; it is recorded here as its own minimal surface.
 
-Motion is decoration only. Entrances use short, decelerating fades and slides (0.2 to 0.3 seconds, cubic-bezier(0.16, 1, 0.3, 1)), a `prefers-reduced-motion` rule collapses all of it, and every state stays fully readable without animation. Accessibility posture is visible in the base layer: a global 2px white focus outline, AA-contrast text pairs in both directions of the monochrome theme, and dark color-scheme declared at the root.
+Motion is decoration only. Entrances use short, decelerating fades and slides (0.2 to 0.3 seconds, cubic-bezier(0.16, 1, 0.3, 1)), a `prefers-reduced-motion` rule collapses all of it, and every state stays fully readable without animation. Accessibility posture is visible in the base layer: a global 2px white focus outline, AA-contrast text pairs in both directions of the monochrome theme, and dark color-scheme declared at the root. The site carries the same posture in its own idioms: a global 2px focus outline in the foreground color with a 2px offset, its own `prefers-reduced-motion` collapse (nothing on the site animates), and AA-contrast pairs computed in both schemes.
 
-*Provenance: every token, measurement and rule in this file was read from the code. The North Star was confirmed by the operator on 2026-09-02; the descriptive colour names and the named rules remain derived language, still open to the operator's rewording.*
+*Provenance: every token, measurement and rule in this file was read from the code. The North Star was confirmed by the operator on 2026-09-02; the descriptive colour names and the named rules remain derived language, still open to the operator's rewording. Re-merged 2026-09-02 after plan 022 steps 6 and 7 so the file matches the shipped state: the ink-muted contrast step, the site's Inter adoption and shared frame, the keyboard-accessible InfoTip, the tri-state KPI values, and the two resolved inconsistencies below.*
 
 **Key Characteristics:**
 - Layered near-black monochrome surfaces with hairline borders; depth by lightness, not shadow.
 - The accent is white; color appears only as severity, at small sizes or 15 percent tints.
-- One typeface (self-hosted Inter), typeset small: 14px body baseline, 20px page titles as the ceiling.
+- One typeface on both surfaces (self-hosted Inter), typeset small: 14px dashboard body baseline, 20px titles as the ceiling, 16px site body.
 - Genuinely flat: shadow belongs only to floating layers (dialogs, dropdown menus, toasts).
 - Radius ladder: 12px containers, 8px controls, 6px chips, full pills only for progress and dots.
 - Short decelerating motion, decoration only, killed entirely under reduced motion.
@@ -190,7 +190,7 @@ Severity appears at full strength only as text and as 8px status dots; large sur
 - **Hairline White 13 Percent** (`line-strong`, rgb(255 255 255 / 0.13)): emphasized borders on floating layers, secondary button borders, dashed empty-state borders.
 - **Ink White** (`ink`, #f7f8f8): primary text.
 - **Soft Steel** (`ink-soft`, #9fa5ae): secondary text, table cell text, inactive controls.
-- **Muted Slate Grey** (`ink-muted`, #7b808a): hints, table headers, labels, icons, timestamps.
+- **Muted Slate Grey** (`ink-muted`, #898e96): hints, table headers, labels, icons, timestamps. Raised in plan 022 from #7b808a to the lightest grey step that clears 4.5:1 on every surface the class sits on (worst remaining pair 4.59:1 on the accent tint, 5.39:1 on raised).
 - **Site Paper White** (`site-background`, #ffffff) and **Site Ink** (`site-foreground`, #171717): the marketing site's entire token set. Under `prefers-color-scheme: dark` they flip to #0a0a0a and #ededed.
 
 ### Named Rules
@@ -206,7 +206,7 @@ Severity appears at full strength only as text and as 8px status dots; large sur
 **Body Font:** Inter, same stack
 **Label/Mono Font:** ui-monospace, SFMono-Regular, Menlo, Consolas, monospace (URLs and IDs only)
 
-**Character:** One utilitarian workhorse family at deliberately small sizes. The dashboard resets the body to 14px (not Tailwind's 16px), keeps a tight-tracked semibold for titles, and stops at 20px; nothing in the product is display-sized. The site uses no webfont at all: it is the system Arial stack at browser defaults, h1 bold 24px, h2 semibold 20px, body 16px.
+**Character:** One utilitarian workhorse family at deliberately small sizes. The dashboard resets the body to 14px (not Tailwind's 16px), keeps a tight-tracked semibold for titles, and stops at 20px; nothing in the product is display-sized. The site typesets in the same self-hosted Inter (next/font/local, weights 400, 500, 600, 700; the site roles fall back to Arial, Helvetica, sans-serif), h1 bold 24px, h2 semibold 20px, body 16px.
 
 ### Hierarchy
 - **Title** (Inter 600, 20px / 28px, letter-spacing -0.025em): page titles and KPI values; the largest text in the product. Dialog titles sit one step down at 16px semibold.
@@ -226,7 +226,7 @@ The dashboard is a fixed-chrome operator app. A 240px sidebar (`w-60`, panel bac
 
 Every route opens with the same PageHeader: a 20px semibold title with an optional muted description on the left and action buttons on the right, followed by a 32px gap. KPI tiles sit in a 2-column grid that becomes 4 columns at 1024px, with 12px gaps and a staggered entrance of 50ms per tile. Tables live inside a 12px-radius bordered panel and scroll horizontally rather than reflowing. Breakpoints in actual use are Tailwind's `md` (768px) and `lg` (1024px).
 
-The site is a single 672px column (`max-w-2xl`) with 24px side padding and 48px vertical padding per document page: no sidebar, no header, no shared navigation. The home page is a centered construction placeholder.
+The site is a single 672px column (`max-w-2xl`) with 24px side padding and 48px vertical padding per document page, wrapped in a persistent frame: a header with the text wordmark linking home plus nav to the offer and bot pages, a footer with the compliance links and the contact address, and a skip link to the main content. The home page is a real single-column page; the preview route handler answers outside the frame with standalone documents.
 
 ## Elevation & Depth
 
@@ -240,7 +240,7 @@ Depth is tonal, not shadowed. The four surface steps (base, panel, raised, overl
 
 ## Shapes
 
-The form language is a strict radius ladder mapped to elevation: 12px (`rounded-xl`) for containers that hold content (cards, KPI tiles, dialogs, empty states, table wrappers), 8px (`rounded-lg`) for controls (all button variants, inputs, selects, textareas, nav items, dropdown panels, segmented containers, skeleton loading rows), 6px (`rounded-md`) for inner elements (badges, dropdown items, segmented segments), and full pills only for progress bars and status dots. Empty states are the one dashed border in the system: 1px dashed `line-strong` on a 60 percent panel background. Borders elsewhere are 1px solid hairlines (7 percent white, 13 percent for floating layers and secondary buttons). The site defaults to a 4px radius (`rounded`) on its code blocks and its single CTA-style link, one step tighter than any dashboard control.
+The form language is a strict radius ladder mapped to elevation: 12px (`rounded-xl`) for containers that hold content (cards, KPI tiles, dialogs, empty states, table wrappers), 8px (`rounded-lg`) for controls (all button variants, inputs, selects, textareas, nav items, dropdown panels, segmented containers, skeleton loading rows), 6px (`rounded-md`) for inner elements (badges, dropdown items, segmented segments), and full pills only for progress bars and status dots. Empty states are the one dashed border in the system: 1px dashed `line-strong` on a 60 percent panel background. Borders elsewhere are 1px solid hairlines (7 percent white, 13 percent for floating layers and secondary buttons). The site defaults to a 4px radius (`rounded`) on its buttons and code blocks, one step tighter than any dashboard control.
 
 ## Components
 
@@ -270,18 +270,18 @@ The form language is a strict radius ladder mapped to elevation: 12px (`rounded-
 - **Placeholder:** `ink-muted`.
 
 ### Navigation
-- **Style:** sidebar items are 8px-radius rows with a 16px icon and 14px medium label; default `ink-soft`, hover gains `raised` background and `ink` text, active is `accent-tint` background with `ink` text. The wordmark is text only (15px semibold, tight tracking; the operator direction is explicitly no logo mark). Dropdown menus are the floating pattern: `overlay` panel, 8px radius, `line-strong` border, shadow, 4px inner padding, 6px-radius items with `raised` hover and focus.
+- **Style:** sidebar items are 8px-radius rows with a 16px icon and 14px medium label; default `ink-soft`, hover gains `raised` background and `ink` text, active is `accent-tint` background with `ink` text. The wordmark is text only (14px semibold, tight tracking; the operator direction is explicitly no logo mark). Dropdown menus are the floating pattern: `overlay` panel, 8px radius, `line-strong` border, shadow, 4px inner padding, 6px-radius items with `raised` hover and focus.
 
 ### Empty States
 - **Style:** centered column in a 12px-radius, 1px dashed `line-strong` bordered box on `panel` at 60 percent, 40px padding; optional 24px muted icon, 14px medium title, 14px muted description, action button below.
 
 ### Signature Patterns
-- **KPI Tile:** 12px-radius bordered panel, 16px by 12px padding, 12px muted label over a 20px semibold tight-tracked value; the critical tone turns the value `sev-critical`. Dashboards open with a staggered 4-tile row.
+- **KPI Tile:** 12px-radius bordered panel, 16px by 12px padding, 12px muted label over a 20px semibold tight-tracked value; the critical tone turns the value `sev-critical`. The value is tri-state since plan 022: loaded (the number), loading (skeleton), or unavailable (the localized Indisponible marker at a muted step), so a failed load never renders as a confident zero. Outreach hub counts use the same three states. Dashboards open with a staggered 4-tile row.
 - **Status Dot:** 8px full-strength circle: grey for queued and cancelled, white and pulsing for running, green for complete, red for failed.
 - **Progress Bar:** 6px full-round track on `raised`; the fill is white with a 300ms width transition, or a one-third-wide white segment slides forever for uncapped work (indeterminate means no real target exists).
 - **Skeleton:** `raised` block with a 110deg white 5 percent shimmer sweeping every 1.8s.
 - **Toasts:** Sonner, dark theme, top right, `overlay` background with `line-strong` border and `ink` text.
-- **InfoTip:** a 14px muted info icon with a native `title` tooltip on purpose (no popover to clip inside scrolling tables).
+- **InfoTip:** a 14px muted info icon on a focusable trigger; the hint opens on hover and keyboard focus in a portal-rendered floating panel (`overlay` background, `line-strong` border, 6px radius, 12px text), so it neither clips inside scrolling tables nor locks out keyboard users.
 
 ## Do's and Don'ts
 
@@ -292,13 +292,15 @@ The form language is a strict radius ladder mapped to elevation: 12px (`rounded-
 - **Do** give floating layers (dialog, dropdown) both a `line-strong` border and the shadow preset; they never appear separately.
 - **Do** use the named keyframe animations (`page-in`, `overlay-in`, `content-in`, `drawer-in`) with the cubic-bezier(0.16, 1, 0.3, 1) curve for entrances, and keep state readable with animations disabled.
 - **Do** keep the focus system: global 2px `accent` outline with 2px offset; inputs add the 70 percent border plus 25 percent ring.
+- **Do** render unknown data as the unavailable state (the localized Indisponible marker, or a skeleton while loading), never as a confident zero; a zero means loaded and genuinely empty.
+- **Do** keep every public site page inside the shared frame with its skip link; only the preview route handler answers bare.
 
 ### Don't:
 - **Don't** introduce a brand hue into dashboard chrome; white is the accent and severity is the only color.
 - **Don't** put shadows on resting surfaces (cards, tiles, buttons, tables); shadow means "floating".
 - **Don't** typeset above 20px; below 14px the steps are 13, 12, and the single 11px micro-label in the report preparation card.
 - **Don't** fill large areas with severity colors; full-strength chroma belongs to text and dots only.
-- **Don't** import dashboard tokens into the site or treat the site as themed; it is deliberately standalone with its own two-color scheme-swap system.
+- **Don't** import dashboard tokens into the site or treat the site as themed; it is deliberately standalone with its own two-color scheme-swap system. Sharing the Inter font files (plan 022) is not token sharing.
 - **Don't** replace the wordmark with a logo mark; the brand is the name, set in semibold Inter.
 
 ## Observed Inconsistencies (recorded, not judged)
@@ -307,8 +309,8 @@ These are facts about the incumbent implementation worth knowing before changing
 
 1. `ink` and `accent-bright` are the same value (#f7f8f8) under two names, and `accent` (#f2f3f5) differs from it by a few points; the accent family is nearly indistinguishable from the text greys by design.
 2. Two reds coexist: `danger` #eb5757 (forms, destructive buttons) and `sev-critical` #f2555f (severity, failed jobs).
-3. The site does not share the dashboard's system: different font (system Arial instead of the self-hosted Inter shared by dashboard and report), different radius step (4px vs 8px), and a pure black/white `prefers-color-scheme` swap instead of the near-black token scale.
+3. The site does not share the dashboard's token system: since plan 022 it loads the same self-hosted Inter files through next/font/local, but it keeps its own radius step (4px vs 8px), its own button and focus classes, and a pure black/white `prefers-color-scheme` swap instead of the near-black token scale.
 4. `text-[13px]` is an arbitrary value appearing in five files (small buttons, field labels, segmented items, scan URLs, report preparation copy); it is a real step of the scale that exists only as a literal.
-5. **The self-hosted Inter never loads in the built dashboard. Confirmed against the committed build on 2026-09-02, not merely suspected.** `theme.css:12,19,26,33` request `/dashboard/fonts/Inter-*.woff2`, and the built stylesheet (`dist/public/assets/index-8ciFPnJv.css`) ships those exact URLs. The Vite plugin copies the canonical woff2 files to `dist/public/fonts/`, and `routes/static.ts` serves `dist/public` at the root, so the request resolves to `dist/public/dashboard/fonts/...`, which does not exist. `APP_ROUTE_PATTERN` is `/^\/(audits|scans|login)(\/|$)/`, so `/dashboard/...` does not even reach the SPA fallback: it is a plain 404. Every `@font-face` therefore fails and the dashboard renders in the fallback stack (`ui-sans-serif, system-ui`), not Inter. The whole type ramp above is specified for a typeface that is not currently being served. This is a code defect, not a documentation one; the fix is to align the four URLs with where the fonts are actually served, then rebuild.
+5. **RESOLVED 2026-09-02, plan 022 step 6: the self-hosted Inter now loads.** The four `@font-face` URLs in `theme.css` used to request `/dashboard/fonts/Inter-*.woff2`, which the built app resolved to `dist/public/dashboard/fonts/...` (a plain 404; `APP_ROUTE_PATTERN` did not cover the path either), so every `@font-face` failed and the dashboard rendered in the fallback stack. The URLs now point at `/fonts/Inter-*.woff2`, and the `copy-inter-fonts` Vite plugin both copies the canonical woff2 files to `dist/public/fonts` at build time and serves the same canonical files through a dev-server middleware, so dev and build answer identically. Verified 2026-09-02: all four URLs return 200 `font/woff2` from both the built `dist/public` output and the Vite dev server.
 
-6. The sidebar wordmark is `text-[15px]` (`app/brand.tsx:10`) while the same component's topbar variant is `text-sm` (14px). 15px appears exactly once in the product, has no semantic role, and is deliberately **not** on the ramp above, so the detector keeps flagging it. It is drift inside one component, not a scale step.
+6. **RESOLVED 2026-09-02, plan 022 step 6.** The sidebar wordmark's one-off 15px step moved to the standard `text-sm` (14px), matching the same component's topbar variant. The detector's only real dashboard font-size finding is cleared; the four remaining `overused-font` findings on Inter are dismissed by the recorded decision to pin Inter across dashboard, report, and site.

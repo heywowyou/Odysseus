@@ -44,15 +44,15 @@ export interface PreviewResponse {
  */
 
 const PREVIEW_FAILURE_STYLES = `
-    body { margin: 0; background: #ffffff; color: #171717; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; }
+    body { margin: 0; background: #ffffff; color: #171717; font-family: system-ui, sans-serif; line-height: 1.6; }
     main { max-width: 42rem; margin: 0 auto; padding: 3rem 1.5rem; }
     h1 { font-size: 1.5rem; line-height: 1.33; }
     p[lang="en"] { margin-top: 0.25rem; }
-    hr { border: 0; border-top: 1px solid #e5e5e5; margin: 2rem 0; }
+    hr { border: 0; border-top: 1px solid color-mix(in srgb, #171717 15%, transparent); margin: 2rem 0; }
     a { color: inherit; }
     @media (prefers-color-scheme: dark) {
       body { background: #0a0a0a; color: #ededed; }
-      hr { border-top-color: #262626; }
+      hr { border-top-color: color-mix(in srgb, #ededed 15%, transparent); }
     }`;
 
 const PREVIEW_FAILURE_HELP = `
