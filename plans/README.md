@@ -352,7 +352,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [021](./021-complete-audits-without-template-repetition.md) | Keep full-site audits complete without repeating template work | P1 | L | 018-020 | IMPLEMENTED |
 | [022](archive/022-dashboard-and-site-design-refactor.md) | Refactor the operator dashboard and public site UI with the Impeccable workflow | P2 | L | none | DONE (og:image and 4 unproposed inventory rows deferred) |
 | [023](archive/023-report-visual-design-refactor.md) | Revise the report visual design as a gated, operator-directed redesign | P2 | L | 018-021, operator-approved direction | DONE (review accepted 2026-09-02; the glossary ordering change deliberately left to plan 024) |
-| [024](./024-report-feedback-followups.md) | Close three small gaps between the report and Conseil papa | P2 | S | 018, 019 | TODO |
+| [024](archive/024-report-feedback-followups.md) | Close three small gaps between the report and Conseil papa | P2 | S | 018, 019 | DONE (trade-off 44 order amended to glossary-last 2026-09-01; the reference HTML's stale remaining-work region moved to issue #25) |
 | [025](./025-llm-provider-switch.md) | Switch the LLM provider from Mistral to OpenAI gpt-4.1-mini | P1 | M | none | TODO |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
@@ -466,8 +466,8 @@ lives. Steps landed as `6cc9172` (design documents and flat sources) and
 baseline regenerated deliberately); trade-off 65 records the revision and
 its fresh-approval consequence. Page counts were unchanged at 34/33/33/33
 across both fixtures and languages. Leftovers: `report.reference.html`'s
-remaining-work region still shows a pre-plan-018 structure (verify and
-refresh in the next report session or plan 024), and the reference audit
+remaining-work region still shows a pre-plan-018 structure (now tracked as
+issue #25; plan 024 closed without taking it on), and the reference audit
 render still waits on the `raisonSociale` dashboard confirmation.
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
