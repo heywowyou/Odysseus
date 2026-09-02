@@ -1464,6 +1464,35 @@ cap instead; that decision is the operator's.
     IDs only and deliberately preserves no audit-to-rule mapping, so CI keeps
     the measured coverage floor without publishing a named site's defects.
 
+    **A pipeline run aimed at a fixture directory writes into it, and only half
+    of that is visible (2026-09-02, issue #24).** Four timestamped analysis
+    JSONs appeared under `large-rule-families/analyses/` during a session and
+    were first read as something a vitest run had done. It was not: instrumenting
+    every `fs` write path during a full `vitest run` (355 files, 3502 tests)
+    recorded no write into `fixtures/test-audits` at all, only `cp` and
+    `copyFile` taking the fixture as a *source* - `report-env-loading.e2e.test.ts`
+    copying it to a `mkdtemp` before running the CLI against the copy, which is
+    the correct pattern already in place. What actually ran was an ordinary
+    analyze-then-report pass pointed at the fixture: the same directory's
+    `reports/` folder holds the French and English PDFs rendered ninety seconds
+    after those analyses, stamped with the same commit. `reports/` is gitignored
+    and `analyses/` is not, so the PDFs left no trace and the analyses looked
+    like an unexplained test artifact.
+
+    The cost is not the `git status` noise. Both loaders resolve an analysis by
+    suffix and take the newest filename (`.sort().at(-1)` in report's
+    `latestAnalysisPath` and llm's `loadLargeRuleFamiliesRawThemes`),
+    deliberately, so a regenerated fixture needs no pinned filename edited into
+    a test. A stray analysis therefore sorts last and silently becomes the
+    fixture under test on one machine - measured: planting one empty-themes file
+    turns `structure-ranking.test.ts` red while nothing in the tree changed.
+    That is the same failure this entry refuses to accept when it declines to
+    gitignore these directories. `fixture-hygiene.test.ts` now fails on any
+    untracked file under `fixtures/test-audits`, so a rebake is a decision -
+    commit it or delete it - rather than a surprise a later session has to
+    re-derive. The 2026-09-01 batch stays: its `-fr.json` is the newest committed
+    one, which makes it what the tests actually read.
+
 35. **The hotel prescan is a distinct path over shared scanner primitives, not
     a smaller call into the audit pipeline (2026-08-27).** Plan 004's brief was
     a 60-to-90-second, three-page, no-Lighthouse pass whose output feeds
