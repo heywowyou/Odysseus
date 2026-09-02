@@ -701,30 +701,114 @@
       </section>
 
       <!-- REMAINING WORK -->
-      <section class="sheet">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: var(--space-2);
-          "
-        >
-          <h6 style="color: var(--color-accent-300); margin: 0">06 · Reste à traiter</h6>
+      <section class="sheet" id="section-05b">
+        <div class="section-head">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: baseline;
+              margin-bottom: var(--space-2);
+            "
+          >
+            <h6 style="color: var(--color-accent-300); margin: 0">06 · Reste à traiter</h6>
+          </div>
+          <h2 style="margin-bottom: var(--space-4)">Les autres constats, groupés par thème</h2>
         </div>
-        <h2 style="margin-bottom: var(--space-4)">Les autres constats, groupés par thème</h2>
-        <p style="font-size: 13.5px; opacity: 0.85; max-width: 64ch">
+        {{#if remainingGroups.length}}
+        <p style="font-size: 13.5px; opacity: 0.85; max-width: 64ch; margin-bottom: var(--space-3)">
           {{ remainingWork.introText }}
         </p>
-        {{#each remainingGroups as |grp|}}
-        <div style="margin-bottom: var(--space-4)">
-          <h5>{{ grp.domainLabel }}</h5>
-          <p style="font-size: 13px; opacity: 0.8; max-width: 64ch">{{ grp.summaryText }}</p>
-        </div>
-        {{/each}}
-        <p style="font-size: 11px; opacity: 0.5; margin-top: var(--space-4)">
+        <p
+          class="text-muted"
+          style="font-size: 11.5px; max-width: 64ch; margin-bottom: var(--space-6)"
+        >
           {{ remainingWork.scopeNote }}
         </p>
+        {{#each remainingGroups as |grp|}}
+        <div class="remaining-category" style="margin-bottom: var(--space-8)">
+          <!-- The category heading and its FIRST rule block share one
+               .remaining-category-head wrapper, and only that one: the wrapper is
+               the bounded break-inside: avoid unit that replaces break-after on
+               these headings (paged.css). Every later rule block is a sibling,
+               outside the wrapper. Reproduce this nesting exactly when porting -
+               moving the whole group inside the wrapper is what put Paged.js's
+               break solver into its "Layout repeated" guard. -->
+          <div class="remaining-category-head">
+            <h5 style="color: {{ grp.categoryColor }}">{{ grp.categoryLabel }}</h5>
+            <div class="remaining-rule" style="margin-bottom: var(--space-3)">
+              <div style="font-size: 13.5px; font-weight: 500">
+                {{ grp.firstRule.title }}
+                <span
+                  style="
+                    display: inline-block;
+                    font-size: 10px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.02em;
+                    padding: 1px 6px;
+                    border-radius: 4px;
+                    margin-left: 6px;
+                    color: {{ grp.firstRule.severityColor }};
+                    background: {{ grp.firstRule.severityBg }};
+                  "
+                  >{{ grp.firstRule.severityLabel }}</span
+                >
+              </div>
+              <div class="text-muted" style="font-size: 11px; margin-top: 2px">
+                {{ grp.firstRule.countsText }}
+              </div>
+              {{#if grp.firstRule.actionText}}
+              <p style="font-size: 13px; margin-top: 4px; max-width: 70ch">
+                {{ grp.firstRule.actionText }}
+              </p>
+              {{/if}}
+              <div class="text-muted" style="font-size: 11px; margin-top: 4px">
+                {{ grp.firstRule.findingRefsText }}
+              </div>
+            </div>
+          </div>
+          {{#each grp.restRules as |rule|}}
+          <div class="remaining-rule" style="margin-bottom: var(--space-3)">
+            <div style="font-size: 13.5px; font-weight: 500">
+              {{ rule.title }}
+              <span
+                style="
+                  display: inline-block;
+                  font-size: 10px;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 0.02em;
+                  padding: 1px 6px;
+                  border-radius: 4px;
+                  margin-left: 6px;
+                  color: {{ rule.severityColor }};
+                  background: {{ rule.severityBg }};
+                "
+                >{{ rule.severityLabel }}</span
+              >
+            </div>
+            <div class="text-muted" style="font-size: 11px; margin-top: 2px">
+              {{ rule.countsText }}
+            </div>
+            {{#if rule.actionText}}
+            <p style="font-size: 13px; margin-top: 4px; max-width: 70ch">{{ rule.actionText }}</p>
+            {{/if}}
+            <div class="text-muted" style="font-size: 11px; margin-top: 4px">
+              {{ rule.findingRefsText }}
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        {{/each}} {{/if}}
+        <!-- Empty case: when every finding is already covered by a ranked
+             priority, the section renders its heading and this single
+             paragraph instead of the intro, the scope note and the groups. -->
+        {{#if remainingWork.nothingRemaining}}
+        <p style="font-size: 13.5px; opacity: 0.85; max-width: 64ch">
+          {{ remainingWork.nothingRemaining }}
+        </p>
+        {{/if}}
       </section>
 
       <!-- OBSERVATIONS -->
