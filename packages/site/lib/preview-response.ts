@@ -29,8 +29,61 @@ export interface PreviewResponse {
   headers: Record<string, string>;
 }
 
-const NOT_FOUND_BODY = 'Aperçu introuvable ou retiré. / Preview not found or withdrawn.';
-const GONE_BODY = 'Cet aperçu a expiré. / This preview has expired.';
+/**
+ * The failure pages, rewritten as small complete documents by plan 022 step 7.
+ * The bare one-line strings they replace told the truth but gave a 404/410
+ * recipient nothing to do next. The route contract itself is untouched: same
+ * statuses, same headers, same 200 passthrough, and the 404 body stays one
+ * shared constant so malformed, unknown and revoked remain indistinguishable.
+ * The CSP below allows inline styles only, so these pages carry no external
+ * resources of any kind.
+ *
+ * French first with the English text beneath, as on the compliance pages; the
+ * thirty-day public lifetime is the one promised in docs/rules/outreach-rules.md
+ * and stated on /confidentialite-prospection.
+ */
+
+const PREVIEW_FAILURE_STYLES = `
+    body { margin: 0; background: #ffffff; color: #171717; font-family: Arial, Helvetica, sans-serif; line-height: 1.6; }
+    main { max-width: 42rem; margin: 0 auto; padding: 3rem 1.5rem; }
+    h1 { font-size: 1.5rem; line-height: 1.33; }
+    p[lang="en"] { margin-top: 0.25rem; }
+    hr { border: 0; border-top: 1px solid #e5e5e5; margin: 2rem 0; }
+    a { color: inherit; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0a0a0a; color: #ededed; }
+      hr { border-top-color: #262626; }
+    }`;
+
+const PREVIEW_FAILURE_HELP = `
+      <hr>
+      <p>Si ce lien vous a été envoyé par Odysseus et ne fonctionne plus, répondez simplement au message reçu, ou écrivez à <a href="mailto:contact@odysseusaudit.com">contact@odysseusaudit.com</a>.</p>
+      <p lang="en">If Odysseus sent you this link and it no longer works, simply reply to the message you received, or write to <a href="mailto:contact@odysseusaudit.com">contact@odysseusaudit.com</a>.</p>
+      <p><a href="/">Retour à la page d'accueil / Back to the home page</a></p>`;
+
+function previewFailurePage(title: string, heading: string, french: string, english: string) {
+  return (
+    `<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n` +
+    `<meta name="viewport" content="width=device-width, initial-scale=1">\n` +
+    `<title>${title}</title>\n<style>${PREVIEW_FAILURE_STYLES}</style>\n</head>\n<body>\n<main>\n` +
+    `<h1>${heading}</h1>\n<p>${french}</p>\n<p lang="en">${english}</p>\n` +
+    `${PREVIEW_FAILURE_HELP}\n</main>\n</body>\n</html>`
+  );
+}
+
+const NOT_FOUND_BODY = previewFailurePage(
+  'Aperçu indisponible',
+  "Cet aperçu n'est pas disponible",
+  'Le lien ouvert ne correspond à aucun aperçu publié. Il est peut-être incomplet, ou le document a été retiré.',
+  'The link you opened does not match any published preview. It may be incomplete, or the document has been withdrawn.',
+);
+
+const GONE_BODY = previewFailurePage(
+  'Aperçu expiré',
+  'Cet aperçu a expiré',
+  "Les aperçus publiés en ligne restent accessibles trente jours. Passé ce délai, le lien cesse de fonctionner et le document est supprimé de l'espace de stockage.",
+  'Published previews stay reachable for thirty days. After that, the link stops working and the document is deleted from its storage.',
+);
 
 /**
  * Security headers for a document that is a self-contained page of inline CSS

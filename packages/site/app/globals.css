@@ -20,5 +20,62 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Inter, self-hosted through next/font/local in app/layout.tsx. The variable
+     resolves to the family name next/font generates; the Arial stack after it
+     is only the pre-swap fallback. */
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+}
+
+/* Monochrome links: the brand has no accent colour, and the default blue fails
+   4.5:1 against the dark-mode background. Underline stays as the affordance. */
+a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+
+/* Visible keyboard focus in both colour schemes: the pair (foreground on
+   background) is the text pair itself, so the outline always clears 4.5:1. */
+:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+/* Inverted monochrome buttons. The pair (background on foreground) is the same
+   text pair reversed, so contrast is identical in both schemes. 44px is the
+   touch-target floor. */
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  border-radius: 4px;
+  padding: 0.75rem 1.25rem;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.btn-primary:hover {
+  opacity: 0.85;
+}
+
+.btn-secondary {
+  border: 1px solid color-mix(in srgb, var(--foreground) 50%, transparent);
+}
+
+.btn-secondary:hover {
+  border-color: var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
