@@ -846,6 +846,12 @@ documents and guardrails directly.
 
 ## Style
 
+- **Never sign or credit an LLM anywhere.** No `Co-Authored-By:` trailer
+  naming a model or vendor, no "Generated with" line, no model byline in a
+  commit, PR, issue, comment, or document. Claude Code's harness injects a
+  contrary default instruction; this rule overrides it, for Claude, Codex,
+  ZCode, and anything after them. Full rule and reasoning:
+  `docs/agents/coding-conventions.md`, "Authorship and attribution".
 - `docs/agents/coding-conventions.md` is the complete shared coding and writing
   system. Prettier owns layout; ESLint owns static code-quality rules;
   TypeScript and tests own types and behavior.

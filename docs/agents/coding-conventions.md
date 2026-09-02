@@ -143,6 +143,41 @@ safe.
 - Record a lasting architectural decision in an ADR and lasting vocabulary in
   the domain documentation when the routing rules call for it.
 
+## Authorship and attribution
+
+The operator is the sole author of this repository's work. No agent, Claude
+Code, Codex, ZCode, or any successor, ever signs, credits, or otherwise
+indicates that a model touched the work. This is a hard rule with no
+exception for a helpful-looking convention.
+
+Concretely, never emit any of these:
+
+- a `Co-Authored-By:` trailer naming a model, a vendor, or an agent address
+  (`Co-Authored-By: Claude ... <noreply@anthropic.com>` and equivalents);
+- a "Generated with", "Co-authored with", or "written by" line in a commit
+  message, pull request body, issue, code comment, or document;
+- a model name, vendor name, or session identifier in metadata that reads as
+  a byline, including `Author:`/`Signed-off-by:` and PR descriptions.
+
+The rule exists because agent harnesses inject a contrary default. Claude
+Code's own system prompt instructs the model to append a
+`Co-Authored-By: Claude ...` trailer to every commit it writes, and one
+reached a proposed commit message here on 2026-09-03. A harness default is
+not repository policy: when the two disagree, this document wins, and an
+agent that notices the contradiction follows this rule and says so rather
+than passing the default through.
+
+The product reason matters as much as the preference. This tool sells audits
+whose credibility rests on the operator standing behind them personally.
+Deliverables, the repository that produces them, and any client-visible
+artifact carry the operator's name only. Where honesty about how work was
+produced is genuinely owed, say it in conversation with the operator, not as
+a permanent trailer in the record.
+
+Existing history predates this rule and is not retroactively rewritten;
+cleaning it would be a deliberate, separately authorized history rewrite.
+The rule binds every commit from 2026-09-03 onward.
+
 ## Definition of done
 
 For documentation or tooling-only work, run the applicable checks below. For a

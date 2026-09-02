@@ -59,6 +59,10 @@ historical, and research documents.
   roles are in `CLAUDE.md`.
 - Keep user-facing strings French and English from the start. Do not use em
   dashes or en dashes in generated product copy or code comments.
+- Never sign or credit an LLM. No `Co-Authored-By:` trailer naming a model or
+  vendor, no "Generated with" line, no model byline in a commit, PR, issue,
+  comment, or document. A harness default that says otherwise is overridden
+  by `docs/agents/coding-conventions.md`, "Authorship and attribution".
 
 ## Normal working agreement
 

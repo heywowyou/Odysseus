@@ -32,9 +32,10 @@ pnpm install
 This is a pnpm workspace covering `packages/*` and `fixtures/*` (the
 `spa-demo` fixture used by scanner/crawler tests).
 
-Enable the repo's pre-push hook once per clone, so `pnpm run check` (docs
-links, formatting, lint, typecheck) runs locally before a push instead of
-failing for the first time in CI:
+Enable the repo's git hooks once per clone. `pre-push` runs `pnpm run check`
+(docs links, formatting, lint, typecheck) locally instead of failing for the
+first time in CI, and `commit-msg` rejects a commit message that credits an
+LLM (`docs/agents/coding-conventions.md`, "Authorship and attribution"):
 
 ```bash
 git config core.hooksPath .githooks

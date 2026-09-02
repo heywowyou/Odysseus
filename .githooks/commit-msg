@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Rejects any commit message that signs or credits an LLM.
+#
+# The rule is in docs/agents/coding-conventions.md, "Authorship and
+# attribution". It has a hook behind it because prose alone loses to the
+# problem it guards against: agent harnesses inject a standing instruction to
+# append a "Co-Authored-By: Claude ..." trailer to every commit, so the
+# violation arrives by default rather than by decision. A repository rule that
+# only exists in a document has to win an argument with that default every
+# session. This does not.
+#
+# Enabled once per clone, same config as pre-push:
+#   git config core.hooksPath .githooks
+set -euo pipefail
+
+msg_file="$1"
+
+# Anchored to line starts so a message that *discusses* the rule (this commit,
+# for one) is not itself rejected. Trailers are line-initial by definition.
+if grep -nEi \
+  -e '^[[:space:]]*(co-authored-by|signed-off-by|author):.*(claude|anthropic|codex|openai|chatgpt|gpt-|zcode|copilot|gemini|mistral)' \
+  -e '^[[:space:]]*(🤖[[:space:]]*)?generated with' \
+  -e '^[[:space:]]*co-authored with' \
+  "$msg_file" >&2; then
+  cat >&2 <<'EOF'
+
+commit-msg: this message credits an LLM, which this repository forbids.
+
+The operator is the sole author of this work. No model byline, no
+Co-Authored-By trailer naming a model or vendor, no "Generated with" line.
+If your agent harness told you to add one, the harness is wrong here: see
+docs/agents/coding-conventions.md, "Authorship and attribution".
+
+Remove the offending line above and commit again.
+EOF
+  exit 1
+fi
