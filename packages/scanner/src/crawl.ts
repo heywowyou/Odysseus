@@ -25,6 +25,19 @@ import {
 import { findMentionsLegalesUrl } from './checks/mentions-legales.js';
 import { isSocialPlatformHost } from './social-hosts.js';
 import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
+import {
+  buildPageAuditProfile,
+  extractRawPageAuditFacts,
+  type PageAuditProfile,
+  type RawPageAuditFacts,
+} from './page-audit-profile.js';
+import {
+  ContinuationGuard,
+  classifyContinuationLink,
+  computeRepeatedQueryKeys,
+  type ContinuationGuardSummary,
+} from './continuation-guard.js';
+import { isConfirmedListing } from './full-audit-plan.js';
 
 export { isSameSiteHostname } from './links.js';
 
@@ -36,7 +49,8 @@ export { isSameSiteHostname } from './links.js';
  *  since all three consume one iteration of the politeness delay. */
 export type CrawlProgressEvent =
   | { type: 'crawl-start'; maxPages: number; effectiveDelayMs: number; robotsTxtFound: boolean }
-  | { type: 'crawl-page'; visited: number; maxPages: number; queued: number };
+  | { type: 'crawl-page'; visited: number; maxPages: number; queued: number }
+  | { type: 'continuation-guard'; omittedUrlCount: number; omittedFamilyCount: number };
 
 export interface CrawlOptions {
   browser: Browser;
@@ -79,6 +93,12 @@ export interface CrawledPage {
   error?: string;
   discoveredFrom?: string;
   discoveryMethod: PageDiscoveryMethod;
+  /** Plan 021 Step 3: only present for `status === 'visited'`, extracted
+   *  from this same post-`load` navigation, no extra page fetch. Absent
+   *  for every other status, including `discovered-not-scanned`, since
+   *  nothing downstream schedules checks against a page that is never
+   *  scanned. */
+  auditProfile?: PageAuditProfile;
 }
 
 export interface CrawlResult {
@@ -121,6 +141,14 @@ export interface CrawlResult {
   /** Every URL observed in an internal anchor, whether or not a configured
    *  page cap left enough budget to navigate it. Includes the start URL. */
   linkDiscoveredUrls: string[];
+  /** Plan 021 Step 6: present only when the continuation-family guard
+   *  actually omitted at least one link-discovered URL, so absent means
+   *  nothing was bounded and every discovered URL was traversed. Seeds and
+   *  eligible sitemap-declared URLs are never governed by the guard, so
+   *  they can never appear here. Bounded by construction: at most 100
+   *  families and 3 example URLs each, with aggregate counts kept exact
+   *  beyond the caps. */
+  continuationGuardSummary?: ContinuationGuardSummary;
   sitemap?: SitemapCheckResult;
   sitemapCoverage?: SitemapCoverageSummary;
 }
@@ -216,6 +244,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const linkDiscoveredFrom = new Map<string, string>();
   const enqueued = new Set<string>([start.toString()]);
   const queue: QueueItem[] = [{ url: start.toString(), depth: 0, discoveryMethod: 'link' }];
+  // Plan 021 Step 6: one guard per crawlSite call, never shared across
+  // crawls - a family key is only meaningful within the site it was
+  // discovered on.
+  const continuationGuard = new ContinuationGuard();
 
   // Manual-input-layer milestone: extra seed URLs are enqueued at depth 0,
   // same as the start URL, before the crawl loop begins. Off-origin seeds
@@ -342,6 +374,40 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                 .catch(() => false);
               if (declaresHreflang) discoverOnly = false;
             }
+
+            // Plan 021 Step 3: extracted from this same loaded page, no
+            // extra navigation, and only for a page that will actually be
+            // scanned. A DOM-evaluation failure here must never fail the
+            // crawl (extractRawPageAuditFacts's own doc comment): falling
+            // back to an all-empty fact set classifies as unknown/fallback,
+            // which never reduces coverage, rather than leaving the page
+            // with no profile at all.
+            let auditProfile: PageAuditProfile | undefined;
+            if (!discoverOnly) {
+              const profileContext = {
+                url: item.url,
+                isHomepage: item.url === start.toString(),
+                isOperatorSeed: item.discoveryMethod === 'seed',
+              };
+              try {
+                const facts = await extractRawPageAuditFacts(browserPage);
+                auditProfile = buildPageAuditProfile(facts, profileContext);
+              } catch {
+                const emptyFacts: RawPageAuditFacts = {
+                  metaRobotsNoindex: false,
+                  jsonLdTypes: [],
+                  paginationRelNext: false,
+                  paginationRelPrev: false,
+                  numberedPaginationControlCount: 0,
+                  bodyClassTokens: [],
+                  transactionalFormSignalCount: 0,
+                  repeatedTeaserLinkGroupSize: 0,
+                  structuralTokens: [],
+                };
+                auditProfile = buildPageAuditProfile(emptyFacts, profileContext);
+              }
+            }
+
             recordPage({
               url: item.url,
               depth: item.depth,
@@ -349,12 +415,27 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               discoveryMethod,
               ...(httpStatus !== undefined ? { httpStatus } : {}),
               ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+              ...(auditProfile !== undefined ? { auditProfile } : {}),
             });
 
             if (discoveryMethod !== 'sitemap-only' && item.depth < maxDepth) {
-              const hrefs = await browserPage.$$eval('a[href]', (anchors) =>
-                anchors.map((a) => a.getAttribute('href')),
+              // Per-anchor structural evidence (plan 021 Step 6), read at
+              // discovery time before URL normalization discards rel and
+              // context: the anchor's own rel token and whether it sits in
+              // a numbered pagination control. The pagination selector and
+              // numeric-text filter here must stay byte-identical to
+              // page-audit-profile.ts's page-level count, so the guard's
+              // evidence and the profile's fact can never diverge.
+              const anchors = await browserPage.$$eval('a[href]', (anchorEls) =>
+                anchorEls.map((a) => ({
+                  href: a.getAttribute('href'),
+                  relNext: (a.getAttribute('rel') ?? '').split(/\s+/).includes('next'),
+                  isNumberedPaginationControl:
+                    a.matches('nav[class*="pag" i] a, [class*="pagination" i] a') &&
+                    /^\d+$/.test((a.textContent ?? '').trim()),
+                })),
               );
+              const hrefs = anchors.map((anchor) => anchor.href);
               // Resolved against browserPage.url() (where the navigation actually
               // landed), not item.url (what was requested). A same-origin request
               // can still land on a different origin after a server redirect - a
@@ -366,17 +447,59 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               // lacoorniche.com: www.lacoorniche.com 301s to lacoorniche.com,
               // visitedCount was 1 before this fix).
               const landedUrl = browserPage.url();
-              for (const link of normalizeInternalLinks(
-                hrefs,
-                landedUrl,
-                options.exclusions ?? [],
-              )) {
+              // Same normalization normalizeInternalLinks applies below, keyed per
+              // canonical link so the guard can be consulted per candidate; two
+              // anchors normalizing to one URL OR-merge, since either alone is
+              // sufficient evidence.
+              const anchorEvidenceByUrl = new Map<
+                string,
+                { relNext: boolean; isNumberedPaginationControl: boolean }
+              >();
+              for (const anchor of anchors) {
+                if (anchor.href === null) continue;
+                const normalized = normalizePageUrl(anchor.href, landedUrl, {
+                  exclusionPatterns: options.exclusions ?? [],
+                });
+                if (normalized === undefined) continue;
+                const existing = anchorEvidenceByUrl.get(normalized);
+                anchorEvidenceByUrl.set(normalized, {
+                  relNext: (existing?.relNext ?? false) || anchor.relNext,
+                  isNumberedPaginationControl:
+                    (existing?.isNumberedPaginationControl ?? false) ||
+                    anchor.isNumberedPaginationControl,
+                });
+              }
+              const links = normalizeInternalLinks(hrefs, landedUrl, options.exclusions ?? []);
+              const repeatedQueryKeysOnSourcePage = computeRepeatedQueryKeys(links);
+              for (const link of links) {
                 linkDiscoveredUrls.add(link);
                 if (!linkDiscoveredFrom.has(link)) linkDiscoveredFrom.set(link, item.url);
                 const existingPage = pagesByUrl.get(link);
                 if (existingPage !== undefined) {
                   existingPage.discoveryMethod = 'link';
                   existingPage.discoveredFrom ??= item.url;
+                }
+                // Only a continuation-classified link is governed: the guard
+                // never sees an ordinary link, and returning false here omits
+                // exactly this enqueue while keeping the discovery bookkeeping
+                // above - the same posture as a frontier truncated by maxPages.
+                const anchorEvidence = anchorEvidenceByUrl.get(link);
+                if (anchorEvidence !== undefined) {
+                  const classification = classifyContinuationLink({
+                    targetUrl: link,
+                    sourcePageUrl: item.url,
+                    relNext: anchorEvidence.relNext,
+                    isNumberedPaginationControl: anchorEvidence.isNumberedPaginationControl,
+                    sourceIsConfirmedListing:
+                      auditProfile !== undefined && isConfirmedListing(auditProfile),
+                    repeatedQueryKeysOnSourcePage,
+                  });
+                  if (
+                    classification.isContinuation &&
+                    !continuationGuard.admit(classification, link)
+                  ) {
+                    continue;
+                  }
                 }
                 if (enqueued.has(link)) continue;
                 enqueued.add(link);
@@ -490,6 +613,17 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           failedSitemapCount: sitemap.fetchErrors.length,
         };
 
+  const continuationGuardSummary = continuationGuard.summary();
+  if (continuationGuardSummary.totalOmittedUrlCount > 0) {
+    options.onProgress?.({
+      type: 'continuation-guard',
+      omittedUrlCount: continuationGuardSummary.totalOmittedUrlCount,
+      omittedFamilyCount:
+        continuationGuardSummary.families.length +
+        continuationGuardSummary.additionalFamiliesOmittedCount,
+    });
+  }
+
   return {
     startUrl: start.toString(),
     pages,
@@ -503,6 +637,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     robotsDisallowMatches,
     aiCrawlerBlocks,
     linkDiscoveredUrls: [...linkDiscoveredUrls],
+    ...(continuationGuardSummary.totalOmittedUrlCount > 0 ? { continuationGuardSummary } : {}),
     ...(sitemap !== undefined ? { sitemap } : {}),
     ...(sitemapCoverage !== undefined ? { sitemapCoverage } : {}),
   };

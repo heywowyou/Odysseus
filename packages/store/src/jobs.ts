@@ -78,6 +78,12 @@ export async function updateJobProgress(
   if (patch.phase !== undefined) $set['phase'] = patch.phase;
   if (patch.progress?.crawl !== undefined) $set['progress.crawl'] = patch.progress.crawl;
   if (patch.progress?.scan !== undefined) $set['progress.scan'] = patch.progress.scan;
+  if (patch.progress?.contentScan !== undefined)
+    $set['progress.contentScan'] = patch.progress.contentScan;
+  if (patch.progress?.lighthouse !== undefined)
+    $set['progress.lighthouse'] = patch.progress.lighthouse;
+  if (patch.progress?.continuationGuard !== undefined)
+    $set['progress.continuationGuard'] = patch.progress.continuationGuard;
   if (patch.progress?.ingestion !== undefined)
     $set['progress.ingestion'] = patch.progress.ingestion;
   if (patch.progress?.message !== undefined) $set['progress.message'] = patch.progress.message;

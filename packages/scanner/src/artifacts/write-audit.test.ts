@@ -51,6 +51,39 @@ describe('writeAuditArtifacts characterization', () => {
         sitemapMode: 'supplement',
       },
       siteResult: {
+        analysisCoverageByUrl: new Map([
+          [
+            home,
+            {
+              plannerVersion: 'v1',
+              role: 'content',
+              confidence: 'high',
+              templateFamilyId: 'family-a',
+              reasonCodes: ['content-json-ld'],
+              passes: {
+                rendered: { outcome: 'completed' },
+                axe: { outcome: 'completed' },
+                extended: { outcome: 'completed' },
+                lighthouse: { outcome: 'completed' },
+              },
+            },
+          ],
+          [
+            legal,
+            {
+              plannerVersion: 'v1',
+              role: 'utility',
+              confidence: 'fallback',
+              reasonCodes: ['utility-signal-only'],
+              passes: {
+                rendered: { outcome: 'completed' },
+                axe: { outcome: 'completed' },
+                extended: { outcome: 'partial', failedCheckIds: ['reflow'] },
+                lighthouse: { outcome: 'failed', failedCheckIds: ['lighthouse'] },
+              },
+            },
+          ],
+        ]),
         crawl: {
           startUrl: home,
           pages: [
@@ -79,6 +112,13 @@ describe('writeAuditArtifacts characterization', () => {
           aiCrawlerBlocks: [],
           mentionsLegalesPageUrl: legal,
           linkDiscoveredUrls: [legal, `${home}private`],
+          continuationGuardSummary: {
+            guardVersion: 'v1',
+            familyMaxEnqueued: 60,
+            families: [],
+            additionalFamiliesOmittedCount: 0,
+            totalOmittedUrlCount: 3,
+          },
         } as never,
         pages: [
           {
@@ -135,7 +175,14 @@ describe('writeAuditArtifacts characterization', () => {
     expect(path.isAbsolute(result.pages[0]?.renderDiff?.rawScreenshotRef ?? '/')).toBe(false);
     const homeEntry = result.manifest.pages.find((page) => page.url === home);
     expect(homeEntry?.errors.renderDiff).toBe('partial render error');
+    expect(homeEntry?.analysisCoverage?.passes.lighthouse.outcome).toBe('completed');
     const legalEntry = result.manifest.pages.find((page) => page.url === legal);
     expect(legalEntry?.errors.lighthouse).toBe('timed out');
+    expect(legalEntry?.analysisCoverage?.passes.extended).toEqual({
+      outcome: 'partial',
+      failedCheckIds: ['reflow'],
+    });
+    expect(result.manifest.pages[2]?.analysisCoverage).toBeUndefined();
+    expect(result.manifest.continuationGuardSummary?.totalOmittedUrlCount).toBe(3);
   });
 });

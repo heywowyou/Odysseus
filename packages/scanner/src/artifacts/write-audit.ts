@@ -26,6 +26,7 @@ import {
   type CruxFieldDataResult,
   type ManifestKind,
   type ManifestPageEntry,
+  type PageAnalysisCoverage,
   buildTranslationClusters,
 } from '@odysseus/core';
 import { getArtifactsRoot } from '../config.js';
@@ -39,7 +40,12 @@ import { buildManifest } from './manifest.js';
 
 export interface WriteAuditArtifactsInput {
   kind: ManifestKind;
-  siteResult: { crawl: CrawlResult; pages: PageScanResult[]; cruxFieldData?: CruxFieldDataResult };
+  siteResult: {
+    crawl: CrawlResult;
+    pages: PageScanResult[];
+    cruxFieldData?: CruxFieldDataResult;
+    analysisCoverageByUrl?: ReadonlyMap<string, PageAnalysisCoverage>;
+  };
   browser: Browser;
   startedAt: Date;
   finishedAt: Date;
@@ -453,6 +459,9 @@ export async function writeAuditArtifacts(
       ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
       ...(crawledPage.discoveredFrom !== undefined
         ? { discoveredFrom: crawledPage.discoveredFrom }
+        : {}),
+      ...(input.siteResult.analysisCoverageByUrl?.get(scanResult.url) !== undefined
+        ? { analysisCoverage: input.siteResult.analysisCoverageByUrl.get(scanResult.url)! }
         : {}),
       ...(scanResult.renderDiff !== undefined
         ? { renderDiffMissingPercent: scanResult.renderDiff.missingPercent }

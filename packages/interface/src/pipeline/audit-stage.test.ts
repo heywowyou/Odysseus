@@ -215,6 +215,24 @@ describe('runAuditStage', () => {
     expect(options).not.toHaveProperty('maxDepth');
   });
 
+  it('enables the staged full-audit planner when Lighthouse is not skipped', async () => {
+    await runAuditStage('https://example.com/', {}, fakeConnection);
+
+    expect(scanSite).toHaveBeenCalledWith(
+      'https://example.com/',
+      expect.objectContaining({ fullAuditPlanning: true }),
+    );
+  });
+
+  it('never enables the staged full-audit planner when skipLighthouse is set (prospecting)', async () => {
+    await runAuditStage('https://example.com/', { skipLighthouse: true }, fakeConnection);
+
+    expect(scanSite).toHaveBeenCalledWith(
+      'https://example.com/',
+      expect.objectContaining({ fullAuditPlanning: false, skipLighthouse: true }),
+    );
+  });
+
   it('forwards onProgress to scanSite when provided', async () => {
     const onProgress = vi.fn();
     await runAuditStage('https://example.com/', { onProgress }, fakeConnection);
@@ -257,6 +275,11 @@ describe('runAuditStage', () => {
       auditDir: '/artifacts/example.com/2026-08-04T00-00-00Z',
       visitedCount: 2,
       prunedPageDirCount: 1,
+      coverageSummary: {
+        kind: 'legacy-unknown',
+        inventoriedUrlCount: 2,
+        continuationOmittedUrlCount: 0,
+      },
       obligationAssessment: { status: 'undetermined', basis: [] },
     });
   });

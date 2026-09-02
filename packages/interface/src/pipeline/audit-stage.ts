@@ -39,6 +39,8 @@ import {
   type SiteSignalOverrides,
   type SitemapMode,
   normalizeRegistryDisplayName,
+  summarizeAuditCoverage,
+  type AuditCoverageSummary,
 } from '@odysseus/core';
 import { persistAudit, prefillAuditManualFields } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
@@ -84,6 +86,7 @@ export interface AuditStageResult {
   auditDir: string;
   visitedCount: number;
   prunedPageDirCount: number;
+  coverageSummary: AuditCoverageSummary;
   obligationAssessment: ObligationAssessment;
 }
 
@@ -131,6 +134,15 @@ export async function runAuditStage(
         : {}),
       ...(options.skipLighthouse ? { skipLighthouse: options.skipLighthouse } : {}),
       ...(options.sitemapMode !== undefined ? { sitemapMode: options.sitemapMode } : {}),
+      // Plan 021: the staged full-audit planner (family-stratified
+      // Lighthouse selection) is gated on Lighthouse actually running.
+      // Prospecting always sets skipLighthouse, so it stays on the
+      // legacy per-page path and never acquires full-audit
+      // representative policy, per Step 5's explicit requirement -
+      // rather than an unconditional flag whose "harmless because
+      // Lighthouse never fires anyway" reasoning is a weaker guarantee
+      // than simply never entering that code path at all.
+      fullAuditPlanning: !options.skipLighthouse,
     });
 
     const finishedAt = new Date();
@@ -246,6 +258,7 @@ export async function runAuditStage(
       auditDir: artifacts.auditDir,
       visitedCount: siteResult.crawl.visitedCount,
       prunedPageDirCount: prunedPageDirs.length,
+      coverageSummary: summarizeAuditCoverage(manifest),
       obligationAssessment,
     };
   } finally {

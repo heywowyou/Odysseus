@@ -35,6 +35,8 @@ export type {
   JobOptionsSnapshot,
   JobPhase,
   JobProgress,
+  JobProgressAnalysisStage,
+  JobProgressContinuationGuard,
   JobProgressCrawl,
   JobProgressIngestion,
   JobProgressScan,

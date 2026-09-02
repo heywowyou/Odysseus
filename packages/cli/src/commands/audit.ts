@@ -1,7 +1,11 @@
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
 import { runAuditStage } from '@odysseus/interface';
-import { isHttpUrlWithoutCredentials, type SiteSignalOverrides } from '@odysseus/core';
+import {
+  isHttpUrlWithoutCredentials,
+  type AuditCoverageSummary,
+  type SiteSignalOverrides,
+} from '@odysseus/core';
 import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
 import { parseSirenOption } from '../parse-siren-option.js';
 import { parseBooleanOption } from '../parse-boolean-option.js';
@@ -12,6 +16,41 @@ function parsePositiveInt(value: string): number {
     throw new InvalidArgumentError(`must be a positive integer, got "${value}"`);
   }
   return parsed;
+}
+
+const COVERAGE_REASON_LABELS: Readonly<Record<string, string>> = {
+  'discovered-not-scanned': 'discovered but deliberately not scanned',
+  'skipped-robots': 'skipped robots',
+  'skipped-non-html': 'skipped non-HTML',
+  'skipped-external-redirect': 'skipped external redirect',
+  error: 'crawl error',
+  'coverage-missing': 'coverage missing',
+};
+
+export function formatAuditCoverageSummary(summary: AuditCoverageSummary): string[] {
+  const lines = [`  URLs inventoried: ${summary.inventoriedUrlCount}`];
+  if (summary.kind === 'legacy-unknown') {
+    lines.push('  Pass-specific coverage: unknown (legacy manifest)');
+  } else {
+    lines.push(
+      `  Content checks: ${summary.content.completed} completed, ${summary.content.partial} partial, ${summary.content.failed} failed`,
+      `  Axe: ${summary.passes.axe.completed} completed, ${summary.passes.axe.failed} failed`,
+      `  Lighthouse: ${summary.passes.lighthouse.completed} measured, ${summary.passes.lighthouse.failed} failed, ${summary.passes.lighthouse.notPlanned} not planned`,
+    );
+    const withoutContentEntries = Object.entries(summary.pagesWithoutContentAnalysis).filter(
+      (entry): entry is [string, number] => entry[1] !== undefined && entry[1] > 0,
+    );
+    if (withoutContentEntries.length > 0) {
+      const total = withoutContentEntries.reduce((sum, [, count]) => sum + count, 0);
+      const reasons = withoutContentEntries
+        .map(([reason, count]) => `${COVERAGE_REASON_LABELS[reason] ?? reason}: ${count}`)
+        .join(', ');
+      lines.push(`  Pages without content analysis: ${total} (${reasons})`);
+    }
+    lines.push(`  Template families represented: ${summary.templateFamilyCount}`);
+  }
+  lines.push(`  Continuation URLs omitted: ${summary.continuationOmittedUrlCount}`);
+  return lines;
 }
 
 export function registerAuditCommand(program: Command): void {
@@ -91,7 +130,9 @@ export function registerAuditCommand(program: Command): void {
           for (const finding of result.findings) bySeverity[finding.severity]++;
 
           console.log(`Audit ${result.auditId} complete for ${url}`);
-          console.log(`  Pages visited: ${result.visitedCount}`);
+          for (const line of formatAuditCoverageSummary(result.coverageSummary)) {
+            console.log(line);
+          }
           console.log(
             `  Findings: ${result.findings.length} (critical: ${bySeverity.critical}, serious: ${bySeverity.serious}, moderate: ${bySeverity.moderate}, minor: ${bySeverity.minor})`,
           );

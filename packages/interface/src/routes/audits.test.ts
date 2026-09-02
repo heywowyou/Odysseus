@@ -73,6 +73,7 @@ beforeEach(() => {
     finishedAt: new Date('2026-08-08T10:05:00.000Z'),
     findingsProvenance,
     crawl: { visitedCount: 5 },
+    pages: [],
   } as never);
   vi.mocked(getFindingsForAudit).mockResolvedValue([]);
   vi.mocked(getSeverityRollup).mockResolvedValue({} as never);
@@ -165,6 +166,58 @@ describe('POST /api/audits/:auditId/approve-reports', () => {
 });
 
 describe('GET /api/audits/:auditId', () => {
+  it('returns current pass coverage and an explicit legacy fallback', async () => {
+    vi.mocked(getAudit).mockResolvedValueOnce({
+      auditId: 'audit-1',
+      siteUrl: 'https://example.com/',
+      startedAt: new Date('2026-08-08T10:00:00.000Z'),
+      finishedAt: new Date('2026-08-08T10:05:00.000Z'),
+      findingsProvenance,
+      crawl: { visitedCount: 1 },
+      pages: [
+        {
+          url: 'https://example.com/',
+          depth: 0,
+          status: 'visited',
+          analysisCoverage: {
+            plannerVersion: 'v1',
+            role: 'content',
+            confidence: 'high',
+            reasonCodes: ['content-json-ld'],
+            passes: {
+              rendered: { outcome: 'completed' },
+              axe: { outcome: 'completed' },
+              extended: { outcome: 'completed' },
+              lighthouse: { outcome: 'not-planned' },
+            },
+          },
+          errors: {},
+        },
+      ],
+    } as never);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const currentRes = fakeRes();
+    await router.handle(fakeReq('/api/audits/audit-1'), currentRes);
+    expect(JSON.parse(currentRes.body ?? '{}').coverageSummary).toMatchObject({
+      kind: 'current',
+      inventoriedUrlCount: 1,
+      content: { completed: 1, partial: 0, failed: 0 },
+      passes: { lighthouse: { completed: 0, failed: 0, notPlanned: 1 } },
+    });
+
+    const legacyRouter = new Router();
+    registerAuditRoutes(legacyRouter, fakeConnection);
+    const legacyRes = fakeRes();
+    await legacyRouter.handle(fakeReq('/api/audits/audit-1'), legacyRes);
+    expect(JSON.parse(legacyRes.body ?? '{}').coverageSummary).toEqual({
+      kind: 'legacy-unknown',
+      inventoriedUrlCount: 0,
+      continuationOmittedUrlCount: 0,
+    });
+  });
+
   it('includes reportLanguages', async () => {
     const router = new Router();
     registerAuditRoutes(router, fakeConnection);

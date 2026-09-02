@@ -155,6 +155,79 @@ describe.skipIf(!mongoAvailable)('persistAudit', () => {
     expect(stored?.pages[1]?.discoveredFrom).toBe('https://example.com/');
   });
 
+  it('round-trips versioned page coverage and bounded continuation omissions', async () => {
+    const manifest = buildManifest({
+      auditId: 'persist-analysis-coverage',
+      pages: [
+        {
+          url: 'https://example.com/',
+          depth: 0,
+          status: 'visited',
+          analysisCoverage: {
+            plannerVersion: 'v1',
+            role: 'content',
+            confidence: 'high',
+            templateFamilyId: 'family-a',
+            reasonCodes: ['content-json-ld', 'stable-family-representative'],
+            passes: {
+              rendered: { outcome: 'completed' },
+              axe: { outcome: 'completed' },
+              extended: {
+                outcome: 'partial',
+                failedCheckIds: ['form-error-handling', 'reflow'],
+              },
+              lighthouse: { outcome: 'failed', failedCheckIds: ['lighthouse'] },
+            },
+          },
+          errors: { lighthouse: 'timed out' },
+        },
+        {
+          url: 'https://example.com/article',
+          depth: 1,
+          status: 'visited',
+          analysisCoverage: {
+            plannerVersion: 'v1',
+            role: 'content',
+            confidence: 'high',
+            templateFamilyId: 'family-a',
+            reasonCodes: ['content-json-ld'],
+            passes: {
+              rendered: { outcome: 'completed' },
+              axe: { outcome: 'failed', failedCheckIds: ['axe'] },
+              extended: { outcome: 'completed' },
+              lighthouse: { outcome: 'not-planned' },
+            },
+          },
+          errors: { axe: 'frame detached' },
+        },
+      ],
+      continuationGuardSummary: {
+        guardVersion: 'v1',
+        familyMaxEnqueued: 60,
+        families: [
+          {
+            familyKey: 'path:/page/{n}/',
+            basis: 'numbered-pagination-control',
+            enqueuedCount: 60,
+            omittedCount: 3,
+            omittedExampleUrls: ['https://example.com/page/61/'],
+          },
+        ],
+        additionalFamiliesOmittedCount: 2,
+        totalOmittedUrlCount: 9,
+      },
+    });
+
+    await persistAudit(connection!, manifest, []);
+
+    const stored = await createAuditModel(connection!)
+      .findOne({ auditId: manifest.auditId })
+      .lean();
+    expect(stored?.pages[0]?.analysisCoverage).toEqual(manifest.pages[0]?.analysisCoverage);
+    expect(stored?.pages[1]?.analysisCoverage?.passes.lighthouse.outcome).toBe('not-planned');
+    expect(stored?.continuationGuardSummary).toEqual(manifest.continuationGuardSummary);
+  });
+
   it('removes findings that are absent when the same audit is persisted again', async () => {
     const manifest = buildManifest({ auditId: 'persist-test-retry' });
     const retained = buildFinding({

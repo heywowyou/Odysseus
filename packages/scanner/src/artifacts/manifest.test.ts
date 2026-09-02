@@ -84,4 +84,49 @@ describe('buildManifest', () => {
     expect(manifest.tool.axeCoreVersion).toBeNull();
     expect(manifest.tool.lighthouseVersion).toBeNull();
   });
+
+  it('keeps bounded continuation omissions separate from inventoried pages', () => {
+    const continuationGuardSummary = {
+      guardVersion: 'v1' as const,
+      familyMaxEnqueued: 60,
+      families: [
+        {
+          familyKey: 'path:/page/{n}/',
+          basis: 'rel-next' as const,
+          enqueuedCount: 60,
+          omittedCount: 2,
+          omittedExampleUrls: ['https://example.com/page/61/'],
+        },
+      ],
+      additionalFamiliesOmittedCount: 0,
+      totalOmittedUrlCount: 2,
+    };
+    const manifest = buildManifest({
+      auditId: 'audit-guard',
+      kind: 'audit',
+      siteUrl: 'https://example.com/',
+      startedAt: new Date(),
+      finishedAt: new Date(),
+      tool: {
+        playwrightVersion: '1.49.0',
+        chromiumVersion: '130.0.0.0',
+        axeCoreVersion: null,
+        lighthouseVersion: null,
+      },
+      config: {
+        maxPages: 1,
+        maxDepth: 0,
+        crawlDelayMs: 0,
+        pageTimeoutMs: 30_000,
+        lighthouseTimeoutMs: 60_000,
+        userAgent: 'test',
+        scanConcurrency: 1,
+      },
+      crawl: buildCrawlResult({ continuationGuardSummary }),
+      pages: [],
+    });
+
+    expect(manifest.continuationGuardSummary).toEqual(continuationGuardSummary);
+    expect(manifest.pages).toEqual([]);
+  });
 });

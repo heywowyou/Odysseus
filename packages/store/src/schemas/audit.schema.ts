@@ -111,6 +111,43 @@ const coreWebVitalsSchema = new Schema(
   { _id: false },
 );
 
+const auditPassCoverageSchema = new Schema(
+  {
+    outcome: {
+      type: String,
+      required: true,
+      enum: ['completed', 'partial', 'failed', 'not-planned'],
+    },
+    failedCheckIds: { type: [String], default: undefined },
+  },
+  { _id: false },
+);
+
+const pageAnalysisCoverageSchema = new Schema(
+  {
+    plannerVersion: { type: String, required: true, enum: ['v1'] },
+    role: {
+      type: String,
+      required: true,
+      enum: ['content', 'transactional', 'listing', 'utility', 'unknown'],
+    },
+    confidence: { type: String, required: true, enum: ['high', 'fallback'] },
+    templateFamilyId: { type: String },
+    reasonCodes: { type: [String], required: true },
+    passes: {
+      _id: false,
+      type: {
+        rendered: { type: auditPassCoverageSchema, required: true },
+        axe: { type: auditPassCoverageSchema, required: true },
+        extended: { type: auditPassCoverageSchema, required: true },
+        lighthouse: { type: auditPassCoverageSchema, required: true },
+      },
+      required: true,
+    },
+  },
+  { _id: false },
+);
+
 const manifestPageEntrySchema = new Schema(
   {
     url: { type: String, required: true },
@@ -135,6 +172,7 @@ const manifestPageEntrySchema = new Schema(
     coreWebVitals: { type: coreWebVitalsSchema },
     crawlError: { type: String },
     discoveredFrom: { type: String },
+    analysisCoverage: { type: pageAnalysisCoverageSchema },
     errors: {
       _id: false,
       type: {
@@ -148,6 +186,32 @@ const manifestPageEntrySchema = new Schema(
   // "errors" is a Mongoose-reserved schema pathname; it's an intentional
   // field name matching ManifestPageEntry.errors, not an accident.
   { _id: false, suppressReservedKeysWarning: true },
+);
+
+const continuationFamilyOmissionSchema = new Schema(
+  {
+    familyKey: { type: String, required: true },
+    basis: {
+      type: String,
+      required: true,
+      enum: ['rel-next', 'numbered-pagination-control', 'query-key-family'],
+    },
+    enqueuedCount: { type: Number, required: true },
+    omittedCount: { type: Number, required: true },
+    omittedExampleUrls: { type: [String], required: true },
+  },
+  { _id: false },
+);
+
+const continuationGuardSummarySchema = new Schema(
+  {
+    guardVersion: { type: String, required: true, enum: ['v1'] },
+    familyMaxEnqueued: { type: Number, required: true },
+    families: { type: [continuationFamilyOmissionSchema], required: true },
+    additionalFamiliesOmittedCount: { type: Number, required: true },
+    totalOmittedUrlCount: { type: Number, required: true },
+  },
+  { _id: false },
 );
 
 const provencedFieldSchema = new Schema(
@@ -354,6 +418,7 @@ const auditSchema = new Schema<AuditDocument>(
     config: { type: configSnapshotSchema, required: true },
     crawl: { type: crawlStatsSchema, required: true },
     pages: { type: [manifestPageEntrySchema], default: [] },
+    continuationGuardSummary: { type: continuationGuardSummarySchema },
     manualFields: { type: manualFieldsSchema },
     reportPreparation: { type: reportPreparationSchema },
   },

@@ -31,13 +31,21 @@ vi.mock('./checks/nap-consistency.js', () => ({ checkNapConsistency: vi.fn() }))
 vi.mock('./checks/reflow.js', () => ({ checkReflow: vi.fn() }));
 vi.mock('./checks/html-validity.js', () => ({ checkHtmlValidity: vi.fn() }));
 vi.mock('./checks/structured-data.js', () => ({ checkStructuredData: vi.fn() }));
+vi.mock('./checks/rendered-cost-profile.js', () => ({
+  recordRenderedResourceTotals: vi.fn(() => async () => ({
+    resourceCount: 4,
+    knownTransferBytes: 1000,
+    unknownTransferSizeCount: 0,
+  })),
+  extractRenderedDomCostFacts: vi.fn(async () => ({ domNodeCount: 42, imageCount: 3 })),
+}));
 vi.mock('./config.js', () => ({ getPageTimeoutMs: vi.fn(() => 30_000) }));
 
 import { runAxe } from './axe.js';
 import { runLighthouseIsolated } from './lighthouse-isolated.js';
 import { renderDiff } from './render-diff.js';
 import { extractMentionsLegales } from './checks/mentions-legales.js';
-import { scanPage } from './scan-page.js';
+import { scanPage, runRenderedAnalysis, runLighthouseAnalysis } from './scan-page.js';
 
 const page = { evaluate: vi.fn(async () => 'SIREN 732829320') };
 const browser = {} as never;
@@ -106,5 +114,83 @@ describe('scanPage characterization', () => {
     await pending;
     expect(runLighthouseIsolated).toHaveBeenCalledOnce();
     vi.useRealTimers();
+  });
+});
+
+describe('runRenderedAnalysis', () => {
+  it('populates checkOutcomes for every applicable and not-applicable check, and composes the cost profile', async () => {
+    vi.mocked(renderDiff).mockImplementation(async (_browser, _url, options) => {
+      await options.onRenderedPageCreated?.(page as never);
+      await options.onRenderedPage?.(page as never);
+      return { rawTextLength: 1, renderedTextLength: 2 } as never;
+    });
+
+    const result = await runRenderedAnalysis({} as never, 'https://example.com/', {
+      screenshotDir: '/tmp/pages',
+    });
+
+    expect(result.checkOutcomes.axe).toBe('completed');
+    expect(result.checkOutcomes['render-diff']).toBe('completed');
+    expect(result.checkOutcomes['mentions-legales']).toBe('not-applicable');
+    expect(result.checkOutcomes['sitemap-check']).toBe('not-applicable');
+    expect(result.checkOutcomes['canonical-target']).toBe('not-applicable');
+    expect(result.renderedCostProfile).toMatchObject({
+      url: 'https://example.com/',
+      domNodeCount: 42,
+      imageCount: 3,
+      resourceCount: 4,
+      knownTransferBytes: 1000,
+      unknownTransferSizeCount: 0,
+    });
+    expect(result).not.toHaveProperty('lighthouse');
+  });
+
+  it('marks every rendered-hook check not-applicable when the render diff navigation itself fails', async () => {
+    vi.mocked(renderDiff).mockRejectedValueOnce(new Error('navigation failed'));
+
+    const result = await runRenderedAnalysis({} as never, 'https://example.com/', {
+      screenshotDir: '/tmp/pages',
+    });
+
+    expect(result.checkOutcomes['render-diff']).toBe('failed');
+    expect(result.checkOutcomes.axe).toBe('not-applicable');
+    expect(result.renderDiffError).toBe('navigation failed');
+  });
+
+  it('marks a per-check failure as failed in checkOutcomes without losing the others', async () => {
+    vi.mocked(renderDiff).mockImplementation(async (_browser, _url, options) => {
+      await options.onRenderedPage?.(page as never);
+      return { rawTextLength: 1, renderedTextLength: 2 } as never;
+    });
+    vi.mocked(runAxe).mockRejectedValueOnce(new Error('axe failed'));
+
+    const result = await runRenderedAnalysis({} as never, 'https://example.com/', {
+      screenshotDir: '/tmp/pages',
+    });
+
+    expect(result.checkOutcomes.axe).toBe('failed');
+    expect(result.axeError).toBe('axe failed');
+    expect(result.checkOutcomes['head-metadata']).toBe('completed');
+  });
+});
+
+describe('runLighthouseAnalysis', () => {
+  it('applies the delay before calling Lighthouse and returns the result', async () => {
+    vi.useFakeTimers();
+    const pending = runLighthouseAnalysis('https://example.com/', 9222, { delayMs: 100 });
+    await vi.advanceTimersByTimeAsync(99);
+    expect(runLighthouseIsolated).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await pending;
+    expect(runLighthouseIsolated).toHaveBeenCalledOnce();
+    expect(result.lighthouse).toBeDefined();
+    vi.useRealTimers();
+  });
+
+  it('returns lighthouseError instead of throwing', async () => {
+    vi.mocked(runLighthouseIsolated).mockRejectedValueOnce(new Error('lighthouse failed'));
+    const result = await runLighthouseAnalysis('https://example.com/', 9222, {});
+    expect(result.lighthouseError).toBe('lighthouse failed');
+    expect(result.lighthouse).toBeUndefined();
   });
 });

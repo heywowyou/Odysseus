@@ -18,6 +18,9 @@ export type JobPhase =
   | 'queued'
   | 'crawl'
   | 'scan'
+  | 'content-scan'
+  | 'select-performance'
+  | 'lighthouse'
   | 'normalize'
   | 'analyze-fr'
   | 'analyze-en'
@@ -96,6 +99,17 @@ export interface JobProgressScan {
   etaMs?: number;
 }
 
+export interface JobProgressAnalysisStage {
+  completed: number;
+  target: number;
+  etaMs?: number;
+}
+
+export interface JobProgressContinuationGuard {
+  omittedUrlCount: number;
+  omittedFamilyCount: number;
+}
+
 /** prospect-ingestion jobs only: one bounded batch's worth of progress
  *  counters, never the cumulative total across every batch ever run - see
  *  ingestionResults below for why the same "one batch, not the whole
@@ -112,6 +126,9 @@ export interface JobProgressIngestion {
 export interface JobProgress {
   crawl?: JobProgressCrawl;
   scan?: JobProgressScan;
+  contentScan?: JobProgressAnalysisStage;
+  lighthouse?: JobProgressAnalysisStage;
+  continuationGuard?: JobProgressContinuationGuard;
   ingestion?: JobProgressIngestion;
   message?: string;
 }
@@ -214,6 +231,23 @@ const jobProgressScanSchema = new Schema(
   { _id: false },
 );
 
+const jobProgressAnalysisStageSchema = new Schema(
+  {
+    completed: { type: Number, required: true },
+    target: { type: Number, required: true },
+    etaMs: { type: Number },
+  },
+  { _id: false },
+);
+
+const jobProgressContinuationGuardSchema = new Schema(
+  {
+    omittedUrlCount: { type: Number, required: true },
+    omittedFamilyCount: { type: Number, required: true },
+  },
+  { _id: false },
+);
+
 const jobProgressIngestionSchema = new Schema(
   {
     afnicRowsScanned: { type: Number, required: true },
@@ -230,6 +264,9 @@ const jobProgressSchema = new Schema(
   {
     crawl: { type: jobProgressCrawlSchema },
     scan: { type: jobProgressScanSchema },
+    contentScan: { type: jobProgressAnalysisStageSchema },
+    lighthouse: { type: jobProgressAnalysisStageSchema },
+    continuationGuard: { type: jobProgressContinuationGuardSchema },
     ingestion: { type: jobProgressIngestionSchema },
     message: { type: String },
   },
@@ -293,6 +330,9 @@ const jobSchema = new Schema<JobDocument>(
         'queued',
         'crawl',
         'scan',
+        'content-scan',
+        'select-performance',
+        'lighthouse',
         'normalize',
         'analyze-fr',
         'analyze-en',

@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
   isValidSiren,
+  summarizeAuditCoverage,
   type AuditManifest,
   type AuditManualFields,
   type Finding,
@@ -211,6 +212,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       startedAt: audit.startedAt,
       finishedAt: audit.finishedAt,
       pagesVisited: audit.crawl.visitedCount,
+      coverageSummary: summarizeAuditCoverage(audit),
       severityRollup,
       findings,
       reportLanguages,

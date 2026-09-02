@@ -1,5 +1,5 @@
 import type { Browser } from 'playwright';
-import type { CruxFieldDataResult, SitemapMode } from '@odysseus/core';
+import type { CruxFieldDataResult, PageAnalysisCoverage, SitemapMode } from '@odysseus/core';
 import { getCruxApiKey, getPageTimeoutMs, getScanConcurrency } from './config.js';
 import type { RedirectHostCache } from './checks/transactional-flow.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
@@ -14,8 +14,23 @@ import {
   type AccessibilityStatementCheckResult,
 } from './checks/accessibility-statement.js';
 import { fetchCruxFieldData } from './crux.js';
-import { type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
-import { type PageScanResult, scanPage } from './scan-page.js';
+import { type CrawledPage, type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
+import {
+  type LighthouseAnalysisResult,
+  type PageScanResult,
+  type RenderedAnalysisResult,
+  runLighthouseAnalysis,
+  runRenderedAnalysis,
+  scanPage,
+} from './scan-page.js';
+import {
+  buildContentAuditPlan,
+  finalizeLighthousePlan,
+  type FullAuditPlan,
+  type RenderedCostProfile,
+} from './full-audit-plan.js';
+import type { PageAuditProfile } from './page-audit-profile.js';
+import { derivePageAnalysisCoverage } from './analysis-coverage.js';
 
 /** Extends crawl's own events with the scan phase's. scan-start fires
  *  once, after the crawl finishes (the total page count isn't known
@@ -25,7 +40,13 @@ import { type PageScanResult, scanPage } from './scan-page.js';
 export type ScanProgressEvent =
   | CrawlProgressEvent
   | { type: 'scan-start'; totalPages: number }
-  | { type: 'scan-page'; scanned: number; totalPages: number; url: string };
+  | { type: 'scan-page'; scanned: number; totalPages: number; url: string }
+  | { type: 'content-scan-start'; totalPages: number }
+  | { type: 'content-scan-page'; completed: number; totalPages: number; url: string }
+  | { type: 'select-performance' }
+  | { type: 'lighthouse-start'; totalPages: number }
+  | { type: 'lighthouse-page'; completed: number; totalPages: number; url: string }
+  | { type: 'analysis-complete' };
 
 export interface ScanSiteOptions {
   browser: Browser;
@@ -58,6 +79,19 @@ export interface ScanSiteOptions {
    *  `inspect` so sitemap findings remain available without expanding its
    *  three-page budget. */
   sitemapMode?: Exclude<SitemapMode, 'none'>;
+  /** Plan 021 opt-in: stages the scan through the two-stage deterministic
+   *  planner (`buildContentAuditPlan` then `finalizeLighthousePlan`)
+   *  instead of the legacy per-page loop, so Lighthouse runs only on
+   *  mandatory pages plus family/language representatives rather than on
+   *  every page. Defaults to `false` (the legacy behavior, unconditional
+   *  per-page Lighthouse unless `skipLighthouse`) so the standalone `scan`
+   *  CLI command and any other direct caller keep their exact current
+   *  behavior with no code change. Set only by `runAuditStage` for the
+   *  real paid full-audit path (plan 021 Step 5): prospecting already sets
+   *  `skipLighthouse: true`, which this flag composes with harmlessly
+   *  (the planner still runs, but the selective Lighthouse lane never
+   *  fires). */
+  fullAuditPlanning?: boolean;
 }
 
 export interface SiteScanResult {
@@ -68,6 +102,14 @@ export interface SiteScanResult {
    *  `available: false`) when CRUX_API_KEY was never configured, so this
    *  fetch was never attempted at all. */
   cruxFieldData?: CruxFieldDataResult;
+  /** Only present when `fullAuditPlanning` was set: the finalized plan
+   *  (with Lighthouse selections) the scan actually ran, for Step 7's
+   *  coverage persistence. */
+  fullAuditPlan?: FullAuditPlan;
+  /** Present only for the staged full-audit path. URL-keyed so artifact
+   *  writing can join crawl inventory to pass provenance without relying on
+   *  completion order. */
+  analysisCoverageByUrl?: ReadonlyMap<string, PageAnalysisCoverage>;
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -134,6 +176,242 @@ async function runScanLane(
   }
 }
 
+/** Every field `runRenderedAnalysisLane` needs to forward into each page's
+ *  `runRenderedAnalysis` call, bundled once per `scanSite` run rather than
+ *  threaded as a long positional parameter list a second time. */
+interface StagedScanContext {
+  screenshotDir: string;
+  timeoutMs: number | undefined;
+  userAgent: string | undefined;
+  mentionsLegalesUrl: string | undefined;
+  redirectHostCache: RedirectHostCache;
+  homepageUrl: string | undefined;
+  sitemapCheck:
+    (SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] }) | undefined;
+  llmsTxtCheck: LlmsTxtCheckResult | undefined;
+  securityHeadersCheck: SecurityHeadersCheckResult | undefined;
+  cookieConsentCheck: CookieConsentCheckResult | undefined;
+  accessibilityStatementCheck: AccessibilityStatementCheckResult | undefined;
+  bookingEngineUrl: string | undefined;
+}
+
+/**
+ * Rendered-analysis equivalent of `runScanLane`: same sequential,
+ * staggered-start, delay-paced lane shape, but calling
+ * `runRenderedAnalysis` (no Lighthouse) instead of the all-in-one
+ * `scanPage`, since the full-audit planner's Lighthouse selection cannot
+ * be decided until every lane's rendered-cost facts exist.
+ */
+async function runRenderedAnalysisLane(
+  laneUrls: string[],
+  browser: Browser,
+  delayMs: number,
+  startDelayMs: number,
+  context: StagedScanContext,
+  onPageDone: (url: string, result: RenderedAnalysisResult) => void,
+): Promise<void> {
+  let nextDelayMs = startDelayMs;
+
+  for (const url of laneUrls) {
+    if (nextDelayMs > 0) {
+      await sleep(nextDelayMs);
+    }
+    nextDelayMs = delayMs;
+
+    const result = await runRenderedAnalysis(browser, url, {
+      delayMs,
+      screenshotDir: context.screenshotDir,
+      redirectHostCache: context.redirectHostCache,
+      ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
+      ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
+      ...(context.mentionsLegalesUrl !== undefined
+        ? { mentionsLegalesUrl: context.mentionsLegalesUrl }
+        : {}),
+      ...(context.homepageUrl !== undefined ? { homepageUrl: context.homepageUrl } : {}),
+      ...(context.sitemapCheck !== undefined ? { sitemapCheck: context.sitemapCheck } : {}),
+      ...(context.llmsTxtCheck !== undefined ? { llmsTxtCheck: context.llmsTxtCheck } : {}),
+      ...(context.securityHeadersCheck !== undefined
+        ? { securityHeadersCheck: context.securityHeadersCheck }
+        : {}),
+      ...(context.cookieConsentCheck !== undefined
+        ? { cookieConsentCheck: context.cookieConsentCheck }
+        : {}),
+      ...(context.accessibilityStatementCheck !== undefined
+        ? { accessibilityStatementCheck: context.accessibilityStatementCheck }
+        : {}),
+      ...(context.bookingEngineUrl !== undefined
+        ? { bookingEngineUrl: context.bookingEngineUrl }
+        : {}),
+    });
+    onPageDone(url, result);
+  }
+}
+
+/** `crawlSite` (via Step 3's wiring) always attaches an audit profile to
+ *  every page it marks `visited`, falling back to an empty-facts profile
+ *  on extraction failure rather than leaving the field unset - so a
+ *  missing profile here means that invariant broke, not a normal
+ *  condition to fall back from silently. Full-audit coverage depends on
+ *  every visited page being planned; silently skipping one would be
+ *  exactly the "quietly under-report the site" failure class this plan
+ *  exists to close, so this throws instead. */
+function toPlanProfile(page: CrawledPage): PageAuditProfile {
+  if (page.auditProfile === undefined) {
+    throw new Error(
+      `Full-audit planning requires an audit profile for every visited page, but ${page.url} has none.`,
+    );
+  }
+  return page.auditProfile;
+}
+
+/**
+ * Runs the plan 021 staged pipeline: build the content plan from every
+ * visited page's audit profile, run rendered analysis for all of them
+ * (concurrent lanes, same pacing as the legacy path), finalize the
+ * Lighthouse plan from the resulting cost facts, then run Lighthouse only
+ * for the selected pages. `skipLighthouse` still short-circuits the
+ * Lighthouse stage entirely, exactly as it does in the legacy path - the
+ * plan is still computed (for provenance) but its Lighthouse selections
+ * are never acted on.
+ */
+async function runStagedFullAuditScan(
+  pagesToScan: CrawledPage[],
+  browser: Browser,
+  debugPort: number,
+  delayMs: number,
+  concurrency: number,
+  skipLighthouse: boolean,
+  context: StagedScanContext,
+  onProgress: ((event: ScanProgressEvent) => void) | undefined,
+): Promise<{
+  pages: PageScanResult[];
+  fullAuditPlan: FullAuditPlan;
+  analysisCoverageByUrl: ReadonlyMap<string, PageAnalysisCoverage>;
+}> {
+  const profiles = pagesToScan.map(toPlanProfile);
+  const contentPlan = buildContentAuditPlan(profiles);
+
+  const renderedResults = new Map<string, RenderedAnalysisResult>();
+  const renderedCosts = new Map<string, RenderedCostProfile>();
+  let contentCompleted = 0;
+  onProgress?.({ type: 'content-scan-start', totalPages: pagesToScan.length });
+
+  const lanes: string[][] = Array.from({ length: concurrency }, () => []);
+  pagesToScan.forEach((page, index) => {
+    lanes[index % concurrency]!.push(page.url);
+  });
+
+  await Promise.all(
+    lanes
+      .filter((laneUrls) => laneUrls.length > 0)
+      .map((laneUrls, laneIndex) =>
+        runRenderedAnalysisLane(
+          laneUrls,
+          browser,
+          delayMs,
+          laneIndex * delayMs,
+          context,
+          (url, result) => {
+            renderedResults.set(url, result);
+            if (result.renderedCostProfile !== undefined) {
+              renderedCosts.set(url, result.renderedCostProfile);
+            }
+            contentCompleted += 1;
+            onProgress?.({
+              type: 'content-scan-page',
+              completed: contentCompleted,
+              totalPages: pagesToScan.length,
+              url,
+            });
+          },
+        ),
+      ),
+  );
+
+  const finalizedPlan = finalizeLighthousePlan(contentPlan, renderedCosts);
+  onProgress?.({ type: 'select-performance' });
+  const selectedUrls = new Set(
+    skipLighthouse
+      ? []
+      : finalizedPlan.decisions
+          .filter((decision) => decision.plannedPasses.includes('lighthouse'))
+          .map((decision) => decision.url),
+  );
+  onProgress?.({ type: 'lighthouse-start', totalPages: selectedUrls.size });
+
+  const pages: PageScanResult[] = [];
+  const analysisCoverageByUrl = new Map<string, PageAnalysisCoverage>();
+  const decisionByUrl = new Map(
+    finalizedPlan.decisions.map((decision) => [decision.url, decision]),
+  );
+  let scanned = 0;
+  const emit = (url: string, lighthouseResult: LighthouseAnalysisResult | undefined): void => {
+    const rendered = renderedResults.get(url);
+    if (rendered === undefined) return;
+    const decision = decisionByUrl.get(url);
+    if (decision === undefined) {
+      throw new Error(`Full-audit plan has no decision for rendered page ${url}.`);
+    }
+    analysisCoverageByUrl.set(
+      url,
+      derivePageAnalysisCoverage({
+        decision,
+        checkOutcomes: rendered.checkOutcomes,
+        lighthouseSelected: selectedUrls.has(url),
+        ...(lighthouseResult !== undefined
+          ? {
+              lighthouseOutcome: lighthouseResult.lighthouse !== undefined ? 'completed' : 'failed',
+            }
+          : {}),
+      }),
+    );
+    const {
+      checkOutcomes: _checkOutcomes,
+      renderedCostProfile: _renderedCostProfile,
+      ...content
+    } = rendered;
+    const pageResult: PageScanResult = { ...content };
+    if (lighthouseResult?.lighthouse !== undefined)
+      pageResult.lighthouse = lighthouseResult.lighthouse;
+    if (lighthouseResult?.lighthouseError !== undefined)
+      pageResult.lighthouseError = lighthouseResult.lighthouseError;
+    pages.push(pageResult);
+    scanned += 1;
+    onProgress?.({ type: 'scan-page', scanned, totalPages: pagesToScan.length, url });
+  };
+
+  // Pages not selected for Lighthouse are already fully done once the
+  // rendered stage finishes; emitting for them first (rather than
+  // interleaving) keeps this stage a clean two-phase run. Step 8 revisits
+  // progress ordering for the staged pipeline; this is a correct, if not
+  // yet interleaved, signal.
+  for (const url of renderedResults.keys()) {
+    if (!selectedUrls.has(url)) emit(url, undefined);
+  }
+
+  // Lighthouse calls are already serialized process-wide (see
+  // runLighthouseSerialized's own doc comment in scan-page.ts), so running
+  // them through a second lane structure would add complexity without
+  // adding real parallelism - a plain sequential loop gets the same
+  // throughput while keeping the pre-call politeness delay simple.
+  let lighthouseCompleted = 0;
+  for (const url of selectedUrls) {
+    const lighthouseResult = await runLighthouseAnalysis(url, debugPort, { delayMs });
+    emit(url, lighthouseResult);
+    lighthouseCompleted += 1;
+    onProgress?.({
+      type: 'lighthouse-page',
+      completed: lighthouseCompleted,
+      totalPages: selectedUrls.size,
+      url,
+    });
+  }
+
+  onProgress?.({ type: 'analysis-complete' });
+
+  return { pages, fullAuditPlan: finalizedPlan, analysisCoverageByUrl };
+}
+
 /**
  * Crawls a site, then scans every page the crawl actually visited (skipping
  * robots-disallowed and errored pages, since there is nothing rendered to
@@ -170,7 +448,6 @@ export async function scanSite(
   });
 
   const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
-  options.onProgress?.({ type: 'scan-start', totalPages: pagesToScan.length });
 
   // When no URL matched the mentions-legales heuristic, the LCEN check
   // must still run somewhere - otherwise a site with no legal notice page
@@ -266,6 +543,48 @@ export async function scanSite(
     Math.min(options.concurrency ?? getScanConcurrency(), pagesToScan.length || 1),
   );
 
+  // One cache for the whole site, shared across every lane, so a
+  // booking-engine link repeated on every page (a real hotel site's nav)
+  // costs one third-party navigation per audit, not one per page. See
+  // transactional-flow.ts's RedirectHostCache doc comment.
+  const redirectHostCache: RedirectHostCache = new Map();
+
+  if (options.fullAuditPlanning) {
+    const context: StagedScanContext = {
+      screenshotDir: options.screenshotDir,
+      timeoutMs: options.timeoutMs,
+      userAgent: options.userAgent,
+      mentionsLegalesUrl: mentionsLegalesUrlForScan,
+      redirectHostCache,
+      homepageUrl: homepageUrlForScan,
+      sitemapCheck,
+      llmsTxtCheck: llmsTxtCheckForScan,
+      securityHeadersCheck: securityHeadersCheckForScan,
+      cookieConsentCheck,
+      accessibilityStatementCheck,
+      bookingEngineUrl: options.bookingEngineUrl,
+    };
+    const { pages, fullAuditPlan, analysisCoverageByUrl } = await runStagedFullAuditScan(
+      pagesToScan,
+      options.browser,
+      options.debugPort,
+      crawl.effectiveDelayMs,
+      concurrency,
+      options.skipLighthouse ?? false,
+      context,
+      options.onProgress,
+    );
+    return {
+      crawl,
+      pages,
+      fullAuditPlan,
+      analysisCoverageByUrl,
+      ...(cruxFieldData !== undefined ? { cruxFieldData } : {}),
+    };
+  }
+
+  options.onProgress?.({ type: 'scan-start', totalPages: pagesToScan.length });
+
   const lanes: string[][] = Array.from({ length: concurrency }, () => []);
   pagesToScan.forEach((page, index) => {
     lanes[index % concurrency]!.push(page.url);
@@ -281,12 +600,6 @@ export async function scanSite(
       url: pageResult.url,
     });
   };
-
-  // One cache for the whole site, shared across every lane, so a
-  // booking-engine link repeated on every page (a real hotel site's nav)
-  // costs one third-party navigation per audit, not one per page. See
-  // transactional-flow.ts's RedirectHostCache doc comment.
-  const redirectHostCache: RedirectHostCache = new Map();
 
   await Promise.all(
     lanes

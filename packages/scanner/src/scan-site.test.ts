@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./crawl.js', () => ({ crawlSite: vi.fn() }));
-vi.mock('./scan-page.js', () => ({ scanPage: vi.fn() }));
+vi.mock('./scan-page.js', () => ({
+  scanPage: vi.fn(),
+  runRenderedAnalysis: vi.fn(),
+  runLighthouseAnalysis: vi.fn(),
+}));
 vi.mock('./checks/llms-txt.js', () => ({ checkLlmsTxt: vi.fn() }));
 vi.mock('./checks/security-headers.js', () => ({ checkSecurityHeaders: vi.fn() }));
 vi.mock('./checks/cookie-consent.js', () => ({ checkCookieConsent: vi.fn() }));
@@ -16,7 +20,7 @@ vi.mock('./config.js', () => ({
 }));
 
 import { crawlSite } from './crawl.js';
-import { scanPage } from './scan-page.js';
+import { scanPage, runRenderedAnalysis, runLighthouseAnalysis } from './scan-page.js';
 import { checkLlmsTxt } from './checks/llms-txt.js';
 import { checkSecurityHeaders } from './checks/security-headers.js';
 import { checkCookieConsent } from './checks/cookie-consent.js';
@@ -123,5 +127,186 @@ describe('scanSite characterization', () => {
     expect(checkLlmsTxt).toHaveBeenCalledOnce();
     expect(checkSecurityHeaders).toHaveBeenCalledOnce();
     expect(checkCookieConsent).toHaveBeenCalledOnce();
+  });
+});
+
+describe('scanSite with fullAuditPlanning', () => {
+  const pageA = `${startUrl}a`;
+  const pageB = `${startUrl}b`;
+
+  const withProfile = (
+    url: string,
+    roleSignals: { kind: string; detail: string }[],
+    templateFamilyId?: string,
+  ) => ({
+    url,
+    status: 'visited',
+    discoveryMethod: 'link',
+    auditProfile: {
+      url,
+      profileVersion: 'v1',
+      roleSignals,
+      ...(templateFamilyId !== undefined ? { templateFamilyId } : {}),
+    },
+  });
+
+  beforeEach(() => {
+    vi.mocked(crawlSite).mockResolvedValue({
+      startUrl,
+      pages: [
+        withProfile(startUrl, [{ kind: 'homepage-url', detail: startUrl }]),
+        withProfile(pageA, [{ kind: 'content-json-ld-type', detail: 'Article' }], 'family-1'),
+        withProfile(pageB, [{ kind: 'content-json-ld-type', detail: 'Article' }], 'family-1'),
+      ],
+      effectiveDelayMs: 0,
+      visitedCount: 3,
+      maxPages: 10,
+      maxDepth: 2,
+      robotsTxtFound: true,
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      linkDiscoveredUrls: [pageA, pageB],
+    } as never);
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => ({
+      url,
+      checkOutcomes: {
+        'render-diff': 'completed',
+        axe: 'completed',
+        'transactional-flow-evidence': 'completed',
+        'transactional-flow-redirect-checks': 'completed',
+        'head-metadata': 'completed',
+        'canonical-target': 'not-applicable',
+        'mixed-content': 'completed',
+        'keyboard-navigation': url === pageB ? 'failed' : 'completed',
+        'form-error-handling': 'completed',
+        'video-captions': 'completed',
+        'alt-text': 'completed',
+        'nap-consistency': 'completed',
+        reflow: 'completed',
+        'html-validity': 'completed',
+        'structured-data': 'completed',
+      },
+    }));
+    vi.mocked(runLighthouseAnalysis).mockImplementation(async (url) => ({
+      lighthouse: { finalUrl: url } as never,
+    }));
+  });
+
+  it('runs rendered analysis for every visited page and Lighthouse only for the planner-selected ones', async () => {
+    const events: ScanProgressEvent[] = [];
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 3,
+      fullAuditPlanning: true,
+      onProgress: (event) => events.push(event),
+    });
+
+    expect(
+      vi
+        .mocked(runRenderedAnalysis)
+        .mock.calls.map((call) => call[1])
+        .sort(),
+    ).toEqual([startUrl, pageA, pageB].sort());
+
+    // The homepage is mandatory; of the two same-family content pages,
+    // only the stable representative (page A, first by URL) is selected
+    // in the absence of any rendered-cost outlier data - page B never
+    // runs Lighthouse.
+    expect(
+      vi
+        .mocked(runLighthouseAnalysis)
+        .mock.calls.map((call) => call[0])
+        .sort(),
+    ).toEqual([startUrl, pageA].sort());
+
+    expect(result.fullAuditPlan?.decisions).toHaveLength(3);
+    const bDecision = result.fullAuditPlan?.decisions.find((d) => d.url === pageB);
+    expect(bDecision?.plannedPasses).not.toContain('lighthouse');
+    const aDecision = result.fullAuditPlan?.decisions.find((d) => d.url === pageA);
+    expect(aDecision?.plannedPasses).toContain('lighthouse');
+
+    for (const pageResult of result.pages) {
+      expect(pageResult).not.toHaveProperty('checkOutcomes');
+      expect(pageResult).not.toHaveProperty('renderedCostProfile');
+    }
+    const homeResult = result.pages.find((p) => p.url === startUrl);
+    expect(homeResult?.lighthouse).toBeDefined();
+    const bResult = result.pages.find((p) => p.url === pageB);
+    expect(bResult?.lighthouse).toBeUndefined();
+
+    expect(result.analysisCoverageByUrl?.get(startUrl)?.passes).toEqual({
+      rendered: { outcome: 'completed' },
+      axe: { outcome: 'completed' },
+      extended: { outcome: 'completed' },
+      lighthouse: { outcome: 'completed' },
+    });
+    expect(result.analysisCoverageByUrl?.get(pageB)?.passes).toEqual({
+      rendered: { outcome: 'completed' },
+      axe: { outcome: 'completed' },
+      extended: { outcome: 'partial', failedCheckIds: ['keyboard-navigation'] },
+      lighthouse: { outcome: 'not-planned' },
+    });
+    expect(events.filter((event) => event.type.startsWith('content-scan'))).toEqual([
+      { type: 'content-scan-start', totalPages: 3 },
+      { type: 'content-scan-page', completed: 1, totalPages: 3, url: startUrl },
+      { type: 'content-scan-page', completed: 2, totalPages: 3, url: pageA },
+      { type: 'content-scan-page', completed: 3, totalPages: 3, url: pageB },
+    ]);
+    expect(events.filter((event) => event.type === 'select-performance')).toEqual([
+      { type: 'select-performance' },
+    ]);
+    expect(events.filter((event) => event.type.startsWith('lighthouse'))).toEqual([
+      { type: 'lighthouse-start', totalPages: 2 },
+      { type: 'lighthouse-page', completed: 1, totalPages: 2, url: startUrl },
+      { type: 'lighthouse-page', completed: 2, totalPages: 2, url: pageA },
+    ]);
+    expect(events.at(-1)).toEqual({ type: 'analysis-complete' });
+  });
+
+  it('never calls Lighthouse when skipLighthouse is set, even for planner-selected pages', async () => {
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 3,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+    });
+
+    expect(runLighthouseAnalysis).not.toHaveBeenCalled();
+    // The plan itself still records the selection, for provenance, even
+    // though it was never acted on.
+    const homeDecision = result.fullAuditPlan?.decisions.find((d) => d.url === startUrl);
+    expect(homeDecision?.plannedPasses).toContain('lighthouse');
+    expect(result.pages.every((p) => p.lighthouse === undefined)).toBe(true);
+    expect(result.analysisCoverageByUrl?.get(startUrl)?.passes.lighthouse).toEqual({
+      outcome: 'not-planned',
+    });
+  });
+
+  it('throws if a visited page has no audit profile, rather than silently skipping it', async () => {
+    vi.mocked(crawlSite).mockResolvedValue({
+      startUrl,
+      pages: [{ url: startUrl, status: 'visited', discoveryMethod: 'seed' }],
+      effectiveDelayMs: 0,
+      visitedCount: 1,
+      maxPages: 10,
+      maxDepth: 2,
+      robotsTxtFound: true,
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      linkDiscoveredUrls: [],
+    } as never);
+
+    await expect(
+      scanSite(startUrl, {
+        browser: {} as never,
+        debugPort: 9222,
+        screenshotDir: '/tmp/pages',
+        fullAuditPlanning: true,
+      }),
+    ).rejects.toThrow(/audit profile/);
   });
 });

@@ -46,6 +46,12 @@ import { checkReflow, type ReflowCheckResult } from './checks/reflow.js';
 import { checkHtmlValidity, type HtmlValidityCheckResult } from './checks/html-validity.js';
 import type { SecurityHeadersCheckResult } from './checks/security-headers.js';
 import { checkStructuredData, type StructuredDataCheckResult } from './checks/structured-data.js';
+import {
+  extractRenderedDomCostFacts,
+  recordRenderedResourceTotals,
+} from './checks/rendered-cost-profile.js';
+import type { RenderedCostProfile } from './full-audit-plan.js';
+import type { CheckExecutionOutcome, CheckId } from './check-scope-coverage.js';
 
 export interface ScanPageOptions {
   /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
@@ -145,6 +151,41 @@ export interface PageScanResult {
   structuredDataError?: string;
 }
 
+/**
+ * Options for the rendered-analysis-only function: every ScanPageOptions
+ * field except `skipLighthouse`, which has no meaning here since this
+ * function never runs Lighthouse at all.
+ */
+export type RenderedAnalysisOptions = Omit<ScanPageOptions, 'skipLighthouse'>;
+
+/**
+ * Rendered-pass output: render diff, axe, and every check that runs off
+ * the same rendered navigation, plus the rendered-cost profile the
+ * full-audit planner's Lighthouse tie-break needs (plan 021) and the
+ * explicit per-check outcome for every registered check this function is
+ * responsible for (every `check-scope-coverage.ts` entry except
+ * `lighthouse`, which `runLighthouseAnalysis` owns). Never contains raw
+ * exception text in `checkOutcomes` - that stays in the existing `*Error`
+ * fields where one exists.
+ */
+export interface RenderedAnalysisResult extends Omit<
+  PageScanResult,
+  'lighthouse' | 'lighthouseError'
+> {
+  renderedCostProfile?: RenderedCostProfile;
+  checkOutcomes: Partial<Record<CheckId, CheckExecutionOutcome>>;
+}
+
+export interface LighthouseAnalysisOptions {
+  /** Politeness delay applied before this Lighthouse call. */
+  delayMs?: number;
+}
+
+export interface LighthouseAnalysisResult {
+  lighthouse?: LighthouseResult;
+  lighthouseError?: string;
+}
+
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -182,37 +223,58 @@ async function runLighthouseSerialized(url: string, debugPort: number): Promise<
 }
 
 /**
- * Scans one page with all three scanners, reusing a single rendered
- * navigation for both render-diff's text/screenshot extraction and
- * axe-core (via renderDiff's onRenderedPage hook), so only two page loads
- * are made under our own control (raw + rendered). Lighthouse performs its
- * own separate navigation over the CDP debugPort, since it cannot attach
- * to an already-loaded Playwright page.
+ * Runs render diff, axe, and every other check that reuses that same
+ * rendered navigation (plan 021 Step 5: extracted from the former
+ * `scanPage`, same checks, same order, no Lighthouse). Reuses a single
+ * rendered navigation for axe-core and every custom check (via renderDiff's
+ * onRenderedPage hook) and the resource/DOM facts behind
+ * `renderedCostProfile` (via onRenderedPageCreated, attached before
+ * navigation so no response is missed), so only two page loads are made
+ * under our own control (raw + rendered) - Lighthouse, when it runs at
+ * all, performs its own separate navigation and lives in
+ * `runLighthouseAnalysis` instead.
  */
-export async function scanPage(
+export async function runRenderedAnalysis(
   browser: Browser,
-  debugPort: number,
   url: string,
-  options: ScanPageOptions,
-): Promise<PageScanResult> {
-  const result: PageScanResult = { url };
+  options: RenderedAnalysisOptions,
+): Promise<RenderedAnalysisResult> {
+  const checkOutcomes: Partial<Record<CheckId, CheckExecutionOutcome>> = {};
+  const result: Omit<RenderedAnalysisResult, 'checkOutcomes'> = { url };
+
   if (options.sitemapCheck !== undefined && url === options.homepageUrl) {
     result.sitemapCheck = { ...options.sitemapCheck, pageUrl: url };
+    checkOutcomes['sitemap-check'] = 'completed';
+  } else {
+    checkOutcomes['sitemap-check'] = 'not-applicable';
   }
   if (options.llmsTxtCheck !== undefined && url === options.homepageUrl) {
     result.llmsTxtCheck = options.llmsTxtCheck;
+    checkOutcomes['llms-txt-check'] = 'completed';
+  } else {
+    checkOutcomes['llms-txt-check'] = 'not-applicable';
   }
   if (options.cookieConsentCheck !== undefined && url === options.homepageUrl) {
     result.cookieConsent = options.cookieConsentCheck;
+    checkOutcomes['cookie-consent'] = 'completed';
+  } else {
+    checkOutcomes['cookie-consent'] = 'not-applicable';
   }
 
   if (options.accessibilityStatementCheck !== undefined && url === options.homepageUrl) {
     result.accessibilityStatement = options.accessibilityStatementCheck;
+    checkOutcomes['accessibility-statement'] = 'completed';
+  } else {
+    checkOutcomes['accessibility-statement'] = 'not-applicable';
   }
 
   if (options.securityHeadersCheck !== undefined && url === options.homepageUrl) {
     result.securityHeaders = options.securityHeadersCheck;
+    checkOutcomes['security-headers'] = 'completed';
+  } else {
+    checkOutcomes['security-headers'] = 'not-applicable';
   }
+
   let axeResult: AxeResults | undefined;
   let axeError: string | undefined;
   let mentionsLegalesResult: MentionsLegalesExtraction | undefined;
@@ -237,37 +299,59 @@ export async function scanPage(
   let reflowResult: ReflowCheckResult | undefined;
   let htmlValidityResult: HtmlValidityCheckResult | undefined;
   let structuredDataError: string | undefined;
+  let renderedCostProfile: RenderedCostProfile | undefined;
 
   try {
+    let readResourceTotals:
+      | (() => Promise<{
+          resourceCount: number;
+          knownTransferBytes: number;
+          unknownTransferSizeCount: number;
+        }>)
+      | undefined;
+
     result.renderDiff = await renderDiff(browser, url, {
       screenshotDir: options.screenshotDir,
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
       ...(options.delayMs !== undefined ? { preRenderedDelayMs: options.delayMs } : {}),
+      onRenderedPageCreated: async (page) => {
+        // Must be attached before navigation - see
+        // rendered-cost-profile.ts's own doc comment.
+        readResourceTotals = recordRenderedResourceTotals(page);
+      },
       onRenderedPage: async (page) => {
         try {
           axeResult = await runAxe(page);
+          checkOutcomes.axe = 'completed';
         } catch (error) {
           axeError = toErrorMessage(error);
+          checkOutcomes.axe = 'failed';
         }
 
         if (options.mentionsLegalesUrl !== undefined && url === options.mentionsLegalesUrl) {
           try {
             const bodyText = await page.evaluate(() => document.body.innerText);
             mentionsLegalesResult = extractMentionsLegales(url, bodyText);
+            checkOutcomes['mentions-legales'] = 'completed';
           } catch (error) {
             mentionsLegalesError = toErrorMessage(error);
+            checkOutcomes['mentions-legales'] = 'failed';
           }
+        } else {
+          checkOutcomes['mentions-legales'] = 'not-applicable';
         }
 
         try {
           transactionalFlowEvidence = await detectTransactionalFlow(page, url);
+          checkOutcomes['transactional-flow-evidence'] = 'completed';
         } catch {
           // Transactional-flow detection is best-effort evidence, not a
           // finding: a failure here must not surface as a page error the
           // way axe/render-diff failures do, and an empty result is
           // already the correct fallback for "nothing detected".
           transactionalFlowEvidence = [];
+          checkOutcomes['transactional-flow-evidence'] = 'failed';
         }
 
         try {
@@ -282,6 +366,7 @@ export async function scanPage(
               ? { bookingEngineUrl: options.bookingEngineUrl }
               : {}),
           });
+          checkOutcomes['transactional-flow-redirect-checks'] = 'completed';
           // Only a confirmed single-property redirect promotes to
           // transactional-flow evidence (drives hasTransactionalFlow);
           // 'marketplace' and 'undetermined' checks stay recorded on
@@ -304,12 +389,15 @@ export async function scanPage(
           // failure to follow a redirect must not surface as a page
           // error, and an empty result is the correct fallback.
           transactionalFlowRedirectChecks = [];
+          checkOutcomes['transactional-flow-redirect-checks'] = 'failed';
         }
 
         try {
           headMetadataResult = await extractHeadMetadata(page, url);
+          checkOutcomes['head-metadata'] = 'completed';
         } catch (error) {
           headMetadataError = toErrorMessage(error);
+          checkOutcomes['head-metadata'] = 'failed';
         }
 
         // Only meaningful once headMetadataResult exists and names
@@ -330,33 +418,45 @@ export async function scanPage(
                 headMetadataResult.canonicalUrls[0]!,
                 options.timeoutMs ?? getPageTimeoutMs(),
               )) ?? undefined;
+            checkOutcomes['canonical-target'] = 'completed';
           } catch {
             canonicalTargetResult = undefined;
+            checkOutcomes['canonical-target'] = 'failed';
           }
+        } else {
+          checkOutcomes['canonical-target'] = 'not-applicable';
         }
 
         try {
           mixedContentResult = await extractMixedContentResources(page, url);
+          checkOutcomes['mixed-content'] = 'completed';
         } catch (error) {
           mixedContentError = toErrorMessage(error);
+          checkOutcomes['mixed-content'] = 'failed';
         }
 
         try {
           videoCaptionsResult = await checkVideoCaptions(page, url);
+          checkOutcomes['video-captions'] = 'completed';
         } catch (error) {
           videoCaptionsError = toErrorMessage(error);
+          checkOutcomes['video-captions'] = 'failed';
         }
 
         try {
           altTextResult = await extractAltTextFacts(page, url);
+          checkOutcomes['alt-text'] = 'completed';
         } catch (error) {
           altTextError = toErrorMessage(error);
+          checkOutcomes['alt-text'] = 'failed';
         }
 
         try {
           structuredDataResult = await checkStructuredData(page, url);
+          checkOutcomes['structured-data'] = 'completed';
         } catch (error) {
           structuredDataError = toErrorMessage(error);
+          checkOutcomes['structured-data'] = 'failed';
         }
 
         // C7: reads page.content() only, no DOM mutation, so it sits with
@@ -364,8 +464,26 @@ export async function scanPage(
         // send input events.
         try {
           htmlValidityResult = await checkHtmlValidity(page, url);
+          checkOutcomes['html-validity'] = 'completed';
         } catch {
           htmlValidityResult = undefined;
+          checkOutcomes['html-validity'] = 'failed';
+        }
+
+        // The rendered-cost profile is read-only, same posture as
+        // html-validity above: no dedicated registry entry of its own
+        // (it feeds the Lighthouse tie-break, not a client-facing
+        // finding), so no checkOutcomes entry either.
+        try {
+          const domCostFacts = await extractRenderedDomCostFacts(page);
+          const resourceTotals = (await readResourceTotals?.()) ?? {
+            resourceCount: 0,
+            knownTransferBytes: 0,
+            unknownTransferSizeCount: 0,
+          };
+          renderedCostProfile = { url, ...domCostFacts, ...resourceTotals };
+        } catch {
+          renderedCostProfile = undefined;
         }
 
         // C6: needs headMetadataResult's parsed JSON-LD, so it runs after
@@ -379,9 +497,13 @@ export async function scanPage(
               url,
               headMetadataResult.jsonLdBlocks,
             );
+            checkOutcomes['nap-consistency'] = 'completed';
           } catch {
             napConsistencyResult = undefined;
+            checkOutcomes['nap-consistency'] = 'failed';
           }
+        } else {
+          checkOutcomes['nap-consistency'] = 'not-applicable';
         }
 
         // Runs after every read-only DOM check above: this is the only
@@ -391,8 +513,10 @@ export async function scanPage(
         // styles, a dropdown opened on :focus, etc.).
         try {
           keyboardNavigationResult = await walkKeyboardNavigation(page, url);
+          checkOutcomes['keyboard-navigation'] = 'completed';
         } catch (error) {
           keyboardNavigationError = toErrorMessage(error);
+          checkOutcomes['keyboard-navigation'] = 'failed';
         }
 
         // Runs last of all: the only check that triggers form
@@ -402,8 +526,10 @@ export async function scanPage(
         // this hook does can be affected by it.
         try {
           formErrorHandlingResult = await checkFormErrorHandling(page, url);
+          checkOutcomes['form-error-handling'] = 'completed';
         } catch (error) {
           formErrorHandlingError = toErrorMessage(error);
+          checkOutcomes['form-error-handling'] = 'failed';
         }
 
         // C3: genuinely last. This is the only check that changes the
@@ -414,13 +540,20 @@ export async function scanPage(
         // ordering it last means nothing depends on that having worked.
         try {
           reflowResult = await checkReflow(page, url);
+          checkOutcomes.reflow = 'completed';
         } catch {
           reflowResult = undefined;
+          checkOutcomes.reflow = 'failed';
         }
       },
     });
+    checkOutcomes['render-diff'] = 'completed';
   } catch (error) {
     result.renderDiffError = toErrorMessage(error);
+    checkOutcomes['render-diff'] = 'failed';
+    // Every downstream check that reuses this same rendered navigation
+    // never ran at all when the navigation itself failed.
+    checkOutcomes.axe = 'not-applicable';
   }
 
   if (axeResult !== undefined) result.axe = axeResult;
@@ -450,17 +583,65 @@ export async function scanPage(
   if (reflowResult !== undefined) result.reflow = reflowResult;
   if (htmlValidityResult !== undefined) result.htmlValidity = htmlValidityResult;
   if (structuredDataError !== undefined) result.structuredDataError = structuredDataError;
+  if (renderedCostProfile !== undefined) result.renderedCostProfile = renderedCostProfile;
+
+  return { ...result, checkOutcomes };
+}
+
+/**
+ * Runs Lighthouse against one page: the existing pre-Lighthouse politeness
+ * delay, the process-wide serialized queue, the isolated-process
+ * navigation, and the same result/error shape `scanPage` always returned
+ * (plan 021 Step 5: extracted from the former `scanPage`, unchanged
+ * behavior). Callers decide whether and when to call this at all - a page
+ * the full-audit planner did not select for Lighthouse simply never calls
+ * it.
+ */
+export async function runLighthouseAnalysis(
+  url: string,
+  debugPort: number,
+  options: LighthouseAnalysisOptions = {},
+): Promise<LighthouseAnalysisResult> {
+  if (options.delayMs !== undefined && options.delayMs > 0) {
+    await sleep(options.delayMs);
+  }
+
+  try {
+    return { lighthouse: await runLighthouseSerialized(url, debugPort) };
+  } catch (error) {
+    return { lighthouseError: toErrorMessage(error) };
+  }
+}
+
+/**
+ * Compatibility wrapper preserving the pre-plan-021 all-in-one behavior:
+ * rendered analysis followed by Lighthouse (unless skipped), returned as
+ * the legacy `PageScanResult` shape. This is the only path prospecting and
+ * the standalone `scan` CLI command use; both call this directly and
+ * neither passes anything that would engage the full-audit planner, so
+ * their existing per-page Lighthouse behavior is unchanged (see
+ * `scanSite`'s own `fullAuditPlanning` option doc comment).
+ */
+export async function scanPage(
+  browser: Browser,
+  debugPort: number,
+  url: string,
+  options: ScanPageOptions,
+): Promise<PageScanResult> {
+  const {
+    checkOutcomes: _checkOutcomes,
+    renderedCostProfile: _renderedCostProfile,
+    ...rendered
+  } = await runRenderedAnalysis(browser, url, options);
+  const result: PageScanResult = rendered;
 
   if (!options.skipLighthouse) {
-    if (options.delayMs !== undefined && options.delayMs > 0) {
-      await sleep(options.delayMs);
-    }
-
-    try {
-      result.lighthouse = await runLighthouseSerialized(url, debugPort);
-    } catch (error) {
-      result.lighthouseError = toErrorMessage(error);
-    }
+    const lighthouseResult = await runLighthouseAnalysis(url, debugPort, {
+      ...(options.delayMs !== undefined ? { delayMs: options.delayMs } : {}),
+    });
+    if (lighthouseResult.lighthouse !== undefined) result.lighthouse = lighthouseResult.lighthouse;
+    if (lighthouseResult.lighthouseError !== undefined)
+      result.lighthouseError = lighthouseResult.lighthouseError;
   }
 
   return result;

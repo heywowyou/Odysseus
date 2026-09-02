@@ -100,6 +100,31 @@ describe('crawlSite against fixtures/spa-demo', () => {
     ).toEqual([1, 2, 3]);
   }, 45_000);
 
+  it('extracts an audit profile for every visited page, from the existing navigation only', async () => {
+    const result = await crawlSite(TEST_URL, {
+      browser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+    });
+
+    const visitedPages = result.pages.filter((page) => page.status === 'visited');
+    expect(visitedPages.length).toBeGreaterThan(0);
+    for (const page of visitedPages) {
+      expect(page.auditProfile).toBeDefined();
+      expect(page.auditProfile?.profileVersion).toBe('v1');
+      expect(page.auditProfile?.url).toBe(page.url);
+    }
+
+    const nonVisitedPages = result.pages.filter((page) => page.status !== 'visited');
+    for (const page of nonVisitedPages) {
+      expect(page.auditProfile).toBeUndefined();
+    }
+
+    const home = result.pages.find((page) => page.url === TEST_URL || page.url === `${TEST_URL}/`);
+    expect(home?.auditProfile?.roleSignals[0]).toMatchObject({ kind: 'homepage-url' });
+  }, 45_000);
+
   it('inspects a sitemap without adding its orphan page to the link crawl', async () => {
     const result = await crawlSite(TEST_URL, {
       browser,

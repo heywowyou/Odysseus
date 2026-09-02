@@ -105,6 +105,24 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
       effectiveDelayMs: 1000,
       etaMs: 8000,
     });
+
+    await updateJobProgress(connection!, job.jobId, {
+      phase: 'lighthouse',
+      progress: {
+        contentScan: { completed: 10, target: 10, etaMs: 0 },
+        lighthouse: { completed: 2, target: 3, etaMs: 5000 },
+        continuationGuard: { omittedUrlCount: 4, omittedFamilyCount: 1 },
+      },
+    });
+
+    const staged = await getJob(connection!, job.jobId);
+    expect(staged?.phase).toBe('lighthouse');
+    expect(staged?.progress.contentScan).toEqual({ completed: 10, target: 10, etaMs: 0 });
+    expect(staged?.progress.lighthouse).toEqual({ completed: 2, target: 3, etaMs: 5000 });
+    expect(staged?.progress.continuationGuard).toEqual({
+      omittedUrlCount: 4,
+      omittedFamilyCount: 1,
+    });
   });
 
   it('completeJob sets status, phase, finishedAt and the auditId patch', async () => {

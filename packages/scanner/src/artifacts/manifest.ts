@@ -80,6 +80,9 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
         : {}),
     },
     pages: input.pages,
+    ...(input.crawl.continuationGuardSummary !== undefined
+      ? { continuationGuardSummary: input.crawl.continuationGuardSummary }
+      : {}),
     ...(input.siteSignals !== undefined ? { siteSignals: input.siteSignals } : {}),
     ...(input.cruxFieldData !== undefined ? { cruxFieldData: input.cruxFieldData } : {}),
     ...(input.translationClusters !== undefined
