@@ -32,6 +32,14 @@ pnpm install
 This is a pnpm workspace covering `packages/*` and `fixtures/*` (the
 `spa-demo` fixture used by scanner/crawler tests).
 
+Enable the repo's pre-push hook once per clone, so `pnpm run check` (docs
+links, formatting, lint, typecheck) runs locally before a push instead of
+failing for the first time in CI:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Environment variables
 
 Copy `.env.example` to `.env` and fill in the values you need:

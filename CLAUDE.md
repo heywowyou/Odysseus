@@ -876,6 +876,11 @@ documents and guardrails directly.
   understanding is approval on trust.
 - Run `pnpm run format` after maintained-source edits and `pnpm run check`
   before handoff. Record affected tests and any manual review separately.
+  A `.githooks/pre-push` hook runs the same `pnpm run check` automatically
+  once `git config core.hooksPath .githooks` is set (README.md, one-time
+  per clone); it exists because a docs-link break reached `main` and failed
+  CI three pushes in a row (2026-09-02) before anyone ran the check
+  locally. Do not bypass it with `--no-verify` as a habit.
 
 ## Build order
 

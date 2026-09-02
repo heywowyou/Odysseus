@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Runs the same fast gate CI runs (docs links, formatting, lint, typecheck)
+# before a push leaves this machine. Skips the test suites deliberately:
+# they need Docker Mongo and Playwright Chromium, which not every push
+# should have to pay for locally, and CI still runs them as the real gate.
+#
+# Enabled once per clone with:
+#   git config core.hooksPath .githooks
+set -euo pipefail
+
+echo "pre-push: running pnpm run check (docs, format, lint, typecheck)..."
+if ! pnpm run check; then
+  echo
+  echo "pre-push: pnpm run check failed. Fix the issue above, or skip this" \
+    "hook once with 'git push --no-verify' if you are certain." >&2
+  exit 1
+fi
