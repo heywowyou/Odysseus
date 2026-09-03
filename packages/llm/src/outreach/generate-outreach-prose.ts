@@ -1,6 +1,7 @@
 import { MAX_RETRIES, OPENAI_MODEL, OPENAI_TEMPERATURE } from '../constants.js';
 import { findLanguageComplianceViolationsInFields } from '../language-guard.js';
 import { findLegalConsequenceViolationsInFields } from '../legal-consequence-guard.js';
+import { paceRateLimitedRetry } from '../rate-limit-pacing.js';
 import { normalizeOutreachOutputTypography } from '../typography.js';
 import { findAliasViolations } from './guards/alias-guard.js';
 import { findObservationScopeViolations } from './guards/observation-scope-guard.js';
@@ -111,6 +112,7 @@ export async function generateOutreachProse(
       lastFailureReason = error instanceof Error ? error.message : String(error);
       previousRejection = buildOutreachRetryFeedback(lastFailureReason);
       console.error(`${logPrefix} failed - ${lastFailureReason}`);
+      await paceRateLimitedRetry(attempt, lastFailureReason);
       continue;
     }
 

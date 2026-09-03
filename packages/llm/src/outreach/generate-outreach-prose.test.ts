@@ -8,7 +8,12 @@ vi.mock('./outreach-client.js', () => ({
   callOpenAiForOutreach: vi.fn(),
 }));
 
+vi.mock('../rate-limit-pacing.js', () => ({
+  paceRateLimitedRetry: vi.fn(),
+}));
+
 const { callOpenAiForOutreach } = await import('./outreach-client.js');
+const { paceRateLimitedRetry } = await import('../rate-limit-pacing.js');
 const { generateOutreachProse } = await import('./generate-outreach-prose.js');
 
 function touch1Input(overrides: Partial<OutreachProseInput> = {}): OutreachProseInput {
@@ -545,5 +550,26 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
     expect(vi.mocked(callOpenAiForOutreach).mock.calls[1]?.[1]).toContain('network error');
+  });
+
+  it('routes an API-error retry through the shared rate-limit pacing helper (issue #31)', async () => {
+    // The gating logic (whether a failure text actually looks rate-limited)
+    // is rate-limit-pacing.ts's own contract, covered by rate-limit-pacing.test.ts.
+    // What issue #31 needs proven here is that this loop's API-error catch
+    // calls the shared helper at all, the same way analyze-writing.ts does,
+    // instead of retrying immediately as it did before the fix.
+    vi.mocked(paceRateLimitedRetry).mockReset().mockResolvedValue(undefined);
+    vi.mocked(callOpenAiForOutreach)
+      .mockReset()
+      .mockRejectedValueOnce(new Error('429 Rate limit exceeded (provider retry-after: 7s)'))
+      .mockResolvedValueOnce({ output: cleanTouch1Output() });
+
+    await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
+
+    expect(paceRateLimitedRetry).toHaveBeenCalledTimes(1);
+    expect(paceRateLimitedRetry).toHaveBeenCalledWith(
+      1,
+      '429 Rate limit exceeded (provider retry-after: 7s)',
+    );
   });
 });

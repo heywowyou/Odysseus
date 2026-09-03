@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { getOpenAiApiKey, getOpenAiBaseUrl } from '../config.js';
 import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_OUTPUT_TOKENS } from '../constants.js';
+import { withProviderRetryAfterHint } from '../client.js';
 import { buildOutreachSystemPrompt, buildOutreachUserPrompt } from './outreach-prompt.js';
 import type { OutreachProseInput } from './outreach-input.js';
 import {
@@ -49,24 +50,26 @@ export async function callOpenAiForOutreach(
         ? OUTREACH_TOUCH2_OUTPUT_JSON_SCHEMA
         : OUTREACH_TOUCH3_OUTPUT_JSON_SCHEMA;
 
-  const response = await client.chat.completions.create({
-    model: OPENAI_MODEL,
-    max_completion_tokens: MAX_OUTPUT_TOKENS,
-    temperature: OPENAI_TEMPERATURE,
-    reasoning_effort: 'none',
-    messages: [
-      { role: 'system', content: buildOutreachSystemPrompt(input) },
-      { role: 'user', content: buildOutreachUserPrompt(input, previousRejection) },
-    ],
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: `outreach_touch${input.touch}_output`,
-        schema: jsonSchema,
-        strict: true,
+  const response = await withProviderRetryAfterHint(() =>
+    client.chat.completions.create({
+      model: OPENAI_MODEL,
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
+      temperature: OPENAI_TEMPERATURE,
+      reasoning_effort: 'none',
+      messages: [
+        { role: 'system', content: buildOutreachSystemPrompt(input) },
+        { role: 'user', content: buildOutreachUserPrompt(input, previousRejection) },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: `outreach_touch${input.touch}_output`,
+          schema: jsonSchema,
+          strict: true,
+        },
       },
-    },
-  });
+    }),
+  );
 
   const choice = response.choices?.[0];
   if (!choice) {

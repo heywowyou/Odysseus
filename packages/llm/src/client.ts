@@ -37,8 +37,11 @@ function createClient(): OpenAI {
  *  message (issue #30): the analyze retry loops pace off the failure text
  *  and never see the error object, where the Retry-After header alone
  *  lives. Any other error, including a 429 with no readable Retry-After,
- *  passes through untouched. */
-async function withProviderRetryAfterHint<T>(call: () => Promise<T>): Promise<T> {
+ *  passes through untouched.
+ *
+ *  Exported for outreach-client.ts (issue #31): the outreach loop is the
+ *  same defect class on a different call site, not a copy of this logic. */
+export async function withProviderRetryAfterHint<T>(call: () => Promise<T>): Promise<T> {
   try {
     return await call();
   } catch (error) {
