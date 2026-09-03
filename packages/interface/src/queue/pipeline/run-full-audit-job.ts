@@ -63,7 +63,13 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       connection,
     );
 
-    await updateJobProgress(connection, job.jobId, { phase: 'analyze-fr' });
+    // Written now, not only in completeJob at the end: a report-stage
+    // failure below still leaves the audit and both analyses persisted,
+    // and the operator needs the dashboard link to reach them. See #35.
+    await updateJobProgress(connection, job.jobId, {
+      phase: 'analyze-fr',
+      auditId: auditResult.auditId,
+    });
     const frAnalysis = await runAnalysisStage(
       auditResult.auditDir,
       auditResult.manifest,

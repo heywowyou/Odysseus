@@ -140,6 +140,24 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect(stored?.auditId).toBe('audit-123');
   });
 
+  it('keeps a job auditId set via updateJobProgress after a later failJob (#35)', async () => {
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://f.example/',
+      options: {},
+    });
+
+    await updateJobProgress(connection!, job.jobId, {
+      phase: 'analyze-fr',
+      auditId: 'audit-orphan-guard',
+    });
+    await failJob(connection!, job.jobId, 'report generation aborted');
+
+    const stored = await getJob(connection!, job.jobId);
+    expect(stored?.status).toBe('failed');
+    expect(stored?.auditId).toBe('audit-orphan-guard');
+  });
+
   it('failJob sets status, phase, finishedAt and the error message', async () => {
     const job = await createJob(connection!, {
       type: 'full-audit',

@@ -66,6 +66,12 @@ export interface JobProgressPatch {
   /** Same reasoning as urlResults above, for prospect-ingestion jobs:
    *  one entry per candidate in the current batch only. */
   ingestionResults?: ProspectIngestionResult[];
+  /** Written as soon as the audit stage resolves, well before completeJob
+   *  runs, so a later report-stage failure still leaves the dashboard able
+   *  to link the job to its persisted audit (rowTarget in
+   *  dashboard/routes/audits-model.ts reads this field regardless of job
+   *  status). */
+  auditId?: string;
 }
 
 export async function updateJobProgress(
@@ -89,6 +95,7 @@ export async function updateJobProgress(
   if (patch.progress?.message !== undefined) $set['progress.message'] = patch.progress.message;
   if (patch.urlResults !== undefined) $set['urlResults'] = patch.urlResults;
   if (patch.ingestionResults !== undefined) $set['ingestionResults'] = patch.ingestionResults;
+  if (patch.auditId !== undefined) $set['auditId'] = patch.auditId;
   if (Object.keys($set).length === 0) return;
   await JobModel.updateOne({ jobId }, { $set });
 }
