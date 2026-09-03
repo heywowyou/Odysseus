@@ -1,6 +1,7 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
+import { APP_ROUTE_PREFIXES } from '../app-routes.js';
 import { getPublicDir } from '../config.js';
 import type { Router } from '../router.js';
 
@@ -12,7 +13,7 @@ const CONTENT_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
-const APP_ROUTE_PATTERN = /^\/(audits|scans|login)(\/|$)/;
+const APP_ROUTE_PATTERN = new RegExp(`^/(${APP_ROUTE_PREFIXES.join('|')})(/|$)`);
 
 export type StaticResolution =
   | { kind: 'file'; filePath: string }
@@ -42,7 +43,8 @@ async function isFile(candidate: string): Promise<boolean> {
  *
  *  Exact files under publicDir win first (the built SPA's index.html and
  *  hashed assets). Client-side routes have no file on disk, so anything
- *  under /audits, /scans, or /login serves the SPA entry and lets the
+ *  under one of APP_ROUTE_PREFIXES (app-routes.ts, kept in sync with
+ *  dashboard/App.tsx's top-level routes) serves the SPA entry and lets the
  *  client router render the route; the prefix list is deliberate so anything
  *  else (bookmarks to the removed pre-rebuild pages, stray paths) keeps plain
  *  404 semantics. /api/* never reaches this resolver, the router matches
