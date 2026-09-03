@@ -4,6 +4,7 @@ import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import {
   crawlProgress,
   contentScanProgress,
+  coverageSegments,
   currentPhaseLabel,
   formatEta,
   isKnownPhase,
@@ -40,6 +41,33 @@ function job(
     ...(fields.error !== undefined ? { error: fields.error } : {}),
   };
 }
+
+describe('coverageSegments', () => {
+  // Captured job record from GitHub issue #33 (www.villasfoch.fr, job
+  // 3ec80395-1070-4d55-8ea7-7c7701ba3d31, 2026-09-03): 32 URLs visited, 28
+  // content-checked, 28 performance-measured, none omitted. The strip used
+  // to print "Contenu vérifié 0" here even though 28 pages were checked.
+  it('labels each band with its absolute charter count, not the residual used for width', () => {
+    const segments = coverageSegments(
+      job({
+        progress: {
+          crawl: { visited: 32, target: 32 },
+          contentScan: { completed: 28, target: 32, etaMs: 0 },
+          lighthouse: { completed: 28, target: 28, etaMs: 0 },
+        },
+      }),
+      en.common.coverage,
+    );
+
+    const byKind = Object.fromEntries(segments.map((segment) => [segment.kind, segment]));
+    expect(byKind['measured']).toMatchObject({ value: 28, displayValue: 28 });
+    // Residual width is 0 (checked === measured here), but the label still
+    // reads the true content-checked count.
+    expect(byKind['checked']).toMatchObject({ value: 0, displayValue: 28 });
+    expect(byKind['reached']).toMatchObject({ value: 4, displayValue: 32 });
+    expect(byKind['omitted']).toMatchObject({ value: 0, displayValue: 0 });
+  });
+});
 
 describe('isTerminal', () => {
   it('is false while the job can still change', () => {

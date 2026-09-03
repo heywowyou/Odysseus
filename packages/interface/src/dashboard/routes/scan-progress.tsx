@@ -6,7 +6,7 @@ import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge, badgeStyles, type BadgeTone } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { CoverageBar, type CoverageSegment } from '../components/ui/coverage-bar';
+import { CoverageBar } from '../components/ui/coverage-bar';
 import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { InfoTip } from '../components/ui/info-tip';
@@ -14,7 +14,6 @@ import { ProgressBar } from '../components/ui/progress-bar';
 import { Spinner } from '../components/ui/spinner';
 import { StatusDot } from '../components/ui/status-dot';
 import { useI18n } from '../i18n/provider';
-import type { DashboardStrings } from '../i18n/types';
 import { ApiError, fetchJson, postEmpty } from '../lib/api';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import { canStop } from '../lib/job-actions';
@@ -23,9 +22,11 @@ import { usePolling } from '../lib/use-polling';
 import { hostnameOf } from './audit-detail-model';
 import {
   contentScanProgress,
+  coverageSegments,
   crawlProgress,
   currentPhaseLabel,
   formatEta,
+  hasCoverage,
   hasStagedAnalysisProgress,
   isTerminal,
   lighthouseProgress,
@@ -35,49 +36,6 @@ import {
 } from './scan-progress-model';
 
 const POLL_INTERVAL_MS = 3000;
-
-/**
- * What this run has actually covered so far, as disjoint counts.
- *
- * The coverage terms nest - every performance-measured page is also
- * content-checked, every content-checked page is also inventoried - so they
- * cannot be drawn on top of each other without double-counting. Each band here
- * is the difference against the stronger one, which makes the widths add up to
- * the inventory and keeps the strip honest. Omitted URLs stay out of the
- * inventory entirely: the continuation guard left them undiscovered, and
- * folding them in would be exactly the overstatement the guard is disclosed to
- * prevent.
- */
-function coverageSegments(
-  job: ScanJobDetail,
-  labels: DashboardStrings['common']['coverage'],
-): CoverageSegment[] {
-  const visited = job.progress.crawl?.visited ?? 0;
-  const checked = job.progress.contentScan?.completed ?? job.progress.scan?.scanned ?? 0;
-  const measured = job.progress.lighthouse?.completed ?? 0;
-  const omitted = job.progress.continuationGuard?.omittedUrlCount ?? 0;
-  return [
-    { kind: 'measured', label: labels.measured, value: measured },
-    { kind: 'checked', label: labels.checked, value: Math.max(0, checked - measured) },
-    { kind: 'reached', label: labels.reached, value: Math.max(0, visited - checked) },
-    { kind: 'omitted', label: labels.omitted, value: omitted },
-  ];
-}
-
-/** True once any counter has moved. Before that the strip would be a full-width
- *  band of nothing, which reads as a finished scan rather than a starting one. */
-function hasCoverage(job: ScanJobDetail): boolean {
-  return coverageSegments(job, EMPTY_COVERAGE_LABELS).some((segment) => segment.value > 0);
-}
-
-const EMPTY_COVERAGE_LABELS = {
-  caption: '',
-  measured: '',
-  checked: '',
-  reached: '',
-  failed: '',
-  omitted: '',
-};
 
 function fillProgressCopy(template: string, values: Record<string, number>): string {
   return Object.entries(values).reduce(

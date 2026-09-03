@@ -26,7 +26,15 @@ export type CoverageSegmentKind = 'measured' | 'checked' | 'reached' | 'failed' 
 export interface CoverageSegment {
   kind: CoverageSegmentKind;
   label: string;
+  /** Drives the bar's width, so this stays the disjoint (nesting-adjusted)
+   *  count: double-counting it would misdraw the strip, since a
+   *  performance-measured page is also a content-checked one. */
   value: number;
+  /** What the legend prints. Defaults to value. The charter's coverage
+   *  vocabulary (measured/checked/inventoried) names absolute counts, not
+   *  residuals, so the legend shows the real total for each band while the
+   *  bar itself still draws the non-overlapping remainder. */
+  displayValue?: number;
 }
 
 const FILL_STYLES: Record<CoverageSegmentKind, string> = {
@@ -103,7 +111,9 @@ export function CoverageBar(props: {
                 aria-hidden="true"
               />
               <dt className="text-xs text-ink-muted">{segment.label}</dt>
-              <dd className="numeric text-sm font-medium text-ink">{segment.value}</dd>
+              <dd className="numeric text-sm font-medium text-ink">
+                {segment.displayValue ?? segment.value}
+              </dd>
             </div>
           ))}
         </dl>

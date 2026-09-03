@@ -1,3 +1,4 @@
+import type { CoverageSegment } from '../components/ui/coverage-bar';
 import type { DashboardStrings } from '../i18n/types';
 import type { JobStatus, ScanJobDetail } from '../lib/api-types';
 
@@ -50,6 +51,63 @@ export function isTerminal(status: JobStatus | undefined): boolean {
 
 function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, value));
+}
+
+/**
+ * What this run has actually covered so far.
+ *
+ * The coverage terms nest - every performance-measured page is also
+ * content-checked, every content-checked page is also inventoried - so the
+ * bar segments cannot be drawn on top of each other without double-counting:
+ * each segment's `value` is the difference against the stronger band, which
+ * is what keeps the strip widths honest. But the charter's coverage
+ * vocabulary (measured/checked/inventoried, CLAUDE.md's "coverage
+ * vocabulary, plan 021") names absolute counts, not residuals, so the label
+ * text uses `displayValue` to print the real total for each band (e.g.
+ * "Contenu vérifié 28", not the 0 left over once the 28 measured pages are
+ * subtracted out). Omitted URLs stay out of the inventory entirely: the
+ * continuation guard left them undiscovered, and folding them in would be
+ * exactly the overstatement the guard is disclosed to prevent.
+ */
+export function coverageSegments(
+  job: ScanJobDetail,
+  labels: DashboardStrings['common']['coverage'],
+): CoverageSegment[] {
+  const visited = job.progress.crawl?.visited ?? 0;
+  const checked = job.progress.contentScan?.completed ?? job.progress.scan?.scanned ?? 0;
+  const measured = job.progress.lighthouse?.completed ?? 0;
+  const omitted = job.progress.continuationGuard?.omittedUrlCount ?? 0;
+  return [
+    { kind: 'measured', label: labels.measured, value: measured, displayValue: measured },
+    {
+      kind: 'checked',
+      label: labels.checked,
+      value: Math.max(0, checked - measured),
+      displayValue: checked,
+    },
+    {
+      kind: 'reached',
+      label: labels.reached,
+      value: Math.max(0, visited - checked),
+      displayValue: visited,
+    },
+    { kind: 'omitted', label: labels.omitted, value: omitted, displayValue: omitted },
+  ];
+}
+
+const EMPTY_COVERAGE_LABELS: DashboardStrings['common']['coverage'] = {
+  caption: '',
+  measured: '',
+  checked: '',
+  reached: '',
+  failed: '',
+  omitted: '',
+};
+
+/** True once any counter has moved. Before that the strip would be a full-width
+ *  band of nothing, which reads as a finished scan rather than a starting one. */
+export function hasCoverage(job: ScanJobDetail): boolean {
+  return coverageSegments(job, EMPTY_COVERAGE_LABELS).some((segment) => segment.value > 0);
 }
 
 /** Crawl bar percentage, ported from app-progress.ts renderFullAudit:
