@@ -47,7 +47,19 @@ function withProviders(
     route === undefined ? null : { initialEntries: [route.path] },
     route === undefined
       ? child
-      : createElement(Routes, null, createElement(Route, { path: route.pattern, element: child })),
+      : createElement(
+          Routes,
+          null,
+          createElement(Route, {
+            path: route.pattern,
+            // react-router 8.3.1 resolves its own React types from
+            // @types/react 18 through pnpm's virtual-store hoist (pinned by
+            // the React 18 spa-demo fixture), while this file compiles
+            // against 19; the two ReactNode unions are mutually
+            // unassignable, so the element prop needs the explicit bridge.
+            element: child as unknown as React.ComponentProps<typeof Route>['element'],
+          }),
+        ),
   );
   return createElement(I18nProvider, null, router);
 }
