@@ -135,6 +135,45 @@ export interface ListOperatorProspectsOptions extends OperatorViewPageOptions {
   /** `not-evaluated` selects candidates no qualification generation has
    *  reached, which is a different set from any single outcome. */
   qualificationOutcome?: HotelQualificationOutcome | 'not-evaluated';
+  /** Free-text search over the list's visible identity fields (name,
+   *  commune, postcode) plus the candidate id. Blank means off. */
+  search?: string;
+}
+
+/** One row per fold family: the base letter plus its accented variants.
+ *  Every member expands to the same character class, so a query typed with
+ *  or without the accent finds both stored forms, whichever direction the
+ *  catalogue recorded. Case is left to the pattern's `i` flag. */
+const ACCENT_FOLD_FAMILIES: readonly (readonly [string, string])[] = [
+  ['a', 'àâä'],
+  ['e', 'éèêë'],
+  ['i', 'îï'],
+  ['o', 'ôö'],
+  ['u', 'ùûü'],
+  ['c', 'ç'],
+  ['y', 'ÿ'],
+];
+
+const ACCENT_FOLD_CLASSES: Record<string, string> = {};
+for (const [base, variants] of ACCENT_FOLD_FAMILIES) {
+  for (const char of base + variants) {
+    ACCENT_FOLD_CLASSES[char] = `[${base}${variants}]`;
+  }
+}
+
+function escapeRegexLiteral(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** The class content comes only from the fixed table above, so its
+ *  characters never need in-class escaping. */
+export function buildProspectSearchPattern(search: string): RegExp {
+  let source = '';
+  for (const char of search.toLowerCase()) {
+    const fold = ACCENT_FOLD_CLASSES[char];
+    source += fold === undefined ? escapeRegexLiteral(char) : fold;
+  }
+  return new RegExp(source, 'i');
 }
 
 export interface OperatorProspectRow {
@@ -213,6 +252,17 @@ function buildProspectFilter(options: ListOperatorProspectsOptions): Record<stri
         ? { qualification: { $exists: false } }
         : { 'qualification.outcome': options.qualificationOutcome },
     );
+  }
+  if (options.search !== undefined && options.search.trim() !== '') {
+    const pattern = buildProspectSearchPattern(options.search.trim());
+    constraints.push({
+      $or: [
+        { name: pattern },
+        { commune: pattern },
+        { postcode: pattern },
+        { candidateId: pattern },
+      ],
+    });
   }
   switch (options.queue) {
     case 'join-review':

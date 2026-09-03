@@ -69,6 +69,11 @@ const CAMPAIGN_ELIGIBILITIES: readonly HotelCampaignEligibility[] = [
   'parked-unknown-rating',
 ];
 
+/** Free-text search is an unbounded string by nature; this cap keeps one
+ *  query from carrying a pathological payload while staying far above any
+ *  name, commune, or candidate id an operator would paste. */
+const SEARCH_MAX_LENGTH = 100;
+
 /** Thrown at this module's boundary so a bad query or body fails fast with
  *  400 instead of travelling into the store (rule: fail fast at the
  *  boundary, same as routes/scans.ts). */
@@ -139,6 +144,20 @@ function parseListQuery(query: URLSearchParams): ListOperatorProspectsOptions {
     const version = rawVersion.trim();
     if (version === '') throw new ProspectRequestError('resolutionVersion must not be empty');
     options.resolutionVersion = version;
+  }
+
+  const rawSearch = query.get('q');
+  if (rawSearch !== null) {
+    const search = rawSearch.trim();
+    // Blank means "no search", matching a client that clears the field,
+    // rather than an error: the other params reject empties because an
+    // empty enum value cannot name a state.
+    if (search !== '') {
+      if (search.length > SEARCH_MAX_LENGTH) {
+        throw new ProspectRequestError(`q must be at most ${SEARCH_MAX_LENGTH} characters`);
+      }
+      options.search = search;
+    }
   }
 
   const rawLimit = query.get('limit');

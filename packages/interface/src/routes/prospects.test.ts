@@ -178,6 +178,28 @@ describe('GET /api/prospects', () => {
     expect(vi.mocked(listOperatorProspects).mock.calls[0]?.[1]).toEqual({});
   });
 
+  it('passes the search through trimmed', async () => {
+    const res = await handle('/api/prospects?q=%20H%C3%B4tel%20Belv%C3%A9d%C3%A8re%20');
+    expect(res.statusCode).toBe(200);
+    expect(listOperatorProspects).toHaveBeenCalledWith(fakeConnection, {
+      search: 'Hôtel Belvédère',
+    });
+  });
+
+  it('treats a blank search as no search constraint', async () => {
+    await handle('/api/prospects?q=%20%20');
+    expect(vi.mocked(listOperatorProspects).mock.calls[0]?.[1]).toEqual({});
+    await handle('/api/prospects?q=');
+    expect(vi.mocked(listOperatorProspects).mock.calls[1]?.[1]).toEqual({});
+  });
+
+  it('rejects an oversized search with 400 and never reaches the store', async () => {
+    const res = await handle(`/api/prospects?q=${'x'.repeat(101)}`);
+    expect(res.statusCode).toBe(400);
+    expect(res.body ?? '').toMatch(/q/);
+    expect(listOperatorProspects).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['queue=does-not-exist', /queue/],
     ['identityStatus=banana', /identityStatus/],

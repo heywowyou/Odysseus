@@ -85,13 +85,15 @@ export function isQualificationValue(value: string): value is QualificationFilte
   return value === '' || (QUALIFICATION_VALUES as readonly string[]).includes(value);
 }
 
-/** Controlled state of the list's filters; '' means the filter is off. */
+/** Controlled state of the list's filters; '' means the filter is off.
+ *  `search` is the free-text box and travels as the API's `q` param. */
 export interface ProspectFilterState {
   queue: ProspectQueue;
   identityStatus: IdentityStatusFilter;
   groupStatus: GroupStatusFilter;
   reviewState: ReviewStateFilter;
   qualificationOutcome: QualificationFilter;
+  search: string;
 }
 
 export function createEmptyFilters(): ProspectFilterState {
@@ -101,6 +103,7 @@ export function createEmptyFilters(): ProspectFilterState {
     groupStatus: '',
     reviewState: '',
     qualificationOutcome: '',
+    search: '',
   };
 }
 
@@ -108,7 +111,8 @@ export const PROSPECT_PAGE_SIZE = 25;
 
 /** Query path of GET /api/prospects for the current filters and page.
  *  Offset stays out when it is 0 so shared URLs stay canonical; limit is
- *  always sent so a response is self-describing. */
+ *  always sent so a response is self-describing. The search is trimmed so
+ *  whitespace typed into the box never reaches the API as a constraint. */
 export function buildProspectsPath(filters: ProspectFilterState, offset: number): string {
   const params = new URLSearchParams();
   if (filters.queue !== 'all') params.set('queue', filters.queue);
@@ -118,6 +122,8 @@ export function buildProspectsPath(filters: ProspectFilterState, offset: number)
   if (filters.qualificationOutcome !== '') {
     params.set('qualificationOutcome', filters.qualificationOutcome);
   }
+  const search = filters.search.trim();
+  if (search !== '') params.set('q', search);
   params.set('limit', String(PROSPECT_PAGE_SIZE));
   if (offset > 0) params.set('offset', String(offset));
   const queryString = params.toString();

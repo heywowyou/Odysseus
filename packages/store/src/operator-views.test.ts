@@ -636,6 +636,120 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       expect(parkedRow?.scoringVersion).toBeNull();
       expect(parkedRow?.contactState).toBeNull();
     });
+
+    it('finds candidates by name case- and accent-insensitively in both directions', async () => {
+      if (!connection) return;
+      const accented = candidateInput({
+        name: 'Hôtel Belvédère',
+        normalizedName: 'hotel belvedere',
+      });
+      const plain = candidateInput({
+        name: 'Hotel Saint Clair',
+        normalizedName: 'hotel saint clair',
+      });
+      await upsertHotelCandidates(connection!, [accented, plain]);
+
+      const byUnaccentedQuery = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        search: 'belvedere',
+      });
+      expect(byUnaccentedQuery.rows.map((row) => row.candidateId)).toEqual([accented.candidateId]);
+
+      const byAccentedQuery = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        search: 'Hôtel',
+      });
+      expect(byAccentedQuery.rows.map((row) => row.candidateId).sort()).toEqual(
+        [accented.candidateId, plain.candidateId].sort(),
+      );
+    });
+
+    it('finds candidates by commune, postcode, and candidate id', async () => {
+      if (!connection) return;
+      const byCommune = candidateInput({ commune: 'Chamonix-Mont-Blanc' });
+      const byPostcode = candidateInput({ postcode: '74400' });
+      const byId = candidateInput({ candidateId: 'cand-siren-42810' });
+      await upsertHotelCandidates(connection!, [byCommune, byPostcode, byId]);
+
+      const communeHit = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        search: 'chamonix',
+      });
+      expect(communeHit.rows.map((row) => row.candidateId)).toEqual([byCommune.candidateId]);
+
+      const postcodeHit = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        search: '74400',
+      });
+      expect(postcodeHit.rows.map((row) => row.candidateId)).toEqual([byPostcode.candidateId]);
+
+      const idHit = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        search: '42810',
+      });
+      expect(idHit.rows.map((row) => row.candidateId)).toEqual([byId.candidateId]);
+    });
+
+    it('matches regex special characters literally', async () => {
+      if (!connection) return;
+      const plus = candidateInput({ name: 'A+B Hôtel', normalizedName: 'a+b hotel' });
+      const parens = candidateInput({ name: 'Le Panier (Bis)', normalizedName: 'le panier bis' });
+      await upsertHotelCandidates(connection!, [plus, parens]);
+
+      const plusHit = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        search: 'a+b',
+      });
+      expect(plusHit.rows.map((row) => row.candidateId)).toEqual([plus.candidateId]);
+
+      const parensHit = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        search: '(bis)',
+      });
+      expect(parensHit.rows.map((row) => row.candidateId)).toEqual([parens.candidateId]);
+    });
+
+    it('returns an empty page when nothing matches and treats a blank query as no constraint', async () => {
+      if (!connection) return;
+      const seeded = candidateInput();
+      await upsertHotelCandidates(connection!, [seeded]);
+
+      const noHit = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        search: 'zzzzquarante-deux',
+      });
+      expect(noHit.rows).toEqual([]);
+      expect(noHit.total).toBe(0);
+
+      const blank = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        search: '   ',
+      });
+      expect(blank.total).toBe(1);
+      expect(blank.rows.map((row) => row.candidateId)).toEqual([seeded.candidateId]);
+    });
+
+    it('combines the search with the other filters', async () => {
+      if (!connection) return;
+      const shared = 'Hôtel Belvédère';
+      const parked = candidateInput({ name: shared, normalizedName: 'hotel belvedere' });
+      const pending = candidateInput({
+        name: shared,
+        normalizedName: 'hotel belvedere',
+        identityStatus: 'needs-review',
+        review: { state: 'pending', queuedReason: 'siret-disagreement' },
+      });
+      await upsertHotelCandidates(connection!, [parked, pending]);
+      await recordHotelQualifications(connection!, [qualificationInput(parked.candidateId)]);
+
+      const page = await listOperatorProspects(connection!, {
+        resolutionVersion: RESOLUTION_VERSION,
+        search: 'belvedere',
+        queue: 'parked',
+      });
+      expect(page.total).toBe(1);
+      expect(page.rows.map((row) => row.candidateId)).toEqual([parked.candidateId]);
+    });
   });
 
   describe('projection safety', () => {

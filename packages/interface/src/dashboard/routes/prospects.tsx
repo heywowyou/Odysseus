@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
 import { Building2, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
@@ -9,6 +9,7 @@ import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Field } from '../components/ui/field';
 import { InfoTip } from '../components/ui/info-tip';
+import { Input } from '../components/ui/input';
 import { SegmentedControl } from '../components/ui/segmented';
 import { Select } from '../components/ui/select';
 import { Skeleton } from '../components/ui/skeleton';
@@ -23,6 +24,7 @@ import {
 import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
 import { fetchJson } from '../lib/api';
+import { useDebouncedValue } from '../lib/use-debounced-value';
 import { usePolling } from '../lib/use-polling';
 import { vocabularyLabel } from '../lib/vocabulary';
 import {
@@ -54,6 +56,9 @@ import type {
 
 const POLL_INTERVAL_MS = 8000;
 const SKELETON_ROW_COUNT = 8;
+/** Settling time for the search box: the list refetches from the server on
+ *  every change, so keystrokes must batch into one request per pause. */
+const SEARCH_DEBOUNCE_MS = 300;
 
 function reviewLabel(reviewState: string, strings: DashboardStrings): string {
   return vocabularyLabel(strings.labels.review, reviewState, strings.common.vocabularyFallback);
@@ -86,6 +91,19 @@ export function ProspectsPage(): JSX.Element {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<ProspectFilterState>(createEmptyFilters);
   const [requestedOffset, setRequestedOffset] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS);
+
+  // The settled search value joins the filter state the same way a Select
+  // change does, through the same applyFilters semantics: a new value resets
+  // the offset, and an unchanged one (the mount run) is a no-op.
+  useEffect(() => {
+    setFilters((current) => {
+      if (current.search === debouncedSearch) return current;
+      return { ...current, search: debouncedSearch };
+    });
+    setRequestedOffset(0);
+  }, [debouncedSearch]);
 
   const page = usePolling(
     () => fetchJson<ProspectListResponse>(buildProspectsPath(filters, requestedOffset)),
@@ -302,6 +320,14 @@ export function ProspectsPage(): JSX.Element {
 
       <Card className="mb-4">
         <div className="flex flex-wrap items-center gap-3">
+          <Input
+            type="search"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder={strings.prospects.searchPlaceholder}
+            aria-label={strings.prospects.searchPlaceholder}
+            className="min-w-40 flex-1"
+          />
           <div className="w-44">
             <Field
               label={strings.prospects.filters.identityStatus}

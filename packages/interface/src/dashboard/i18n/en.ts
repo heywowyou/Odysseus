@@ -374,6 +374,7 @@ export const en: DashboardStrings = {
     title: 'Prospects',
     description: 'Review the hotel list, from first contact data to outreach.',
     queueLabel: 'Lists',
+    searchPlaceholder: 'Search by name, city, or postcode…',
     queues: {
       all: 'All prospects',
       joinReview: 'Matches to review',

@@ -378,6 +378,7 @@ export const fr: DashboardStrings = {
     title: 'Prospects',
     description: 'Revue de la liste d’hôtels, des données de contact jusqu’aux démarches.',
     queueLabel: 'Listes',
+    searchPlaceholder: 'Rechercher par nom, ville ou code postal…',
     queues: {
       all: 'Tous les prospects',
       joinReview: 'Rapprochement à valider',

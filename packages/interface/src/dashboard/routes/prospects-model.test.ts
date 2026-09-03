@@ -52,6 +52,7 @@ describe('buildProspectsPath', () => {
       groupStatus: '',
       reviewState: 'pending',
       qualificationOutcome: 'not-evaluated',
+      search: '',
     };
     const path = buildProspectsPath(filters, 50);
     expect(path).toBe(
@@ -63,6 +64,16 @@ describe('buildProspectsPath', () => {
   it('omits the offset on the first page', () => {
     const path = buildProspectsPath({ ...createEmptyFilters(), queue: 'parked' }, 0);
     expect(path).not.toContain('offset');
+  });
+
+  it('sends the search as q when it has content and trims surrounding whitespace', () => {
+    const path = buildProspectsPath({ ...createEmptyFilters(), search: '  Hôtel Belvédère ' }, 0);
+    expect(path).toBe('/api/prospects?q=H%C3%B4tel+Belv%C3%A9d%C3%A8re&limit=25');
+  });
+
+  it('omits q for a blank or whitespace-only search', () => {
+    expect(buildProspectsPath({ ...createEmptyFilters(), search: '' }, 0)).not.toContain('q=');
+    expect(buildProspectsPath({ ...createEmptyFilters(), search: '   ' }, 0)).not.toContain('q=');
   });
 });
 

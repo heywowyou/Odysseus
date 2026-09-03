@@ -403,6 +403,8 @@ export interface DashboardStrings {
     title: string;
     description: string;
     queueLabel: string;
+    /** Placeholder and accessible name of the prospect search box. */
+    searchPlaceholder: string;
     queues: Record<
       'all' | 'joinReview' | 'parked' | 'rejected' | 'alreadyEngaged' | 'groups',
       string
