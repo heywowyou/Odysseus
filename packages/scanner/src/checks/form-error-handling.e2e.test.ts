@@ -5,13 +5,17 @@ import type { Browser } from 'playwright';
 import { launchBrowser } from '../browser.js';
 import { checkFormErrorHandling } from './form-error-handling.js';
 
+/** `onRequest` reports the method and path, never just "something arrived":
+ *  a safety assertion that counts every request cannot tell a real escaped
+ *  form submission from a 404 probe or a speculative connection, and issue 16
+ *  could not be triaged until the two were distinguishable. */
 function startStaticServer(
   routes: Record<string, string>,
-  onRequest?: () => void,
+  onRequest?: (method: string, url: string) => void,
 ): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
-      onRequest?.();
+      onRequest?.(req.method ?? '', req.url ?? '');
       const body = routes[req.url ?? '/'];
       if (body === undefined) {
         res.writeHead(404).end('not found');
@@ -26,6 +30,25 @@ function startStaticServer(
   });
 }
 
+/** Waits until the observed count has stopped moving, rather than sleeping a
+ *  fixed span and hoping the window was long enough. A fixed sleep makes a
+ *  safety assertion timing-dependent in exactly the direction that hides a
+ *  defect: under load the escape can land after the sleep and the test passes. */
+async function countWhenQuiet(getCount: () => number, quietMs = 250, maxMs = 3_000) {
+  const deadline = Date.now() + maxMs;
+  let count = getCount();
+  let lastChange = Date.now();
+  while (Date.now() < deadline && Date.now() - lastChange < quietMs) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    const next = getCount();
+    if (next !== count) {
+      count = next;
+      lastChange = Date.now();
+    }
+  }
+  return count;
+}
+
 describe('checkFormErrorHandling against real pages', () => {
   let browser: Browser;
 
@@ -37,13 +60,21 @@ describe('checkFormErrorHandling against real pages', () => {
     await browser?.close();
   });
 
-  async function checkHtml(html: string) {
+  /** `beforeTeardown` runs with the page still open, which is the only way a
+   *  safety assertion about escaped requests means anything: closing the
+   *  context cancels whatever the page still had pending, so a check that
+   *  counted hits after teardown would report a clean result for a request
+   *  the teardown itself killed. A real scan leaves the page open for the
+   *  passes that follow this one, so the test must too. */
+  async function checkHtml(html: string, beforeTeardown?: () => Promise<void>) {
     const { server, origin } = await startStaticServer({ '/': html });
     const context = await browser.newContext();
     try {
       const page = await context.newPage();
       await page.goto(origin);
-      return await checkFormErrorHandling(page, origin);
+      const result = await checkFormErrorHandling(page, origin);
+      await beforeTeardown?.();
+      return result;
     } finally {
       await context.close();
       server.close();
@@ -109,9 +140,9 @@ describe('checkFormErrorHandling against real pages', () => {
   });
 
   it('SAFETY: never lets a real network request escape, even from a form with no validation gate at all', async () => {
-    let destinationHits = 0;
-    const destination = await startStaticServer({ '/submit': 'ok' }, () => {
-      destinationHits += 1;
+    let submissions = 0;
+    const destination = await startStaticServer({ '/submit': 'ok' }, (method, url) => {
+      if (method === 'POST' && url === '/submit') submissions += 1;
     });
     try {
       const html = `<body>
@@ -131,22 +162,61 @@ describe('checkFormErrorHandling against real pages', () => {
         </script>
       </body>`;
 
-      await checkHtml(html);
+      // The request must never have reached the server at all, not merely
+      // have resolved quickly.
+      let observed = -1;
+      await checkHtml(html, async () => {
+        observed = await countWhenQuiet(() => submissions);
+      });
 
-      // Give any (blocked) fetch a moment to have resolved/failed before
-      // asserting - the request should never have reached the server at
-      // all, not merely resolved quickly.
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      expect(destinationHits).toBe(0);
+      expect(observed).toBe(0);
+    } finally {
+      destination.server.close();
+    }
+  });
+
+  it('SAFETY: blocks a submit handler whose network call lands after the check has finished inspecting', async () => {
+    let submissions = 0;
+    const destination = await startStaticServer({ '/submit': 'ok' }, (method, url) => {
+      if (method === 'POST' && url === '/submit') submissions += 1;
+    });
+    try {
+      // Deferring the call is what makes this deterministic rather than
+      // timing-dependent: the request is guaranteed to be created after the
+      // triggering evaluate call has already returned. Stubbing the page's
+      // network entry points cannot help here (they are restored by then), so
+      // this form is covered only by the request-blocking route, and only if
+      // that route is still installed. Tearing it down the moment evaluate
+      // resolved escaped 10 times out of 10; holding it until the page goes
+      // quiet escapes 0 times out of 10.
+      const html = `<body>
+        <form id="unsafe">
+          <input type="text" name="name" required />
+          <button type="submit">Send</button>
+        </form>
+        <script>
+          document.getElementById('unsafe').addEventListener('submit', (e) => {
+            e.preventDefault();
+            setTimeout(() => fetch('${destination.origin}/submit', { method: 'POST' }), 50);
+          });
+        </script>
+      </body>`;
+
+      let observed = -1;
+      await checkHtml(html, async () => {
+        observed = await countWhenQuiet(() => submissions);
+      });
+
+      expect(observed).toBe(0);
     } finally {
       destination.server.close();
     }
   });
 
   it('SAFETY: never submits via a real trusted click either (regression guard - this check must never click the submit button)', async () => {
-    let destinationHits = 0;
-    const destination = await startStaticServer({ '/submit': 'ok' }, () => {
-      destinationHits += 1;
+    let submissions = 0;
+    const destination = await startStaticServer({ '/submit': 'ok' }, (method, url) => {
+      if (method === 'POST' && url === '/submit') submissions += 1;
     });
     try {
       const html = `<body>
@@ -156,9 +226,12 @@ describe('checkFormErrorHandling against real pages', () => {
         </form>
       </body>`;
 
-      await checkHtml(html);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      expect(destinationHits).toBe(0);
+      let observed = -1;
+      await checkHtml(html, async () => {
+        observed = await countWhenQuiet(() => submissions);
+      });
+
+      expect(observed).toBe(0);
     } finally {
       destination.server.close();
     }
