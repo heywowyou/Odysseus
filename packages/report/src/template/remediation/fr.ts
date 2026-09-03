@@ -102,6 +102,8 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     "Corrigez la syntaxe du bloc de données structurées : il n'est pas lisible en tant que JSON et est donc ignoré entièrement.",
   'jsonld-missing':
     "Ajoutez un bloc de données structurées JSON-LD décrivant l'établissement, pour que les moteurs et les assistants de recherche puissent le lire.",
+  'keyboard-trap':
+    'Donnez un moyen de sortir de cet élément au clavier, par exemple la touche Echap ou un bouton de fermeture accessible, plutôt que de bloquer la touche de tabulation qui doit continuer à faire avancer le focus.',
   label:
     "Associez une étiquette à chaque champ de formulaire, avec une balise label liée au champ. Un texte d'aide affiché dans le champ ne suffit pas.",
   'largest-contentful-paint':

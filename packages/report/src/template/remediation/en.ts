@@ -82,6 +82,8 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     'Fix the syntax of the structured-data block: it does not parse as JSON and is therefore ignored entirely.',
   'jsonld-missing':
     'Add a JSON-LD structured-data block describing the business, so search engines and answer assistants can read it.',
+  'keyboard-trap':
+    'Give this element a keyboard way out, such as the Escape key or an accessible close button, instead of intercepting the Tab key that should keep moving focus forward.',
   label:
     'Associate a label with every form field, using a label tag tied to the field. Placeholder text inside the field is not enough.',
   'largest-contentful-paint':
