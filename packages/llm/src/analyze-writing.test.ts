@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
+import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 
 vi.mock('./client.js', () => ({
-  callMistralForWriting: vi.fn(),
+  callOpenAiForWriting: vi.fn(),
 }));
 
-const { callMistralForWriting } = await import('./client.js');
+const { callOpenAiForWriting } = await import('./client.js');
 const { analyzeWriting } = await import('./analyze-writing.js');
 
 const input: WritingInput = {
@@ -126,20 +126,20 @@ function buildViolatingThemeTitleOutput(): WritingPassOutput {
 
 describe('analyzeWriting', () => {
   it('returns the output on a clean pass', async () => {
-    vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
+    vi.mocked(callOpenAiForWriting).mockReset().mockResolvedValueOnce({
       output: buildCleanFrenchOutput(),
     });
 
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.themes).toHaveLength(1);
-    expect(result.model).toBe(MISTRAL_MODEL);
-    expect(result.temperature).toBe(MISTRAL_TEMPERATURE);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(1);
+    expect(result.model).toBe(OPENAI_MODEL);
+    expect(result.temperature).toBe(OPENAI_TEMPERATURE);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
   });
 
   it('retries once on a theme-key mismatch, then succeeds', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildMismatchedKeyOutput() })
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
@@ -147,11 +147,11 @@ describe('analyzeWriting', () => {
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.themes[0]!.themeKey).toBe('t1');
-    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
   });
 
   it('retries once when the first response fails the language-compliance guard, then succeeds', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildFailingEnglishTitleOutput() })
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
@@ -159,20 +159,20 @@ describe('analyzeWriting', () => {
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.themes[0]!.title).toBe('Contraste des couleurs insuffisant');
-    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries when every attempt fails language compliance', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValue({ output: buildFailingEnglishTitleOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once when the first response uses a non-canonical severity word, then succeeds', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildNonCanonicalSeverityWordOutput() })
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
@@ -180,20 +180,20 @@ describe('analyzeWriting', () => {
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.executiveSummary).not.toMatch(/majeur/i);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries when every attempt uses a non-canonical severity word', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValue({ output: buildNonCanonicalSeverityWordOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once when the first response cites WCAG 2.1, then succeeds', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildWcag21CitationOutput() })
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
@@ -201,20 +201,20 @@ describe('analyzeWriting', () => {
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.themes[0]!.recommendedActions[0]).not.toMatch(/2\.1/);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries when every attempt cites WCAG 2.1', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValue({ output: buildWcag21CitationOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once when the first response asserts an unhedged business claim, then succeeds', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildUnhedgedBusinessClaimOutput() })
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
@@ -222,20 +222,20 @@ describe('analyzeWriting', () => {
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.themes[0]!.businessImpact).not.toMatch(/rentable/i);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries when every attempt asserts an unhedged business claim', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValue({ output: buildUnhedgedBusinessClaimOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once when executiveSummary contains a digit, then succeeds', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildDigitInSummaryOutput() })
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
@@ -243,20 +243,20 @@ describe('analyzeWriting', () => {
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.executiveSummary).not.toMatch(/\d/);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries when every attempt puts a digit in executiveSummary', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValue({ output: buildDigitInSummaryOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once when the first response puts a legal claim in a theme title, then succeeds', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildViolatingThemeTitleOutput() })
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
@@ -264,16 +264,16 @@ describe('analyzeWriting', () => {
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.themes[0]!.title).toBe('Contraste des couleurs insuffisant');
-    expect(callMistralForWriting).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries when every attempt puts a legal claim in a theme title', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValue({ output: buildViolatingThemeTitleOutput() });
 
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 });
 
@@ -290,17 +290,17 @@ function buildGravesSummaryOutput(): WritingPassOutput {
 
 describe('analyzeWriting retry feedback (issue #21)', () => {
   it('sends no rejection feedback on the first attempt', async () => {
-    vi.mocked(callMistralForWriting).mockReset().mockResolvedValueOnce({
+    vi.mocked(callOpenAiForWriting).mockReset().mockResolvedValueOnce({
       output: buildCleanFrenchOutput(),
     });
 
     await analyzeWriting(input, ['t1'], false);
 
-    expect(vi.mocked(callMistralForWriting).mock.calls[0]![2]).toBeUndefined();
+    expect(vi.mocked(callOpenAiForWriting).mock.calls[0]![2]).toBeUndefined();
   });
 
   it('feeds the severity guard rejection into the next attempt, then succeeds', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildGravesSummaryOutput() })
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
@@ -308,7 +308,7 @@ describe('analyzeWriting retry feedback (issue #21)', () => {
     const result = await analyzeWriting(input, ['t1'], false);
 
     expect(result.output.executiveSummary).not.toMatch(/grave/i);
-    const calls = vi.mocked(callMistralForWriting).mock.calls;
+    const calls = vi.mocked(callOpenAiForWriting).mock.calls;
     expect(calls).toHaveLength(2);
     expect(calls[1]![2]).toContain('rejected by the automated guard');
     expect(calls[1]![2]).toContain('"graves"');
@@ -316,7 +316,7 @@ describe('analyzeWriting retry feedback (issue #21)', () => {
   });
 
   it('carries the latest failure reason across a thrown attempt', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildGravesSummaryOutput() })
       .mockRejectedValueOnce(new Error('connection reset by peer'))
@@ -324,8 +324,8 @@ describe('analyzeWriting retry feedback (issue #21)', () => {
 
     const result = await analyzeWriting(input, ['t1'], false);
 
-    expect(result.model).toBe(MISTRAL_MODEL);
-    const calls = vi.mocked(callMistralForWriting).mock.calls;
+    expect(result.model).toBe(OPENAI_MODEL);
+    const calls = vi.mocked(callOpenAiForWriting).mock.calls;
     expect(calls).toHaveLength(3);
     // The feedback always names the most recent failure, not the first.
     expect(calls[1]![2]).toContain('"graves"');
@@ -334,14 +334,14 @@ describe('analyzeWriting retry feedback (issue #21)', () => {
   });
 
   it('feeds a legal-consequence rejection into the next attempt', async () => {
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({ output: buildViolatingThemeTitleOutput() })
       .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
 
     await analyzeWriting(input, ['t1'], false);
 
-    const calls = vi.mocked(callMistralForWriting).mock.calls;
+    const calls = vi.mocked(callOpenAiForWriting).mock.calls;
     expect(calls[1]![2]).toContain('rejected by the automated guard');
     expect(calls[1]![2]).toContain('risques juridiques');
   });

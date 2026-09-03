@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { MISTRAL_MODEL, MISTRAL_TEMPERATURE } from './constants.js';
+import { OPENAI_MODEL, OPENAI_TEMPERATURE } from './constants.js';
 import type { ReviewerInput, ReviewerPassOutput } from './reviewer-schema.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 
 vi.mock('./client.js', () => ({
-  callMistralForReview: vi.fn(),
+  callOpenAiForReview: vi.fn(),
 }));
 
-const { callMistralForReview } = await import('./client.js');
+const { callOpenAiForReview } = await import('./client.js');
 const { analyzeReview, summarizeUnsupportedReviews } = await import('./analyze-review.js');
 
 const writingInput: WritingInput = {
@@ -75,7 +75,7 @@ function buildReviewOutput(overrides: Partial<ReviewerPassOutput> = {}): Reviewe
 
 describe('analyzeReview', () => {
   it('returns ok with the verdicts and the model constants on a clean pass', async () => {
-    vi.mocked(callMistralForReview).mockReset().mockResolvedValueOnce({
+    vi.mocked(callOpenAiForReview).mockReset().mockResolvedValueOnce({
       output: buildReviewOutput(),
     });
 
@@ -83,24 +83,24 @@ describe('analyzeReview', () => {
 
     expect(outcome.status).toBe('ok');
     if (outcome.status !== 'ok') return;
-    expect(outcome.model).toBe(MISTRAL_MODEL);
-    expect(outcome.temperature).toBe(MISTRAL_TEMPERATURE);
+    expect(outcome.model).toBe(OPENAI_MODEL);
+    expect(outcome.temperature).toBe(OPENAI_TEMPERATURE);
     expect(outcome.output.themes[0]!.themeKey).toBe('t1');
-    expect(callMistralForReview).toHaveBeenCalledTimes(1);
+    expect(callOpenAiForReview).toHaveBeenCalledTimes(1);
   });
 
   it('is called with exactly the writer input and written prose', async () => {
-    vi.mocked(callMistralForReview).mockReset().mockResolvedValueOnce({
+    vi.mocked(callOpenAiForReview).mockReset().mockResolvedValueOnce({
       output: buildReviewOutput(),
     });
 
     await analyzeReview(reviewerInput);
 
-    expect(callMistralForReview).toHaveBeenCalledWith(reviewerInput);
+    expect(callOpenAiForReview).toHaveBeenCalledWith(reviewerInput);
   });
 
   it('returns skipped when the API call fails, without throwing', async () => {
-    vi.mocked(callMistralForReview).mockReset().mockRejectedValueOnce(new Error('HTTP 429'));
+    vi.mocked(callOpenAiForReview).mockReset().mockRejectedValueOnce(new Error('HTTP 429'));
 
     const outcome = await analyzeReview(reviewerInput);
 
@@ -108,7 +108,7 @@ describe('analyzeReview', () => {
   });
 
   it('returns skipped when the review echoes the wrong themeKey set', async () => {
-    vi.mocked(callMistralForReview)
+    vi.mocked(callOpenAiForReview)
       .mockReset()
       .mockResolvedValueOnce({
         output: buildReviewOutput({

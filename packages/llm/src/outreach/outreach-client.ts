@@ -1,6 +1,6 @@
-import { Mistral } from '@mistralai/mistralai';
-import { getMistralApiKey } from '../config.js';
-import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_OUTPUT_TOKENS } from '../constants.js';
+import OpenAI from 'openai';
+import { getOpenAiApiKey, getOpenAiBaseUrl } from '../config.js';
+import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_OUTPUT_TOKENS } from '../constants.js';
 import { buildOutreachSystemPrompt, buildOutreachUserPrompt } from './outreach-prompt.js';
 import type { OutreachProseInput } from './outreach-input.js';
 import {
@@ -15,8 +15,8 @@ import {
   type OutreachProseOutput,
 } from './outreach-schema.js';
 
-function createClient(): Mistral {
-  return new Mistral({ apiKey: getMistralApiKey() });
+function createClient(): OpenAI {
+  return new OpenAI({ apiKey: getOpenAiApiKey(), baseURL: getOpenAiBaseUrl() });
 }
 
 export interface RawOutreachCallResult {
@@ -24,8 +24,8 @@ export interface RawOutreachCallResult {
 }
 
 /**
- * Single call to Mistral for one outreach touch. Same posture as
- * callMistralForStructure/callMistralForWriting in client.ts: responseFormat
+ * Single call to OpenAI for one outreach touch. Same posture as
+ * callOpenAiForStructure/callOpenAiForWriting in client.ts: response_format
  * is a shape hint only, the real validation authority is the explicit
  * schema.parse() below. Dispatches on input.touch to the matching
  * schema/JSON-mirror pair rather than sending a single discriminated-union
@@ -36,7 +36,7 @@ export interface RawOutreachCallResult {
  * failure reason thereafter, so a retry is a correction rather than a
  * rerun of the identical conversation (issue #12).
  */
-export async function callMistralForOutreach(
+export async function callOpenAiForOutreach(
   input: OutreachProseInput,
   previousRejection?: string,
 ): Promise<RawOutreachCallResult> {
@@ -49,21 +49,20 @@ export async function callMistralForOutreach(
         ? OUTREACH_TOUCH2_OUTPUT_JSON_SCHEMA
         : OUTREACH_TOUCH3_OUTPUT_JSON_SCHEMA;
 
-  const response = await client.chat.complete({
-    model: MISTRAL_MODEL,
-    maxTokens: MAX_OUTPUT_TOKENS,
-    temperature: MISTRAL_TEMPERATURE,
-    // reasoningEffort deliberately unset - see callMistralForStructure's
-    // identical comment in client.ts.
+  const response = await client.chat.completions.create({
+    model: OPENAI_MODEL,
+    max_completion_tokens: MAX_OUTPUT_TOKENS,
+    temperature: OPENAI_TEMPERATURE,
+    reasoning_effort: 'none',
     messages: [
       { role: 'system', content: buildOutreachSystemPrompt(input) },
       { role: 'user', content: buildOutreachUserPrompt(input, previousRejection) },
     ],
-    responseFormat: {
+    response_format: {
       type: 'json_schema',
-      jsonSchema: {
+      json_schema: {
         name: `outreach_touch${input.touch}_output`,
-        schemaDefinition: jsonSchema,
+        schema: jsonSchema,
         strict: true,
       },
     },
@@ -72,20 +71,26 @@ export async function callMistralForOutreach(
   const choice = response.choices?.[0];
   if (!choice) {
     throw new Error(
-      `odysseus outreach (touch ${input.touch}): Mistral response contained no choices`,
+      `odysseus outreach (touch ${input.touch}): OpenAI response contained no choices`,
     );
   }
 
-  if (choice.finishReason === 'length') {
+  if (choice.finish_reason === 'length') {
     throw new Error(
-      `odysseus outreach (touch ${input.touch}): Mistral response was truncated (finishReason: length) - increase MAX_OUTPUT_TOKENS`,
+      `odysseus outreach (touch ${input.touch}): OpenAI response was truncated (finish_reason: length) - increase MAX_OUTPUT_TOKENS`,
     );
   }
 
-  const content = choice.message?.content;
+  if (choice.message.refusal) {
+    throw new Error(
+      `odysseus outreach (touch ${input.touch}): OpenAI refused the request: ${choice.message.refusal}`,
+    );
+  }
+
+  const content = choice.message.content;
   if (typeof content !== 'string') {
     throw new Error(
-      `odysseus outreach (touch ${input.touch}): Mistral response content was not a plain string (unexpected shape)`,
+      `odysseus outreach (touch ${input.touch}): OpenAI response content was not a plain string (unexpected shape)`,
     );
   }
 

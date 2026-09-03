@@ -1,6 +1,6 @@
 import type { AuditManifest, Finding } from '@odysseus/core';
-import { callMistralForStructure } from './client.js';
-import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
+import { callOpenAiForStructure } from './client.js';
+import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { applyStructureRankingRules } from './structure-ranking.js';
 import {
   findInventedStructureFindingIds,
@@ -54,15 +54,14 @@ export async function analyzeStructure(
   const aliasedInput = aliasStructureInput(input, aliasMap);
 
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
-    let result: Awaited<ReturnType<typeof callMistralForStructure>>;
+    let result: Awaited<ReturnType<typeof callOpenAiForStructure>>;
     try {
-      result = await callMistralForStructure(aliasedInput, usedFallbackContext);
+      result = await callOpenAiForStructure(aliasedInput, usedFallbackContext);
     } catch (error) {
       // A malformed or truncated response (e.g. schema/JSON parse failure)
       // is a retryable attempt, not an immediate abort - same treatment as
-      // an invented finding ID. Mistral has no distinct refusal signal, so
-      // refusal-like model behavior also surfaces here, as a parse or
-      // validation failure. Only genuinely unrecoverable errors (auth,
+      // an invented finding ID. A provider refusal also surfaces here as a
+      // failed attempt. Only genuinely unrecoverable errors (auth,
       // etc.) will still fail every attempt and surface via the
       // exhausted-retries error below.
       lastFailureReason = error instanceof Error ? error.message : String(error);
@@ -100,8 +99,8 @@ export async function analyzeStructure(
       themes,
       quickWins: output.quickWins,
       overallRisk: output.overallRisk,
-      model: MISTRAL_MODEL,
-      temperature: MISTRAL_TEMPERATURE,
+      model: OPENAI_MODEL,
+      temperature: OPENAI_TEMPERATURE,
       unreferencedFindingCount: unreferenced.length,
     };
   }

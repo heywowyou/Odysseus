@@ -1,4 +1,4 @@
-import { MAX_RETRIES, MISTRAL_MODEL, MISTRAL_TEMPERATURE } from '../constants.js';
+import { MAX_RETRIES, OPENAI_MODEL, OPENAI_TEMPERATURE } from '../constants.js';
 import { findLanguageComplianceViolationsInFields } from '../language-guard.js';
 import { findLegalConsequenceViolationsInFields } from '../legal-consequence-guard.js';
 import { normalizeOutreachOutputTypography } from '../typography.js';
@@ -8,7 +8,7 @@ import { findOutreachFormatViolations } from './guards/outreach-format-guard.js'
 import { findOutreachNumberViolations } from './guards/outreach-number-guard.js';
 import { findOutreachStructureViolations } from './guards/outreach-structure-guard.js';
 import { findOutreachVocabularyViolations } from './guards/outreach-vocabulary-guard.js';
-import { callMistralForOutreach } from './outreach-client.js';
+import { callOpenAiForOutreach } from './outreach-client.js';
 import { OUTREACH_TOUCH_LIMITS } from './outreach-limits.js';
 import type { OutreachProseInput } from './outreach-input.js';
 import { buildOutreachRetryFeedback } from './outreach-prompt.js';
@@ -21,7 +21,8 @@ export interface GenerateOutreachProseResult {
 }
 
 /** Extra attempts granted when an attempt fails on nothing but the touch-1
- *  word floor. Issue #14: at temperature 0.2 live Mistral lands 56-58 words
+ *  word floor. Issue #14: in 2026-08 live Mistral measurements, temperature
+ *  0.2 landed 56-58 words
  *  against the 60 floor often enough that roughly one run in two exhausted
  *  the base budget. A pure shortfall is the one rejection where every other
  *  guard has already passed, so an extra attempt is cheap and carries no
@@ -44,7 +45,8 @@ const WORD_ASK_CEILING_ABOVE_MIN = 15;
  * analyze-structure.ts) - same MAX_RETRIES constant, separate loop. Unlike
  * those passes, a rejected attempt's reason is fed back into the next
  * call (issue #12): three identical prompts at the configured low
- * temperature produced three near identical undershoots on live Mistral,
+ * temperature produced three near identical undershoots in 2026-08 live
+ * Mistral measurements,
  * so a retry must be a correction, not a rerun. A rejection that is nothing
  * but a word-count shortfall additionally buys attempts past the base
  * budget (issue #14): every other guard has already passed at that point,
@@ -100,14 +102,12 @@ export async function generateOutreachProse(
     const attemptBudget = attempt <= baseAttempts ? baseAttempts : maxAttempts;
     const logPrefix = `odysseus outreach (touch ${input.touch}, language=${input.language}): attempt ${attempt}/${attemptBudget}`;
 
-    let result: Awaited<ReturnType<typeof callMistralForOutreach>>;
+    let result: Awaited<ReturnType<typeof callOpenAiForOutreach>>;
     try {
-      result = await callMistralForOutreach(input, previousRejection);
+      result = await callOpenAiForOutreach(input, previousRejection);
     } catch (error) {
       // Same posture as analyzeWriting/analyzeStructure: a parse/validation
-      // failure is retried like any other rejected attempt, including
-      // refusal-like model behavior, since Mistral has no distinct refusal
-      // signal.
+      // failure or provider refusal is retried like any other rejected attempt.
       lastFailureReason = error instanceof Error ? error.message : String(error);
       previousRejection = buildOutreachRetryFeedback(lastFailureReason);
       console.error(`${logPrefix} failed - ${lastFailureReason}`);
@@ -209,8 +209,8 @@ export async function generateOutreachProse(
 
     return {
       output: normalizeOutreachOutputTypography(result.output, input.language),
-      model: MISTRAL_MODEL,
-      temperature: MISTRAL_TEMPERATURE,
+      model: OPENAI_MODEL,
+      temperature: OPENAI_TEMPERATURE,
     };
   }
 

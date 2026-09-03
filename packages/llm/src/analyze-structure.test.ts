@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AuditManifest, Finding } from '@odysseus/core';
-import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
+import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import type { StructureInput, StructurePassOutput } from './structure-schema.js';
 
 vi.mock('./client.js', () => ({
-  callMistralForStructure: vi.fn(),
+  callOpenAiForStructure: vi.fn(),
 }));
 
-const { callMistralForStructure } = await import('./client.js');
+const { callOpenAiForStructure } = await import('./client.js');
 const { analyzeStructure } = await import('./analyze-structure.js');
 
 function buildFinding(findingId: string): Finding {
@@ -132,7 +132,7 @@ function buildInventedOutput(): StructurePassOutput {
 
 describe('analyzeStructure', () => {
   it('returns themeKey-assigned themes on a clean pass and reports unreferenced findings', async () => {
-    vi.mocked(callMistralForStructure).mockReset().mockResolvedValueOnce({
+    vi.mocked(callOpenAiForStructure).mockReset().mockResolvedValueOnce({
       output: buildCleanOutput(),
     });
 
@@ -148,20 +148,20 @@ describe('analyzeStructure', () => {
         findingIds: ['f1', 'f2'],
       },
     ]);
-    expect(result.model).toBe(MISTRAL_MODEL);
-    expect(result.temperature).toBe(MISTRAL_TEMPERATURE);
+    expect(result.model).toBe(OPENAI_MODEL);
+    expect(result.temperature).toBe(OPENAI_TEMPERATURE);
     expect(result.unreferencedFindingCount).toBe(0);
-    expect(callMistralForStructure).toHaveBeenCalledTimes(1);
+    expect(callOpenAiForStructure).toHaveBeenCalledTimes(1);
   });
 
   it('shows the model aliases, never the real finding IDs', async () => {
-    vi.mocked(callMistralForStructure)
+    vi.mocked(callOpenAiForStructure)
       .mockReset()
       .mockResolvedValueOnce({ output: buildCleanOutput() });
 
     await analyzeStructure(input, filteredFindings, false, manifest);
 
-    const sent = vi.mocked(callMistralForStructure).mock.calls[0]?.[0];
+    const sent = vi.mocked(callOpenAiForStructure).mock.calls[0]?.[0];
     expect(sent?.findings.map((f) => f.findingId)).toEqual(['x1', 'x2']);
     expect(JSON.stringify(sent)).not.toContain('"f1"');
   });
@@ -169,7 +169,7 @@ describe('analyzeStructure', () => {
   it('rejects a real finding ID in the response, because the model was never shown one', async () => {
     const realIdOutput = buildCleanOutput();
     realIdOutput.themes[0]!.findingIds = ['f1', 'f2'];
-    vi.mocked(callMistralForStructure)
+    vi.mocked(callOpenAiForStructure)
       .mockReset()
       .mockResolvedValueOnce({ output: realIdOutput })
       .mockResolvedValueOnce({ output: buildCleanOutput() });
@@ -177,11 +177,11 @@ describe('analyzeStructure', () => {
     const result = await analyzeStructure(input, filteredFindings, false, manifest);
 
     expect(result.themes[0]!.findingIds).toEqual(['f1', 'f2']);
-    expect(callMistralForStructure).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForStructure).toHaveBeenCalledTimes(2);
   });
 
   it('retries once when the first response invents a finding ID, then succeeds', async () => {
-    vi.mocked(callMistralForStructure)
+    vi.mocked(callOpenAiForStructure)
       .mockReset()
       .mockResolvedValueOnce({ output: buildInventedOutput() })
       .mockResolvedValueOnce({ output: buildCleanOutput() });
@@ -189,17 +189,29 @@ describe('analyzeStructure', () => {
     const result = await analyzeStructure(input, filteredFindings, false, manifest);
 
     expect(result.themes[0]!.findingIds).toEqual(['f1', 'f2']);
-    expect(callMistralForStructure).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForStructure).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries an explicit provider refusal, then succeeds', async () => {
+    vi.mocked(callOpenAiForStructure)
+      .mockReset()
+      .mockRejectedValueOnce(new Error('OpenAI refused the request'))
+      .mockResolvedValueOnce({ output: buildCleanOutput() });
+
+    const result = await analyzeStructure(input, filteredFindings, false, manifest);
+
+    expect(result.themes[0]!.findingIds).toEqual(['f1', 'f2']);
+    expect(callOpenAiForStructure).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries rather than returning a partial result', async () => {
-    vi.mocked(callMistralForStructure)
+    vi.mocked(callOpenAiForStructure)
       .mockReset()
       .mockResolvedValue({ output: buildInventedOutput() });
 
     await expect(analyzeStructure(input, filteredFindings, false, manifest)).rejects.toThrow(
       /exhausted \d+ attempts/,
     );
-    expect(callMistralForStructure).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForStructure).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 });

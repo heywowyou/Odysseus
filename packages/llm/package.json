@@ -2,7 +2,7 @@
   "name": "@odysseus/llm",
   "private": true,
   "version": "0.1.0",
-  "description": "Calls the Mistral API to group, prioritize, and explain findings already produced by deterministic scanners. Never scans, never detects. The only package that talks to the Mistral API.",
+  "description": "Calls the OpenAI API to group, prioritize, and explain findings already produced by deterministic scanners. Never scans, never detects. The only package that talks to the OpenAI API.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,9 +15,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@mistralai/mistralai": "^2.5.0",
     "@odysseus/core": "workspace:*",
     "franc-min": "^6.2.0",
+    "openai": "^7.9.0",
     "zod": "^3.24.1"
   }
 }

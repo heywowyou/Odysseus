@@ -78,7 +78,7 @@ function fakeAnalysis() {
     auditId: 'audit-1',
     findingsProvenance,
     language: 'fr' as const,
-    model: 'mistral-test',
+    model: 'openai-test',
     temperature: 0.2,
     generatedAt: new Date('2026-08-02T00:10:00.000Z'),
     executiveSummary: 'Summary',

@@ -49,7 +49,7 @@ Copy `.env.example` to `.env` and fill in the values you need:
 cp .env.example .env
 ```
 
-At minimum, `MISTRAL_API_KEY` and `MONGODB_URI` are required to run a
+At minimum, `OPENAI_API_KEY` and `MONGODB_URI` are required to run a
 real audit end to end. The other variables have documented defaults in
 `.env.example`.
 

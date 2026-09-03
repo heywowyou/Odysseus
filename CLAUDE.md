@@ -446,9 +446,16 @@ means numbered entry 24, not a literal Markdown heading anchor.
     ceiling only as a deliberate choice, never as a side effect.
     → trade-offs.md#66
 
+67. Every model pass uses OpenAI `gpt-5.4-mini` through strict structured
+    output with temperature 0.2 and reasoning effort `none`. The generic alias
+    is an operator-approved automatic-upgrade trade-off; recheck bilingual
+    report quality after an alias repoint. Never split models per pass while
+    persisted analysis provenance has only one model field.
+    → trade-offs.md#67
+
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
-module, Mongoose 9, Zod, Commander, Vitest, pino, `@mistralai/mistralai`.
+module, Mongoose 9, Zod, Commander, Vitest, pino, `openai`.
 
 No Redis, no BullMQ, no Express API, no Next.js dashboard, no public web
 interface to the audit engine itself. Those are later phases and are
@@ -484,7 +491,7 @@ rejected because it cannot produce those metrics.
 - `scanner` — owns the Chromium lifecycle, render diff, crawler, axe,
   Lighthouse, config, and the artifacts layout.
 - `store` — Mongoose models and connection handling. Nothing else.
-- `llm` — the only package that talks to the Mistral API. Peer of
+- `llm` — the only package that talks to the OpenAI API. Peer of
   scanner, not a consumer: it depends on `core` and nothing else in the
   workspace.
 - `report` — renders a stored analysis and the findings appendix into a
@@ -630,7 +637,7 @@ real-site scan. Saved artifacts under `artifacts/sas-fernande.fr/` are
 real-site reference data; `normalize <dir>` re-runs against them offline
 without touching the site.
 
-Tests never call the live Mistral API. The LLM package is tested with
+Tests never call a live model API. The LLM package is tested with
 a stubbed client, including the path where retries are exhausted and the
 call throws rather than returning a partial analysis. Live verification
 is a manual step, and for anything client-facing it means reading the
@@ -639,11 +646,11 @@ output as the client would, not just checking that it validated.
 **Analysis and PDF authorization, amended 2026-08-27.** Generating or
 regenerating an analysis from a saved audit is standing-authorized. The
 structured `manifest.json` and normalized `findings.json` may be sent to the
-configured Mistral API, and French and English PDFs may be rendered from the
+configured OpenAI API, and French and English PDFs may be rendered from the
 validated stored analyses, without asking for permission each time. This does
 not authorize sending raw HTML, page bodies, or screenshots to the model, and
-it does not authorize a new live browser scan. Mistral analysis cost is
-negligible for this workflow and is not a separate approval gate; still avoid
+it does not authorize a new live browser scan. OpenAI analysis cost is small
+for this workflow and is not a separate approval gate; still avoid
 gratuitous regeneration and preserve the existing cost gates and provenance.
 
 Any fixture dev server started during a session must be stopped before the

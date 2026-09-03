@@ -1,8 +1,8 @@
 export {
   LLM_SEVERITY_FLOOR,
   MAX_RETRIES,
-  MISTRAL_MODEL,
-  MISTRAL_TEMPERATURE,
+  OPENAI_MODEL,
+  OPENAI_TEMPERATURE,
   MAX_OUTPUT_TOKENS,
   REVIEWER_MAX_OUTPUT_TOKENS,
 } from './constants.js';
@@ -72,7 +72,7 @@ export type { ThemeKeyMismatch } from './theme-key-guard.js';
 export { findLanguageComplianceViolations } from './language-guard.js';
 export type { LanguageComplianceViolation } from './language-guard.js';
 
-export { ensureEnvLoaded, getMistralApiKey } from './config.js';
+export { ensureEnvLoaded, getOpenAiApiKey, getOpenAiBaseUrl } from './config.js';
 
 export { buildOutreachProseInput } from './outreach/outreach-input.js';
 export type { OutreachEvidenceForModel, OutreachProseInput } from './outreach/outreach-input.js';

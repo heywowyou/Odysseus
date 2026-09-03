@@ -56,9 +56,9 @@ applicable **2 August 2026**. Sanctions under article 99 reach EUR 15
 million or 3 percent of worldwide turnover, obviously scaled to the
 operator, but the obligation is real rather than notional.
 
-Odysseus is a **deployer**, not a provider: the model is Mistral's.
+Odysseus is a **deployer**, not a provider: the model is OpenAI's.
 Provider obligations, including machine-readable marking of synthetic
-content under 50(2), sit with Mistral. Deployer obligations under 50(4)
+content under 50(2), sit with OpenAI. Deployer obligations under 50(4)
 cover deepfakes and **text published to inform the public on matters of
 public interest**. This is a narrow category: a document sent privately
 to one paying client is not "publishing to inform the public," so it
@@ -66,10 +66,10 @@ does not apply by definition, not because of any mitigation we add.
 
 **Assessment by output:**
 
-- **Client audit reports, both tiers.** Commissioned, private,
+- **Client audit reports.** Commissioned, private,
   single-recipient deliverables. Not public-interest text. Out of scope
   for 50(4), full stop. **No change to the LLM report pipeline.**
-  Continue generating with Mistral exactly as built.
+  Continue generating with OpenAI exactly as built.
 - **Outreach emails.** Private commercial communication to one prospect.
   Out of scope for the same reason. No change.
 - **The benchmark study, milestone 10.** The one document in this
@@ -80,7 +80,7 @@ does not apply by definition, not because of any mitigation we add.
 file recommended writing the study by hand to avoid the question
 entirely. That is stronger than necessary and not worth the cost of
 manually drafting 20-plus pages. **The actual requirement is disclosure,
-not authorship.** Generate the study with Mistral as with everything
+not authorship.** Generate the study with OpenAI as with everything
 else, and add one visible line near the top, not buried in a footer or
 the CGU:
 
@@ -91,6 +91,16 @@ That single sentence satisfies 50(4) if it applies, and costs nothing
 against the existing pipeline. Hand-writing remains an option if a
 fully manual document is wanted for other reasons, but it is not what
 this regulation requires.
+
+**Provider data posture.** Keep OpenAI's Data Processing Addendum in the
+operator's vendor records. OpenAI states that Chat Completions API customer
+content is not used for training by default. The standard abuse-monitoring
+retention is 30 days unless the organization qualifies for stricter controls.
+EU storage and processing require an eligible organization/project, the
+applicable retention-control amendment, and requests to
+`https://eu.api.openai.com/v1`; eligible post-5 March 2026 models carry a
+10 percent regional-processing uplift. Setting `OPENAI_BASE_URL` alone does not
+grant eligibility.
 
 **If a conversational assistant is ever added to the site**, article
 50(1) requires telling people they are talking to an AI. The milestone

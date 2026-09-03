@@ -83,7 +83,7 @@ describe('renderHtml against the real small-site.test audit', () => {
   // guard rejects "majeur" before an analysis is ever persisted. Not
   // re-asserted here against the small-site fixture, since that fixture
   // is frozen real LLM output captured before this fix and tests never
-  // call the live Mistral API to regenerate it (CLAUDE.md, Testing).
+  // call the live configured API to regenerate it (CLAUDE.md, Testing).
 
   it('composes the English document with the English chrome strings, not French', async () => {
     const manifest = await loadSmallSiteManifest();

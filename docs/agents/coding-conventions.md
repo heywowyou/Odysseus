@@ -98,7 +98,7 @@ safe.
 - Prefer the smallest test level that proves the contract. Add integration or
   end-to-end coverage when the risk crosses a package, process, browser, storage,
   or rendered-output boundary.
-- Keep tests deterministic. Never call the live Mistral API, and never scan a
+- Keep tests deterministic. Never call a live model API, and never scan a
   live third-party site without the user's current explicit authorization for
   that named site.
 - Reuse committed fixtures. Follow the fixture-refresh and real-scan provenance

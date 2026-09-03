@@ -14,11 +14,11 @@ import type { StructurePassOutput } from './structure-schema.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
 vi.mock('./client.js', () => ({
-  callMistralForStructure: vi.fn(),
-  callMistralForWriting: vi.fn(),
+  callOpenAiForStructure: vi.fn(),
+  callOpenAiForWriting: vi.fn(),
 }));
 
-const { callMistralForStructure, callMistralForWriting } = await import('./client.js');
+const { callOpenAiForStructure, callOpenAiForWriting } = await import('./client.js');
 const { analyzeStructure } = await import('./analyze-structure.js');
 const { analyzeWriting } = await import('./analyze-writing.js');
 const { mergeAnalysisPasses } = await import('./merge.js');
@@ -129,7 +129,7 @@ describe('two-pass analysis produces identical structure across languages', () =
     const siteContext = buildFallbackSiteContext();
     const structureInput = buildStructureInput(filtered, siteContext);
 
-    vi.mocked(callMistralForStructure)
+    vi.mocked(callOpenAiForStructure)
       .mockReset()
       .mockResolvedValueOnce({
         output: buildFixedStructureOutput(filtered),
@@ -150,7 +150,7 @@ describe('two-pass analysis produces identical structure across languages', () =
     };
     const siteStats = computeSiteStats(loadSmallSiteAllFindings(), loadSmallSiteManifest());
 
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({
         output: buildWritingOutputFor('fr', themeKeys),
@@ -166,7 +166,7 @@ describe('two-pass analysis produces identical structure across languages', () =
     const frWriting = await analyzeWriting(frWritingInput, themeKeys, false);
     const mergedFr = mergeAnalysisPasses(structureDoc, frWriting.output, filtered, 'fr');
 
-    vi.mocked(callMistralForWriting)
+    vi.mocked(callOpenAiForWriting)
       .mockReset()
       .mockResolvedValueOnce({
         output: buildWritingOutputFor('en', themeKeys),

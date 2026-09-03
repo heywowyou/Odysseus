@@ -1,7 +1,7 @@
 /**
  * Hand-built JSON Schemas mirroring the three closed schemas in
- * outreach-schema.ts, for the Mistral API's response_format json_schema
- * shape hint only. Same posture as writing-output-schema.ts: NOT the
+ * outreach-schema.ts, as explicit, auditable API shape hints. Same posture
+ * as writing-output-schema.ts: NOT the
  * validation authority - the zod `.parse()` calls in outreach-client.ts are.
  * Three separate schemas, not one union - see outreach-schema.ts's doc
  * comment for why.

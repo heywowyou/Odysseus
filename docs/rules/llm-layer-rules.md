@@ -123,8 +123,8 @@ theme, or the wrong language is the failure mode that ends the business.
 rejection reason.** Each retry appends the previous attempt's failure
 reason to its user message (`buildWritingRetryFeedback`), so a retry is a
 correction rather than a rerun of the identical conversation. The defect
-this fixes was measured, not hypothetical: at `MISTRAL_TEMPERATURE` 0.2 a
-French writing pass produced an `executiveSummary` containing "graves" on
+this fixes was measured, not hypothetical: at temperature 0.2, a 2026-09-01
+Mistral French writing pass produced an `executiveSummary` containing "graves" on
 eight consecutive attempts across three runs and two regenerated structure
 files, all rejected by the severity-vocabulary guard the model never saw.
 The mechanism is the outreach loop's, already measured there (section 11,
@@ -137,8 +137,8 @@ blind retry until one appears.
 
 **Amended 2026-09-01 (plan 019 operator review): rate-limit errors are
 paced, not burned through.** An API-error retry in either pass now waits
-before re-calling when the failure is a provider rate limit (HTTP 429,
-Mistral code 1300): 20 seconds after the first failure, 40 after the
+before re-calling when the failure is a provider rate limit (HTTP 429):
+20 seconds after the first failure, 40 after the
 second, scaling with the attempt number. The retry budget (`MAX_RETRIES`)
 and every guard are unchanged, and guard rejections still retry
 immediately. Measured live: regenerating writing for a real audit, the
@@ -151,18 +151,17 @@ flow completes. (`rate-limit-pacing.ts`, shared by both passes.)
 ## 3. Determinism and provenance
 
 Claude Opus 5 and other current-generation Claude models rejected the
-`temperature` parameter outright (HTTP 400); Mistral has no such
-restriction and accepts `temperature` normally. Determinism comes from
+`temperature` parameter outright (HTTP 400); the OpenAI Chat Completions API
+accepts values from 0 to 2. Determinism comes from
 two things instead, neither of which touches Zod validation or the
 invented-finding guard: those run regardless, on every response,
 independent of how the response was produced.
 
-**Structured output**, via the Mistral SDK's `chat.complete`
-`responseFormat: { type: 'json_schema', jsonSchema: { name, schemaDefinition,
+**Structured output**, via the OpenAI SDK's `chat.completions.create`
+`response_format: { type: 'json_schema', json_schema: { name, schema,
 strict: true } }`, constrains the response shape server-side. Each pass
-passes its own hand-built JSON Schema (`STRUCTURE_OUTPUT_JSON_SCHEMA` /
-`WRITING_OUTPUT_JSON_SCHEMA`, see section 8) rather than the SDK's
-`responseFormatFromZodObject` helper. This is a schema guarantee about
+passes its own explicit JSON Schema (`STRUCTURE_OUTPUT_JSON_SCHEMA` /
+`WRITING_OUTPUT_JSON_SCHEMA`, see section 8). This is a schema guarantee about
 _shape_, not a validation step in itself - the code still runs an
 explicit, auditable `structurePassOutputSchema.parse()` /
 `writingPassOutputSchema.parse()` on every response, because CLAUDE.md's
@@ -174,13 +173,11 @@ alternative groupings on a task that calls for a stable, repeatable
 answer over the same findings. This is a client deliverable, not a
 brainstorm, and two runs over the same findings should not produce
 materially different priorities. Both passes use the same
-`MISTRAL_MODEL`/`MISTRAL_TEMPERATURE` constants; there is no separate
-configuration tier per pass. `reasoningEffort` is deliberately never set:
-Mistral's reasoning-enabled models (Magistral) return chain-of-thought as
-explicit "thinking" content blocks that share this same `maxTokens`
-budget with the JSON answer, the same failure mode that already forced
-`MAX_OUTPUT_TOKENS` to 16000 once under the previous provider (see
-constants.ts).
+`OPENAI_MODEL`/`OPENAI_TEMPERATURE` constants; there is no separate
+configuration tier per pass. Every call sets `reasoning_effort: 'none'`:
+report grouping and writing do not need hidden reasoning tokens sharing the
+same completion budget, the failure mode that already forced
+`MAX_OUTPUT_TOKENS` to 16000 once under an earlier provider (see constants.ts).
 
 **Record the model identifier and temperature alongside the output**,
 for the same reason the audit manifest records axe and Lighthouse
@@ -196,11 +193,9 @@ separately recorded - the locked `AnalysisDocumentFields` shape has one
 `model`/`temperature` slot, and adding a second pair was judged out of
 scope for this fix.
 
-Mistral has no distinct refusal signal equivalent to Anthropic's
-`stop_reason === 'refusal'`. Any refusal-like model behavior surfaces
-indirectly - as a JSON parse failure or a Zod validation rejection - and
-is caught by the same retry loop as any other malformed response (see
-section 2).
+OpenAI exposes an explicit `message.refusal` signal. A refusal is thrown and
+caught by the same retry loop as any other malformed response (see section 2);
+it never becomes a partial analysis.
 
 ---
 
@@ -421,10 +416,10 @@ compared.
 Two files, `packages/llm/src/structure-output-schema.ts` and
 `packages/llm/src/writing-output-schema.ts`, each hand-mirror one of the
 two-pass, non-locked Zod schemas (`structurePassOutputSchema` /
-`writingPassOutputSchema`, both in section 9) as a JSON Schema, because
-the Mistral SDK's `responseFormatFromZodObject` helper requires a zod v4
-schema and this workspace is on zod v3. Editing a schema to satisfy a
-helper was the wrong trade, so the mirrors exist instead. (Before the two-pass split, a
+`writingPassOutputSchema`, both in section 9) as an explicit, auditable JSON
+Schema shape hint. The workspace remains on zod v3, and editing an
+authoritative schema to satisfy an SDK helper is the wrong trade, so the
+mirrors remain. (Before the two-pass split, a
 single `output-schema.ts` mirrored the locked `llmOutputSchema` the same
 way; it was deleted when no call any longer asks the model for a full
 `LlmOutput`-shaped response in one shot.)
@@ -445,9 +440,9 @@ reject anything else outright.
 
 A hand-maintained mirror decays silently. A test asserts each mirror and
 its Zod schema describe the same shape, so adding a field to either
-schema fails loudly rather than quietly leaving the shape hint stale. If
-this workspace ever moves to zod v4, delete the mirrors and use the
-Mistral SDK's `responseFormatFromZodObject` helper directly.
+schema fails loudly rather than quietly leaving the shape hint stale. A future
+zod upgrade does not by itself justify deleting these explicit mirrors; the
+sync tests are the drift guard.
 
 ---
 
@@ -644,7 +639,7 @@ word-count shortfall is stated as arithmetic (what was counted, what the
 floor is, the delta to write). The writing pass adopted the same
 mechanism on 2026-09-01 (issue #21, section 2), with `buildWritingRetryFeedback`
 and no arithmetic variant, since none of its guards enforces a count the
-model could undershoot. Measured on live Mistral: three identical
+model could undershoot. Measured on live Mistral in 2026-08: three identical
 prompts at the configured low temperature produced three near identical
 undershoots of the touch-1 floor, while the arithmetic feedback recovered
 a 59-word rejection to 70 words on the next attempt. Touch 1's system
@@ -666,7 +661,7 @@ to the published page.
 
 ## 12. The shadow reviewer pass
 
-Added 2026-08-29. One extra Mistral call per analysis, always on (operator
+Added 2026-08-29. One extra model call per analysis, always on (operator
 decision), that reviews the writing pass's prose against exactly the input
 the writer was shown. It exists for the one fault class the deterministic
 guards cannot see: a fluent, unsupported assertion about this specific
@@ -714,10 +709,10 @@ profitable page": unsupported). The model contradicted the examples
 verbatim in its reasons. Conclusion: this is a model-capability limit,
 not a prompt bug. The prompt keeps the correct specification (see
 `reviewer-prompt.test.ts`, which pins both sides of it) so the same
-instrument can be re-measured when `mistral-large-latest` access is
-restored or a provider decision lands. Until then the stream must be
-read knowing the bias: `unsupported` on a businessImpact field currently
-means "states consequences", while the rare genuinely interesting catch
+instrument can be re-measured after the OpenAI provider switch. Until that
+new evidence exists, the historical stream must be read knowing the bias:
+`unsupported` on a businessImpact field meant "states consequences", while
+the rare genuinely interesting catch
 (an unhedged "this directly harms your SEO") is real signal buried in
 it.
 
@@ -728,7 +723,7 @@ lint-stored-analyses.ts`), matching the one historical fault each was
 built from. The pre-existing severity-vocabulary guard rejected a real
 lacoorniche.com first attempt ("graves") and the retry loop recovered -
 the reject-log-retry-fail-loud machinery working as designed on live
-output. Also noted: Mistral rate-limits (HTTP 429) on the medium tier
+output. Also noted in that Mistral campaign: rate limits (HTTP 429) on the medium tier
 are common enough that back-to-back analyze runs need spacing; a 429
 during retries fails the analysis loudly (by design), and a 429 on the
 reviewer skips it (also by design).

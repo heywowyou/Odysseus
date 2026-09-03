@@ -6,7 +6,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
  * section 2): this only stops the loop from burning every attempt inside
  * one throttling window - measured live during plan 019's operator review,
  * where a French pass succeeded and the English pass then 429ed on all
- * three immediate attempts (Mistral code 1300).
+ * three immediate attempts.
  */
 
 const RATE_LIMIT_BASE_DELAY_MS = 20_000;

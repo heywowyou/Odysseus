@@ -107,7 +107,7 @@ beforeEach(async () => {
     ],
     quickWins: ['f1'],
     overallRisk: 'high',
-    model: 'mistral-test',
+    model: 'openai-test',
     temperature: 0.2,
     unreferencedFindingCount: 0,
   });
@@ -124,7 +124,7 @@ beforeEach(async () => {
       executiveSummary: 'Summary',
       notes: '',
     },
-    model: 'mistral-test',
+    model: 'openai-test',
     temperature: 0.2,
   });
   vi.mocked(persistAnalysis).mockResolvedValue(undefined);
@@ -142,7 +142,7 @@ beforeEach(async () => {
       executiveSummary: { verdict: 'supported', reason: 'generic framing only' },
       notes: { verdict: 'supported', reason: 'empty' },
     },
-    model: 'mistral-test',
+    model: 'openai-test',
     temperature: 0.2,
   });
 });

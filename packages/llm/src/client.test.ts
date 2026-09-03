@@ -2,17 +2,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const completeMock = vi.fn();
 
-vi.mock('@mistralai/mistralai', () => ({
-  Mistral: vi.fn().mockImplementation(() => ({
-    chat: { complete: completeMock },
+vi.mock('openai', () => ({
+  default: vi.fn().mockImplementation(() => ({
+    chat: { completions: { create: completeMock } },
   })),
 }));
 
 vi.mock('./config.js', () => ({
-  getMistralApiKey: () => 'test-key',
+  getOpenAiApiKey: () => 'test-key',
+  getOpenAiBaseUrl: () => undefined,
 }));
 
-const { callMistralForStructure, callMistralForWriting } = await import('./client.js');
+const { callOpenAiForStructure, callOpenAiForWriting } = await import('./client.js');
 
 const structureInput = {
   siteContext: {
@@ -59,75 +60,95 @@ const validWritingOutput = {
   notes: '',
 };
 
-function choice(overrides: { finishReason?: string; content?: unknown } = {}) {
+function choice(
+  overrides: { finishReason?: string; content?: unknown; refusal?: string | null } = {},
+) {
   return {
     choices: [
       {
-        finishReason: overrides.finishReason ?? 'stop',
+        finish_reason: overrides.finishReason ?? 'stop',
         message: {
           content:
             'content' in overrides ? overrides.content : JSON.stringify(validStructureOutput),
+          refusal: overrides.refusal ?? null,
         },
       },
     ],
   };
 }
 
-describe('callMistralForStructure', () => {
+describe('callOpenAiForStructure', () => {
   afterEach(() => {
     completeMock.mockReset();
   });
 
   it('returns the schema-validated output on a successful call', async () => {
     completeMock.mockResolvedValue(choice({ content: JSON.stringify(validStructureOutput) }));
-    const result = await callMistralForStructure(structureInput, false);
+    const result = await callOpenAiForStructure(structureInput, false);
     expect(result.output).toEqual(validStructureOutput);
+    expect(completeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'gpt-5.4-mini',
+        temperature: 0.2,
+        reasoning_effort: 'none',
+        max_completion_tokens: 16000,
+        response_format: expect.objectContaining({
+          type: 'json_schema',
+          json_schema: expect.objectContaining({ strict: true }),
+        }),
+      }),
+    );
   });
 
   it('throws when the response has no choices', async () => {
     completeMock.mockResolvedValue({ choices: [] });
-    await expect(callMistralForStructure(structureInput, false)).rejects.toThrow(
+    await expect(callOpenAiForStructure(structureInput, false)).rejects.toThrow(
       'contained no choices',
     );
   });
 
   it('throws when the response was truncated (finishReason length)', async () => {
     completeMock.mockResolvedValue(choice({ finishReason: 'length' }));
-    await expect(callMistralForStructure(structureInput, false)).rejects.toThrow('truncated');
+    await expect(callOpenAiForStructure(structureInput, false)).rejects.toThrow('truncated');
+  });
+
+  it('throws when the provider returns an explicit refusal', async () => {
+    completeMock.mockResolvedValue(choice({ refusal: 'I cannot comply.' }));
+    await expect(callOpenAiForStructure(structureInput, false)).rejects.toThrow(
+      'refused the request',
+    );
   });
 
   it('throws when the message content is not a plain string', async () => {
     completeMock.mockResolvedValue(choice({ content: [{ type: 'text', text: 'x' }] }));
-    await expect(callMistralForStructure(structureInput, false)).rejects.toThrow(
-      'unexpected shape',
-    );
+    await expect(callOpenAiForStructure(structureInput, false)).rejects.toThrow('unexpected shape');
   });
 
   it('throws when the content is not valid JSON', async () => {
     completeMock.mockResolvedValue(choice({ content: 'not json' }));
-    await expect(callMistralForStructure(structureInput, false)).rejects.toThrow();
+    await expect(callOpenAiForStructure(structureInput, false)).rejects.toThrow();
   });
 
   it('throws when the parsed content fails schema validation', async () => {
     completeMock.mockResolvedValue(choice({ content: JSON.stringify({ themes: [] }) }));
-    await expect(callMistralForStructure(structureInput, false)).rejects.toThrow();
+    await expect(callOpenAiForStructure(structureInput, false)).rejects.toThrow();
   });
 });
 
-describe('callMistralForWriting', () => {
+describe('callOpenAiForWriting', () => {
   afterEach(() => {
     completeMock.mockReset();
   });
 
   it('returns the schema-validated output on a successful call', async () => {
     completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingOutput) }));
-    const result = await callMistralForWriting(writingInput, false);
+    const result = await callOpenAiForWriting(writingInput, false);
     expect(result.output).toEqual(validWritingOutput);
   });
 
   it('appends the previous rejection to the user message so a retry is a correction (issue #21)', async () => {
     completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingOutput) }));
-    await callMistralForWriting(
+    await callOpenAiForWriting(
       writingInput,
       false,
       'Your previous response was rejected by the automated guard: test reason.',
@@ -142,23 +163,21 @@ describe('callMistralForWriting', () => {
 
   it('throws when the response has no choices', async () => {
     completeMock.mockResolvedValue({ choices: [] });
-    await expect(callMistralForWriting(writingInput, false)).rejects.toThrow(
-      'contained no choices',
-    );
+    await expect(callOpenAiForWriting(writingInput, false)).rejects.toThrow('contained no choices');
   });
 
   it('throws when the response was truncated (finishReason length)', async () => {
     completeMock.mockResolvedValue(choice({ finishReason: 'length' }));
-    await expect(callMistralForWriting(writingInput, false)).rejects.toThrow('truncated');
+    await expect(callOpenAiForWriting(writingInput, false)).rejects.toThrow('truncated');
   });
 
   it('throws when the message content is not a plain string', async () => {
     completeMock.mockResolvedValue(choice({ content: null }));
-    await expect(callMistralForWriting(writingInput, false)).rejects.toThrow('unexpected shape');
+    await expect(callOpenAiForWriting(writingInput, false)).rejects.toThrow('unexpected shape');
   });
 
   it('throws when the parsed content fails schema validation', async () => {
     completeMock.mockResolvedValue(choice({ content: JSON.stringify({ themes: [] }) }));
-    await expect(callMistralForWriting(writingInput, false)).rejects.toThrow();
+    await expect(callOpenAiForWriting(writingInput, false)).rejects.toThrow();
   });
 });

@@ -1,9 +1,7 @@
 /**
  * A hand-built JSON Schema mirroring reviewerPassOutputSchema
- * (reviewer-schema.ts), for the Mistral API's response_format json_schema
- * shape hint only. See writing-output-schema.ts and
- * docs/rules/llm-layer-rules.md section 8 for why this is hand-built rather
- * than derived with responseFormatFromZodObject.
+ * (reviewer-schema.ts), as an explicit, auditable API shape hint. See
+ * writing-output-schema.ts and docs/rules/llm-layer-rules.md section 8.
  *
  * NOT the validation authority - reviewerPassOutputSchema.parse() in
  * client.ts is. Character bounds (reason max length) live in the Zod

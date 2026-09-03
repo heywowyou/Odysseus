@@ -1,6 +1,6 @@
 /**
  * Groups, prioritizes, and writes a completed audit's findings via the
- * Mistral API, exactly as the `odysseus analyze` CLI command does today -
+ * OpenAI API, exactly as the `odysseus analyze` CLI command does today -
  * extracted so `cli` and the queued pipeline share one implementation.
  * See audit-stage.ts's header for why this was extracted.
  *
@@ -292,7 +292,7 @@ export async function runAnalysisStage(
   // Shadow reviewer (docs/rules/llm-layer-rules.md section 12): runs after the
   // analysis is fully written and persisted, and its whole body is
   // wrapped so a reviewer failure of any kind can never block, fail, or
-  // delay the analysis it reviews. One extra Mistral call per analysis
+  // delay the analysis it reviews. One extra provider call per analysis
   // by operator decision, always on; verdicts are data for a later
   // promotion decision, not a gate.
   try {

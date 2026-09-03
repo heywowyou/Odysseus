@@ -373,7 +373,7 @@ Two bugs were found only by scanning a real site after the full test suite passe
 
 Verified on sas-fernande.fr: 11 pages, 78 findings, render diff 0 on every page as expected for a server-rendered site.
 
-**Milestone 5: LLM prioritization.** Done 2026-08-02. New `packages/llm`, the only package that talks to the Mistral API. Structured output plus explicit Zod validation on every response, hard rejection of any finding ID absent from the input, two retries then a thrown error rather than a partial analysis. Analyses are stored insert-only, one per language and again after a prompt change, each recording the model identifier and temperature.
+**Milestone 5: LLM prioritization.** Done 2026-08-02. New `packages/llm`, the only package that talks to the configured model API (OpenAI since plan 025). Structured output plus explicit Zod validation on every response, hard rejection of any finding ID absent from the input, two retries then a thrown error rather than a partial analysis. Analyses are stored insert-only, one per language and again after a prompt change, each recording the model identifier and temperature.
 
 Verified live in both languages against the real capture: 11 themes from 17 findings, plain-language French that reads as French, and legal relevance lines naming the WCAG criterion and EN 301 549 without asserting the EAA applies to the business. The top-ranked theme was traced by hand to a single `is-crawlable` finding, and `curl` confirmed the quote request page carries `noindex, follow`. A client can check that claim in ten seconds, which is the whole proposition working end to end for the first time.
 
@@ -477,7 +477,7 @@ percentile in the paid report, and publish the study in French on
 `odysseusaudit.com`. Target: before 22 September 2026, the Créteil hearing in
 the E.Leclerc matter (`docs/rules/obligation-basis.md` section 5), which will be the
 third data point in a contested line and will be covered. Generate the study
-with Mistral as with everything else; add the one-line AI-assistance
+with OpenAI as with everything else; add the one-line AI-assistance
 disclosure from `docs/rules/operator-obligations.md` section 3 near the top of the
 published page. No other change to authorship or pipeline.
 
@@ -541,7 +541,7 @@ Explicitly not required for the first email: client login, self-serve signup, bi
 
 ### 8.3 EU AI Act
 
-Article 50 transparency obligations became applicable 2 August 2026. Odysseus is a deployer, not a provider (the model is Mistral's). Client audit reports and outreach emails are private, single-recipient documents and are out of scope for article 50(4) by definition, not because of any mitigation added; no change to either pipeline. The milestone 10 benchmark study is the one document actually published to the public and is the only place 50(4) is plausibly engaged; the fix is a one-line AI-assistance disclosure near the top of the published page, not hand-authorship. Full reasoning, including a corrected earlier overcorrection: `docs/rules/operator-obligations.md` section 3.
+Article 50 transparency obligations became applicable 2 August 2026. Odysseus is a deployer, not a provider (the model is OpenAI's). Client audit reports and outreach emails are private, single-recipient documents and are out of scope for article 50(4) by definition, not because of any mitigation added; no change to either pipeline. The milestone 10 benchmark study is the one document actually published to the public and is the only place 50(4) is plausibly engaged; the fix is a one-line AI-assistance disclosure near the top of the published page, not hand-authorship. Full reasoning, including a corrected earlier overcorrection: `docs/rules/operator-obligations.md` section 3.
 
 ### 8.4 Other operator obligations with near-term dates
 

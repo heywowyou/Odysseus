@@ -1,5 +1,5 @@
-import { callMistralForWriting } from './client.js';
-import { MISTRAL_MODEL, MISTRAL_TEMPERATURE, MAX_RETRIES } from './constants.js';
+import { callOpenAiForWriting } from './client.js';
+import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { findBusinessClaimViolations } from './business-claim-guard.js';
 import { findExecutiveSummaryDigitViolations } from './executive-summary-digit-guard.js';
 import { findLanguageComplianceViolations } from './language-guard.js';
@@ -42,14 +42,12 @@ export async function analyzeWriting(
   let previousRejection: string | undefined;
 
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
-    let result: Awaited<ReturnType<typeof callMistralForWriting>>;
+    let result: Awaited<ReturnType<typeof callOpenAiForWriting>>;
     try {
-      result = await callMistralForWriting(input, usedFallbackContext, previousRejection);
+      result = await callOpenAiForWriting(input, usedFallbackContext, previousRejection);
     } catch (error) {
       // See analyzeStructure's identical comment - a parse/validation
-      // failure is retried like any other rejected attempt, including
-      // refusal-like model behavior since Mistral has no distinct refusal
-      // signal.
+      // failure or provider refusal is retried like any other rejected attempt.
       lastFailureReason = error instanceof Error ? error.message : String(error);
       previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
@@ -146,8 +144,8 @@ export async function analyzeWriting(
     // has passed, so a guard never inspects text this rewrote.
     return {
       output: normalizeWritingOutputTypography(result.output, input.language),
-      model: MISTRAL_MODEL,
-      temperature: MISTRAL_TEMPERATURE,
+      model: OPENAI_MODEL,
+      temperature: OPENAI_TEMPERATURE,
     };
   }
 

@@ -1,10 +1,7 @@
 /**
  * A hand-built JSON Schema mirroring structurePassOutputSchema
- * (structure-schema.ts), for the Mistral API's response_format json_schema
- * shape hint only. Same rationale as the deleted output-schema.ts had
- * for the old single-pass llmOutputSchema: the installed
- * @mistralai/mistralai SDK's responseFormatFromZodObject helper requires a
- * zod v4 schema, and this workspace is on zod v3. See
+ * (structure-schema.ts), as an explicit, auditable API shape hint. The
+ * workspace remains on zod v3 and the mirror-sync tests guard drift. See
  * docs/rules/llm-layer-rules.md section 8.
  *
  * This schema only constrains the API's output shape server-side. It is

@@ -1,5 +1,5 @@
-import { callMistralForReview } from './client.js';
-import { MISTRAL_MODEL, MISTRAL_TEMPERATURE } from './constants.js';
+import { callOpenAiForReview } from './client.js';
+import { OPENAI_MODEL, OPENAI_TEMPERATURE } from './constants.js';
 import type { ReviewerInput, ReviewerPassOutput } from './reviewer-schema.js';
 
 /** Shadow-mode reviewer outcome. `skipped` means no review was produced:
@@ -29,7 +29,7 @@ function describeThemeKeyMismatch(input: ReviewerInput, output: ReviewerPassOutp
 
 export async function analyzeReview(input: ReviewerInput): Promise<ReviewOutcome> {
   try {
-    const result = await callMistralForReview(input);
+    const result = await callOpenAiForReview(input);
     const mismatch = describeThemeKeyMismatch(input, result.output);
     if (mismatch) {
       return { status: 'skipped', reason: mismatch };
@@ -37,8 +37,8 @@ export async function analyzeReview(input: ReviewerInput): Promise<ReviewOutcome
     return {
       status: 'ok',
       output: result.output,
-      model: MISTRAL_MODEL,
-      temperature: MISTRAL_TEMPERATURE,
+      model: OPENAI_MODEL,
+      temperature: OPENAI_TEMPERATURE,
     };
   } catch (error) {
     return {

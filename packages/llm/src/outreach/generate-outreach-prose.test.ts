@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { MAX_RETRIES, MISTRAL_MODEL, MISTRAL_TEMPERATURE } from '../constants.js';
+import { MAX_RETRIES, OPENAI_MODEL, OPENAI_TEMPERATURE } from '../constants.js';
 import { WORD_SHORTFALL_EXTRA_ATTEMPTS } from './generate-outreach-prose.js';
 import type { OutreachProseInput } from './outreach-input.js';
 import type { OutreachProseOutput } from './outreach-schema.js';
 
 vi.mock('./outreach-client.js', () => ({
-  callMistralForOutreach: vi.fn(),
+  callOpenAiForOutreach: vi.fn(),
 }));
 
-const { callMistralForOutreach } = await import('./outreach-client.js');
+const { callOpenAiForOutreach } = await import('./outreach-client.js');
 const { generateOutreachProse } = await import('./generate-outreach-prose.js');
 
 function touch1Input(overrides: Partial<OutreachProseInput> = {}): OutreachProseInput {
@@ -87,42 +87,42 @@ function cleanTouch3Output(): Extract<OutreachProseOutput, { touch: 3 }> {
 
 describe('generateOutreachProse - clean pass across touches', () => {
   it('returns touch 1 output on a clean pass', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({ output: cleanTouch1Output() });
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
     expect(result.output.touch).toBe(1);
-    expect(result.model).toBe(MISTRAL_MODEL);
-    expect(result.temperature).toBe(MISTRAL_TEMPERATURE);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(1);
+    expect(result.model).toBe(OPENAI_MODEL);
+    expect(result.temperature).toBe(OPENAI_TEMPERATURE);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(1);
   });
 
   it('returns touch 2 output on a clean pass', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({ output: cleanTouch2Output() });
 
     const result = await generateOutreachProse(touch2Input(), 'keyboard-trap');
 
     expect(result.output.touch).toBe(2);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(1);
   });
 
   it('returns touch 3 output on a clean pass with no selected observation key', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({ output: cleanTouch3Output() });
 
     const result = await generateOutreachProse(touch3Input(), undefined);
 
     expect(result.output.touch).toBe(3);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(1);
   });
 
   it('normalizes typography on the way out (dash and guillemet spacing)', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -143,7 +143,7 @@ describe('generateOutreachProse - clean pass across touches', () => {
 
 describe('generateOutreachProse - guard rejections (touch 1)', () => {
   it('retries once on an alias leak, then succeeds', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -154,12 +154,12 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
   });
 
   it('throws after exhausting retries when every attempt leaks the alias', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValue({
         output: cleanTouch1Output({
@@ -170,11 +170,11 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await expect(
       generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
     ).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once on an observation-scope drift, then succeeds', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -185,12 +185,12 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
   });
 
   it('throws after exhausting retries when every attempt drifts to a different observation', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValue({
         output: cleanTouch1Output({
@@ -201,11 +201,11 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await expect(
       generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
     ).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once on a doctrine vocabulary violation, then succeeds', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -216,12 +216,12 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
   });
 
   it('throws after exhausting retries when every attempt mentions a competitor', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValue({
         output: cleanTouch1Output({
@@ -232,11 +232,11 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await expect(
       generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
     ).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once on a legal-consequence claim, then succeeds', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -248,12 +248,12 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
   });
 
   it('throws after exhausting retries when every attempt claims a legal consequence', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValue({
         output: cleanTouch1Output({
@@ -265,11 +265,11 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await expect(
       generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
     ).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once on an invented digit, then succeeds', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -282,12 +282,12 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
   });
 
   it('throws after exhausting retries when every attempt invents a digit', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValue({
         output: cleanTouch1Output({
@@ -300,11 +300,11 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await expect(
       generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
     ).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once on a leaked URL, then succeeds', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -316,12 +316,12 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
   });
 
   it('throws after exhausting retries when every attempt leaks a URL', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValue({
         output: cleanTouch1Output({
@@ -333,11 +333,11 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await expect(
       generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
     ).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once when a field is written in the wrong language, then succeeds', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -349,12 +349,12 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
   });
 
   it('throws after exhausting retries when every attempt is in the wrong language', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValue({
         output: cleanTouch1Output({
@@ -366,11 +366,11 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await expect(
       generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
     ).rejects.toThrow(/exhausted \d+ attempts/);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once when the word budget is missed, then succeeds', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -381,7 +381,7 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
   });
 
@@ -393,7 +393,7 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
       cleanTouch1Output({
         evidenceSentence: "Une partie du contenu ne s'affiche pas sans JavaScript.",
       });
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({ output: short() })
       .mockResolvedValueOnce({ output: short() })
@@ -403,7 +403,7 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
     expect(result.output.touch).toBe(1);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1 + 1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1 + 1);
   });
 
   it('escalates the word ask by the undershoot across repeated shortfalls', async () => {
@@ -415,7 +415,7 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
       cleanTouch1Output({
         evidenceSentence: "Une partie du contenu ne s'affiche pas sans JavaScript.",
       });
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({ output: short() })
       .mockResolvedValueOnce({ output: short() })
@@ -425,7 +425,7 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
     const feedbackFor = (attemptIndex: number) =>
-      vi.mocked(callMistralForOutreach).mock.calls[attemptIndex]?.[1] ?? '';
+      vi.mocked(callOpenAiForOutreach).mock.calls[attemptIndex]?.[1] ?? '';
     expect(feedbackFor(1)).toContain('at least 62 words');
     expect(feedbackFor(2)).toContain('at least 73 words');
     expect(feedbackFor(3)).toContain('at least 75 words');
@@ -434,7 +434,7 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
   });
 
   it('throws after spending every attempt, including the extras, on shortfalls', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValue({
         output: cleanTouch1Output({
@@ -445,7 +445,7 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await expect(
       generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
     ).rejects.toThrow(/exhausted 5 attempts/);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(
       MAX_RETRIES + 1 + WORD_SHORTFALL_EXTRA_ATTEMPTS,
     );
   });
@@ -453,7 +453,7 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
   it('ends at the base budget when the last base attempt fails on something other than length', async () => {
     // Two short attempts, then a vocabulary leak: the extras exist only for
     // pure word-count shortfalls, so the third rejection ends the run.
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -474,33 +474,33 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
     await expect(
       generateOutreachProse(touch1Input(), 'text-missing-from-raw-html'),
     ).rejects.toThrow(/exhausted 3 attempts/);
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
 
   it('retries once on a raw API/parse failure, then succeeds', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockRejectedValueOnce(new Error('network error'))
       .mockResolvedValueOnce({ output: cleanTouch1Output() });
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
   });
 
   it('passes no rejection reason on the first attempt', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({ output: cleanTouch1Output() });
 
     await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(vi.mocked(callMistralForOutreach).mock.calls[0]?.[1]).toBeUndefined();
+    expect(vi.mocked(callOpenAiForOutreach).mock.calls[0]?.[1]).toBeUndefined();
   });
 
   it('feeds the guard rejection reason back into the retry attempt', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -511,16 +511,16 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     const result = await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(callMistralForOutreach).toHaveBeenCalledTimes(2);
+    expect(callOpenAiForOutreach).toHaveBeenCalledTimes(2);
     expect(result.output.touch).toBe(1);
-    const retryFeedback = vi.mocked(callMistralForOutreach).mock.calls[1]?.[1];
+    const retryFeedback = vi.mocked(callOpenAiForOutreach).mock.calls[1]?.[1];
     expect(retryFeedback).toContain('too-few-words');
     expect(retryFeedback).toContain('below the required minimum of 60');
     expect(retryFeedback).toContain('more words than last time');
   });
 
   it('feeds a generic guard rejection back without word arithmetic', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockResolvedValueOnce({
         output: cleanTouch1Output({
@@ -531,19 +531,19 @@ describe('generateOutreachProse - guard rejections (touch 1)', () => {
 
     await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    const retryFeedback = vi.mocked(callMistralForOutreach).mock.calls[1]?.[1];
+    const retryFeedback = vi.mocked(callOpenAiForOutreach).mock.calls[1]?.[1];
     expect(retryFeedback).toContain('alias violation');
     expect(retryFeedback).not.toContain('more words than last time');
   });
 
   it('feeds an API failure reason back into the retry attempt too', async () => {
-    vi.mocked(callMistralForOutreach)
+    vi.mocked(callOpenAiForOutreach)
       .mockReset()
       .mockRejectedValueOnce(new Error('network error'))
       .mockResolvedValueOnce({ output: cleanTouch1Output() });
 
     await generateOutreachProse(touch1Input(), 'text-missing-from-raw-html');
 
-    expect(vi.mocked(callMistralForOutreach).mock.calls[1]?.[1]).toContain('network error');
+    expect(vi.mocked(callOpenAiForOutreach).mock.calls[1]?.[1]).toContain('network error');
   });
 });

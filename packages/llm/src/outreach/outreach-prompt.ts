@@ -14,7 +14,8 @@ import type { OutreachTouch1Output } from './outreach-schema.js';
  * and examples.
  *
  * Touch 1 additionally carries a worked example of a correctly sized
- * response (issue #12: on live Mistral the model wrote 31-38 words against
+ * response (issue #12: in 2026-08 live Mistral measurements, the model wrote
+ * 31-38 words against
  * the 60-word floor on six consecutive attempts, so the numeric instruction
  * alone under-determines length). The example is stated once per language
  * and must itself satisfy every outreach guard, which

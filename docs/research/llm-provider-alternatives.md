@@ -14,6 +14,28 @@ The project calls chat completions with `responseFormat: { type: 'json_schema', 
 6. EU/GDPR posture: where data is hosted and processed, whether API data trains models. A con/pro item, not a hard blocker.
 7. Small migration: OpenAI-compatible endpoint or official TypeScript SDK.
 
+## OpenAI mini and nano second pass (2026-09-03)
+
+This update preserves the 2026-08-29 market survey above but supersedes its OpenAI recommendation for plan 025. Prices below are standard API text-token prices in USD per 1M tokens, not Batch API prices. Every listed model supports both Chat Completions and Structured Outputs according to its official model page, so each fits the project's existing `chat.completions` plus strict JSON-schema contract without an endpoint migration.
+
+| Model | Input | Output | Reasoning posture and intended work | Report-generation assessment |
+| --- | ---: | ---: | --- | --- |
+| `gpt-5.6-terra` | $2.00 | $12.00 | Configurable reasoning from `none` through `max`; balanced intelligence-and-cost tier that OpenAI says roughly corresponds to the earlier mini tier | Strongest quality candidate in this subset, but 2.67 times the input and output price of GPT-5.4 Mini is unnecessary before report evals show a material gain |
+| `gpt-5.6-luna` | $0.20 | $1.20 | Configurable reasoning from `none` through `max`; cost-sensitive tier that OpenAI says roughly corresponds to the earlier nano tier | Attractive production cost and newer generation, but its nano-like positioning makes it a weaker default for nuanced client-facing prose |
+| `gpt-5.4-mini` | $0.75 | $4.50 | Reasoning supports `none` by default plus `low`, `medium`, `high`, and `xhigh`; OpenAI calls it its strongest mini model yet | **Selected.** Best documented quality-cost middle ground for nuanced bilingual report prose while retaining strict structured output and Chat Completions |
+| `gpt-5.4-nano` | $0.20 | $1.25 | Same reasoning-effort range; explicitly designed for classification, extraction, ranking, and other simple high-volume tasks | Good candidate for later routing of mechanical subtasks, not the default writer or reviewer |
+| `gpt-5-mini` | $0.25 | $2.00 | Earlier GPT-5 reasoning model for well-defined tasks and precise prompts | Cheaper, but the model page now directs new high-volume workloads toward GPT-5.6 Terra; no reason to prefer this older tier for prose quality |
+| `gpt-5-nano` | $0.05 | $0.40 | Earlier GPT-5 reasoning model aimed at summarization and classification | Lowest price, but explicitly task-shaped for summaries and classifiers rather than polished bilingual reports |
+| `gpt-4.1-mini` | $0.40 | $1.60 | Non-reasoning model with low latency, strong instruction following, and a 32,768-token maximum output | Clean compatibility and still viable, but superseded here by the newer GPT-5.4 Mini quality tier |
+| `gpt-4.1-nano` | $0.10 | $0.40 | Non-reasoning, low-latency instruction-following tier; currently listed as deprecated in the all-model catalog | Do not adopt for new report work |
+| `gpt-4o-mini` | $0.15 | $0.60 | Non-reasoning focused-task model with a 16,384-token maximum output | Cheapest established fallback, but older and less compelling for final report prose |
+
+The choice of `gpt-5.4-mini` is a quality-positioning inference, not a claim that OpenAI publishes a French-versus-English report-writing benchmark. OpenAI describes GPT-5.4 Mini as its strongest mini model, describes the nano tiers as optimized for simple or cost-sensitive work, and states that its latest models are multilingual. That evidence favors GPT-5.4 Mini for the writer and reviewer calls where tone, prioritization, and faithful French and English rendering matter. Representative bilingual report evals remain the final acceptance test. Sources: https://developers.openai.com/api/docs/models/gpt, https://developers.openai.com/api/docs/models/gpt-5.4-mini, https://developers.openai.com/api/docs/models/gpt-5.4-nano
+
+`2025-04-14` is not a distinct quality edition. It is the immutable snapshot behind the `gpt-4.1-mini` alias, as shown on the GPT-4.1 Mini model page. If GPT-4.1 Mini were retained, the operator preference is therefore `gpt-4.1-mini`, not `gpt-4.1-mini-2025-04-14`. Plan 025 instead uses the generic `gpt-5.4-mini` alias. This intentionally accepts that OpenAI may move the alias to a later snapshot, trading byte-for-byte model reproducibility for automatic model updates. The currently documented pinned GPT-5.4 Mini snapshot is `gpt-5.4-mini-2026-03-17`; pin it only if a future regression or audit requirement makes repeatability more important than the operator-accepted alias behavior. Sources: https://developers.openai.com/api/docs/models/gpt-4.1-mini, https://developers.openai.com/api/docs/models/gpt-5.4-mini
+
+Direct official comparison sources: https://developers.openai.com/api/docs/models/gpt-5.6-terra, https://developers.openai.com/api/docs/models/gpt-5.6-luna, https://developers.openai.com/api/docs/models/gpt-5.4-mini, https://developers.openai.com/api/docs/models/gpt-5.4-nano, https://developers.openai.com/api/docs/models/gpt-5-mini, https://developers.openai.com/api/docs/models/gpt-5-nano, https://developers.openai.com/api/docs/models/gpt-4.1-mini, https://developers.openai.com/api/docs/models/gpt-4.1-nano, https://developers.openai.com/api/docs/models/gpt-4o-mini
+
 ## Comparison table
 
 | Model | Provider | Input $/1M | Output $/1M | Strict JSON schema | Temperature | EU data posture | One-line verdict |

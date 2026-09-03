@@ -2443,10 +2443,9 @@ The configured account returned HTTP 403 `tier_not_allowed` for
 were available. `MISTRAL_MODEL` therefore points to `mistral-medium-latest`, and
 the structure, writing, and outreach calls all inherit that one constant.
 
-This is an operational compatibility choice, not an outreach-specific model
-fork and not a provider evaluation. Comparing Mistral with another provider, or
-moving back to Large after access changes, requires separate quality evidence
-and approval.
+This was an operational compatibility choice, not an outreach-specific model
+fork or a provider evaluation. Plan 025 supplied the required provider
+comparison and operator approval; entry 67 supersedes this choice.
 
 
 ### 54. Outreach generation and deterministic assembly remain separate deep interfaces
@@ -2486,7 +2485,7 @@ and were promoted with zero false positives; do not add a prose guard to
 the retry loop without the same measured promotion step, and do not
 widen the business-claim patterns to traffic vocabulary.
 
-The shadow reviewer (`analyze-review.ts`, one extra Mistral call per
+The shadow reviewer (`analyze-review.ts`, one extra model call per
 analysis, always on by operator decision) checks the writer's prose
 against exactly the writer's input and returns evidence-bound verdicts.
 It is not a gate and must not become one on the current model: the
@@ -3240,3 +3239,87 @@ mailbox setup, live deployment, and every named-site scan remain explicit STOP
 gates in the relevant numbered plans. The first real wave cannot land before
 2026-09-15. Paid full-audit sitemap coverage from 9b.5 remains independent of
 this prospecting path.
+
+
+### 67. OpenAI GPT-5.4 Mini replaces Mistral for every model pass (plan 025)
+
+The Mistral account's persistent rate limits and inability to call its larger
+model blocked a full French analysis. Plan 025 replaces the SDK and routes the
+structure, writing, shadow-review, and outreach passes through OpenAI's Chat
+Completions API. The strict JSON Schema hints, explicit Zod validation, guards,
+retry budgets, and fail-loud behavior are unchanged. Every call uses
+`temperature: 0.2` and `reasoning_effort: 'none'` so hidden reasoning does not
+compete with the bounded JSON completion.
+
+The plan originally selected dated `gpt-4.1-mini-2025-04-14` at $0.40 input
+and $1.60 output per million tokens. On 2026-09-03 the operator requested a
+second pass over the current OpenAI catalog, prioritized report quality over
+the lowest price, and explicitly preferred a generic alias. The resulting
+choice is `gpt-5.4-mini`: OpenAI describes it as its strongest Mini model; it
+supports Chat Completions and Structured Outputs, defaults to no reasoning,
+and costs $0.75 input and $4.50 output per million tokens. It remains cheaper
+than the displaced Mistral Medium baseline ($1.50/$7.50). A maximum 16k output
+costs $0.072 plus input rather than $0.12 output alone.
+
+Rejected for this combined workload: GPT-5.4 nano and the older Nano models,
+which OpenAI positions for simple high-volume classification, extraction, and
+ranking rather than client-facing bilingual prose; GPT-4o Mini and GPT-4.1
+Mini, which are cheaper but lower-quality starting points; GPT-5.6 Terra,
+which is the current balanced family but costs $2/$12 and defaults to medium
+reasoning; and GPT-5.6 Sol, whose $4/$20 flagship price is disproportionate to
+bounded report generation. A per-pass model split was also rejected because it
+would complicate provenance and make a reused structure pass impossible to
+describe with the locked single model field.
+
+Using a generic alias deliberately weakens reproducibility: two analyses that
+both record `gpt-5.4-mini` can reflect different provider snapshots after an
+alias repoint. The operator accepts that risk in exchange for automatic minor
+upgrades. Re-run the saved-audit French/English quality check after a repoint or
+if guard/retry behavior changes materially. API customer content is not used
+for training by default; EU regional storage and processing remain an
+organization/project-level opt-in with eligibility and retention-control
+requirements, a regional base URL, and a 10 percent uplift for this model.
+
+Live acceptance on 2026-09-03 resolved the generic alias to
+`gpt-5.4-mini-2026-03-17`. All six API-facing schema mirrors (structure,
+writing, reviewer, and outreach touches 1 through 3) returned `finish_reason:
+stop`, no refusal, and passed their explicit Zod parsers. The plan's earlier
+reference to seven schemas was an arithmetic error; there are six real mirrors
+and all six were exercised. Their 1,100 combined tokens cost approximately
+$0.0021 and completed in 1.7 to 5.4 seconds each.
+
+The representative saved audit then completed one structure, two writing, and
+two reviewer calls with no refusal, truncation, retry exhaustion, or guard
+failure. It used 174,707 input and 7,536 output tokens, approximately $0.1649,
+and persisted one shared 10-theme structure plus French and English analyses
+with `model: 'gpt-5.4-mini'`. Both reviewer artifacts marked all 42 reviewed
+fields supported. Compared with Mistral's stored 11-theme English output, the
+new structure more usefully places the reservation page's keyboard, button,
+and contrast barriers together at priority one and avoids some unnecessarily
+prescriptive prose. Its main weakness is repetition: the 179 touch-target
+findings are divided into three page-family themes with similar actions,
+whereas Mistral grouped them once. The French is clear, cautious, and
+client-readable overall, with occasional slightly mechanical wording such as
+"assistants de réponse". This is acceptable evidence for retaining GPT-5.4
+Mini, subject to the operator's required French report read.
+
+PDF generation reached the existing cover-identity safety gate and stopped as
+designed: the synthetic fixture's `nomCommercial`, "Hôtel du Bassin", remains
+detected rather than operator-confirmed. Do not falsify that provenance. Once
+the operator confirms or corrects this fixture name, generate both reports and
+perform the final French read before accepting the provider for production.
+
+The operator confirmed that fixture identity later in the same session. The
+large fixture then exposed a separate deterministic catalog gap: a valid
+`keyboard-trap` finding has no reviewed report remediation, logged as issue
+#27 rather than weakened or silently omitted. A second saved run of the same
+synthetic fixture contains 16 findings without that rule and was therefore used
+for the rendered acceptance path. Its shared three-theme structure and paired
+FR/EN writing and review passes added 12,045 input and 2,427 output tokens,
+approximately $0.0200. Both PDFs rendered successfully: 25 French pages and 24
+English pages. The generated priorities are concise, correctly grounded, and
+natural in both languages; the French priority prose passes the client read.
+The deterministic surrounding template has repeated singular-agreement defects
+such as "1 pages", logged separately as issue #28 and not attributed to the
+model migration. Total measured OpenAI spend for schema smoke, the large
+comparison, and the rendered acceptance pair was approximately $0.1870.

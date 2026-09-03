@@ -122,7 +122,14 @@ Fill in exactly these, leave everything else as shipped:
   password goes over stdin, never a CLI argument (arguments land in shell
   history and process lists). The plaintext itself is written nowhere and
   told to no one.
-- `MISTRAL_API_KEY`: the existing analysis key.
+- `OPENAI_API_KEY`: the analysis key. A fresh key may start on a lower rate-limit
+  tier, so verify the limits before running a large batch.
+- Optional `OPENAI_BASE_URL`: leave unset for the standard endpoint. Set it to
+  the organization's enabled EU regional endpoint when EU data residency is
+  required; regional processing carries a 10 percent uplift.
+- The application intentionally requests the generic `gpt-5.4-mini` alias.
+  Recheck report quality after OpenAI changes the alias target; the operator
+  explicitly prefers automatic minor upgrades over a dated snapshot pin.
 - The `ODYSSEUS_PREVIEW_BUCKET_*` block: the same Scaleway bucket values the
   local `.env` already uses.
 

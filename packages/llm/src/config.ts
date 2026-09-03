@@ -31,7 +31,7 @@ function findWorkspaceRoot(): string {
 let envLoaded = false;
 
 /** Populates process.env from .env as a side effect. Calling this early
- *  (via getMistralApiKey) also makes a later getMongoUri() call
+ *  (via getOpenAiApiKey) also makes a later getMongoUri() call
  *  succeed, since getMongoUri() does not trigger env loading itself. */
 export function ensureEnvLoaded(): void {
   if (envLoaded) return;
@@ -43,17 +43,25 @@ export function ensureEnvLoaded(): void {
   }
 }
 
-/** Reads MISTRAL_API_KEY from the environment, loading .env first.
+/** Reads OPENAI_API_KEY from the environment, loading .env first.
  *  Throws a clear, loud error if unset rather than letting the SDK fail
  *  later with an opaque auth error, matching getMongoUri()'s style in
  *  packages/store/src/connection.ts. */
-export function getMistralApiKey(): string {
+export function getOpenAiApiKey(): string {
   ensureEnvLoaded();
-  const key = process.env['MISTRAL_API_KEY'];
+  const key = process.env['OPENAI_API_KEY'];
   if (!key) {
     throw new Error(
-      'odysseus: MISTRAL_API_KEY is not set. Set it in the environment or in .env before running a command that calls the Mistral API.',
+      'odysseus: OPENAI_API_KEY is not set. Set it in the environment or in .env before running a command that calls the OpenAI API.',
     );
   }
   return key;
+}
+
+/** Optional OpenAI-compatible base URL. Undefined lets the SDK use its
+ *  standard endpoint; deployments that enable EU data residency can opt in
+ *  without changing application code. */
+export function getOpenAiBaseUrl(): string | undefined {
+  ensureEnvLoaded();
+  return process.env['OPENAI_BASE_URL'] || undefined;
 }

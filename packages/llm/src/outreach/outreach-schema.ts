@@ -7,7 +7,7 @@ const MAX_SENTENCE_CHARS = 300;
 
 /**
  * One closed schema per touch, not a single schema with optional fields, and
- * not represented as a JSON-schema `oneOf` in the Mistral response format
+ * not represented as a JSON-schema `oneOf` in the provider response format
  * (see outreach-output-schema.ts). A union would make every touch's fields
  * structurally optional at the top level, which destroys the same
  * negative-space property writing-output-schema.test.ts exists to hold: the

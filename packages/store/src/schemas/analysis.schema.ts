@@ -19,16 +19,14 @@ export interface AnalysisDocumentFields {
   auditId: string;
   findingsProvenance: FindingsProvenance;
   language: ReportLanguage;
-  /** Mistral model identifier, e.g. 'mistral-large-latest'. Recorded
-   *  alongside temperature for the same provenance reason the audit
+  /** Model identifier recorded at generation time alongside temperature for
+   *  the same provenance reason the audit
    *  manifest records axe/Lighthouse versions: a model or temperature
    *  change between two monitoring runs must never read as the client's
    *  site changing. */
   model: string;
-  /** Mistral's temperature parameter at the time this analysis was
-   *  generated. Unlike Claude Opus 5 (which rejected temperature
-   *  outright), Mistral accepts it normally, so this is a real sampling
-   *  knob, not just a label. See docs/rules/llm-layer-rules.md section 3. */
+  /** Sampling temperature at the time this analysis was generated. See
+   *  docs/rules/llm-layer-rules.md section 3. */
   temperature: number;
   generatedAt: Date;
   executiveSummary: string;
