@@ -3468,6 +3468,16 @@ changed. Theme order in the output is now the input's order rather than
 whatever order the model emitted, which is a small determinism gain, not a
 behavior change anyone depended on.
 
+**Verified live, 2026-09-03.** Confirmed against the audit this incident
+destroyed. `analyze --language en` was re-run on
+`artifacts/www.villasfoch.fr/2026-09-03T18-51-57Z`, whose stored structure
+document has 9 themes including the `t8` that was duplicated, reusing that
+structure so only the writing pass ran. It succeeded on the first attempt with
+no rejection logged, returned all 9 themes, and wrote
+`analyses/2026-09-03T20-12-12Z-en.json`, which carries no `themeKey` into the
+locked shape. The provider accepts a theme-keyed strict schema, and the audit
+that was lost to this defect now has its English analysis.
+
 `findThemeKeyMismatches` stays, as defense in depth, and should now never
 fire. Kept because a provider that quietly stops honouring strict mode, or a
 defect in the schema builder, would otherwise pass unnoticed. Issue #36 also
@@ -3478,7 +3488,7 @@ one would weaken the reject-rather-than-patch posture the whole LLM layer
 rests on. If this guard ever fires again, that is a signal worth reading, not
 a case for patching model output.
 
-### 71. Remediation copy is coverage-tested against every custom rule that can be emitted, not only the rules a fixture happens to contain
+### 71. Remediation copy is coverage-tested against every rule the scanners can emit, not only the rules a fixture happens to contain
 
 Report generation aborts when a priority finding names a rule with no
 reviewed remediation copy (`rendered-priorities.ts`, "Missing reviewed report
@@ -3508,13 +3518,28 @@ since 2026-08-24, adopted for the same reason: that table was extended
 reactively four times, each time after English text had already shipped
 inside a French report, and the source-derived check ended it.
 
-Scoped to custom rules, not the full reachable set, and that is a deliberate
-line. 66 of the 113 reachable axe and Lighthouse rules also have no
-remediation copy, and the same fail-loud boundary applies to them. Custom
-rules are ours and enumerable; the axe and Lighthouse universes are not, and
-writing 66 lines of guidance for rules this repo has never observed in real
-output would produce exactly the guessed remediation the table exists to
-prevent. The residual exposure is recorded here rather than closed over: a
-paid audit can still abort on an axe or Lighthouse rule no fixture has seen.
-The fixture-observed test remains the right mechanism for those, and the
-right time to write a line is when a real scan first emits the rule.
+That first pass was scoped to custom rules and left 66 of the 113 reachable
+axe and Lighthouse rules uncovered, on the argument that those universes are
+not this repo's and that writing copy for rules it has never observed would
+produce exactly the guessed remediation the table exists to prevent.
+
+**Amended the same day, after checking the premise.** That argument was too
+strong, and the evidence against it was already in the repo: all 66 of those
+rules carry a reviewed French label and gloss in `rule-translations.ts`, from
+the 2026-08-24 decision to translate the full reachable set. The substance of
+what each rule detects was therefore already reviewed content here, so a
+remediation line is written from it rather than invented, and the axe rules in
+question are mostly mechanical single-fix rules (`aria-*`, `td-headers-attr`,
+`list`/`listitem`) where the fix is well defined. All 66 now have reviewed
+copy in both languages, and coverage is ratcheted over the whole reachable
+set, matching what `rule-translations.test.ts` does.
+
+The accepted cost is that an axe-core or Lighthouse upgrade introducing a new
+rule now fails the build until copy exists for it. That is the intended
+behavior, not a side effect: `packages/scanner/src/reachable-rule-ids.test.ts`
+already forces regenerating the committed list on such an upgrade, so the
+upgrade path gains one step rather than a new kind of work. The alternative,
+filling the copy without the ratchet, was rejected on this repo's own history:
+the translations table was extended reactively four times, each time after a
+client-facing report had already shipped English text inside a French
+document, and only the source-derived check ended it.

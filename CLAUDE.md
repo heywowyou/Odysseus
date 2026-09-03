@@ -411,10 +411,11 @@ means numbered entry 24, not a literal Markdown heading anchor.
     and do not add a local repair for a key mismatch: keep
     `findThemeKeyMismatches` as a guard that should never fire.
     → trade-offs.md#70
-71. Every custom rule in `CUSTOM_CHECK_SEVERITY` must carry reviewed FR/EN
-    remediation copy, enforced by a source-derived test. Do not fill the
-    axe/Lighthouse remainder with guessed copy; write a line when a real
-    scan first emits the rule. → trade-offs.md#71
+71. Every rule the scanners can emit — `CUSTOM_CHECK_SEVERITY` plus the whole
+    reachable axe/Lighthouse set — must carry reviewed FR/EN remediation copy,
+    enforced by a source-derived test. An upgrade adding a rule fails the
+    build until copy exists; write it, do not lower the check.
+    → trade-offs.md#71
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
