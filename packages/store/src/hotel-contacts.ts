@@ -58,7 +58,7 @@ export async function listCohortMembersToContact(
 ): Promise<CohortMemberToContact[]> {
   const cohort = await createHotelScoreCohortModel(connection)
     .findOne({ scoringVersion: options.scoringVersion })
-    .sort({ computedAt: -1 })
+    .sort({ computedAt: -1, _id: -1 })
     .lean<{
       cohortId: string;
       members: { candidateId: string; state: OutreachSelectionState }[];
