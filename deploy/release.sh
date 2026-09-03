@@ -11,6 +11,10 @@ LOCK_FILE="$DEPLOY_ROOT/.deploy.lock"
 HEALTH_URL="${ODYSSEUS_DEPLOY_HEALTH_URL:-https://app.odysseusaudit.com/}"
 HEALTH_ATTEMPTS="${ODYSSEUS_DEPLOY_HEALTH_ATTEMPTS:-30}"
 HEALTH_DELAY_SECONDS="${ODYSSEUS_DEPLOY_HEALTH_DELAY_SECONDS:-2}"
+# Ceiling for Docker build cache after each deploy. The VPS disk is 30 GB and
+# one build moves roughly 6 GB through the cache, so an uncapped cache filled
+# the disk within two weeks of releases (2026-09-03 outage).
+BUILD_CACHE_KEEP="${ODYSSEUS_BUILD_CACHE_KEEP:-4GB}"
 COMPOSE_PROJECT_NAME=deploy
 
 log() {
@@ -176,18 +180,31 @@ prune_old_releases() {
   current_path="$(readlink -f "$CURRENT_LINK")"
   previous_path="$(<"$PREVIOUS_FILE")"
 
+  # Disk policy: the server of record keeps data (artifacts volume, .env) and
+  # the small release trees; images are regenerable and are what filled the
+  # disk on 2026-09-03. Only the current and previous releases keep their
+  # image, which is what makes the documented rollback instant; restoring any
+  # older release rebuilds first (rollback_release handles a missing image).
   while IFS= read -r path; do
     name="$(basename "$path")"
     is_release_id "$name" || continue
-    if [[ "$path" == "$current_path" || "$path" == "$previous_path" || $retained -lt 5 ]]; then
-      retained=$((retained + 1))
+    if [[ "$path" == "$current_path" || "$path" == "$previous_path" ]]; then
       continue
     fi
-    log "pruning old release $name"
-    rm -rf -- "$path"
+    if [[ $retained -ge 5 ]]; then
+      log "pruning old release $name"
+      rm -rf -- "$path"
+    else
+      retained=$((retained + 1))
+    fi
     docker image rm "odysseus-app:$name" >/dev/null 2>&1 || true
   done < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' |
     sort -nr | cut -d' ' -f2-)
+
+  # Unnamed leftovers pin cache the same way; the builder cache itself is
+  # capped last so it can reclaim layers freed by the removals above.
+  docker image prune -f >/dev/null 2>&1 || true
+  docker builder prune -f -a --keep-storage "$BUILD_CACHE_KEEP" >/dev/null 2>&1 || true
 }
 
 deploy_release() {

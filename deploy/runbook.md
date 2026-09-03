@@ -310,6 +310,39 @@ older release is the active rollback target. Every deployment restarts the app,
 which logs out the in-memory dashboard session. A job interrupted during the
 restart is returned to the persistent queue when the new process starts.
 
+### Disk usage on the VPS
+
+The VPS disk is 30 GB and the builds are large, so the controller enforces a
+data-first disk policy after every successful deploy (`prune_old_releases` in
+`deploy/release.sh`):
+
+- Kept: the artifacts volume, `/srv/odysseus/.env`, the Caddy certificates,
+  the five most recent release trees (a few dozen MB each), and the app images
+  for the current and previous releases only (about 3 GB each). Atlas holds
+  the database, off-box.
+- Pruned: app images for every other release (a rollback to one of those
+  rebuilds the image first; the controller handles a missing image), dangling
+  images, and Docker build cache above 4 GB
+  (`ODYSSEUS_BUILD_CACHE_KEEP` overrides the ceiling).
+
+Before the controller had this policy the disk filled on 2026-09-03 and
+deploys died with `no space left on device` during the image build. If that
+ever recurs before the controller's own prune can run, reclaim space from an
+operator SSH session, keeping the current and previous images:
+
+```sh
+readlink /srv/odysseus/current
+cat /srv/odysseus/previous-release
+docker images --format '{{.Repository}}:{{.Tag}}' | grep odysseus-app
+# docker image rm <tags that are neither of the two pointers above>
+docker image prune -f
+docker builder prune -f -a --keep-storage 4GB
+df -h /
+```
+
+A deploy can then be re-run from Actions. Never prune volumes: the artifacts
+volume is the data of record on this box (see section 11).
+
 ## 8. Backups
 
 The nightly job tars the artifacts volume and copies it to the existing

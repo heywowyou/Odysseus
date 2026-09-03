@@ -20,6 +20,12 @@ assert_contains() {
   grep -Fq -- "$2" "$1" || fail "$1 does not contain '$2'"
 }
 
+assert_not_contains() {
+  if grep -Fq -- "$2" "$1"; then
+    fail "$1 unexpectedly contains '$2'"
+  fi
+}
+
 make_fake_commands() {
   local bin_dir="$1"
   mkdir -p "$bin_dir"
@@ -84,6 +90,25 @@ make_release_archive "$ARCHIVE"
 
 DEPLOY_ROOT="$TEST_ROOT/production"
 make_legacy_root "$DEPLOY_ROOT"
+
+# Six pre-existing releases with staggered mtimes: the five most recent keep
+# their trees, the oldest is deleted outright, and none of them may keep its
+# image once the deploy finishes (only current and previous earn an image).
+STALE_IDS=(
+  1111111111111111111111111111111111111111
+  2222222222222222222222222222222222222222
+  3333333333333333333333333333333333333333
+  4444444444444444444444444444444444444444
+  5555555555555555555555555555555555555555
+  6666666666666666666666666666666666666666
+)
+for index in "${!STALE_IDS[@]}"; do
+  stale_id="${STALE_IDS[$index]}"
+  mkdir -p "$DEPLOY_ROOT/releases/$stale_id"
+  printf '%s\n' "$stale_id" >"$DEPLOY_ROOT/releases/$stale_id/.odysseus-release"
+  touch -d "2020-01-$((index + 1)) 12:00:00" "$DEPLOY_ROOT/releases/$stale_id"
+done
+
 run_controller "$DEPLOY_ROOT" deploy "$ARCHIVE" "$RELEASE_ID"
 
 assert_eq "$(readlink -f "$DEPLOY_ROOT/current")" "$DEPLOY_ROOT/releases/$RELEASE_ID"
@@ -91,6 +116,19 @@ assert_eq "$(<"$DEPLOY_ROOT/previous-release")" "$DEPLOY_ROOT"
 assert_eq "$(readlink "$DEPLOY_ROOT/releases/$RELEASE_ID/.env")" "$DEPLOY_ROOT/.env"
 assert_contains "$TEST_ROOT/docker.log" "tag=$RELEASE_ID"
 assert_contains "$TEST_ROOT/docker.log" 'up -d --remove-orphans'
+
+[[ ! -e "$DEPLOY_ROOT/releases/${STALE_IDS[0]}" ]] ||
+  fail 'the oldest stale release was not pruned'
+for index in 1 2 3 4 5; do
+  [[ -d "$DEPLOY_ROOT/releases/${STALE_IDS[$index]}" ]] ||
+    fail "retained stale release ${STALE_IDS[$index]} was deleted"
+done
+for stale_id in "${STALE_IDS[@]}"; do
+  assert_contains "$TEST_ROOT/docker.log" "image rm odysseus-app:$stale_id"
+done
+assert_not_contains "$TEST_ROOT/docker.log" "image rm odysseus-app:$RELEASE_ID"
+assert_contains "$TEST_ROOT/docker.log" 'image prune -f'
+assert_contains "$TEST_ROOT/docker.log" 'builder prune -f -a --keep-storage 4GB'
 
 run_controller "$DEPLOY_ROOT" rollback
 assert_eq "$(readlink -f "$DEPLOY_ROOT/current")" "$DEPLOY_ROOT"
