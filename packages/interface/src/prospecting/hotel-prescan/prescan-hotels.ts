@@ -175,52 +175,52 @@ export async function prescanHotels(options: PrescanHotelsOptions): Promise<Hote
       continue;
     }
 
-    // Results are collected per lane and written after the lanes finish, so
-    // the store sees one ordered batch rather than interleaved writes from
-    // however many lanes happen to be running.
-    const measured: {
-      candidate: HotelCandidateDocument;
-      result: Awaited<ReturnType<HotelPrescanner>> | null;
-    }[] = [];
-
+    // Each candidate is persisted the moment its own prescan resolves,
+    // inside its lane, rather than buffered into a whole-batch array and
+    // written only once every lane finishes. That used to hold up to
+    // PRESCAN_BATCH_SIZE candidates' worth of evidence in memory at once
+    // even though only `concurrency` of them were ever actually in flight;
+    // peak memory now tracks lane width instead. Writes across lanes
+    // interleave (lane order is no longer a single ordered batch to the
+    // store), which no caller of this function's report or store depends
+    // on - see the resolved memory issue for the earlier buffered version.
     await Promise.all(
       toLanes(page, options.concurrency).map(async (lane) => {
         for (const candidate of lane) {
+          let result: Awaited<ReturnType<HotelPrescanner>> | null;
           try {
-            measured.push({ candidate, result: await options.prescan(candidate) });
+            result = await options.prescan(candidate);
           } catch {
             // One hotel's browser failure must not end a batch of hundreds.
             // Counted as a failure rather than persisted: there is no
             // measurement to store, and storing an empty one would make
             // "we could not measure this" indistinguishable from "this site
             // is empty".
-            measured.push({ candidate, result: null });
+            result = null;
           }
+
+          candidatesPrescanned += 1;
+          if (result === null) {
+            failures += 1;
+          } else {
+            byStatus[result.status] += 1;
+            byEvidenceStatus[result.evidence?.status ?? 'missing'] += 1;
+            pagesLoaded += result.pages.length;
+            const written = await options.store.record({
+              ...result,
+              candidateId: candidate.candidateId,
+              resolutionVersion: options.resolutionVersion,
+              qualificationVersion: options.qualificationVersion,
+              prescanVersion: options.prescanVersion,
+              scanJobId: options.scanJobId,
+            });
+            if (!written.pointerWritten) pointersMissed += 1;
+          }
+          options.onProgress?.(candidatesPrescanned);
         }
       }),
     );
 
-    for (const { candidate, result } of measured) {
-      candidatesPrescanned += 1;
-      if (result === null) {
-        failures += 1;
-        continue;
-      }
-      byStatus[result.status] += 1;
-      byEvidenceStatus[result.evidence?.status ?? 'missing'] += 1;
-      pagesLoaded += result.pages.length;
-      const written = await options.store.record({
-        ...result,
-        candidateId: candidate.candidateId,
-        resolutionVersion: options.resolutionVersion,
-        qualificationVersion: options.qualificationVersion,
-        prescanVersion: options.prescanVersion,
-        scanJobId: options.scanJobId,
-      });
-      if (!written.pointerWritten) pointersMissed += 1;
-    }
-
-    options.onProgress?.(candidatesPrescanned);
     if (page.length < pageSize) break;
   }
 

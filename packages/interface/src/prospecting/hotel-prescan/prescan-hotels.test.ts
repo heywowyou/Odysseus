@@ -271,6 +271,39 @@ describe('prescanHotels', () => {
     expect(peak).toBeLessThanOrEqual(3);
   });
 
+  // Issue #5: each candidate used to be measured, buffered into a
+  // whole-batch array, and only written once every lane in the batch had
+  // finished - peak memory tracked PRESCAN_BATCH_SIZE (100), not
+  // `concurrency`. record() is now called from inside each lane as soon as
+  // its own candidate resolves, so at most `concurrency` results are ever
+  // measured-but-unwritten at once, regardless of batch size.
+  it('persists each candidate as its own lane finishes it, never buffering a whole batch unwritten', async () => {
+    const many = Array.from({ length: 9 }, (_, i) => candidate(`c${i}`));
+    const store = fakeStore(many);
+    let unwritten = 0;
+    let peakUnwritten = 0;
+    const prescan = vi.fn(async () => {
+      unwritten += 1;
+      peakUnwritten = Math.max(peakUnwritten, unwritten);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return measurement();
+    });
+    const port: HotelPrescanStorePort = {
+      ...store.port,
+      record: async (input) => {
+        unwritten -= 1;
+        store.recorded.push(input);
+        store.prescannedIds.add(input.candidateId);
+        return { prescanId: `prescan-${store.recorded.length}`, pointerWritten: true };
+      },
+    };
+
+    await prescanHotels(options({ store: port, prescan, concurrency: 3 }));
+
+    expect(peakUnwritten).toBeLessThanOrEqual(3);
+    expect(store.recorded).toHaveLength(9);
+  });
+
   it('reports progress as it goes', async () => {
     const store = fakeStore(Array.from({ length: 4 }, (_, i) => candidate(`c${i}`)));
     const seen: number[] = [];
