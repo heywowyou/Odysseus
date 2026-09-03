@@ -68,9 +68,11 @@ describe('renderExecutiveSummary against the real small-site.test analysis', () 
 
   // item 5: the jump-link's own visible label states its destination
   // instead of a bare "Voir ->"/"See ->" repeated identically 3 times
-  // with no stated destination, and carries a visual affordance (an
-  // underline) distinguishing it from the plain-text theme title beside it.
-  it('item 5: each jump link names its own priority rank, not a bare arrow, and is visually underlined', async () => {
+  // with no stated destination. The label's size and accent color set it
+  // apart from the plain-text theme title beside it; the underline was
+  // dropped on the operator's 2026-09-03 direction so the link matches
+  // the flat source's non-underlined label.
+  it('item 5: each jump link names its own priority rank, not a bare arrow, and carries no underline', async () => {
     const analysis = await loadSmallSiteAnalysis('fr');
     const findings = await loadSmallSiteFindings();
     const manifest = await loadSmallSiteManifest();
@@ -83,7 +85,7 @@ describe('renderExecutiveSummary against the real small-site.test analysis', () 
       expect(html).toContain(`Voir priorité ${theme.priorityRank}`);
     }
     expect(html).not.toContain('>Voir →<');
-    expect(html).toContain('text-decoration:underline');
+    expect(html).not.toContain('text-decoration:underline');
   });
 
   // item 3.4: the link used to repeat the full theme title a second time

@@ -42,7 +42,9 @@ document now records:
   (items 35/2.7); appendix real table, merged rule summaries, removed
   minor-groups sub-table, per-finding URL rows (items 26/25/2.4/2.6);
   next-steps prose synthesis (plan 018 step 7); TOC target-counter page
-  numbers (B8); underlined relabelled jump links (item 5); page numbers
+  numbers (B8); relabelled jump links (item 5; their added underline was
+  dropped on operator direction 2026-09-03, so the labels now match the
+  flat source's non-underlined form); page numbers
   in `@page` margin boxes instead of markup; mm-based page geometry.
 - **Deliberate departures from the flat source, recorded where they
   live:** the metadata sheet's risk scale replaces the flat's single risk
