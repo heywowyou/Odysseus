@@ -1,7 +1,14 @@
 import type { AuditManifest, AuditManualFields, Finding } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatDate, formatNumber, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  formatDate,
+  formatNumber,
+  pluralize,
+  sheet,
+} from '../html-utils.js';
 import { LEVEL_COLOR } from '../design-tokens.js';
 import { computeStatistics } from '../statistics.js';
 import { hasMeasuredCoreWebVitals } from './core-web-vitals-table.js';
@@ -127,7 +134,7 @@ export function renderMetadataSheet(
   const coverage = buildCoverageDisclosure(strings, manifest, analysis.language);
   const scopeValue = manifest.pages.some((page) => page.analysisCoverage !== undefined)
     ? coverage.summary
-    : fillTemplate(strings.metadata.pagesScannedValueTemplate, { count: pagesScanned });
+    : `${formatNumber(pagesScanned, analysis.language)} ${pluralize(pagesScanned, strings.metadata.pagesScannedSingular, strings.metadata.pagesScannedPlural)}`;
   const raisonSociale = manualFields?.raisonSociale?.value;
 
   return sheet(

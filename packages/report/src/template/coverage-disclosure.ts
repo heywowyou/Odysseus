@@ -4,7 +4,7 @@ import {
   type PageWithoutContentAnalysisReason,
   type ReportLanguage,
 } from '@odysseus/core';
-import { fillTemplate, formatNumber } from './html-utils.js';
+import { fillTemplate, formatNumber, pluralize } from './html-utils.js';
 import type { ReportStrings } from './strings/i18n.js';
 
 const WITHOUT_CONTENT_REASON_ORDER: readonly PageWithoutContentAnalysisReason[] = [
@@ -32,12 +32,23 @@ export function buildCoverageDisclosure(
   language: ReportLanguage,
 ): CoverageDisclosure {
   const coverage = summarizeAuditCoverage(manifest);
+  const cov = strings.coverage;
   const n = (value: number): string => formatNumber(value, language);
+  // Composes a full "N word(s)" phrase (issue #28: a bare count next to a
+  // hardcoded plural noun/adjective disagreed with the count whenever it
+  // was 1, in both languages - French adjectives also needed the matching
+  // gendered singular, not just the English noun's dropped "s").
+  const phrase = (count: number, singular: string, plural: string): string =>
+    `${n(count)} ${pluralize(count, singular, plural)}`;
 
   if (coverage.kind === 'legacy-unknown') {
     return {
       summary: fillTemplate(strings.coverage.legacyUnknownTemplate, {
-        inventory: n(coverage.inventoriedUrlCount),
+        inventory: phrase(
+          coverage.inventoriedUrlCount,
+          cov.inventoriedUrlSingular,
+          cov.inventoriedUrlPlural,
+        ),
       }),
       details: [],
     };
@@ -49,7 +60,8 @@ export function buildCoverageDisclosure(
   const details: string[] = [];
   const withoutContent = WITHOUT_CONTENT_REASON_ORDER.flatMap((reason) => {
     const count = coverage.pagesWithoutContentAnalysis[reason] ?? 0;
-    return count === 0 ? [] : [`${n(count)} ${strings.coverage.reasonLabels[reason]}`];
+    const label = strings.coverage.reasonLabels[reason];
+    return count === 0 ? [] : [phrase(count, label.singular, label.plural)];
   });
   if (withoutContent.length > 0) {
     details.push(
@@ -68,15 +80,31 @@ export function buildCoverageDisclosure(
 
   return {
     summary: fillTemplate(strings.coverage.summaryTemplate, {
-      inventory: n(coverage.inventoriedUrlCount),
-      content: n(contentCompleted),
-      contentCompleted: n(coverage.content.completed),
-      contentPartial: n(coverage.content.partial),
+      inventory: phrase(
+        coverage.inventoriedUrlCount,
+        cov.inventoriedUrlSingular,
+        cov.inventoriedUrlPlural,
+      ),
+      content: phrase(contentCompleted, cov.pageSingular, cov.pagePlural),
+      contentCompleted: phrase(
+        coverage.content.completed,
+        cov.completedSingular,
+        cov.completedPlural,
+      ),
+      contentPartial: phrase(coverage.content.partial, cov.partialSingular, cov.partialPlural),
       contentFailed: n(coverage.content.failed),
-      lighthouse: n(lighthouseMeasured),
-      lighthousePartial: n(coverage.passes.lighthouse.partial),
+      lighthouse: phrase(lighthouseMeasured, cov.measuredSingular, cov.measuredPlural),
+      lighthousePartial: phrase(
+        coverage.passes.lighthouse.partial,
+        cov.lighthousePartialSingular,
+        cov.lighthousePartialPlural,
+      ),
       lighthouseFailed: n(coverage.passes.lighthouse.failed),
-      lighthouseNotPlanned: n(coverage.passes.lighthouse.notPlanned),
+      lighthouseNotPlanned: phrase(
+        coverage.passes.lighthouse.notPlanned,
+        cov.notPlannedSingular,
+        cov.notPlannedPlural,
+      ),
     }),
     details,
   };

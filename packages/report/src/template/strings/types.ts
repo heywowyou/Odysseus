@@ -55,11 +55,17 @@ export interface ReportStrings {
     situationHeading: string;
     situationBody: string;
     complicationHeading: string;
-    /** The deterministic complication facts. Counts arrive pre-formatted
-     *  (formatNumber); the "at least" wording accounts for site-wide
-     *  findings that carry no page URL. Template: {findings},
-     *  {criticalSerious}, {pages}, {priorities}. */
+    /** The deterministic complication facts. {findings}, {criticalSerious}
+     *  and {priorities} arrive pre-formatted (formatNumber); {pages}
+     *  arrives as the full "N page(s)" phrase (formatNumber plus
+     *  pageSingular/pagePlural below), since English and French both
+     *  inflect the noun (issue #28: "1 pages" printed for a one-page
+     *  scope). The "at least" wording accounts for site-wide findings that
+     *  carry no page URL. Template: {findings}, {criticalSerious}, {pages},
+     *  {priorities}. */
     complicationBodyTemplate: string;
+    pageSingular: string;
+    pagePlural: string;
     /** The legal reminder, pointing at the later legal section. Kept
      *  conditional ("peuvent s'appliquer" / "may apply") and deferring to
      *  counsel: client-claims.test.ts pins both properties. Template:
@@ -91,9 +97,13 @@ export interface ReportStrings {
   statistics: {
     eyebrow: string;
     heading: string;
-    /** Template: {pages}, {findings}. */
+    /** {pages} arrives as the full "N page(s) analyzed" phrase
+     *  (formatNumber plus pagesAnalyzedSingular/pagesAnalyzedPlural
+     *  below); {findings} is a bare formatted count. Template: {pages},
+     *  {findings}. */
     introTemplate: string;
-    pagesTileLabel: string;
+    pagesAnalyzedSingular: string;
+    pagesAnalyzedPlural: string;
     findingsTileLabel: string;
     accessibilityOccurrencesTileLabel: string;
     /** item 1.8 (La Corniche pass): rendered only when
@@ -124,8 +134,17 @@ export interface ReportStrings {
     seriousTileLabel: string;
     moderateTileLabel: string;
     minorTileLabel: string;
-    /** Template: {pages}. */
+    /** {criteria} and {pages} each arrive as a full "N noun(s)" phrase
+     *  (formatNumber plus the wcagCriterionSingular/Plural and
+     *  pageSingular/Plural pairs below), so a one-criterion or one-page
+     *  scope agrees grammatically (issue #28: "1 critères ... 1 pages"
+     *  printed for a single-criterion, single-page failure). Template:
+     *  {criteria}, {pages}. */
     wcagFailingDescriptionTemplate: string;
+    wcagCriterionSingular: string;
+    wcagCriterionPlural: string;
+    pageSingular: string;
+    pagePlural: string;
     /** B9: heading over the WCAG fail-count line, which previously sat
      *  unlabelled at the bottom of the section, unlike the severity/
      *  category blocks above it which both have one. */
@@ -187,8 +206,26 @@ export interface ReportStrings {
   coverage: {
     /** Templates: {inventory}, {content}, {contentCompleted},
      *  {contentPartial}, {contentFailed}, {lighthouse}, {lighthousePartial},
-     *  {lighthouseFailed}, {lighthouseNotPlanned}. */
+     *  {lighthouseFailed}, {lighthouseNotPlanned} - each a full composed
+     *  "N word(s)" phrase built with the singular/plural pairs below, not a
+     *  bare count (issue #28), except {contentFailed} and {lighthouseFailed}
+     *  themselves, which stay a bare count against invariant static text in
+     *  the template since "failed"/"en échec" never inflects. */
     summaryTemplate: string;
+    inventoriedUrlSingular: string;
+    inventoriedUrlPlural: string;
+    pageSingular: string;
+    pagePlural: string;
+    completedSingular: string;
+    completedPlural: string;
+    partialSingular: string;
+    partialPlural: string;
+    measuredSingular: string;
+    measuredPlural: string;
+    lighthousePartialSingular: string;
+    lighthousePartialPlural: string;
+    notPlannedSingular: string;
+    notPlannedPlural: string;
     /** Template: {inventory}. */
     legacyUnknownTemplate: string;
     /** Template: {reasons}. */
@@ -202,7 +239,7 @@ export interface ReportStrings {
       | 'skipped-external-redirect'
       | 'error'
       | 'coverage-missing',
-      string
+      { singular: string; plural: string }
     >;
   };
   observations: {
@@ -274,8 +311,10 @@ export interface ReportStrings {
     siteLabel: string;
     dateLabel: string;
     pagesScannedLabel: string;
-    /** Template: {count}. */
-    pagesScannedValueTemplate: string;
+    /** Count-agreeing noun for the pages-scanned value: a one-page audit
+     *  reads "1 page analyzed", not "1 pages analyzed" (issue #28). */
+    pagesScannedSingular: string;
+    pagesScannedPlural: string;
     languageLabel: string;
     /** item 3.8: states all four categories this product always audits
      *  (CATEGORY_ORDER, statistics.ts), not conditioned on whether findings
@@ -683,8 +722,11 @@ export interface ReportStrings {
   coreWebVitals: {
     eyebrow: string;
     heading: string;
-    /** Template: {pages}. */
+    /** Template: {pages}, a full "N page(s)" phrase built with
+     *  pageSingular/pagePlural below, not a bare count - issue #28. */
     introTemplate: string;
+    pageSingular: string;
+    pagePlural: string;
     metricColumnLabel: string;
     valueColumnLabel: string;
     realUserValueColumnLabel: string;
@@ -968,8 +1010,12 @@ export interface ReportStrings {
   methodology: {
     eyebrow: string;
     heading: string;
-    /** Template: {axeVersion}, {lighthouseVersion}, {pages}, {date}. */
+    /** Template: {axeVersion}, {lighthouseVersion}, {pages} (a full "N
+     *  page(s)" phrase built with pagesScannedSingular/Plural below, not a
+     *  bare count - issue #28), {date}. */
     toolingParagraphTemplate: string;
+    pagesScannedSingular: string;
+    pagesScannedPlural: string;
     /** 2026-08-25: states which languages the crawl actually reached, on a
      *  site that publishes more than one. A real report said "65 pages
      *  analysees" for a trilingual site having visited only the French one.

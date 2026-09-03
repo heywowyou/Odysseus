@@ -76,6 +76,26 @@ describe('renderMetadataSheet field order and presence', () => {
     expect(html).not.toContain(escapeHtml(fr.metadata.legalNameLabel));
   });
 
+  // Issue #28: a one-page audit used to print "1 pages analysées" /
+  // "1 pages analyzed" on this sheet.
+  it('agrees the pages-scanned value for a single visited page, in both languages', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const onePageManifest: AuditManifest = {
+      ...manifest,
+      pages: manifest.pages.slice(0, 1).map(({ analysisCoverage: _coverage, ...page }) => page),
+    };
+
+    const analysisFr = await loadSmallSiteAnalysis('fr');
+    const htmlFr = renderMetadataSheet(fr, onePageManifest, analysisFr);
+    expect(htmlFr).toContain('1 page analysée');
+    expect(htmlFr).not.toContain('1 pages analysées');
+
+    const analysisEn = await loadSmallSiteAnalysis('en');
+    const htmlEn = renderMetadataSheet(en, onePageManifest, analysisEn);
+    expect(htmlEn).toContain('1 page analyzed');
+    expect(htmlEn).not.toContain('1 pages analyzed');
+  });
+
   it('inserts the legal-name row between the referential and the risk scale when present', async () => {
     const manifest = await loadSmallSiteManifest();
     const analysis = await loadSmallSiteAnalysis('fr');

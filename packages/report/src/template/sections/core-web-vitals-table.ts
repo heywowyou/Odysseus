@@ -8,7 +8,14 @@ import type {
 } from '@odysseus/core';
 import { CORE_WEB_VITAL_THRESHOLDS, rateCoreWebVital } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  formatNumber,
+  pluralize,
+  renderSheetHeader,
+  sheet,
+} from '../html-utils.js';
 import { SEVERITY } from '../design-tokens.js';
 import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 
@@ -358,7 +365,7 @@ export function renderCoreWebVitalsTable(
   return sheet(
     `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
-    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.introTemplate, { pages: formatNumber(pagesScanned, language) }))}</p>
+    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.introTemplate, { pages: `${formatNumber(pagesScanned, language)} ${pluralize(pagesScanned, c.pageSingular, c.pagePlural)}` }))}</p>
     <p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(coverage.summary)}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <thead>

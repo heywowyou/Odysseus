@@ -67,7 +67,7 @@ describe('current coverage reaches every report scope surface', () => {
 
     for (const html of surfaces) expect(html).toContain(summaryNeedle);
     expect(surfaces[3]).toContain('7 additional continuation URLs');
-    expect(surfaces[4]).toContain('8 coverage record unavailable');
+    expect(surfaces[4]).toContain('8 coverage records unavailable');
   });
 
   it('renders the shared summary in French without inventing family reach', async () => {

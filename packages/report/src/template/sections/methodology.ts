@@ -425,7 +425,7 @@ export function renderMethodology(
   const toolingParagraph = fillTemplate(m.toolingParagraphTemplate, {
     axeVersion,
     lighthouseVersion,
-    pages: pagesScanned,
+    pages: `${formatNumber(pagesScanned, language)} ${pluralize(pagesScanned, m.pagesScannedSingular, m.pagesScannedPlural)}`,
     date: formatDate(new Date(manifest.startedAt), language),
   });
   const reportCoverage = buildCoverageDisclosure(strings, manifest, language);

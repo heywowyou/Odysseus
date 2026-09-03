@@ -29,7 +29,9 @@ export const fr: ReportStrings = {
       "Ce rapport répond à un besoin simple : disposer d'un état des lieux factuel du site, établi par des tests automatisés et reproductibles, pour décider quoi corriger et dans quel ordre. Des outils déterministes ont visité le périmètre analysé et comparé chaque page à des critères publics : accessibilité (WCAG 2.2 niveau AA), référencement naturel (SEO), visibilité auprès des assistants IA (GEO), et rendu sans JavaScript. Chaque constat listé dans ce rapport provient d'un de ces tests : rien n'est inventé, rien n'est deviné.",
     complicationHeading: 'Ce que le diagnostic relève',
     complicationBodyTemplate:
-      "L'analyse a relevé {findings} constats distincts, dont {criticalSerious} critiques ou sérieux, présents sur au moins {pages} pages du périmètre analysé. Ces constats sont regroupés en {priorities} priorités classées, qui indiquent par où commencer.",
+      "L'analyse a relevé {findings} constats distincts, dont {criticalSerious} critiques ou sérieux, présents sur au moins {pages} du périmètre analysé. Ces constats sont regroupés en {priorities} priorités classées, qui indiquent par où commencer.",
+    pageSingular: 'page',
+    pagePlural: 'pages',
     consequenceRegulatory:
       "Des obligations légales peuvent s'appliquer à votre établissement : la section « {legalSection} » décrit les critères publiés et les faits enregistrés, à faire confirmer par votre conseil juridique.",
     notALegalOpinionNote:
@@ -51,8 +53,9 @@ export const fr: ReportStrings = {
     eyebrow: "L'audit en chiffres",
     heading: "Ce que l'analyse a relevé",
     introTemplate:
-      '{pages} pages analysées, {findings} constats distincts après regroupement des répétitions. Un constat présent sur plusieurs pages compte une seule fois.',
-    pagesTileLabel: 'pages analysées',
+      '{pages}, {findings} constats distincts après regroupement des répétitions. Un constat présent sur plusieurs pages compte une seule fois.',
+    pagesAnalyzedSingular: 'page analysée',
+    pagesAnalyzedPlural: 'pages analysées',
     findingsTileLabel: 'constats distincts',
     accessibilityOccurrencesTileLabel: "occurrences d'accessibilité",
     heuristicOccurrencesExcludedNoteTemplate:
@@ -80,7 +83,11 @@ export const fr: ReportStrings = {
     seriousTileLabel: 'sérieux',
     moderateTileLabel: 'modérés',
     minorTileLabel: 'mineurs',
-    wcagFailingDescriptionTemplate: 'critères WCAG 2.2 AA en échec sur {pages} pages',
+    wcagFailingDescriptionTemplate: '{criteria} en échec sur {pages}',
+    wcagCriterionSingular: 'critère WCAG 2.2 AA',
+    wcagCriterionPlural: 'critères WCAG 2.2 AA',
+    pageSingular: 'page',
+    pagePlural: 'pages',
     wcagFailingHeading: 'Conformité WCAG',
     severityBreakdownHeading: 'Répartition par sévérité',
     categoryBreakdownHeading: 'Répartition par catégorie',
@@ -115,19 +122,42 @@ export const fr: ReportStrings = {
   },
   coverage: {
     summaryTemplate:
-      '{inventory} URL inventoriées ; résultats sensibles au contenu sur {content} pages ({contentCompleted} terminés, {contentPartial} partiels, {contentFailed} en échec) ; Lighthouse : {lighthouse} mesurées, {lighthousePartial} partielles, {lighthouseFailed} en échec, {lighthouseNotPlanned} non planifiées.',
+      '{inventory} ; résultats sensibles au contenu sur {content} ({contentCompleted}, {contentPartial}, {contentFailed} en échec) ; Lighthouse : {lighthouse}, {lighthousePartial}, {lighthouseFailed} en échec, {lighthouseNotPlanned}.',
+    inventoriedUrlSingular: 'URL inventoriée',
+    inventoriedUrlPlural: 'URL inventoriées',
+    pageSingular: 'page',
+    pagePlural: 'pages',
+    completedSingular: 'terminé',
+    completedPlural: 'terminés',
+    partialSingular: 'partiel',
+    partialPlural: 'partiels',
+    measuredSingular: 'mesurée',
+    measuredPlural: 'mesurées',
+    lighthousePartialSingular: 'partielle',
+    lighthousePartialPlural: 'partielles',
+    notPlannedSingular: 'non planifiée',
+    notPlannedPlural: 'non planifiées',
     legacyUnknownTemplate:
-      '{inventory} URL inventoriées. La couverture passe par passe n’est pas disponible pour cet audit historique.',
+      '{inventory}. La couverture passe par passe n’est pas disponible pour cet audit historique.',
     withoutContentTemplate: 'Pages sans analyse du contenu : {reasons}.',
     guardedOmissionsTemplate:
       '{count} URL de continuation supplémentaires ont été omises par le garde-fou de répétition.',
     reasonLabels: {
-      'discovered-not-scanned': 'découvertes mais non analysées',
-      'skipped-robots': 'bloquées par robots.txt',
-      'skipped-non-html': 'ressources non HTML',
-      'skipped-external-redirect': 'redirections externes',
-      error: 'erreurs d’exploration',
-      'coverage-missing': 'données de couverture indisponibles',
+      'discovered-not-scanned': {
+        singular: 'découverte mais non analysée',
+        plural: 'découvertes mais non analysées',
+      },
+      'skipped-robots': { singular: 'bloquée par robots.txt', plural: 'bloquées par robots.txt' },
+      'skipped-non-html': { singular: 'ressource non HTML', plural: 'ressources non HTML' },
+      'skipped-external-redirect': {
+        singular: 'redirection externe',
+        plural: 'redirections externes',
+      },
+      error: { singular: 'erreur d’exploration', plural: 'erreurs d’exploration' },
+      'coverage-missing': {
+        singular: 'donnée de couverture indisponible',
+        plural: 'données de couverture indisponibles',
+      },
     },
   },
   observations: {
@@ -173,7 +203,8 @@ export const fr: ReportStrings = {
     siteLabel: 'Site audité',
     dateLabel: "Date de l'audit",
     pagesScannedLabel: 'Périmètre analysé',
-    pagesScannedValueTemplate: '{count} pages analysées',
+    pagesScannedSingular: 'page analysée',
+    pagesScannedPlural: 'pages analysées',
     languageLabel: 'Langue du rapport',
     wcagReferentialLabel: 'Référentiel audité',
     // item 2.5 (La Corniche pass): a plain space after "·" let the old
@@ -428,7 +459,9 @@ export const fr: ReportStrings = {
     eyebrow: 'Performance',
     heading: 'Mesures de performance',
     introTemplate:
-      'Valeurs médianes agrégées sur les {pages} pages. Simulation mobile avec limitation réseau, passage unique, données de laboratoire (Lighthouse) et non de terrain.',
+      'Valeurs médianes agrégées sur {pages}. Simulation mobile avec limitation réseau, passage unique, données de laboratoire (Lighthouse) et non de terrain.',
+    pageSingular: 'page',
+    pagePlural: 'pages',
     metricColumnLabel: 'Métrique',
     valueColumnLabel: 'Valeur médiane',
     realUserValueColumnLabel: '75e percentile',
@@ -767,7 +800,9 @@ export const fr: ReportStrings = {
     sitemapIncompleteTemplate:
       "La couverture du sitemap est incomplète. Fichiers sitemap non lus : {failed}. URL de pages déclarées hors du périmètre autorisé ou filtrées par les règles de l'audit : {filtered}. Pages éligibles omises en raison du plafond configuré : {omitted}.",
     toolingParagraphTemplate:
-      "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} pages analysées le {date} à partir de la page d'accueil. Une URL qui ne fait que mener à l'accueil d'une langue (par exemple /en) n'est pas comptée comme une page analysée, car elle ne porte pas de contenu propre ; les pages de cette langue sont explorées normalement.",
+      "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} analysées le {date} à partir de la page d'accueil. Une URL qui ne fait que mener à l'accueil d'une langue (par exemple /en) n'est pas comptée comme une page analysée, car elle ne porte pas de contenu propre ; les pages de cette langue sont explorées normalement.",
+    pagesScannedSingular: 'page',
+    pagesScannedPlural: 'pages',
     automatedCoverageCaveat:
       "Les outils automatisés détectent une part reconnue mais limitée des problèmes d'accessibilité, une estimation généralement admise situant cette part entre 30 et 40 pour cent des critères, sans source unique attribuable. C'est une propriété de tout audit automatisé, pas une réserve sur celui-ci : elle garantit que chaque constat listé est vérifiable. Cet audit inclut une passe d'accessibilité étendue couvrant la navigation au clavier, l'ordre de focus, la gestion des erreurs de formulaire, la présence de sous-titres vidéo, et un signal heuristique sur la qualité des textes alternatifs. Cet audit est entièrement automatisé : certaines propriétés d'accessibilité ne peuvent pas être évaluées de manière fiable par des outils automatisés seuls et ne font l'objet d'aucun constat dans ce rapport.",
     extendedPassNoneFoundNote:

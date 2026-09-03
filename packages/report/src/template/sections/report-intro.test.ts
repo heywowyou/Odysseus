@@ -127,7 +127,7 @@ describe('renderReportIntro', () => {
         fillTemplate(fr.reportIntro.complicationBodyTemplate, {
           findings: '3',
           criticalSerious: '2',
-          pages: '2',
+          pages: '2 pages',
           priorities: '1',
         }),
       ),
@@ -151,7 +151,7 @@ describe('renderReportIntro', () => {
       fillTemplate(en.reportIntro.complicationBodyTemplate, {
         findings: '1',
         criticalSerious: '1',
-        pages: '1',
+        pages: '1 page',
         priorities: '1',
       }),
     );
@@ -167,7 +167,7 @@ describe('renderReportIntro', () => {
         fillTemplate(fr.reportIntro.complicationBodyTemplate, {
           findings: '0',
           criticalSerious: '0',
-          pages: '0',
+          pages: '0 pages',
           priorities: '0',
         }),
       ),
@@ -185,7 +185,7 @@ describe('renderReportIntro', () => {
       fillTemplate(en.reportIntro.complicationBodyTemplate, {
         findings: '0',
         criticalSerious: '0',
-        pages: '0',
+        pages: '0 pages',
         priorities: '0',
       }),
     );

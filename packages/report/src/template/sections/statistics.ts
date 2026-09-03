@@ -5,7 +5,14 @@ import {
   type ReportLanguage,
 } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
-import { escapeHtml, fillTemplate, formatNumber, renderSheetHeader, sheet } from '../html-utils.js';
+import {
+  escapeHtml,
+  fillTemplate,
+  formatNumber,
+  pluralize,
+  renderSheetHeader,
+  sheet,
+} from '../html-utils.js';
 import { CATEGORY, CATEGORY_ORDER, SEVERITY } from '../design-tokens.js';
 import { type RenderedPriority, summarizePriorityOwnership } from '../rendered-priorities.js';
 import { computeStatistics } from '../statistics.js';
@@ -99,7 +106,10 @@ export function renderStatistics(
   const coverage = buildCoverageDisclosure(strings, manifest, language);
 
   const numberTiles = [
-    renderNumberTile(n(stats.pagesScanned), s.pagesTileLabel),
+    renderNumberTile(
+      n(stats.pagesScanned),
+      pluralize(stats.pagesScanned, s.pagesAnalyzedSingular, s.pagesAnalyzedPlural),
+    ),
     renderNumberTile(n(stats.totalFindings), s.findingsTileLabel),
     renderNumberTile(n(stats.accessibilityOccurrences), s.accessibilityOccurrencesTileLabel),
     renderNumberTile(
@@ -163,10 +173,10 @@ export function renderStatistics(
     )
     .join('');
 
-  const wcagFailText = fillTemplate(s.wcagFailingDescriptionTemplate, {
-    pages: n(stats.pagesWithWcagFailure),
+  const wcagFailCountText = fillTemplate(s.wcagFailingDescriptionTemplate, {
+    criteria: `${n(stats.wcagCriteriaFailingCount)} ${pluralize(stats.wcagCriteriaFailingCount, s.wcagCriterionSingular, s.wcagCriterionPlural)}`,
+    pages: `${n(stats.pagesWithWcagFailure)} ${pluralize(stats.pagesWithWcagFailure, s.pageSingular, s.pagePlural)}`,
   });
-  const wcagFailCountText = `${n(stats.wcagCriteriaFailingCount)} ${wcagFailText}`;
 
   // item 1.8 (La Corniche pass): the tile above now excludes heuristic
   // occurrences (statistics.ts's computeStatistics), so it sits beside

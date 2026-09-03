@@ -79,6 +79,59 @@ describe('renderStatistics against the real small-site.test scan', () => {
     expect(html).toMatch(/WCAG 2\.2 AA criteria failing across \d+ pages/);
   });
 
+  // Issue #28: a single failing criterion on a single page used to render
+  // "1 critères WCAG 2.2 AA en échec sur 1 pages" (and the English
+  // equivalent "1 WCAG 2.2 AA criteria failing across 1 pages") -
+  // grammatically wrong on the exact count a one-page or bounded audit is
+  // most likely to hit.
+  it('agrees the WCAG-fail-count paragraph with a single criterion on a single page', () => {
+    const finding: Finding = {
+      findingId: 'f-wcag-1',
+      auditId: 'audit-1',
+      schemaVersion: 1,
+      source: 'axe',
+      ruleId: 'rule-wcag',
+      category: 'accessibility',
+      severity: 'serious',
+      wcagCriteria: ['1.1.1'],
+      title: 'Title',
+      description: 'desc',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [{ pageUrl: 'https://example.com/', selector: '.x', snippet: '' }],
+      rawEvidence: {},
+      dedupeKey: 'd-wcag-1',
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+    const manifest = buildMinimalManifest();
+
+    const en = renderStatistics(getStrings('en'), 3, 'en', [finding], manifest);
+    expect(en).toContain('1 WCAG 2.2 AA criterion failing across 1 page');
+    expect(en).not.toContain('1 WCAG 2.2 AA criteria');
+    expect(en).not.toContain('across 1 pages');
+
+    const fr = renderStatistics(getStrings('fr'), 3, 'fr', [finding], manifest);
+    expect(fr).toContain('1 critère WCAG 2.2 AA en échec sur 1 page');
+    expect(fr).not.toContain('1 critères');
+    expect(fr).not.toContain('sur 1 pages');
+  });
+
+  // Issue #28: the "pages analyzed" tile printed "1 pages analysées" /
+  // "1 pages analyzed" for a one-page scope.
+  it('agrees the pages-analyzed tile caption for a single-page scope', () => {
+    const finding = buildCategoryFinding('accessibility', 1);
+    const manifest = buildMinimalManifest();
+
+    const fr = renderStatistics(getStrings('fr'), 3, 'fr', [finding], manifest);
+    expect(fr).toContain('>page analysée<');
+    expect(fr).not.toContain('>pages analysées<');
+
+    const en = renderStatistics(getStrings('en'), 3, 'en', [finding], manifest);
+    expect(en).toContain('>page analyzed<');
+    expect(en).not.toContain('>pages analyzed<');
+  });
+
   // item D7 (P4): a severity or category with zero findings is no longer
   // rendered as an empty tile ("Modéré 0", "Rendu 0"), so the small-site
   // fixture (which has findings in every severity but not necessarily

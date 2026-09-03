@@ -5,6 +5,7 @@ import {
   escapeHtml,
   fillTemplate,
   formatNumber,
+  pluralize,
   renderSheetHeader,
   sheet,
   stripInlineMarkdown,
@@ -90,7 +91,7 @@ export function renderReportIntro(
   const complication = fillTemplate(r.complicationBodyTemplate, {
     findings: formatNumber(facts.findingCount, analysis.language),
     criticalSerious: formatNumber(facts.criticalSeriousCount, analysis.language),
-    pages: formatNumber(facts.affectedPageCount, analysis.language),
+    pages: `${formatNumber(facts.affectedPageCount, analysis.language)} ${pluralize(facts.affectedPageCount, r.pageSingular, r.pagePlural)}`,
     priorities: formatNumber(facts.priorityCount, analysis.language),
   });
 

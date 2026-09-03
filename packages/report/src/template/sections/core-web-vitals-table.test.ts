@@ -110,6 +110,37 @@ describe('renderCoreWebVitalsTable', () => {
     expect(html).not.toContain('aggregated across 4 pages');
   });
 
+  // Issue #28: a single measured page used to print "aggregated across 1 pages".
+  it('agrees the intro sentence for a single measured page, in both languages', () => {
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [
+        {
+          url: 'https://example.com/',
+          pageDir: 'pages/root-aaa',
+          depth: 0,
+          status: 'visited',
+          errors: {},
+          coreWebVitals: {
+            lcp: buildMeasurement(1800, '1.8 s'),
+            cls: buildMeasurement(0, '0'),
+            tbt: buildMeasurement(120, '120 ms'),
+            fcp: buildMeasurement(900, '0.9 s'),
+            speedIndex: buildMeasurement(2000, '2.0 s'),
+          },
+        },
+      ],
+    } as unknown as AuditManifest;
+
+    const htmlEn = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+    expect(htmlEn).toContain('aggregated across 1 page.');
+    expect(htmlEn).not.toContain('aggregated across 1 pages');
+
+    const htmlFr = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
+    expect(htmlFr).toContain('agrégées sur 1 page.');
+    expect(htmlFr).not.toContain('agrégées sur 1 pages');
+  });
+
   it('computes the median across pages, not the mean, so one outlier page cannot drag the aggregate', () => {
     const page = (lcp: number) => ({
       url: `https://example.com/${lcp}`,

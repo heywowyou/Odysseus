@@ -79,8 +79,34 @@ describe('buildCoverageDisclosure', () => {
     const disclosure = buildCoverageDisclosure(getStrings('fr'), currentManifest(), 'fr');
 
     expect(disclosure.summary).toContain('5 URL inventoriées');
-    expect(disclosure.summary).toContain('1 en échec, 1 non planifiées');
+    expect(disclosure.summary).toContain('1 en échec, 1 non planifiée');
     expect(disclosure.details.join(' ')).toContain('12 URL de continuation');
+  });
+
+  // Issue #28: a large non-HTML skip count printed the singular English
+  // noun ("520 non-HTML resource") and the French participle disagreed
+  // the other way, always plural even for a single skip.
+  it('agrees the without-content reason labels with their counts, in both languages', () => {
+    const manyNonHtmlManifest: AuditManifest = {
+      siteUrl: 'https://example.com/',
+      pages: [
+        coveredPage('home', 'completed', 'completed'),
+        ...Array.from({ length: 520 }, (_, i) => ({
+          url: `https://example.com/asset-${i}.pdf`,
+          depth: 1,
+          status: 'skipped-non-html',
+          errors: {},
+        })),
+      ],
+    } as unknown as AuditManifest;
+    const disclosureEn = buildCoverageDisclosure(getStrings('en'), manyNonHtmlManifest, 'en');
+    expect(disclosureEn.details.join(' ')).toContain('520 non-HTML resources');
+    expect(disclosureEn.details.join(' ')).not.toContain('520 non-HTML resource,');
+
+    const oneNotPlannedManifest = currentManifest();
+    const disclosureFr = buildCoverageDisclosure(getStrings('fr'), oneNotPlannedManifest, 'fr');
+    expect(disclosureFr.details.join(' ')).toContain('1 bloquée par robots.txt');
+    expect(disclosureFr.details.join(' ')).not.toContain('1 bloquées par robots.txt');
   });
 
   it('states that pass coverage is unknown for a historical manifest', () => {
