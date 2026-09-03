@@ -25,6 +25,8 @@
 export const REMEDIATION_FR: Readonly<Record<string, string>> = {
   'accessibility-statement-missing':
     "Bonne pratique facultative hors article 47 : envisagez de publier une déclaration d'accessibilité et d'ajouter un lien depuis le pied de page.",
+  'ai-crawler-blocked':
+    "Retirez du fichier robots.txt la règle qui interdit ce robot d'assistant IA, si vous souhaitez que le site puisse être cité dans ses réponses.",
   'alt-text-quality-heuristic':
     "Reprenez le texte alternatif de ces images pour qu'il décrive ce que chacune montre réellement. Ce point demande une relecture humaine, pas un correctif automatique.",
   'aria-command-name':
@@ -39,6 +41,8 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     "Ajoutez du texte visible dans chaque bouton, ou un attribut aria-label lorsque le bouton n'affiche qu'une icône.",
   'cache-insight':
     'Allongez la durée de mise en cache des fichiers qui changent rarement (images, styles, scripts).',
+  'canonical-conflicting':
+    "Ne déclarez qu'une seule URL canonique par page : tant que plusieurs se contredisent, les moteurs de recherche en retiennent une au hasard.",
   'canonical-missing':
     "Déclarez une URL canonique sur chaque page, pointant vers l'adresse que vous voulez voir indexée.",
   'canonical-target-noindex':
@@ -49,8 +53,14 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     'Réservez la place des éléments qui arrivent après le premier affichage, pour que le contenu ne se déplace plus sous les yeux du visiteur.',
   'color-contrast':
     "Augmentez le contraste entre le texte et son fond jusqu'à au moins 4,5 pour 1, ou 3 pour 1 pour les grands caractères. Corrigez la règle de style, pas chaque élément.",
+  'consent-mechanism-absent':
+    "Mettez en place un mécanisme de consentement sur le site, capable de bloquer les composants de mesure et de publicité tant que le visiteur n'a rien accepté.",
+  'cookie-non-essential-before-consent':
+    'Reportez le dépôt des cookies de mesure et de publicité après le choix du visiteur. Seuls les cookies nécessaires au fonctionnement du site peuvent être écrits avant.',
   'crawlable-anchors':
     "Rendez ces liens explorables : utilisez une balise a avec un attribut href, plutôt qu'un élément rendu cliquable par JavaScript.",
+  'crux-cls-poor':
+    "Stabilisez la mise en page pendant le chargement, en donnant des dimensions aux images et en réservant la place des bannières. Ces mesures viennent de vos visiteurs réels, pas d'une simulation.",
   'crux-inp-poor':
     "Réduisez le travail que le navigateur effectue au moment des clics et des saisies. Ces mesures viennent de vos visiteurs réels, pas d'une simulation.",
   'crux-lcp-poor':
@@ -82,6 +92,8 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     "Ajoutez un attribut title à chaque iframe, décrivant ce qu'elle contient (par exemple une carte ou un module de réservation).",
   'heading-hierarchy-skip':
     "Reprenez la hiérarchie des titres pour qu'elle descende sans sauter de niveau. Choisissez le niveau selon la structure, pas selon la taille voulue.",
+  'hreflang-invalid':
+    "Corrigez le code de langue ou de région de cette annotation hreflang : tel qu'il est écrit, il n'est pas reconnu et l'annotation est ignorée.",
   'hreflang-missing':
     'Déclarez les annotations hreflang entre les versions linguistiques de chaque page, dans les deux sens.',
   'hreflang-no-return-link':
@@ -90,10 +102,16 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     "Ajoutez l'attribut lang sur la balise html de chaque page, avec le code de la langue réellement utilisée.",
   'html-structural-validity':
     'Corrigez le code HTML signalé : identifiants dupliqués, balises fermées dans le désordre, éléments placés dans un parent qui ne les accepte pas.',
+  'http-error-status':
+    "Rétablissez cette page, ou faites-la rediriger vers l'adresse qui l'a remplacée, puis corrigez les liens qui pointent encore vers elle.",
   'image-alt':
     "Ajoutez un attribut alt décrivant chaque image porteuse d'information. Pour une image purement décorative, laissez alt vide.",
   'image-delivery-insight':
     "Servez ces images dans un format moderne et à la taille réellement affichée. C'est une seule opération à mener sur l'ensemble des fichiers listés.",
+  'image-legacy-format':
+    "Convertissez ces images dans un format moderne comme WebP ou AVIF, à qualité visuelle comparable. C'est une seule opération à mener sur l'ensemble des fichiers listés.",
+  'image-oversized':
+    "Servez ces images à la taille où elles sont réellement affichées, plutôt qu'en pleine résolution redimensionnée par le navigateur.",
   interactive:
     'Réduisez le temps avant que la page ne réponde aux clics, principalement en allégeant le JavaScript exécuté au chargement.',
   'is-crawlable':
@@ -142,16 +160,26 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     "Ajoutez une meta description à chaque page : c'est le texte affiché sous le titre dans les résultats de recherche.",
   'meta-description-length':
     "Ajustez la longueur de la meta description pour qu'elle reste lisible entière dans les résultats de recherche, autour de 120 à 160 caractères.",
+  'meta-description-missing':
+    'Ajoutez une meta description à cette page, pour choisir vous-même le résumé affiché sous le titre dans les résultats de recherche.',
   'meta-title-length':
     "Ajustez la longueur du titre de la page pour qu'il ne soit pas tronqué dans les résultats de recherche, autour de 30 à 60 caractères.",
+  'meta-title-missing':
+    "Donnez un titre à cette page : c'est le libellé affiché dans l'onglet du navigateur et en tête du résultat de recherche.",
   'meta-viewport':
     'Retirez user-scalable=no et toute limite de maximum-scale de la balise viewport, pour que le zoom reste possible.',
+  'mixed-content':
+    'Servez ces fichiers en HTTPS comme le reste de la page, ou retirez-les : en HTTP simple, les navigateurs les bloquent ou affichent un avertissement de sécurité.',
   'modern-http-insight':
     'Activez une version récente du protocole HTTP sur votre hébergement, pour que les fichiers se chargent en parallèle.',
   'modern-image-formats':
     "Convertissez ces images dans un format moderne comme WebP ou AVIF. C'est une seule opération à mener sur l'ensemble des fichiers listés.",
   'multiple-h1':
     "Ne gardez qu'un seul titre de niveau 1 par page et passez les autres en niveau 2.",
+  'nap-phone-mismatch':
+    'Alignez le numéro de téléphone des données structurées sur celui affiché aux visiteurs, pour que les deux versions concordent.',
+  'nap-postal-code-mismatch':
+    "Alignez le code postal des données structurées sur l'adresse affichée aux visiteurs, pour que les deux versions concordent.",
   'nested-interactive':
     "Ne placez pas un contrôle cliquable à l'intérieur d'un autre. Sortez le bouton ou le lien imbriqué de son parent.",
   'network-dependency-tree-insight':
@@ -165,6 +193,8 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     "Ajoutez les balises Open Graph (titre, description, image) pour contrôler l'aperçu affiché lors d'un partage sur les réseaux sociaux.",
   'prioritize-lcp-image':
     "Préchargez l'image principale de la page, pour que le navigateur la demande sans attendre.",
+  'redirect-chain-excessive':
+    'Raccourcissez la chaîne de redirections en faisant pointer la première adresse directement vers la destination finale.',
   redirects:
     "Faites pointer les liens directement vers l'adresse finale, pour supprimer les redirections intermédiaires.",
   'reflow-horizontal-scroll':
@@ -173,6 +203,8 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     'Différez ou intégrez les styles et scripts qui bloquent le premier affichage.',
   'render-blocking-resources':
     'Différez ou intégrez les styles et scripts qui bloquent le premier affichage.',
+  'robots-blocks-indexing':
+    "Retirez du fichier robots.txt la règle qui interdit l'accès à la page d'accueil, sans quoi le site peut disparaître des résultats de recherche.",
   'robots-disallow-broad':
     "Resserrez la règle du fichier robots.txt : telle qu'elle est écrite, elle bloque une part importante des pages du site.",
   'robots-txt':
@@ -193,6 +225,8 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     'Associez une étiquette visible à chaque liste déroulante, ou donnez-lui un attribut aria-label.',
   'server-response-time':
     'Réduisez le délai de première réponse du serveur, par la mise en cache côté serveur ou un hébergement plus rapide.',
+  'sitemap-missing':
+    'Publiez un fichier sitemap.xml listant les pages du site et déclarez-le dans le fichier robots.txt, pour ne pas laisser leur découverte reposer sur les seuls liens internes.',
   'sitemap-orphan-page':
     'Ajoutez un lien vers ces pages depuis la navigation du site, ou retirez-les du plan de site. Une page listée mais jamais liée est difficile à atteindre.',
   'sitemap-stale':
@@ -243,4 +277,6 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
     'Activez la compression des réponses textuelles (gzip ou brotli) sur votre serveur.',
   'video-missing-captions':
     "Ajoutez une piste de sous-titres aux vidéos porteuses de parole ou d'information sonore.",
+  'youtube-tracking-embed':
+    'Remplacez le domaine youtube.com par youtube-nocookie.com dans le code de la vidéo : la même vidéo est servie, sans les cookies publicitaires déposés au chargement.',
 };

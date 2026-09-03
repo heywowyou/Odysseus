@@ -147,11 +147,11 @@ means numbered entry 24, not a literal Markdown heading anchor.
    stricter prospecting-worthiness gate, both scoring on `SEVERITY_ORDER`
    over distinct findings. Do not remove either without revisiting
    `docs/rules/llm-layer-rules.md` section 10. → trade-offs.md#6
-7. `structure-output-schema.ts`/`writing-output-schema.ts` are hand-
-   mirrored Zod-v3 copies needed only because the SDK helper requires
-   zod v4. Never treat them as the validation authority — the real Zod
-   schemas' `.parse()` is what runs. Delete the mirrors only if `core`
-   moves to zod v4. → trade-offs.md#7
+7. `structure-output-schema.ts`/`writing-output-schema.ts` are provider-
+   facing Zod-v3 shape hints needed only because the SDK helper requires
+   zod v4 (the writing one is built per call, trade-off 70). Never treat
+   them as the validation authority — the real Zod schemas' `.parse()` is
+   what runs. → trade-offs.md#7
 8. Findings the LLM can't give good advice about (wrapper pages,
    noindex-legal pages) are diverted before the structure pass via
    `packages/llm/src/diversion.ts`'s `partitionFindings`, not explained
@@ -405,6 +405,16 @@ means numbered entry 24, not a literal Markdown heading anchor.
     in this charter. Do not restate its per-model detail here beyond the
     delegation and document-length rules already promoted into Style.
     → trade-offs.md#69
+70. The writing pass's provider schema is built per call and keyed by the
+    expected theme keys, so a duplicate, missing, or invented theme key is
+    unrepresentable. Do not revert it to an array of self-labelled themes,
+    and do not add a local repair for a key mismatch: keep
+    `findThemeKeyMismatches` as a guard that should never fire.
+    → trade-offs.md#70
+71. Every custom rule in `CUSTOM_CHECK_SEVERITY` must carry reviewed FR/EN
+    remediation copy, enforced by a source-derived test. Do not fill the
+    axe/Lighthouse remainder with guessed copy; write a line when a real
+    scan first emits the rule. → trade-offs.md#71
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node

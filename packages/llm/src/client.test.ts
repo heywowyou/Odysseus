@@ -28,7 +28,7 @@ const structureInput = {
 const writingInput = {
   language: 'fr' as const,
   siteContext: structureInput.siteContext,
-  themes: [],
+  themes: [{ themeKey: 'theme-1', category: 'accessibility' as const, findings: [] }],
   siteStats: { pagesScanned: 1, totalFindings: 0, critical: 0, serious: 0, moderate: 0, minor: 0 },
   dominantPerformanceMetric: null,
 };
@@ -47,6 +47,23 @@ const validStructureOutput = {
   overallRisk: 'medium',
 };
 
+/** What the provider now returns: themes keyed by theme key, with no
+ *  themeKey field inside, so a duplicate key cannot be expressed at all
+ *  (issue #36). */
+const validWritingResponse = {
+  themes: {
+    'theme-1': {
+      title: 'Missing alt text',
+      businessImpact: 'Screen reader users cannot understand the images.',
+      recommendedActions: ['Add alt text to all images.'],
+    },
+  },
+  executiveSummary: 'The site has one accessibility issue worth fixing.',
+  notes: '',
+};
+
+/** What callOpenAiForWriting hands back: the array shape the rest of the
+ *  codebase reads, with themeKey restored from the property name. */
 const validWritingOutput = {
   themes: [
     {
@@ -162,13 +179,23 @@ describe('callOpenAiForWriting', () => {
   });
 
   it('returns the schema-validated output on a successful call', async () => {
-    completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingOutput) }));
+    completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingResponse) }));
     const result = await callOpenAiForWriting(writingInput, false);
     expect(result.output).toEqual(validWritingOutput);
   });
 
+  it('asks the provider for a schema keyed by the theme keys it shows (issue #36)', async () => {
+    completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingResponse) }));
+    await callOpenAiForWriting(writingInput, false);
+
+    const schema = completeMock.mock.calls[0]![0].response_format.json_schema.schema;
+    expect(schema.properties.themes.type).toBe('object');
+    expect(schema.properties.themes.required).toEqual(['theme-1']);
+    expect(schema.properties.themes.additionalProperties).toBe(false);
+  });
+
   it('appends the previous rejection to the user message so a retry is a correction (issue #21)', async () => {
-    completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingOutput) }));
+    completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingResponse) }));
     await callOpenAiForWriting(
       writingInput,
       false,

@@ -133,6 +133,13 @@ cap instead; that decision is the operator's.
    shape so drift fails loudly. If `core` ever moves to zod v4, delete
    the mirrors and use the helper.
 
+   **Amended 2026-09-03, issue #36.** `writing-output-schema.ts` is now
+   built per call (`buildWritingOutputJsonSchema`) rather than declared,
+   so the theme keys that call shows become the response's own required
+   properties. It stops being a literal mirror; it does not stop being a
+   shape hint, and `writingPassOutputSchema.parse()` is still the
+   authority. Full reasoning and the incident: entry 70 below.
+
 8. **Findings the LLM cannot give good advice about are diverted before
    the structure pass, not passed in with a prompt instruction to be
    careful**, decided during the report v2 refactor (2026-08-07) after a
@@ -3411,3 +3418,103 @@ from 55,739 to 47,870 bytes, restoring real headroom under the 56 KiB
 ceiling without lowering it. No content was deleted outright: everything
 trimmed already existed in full in a linked document, or was moved to one
 that did not yet have it.
+
+### 70. The writing pass asks the provider for a theme-keyed object, so a duplicate theme key is unrepresentable rather than merely detected
+
+A full audit of `www.villasfoch.fr` (job f678c11d, 2026-09-03) crawled, ran
+every content check, ran Lighthouse, and produced a valid French analysis.
+It was then destroyed at the English writing pass, because the model returned
+a theme map containing the key `t8` twice:
+
+    attempt 1/3 rejected - theme key mismatch - missing: [], extra: [], duplicate: [t8]
+    attempt 2/3 rejected - theme key mismatch - missing: [], extra: [], duplicate: [t8]
+    attempt 3/3 rejected - theme key mismatch - missing: [], extra: [], duplicate: [t8]
+
+The retry loop was not the weak part. Since issue #21 it carries each
+rejection into the next call as an explicit correction, and it did so here:
+the model was told about the duplicate twice and reproduced it twice, at
+temperature 0.2 with reasoning effort `none`. That is the same
+low-temperature reproducibility already measured for the severity-vocabulary
+rejections, and it is the reason a correction loop cannot be the last line of
+defense on its own.
+
+The weak part was that the response could express the failure at all. The
+pass knew the expected theme keys before it made the call, but the provider
+schema admitted an array of theme objects each carrying its own `themeKey`
+string, so nothing checked the key set until the response had already been
+paid for and parsed.
+
+`buildWritingOutputJsonSchema(themeKeys)` now builds the schema per call:
+`themes` is an object whose properties are exactly the expected keys, every
+one of them in `required`, with `additionalProperties: false`. A JSON object
+cannot carry a key twice, so the duplicate is unrepresentable; `required`
+makes an omission a provider-side violation; `additionalProperties` makes an
+invented key one. Under OpenAI's strict structured output every declared
+property must be required anyway, which is exactly the constraint wanted.
+
+The obvious smaller change, keeping the array and constraining `themeKey` to
+an enum, was rejected on what strict mode actually supports: `uniqueItems`,
+`minItems` and `maxItems` are all unsupported keywords there, so an enum
+would have blocked only the invented key and left the duplicate that caused
+this incident. It would have looked like a fix and changed nothing.
+
+Costs accepted. `writing-output-schema.ts` stops being a literal mirror of
+`writingPassOutputSchema`, which is why trade-off 7 above carries an
+amendment; the shape-sync test now compares field by field with `themeKey`
+excluded, since the property name carries it. `client.ts` gains a small
+transform back to the array shape before the Zod authority parses, which is
+the one place the two shapes are bridged. Nothing downstream of that parse
+changed. Theme order in the output is now the input's order rather than
+whatever order the model emitted, which is a small determinism gain, not a
+behavior change anyone depended on.
+
+`findThemeKeyMismatches` stays, as defense in depth, and should now never
+fire. Kept because a provider that quietly stops honouring strict mode, or a
+defect in the schema builder, would otherwise pass unnoticed. Issue #36 also
+suggested a deterministic local repair, merging or dropping a duplicate
+before burning the audit. Not implemented, deliberately: under this schema a
+duplicate cannot arrive, so the repair path would be dead code, and adding
+one would weaken the reject-rather-than-patch posture the whole LLM layer
+rests on. If this guard ever fires again, that is a signal worth reading, not
+a case for patching model output.
+
+### 71. Remediation copy is coverage-tested against every custom rule that can be emitted, not only the rules a fixture happens to contain
+
+Report generation aborts when a priority finding names a rule with no
+reviewed remediation copy (`rendered-priorities.ts`, "Missing reviewed report
+remediation for rule IDs"). That fail-loud boundary is right: a wrong
+remediation instruction is worse than none, so the report refuses rather than
+guessing.
+
+The problem was what guarded it. `remediation.test.ts` only asserted coverage
+for rule ids that some committed fixture happened to emit, so a rule the
+scanners can produce but no fixture contains had no copy and no test. Issue
+#27 is what that costs: a valid audit containing a detected `keyboard-trap`
+could be scanned and analyzed but could never produce a client report, and
+the failure landed at the last stage, after the crawl and both model passes
+had already been paid for.
+
+Adding the missing `keyboard-trap` copy (0555cc9) fixed that one rule and
+left seventeen others in exactly the same position. This entry is the
+mechanism: `remediation.test.ts` now also derives coverage from
+`CUSTOM_CHECK_SEVERITY`, so every custom rule with a severity mapping must
+have reviewed French and English copy before it can reach a report. The
+eighteen gaps that check exposed are filled, each written against what the
+rule actually detects, using the reviewed gloss already agreed for it in
+`rule-translations.ts` rather than a paraphrase of its title.
+
+This is the same three-layer mechanism `rule-translations.test.ts` has used
+since 2026-08-24, adopted for the same reason: that table was extended
+reactively four times, each time after English text had already shipped
+inside a French report, and the source-derived check ended it.
+
+Scoped to custom rules, not the full reachable set, and that is a deliberate
+line. 66 of the 113 reachable axe and Lighthouse rules also have no
+remediation copy, and the same fail-loud boundary applies to them. Custom
+rules are ours and enumerable; the axe and Lighthouse universes are not, and
+writing 66 lines of guidance for rules this repo has never observed in real
+output would produce exactly the guessed remediation the table exists to
+prevent. The residual exposure is recorded here rather than closed over: a
+paid audit can still abort on an axe or Lighthouse rule no fixture has seen.
+The fixture-observed test remains the right mechanism for those, and the
+right time to write a line is when a real scan first emits the rule.

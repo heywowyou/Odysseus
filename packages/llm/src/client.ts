@@ -18,7 +18,7 @@ import {
   type WritingInput,
   type WritingPassOutput,
 } from './writing-schema.js';
-import { WRITING_OUTPUT_JSON_SCHEMA } from './writing-output-schema.js';
+import { buildWritingOutputJsonSchema } from './writing-output-schema.js';
 import { buildWritingSystemPrompt, buildWritingUserPrompt } from './writing-prompt.js';
 import {
   reviewerPassOutputSchema,
@@ -127,9 +127,38 @@ export async function callOpenAiForStructure(
   return { output };
 }
 
+/** Turn the provider's theme map back into the array shape the rest of the
+ *  codebase reads, in the order the themes were shown to the model.
+ *
+ *  Issue #36: the provider is asked for an object keyed by theme key so a
+ *  duplicate, missing, or invented key is unrepresentable rather than caught
+ *  after the fact. That makes the response shape deliberately different from
+ *  writingPassOutputSchema's, and this is the one place that difference is
+ *  bridged. Theme order is now the input's order rather than whatever order
+ *  the model happened to emit.
+ *
+ *  Nothing here validates: writingPassOutputSchema.parse() below still owns
+ *  that, on the array this produces. A response missing a key simply produces
+ *  an entry Zod then rejects, exactly as before. */
+function toThemeArray(themeKeys: readonly string[], themes: unknown): unknown {
+  if (typeof themes !== 'object' || themes === null || Array.isArray(themes)) return themes;
+  const byKey = themes as Record<string, unknown>;
+  return themeKeys
+    .filter((themeKey) => themeKey in byKey)
+    .map((themeKey) => {
+      const theme = byKey[themeKey];
+      return typeof theme === 'object' && theme !== null && !Array.isArray(theme)
+        ? { themeKey, ...(theme as Record<string, unknown>) }
+        : theme;
+    });
+}
+
 /** Single call to OpenAI for the writing pass. Same posture as
- *  callOpenAiForStructure, against writingPassOutputSchema and
- *  WRITING_OUTPUT_JSON_SCHEMA instead.
+ *  callOpenAiForStructure, against writingPassOutputSchema and a
+ *  per-call schema from buildWritingOutputJsonSchema instead. The schema is
+ *  built from input.themes rather than from a second list, so it constrains
+ *  exactly the theme keys the prompt shows and there is no parallel source of
+ *  truth to drift (issue #36).
  *
  *  previousRejection is undefined on the first attempt and carries the
  *  guard's failure reason thereafter, appended to the user prompt so a
@@ -141,6 +170,7 @@ export async function callOpenAiForWriting(
   previousRejection?: string,
 ): Promise<RawWritingCallResult> {
   const client = createClient();
+  const themeKeys = input.themes.map((theme) => theme.themeKey);
 
   const response = await withProviderRetryAfterHint(() =>
     client.chat.completions.create({
@@ -163,7 +193,7 @@ export async function callOpenAiForWriting(
         type: 'json_schema',
         json_schema: {
           name: 'writing_pass_output',
-          schema: WRITING_OUTPUT_JSON_SCHEMA,
+          schema: buildWritingOutputJsonSchema(themeKeys),
           strict: true,
         },
       },
@@ -194,7 +224,15 @@ export async function callOpenAiForWriting(
     );
   }
 
-  const output = writingPassOutputSchema.parse(JSON.parse(content));
+  const parsed: unknown = JSON.parse(content);
+  // A non-object response is handed to Zod untouched, so its rejection reads
+  // as the schema violation it is rather than as a transform failure.
+  const raw = parsed as Record<string, unknown>;
+  const output = writingPassOutputSchema.parse(
+    typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? { ...raw, themes: toThemeArray(themeKeys, raw.themes) }
+      : parsed,
+  );
   return { output };
 }
 

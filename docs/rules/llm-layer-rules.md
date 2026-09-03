@@ -469,6 +469,15 @@ schema fails loudly rather than quietly leaving the shape hint stale. A future
 zod upgrade does not by itself justify deleting these explicit mirrors; the
 sync tests are the drift guard.
 
+**Amended 2026-09-03, issue #36.** `writing-output-schema.ts` is no longer a
+literal mirror. It exports `buildWritingOutputJsonSchema(themeKeys)`, which
+builds the shape per call so the expected theme keys become the response's
+own required properties; the reasoning and the incident are in section 9.
+Everything above still holds: it is not the validation authority,
+`writingPassOutputSchema.parse()` still runs on every response, and the
+shape-sync test still compares the two, now field by field with `themeKey`
+excluded because the property name carries it.
+
 ---
 
 ## 9. The two-pass split and theme correlation
@@ -512,11 +521,39 @@ order it was shown them. `assignThemeKeys` assigns a deterministic,
 code-generated `themeKey` (`t1`, `t2`, ...) to each structure-pass theme
 immediately after the structure pass's own guards pass - never chosen by
 the model. It is persisted in the on-disk structure document (section
-5), shown to the writing pass per theme, and required as a field the
-writing pass must echo back verbatim. `findThemeKeyMismatches` rejects a
-writing-pass response whose returned `themeKey`s don't exactly match
-what it was shown (missing, extra, or duplicated), the same
+5) and shown to the writing pass per theme. `findThemeKeyMismatches`
+rejects a writing-pass response whose returned `themeKey`s don't exactly
+match what it was shown (missing, extra, or duplicated), the same
 retry-then-fail-loud treatment as an invented finding ID.
+
+**Amended 2026-09-03, issue #36.** That guard is no longer the primary
+mechanism. The writing pass used to ask the provider for an array of theme
+objects, each echoing its own `themeKey` back verbatim, so a wrong key set
+could only be caught after the response arrived. A real audit of
+`www.villasfoch.fr` returned the key `t8` twice on all three attempts,
+including the two carrying the rejection back as a correction (the section 2
+mechanism), and the completed crawl, content checks, Lighthouse run and
+French pass were all thrown away with it.
+
+`buildWritingOutputJsonSchema` now builds the provider schema per call from
+the theme keys that call is showing: `themes` is an object whose properties
+are exactly those keys, all `required`, `additionalProperties: false`. A
+duplicate key cannot be expressed by a JSON object, a missing one violates
+`required`, and an invented one violates `additionalProperties`. The array
+alternative (an enum-constrained `themeKey` field) was rejected on what
+OpenAI strict structured output actually supports: `uniqueItems`, `minItems`
+and `maxItems` are unsupported keywords there, so it would still have
+admitted the duplicate that caused the incident.
+
+The array shape everything downstream reads is unchanged: `client.ts`
+converts the keyed object back before `writingPassOutputSchema.parse()`,
+which remains the validation authority. Theme order is now the input's
+order rather than the model's.
+
+No deterministic repair of a duplicate key was added, deliberately: under
+this schema a duplicate cannot arrive, so a repair path would be dead code
+that also weakens the reject-rather-than-patch posture this section rests
+on.
 
 **Merge** (`mergeAnalysisPasses`, `merge.ts`): zips the structure pass's
 themes with the writing pass's themes by `themeKey`, builds one

@@ -6,6 +6,8 @@
 export const REMEDIATION_EN: Readonly<Record<string, string>> = {
   'accessibility-statement-missing':
     'Optional best practice outside Article 47: consider publishing an accessibility statement and linking to it from the footer.',
+  'ai-crawler-blocked':
+    'Remove the robots.txt rule that blocks this AI assistant crawler, if you want the site to be citable in its answers.',
   'alt-text-quality-heuristic':
     'Rewrite the alt text on these images so each one describes what it actually shows. This needs a human read, not an automated fix.',
   'aria-command-name':
@@ -20,6 +22,8 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     'Add visible text inside every button, or an aria-label attribute where the button shows only an icon.',
   'cache-insight':
     'Lengthen the cache lifetime of files that rarely change, such as images, stylesheets, and scripts.',
+  'canonical-conflicting':
+    'Declare a single canonical URL per page: while several contradict each other, search engines pick one of them arbitrarily.',
   'canonical-missing':
     'Declare a canonical URL on every page, pointing at the address you want indexed.',
   'canonical-target-noindex':
@@ -30,8 +34,14 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     "Reserve space for elements that arrive after the first render, so content stops moving under the visitor's eyes.",
   'color-contrast':
     'Raise the contrast between text and its background to at least 4.5 to 1, or 3 to 1 for large text. Fix the style rule, not each element.',
+  'consent-mechanism-absent':
+    'Put a consent mechanism in place on the site, able to hold back the analytics and advertising components until the visitor has accepted them.',
+  'cookie-non-essential-before-consent':
+    'Delay analytics and advertising cookies until the visitor has made a choice. Only cookies the site needs to function may be written before that.',
   'crawlable-anchors':
     'Make these links crawlable: use an a tag with an href attribute rather than an element made clickable by JavaScript.',
+  'crux-cls-poor':
+    'Stabilize the layout while the page loads, by sizing images and reserving space for banners. These measurements come from your real visitors.',
   'crux-inp-poor':
     'Reduce the work the browser does when someone clicks or types. These measurements come from your real visitors, not from a simulation.',
   'crux-lcp-poor':
@@ -62,6 +72,8 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     'Add a title attribute to every iframe describing what it contains, for example a map or a booking widget.',
   'heading-hierarchy-skip':
     'Rework the heading hierarchy so it descends without skipping a level. Choose the level by structure, not by the size you want.',
+  'hreflang-invalid':
+    'Correct the language or region code in this hreflang annotation: as written it is not recognized, so the annotation is ignored.',
   'hreflang-missing':
     'Declare hreflang annotations between the language versions of each page, in both directions.',
   'hreflang-no-return-link':
@@ -70,10 +82,16 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     'Add a lang attribute to the html tag of every page, set to the language the page is actually written in.',
   'html-structural-validity':
     'Fix the reported markup: duplicate ids, tags closed out of order, and elements placed inside a parent that does not accept them.',
+  'http-error-status':
+    'Restore this page, or redirect it to the address that replaced it, then fix the links still pointing at it.',
   'image-alt':
     'Add an alt attribute describing every image that carries information. For a purely decorative image, leave alt empty.',
   'image-delivery-insight':
     'Serve these images in a modern format and at the size actually displayed. This is one operation to carry out across all the listed files.',
+  'image-legacy-format':
+    'Convert these images to a modern format such as WebP or AVIF, at comparable visual quality. This is one operation across the whole list of files.',
+  'image-oversized':
+    'Serve these images at the size they are actually displayed, rather than at full resolution resized by the browser.',
   interactive:
     'Reduce the time before the page responds to clicks, mainly by lightening the JavaScript run at load time.',
   'is-crawlable':
@@ -122,15 +140,25 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     'Add a meta description to every page: it is the text shown under the title in search results.',
   'meta-description-length':
     'Adjust the meta description length so it stays fully readable in search results, around 120 to 160 characters.',
+  'meta-description-missing':
+    'Add a meta description to this page, so you choose the summary shown under the title in search results rather than leaving it to the search engine.',
   'meta-title-length':
     'Adjust the page title length so it is not cut off in search results, around 30 to 60 characters.',
+  'meta-title-missing':
+    'Give this page a title: it is the label shown in the browser tab and at the head of the search result.',
   'meta-viewport':
     'Remove user-scalable=no and any maximum-scale limit from the viewport tag, so zooming stays possible.',
+  'mixed-content':
+    'Serve these files over HTTPS like the rest of the page, or remove them: over plain HTTP, browsers either block them or show a security warning.',
   'modern-http-insight':
     'Enable a recent version of the HTTP protocol on your hosting, so files load in parallel.',
   'modern-image-formats':
     'Convert these images to a modern format such as WebP or AVIF. This is one operation to carry out across all the listed files.',
   'multiple-h1': 'Keep a single level-1 heading per page and move the others down to level 2.',
+  'nap-phone-mismatch':
+    'Bring the phone number in the structured data into line with the one shown to visitors, so both versions agree.',
+  'nap-postal-code-mismatch':
+    'Bring the postal code in the structured data into line with the address shown to visitors, so both versions agree.',
   'nested-interactive':
     'Do not place one clickable control inside another. Move the nested button or link out of its parent.',
   'network-dependency-tree-insight':
@@ -144,6 +172,8 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     'Add Open Graph tags (title, description, image) to control the preview shown when the page is shared on social networks.',
   'prioritize-lcp-image':
     "Preload the page's main image so the browser requests it without waiting.",
+  'redirect-chain-excessive':
+    'Shorten the redirect chain by pointing the first address straight at the final destination.',
   redirects: 'Point links straight at the final address, removing the intermediate redirects.',
   'reflow-horizontal-scroll':
     'Make the layout adapt down to a width of 320 pixels with no horizontal scrolling.',
@@ -151,6 +181,8 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     'Defer or inline the stylesheets and scripts that block the first render.',
   'render-blocking-resources':
     'Defer or inline the stylesheets and scripts that block the first render.',
+  'robots-blocks-indexing':
+    'Remove the robots.txt rule blocking access to the home page, otherwise the site can disappear from search results.',
   'robots-disallow-broad':
     "Narrow the robots.txt rule: as written it blocks a large share of the site's pages.",
   'robots-txt': 'Fix the robots.txt syntax: as it stands part of its content is ignored.',
@@ -170,6 +202,8 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     'Associate a visible label with every dropdown, or give it an aria-label attribute.',
   'server-response-time':
     "Reduce the server's first response time, through server-side caching or faster hosting.",
+  'sitemap-missing':
+    'Publish a sitemap.xml listing the site pages and declare it in robots.txt, so their discovery does not rest on internal links alone.',
   'sitemap-orphan-page':
     "Link to these pages from the site's own navigation, or remove them from the sitemap. A page listed but never linked is hard to reach.",
   'sitemap-stale': 'Regenerate the sitemap so it matches the pages currently published.',
@@ -214,4 +248,6 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
     'Serve these images at the dimensions actually displayed, rather than at full resolution resized by the browser.',
   'uses-text-compression': 'Enable compression of text responses, gzip or brotli, on your server.',
   'video-missing-captions': 'Add a captions track to videos carrying speech or meaningful audio.',
+  'youtube-tracking-embed':
+    'Swap the youtube.com domain for youtube-nocookie.com in the video embed code: the same video is served, without the advertising cookies set on load.',
 };
