@@ -14,7 +14,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { promises as fs } from 'node:fs';
+import * as fs from 'node:fs';
 import path from 'node:path';
 import type { Browser } from 'playwright';
 import {
@@ -410,11 +410,17 @@ function buildSiteSignals(
 export async function writeAuditArtifacts(
   input: WriteAuditArtifactsInput,
 ): Promise<WriteAuditArtifactsResult> {
+  // The file writes below are deliberately synchronous. This pass runs
+  // once, after an audit has already spent hours crawling and scanning,
+  // and async libuv file operations have hung forever on this exact step
+  // under WSL2 (io_uring completions that never arrive), destroying the
+  // whole run. Direct syscalls cannot take that path. The function stays
+  // async so callers are unchanged.
   const auditId = input.auditId ?? randomUUID();
   const hostname = new URL(input.siteResult.crawl.startUrl).hostname;
   const auditDir = buildAuditDir(getArtifactsRoot(), hostname, input.startedAt);
   const pagesDir = path.join(auditDir, 'pages');
-  await fs.mkdir(pagesDir, { recursive: true });
+  fs.mkdirSync(pagesDir, { recursive: true });
 
   const scanByUrl = new Map(input.siteResult.pages.map((page) => [page.url, page]));
   const manifestPages: ManifestPageEntry[] = [];
@@ -441,14 +447,14 @@ export async function writeAuditArtifacts(
 
     const pageDir = buildPageDir(scanResult.url);
     const pageDirPath = path.join(pagesDir, pageDir);
-    await fs.mkdir(pageDirPath, { recursive: true });
+    fs.mkdirSync(pageDirPath, { recursive: true });
 
     const relativizedRenderDiff = scanResult.renderDiff
       ? toAuditRelativeRefs(scanResult.renderDiff, auditDir)
       : undefined;
 
     const scanJson = buildScanJson(scanResult, relativizedRenderDiff);
-    await fs.writeFile(path.join(pageDirPath, 'scan.json'), JSON.stringify(scanJson, null, 2));
+    fs.writeFileSync(path.join(pageDirPath, 'scan.json'), JSON.stringify(scanJson, null, 2));
 
     manifestPages.push({
       url: scanResult.url,
@@ -519,7 +525,7 @@ export async function writeAuditArtifacts(
       : {}),
   });
 
-  await fs.writeFile(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  fs.writeFileSync(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
   return { auditId, auditDir, manifest, pages: normalizePages };
 }

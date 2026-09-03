@@ -22,7 +22,7 @@
  * working after pruning has run.
  */
 
-import { promises as fs } from 'node:fs';
+import * as fs from 'node:fs';
 import path from 'node:path';
 import { RENDER_DIFF_EMISSION_THRESHOLD_PERCENT } from '@odysseus/core';
 
@@ -61,9 +61,12 @@ export function selectPageDirsToKeep(
   return keep;
 }
 
+// Synchronous unlink for the same reason as write-audit.ts: pruning runs
+// at the very end of a paid audit, and an async libuv unlink that never
+// completes would hang the CLI after the artifacts are already on disk.
 async function unlinkIfExists(filePath: string): Promise<void> {
   try {
-    await fs.unlink(filePath);
+    fs.unlinkSync(filePath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
