@@ -353,7 +353,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [022](archive/022-dashboard-and-site-design-refactor.md) | Refactor the operator dashboard and public site UI with the Impeccable workflow | P2 | L | none | DONE (og:image and 4 unproposed inventory rows deferred) |
 | [023](archive/023-report-visual-design-refactor.md) | Revise the report visual design as a gated, operator-directed redesign | P2 | L | 018-021, operator-approved direction | DONE (review accepted 2026-09-02; the glossary ordering change deliberately left to plan 024) |
 | [024](archive/024-report-feedback-followups.md) | Close three small gaps between the report and Conseil papa | P2 | S | 018, 019 | DONE (trade-off 44 order amended to glossary-last 2026-09-01; the reference HTML's stale remaining-work region moved to issue #25) |
-| [025](./025-llm-provider-switch.md) | Switch the LLM provider from Mistral to OpenAI gpt-4.1-mini | P1 | M | none | TODO |
+| [025](archive/025-llm-provider-switch.md) | Switch the LLM provider from Mistral to OpenAI gpt-5.4-mini | P1 | M | none | DONE (operator accepted the rendered French and English reports 2026-09-03) |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the

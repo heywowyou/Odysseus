@@ -1,4 +1,4 @@
-# Plan 025: Switch the LLM provider from Mistral to OpenAI gpt-4.1-mini
+# Plan 025: Switch the LLM provider from Mistral to OpenAI gpt-5.4-mini
 
 ## Status
 
@@ -29,17 +29,21 @@ alternatives against this project's seven criteria: strict server-side
 reasoning-token budget trap, `temperature: 0.2` accepted, price at volume, EU
 data posture, and small migration. Its conclusion:
 
-- **gpt-4.1-mini ($0.40 in / $1.60 out) is the only candidate passing all
-  seven with no caveats**, roughly 3.7x cheaper on input and 4.7x cheaper on
-  output than the current baseline, about $0.026 per 16k-token generation
-  versus about $0.12. It is not a reasoning model, so the Magistral-style
-  thinking-blocks-share-the-output-budget failure mode cannot recur.
+- **The original plan selected gpt-4.1-mini ($0.40 in / $1.60 out)** as the
+  only researched candidate passing all seven criteria without caveats. On
+  2026-09-03 the operator requested a fresh comparison of current OpenAI Mini
+  and Nano models and prioritized report quality over the lowest price. The
+  selection is now **gpt-5.4-mini ($0.75 in / $4.50 out)**: OpenAI describes
+  it as its strongest Mini model, it supports Structured Outputs and Chat
+  Completions, and `reasoning_effort: none` preserves a bounded request. A
+  full 16k output costs at most $0.072 plus input, below Mistral Medium's
+  $0.12 output cost alone.
 - Rejected alternatives, so the executor does not relitigate them:
   gpt-4o-mini ($0.15/$0.60, same request shape, deferred pending a French
   prose verdict, see step 5's fallback), GLM-4.5/4.7-Flash (free, but no
   server-side schema enforcement and a China-based vendor, fails the
-  structured-output criterion for production), GPT-5 mini/nano (reject
-  `temperature: 0.2`), DeepSeek V4 (`json_object` only, thinking on by
+  structured-output criterion for production), the older GPT-5 mini/nano
+  family (superseded for new workloads), DeepSeek V4 (`json_object` only, thinking on by
   default), Qwen flash (no strict `json_schema` on the Singapore
   international region), Claude Haiku 4.5 (pricier, different API shape),
   grok-4.3 (no cheap tier).
@@ -49,14 +53,13 @@ model once per prospect, audits two to three times per audit.
 
 ## Model id decision
 
-Pin the dated snapshot `gpt-4.1-mini-2025-04-14`, not the moving
-`gpt-4.1-mini` alias. The llm layer records `model` and `temperature` on
-every persisted analysis precisely so a provider-side change never reads as
-the client's site changing (`docs/rules/llm-layer-rules.md` section 3); a
-pinned snapshot applies the same discipline to the constant itself. The alias
-is rejected because it silently shifts behavior when OpenAI repoints it. When
-OpenAI eventually announces snapshot deprecation, changing this one constant
-is the whole migration (note it in `deploy/runbook.md`, step 4).
+Use the generic `gpt-5.4-mini` alias by explicit operator decision on
+2026-09-03. The first plan draft pinned `gpt-4.1-mini-2025-04-14` so a provider
+repoint could never read as a site change. The operator prefers automatic
+minor model upgrades over that reproducibility guarantee. Every persisted
+analysis still records the requested model and temperature, but two runs that
+both record the alias may reflect different provider snapshots. This accepted
+trade-off is recorded in the provider decision entry and deployment runbook.
 
 ## Current state
 
@@ -110,7 +113,8 @@ is the whole migration (note it in `deploy/runbook.md`, step 4).
   production retry-exhaustion messages are provider-neutral).
 - Research-verified OpenAI facts
   (`docs/research/llm-provider-alternatives.md`): chat completions accepts
-  `temperature` 0 to 2 for gpt-4.1-mini; strict `json_schema` via
+  `temperature` 0 to 2; gpt-5.4-mini supports `reasoning_effort: none` and
+  strict `json_schema` via
   `response_format: { type: 'json_schema', json_schema: { name, schema,
   strict: true } }` in the same shape the code already sends; API data is
   not used for training by default; an EU data-residency endpoint
@@ -131,7 +135,7 @@ is the whole migration (note it in `deploy/runbook.md`, step 4).
   `docs/rules/operator-obligations.md`, `docs/decisions/trade-offs.md`
   (new entry), `docs/agents/coding-conventions.md`, `README.md`,
   `.env.example`, `deploy/runbook.md`, `plans/README.md`
-- one live smoke test per JSON schema and one French/English A/B
+- one live smoke test per API-facing JSON schema and one French/English A/B
   regeneration on an already-saved audit (no site re-scan)
 
 **Out of scope**:
@@ -140,7 +144,7 @@ is the whole migration (note it in `deploy/runbook.md`, step 4).
   retry-budget, or schema change
 - locked contracts (`packages/core/src/types/llm-output.ts` and the rest of
   the locked list)
-- switching to gpt-4o-mini (documented fallback only, see stop conditions)
+- switching to a Nano tier or using different models per pass
 - frozen artifacts, fixture JSONs, and historical test literals
 - Mistral mentions in historical/archive documents and archived plans
 - plan 014, 020, 021 work; new live browser scans; pushes
@@ -161,16 +165,17 @@ is the whole migration (note it in `deploy/runbook.md`, step 4).
    the SDK default apply). Keep the deliberate duplication header comment
    intact.
 3. `constants.ts`: `MISTRAL_MODEL` becomes `OPENAI_MODEL =
-   'gpt-4.1-mini-2025-04-14'`, `MISTRAL_TEMPERATURE` becomes
+   'gpt-5.4-mini'`, `MISTRAL_TEMPERATURE` becomes
    `OPENAI_TEMPERATURE = 0.2`. Rewrite the comments: the tier-gate comment
    is history (say so, one line); the temperature comment keeps the
-   repeatability rationale and notes gpt-4.1-mini accepts 0 to 2; the
+   repeatability rationale and notes Chat Completions accepts 0 to 2; the
    `MAX_OUTPUT_TOKENS` comment keeps the truncation history and gains that
    the current provider is not a reasoning model.
 4. `client.ts`: `createClient()` returns
    `new OpenAI({ apiKey: getOpenAiApiKey(), baseURL: getOpenAiBaseUrl() })`.
    Port all three calls. Request mapping: `chat.complete` becomes
    `chat.completions.create`; `maxTokens` becomes `max_completion_tokens`;
+   set `reasoning_effort: 'none'` on every call;
    `responseFormat: { type: 'json_schema', jsonSchema: { name,
    schemaDefinition, strict: true } }` becomes `response_format: { type:
    'json_schema', json_schema: { name, schema, strict: true } }`; messages
@@ -239,8 +244,8 @@ because the standing analysis authorization names the provider.
 1. `CLAUDE.md`: L402 dependency list (`@mistralai/mistralai` becomes
    `openai`); L438 llm package description; L584 "Tests never call the live
    Mistral API" becomes provider-neutral; L590-598 standing authorization
-   becomes "configured OpenAI API" with the cost sentence updated (about
-   $0.026 per generation).
+   becomes "configured OpenAI API" with the cost sentence updated (a
+   16k-token output ceiling costs $0.072 plus input).
 2. `docs/rules/llm-layer-rules.md`: sections 3 and 8 plus the passages at
    L126, L141, L152-155, L160-163, L177, L179-184, L199-204 rewritten to
    the new provider; dated live measurements (L647, L669, L705-735) stay,
@@ -258,8 +263,8 @@ because the standing analysis authorization names the provider.
    default, and the EU residency option at a 10 percent uplift.
 5. `docs/agents/coding-conventions.md:101`, `README.md:43`,
    `.env.example` (`OPENAI_API_KEY=`, commented `OPENAI_BASE_URL=`),
-   `deploy/runbook.md` (key setup, EU endpoint opt-in, snapshot
-   deprecation note, fresh-key rate-limit tiers).
+   `deploy/runbook.md` (key setup, EU endpoint opt-in, generic-alias review
+   note, fresh-key rate-limit tiers).
 6. `plans/README.md`: mark this plan's status per its outcome.
 
 **Verify**: `node scripts/check-agent-docs.mjs` exits 0 (all local links
@@ -270,8 +275,9 @@ resolve).
 1. Full gates: workspace build and typecheck, the full unit suite, store
    suite (Mongo test service per `plans/README.md` verification baseline),
    formatting, docs check, i.e. the `pnpm run check` equivalent.
-2. Schema smoke test against the live API: one minimal call per JSON schema
-   (seven cheap calls, well under a cent) proving OpenAI strict mode
+2. Schema smoke test against the live API: one minimal call per API-facing
+   JSON schema (six cheap calls: structure, writing, reviewer, and three
+   outreach touches; well under a cent) proving OpenAI strict mode
    accepts every shape hint. Requires `OPENAI_API_KEY` in `.env`,
    operator-provided; without it, stop before this sub-step and ask.
 3. Quality A/B, the evidence trade-off 53 requires for a provider change:
@@ -285,7 +291,7 @@ resolve).
    session log `ready-for-commit`.
 
 **Verify**: all gates green; the A/B artifacts exist under the audit's
-`analyses/` with `model: 'gpt-4.1-mini-2025-04-14'` recorded.
+`analyses/` with `model: 'gpt-5.4-mini'` recorded.
 
 ## Test plan
 
@@ -300,21 +306,26 @@ resolve).
 
 ## Done criteria
 
-- [ ] No file under maintained source imports `@mistralai/mistralai`; the
+- [x] No file under maintained source imports `@mistralai/mistralai`; the
       dependency is removed and `openai` is in `packages/llm` and the
       lockfile.
-- [ ] All four call sites (structure, writing, review, outreach) run
-      `gpt-4.1-mini-2025-04-14` at temperature 0.2 through strict
+- [x] All four call sites (structure, writing, review, outreach) run
+      `gpt-5.4-mini` at temperature 0.2 and reasoning effort `none` through strict
       `json_schema`, with Zod validation, guards, retry budget, and
       fail-loud behavior unchanged.
-- [ ] Persisted analyses record the new model identifier; historical data
+- [x] Persisted analyses record the new model identifier; historical data
       and fixtures untouched.
-- [ ] All step 4 documents updated consistently, including the new
+- [x] All step 4 documents updated consistently, including the new
       trade-offs entry with the recorded quality evidence.
-- [ ] `pnpm run check` and the full test suite pass.
-- [ ] French and English A/B outputs exist and the operator has read the
-      French prose.
-- [ ] `plans/README.md` shows this plan's final status.
+- [x] `pnpm run check` and the full test suite pass. Docs, formatting, lint,
+      the workspace build, the dashboard typecheck, the unit suite (3,144
+      tests), and the store suite with the Mongo harness up (3,361 tests)
+      all pass; the dashboard typecheck fix landed as its own slice (root
+      cause tracked as issue #29).
+- [x] French and English A/B outputs exist and the operator has read the
+      French prose (accepted 2026-09-03; the one objection was the
+      deterministic template's underlined jump links, fixed the same day).
+- [x] `plans/README.md` shows this plan's final status (DONE, archived).
 
 ## Stop conditions
 
@@ -322,12 +333,10 @@ Stop and report if:
 
 - OpenAI strict mode rejects a shape hint in a way a mirror-only fix cannot
   solve (the fix must never touch the Zod authority);
-- the pinned snapshot id is not accepted by the API (model-not-found):
-  confirm the current dated snapshot from OpenAI's docs, and if it differs,
-  treat that as a one-constant change under this plan and note it in the
-  trade-offs entry;
+- the generic model id is not accepted by the API (model-not-found): confirm
+  current availability from OpenAI's docs and stop for operator direction;
 - the French prose fails the operator read: the documented fallback is a
-  one-constant switch to `gpt-4o-mini` (same code path, cheaper) or a
+  one-constant switch to generic `gpt-4.1-mini` (same code path, cheaper) or a
   revert of the whole commit, Mistral remaining intact in git history;
 - the `pnpm install` for the lockfile cannot be completed in the executor's
   shell;
@@ -349,7 +358,7 @@ reorder them.
 - The research backing this plan lives in
   `docs/research/llm-provider-alternatives.md`; if prices or capabilities
   are re-checked later, update that file rather than citing it from memory.
-- If the operator later wants `gpt-4o-mini` for cost, that is a
+- If the operator later wants a Nano model for cost, that is a
   one-constant change plus a French prose read, not a new plan.
 - `MISTRAL_API_KEY` may remain in the operator's `.env` harmlessly; remove
   it whenever convenient after cutover.

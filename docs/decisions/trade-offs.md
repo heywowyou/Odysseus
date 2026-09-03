@@ -3324,6 +3324,11 @@ such as "1 pages", logged separately as issue #28 and not attributed to the
 model migration. Total measured OpenAI spend for schema smoke, the large
 comparison, and the rendered acceptance pair was approximately $0.1870.
 
+The operator read the rendered French and English reports on 2026-09-03 and
+accepted the prose for production. The single objection was the deterministic
+template's underlined jump-link labels, not the model output; it was removed
+the same day and recorded in the report design tokens document.
+
 ### 68. Real-scan fixtures go stale silently; a freshness ratchet catches it instead of a changelog
 
 Discovered 2026-08-25: the whole suite was green while
