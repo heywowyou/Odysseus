@@ -9,6 +9,7 @@ import { promises as fs } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
+import type { Browser } from 'playwright';
 import {
   assertFindingsProvenance,
   buildFindingsProvenance,
@@ -20,11 +21,12 @@ import {
 import {
   generateReportPdf,
   reportPageCountWarning,
+  REPORT_PDF_CHROMIUM_ARGS,
   REPORT_TEMPLATE_VERSION,
   type ReportPageCountWarning,
   type StoredAnalysis,
 } from '@odysseus/report';
-import { readOdysseusBuildId } from '@odysseus/scanner';
+import { launchBrowser, readOdysseusBuildId } from '@odysseus/scanner';
 import { getAuditManualFields, getReportPreparation, persistReport } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 
@@ -61,6 +63,12 @@ export async function runReportStage(
   findings: Finding[],
   analysis: StoredAnalysis,
   connection: Connection,
+  /** Issue #6: runAllReportsStage launches one browser and passes it here
+   *  for both the French and English pass, instead of a fresh Chromium
+   *  launch per language. Absent for a standalone single-language render
+   *  (the CLI's `odysseus report`), which still gets its own browser from
+   *  generateReportPdf, unchanged from before. */
+  browser?: Browser,
 ): Promise<ReportStageResult> {
   const findingsProvenance = buildFindingsProvenance(findings);
   assertFindingsProvenance(manifest.findingsProvenance, findingsProvenance, 'manifest');
@@ -124,6 +132,7 @@ export async function runReportStage(
     },
     ...(manualFields !== undefined ? { manualFields } : {}),
     preparation: preparationPreview[analysis.language],
+    ...(browser !== undefined ? { browser } : {}),
   });
 
   const pdfDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
@@ -196,6 +205,14 @@ export interface AllReportsStageResult {
  * ordering, rather than Promise.all: bounds concurrent Chromium PDF
  * renders to one at a time, and keeps a mid-run failure's error
  * attributable to a single language instead of an aggregated rejection.
+ *
+ * Issue #6: one Chromium instance is launched here and passed to both
+ * language passes instead of runReportStage/generateReportPdf each
+ * launching and closing their own - launch overhead was paid twice per
+ * audit for no reason, since nothing about the browser process itself is
+ * language-specific. Pagination still runs once per language inside that
+ * shared browser: French and English text lengths differ enough that page
+ * breaks genuinely differ, so only the launch is shared, not the layout.
  */
 export async function runAllReportsStage(
   auditDir: string,
@@ -206,21 +223,27 @@ export async function runAllReportsStage(
 ): Promise<AllReportsStageResult[]> {
   const results: AllReportsStageResult[] = [];
 
-  for (const language of ['fr', 'en'] as const) {
-    const { reportPath, generatedAt, pageCount, pageCountWarning } = await runReportStage(
-      auditDir,
-      manifest,
-      findings,
-      analyses[language],
-      connection,
-    );
-    results.push({
-      language,
-      reportPath,
-      generatedAt,
-      pageCount,
-      ...(pageCountWarning !== undefined ? { pageCountWarning } : {}),
-    });
+  const { browser } = await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS });
+  try {
+    for (const language of ['fr', 'en'] as const) {
+      const { reportPath, generatedAt, pageCount, pageCountWarning } = await runReportStage(
+        auditDir,
+        manifest,
+        findings,
+        analyses[language],
+        connection,
+        browser,
+      );
+      results.push({
+        language,
+        reportPath,
+        generatedAt,
+        pageCount,
+        ...(pageCountWarning !== undefined ? { pageCountWarning } : {}),
+      });
+    }
+  } finally {
+    await browser.close();
   }
 
   return results;

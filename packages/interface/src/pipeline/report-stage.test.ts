@@ -24,9 +24,16 @@ vi.mock('@odysseus/store', () => ({
     updatedAt: '2026-09-01T00:00:00.000Z',
   }),
 }));
-vi.mock('@odysseus/scanner', () => ({ readOdysseusBuildId: vi.fn(() => 'render-build') }));
+/** runAllReportsStage launches one browser to share across both language
+ *  passes (issue #6); generateReportPdf itself is fully mocked below and
+ *  never touches it, so a fake with a no-op close() is enough here. */
+vi.mock('@odysseus/scanner', () => ({
+  readOdysseusBuildId: vi.fn(() => 'render-build'),
+  launchBrowser: vi.fn(async () => ({ browser: { close: vi.fn() }, debugPort: 0 })),
+}));
 
 import { generateReportPdf } from '@odysseus/report';
+import { launchBrowser } from '@odysseus/scanner';
 import { persistReport } from '@odysseus/store';
 import { buildFindingsProvenance, type AuditManifest } from '@odysseus/core';
 import { runAllReportsStage, runReportStage } from './report-stage.js';
@@ -249,6 +256,23 @@ describe('runAllReportsStage', () => {
       expect(result.pageCountWarning).toBeUndefined();
     }
     expect(generateReportPdf).toHaveBeenCalledTimes(2);
+  });
+
+  // Issue #6: the fr and en passes used to each launch and close their own
+  // Chromium instance inside generateReportPdf, roughly doubling report
+  // wall time for a cost that has nothing to do with either language.
+  it('launches Chromium once and shares it across both language passes', async () => {
+    const manifest = fakeManifest();
+    const fr = fakeAnalysis();
+    const en = { ...fakeAnalysis(), language: 'en' as const };
+
+    await runAllReportsStage(auditDir, manifest, [], { fr, en }, fakeConnection);
+
+    expect(launchBrowser).toHaveBeenCalledTimes(1);
+    const { browser } = await vi.mocked(launchBrowser).mock.results[0]!.value;
+    const passedBrowsers = vi.mocked(generateReportPdf).mock.calls.map(([input]) => input.browser);
+    expect(passedBrowsers).toEqual([browser, browser]);
+    expect(browser.close).toHaveBeenCalledTimes(1);
   });
 
   it('persists a report document for each of the two generated reports', async () => {

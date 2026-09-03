@@ -86,7 +86,14 @@ export async function generateReportPdf(
     );
   }
 
-  const { browser } = await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS });
+  // Issue #6: a caller rendering both language reports for one audit back
+  // to back can pass an already-launched browser (report-stage.ts's
+  // runAllReportsStage) so the two passes share one Chromium launch
+  // instead of paying for it twice. Ownership follows who launched it:
+  // this function only closes a browser it launched itself.
+  const ownsBrowser = input.browser === undefined;
+  const browser =
+    input.browser ?? (await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS })).browser;
   try {
     const {
       pages: renderDiffEvidencePages,
@@ -116,6 +123,6 @@ export async function generateReportPdf(
 
     return await renderPdfWithPageCountFromHtml(html, browser);
   } finally {
-    await browser.close();
+    if (ownsBrowser) await browser.close();
   }
 }

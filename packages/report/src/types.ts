@@ -1,3 +1,4 @@
+import type { Browser } from 'playwright';
 import type {
   AuditManifest,
   AuditManualFields,
@@ -81,4 +82,10 @@ export interface GenerateReportInput {
    *  absent means the report renders its safe generic fallbacks
    *  unchanged. */
   preparation?: PreparationPreviewLanguage;
+  /** Issue #6: a caller generating both language reports for the same
+   *  audit back to back (packages/interface's report-stage.ts) launches
+   *  Chromium once and passes it here for both passes, instead of paying a
+   *  fresh browser launch per language. generateReportPdf launches and
+   *  closes its own browser when this is absent, unchanged from before. */
+  browser?: Browser;
 }
