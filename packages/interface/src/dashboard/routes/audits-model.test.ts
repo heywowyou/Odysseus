@@ -9,7 +9,11 @@ import {
   siteLabel,
   sortSummaries,
 } from './audits-model';
+import { en } from '../i18n/en';
+import { fr } from '../i18n/fr';
 import type { ScanSummary } from '../lib/api-types';
+
+const siteCountLabels = en.audits;
 
 function makeSummary(overrides: Partial<ScanSummary> = {}): ScanSummary {
   return {
@@ -78,7 +82,9 @@ describe('hostname and site label', () => {
   });
 
   it('labels a row by its hostname', () => {
-    expect(siteLabel(makeSummary({ siteUrl: 'http://hotel-exemple.fr' }))).toBe('hotel-exemple.fr');
+    expect(siteLabel(makeSummary({ siteUrl: 'http://hotel-exemple.fr' }), siteCountLabels)).toBe(
+      'hotel-exemple.fr',
+    );
   });
 
   it('labels a prospecting row by its URL count when there is no site', () => {
@@ -86,11 +92,17 @@ describe('hostname and site label', () => {
       type: 'prospecting',
       urls: ['https://a.example.fr', 'https://b.example.fr', 'https://c.example.fr'],
     });
-    expect(siteLabel(summary)).toBe('3 sites');
+    expect(siteLabel(summary, siteCountLabels)).toBe('3 sites');
+  });
+
+  it('uses the singular form for exactly one URL (issue #34)', () => {
+    const summary = makeSummary({ type: 'prospecting', urls: ['https://a.example.fr'] });
+    expect(siteLabel(summary, siteCountLabels)).toBe('1 site');
+    expect(siteLabel(summary, fr.audits)).toBe('1 site');
   });
 
   it('labels a row with nothing known as empty', () => {
-    expect(siteLabel(makeSummary({ type: 'prospecting' }))).toBe('');
+    expect(siteLabel(makeSummary({ type: 'prospecting' }), siteCountLabels)).toBe('');
   });
 });
 
@@ -98,17 +110,17 @@ describe('searchMatches', () => {
   const summary = makeSummary({ siteUrl: 'https://Hotel-Exemple.fr/page' });
 
   it('matches the hostname case-insensitively', () => {
-    expect(searchMatches(summary, 'exemple')).toBe(true);
-    expect(searchMatches(summary, 'EXEMPLE.FR')).toBe(true);
+    expect(searchMatches(summary, 'exemple', siteCountLabels)).toBe(true);
+    expect(searchMatches(summary, 'EXEMPLE.FR', siteCountLabels)).toBe(true);
   });
 
   it('rejects a substring that is not in the hostname', () => {
-    expect(searchMatches(summary, 'nomatch')).toBe(false);
+    expect(searchMatches(summary, 'nomatch', siteCountLabels)).toBe(false);
   });
 
   it('matches everything on an empty or blank query', () => {
-    expect(searchMatches(summary, '')).toBe(true);
-    expect(searchMatches(summary, '   ')).toBe(true);
+    expect(searchMatches(summary, '', siteCountLabels)).toBe(true);
+    expect(searchMatches(summary, '   ', siteCountLabels)).toBe(true);
   });
 });
 

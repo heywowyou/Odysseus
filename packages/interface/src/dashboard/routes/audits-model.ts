@@ -1,3 +1,4 @@
+import type { DashboardStrings } from '../i18n/types';
 import type { JobStatus, ScanSummary, SeverityRollup } from '../lib/api-types';
 
 /** Sort order of the audits list; newest is the default so the operator
@@ -70,24 +71,35 @@ export function hostnameOf(siteUrl: string): string {
 
 /** Site column text: the hostname, or the URL count for a prospecting job
  *  that has no single site. Empty when neither is known, in which case the
- *  page falls back to common.unknownSite. */
-export function siteLabel(summary: ScanSummary): string {
+ *  page falls back to common.unknownSite. Count-aware and routed through
+ *  i18n (audits.siteCountSingular / siteCountPlural) so a one-URL job reads
+ *  "1 site" rather than a hardcoded plural, in both French and English. */
+export function siteLabel(
+  summary: ScanSummary,
+  labels: Pick<DashboardStrings['audits'], 'siteCountSingular' | 'siteCountPlural'>,
+): string {
   if (summary.siteUrl !== undefined) {
     return hostnameOf(summary.siteUrl);
   }
   const urlCount = summary.urls?.length ?? 0;
-  return urlCount > 0 ? `${urlCount} sites` : '';
+  if (urlCount === 0) return '';
+  const template = urlCount === 1 ? labels.siteCountSingular : labels.siteCountPlural;
+  return template.replace('{count}', String(urlCount));
 }
 
 /** Case-insensitive substring match against the site column text, so the
  *  search box finds exactly what the operator can see. An empty or blank
  *  query matches everything so clearing the box restores all rows. */
-export function searchMatches(summary: ScanSummary, query: string): boolean {
+export function searchMatches(
+  summary: ScanSummary,
+  query: string,
+  labels: Pick<DashboardStrings['audits'], 'siteCountSingular' | 'siteCountPlural'>,
+): boolean {
   const needle = query.trim().toLowerCase();
   if (needle === '') {
     return true;
   }
-  return siteLabel(summary).toLowerCase().includes(needle);
+  return siteLabel(summary, labels).toLowerCase().includes(needle);
 }
 
 /** Rows ordered by creation time. Copies before sorting so the polled array

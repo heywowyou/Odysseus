@@ -80,6 +80,11 @@ export interface DashboardStrings {
     emptyStateCta: string;
     dateColumn: string;
     siteColumn: string;
+    /** Site column text for a multi-URL prospecting job (no single site).
+     *  {count} is replaced with the URL count; singular is used only for
+     *  count === 1. */
+    siteCountSingular: string;
+    siteCountPlural: string;
     typeColumn: string;
     statusColumn: string;
     severityColumn: string;

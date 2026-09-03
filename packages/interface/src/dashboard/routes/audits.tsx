@@ -90,11 +90,11 @@ export function AuditsPage(): JSX.Element {
     () =>
       sortSummaries(
         filterSummaries(data ?? [], statusFilter).filter((summary) =>
-          searchMatches(summary, search),
+          searchMatches(summary, search, strings.audits),
         ),
         sortOrder,
       ),
-    [data, statusFilter, search, sortOrder],
+    [data, statusFilter, search, sortOrder, strings.audits],
   );
   const kpis = useMemo(() => computeKpis(data ?? []), [data]);
   // A count is only trustworthy once data exists: while the first load is in
@@ -138,7 +138,7 @@ export function AuditsPage(): JSX.Element {
   };
 
   const pendingRow = pendingAction?.row;
-  const pendingSite = pendingRow === undefined ? '' : siteLabel(pendingRow);
+  const pendingSite = pendingRow === undefined ? '' : siteLabel(pendingRow, strings.audits);
 
   let body: JSX.Element;
   if (data === undefined && error !== undefined) {
@@ -204,7 +204,7 @@ export function AuditsPage(): JSX.Element {
               <TableBody>
                 {visible.map((summary) => {
                   const target = rowTarget(summary);
-                  const site = siteLabel(summary);
+                  const site = siteLabel(summary, strings.audits);
                   const badges: SeverityBadge[] = severityBadges(summary.severityRollup);
                   const type = typeBadge(summary, strings);
                   return (

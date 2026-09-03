@@ -67,6 +67,8 @@ export const fr: DashboardStrings = {
     emptyStateCta: 'Lancer un premier scan',
     dateColumn: 'Date',
     siteColumn: 'Site',
+    siteCountSingular: '{count} site',
+    siteCountPlural: '{count} sites',
     typeColumn: 'Type',
     statusColumn: 'Statut',
     severityColumn: 'Gravité',
