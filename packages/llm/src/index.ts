@@ -73,6 +73,7 @@ export { findLanguageComplianceViolations } from './language-guard.js';
 export type { LanguageComplianceViolation } from './language-guard.js';
 
 export { ensureEnvLoaded, getOpenAiApiKey, getOpenAiBaseUrl } from './config.js';
+export { pauseBetweenLanguagePasses } from './rate-limit-pacing.js';
 
 export { buildOutreachProseInput } from './outreach/outreach-input.js';
 export type { OutreachEvidenceForModel, OutreachProseInput } from './outreach/outreach-input.js';

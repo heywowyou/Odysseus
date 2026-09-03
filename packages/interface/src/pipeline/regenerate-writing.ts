@@ -25,6 +25,7 @@ import {
   recordReadyWritingCandidate,
   type AuditDocument,
 } from '@odysseus/store';
+import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runAnalysisStage } from './analysis-stage.js';
 import { readAuditEvidence } from './audit-evidence.js';
 
@@ -128,6 +129,9 @@ export async function regenerateWriting(
       connection,
     );
     partialPair = { frAnalysisId: frStage.analysis.analysisId };
+    // Issue #30, same shape as run-full-audit-job: the English pass must
+    // not enter the quota window the French pass just drained.
+    await pauseBetweenLanguagePasses();
     const enStage = await runAnalysisStage(
       auditDir,
       manifest,

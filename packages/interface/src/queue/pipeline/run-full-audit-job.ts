@@ -13,6 +13,7 @@
 import { completeJob, updateJobProgress, type JobDocument } from '@odysseus/store';
 import type { SiteSignalOverrides } from '@odysseus/core';
 import { hasMeasuredCoreWebVitals } from '@odysseus/report';
+import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
@@ -70,6 +71,12 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       { language: 'fr', obligationAssessment: auditResult.obligationAssessment },
       connection,
     );
+
+    // Issue #30: back to back, the English pass entered the provider quota
+    // window the French pass had just drained and 429ed through every
+    // retry. The pacing knowledge lives in @odysseus/llm with the rest of
+    // the rate-limit handling.
+    await pauseBetweenLanguagePasses();
 
     await updateJobProgress(connection, job.jobId, { phase: 'analyze-en' });
     const enAnalysis = await runAnalysisStage(

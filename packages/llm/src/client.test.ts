@@ -133,6 +133,27 @@ describe('callOpenAiForStructure', () => {
     completeMock.mockResolvedValue(choice({ content: JSON.stringify({ themes: [] }) }));
     await expect(callOpenAiForStructure(structureInput, false)).rejects.toThrow();
   });
+
+  it('appends the provider Retry-After to a 429 error message (issue #30)', async () => {
+    completeMock.mockRejectedValue(
+      Object.assign(new Error('429 Rate limit exceeded'), {
+        status: 429,
+        headers: new Headers({ 'retry-after': '7' }),
+      }),
+    );
+    await expect(callOpenAiForStructure(structureInput, false)).rejects.toThrow(
+      '(provider retry-after: 7s)',
+    );
+  });
+
+  it('leaves provider errors without a readable Retry-After untouched', async () => {
+    completeMock.mockRejectedValue(
+      Object.assign(new Error('429 Rate limit exceeded'), { status: 429, headers: new Headers() }),
+    );
+    await expect(callOpenAiForStructure(structureInput, false)).rejects.toThrow(
+      /^429 Rate limit exceeded$/,
+    );
+  });
 });
 
 describe('callOpenAiForWriting', () => {
@@ -179,5 +200,17 @@ describe('callOpenAiForWriting', () => {
   it('throws when the parsed content fails schema validation', async () => {
     completeMock.mockResolvedValue(choice({ content: JSON.stringify({ themes: [] }) }));
     await expect(callOpenAiForWriting(writingInput, false)).rejects.toThrow();
+  });
+
+  it('appends the provider Retry-After to a 429 on the writing path too (issue #30)', async () => {
+    completeMock.mockRejectedValue(
+      Object.assign(new Error('429 Rate limit exceeded'), {
+        status: 429,
+        headers: new Headers({ 'retry-after-ms': '500' }),
+      }),
+    );
+    await expect(callOpenAiForWriting(writingInput, false)).rejects.toThrow(
+      '(provider retry-after: 500ms)',
+    );
   });
 });

@@ -4,11 +4,16 @@ vi.mock('../../pipeline/audit-stage.js', () => ({ runAuditStage: vi.fn() }));
 vi.mock('../../pipeline/analysis-stage.js', () => ({ runAnalysisStage: vi.fn() }));
 vi.mock('../../pipeline/report-stage.js', () => ({ runAllReportsStage: vi.fn() }));
 vi.mock('@odysseus/store', () => ({ completeJob: vi.fn(), updateJobProgress: vi.fn() }));
+vi.mock('@odysseus/llm', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  pauseBetweenLanguagePasses: vi.fn(),
+}));
 
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import { completeJob, updateJobProgress } from '@odysseus/store';
+import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runFullAuditJob } from './run-full-audit-job.js';
 import { CancellationRegistry } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
@@ -133,6 +138,24 @@ describe('runFullAuditJob', () => {
     await runFullAuditJob(job, ctx);
 
     expect(calls).toEqual(['audit', 'analyze-fr', 'analyze-en', 'report-all', 'complete']);
+  });
+
+  // Issue #30: back to back, the English pass entered the quota window the
+  // French pass had just drained and 429ed through every retry.
+  it('pauses between the French and English passes', async () => {
+    const job = fakeJob();
+    const calls: string[] = [];
+    vi.mocked(runAnalysisStage).mockImplementation(async (_d, _m, _f, options) => {
+      calls.push(`analyze-${(options as { language: string }).language}`);
+      return fakeAnalysisResult((options as { language: 'fr' | 'en' }).language);
+    });
+    vi.mocked(pauseBetweenLanguagePasses).mockImplementation(async () => {
+      calls.push('pause');
+    });
+
+    await runFullAuditJob(job, ctx);
+
+    expect(calls).toEqual(['analyze-fr', 'pause', 'analyze-en']);
   });
 
   it('generates all four (language, tier) report combinations from the fr and en analyses', async () => {

@@ -27,9 +27,25 @@ import {
 } from './reviewer-schema.js';
 import { REVIEWER_OUTPUT_JSON_SCHEMA } from './reviewer-output-schema.js';
 import { buildReviewerSystemPrompt, buildReviewerUserPrompt } from './reviewer-prompt.js';
+import { appendProviderRetryAfterHint, extractProviderRetryAfterMs } from './rate-limit-pacing.js';
 
 function createClient(): OpenAI {
   return new OpenAI({ apiKey: getOpenAiApiKey(), baseURL: getOpenAiBaseUrl() });
+}
+
+/** Re-throw a provider 429 with the wait it asked for appended to the
+ *  message (issue #30): the analyze retry loops pace off the failure text
+ *  and never see the error object, where the Retry-After header alone
+ *  lives. Any other error, including a 429 with no readable Retry-After,
+ *  passes through untouched. */
+async function withProviderRetryAfterHint<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    const retryAfterMs = extractProviderRetryAfterMs(error);
+    if (retryAfterMs === undefined || !(error instanceof Error)) throw error;
+    throw new Error(appendProviderRetryAfterHint(error.message, retryAfterMs), { cause: error });
+  }
 }
 
 export interface RawStructureCallResult {
@@ -59,24 +75,26 @@ export async function callOpenAiForStructure(
 ): Promise<RawStructureCallResult> {
   const client = createClient();
 
-  const response = await client.chat.completions.create({
-    model: OPENAI_MODEL,
-    max_completion_tokens: MAX_OUTPUT_TOKENS,
-    temperature: OPENAI_TEMPERATURE,
-    reasoning_effort: 'none',
-    messages: [
-      { role: 'system', content: buildStructureSystemPrompt(usedFallbackContext) },
-      { role: 'user', content: buildStructureUserPrompt(input) },
-    ],
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: 'structure_pass_output',
-        schema: STRUCTURE_OUTPUT_JSON_SCHEMA,
-        strict: true,
+  const response = await withProviderRetryAfterHint(() =>
+    client.chat.completions.create({
+      model: OPENAI_MODEL,
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
+      temperature: OPENAI_TEMPERATURE,
+      reasoning_effort: 'none',
+      messages: [
+        { role: 'system', content: buildStructureSystemPrompt(usedFallbackContext) },
+        { role: 'user', content: buildStructureUserPrompt(input) },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'structure_pass_output',
+          schema: STRUCTURE_OUTPUT_JSON_SCHEMA,
+          strict: true,
+        },
       },
-    },
-  });
+    }),
+  );
 
   const choice = response.choices?.[0];
   if (!choice) {
@@ -121,31 +139,33 @@ export async function callOpenAiForWriting(
 ): Promise<RawWritingCallResult> {
   const client = createClient();
 
-  const response = await client.chat.completions.create({
-    model: OPENAI_MODEL,
-    max_completion_tokens: MAX_OUTPUT_TOKENS,
-    temperature: OPENAI_TEMPERATURE,
-    reasoning_effort: 'none',
-    messages: [
-      {
-        role: 'system',
-        content: buildWritingSystemPrompt(
-          input.language,
-          usedFallbackContext,
-          input.dominantPerformanceMetric,
-        ),
+  const response = await withProviderRetryAfterHint(() =>
+    client.chat.completions.create({
+      model: OPENAI_MODEL,
+      max_completion_tokens: MAX_OUTPUT_TOKENS,
+      temperature: OPENAI_TEMPERATURE,
+      reasoning_effort: 'none',
+      messages: [
+        {
+          role: 'system',
+          content: buildWritingSystemPrompt(
+            input.language,
+            usedFallbackContext,
+            input.dominantPerformanceMetric,
+          ),
+        },
+        { role: 'user', content: buildWritingUserPrompt(input, previousRejection) },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'writing_pass_output',
+          schema: WRITING_OUTPUT_JSON_SCHEMA,
+          strict: true,
+        },
       },
-      { role: 'user', content: buildWritingUserPrompt(input, previousRejection) },
-    ],
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: 'writing_pass_output',
-        schema: WRITING_OUTPUT_JSON_SCHEMA,
-        strict: true,
-      },
-    },
-  });
+    }),
+  );
 
   const choice = response.choices?.[0];
   if (!choice) {
@@ -189,24 +209,26 @@ export interface RawReviewerCallResult {
 export async function callOpenAiForReview(input: ReviewerInput): Promise<RawReviewerCallResult> {
   const client = createClient();
 
-  const response = await client.chat.completions.create({
-    model: OPENAI_MODEL,
-    max_completion_tokens: REVIEWER_MAX_OUTPUT_TOKENS,
-    temperature: OPENAI_TEMPERATURE,
-    reasoning_effort: 'none',
-    messages: [
-      { role: 'system', content: buildReviewerSystemPrompt() },
-      { role: 'user', content: buildReviewerUserPrompt(input) },
-    ],
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: 'reviewer_pass_output',
-        schema: REVIEWER_OUTPUT_JSON_SCHEMA,
-        strict: true,
+  const response = await withProviderRetryAfterHint(() =>
+    client.chat.completions.create({
+      model: OPENAI_MODEL,
+      max_completion_tokens: REVIEWER_MAX_OUTPUT_TOKENS,
+      temperature: OPENAI_TEMPERATURE,
+      reasoning_effort: 'none',
+      messages: [
+        { role: 'system', content: buildReviewerSystemPrompt() },
+        { role: 'user', content: buildReviewerUserPrompt(input) },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'reviewer_pass_output',
+          schema: REVIEWER_OUTPUT_JSON_SCHEMA,
+          strict: true,
+        },
       },
-    },
-  });
+    }),
+  );
 
   const choice = response.choices?.[0];
   if (!choice) {

@@ -146,6 +146,31 @@ French pass succeeded and the English pass then exhausted all three
 immediate attempts inside one rate-limit window; with pacing the same
 flow completes. (`rate-limit-pacing.ts`, shared by both passes.)
 
+**Amended 2026-09-03 (issue #30): the pacing is provider-informed, and the
+two language passes no longer share one quota window.** After the
+plan-025 provider switch, a real scan's English writing pass still
+exhausted all three attempts inside the old 20s+40s budget. Three
+changes, retry budget and guards still unchanged:
+
+- The backoff floor is now 60s times the attempt number (60s, then 120s).
+  The 20s figure was measured against the pre-plan-025 provider; the
+  current one demonstrably outlasted the whole 60s budget. Pacing delays
+  are only ever paid by a run that is already being throttled.
+- A `Retry-After` response header on the 429 is waited out in full, as a
+  floor over the base delay, never a shortcut under it. The header is read
+  off the error object (`client.ts` duck-types `status`/`headers`, because
+  the SDK's own message wording is not stable across major versions) and
+  travels to the pacing helper as a
+  `(provider retry-after: Ns)` marker appended to the failure message.
+  Whether the current provider sends the header at all is unconfirmed; if
+  it does not, the floor is the only protection, and a window longer than
+  roughly three minutes still fails loudly by design.
+- The queued full audit (`run-full-audit-job.ts`) and the dashboard's
+  writing regeneration (`regenerate-writing.ts`) pause 20s between the
+  French and English analysis stages, because the French pass (structure +
+  writing + review) is what drains the window the English pass then
+  enters. A standalone `analyze --language X` run pauses nothing.
+
 ---
 
 ## 3. Determinism and provenance

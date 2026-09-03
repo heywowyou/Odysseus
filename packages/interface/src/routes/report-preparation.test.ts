@@ -46,6 +46,13 @@ vi.mock('../pipeline/analysis-stage.js', () => ({
   runAnalysisStage: vi.fn(),
 }));
 
+// Regeneration runs the fr and en stages back to back; the real inter-pass
+// pause would add a 20s sleep to this suite (issue #30).
+vi.mock('@odysseus/llm', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  pauseBetweenLanguagePasses: vi.fn(),
+}));
+
 import {
   approveWritingCandidate,
   clearStaleWarningAcknowledgement,
@@ -57,6 +64,7 @@ import {
 } from '@odysseus/store';
 import { runAnalysisStage } from '../pipeline/analysis-stage.js';
 import { generateReportPdf } from '@odysseus/report';
+import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { getAnalysisById, getAuditManualFields } from '@odysseus/store';
 import { Router } from '../router.js';
 import { registerReportPreparationRoutes } from './report-preparation.js';
@@ -473,8 +481,13 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
         acknowledgedAt: '2026-09-01T00:00:00.000Z',
       },
     };
+    const callOrder: string[] = [];
+    vi.mocked(pauseBetweenLanguagePasses).mockImplementation(async () => {
+      callOrder.push('pause');
+    });
     vi.mocked(runAnalysisStage).mockImplementation(async (_dir, _manifest, _findings, options) => {
       const language = options.language;
+      callOrder.push(`analyze-${language}`);
       return {
         analysis: {
           analysisId: `analysis-${language}`,
@@ -518,6 +531,7 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
     );
     expect(res.statusCode).toBe(201);
     expect(runAnalysisStage).toHaveBeenCalledTimes(2);
+    expect(callOrder).toEqual(['analyze-fr', 'pause', 'analyze-en']);
     const body = JSON.parse(res.body!);
     expect(body.candidate.status).toBe('ready');
     expect(body.candidate.pair).toEqual({
