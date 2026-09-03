@@ -7,6 +7,11 @@ export type { RunAuditStageOptions, AuditStageResult } from './pipeline/audit-st
 export { runAnalysisStage } from './pipeline/analysis-stage.js';
 export type { RunAnalysisStageOptions, AnalysisStageResult } from './pipeline/analysis-stage.js';
 export { runReportStage, runAllReportsStage } from './pipeline/report-stage.js';
+export { backfillAuditRow } from './pipeline/backfill-audit-row.js';
+export type {
+  BackfillAuditRowOptions,
+  BackfillAuditRowResult,
+} from './pipeline/backfill-audit-row.js';
 export type { ReportStageResult, AllReportsStageResult } from './pipeline/report-stage.js';
 export {
   DEFAULT_INTERFACE_PORT,
