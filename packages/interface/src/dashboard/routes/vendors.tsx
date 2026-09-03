@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -79,9 +79,9 @@ export function VendorsPage(): JSX.Element {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-ink">{row.value}</TableCell>
-                  <TableCell className="text-right tabular-nums">{row.candidates}</TableCell>
-                  <TableCell className="text-right tabular-nums">{row.failures ?? '-'}</TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="numeric text-right">{row.candidates}</TableCell>
+                  <TableCell className="numeric text-right">{row.failures ?? '-'}</TableCell>
+                  <TableCell className="numeric text-right">
                     {row.failureRate === null ? '-' : formatFailureRate(row.failureRate, language)}
                   </TableCell>
                 </TableRow>
@@ -93,7 +93,7 @@ export function VendorsPage(): JSX.Element {
   }
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.surface}>
       <PageHeader title={strings.vendors.title} description={strings.vendors.description} />
       {body}
     </article>

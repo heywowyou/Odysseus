@@ -3,7 +3,7 @@ import type { JSX } from 'react';
 import { ChevronRight, Radar, Square, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import type { BadgeTone } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
@@ -11,8 +11,8 @@ import { Card } from '../components/ui/card';
 import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
-import { KpiTile } from '../components/ui/kpi';
 import type { KpiValueState } from '../components/ui/kpi';
+import { cn } from '../lib/cn';
 import { Select } from '../components/ui/select';
 import { Skeleton } from '../components/ui/skeleton';
 import { StatusDot } from '../components/ui/status-dot';
@@ -40,7 +40,7 @@ import {
   siteLabel,
   sortSummaries,
 } from './audits-model';
-import type { SeverityBadge, SortOrder, StatusFilter } from './audits-model';
+import type { SeverityBadge, SeverityKey, SortOrder, StatusFilter } from './audits-model';
 
 const POLL_INTERVAL_MS = 5000;
 const SKELETON_ROW_COUNT = 8;
@@ -191,11 +191,13 @@ export function AuditsPage(): JSX.Element {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableHeaderCell className="w-56">{strings.audits.dateColumn}</TableHeaderCell>
+                  <TableHeaderCell className="w-48">{strings.audits.dateColumn}</TableHeaderCell>
                   <TableHeaderCell>{strings.audits.siteColumn}</TableHeaderCell>
-                  <TableHeaderCell>{strings.audits.typeColumn}</TableHeaderCell>
-                  <TableHeaderCell>{strings.audits.statusColumn}</TableHeaderCell>
-                  <TableHeaderCell>{strings.audits.severityColumn}</TableHeaderCell>
+                  <TableHeaderCell className="w-40">{strings.audits.typeColumn}</TableHeaderCell>
+                  <TableHeaderCell className="w-32">{strings.audits.statusColumn}</TableHeaderCell>
+                  <TableHeaderCell className="w-56">
+                    {strings.audits.severityColumn}
+                  </TableHeaderCell>
                   <TableHeaderCell className="w-10">{null}</TableHeaderCell>
                 </TableRow>
               </TableHead>
@@ -207,11 +209,11 @@ export function AuditsPage(): JSX.Element {
                   const type = typeBadge(summary, strings);
                   return (
                     <TableRow key={summary.jobId} onClick={() => navigate(target)}>
-                      <TableCell>
-                        <div className="text-ink">
+                      <TableCell className="whitespace-nowrap">
+                        <div className="numeric text-ink">
                           {formatDateTime(summary.createdAt, language)}
                         </div>
-                        <div className="text-xs text-ink-muted">
+                        <div className="numeric text-xs text-ink-muted">
                           {formatRelativeTime(summary.createdAt, strings.common.relativeTime)}
                         </div>
                       </TableCell>
@@ -220,29 +222,25 @@ export function AuditsPage(): JSX.Element {
                             the row target; the row click is the mouse shortcut. */}
                         <Link
                           to={target}
-                          className="font-medium text-ink hover:text-accent-bright"
+                          className="ident font-medium text-ink hover:text-accent-bright"
                           onClick={(event) => event.stopPropagation()}
                         >
                           {site === '' ? strings.common.unknownSite : site}
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <Badge tone={type.tone}>{type.label}</Badge>
+                        <Badge tone={type.tone} className="whitespace-nowrap">
+                          {type.label}
+                        </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <span className="inline-flex items-center gap-2">
                           <StatusDot status={summary.status} />
                           {strings.common.statusLabels[summary.status]}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {badges.map((badge) => (
-                            <Badge key={badge.key} tone={badge.key}>
-                              {badge.count}
-                            </Badge>
-                          ))}
-                        </div>
+                        <SeverityCounts badges={badges} />
                       </TableCell>
                       <TableCell className="text-right">
                         {/* Row mutations stop the row click so pointing at
@@ -302,7 +300,7 @@ export function AuditsPage(): JSX.Element {
   }
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.surface}>
       <PageHeader
         title={strings.audits.title}
         description={strings.audits.description}
@@ -321,50 +319,14 @@ export function AuditsPage(): JSX.Element {
             </Link>
           </>
         }
+        meta={
+          <QueueReadout
+            kpis={kpis}
+            state={kpiState}
+            unavailableLabel={strings.common.valueUnavailable}
+          />
+        }
       />
-
-      {/* Staggered entrance: each tile starts 50 ms after the previous one,
-          with the animation's backwards fill keeping late tiles invisible
-          until their turn. */}
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {(
-          [
-            {
-              key: 'running',
-              label: strings.audits.kpiRunning,
-              value: kpis.running,
-              tone: 'default',
-            },
-            {
-              key: 'complete',
-              label: strings.audits.kpiComplete,
-              value: kpis.complete,
-              tone: 'default',
-            },
-            { key: 'failed', label: strings.audits.kpiFailed, value: kpis.failed, tone: 'default' },
-            {
-              key: 'critical',
-              label: strings.audits.kpiCritical,
-              value: kpis.critical,
-              tone: kpis.critical > 0 ? 'critical' : 'default',
-            },
-          ] as const
-        ).map((tile, slot) => (
-          <div
-            key={tile.key}
-            style={{ animationDelay: `${slot * 50}ms` }}
-            className="animate-page-in"
-          >
-            <KpiTile
-              label={tile.label}
-              value={tile.value}
-              state={kpiState}
-              unavailableLabel={strings.common.valueUnavailable}
-              tone={tile.tone}
-            />
-          </div>
-        ))}
-      </div>
 
       <Card className="mb-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -448,3 +410,85 @@ export function AuditsPage(): JSX.Element {
     </article>
   );
 }
+
+/** The run list's own state, read as one line rather than as four boxes.
+ *  Running, complete and failed are three states of the same list, so they sit
+ *  together and separated only by rules; the critical-finding count is a
+ *  different axis entirely and is the one value allowed to carry colour. */
+function QueueReadout(props: {
+  kpis: { running: number; complete: number; failed: number; critical: number };
+  state: KpiValueState;
+  unavailableLabel: string;
+}): JSX.Element {
+  const { strings } = useI18n();
+  const { kpis, state, unavailableLabel } = props;
+  const entries = [
+    { key: 'running', label: strings.audits.kpiRunning, value: kpis.running, critical: false },
+    { key: 'complete', label: strings.audits.kpiComplete, value: kpis.complete, critical: false },
+    { key: 'failed', label: strings.audits.kpiFailed, value: kpis.failed, critical: false },
+    { key: 'critical', label: strings.audits.kpiCritical, value: kpis.critical, critical: true },
+  ];
+  return (
+    <dl className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
+      {entries.map((entry) => (
+        <div key={entry.key} className="flex items-baseline gap-2">
+          <dt className="text-xs text-ink-muted">{entry.label}</dt>
+          {state === 'loading' ? (
+            <Skeleton className="h-4 w-6" />
+          ) : (
+            <dd
+              className={cn(
+                'numeric text-base font-semibold',
+                state === 'unavailable'
+                  ? 'text-ink-muted'
+                  : entry.critical && entry.value > 0
+                    ? 'text-sev-critical'
+                    : 'text-ink',
+              )}
+            >
+              {state === 'unavailable' ? unavailableLabel : entry.value}
+            </dd>
+          )}
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** The four severity counts of one run, in fixed severity order. Absent
+ *  severities hold their place with a dash rather than collapsing the row, so
+ *  the numbers stay in the same four columns all the way down the table and a
+ *  glance compares like with like. */
+function SeverityCounts({ badges }: { badges: SeverityBadge[] }): JSX.Element {
+  const { strings } = useI18n();
+  if (badges.length === 0) return <span className="text-ink-muted">-</span>;
+  const byKey = new Map(badges.map((badge) => [badge.key, badge.count]));
+  return (
+    <div className="flex items-baseline gap-3">
+      {SEVERITIES.map((severity) => {
+        const count = byKey.get(severity);
+        return (
+          <span
+            key={severity}
+            className={cn(
+              'numeric w-9 text-sm',
+              count === undefined ? 'text-ink-muted' : SEVERITY_TEXT[severity],
+            )}
+            title={strings.common.severityLabels[severity]}
+          >
+            {count ?? '-'}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+const SEVERITY_TEXT: Record<SeverityKey, string> = {
+  critical: 'text-sev-critical',
+  serious: 'text-sev-serious',
+  moderate: 'text-sev-moderate',
+  minor: 'text-sev-minor',
+};
+
+const SEVERITIES: readonly SeverityKey[] = ['critical', 'serious', 'moderate', 'minor'];

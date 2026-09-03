@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import { useParams, Link } from 'react-router';
 import { toast } from 'sonner';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -139,7 +139,7 @@ export function ProspectDetailPage(): JSX.Element {
 
   if (isNotFound) {
     return (
-      <article>
+      <article className={PAGE_WIDTH.surface}>
         <EmptyState
           title={strings.operator.notFound}
           action={
@@ -283,7 +283,10 @@ export function ProspectDetailPage(): JSX.Element {
                   strings.common.vocabularyFallback,
                 )}
               />
-              <DefinitionRow label="candidateId" value={data.candidateId} />
+              <DefinitionRow
+                label="candidateId"
+                value={<span className="ident">{data.candidateId}</span>}
+              />
             </div>
           </div>
         </Card>
@@ -451,7 +454,7 @@ export function ProspectDetailPage(): JSX.Element {
               <TableBody>
                 <TableRow>
                   <TableCell className="text-ink">{data.thread.state}</TableCell>
-                  <TableCell className="tabular-nums">{data.thread.currentTouch}</TableCell>
+                  <TableCell className="numeric">{data.thread.currentTouch}</TableCell>
                   <TableCell className="text-xs text-ink-muted">
                     {formatDateTime(data.thread.stateEnteredAt, language)}
                   </TableCell>

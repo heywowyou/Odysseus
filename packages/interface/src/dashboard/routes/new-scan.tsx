@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Field } from '../components/ui/field';
@@ -76,7 +76,7 @@ export function NewScanPage() {
   };
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.reading}>
       <PageHeader title={copy.title} description={copy.description} />
       <Card className="max-w-3xl">
         <form className="flex flex-col gap-5" onSubmit={handleSubmit}>

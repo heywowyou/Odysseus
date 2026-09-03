@@ -86,27 +86,36 @@ export function LoginPage(): JSX.Element {
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-base px-4 text-ink">
-      <Card className="w-full max-w-sm">
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-          <h1 className="text-xl font-semibold tracking-tight">{copy.title}</h1>
-          <Field
-            label={copy.passwordLabel}
-            htmlFor="login-password"
-            {...(errorText !== null ? { error: errorText } : {})}
-          >
-            <Input
-              id="login-password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </Field>
-          <Button type="submit" className="w-full" isLoading={isSubmitting}>
-            {isSubmitting ? copy.submitting : copy.submit}
-          </Button>
-        </form>
-      </Card>
+      <div className="w-full max-w-sm">
+        {/* The front door was anonymous: the same nameplate the shell wears
+            is the cheapest way to make it obviously this tool and not a
+            generic password box. */}
+        <div className="mb-6 text-center">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-ink">Odysseus</p>
+          <p className="mt-1 text-sm text-ink-muted">{strings.shell.tagline}</p>
+        </div>
+        <Card>
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+            <h1 className="text-sm font-medium text-ink-soft">{copy.title}</h1>
+            <Field
+              label={copy.passwordLabel}
+              htmlFor="login-password"
+              {...(errorText !== null ? { error: errorText } : {})}
+            >
+              <Input
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </Field>
+            <Button type="submit" className="w-full" isLoading={isSubmitting}>
+              {isSubmitting ? copy.submitting : copy.submit}
+            </Button>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }

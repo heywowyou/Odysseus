@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 import { Link, useParams } from 'react-router';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import type { BadgeTone } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
@@ -77,7 +77,7 @@ export function EvidencePage(): JSX.Element {
                     {asset.state === 'captured' ? (
                       <div className="flex flex-col gap-1">
                         <Badge tone="accent">{asset.pageRole}</Badge>
-                        <span className="text-xs text-ink-muted tabular-nums">
+                        <span className="numeric text-xs text-ink-muted">
                           {asset.width}x{asset.height} · {formatByteSize(asset.byteSize)} ·{' '}
                           {asset.selectionReason}
                         </span>
@@ -103,7 +103,7 @@ export function EvidencePage(): JSX.Element {
                     {language === 'fr' ? summary.observation.fr : summary.observation.en}
                   </span>
                   {summary.wcagCriteria.length > 0 ? (
-                    <span className="text-xs text-ink-muted tabular-nums">
+                    <span className="numeric text-xs text-ink-muted">
                       WCAG {summary.wcagCriteria.join(', ')}
                     </span>
                   ) : null}
@@ -117,7 +117,7 @@ export function EvidencePage(): JSX.Element {
   }
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.reading}>
       <PageHeader
         title={strings.evidence.title}
         description={strings.evidence.description}

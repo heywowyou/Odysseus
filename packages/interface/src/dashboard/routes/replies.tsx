@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { MailQuestion } from 'lucide-react';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -94,7 +94,7 @@ export function RepliesPage(): JSX.Element {
           <Table>
             <TableHead>
               <TableRow>
-                <TableHeaderCell>{strings.replies.columns.hotel}</TableHeaderCell>
+                <TableHeaderCell>{strings.replies.columns.prospect}</TableHeaderCell>
                 <TableHeaderCell>{strings.replies.columns.receivedAt}</TableHeaderCell>
                 <TableHeaderCell>{strings.replies.columns.state}</TableHeaderCell>
                 <TableHeaderCell>{strings.replies.columns.reason}</TableHeaderCell>
@@ -105,7 +105,7 @@ export function RepliesPage(): JSX.Element {
               {data.rows.map((reply) => (
                 <TableRow key={reply.threadId}>
                   <TableCell>
-                    <span className="font-medium text-ink">{reply.candidateId}</span>
+                    <span className="ident text-ink">{reply.candidateId}</span>
                     <div className="text-xs text-ink-muted">{reply.domain}</div>
                   </TableCell>
                   <TableCell>
@@ -179,7 +179,7 @@ export function RepliesPage(): JSX.Element {
   }
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.surface}>
       <PageHeader title={strings.replies.title} description={strings.replies.description} />
       <p
         className="mb-4 rounded-xl border border-line-strong bg-panel px-5 py-4 text-sm text-ink-soft"

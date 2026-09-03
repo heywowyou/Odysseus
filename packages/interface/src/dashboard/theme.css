@@ -64,6 +64,15 @@
   --color-sev-serious: #f08b3c;
   --color-sev-moderate: #e5b93c;
   --color-sev-minor: #4cc98a;
+  /* Certainty is drawn, not coloured: a measured quantity sits on solid ink,
+     an unmeasured one on this hatch. Keeping it a texture rather than a fifth
+     hue leaves severity as the only colour that carries meaning. */
+  --color-hatch: rgb(255 255 255 / 0.11);
+  /* Two content widths. Forms and prose stay at a readable measure; the
+     operator tables get the whole surface, because a ten-column prospect row
+     wraps to three lines inside a reading column. */
+  --container-reading: 46rem;
+  --container-surface: 96rem;
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --animate-page-in: page-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -161,6 +170,33 @@
 }
 
 @layer components {
+  /* The dashboard reads in two registers. Prose stays in Inter, which is
+     shared with the client report and must not drift from it. Every measured
+     quantity switches to tabular figures so a column of numbers aligns on its
+     digits and a changing counter does not jitter, and every identifier the
+     operator might copy (domain, job id, digest, selector) switches to the
+     mono face. The distinction is the point: prose is written, facts are
+     measured. */
+  .numeric {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    letter-spacing: -0.01em;
+  }
+  .ident {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    letter-spacing: 0;
+  }
+  /* Applied to any surface standing for something that was not measured: an
+     omitted continuation family, a planned skip, an unknown fact. Never used
+     for a measured zero, which is a real number and gets solid ink. */
+  .hatched {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      var(--color-hatch) 0 1px,
+      transparent 1px 6px
+    );
+  }
   /* Shimmer sweep for loading placeholders, drawn over the surface color. */
   .skeleton-shimmer {
     background-image: linear-gradient(

@@ -2,21 +2,25 @@ import { useCallback, useEffect, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { toast } from 'sonner';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge, badgeStyles, type BadgeTone } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { CoverageBar, type CoverageSegment } from '../components/ui/coverage-bar';
 import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { InfoTip } from '../components/ui/info-tip';
 import { ProgressBar } from '../components/ui/progress-bar';
 import { Spinner } from '../components/ui/spinner';
+import { StatusDot } from '../components/ui/status-dot';
 import { useI18n } from '../i18n/provider';
+import type { DashboardStrings } from '../i18n/types';
 import { ApiError, fetchJson, postEmpty } from '../lib/api';
 import type { ScanJobDetail, ScanUrlResult } from '../lib/api-types';
 import { canStop } from '../lib/job-actions';
 import { cn } from '../lib/cn';
 import { usePolling } from '../lib/use-polling';
+import { hostnameOf } from './audit-detail-model';
 import {
   contentScanProgress,
   crawlProgress,
@@ -31,6 +35,49 @@ import {
 } from './scan-progress-model';
 
 const POLL_INTERVAL_MS = 3000;
+
+/**
+ * What this run has actually covered so far, as disjoint counts.
+ *
+ * The coverage terms nest - every performance-measured page is also
+ * content-checked, every content-checked page is also inventoried - so they
+ * cannot be drawn on top of each other without double-counting. Each band here
+ * is the difference against the stronger one, which makes the widths add up to
+ * the inventory and keeps the strip honest. Omitted URLs stay out of the
+ * inventory entirely: the continuation guard left them undiscovered, and
+ * folding them in would be exactly the overstatement the guard is disclosed to
+ * prevent.
+ */
+function coverageSegments(
+  job: ScanJobDetail,
+  labels: DashboardStrings['common']['coverage'],
+): CoverageSegment[] {
+  const visited = job.progress.crawl?.visited ?? 0;
+  const checked = job.progress.contentScan?.completed ?? job.progress.scan?.scanned ?? 0;
+  const measured = job.progress.lighthouse?.completed ?? 0;
+  const omitted = job.progress.continuationGuard?.omittedUrlCount ?? 0;
+  return [
+    { kind: 'measured', label: labels.measured, value: measured },
+    { kind: 'checked', label: labels.checked, value: Math.max(0, checked - measured) },
+    { kind: 'reached', label: labels.reached, value: Math.max(0, visited - checked) },
+    { kind: 'omitted', label: labels.omitted, value: omitted },
+  ];
+}
+
+/** True once any counter has moved. Before that the strip would be a full-width
+ *  band of nothing, which reads as a finished scan rather than a starting one. */
+function hasCoverage(job: ScanJobDetail): boolean {
+  return coverageSegments(job, EMPTY_COVERAGE_LABELS).some((segment) => segment.value > 0);
+}
+
+const EMPTY_COVERAGE_LABELS = {
+  caption: '',
+  measured: '',
+  checked: '',
+  reached: '',
+  failed: '',
+  omitted: '',
+};
 
 function fillProgressCopy(template: string, values: Record<string, number>): string {
   return Object.entries(values).reduce(
@@ -139,8 +186,14 @@ export function ScanProgressPage(): JSX.Element {
   }
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.reading}>
       <PageHeader
+        eyebrow={
+          job === undefined
+            ? undefined
+            : strings.common.typeLabels[job.type === 'full-audit' ? 'fullAudit' : 'prospecting']
+        }
+        subject={job?.siteUrl === undefined ? undefined : hostnameOf(job.siteUrl)}
         title={strings.progress.title}
         description={strings.progress.description}
         actions={
@@ -149,6 +202,28 @@ export function ScanProgressPage(): JSX.Element {
               {strings.progress.stopButton}
             </Button>
           ) : undefined
+        }
+        meta={
+          job === undefined ? undefined : (
+            <div className="flex flex-col gap-4">
+              {/* The phase belongs in the header, not floating above the
+                  cards: phases without a progress row of their own
+                  (normalizing, writing, rendering the PDFs) are otherwise
+                  invisible while they run. */}
+              <div className="flex items-center gap-2 text-sm">
+                {isTerminal(job.status) ? null : <StatusDot status="running" />}
+                <span className="text-ink-soft">
+                  {currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
+                </span>
+              </div>
+              {hasCoverage(job) ? (
+                <CoverageBar
+                  segments={coverageSegments(job, strings.common.coverage)}
+                  caption={strings.common.coverage.caption}
+                />
+              ) : null}
+            </div>
+          )
         }
       />
       {body}
@@ -165,20 +240,55 @@ export function ScanProgressPage(): JSX.Element {
   );
 }
 
+/** One phase of a live run. The three phases used to be three separate cards,
+ *  which read as three unrelated things rather than as one run moving through
+ *  its stages; they are rows of a single panel now, and the estimate sits on
+ *  the row it belongs to instead of below it. */
+function PhaseRow(props: {
+  label: string;
+  hint: string;
+  value: number | null;
+  etaMs?: number | undefined;
+  rough?: boolean;
+  note?: string | undefined;
+  running?: boolean;
+}): JSX.Element {
+  const { strings } = useI18n();
+  const { label, hint, value, etaMs, rough = false, note, running = false } = props;
+  return (
+    <div className="py-4 first:pt-0 last:pb-0">
+      <div className="mb-2 flex items-baseline justify-between gap-4">
+        <div className="flex items-center gap-1.5">
+          {running ? <StatusDot status="running" /> : null}
+          {/* A phase is a readout line, not a document section: the three
+              rows sit inside one untitled card, so a heading here would skip
+              a level under the page title. */}
+          <p className={cn('text-sm font-medium', running ? 'text-ink' : 'text-ink-soft')}>
+            {label}
+          </p>
+          <InfoTip label={label} hint={hint} />
+        </div>
+        {etaMs !== undefined ? (
+          <p className="numeric shrink-0 text-xs text-ink-muted">
+            {strings.progress.etaLabel}: {formatEta(etaMs)}
+            {rough ? ` ${strings.progress.etaRoughSuffix}` : ''}
+          </p>
+        ) : null}
+      </div>
+      <ProgressBar value={value} ariaLabel={label} />
+      {note !== undefined ? <p className="numeric mt-2 text-xs text-ink-muted">{note}</p> : null}
+    </div>
+  );
+}
+
 /** Live view of one job document. The phase line mirrors the old page's
  *  phase status text for full audits; for prospecting the spinner card
  *  carries the phase copy instead, so the label never shows twice. */
 function JobView({ job }: { job: ScanJobDetail }): JSX.Element {
-  const { strings } = useI18n();
   const terminal = isTerminal(job.status);
   const prospecting = job.type === 'prospecting';
   return (
     <div className="flex flex-col gap-4">
-      {!terminal && !prospecting ? (
-        <p className="text-sm text-ink-muted">
-          {currentPhaseLabel(job.phase, strings.progress.phaseLabels)}
-        </p>
-      ) : null}
       {prospecting ? (
         <ProspectingView job={job} terminal={terminal} />
       ) : (
@@ -228,78 +338,49 @@ function FullAuditView({ job, terminal }: { job: ScanJobDetail; terminal: boolea
           : undefined;
 
   return (
-    <>
-      <Card>
-        <div className="mb-3 flex items-center gap-1.5">
-          <h2 className="text-sm font-semibold text-ink">{strings.progress.crawlPhaseLabel}</h2>
-          <InfoTip label={strings.progress.crawlPhaseLabel} hint={strings.hints.crawl} />
-        </div>
-        {/* A null crawl progress is an uncapped crawl (issue 18): the bar
-            renders indeterminate instead of pretending to know a percentage. */}
-        <ProgressBar value={crawlProgress(job)} ariaLabel={strings.progress.crawlPhaseLabel} />
-        {crawlEta !== undefined ? (
-          <p className="mt-2 text-xs text-ink-muted">
-            {strings.progress.etaLabel}: {formatEta(crawlEta)}
-          </p>
-        ) : null}
-      </Card>
-      {staged ? (
-        <>
-          <Card>
-            <div className="mb-3 flex items-center gap-1.5">
-              <h2 className="text-sm font-semibold text-ink">
-                {strings.progress.contentScanPhaseLabel}
-              </h2>
-              <InfoTip label={strings.progress.contentScanPhaseLabel} hint={strings.hints.scan} />
-            </div>
-            <ProgressBar
+    <Card>
+      <div className="divide-y divide-line">
+        <PhaseRow
+          label={strings.progress.crawlPhaseLabel}
+          hint={strings.hints.crawl}
+          /* A null crawl progress is an uncapped crawl (issue 18): the bar
+             renders indeterminate instead of pretending to know a percentage. */
+          value={crawlProgress(job)}
+          etaMs={crawlEta}
+          running={job.phase === 'crawl'}
+        />
+        {staged ? (
+          <>
+            <PhaseRow
+              label={strings.progress.contentScanPhaseLabel}
+              hint={strings.hints.scan}
               value={contentScanProgress(job)}
-              ariaLabel={strings.progress.contentScanPhaseLabel}
+              etaMs={contentEta}
+              rough
+              running={job.phase === 'content-scan'}
             />
-            {contentEta !== undefined ? (
-              <p className="mt-2 text-xs text-ink-muted">
-                {strings.progress.etaLabel}: {formatEta(contentEta)}{' '}
-                {strings.progress.etaRoughSuffix}
-              </p>
-            ) : null}
-          </Card>
-          <Card>
-            <div className="mb-3 flex items-center gap-1.5">
-              <h2 className="text-sm font-semibold text-ink">
-                {strings.progress.lighthousePhaseLabel}
-              </h2>
-              <InfoTip label={strings.progress.lighthousePhaseLabel} hint={strings.hints.scan} />
-            </div>
-            <ProgressBar
+            <PhaseRow
+              label={strings.progress.lighthousePhaseLabel}
+              hint={strings.hints.scan}
               value={lighthouseProgress(job)}
-              ariaLabel={strings.progress.lighthousePhaseLabel}
+              etaMs={lighthouseEta}
+              rough
+              note={stagedSummary}
+              running={job.phase === 'lighthouse' || job.phase === 'select-performance'}
             />
-            {lighthouseEta !== undefined ? (
-              <p className="mt-2 text-xs text-ink-muted">
-                {strings.progress.etaLabel}: {formatEta(lighthouseEta)}{' '}
-                {strings.progress.etaRoughSuffix}
-              </p>
-            ) : null}
-            {stagedSummary !== undefined ? (
-              <p className="mt-2 text-xs text-ink-muted">{stagedSummary}</p>
-            ) : null}
-          </Card>
-        </>
-      ) : (
-        <Card>
-          <div className="mb-3 flex items-center gap-1.5">
-            <h2 className="text-sm font-semibold text-ink">{strings.progress.scanPhaseLabel}</h2>
-            <InfoTip label={strings.progress.scanPhaseLabel} hint={strings.hints.scan} />
-          </div>
-          <ProgressBar value={scanProgress(job)} ariaLabel={strings.progress.scanPhaseLabel} />
-          {scanEta !== undefined ? (
-            <p className="mt-2 text-xs text-ink-muted">
-              {strings.progress.etaLabel}: {formatEta(scanEta)} {strings.progress.etaRoughSuffix}
-            </p>
-          ) : null}
-        </Card>
-      )}
-    </>
+          </>
+        ) : (
+          <PhaseRow
+            label={strings.progress.scanPhaseLabel}
+            hint={strings.hints.scan}
+            value={scanProgress(job)}
+            etaMs={scanEta}
+            rough
+            running={job.phase === 'scan'}
+          />
+        )}
+      </div>
+    </Card>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { JSX, FormEvent } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -51,7 +51,7 @@ export function SuppressionsPage(): JSX.Element {
   };
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.reading}>
       <PageHeader
         title={strings.suppressions.title}
         description={strings.suppressions.description}

@@ -181,15 +181,6 @@ export function locationLabel(row: ProspectRow): string {
   return row.commune ?? row.postcode ?? '';
 }
 
-/** Score column text: brokenness over ability, the pair the qualification
- *  gate reads. Empty while no score exists (no score is not a zero). */
-export function scoreLabel(row: ProspectRow): string {
-  if (row.brokennessTotal === null || row.abilityTotal === null) {
-    return '';
-  }
-  return `${row.brokennessTotal} / ${row.abilityTotal}`;
-}
-
 export type BadgeTone = 'neutral' | 'accent' | 'critical' | 'serious' | 'moderate' | 'minor';
 
 /** Review state tone: a pending decision is the queue's work item, an

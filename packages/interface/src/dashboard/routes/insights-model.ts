@@ -192,22 +192,6 @@ export function prescanRows(prescan: PrescanResponse): {
 
 export type ScoreComponentGroup = 'brokenness' | 'ability';
 
-/** Every score component in one display order: the brokenness components,
- *  then the ability ones, each tagged with its group so the table can key
- *  rows without relying on component ids being globally unique. */
-export function scoreComponentRows(score: ScoreResponse): {
-  group: ScoreComponentGroup;
-  component: ScoreComponentResponse;
-}[] {
-  return [
-    ...score.brokenness.components.map((component) => ({
-      group: 'brokenness' as const,
-      component,
-    })),
-    ...score.ability.components.map((component) => ({ group: 'ability' as const, component })),
-  ];
-}
-
 /** Version choices of the diff selects: the current score's version first,
  *  then the versions of the last fetched diff, deduplicated. The route
  *  interface has no version listing, so the versions the operator has

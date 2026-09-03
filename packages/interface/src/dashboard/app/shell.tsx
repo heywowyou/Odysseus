@@ -11,11 +11,25 @@ export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname } = useLocation();
 
-  const navItems = [
-    { to: '/audits', label: strings.nav.audits, icon: ListChecks },
-    { to: '/scans/new', label: strings.nav.newScan, icon: Radar },
-    { to: '/prospects', label: strings.nav.prospects, icon: Building2 },
-    { to: '/outreach', label: strings.nav.outreach, icon: Mail },
+  /* Grouped by the two halves of the work rather than listed flat: measuring a
+     site and running a campaign are different jobs with different rhythms, and
+     the flat list gave no clue that "Nouveau scan" and "Audits" are two ends of
+     one thing. The groups encode that; they are not decoration. */
+  const navGroups = [
+    {
+      label: strings.shell.groupMeasure,
+      items: [
+        { to: '/scans/new', label: strings.nav.newScan, icon: Radar },
+        { to: '/audits', label: strings.nav.audits, icon: ListChecks },
+      ],
+    },
+    {
+      label: strings.shell.groupCampaign,
+      items: [
+        { to: '/prospects', label: strings.nav.prospects, icon: Building2 },
+        { to: '/outreach', label: strings.nav.outreach, icon: Mail },
+      ],
+    },
   ];
 
   useEffect(() => {
@@ -32,21 +46,32 @@ export function AppShell() {
   }, [menuOpen]);
 
   const nav = (
-    <nav className="flex flex-col gap-1 px-3" aria-label={strings.shell.navigation}>
-      {navItems.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-              isActive ? 'bg-accent-tint text-ink' : 'text-ink-soft hover:bg-raised hover:text-ink',
-            )
-          }
-        >
-          <item.icon className="size-4 shrink-0" aria-hidden="true" />
-          {item.label}
-        </NavLink>
+    <nav className="flex flex-col gap-6 px-3" aria-label={strings.shell.navigation}>
+      {navGroups.map((group) => (
+        <div key={group.label}>
+          <p className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-muted">
+            {group.label}
+          </p>
+          <div className="flex flex-col gap-0.5">
+            {group.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-accent-tint text-ink'
+                      : 'text-ink-soft hover:bg-raised hover:text-ink',
+                  )
+                }
+              >
+                <item.icon className="size-4 shrink-0" aria-hidden="true" />
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+        </div>
       ))}
     </nav>
   );
@@ -106,10 +131,7 @@ export function AppShell() {
       <div className="md:pl-60">
         {/* Keyed by pathname so each navigation remounts the page container
             and replays the entrance animation. */}
-        <main
-          key={pathname}
-          className="mx-auto w-full max-w-5xl animate-page-in px-4 pb-16 pt-16 md:px-8 md:pt-10"
-        >
+        <main key={pathname} className="animate-page-in px-4 pb-16 pt-16 md:px-8 md:pt-10">
           <Outlet />
         </main>
       </div>

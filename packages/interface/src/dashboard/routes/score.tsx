@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { Link, useParams } from 'react-router';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Field } from '../components/ui/field';
-import { KpiTile } from '../components/ui/kpi';
 import { Select } from '../components/ui/select';
 import { Skeleton } from '../components/ui/skeleton';
 import {
@@ -18,15 +17,38 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
+import type { DashboardStrings } from '../i18n/types';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { formatDateTime } from '../lib/format';
-import {
-  diffVersionOptions,
-  scoreComponentRows,
-  scoreDiffRows,
-  useInsightView,
-} from './insights-model';
+import { diffVersionOptions, scoreDiffRows, useInsightView } from './insights-model';
 import type { ScoreDiffResponse, ScoreResponse } from './insights-model';
+
+/** Both scoring sides, in the order the qualification gate reads them.
+ *  They are separate scores, not two halves of one total, so the page draws
+ *  them as two tables rather than one merged list. */
+const SCORE_SIDES = ['brokenness', 'ability'] as const;
+
+/** Version and computation date, the two facts that qualify every number on
+ *  this page: a score is only ever read against the weights that produced it. */
+function ScoreReadout(props: {
+  version: string;
+  computedAt: string;
+  strings: DashboardStrings;
+}): JSX.Element {
+  const { version, computedAt, strings } = props;
+  return (
+    <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
+      <div className="flex items-baseline gap-2">
+        <dt className="text-ink-muted">{strings.score.versionLabel}</dt>
+        <dd className="ident text-ink">{version}</dd>
+      </div>
+      <div className="flex items-baseline gap-2">
+        <dt className="text-ink-muted">{strings.score.computedAtLabel}</dt>
+        <dd className="numeric text-ink">{computedAt}</dd>
+      </div>
+    </dl>
+  );
+}
 
 function formatDelta(delta: number): string {
   return delta > 0 ? `+${delta}` : `${delta}`;
@@ -88,50 +110,53 @@ export function ScorePage(): JSX.Element {
     const versionOptions = diffVersionOptions(score.data, diff.data);
     body = (
       <>
-        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiTile label={strings.score.totalLabel} value={data.brokenness.total} />
-          <KpiTile
-            label={strings.score.versionLabel}
-            value={data.scoringVersion}
-            className="col-span-2"
-          />
-          <KpiTile
-            label={strings.score.computedAtLabel}
-            value={formatDateTime(data.computedAt, language)}
-          />
-        </div>
-        <Card
-          title={strings.score.breakdownHeading}
-          className="mb-4"
-          description={strings.score.breakdownSummary
-            .replace('{x}', String(data.brokenness.total))
-            .replace('{y}', String(data.ability.total))}
-        >
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>{strings.score.breakdownColumns.component}</TableHeaderCell>
-                <TableHeaderCell className="w-24 text-right">
-                  {strings.score.breakdownColumns.value}
-                </TableHeaderCell>
-                <TableHeaderCell>{strings.score.breakdownColumns.why}</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {scoreComponentRows(data).map(({ group, component }) => (
-                <TableRow key={`${group}-${component.id}`}>
-                  <TableCell className="text-ink">
-                    {/* An unknown component id keeps its raw code: the id is
-                        the precise handle the report and the store share. */}
-                    {vocabularyLabel(strings.score.componentLabels, component.id, component.id)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{component.points}</TableCell>
-                  <TableCell className="text-ink-muted">{component.reason}</TableCell>
+        <h2 className="mb-3 text-xs uppercase tracking-[0.14em] text-ink-muted">
+          {strings.score.breakdownHeading}
+        </h2>
+        {SCORE_SIDES.map((side) => (
+          <Card
+            key={side}
+            title={strings.labels.scoreSide[side]}
+            className="mb-4"
+            description={`${strings.score.totalLabel} ${data[side].total}`}
+          >
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeaderCell>{strings.score.breakdownColumns.component}</TableHeaderCell>
+                  <TableHeaderCell className="w-24 text-right">
+                    {strings.score.breakdownColumns.value}
+                  </TableHeaderCell>
+                  <TableHeaderCell>{strings.score.breakdownColumns.why}</TableHeaderCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+              </TableHead>
+              <TableBody>
+                {data[side].components.map((component) => (
+                  <TableRow key={component.id}>
+                    <TableCell className="whitespace-nowrap text-ink">
+                      {/* An unknown component id keeps its raw code: the id is
+                          the precise handle the report and the store share. */}
+                      {vocabularyLabel(strings.score.componentLabels, component.id, component.id)}
+                    </TableCell>
+                    <TableCell className="numeric text-right text-ink">
+                      {component.points}
+                    </TableCell>
+                    <TableCell className="text-ink-muted">
+                      {/* A reason code with no copy yet renders as its own code
+                          rather than as nothing: the operator can still tell why
+                          the component scored, and the gap is visible. */}
+                      {vocabularyLabel(
+                        strings.labels.scoreReason,
+                        component.reason,
+                        component.reason,
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        ))}
         <Card title={strings.score.diffHeading}>
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label={strings.score.diffFromLabel} htmlFor="score-diff-from">
@@ -177,9 +202,11 @@ export function ScorePage(): JSX.Element {
               <TableBody>
                 {scoreDiffRows(diff.data).map((row) => (
                   <TableRow key={row.field}>
-                    <TableCell className="text-ink">{row.field}</TableCell>
-                    <TableCell className="text-right tabular-nums">{row.before ?? '-'}</TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-ink">
+                      {strings.labels.scoreSide[row.field]}
+                    </TableCell>
+                    <TableCell className="numeric text-right">{row.before ?? '-'}</TableCell>
+                    <TableCell className="numeric text-right">
                       {row.after ?? '-'}
                       {row.after !== null && row.delta !== null && row.delta !== 0 ? (
                         <span className="ml-2 text-xs text-ink-muted">
@@ -200,10 +227,20 @@ export function ScorePage(): JSX.Element {
   }
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.surface}>
       <PageHeader
         title={strings.score.title}
+        subject={candidateId}
         description={strings.score.description}
+        meta={
+          score.data === undefined ? null : (
+            <ScoreReadout
+              version={score.data.scoringVersion}
+              computedAt={formatDateTime(score.data.computedAt, language)}
+              strings={strings}
+            />
+          )
+        }
         actions={
           candidateId !== undefined ? (
             <Link

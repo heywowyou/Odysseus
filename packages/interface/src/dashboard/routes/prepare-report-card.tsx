@@ -364,7 +364,7 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
             {strings.prepareReport.detectedTurnoverLabel}
           </span>
           {detectedTurnover ? (
-            <span className="text-[13px] font-medium tabular-nums text-ink">
+            <span className="numeric text-[13px] font-medium text-ink">
               {formatEur(detectedTurnover.amountEur, language)} · {detectedTurnover.year}
             </span>
           ) : (
@@ -496,7 +496,7 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
           <p className="text-xs text-ink-muted">{strings.prepareReport.turnoverEffectiveLabel}</p>
           {turnoverPreview.status === 'available' ? (
             <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1">
-              <p className="text-sm font-semibold tabular-nums text-ink">
+              <p className="numeric text-sm font-semibold text-ink">
                 {formatEur(turnoverPreview.amountEur, language)} · {turnoverPreview.year}
               </p>
               <p className="text-xs text-ink-soft">
@@ -518,7 +518,7 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
       </section>
 
       <h3 className="mt-5 text-[13px] font-medium">{strings.prepareReport.stakeholdersHeading}</h3>
-      <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+      <div className="mt-2 grid max-w-reading grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
         {(
           [
             ['management', 'stakeholderManagement'],
@@ -529,10 +529,11 @@ export function PrepareReportCard(props: { auditId: string }): JSX.Element {
         ).map(([role, key]) => (
           <Field
             key={role}
-            label={
-              data.preview[previewLanguage].stakeholders.find((entry) => entry.role === role)
-                ?.roleLabel ?? role
-            }
+            /* The field label is dashboard chrome, so it follows the operator's
+               own language. It used to come from the preview being previewed,
+               which made it flip language with the preview selector and fall
+               back to the raw English role key when the preview had no entry. */
+            label={strings.labels.stakeholderRole[role]}
             htmlFor={`prep-${key}`}
           >
             <Input

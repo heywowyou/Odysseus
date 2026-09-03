@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { FileText } from 'lucide-react';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -95,7 +95,7 @@ export function DraftsPage(): JSX.Element {
           <Table>
             <TableHead>
               <TableRow>
-                <TableHeaderCell>{strings.drafts.columns.hotel}</TableHeaderCell>
+                <TableHeaderCell>{strings.drafts.columns.prospect}</TableHeaderCell>
                 <TableHeaderCell className="w-20">{strings.drafts.columns.touch}</TableHeaderCell>
                 <TableHeaderCell>{strings.drafts.columns.createdAt}</TableHeaderCell>
                 <TableHeaderCell>{strings.drafts.columns.providerState}</TableHeaderCell>
@@ -107,7 +107,7 @@ export function DraftsPage(): JSX.Element {
               {data.rows.map((draft: OutreachDraftRow) => (
                 <TableRow key={draft.draftId}>
                   <TableCell>
-                    <span className="font-medium text-ink">{draft.candidateId}</span>
+                    <span className="ident text-ink">{draft.candidateId}</span>
                     <span className="ml-2 text-xs uppercase text-ink-muted">{draft.language}</span>
                   </TableCell>
                   <TableCell>{draft.touch}</TableCell>
@@ -196,7 +196,7 @@ export function DraftsPage(): JSX.Element {
   }
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.surface}>
       <PageHeader title={strings.drafts.title} description={strings.drafts.description} />
       <p
         className="mb-4 rounded-xl border border-line-strong bg-panel px-5 py-4 text-sm font-medium text-ink"

@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 import { Link, useParams } from 'react-router';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import type { BadgeTone } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
@@ -108,7 +108,7 @@ export function PrescanPage(): JSX.Element {
                     {vocabularyLabel(strings.prescan.roleLabels, row.role, row.role)}
                   </TableCell>
                   {row.page !== null ? (
-                    <TableCell className="tabular-nums">{row.page.httpStatus ?? '-'}</TableCell>
+                    <TableCell className="numeric">{row.page.httpStatus ?? '-'}</TableCell>
                   ) : (
                     <TableCell className="text-ink-muted">{row.reason}</TableCell>
                   )}
@@ -122,7 +122,7 @@ export function PrescanPage(): JSX.Element {
   }
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.surface}>
       <PageHeader
         title={strings.prescan.title}
         description={strings.prescan.description}

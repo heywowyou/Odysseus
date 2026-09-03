@@ -1,7 +1,7 @@
 import type { JSX } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Skeleton } from '../components/ui/skeleton';
 import { useApi, type ApiState } from '../lib/use-api';
 import { useI18n } from '../i18n/provider';
@@ -26,12 +26,12 @@ function HubCountLine(props: { count: HubCount; unavailableLabel: string }): JSX
   const { count, unavailableLabel } = props;
   if (count.kind === 'none') return null;
   if (count.kind === 'loading') {
-    return <Skeleton className="mt-3 h-7 w-10" />;
+    return <Skeleton className="h-7 w-10" />;
   }
   if (count.kind === 'unavailable') {
-    return <p className="mt-3 text-base font-semibold text-ink-muted">{unavailableLabel}</p>;
+    return <p className="text-sm text-ink-muted">{unavailableLabel}</p>;
   }
-  return <p className="mt-3 text-xl font-semibold tracking-tight text-ink">{count.value}</p>;
+  return <p className="numeric text-xl font-semibold text-ink">{count.value}</p>;
 }
 
 /** The outreach hub. Each card shows the live queue count from its list
@@ -43,7 +43,7 @@ export function OutreachIndexPage(): JSX.Element {
   const replies = useApi<RepliesPage>('/api/outreach/replies?limit=1');
   const outcomes = useApi<OutcomesPage>('/api/outreach/outcomes?limit=1');
 
-  const cards = [
+  const stages = [
     {
       to: '/outreach/drafts',
       title: strings.outreachIndex.cards.draftsTitle,
@@ -57,12 +57,6 @@ export function OutreachIndexPage(): JSX.Element {
       count: hubCount(replies),
     },
     {
-      to: '/outreach/do-not-contact',
-      title: strings.outreachIndex.cards.suppressionsTitle,
-      description: strings.outreachIndex.cards.suppressionsDescription,
-      count: { kind: 'none' } as HubCount,
-    },
-    {
       to: '/outreach/outcomes',
       title: strings.outreachIndex.cards.outcomesTitle,
       description: strings.outreachIndex.cards.outcomesDescription,
@@ -70,28 +64,61 @@ export function OutreachIndexPage(): JSX.Element {
     },
   ];
 
+  const standing = {
+    to: '/outreach/do-not-contact',
+    title: strings.outreachIndex.cards.suppressionsTitle,
+    description: strings.outreachIndex.cards.suppressionsDescription,
+  };
+
   return (
-    <>
+    <article className={PAGE_WIDTH.reading}>
       <PageHeader
         title={strings.outreachIndex.title}
         description={strings.outreachIndex.description}
       />
-      <div className="grid gap-4 sm:grid-cols-2">
-        {cards.map((card) => (
-          <Link
-            key={card.to}
-            to={card.to}
-            className="block rounded-xl border border-line bg-panel p-5 transition-colors hover:border-line-strong"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm font-semibold text-ink">{card.title}</p>
-              <ChevronRight className="size-4 shrink-0 text-ink-muted" aria-hidden="true" />
-            </div>
-            <p className="mt-1 text-sm text-ink-muted">{card.description}</p>
-            <HubCountLine count={card.count} unavailableLabel={strings.common.valueUnavailable} />
-          </Link>
+      {/* Drafts, replies and outcomes are one sequence a message travels
+          through, not four unrelated destinations, so they are numbered and
+          stacked in that order. Suppressions sit apart underneath because
+          they are a standing rule over the whole campaign rather than a
+          stage of it. */}
+      <ol className="flex flex-col gap-3">
+        {stages.map((card, index) => (
+          <li key={card.to}>
+            <Link
+              to={card.to}
+              className="flex items-start gap-4 rounded-xl border border-line bg-panel p-5 transition-colors hover:border-line-strong"
+            >
+              <span
+                className="numeric mt-[2px] w-5 shrink-0 text-sm text-ink-muted"
+                aria-hidden="true"
+              >
+                {index + 1}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-ink">{card.title}</span>
+                <span className="mt-1 block text-sm text-ink-muted">{card.description}</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-3">
+                <HubCountLine
+                  count={card.count}
+                  unavailableLabel={strings.common.valueUnavailable}
+                />
+                <ChevronRight className="size-4 text-ink-muted" aria-hidden="true" />
+              </span>
+            </Link>
+          </li>
         ))}
-      </div>
-    </>
+      </ol>
+      <Link
+        to={standing.to}
+        className="mt-5 flex items-center gap-3 rounded-xl border border-dashed border-line px-5 py-4 transition-colors hover:border-line-strong"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-ink">{standing.title}</span>
+          <span className="mt-1 block text-sm text-ink-muted">{standing.description}</span>
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-ink-muted" aria-hidden="true" />
+      </Link>
+    </article>
   );
 }

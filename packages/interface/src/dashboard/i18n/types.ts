@@ -17,6 +17,10 @@ export interface DashboardStrings {
   };
   shell: {
     tagline: string;
+    /** Sidebar group headings. The navigation is grouped by the two halves of
+     *  the work rather than listed flat. */
+    groupMeasure: string;
+    groupCampaign: string;
     navigation: string;
     openMenu: string;
     closeMenu: string;
@@ -55,6 +59,19 @@ export interface DashboardStrings {
     /** Marker rendered in place of a count whose backing data failed to
      *  load, so unknown never reads as a confident zero. */
     valueUnavailable: string;
+    /** Legend of the coverage strip. These are the charter's own coverage
+     *  terms and they are not interchangeable: a page can be inventoried
+     *  without being content-checked, and content-checked without being
+     *  performance-measured. Omitted URLs were never inventoried at all, so
+     *  the strip keeps them outside the inventory. */
+    coverage: {
+      caption: string;
+      measured: string;
+      checked: string;
+      reached: string;
+      failed: string;
+      omitted: string;
+    };
   };
   audits: {
     title: string;
@@ -550,7 +567,7 @@ export interface DashboardStrings {
     title: string;
     description: string;
     columns: {
-      hotel: string;
+      prospect: string;
       touch: string;
       createdAt: string;
       providerState: string;
@@ -564,7 +581,7 @@ export interface DashboardStrings {
   replies: {
     title: string;
     description: string;
-    columns: { hotel: string; receivedAt: string; state: string; reason: string };
+    columns: { prospect: string; receivedAt: string; state: string; reason: string };
     markReviewed: string;
     metadataNote: string;
     empty: string;
@@ -584,7 +601,8 @@ export interface DashboardStrings {
     title: string;
     description: string;
     summaryHeading: string;
-    columns: { hotel: string; outcome: string; setAt: string };
+    lostReasonsHeading: string;
+    columns: { prospect: string; outcome: string; setAt: string };
     optOut: string;
     empty: string;
   };
@@ -650,6 +668,19 @@ export interface DashboardStrings {
       'budget' | 'timing' | 'not-a-priority' | 'existing-provider' | 'scope-mismatch' | 'other',
       string
     >;
+    /** The two halves of a prospect score, named where they are shown. The
+     *  store's own field names (`brokenness`, `ability`) used to reach the
+     *  operator untranslated in the version-difference table. */
+    scoreSide: Record<'brokenness' | 'ability', string>;
+    /** Why a score component scored what it did: core's closed
+     *  HotelScoreReason vocabulary. Every `*-unknown` value means the fact was
+     *  never observed, which is deliberately not the same as observing it
+     *  absent, and the copy has to keep those apart. */
+    scoreReason: Record<string, string>;
+    /** Stakeholder roles of the report-preparation card. Previously read off
+     *  the preview's filled-in roles, so an empty role showed its raw English
+     *  key to a French operator. */
+    stakeholderRole: Record<'management' | 'technical' | 'communications' | 'legal', string>;
   };
   /** One-line plain-language hints of the pipeline stages, shown next to
    *  the vocabulary by InfoTip on operator pages. Each key names the stage

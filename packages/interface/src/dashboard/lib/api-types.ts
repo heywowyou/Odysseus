@@ -56,12 +56,19 @@ export interface ScanUrlResult {
 /** Response of GET /api/scans/:jobId: the full job document (store's
  *  getJob, served verbatim by routes/scans.ts), narrowed to the fields the
  *  live progress page reads. phase stays a plain string so a pipeline
- *  phase without dashboard copy renders as its raw value. */
+ *  phase without dashboard copy renders as its raw value.
+ *
+ *  siteUrl and createdAt are served by the same route (it sends the job
+ *  document verbatim) and are read here so the progress page can name the
+ *  site it is scanning; both stay optional because a prospecting job has a
+ *  URL list rather than one site. */
 export interface ScanJobDetail {
   jobId: string;
   type: JobType;
   status: JobStatus;
   phase: string;
+  siteUrl?: string;
+  createdAt?: string;
   auditId?: string;
   auditIds?: string[];
   urlResults?: ScanUrlResult[];

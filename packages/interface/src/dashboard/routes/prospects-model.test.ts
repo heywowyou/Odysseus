@@ -11,7 +11,6 @@ import {
   prospectSubPages,
   qualificationBadgeTone,
   reviewBadgeTone,
-  scoreLabel,
   totalPages,
 } from './prospects-model';
 import type { ProspectFilterState, ProspectRow } from './prospects-model';
@@ -99,14 +98,6 @@ describe('row labels', () => {
 
   it('renders an empty location when the catalogue knows neither', () => {
     expect(locationLabel(makeRow({ commune: null, postcode: null }))).toBe('');
-  });
-
-  it('formats the score as brokenness over ability', () => {
-    expect(scoreLabel(makeRow())).toBe('4 / 12');
-  });
-
-  it('leaves the score empty when no score exists, never zero', () => {
-    expect(scoreLabel(makeRow({ brokennessTotal: null, abilityTotal: null }))).toBe('');
   });
 });
 

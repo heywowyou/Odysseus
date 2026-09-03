@@ -1,7 +1,7 @@
 import type { JSX } from 'react';
 import { Link, useParams } from 'react-router';
 import { Info } from 'lucide-react';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import type { BadgeTone } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
@@ -89,7 +89,7 @@ export function PreviewPage(): JSX.Element {
   }
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.reading}>
       <PageHeader
         title={strings.preview.title}
         description={strings.preview.description}

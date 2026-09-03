@@ -7,7 +7,6 @@ import {
   formatFailureRate,
   prescanRows,
   previewState,
-  scoreComponentRows,
   scoreDiffRows,
   vendorRows,
 } from './insights-model';
@@ -100,15 +99,6 @@ describe('prescanRows', () => {
       absentRoles: [{ role: 'homepage' as const, reason: 'no-booking-path' }],
     };
     expect(prescanRows(doubled)).toHaveLength(2);
-  });
-});
-
-describe('scoreComponentRows', () => {
-  it('lists brokenness components before ability ones, each with its group', () => {
-    expect(scoreComponentRows(score)).toEqual([
-      { group: 'brokenness', component: { id: 'no-alt', points: 6, reason: 'evidence-confirmed' } },
-      { group: 'ability', component: { id: 'no-booking', points: 3, reason: 'no-evidence' } },
-    ]);
   });
 });
 

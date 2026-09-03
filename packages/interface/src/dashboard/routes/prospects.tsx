@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { JSX } from 'react';
 import { Building2, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -43,7 +43,6 @@ import {
   locationLabel,
   qualificationBadgeTone,
   reviewBadgeTone,
-  scoreLabel,
   totalPages,
 } from './prospects-model';
 import type {
@@ -67,9 +66,13 @@ function detailTarget(row: ProspectRow): string {
 /** Header cell whose column name carries an inline info tip, for columns
  *  whose meaning one line of copy can settle (how the score, the
  *  qualification outcome, or the review state are produced). */
-function HeaderWithTip(props: { label: string; hint: string }): JSX.Element {
+function HeaderWithTip(props: {
+  label: string;
+  hint: string;
+  className?: string | undefined;
+}): JSX.Element {
   return (
-    <TableHeaderCell>
+    <TableHeaderCell className={props.className ?? ''}>
       <span className="inline-flex items-center gap-1">
         {props.label}
         <InfoTip label={props.label} hint={props.hint} />
@@ -148,7 +151,7 @@ export function ProspectsPage(): JSX.Element {
             <TableHead>
               <TableRow>
                 <TableHeaderCell className="w-56">{strings.prospects.columns.name}</TableHeaderCell>
-                <TableHeaderCell>{strings.prospects.columns.city}</TableHeaderCell>
+                <TableHeaderCell className="w-44">{strings.prospects.columns.city}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.identity}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.group}</TableHeaderCell>
                 <HeaderWithTip
@@ -159,7 +162,14 @@ export function ProspectsPage(): JSX.Element {
                   label={strings.prospects.columns.review}
                   hint={strings.hints.review}
                 />
-                <HeaderWithTip label={strings.prospects.columns.score} hint={strings.hints.score} />
+                <HeaderWithTip
+                  label={strings.labels.scoreSide.brokenness}
+                  hint={strings.hints.score}
+                  className="w-28 text-right"
+                />
+                <TableHeaderCell className="w-28 text-right">
+                  {strings.labels.scoreSide.ability}
+                </TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.contact}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.thread}</TableHeaderCell>
                 <TableHeaderCell>{strings.prospects.columns.outcome}</TableHeaderCell>
@@ -180,22 +190,22 @@ export function ProspectsPage(): JSX.Element {
                       {row.name}
                     </Link>
                   </TableCell>
-                  <TableCell>{locationLabel(row)}</TableCell>
-                  <TableCell className="text-xs text-ink-soft">
+                  <TableCell className="whitespace-nowrap">{locationLabel(row)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-xs text-ink-soft">
                     {vocabularyLabel(
                       strings.labels.identity,
                       row.identityStatus,
                       strings.common.vocabularyFallback,
                     )}
                   </TableCell>
-                  <TableCell className="text-xs text-ink-soft">
+                  <TableCell className="whitespace-nowrap text-xs text-ink-soft">
                     {vocabularyLabel(
                       strings.labels.group,
                       row.groupStatus,
                       strings.common.vocabularyFallback,
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <Badge tone={qualificationBadgeTone(row.qualificationOutcome)}>
                       {vocabularyLabel(
                         strings.labels.qualification,
@@ -204,27 +214,32 @@ export function ProspectsPage(): JSX.Element {
                       )}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <Badge tone={reviewBadgeTone(row.reviewState)}>
                       {reviewLabel(row.reviewState, strings)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="tabular-nums">{scoreLabel(row)}</TableCell>
-                  <TableCell className="text-xs text-ink-soft">
+                  <TableCell className="numeric text-right text-ink">
+                    {row.brokennessTotal ?? '-'}
+                  </TableCell>
+                  <TableCell className="numeric text-right text-ink">
+                    {row.abilityTotal ?? '-'}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-xs text-ink-soft">
                     {vocabularyLabel(
                       strings.labels.contact,
                       row.contactState,
                       strings.common.vocabularyFallback,
                     )}
                   </TableCell>
-                  <TableCell className="text-xs text-ink-soft">
+                  <TableCell className="whitespace-nowrap text-xs text-ink-soft">
                     {vocabularyLabel(
                       strings.labels.thread,
                       row.threadState,
                       strings.common.vocabularyFallback,
                     )}
                   </TableCell>
-                  <TableCell className="text-xs text-ink-soft">
+                  <TableCell className="whitespace-nowrap text-xs text-ink-soft">
                     {vocabularyLabel(
                       strings.labels.outcome,
                       row.outcome,
@@ -273,7 +288,7 @@ export function ProspectsPage(): JSX.Element {
   }
 
   return (
-    <article>
+    <article className={PAGE_WIDTH.surface}>
       <PageHeader title={strings.prospects.title} description={strings.prospects.description} />
 
       <div className="mb-4">

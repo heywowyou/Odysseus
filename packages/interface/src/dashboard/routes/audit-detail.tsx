@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
 import { useParams } from 'react-router';
 import { toast } from 'sonner';
-import { PageHeader } from '../components/page-header';
+import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import type { BadgeTone } from '../components/ui/badge';
 import { Button, buttonStyles } from '../components/ui/button';
@@ -11,7 +11,6 @@ import { ConfirmDialog } from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { Field } from '../components/ui/field';
 import { Input } from '../components/ui/input';
-import { KpiTile } from '../components/ui/kpi';
 import { Select } from '../components/ui/select';
 import { Skeleton } from '../components/ui/skeleton';
 import {
@@ -23,6 +22,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
+import type { DashboardStrings } from '../i18n/types';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { PrepareReportCard } from './prepare-report-card';
 import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
@@ -54,6 +54,7 @@ import type {
   ManualFieldsResponse,
   ReportFreshness,
   Severity,
+  SeverityRollup,
   SirenPreviewResponse,
 } from './audit-detail-types';
 
@@ -226,10 +227,8 @@ function FindingsCard({ findings }: { findings: FindingResponse[] }): JSX.Elemen
                   )}
                 </TableCell>
                 <TableCell className="text-ink">{finding.title}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {countOccurrences(finding)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{countPages(finding)}</TableCell>
+                <TableCell className="numeric text-right">{countOccurrences(finding)}</TableCell>
+                <TableCell className="numeric text-right">{countPages(finding)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -412,7 +411,7 @@ function EnrichmentCard(props: {
       title={strings.auditDetail.manualFieldsHeading}
       description={strings.auditDetail.manualFieldsHint}
     >
-      <div className="grid grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
+      <div className="grid max-w-reading grid-cols-1 gap-x-4 gap-y-4 md:grid-cols-2">
         <div className="md:col-span-2">
           <Field
             label={strings.auditDetail.sirenLabel}
@@ -477,6 +476,51 @@ function EnrichmentCard(props: {
   );
 }
 
+/** The severity rollup drawn to scale rather than as four equal tiles.
+ *  Four same-sized numbers make a hundred minor issues look like the four
+ *  critical ones; the whole point of the mix is its proportion. Every count
+ *  is still written out beside its swatch, so nothing depends on the bar. */
+function SeverityBar(props: { rollup: SeverityRollup; strings: DashboardStrings }): JSX.Element {
+  const { rollup, strings } = props;
+  const total = SEVERITIES.reduce((sum, severity) => sum + rollup[severity], 0);
+  return (
+    <figure className="m-0">
+      <div className="flex h-2 w-full overflow-hidden rounded-full bg-raised" aria-hidden="true">
+        {SEVERITIES.map((severity) =>
+          rollup[severity] === 0 ? null : (
+            <div
+              key={severity}
+              className={SEVERITY_FILL[severity]}
+              style={{ width: `${(rollup[severity] / total) * 100}%` }}
+            />
+          ),
+        )}
+      </div>
+      <figcaption className="mt-3">
+        <dl className="flex flex-wrap gap-x-6 gap-y-2">
+          {SEVERITIES.map((severity) => (
+            <div key={severity} className="flex items-baseline gap-2">
+              <span
+                className={cn('size-2 shrink-0 rounded-sm', SEVERITY_FILL[severity])}
+                aria-hidden="true"
+              />
+              <dt className="text-xs text-ink-muted">{strings.common.severityLabels[severity]}</dt>
+              <dd className="numeric text-sm font-medium text-ink">{rollup[severity]}</dd>
+            </div>
+          ))}
+        </dl>
+      </figcaption>
+    </figure>
+  );
+}
+
+const SEVERITY_FILL: Record<Severity, string> = {
+  critical: 'bg-sev-critical',
+  serious: 'bg-sev-serious',
+  moderate: 'bg-sev-moderate',
+  minor: 'bg-sev-minor',
+};
+
 export function AuditDetailPage(): JSX.Element {
   const { auditId } = useParams<{ auditId: string }>();
   const { language, strings } = useI18n();
@@ -518,7 +562,7 @@ export function AuditDetailPage(): JSX.Element {
 
   if (isNotFound) {
     return (
-      <article>
+      <article className={PAGE_WIDTH.surface}>
         <EmptyState title={strings.auditDetail.notFound} />
       </article>
     );
@@ -547,12 +591,7 @@ export function AuditDetailPage(): JSX.Element {
           <Skeleton className="h-7 w-64" />
           <Skeleton className="mt-2 h-4 w-96 max-w-full" />
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {SEVERITIES.map((severity) => (
-            <Skeleton key={severity} className="h-20" />
-          ))}
-        </div>
-        <div className="mt-6 flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           <Skeleton className="h-36" />
           <Skeleton className="h-80" />
           <Skeleton className="h-72" />
@@ -561,16 +600,26 @@ export function AuditDetailPage(): JSX.Element {
     );
   }
 
-  const headerDescription = `${strings.auditDetail.dateLabel} ${formatDateTime(
-    data.startedAt,
-    language,
-  )} · ${strings.auditDetail.pagesVisitedLabel} ${data.pagesVisited}`;
-
   return (
-    <article>
+    <article className={PAGE_WIDTH.surface}>
       <PageHeader
+        eyebrow={strings.common.typeLabels.fullAudit}
         title={hostnameOf(data.siteUrl)}
-        description={headerDescription}
+        meta={
+          <div className="flex flex-col gap-4">
+            <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
+              <div className="flex items-baseline gap-2">
+                <dt className="text-ink-muted">{strings.auditDetail.dateLabel}</dt>
+                <dd className="numeric text-ink">{formatDateTime(data.startedAt, language)}</dd>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <dt className="text-ink-muted">{strings.auditDetail.pagesVisitedLabel}</dt>
+                <dd className="numeric text-ink">{data.pagesVisited}</dd>
+              </div>
+            </dl>
+            <SeverityBar rollup={data.severityRollup} strings={strings} />
+          </div>
+        }
         actions={
           <>
             <Badge>
@@ -589,24 +638,7 @@ export function AuditDetailPage(): JSX.Element {
           </>
         }
       />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {SEVERITIES.map((severity, slot) => (
-          <div
-            key={severity}
-            style={{ animationDelay: `${slot * 50}ms` }}
-            className="animate-page-in"
-          >
-            <KpiTile
-              label={strings.common.severityLabels[severity]}
-              value={data.severityRollup[severity]}
-              tone={
-                severity === 'critical' && data.severityRollup.critical > 0 ? 'critical' : 'default'
-              }
-            />
-          </div>
-        ))}
-      </div>
-      <div className="mt-6 flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
         <ReportsCard detail={data} />
         <PrepareReportCard auditId={data.auditId} />
         <EnrichmentCard
