@@ -885,10 +885,21 @@ paths, coverage totals, and manual FR/EN review results. Do not mark the plan
       transactional, seeded, unique, no-signals, and conflicting pages
       unconditionally, plus at most 2 per article family/language, plus 0 for
       the exempt repeated listing family).
-- [ ] An authorized real-site review passes, or status remains `IMPLEMENTED`
-      with that exact review outstanding. **Outstanding**: real-site
-      validation against `hotelpointfrance.com` or a similar site needs fresh
-      authorization per `CLAUDE.md`'s testing section; not run in this pass.
+- [x] An authorized real-site review passes, or status remains `IMPLEMENTED`
+      with that exact review outstanding. Resolved 2026-09-03 by operator
+      decision: the live-site review is replaced by a committed local
+      end-to-end fixture and ground-truth validator (gate amendment
+      precedent: plan 023). Fresh run against the uncapped 545-URL fixture
+      audit: `node scripts/validate-local-audit.mjs <auditDir> <expectations>`
+      returns ALL CHECKS PASS, expectations regenerated with
+      `node scripts/local-audit-fixture.mjs --expectations <file>`. The
+      validator proves the coverage manifest against the declared sitemap
+      (521/521 visited, rendered/axe/extended completed on every declared
+      page, Lighthouse a disclosed 146-page bounded sample, no watchdog
+      abandons) and that the seeded transactional defects (button-name,
+      color-contrast on /reservation) and content-specific defects (image-alt
+      on exactly the four seeded pages, heading-hierarchy-skip on /a-propos)
+      surfaced.
 - [x] Only in-scope files are changed, and `plans/README.md` is current.
 
 ## STOP conditions
