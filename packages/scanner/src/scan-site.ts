@@ -117,6 +117,52 @@ async function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Hard per-page deadlines for the scan lanes. A rendered-analysis await
+ * that never completes (three full audits of the same site have wedged
+ * this way at different pages and phases, all with every thread idle)
+ * otherwise costs the entire multi-hour audit, because lanes await each
+ * page without a bound of their own. The deadlines are deliberately
+ * many times the observed per-page mean so a legitimately heavy page
+ * still finishes; only an abandoned await pays the deadline. The losing
+ * work promise is not cancelled (Playwright offers no page-scoped
+ * cancellation), so a wedged page leaks its tab until the browser
+ * closes; at most one tab per wedged page is acceptable against losing
+ * the run.
+ */
+export const RENDERED_ANALYSIS_WATCHDOG_MS = 420_000;
+export const FULL_SCAN_PAGE_WATCHDOG_MS = 600_000;
+
+/**
+ * Resolves with `work`'s result, or, if `work` is still pending after
+ * `watchdogMs`, with a synthesized failed result so the lane can move on
+ * and the manifest can record the page as failed coverage. The result's
+ * empty checkOutcomes is what makes the persisted pass record honest:
+ * derivePageAnalysisCoverage derives failed for every content pass with
+ * no completed checks, and the error string carries the reason.
+ */
+export async function withPageWatchdog<T extends RenderedAnalysisResult | PageScanResult>(
+  url: string,
+  work: Promise<T>,
+  watchdogMs: number,
+): Promise<T | RenderedAnalysisResult> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<RenderedAnalysisResult>((resolve) => {
+    timer = setTimeout(() => {
+      resolve({
+        url,
+        renderDiffError: `watchdog: page analysis did not complete within ${watchdogMs}ms; abandoned so the audit could continue`,
+        checkOutcomes: {},
+      });
+    }, watchdogMs);
+  });
+  try {
+    return await Promise.race([work, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Runs one lane of the scan phase: a sequential slice of pagesToScan,
  * pacing itself with the exact same delayMs sleep-between-pages a single
  * sequential scan always used. `startDelayMs` staggers this lane's very
@@ -156,23 +202,27 @@ async function runScanLane(
     }
     nextDelayMs = delayMs;
 
-    const pageResult = await scanPage(browser, debugPort, url, {
-      delayMs,
-      screenshotDir,
-      redirectHostCache,
-      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
-      ...(userAgent !== undefined ? { userAgent } : {}),
-      ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
-      ...(homepageUrl !== undefined ? { homepageUrl } : {}),
-      ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
-      ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
-      ...(securityHeadersCheck !== undefined ? { securityHeadersCheck } : {}),
-      ...(cookieConsentCheck !== undefined ? { cookieConsentCheck } : {}),
-      ...(accessibilityStatementCheck !== undefined ? { accessibilityStatementCheck } : {}),
-      ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
-      ...(skipLighthouse ? { skipLighthouse } : {}),
-    });
-    onPageDone(pageResult);
+    const pageResult = await withPageWatchdog(
+      url,
+      scanPage(browser, debugPort, url, {
+        delayMs,
+        screenshotDir,
+        redirectHostCache,
+        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+        ...(userAgent !== undefined ? { userAgent } : {}),
+        ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
+        ...(homepageUrl !== undefined ? { homepageUrl } : {}),
+        ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
+        ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
+        ...(securityHeadersCheck !== undefined ? { securityHeadersCheck } : {}),
+        ...(cookieConsentCheck !== undefined ? { cookieConsentCheck } : {}),
+        ...(accessibilityStatementCheck !== undefined ? { accessibilityStatementCheck } : {}),
+        ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
+        ...(skipLighthouse ? { skipLighthouse } : {}),
+      }),
+      FULL_SCAN_PAGE_WATCHDOG_MS,
+    );
+    onPageDone(pageResult as PageScanResult);
   }
 }
 
@@ -218,32 +268,36 @@ async function runRenderedAnalysisLane(
     }
     nextDelayMs = delayMs;
 
-    const result = await runRenderedAnalysis(browser, url, {
-      delayMs,
-      screenshotDir: context.screenshotDir,
-      redirectHostCache: context.redirectHostCache,
-      ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
-      ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
-      ...(context.mentionsLegalesUrl !== undefined
-        ? { mentionsLegalesUrl: context.mentionsLegalesUrl }
-        : {}),
-      ...(context.homepageUrl !== undefined ? { homepageUrl: context.homepageUrl } : {}),
-      ...(context.sitemapCheck !== undefined ? { sitemapCheck: context.sitemapCheck } : {}),
-      ...(context.llmsTxtCheck !== undefined ? { llmsTxtCheck: context.llmsTxtCheck } : {}),
-      ...(context.securityHeadersCheck !== undefined
-        ? { securityHeadersCheck: context.securityHeadersCheck }
-        : {}),
-      ...(context.cookieConsentCheck !== undefined
-        ? { cookieConsentCheck: context.cookieConsentCheck }
-        : {}),
-      ...(context.accessibilityStatementCheck !== undefined
-        ? { accessibilityStatementCheck: context.accessibilityStatementCheck }
-        : {}),
-      ...(context.bookingEngineUrl !== undefined
-        ? { bookingEngineUrl: context.bookingEngineUrl }
-        : {}),
-    });
-    onPageDone(url, result);
+    const result = await withPageWatchdog(
+      url,
+      runRenderedAnalysis(browser, url, {
+        delayMs,
+        screenshotDir: context.screenshotDir,
+        redirectHostCache: context.redirectHostCache,
+        ...(context.timeoutMs !== undefined ? { timeoutMs: context.timeoutMs } : {}),
+        ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
+        ...(context.mentionsLegalesUrl !== undefined
+          ? { mentionsLegalesUrl: context.mentionsLegalesUrl }
+          : {}),
+        ...(context.homepageUrl !== undefined ? { homepageUrl: context.homepageUrl } : {}),
+        ...(context.sitemapCheck !== undefined ? { sitemapCheck: context.sitemapCheck } : {}),
+        ...(context.llmsTxtCheck !== undefined ? { llmsTxtCheck: context.llmsTxtCheck } : {}),
+        ...(context.securityHeadersCheck !== undefined
+          ? { securityHeadersCheck: context.securityHeadersCheck }
+          : {}),
+        ...(context.cookieConsentCheck !== undefined
+          ? { cookieConsentCheck: context.cookieConsentCheck }
+          : {}),
+        ...(context.accessibilityStatementCheck !== undefined
+          ? { accessibilityStatementCheck: context.accessibilityStatementCheck }
+          : {}),
+        ...(context.bookingEngineUrl !== undefined
+          ? { bookingEngineUrl: context.bookingEngineUrl }
+          : {}),
+      }),
+      RENDERED_ANALYSIS_WATCHDOG_MS,
+    );
+    onPageDone(url, result as RenderedAnalysisResult);
   }
 }
 
