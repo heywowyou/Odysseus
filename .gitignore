@@ -14,6 +14,11 @@ coverage/
 *.tsbuildinfo
 .playwright-mcp/
 
+# ZCode session scratch: browser driver scripts and screenshots taken while
+# exercising the dashboard. Agent tooling, never repo content; it also holds
+# client site captures that must not be committed.
+/.zcode/
+
 # The runbook's local smoke (section 10) copies its stub-secret env to the
 # repo root; it must never be committed.
 /.env.smoke
