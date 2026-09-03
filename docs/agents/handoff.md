@@ -73,6 +73,11 @@ session log only after the tree no longer needs its provenance. If completed
 work remains uncommitted, set the log to `ready-for-commit` and leave it for
 the next agent; its presence always requires reconciliation before new work.
 
+The reason is recovery, not bookkeeping: a crashed session leaves a large
+uncommitted working tree and no account of which items in it are finished,
+which are half-done, and which were deliberately deferred. That state is
+expensive to re-derive and easy to re-derive wrongly.
+
 ## Maintaining this agreement
 
 When a process rule applies to both agents, put it in `CLAUDE.md` or this

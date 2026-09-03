@@ -282,14 +282,9 @@ means numbered entry 24, not a literal Markdown heading anchor.
     `.remaining-category h5` — use the bounded `.remaining-category-head`
     wrapper instead. CWV metric tie-breaks return no metric on a genuine
     tie, never fall back to LCP by list order. → trade-offs.md#32
-33. eTLD+1 comes from `tldts` with `allowPrivateDomains`, never from a
-    hand-rolled parser and never from ICANN-only `tldts-icann`. A shared
-    registrable domain means chain only when it is absent from
-    `hotel-vendor-hosts.ts`; a vendor or federation host means independent
-    hotels routed to review, decided by the curated list rather than by group
-    size. Grouping counts the whole run before classifying any row, and only a
-    domain held by exactly one establishment is ever an identity key.
-    → trade-offs.md#33
+33. eTLD+1 comes from `tldts` with `allowPrivateDomains`, never a
+    hand-rolled parser or ICANN-only `tldts-icann`; only a domain held by
+    exactly one establishment is ever an identity key. → trade-offs.md#33
 34. Real-scan test fixtures under `fixtures/test-audits/` are committed with
     the client removed, built only by `scripts/deidentify-audit.mjs`. Never
     gitignore them (a green suite then describes data no other machine has),
@@ -315,13 +310,8 @@ means numbered entry 24, not a literal Markdown heading anchor.
     Do not widen the contract, do not re-require the composite, and do not
     lower the 20 percent render-gap threshold. → trade-offs.md#36
 37. A redirect off the declared domain is classified by counting
-    establishments at the target, never by comparing domain names: a target
-    several establishments reach or declare is a chain, one exactly one
-    establishment holds is that hotel's own and is adopted and re-checked. The
-    count spans the whole catalogue, redirect rows plus declared owners, or an
-    acquisition reads as a rename. Reconciliation writes a complete new
-    generation - one row out per row in - because `listCandidatesToPrescan`
-    filters on the qualification version. → trade-offs.md#37
+    establishments at the target, never by comparing domain names.
+    → trade-offs.md#37
 38. Hotel outreach scores are insert-only and versioned, and the selected
     cohort is its own insert-only generation, never a field written back onto
     a score. Worthiness over a prescan is a separate pure predicate
@@ -333,60 +323,32 @@ means numbered entry 24, not a literal Markdown heading anchor.
 
 39. Hotel role contacts are discovered for the selected cohort only, never for
     the qualified population, and a hotel with no usable address parks with one
-    of four typed reasons rather than a null. `discoverRoleContact` is the one
-    implementation, which `extractContactAddress` now adapts; it can only ever
-    return an allowlisted local part, so a named address is never captured at
-    all. The allowlist is ordered and widening it is a new `contactVersion`,
-    never an in-place edit. MX is read as a fact about the domain: no SMTP
-    probing, no catch-all classification, and a resolver failure is `unknown`,
-    never `no-mx`. Suppression is checked before the fetch and again before the
-    write. → trade-offs.md#39
+    of four typed reasons rather than a null. Widening the ordered local-part
+    allowlist is a new `contactVersion`, never an in-place edit. A resolver
+    failure is `unknown`, never `no-mx`. → trade-offs.md#39
 
-40. Every derived document carries a `findingsProvenance` stamp (findings
-    schema version, normalization fingerprint, findings digest) and fails
-    closed: an analysis, report or artifact carrying none is refused, never
+40. Every derived document carries a `findingsProvenance` stamp and fails
+    closed: an analysis, report, or artifact carrying none is refused, never
     trusted for being old. `packages/core/src/normalize/findings-provenance.ts`
-    is the one place that computes or compares one. Five legal-copy rules bind
-    the paid report: no client-specific criteria verdict, no exemption filing
-    route, no client-specific sanction figure, no superseded LCEN article 6-III,
-    and accessibility-statement publication conditioned on an independently
-    established Article 47 regime. `scripts/deidentify-audit.mjs` derives a
-    fixture's provenance rather than copying the source's, and the Lighthouse
-    failure line names a translated cause, never the tool's own message.
-    → trade-offs.md#40
+    is the one place that computes or compares one. → trade-offs.md#40
 
-41. The Sirene join runs in the qualification pass (never identity
-    resolution) and is written onto the qualification generation, never back
-    onto the candidate; qualification is `v3`, scoring reads
-    `effectifBandCode` from there. Do not call the joiner with `undefined`,
-    and do not read `stock-file-unavailable` as a fact about a hotel. Apply
-    a fresh stock file with `backfillSirene` (contacts nobody), never by
-    re-running `qualifyHotels` (would re-probe every live site);
-    `backfillSirene` refuses to run without the stock file and takes no
-    `--limit`. → trade-offs.md#41
+41. The Sirene join runs in the qualification pass, never identity
+    resolution, and is written onto the qualification generation, never back
+    onto the candidate. Apply a fresh stock file with `backfillSirene`
+    (contacts nobody), never by re-running `qualifyHotels` (re-probes every
+    live site). → trade-offs.md#41
 
 42. The outreach preview is a separate document kind, never a tier of the paid
     report: its input contract (`packages/core/src/types/outreach-preview.ts`)
-    shares no type with `GenerateReportInput`, and strict objects plus closed
-    vocabularies are what reject finding IDs, selectors, exact URLs and
-    statistics - do not spread a report input into a preview input, and do not
-    widen the schema to admit one. The offer price is
-    `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` in `core`, never an input field; images
-    are PNG only; argument B is enabled for hotels as a general reading, behind
-    `OutreachSourceCapabilities`. The renderer lints its own output and throws.
-    → trade-offs.md#42
+    shares no type with `GenerateReportInput`. Do not spread a report input
+    into a preview input, and do not widen the schema to admit finding IDs,
+    selectors, exact URLs, or statistics. → trade-offs.md#42
 
 44. A paid deliverable is the exact current French and English report pair:
     render identity is created before PDF generation, approval is insert-only
-    over both verified digests, previews require freshness, and delivery also
-    requires the matching current approval. Keep one PDF per language with
-    the glossary last and the technical appendix second to last (reversed
-    from appendix-last on 2026-09-01, plan 024); priorities use contiguous
-    display ranks, deterministic remediation, and ownership context without
-    changing raw severity or the locked LLM schema. Numeric effort estimates
-    and Lighthouse successor-family dedupe remain deferred until their
-    recorded triggers.
-    → trade-offs.md#44
+    over both verified digests, and delivery requires the matching current
+    approval. Keep one PDF per language with the glossary last and the
+    technical appendix second to last. → trade-offs.md#44
 
 55. WCAG-citation and business-claim guards run in the writing pass's retry
     loop (measured promotion, zero false positives over stored analyses), and
@@ -403,36 +365,23 @@ means numbered entry 24, not a literal Markdown heading anchor.
     → trade-offs.md#61
 
 62. Report preparation (plan 019) is one deep core module with typed
-    vocabularies, evidence-bound tri-state journeys, candidate-before-selection
-    writing, and per-language fallbacks; handlers and rendering consume its
-    bounded outputs and never reimplement preparation policy. `no-issue-detected`
-    requires positive evidence the detector ran; journey evidence reads the
-    on-disk manifest, not the Mongo audit document, whose schema does not
-    persist `siteSignals`. → trade-offs.md#62
+    vocabularies and evidence-bound journeys; handlers and rendering consume
+    its bounded outputs and never reimplement preparation policy.
+    `no-issue-detected` requires positive evidence the detector ran.
+    → trade-offs.md#62
 
 63. Client-specific financial estimates are denied by default; broad
     `scales-down` status never grants estimate permission. The canonical
-    opportunity resolver (opt-in primary reference, exact sector and
-    measured-problem evidence, traceable turnover) is **not implemented** —
-    the only candidate source has no mapping to a measured Core Web Vital
-    metric. Turnover input exists with no financial consumer yet. The EUR
-    7,500 EAA sentence is a separate deterministic general reference, never
-    this client's exposure. → trade-offs.md#63
+    opportunity resolver is **not implemented**. The EUR 7,500 EAA sentence is
+    a separate deterministic general reference, never this client's exposure.
+    → trade-offs.md#63
 
 64. A full audit's tool coverage is pass-specific, not uniform per URL
-    (plan 021). Every successfully crawled HTML page, including every
-    listing/archive page, keeps render diff, axe, and the extended pass;
-    only Lighthouse is family-stratified, chosen by a two-stage
-    deterministic planner (`buildContentAuditPlan`, then
-    `finalizeLighthousePlan` once rendered-cost facts exist). Page role
+    (plan 021). Every successfully crawled HTML page keeps render diff, axe,
+    and the extended pass; only Lighthouse is family-stratified. Page role
     and template-family classification never remove rendered, axe, or
-    extended checks in v1, never come from URL text alone, and fall back
-    to fuller coverage on any ambiguity. A sampled finding is never
-    propagated to an untested page; reach and work are reported
-    separately. `docs/rules/offer-positioning.md` and
-    `docs/product/odysseus-project-brief.md`'s 9b.5 write-up are amended
-    alongside this contract, since the offer is sold on inventory
-    completeness, not on every tool running everywhere.
+    extended checks, and fall back to fuller coverage on any ambiguity. A
+    sampled finding is never propagated to an untested page.
     → trade-offs.md#64
 
 66. `CLAUDE.md` and `AGENTS.md` are loaded into every session, not read on
@@ -452,6 +401,10 @@ means numbered entry 24, not a literal Markdown heading anchor.
     report quality after an alias repoint. Never split models per pass while
     persisted analysis provenance has only one model field.
     → trade-offs.md#67
+69. Per-host prompting guidance lives in `docs/agents/model-prompting.md`, not
+    in this charter. Do not restate its per-model detail here beyond the
+    delegation and document-length rules already promoted into Style.
+    → trade-offs.md#69
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
@@ -576,36 +529,17 @@ tree no longer needs its provenance, normally because the coherent work was
 committed or explicitly discarded. If implementation is complete but remains
 uncommitted, set status `ready-for-commit` and leave the log in place. Nothing
 durable should survive only there; the file's presence means the next agent
-must reconcile it before starting new work.
-
-The reason is recovery, not bookkeeping: a crashed session leaves a large
-uncommitted working tree and no account of which items in it are finished,
-which are half-done, and which were deliberately deferred. That state is
-expensive to re-derive and easy to re-derive wrongly.
+must reconcile it before starting new work. Rationale: `docs/agents/handoff.md`,
+"Parking or handing off work".
 
 ## Pausing before the usage limit
 
-When usage approaches its limit (around 99 percent), stop and park the work
-deliberately rather than being cut off mid-change. Being interrupted at an
-arbitrary point is what produced the crashed session this file's session-log
-rule already exists to recover from, and a large half-applied refactor is the
-most expensive thing to hand to the next session.
-
-On approaching the limit:
-
-- do not start anything new: no new milestone, no multi-file refactor, no
-  fresh scan, no long measurement run;
-- bring the working tree to a state that builds and typechecks, even if that
-  means finishing one edit or reverting one;
-- update `docs/session/current-session.md` so it states exactly what is done,
-  what is in flight, and what the next concrete step is;
-- commit what is coherent when the user or active workflow authorizes a
-  commit; otherwise mark the log `ready-for-commit` and say plainly what is
-  left uncommitted and why;
-- then stop and report, rather than beginning another unit of work.
-
-Resume from the session log after the usage resets, not from the working tree
-alone. The point is that the stopping point is chosen, not accidental.
+When usage approaches its limit (around 99 percent), stop deliberately rather
+than being cut off mid-change: do not start anything new, bring the tree to a
+state that builds and typechecks, update the session log per
+`docs/agents/handoff.md`'s parking checklist, commit only if authorized, then
+stop and report. Resume from the session log after the reset, not from the
+working tree alone.
 
 ## Testing
 
@@ -659,55 +593,16 @@ completion.
 
 ### Real-scan fixtures go stale silently. Refresh them and let a test catch it.
 
-Discovered 2026-08-25: the whole suite was green while
-`artifacts/sas-fernande.fr/2026-08-02T17-31-56Z` still reported 78 findings,
-months after normalization changes had taken it to 42. `artifacts/` is
-gitignored, so nothing versioned these directories, and nothing checked
-whether the code that produced them was still the code in the tree. Every
-test asserting "78 findings, 61 minor" was describing a pipeline that no
-longer existed, and would have handed the next person eight unexplained
-failures with no way to tell a real regression from accumulated staleness.
-
-`fixtures/audits.json` is now the single curated list of real-scan
-directories the test suite depends on, each with a one-line reason it is
-kept - curated, not accumulated, since the list had grown to thirteen
-directories with three timestamps for one site and no record of why. Run
+`fixtures/audits.json` is the single curated list of real-scan directories
+the test suite depends on, each with a one-line reason it is kept. Run
 `pnpm fixtures:refresh` after any change under `packages/core/src/normalize`
-to re-derive every one of them with `normalize <dir>` and stamp each with a
-fingerprint of the normalization source that produced it
-(`scripts/fixture-fingerprint.mjs`). `fixture-freshness.test.ts` fails the
-build the moment a listed fixture's stamp does not match the code in the
-tree, so staleness is a red test, not a silent fact discovered by reading
-`git log` months later.
-
-Two more tests turn "the report is accurate" from a stated goal into a
-measured one, and are worth keeping distinct (`rule-coverage.test.ts`'s own
-header comment states this in full): **recall** - the scanner finding a real
-issue at all - is bounded by what automated detection can reach, documented
-at roughly 30 to 40 percent of WCAG criteria, and no fixture work moves that
-number. **Precision** - every finding the report prints being real, correctly
-described, and singly counted - is the property actually holding a client
-relationship, and is the one held to a near-perfect bar.
-
-- `rule-coverage.test.ts`'s recall ratchet fails when fewer of the tool's
-  emittable rules are exercised by any curated fixture than were measured
-  last time. A rule with a severity mapping, remediation copy, and report
-  wiring but no fixture behind it has never been observed firing - which is
-  exactly how `hreflang-missing` (trade-off 31), the LCEN regime
-  (trade-off 28), and both cost gates (trade-off 23) went unnoticed for
-  months. Raise the floor when coverage improves; never lower it to make a
-  red build green.
-- The same file's single-rule concentration check is a precision smell: no
-  rule may account for more than 30 percent of one audit's findings. It has
-  now caught the same underlying defect three times under three different
-  names - trade-off 31 (219 of 282 Lagnonu findings in five rules),
-  trade-off 30 (102 of 305 haaitza findings in two Lighthouse image audits),
-  trade-off 24 (182 of 265 language variants of one page) - and each time
-  the cause was the same: the wrong identity chosen for a defect, so one
-  instruction printed dozens of times. A rule can legitimately sit above the
-  line (`image-alt` on a picture-heavy site, where each image is genuinely a
-  separate editorial decision); the threshold exists to make crossing it a
-  question asked, not a pattern that ships unnoticed a fourth time.
+to re-derive every one of them and stamp each with a normalization-source
+fingerprint (`scripts/fixture-fingerprint.mjs`); `fixture-freshness.test.ts`
+fails the build the moment a listed fixture's stamp does not match the code
+in the tree. `rule-coverage.test.ts` adds two ratchets: a recall floor (never
+lower it to make a red build green) and a 30-percent single-rule
+concentration cap that catches a wrong-identity defect before it ships.
+Incident, full reasoning, and prior catches: trade-offs.md#68.
 
 ## Claude Code MCP servers
 
@@ -771,61 +666,37 @@ every skill. Use a listed skill when it is available in the active agent; if
 it is unavailable, state that briefly and follow the underlying repository
 documents and guardrails directly.
 
-- **ask-matt** — the user is unsure which of these skills fits their
-  situation; use it to route rather than guessing.
-- **grill-with-docs** — sharpening a plan or design through interview
-  before committing to it, when the result should also produce an ADR or
-  glossary entry. Delegates the interview itself to `grilling` and the
-  write-down to `domain-modeling`.
-- **grilling** — the user wants their thinking on a plan, decision, or
-  idea stress-tested, or uses a "grill" trigger phrase; also invoked by
-  `grill-with-docs` and by `improve-codebase-architecture`'s step 3
-  (walking a chosen deepening candidate to an interface). Unlike
-  `grill-with-docs`, model-invokable directly, no explicit `/` command
-  required.
-- **triage** — working an issue or external PR through the
-  needs-triage/needs-info/ready-for-agent/ready-for-human/wontfix state
-  machine on `heywowyou/Odysseus`.
-- **improve-codebase-architecture** — asked to survey this codebase for
-  deepening opportunities and want a visual HTML report to pick from
-  before grilling into one.
-- **to-spec** — the current conversation has already converged on a design
-  and just needs synthesizing into a spec published to GitHub Issues, with
-  no further interview.
-- **to-tickets** — breaking an agreed plan or spec into tracer-bullet
-  tickets with explicit blocking edges, published to GitHub Issues.
-- **implement** — implementing a piece of work that already has a spec or
-  ticket behind it.
-- **wayfinder** — planning work too large for one session as a map of
-  decision tickets on GitHub Issues, or resolving the next open ticket in
-  an existing map.
-- **prototype** — the user wants to sanity-check a state model, logic
-  shape, or UI look before committing, and the result is meant to be
-  thrown away.
-- **diagnosing-bugs** — the user says "diagnose" or "debug this", or
-  reports something broken, throwing, failing, or slow, with more than one
-  plausible cause (overlaps the sequential-thinking trigger above for that
-  case).
-- **research** — a topic needs investigating against primary sources and
-  the findings written to a Markdown file, matching this repo's existing
-  `docs/research/` pattern.
-- **tdd** — building a feature or fixing a bug test-first, reinforcing this
-  repo's own "write tests with fixtures" testing discipline.
-- **domain-modeling** — discussing codebase terminology, or writing/editing
-  a `CONTEXT.md` or ADR under the multi-context layout above.
-- **codebase-design** — designing or improving a module's interface,
-  deciding where a seam goes, or making code more testable — most relevant
+Most of the skills below carry only a trigger note here because the active
+host already lists each installed skill with its own one-line description
+every session; this catalogue exists for the two that carry repo-specific
+facts no host listing has (impeccable, audit-rehearsal) and for routing.
+
+- **ask-matt** — route to the right skill when unsure which fits.
+- **grill-with-docs** / **grilling** — stress-test a plan or idea before
+  committing; `grill-with-docs` also produces an ADR or glossary entry.
+- **triage** — work a GitHub issue or PR through the
+  needs-triage/needs-info/ready-for-agent/ready-for-human/wontfix states.
+- **improve-codebase-architecture** — survey the codebase for deepening
+  opportunities as a visual HTML report.
+- **to-spec** — synthesize a converged design into a GitHub Issues spec.
+- **to-tickets** — break an agreed plan into tracer-bullet tickets.
+- **implement** — implement a piece of work with a spec or ticket behind it.
+- **wayfinder** — plan oversized work as a map of decision tickets, or
+  resolve the next open ticket in an existing map.
+- **prototype** — throwaway sanity-check of a state model or UI look.
+- **diagnosing-bugs** — diagnose something broken, throwing, or slow with
+  more than one plausible cause.
+- **research** — investigate primary sources and write findings to
+  `docs/research/`.
+- **tdd** — build or fix test-first.
+- **domain-modeling** — write or edit a `CONTEXT.md` or ADR.
+- **codebase-design** — design a module interface or seam, most relevant
   to `core`'s locked-contract boundaries.
-- **resolving-merge-conflicts** — an in-progress git merge or rebase has
-  conflicts to resolve.
-- **improve** (shadcn) — asked to audit the codebase read-only and produce
-  prioritized, self-contained plans for another agent to execute later;
-  never implements anything itself, unlike `improve-codebase-architecture`
-  which grills interactively toward one chosen change.
-- **find-skills** (vercel-labs) — the user asks "is there a skill for X" or
-  wants a capability none of the skills above cover; verify install count
-  and source reputation before recommending one, and read its full
-  generated output before treating it as authoritative.
+- **resolving-merge-conflicts** — resolve an in-progress merge or rebase.
+- **improve** (shadcn) — read-only codebase audit producing plans for
+  another agent to execute; never implements itself.
+- **find-skills** (vercel-labs) — find a capability no listed skill covers;
+  verify install count and source reputation before recommending one.
 - **impeccable** (pbakaus/impeccable, skill bundle 4.1.2, added 2026-09-01
   via its native installer at project scope for the claude and codex
   providers, so it is deliberately not in `skills-lock.json`; `npx
@@ -886,6 +757,15 @@ documents and guardrails directly.
   per clone); it exists because a docs-link break reached `main` and failed
   CI three pushes in a row (2026-09-02) before anyone ran the check
   locally. Do not bypass it with `--no-verify` as a habit.
+- Per-host model identity, effort defaults, and current prompting deltas:
+  `docs/agents/model-prompting.md`.
+- Delegate to a subagent only for large, genuinely independent,
+  parallelizable tracks of work. Never delegate to verify or double-check
+  your own work, and keep spawn counts low.
+- Match the length of a written document to what the task needs: cover the
+  substance, but do not pad with filler sections, redundant summaries, or
+  boilerplate. `AGENTS.md` and `CLAUDE.md` enforce this with a byte ceiling;
+  every other document should hold to the same discipline without one.
 
 ## Build order
 

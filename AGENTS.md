@@ -85,6 +85,14 @@ before the session ends, and a fixed one is closed with its commit hash and
 verification evidence. The full lifecycle, including uniqueness and labeling
 rules, is binding on every agent: `docs/agents/issue-tracker.md`.
 
+## Model and effort
+
+Per-host model identity, effort defaults, and current prompting deltas from
+each vendor's own guidance: `docs/agents/model-prompting.md`. Covers Codex
+(GPT-5.6, variants `sol`/`terra`/`luna`) and ZCode (GLM-5.3 and
+GLM-5.3-Flash) directly; read it before tuning effort or reasoning settings
+rather than carrying over defaults from a prior model generation.
+
 ## Agent concurrency (ZCode only)
 
 ZCode is expected to use subagents by default, not as an exception: whenever

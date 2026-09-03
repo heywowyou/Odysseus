@@ -3323,3 +3323,86 @@ The deterministic surrounding template has repeated singular-agreement defects
 such as "1 pages", logged separately as issue #28 and not attributed to the
 model migration. Total measured OpenAI spend for schema smoke, the large
 comparison, and the rendered acceptance pair was approximately $0.1870.
+
+### 68. Real-scan fixtures go stale silently; a freshness ratchet catches it instead of a changelog
+
+Discovered 2026-08-25: the whole suite was green while
+`artifacts/sas-fernande.fr/2026-08-02T17-31-56Z` still reported 78 findings,
+months after normalization changes had taken it to 42. `artifacts/` is
+gitignored, so nothing versioned these directories, and nothing checked
+whether the code that produced them was still the code in the tree. Every
+test asserting "78 findings, 61 minor" was describing a pipeline that no
+longer existed, and would have handed the next person eight unexplained
+failures with no way to tell a real regression from accumulated staleness.
+
+`fixtures/audits.json` is now the single curated list of real-scan
+directories the test suite depends on, each with a one-line reason it is
+kept, since the list had grown to thirteen directories with three
+timestamps for one site and no record of why. `pnpm fixtures:refresh`
+re-derives every one of them with `normalize <dir>` and stamps each with a
+fingerprint of the normalization source that produced it
+(`scripts/fixture-fingerprint.mjs`); `fixture-freshness.test.ts` fails the
+build the moment a listed fixture's stamp does not match the code in the
+tree, so staleness is a red test, not a fact discovered by reading `git log`
+months later.
+
+`rule-coverage.test.ts` adds two more measured ratchets distinguishing
+recall (the scanner finding a real issue at all, bounded by what automated
+detection can reach and never moved by fixture work alone) from precision
+(every printed finding being real, correctly described, and singly
+counted, held to a near-perfect bar). Its recall ratchet fails when fewer of
+the tool's emittable rules are exercised by any curated fixture than were
+measured last time; a rule with severity mapping, remediation copy, and
+report wiring but no fixture behind it has never been observed firing,
+which is exactly how `hreflang-missing` (trade-off 31), the LCEN regime
+(trade-off 28), and both cost gates (trade-off 23) went unnoticed for
+months. Its single-rule concentration check is a precision smell: no rule
+may account for more than 30 percent of one audit's findings, and has
+caught the same underlying defect three times under three different names
+(trade-off 31, 219 of 282 Lagnonu findings in five rules; trade-off 30, 102
+of 305 haaitza findings in two Lighthouse image audits; trade-off 24, 182 of
+265 language variants of one page) — each time the wrong identity was
+chosen for a defect, so one instruction printed dozens of times. A rule can
+legitimately sit above the line (`image-alt` on a picture-heavy site, where
+each image is genuinely a separate editorial decision); the threshold
+exists to make crossing it a question asked, not a pattern that ships
+unnoticed a fourth time.
+
+### 69. Per-host prompting guidance is a focused document, and CLAUDE.md's trade-off index is trimmed to one line each
+
+Claude Opus 5, Claude Sonnet 5, GPT-5.6, and GLM-5.3/5.3-Flash each shipped
+current, primary-sourced prompting guidance after this repo's agent documents
+were written, and none of the three agent hosts had any per-model guidance at
+all. `docs/agents/model-prompting.md` collects it: model identity, effort
+defaults, and the behavioral deltas from each vendor's own guidance, one
+section per host, dated and linked to its primary source. It governs
+agent-host behavior only; the product's own model layer stays trade-off 67.
+Two findings from that research are load-bearing enough to promote into
+`CLAUDE.md` itself rather than leave in the focused document alone: Opus 5
+over-delegates to subagents relative to prior models, so the charter now caps
+delegation to large, genuinely independent, parallelizable tracks and never to
+self-verification; and Opus 5 writes longer files by default, which matters
+here specifically because `AGENTS.md` and `CLAUDE.md` carry enforced byte
+ceilings (trade-off 66), so the charter now states the length-calibration rule
+directly rather than relying on a linked document a session may not open.
+
+The same research (GPT-5.6's own guidance measures 41 to 66 percent token
+savings and 10 to 15 percent score gains from removing redundant or no-op
+system-prompt instructions) motivated re-reading `CLAUDE.md` end to end for
+content that no longer earned its altitude under trade-off 66's own standard.
+Ten trade-off index entries (33, 37, 39, 40, 41, 42, 44, 62, 63, 64) had grown
+past one governing imperative into argued detail already present in full in
+this file; each is now trimmed to its "do not X" line plus its pointer. The
+Skill Usage Policy catalogue's one-line trigger descriptions duplicated what
+every agent host already lists for its own installed skills each session;
+only the two entries carrying repo-specific facts no host listing has
+(`impeccable`'s exclusions and hook wiring, `audit-rehearsal`'s scope) kept
+their full text. The fixture-staleness incident narrative that used to sit
+under Testing moved to trade-off 68 above, in the same pass. The Session-log
+rationale paragraph moved to `docs/agents/handoff.md`, and the "Pausing
+before the usage limit" section was compressed to remove its overlap with the
+session-log section directly above it. Combined, these cuts took `CLAUDE.md`
+from 55,739 to 47,870 bytes, restoring real headroom under the 56 KiB
+ceiling without lowering it. No content was deleted outright: everything
+trimmed already existed in full in a linked document, or was moved to one
+that did not yet have it.

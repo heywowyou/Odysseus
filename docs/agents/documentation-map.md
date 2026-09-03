@@ -104,6 +104,8 @@ linked issue without checking both.
 - `docs/agents/domain.md`: domain glossary and ADR conventions.
 - `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`: GitHub
   workflow.
+- `docs/agents/model-prompting.md`: per-host model identity, effort defaults,
+  and current prompting deltas from each vendor's own guidance.
 
 Tool availability is agent-specific. Repository descriptions of a skill, MCP
 server, or launch command are not proof that the current agent has that
