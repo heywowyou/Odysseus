@@ -83,6 +83,11 @@ export type CrawledPageStatus =
   | 'skipped-robots'
   | 'skipped-non-html'
   | 'skipped-external-redirect'
+  /** Navigated, but the server answered a non-2xx final status (issue #39):
+   *  the URL stays inventoried with its failure reason (httpStatus), but it
+   *  is not a page of the site, so it is never scanned and never counts as
+   *  one. Keep in sync with packages/core's ManifestPageStatus. */
+  | 'http-error-status'
   | 'error';
 
 export interface CrawledPage {
@@ -348,6 +353,23 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               ...(httpStatus !== undefined ? { httpStatus } : {}),
               ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
             });
+          } else if (httpStatus !== undefined && (httpStatus < 200 || httpStatus >= 300)) {
+            // Issue #39: a non-2xx response means the URL has no page behind
+            // it. It still cost a navigation (the politeness delay above was
+            // already paid and the budget slot is spent), so it stays in the
+            // inventory with its failure reason, but it must never be
+            // scanned, never emit findings as if it were content, never have
+            // its links followed, and never count as a page the client is
+            // presented. The four /back-office/* 404s that reached the
+            // Villas Foch report were exactly this failure.
+            recordPage({
+              url: item.url,
+              depth: item.depth,
+              status: 'http-error-status',
+              discoveryMethod,
+              ...(httpStatus !== undefined ? { httpStatus } : {}),
+              ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+            });
           } else {
             // A bare language homepage duplicates the homepage it translates,
             // yet is often the only route into that language's subtree
@@ -563,9 +585,12 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     await context.close();
   }
 
-  // A broken link (e.g. a malformed href) can still crawl to a 'visited'
-  // page whose path matches the mentions-legales pattern but 404s - that
-  // must never win over an actual 200 page just because it appears first.
+  // A broken link (e.g. a malformed href) can still land on a URL whose
+  // path matches the mentions-legales pattern but which answers a non-2xx
+  // status - recorded 'http-error-status' since issue #39, so the status
+  // test alone already excludes it; the 2xx condition stays as defense in
+  // depth. Neither may win over an actual 200 page just because it appears
+  // first.
   const resolvedUrls = pages
     .filter(
       (page) =>

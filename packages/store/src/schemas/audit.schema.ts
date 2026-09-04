@@ -163,6 +163,9 @@ const manifestPageEntrySchema = new Schema(
         'skipped-robots',
         'skipped-non-html',
         'skipped-external-redirect',
+        // Issue #39: navigated to a non-2xx response; inventoried with its
+        // httpStatus, never scanned.
+        'http-error-status',
         'error',
       ],
     },

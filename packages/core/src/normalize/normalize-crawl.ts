@@ -43,6 +43,10 @@ export type CrawlPageStatus =
   | 'skipped-robots'
   | 'skipped-non-html'
   | 'skipped-external-redirect'
+  /** Navigated to a non-2xx response (issue #39). Kept in sync with
+   *  ManifestPageStatus by hand; historical manifests recorded the same
+   *  outcome as 'visited', which isBrokenTarget still reads. */
+  | 'http-error-status'
   | 'error';
 
 export interface CrawlPageInput {
@@ -75,6 +79,10 @@ export interface NormalizeCrawlInput {
 
 function isBrokenTarget(page: CrawlPageInput): boolean {
   if (page.status === 'error') return true;
+  if (page.status === 'http-error-status') return true;
+  // Historical manifests recorded a 404 target as 'visited' (issue #39
+  // predates the dedicated status), so the old shape must keep firing or
+  // re-normalizing an old audit would silently drop its broken links.
   return page.status === 'visited' && page.httpStatus !== undefined && page.httpStatus >= 400;
 }
 

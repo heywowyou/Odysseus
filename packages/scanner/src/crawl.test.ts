@@ -123,6 +123,42 @@ function installFetchStub(routes: Record<string, string>): void {
 
 const ROBOTS_BODY = 'User-agent: *\nAllow: /\n';
 
+/** Issue #39 harness: the same fake browser as makeFakeBrowser above, but
+ *  each URL can answer its own HTTP status, so the crawl loop's status
+ *  assignment is exercised against a real navigation sequence. Anchors are
+ *  only read for pages the loop reaches link discovery on, which after the
+ *  fix never includes a non-2xx response. */
+function makeStatusFakeBrowser(
+  statusFor: (url: string) => number,
+  anchorsFor: (url: string) => FakeAnchorSpec[] = () => [],
+): Browser {
+  const context = {
+    setDefaultTimeout: () => {},
+    setDefaultNavigationTimeout: () => {},
+    newPage: async () => {
+      let currentUrl = 'about:blank';
+      return {
+        goto: async (url: string) => {
+          currentUrl = url;
+          return {
+            status: () => statusFor(url),
+            headers: () => ({ 'content-type': 'text/html; charset=utf-8' }),
+          };
+        },
+        url: () => currentUrl,
+        $$eval: async (_selector: string, fn: (elements: unknown[]) => unknown) =>
+          fn(anchorsFor(currentUrl).map(fakeAnchorElement)),
+        evaluate: async () => {
+          throw new Error('no DOM in unit mock');
+        },
+        close: async () => {},
+      };
+    },
+    close: async () => {},
+  };
+  return { newContext: async () => context } as unknown as Browser;
+}
+
 /** A rel=next chain: the homepage links to /page/1/, each /page/k/ links
  *  to /page/k+1/ (raw hrefs keep the trailing slash a real site would
  *  have; normalizePageUrl strips it during discovery). */
@@ -296,5 +332,111 @@ describe('crawlSite continuation-family guard wiring', () => {
     // Nothing was link-discovered past the threshold, so there is no guard
     // summary at all - absent means nothing was omitted.
     expect(result.continuationGuardSummary).toBeUndefined();
+  });
+});
+
+/** Issue #39 (Villas Foch): a real page linked bare domain and mailbox
+ *  hrefs without a scheme, the crawler resolved them relative to the
+ *  current path, the server answered 404, and those four URLs were then
+ *  presented in the delivered report as pages analysed, complete with
+ *  findings emitted against them. The crawl fact is real and stays
+ *  inventoried; the page status must say so. */
+describe('crawlSite non-2xx responses (issue #39)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('records a 404 as http-error-status with its failure reason, not as visited', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const result = await crawlSite('https://example.com', {
+      browser: makeStatusFakeBrowser(
+        (url) => (url === 'https://example.com/back-office/www.staffcom.fr' ? 404 : 200),
+        (url) => (url === 'https://example.com/' ? [{ href: '/back-office/www.staffcom.fr' }] : []),
+      ),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    const notFound = result.pages.find(
+      (page) => page.url === 'https://example.com/back-office/www.staffcom.fr',
+    );
+    expect(notFound?.status).toBe('http-error-status');
+    expect(notFound?.httpStatus).toBe(404);
+    expect(notFound?.discoveredFrom).toBe('https://example.com/');
+  });
+
+  it('excludes the 404 from the visited page population and the visitedCount denominator', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const result = await crawlSite('https://example.com', {
+      browser: makeStatusFakeBrowser(
+        (url) => (url === 'https://example.com/back-office/bienvenue@villasfoch.fr' ? 404 : 200),
+        (url) =>
+          url === 'https://example.com/' ? [{ href: '/back-office/bienvenue@villasfoch.fr' }] : [],
+      ),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    expect(result.pages.filter((page) => page.status === 'visited')).toHaveLength(1);
+    expect(result.visitedCount).toBe(2);
+  });
+
+  it('does not follow links found on a non-2xx page', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const result = await crawlSite('https://example.com', {
+      browser: makeStatusFakeBrowser(
+        (url) => (url === 'https://example.com/dead' ? 500 : 200),
+        (url) => {
+          if (url === 'https://example.com/') return [{ href: '/dead' }];
+          if (url === 'https://example.com/dead') return [{ href: '/only-via-dead' }];
+          return [];
+        },
+      ),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    const dead = result.pages.find((page) => page.url === 'https://example.com/dead');
+    expect(dead?.status).toBe('http-error-status');
+    expect(dead?.httpStatus).toBe(500);
+    expect(
+      result.pages.find((page) => page.url === 'https://example.com/only-via-dead'),
+    ).toBeUndefined();
+    expect(result.linkDiscoveredUrls).not.toContain('https://example.com/only-via-dead');
+  });
+
+  it('never hands a 404 mentions-legales URL to the SIREN extraction', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const result = await crawlSite('https://example.com', {
+      browser: makeStatusFakeBrowser(
+        (url) => (url === 'https://example.com/mentions-legales' ? 404 : 200),
+        (url) => (url === 'https://example.com/' ? [{ href: '/mentions-legales' }] : []),
+      ),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    const notFound = result.pages.find(
+      (page) => page.url === 'https://example.com/mentions-legales',
+    );
+    expect(notFound?.status).toBe('http-error-status');
+    expect(result.mentionsLegalesPageUrl).toBeUndefined();
+  });
+
+  it('still records a 2xx page as visited', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const result = await crawlSite('https://example.com', {
+      browser: makeStatusFakeBrowser(() => 204),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    expect(result.pages[0]?.status).toBe('visited');
+    expect(result.pages[0]?.httpStatus).toBe(204);
   });
 });

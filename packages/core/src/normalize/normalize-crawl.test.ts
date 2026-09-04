@@ -89,6 +89,31 @@ describe('broken-internal-link', () => {
     expect(broken[0]?.description).toMatch(/could not be reached/i);
   });
 
+  // Issue #39: the crawler now records a non-2xx target with its own
+  // status instead of 'visited'. The link that led there is still broken.
+  it('fires for a target recorded http-error-status, stating the HTTP status', () => {
+    const candidates = extractCrawlCandidates(
+      baseInput({
+        pages: [
+          { url: START_URL, status: 'visited', httpStatus: 200 },
+          {
+            url: 'https://example.com/back-office/www.staffcom.fr',
+            status: 'http-error-status',
+            httpStatus: 404,
+            discoveredFrom: START_URL,
+          },
+        ],
+      }),
+    );
+    const broken = candidates.filter((c) => c.ruleId === BROKEN_INTERNAL_LINK_RULE_ID);
+    expect(broken).toHaveLength(1);
+    expect(broken[0]?.pageUrl).toBe(START_URL);
+    expect(broken[0]?.element?.selector).toBe(
+      'a[href="https://example.com/back-office/www.staffcom.fr"]',
+    );
+    expect(broken[0]?.description).toContain('HTTP 404');
+  });
+
   it('does not fire for a successfully visited target', () => {
     const candidates = extractCrawlCandidates(
       baseInput({

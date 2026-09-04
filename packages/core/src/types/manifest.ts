@@ -126,6 +126,13 @@ export type ManifestPageStatus =
   | 'skipped-robots'
   | 'skipped-non-html'
   | 'skipped-external-redirect'
+  /** Navigated, but the server answered a non-2xx final status (issue
+   *  #39). The URL stays inventoried with its failure reason (httpStatus),
+   *  but no page directory was written, no scanner ran on it, and it does
+   *  not belong to the content-checked population. Historical manifests
+   *  recorded these as 'visited'; keep the broken-internal-link rule
+   *  reading both shapes. */
+  | 'http-error-status'
   | 'error';
 
 /**
