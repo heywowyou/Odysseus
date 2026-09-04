@@ -14,3 +14,24 @@ overrides:
   # structured-data-testing-tool major bump or replacement.
   'nth-check@<2.0.1': '>=2.0.1'
   'validator@<13.15.22': '>=13.15.22'
+packageExtensions:
+  # Issue #29: react-router ships d.ts that import React's types but
+  # declares no @types/react of its own, so its declaration resolution fell
+  # through to pnpm's virtual-store hoist, where exactly one @types/react
+  # wins per package name regardless of which majors the workspace actually
+  # uses. With @types/react 18 (the spa-demo fixture's pin) in that slot,
+  # the dashboard project compiled its own code against 19 while
+  # react-router's exported prop types carried the 18 ReactNode union, and
+  # the two are mutually unassignable. Declaring the types packages here
+  # pins react-router's own resolution to the same 19 copies the dashboard
+  # and site already use, so no future reinstall can flip the winner.
+  # Scoped to the 8.x line: a react-router major may target a different
+  # React and must re-decide this deliberately. Deliberately not a hoist
+  # exclusion: with @types/react removed from the hoist and no root-level
+  # declaration, react-router (and lucide-react, which also declares no
+  # @types/react) would resolve no React types at all and silently degrade
+  # to any under skipLibCheck.
+  'react-router@>=8.3 <9':
+    dependencies:
+      '@types/react': ^19.2.18
+      '@types/react-dom': ^19.2.5

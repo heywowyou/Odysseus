@@ -32,6 +32,24 @@ export interface OutreachDraftsPage {
   offset: number;
 }
 
+/** Issue #15: the exact persisted text of one live draft, served by
+ *  GET /api/outreach/drafts/:draftId/text. businessName is the candidate's
+ *  hotel name when the candidate row still resolves, null otherwise; the
+ *  dialog falls back to candidateId. Dates arrive as ISO strings, like
+ *  every list row above. */
+export interface OutreachDraftText {
+  draftId: string;
+  threadId: string;
+  candidateId: string;
+  businessName: string | null;
+  touch: number;
+  language: 'fr' | 'en';
+  recipient: string;
+  subject: string;
+  body: string;
+  createdAt: string;
+}
+
 export interface ReplyReviewRow {
   threadId: string;
   candidateId: string;

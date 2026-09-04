@@ -564,6 +564,14 @@ export const en: DashboardStrings = {
     skip: 'Skip',
     neverSendNote: 'Odysseus cannot send drafts. Sending happens only in the operator mailbox.',
     empty: 'No drafts are waiting for review.',
+    viewText: 'View text',
+    textDialogDescription:
+      'The exact text stored with this draft. Sending happens only in your mailbox.',
+    textRecipientLabel: 'Recipient',
+    textSubjectLabel: 'Subject',
+    textBodyLabel: 'Message body',
+    copyButton: 'Copy',
+    copiedLabel: 'Copied',
   },
   replies: {
     title: 'Replies',

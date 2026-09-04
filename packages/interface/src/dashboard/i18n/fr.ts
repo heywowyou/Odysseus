@@ -576,6 +576,14 @@ export const fr: DashboardStrings = {
     neverSendNote:
       'Odysseus ne peut pas envoyer de brouillons. L’envoi se fait uniquement depuis la boîte de l’opérateur.',
     empty: 'Aucun brouillon en attente de revue.',
+    viewText: 'Voir le texte',
+    textDialogDescription:
+      'Le texte exact stocké avec ce brouillon. L’envoi se fait uniquement depuis votre boîte.',
+    textRecipientLabel: 'Destinataire',
+    textSubjectLabel: 'Objet',
+    textBodyLabel: 'Corps du message',
+    copyButton: 'Copier',
+    copiedLabel: 'Copié',
   },
   replies: {
     title: 'Réponses',

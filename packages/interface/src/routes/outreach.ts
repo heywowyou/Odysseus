@@ -6,6 +6,7 @@ import {
   closeOutreachThreadsForDomain,
   findOutreachDraftById,
   findOutreachThreadById,
+  getHotelCandidate,
   getOutcomeSummary,
   isSuppressed,
   listLivePreviewsForDomain,
@@ -86,6 +87,44 @@ export function registerOutreachRoutes(router: Router, connection: Connection): 
   router.get('/api/outreach/drafts', async ({ res, query }) => {
     const page = await listOutreachReviewDrafts(connection, parsePageQuery(query));
     sendJson(res, 200, page);
+  });
+
+  // Issue #15: the exact subject and body of one live draft. The text is
+  // persisted with the row precisely so the operator can still read it once
+  // the one-time CLI output is gone, and this is the only dashboard surface
+  // that serves it - the list endpoint above stays metadata-only. Read-only
+  // like every handler in this module: nothing sends, edits, or deletes.
+  // Only status 'created' is served, so a draft reviewed mid-flight reads
+  // back as gone (404) instead of half-leaving the review flow, and the
+  // providerThreadId-less failed rows (empty text by store design) are
+  // unreachable here too.
+  router.get('/api/outreach/drafts/:draftId/text', async ({ res, params }) => {
+    const draftId = params['draftId'] ?? '';
+    if (!UUID_PATTERN.test(draftId)) {
+      sendError(res, 400, 'draftId must be a UUID');
+      return;
+    }
+    const draft = await findOutreachDraftById(connection, draftId);
+    if (draft === null || draft.status !== 'created') {
+      sendError(res, 404, 'no live draft found for this id');
+      return;
+    }
+    // The candidate's name travels along so the dialog shows a hotel, not a
+    // bare id; an unknown candidate degrades to null rather than failing a
+    // read whose text is already on the row.
+    const candidate = await getHotelCandidate(connection, draft.candidateId);
+    sendJson(res, 200, {
+      draftId: draft.draftId,
+      threadId: draft.threadId,
+      candidateId: draft.candidateId,
+      businessName: candidate?.name ?? null,
+      touch: draft.touch,
+      language: draft.language,
+      recipient: draft.roleAddress,
+      subject: draft.subject,
+      body: draft.body,
+      createdAt: draft.createdAt,
+    });
   });
 
   // Approve/skip both mean "reviewed" and nothing else: the draft leaves the

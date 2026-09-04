@@ -52,12 +52,14 @@ function withProviders(
           null,
           createElement(Route, {
             path: route.pattern,
-            // react-router 8.3.1 resolves its own React types from
-            // @types/react 18 through pnpm's virtual-store hoist (pinned by
-            // the React 18 spa-demo fixture), while this file compiles
-            // against 19; the two ReactNode unions are mutually
-            // unassignable, so the element prop needs the explicit bridge.
-            element: child as unknown as React.ComponentProps<typeof Route>['element'],
+            // react-router declares no @types/react of its own, so its prop
+            // types used to resolve through pnpm's virtual-store hoist,
+            // where the 18 copy won and clashed with this file's 19 types
+            // (issue #29). The packageExtensions pin in pnpm-workspace.yaml
+            // anchors react-router to the same 19 types the dashboard
+            // compiles against, so no cast belongs here: this line fails
+            // loudly again if that anchor ever regresses.
+            element: child,
           }),
         ),
   );

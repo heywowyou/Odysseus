@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@odysseus/store', () => ({
   listOutreachReviewDrafts: vi.fn(),
   findOutreachDraftById: vi.fn(),
+  getHotelCandidate: vi.fn(),
   markOutreachDraftDeleted: vi.fn(),
   listRepliesNeedingReview: vi.fn(),
   findOutreachThreadById: vi.fn(),
@@ -24,6 +25,7 @@ import {
   closeOutreachThreadsForDomain,
   findOutreachDraftById,
   findOutreachThreadById,
+  getHotelCandidate,
   getOutcomeSummary,
   isSuppressed,
   listLivePreviewsForDomain,
@@ -149,6 +151,94 @@ describe('GET /api/outreach/drafts', () => {
 
     expect(listOutreachReviewDrafts).toHaveBeenCalledWith(fakeConnection, { limit: 50, offset: 0 });
     expect(JSON.parse(res.body ?? '{}').rows).toEqual([]);
+  });
+});
+
+describe('GET /api/outreach/drafts/:draftId/text', () => {
+  // Only the fields the text endpoint reads; the stored row carries more.
+  const liveDraft = {
+    draftId: DRAFT_ID,
+    threadId: THREAD_ID,
+    candidateId: 'c-1',
+    touch: 2,
+    language: 'fr',
+    roleAddress: 'role@hotel-exemple.fr',
+    subject: 'Objet du brouillon',
+    body: 'Corps du brouillon',
+    status: 'created',
+    createdAt: new Date('2026-09-01T08:30:00.000Z'),
+  } as never;
+
+  it('serves the exact persisted text of a live draft with the candidate name', async () => {
+    vi.mocked(findOutreachDraftById).mockResolvedValue(liveDraft);
+    vi.mocked(getHotelCandidate).mockResolvedValue({ candidateId: 'c-1', name: 'Hôtel Exemple' });
+
+    const router = new Router();
+    registerOutreachRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(fakeGetReq(`/api/outreach/drafts/${DRAFT_ID}/text`), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(findOutreachDraftById).toHaveBeenCalledWith(fakeConnection, DRAFT_ID);
+    expect(getHotelCandidate).toHaveBeenCalledWith(fakeConnection, 'c-1');
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      draftId: DRAFT_ID,
+      threadId: THREAD_ID,
+      candidateId: 'c-1',
+      businessName: 'Hôtel Exemple',
+      touch: 2,
+      language: 'fr',
+      recipient: 'role@hotel-exemple.fr',
+      subject: 'Objet du brouillon',
+      body: 'Corps du brouillon',
+      createdAt: '2026-09-01T08:30:00.000Z',
+    });
+  });
+
+  it('degrades businessName to null when the candidate row is gone', async () => {
+    vi.mocked(findOutreachDraftById).mockResolvedValue(liveDraft);
+    vi.mocked(getHotelCandidate).mockResolvedValue(null);
+
+    const router = new Router();
+    registerOutreachRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(fakeGetReq(`/api/outreach/drafts/${DRAFT_ID}/text`), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}').businessName).toBeNull();
+  });
+
+  it('serves no text once the draft has left the live set', async () => {
+    vi.mocked(findOutreachDraftById).mockResolvedValue({ ...liveDraft, status: 'deleted' });
+
+    const router = new Router();
+    registerOutreachRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(fakeGetReq(`/api/outreach/drafts/${DRAFT_ID}/text`), res);
+
+    expect(res.statusCode).toBe(404);
+    expect(getHotelCandidate).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 for an unknown draft id', async () => {
+    vi.mocked(findOutreachDraftById).mockResolvedValue(null);
+
+    const router = new Router();
+    registerOutreachRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(fakeGetReq(`/api/outreach/drafts/${DRAFT_ID}/text`), res);
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('rejects a malformed draft id with 400 and reads nothing', async () => {
+    const router = new Router();
+    registerOutreachRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(fakeGetReq('/api/outreach/drafts/not-a-uuid/text'), res);
+
+    expect(res.statusCode).toBe(400);
+    expect(findOutreachDraftById).not.toHaveBeenCalled();
   });
 });
 

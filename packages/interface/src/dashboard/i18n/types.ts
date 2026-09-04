@@ -584,6 +584,16 @@ export interface DashboardStrings {
     skip: string;
     neverSendNote: string;
     empty: string;
+    /** Issue #15: read-only dialog with the draft's persisted text. The
+     *  meta labels (touch, created date) reuse the column names above so
+     *  the table and the dialog cannot drift apart. */
+    viewText: string;
+    textDialogDescription: string;
+    textRecipientLabel: string;
+    textSubjectLabel: string;
+    textBodyLabel: string;
+    copyButton: string;
+    copiedLabel: string;
   };
   replies: {
     title: string;

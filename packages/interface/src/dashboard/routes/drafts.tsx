@@ -5,6 +5,13 @@ import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { EmptyState } from '../components/ui/empty-state';
 import { Skeleton } from '../components/ui/skeleton';
 import {
@@ -20,10 +27,36 @@ import { fetchJson, sendJson } from '../lib/api';
 import { formatDateTime, formatRelativeTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import { PAGE_SIZE, clampedOffset, pageState } from './outreach-model';
-import type { OutreachDraftRow, OutreachDraftsPage } from './outreach-model';
+import type { OutreachDraftRow, OutreachDraftsPage, OutreachDraftText } from './outreach-model';
 
 const POLL_INTERVAL_MS = 5000;
 const SKELETON_ROW_COUNT = 8;
+
+/** Copies one text field and flips to the copied label for a moment. The
+ *  clipboard can refuse (permissions, insecure context); the button then
+ *  stays usable and quiet, because the text is still on screen to select. */
+function CopyButton(props: { text: string; label: string; copiedLabel: string }): JSX.Element {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => {
+        void navigator.clipboard
+          .writeText(props.text)
+          .then(() => {
+            setCopied(true);
+            window.setTimeout(() => {
+              setCopied(false);
+            }, 2000);
+          })
+          .catch(() => {});
+      }}
+    >
+      {copied ? props.copiedLabel : props.label}
+    </Button>
+  );
+}
 
 export function DraftsPage(): JSX.Element {
   const { strings, language } = useI18n();
@@ -36,6 +69,16 @@ export function DraftsPage(): JSX.Element {
   const [pendingDraftId, setPendingDraftId] = useState<string | null>(null);
   const [actionFailed, setActionFailed] = useState(false);
 
+  // Issue #15: read-only view of the draft's persisted text. Strictly a
+  // read plus a clipboard copy: the dialog has no send, edit, or review
+  // action, matching the page's stated rule that sending stays a manual
+  // Gmail act.
+  const [textDraft, setTextDraft] = useState<OutreachDraftRow | null>(null);
+  const [draftText, setDraftText] = useState<OutreachDraftText | null>(null);
+  const [textLoading, setTextLoading] = useState(false);
+  const [textError, setTextError] = useState(false);
+  const [textRetryNonce, setTextRetryNonce] = useState(0);
+
   // An action on the last row of the last page shrinks the list; step the
   // window back instead of showing a phantom empty page.
   useEffect(() => {
@@ -43,6 +86,30 @@ export function DraftsPage(): JSX.Element {
       setOffset(clampedOffset(data.total, PAGE_SIZE, offset));
     }
   }, [data, offset]);
+
+  // Fetched on open, not with the list: bodies are bulky and the list stays
+  // metadata-only on purpose. The stale flag keeps a slow response for one
+  // draft from landing in a dialog the operator has since re-pointed.
+  useEffect(() => {
+    if (textDraft === null) return;
+    let stale = false;
+    setTextLoading(true);
+    setTextError(false);
+    setDraftText(null);
+    fetchJson<OutreachDraftText>(`/api/outreach/drafts/${textDraft.draftId}/text`)
+      .then((text) => {
+        if (!stale) setDraftText(text);
+      })
+      .catch(() => {
+        if (!stale) setTextError(true);
+      })
+      .finally(() => {
+        if (!stale) setTextLoading(false);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [textDraft, textRetryNonce]);
 
   const review = async (draftId: string, action: 'approve' | 'skip'): Promise<void> => {
     setPendingDraftId(draftId);
@@ -100,7 +167,7 @@ export function DraftsPage(): JSX.Element {
                 <TableHeaderCell>{strings.drafts.columns.createdAt}</TableHeaderCell>
                 <TableHeaderCell>{strings.drafts.columns.providerState}</TableHeaderCell>
                 <TableHeaderCell>{strings.drafts.columns.reviewState}</TableHeaderCell>
-                <TableHeaderCell className="w-52">{null}</TableHeaderCell>
+                <TableHeaderCell className="w-64">{null}</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -127,6 +194,15 @@ export function DraftsPage(): JSX.Element {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setTextDraft(draft);
+                        }}
+                      >
+                        {strings.drafts.viewText}
+                      </Button>
                       <Button
                         variant="secondary"
                         size="sm"
@@ -205,6 +281,99 @@ export function DraftsPage(): JSX.Element {
         {strings.drafts.neverSendNote}
       </p>
       {body}
+      <Dialog
+        open={textDraft !== null}
+        onOpenChange={(open) => {
+          if (!open) setTextDraft(null);
+        }}
+      >
+        <DialogContent>
+          <DialogTitle>
+            {draftText?.businessName ?? textDraft?.candidateId ?? strings.drafts.title}
+          </DialogTitle>
+          <DialogDescription>{strings.drafts.textDialogDescription}</DialogDescription>
+          <div className="mt-4 flex flex-col gap-4">
+            {textLoading ? (
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            ) : textError ? (
+              <div className="flex flex-col items-start gap-3">
+                <p className="text-sm text-danger">{strings.common.requestFailed}</p>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setTextRetryNonce((nonce) => nonce + 1);
+                  }}
+                >
+                  {strings.common.retry}
+                </Button>
+              </div>
+            ) : draftText !== null ? (
+              <>
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                  <span className="text-ink-muted">
+                    {strings.drafts.textRecipientLabel}{' '}
+                    <span className="ident text-ink">{draftText.recipient}</span>
+                  </span>
+                  <span className="text-ink-muted">
+                    {strings.drafts.columns.touch}{' '}
+                    <span className="text-ink">{draftText.touch}</span>
+                  </span>
+                  <span className="text-xs uppercase text-ink-muted">{draftText.language}</span>
+                  <span className="text-ink-muted">
+                    {strings.drafts.columns.createdAt}{' '}
+                    <span className="text-ink">
+                      {formatDateTime(new Date(draftText.createdAt), language)}
+                    </span>
+                  </span>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-ink">
+                      {strings.drafts.textSubjectLabel}
+                    </span>
+                    <CopyButton
+                      text={draftText.subject}
+                      label={strings.drafts.copyButton}
+                      copiedLabel={strings.drafts.copiedLabel}
+                    />
+                  </div>
+                  <p className="mt-1 break-words rounded-lg border border-line bg-panel p-3 text-sm text-ink">
+                    {draftText.subject}
+                  </p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-ink">
+                      {strings.drafts.textBodyLabel}
+                    </span>
+                    <CopyButton
+                      text={draftText.body}
+                      label={strings.drafts.copyButton}
+                      copiedLabel={strings.drafts.copiedLabel}
+                    />
+                  </div>
+                  <p className="mt-1 max-h-72 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-line bg-panel p-3 text-sm text-ink">
+                    {draftText.body}
+                  </p>
+                </div>
+              </>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setTextDraft(null);
+              }}
+            >
+              {strings.common.cancel}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </article>
   );
 }
