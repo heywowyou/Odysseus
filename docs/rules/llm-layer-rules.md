@@ -789,3 +789,23 @@ output. Also noted in that Mistral campaign: rate limits (HTTP 429) on the mediu
 are common enough that back-to-back analyze runs need spacing; a 429
 during retries fails the analysis loudly (by design), and a 429 on the
 reviewer skips it (also by design).
+
+---
+
+## 13. GitHub issue lifecycle for model-driven work
+
+Issue lifecycle is a standard part of completing model-driven work, not
+optional administration. When a verified defect is found and will not be
+fixed in the current session, create a GitHub issue before the session ends
+or add the evidence to the existing issue. A local note, session log, or
+prompt is not a substitute for the issue tracker.
+
+The converse is equally binding. When a verified defect has been fixed,
+committed, and tested, close its GitHub issue in the same session. The
+closing comment names the commit and the verification commands with their
+results. Do not leave a confirmed fixed issue open for a later cleanup pass.
+
+`docs/agents/issue-tracker.md` owns the exact GitHub commands, uniqueness
+check, labels, and the full resolution lifecycle. This rule is repeated here
+because model-output guards and review work routinely expose defects: the
+discovery and resolution paths must be equally automatic.
