@@ -539,6 +539,16 @@ export interface ReportStrings {
     transactionalFlowConflictTemplate: string;
     transactionalFlowConflictManualAbsent: string;
     transactionalFlowConflictManualPresent: string;
+    /** Issue #42: shown when the obligation engine resolved the flow gate
+     *  to likely_in_scope via a 'transactional-flow-inconclusive' fact -
+     *  booking controls were detected but their destination could not be
+     *  established, which is a stronger hint than a plain "to be
+     *  confirmed" and must not be silently interchangeable with a clean
+     *  negative. Template: {examplePages}, a short comma-joined sample. */
+    transactionalFlowInconclusiveTemplate: string;
+    /** Fallback when the stored siteSignals carry no resolvable example
+     *  pages for the inconclusive detection. */
+    transactionalFlowInconclusiveNoExample: string;
   };
   /** Pure re-presentation of analysis.themes (rank/title/effort/impact/
    *  pages) as a dense, printable table - no new data, no new logic. */
@@ -1120,6 +1130,12 @@ export interface ReportStrings {
     legalCitationTransactionalFlowLocationOnSite: string;
     legalCitationTransactionalFlowLocationDelegated: string;
     legalCitationTransactionalFlowUnknownFact: string;
+    /** Issue #42: the fact kind 'transactional-flow-inconclusive'
+     *  sentence - booking controls were found but their destination could
+     *  not be established, so the flow gate could not be resolved either
+     *  way. Distinct from legalCitationNoTransactionalFlowFact's clean
+     *  negative. */
+    legalCitationTransactionalFlowInconclusiveFact: string;
     legalCitationNoTransactionalFlowFact: string;
     legalCitationSirenMissingFact: string;
     /** Template: {reason}. */

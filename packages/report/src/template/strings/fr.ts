@@ -320,6 +320,13 @@ export const fr: ReportStrings = {
       'Signal contradictoire : la détection automatisée a identifié un parcours transactionnel sur ce site, mais une confirmation manuelle indique {manualValue}. À vérifier avant toute décision fondée sur ce statut.',
     transactionalFlowConflictManualAbsent: "l'absence d'un tel parcours",
     transactionalFlowConflictManualPresent: 'sa présence',
+    // Issue #42: the inconclusive detection is a materially stronger hint
+    // than a routine "à confirmer" - booking controls were actually seen,
+    // only their destination could not be established.
+    transactionalFlowInconclusiveTemplate:
+      "Des contrôles de réservation ont été relevés sur les pages visitées (par exemple : {examplePages}), mais leur destination n'a pas pu être établie de manière fiable. Un parcours de réservation en ligne existe donc peut-être : faites-le confirmer avant de vous appuyer sur ce statut.",
+    transactionalFlowInconclusiveNoExample:
+      "Des contrôles de réservation ont été relevés sur les pages visitées, mais leur destination n'a pas pu être établie de manière fiable. Un parcours de réservation en ligne existe donc peut-être : faites-le confirmer avant de vous appuyer sur ce statut.",
     disclaimerNote:
       'Cette section reproduit des critères réglementaires et des données publiques de votre entreprise, sans interprétation juridique supplémentaire. Une confirmation par un conseil juridique reste nécessaire avant toute décision.',
     undeterminedActionNote:
@@ -844,6 +851,10 @@ export const fr: ReportStrings = {
     legalCitationTransactionalFlowLocationDelegated: 'en ligne, délégué à un prestataire tiers',
     legalCitationTransactionalFlowUnknownFact:
       "La présence d'un parcours de réservation, panier ou paiement en ligne n'a pas pu être confirmée sur l'ensemble du site.",
+    // Issue #42: detection found booking controls it could not resolve -
+    // materially different from the clean negative below.
+    legalCitationTransactionalFlowInconclusiveFact:
+      "Des contrôles de réservation ont été relevés sur les pages visitées, mais leur destination n'a pas pu être établie de manière fiable : un parcours transactionnel n'est donc ni confirmé ni exclu.",
     legalCitationNoTransactionalFlowFact:
       "Aucun parcours de réservation, panier ou paiement en ligne n'a été trouvé sur les pages visitées.",
     legalCitationSirenMissingFact: "Aucun identifiant SIREN n'a été trouvé sur les pages visitées.",

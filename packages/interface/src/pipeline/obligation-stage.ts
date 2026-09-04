@@ -181,11 +181,15 @@ function resolveSiteSignals(
   const siteSignals: SiteSignals = {
     hasTransactionalFlow: override.value,
     transactionalFlowEvidence: detected?.transactionalFlowEvidence ?? [],
-    ...(detected?.transactionalFlowRedirectChecks !== undefined
-      ? {
-          transactionalFlowRedirectChecks: detected.transactionalFlowRedirectChecks,
-        }
-      : {}),
+    // transactionalFlowEvidence is passed through because it feeds the
+    // 'transactional-flow' fact's own payload when the override is true.
+    // transactionalFlowRedirectChecks and transactionalFlowAmbiguities
+    // are deliberately NOT: since issue #42 both flip a detector-resolved
+    // false to likely_in_scope, and an operator asserting "no
+    // transactional flow" is resolving the gate personally - their word
+    // is the escape hatch from an inconclusive detection, not something
+    // detector ambiguity partially overrides. Both records stay on the
+    // manifest, where the report reads them.
   };
 
   return { siteSignals, resolutions };

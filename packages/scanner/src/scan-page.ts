@@ -2,6 +2,7 @@ import type { Browser } from 'playwright';
 import type { Result as LighthouseResult } from 'lighthouse';
 import type {
   RenderDiffResult,
+  TransactionalFlowAmbiguity,
   TransactionalFlowEvidence,
   TransactionalFlowRedirectCheck,
 } from '@odysseus/core';
@@ -14,6 +15,7 @@ import {
 } from './checks/mentions-legales.js';
 import {
   detectTransactionalFlow,
+  detectUnresolvedBookingControls,
   findDelegatedBookingRedirectChecks,
   type RedirectHostCache,
 } from './checks/transactional-flow.js';
@@ -122,6 +124,7 @@ export interface PageScanResult {
   mentionsLegalesError?: string;
   transactionalFlowEvidence?: TransactionalFlowEvidence[];
   transactionalFlowRedirectChecks?: TransactionalFlowRedirectCheck[];
+  transactionalFlowAmbiguities?: TransactionalFlowAmbiguity[];
   headMetadata?: HeadMetadataExtraction;
   headMetadataError?: string;
   sitemapCheck?: SitemapCheckResult & {
@@ -281,6 +284,7 @@ export async function runRenderedAnalysis(
   let mentionsLegalesError: string | undefined;
   let transactionalFlowEvidence: TransactionalFlowEvidence[] | undefined;
   let transactionalFlowRedirectChecks: TransactionalFlowRedirectCheck[] | undefined;
+  let transactionalFlowAmbiguities: TransactionalFlowAmbiguity[] | undefined;
   let headMetadataResult: HeadMetadataExtraction | undefined;
   let headMetadataError: string | undefined;
   let canonicalTargetResult: CanonicalTargetCheckResult | undefined;
@@ -390,6 +394,18 @@ export async function runRenderedAnalysis(
           // error, and an empty result is the correct fallback.
           transactionalFlowRedirectChecks = [];
           checkOutcomes['transactional-flow-redirect-checks'] = 'failed';
+        }
+
+        try {
+          transactionalFlowAmbiguities = await detectUnresolvedBookingControls(page, url);
+          checkOutcomes['transactional-flow-ambiguities'] = 'completed';
+        } catch {
+          // Same best-effort posture as the two transactional-flow passes
+          // above: a failure here must not surface as a page error, an
+          // empty result is the fallback, and the failed outcome is still
+          // recorded in checkOutcomes rather than silently dropped.
+          transactionalFlowAmbiguities = [];
+          checkOutcomes['transactional-flow-ambiguities'] = 'failed';
         }
 
         try {
@@ -564,6 +580,8 @@ export async function runRenderedAnalysis(
     result.transactionalFlowEvidence = transactionalFlowEvidence;
   if (transactionalFlowRedirectChecks !== undefined)
     result.transactionalFlowRedirectChecks = transactionalFlowRedirectChecks;
+  if (transactionalFlowAmbiguities !== undefined)
+    result.transactionalFlowAmbiguities = transactionalFlowAmbiguities;
   if (headMetadataResult !== undefined) result.headMetadata = headMetadataResult;
   if (headMetadataError !== undefined) result.headMetadataError = headMetadataError;
   if (canonicalTargetResult !== undefined) result.canonicalTarget = canonicalTargetResult;

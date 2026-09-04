@@ -280,6 +280,13 @@ export const en: ReportStrings = {
       'Conflicting signal: automated detection found a transactional flow on this site, but a manual confirmation states {manualValue}. Verify before relying on this status.',
     transactionalFlowConflictManualAbsent: 'no such flow exists',
     transactionalFlowConflictManualPresent: 'it does exist',
+    // Issue #42: the inconclusive detection is a materially stronger hint
+    // than a routine "requires verification" - booking controls were
+    // actually seen, only their destination could not be established.
+    transactionalFlowInconclusiveTemplate:
+      'Booking controls were found on the visited pages (for example: {examplePages}), but their destination could not be reliably established. An online booking flow may therefore exist: have it confirmed before relying on this status.',
+    transactionalFlowInconclusiveNoExample:
+      'Booking controls were found on the visited pages, but their destination could not be reliably established. An online booking flow may therefore exist: have it confirmed before relying on this status.',
     disclaimerNote:
       'Generated from the existing obligation assessment; no additional legal interpretation has been added. A review by qualified legal counsel remains necessary.',
     undeterminedActionNote:
@@ -735,6 +742,10 @@ export const en: ReportStrings = {
     legalCitationTransactionalFlowLocationDelegated: 'online, delegated to a third-party provider',
     legalCitationTransactionalFlowUnknownFact:
       'Whether the site offers a booking, cart, or checkout flow directly online could not be confirmed across the whole site.',
+    // Issue #42: detection found booking controls it could not resolve -
+    // materially different from the clean negative below.
+    legalCitationTransactionalFlowInconclusiveFact:
+      'Booking controls were found on the visited pages, but their destination could not be reliably established: a transactional flow can therefore be neither confirmed nor ruled out.',
     legalCitationNoTransactionalFlowFact:
       'No booking, cart, or checkout flow was found on the visited pages.',
     legalCitationSirenMissingFact: 'No SIREN identifier was found on the visited pages.',

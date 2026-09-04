@@ -104,6 +104,15 @@ export const CHECK_SCOPE_REGISTRY: readonly CheckScopeEntry[] = [
     completionSignal: 'best-effort-no-error-field',
   },
   {
+    id: 'transactional-flow-ambiguities',
+    resultField: 'transactionalFlowAmbiguities',
+    scope: 'flow',
+    pass: 'rendered',
+    applicability:
+      'Every rendered page: a JS-driven booking control with no crawlable href can appear anywhere on a site (issue #42).',
+    completionSignal: 'best-effort-no-error-field',
+  },
+  {
     id: 'head-metadata',
     resultField: 'headMetadata',
     errorField: 'headMetadataError',

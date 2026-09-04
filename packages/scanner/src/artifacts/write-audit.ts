@@ -91,6 +91,9 @@ function buildScanJson(
     ...(scanResult.transactionalFlowRedirectChecks !== undefined
       ? { transactionalFlowRedirectChecks: scanResult.transactionalFlowRedirectChecks }
       : {}),
+    ...(scanResult.transactionalFlowAmbiguities !== undefined
+      ? { transactionalFlowAmbiguities: scanResult.transactionalFlowAmbiguities }
+      : {}),
     ...(scanResult.headMetadata !== undefined ? { headMetadata: scanResult.headMetadata } : {}),
     ...(scanResult.headMetadataError !== undefined
       ? { headMetadataError: scanResult.headMetadataError }
@@ -376,6 +379,9 @@ function buildSiteSignals(
   const transactionalFlowRedirectChecks = siteResult.pages.flatMap(
     (page) => page.transactionalFlowRedirectChecks ?? [],
   );
+  const transactionalFlowAmbiguities = siteResult.pages.flatMap(
+    (page) => page.transactionalFlowAmbiguities ?? [],
+  );
   const mentionsLegalesPageUrl = siteResult.crawl.mentionsLegalesPageUrl;
   const mentionsLegalesPage = mentionsLegalesPageUrl
     ? siteResult.pages.find((page) => page.url === mentionsLegalesPageUrl)
@@ -401,6 +407,11 @@ function buildSiteSignals(
     hasTransactionalFlow: transactionalFlowEvidence.length > 0,
     transactionalFlowEvidence,
     ...(transactionalFlowRedirectChecks.length > 0 ? { transactionalFlowRedirectChecks } : {}),
+    // Never merged into transactionalFlowEvidence: an unresolved booking
+    // control must not flip hasTransactionalFlow (issue #42) - it is
+    // recorded so assessObligations can tell a clean negative from an
+    // inconclusive detection.
+    ...(transactionalFlowAmbiguities.length > 0 ? { transactionalFlowAmbiguities } : {}),
     ...(siren !== undefined ? { siren } : {}),
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
     ...(siteName !== undefined ? { siteName } : {}),

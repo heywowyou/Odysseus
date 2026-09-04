@@ -18,7 +18,10 @@ const VALID_COMPLETION_SIGNALS: readonly CheckCompletionSignal[] = [
 // compile-time exhaustiveness assertion in check-scope-coverage.ts: a
 // change to this number should always be a conscious edit to this test,
 // not a silent side effect of adding a PageScanResult field.
-const EXPECTED_ENTRY_COUNT = 22;
+// 2026-09-04, issue #42: +1 for transactional-flow-ambiguities, the
+// per-page pass recording booking controls whose destination could not
+// be established.
+const EXPECTED_ENTRY_COUNT = 23;
 
 describe('CHECK_SCOPE_REGISTRY', () => {
   it('has the expected number of entries', () => {

@@ -79,6 +79,89 @@ describe('assessObligations', () => {
     expect(result.basis[0]?.facts).toContainEqual({ kind: 'no-transactional-flow' });
   });
 
+  // Issue #42 (Villas Foch, real audit ff95ff97): a five-star hotel whose
+  // booking controls carry no href attribute at all left
+  // hasTransactionalFlow=false with nothing else recorded, resolved
+  // out_of_scope, and silently withheld the EAA reference from a client
+  // who does take bookings. A detector-resolved negative with unresolved
+  // booking signals must resolve inconclusive, not clean.
+  it('resolves likely_in_scope with an inconclusive fact when the detector recorded unresolved booking controls', () => {
+    const profile = buildProfile({ effectifCode: '22', turnover: null });
+    const inconclusive: SiteSignals = {
+      hasTransactionalFlow: false,
+      transactionalFlowEvidence: [],
+      transactionalFlowAmbiguities: [
+        {
+          selector: 'a.item__booking-link',
+          pageUrl: 'https://www.villasfoch.fr/fr/chambres-et-suites',
+          matchedVia: ['class'],
+          detail: 'Booking-intent control matched via class; no crawlable destination.',
+        },
+      ],
+    };
+    const result = assessObligations(profile, inconclusive);
+    expect(result.status).toBe('likely_in_scope');
+    expect(result.basis[0]?.facts).toContainEqual({ kind: 'transactional-flow-inconclusive' });
+    expect(result.basis[0]?.facts).not.toContainEqual({ kind: 'no-transactional-flow' });
+  });
+
+  it('resolves likely_in_scope when a followed booking link came back undetermined', () => {
+    const profile = buildProfile({ effectifCode: '22', turnover: null });
+    const inconclusive: SiteSignals = {
+      hasTransactionalFlow: false,
+      transactionalFlowEvidence: [],
+      transactionalFlowRedirectChecks: [
+        {
+          pageUrl: 'https://example.com/',
+          linkUrl: 'https://unknown-engine.example/book',
+          resolution: 'undetermined',
+          detail:
+            'Destination page matches neither the origin page identifying text nor a multi-property search UI.',
+        },
+      ],
+    };
+    const result = assessObligations(profile, inconclusive);
+    expect(result.status).toBe('likely_in_scope');
+    expect(result.basis[0]?.facts).toContainEqual({ kind: 'transactional-flow-inconclusive' });
+  });
+
+  it('keeps a clean negative when the only redirect checks resolved marketplace', () => {
+    const profile = buildProfile({ effectifCode: '22', turnover: null });
+    const cleanNegative: SiteSignals = {
+      hasTransactionalFlow: false,
+      transactionalFlowEvidence: [],
+      transactionalFlowRedirectChecks: [
+        {
+          pageUrl: 'https://example.com/',
+          linkUrl: 'https://www.booking.com/hotel/fr/example.html',
+          resolution: 'marketplace',
+          detail: 'www.booking.com is a known third-party booking marketplace; not followed.',
+        },
+      ],
+    };
+    const result = assessObligations(profile, cleanNegative);
+    expect(result.status).toBe('out_of_scope');
+    expect(result.basis[0]?.facts).toContainEqual({ kind: 'no-transactional-flow' });
+  });
+
+  it('keeps the SME exemption decisive even with unresolved booking signals', () => {
+    const profile = buildProfile({ effectifCode: '02', turnover: 500_000 });
+    const inconclusive: SiteSignals = {
+      hasTransactionalFlow: false,
+      transactionalFlowEvidence: [],
+      transactionalFlowAmbiguities: [
+        {
+          selector: 'a.reservation',
+          pageUrl: 'https://example.com/',
+          matchedVia: ['class'],
+          detail: 'Booking-intent control matched via class; no crawlable destination.',
+        },
+      ],
+    };
+    const result = assessObligations(profile, inconclusive);
+    expect(result.status).toBe('out_of_scope');
+  });
+
   // item 0.1 (La Corniche pass, real bug: a report declared a 5-star
   // hotel with a live booking widget "Hors champ" on the basis of "absence
   // de parcours de réservation"). Confirms the acceptance check stated in

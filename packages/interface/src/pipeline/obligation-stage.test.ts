@@ -6,7 +6,7 @@ vi.mock('../logger.js', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: 
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { logger } from '../logger.js';
 import { runObligationStage } from './obligation-stage.js';
-import type { AuditManifest, OperatorProfile } from '@odysseus/core';
+import type { AuditManifest, AuditManifestSiteSignals, OperatorProfile } from '@odysseus/core';
 
 const fakeConnection = {} as never;
 
@@ -415,5 +415,57 @@ describe('runObligationStage with a manual hasTransactionalFlow override', () =>
     });
 
     expect(result.status).toBe('out_of_scope');
+  });
+});
+
+// Issue #42: the detector now records unresolved booking controls
+// (JS-driven booking buttons with no crawlable href, and redirect checks
+// that resolved 'undetermined'). A detector-resolved false with such
+// signals is inconclusive, not clean; a manual override resolves the gate
+// personally and must stay decisive either way.
+describe('runObligationStage with unresolved booking signals (issue #42)', () => {
+  const villaFochSignals: AuditManifestSiteSignals = {
+    siren: '732829320',
+    hasTransactionalFlow: false,
+    transactionalFlowEvidence: [],
+    transactionalFlowAmbiguities: [
+      {
+        selector: 'a.item__booking-link',
+        pageUrl: 'https://www.villasfoch.fr/fr/chambres-et-suites',
+        matchedVia: ['class'],
+        detail: 'Booking-intent control matched via class; no crawlable destination.',
+      },
+    ],
+  };
+
+  it('resolves likely_in_scope, not out_of_scope, when the detector recorded unresolved booking controls and no override exists', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({
+      status: 'found',
+      profile: foundProfile(),
+    });
+    const manifest = fakeManifest({ siteSignals: villaFochSignals });
+
+    const result = await runObligationStage(manifest, fakeConnection);
+
+    expect(result.status).toBe('likely_in_scope');
+    expect(result.basis[0]?.facts).toContainEqual({ kind: 'transactional-flow-inconclusive' });
+  });
+
+  it('lets a manual false stay a clean out_of_scope even with unresolved booking signals on the manifest', async () => {
+    vi.mocked(lookupOperatorProfile).mockResolvedValue({
+      status: 'found',
+      profile: foundProfile(),
+    });
+    const manifest = fakeManifest({ siteSignals: villaFochSignals });
+
+    const result = await runObligationStage(manifest, fakeConnection, undefined, {
+      hasTransactionalFlow: { value: false, reason: 'confirmed by hand: books by phone only' },
+    });
+
+    expect(result.status).toBe('out_of_scope');
+    expect(result.siteSignalResolutions?.['hasTransactionalFlow']).toMatchObject({
+      value: false,
+      source: 'manual',
+    });
   });
 });

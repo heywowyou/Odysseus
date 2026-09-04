@@ -86,12 +86,57 @@ export interface TransactionalFlowRedirectCheck {
   detail: string;
 }
 
+/**
+ * A booking-intent control the detector found but whose destination it
+ * could not establish: an anchor carrying booking-intent vocabulary in
+ * its text, aria-label, or class, with no crawlable http(s) destination
+ * (no href attribute at all, a javascript: URL, a bare fragment, or an
+ * unknown scheme) - the JS-driven booking-button pattern behind issue
+ * #42 (Villas Foch: `<a class="item__booking-link distributor">` with no
+ * href, invisible to every href-based signal the detector had).
+ *
+ * Deliberately recorded as ambiguity, never as
+ * TransactionalFlowEvidence: a class name alone must never set
+ * hasTransactionalFlow (a control can say "Réserver" and lead to a phone
+ * number, which is not an online transactional flow), but it must also
+ * never be silently folded into a clean "no transactional flow found" -
+ * assessObligations resolves the two differently, and they carry very
+ * different weight under CLAUDE.md non-negotiable rule 6.
+ *
+ * mailto:/tel: booking anchors are deliberately not ambiguities: their
+ * destination is determinable and offline, so they resolve that control
+ * rather than leaving it unresolved. Anchors with a crawlable http(s)
+ * href are also excluded: an external one is findDelegatedBookingRedi
+ * rectChecks' input, and a same-origin one leads to a page the crawl
+ * itself scans.
+ */
+export interface TransactionalFlowAmbiguity {
+  selector: string;
+  pageUrl: string;
+  /** The raw href attribute value when one is present but not crawlable
+   *  (javascript:, a bare fragment, an unknown scheme); absent when the
+   *  anchor carries no href attribute at all. */
+  href?: string;
+  /** Which anchor attributes matched booking-intent vocabulary. */
+  matchedVia: ('text' | 'aria-label' | 'class')[];
+  /** Internal English classification reasoning, same convention as
+   *  TransactionalFlowEvidence.detail - never render this directly in
+   *  client-facing copy. */
+  detail: string;
+}
+
 export interface SiteSignals {
   hasTransactionalFlow: boolean;
   transactionalFlowEvidence: TransactionalFlowEvidence[];
   /** Optional for the same backward-compatibility reason other manifest
    *  fields are: absent for audits captured before this milestone. */
   transactionalFlowRedirectChecks?: TransactionalFlowRedirectCheck[];
+  /** Booking-intent controls whose destination could not be established
+   *  (see TransactionalFlowAmbiguity). Never counts toward
+   *  hasTransactionalFlow; assessObligations reads it to tell a clean
+   *  negative from an inconclusive one. Optional for the same
+   *  backward-compatibility reason as transactionalFlowRedirectChecks. */
+  transactionalFlowAmbiguities?: TransactionalFlowAmbiguity[];
 }
 
 /** Part B: a human-supplied fact about one boolean SiteSignals field,
@@ -128,6 +173,7 @@ export type ObligationBasisFact =
   | { kind: 'transactional-flow'; evidence: TransactionalFlowEvidence[] }
   | { kind: 'no-transactional-flow' }
   | { kind: 'transactional-flow-unknown' }
+  | { kind: 'transactional-flow-inconclusive' }
   | { kind: 'siren-missing' }
   | {
       kind: 'sirene-lookup-failed';
@@ -153,9 +199,15 @@ export interface SirenMismatch {
  * likely_in_scope is the prospecting-filter result: assessObligations was
  * called with only a profile (no SiteSignals), so the SME exemption test
  * ran but the B2C transactional-flow gate could not be confirmed either
- * way. undetermined means the exemption test itself could not run at all
- * (no SIREN, or a failed Sirene lookup) - a stronger form of "don't know"
- * than likely_in_scope.
+ * way. Since issue #42 it also covers the on-scan form of the same "the
+ * gate could not be confirmed" state: SiteSignals were supplied,
+ * hasTransactionalFlow came back false, but the detector recorded
+ * unresolved booking signals (transactionalFlowAmbiguities, or redirect
+ * checks that resolved 'undetermined') - a fact kind
+ * 'transactional-flow-inconclusive' distinguishes that case from a clean
+ * 'no-transactional-flow' negative. undetermined means the exemption test
+ * itself could not run at all (no SIREN, or a failed Sirene lookup) - a
+ * stronger form of "don't know" than likely_in_scope.
  *
  * sirenSource/sirenMismatch are never set by assessObligations itself -
  * that function has no notion of where a SIREN came from, only whether

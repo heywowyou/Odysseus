@@ -102,6 +102,44 @@ function renderSirenNote(
   return `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(text)}</p>${verbatimNote}`;
 }
 
+/** Issue #42: when the obligation engine resolved the transactional-flow
+ *  gate to likely_in_scope via a 'transactional-flow-inconclusive' fact,
+ *  the status card alone reads like a routine "to be confirmed"; the
+ *  client deserves to know detection actually found booking controls it
+ *  could not resolve, which is a materially stronger hint than silence.
+ *  Reads the engine's own fact (never recomputes the decision) and the
+ *  underlying siteSignals only for the example pages, the same pattern
+ *  renderTransactionalFlowScopeNote uses for confirmed evidence. */
+function renderTransactionalFlowInconclusiveNote(
+  strings: ReportStrings,
+  manifest: AuditManifest,
+  obligationAssessment: ObligationAssessment | undefined,
+): string {
+  const inconclusive = obligationAssessment?.basis.some((b) =>
+    b.facts.some((f) => f.kind === 'transactional-flow-inconclusive'),
+  );
+  if (!inconclusive) return '';
+
+  const l = strings.legalExposure;
+  const examplePages = [
+    ...new Set(
+      [
+        ...(manifest.siteSignals?.transactionalFlowAmbiguities ?? []).map((a) => a.pageUrl),
+        ...(manifest.siteSignals?.transactionalFlowRedirectChecks ?? [])
+          .filter((check) => check.resolution === 'undetermined')
+          .map((check) => check.pageUrl),
+      ].sort(),
+    ),
+  ]
+    .slice(0, TRANSACTIONAL_FLOW_EXAMPLE_PAGE_COUNT)
+    .join(', ');
+
+  const text = examplePages
+    ? fillTemplate(l.transactionalFlowInconclusiveTemplate, { examplePages })
+    : l.transactionalFlowInconclusiveNoExample;
+  return `<p style="font-size:12.5px;opacity:0.65;margin-top:var(--space-2)">${escapeHtml(text)}</p>`;
+}
+
 /** item 0.1: a manual hasTransactionalFlow override that disagrees with
  *  what the scanner actually detected must be visible, not silently
  *  trusted - assessObligations() still only ever sees one resolved
@@ -378,6 +416,7 @@ export function renderLegalExposure(
     </div>
     <p style="font-size:13.5px;opacity:0.85;max-width:66ch">${escapeHtml(paragraph)}</p>
     ${renderTransactionalFlowScopeNote(strings, manifest)}
+    ${renderTransactionalFlowInconclusiveNote(strings, manifest, obligationAssessment)}
     ${renderTransactionalFlowConflictNote(strings, obligationAssessment)}
     ${lcenBlock}
     ${renderSirenNote(strings, language, manifest, manualFields, obligationAssessment, lcenBlock !== '')}

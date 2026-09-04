@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  anchorClassHintsAtBooking,
   classifyDestinationPage,
   detectOutboundBookingLinks,
   findBookingEngineDomainReferences,
   findBookingIframes,
   findBookingIntentLinks,
+  findUnresolvedBookingControls,
 } from './transactional-flow.js';
 
 // item 0.1 (La Corniche pass): confirmed live against lacoorniche.com. The
@@ -163,5 +165,167 @@ describe('classifyDestinationPage', () => {
     const result = classifyDestinationPage(originName, destinationTitle, destinationBody);
 
     expect(result.resolution).not.toBe('single-property');
+  });
+});
+
+// Issue #42 (Villas Foch): a five-star Bordeaux hotel whose booking
+// controls are `<a class="item__booking-link distributor">` with no href
+// attribute at all - Lighthouse flagged them as crawlable-anchors
+// findings, while every href-based signal in this file saw nothing and
+// siteSignals resolved to a clean false, silently flipping the legal
+// obligation status. These tests use that exact markup.
+describe('findUnresolvedBookingControls', () => {
+  const pageUrl = 'https://www.villasfoch.fr/fr/chambres-et-suites';
+
+  it('records a booking control with no href attribute at all, matched via its class', () => {
+    const anchors = [
+      {
+        selector: 'a.item__booking-link',
+        text: '',
+        ariaLabel: '',
+        className: 'item__booking-link distributor',
+      },
+    ];
+    expect(findUnresolvedBookingControls(pageUrl, anchors)).toEqual([
+      {
+        selector: 'a.item__booking-link',
+        pageUrl,
+        matchedVia: ['class'],
+        detail:
+          'Booking-intent control matched via class; no crawlable destination (no href attribute).',
+      },
+    ]);
+  });
+
+  it('records a javascript: booking button matched via its text', () => {
+    const anchors = [
+      {
+        selector: 'a.btn-reserver',
+        href: 'javascript:void(0)',
+        text: 'Réserver',
+        ariaLabel: '',
+        className: 'btn-reserver',
+      },
+    ];
+    const result = findUnresolvedBookingControls(pageUrl, anchors);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.href).toBe('javascript:void(0)');
+    expect(result[0]?.matchedVia).toEqual(['text', 'class']);
+  });
+
+  it('records a bare-fragment booking control', () => {
+    const anchors = [
+      {
+        selector: 'a.booking',
+        href: '#',
+        text: 'Book now',
+        ariaLabel: '',
+        className: 'booking',
+      },
+    ];
+    expect(findUnresolvedBookingControls(pageUrl, anchors)).toHaveLength(1);
+  });
+
+  it('never records a tel: or mailto: booking link: its destination is determinable and offline', () => {
+    const anchors = [
+      {
+        selector: 'a',
+        href: 'tel:+33556000000',
+        text: 'Réserver par téléphone',
+        ariaLabel: '',
+        className: '',
+      },
+      {
+        selector: 'a',
+        href: 'mailto:stay@example.com',
+        text: 'Book by email',
+        ariaLabel: '',
+        className: '',
+      },
+    ];
+    expect(findUnresolvedBookingControls(pageUrl, anchors)).toEqual([]);
+  });
+
+  it('never records an anchor with a crawlable href: external ones are the redirect check input, same-origin ones lead to a scanned page', () => {
+    const anchors = [
+      {
+        selector: 'a.engine',
+        href: 'https://booking-engine.example/availability?hotel=1234',
+        text: 'Réserver',
+        ariaLabel: '',
+        className: 'engine',
+      },
+      {
+        selector: 'a.page',
+        href: '/fr/contact',
+        text: 'Réserver',
+        ariaLabel: '',
+        className: 'page',
+      },
+    ];
+    expect(findUnresolvedBookingControls(pageUrl, anchors)).toEqual([]);
+  });
+
+  it('never matches "facebook" - the class vocabulary uses token equality on booking/reserv, not a bare "book" substring', () => {
+    const anchors = [
+      {
+        selector: 'a.facebook-link',
+        text: '',
+        ariaLabel: '',
+        className: 'facebook-link',
+      },
+    ];
+    expect(findUnresolvedBookingControls(pageUrl, anchors)).toEqual([]);
+  });
+
+  it('records nothing when the anchor carries no booking vocabulary', () => {
+    const anchors = [{ selector: 'a.nav', text: 'Contact', ariaLabel: '', className: 'nav' }];
+    expect(findUnresolvedBookingControls(pageUrl, anchors)).toEqual([]);
+  });
+
+  it('matches booking vocabulary carried only in the aria-label', () => {
+    const anchors = [
+      {
+        selector: 'a.icon',
+        href: 'javascript:void(0)',
+        text: '',
+        ariaLabel: 'Book your stay',
+        className: 'icon',
+      },
+    ];
+    expect(findUnresolvedBookingControls(pageUrl, anchors)[0]?.matchedVia).toEqual(['aria-label']);
+  });
+
+  it('collapses repeated copies of the same control on one page into one entry', () => {
+    const anchors = [
+      {
+        selector: 'a.item__booking-link',
+        text: '',
+        ariaLabel: '',
+        className: 'item__booking-link',
+      },
+      {
+        selector: 'a.item__booking-link',
+        text: '',
+        ariaLabel: '',
+        className: 'item__booking-link',
+      },
+    ];
+    expect(findUnresolvedBookingControls(pageUrl, anchors)).toHaveLength(1);
+  });
+});
+
+describe('anchorClassHintsAtBooking', () => {
+  it('matches separator-delimited and camelCase booking tokens', () => {
+    expect(anchorClassHintsAtBooking('item__booking-link')).toBe(true);
+    expect(anchorClassHintsAtBooking('bookingLink')).toBe(true);
+    expect(anchorClassHintsAtBooking('reservation-btn')).toBe(true);
+    expect(anchorClassHintsAtBooking('widget__reservations')).toBe(true);
+  });
+
+  it('does not match "book" inside unrelated tokens', () => {
+    expect(anchorClassHintsAtBooking('facebook-link')).toBe(false);
+    expect(anchorClassHintsAtBooking('notebook-widget')).toBe(false);
+    expect(anchorClassHintsAtBooking('content__links')).toBe(false);
   });
 });

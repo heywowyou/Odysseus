@@ -27,7 +27,11 @@
  */
 
 import type { Browser, Page } from 'playwright';
-import type { TransactionalFlowEvidence, TransactionalFlowRedirectCheck } from '@odysseus/core';
+import type {
+  TransactionalFlowAmbiguity,
+  TransactionalFlowEvidence,
+  TransactionalFlowRedirectCheck,
+} from '@odysseus/core';
 import { DEFAULT_TIMEOUT_MS } from '../browser.js';
 import { getCrawlerUserAgent } from '../config.js';
 import { isSocialPlatformHost } from '../social-hosts.js';
@@ -251,6 +255,148 @@ export async function detectTransactionalFlow(
   }
 
   return evidence;
+}
+
+/** Issue #42 (Villas Foch): the class vocabulary for anchors whose text
+ *  says nothing but whose class names the booking control, e.g. the real
+ *  `<a class="item__booking-link distributor">` with no href attribute
+ *  that every href-based signal in this file missed. Split on separators
+ *  and camelCase first: "item__booking-link" has no \b word boundary
+ *  before "booking" (an underscore is a word character), so
+ *  BOOKING_INTENT_TEXT_PATTERN cannot see it, and a bare substring match
+ *  on "book" would re-create the Facebook false positive the \b fix in
+ *  that pattern exists for ("facebook-*" classes are everywhere). Token
+ *  equality against "booking"/"reserv" keeps "facebook" itself from
+ *  matching. Deliberately narrow - only classes observed on real sites
+ *  belong here, the same starting-position posture as the domain lists
+ *  above. */
+export function anchorClassHintsAtBooking(className: string): boolean {
+  return className
+    .split(/[^a-zA-Z]+|(?<=[a-z])(?=[A-Z])/)
+    .some((token) => token.startsWith('booking') || token.startsWith('reserv'));
+}
+
+export interface AnchorAttributes {
+  /** Raw href attribute value; undefined when the anchor carries no
+   *  href attribute at all. */
+  href?: string;
+  text: string;
+  ariaLabel: string;
+  className: string;
+  /** Built by the DOM extraction as tag + id or first class, so the
+   *  pure function below stays browser-free. */
+  selector: string;
+}
+
+/** Where an anchor's href leads, as far as a string can tell. 'offline'
+ *  is a determinable, non-web destination (mailto:, tel:): it resolves
+ *  the control rather than leaving it unresolved, so it is not an
+ *  ambiguity - a "Réserver par téléphone" link is evidence about that control,
+ *  not an unresolved signal about the site. */
+type AnchorHrefResolution = 'navigable' | 'offline' | 'unresolved';
+
+function classifyAnchorHref(href: string | undefined, pageUrl: string): AnchorHrefResolution {
+  if (href === undefined) return 'unresolved';
+  const trimmed = href.trim();
+  // A bare fragment navigates to the page itself - it names no
+  // destination a detector could classify.
+  if (trimmed === '' || trimmed.startsWith('#')) return 'unresolved';
+  try {
+    const resolved = new URL(trimmed, pageUrl);
+    if (resolved.protocol === 'mailto:' || resolved.protocol === 'tel:') return 'offline';
+    if (resolved.protocol === 'javascript:') return 'unresolved';
+    if (/^https?:$/.test(resolved.protocol)) return 'navigable';
+    return 'unresolved';
+  } catch {
+    return 'unresolved';
+  }
+}
+
+/** Pure detection of the ambiguity class behind issue #42: anchors that
+ *  carry booking-intent vocabulary (text, aria-label, or class) but name
+ *  no crawlable destination a human or the redirect-following check
+ *  could classify - no href attribute at all, a javascript: URL, or a
+ *  bare fragment. These are the JS-driven booking controls
+ *  findDelegatedBookingRedirectChecks can never see (it reads only
+ *  a[href], the Villas Foch booking links had no href) and are recorded
+ *  as TransactionalFlowAmbiguity, never as flow evidence: a class name
+ *  alone must not set hasTransactionalFlow. Anchors with a crawlable
+ *  href are deliberately out of scope here - an external one is the
+ *  redirect check's input, a same-origin one leads to a page this same
+ *  scan visits. */
+export function findUnresolvedBookingControls(
+  pageUrl: string,
+  anchors: readonly AnchorAttributes[],
+): TransactionalFlowAmbiguity[] {
+  const ambiguities: TransactionalFlowAmbiguity[] = [];
+  const seen = new Set<string>();
+
+  for (const anchor of anchors) {
+    const matchedVia: TransactionalFlowAmbiguity['matchedVia'] = [];
+    if (anchor.text.trim() !== '' && BOOKING_INTENT_TEXT_PATTERN.test(anchor.text))
+      matchedVia.push('text');
+    if (anchor.ariaLabel.trim() !== '' && BOOKING_INTENT_TEXT_PATTERN.test(anchor.ariaLabel))
+      matchedVia.push('aria-label');
+    if (anchorClassHintsAtBooking(anchor.className)) matchedVia.push('class');
+    if (matchedVia.length === 0) continue;
+
+    if (classifyAnchorHref(anchor.href, pageUrl) !== 'unresolved') continue;
+
+    // Same control repeated across a page (a room list where every card
+    // carries the booking link) is one ambiguity entry, not one per
+    // anchor - the per-page signal is "this control exists and could not
+    // be resolved", not a count of its copies.
+    const dedupeKey = `${anchor.selector}|${anchor.href ?? ''}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+
+    ambiguities.push({
+      selector: anchor.selector,
+      pageUrl,
+      ...(anchor.href !== undefined ? { href: anchor.href } : {}),
+      matchedVia,
+      detail: `Booking-intent control matched via ${matchedVia.join(' and ')}; no crawlable destination${
+        anchor.href !== undefined ? ` (href: ${anchor.href})` : ' (no href attribute)'
+      }.`,
+    });
+  }
+
+  return ambiguities;
+}
+
+/** Browser-side half of findUnresolvedBookingControls: extracts every
+ *  anchor with the attributes the pure function needs. Reads all `a`
+ *  elements, not just a[href] - the missing href attribute is the whole
+ *  point. getAttribute('class') rather than el.className because an SVG
+ *  <a> element's className is not a string. */
+export async function detectUnresolvedBookingControls(
+  page: Page,
+  pageUrl: string,
+): Promise<TransactionalFlowAmbiguity[]> {
+  // The serialized href comes back as string | null (the attribute's own
+  // absence encoding); it is converted to the optional-property shape
+  // AnchorAttributes requires only after the boundary, since the browser
+  // callback's return type is inferred, not declared.
+  const anchors = await page.$$eval('a', (elements) =>
+    elements.map((el) => {
+      const className = el.getAttribute('class') ?? '';
+      const firstClass = className.trim().split(/\s+/)[0] ?? '';
+      return {
+        href: el.getAttribute('href'),
+        text: el.textContent ?? '',
+        ariaLabel: el.getAttribute('aria-label') ?? '',
+        className,
+        selector: el.id ? `a#${el.id}` : firstClass !== '' ? `a.${firstClass}` : 'a',
+      };
+    }),
+  );
+  return findUnresolvedBookingControls(
+    pageUrl,
+    anchors.map(({ href, ...rest }) => ({
+      ...rest,
+      ...(href !== null ? { href } : {}),
+    })),
+  );
 }
 
 /** Confirms the negative case only: an outbound-only link to a

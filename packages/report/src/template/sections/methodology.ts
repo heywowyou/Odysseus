@@ -107,6 +107,12 @@ function renderFact(
     }
     case 'transactional-flow-unknown':
       return m.legalCitationTransactionalFlowUnknownFact;
+    // Issue #42: distinguish "the detector ran and found nothing" (the
+    // no-transactional-flow sentence below) from "the detector ran and
+    // left booking signals it could not resolve". Same status
+    // (likely_in_scope), materially different sentence for the client.
+    case 'transactional-flow-inconclusive':
+      return m.legalCitationTransactionalFlowInconclusiveFact;
     case 'no-transactional-flow':
       return m.legalCitationNoTransactionalFlowFact;
     case 'siren-missing':
@@ -147,7 +153,11 @@ export function pickPrimaryBasis(
       (f) => f.kind === 'transactional-flow',
     )
       ? 'in_scope'
-      : eaaBasis.facts.some((f) => f.kind === 'transactional-flow-unknown')
+      : eaaBasis.facts.some(
+            (f) =>
+              f.kind === 'transactional-flow-unknown' ||
+              f.kind === 'transactional-flow-inconclusive',
+          )
         ? 'likely_in_scope'
         : 'out_of_scope';
     if (eaaOwnStatus === assessment.status) return eaaBasis;

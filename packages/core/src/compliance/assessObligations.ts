@@ -10,7 +10,10 @@
  * transactional-flow gate cannot be confirmed either way, so a
  * not-exempt profile resolves to 'likely_in_scope' rather than
  * 'in_scope'. Supplied: the gate is resolved definitively, either
- * 'in_scope' or 'out_of_scope'.
+ * 'in_scope' or 'out_of_scope' - except when the detector recorded
+ * unresolved booking signals (issue #42), which resolves to
+ * 'likely_in_scope' with a 'transactional-flow-inconclusive' fact rather
+ * than dressing an unresolved detection up as a clean negative.
  *
  * Milestone 9a note: an OperatorProfile built from the Sirene *stock*
  * file (packages/interface's sirene-stock-join.ts, used by the
@@ -58,6 +61,20 @@ function knownSireneFailureReason(
       return reason;
   }
   return 'api-unreachable';
+}
+
+/** Issue #42: how many booking signals the detector found but could not
+ *  resolve, from the two places it records them - booking-intent controls
+ *  with no crawlable destination (transactionalFlowAmbiguities), and
+ *  followed booking links whose destination page classified as
+ *  'undetermined'. Both mean hasTransactionalFlow=false is an unresolved
+ *  detection, not a clean negative; 'marketplace' resolutions are a
+ *  confirmed negative for their links and deliberately do not count. */
+function transactionalFlowAmbiguityCount(siteSignals: SiteSignals): number {
+  const undeterminedRedirectChecks = (siteSignals.transactionalFlowRedirectChecks ?? []).filter(
+    (check) => check.resolution === 'undetermined',
+  ).length;
+  return (siteSignals.transactionalFlowAmbiguities ?? []).length + undeterminedRedirectChecks;
 }
 
 /** Neither the EAA gate nor article 47 can be evaluated without a
@@ -130,6 +147,16 @@ export function assessObligations(
   } else if (siteSignals.hasTransactionalFlow) {
     eaaStatus = 'in_scope';
     eaaFacts.push({ kind: 'transactional-flow', evidence: siteSignals.transactionalFlowEvidence });
+  } else if (transactionalFlowAmbiguityCount(siteSignals) > 0) {
+    // Issue #42: the detector ran and left booking signals it could not
+    // resolve. That is not a clean negative - resolving out_of_scope here
+    // is exactly how Villas Foch's no-href booking controls silently
+    // withheld the EAA reference from a client who does take bookings.
+    // 'likely_in_scope' is the established status for "the flow gate
+    // could not be confirmed either way"; the fact kind keeps the two
+    // routes to it distinguishable in stored basis data.
+    eaaStatus = 'likely_in_scope';
+    eaaFacts.push({ kind: 'transactional-flow-inconclusive' });
   } else {
     eaaStatus = 'out_of_scope';
     eaaFacts.push({ kind: 'no-transactional-flow' });
