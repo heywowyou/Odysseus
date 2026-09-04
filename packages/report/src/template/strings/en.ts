@@ -624,7 +624,10 @@ export const en: ReportStrings = {
     reauditPricingTemplate:
       'Indicative price: EUR {price} excl. VAT, within {days} business days of confirming fixes are live. To request one, write to {email}.',
     authorshipTemplate:
-      'Report produced by {producer}, rendered on {renderDate} (render build {renderBuild}, template {templateVersion}), from the scan completed on {scanDate} (scan build {scanBuild}), report ID {reportId}.',
+      'Report produced by {producer}, rendered on {renderDate} ({renderQualifier}), from the scan completed on {scanDate}{scanQualifier}, report ID {reportId}.',
+    renderQualifierTemplate: 'render build {renderBuild}, template {templateVersion}',
+    renderQualifierWithoutBuildTemplate: 'template {templateVersion}',
+    scanQualifierTemplate: 'scan build {scanBuild}',
     issuerBlockTemplate: 'Signatory: {signatory}. SIRET: {registrationNumber}.',
     liabilityStatement:
       'This report reproduces technical findings detected by automated tools, together with explanations and prioritization. It does not constitute legal advice; see the "Legal exposure" section and the methodology for coverage limits. Odysseus cannot be held liable for decisions made on the sole basis of this document.',

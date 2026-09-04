@@ -417,6 +417,12 @@ means numbered entry 24, not a literal Markdown heading anchor.
     build until copy exists; write it, do not lower the check.
     → trade-offs.md#71
 
+72. The build identity is stamped into the deployment image
+    (`ODYSSEUS_BUILD_ID`, passed by `release.sh` through compose), never derived
+    from a runtime `git` call, which production has no checkout for; and
+    client-facing copy gates every build identity on `isKnownBuildId` rather
+    than printing the `unknown` sentinel. → trade-offs.md#72
+
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
 module, Mongoose 9, Zod, Commander, Vitest, pino, `openai`.

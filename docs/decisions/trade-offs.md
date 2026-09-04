@@ -3543,3 +3543,58 @@ filling the copy without the ratchet, was rejected on this repo's own history:
 the translations table was extended reactively four times, each time after a
 client-facing report had already shipped English text inside a French
 document, and only the source-derived check ended it.
+
+### 72. The build identity is stamped into the deployment image, never derived from a git checkout at runtime, and client-facing copy refuses the sentinel
+
+`readOdysseusBuildId()` existed to keep a semver number that never gets
+bumped out of a paying client's footer (item 0.6): a git short SHA ties a
+report to an exact commit instead. It got that SHA by shelling out to
+`git rev-parse --short HEAD` at runtime, and swallowed every failure into
+the literal string `unknown`.
+
+Production has no git checkout. `.dockerignore` excludes `.git` from the
+build context, which is correct for image size and for keeping repository
+metadata out of a deployed artifact, but it means the fallback was not an
+edge case there: it was the only path. Every report rendered from the hosted
+dashboard printed "build de rendu unknown" to the client, and every artifact
+produced there recorded `manifest.tool.odysseusVersion: "unknown"`, which is
+precisely the provenance the manifest exists to carry.
+
+It looked intermittent, which is how it survived. On audit
+`ff95ff97-cb54-41c7-8a33-89c9116985aa` one render resolved commit `2b7eec6`
+and a later one resolved `unknown`; the difference was not flakiness but
+which machine rendered it.
+
+Two decisions, and both matter:
+
+**The commit is stamped at image build time.** `release.sh` already passes
+the verified commit as `ODYSSEUS_IMAGE_TAG` for both the build and the up,
+so `deploy/compose.yaml` forwards it as an `ODYSSEUS_BUILD_ID` build
+argument and the Dockerfile bakes it into the image. `readOdysseusBuildId()`
+reads the environment first and keeps the git call as the development path.
+The environment is deliberately not cached: reading it costs nothing, and
+caching it would make the precedence untestable without a reset hook that
+only tests would ever call. A full 40-character SHA is abbreviated to git's
+short form so a stamped build reads identically to a local one and lands in
+report filenames at the same length; anything that is not a full SHA passes
+through untouched, since truncating a tag would corrupt it.
+
+**The report refuses to print the sentinel even so.** The provenance line
+now composes its build clauses through separate qualifier templates that the
+caller selects or omits (`renderQualifierTemplate`,
+`renderQualifierWithoutBuildTemplate`, `scanQualifierTemplate`), gated on
+`isKnownBuildId` from `packages/core/src/build-identity.ts`. Stamping alone
+would have been enough for the deployed path and would have left the defect
+one misconfiguration away from returning. A provenance line that quietly
+says less is honest; one that says "unknown" reads to a client as a defect
+in the document and tells them nothing.
+
+The sentinel and its predicate live in `core` rather than in whichever
+package resolves the value, because the two ends must agree: the scanner
+stamps it onto every manifest and the report decides whether it is fit to
+print. They disagreed, and that is the whole bug.
+
+Do not reintroduce a runtime `git` call as the primary source, and do not
+interpolate a build identity straight into client copy without gating it.
+Found by the audit-rehearsal pass on the Villas Foch report, filed as issue
+#58.

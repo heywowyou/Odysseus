@@ -7,6 +7,7 @@ import {
   ODYSSEUS_REAUDIT_LEAD_TIME_DAYS,
   ODYSSEUS_REAUDIT_PRICE_EUR_HT,
 } from '../html-utils.js';
+import { UNKNOWN_BUILD_ID } from '@odysseus/core';
 import { buildLegacyPriority, type RenderedPriority } from '../rendered-priorities.js';
 
 function fakeManifest(): AuditManifest {
@@ -137,6 +138,48 @@ describe('item 31: authorship and liability block', () => {
     expect(html).toContain('template 2');
     expect(html).toContain('scan build 0.5.2');
     expect(html).toContain('report-123');
+  });
+
+  // Issue #58: readOdysseusBuildId falls back to the literal string
+  // "unknown" whenever it cannot resolve a commit, which every render
+  // inside the deployment image did. That word reached the client in the
+  // provenance line, where it reads as a defect in the document. The copy
+  // now drops the clause instead of naming a build it does not have.
+  it('omits the render build clause rather than printing the unknown sentinel', () => {
+    const html = renderNextSteps(getStrings('en'), 14, fakeManifest(), 'en', {
+      reportId: 'report-123',
+      renderedAt: new Date('2026-08-29T00:00:00.000Z'),
+      rendererBuild: UNKNOWN_BUILD_ID,
+      templateVersion: 2,
+    });
+    expect(html).not.toContain(UNKNOWN_BUILD_ID);
+    expect(html).not.toContain('render build');
+    // The template version is still known, so the parenthesis still earns
+    // its place and the rest of the line is unchanged.
+    expect(html).toContain('template 2');
+    expect(html).toContain('report-123');
+  });
+
+  it('omits the scan build clause when the scan build is unknown, in French too', () => {
+    const manifest = fakeManifest();
+    const html = renderNextSteps(
+      getStrings('fr'),
+      14,
+      { ...manifest, tool: { ...manifest.tool, odysseusVersion: UNKNOWN_BUILD_ID } },
+      'fr',
+      {
+        reportId: 'report-123',
+        renderedAt: new Date('2026-08-29T00:00:00.000Z'),
+        rendererBuild: UNKNOWN_BUILD_ID,
+        templateVersion: 2,
+      },
+    );
+    expect(html).not.toContain(UNKNOWN_BUILD_ID);
+    expect(html).not.toContain('build de scan');
+    expect(html).not.toContain('build de rendu');
+    // The sentence must still read as a sentence with both clauses gone.
+    expect(html).toContain('Rapport produit par');
+    expect(html).toContain('modèle 2');
   });
 
   it('states a limitation-of-liability sentence consistent with "report, don\'t conclude"', () => {

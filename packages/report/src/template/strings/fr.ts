@@ -716,7 +716,10 @@ export const fr: ReportStrings = {
     reauditPricingTemplate:
       'Tarif indicatif : {price} € HT, sous {days} jours ouvrés après confirmation des correctifs. Pour en faire la demande, écrivez à {email}.',
     authorshipTemplate:
-      'Rapport produit par {producer}, rendu le {renderDate} (build de rendu {renderBuild}, modèle {templateVersion}), à partir du scan achevé le {scanDate} (build de scan {scanBuild}), identifiant de rapport {reportId}.',
+      'Rapport produit par {producer}, rendu le {renderDate} ({renderQualifier}), à partir du scan achevé le {scanDate}{scanQualifier}, identifiant de rapport {reportId}.',
+    renderQualifierTemplate: 'build de rendu {renderBuild}, modèle {templateVersion}',
+    renderQualifierWithoutBuildTemplate: 'modèle {templateVersion}',
+    scanQualifierTemplate: 'build de scan {scanBuild}',
     issuerBlockTemplate: 'Signataire : {signatory}. SIRET : {registrationNumber}.',
     liabilityStatement:
       "Ce rapport reproduit des constats techniques détectés par des outils automatisés, accompagnés d'explications et de priorisations. Il ne constitue pas un avis juridique ; voir la section « Exposition légale » et la méthodologie pour les limites de couverture. Odysseus ne saurait être tenu responsable des décisions prises sur la seule base de ce document.",

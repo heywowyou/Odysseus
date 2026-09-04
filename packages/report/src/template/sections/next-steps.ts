@@ -1,3 +1,4 @@
+import { isKnownBuildId } from '@odysseus/core';
 import type { AuditManifest } from '@odysseus/core';
 import type { ReportStrings } from '../strings/i18n.js';
 import type { ReportRenderMetadata } from '../../types.js';
@@ -59,13 +60,28 @@ export function renderNextSteps(
   const n = strings.nextSteps;
 
   const questionBody = fillTemplate(n.questionBodyTemplate, { email: ODYSSEUS_CONTACT_EMAIL });
+  // Issue #58: an unresolved build identity used to reach the client as the
+  // literal word "unknown", which reads as a defect in the document and
+  // tells them nothing. Every render inside the deployment image hit that
+  // path, because the image carries no git checkout to read a commit from.
+  // The build is stamped properly now, but the copy still refuses to print
+  // the sentinel: a provenance line that quietly says less is honest, one
+  // that says "unknown" is not.
+  const templateVersion = String(renderMetadata?.templateVersion ?? 'legacy');
+  const renderBuild = renderMetadata?.rendererBuild ?? manifest.tool.odysseusVersion;
+  const scanBuild = manifest.tool.odysseusVersion;
+  const renderQualifier = isKnownBuildId(renderBuild)
+    ? fillTemplate(n.renderQualifierTemplate, { renderBuild, templateVersion })
+    : fillTemplate(n.renderQualifierWithoutBuildTemplate, { templateVersion });
+  const scanQualifier = isKnownBuildId(scanBuild)
+    ? ` (${fillTemplate(n.scanQualifierTemplate, { scanBuild })})`
+    : '';
   const authorship = fillTemplate(n.authorshipTemplate, {
     producer: ODYSSEUS_PRODUCER_NAME,
     scanDate: formatDate(new Date(manifest.finishedAt), language),
-    scanBuild: manifest.tool.odysseusVersion,
     renderDate: formatDate(renderMetadata?.renderedAt ?? new Date(manifest.startedAt), language),
-    renderBuild: renderMetadata?.rendererBuild ?? manifest.tool.odysseusVersion,
-    templateVersion: String(renderMetadata?.templateVersion ?? 'legacy'),
+    renderQualifier,
+    scanQualifier,
     reportId: renderMetadata?.reportId ?? manifest.auditId,
   });
   const issuerBlock = fillTemplate(n.issuerBlockTemplate, {

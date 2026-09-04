@@ -39,6 +39,16 @@ FROM node:22-bookworm-slim
 WORKDIR /app
 COPY --from=build /app ./
 
+# Issue #58: .git is excluded from the build context (.dockerignore), so the
+# runtime cannot derive a commit the way a developer checkout does, and every
+# report rendered here used to print the literal word "unknown" to the client.
+# The commit is known to whoever builds the image, so it is stamped in as a
+# build argument. Empty is the honest default for an unstamped local build:
+# readOdysseusBuildId then falls through to its git path, and to the sentinel
+# only if that fails too.
+ARG ODYSSEUS_BUILD_ID=""
+ENV ODYSSEUS_BUILD_ID=${ODYSSEUS_BUILD_ID}
+
 # Chromium lands in a fixed, world-readable path, installed as root BEFORE
 # dropping to the runtime user so both the browser and its apt system deps
 # are present. Called via node directly: the runtime stage needs no package

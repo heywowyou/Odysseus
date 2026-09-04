@@ -893,9 +893,27 @@ export interface ReportStrings {
     reauditPricingTemplate: string;
     /** item 31: no authorship, terms, or liability block anywhere in a
      *  paid deliverable that may be forwarded to counsel. Template:
-     *  {producer}, {renderDate}, {renderBuild}, {templateVersion},
-     *  {scanDate}, {scanBuild}, {reportId}. */
+     *  {producer}, {renderDate}, {renderQualifier}, {scanDate},
+     *  {scanQualifier}, {reportId}.
+     *
+     *  Issue #58: the build identities used to be interpolated here
+     *  directly, so an unresolved build printed the word "unknown" to the
+     *  client. They now arrive pre-composed through the qualifier
+     *  templates below, which the caller selects or omits, because whether
+     *  a build is fit to print is a decision and not a formatting
+     *  detail. */
     authorshipTemplate: string;
+    /** Parenthesised detail after the render date, when the render build
+     *  is known. Template: {renderBuild}, {templateVersion}. */
+    renderQualifierTemplate: string;
+    /** Same position, when the render build could not be resolved. The
+     *  template version is always known, so the parenthesis still earns
+     *  its place. Template: {templateVersion}. */
+    renderQualifierWithoutBuildTemplate: string;
+    /** Parenthesised detail after the scan date, when the scan build is
+     *  known. Omitted entirely otherwise: unlike the render qualifier
+     *  there is nothing else in it. Template: {scanBuild}. */
+    scanQualifierTemplate: string;
     /** item 3.13: no issuer identity (legal entity, signatory,
      *  registration number) anywhere in the document - a professionalism
      *  and liability-exposure gap for a EUR 1,600 HT French deliverable.

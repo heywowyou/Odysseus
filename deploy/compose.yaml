@@ -16,6 +16,12 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        # release.sh sets ODYSSEUS_IMAGE_TAG to the verified commit for both
+        # the build and the up, so the image records the commit it was built
+        # from (issue #58). Empty for a local build, where the tag defaults
+        # to "latest" and naming that as a build would be a lie.
+        ODYSSEUS_BUILD_ID: ${ODYSSEUS_IMAGE_TAG:-}
     # Automated releases set this to the verified Git commit. Local and legacy
     # deployments keep the existing latest tag.
     image: odysseus-app:${ODYSSEUS_IMAGE_TAG:-latest}
