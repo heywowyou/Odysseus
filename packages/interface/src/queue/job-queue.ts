@@ -16,6 +16,7 @@ import {
   cancelJob,
   claimNextQueuedJob,
   failJob,
+  reconcileFailedAuditJobs,
   resetOrphanedRunningJobs,
   type JobDocument,
   type JobType,
@@ -71,10 +72,25 @@ export class JobQueue {
   }
 
   /** Resets any job left 'running' by an unclean previous shutdown back
-   *  to 'queued' (see resetOrphanedRunningJobs), then starts the claim
-   *  loop. Returns the number of jobs reset, for the caller to log. */
+   *  to 'queued' (see resetOrphanedRunningJobs), then advances any failed
+   *  full-audit job whose audit has since gained a current bilingual
+   *  report pair (see reconcileFailedAuditJobs, issue #56), then starts
+   *  the claim loop. Returns the number of jobs reset, for the caller to
+   *  log. A reconciliation failure must never keep the queue from
+   *  starting: it is a bookkeeping pass, not a prerequisite for work. */
   async start(): Promise<number> {
     const orphanedCount = await resetOrphanedRunningJobs(this.connection);
+    try {
+      const reconciled = await reconcileFailedAuditJobs(this.connection);
+      if (reconciled > 0) {
+        logger.info(
+          { reconciled },
+          'advanced failed full-audit jobs whose audits completed outside the queue',
+        );
+      }
+    } catch (error) {
+      logger.error({ err: error }, 'failed job reconciliation skipped; the queue will still start');
+    }
     this.running = true;
     this.loopPromise = this.runLoop();
     return orphanedCount;

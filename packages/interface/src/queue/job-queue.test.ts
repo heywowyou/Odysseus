@@ -4,10 +4,16 @@ vi.mock('@odysseus/store', () => ({
   claimNextQueuedJob: vi.fn(),
   failJob: vi.fn(),
   resetOrphanedRunningJobs: vi.fn(),
+  reconcileFailedAuditJobs: vi.fn(),
 }));
 vi.mock('../logger.js', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
-import { claimNextQueuedJob, failJob, resetOrphanedRunningJobs } from '@odysseus/store';
+import {
+  claimNextQueuedJob,
+  failJob,
+  reconcileFailedAuditJobs,
+  resetOrphanedRunningJobs,
+} from '@odysseus/store';
 import { logger } from '../logger.js';
 import { JobQueue } from './job-queue.js';
 
@@ -49,6 +55,7 @@ let queue: JobQueue | undefined;
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(resetOrphanedRunningJobs).mockResolvedValue(0);
+  vi.mocked(reconcileFailedAuditJobs).mockResolvedValue(0);
   vi.mocked(claimNextQueuedJob).mockResolvedValue(null);
   vi.mocked(failJob).mockResolvedValue(undefined);
 });
@@ -75,6 +82,55 @@ describe('JobQueue', () => {
     const orphaned = await queue.start();
     expect(orphaned).toBe(3);
     expect(resetOrphanedRunningJobs).toHaveBeenCalledWith(fakeConnection);
+  });
+
+  // Issue #56: a failed full-audit job whose audit was later completed
+  // through a path the queue does not run (report regeneration, CLI) must
+  // not stay listed as failed forever. The queue reconciles those rows
+  // once per start.
+  it('reconciles failed jobs against completed audits on start', async () => {
+    vi.mocked(reconcileFailedAuditJobs).mockResolvedValueOnce(2);
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: {
+        'full-audit': vi.fn().mockResolvedValue(undefined),
+        prospecting: vi.fn().mockResolvedValue(undefined),
+        'prospect-ingestion': vi.fn().mockResolvedValue(undefined),
+        'hotel-prescan': vi.fn().mockResolvedValue(undefined),
+      },
+    });
+
+    await queue.start();
+    expect(reconcileFailedAuditJobs).toHaveBeenCalledWith(fakeConnection);
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ reconciled: 2 }),
+      expect.stringContaining('completed outside the queue'),
+    );
+  });
+
+  it('still starts the claim loop when the reconciliation pass fails', async () => {
+    vi.mocked(reconcileFailedAuditJobs).mockRejectedValueOnce(new Error('mongo hiccup'));
+    const job = fakeJob({ jobId: 'job-after-reconcile-error' });
+    vi.mocked(claimNextQueuedJob).mockResolvedValueOnce(job).mockResolvedValue(null);
+    const runFullAuditJob = vi.fn().mockResolvedValue(undefined);
+
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: {
+        'full-audit': runFullAuditJob,
+        prospecting: vi.fn(),
+        'prospect-ingestion': vi.fn(),
+        'hotel-prescan': vi.fn(),
+      },
+    });
+    await queue.start();
+    queue.notify();
+    await waitFor(() => runFullAuditJob.mock.calls.length >= 1);
+
+    expect(logger.error).toHaveBeenCalled();
+    expect(runFullAuditJob).toHaveBeenCalledTimes(1);
   });
 
   it('runs a full-audit job with the full-audit runner', async () => {
