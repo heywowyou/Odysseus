@@ -7,6 +7,7 @@
 
 import { promises as fs } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
+import { hostname } from 'node:os';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import type { Browser } from 'playwright';
@@ -154,6 +155,11 @@ export async function runReportStage(
     reportTemplateVersion: REPORT_TEMPLATE_VERSION,
     pdfDigest,
     pageCount,
+    // Issue #62: the artifacts root is per-machine while the database is
+    // shared, so a row whose file is missing on one machine usually
+    // points at the machine named here. Recorded on the sidecar and the
+    // row alike, via the spread below.
+    renderedOnHost: hostname(),
   };
   await fs.writeFile(
     provenancePath,

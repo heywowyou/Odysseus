@@ -38,6 +38,13 @@ export interface ReportDocumentFields {
   /** Path relative to the audit directory, e.g. "reports/2026-...-full-fr.pdf". */
   fileRef: string;
   generatedAt: Date;
+  /** Issue #62: os.hostname() of the machine that rendered the PDF. The
+   *  artifacts root is per-machine (local workspace vs the deployment's
+   *  /data/artifacts volume) while the Mongo data is shared, so a fileRef
+   *  that resolves to nothing on this machine usually means the file
+   *  lives on the machine named here, not that it was lost. Optional:
+   *  documents rendered before it was recorded simply lack it. */
+  renderedOnHost?: string;
   /** Measured Paged.js page count recorded at generation time (plan 018).
    *  Optional: documents generated before it was recorded simply lack it,
    *  and the length warning must never infer a value for them. */
@@ -77,6 +84,7 @@ const reportSchema = new Schema<ReportDocument>(
     analysisGeneratedAt: { type: Date, required: true },
     fileRef: { type: String, required: true },
     generatedAt: { type: Date, required: true },
+    renderedOnHost: { type: String },
     // Not required: legacy documents predate the measured page count and
     // strict mode strips the key on write when it is absent, so a lean
     // read simply returns undefined for them.

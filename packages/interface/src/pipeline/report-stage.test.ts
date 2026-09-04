@@ -171,6 +171,8 @@ describe('runReportStage', () => {
       analysisGeneratedAt: analysis.generatedAt,
       fileRef: path.relative(auditDir, result.reportPath),
       generatedAt: result.generatedAt,
+      // Issue #62: names the machine whose artifacts root holds the file.
+      renderedOnHost: os.hostname(),
     });
   });
 

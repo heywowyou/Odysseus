@@ -15,6 +15,7 @@ import { registerBackfillAuditCommand } from './commands/backfill-audit.js';
 import { registerReportCommand } from './commands/report.js';
 import { registerServeCommand } from './commands/serve.js';
 import { registerProspectCommand } from './commands/prospect.js';
+import { registerVerifyReportsCommand } from './commands/verify-reports.js';
 
 // Loaded once, unconditionally, here rather than left as a side effect of
 // whichever command happens to import @odysseus/scanner or @odysseus/llm
@@ -39,5 +40,6 @@ registerBackfillAuditCommand(program);
 registerReportCommand(program);
 registerServeCommand(program);
 registerProspectCommand(program);
+registerVerifyReportsCommand(program);
 
 program.parse(process.argv);

@@ -56,6 +56,17 @@ export type { CrawlEtaInput, ScanEtaInput } from './queue/eta.js';
 export { JobQueue } from './queue/job-queue.js';
 export type { JobQueueOptions, PipelineContext, PipelineFn } from './queue/job-queue.js';
 export { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
+export {
+  sweepReportIntegrity,
+  classifyReportRows,
+  nodeReportIntegrityFs,
+} from './reports/integrity.js';
+export type {
+  ReportIntegrityEntry,
+  ReportIntegrityStatus,
+  ReportIntegrityInputRow,
+  ReportIntegrityFs,
+} from './reports/integrity.js';
 export { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
 export { runProspectIngestionJob } from './queue/pipeline/run-prospect-ingestion-job.js';
 export { registerProspectingRoutes } from './routes/prospecting.js';
