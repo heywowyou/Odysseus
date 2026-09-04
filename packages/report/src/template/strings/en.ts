@@ -278,7 +278,9 @@ export const en: ReportStrings = {
     registrySnapshotVerbatimNote:
       'This denomination is reproduced exactly as it appears in the Sirene registry, associated with the SIREN above, not derived from the domain name.',
     transactionalFlowConflictTemplate:
-      'Conflicting signal: automated detection found a transactional flow on this site, but a manual confirmation states {manualValue}. Verify before relying on this status.',
+      'Conflicting signal: automated detection {detectedValue}; a manual confirmation states {manualValue}. Verify before relying on this status.',
+    transactionalFlowConflictDetectedAbsent: 'did not confirm a transactional flow',
+    transactionalFlowConflictDetectedPresent: 'found a transactional flow',
     transactionalFlowConflictManualAbsent: 'no such flow exists',
     transactionalFlowConflictManualPresent: 'it does exist',
     // Issue #42: the inconclusive detection is a materially stronger hint

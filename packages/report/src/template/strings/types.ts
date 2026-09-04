@@ -543,6 +543,8 @@ export interface ReportStrings {
      *  Template: {manualValue}, one of transactionalFlowConflictManual
      *  Absent/Present below. */
     transactionalFlowConflictTemplate: string;
+    transactionalFlowConflictDetectedAbsent: string;
+    transactionalFlowConflictDetectedPresent: string;
     transactionalFlowConflictManualAbsent: string;
     transactionalFlowConflictManualPresent: string;
     /** Issue #42: shown when the obligation engine resolved the flow gate

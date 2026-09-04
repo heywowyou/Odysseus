@@ -321,7 +321,9 @@ export const fr: ReportStrings = {
     // a person still deserves a visible caveat when it contradicts
     // machine evidence, since it can mean either is wrong.
     transactionalFlowConflictTemplate:
-      'Signal contradictoire : la détection automatisée a identifié un parcours transactionnel sur ce site, mais une confirmation manuelle indique {manualValue}. À vérifier avant toute décision fondée sur ce statut.',
+      'Signal contradictoire : la détection automatisée {detectedValue} ; une confirmation manuelle indique {manualValue}. À vérifier avant toute décision fondée sur ce statut.',
+    transactionalFlowConflictDetectedAbsent: "n'a pas confirmé de parcours transactionnel",
+    transactionalFlowConflictDetectedPresent: 'a identifié un parcours transactionnel',
     transactionalFlowConflictManualAbsent: "l'absence d'un tel parcours",
     transactionalFlowConflictManualPresent: 'sa présence',
     // Issue #42: the inconclusive detection is a materially stronger hint

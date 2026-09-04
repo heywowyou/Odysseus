@@ -160,10 +160,13 @@ function renderTransactionalFlowConflictNote(
     return '';
 
   const l = strings.legalExposure;
+  const detectedValue = resolution.detectedValue
+    ? l.transactionalFlowConflictDetectedPresent
+    : l.transactionalFlowConflictDetectedAbsent;
   const manualValue = resolution.value
     ? l.transactionalFlowConflictManualPresent
     : l.transactionalFlowConflictManualAbsent;
-  const text = fillTemplate(l.transactionalFlowConflictTemplate, { manualValue });
+  const text = fillTemplate(l.transactionalFlowConflictTemplate, { detectedValue, manualValue });
   return `<p style="font-size:12.5px;opacity:0.85;margin-top:var(--space-2);color:${SEVERITY.serious.color}">${escapeHtml(text)}</p>`;
 }
 
