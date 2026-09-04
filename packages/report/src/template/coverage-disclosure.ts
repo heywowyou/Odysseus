@@ -13,6 +13,7 @@ const WITHOUT_CONTENT_REASON_ORDER: readonly PageWithoutContentAnalysisReason[] 
   'skipped-non-html',
   'skipped-external-redirect',
   'error',
+  'http-error-status',
   'coverage-missing',
 ];
 

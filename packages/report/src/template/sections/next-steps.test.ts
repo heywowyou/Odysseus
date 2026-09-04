@@ -281,7 +281,7 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
     expect(html).toContain('section-14');
     expect(html).toContain('canal direct de réservation');
     expect(html).toContain(
-      'Priorités classées : 3. Couvrant au moins un constat critique ou sérieux : 2. Gains rapides, faible complexité pour un impact moyen ou élevé : 1.',
+      'Priorités classées : 3. Couvrant au moins un constat critique ou sérieux : 2. Gains rapides, faible complexité pour un impact moyen ou élevé : 1.',
     );
     expect(html).toContain('la direction');
     expect(html).toContain('le prestataire technique ou le service informatique');
@@ -289,7 +289,7 @@ describe('plan 018 step 7: the ending is a synthesis, not three sales cards', ()
     expect(html).toContain('le juridique');
     expect(html).toContain('trois à six mois');
     expect(html).toContain(`${ODYSSEUS_REAUDIT_PRICE_EUR_HT} € HT`);
-    expect(html).toContain('Une question ?');
+    expect(html).toContain('Une question ?');
     expect(html).toContain(ODYSSEUS_CONTACT_EMAIL);
     expect(html).toContain('Rapport produit par');
     expect(html).toContain('a1b2c3');

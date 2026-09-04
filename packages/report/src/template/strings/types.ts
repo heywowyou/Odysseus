@@ -77,7 +77,6 @@ export interface ReportStrings {
      *  {legalSection}, {methodologySection}, both resolved through
      *  sectionTitle. */
     notALegalOpinionNote: string;
-    questionHeading: string;
     audienceHeading: string;
     journeysHeading: string;
     /** Role labels only: stakeholder names arrive in plan 019. Matches
@@ -86,13 +85,6 @@ export interface ReportStrings {
     roleTechnicalLabel: string;
     roleCommunicationsLabel: string;
     roleLegalLabel: string;
-    nextActionsHeading: string;
-    /** Template: {title}, {contact}. Effort deliberately left to the
-     *  detailed card's "Complexity" metadata, not this sentence. */
-    nextActionItemTemplate: string;
-    contactAgency: string;
-    contactAgencyAndVendor: string;
-    contactUnknownVendor: string;
   };
   statistics: {
     eyebrow: string;
@@ -238,6 +230,7 @@ export interface ReportStrings {
       | 'skipped-non-html'
       | 'skipped-external-redirect'
       | 'error'
+      | 'http-error-status'
       | 'coverage-missing',
       { singular: string; plural: string }
     >;
@@ -315,7 +308,6 @@ export interface ReportStrings {
      *  reads "1 page analyzed", not "1 pages analyzed" (issue #28). */
     pagesScannedSingular: string;
     pagesScannedPlural: string;
-    languageLabel: string;
     /** item 3.8: states all four categories this product always audits
      *  (CATEGORY_ORDER, statistics.ts), not conditioned on whether findings
      *  exist in each - a clean category is still part of what was checked.

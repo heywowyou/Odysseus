@@ -35,18 +35,12 @@ export const en: ReportStrings = {
       'Legal obligations may apply to your establishment: the "{legalSection}" section sets out the published criteria and the recorded facts, to be confirmed with your legal adviser.',
     notALegalOpinionNote:
       'What this report is not: legal advice (see the "{legalSection}" section); an exhaustive audit, since automated detection covers roughly 30 to 40 percent of accessibility criteria (see "{methodologySection}").',
-    questionHeading: 'The question this report answers',
-    audienceHeading: 'Who uses this report',
+    audienceHeading: 'Who this report is for',
     journeysHeading: 'Verified visitor journeys',
     roleManagementLabel: 'Management',
     roleTechnicalLabel: 'Technical provider or IT',
     roleCommunicationsLabel: 'Communications',
     roleLegalLabel: 'Legal',
-    nextActionsHeading: 'The three actions to launch first',
-    nextActionItemTemplate: '{title}, pass on to: {contact}.',
-    contactAgency: 'your agency',
-    contactAgencyAndVendor: 'your agency and the relevant third-party provider',
-    contactUnknownVendor: 'the relevant third-party provider',
   },
   statistics: {
     eyebrow: 'The audit in numbers',
@@ -136,6 +130,7 @@ export const en: ReportStrings = {
       'skipped-non-html': { singular: 'non-HTML resource', plural: 'non-HTML resources' },
       'skipped-external-redirect': { singular: 'external redirect', plural: 'external redirects' },
       error: { singular: 'crawl error', plural: 'crawl errors' },
+      'http-error-status': { singular: 'HTTP error', plural: 'HTTP errors' },
       'coverage-missing': {
         singular: 'coverage record unavailable',
         plural: 'coverage records unavailable',
@@ -188,7 +183,6 @@ export const en: ReportStrings = {
     pagesScannedLabel: 'Scope analyzed',
     pagesScannedSingular: 'page analyzed',
     pagesScannedPlural: 'pages analyzed',
-    languageLabel: 'Report language',
     wcagReferentialLabel: 'Standard audited',
     // item 2.5 (La Corniche pass): a plain space after the separator let
     // the old cover's narrow value column wrap right after it, leaving it

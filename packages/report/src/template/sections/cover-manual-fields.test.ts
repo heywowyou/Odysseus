@@ -133,13 +133,13 @@ describe('item 3.9: "Préparé pour" never renders', () => {
 describe('the cover carries the canonical generic decision question, byte for byte', () => {
   it('the resolver returns the canonical French bytes from the flat design source', () => {
     expect(resolveGenericDecisionQuestion('fr')).toBe(
-      'Quel est l\u2019état actuel du site, et par où commencer ?',
+      'Quel est l\u2019état actuel de votre site, et par où commencer\u00a0?',
     );
   });
 
   it('the resolver returns the canonical English bytes', () => {
     expect(resolveGenericDecisionQuestion('en')).toBe(
-      'What is the current state of the site, and where should you start?',
+      'What is the current state of your site, and where should you start?',
     );
   });
 

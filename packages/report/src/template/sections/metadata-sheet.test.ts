@@ -65,7 +65,6 @@ describe('renderMetadataSheet field order and presence', () => {
       escapeHtml(fr.metadata.siteLabel),
       escapeHtml(fr.metadata.dateLabel),
       escapeHtml(fr.metadata.pagesScannedLabel),
-      escapeHtml(fr.metadata.languageLabel),
       escapeHtml(fr.metadata.wcagReferentialLabel),
       escapeHtml(fr.metadata.riskSmallLabel),
     ]);
@@ -74,6 +73,9 @@ describe('renderMetadataSheet field order and presence', () => {
     expect(html).toContain('https://small-site.test/');
     expect(html).toContain('11 pages analysées');
     expect(html).not.toContain(escapeHtml(fr.metadata.legalNameLabel));
+    // Issue #51: the report-language row is gone from the client-facing
+    // sheet, in both languages; both literal labels must stay absent.
+    expect(html).not.toContain('Langue du rapport');
   });
 
   // Issue #28: a one-page audit used to print "1 pages analysées" /
@@ -108,7 +110,6 @@ describe('renderMetadataSheet field order and presence', () => {
       escapeHtml(fr.metadata.siteLabel),
       escapeHtml(fr.metadata.dateLabel),
       escapeHtml(fr.metadata.pagesScannedLabel),
-      escapeHtml(fr.metadata.languageLabel),
       escapeHtml(fr.metadata.wcagReferentialLabel),
       escapeHtml(fr.metadata.legalNameLabel),
       escapeHtml(fr.metadata.riskSmallLabel),
@@ -124,10 +125,11 @@ describe('renderMetadataSheet field order and presence', () => {
       escapeHtml(en.metadata.siteLabel),
       escapeHtml(en.metadata.dateLabel),
       escapeHtml(en.metadata.pagesScannedLabel),
-      escapeHtml(en.metadata.languageLabel),
       escapeHtml(en.metadata.wcagReferentialLabel),
       escapeHtml(en.metadata.riskSmallLabel),
     ]);
+    // Issue #51: no report-language row in English either.
+    expect(html).not.toContain('Report language');
   });
 
   it('lists Performance in the referential row only when it was measured', async () => {

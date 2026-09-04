@@ -29,11 +29,11 @@ describe('buildReportPreparationPreview', () => {
       findings: [],
     });
     expect(preview.fr.coverQuestion).toEqual({
-      value: 'Quel est l’état actuel du site, et par où commencer ?',
+      value: 'Quel est l’état actuel de votre site, et par où commencer ?',
       source: 'fallback',
     });
     expect(preview.en.coverQuestion).toEqual({
-      value: 'What is the current state of the site, and where should you start?',
+      value: 'What is the current state of your site, and where should you start?',
       source: 'fallback',
     });
   });

@@ -154,10 +154,10 @@ export const SITUATION_QUESTION_COPY: Partial<Record<ReportSituation, BilingualC
  * string table lives here in core so the preparation preview and the report
  * package cannot drift apart; packages/report re-exports the resolver.
  */
-const GENERIC_DECISION_QUESTION_FR = 'Quel est l’état actuel du site, et par où commencer ?';
+const GENERIC_DECISION_QUESTION_FR = 'Quel est l’état actuel de votre site, et par où commencer ?';
 
 const GENERIC_DECISION_QUESTION_EN =
-  'What is the current state of the site, and where should you start?';
+  'What is the current state of your site, and where should you start?';
 
 export function resolveGenericDecisionQuestion(language: ReportLanguage): string {
   return language === 'fr' ? GENERIC_DECISION_QUESTION_FR : GENERIC_DECISION_QUESTION_EN;

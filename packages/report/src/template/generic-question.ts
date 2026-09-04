@@ -24,12 +24,12 @@ import type { PreparationPreviewLanguage, ReportLanguage } from '@odysseus/core'
  */
 
 /** Canonical French bytes, verbatim from the flat design source. */
-const GENERIC_DECISION_QUESTION_FR = 'Quel est l’état actuel du site, et par où commencer ?';
+const GENERIC_DECISION_QUESTION_FR = 'Quel est l’état actuel de votre site, et par où commencer ?';
 
 /** Canonical English counterpart, the approved translation of the same
  *  question (plan 018 step 4). */
 const GENERIC_DECISION_QUESTION_EN =
-  'What is the current state of the site, and where should you start?';
+  'What is the current state of your site, and where should you start?';
 
 export function resolveGenericDecisionQuestion(language: ReportLanguage): string {
   return language === 'fr' ? GENERIC_DECISION_QUESTION_FR : GENERIC_DECISION_QUESTION_EN;

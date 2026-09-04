@@ -8,15 +8,11 @@ import {
   pluralize,
   renderSheetHeader,
   sheet,
-  stripInlineMarkdown,
 } from '../html-utils.js';
 import { resolveDecisionQuestion } from '../generic-question.js';
 import { sectionTitle, type SectionId } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
-import { detectFindingVendor, isThirdPartyFinding } from '../third-party-attribution.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
-
-const TOP_ACTION_COUNT = 3;
 
 /** The deterministic complication facts (plan 018 step 5), all computed
  *  from inputs already in hand at render time: no manifest, no new scan,
@@ -65,10 +61,14 @@ function computeIntroFacts(
  *  drift. P3 (2026-08-21 La Corniche feedback pass) history: the section
  *  exists to answer "why am I, the non-technical director, holding this,
  *  and what do I do with it" - structural/navigational, template-driven,
- *  no new LLM pass. "Vos trois prochaines actions" still reuses the
- *  top-3-theme data (title, first-party/third-party ownership) rather than
- *  regenerating anything, so it can never drift out of sync with the
- *  priorities section; effort wording stays on the detailed card only.
+ *  no new LLM pass.
+ *
+ *  Two removals, both de-duplication: the question renders without its
+ *  old heading (issue #52), which labelled as a question the sentence
+ *  directly below it, and without the former top-3 action list (issue
+ *  #54), which repeated the priorities the executive summary's start-here
+ *  block announces on the next page, with the detail this page never
+ *  carried. The section ends on the audience roles and the scope note.
  *
  *  Audience rows are role labels only (names arrive in plan 019) and are
  *  anchored to the new canonical order semantics: section-02 (legal
@@ -150,27 +150,6 @@ export function renderReportIntro(
     })
     .join('');
 
-  const topThemes = (
-    priorities
-      ? priorities.map((priority) => priority.theme)
-      : selectRenderedThemes(analysis.themes, findingsById)
-  ).slice(0, TOP_ACTION_COUNT);
-  const actionsList = topThemes
-    .map((theme) => {
-      const themeFindings = theme.findingIds
-        .map((id) => findingsById.get(id))
-        .filter((f): f is Finding => f !== undefined);
-      const contact = whoToContact(strings, themeFindings);
-      // Effort deliberately left out of this sentence (plan 018 step 5):
-      // "Complexity" is the detailed card's own metadata (themes.ts).
-      const text = fillTemplate(r.nextActionItemTemplate, {
-        title: stripInlineMarkdown(theme.title),
-        contact,
-      });
-      return `<li style="margin-bottom:8px">${escapeHtml(text)}</li>`;
-    })
-    .join('');
-
   // Plan 019: confirmed, evidence-resolved journeys only. The preview
   // carries no journey the operator did not confirm and the evidence can
   // no longer support, so rendering is a straight projection; every step's
@@ -201,41 +180,13 @@ export function renderReportIntro(
     <h5>${escapeHtml(r.complicationHeading)}</h5>
     <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-2)">${escapeHtml(complication)}</p>
     <p style="font-size:12.5px;opacity:0.9;margin:0 0 var(--space-4)">${escapeHtml(legalReminder)}</p>
-    <h5>${escapeHtml(r.questionHeading)}</h5>
     <p style="font-size:17px;opacity:0.9;margin:0 0 var(--space-6);max-width:38ch">${escapeHtml(question)}</p>
     <h5>${escapeHtml(r.audienceHeading)}</h5>
     <table style="width:100%;border-collapse:collapse;margin-bottom:var(--space-6)"><tbody>${audienceRows}</tbody></table>
     ${journeysBlock}
-    ${
-      actionsList
-        ? `<h5>${escapeHtml(r.nextActionsHeading)}</h5><ol style="margin:0 0 var(--space-4);padding-left:1.2em;font-size:12.5px;opacity:0.9">${actionsList}</ol>`
-        : ''
-    }
     <p style="font-size:11.5px;opacity:0.6;margin:0">${escapeHtml(scopeNote)}</p>
   `,
     '',
     'section-00',
   );
-}
-
-/** Same first-party/third-party classification renderOwnershipSplitNote
- *  (themes.ts) uses, reduced to a single "who to contact" phrase for this
- *  page's action list rather than a full split sentence. */
-function whoToContact(strings: ReportStrings, themeFindings: readonly Finding[]): string {
-  const r = strings.reportIntro;
-  const thirdParty = themeFindings.filter((f) => isThirdPartyFinding(f));
-  const firstParty = themeFindings.filter((f) => !isThirdPartyFinding(f));
-
-  if (thirdParty.length > 0 && firstParty.length === 0) {
-    const vendors = [
-      ...new Set(
-        thirdParty.map((f) => detectFindingVendor(f)).filter((v): v is string => v !== undefined),
-      ),
-    ];
-    return vendors.length > 0 ? vendors.join(', ') : r.contactUnknownVendor;
-  }
-  if (thirdParty.length > 0 && firstParty.length > 0) {
-    return r.contactAgencyAndVendor;
-  }
-  return r.contactAgency;
 }

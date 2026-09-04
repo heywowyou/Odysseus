@@ -22,17 +22,6 @@ import { buildCoverageDisclosure } from '../coverage-disclosure.js';
  *  sheet that is unnumbered chrome, like the cover and the TOC. */
 export const METADATA_SHEET_ID = 'report-metadata';
 
-/** The report always states its own language in that same language - a
- *  French report says "Français" regardless of what other languages are
- *  available, an English report says "English". Not user-facing choice
- *  data, just a fixed self-description, so a plain map rather than a
- *  ReportStrings entry. Moved here from cover.ts with the rest of the old
- *  six-field grid (plan 018 step 4). */
-const LANGUAGE_SELF_NAME: Record<StoredAnalysis['language'], string> = {
-  fr: 'Français',
-  en: 'English',
-};
-
 function field(label: string, valueHtml: string): string {
   return `
     <div>
@@ -102,8 +91,12 @@ function renderRiskBadge(
 /** The second physical page, between the cover and the table of contents
  *  (plan 018 step 4), ported from report.reference.html's METADATA SHEET
  *  section: audit identity and scope as a plain fact grid (site, date,
- *  scope, language, referential), the legal name when the operator
- *  supplied one, and the risk scale moved off the now-minimal cover.
+ *  scope, referential), the legal name when the operator supplied one, and
+ *  the risk scale moved off the now-minimal cover. The report-language row
+ *  the old grid also carried is gone (issue #51): the client is reading
+ *  that language, so the line answered no question they have, and PDF
+ *  filenames plus the render identity still carry the language for the
+ *  flows that need it.
  *
  *  raisonSociale renders ONLY here, as the legal identity on the fact
  *  sheet - never above the trading name on the cover - and its whole row
@@ -147,7 +140,6 @@ export function renderMetadataSheet(
       ${field(strings.metadata.siteLabel, escapeHtml(manifest.siteUrl))}
       ${field(strings.metadata.dateLabel, escapeHtml(formatDate(new Date(manifest.startedAt), analysis.language)))}
       ${field(strings.metadata.pagesScannedLabel, escapeHtml(scopeValue))}
-      ${field(strings.metadata.languageLabel, escapeHtml(LANGUAGE_SELF_NAME[analysis.language]))}
       ${field(
         strings.metadata.wcagReferentialLabel,
         escapeHtml(

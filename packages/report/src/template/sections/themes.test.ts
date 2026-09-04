@@ -1973,7 +1973,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     // 2 + 3 = 5 occurrences, exact and never approximate. French guillemets
     // carry U+00A0 (never U+202F), per the canonical strings rule.
     expect(html).toContain(
-      'Constat représentatif : «\u00a0Le contraste des couleurs est insuffisant\u00a0», relevé par exemple sur la page https://example.com/a-propos. Ce chantier concerne 2 pages et 5 occurrences.',
+      'Constat représentatif : «\u00a0Le contraste des couleurs est insuffisant\u00a0», relevé par exemple sur la page https://example.com/a-propos. Ce chantier concerne 2 pages et 5 occurrences.',
     );
   });
 
@@ -1984,7 +1984,7 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
     expect(html).toContain(
-      'Constat représentatif : «\u00a0Le contraste des couleurs est insuffisant\u00a0». Ce chantier concerne 0 pages et 4 occurrences.',
+      'Constat représentatif : «\u00a0Le contraste des couleurs est insuffisant\u00a0». Ce chantier concerne 0 pages et 4 occurrences.',
     );
   });
 

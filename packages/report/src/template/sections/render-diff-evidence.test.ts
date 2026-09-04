@@ -26,7 +26,7 @@ describe('renderRenderDiffEvidence', () => {
     );
 
     expect(html).not.toContain('-.');
-    expect(html).toContain('Manquant : 12% du texte visible absent du HTML brut.');
+    expect(html).toContain('Manquant : 12% du texte visible absent du HTML brut.');
   });
 
   it('still renders the full sentence when a selector is known', () => {
@@ -46,7 +46,7 @@ describe('renderRenderDiffEvidence', () => {
       1,
     );
 
-    expect(html).toContain('Manquant : 40% du texte visible absent du HTML brut, sur .hero.');
+    expect(html).toContain('Manquant : 40% du texte visible absent du HTML brut, sur .hero.');
   });
 
   it('renders a positive statement, not an empty section, when there is nothing to show (B6)', () => {

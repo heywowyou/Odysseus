@@ -70,10 +70,10 @@ describe('preparation copy tables', () => {
 
   it('keeps the generic question bytes identical to the flat mockup question', () => {
     expect(resolveGenericDecisionQuestion('fr')).toBe(
-      'Quel est l’état actuel du site, et par où commencer ?',
+      'Quel est l’état actuel de votre site, et par où commencer ?',
     );
     expect(resolveGenericDecisionQuestion('en')).toBe(
-      'What is the current state of the site, and where should you start?',
+      'What is the current state of your site, and where should you start?',
     );
   });
 

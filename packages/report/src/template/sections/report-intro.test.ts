@@ -57,8 +57,8 @@ function buildAnalysis(findingIds: string[][], language: 'fr' | 'en' = 'fr') {
 }
 
 /** Minimal rendered-priorities view, as renderBody would pass one: the
- *  intro reads only each entry's theme (for the action list) and the
- *  array length (for the complication's priority count). */
+ *  intro reads only the array length (for the complication's priority
+ *  count). */
 function buildPriority(
   themeTitle: string,
   displayRank: number,
@@ -117,7 +117,8 @@ describe('renderReportIntro', () => {
 
     expect(html).toContain(fr.reportIntro.situationHeading);
     expect(html).toContain(fr.reportIntro.complicationHeading);
-    expect(html).toContain(fr.reportIntro.questionHeading);
+    // Issue #52: the question renders without a labelling heading above it.
+    expect(html).not.toContain('La question à laquelle ce rapport répond');
     expect(html).toContain(escapeHtml(fr.reportIntro.situationBody));
     // 3 distinct findings, 2 critical or serious, 2 distinct pages affected
     // (the union; the zero-page minor finding cannot shrink it), 1 priority
@@ -145,7 +146,7 @@ describe('renderReportIntro', () => {
 
     expect(html).toContain(en.reportIntro.situationHeading);
     expect(html).toContain(en.reportIntro.complicationHeading);
-    expect(html).toContain(en.reportIntro.questionHeading);
+    expect(html).not.toContain('The question this report answers');
     expect(html).toContain(en.reportIntro.situationBody);
     expect(html).toContain(
       fillTemplate(en.reportIntro.complicationBodyTemplate, {
@@ -173,8 +174,11 @@ describe('renderReportIntro', () => {
       ),
     );
     expect(html).toContain(resolveGenericDecisionQuestion('fr'));
-    expect(html).toContain(fr.reportIntro.audienceHeading);
-    expect(html).not.toContain(fr.reportIntro.nextActionsHeading);
+    // The renamed heading (issue #53) carries an apostrophe, which renders
+    // escaped, so compare the escaped form.
+    expect(html).toContain(escapeHtml(fr.reportIntro.audienceHeading));
+    // Issue #54: no top-3 action list on this page anymore.
+    expect(html).not.toContain('Les trois actions à lancer en priorité');
   });
 
   it('renders every block with the fallbacks: an empty priorities array, in English', () => {
@@ -191,10 +195,10 @@ describe('renderReportIntro', () => {
     );
     expect(html).toContain(resolveGenericDecisionQuestion('en'));
     expect(html).toContain(en.reportIntro.audienceHeading);
-    expect(html).not.toContain(en.reportIntro.nextActionsHeading);
+    expect(html).not.toContain('The three actions to launch first');
   });
 
-  it('takes the priority count and the action titles from the provided rendered-priorities view', () => {
+  it('takes the priority count from the provided rendered-priorities view alone', () => {
     const findings = [
       buildFinding({ findingId: 'f001', pageUrls: ['https://example.com/a'] }),
       buildFinding({ findingId: 'f002', pageUrls: ['https://example.com/b'] }),
@@ -209,7 +213,10 @@ describe('renderReportIntro', () => {
     expect(html).toContain(
       'Ces constats sont regroupés en 1 priorités classées, qui indiquent par où commencer.',
     );
-    expect(html).toContain('Priorité fournie');
+    // Issue #54: the section no longer lists actions at all, so neither the
+    // view's own titles nor the stored analysis's themes render here.
+    expect(html).not.toContain('Les trois actions à lancer en priorité');
+    expect(html).not.toContain('Priorité fournie');
     expect(html).not.toContain('Priorité 2');
   });
 
@@ -292,89 +299,14 @@ describe('renderReportIntro', () => {
     expect(html).not.toContain('Jane Doe');
   });
 
-  it('escapes interpolated facts: markup, quotes, and long URLs in a stored theme title', () => {
-    const findings = [
-      buildFinding({
-        findingId: 'f001',
-        elements: [{ pageUrl: 'https://example.com/', selector: 'header nav a', snippet: '' }],
-      }),
-    ];
-    const analysis = buildAnalysis([['f001']]);
-    analysis.themes[0]!.title =
-      'Renommer les boutons <b>"urgent"</b> & voir https://example.com/a/very/long/path?x=1&y="z"';
-
-    const html = renderReportIntro(getStrings('fr'), 1, analysis as never, findings);
-
-    expect(html).toContain('&lt;b&gt;&quot;urgent&quot;&lt;/b&gt;');
-    expect(html).toContain('https://example.com/a/very/long/path?x=1&amp;y=&quot;z&quot;');
-    expect(html).not.toContain('<b>');
-    expect(html).not.toContain('x=1&y=');
-  });
-
-  it('lists the top 3 themes as next actions without effort, naming the agency when a theme is entirely first-party', () => {
-    const findings = ['f001', 'f002', 'f003', 'f004'].map((findingId) =>
-      buildFinding({
-        findingId,
-        elements: [{ pageUrl: 'https://example.com/', selector: 'header nav a', snippet: '' }],
-      }),
-    );
-    const analysis = buildAnalysis([['f001'], ['f002'], ['f003'], ['f004']]);
-
-    const html = renderReportIntro(getStrings('fr'), 1, analysis as never, findings);
-
-    expect(html).toContain('Priorité 1');
-    expect(html).toContain('votre agence');
-    expect(html).not.toContain('effort :');
-    // Capped at three: the fourth theme stays off this page.
-    expect(html).not.toContain('Priorité 4');
-  });
-
-  it('names the vendor when a theme is entirely third-party', () => {
-    const findings = [
-      buildFinding({
-        findingId: 'f001',
-        elements: [
-          { pageUrl: 'https://example.com/', selector: '.gform_wrapper button', snippet: '' },
-        ],
-      }),
-    ];
-    const analysis = buildAnalysis([['f001']]);
-
-    const html = renderReportIntro(getStrings('fr'), 1, analysis as never, findings);
-
-    expect(html).toContain('Gravity Forms');
-  });
-
-  it('names both when a theme spans first- and third-party pages', () => {
-    const findings = [
-      buildFinding({
-        findingId: 'f001',
-        elements: [{ pageUrl: 'https://example.com/', selector: 'header nav a', snippet: '' }],
-      }),
-      buildFinding({
-        findingId: 'f002',
-        elements: [
-          {
-            pageUrl: 'https://example.com/contact',
-            selector: '.gform_wrapper button',
-            snippet: '',
-          },
-        ],
-      }),
-    ];
-    const analysis = buildAnalysis([['f001', 'f002']]);
-
-    const html = renderReportIntro(getStrings('fr'), 1, analysis as never, findings);
-
-    expect(html).toContain(escapeHtml(fr.reportIntro.contactAgencyAndVendor));
-  });
-
   it('renders the English chrome strings for an English report, never the French ones', () => {
     const analysis = buildAnalysis([], 'en');
     const html = renderReportIntro(getStrings('en'), 1, analysis as never, []);
 
     expect(html).toContain(en.reportIntro.audienceHeading);
-    expect(html).not.toContain(fr.reportIntro.audienceHeading);
+    // Same apostrophe rule as above: the French heading only ever renders
+    // in its escaped form.
+    expect(html).not.toContain(escapeHtml(fr.reportIntro.audienceHeading));
     expect(html).not.toContain(fr.reportIntro.heading);
   });
 });
