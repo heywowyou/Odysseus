@@ -162,3 +162,78 @@ Each entry:
   - #47 wraps in English too ("Conformance : Not / applicable"). Title corrected.
   - #41 renders "29 pages of 28" in English, confirming the arithmetic defect is in
     the shared computation rather than either language's rendering.
+
+## 2026-09-04 — www.briketenia.com
+
+- URL: https://www.briketenia.com/fr/
+- Audit ID: cb8bad97-1cfb-4897-92bb-bef9d7266780
+- Artifacts: `artifacts/www.briketenia.com/2026-09-04T19-06-02Z/`
+- Discarded before this pick: **chateaudetilly.fr** (hash rank 1). Its
+  uncapped audit ran 5h22 and died of a Node heap OOM at 2,532 pages
+  (evidence kept in `artifacts/chateaudetilly.fr/2026-09-04T13-37-21Z/`,
+  issue drafted). Hash rank 2, hoteljardinsdemademoiselle.com, discarded:
+  no SIREN on candidate or qualification row, so `--siren` could not be
+  supplied. Briketenia is hash rank 3.
+- Render note: the first render was blocked by the cover identity guard
+  (detected guess "⇒ Briketenia"); resolved the way the dashboard would,
+  after checking the Sirene registry (SIREN 309585578 = SOCIETE
+  D'EXPLOITATION BRIKETENIA). A second render was needed after discovering
+  the analyze-time transactional-flow override never reached the report
+  (issue drafted); the final PDFs are the 19:44Z pair, which show the
+  operator-confirmed in_scope status.
+- Verdict: substance a client can act on, undermined by the legal section's
+  pipeline (the override it was told about silently not reaching the page)
+  and by two places where the report appears not to know its own data: a
+  footnote calling real-visitor data simulated, and the same alt-text
+  heuristic described as two different problems in the two languages.
+- Top concerns beyond the filed issues:
+  - The transactional-flow correction path is fragile end to end: the CLI
+    flag is lost at render, the dashboard path works, and the resulting
+    conflict note misdescribes what detection actually found.
+  - The transactional-flow detector's gap (#42's class) is what put this
+    hotel's legal status at "à confirmer" in the first place; Reservit and
+    CoverManager are exactly the off-domain vendors it misses.
+- Nits (not filed as issues):
+  - "La priorité 1 ci-dessus" / "Priority 1 above" while the priorities are
+    below (recurs from the 2026-09-04 villasfoch pass).
+  - Page 22's note discusses a status "Critique" that never appears in the
+    table it annotates (statuses are insuffisant / à améliorer / bon), with
+    straight quotes in French copy (recurs).
+  - "aucune vidéo sans sous-titres n'a été détecté" agreement error (recurs).
+  - Section 09 "Preuve de rendu" is two sentences on an otherwise empty page
+    (recurs).
+  - The driving question ("Quel est l'état actuel de votre site...?") sits
+    orphaned mid-page in section 01 (recurs).
+  - The summary's "Par où commencer" list splits, orphaning row 3 onto a
+    nearly empty page 6, in both languages.
+  - The "Conformité WCAG" heading block sits alone at the bottom of page 7.
+  - EN: "verify by intent" for "à vérifier selon votre contexte" reads as
+    nonsense.
+  - EN annex uses French spacing before colons ("Pages :", "Files :").
+  - EN mixes "analyzed" and "analysed".
+  - Annex tags the alt-text heuristic with "WCAG 1.1.1" while the report
+    carefully frames heuristics as non-conformance signals.
+  - Annex selector column shows "[html-validate:element-permitted-content]"
+    as a selector example (recurs).
+  - The imprint line carries the internal "modèle 2" / "template 2" marker
+    (the build-id half of villasfoch #58 is fixed; the template marker
+    remains and means nothing to a client).
+  - "Reste à traiter" entries split across page breaks (title on one page,
+    description on the next); in EN an annex group title is orphaned at a
+    page bottom.
+  - The disability-tourism reference stat cites an England survey in a
+    French report for a Basque hotel (recurs).
+- Issues filed 2026-09-04, six in total, labelled needs-triage:
+  - #64 uncapped audit of a ~2,500-page site exhausts the default Node heap
+    and loses the entire run (evidence from the discarded chateaudetilly
+    run)
+  - #65 render-time obligation recompute discards the analyze-time
+    --override-transactional-flow determination
+  - #66 transactional-flow conflict note misstates what detection found when
+    the manual override asserts presence
+  - #67 Chrome UX Report table's footnote labels field data as lab data
+    (both languages)
+  - #68 alt-text heuristic finding carries two different meanings across the
+    FR/EN pair
+  - #69 hotel-qualify reasons defaults to qualificationVersion v3 while all
+    catalogue rows are at v2
