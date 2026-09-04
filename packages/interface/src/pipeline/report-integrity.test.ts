@@ -4,7 +4,7 @@ import {
   classifyReportRows,
   type ReportIntegrityFs,
   type ReportIntegrityInputRow,
-} from './integrity.js';
+} from './report-integrity.js';
 
 const AUDIT_DIR = '/artifacts/www.example.com/2026-09-03T20-44-46Z';
 
@@ -46,7 +46,9 @@ describe('classifyReportRows (issue #62)', () => {
       [row()],
       dirs,
       'workstation',
-      fakeFs({ [`${AUDIT_DIR}/reports/2026-09-03T20-56-41Z-t2-2b7eec6-report-1-fr.pdf`]: 'pdf-bytes' }),
+      fakeFs({
+        [`${AUDIT_DIR}/reports/2026-09-03T20-56-41Z-t2-2b7eec6-report-1-fr.pdf`]: 'pdf-bytes',
+      }),
     );
     expect(entries).toHaveLength(1);
     expect(entries[0]?.status).toBe('ok');
@@ -76,7 +78,9 @@ describe('classifyReportRows (issue #62)', () => {
       [row({ renderedOnHost: 'workstation' })],
       dirs,
       'workstation',
-      fakeFs({ [`${AUDIT_DIR}/reports/2026-09-03T20-56-41Z-t2-2b7eec6-report-1-fr.pdf`]: 'different-bytes' }),
+      fakeFs({
+        [`${AUDIT_DIR}/reports/2026-09-03T20-56-41Z-t2-2b7eec6-report-1-fr.pdf`]: 'different-bytes',
+      }),
     );
     expect(entries[0]?.status).toBe('digest-mismatch');
     expect(entries[0]?.actualDigest).toBe(digestOf('different-bytes'));
@@ -89,18 +93,15 @@ describe('classifyReportRows (issue #62)', () => {
       [legacy],
       dirs,
       'workstation',
-      fakeFs({ [`${AUDIT_DIR}/reports/2026-09-03T20-56-41Z-t2-2b7eec6-report-1-fr.pdf`]: 'pdf-bytes' }),
+      fakeFs({
+        [`${AUDIT_DIR}/reports/2026-09-03T20-56-41Z-t2-2b7eec6-report-1-fr.pdf`]: 'pdf-bytes',
+      }),
     );
     expect(entries[0]?.status).toBe('digest-unrecorded');
   });
 
   it('classifies audit-dir-unknown when no audits row can be resolved', async () => {
-    const entries = await classifyReportRows(
-      [row()],
-      new Map(),
-      'workstation',
-      fakeFs({}),
-    );
+    const entries = await classifyReportRows([row()], new Map(), 'workstation', fakeFs({}));
     expect(entries[0]?.status).toBe('audit-dir-unknown');
     expect(entries[0]?.detail).toContain('audit directory');
   });
@@ -124,10 +125,6 @@ describe('classifyReportRows (issue #62)', () => {
       'workstation',
       fakeFs({ [goodPath]: 'pdf-bytes' }),
     );
-    expect(entries.map((entry) => entry.status)).toEqual([
-      'ok',
-      'file-missing',
-      'file-missing',
-    ]);
+    expect(entries.map((entry) => entry.status)).toEqual(['ok', 'file-missing', 'file-missing']);
   });
 });

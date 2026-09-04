@@ -60,13 +60,13 @@ export {
   sweepReportIntegrity,
   classifyReportRows,
   nodeReportIntegrityFs,
-} from './reports/integrity.js';
+} from './pipeline/report-integrity.js';
 export type {
   ReportIntegrityEntry,
   ReportIntegrityStatus,
   ReportIntegrityInputRow,
   ReportIntegrityFs,
-} from './reports/integrity.js';
+} from './pipeline/report-integrity.js';
 export { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
 export { runProspectIngestionJob } from './queue/pipeline/run-prospect-ingestion-job.js';
 export { registerProspectingRoutes } from './routes/prospecting.js';

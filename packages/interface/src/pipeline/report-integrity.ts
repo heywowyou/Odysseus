@@ -30,11 +30,7 @@ import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import { createAuditModel, createReportModel, type ReportDocument } from '@odysseus/store';
 
 export type ReportIntegrityStatus =
-  | 'ok'
-  | 'file-missing'
-  | 'digest-mismatch'
-  | 'digest-unrecorded'
-  | 'audit-dir-unknown';
+  'ok' | 'file-missing' | 'digest-mismatch' | 'digest-unrecorded' | 'audit-dir-unknown';
 
 export interface ReportIntegrityInputRow {
   reportId?: string;
@@ -53,7 +49,11 @@ export interface ReportIntegrityFs {
 }
 
 export const nodeReportIntegrityFs: ReportIntegrityFs = {
-  exists: (filePath) => fs.stat(filePath).then(() => true, () => false),
+  exists: (filePath) =>
+    fs.stat(filePath).then(
+      () => true,
+      () => false,
+    ),
   read: (filePath) => fs.readFile(filePath),
 };
 
