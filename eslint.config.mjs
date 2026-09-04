@@ -20,11 +20,17 @@ export default defineConfig(
     'reports/**',
     'docs/report/design/**',
     // Agent skill trees are vendored by external installers, never maintained
-    // source; the same policy .prettierignore applies to them.
+    // source; the same policy .prettierignore applies to them. .zcode is a
+    // session scratch directory on the same footing (gitignored since
+    // 8b330c2). Prettier already skips all of these because Prettier 3
+    // reads .gitignore as well as .prettierignore; ESLint reads neither, so
+    // a scratch file that is not part of the project failed `pnpm run
+    // check`, and with it the pre-push hook, for anyone who had one.
     '.agents/**',
     '.claude/**',
     '.codex/**',
     '.impeccable/**',
+    '.zcode/**',
   ]),
   {
     files: sourceFiles,
