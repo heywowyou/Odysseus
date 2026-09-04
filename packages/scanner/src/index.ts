@@ -77,6 +77,8 @@ export {
   hashUrl,
   buildPageDir,
   buildAuditDir,
+  buildArtifactBucketKey,
+  parseAuditTimestampDir,
 } from './artifacts/paths.js';
 export { toAuditRelativeRefs } from './artifacts/relativize.js';
 export { collectToolVersions } from './artifacts/versions.js';

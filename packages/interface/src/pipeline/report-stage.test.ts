@@ -30,6 +30,12 @@ vi.mock('@odysseus/store', () => ({
 vi.mock('@odysseus/scanner', () => ({
   readOdysseusBuildId: vi.fn(() => 'render-build'),
   launchBrowser: vi.fn(async () => ({ browser: { close: vi.fn() }, debugPort: 0 })),
+  buildArtifactBucketKey: vi.fn(
+    (hostname: string, startedAt: Date, relativePath: string) =>
+      `${hostname}/${startedAt.toISOString()}/${relativePath}`,
+  ),
+  ensureEnvLoaded: vi.fn(),
+  findWorkspaceRoot: vi.fn(() => '/tmp'),
 }));
 vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 

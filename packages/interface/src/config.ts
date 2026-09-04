@@ -233,6 +233,59 @@ export function getPreviewBucketSecretKey(): string {
   return requiredPreviewEnv('ODYSSEUS_PREVIEW_BUCKET_SECRET_KEY');
 }
 
+/** Issue #63: the bucket audit artifacts and rendered reports are synced
+ *  to, so a job run or read on a different machine (or after a fresh
+ *  deploy) is never stuck with a database row and no local file. A new,
+ *  dedicated bucket, not `ODYSSEUS_PREVIEW_BUCKET_*` above - see
+ *  scaleway-artifact-store.ts's doc comment for why the two must not
+ *  share one. No default endpoint/region constant the way the preview
+ *  bucket has one: this bucket is not provisioned yet as of this issue
+ *  (see the plan's "not in scope" list), so a guessed default would look
+ *  configured when it is not. */
+function requiredArtifactsBucketEnv(name: string): string {
+  ensureEnvLoaded();
+  const value = process.env[name];
+  if (value === undefined || value === '') {
+    throw new Error(`${name} is not set; artifact bucket sync needs it`);
+  }
+  return value;
+}
+
+export function getArtifactsBucketEndpoint(): string {
+  return requiredArtifactsBucketEnv('ODYSSEUS_ARTIFACTS_BUCKET_ENDPOINT');
+}
+
+export function getArtifactsBucketRegion(): string {
+  return requiredArtifactsBucketEnv('ODYSSEUS_ARTIFACTS_BUCKET_REGION');
+}
+
+export function getArtifactsBucketName(): string {
+  return requiredArtifactsBucketEnv('ODYSSEUS_ARTIFACTS_BUCKET_NAME');
+}
+
+export function getArtifactsBucketAccessKeyId(): string {
+  return requiredArtifactsBucketEnv('ODYSSEUS_ARTIFACTS_BUCKET_ACCESS_KEY_ID');
+}
+
+export function getArtifactsBucketSecretAccessKey(): string {
+  return requiredArtifactsBucketEnv('ODYSSEUS_ARTIFACTS_BUCKET_SECRET_ACCESS_KEY');
+}
+
+/** True only when every credential is actually set, so a caller can decide
+ *  to skip sync entirely on a machine with no bucket configured yet
+ *  (development, or before the real bucket is provisioned) instead of
+ *  throwing out of an upload hook that runs on every job. */
+export function isArtifactsBucketConfigured(): boolean {
+  ensureEnvLoaded();
+  return (
+    Boolean(process.env['ODYSSEUS_ARTIFACTS_BUCKET_ENDPOINT']) &&
+    Boolean(process.env['ODYSSEUS_ARTIFACTS_BUCKET_REGION']) &&
+    Boolean(process.env['ODYSSEUS_ARTIFACTS_BUCKET_NAME']) &&
+    Boolean(process.env['ODYSSEUS_ARTIFACTS_BUCKET_ACCESS_KEY_ID']) &&
+    Boolean(process.env['ODYSSEUS_ARTIFACTS_BUCKET_SECRET_ACCESS_KEY'])
+  );
+}
+
 /**
  * Milestone 9c plan 011: the mailbox outreach drafts are prepared in.
  *

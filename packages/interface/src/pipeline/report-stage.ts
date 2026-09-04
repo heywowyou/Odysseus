@@ -30,6 +30,8 @@ import {
 import { launchBrowser, readOdysseusBuildId } from '@odysseus/scanner';
 import { getAuditManualFields, getReportPreparation, persistReport } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
+import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import { syncArtifactFilesToBucket } from '../artifacts/sync-audit-artifacts.js';
 
 export interface ReportStageResult {
   reportId: string;
@@ -182,6 +184,16 @@ export async function runReportStage(
     fileRef: path.relative(auditDir, reportPath),
     generatedAt,
   });
+
+  // Issue #63: after the local write and the DB row both succeeded, same
+  // ordering rule as audit-stage.ts's own sync call.
+  await syncArtifactFilesToBucket(
+    createConfiguredArtifactStore(),
+    auditDir,
+    new URL(manifest.siteUrl).hostname,
+    new Date(manifest.startedAt),
+    [reportPath, provenancePath],
+  );
 
   const pageCountWarning = reportPageCountWarning(pageCount);
   return {

@@ -1,4 +1,3 @@
-import { promises as fs } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
@@ -26,7 +25,7 @@ import {
   type ReportDocument,
   type SelectedAuditAnalysisPairResolution,
 } from '@odysseus/store';
-import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
+import { buildArtifactBucketKey, buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import {
   classifyReportFreshness,
   type ReportFreshness,
@@ -36,6 +35,9 @@ import type { Router } from '../router.js';
 import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { runAllReportsStage } from '../pipeline/report-stage.js';
+import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
+import type { ArtifactStore } from '../artifacts/artifact-store.js';
 
 function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
@@ -59,11 +61,18 @@ type OptionalFindingsProvenance = AuditManifest['findingsProvenance'];
 async function readVerifiedReport(
   auditDir: string,
   report: ReportDocument,
+  hostname: string,
+  startedAt: Date,
+  store: ArtifactStore | undefined,
 ): Promise<Buffer | undefined> {
   if (!report.pdfDigest) return undefined;
   let pdf: Buffer;
   try {
-    pdf = await fs.readFile(path.join(auditDir, report.fileRef));
+    pdf = await resolveArtifactFile(
+      path.join(auditDir, report.fileRef),
+      buildArtifactBucketKey(hostname, startedAt, report.fileRef),
+      store,
+    );
   } catch {
     return undefined;
   }
@@ -80,6 +89,9 @@ async function verifyFreshPair(
   resolution: SelectedAuditAnalysisPairResolution,
   auditDir: string,
   currentFindings: OptionalFindingsProvenance,
+  hostname: string,
+  startedAt: Date,
+  store: ArtifactStore | undefined,
 ): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en: Buffer } } | undefined> {
   // Plan 019: the current analysis pair is the selected one (or, for a
   // legacy audit without a selection, the latest complete pair from the
@@ -102,8 +114,8 @@ async function verifyFreshPair(
   )
     return undefined;
   const [frPdf, enPdf] = await Promise.all([
-    readVerifiedReport(auditDir, fr),
-    readVerifiedReport(auditDir, en),
+    readVerifiedReport(auditDir, fr, hostname, startedAt, store),
+    readVerifiedReport(auditDir, en, hostname, startedAt, store),
   ]);
   if (!frPdf || !enPdf) return undefined;
   return { reports: { fr, en }, pdfs: { fr: frPdf, en: enPdf } };
@@ -119,13 +131,16 @@ async function getFreshVerifiedPair(
   auditId: string,
   auditDir: string,
   currentFindings: OptionalFindingsProvenance,
+  hostname: string,
+  startedAt: Date,
+  store: ArtifactStore | undefined,
 ): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en: Buffer } } | undefined> {
   const [fr, en, resolution] = await Promise.all([
     getLatestReport(connection, auditId, 'fr'),
     getLatestReport(connection, auditId, 'en'),
     resolveSelectedAnalysisPairForAudit(connection, auditId),
   ]);
-  return verifyFreshPair(fr, en, resolution, auditDir, currentFindings);
+  return verifyFreshPair(fr, en, resolution, auditDir, currentFindings, hostname, startedAt, store);
 }
 
 const MANUAL_TEXT_FIELDS = [
@@ -189,6 +204,11 @@ function parseManualFieldsBody(raw: unknown): Omit<AuditManualFields, 'updatedAt
 }
 
 export function registerAuditRoutes(router: Router, connection: Connection): void {
+  // Issue #63: built once, since a caller with no bucket configured must
+  // never pay a per-request cost for constructing one, and every read
+  // below shares the same fallback behaviour.
+  const artifactStore = createConfiguredArtifactStore();
+
   router.get('/api/audits/:auditId', async ({ res, params }) => {
     const auditId = params['auditId']!;
     const audit = await getAudit(connection, auditId);
@@ -228,6 +248,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       selectedPair,
       auditDir,
       audit.findingsProvenance,
+      hostname,
+      audit.startedAt,
+      artifactStore,
     );
     const analysed = Boolean(
       selectedPair.kind !== 'none' &&
@@ -401,10 +424,22 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     let manifest: AuditManifest;
     let findings: Finding[];
     try {
-      manifest = JSON.parse(await fs.readFile(path.join(auditDir, 'manifest.json'), 'utf-8'));
-      findings = JSON.parse(await fs.readFile(path.join(auditDir, 'findings.json'), 'utf-8'));
+      const [manifestBytes, findingsBytes] = await Promise.all([
+        resolveArtifactFile(
+          path.join(auditDir, 'manifest.json'),
+          buildArtifactBucketKey(hostname, audit.startedAt, 'manifest.json'),
+          artifactStore,
+        ),
+        resolveArtifactFile(
+          path.join(auditDir, 'findings.json'),
+          buildArtifactBucketKey(hostname, audit.startedAt, 'findings.json'),
+          artifactStore,
+        ),
+      ]);
+      manifest = JSON.parse(manifestBytes.toString('utf-8'));
+      findings = JSON.parse(findingsBytes.toString('utf-8'));
     } catch {
-      sendError(res, 404, 'audit artifacts not found on disk');
+      sendError(res, 404, 'audit artifacts not found on disk or in the bucket');
       return;
     }
 
@@ -444,16 +479,16 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'audit not found');
       return;
     }
-    const auditDir = buildAuditDir(
-      getArtifactsRoot(),
-      new URL(audit.siteUrl).hostname,
-      audit.startedAt,
-    );
+    const hostname = new URL(audit.siteUrl).hostname;
+    const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
     const pair = await getFreshVerifiedPair(
       connection,
       auditId,
       auditDir,
       audit.findingsProvenance,
+      hostname,
+      audit.startedAt,
+      artifactStore,
     );
     if (!pair) {
       sendError(
@@ -477,6 +512,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
           auditId,
           auditDir,
           audit.findingsProvenance,
+          hostname,
+          audit.startedAt,
+          artifactStore,
         );
         if (
           !current ||
@@ -515,12 +553,15 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 409, `a fresh ${language} report is required for preview`);
       return;
     }
-    const auditDir = buildAuditDir(
-      getArtifactsRoot(),
-      new URL(audit.siteUrl).hostname,
+    const previewHostname = new URL(audit.siteUrl).hostname;
+    const auditDir = buildAuditDir(getArtifactsRoot(), previewHostname, audit.startedAt);
+    const pdf = await readVerifiedReport(
+      auditDir,
+      report,
+      previewHostname,
       audit.startedAt,
+      artifactStore,
     );
-    const pdf = await readVerifiedReport(auditDir, report);
     if (!pdf) {
       sendError(res, 409, 'report PDF is missing or its digest does not match');
       return;
@@ -577,9 +618,13 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
 
     let pdf: Buffer;
     try {
-      pdf = await fs.readFile(filePath);
+      pdf = await resolveArtifactFile(
+        filePath,
+        buildArtifactBucketKey(hostname, audit.startedAt, report.fileRef),
+        artifactStore,
+      );
     } catch {
-      sendError(res, 404, 'report file not found on disk');
+      sendError(res, 404, 'report file not found on disk or in the bucket');
       return;
     }
     const actualDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;

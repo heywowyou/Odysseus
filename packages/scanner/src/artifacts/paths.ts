@@ -34,6 +34,26 @@ export function buildAuditTimestampDir(date: Date): string {
     .replace(/:/g, '-');
 }
 
+/** Reverses buildAuditTimestampDir. Issue #63: `normalize <dir>` is handed
+ *  an audit directory whose name already encodes this timestamp (it is the
+ *  directory's own last path segment), and needs it back as a Date to
+ *  build the matching bucket key - without re-reading manifest.json first,
+ *  since that read is exactly the one that might need the bucket
+ *  fallback. Throws on anything that isn't the exact format this package
+ *  itself produces, rather than guessing. */
+export function parseAuditTimestampDir(dirName: string): Date {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z$/.exec(dirName);
+  if (!match) {
+    throw new Error(`"${dirName}" is not a valid audit timestamp directory name`);
+  }
+  const [, datePart, hh, mm, ss] = match;
+  const date = new Date(`${datePart}T${hh}:${mm}:${ss}Z`);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`"${dirName}" is not a valid audit timestamp directory name`);
+  }
+  return date;
+}
+
 export function slugify(pathname: string): string {
   return pathname
     .toLowerCase()
@@ -55,6 +75,22 @@ export function buildPageDir(url: string): string {
 
 export function buildAuditDir(artifactsRoot: string, hostname: string, startedAt: Date): string {
   return path.join(artifactsRoot, hostname, buildAuditTimestampDir(startedAt));
+}
+
+/** Object-storage key for a file inside an audit directory, mirroring the
+ *  same `<hostname>/<ISO-timestamp>/<relative path>` shape buildAuditDir
+ *  uses on disk (issue #63) - so a bucket key and a local path always
+ *  agree on where a given artifact lives, just under a different root.
+ *  Forward slashes always, since a bucket key is not a filesystem path
+ *  even when built on Windows. */
+export function buildArtifactBucketKey(
+  hostname: string,
+  startedAt: Date,
+  relativePath: string,
+): string {
+  return [hostname, buildAuditTimestampDir(startedAt), relativePath.split(path.sep).join('/')].join(
+    '/',
+  );
 }
 
 /** Prescan layout: `<prescansRoot>/<hostname>/<ISO-timestamp>/`, the same

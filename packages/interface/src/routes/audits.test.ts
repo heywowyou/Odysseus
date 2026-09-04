@@ -20,7 +20,13 @@ vi.mock('@odysseus/store', () => ({
 
 vi.mock('@odysseus/scanner', () => ({
   buildAuditDir: vi.fn(() => '/tmp/fake-audit-dir'),
+  buildArtifactBucketKey: vi.fn(
+    (hostname: string, startedAt: Date, relativePath: string) =>
+      `${hostname}/${startedAt.toISOString()}/${relativePath}`,
+  ),
   getArtifactsRoot: vi.fn(() => '/tmp'),
+  ensureEnvLoaded: vi.fn(),
+  findWorkspaceRoot: vi.fn(() => '/tmp'),
 }));
 
 import {

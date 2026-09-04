@@ -8,7 +8,13 @@ vi.mock('@odysseus/scanner', () => ({
   writeManifestFile: vi.fn(),
   pruneScreenshots: vi.fn(),
   buildAuditDir: vi.fn(() => '/artifacts/example.com/2026-08-04T00-00-00Z'),
+  buildArtifactBucketKey: vi.fn(
+    (hostname: string, startedAt: Date, relativePath: string) =>
+      `${hostname}/${startedAt.toISOString()}/${relativePath}`,
+  ),
   getArtifactsRoot: vi.fn(() => '/artifacts'),
+  ensureEnvLoaded: vi.fn(),
+  findWorkspaceRoot: vi.fn(() => '/tmp'),
   getCrawlDelayMs: vi.fn(() => 1000),
   getCrawlerUserAgent: vi.fn(() => 'OdysseusAuditBot/0.1'),
   getLighthouseTimeoutMs: vi.fn(() => 60_000),

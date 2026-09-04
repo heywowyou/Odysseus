@@ -44,6 +44,8 @@ import {
 } from '@odysseus/core';
 import { persistAudit, prefillAuditManualFields } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
+import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 
 export interface RunAuditStageOptions {
   maxPages?: number;
@@ -221,6 +223,17 @@ export async function runAuditStage(
     );
 
     await persistAudit(connection, manifest, findings);
+
+    // Issue #63: sync after the local write and the DB row both succeeded,
+    // never before - a bucket failure must not block an already-valid
+    // local deliverable. Runs after pruneScreenshots so a pruned page's
+    // screenshot is never uploaded only to be orphaned in the bucket.
+    await syncAuditDirToBucket(
+      createConfiguredArtifactStore(),
+      artifacts.auditDir,
+      hostname,
+      startedAt,
+    );
 
     // 2026-08-22, La Corniche report review: the audit doc must exist
     // before this (persistAudit upserts by auditId above), and

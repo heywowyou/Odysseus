@@ -9,6 +9,8 @@ import {
   type NormalizePageInput,
   type TranslationCluster,
 } from '@odysseus/core';
+import { buildArtifactBucketKey, parseAuditTimestampDir } from '@odysseus/scanner';
+import { createConfiguredArtifactStore, resolveArtifactFile } from '@odysseus/interface';
 
 /**
  * Re-runs normalization offline, from stored scan.json files only. No
@@ -17,19 +19,66 @@ import {
  * tuning pass would mean re-scanning a real client site (minutes, plus
  * another round of uninvited traffic) per iteration.
  */
-async function readPageInputs(artifactsDir: string): Promise<NormalizePageInput[]> {
+/** Issue #63: the bucket key needs hostname and startedAt, which
+ *  buildAuditDir encodes into a real audit directory's own
+ *  `<hostname>/<timestamp>` layout - read from the path rather than from
+ *  manifest.json, since that read is exactly the one that might need the
+ *  bucket fallback below. Returns undefined for a directory that isn't in
+ *  that shape (a de-identified test fixture, a renamed local copy),
+ *  matching this command's original directory-name-agnostic behaviour:
+ *  no identity means no bucket key, so every read below falls back to a
+ *  plain local read exactly as it always has. */
+function tryReadAuditDirIdentity(
+  resolvedDir: string,
+): { hostname: string; startedAt: Date } | undefined {
+  try {
+    return {
+      hostname: path.basename(path.dirname(resolvedDir)),
+      startedAt: parseAuditTimestampDir(path.basename(resolvedDir)),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Reads one artifact file, going through the bucket fallback only when
+ *  `identity` is known - see tryReadAuditDirIdentity. */
+async function readArtifact(
+  localPath: string,
+  relativePath: string,
+  identity: { hostname: string; startedAt: Date } | undefined,
+): Promise<Buffer> {
+  if (!identity) return fs.readFile(localPath);
+  return resolveArtifactFile(
+    localPath,
+    buildArtifactBucketKey(identity.hostname, identity.startedAt, relativePath),
+    createConfiguredArtifactStore(),
+  );
+}
+
+async function readPageInputs(
+  artifactsDir: string,
+  identity: { hostname: string; startedAt: Date } | undefined,
+): Promise<NormalizePageInput[]> {
   const pagesDir = path.join(artifactsDir, 'pages');
   const entries = await fs.readdir(pagesDir, { withFileTypes: true });
 
   const pages: NormalizePageInput[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const scanJsonPath = path.join(pagesDir, entry.name, 'scan.json');
+    const relativePath = path.join('pages', entry.name, 'scan.json');
     try {
-      const raw = await fs.readFile(scanJsonPath, 'utf-8');
-      pages.push(JSON.parse(raw) as NormalizePageInput);
+      const raw = await readArtifact(path.join(artifactsDir, relativePath), relativePath, identity);
+      pages.push(JSON.parse(raw.toString('utf-8')) as NormalizePageInput);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      // A page directory with no scan.json (neither locally nor, if a
+      // bucket is configured, in it) is skipped exactly as before this
+      // issue - resolveArtifactFile's own "not found" error is the bucket-
+      // aware equivalent of the plain ENOENT this loop always tolerated.
+      const isEnoent = (error as NodeJS.ErrnoException).code === 'ENOENT';
+      const isBucketMiss =
+        error instanceof Error && /artifact not found locally/u.test(error.message);
+      if (!isEnoent && !isBucketMiss) throw error;
     }
   }
   return pages;
@@ -46,10 +95,12 @@ export function registerNormalizeCommand(program: Command): void {
       const resolvedDir = path.resolve(artifactsDir);
 
       try {
+        const identity = tryReadAuditDirIdentity(resolvedDir);
         const manifestPath = path.join(resolvedDir, 'manifest.json');
-        const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8')) as AuditManifest;
+        const manifestBytes = await readArtifact(manifestPath, 'manifest.json', identity);
+        const manifest = JSON.parse(manifestBytes.toString('utf-8')) as AuditManifest;
 
-        const pages = await readPageInputs(resolvedDir);
+        const pages = await readPageInputs(resolvedDir, identity);
 
         // B2 (2026-08-24): collapses language-variant duplicates. Manifests
         // written before the field existed carry no clusters, so they are

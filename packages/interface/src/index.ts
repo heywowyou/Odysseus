@@ -13,6 +13,15 @@ export type {
   BackfillAuditRowResult,
 } from './pipeline/backfill-audit-row.js';
 export type { ReportStageResult, AllReportsStageResult } from './pipeline/report-stage.js';
+export type { ArtifactStore } from './artifacts/artifact-store.js';
+export { createScalewayArtifactStore } from './artifacts/scaleway-artifact-store.js';
+export type { ScalewayArtifactStoreOptions } from './artifacts/scaleway-artifact-store.js';
+export { createConfiguredArtifactStore } from './artifacts/configured-artifact-store.js';
+export { resolveArtifactFile } from './artifacts/resolve-artifact.js';
+export {
+  syncAuditDirToBucket,
+  syncArtifactFilesToBucket,
+} from './artifacts/sync-audit-artifacts.js';
 export {
   DEFAULT_INTERFACE_PORT,
   DEFAULT_INTERFACE_HOST,
