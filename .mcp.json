@@ -2,15 +2,11 @@
   "mcpServers": {
     "mongodb-readonly": {
       "type": "stdio",
-      "command": "npx",
+      "command": "bash",
       "args": [
-        "-y",
-        "mongodb-mcp-server@latest",
-        "--readOnly"
+        "scripts/mcp-mongodb-readonly.sh"
       ],
-      "env": {
-        "MDB_MCP_CONNECTION_STRING": "${MDB_MCP_CONNECTION_STRING}"
-      }
+      "env": {}
     },
     "playwright": {
       "type": "stdio",
