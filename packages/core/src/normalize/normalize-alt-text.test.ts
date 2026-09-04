@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   extractAltTextCandidates,
   ALT_TEXT_QUALITY_HEURISTIC_RULE_ID,
+  ALT_TEXT_QUALITY_HEURISTIC_TITLE,
   type AltTextCheckInput,
   type ImageCheckInput,
 } from './normalize-alt-text.js';
@@ -121,6 +122,24 @@ describe('duplicate alt text across different images', () => {
       ]),
     );
     expect(candidates).toHaveLength(2);
+  });
+});
+
+describe('heuristic finding title', () => {
+  it('uses one broad title for every low-value alt-text signal', () => {
+    const candidates = extractAltTextCandidates(
+      withImages([
+        image({ alt: '' }),
+        image({ alt: 'Photo' }),
+        image({ alt: 'IMG_4021.jpg' }),
+        image({ selector: 'img:nth-of-type(4)', alt: 'Notre hôtel', src: 'a.jpg' }),
+        image({ selector: 'img:nth-of-type(5)', alt: 'Notre hôtel', src: 'b.jpg' }),
+      ]),
+    );
+
+    expect(new Set(candidates.map((candidate) => candidate.title))).toEqual(
+      new Set([ALT_TEXT_QUALITY_HEURISTIC_TITLE]),
+    );
   });
 });
 

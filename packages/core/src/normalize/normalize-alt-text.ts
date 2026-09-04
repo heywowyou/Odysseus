@@ -20,6 +20,7 @@ import type { FindingCandidate } from './candidate.js';
 import { severityFromCustom } from './severity.js';
 
 export const ALT_TEXT_QUALITY_HEURISTIC_RULE_ID = 'alt-text-quality-heuristic';
+export const ALT_TEXT_QUALITY_HEURISTIC_TITLE = 'Alt text may be low-value';
 
 export interface ImageCheckInput {
   selector: string;
@@ -58,7 +59,6 @@ function candidate(
   pageUrl: string,
   image: ImageCheckInput,
   reason: string,
-  title: string,
   description: string,
 ): FindingCandidate {
   return {
@@ -67,7 +67,10 @@ function candidate(
     category: 'accessibility',
     severity: severityFromCustom(ALT_TEXT_QUALITY_HEURISTIC_RULE_ID),
     wcagCriteria: ['1.1.1'],
-    title,
+    // This rule groups several observable signals. The title stays broad so
+    // FR and EN reports never present one signal as the meaning of the rule;
+    // the reason and evidence below retain the specific observation.
+    title: ALT_TEXT_QUALITY_HEURISTIC_TITLE,
     description,
     pageUrl,
     element: {
@@ -125,7 +128,6 @@ export function extractAltTextCandidates(input: AltTextCheckInput): FindingCandi
             pageUrl,
             image,
             'empty-alt-non-decorative',
-            'Empty alt text on an image that may not be decorative',
             `This image (${Math.round(image.width)}x${Math.round(image.height)}px) has alt="" but is not marked role="presentation"/"none" or aria-hidden="true". Empty alt text is only correct for genuinely decorative images - if this one carries real content, it is currently invisible to screen readers.`,
           ),
         );
@@ -139,7 +141,6 @@ export function extractAltTextCandidates(input: AltTextCheckInput): FindingCandi
           pageUrl,
           image,
           'generic-placeholder',
-          'Alt text is a generic placeholder word',
           `The alt text "${trimmedAlt}" describes the image as a category, not what it actually shows. This is present but not meaningful to a screen reader user.`,
         ),
       );
@@ -152,7 +153,6 @@ export function extractAltTextCandidates(input: AltTextCheckInput): FindingCandi
           pageUrl,
           image,
           'filename-pattern',
-          'Alt text looks like a raw filename',
           `The alt text "${trimmedAlt}" looks like an unedited camera or file name rather than a description of the image.`,
         ),
       );
@@ -174,7 +174,6 @@ export function extractAltTextCandidates(input: AltTextCheckInput): FindingCandi
           pageUrl,
           image,
           'duplicate-alt-across-different-images',
-          'Alt text is identical across visually different images',
           `${group.length} images on this page share the exact alt text "${image.alt!.trim()}" but have different sources. If they show different content, sharing identical alt text does not describe any of them individually.`,
         ),
       );

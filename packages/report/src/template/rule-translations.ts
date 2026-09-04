@@ -162,7 +162,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> = {
       'Un bloc à défilement ne peut pas être parcouru au clavier, ce qui en rend le contenu inatteignable sans souris.',
   },
   'alt-text-quality-heuristic': {
-    label: "Texte alternatif vide sur une image qui n'est peut-être pas décorative",
+    label: 'Texte alternatif potentiellement peu utile',
     gloss:
       'Signal heuristique sur la qualité des textes alternatifs, pas un test de conformité déterministe.',
   },
