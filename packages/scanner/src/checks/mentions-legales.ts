@@ -37,11 +37,17 @@ const TVA_PATTERN = /\bFR\s?[0-9A-Z]{2}\s?\d{9}\b/i;
 // findMentionsLegalesUrl locking onto the wrong page when a site has both
 // a cookie-consent page and a real legal-notice page. Singular
 // ("mention-legale") is a real variant seen on live sites, not just the
-// plural form. Known simplification: if a site has more than one matching
+// plural form. Issue #44 (Villas Foch): "mentions" compounded with
+// credits/informations ("mentions-et-credits"), the French
+// "informations-legales" compound, and the English "legals"/"legal-notice"
+// forms are real registry-page names on multilingual hotel sites; bare
+// "legal" stays excluded for the same wrong-lock reason as LEGAL_PATH
+// above. Known simplification: if a site has more than one matching
 // page (e.g. both /mentions-legales/ and /cgu/), the first one encountered
 // in crawl order wins - not revisited here since no real site scanned so
 // far has exercised that case.
-const MENTIONS_LEGALES_PATH_PATTERN = /mentions?-legales?|\bcgu\b|\bcgv\b|conditions-generales/i;
+const MENTIONS_LEGALES_PATH_PATTERN =
+  /mentions?-legales?|mentions?-(?:et-)?(?:credits|informations)|informations?-legales?|conditions-generales|\bcgu\b|\bcgv\b|legal-notices?|\blegals\b/i;
 
 /**
  * URL-pattern heuristic only, no navigation. Only considers URLs that

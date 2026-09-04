@@ -50,6 +50,47 @@ describe('findMentionsLegalesUrl', () => {
       findMentionsLegalesUrl(['https://example.com/', 'https://example.com/mention-legale/']),
     ).toBe('https://example.com/mention-legale/');
   });
+
+  // Issue #44 (Villas Foch): the site publishes its SIREN on
+  // /fr/mentions-et-credits and /en/legals-and-credits. Neither path
+  // matched the old pattern, so the extractor never ran and the report
+  // asserted the site publishes no SIREN at all.
+  it('matches the "mentions ... credits" compound the Villas Foch case uses', () => {
+    const urls = ['https://example.com/', 'https://example.com/fr/mentions-et-credits'];
+    expect(findMentionsLegalesUrl(urls)).toBe('https://example.com/fr/mentions-et-credits');
+  });
+
+  it('matches the English "legals" and "legal-notice" page families', () => {
+    expect(findMentionsLegalesUrl(['https://example.com/en/legals-and-credits'])).toBe(
+      'https://example.com/en/legals-and-credits',
+    );
+    expect(findMentionsLegalesUrl(['https://example.com/en/legal-notice'])).toBe(
+      'https://example.com/en/legal-notice',
+    );
+  });
+
+  it('matches the other "mentions" compounds and informations-legales', () => {
+    expect(findMentionsLegalesUrl(['https://example.com/mentions-informations'])).toBe(
+      'https://example.com/mentions-informations',
+    );
+    expect(findMentionsLegalesUrl(['https://example.com/informations-legales'])).toBe(
+      'https://example.com/informations-legales',
+    );
+    expect(findMentionsLegalesUrl(['https://example.com/mentions-credits'])).toBe(
+      'https://example.com/mentions-credits',
+    );
+  });
+
+  it('still does not match a bare "legal" page or a privacy/cookies page', () => {
+    // Bare "legal" stays excluded on purpose: it is the same wrong-lock
+    // risk LEGAL_PATH_PATTERN's own narrowing warns about, and the issue
+    // only names "legals" and "legal-notice" as the English forms.
+    expect(findMentionsLegalesUrl(['https://example.com/legal'])).toBeNull();
+    expect(
+      findMentionsLegalesUrl(['https://example.com/privacy', 'https://example.com/cookies']),
+    ).toBeNull();
+    expect(findMentionsLegalesUrl(['https://example.com/terms'])).toBeNull();
+  });
 });
 
 describe('extractMentionsLegales', () => {
