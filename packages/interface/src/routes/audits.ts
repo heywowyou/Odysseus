@@ -167,6 +167,24 @@ function parseManualFieldsBody(raw: unknown): Omit<AuditManualFields, 'updatedAt
     result.sector = { value: record['sector'], provenance: 'operator' };
   }
 
+  if (record['transactionalFlowOverride'] !== undefined) {
+    const override = record['transactionalFlowOverride'];
+    if (override === null || typeof override !== 'object') {
+      throw new Error('transactionalFlowOverride must be an object');
+    }
+    const overrideRecord = override as Record<string, unknown>;
+    if (typeof overrideRecord['value'] !== 'boolean') {
+      throw new Error('transactionalFlowOverride.value must be a boolean');
+    }
+    if (typeof overrideRecord['reason'] !== 'string' || overrideRecord['reason'].trim() === '') {
+      throw new Error('transactionalFlowOverride.reason must be a non-empty string');
+    }
+    result.transactionalFlowOverride = {
+      value: overrideRecord['value'],
+      reason: overrideRecord['reason'].trim(),
+    };
+  }
+
   return result;
 }
 
@@ -241,6 +259,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       lifecycle,
       approval: approved ? approval : null,
       manualFields: audit.manualFields,
+      ...(audit.siteSignals?.hasTransactionalFlow !== undefined
+        ? { detectedTransactionalFlow: audit.siteSignals.hasTransactionalFlow }
+        : {}),
     });
   });
 

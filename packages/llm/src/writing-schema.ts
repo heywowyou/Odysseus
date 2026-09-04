@@ -74,6 +74,11 @@ export interface WritingSiteStats {
   minor: number;
 }
 
+/** The deterministic transactional-flow determination shared with the
+ * report's legal section. It is context for prose only: the writing pass
+ * cannot change it, and its output is rejected when it claims the opposite. */
+export type TransactionalFlowStatus = 'present' | 'absent' | 'inconclusive' | 'unknown';
+
 export interface WritingInput {
   language: ReportLanguage;
   siteContext: LlmInput['siteContext'];
@@ -84,4 +89,7 @@ export interface WritingInput {
    *  than defaulting to image/CSS advice. null when no page is rated
    *  poor on any metric. See docs/archive/report-v2-refactor.md A4. */
   dominantPerformanceMetric: 'lcp' | 'cls' | 'tbt' | null;
+  /** Optional only for compatibility with stored-analysis tooling and test
+   * fixtures that predate the guard. New analysis-stage calls always set it. */
+  transactionalFlowStatus?: TransactionalFlowStatus;
 }

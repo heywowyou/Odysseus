@@ -235,6 +235,13 @@ const manualFieldsSchema = new Schema(
     revenueBand: { type: provencedFieldSchema },
     declarationContactEmail: { type: provencedFieldSchema },
     recipientName: { type: provencedFieldSchema },
+    transactionalFlowOverride: {
+      _id: false,
+      type: {
+        value: { type: Boolean, required: true },
+        reason: { type: String, required: true },
+      },
+    },
     updatedAt: { type: Date, required: true },
   },
   { _id: false },
@@ -245,6 +252,14 @@ const findingsProvenanceSchema = new Schema(
     findingsSchemaVersion: { type: Number, required: true },
     normalizationFingerprint: { type: String, required: true },
     findingsDigest: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+const privacySecurityCoverageSchema = new Schema(
+  {
+    securityHeaders: { type: String, required: true, enum: ['completed', 'unavailable'] },
+    cookieConsent: { type: String, required: true, enum: ['completed', 'unavailable'] },
   },
   { _id: false },
 );
@@ -417,6 +432,7 @@ const auditSchema = new Schema<AuditDocument>(
     finishedAt: { type: Date, required: true },
     renormalizedAt: { type: Date },
     findingsProvenance: { type: findingsProvenanceSchema },
+    privacySecurityCoverage: { type: privacySecurityCoverageSchema },
     tool: { type: toolVersionsSchema, required: true },
     config: { type: configSnapshotSchema, required: true },
     crawl: { type: crawlStatsSchema, required: true },

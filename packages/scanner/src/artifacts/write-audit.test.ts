@@ -129,6 +129,8 @@ describe('writeAuditArtifacts characterization', () => {
               missingPercent: 25,
             } as never,
             renderDiffError: 'partial render error',
+            securityHeaders: {} as never,
+            cookieConsent: {} as never,
             transactionalFlowEvidence: [
               { kind: 'checkout-form', selector: 'form', pageUrl: home, detail: 'checkout' },
             ],
@@ -170,6 +172,10 @@ describe('writeAuditArtifacts characterization', () => {
       siteName: 'Example',
     });
     expect(result.manifest.translationClusters).toBeDefined();
+    expect(result.manifest.privacySecurityCoverage).toEqual({
+      securityHeaders: 'completed',
+      cookieConsent: 'completed',
+    });
     expect(result.pages).toHaveLength(2);
     expect(result.pages[0]?.renderDiff?.rawScreenshotRef).not.toBe(screenshot);
     expect(path.isAbsolute(result.pages[0]?.renderDiff?.rawScreenshotRef ?? '/')).toBe(false);

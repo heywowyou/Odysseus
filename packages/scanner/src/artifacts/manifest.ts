@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { FINDINGS_SCHEMA_VERSION, UNKNOWN_BUILD_ID, normalizeBuildId } from '@odysseus/core';
-import type { TranslationCluster } from '@odysseus/core';
+import type { PrivacySecurityCoverage, TranslationCluster } from '@odysseus/core';
 import type {
   AuditConfigSnapshot,
   AuditManifest,
@@ -62,6 +62,7 @@ export interface BuildManifestInput {
   pages: ManifestPageEntry[];
   siteSignals?: AuditManifestSiteSignals;
   cruxFieldData?: CruxFieldDataResult;
+  privacySecurityCoverage?: PrivacySecurityCoverage;
   translationClusters?: TranslationCluster[];
 }
 
@@ -100,6 +101,9 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
       : {}),
     ...(input.siteSignals !== undefined ? { siteSignals: input.siteSignals } : {}),
     ...(input.cruxFieldData !== undefined ? { cruxFieldData: input.cruxFieldData } : {}),
+    ...(input.privacySecurityCoverage !== undefined
+      ? { privacySecurityCoverage: input.privacySecurityCoverage }
+      : {}),
     ...(input.translationClusters !== undefined
       ? { translationClusters: input.translationClusters }
       : {}),

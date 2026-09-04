@@ -258,12 +258,22 @@ const TEXT_FIELDS_BOTTOM: readonly TextFieldDef[] = [
 type SirenCheckState =
   { kind: 'idle' } | { kind: 'resolved'; denomination: string } | { kind: 'unresolved' };
 
+type TransactionalFlowChoice = '' | 'present' | 'absent';
+
+function transactionalFlowChoice(
+  override: ManualFieldsResponse['transactionalFlowOverride'],
+): TransactionalFlowChoice {
+  if (override === undefined) return '';
+  return override.value ? 'present' : 'absent';
+}
+
 function EnrichmentCard(props: {
   auditId: string;
   manualFields: ManualFieldsResponse | null;
+  detectedTransactionalFlow: boolean | undefined;
   refresh: () => void;
 }): JSX.Element {
-  const { auditId, manualFields, refresh } = props;
+  const { auditId, manualFields, detectedTransactionalFlow, refresh } = props;
   const { strings } = useI18n();
   const baseline = useMemo(() => manualFieldValuesFromResponse(manualFields), [manualFields]);
   const [values, setValues] = useState<ManualFieldValues>(baseline);
@@ -273,6 +283,13 @@ function EnrichmentCard(props: {
   const [sirenCheck, setSirenCheck] = useState<SirenCheckState>({ kind: 'idle' });
   const [isCheckingSiren, setIsCheckingSiren] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [transactionalFlow, setTransactionalFlow] = useState<TransactionalFlowChoice>(() =>
+    transactionalFlowChoice(manualFields?.transactionalFlowOverride),
+  );
+  const [transactionalFlowReason, setTransactionalFlowReason] = useState(
+    () => manualFields?.transactionalFlowOverride?.reason ?? '',
+  );
+  const [transactionalFlowInvalid, setTransactionalFlowInvalid] = useState(false);
 
   // Re-seed the form whenever a fresh baseline arrives while the form is
   // clean, so a refetch after a save or a regenerate shows server truth
@@ -282,8 +299,11 @@ function EnrichmentCard(props: {
     if (!isDirty) {
       setValues(baseline);
       setEditedKeys(new Set());
+      setTransactionalFlow(transactionalFlowChoice(manualFields?.transactionalFlowOverride));
+      setTransactionalFlowReason(manualFields?.transactionalFlowOverride?.reason ?? '');
+      setTransactionalFlowInvalid(false);
     }
-  }, [baseline, isDirty]);
+  }, [baseline, isDirty, manualFields?.transactionalFlowOverride]);
 
   const markEdited = (key: ManualFieldKey): void => {
     setIsDirty(true);
@@ -302,6 +322,18 @@ function EnrichmentCard(props: {
   const setSector = (value: SectorChoice): void => {
     markEdited('sector');
     setValues((current) => ({ ...current, sector: value }));
+  };
+
+  const setTransactionalFlowChoice = (value: TransactionalFlowChoice): void => {
+    setIsDirty(true);
+    setTransactionalFlowInvalid(false);
+    setTransactionalFlow(value);
+  };
+
+  const setTransactionalFlowReasonValue = (value: string): void => {
+    setIsDirty(true);
+    setTransactionalFlowInvalid(false);
+    setTransactionalFlowReason(value);
   };
 
   const handleSirenChange = (value: string): void => {
@@ -353,7 +385,22 @@ function EnrichmentCard(props: {
       setSirenInvalid(true);
       return;
     }
-    if (Object.keys(patch).length === 0) {
+    const existingOverride = manualFields?.transactionalFlowOverride;
+    const normalizedReason = transactionalFlowReason.trim();
+    const flowValue = transactionalFlow === 'present';
+    if (transactionalFlow !== '' && normalizedReason === '') {
+      setTransactionalFlowInvalid(true);
+      return;
+    }
+    const transactionalFlowPatch =
+      transactionalFlow !== '' &&
+      (existingOverride === undefined ||
+        existingOverride.value !== flowValue ||
+        existingOverride.reason !== normalizedReason)
+        ? { transactionalFlowOverride: { value: flowValue, reason: normalizedReason } }
+        : {};
+    const requestPatch = { ...patch, ...transactionalFlowPatch };
+    if (Object.keys(requestPatch).length === 0) {
       // Nothing the server recognizes changed; sending anyway would only
       // earn a 400 for an empty patch. The stored values already match.
       setIsDirty(false);
@@ -362,7 +409,11 @@ function EnrichmentCard(props: {
     }
     setIsSaving(true);
     try {
-      await sendJson(`/api/audits/${encodeURIComponent(auditId)}/manual-fields`, 'PATCH', patch);
+      await sendJson(
+        `/api/audits/${encodeURIComponent(auditId)}/manual-fields`,
+        'PATCH',
+        requestPatch,
+      );
       // The refetch below returns operator provenance for every saved
       // field, so the detected hints drop exactly like the old page's
       // reload did.
@@ -466,6 +517,57 @@ function EnrichmentCard(props: {
           />
         </div>
         {TEXT_FIELDS_BOTTOM.map((def) => renderTextField(def))}
+        <div className="md:col-span-2">
+          <Field label={strings.auditDetail.transactionalFlowLabel} htmlFor="mf-transactional-flow">
+            <Select
+              id="mf-transactional-flow"
+              name="transactionalFlow"
+              value={transactionalFlow}
+              onChange={(event) => {
+                const value = event.target.value;
+                setTransactionalFlowChoice(value === 'present' || value === 'absent' ? value : '');
+              }}
+            >
+              {manualFields?.transactionalFlowOverride === undefined ? (
+                <option value="">{strings.auditDetail.transactionalFlowUnspecifiedOption}</option>
+              ) : null}
+              <option value="present">{strings.auditDetail.transactionalFlowYesOption}</option>
+              <option value="absent">{strings.auditDetail.transactionalFlowNoOption}</option>
+            </Select>
+          </Field>
+          {detectedTransactionalFlow !== undefined ? (
+            <p className="mt-1.5 text-xs text-accent-bright">
+              {strings.auditDetail.transactionalFlowDetectedTemplate.replace(
+                '{value}',
+                detectedTransactionalFlow
+                  ? strings.auditDetail.transactionalFlowYesOption
+                  : strings.auditDetail.transactionalFlowNoOption,
+              )}
+            </p>
+          ) : null}
+          {transactionalFlow !== '' ? (
+            <div className="mt-3">
+              <Field
+                label={strings.auditDetail.transactionalFlowReasonLabel}
+                htmlFor="mf-transactional-flow-reason"
+                {...(transactionalFlowInvalid
+                  ? { error: strings.auditDetail.transactionalFlowReasonRequired }
+                  : {})}
+              >
+                <Input
+                  id="mf-transactional-flow-reason"
+                  name="transactionalFlowReason"
+                  value={transactionalFlowReason}
+                  placeholder={strings.auditDetail.transactionalFlowReasonPlaceholder}
+                  onChange={(event) => setTransactionalFlowReasonValue(event.target.value)}
+                />
+              </Field>
+            </div>
+          ) : null}
+          <p className="mt-3 text-xs text-ink-muted">
+            {strings.auditDetail.transactionalFlowSavedHint}
+          </p>
+        </div>
       </div>
       <div className="mt-5 flex justify-end border-t border-line pt-4">
         <Button isLoading={isSaving} onClick={() => void handleSave()}>
@@ -644,6 +746,7 @@ export function AuditDetailPage(): JSX.Element {
         <EnrichmentCard
           auditId={data.auditId}
           manualFields={data.manualFields ?? null}
+          detectedTransactionalFlow={data.detectedTransactionalFlow}
           refresh={refresh}
         />
         <FindingsCard findings={data.findings} />

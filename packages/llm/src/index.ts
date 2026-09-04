@@ -56,12 +56,15 @@ export type {
   StructurePassOutput,
 } from './structure-schema.js';
 export type {
+  TransactionalFlowStatus,
   WritingInput,
   WritingThemeInput,
   WritingPassOutput,
   WritingTheme,
   WritingSiteStats,
 } from './writing-schema.js';
+export { findTransactionalFlowViolations } from './transactional-flow-guard.js';
+export type { TransactionalFlowViolation } from './transactional-flow-guard.js';
 
 export {
   findUnreferencedStructureFindingIds,

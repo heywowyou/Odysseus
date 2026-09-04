@@ -125,7 +125,19 @@ export async function regenerateWriting(
       auditDir,
       manifest,
       findings,
-      { language: 'fr' },
+      {
+        language: 'fr',
+        ...(audit.manualFields?.siren !== undefined
+          ? { manualSiren: audit.manualFields.siren.value }
+          : {}),
+        ...(audit.manualFields?.transactionalFlowOverride !== undefined
+          ? {
+              siteSignalOverrides: {
+                hasTransactionalFlow: audit.manualFields.transactionalFlowOverride,
+              },
+            }
+          : {}),
+      },
       connection,
     );
     partialPair = { frAnalysisId: frStage.analysis.analysisId };
@@ -136,7 +148,19 @@ export async function regenerateWriting(
       auditDir,
       manifest,
       findings,
-      { language: 'en' },
+      {
+        language: 'en',
+        ...(audit.manualFields?.siren !== undefined
+          ? { manualSiren: audit.manualFields.siren.value }
+          : {}),
+        ...(audit.manualFields?.transactionalFlowOverride !== undefined
+          ? {
+              siteSignalOverrides: {
+                hasTransactionalFlow: audit.manualFields.transactionalFlowOverride,
+              },
+            }
+          : {}),
+      },
       connection,
     );
     partialPair = {

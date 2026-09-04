@@ -40,6 +40,7 @@ import {
   summarizeUnsupportedReviews,
   type SiteContextInput,
   type StructureDocument,
+  type TransactionalFlowStatus,
 } from '@odysseus/llm';
 import { persistAnalysis } from '@odysseus/store';
 import type { VerifiedStoredAnalysis } from '@odysseus/report';
@@ -89,6 +90,18 @@ function timestampForFilename(date: Date): string {
     .toISOString()
     .replace(/\.\d{3}Z$/, 'Z')
     .replace(/:/g, '-');
+}
+
+function transactionalFlowStatus(assessment: ObligationAssessment): TransactionalFlowStatus {
+  const resolution = assessment.siteSignalResolutions?.['hasTransactionalFlow'];
+  if (resolution?.value === true) return 'present';
+  if (resolution === undefined) return 'unknown';
+  const facts = assessment.basis.flatMap((basis) => basis.facts);
+  if (facts.some((fact) => fact.kind === 'transactional-flow-inconclusive')) {
+    return 'inconclusive';
+  }
+  if (facts.some((fact) => fact.kind === 'transactional-flow-unknown')) return 'unknown';
+  return 'absent';
 }
 
 /** Newest existing analyses/<timestamp>-structure.json for this audit, by
@@ -204,6 +217,20 @@ export async function runAnalysisStage(
     findingsProvenance,
   );
 
+  // Not present in the queued pipeline (run-full-audit-job.ts passes it
+  // through, computed once by runAuditStage), but the standalone
+  // `odysseus analyze <dir>` CLI path calls this stage directly - computed
+  // lazily here so that path stays independently runnable. The Sirene
+  // cache absorbs the cost of a repeat lookup for the same SIREN.
+  const obligationAssessment =
+    options.obligationAssessment ??
+    (await runObligationStage(
+      manifest,
+      connection,
+      options.manualSiren,
+      options.siteSignalOverrides,
+    ));
+
   // siteStats is computed from allFindings (unfiltered), not forModel, so
   // the executive summary cites the audit's true scope rather than only
   // what the model was shown. See docs/archive/report-v2-refactor.md B10.
@@ -216,6 +243,7 @@ export async function runAnalysisStage(
     options.language,
     siteStats,
     dominantPerformanceMetric,
+    transactionalFlowStatus(obligationAssessment),
   );
   const generatedAt = new Date();
   const writingResult = await analyzeWriting(
@@ -233,23 +261,6 @@ export async function runAnalysisStage(
     structureDoc,
     forModel,
   ).length;
-
-  // Not present in the queued pipeline (run-full-audit-job.ts passes it
-  // through, computed once by runAuditStage), but the standalone
-  // `odysseus analyze <dir>` CLI path calls this stage directly - computed
-  // lazily here so that path stays independently runnable. The Sirene
-  // cache absorbs the cost of a repeat lookup for the same SIREN.
-  // manualSiren/siteSignalOverrides let that standalone path reproduce
-  // the same manual facts `odysseus audit` was given, instead of always
-  // falling back to extracted-only facts.
-  const obligationAssessment =
-    options.obligationAssessment ??
-    (await runObligationStage(
-      manifest,
-      connection,
-      options.manualSiren,
-      options.siteSignalOverrides,
-    ));
 
   const analysisId = randomUUID();
   const analysis: VerifiedStoredAnalysis = {

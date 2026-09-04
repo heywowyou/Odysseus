@@ -413,13 +413,32 @@ function summarizeLighthouseFailures(
   return `${m.lighthouseFailureIntroSentence} ${reasonLines.join(' ')}`;
 }
 
+function privacySecurityCoverageNote(
+  manifest: AuditManifest,
+  findings: readonly Partial<Pick<Finding, 'category'>>[],
+  strings: ReportStrings,
+): string | undefined {
+  const coverage = manifest.privacySecurityCoverage;
+  if (
+    coverage === undefined ||
+    coverage.securityHeaders !== 'completed' ||
+    coverage.cookieConsent !== 'completed'
+  ) {
+    return strings.methodology.privacySecurityChecksUnavailable;
+  }
+  return findings.some((finding) => finding.category === 'privacy')
+    ? undefined
+    : strings.methodology.privacySecurityChecksClean;
+}
+
 export function renderMethodology(
   strings: ReportStrings,
   ordinal: number,
   manifest: AuditManifest,
   language: ReportLanguage,
   obligationAssessment?: ObligationAssessment,
-  findings: readonly Pick<Finding, 'findingId' | 'ruleId'>[] = [],
+  findings: readonly (Pick<Finding, 'findingId' | 'ruleId'> &
+    Partial<Pick<Finding, 'category'>>)[] = [],
   resolvedSirenSourceUrl?: string,
 ): string {
   const m = strings.methodology;
@@ -503,6 +522,7 @@ export function renderMethodology(
   );
   const extendedPassNote = renderExtendedPassNote(strings, language, findings);
   const lighthouseFailureNote = summarizeLighthouseFailures(strings, manifest, language);
+  const privacySecurityNote = privacySecurityCoverageNote(manifest, findings, strings);
 
   // Manual-input-layer milestone: pages excluded as social-platform
   // redirects are never silently dropped (crawl.ts still records every
@@ -546,6 +566,7 @@ export function renderMethodology(
     ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(crawlCapNote)}</p>` : ''}
     ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(socialExclusionNote)}</p>` : ''}
     ${lighthouseFailureNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(lighthouseFailureNote)}</p>` : ''}
+    ${privacySecurityNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(privacySecurityNote)}</p>` : ''}
     <div class="hr"></div>
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.automatedCoverageCaveat)}</p>
     ${extendedPassNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(extendedPassNote)}</p>` : ''}

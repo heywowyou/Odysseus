@@ -39,6 +39,7 @@ const input: WritingInput = {
   ],
   siteStats: { pagesScanned: 1, totalFindings: 1, critical: 0, serious: 1, moderate: 0, minor: 0 },
   dominantPerformanceMetric: null,
+  transactionalFlowStatus: 'unknown',
 };
 
 function buildCleanFrenchOutput(): WritingPassOutput {

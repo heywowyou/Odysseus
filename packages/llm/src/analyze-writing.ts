@@ -9,6 +9,7 @@ import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js
 import { buildWritingRetryFeedback } from './writing-prompt.js';
 import { normalizeWritingOutputTypography } from './typography.js';
 import { findThemeKeyMismatches, isThemeKeyMismatchEmpty } from './theme-key-guard.js';
+import { findTransactionalFlowViolations } from './transactional-flow-guard.js';
 import { findWcagCitationViolations } from './wcag-citation-guard.js';
 import { paceRateLimitedRetry } from './rate-limit-pacing.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
@@ -123,6 +124,20 @@ export async function analyzeWriting(
     const businessViolations = findBusinessClaimViolations(result.output, input.language);
     if (businessViolations.length > 0) {
       lastFailureReason = `unhedged business-value claim in field(s): ${businessViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    const transactionalFlowViolations = findTransactionalFlowViolations(
+      result.output,
+      input.language,
+      input.transactionalFlowStatus ?? 'unknown',
+    );
+    if (transactionalFlowViolations.length > 0) {
+      lastFailureReason = `transactional-flow claim conflicts with the deterministic signal in field(s): ${transactionalFlowViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
       previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,

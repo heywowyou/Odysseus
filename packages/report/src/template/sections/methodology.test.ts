@@ -639,6 +639,56 @@ describe('item 1.10/B8: the extended accessibility pass states its own result', 
   });
 });
 
+describe('privacy and security check coverage', () => {
+  it('states a completed clean result without presenting it as legal compliance', async () => {
+    const manifest = {
+      ...(await loadSmallSiteManifest()),
+      privacySecurityCoverage: {
+        securityHeaders: 'completed' as const,
+        cookieConsent: 'completed' as const,
+      },
+    };
+
+    const french = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, []);
+    const english = renderMethodology(getStrings('en'), 11, manifest, 'en', undefined, []);
+
+    expect(french).toContain('Aucun problème n’a été détecté par ces contrôles.');
+    expect(french).toContain('ne constitue pas une conclusion de conformité juridique');
+    expect(english).toContain('No issue was detected by those checks.');
+    expect(english).toContain('not a legal-compliance conclusion');
+  });
+
+  it('does not add a clean disclosure when a privacy finding is present', async () => {
+    const manifest = {
+      ...(await loadSmallSiteManifest()),
+      privacySecurityCoverage: {
+        securityHeaders: 'completed' as const,
+        cookieConsent: 'completed' as const,
+      },
+    };
+
+    const html = renderMethodology(getStrings('en'), 11, manifest, 'en', undefined, [
+      { findingId: 'privacy-1', ruleId: 'security-headers', category: 'privacy' },
+    ]);
+
+    expect(html).not.toContain('No issue was detected by those checks.');
+  });
+
+  it('states that a partial or historical check has no conclusion', async () => {
+    const manifest = {
+      ...(await loadSmallSiteManifest()),
+      privacySecurityCoverage: {
+        securityHeaders: 'completed' as const,
+        cookieConsent: 'unavailable' as const,
+      },
+    };
+
+    const html = renderMethodology(getStrings('en'), 11, manifest, 'en');
+
+    expect(html).toContain('No conclusion is drawn for this scope.');
+  });
+});
+
 // item 3.11: "20 pages" appeared everywhere with nothing stating it is a
 // configured cap, not the whole site - a client could reasonably believe
 // the entire site was covered.

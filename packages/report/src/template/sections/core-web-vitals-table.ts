@@ -365,6 +365,7 @@ export function renderCoreWebVitalsTable(
   return sheet(
     `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
+    ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, true)}
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.introTemplate, { pages: `${formatNumber(pagesScanned, language)} ${pluralize(pagesScanned, c.pageSingular, c.pagePlural)}` }))}</p>
     <p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(coverage.summary)}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
@@ -382,7 +383,6 @@ export function renderCoreWebVitalsTable(
       </tbody>
     </table>
     <p style="font-size:11px;opacity:0.5;margin-top:var(--space-3)">${escapeHtml(c.worstPageFootnote)}</p>
-    ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, true)}
   `,
     '',
     'section-09',

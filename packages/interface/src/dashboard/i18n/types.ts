@@ -260,6 +260,16 @@ export interface DashboardStrings {
     sectorHospitalityOption: string;
     revenueBandLabel: string;
     declarationContactEmailLabel: string;
+    transactionalFlowLabel: string;
+    transactionalFlowUnspecifiedOption: string;
+    transactionalFlowYesOption: string;
+    transactionalFlowNoOption: string;
+    transactionalFlowReasonLabel: string;
+    transactionalFlowReasonPlaceholder: string;
+    transactionalFlowReasonRequired: string;
+    /** Template: {value}. */
+    transactionalFlowDetectedTemplate: string;
+    transactionalFlowSavedHint: string;
     saveButton: string;
     savedMessage: string;
     regenerateButton: string;

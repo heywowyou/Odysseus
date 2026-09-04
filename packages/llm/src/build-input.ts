@@ -1,7 +1,12 @@
 import type { AuditManifest, Finding, ReportLanguage } from '@odysseus/core';
 import { LLM_SEVERITY_FLOOR } from './constants.js';
 import type { StructureInput, StructureThemeWithKey } from './structure-schema.js';
-import type { WritingInput, WritingSiteStats, WritingThemeInput } from './writing-schema.js';
+import type {
+  TransactionalFlowStatus,
+  WritingInput,
+  WritingSiteStats,
+  WritingThemeInput,
+} from './writing-schema.js';
 
 export type SiteContextInput = StructureInput['siteContext'];
 
@@ -75,6 +80,7 @@ export function buildWritingInput(
   language: ReportLanguage,
   siteStats: WritingSiteStats,
   dominantPerformanceMetric: 'lcp' | 'cls' | 'tbt' | null,
+  transactionalFlowStatus: TransactionalFlowStatus = 'unknown',
 ): WritingInput {
   const byId = new Map(filteredFindings.map((f) => [f.findingId, f]));
 
@@ -93,7 +99,14 @@ export function buildWritingInput(
     }),
   }));
 
-  return { language, siteContext, themes, siteStats, dominantPerformanceMetric };
+  return {
+    language,
+    siteContext,
+    themes,
+    siteStats,
+    dominantPerformanceMetric,
+    transactionalFlowStatus,
+  };
 }
 
 /** Deterministic counts for the writing pass's executiveSummary to cite,

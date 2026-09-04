@@ -76,6 +76,11 @@ export interface ProvenancedSectorValue {
   provenance: FieldProvenance;
 }
 
+export interface TransactionalFlowOverrideValue {
+  value: boolean;
+  reason: string;
+}
+
 /** The audit's manual-field enrichment (packages/core AuditManualFields)
  *  over JSON: each field optional, each value carrying its provenance. */
 export interface ManualFieldsResponse {
@@ -87,6 +92,7 @@ export interface ManualFieldsResponse {
   revenueBand?: ProvenancedFieldValue;
   declarationContactEmail?: ProvenancedFieldValue;
   recipientName?: ProvenancedFieldValue;
+  transactionalFlowOverride?: TransactionalFlowOverrideValue;
   updatedAt: string;
 }
 
@@ -125,6 +131,8 @@ export interface AuditDetailResponse {
   lifecycle: AuditLifecycle;
   approval: ReportApprovalResponse | null;
   manualFields: ManualFieldsResponse | null;
+  /** The scan's original signal, before a possible operator correction. */
+  detectedTransactionalFlow?: boolean;
 }
 
 /** POST /api/audits/:auditId/manual-fields/siren-preview. 200 even when

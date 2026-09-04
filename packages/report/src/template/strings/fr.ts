@@ -836,6 +836,10 @@ export const fr: ReportStrings = {
     extendedPassCheckCleanLabel: 'aucune anomalie détectée',
     extendedPassCheckFoundSingular: 'constat détecté',
     extendedPassCheckFoundPlural: 'constats détectés',
+    privacySecurityChecksClean:
+      'Les contrôles automatisés des en-têtes de sécurité et du consentement aux cookies ont été exécutés. Aucun problème n’a été détecté par ces contrôles. Cela ne constitue pas une conclusion de conformité juridique.',
+    privacySecurityChecksUnavailable:
+      'Les contrôles automatisés des en-têtes de sécurité et du consentement aux cookies n’ont pas tous produit de résultat exploitable pour cet audit. Aucune conclusion n’est tirée sur ce périmètre.',
     legalCitationInScopeTemplate:
       'Critères publiés pour {regimeName}, sous le contrôle {authority} ({legalCitation}). Faits vérifiés pour cet audit : {facts}',
     legalCitationLikelyInScopeTemplate:

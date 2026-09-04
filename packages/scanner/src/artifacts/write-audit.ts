@@ -27,6 +27,7 @@ import {
   type ManifestKind,
   type ManifestPageEntry,
   type PageAnalysisCoverage,
+  type PrivacySecurityCoverage,
   buildTranslationClusters,
 } from '@odysseus/core';
 import { getArtifactsRoot } from '../config.js';
@@ -143,6 +144,17 @@ function buildScanJson(
     ...(scanResult.structuredDataError !== undefined
       ? { structuredDataError: scanResult.structuredDataError }
       : {}),
+  };
+}
+
+function buildPrivacySecurityCoverage(
+  startUrl: string,
+  pages: readonly PageScanResult[],
+): PrivacySecurityCoverage {
+  const homepage = pages.find((page) => page.url === startUrl);
+  return {
+    securityHeaders: homepage?.securityHeaders !== undefined ? 'completed' : 'unavailable',
+    cookieConsent: homepage?.cookieConsent !== undefined ? 'completed' : 'unavailable',
   };
 }
 
@@ -522,6 +534,10 @@ export async function writeAuditArtifacts(
     crawl: input.siteResult.crawl,
     pages: manifestPages,
     siteSignals: buildSiteSignals(input.siteResult),
+    privacySecurityCoverage: buildPrivacySecurityCoverage(
+      input.siteResult.crawl.startUrl,
+      input.siteResult.pages,
+    ),
     // B2 (2026-08-24): recorded on the manifest rather than recomputed by
     // each consumer, so `normalize <dir>` reaches the same grouping
     // offline without re-reading every page's head metadata.

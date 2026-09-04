@@ -31,11 +31,13 @@ vi.mock('@odysseus/scanner', () => ({
   readOdysseusBuildId: vi.fn(() => 'render-build'),
   launchBrowser: vi.fn(async () => ({ browser: { close: vi.fn() }, debugPort: 0 })),
 }));
+vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 
 import { generateReportPdf } from '@odysseus/report';
 import { launchBrowser } from '@odysseus/scanner';
-import { persistReport } from '@odysseus/store';
+import { getAuditManualFields, persistReport } from '@odysseus/store';
 import { buildFindingsProvenance, type AuditManifest } from '@odysseus/core';
+import { runObligationStage } from './obligation-stage.js';
 import { runAllReportsStage, runReportStage } from './report-stage.js';
 
 const fakeConnection = {} as never;
@@ -100,6 +102,7 @@ let auditDir: string;
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  vi.mocked(getAuditManualFields).mockResolvedValue(undefined);
   auditDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-report-stage-'));
   vi.mocked(generateReportPdf).mockResolvedValue({
     pdf: Buffer.from('%PDF-fake'),
@@ -174,6 +177,28 @@ describe('runReportStage', () => {
       // Issue #62: names the machine whose artifacts root holds the file.
       renderedOnHost: os.hostname(),
     });
+  });
+
+  it('recomputes the report legal assessment from a saved transactional-flow override', async () => {
+    const manifest = fakeManifest();
+    const override = { value: true, reason: 'Confirmed booking flow in the site header.' };
+    const updatedAssessment = { status: 'in_scope', basis: [] } as never;
+    vi.mocked(getAuditManualFields).mockResolvedValue({
+      transactionalFlowOverride: override,
+      updatedAt: new Date('2026-09-04T00:00:00.000Z'),
+    });
+    vi.mocked(runObligationStage).mockResolvedValue(updatedAssessment);
+
+    await runReportStage(auditDir, manifest, [], fakeAnalysis(), fakeConnection);
+
+    expect(runObligationStage).toHaveBeenCalledWith(manifest, fakeConnection, undefined, {
+      hasTransactionalFlow: override,
+    });
+    expect(generateReportPdf).toHaveBeenCalledWith(
+      expect.objectContaining({
+        analysis: expect.objectContaining({ obligationAssessment: updatedAssessment }),
+      }),
+    );
   });
 
   it('carries no length warning at exactly the 60 page threshold', async () => {

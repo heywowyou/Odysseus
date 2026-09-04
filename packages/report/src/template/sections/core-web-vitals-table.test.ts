@@ -402,6 +402,19 @@ describe('renderCoreWebVitalsTable', () => {
       expect(html).toContain('A large gap between the values above and below is expected');
     });
 
+    it('leads with field data and keeps the simulated lab values as the diagnostic below it', () => {
+      const manifest = measuredManifestWith({
+        available: true,
+        lcp: { p75: 2427 },
+        inp: { p75: 234 },
+        cls: { p75: 0.36 },
+      });
+      const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+      expect(html.indexOf('Real-user data')).toBeLessThan(html.indexOf('Median values aggregated'));
+      expect(html).toContain('2.4 s');
+      expect(html).toContain('1.8 s');
+    });
+
     it('never shows the gap-explanation note when CrUX has no data to compare against', () => {
       const manifest = measuredManifestWith({ available: false });
       const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);

@@ -15,6 +15,7 @@ vi.mock('@odysseus/store', () => ({
   approvalMatchesReportPair: vi.fn(() => false),
   persistReportApproval: vi.fn(),
   listReportLanguages: vi.fn(),
+  setAuditManualFields: vi.fn(),
 }));
 
 vi.mock('@odysseus/scanner', () => ({
@@ -31,12 +32,15 @@ import {
   persistReportApproval,
   getSeverityRollup,
   listReportLanguages,
+  setAuditManualFields,
 } from '@odysseus/store';
 import { Router } from '../router.js';
 import { registerAuditRoutes } from './audits.js';
 
-function fakeReq(url: string): IncomingMessage {
-  const req = Readable.from([]) as unknown as IncomingMessage;
+function fakeReq(url: string, body?: unknown): IncomingMessage {
+  const req = Readable.from(
+    body === undefined ? [] : [Buffer.from(JSON.stringify(body))],
+  ) as unknown as IncomingMessage;
   req.method = 'GET';
   req.url = url;
   req.headers = {};
@@ -162,6 +166,56 @@ describe('POST /api/audits/:auditId/approve-reports', () => {
       }),
       expect.anything(),
     );
+  });
+});
+
+describe('PATCH /api/audits/:auditId/manual-fields transactional-flow override', () => {
+  it('persists an operator override only with a boolean value and a non-empty reason', async () => {
+    vi.mocked(setAuditManualFields).mockResolvedValue({
+      transactionalFlowOverride: {
+        value: true,
+        reason: 'The hotel booking engine is available from the header.',
+      },
+      updatedAt: new Date(),
+    });
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/manual-fields', {
+      transactionalFlowOverride: {
+        value: true,
+        reason: '  The hotel booking engine is available from the header.  ',
+      },
+    });
+    req.method = 'PATCH';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(setAuditManualFields).toHaveBeenCalledWith(
+      fakeConnection,
+      'audit-1',
+      expect.objectContaining({
+        transactionalFlowOverride: {
+          value: true,
+          reason: 'The hotel booking engine is available from the header.',
+        },
+      }),
+    );
+  });
+
+  it('rejects an override without an auditable reason', async () => {
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/manual-fields', {
+      transactionalFlowOverride: { value: false, reason: '   ' },
+    });
+    req.method = 'PATCH';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toContain('reason must be a non-empty string');
+    expect(setAuditManualFields).not.toHaveBeenCalled();
   });
 });
 

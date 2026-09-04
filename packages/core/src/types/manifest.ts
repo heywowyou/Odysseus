@@ -279,6 +279,15 @@ export interface AuditManifestSiteSignals extends SiteSignals {
   siteName?: string;
 }
 
+/** The two privacy/security checks are site-level checks attached to the
+ * homepage scan result. Their absence in an older manifest, or after a
+ * failed homepage scan, is deliberately distinct from a completed clean
+ * result: report copy must never describe unavailable evidence as a pass. */
+export interface PrivacySecurityCoverage {
+  securityHeaders: 'completed' | 'unavailable';
+  cookieConsent: 'completed' | 'unavailable';
+}
+
 export interface AuditManifest {
   auditId: string;
   kind: ManifestKind;
@@ -320,6 +329,9 @@ export interface AuditManifest {
    *  inventoried pages so an omitted URL is never presented as visited. */
   continuationGuardSummary?: ContinuationGuardSummary;
   siteSignals?: AuditManifestSiteSignals;
+  /** Additive scanner provenance for the privacy/security report scope.
+   * Absent on historical audits and therefore rendered as unavailable. */
+  privacySecurityCoverage?: PrivacySecurityCoverage;
   /** Milestone 8.6. Optional so manifests from before this milestone,
    *  and audits where CRUX_API_KEY was not configured, still parse -
    *  absence here means "not queried at all" (no API key configured),

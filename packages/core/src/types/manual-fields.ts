@@ -17,6 +17,7 @@
  */
 
 import type { StatSector } from '../reference-stats/types.js';
+import type { SiteSignalOverride } from './compliance.js';
 
 export type FieldProvenance = 'detected' | 'operator';
 
@@ -41,5 +42,11 @@ export interface AuditManualFields {
   revenueBand?: ProvenancedField<string>;
   declarationContactEmail?: ProvenancedField<string>;
   recipientName?: ProvenancedField<string>;
+  /** A post-scan, operator-verified correction to the transactional-flow
+   * detector. The reason is mandatory here even though the scan-time CLI
+   * override remains backward-compatible with an omitted reason: this
+   * durable dashboard edit changes report legality context after evidence
+   * collection, so it must leave an auditable explanation. */
+  transactionalFlowOverride?: SiteSignalOverride & { reason: string };
   updatedAt: Date;
 }

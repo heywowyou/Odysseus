@@ -725,6 +725,10 @@ export const en: ReportStrings = {
     extendedPassCheckCleanLabel: 'no issue detected',
     extendedPassCheckFoundSingular: 'finding detected',
     extendedPassCheckFoundPlural: 'findings detected',
+    privacySecurityChecksClean:
+      'The automated security-header and cookie-consent checks were completed. No issue was detected by those checks. This is not a legal-compliance conclusion.',
+    privacySecurityChecksUnavailable:
+      'The automated security-header and cookie-consent checks did not both produce a usable result for this audit. No conclusion is drawn for this scope.',
     legalCitationInScopeTemplate:
       'Published criteria for {regimeName}, overseen by {authority} ({legalCitation}). Facts verified for this audit: {facts}',
     legalCitationLikelyInScopeTemplate:

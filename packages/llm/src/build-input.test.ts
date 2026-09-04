@@ -164,7 +164,15 @@ describe('buildWritingInput', () => {
     ];
 
     const siteStats = computeSiteStats(loadSmallSiteFindings(), loadSmallSiteManifest());
-    const input = buildWritingInput(structureThemes, filtered, siteContext, 'fr', siteStats, null);
+    const input = buildWritingInput(
+      structureThemes,
+      filtered,
+      siteContext,
+      'fr',
+      siteStats,
+      null,
+      'unknown',
+    );
 
     expect(input.language).toBe('fr');
     expect(input.siteContext).toBe(siteContext);
@@ -206,7 +214,7 @@ describe('buildWritingInput', () => {
 
     const siteStats = computeSiteStats(loadSmallSiteFindings(), loadSmallSiteManifest());
     expect(() =>
-      buildWritingInput(staleThemes, filtered, siteContext, 'fr', siteStats, null),
+      buildWritingInput(staleThemes, filtered, siteContext, 'fr', siteStats, null, 'unknown'),
     ).toThrow(/references unknown findingId/);
   });
 });

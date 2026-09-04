@@ -106,9 +106,17 @@ export async function runReportStage(
   // is reused unchanged, "manual" now just means "freshest at render
   // time" instead of "given at job creation."
   const manualFields = await getAuditManualFields(connection, manifest.auditId);
-  const obligationAssessment = manualFields?.siren
-    ? await runObligationStage(manifest, connection, manualFields.siren.value)
-    : analysis.obligationAssessment;
+  const obligationAssessment =
+    manualFields?.siren || manualFields?.transactionalFlowOverride
+      ? await runObligationStage(
+          manifest,
+          connection,
+          manualFields?.siren?.value,
+          manualFields.transactionalFlowOverride
+            ? { hasTransactionalFlow: manualFields.transactionalFlowOverride }
+            : undefined,
+        )
+      : analysis.obligationAssessment;
 
   // Plan 019: resolve the bounded preparation preview here, at the
   // orchestration boundary, so render-html.ts never queries storage or

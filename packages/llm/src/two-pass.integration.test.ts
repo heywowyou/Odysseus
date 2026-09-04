@@ -162,6 +162,7 @@ describe('two-pass analysis produces identical structure across languages', () =
       'fr',
       siteStats,
       null,
+      'unknown',
     );
     const frWriting = await analyzeWriting(frWritingInput, themeKeys, false);
     const mergedFr = mergeAnalysisPasses(structureDoc, frWriting.output, filtered, 'fr');
@@ -178,6 +179,7 @@ describe('two-pass analysis produces identical structure across languages', () =
       'en',
       siteStats,
       null,
+      'unknown',
     );
     const enWriting = await analyzeWriting(enWritingInput, themeKeys, false);
     const mergedEn = mergeAnalysisPasses(structureDoc, enWriting.output, filtered, 'en');

@@ -1099,6 +1099,12 @@ export interface ReportStrings {
     extendedPassCheckCleanLabel: string;
     extendedPassCheckFoundSingular: string;
     extendedPassCheckFoundPlural: string;
+    /** Rendered only when both deterministic privacy/security checks ran
+     * clean. This is a check result, never a legal-compliance conclusion. */
+    privacySecurityChecksClean: string;
+    /** Rendered when either check was unavailable, including historical
+     * audits that predate their coverage provenance. */
+    privacySecurityChecksUnavailable: string;
     /** Entity-layer milestone: replaces the old single legalCitationParagraph
      *  hedge with a status-branched determination, code-rendered from
      *  ObligationAssessment (@odysseus/core's assessObligations), never
