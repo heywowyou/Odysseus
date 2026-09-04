@@ -207,6 +207,26 @@ describe('runReportStage', () => {
     );
   });
 
+  it('preserves an analysis-time transactional-flow override when fields have no newer override', async () => {
+    const analysis = {
+      ...fakeAnalysis(),
+      obligationAssessment: { status: 'in_scope', basis: [] },
+    } as never;
+    vi.mocked(getAuditManualFields).mockResolvedValue({
+      siren: { value: '309585578', source: 'detected' },
+      updatedAt: new Date('2026-09-04T00:00:00.000Z'),
+    } as never);
+
+    await runReportStage(auditDir, fakeManifest(), [], analysis, fakeConnection);
+
+    expect(runObligationStage).not.toHaveBeenCalled();
+    expect(generateReportPdf).toHaveBeenCalledWith(
+      expect.objectContaining({
+        analysis: expect.objectContaining({ obligationAssessment: analysis.obligationAssessment }),
+      }),
+    );
+  });
+
   it('carries no length warning at exactly the 60 page threshold', async () => {
     vi.mocked(generateReportPdf).mockResolvedValue({
       pdf: Buffer.from('%PDF-fake'),
