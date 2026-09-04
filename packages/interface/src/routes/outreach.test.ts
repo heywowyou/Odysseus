@@ -36,6 +36,8 @@ import {
   markOutreachThreadSynced,
   recordOutreachOutcome,
   revokeOutreachPreview,
+  type HotelCandidateDocument,
+  type OutreachDraftDocument,
 } from '@odysseus/store';
 import { Router } from '../router.js';
 import { registerOutreachRoutes } from './outreach.js';
@@ -167,11 +169,14 @@ describe('GET /api/outreach/drafts/:draftId/text', () => {
     body: 'Corps du brouillon',
     status: 'created',
     createdAt: new Date('2026-09-01T08:30:00.000Z'),
-  } as never;
+  } as unknown as OutreachDraftDocument;
 
   it('serves the exact persisted text of a live draft with the candidate name', async () => {
     vi.mocked(findOutreachDraftById).mockResolvedValue(liveDraft);
-    vi.mocked(getHotelCandidate).mockResolvedValue({ candidateId: 'c-1', name: 'Hôtel Exemple' });
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'c-1',
+      name: 'Hôtel Exemple',
+    } as unknown as HotelCandidateDocument);
 
     const router = new Router();
     registerOutreachRoutes(router, fakeConnection);
