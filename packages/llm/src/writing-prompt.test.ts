@@ -197,6 +197,45 @@ describe('plan 019: the writing prompt requests outcome-oriented titles without 
   });
 });
 
+// issue #55 (Villas Foch report): the executive summary closed on
+// "L'ensemble donne une image de site qui a besoin d'une remise en ordre
+// technique prioritaire..." - ungrammatical as written ("l'image d'un
+// site" is required), colloquial ("remise en ordre") where the rest of
+// the document is measured, and a stack of three abstractions attached to
+// no finding. The fix is prompt-side: the closing sentence is pinned to
+// formal, complete grammar, the report's professional register, and the
+// findings actually in the input. The deterministic closing sentence the
+// issue names stays an open product decision, so no template string and
+// no guard is introduced here (trade-off 55 requires measured promotion
+// over stored analyses before any new prose guard joins the retry loop).
+describe('issue #55: the writing prompt constrains the executive summary closing sentence', () => {
+  it('requires a grammatically complete, formal final sentence addressed respectfully to the client', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain('grammatically correct, complete, formal sentence');
+    expect(prompt).toContain('addressed respectfully to the client');
+    expect(prompt).toContain('Never close on over-familiar or colloquial phrasing');
+  });
+
+  it('names the ungrammatical, colloquial fault phrases from the real report as examples never to write', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain("L'ensemble donne une image de site");
+    expect(prompt).toContain('remise en ordre');
+  });
+
+  it('grounds the closing sentence in measured findings instead of unmeasured abstractions', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain('families of findings already in your input');
+    expect(prompt).toContain('stacking abstractions that no finding supports');
+  });
+
+  it('gives one formal, grounded closing example per language', () => {
+    const fr = buildWritingSystemPrompt('fr', false, null);
+    expect(fr).toContain('Pris ensemble, ces constats appellent une correction méthodique');
+    const en = buildWritingSystemPrompt('en', false, null);
+    expect(en).toContain('Taken together, these findings call for a methodical correction');
+  });
+});
+
 describe('buildWritingRetryFeedback and the user-prompt correction', () => {
   const input = {
     language: 'fr' as const,
