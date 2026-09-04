@@ -428,9 +428,12 @@ describe('2026-08-22: findings sharing an identical page-URL set within one rule
     ];
 
     const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
-    // Both rows still show their own real occurrence count.
-    expect(html).toContain('>3</td>');
-    expect(html).toContain('>5</td>');
+    // Both rows still show their own real occurrence count. Issue #45: the
+    // counts live in the finding row's own four-column grid (one atomic
+    // <tr> per finding), so the cells are divs inside the row's single
+    // colspan cell, not <td> elements of a shared row.
+    expect(html).toContain('<div>3</div>');
+    expect(html).toContain('<div>5</div>');
   });
 
   it('does not dedupe across different rule groups, only within the same one', () => {

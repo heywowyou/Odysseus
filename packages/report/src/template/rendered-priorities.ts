@@ -32,9 +32,15 @@ export interface PriorityEvidence {
    *  shared helper the findings appendix uses: reviewed French rule label
    *  in a French report, scanner title in English. */
   representativeLabel: string;
-  /** First URL of the deduplicated, lexicographically sorted union of every
-   *  finding's page URLs in this priority. Undefined only for zero-page
-   *  evidence: no finding in the priority carries a page URL at all. */
+  /** First URL of the representative finding's own pageUrls, sorted
+   *  lexicographically. Undefined only when the representative finding
+   *  itself carries no page URL. Issue #40: this used to be the first URL
+   *  of the whole priority's page union, so the "observed for example on
+   *  page P" sentence could name a page the representative finding never
+   *  occurred on - P was chosen across the other findings in the priority,
+   *  and a client opening it found no defect. The page is now chosen from
+   *  the finding the sentence actually quotes, so the two can never
+   *  disagree. */
   representativePageUrl: string | undefined;
   /** Exact count of distinct pages across the whole priority. */
   uniquePageCount: number;
@@ -134,15 +140,29 @@ export function classifyPriorityOwnership(
  *  - representative finding: highest severity first (SEVERITY_ORDER), then
  *    the lexicographically smallest findingId as the tie-break, so two
  *    render runs over the same stored analysis can never disagree;
- *  - representative page: the priority's page URLs deduplicated, sorted
- *    lexicographically, first entry. Lexicographic order rather than the
- *    stored array order because pageUrls ordering is an artifact of scan
- *    timing, not something a reader should see wobble between renders;
+ *  - representative page: the representative finding's own page URLs
+ *    deduplicated, sorted lexicographically, first entry (issue #40: not
+ *    the whole priority's union - the observation sentence quotes this
+ *    finding, so the example page must be one of its own). Lexicographic
+ *    order rather than the stored array order because pageUrls ordering
+ *    is an artifact of scan timing, not something a reader should see
+ *    wobble between renders;
  *  - counts: the exact distinct-page count and the exact occurrence sum
- *    across every finding in the priority, never an approximation. */
+ *    across every finding in the priority, never an approximation. The
+ *    page count is confined to {scopePageUrls} when the caller supplies
+ *    the analyzed scope (issue #41): a finding can cite a URL outside the
+ *    visited scope (an origin-level finding recorded against a
+ *    discovered-but-not-scanned page), and a priority card and the
+ *    checklist both render that count against the visited-page
+ *    denominator - a numerator from a wider population than the
+ *    denominator rendered a real report as "29 pages sur 28". */
 function buildPriorityEvidence(
   findings: readonly Finding[],
   language: ReportLanguage,
+  /** The analyzed scope the priority's page count is confined to: the
+   *  manifest's own visited-page URL set, computed once by the caller from
+   *  the same pages the "sur {totalPages}" denominator counts. */
+  scopePageUrls: ReadonlySet<string>,
 ): PriorityEvidence {
   if (findings.length === 0) {
     // Unreachable through buildRenderedPriorities (selectThemes only keeps
@@ -158,7 +178,15 @@ function buildPriorityEvidence(
       SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] ||
       (a.findingId < b.findingId ? -1 : a.findingId > b.findingId ? 1 : 0),
   )[0]!;
-  const pageUrls = [...new Set(findings.flatMap((finding) => finding.pageUrls))].sort();
+  const pageUrls = [
+    ...new Set(
+      findings
+        .flatMap((finding) => finding.pageUrls)
+        // Issue #41: both surfaces rendering this count state it against the
+        // visited-page total, so both sides must count the same population.
+        .filter((url) => scopePageUrls.has(url)),
+    ),
+  ].sort();
   return {
     representativeFinding: representative,
     representativeLabel: resolveFindingDisplayLabel(
@@ -166,7 +194,7 @@ function buildPriorityEvidence(
       representative.ruleId,
       representative.title,
     ),
-    representativePageUrl: pageUrls[0],
+    representativePageUrl: [...new Set(representative.pageUrls)].sort()[0],
     uniquePageCount: pageUrls.length,
     occurrenceCount: findings.reduce((total, finding) => total + finding.occurrences, 0),
   };
@@ -176,12 +204,17 @@ function buildPriorityEvidence(
  *  already-resolved findings outside the full buildRenderedPriorities
  *  pipeline (renderThemes' internal fallback for focused tests). Evidence
  *  is always built so even this path renders a concrete observation;
- *  ownership counts stay zeroed because no manifest is available here. */
+ *  ownership counts stay zeroed because no manifest is available here.
+ *  scopePageUrls defaults to an empty set, i.e. "no analyzed scope known":
+ *  the page count is a scope-relative figure (see buildPriorityEvidence),
+ *  so a caller that cannot supply the manifest's visited pages gets zero,
+ *  never a count from an unstated population. */
 export function buildLegacyPriority(
   theme: Theme,
   displayRank: number,
   findingsById: ReadonlyMap<string, Finding>,
   language: ReportLanguage,
+  scopePageUrls: ReadonlySet<string> = new Set(),
 ): RenderedPriority {
   const findings = theme.findingIds
     .map((id) => findingsById.get(id))
@@ -196,7 +229,7 @@ export function buildLegacyPriority(
       'verify-intent': 0,
     },
     remediations: [],
-    evidence: buildPriorityEvidence(findings, language),
+    evidence: buildPriorityEvidence(findings, language, scopePageUrls),
   };
 }
 
@@ -217,6 +250,13 @@ export function buildRenderedPriorities(
     );
   }
   const selected = selectThemes(themes, findingsById);
+
+  // Issue #41: the same population the "sur {totalPages}" denominator
+  // counts (checklist.ts and themes.ts both count manifest pages with
+  // status 'visited'), so a priority's page count can never exceed it.
+  const scopePageUrls = new Set(
+    manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
+  );
 
   const priorities = selected.map((theme, index): RenderedPriority => {
     const priorityFindings = theme.findingIds
@@ -243,7 +283,7 @@ export function buildRenderedPriorities(
       findings: priorityFindings,
       ownershipCounts,
       remediations,
-      evidence: buildPriorityEvidence(priorityFindings, language),
+      evidence: buildPriorityEvidence(priorityFindings, language, scopePageUrls),
     };
   });
 

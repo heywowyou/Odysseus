@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Finding, Theme } from '@odysseus/core';
-import { selectReferenceStats } from '@odysseus/core';
+import { selectReferenceStats, SEVERITY_ORDER } from '@odysseus/core';
 import {
   isQuickWinTheme,
   MAX_RENDERED_THEMES,
@@ -39,18 +39,25 @@ describe('renderThemes against the real small-site.test analysis', () => {
     }
     // F38 used to ban every raw page URL from a theme card. Plan 018 step 6
     // supersedes that: block 3 of each card ("What we observed") names one
-    // representative page selected by the priority's own evidence
-    // (rendered-priorities.ts: the deduplicated page union, lexicographically
-    // first). The surviving invariant: no page URL other than each rendered
-    // priority's representative one may appear anywhere in the section.
+    // representative page selected by the priority's own evidence. Issue
+    // #40 changed that selection: the page is the representative finding's
+    // own lexicographically first pageUrl, so the quoted finding and the
+    // example page cannot disagree. The surviving invariant is unchanged:
+    // no page URL other than each rendered priority's representative one
+    // may appear anywhere in the section.
     const representativeUrls = new Set(
       rendered
-        .map(
-          (theme) =>
-            [
-              ...new Set(theme.findingIds.flatMap((id) => findingsById.get(id)?.pageUrls ?? [])),
-            ].sort()[0],
-        )
+        .map((theme) => {
+          const themeFindings = theme.findingIds
+            .map((id) => findingsById.get(id))
+            .filter((f): f is Finding => f !== undefined)
+            .sort(
+              (a, b) =>
+                SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] ||
+                (a.findingId < b.findingId ? -1 : a.findingId > b.findingId ? 1 : 0),
+            );
+          return [...new Set(themeFindings[0]?.pageUrls ?? [])].sort()[0];
+        })
         .filter((url): url is string => url !== undefined),
     );
     for (const finding of findings) {
@@ -1466,15 +1473,118 @@ describe('2026-08-22: Impact commercial and Conformité are colour-coded, Effort
     expect(html).toMatch(/Conformité : <strong style="color:#d97b82">Non conforme<\/strong>/);
   });
 
-  it('colours "Conformité : Sans objet" neutral grey, not red, for a non-accessibility theme', () => {
+  // Issue #47: the footer strip no longer prints "Conformité : Sans
+  // objet" for a non-accessibility theme - it duplicated the "Exigence de
+  // conformité : Sans objet" box three lines above, the same statement
+  // twice on one card. The strip states conformity only when there is a
+  // conformance status to state; the box (with the P2.2 gloss on the
+  // first card that needs it) carries the Sans objet statement.
+  it('states no "Conformité : Sans objet" in the strip for a non-accessibility theme; the Exigence box carries it', () => {
     const findings = [buildFinding('f001', 'seo')];
     const analysis = buildAnalysis('medium', 'seo');
     const html = renderThemes(getStrings('fr'), 4, analysis as never, findings, manifest);
 
-    expect(html).toMatch(
-      /Conformité : <strong style="color:var\(--color-neutral-500\)">Sans objet<\/strong>/,
+    expect(html).not.toMatch(/Conformité : <strong[^>]*>Sans objet/);
+    expect(html).toContain('Exigence de conformité : Sans objet');
+    expect(html).not.toContain('Sans objet</strong>');
+  });
+});
+
+// Issue #47: the metadata strip's fixed five-column grid wrapped values
+// away from their labels in both languages - "Impact commercial" split
+// from ": Élevé", "28" stranded at a line end away from "pages sur", and
+// "Conformité : Non / conforme" broken so a line began with a bare "Non".
+// Each short label/value pair is now one non-breaking unit and the row
+// reflows between units.
+describe('issue #47: each metadata unit keeps its label and value together, and the strip reflows', () => {
+  function buildFinding(findingId: string): Finding {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'axe' as const,
+      ruleId: 'image-alt',
+      category: 'accessibility',
+      severity: 'critical' as const,
+      wcagCriteria: ['1.1.1'],
+      title: 'Missing alt text',
+      description: 'd',
+      pageUrls: ['https://example.com/'],
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    } as never;
+  }
+
+  function buildAnalysis(language: 'fr' | 'en') {
+    return {
+      auditId: 'a1',
+      language,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'medium' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title: 'Chantier un',
+          category: 'accessibility' as const,
+          businessImpact: 'Impact',
+          effort: 'medium' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds: ['f001'],
+          legalRelevance: 'Critère 1.1.1 (Non-contraste), WCAG 2.2 niveau AA',
+          recommendedActions: ['Action'],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const manifest = { pages: [{ url: 'https://example.com/', status: 'visited' }] } as never;
+
+  it('renders each short unit as one non-breaking span, in a wrapping row (fr)', () => {
+    const html = renderThemes(
+      getStrings('fr'),
+      4,
+      buildAnalysis('fr') as never,
+      [buildFinding('f001')],
+      manifest,
     );
-    expect(html).not.toMatch(/Conformité : <strong style="color:#d97b82">Sans objet/);
+
+    expect(html).toContain('display:flex;flex-wrap:wrap;align-items:baseline');
+    for (const label of ['Complexité', 'Impact commercial', 'Pages affectées']) {
+      expect(html).toContain(
+        `<span class="text-muted" style="white-space:nowrap">${label} : <strong`,
+      );
+    }
+    // The one card here is non-conformant, so its conformity status is a
+    // real value and stays in the strip, equally unbreakable.
+    expect(html).toMatch(
+      /<span class="text-muted" style="white-space:nowrap">Conformité : <strong style="color:#d97b82">Non conforme<\/strong><\/span>/,
+    );
+  });
+
+  it('renders the same non-breaking units in English', () => {
+    const html = renderThemes(
+      getStrings('en'),
+      4,
+      buildAnalysis('en') as never,
+      [buildFinding('f001')],
+      manifest,
+    );
+
+    expect(html).toContain('display:flex;flex-wrap:wrap;align-items:baseline');
+    for (const label of ['Complexity', 'Business impact', 'Affected pages']) {
+      expect(html).toContain(
+        `<span class="text-muted" style="white-space:nowrap">${label} : <strong`,
+      );
+    }
   });
 });
 
@@ -1903,7 +2013,16 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     };
   }
 
-  const manifest = { pages: [{ url: 'https://example.com/', status: 'visited' }] } as never;
+  // Issue #41: the observation's page count is confined to the manifest's
+  // visited pages, the same population the "sur {totalPages}" denominator
+  // counts, so this fixture marks every URL its findings cite as visited.
+  const manifest = {
+    pages: [
+      { url: 'https://example.com/', status: 'visited' },
+      { url: 'https://example.com/zones/visiteur', status: 'visited' },
+      { url: 'https://example.com/a-propos', status: 'visited' },
+    ],
+  } as never;
 
   it('renders the six blocks in the plan order, outcome first, with the stored technical title', () => {
     const analysis = buildAnalysis([

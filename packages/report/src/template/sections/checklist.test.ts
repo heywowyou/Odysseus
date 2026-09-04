@@ -190,7 +190,7 @@ describe('2026-08-22/23: the Constats cell caps a long findingIds list rather th
   });
 
   it('renders every id, uncapped, for a theme at or under the cap', () => {
-    const fewIds = Array.from({ length: 10 }, (_, i) => `z${String(i + 1).padStart(3, '0')}`);
+    const fewIds = Array.from({ length: 10 }, (_, i) => `z${String(i + 1).padStart(2, '0')}`);
     const analysis = buildAnalysisWithFindingIds(fewIds);
     const findings = fewIds.map(buildFinding);
 
@@ -205,5 +205,102 @@ describe('2026-08-22/23: the Constats cell caps a long findingIds list rather th
 
     for (const id of fewIds) expect(html).toContain(id);
     expect(html).not.toContain('autres');
+  });
+});
+
+// Issue #41: a real report rendered "29 pages sur 28" on a priority card
+// and "29/28" here, because the numerator counted every URL cited by the
+// theme's findings while the denominator counted only visited manifest
+// pages - a homepage recorded discovered-not-scanned was still cited by
+// origin-level findings. Invariant: no rendered PAGES ratio can have a
+// numerator greater than its denominator.
+describe('issue #41: no checklist PAGES ratio exceeds the visited-page total', () => {
+  function buildCitingFinding(findingId: string, pageUrls: string[]) {
+    return {
+      findingId,
+      auditId: 'a1',
+      schemaVersion: 1 as const,
+      source: 'custom' as const,
+      ruleId: 'rule',
+      category: 'accessibility' as const,
+      severity: 'serious' as const,
+      wcagCriteria: [],
+      title: 't',
+      description: 'd',
+      pageUrls,
+      occurrences: 1,
+      elements: [],
+      rawEvidence: {},
+      dedupeKey: findingId,
+      firstSeenAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+  }
+
+  function buildAnalysisWithFindings(findingIds: string[]) {
+    return {
+      auditId: 'a1',
+      language: 'fr' as const,
+      model: 'test-model',
+      temperature: 0,
+      generatedAt: new Date(),
+      overallRisk: 'high' as const,
+      executiveSummary: 'summary',
+      themes: [
+        {
+          title: 'Chantier citant une page hors périmètre',
+          category: 'accessibility' as const,
+          businessImpact: 'Impact',
+          effort: 'low' as const,
+          impact: 'high' as const,
+          priorityRank: 1,
+          findingIds,
+          recommendedActions: ['Action'],
+        },
+      ],
+      quickWins: [],
+      notes: '',
+    };
+  }
+
+  const visitedUrls = ['https://client.example/a', 'https://client.example/b'];
+  const manifest = {
+    pages: [
+      ...visitedUrls.map((url) => ({ url, status: 'visited' })),
+      // The homepage: discovered but never scanned, still cited by findings
+      // (the real audit's origin-level pattern).
+      { url: 'https://client.example/', status: 'discovered-not-scanned' },
+    ],
+    siteUrl: 'https://client.example',
+    startedAt: new Date().toISOString(),
+  } as never;
+
+  it('counts a theme only over the pages the denominator population covers', () => {
+    const findings = [
+      buildCitingFinding('f001', [...visitedUrls, 'https://client.example/']),
+      buildCitingFinding('f002', ['https://client.example/a']),
+    ];
+    const analysis = buildAnalysisWithFindings(['f001', 'f002']);
+
+    const html = renderChecklist(
+      getStrings('fr'),
+      5,
+      'fr',
+      analysis as never,
+      findings as never,
+      manifest,
+    );
+
+    const ratios = [...html.matchAll(/>(\d+)\/(\d+)</gu)].map((m) => ({
+      numerator: Number(m[1]),
+      denominator: Number(m[2]),
+    }));
+    expect(ratios.length).toBeGreaterThan(0);
+    for (const ratio of ratios) {
+      expect(ratio.numerator).toBeLessThanOrEqual(ratio.denominator);
+    }
+    // The out-of-scope homepage is excluded from the count specifically:
+    // the theme touches both visited pages, not three of two.
+    expect(ratios).toContainEqual({ numerator: 2, denominator: 2 });
   });
 });

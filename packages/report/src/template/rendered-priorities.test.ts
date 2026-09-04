@@ -103,8 +103,10 @@ describe('buildRenderedPriorities', () => {
 // consumed by every priority surface, so no template ever re-derives rule
 // selection. These tests pin the selection rules themselves: representative
 // finding by highest severity then lexicographically smallest findingId,
-// representative page as the lexicographically first entry of the
-// deduplicated page union, and exact unique-page and occurrence counts.
+// representative page as the lexicographically first entry of that
+// finding's own pageUrls (issue #40), and exact unique-page and occurrence
+// counts, with the page count confined to the manifest's visited pages
+// (issue #41).
 describe('plan 018 step 6: deterministic priority evidence', () => {
   const manifest = { pages: [] } as never;
 
@@ -150,6 +152,15 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
     ];
     const themes = [buildTheme(['f001', 'f002'])];
 
+    // Issue #41: the unique-page count is confined to the manifest's
+    // visited pages, the same population the "sur {totalPages}" denominator
+    // counts, so this test's manifest declares both cited URLs visited.
+    const manifest = {
+      pages: [
+        { url: longUrl, status: 'visited' },
+        { url: 'https://example.com/a', status: 'visited' },
+      ],
+    } as never;
     const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
     const priority = priorities[0]!;
 
@@ -161,6 +172,76 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
     expect(priority.evidence.occurrenceCount).toBe(5);
     // The critical finding wins the representative slot (see the rule above).
     expect(priority.evidence.representativeFinding.findingId).toBe('f002');
+  });
+
+  // Issue #40: the representative page used to be the first URL of the
+  // whole priority's union, so the "observed for example on page P"
+  // sentence could name a page the quoted finding never occurred on (a
+  // real report cited the never-scanned homepage for a finding whose only
+  // page was /fr/mentions-et-credits). The page must come from the
+  // representative finding itself, so the sentence and the finding cannot
+  // disagree.
+  it('takes the representative page from the representative finding own pageUrls, not the priority union', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        severity: 'serious',
+        pageUrls: ['https://example.com/a', 'https://example.com/b'],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        severity: 'critical',
+        pageUrls: ['https://example.com/z'],
+      }),
+    ];
+    const themes = [buildTheme(['f001', 'f002'])];
+
+    const priorities = buildRenderedPriorities(themes, findings, { pages: [] } as never, 'en');
+    const priority = priorities[0]!;
+
+    // f002 wins the representative slot on severity; /a sorts before /z,
+    // so the old union-based choice would have named /a - a page f002 was
+    // never observed on.
+    expect(priority.evidence.representativeFinding.findingId).toBe('f002');
+    expect(priority.evidence.representativePageUrl).toBe('https://example.com/z');
+    expect(priority.evidence.representativePageUrl).toBe(
+      [...priority.evidence.representativeFinding.pageUrls].sort()[0],
+    );
+  });
+
+  // Issue #41 invariant: a priority's page count renders against the
+  // visited-page total ("N pages sur M"), so a URL outside the visited
+  // scope (here, a discovered-but-not-scanned page an origin-level finding
+  // still cites) must never push the numerator past the denominator.
+  it('never counts a cited page outside the visited scope into uniquePageCount', () => {
+    const visitedUrls = Array.from({ length: 4 }, (_, i) => `https://example.com/page-${i}`);
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        occurrences: 2,
+        pageUrls: [...visitedUrls, 'https://example.com/'],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        occurrences: 1,
+        pageUrls: ['https://example.com/page-0'],
+      }),
+    ];
+    const themes = [buildTheme(['f001', 'f002'])];
+    const manifest = {
+      pages: [
+        ...visitedUrls.map((url) => ({ url, status: 'visited' })),
+        { url: 'https://example.com/', status: 'discovered-not-scanned' },
+      ],
+    } as never;
+
+    const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
+    const visitedCount = 4;
+
+    expect(priorities[0]!.evidence.uniquePageCount).toBeLessThanOrEqual(visitedCount);
+    // The out-of-scope homepage is excluded from the count specifically,
+    // not just bounded by it.
+    expect(priorities[0]!.evidence.uniquePageCount).toBe(4);
   });
 
   it('carries zero-page evidence unchanged when no finding in the priority has a page URL', () => {

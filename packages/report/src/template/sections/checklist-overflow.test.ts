@@ -111,3 +111,64 @@ describe('the printable checklist never renders an unbounded cell', () => {
     expect(html).not.toContain('4.1.2');
   });
 });
+
+// Issue #48: the COMPLEXITÉ header used a fixed 70px column narrower than
+// its own uppercase 11px label, overflowed into the IMPACT column, and a
+// real report printed the merged token "COMPLEXITÉIMPACT" on the one page
+// designed to be handed to a contractor alone. A fixed-width column can
+// always drift out of sync with a reworded label, so the guard here is the
+// general property: every header label must either sit in a content-sized
+// column (max-content) or in a fixed column with conservative headroom
+// over the label's rendered width, in both languages.
+describe('issue #48: every checklist column header fits its column in both languages', () => {
+  // Generous per-character estimate for an 11px uppercase label with
+  // 0.02em tracking, plus the two var(--space-2) (5.6px) horizontal
+  // paddings of a head cell. Real uppercase widths average well under
+  // 8px/char at this size; the slack is the point.
+  const MIN_COLUMN_PX = (label: string): number => label.length * 8.3 + 12;
+
+  function assertHeadersFit(language: 'fr' | 'en'): void {
+    const strings = getStrings(language);
+    const c = strings.checklist;
+    const labels = [
+      c.rankColumnLabel,
+      c.priorityColumnLabel,
+      c.complexityColumnLabel,
+      c.impactColumnLabel,
+      c.pagesColumnLabel,
+      c.findingsColumnLabel,
+      c.wcagColumnLabel,
+    ];
+    const html = renderChecklist(strings, 6, language, analysis, findings, manifest);
+    const template = /grid-template-columns:([^;"]+)/u.exec(html)?.[1] ?? '';
+    const columns = template.trim().split(/\s+/u);
+    expect(columns).toHaveLength(labels.length);
+
+    columns.forEach((column, index) => {
+      const label = labels[index]!;
+      // max-content sizes to its content; a fr track's automatic minimum is
+      // the label's own min-content width, so neither can under-fit.
+      if (column === 'max-content' || /^\d+fr$/u.test(column)) return;
+      const fixed = /^(\d+(?:\.\d+)?)px$/u.exec(column);
+      expect(
+        fixed,
+        `column ${index} (${label}) is neither max-content nor a px width`,
+      ).not.toBeNull();
+      expect(Number(fixed![1])).toBeGreaterThanOrEqual(MIN_COLUMN_PX(label));
+    });
+
+    // A header label is one word in both languages: wrapping can never
+    // help it fit, so every head cell keeps itself on a single line.
+    const headCells =
+      html.match(/text-transform:uppercase;white-space:nowrap[^>]*">[^<]*</gu) ?? [];
+    expect(headCells.length).toBeGreaterThanOrEqual(labels.length);
+  }
+
+  it('fits every header label in French, including COMPLEXITÉ', () => {
+    assertHeadersFit('fr');
+  });
+
+  it('fits every header label in English', () => {
+    assertHeadersFit('en');
+  });
+});

@@ -598,7 +598,11 @@ export interface ReportStrings {
     /** P2.2 (2026-08-21 La Corniche feedback pass): shown inline,
      *  parenthetically, next to the first rendered card whose
      *  conformityValue is conformityNotApplicable - not repeated on
-     *  every card that shares the value. */
+     *  every card that shares the value. Issue #47: the gloss sits on
+     *  the card's "Exigence de conformité" box (which states
+     *  conformityNotApplicable for non-accessibility themes), not on the
+     *  footer strip, which no longer prints a second "Sans objet" line
+     *  saying the same thing. */
     conformityNotApplicableGloss: string;
     conformityNonConformant: string;
     legalTagLabel: string;

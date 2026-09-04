@@ -265,6 +265,18 @@ function renderRevenueImpactNote(
  *  laid out. Rendered as a fixed-column grid below instead, so every
  *  card's line wraps at the same positions regardless of content
  *  length. */
+/** Issue #47 (superseding item 2.5's grid): the fixed five-column grid
+ *  solved item 2.5's inconsistency by forcing every label/value pair into
+ *  a narrow fixed cell, where the French pairs did not fit - a real report
+ *  wrapped "Impact commercial" away from ": Élevé", stranded "28" at a
+ *  line end away from "pages sur", and split "Conformité : Non /
+ *  conforme" so a line began with a bare "Non". The strip is now a
+ *  wrapping flex row of atomic label+value units: each unit keeps its
+ *  label and value on one line (white-space:nowrap) and the row reflows
+ *  between units, so a colon or a number can never be stranded. The
+ *  finding-references unit stays wrappable: its capped id list is the one
+ *  value long enough to need a second line, and it may only break between
+ *  ids. */
 /** P1.2 (2026-08-21 La Corniche feedback pass): a priority card's own
  *  recommendedActions (LLM-written prose) told the client to ask their
  *  agency to fix a defect that lived inside a third-party plugin (e.g.
@@ -384,7 +396,10 @@ function renderTheme(
    *  the explanation only existed in the glossary, 20 pages later. True
    *  for exactly the first rendered card whose conformity is "Sans
    *  objet", so the gloss appears once, right where it's first needed,
-   *  not repeated on every card that shares the value. */
+   *  not repeated on every card that shares the value. Issue #47 moved
+   *  the gloss onto the "Exigence de conformité : Sans objet" box
+   *  itself, since the footer strip no longer prints a second "Sans
+   *  objet" line of its own. */
   showConformityGloss: boolean,
   /** 2026-08-22 revenue-impact wiring:
    *  ObligationAssessment.registrySnapshot.turnoverEur, threaded down
@@ -394,6 +409,11 @@ function renderTheme(
    *  undefined, this is just where it enters the call chain. */
   turnoverEur: number | undefined,
   priority?: RenderedPriority,
+  /** Issue #41: the manifest's visited-page URL set, the same population
+   *  the card's "sur {totalPages}" denominator counts. Confines the
+   *  no-priority fallback page count to it so the ratio's two sides count
+   *  the same pages. */
+  scopePageUrls?: ReadonlySet<string>,
 ): string {
   const t = strings.themes;
   const themeFindings = theme.findingIds
@@ -401,10 +421,16 @@ function renderTheme(
     .filter((f): f is Finding => f !== undefined);
   // Plan 018 step 6: the page count comes from the priority's own evidence
   // when one is attached, so the footer metadata and the observation block
-  // are computed from the same selection by construction.
+  // are computed from the same selection by construction. The fallback (no
+  // priority attached) counts the same population the evidence builder
+  // does: distinct pages within the analyzed scope, never every cited URL
+  // (issue #41 - a finding can cite a page outside the visited scope, and
+  // this count renders against the visited-page total).
   const uniquePages = priority
     ? priority.evidence.uniquePageCount
-    : new Set(themeFindings.flatMap((f) => f.pageUrls)).size;
+    : new Set(
+        themeFindings.flatMap((f) => f.pageUrls).filter((url) => scopePageUrls?.has(url) ?? true),
+      ).size;
 
   const category = CATEGORY[theme.category];
   const categoryTag = `<span class="tag" style="background:${category.bg};color:${category.color}">${escapeHtml(strings.findingsAppendix.categoryLabels[theme.category])}</span>`;
@@ -428,9 +454,16 @@ function renderTheme(
   // applies - the honest converse of the accessibility case, not an
   // invented one, using the same "Sans objet" wording item 3.8's
   // glossary entry already defines for the reader.
+  //
+  // P2.2 + issue #47: the "Sans objet" gloss (shown once, on the first
+  // rendered card that needs it) sits on this box's sentence rather than
+  // in the footer strip. The strip no longer prints a second "Conformité
+  // : Sans objet" line three lines below this one saying the same thing
+  // (issue #47's related duplication); the explanation still appears
+  // exactly where "Sans objet" is first encountered.
   const legalBox = theme.legalRelevance
     ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(theme.legalRelevance)}</p>`
-    : `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(t.conformityNotApplicable)}</p>`;
+    : `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(t.conformityNotApplicable)}${showConformityGloss ? ` <span style="font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</p>`;
 
   const gapNote = citationStat
     ? measuredCoreWebVitalGapNote(strings, language, citationStat, themeFindings, manifest)
@@ -500,7 +533,10 @@ function renderTheme(
   //   5. legal and citation context (unchanged content sources);
   //   6. footer metadata: Complexity (the plan renames the card's effort
   //      item and confines the word to this one detailed card), commercial
-  //      impact, affected pages, conformity, finding references.
+  //      impact, affected pages, conformity (issue #47: only when there is
+  //      a conformance status to state - a non-accessibility card's "Sans
+  //      objet" is stated once in the Exigence box above instead of being
+  //      repeated here), finding references.
   // The stored technical title is kept as is in this plan; presentation
   // order is the only change.
   const whyItMattersBox = `
@@ -537,11 +573,11 @@ function renderTheme(
       ${legalBox}
       ${citationBox}
       ${renderLcenCrossReferenceNote(strings, themeFindings)}
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.4fr);gap:var(--space-3);font-size:12px;margin-top:4px">
-        <span class="text-muted">${escapeHtml(t.complexityLabel)} : <strong style="color:var(--color-text)">${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
-        <span class="text-muted">${escapeHtml(t.impactLabel)} : <strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
-        <span class="text-muted">${escapeHtml(t.affectedPagesLabel)} : <strong style="color:var(--color-text)">${escapeHtml(pagesText)}</strong></span>
-        <span class="text-muted">${escapeHtml(t.conformityLabel)} : <strong style="color:${isNonConformant ? SEVERITY.critical.color : 'var(--color-neutral-500)'}">${escapeHtml(conformityValue)}</strong>${!isNonConformant && showConformityGloss ? ` <span style="font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</span>
+      <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:2px var(--space-4);font-size:12px;margin-top:4px">
+        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.complexityLabel)} : <strong style="color:var(--color-text)">${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
+        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.impactLabel)} : <strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
+        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.affectedPagesLabel)} : <strong style="color:var(--color-text)">${escapeHtml(pagesText)}</strong></span>
+        ${isNonConformant ? `<span class="text-muted" style="white-space:nowrap">${escapeHtml(t.conformityLabel)} : <strong style="color:${SEVERITY.critical.color}">${escapeHtml(conformityValue)}</strong></span>` : ''}
         <span class="text-muted">${escapeHtml(t.refsLabel)} : ${formatCappedFindingIdLinks(theme.findingIds, language, strings.findingsAppendix)}</span>
       </div>
     </div>
@@ -667,13 +703,19 @@ export function renderThemes(
 ): string {
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
+  // Issue #41: the same visited-page population the "sur {totalPages}"
+  // denominator counts, threaded into both evidence paths so a priority's
+  // page count can never exceed it.
+  const scopePageUrls = new Set(
+    manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
+  );
   // Plan 018 step 6: the fallback path goes through buildLegacyPriority so
   // even test/compatibility priorities carry the deterministic evidence the
   // observation block renders.
   const renderedPriorities =
     priorities ??
     selectRenderedThemes(analysis.themes, findingsById).map((theme, index) =>
-      buildLegacyPriority(theme, index + 1, findingsById, analysis.language),
+      buildLegacyPriority(theme, index + 1, findingsById, analysis.language, scopePageUrls),
     );
   const sortedThemes = renderedPriorities.map((priority) => priority.theme);
   const sector = sectorOverride ?? analysis.obligationAssessment?.sector ?? 'general';
@@ -746,6 +788,7 @@ export function renderThemes(
         theme.priorityRank === firstNotApplicableRank,
         turnoverEur,
         priority,
+        scopePageUrls,
       );
     })
     .join('');

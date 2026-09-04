@@ -92,6 +92,58 @@ describe('renderToc', () => {
     });
   });
 
+  // Issue #49: section-14 (Prochaines étapes) used to be listed inside the
+  // early "Décisions et actions" group although the body renders it after
+  // every evidence section, so the TOC's ordinals read 4, 5, 6, 12, then
+  // 7, 8, 9 - visibly out of order on the report's first navigation page.
+  // The regression class is "any group membership that stops the rendered
+  // ordinals being monotonic top to bottom", so that is what is asserted,
+  // not one group's contents.
+  describe('issue #49: the rendered ordinals never run backwards down the page', () => {
+    function ordinalsInRenderOrder(html: string): number[] {
+      return [...html.matchAll(/flex:none">(\d+)<\/span>/gu)].map((m) => Number(m[1]));
+    }
+
+    it('is strictly increasing by 1, top to bottom, when every section is included (fr)', () => {
+      const ordinals = ordinalsInRenderOrder(renderToc(getStrings('fr'), ALL_SECTIONS));
+      expect(ordinals).toHaveLength(SECTION_IDS.length);
+      expect(ordinals).toEqual(ordinals.map((_, i) => i + 1));
+    });
+
+    it('is strictly increasing by 1, top to bottom, when every section is included (en)', () => {
+      const ordinals = ordinalsInRenderOrder(renderToc(getStrings('en'), ALL_SECTIONS));
+      expect(ordinals).toEqual(ordinals.map((_, i) => i + 1));
+    });
+
+    it('is still monotonic when a middle section is suppressed', () => {
+      const withoutObservations = new Set(ALL_SECTIONS);
+      withoutObservations.delete('section-06');
+      const ordinals = ordinalsInRenderOrder(renderToc(getStrings('fr'), withoutObservations));
+      expect(ordinals).toEqual(ordinals.map((_, i) => i + 1));
+    });
+
+    it("the next-steps row's ordinal is greater than every evidence section's, matching the body order", () => {
+      const html = renderToc(getStrings('fr'), ALL_SECTIONS);
+      const ordinalOf = (id: SectionId): number => {
+        const anchor = html.indexOf(`href="#${id}"`);
+        const row = html.slice(
+          html.lastIndexOf('<div style="display:flex;align-items:baseline', anchor),
+          anchor,
+        );
+        return Number(/flex:none">(\d+)<\/span>/.exec(row)?.[1]);
+      };
+      for (const evidenceId of [
+        'section-06',
+        'section-07',
+        'section-08',
+        'section-09',
+        'section-10',
+      ] as const) {
+        expect(ordinalOf('section-14')).toBeGreaterThan(ordinalOf(evidenceId));
+      }
+    });
+  });
+
   // item 2: a section suppressed for having no content (observations.ts,
   // section-06, when nothing was diverted) must disappear from the TOC
   // too, not just the body, and every later row must renumber to close

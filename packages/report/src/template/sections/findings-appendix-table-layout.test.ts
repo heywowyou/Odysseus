@@ -58,18 +58,49 @@ describe('2026-08-24: annex finding ids never break mid-token across a page frag
 
   it('gives every finding row its own column widths, not just the header row', async () => {
     const html = await render();
-    const idCells = html.match(/<td[^>]*>f\d{3}<\/td>/gu) ?? [];
-    expect(idCells.length).toBeGreaterThan(0);
-    for (const cell of idCells) expect(cell).toContain('width:');
+    // Issue #45 moved each finding's four cells into a per-row grid inside
+    // one atomic colspan="4" row (so a finding can never be split from its
+    // own continuation lines). The grid repeats the colgroup's widths, so
+    // every finding row still lays out identically to the header's columns
+    // wherever a fragment lands.
+    const rowGrids = html.match(/display:grid;grid-template-columns:80px 90px 100px auto/gu) ?? [];
+    const findingRows = html.match(/id="annexref-/gu) ?? [];
+    expect(findingRows.length).toBeGreaterThan(0);
+    expect(rowGrids).toHaveLength(findingRows.length);
   });
 
   it('renders every finding id cell as nowrap, never overflow-wrap:anywhere', async () => {
     const html = await render();
-    const idCells = html.match(/<td[^>]*>f\d{3}<\/td>/gu) ?? [];
+    const idCells =
+      html.match(
+        /<div style="font-family:ui-monospace,monospace;white-space:nowrap">f\d{3}<\/div>/gu,
+      ) ?? [];
     expect(idCells.length).toBeGreaterThan(0);
     for (const cell of idCells) {
       expect(cell).toContain('white-space:nowrap');
       expect(cell).not.toContain('overflow-wrap:anywhere');
+    }
+  });
+
+  // Issue #45: the atomic row carries the guarantee inline as well, so it
+  // is declared where the rows are built and does not depend on the
+  // stylesheet rule alone.
+  it('renders each finding as one atomic row that can never split from its continuation lines', async () => {
+    const html = await render();
+    const rows = html.match(/<tr id="annexref-[^"]*" style="break-inside:avoid">/gu) ?? [];
+    expect(rows.length).toBeGreaterThan(0);
+    // No finding renders a separate continuation <tr> that could be
+    // stranded alone at a page top: the Fichiers/Pages lines live inside
+    // the finding's own single <td colspan="4">.
+    expect(html).not.toContain('appendix-url-row');
+    expect(html).not.toContain('colspan="4" style="padding:0 var(--space-2) 6px');
+    const continuationLines = html.match(/class="url-cell" style="padding-top:6px/gu) ?? [];
+    expect(continuationLines.length).toBeGreaterThan(0);
+    for (const findingRow of rows) {
+      const rowStart = html.indexOf(findingRow);
+      const nextRow = html.indexOf('<tr', rowStart + 1);
+      const rowHtml = html.slice(rowStart, nextRow === -1 ? undefined : nextRow);
+      expect(rowHtml).toContain('<td colspan="4"');
     }
   });
 });

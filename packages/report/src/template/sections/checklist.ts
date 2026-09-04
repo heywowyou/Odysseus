@@ -18,7 +18,12 @@ import { LEVEL_COLOR } from '../design-tokens.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
 
 function headCell(label: string): string {
-  return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
+  // white-space:nowrap (issue #48): a header label is a single word in both
+  // languages, so wrapping can never help it fit - it can only overflow its
+  // column into the neighbour's, which is the "COMPLEXITÉIMPACT" collision.
+  // Keeping the label on one line makes the column-width choice below the
+  // single place that decides whether it fits.
+  return `<div style="padding:var(--space-2);font-size:11px;letter-spacing:0.02em;text-transform:uppercase;white-space:nowrap;color:color-mix(in srgb, var(--color-text) 60%, transparent);border-bottom:1px solid var(--color-divider)">${escapeHtml(label)}</div>`;
 }
 
 function cell(html: string): string {
@@ -56,6 +61,15 @@ export function renderChecklist(
   const c = strings.checklist;
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
   const totalPagesScanned = manifest.pages.filter((page) => page.status === 'visited').length;
+  // Issue #41: the PAGES cell renders "N/M" against the visited-page total,
+  // so the numerator must count the same population. A finding can cite a
+  // URL outside the visited scope (an origin-level finding recorded against
+  // a discovered-but-not-scanned page), and counting it raw produced a real
+  // report's "29/28" - a ratio a reader uses to decide whether to trust the
+  // rest of the numbers.
+  const scopePageUrls = new Set(
+    manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
+  );
   const sortedThemes = priorities
     ? priorities.map((priority) => priority.theme)
     : selectRenderedThemes(analysis.themes, findingsById);
@@ -85,7 +99,9 @@ export function renderChecklist(
       const themeFindings = theme.findingIds
         .map((id) => findingsById.get(id))
         .filter((f): f is Finding => f !== undefined);
-      const uniquePages = new Set(themeFindings.flatMap((f) => f.pageUrls)).size;
+      const uniquePages = new Set(
+        themeFindings.flatMap((f) => f.pageUrls).filter((url) => scopePageUrls.has(url)),
+      ).size;
       const wcagCriteria = [...new Set(themeFindings.flatMap((f) => f.wcagCriteria))].sort(
         compareCriteria,
       );
@@ -104,12 +120,24 @@ export function renderChecklist(
     })
     .join('');
 
+  // Issue #48: the COMPLEXITÉ header used a fixed 70px column, narrower
+  // than the uppercase label at 11px with 0.02em tracking, so the header
+  // overflowed into the IMPACT column and read as one merged
+  // "COMPLEXITÉIMPACT" token on the page designed to be handed to a
+  // contractor alone. The complexity column is now sized to its content
+  // (max-content: the widest of the header and the Faible/Moyen/Élevé
+  // cells), which cannot collide in either language and cannot regress
+  // if a label is ever reworded - reducing the letter-spacing was not an
+  // option, since 0.02em uppercase tracking is a design token
+  // (docs/report/report-design-tokens.md). The other columns keep their
+  // fixed widths; their labels fit with headroom in both languages,
+  // asserted in checklist-overflow.test.ts.
   return sheet(
     `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
     <p style="font-size:12px;opacity:0.7;margin-bottom:4px">${escapeHtml(identifier)}</p>
     <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(c.intro)}</p>
-    <div style="display:grid;grid-template-columns:30px 1fr 70px 70px 60px 110px 80px;font-size:12.5px">
+    <div style="display:grid;grid-template-columns:30px 1fr max-content 70px 60px 110px 80px;font-size:12.5px">
       ${headCell(c.rankColumnLabel)}
       ${headCell(c.priorityColumnLabel)}
       ${headCell(c.complexityColumnLabel)}

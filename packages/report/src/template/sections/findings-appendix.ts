@@ -98,21 +98,18 @@ const APPENDIX_TABLE_STYLE =
  *  cells makes every fragment lay out identically whether or not it happens
  *  to contain the header - but not on its own: table-layout:fixed reads the
  *  first row of the fragment, and a page can open on a full-width
- *  colspan="4" page-URL row, which declares no column widths at all. The
- *  colgroup below is what actually pins the columns, since it applies to the
- *  table regardless of which row leads the fragment. Both are kept: the
- *  colgroup is the guarantee, the per-cell widths make each row
- *  self-describing if a future change ever splits these into separate
- *  tables. */
+ *  colspan="4" row, which declares no column widths at all. The colgroup
+ *  below is what actually pins the columns, since it applies to the table
+ *  regardless of which row leads the fragment. Since issue #45 every
+ *  finding row IS a full-width colspan="4" row (one atomic row per finding,
+ *  see renderSubTableRow), so the colgroup is the only table-level width
+ *  declaration that still reaches every fragment; each row repeats the
+ *  widths on its own internal grid so its four columns keep the header's
+ *  proportions wherever the fragment lands. */
 const APPENDIX_COLUMN_WIDTHS = ['80px', '90px', '100px', 'auto'] as const;
 
 function headCell(label: string, width: string): string {
   return `<th style="width:${width};padding:6px var(--space-2);font-size:10px;letter-spacing:0.02em;text-transform:uppercase;text-align:left;font-weight:400;color:color-mix(in srgb, var(--color-text) 55%, transparent);border-bottom:1px solid var(--color-divider);white-space:nowrap">${escapeHtml(label)}</th>`;
-}
-
-function cell(html: string, extra = '', width?: string): string {
-  const widthRule = width === undefined ? '' : `width:${width};`;
-  return `<td style="${widthRule}padding:6px var(--space-2);border-bottom:1px solid var(--color-divider);${extra}">${html}</td>`;
 }
 
 /** item 25: every finding row states a page count ("9 pages") and never
@@ -186,12 +183,12 @@ function renderPageUrlList(
     }
   }
 
-  // paged.css's `.appendix-url-row { break-before: avoid }` keeps this row
-  // attached to the finding row directly above it - real <tr> siblings,
-  // unlike the old display:contents `.row-atomic` wrapper, are two
-  // independently breakable fragments by default, so this replaces that
-  // wrapper's atomicity for the one pair of rows that actually needs it.
-  return `<tr class="appendix-url-row"><td class="url-cell" colspan="4" style="padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.pagesColumnLabel)} : ${escapeHtml(urlsText)}</td></tr>`;
+  // Issue #45: this line lives INSIDE the finding's own <tr> (see
+  // renderSubTableRow), as a full-width line under the row's four-column
+  // grid - the old separate continuation <tr> could be stranded alone at
+  // the top of a page, opening 15 of 26 pages of a real delivered PDF
+  // mid-row with no finding id, rule or column header in sight.
+  return `<div class="url-cell" style="padding-top:6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.pagesColumnLabel)} : ${escapeHtml(urlsText)}</div>`;
 }
 
 /** item 3.1's own suggested cap. */
@@ -280,7 +277,9 @@ function renderResourceUrlList(
       : shown.join(', ');
   const label = truncated ? a.affectedFilesSampleLabel : a.affectedFilesLabel;
 
-  return `<tr class="appendix-url-row"><td class="url-cell" colspan="4" style="padding:0 var(--space-2) 6px;font-size:10.5px;opacity:0.6">${escapeHtml(label)} : ${escapeHtml(text)}</td></tr>`;
+  // Issue #45: rendered inside the finding's own atomic <tr>, like the
+  // pages line above (see renderSubTableRow).
+  return `<div class="url-cell" style="padding-top:6px;font-size:10.5px;opacity:0.6">${escapeHtml(label)} : ${escapeHtml(text)}</div>`;
 }
 
 /** item 3.3: the anchor formatFindingIdLinks (html-utils.ts) links to from
@@ -312,6 +311,33 @@ function selectorCellStyle(selector: string): string {
   return `font-family:ui-monospace,monospace;overflow-wrap:anywhere;word-break:normal;hyphens:none;opacity:0.8;font-size:${fontSize}`;
 }
 
+/** Issue #45: one finding is ONE table row. The data cells and the
+ *  "Fichiers :" / "Pages :" continuation lines used to be separate <tr>
+ *  siblings kept together only by CSS hints (break-inside:avoid on each
+ *  row, plus .appendix-url-row's break-before:avoid), and a real delivered
+ *  PDF proved those hints do not hold in Paged.js fragmentation: 15 of 26
+ *  appendix pages opened mid-row, on a bare orphaned continuation line
+ *  ("Pages : Mêmes pages que f006") or a selector whose finding id, rule
+ *  and severity sat pages earlier - in the annex explicitly labelled
+ *  "À transmettre à votre prestataire technique".
+ *
+ *  The whole finding now renders as a single <tr> whose one colspan="4"
+ *  cell contains the four-column grid (same widths as the colgroup, so
+ *  the columns still line up with the header row) followed by the
+ *  continuation lines. paged.css's `table tbody tr { break-inside: avoid }`
+ *  then keeps id, page count, occurrences, selector, files and pages
+ *  together as one atomic unit - and stays inside its inline duplicate on
+ *  the row itself, so the guarantee is declared where the rows are built.
+ *
+ *  This is bounded per-row atomicity, exactly what trade-off 17 allows: a
+ *  single finding's height is bounded by its selector, its capped 8-file
+ *  list and its capped 5-URL list. It is deliberately NOT group-level
+ *  break-inside:avoid (a rule group's rendered height is unbounded, and
+ *  the removed .appendix-group/.row-atomic wrappers triggered Paged.js's
+ *  "Layout repeated" infinite-loop guard on real reports), and
+ *  deliberately NOT the old display:contents `.row-atomic` div trick:
+ *  these are real <tr> elements, the fragmentation unit Paged.js handles
+ *  reliably (see the 2026-08-24 comment above). */
 function renderSubTableRow(
   strings: ReportStrings,
   language: ReportLanguage,
@@ -336,14 +362,16 @@ function renderSubTableRow(
         )
       : (finding.elements[0]?.selector ?? '');
   return `
-    <tr id="annexref-${escapeHtml(finding.findingId)}">
-      ${cell(escapeHtml(finding.findingId), 'font-family:ui-monospace,monospace;white-space:nowrap', APPENDIX_COLUMN_WIDTHS[0])}
-      ${cell(formatNumber(finding.pageUrls.length, language), '', APPENDIX_COLUMN_WIDTHS[1])}
-      ${cell(formatNumber(finding.occurrences, language), '', APPENDIX_COLUMN_WIDTHS[2])}
-      ${cell(escapeHtml(selector), selectorCellStyle(selector), APPENDIX_COLUMN_WIDTHS[3])}
+    <tr id="annexref-${escapeHtml(finding.findingId)}" style="break-inside:avoid">
+      <td colspan="4" style="padding:6px var(--space-2);border-bottom:1px solid var(--color-divider)">
+        <div style="display:grid;grid-template-columns:${APPENDIX_COLUMN_WIDTHS.join(' ')}">
+          <div style="font-family:ui-monospace,monospace;white-space:nowrap">${escapeHtml(finding.findingId)}</div>
+          <div>${formatNumber(finding.pageUrls.length, language)}</div>
+          <div>${formatNumber(finding.occurrences, language)}</div>
+          <div style="${selectorCellStyle(selector)}">${escapeHtml(selector)}</div>
+        </div>${renderResourceUrlList(strings, language, finding)}${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup)}
+      </td>
     </tr>
-    ${renderResourceUrlList(strings, language, finding)}
-    ${renderPageUrlList(strings, language, finding, totalPagesScanned, samePagesAsFindingId, clusterLookup)}
   `;
 }
 
@@ -461,6 +489,21 @@ function renderRuleGroup(
   // Grouping badge+title into one non-flex inline wrapper lets ordinary
   // text-wrapping keep the badge adjacent to the title's first line -
   // only the title's own overflow text wraps, not the badge.
+  //
+  // Issue #45, second half - the column header is NOT repeated when a
+  // rule group's rows continue onto a new page, and this file cannot fix
+  // that: the `table thead { display: table-header-group }` rule that
+  // should repeat it is already in paged.css, and Paged.js 0.4.3 does not
+  // implement table-header-group repetition (confirmed against a real
+  // 38-page report, paged.css's D3 comment) - repeating the header needs
+  // an engine-level handler in the render pipeline, not a markup or CSS
+  // change here. Splitting each group into one table per page-worth of
+  // rows cannot work either: sheet layout is decided by Paged.js at render
+  // time, and a hand-split table would just break at different, equally
+  // arbitrary points. What this file CAN do, and does since the
+  // atomic-row change above, is make sure a continuation page can only
+  // ever open on a complete finding row, so the reader paging back needs
+  // to find the row's own id, never a fragment.
   return `
     <div style="margin-bottom:var(--space-4)">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">

@@ -21,6 +21,19 @@ export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<Secti
   // docs/report/report-design-system.md's section table. Rows inside a group
   // stay in registry order, and every group keeps only the ids actually
   // included, so a suppressed section drops its whole row, not its group.
+  //
+  // Issue #49: section-14 (Prochaines étapes) used to sit in the decisions-
+  // and-actions group because that is its narrative role, but the body
+  // renders it after every evidence section (registry order: it sits between
+  // section-10 and the legal reference), so its live ordinal is always the
+  // largest of the numbered middle sections. Listing it in an early group
+  // made the TOC read 4, 5, 6, 12, then 7, 8, 9 - both the section numbers
+  // and the page numbers ran backwards across the group boundary, on the
+  // first navigational page of a paid deliverable. Group membership now
+  // follows document order: the row closes the evidence group, which keeps
+  // every ordinal monotonic top to bottom. The mockup's own tocGroups data
+  // still carries the old membership (n: '12' inside Décisions et actions);
+  // it needs the same one-row move the next time that file is touched.
   const groups: Array<{ label: string; ids: readonly SectionId[] }> = [
     {
       label: strings.toc.executiveContextGroupLabel,
@@ -28,11 +41,11 @@ export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<Secti
     },
     {
       label: strings.toc.decisionsActionsGroupLabel,
-      ids: ['section-04', 'section-05', 'section-05b', 'section-14'],
+      ids: ['section-04', 'section-05', 'section-05b'],
     },
     {
       label: strings.toc.detailedEvidenceGroupLabel,
-      ids: ['section-06', 'section-07', 'section-08', 'section-09', 'section-10'],
+      ids: ['section-06', 'section-07', 'section-08', 'section-09', 'section-10', 'section-14'],
     },
     { label: strings.toc.legalReferenceGroupLabel, ids: ['section-02'] },
     {
