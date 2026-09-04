@@ -1,0 +1,426 @@
+{
+  "$comment": "Export of 21 orphaned reports rows whose auditId had no audits collection entry (audits deleted before the delete cascade existed). Exported 2026-09-04, then purged from Atlas with the operator's approval in GitHub issue #62's integrity-sweep follow-up. Kept for reversibility; see issue #62 and #38.",
+  "exportedAt": "2026-09-04T08:18:06.759Z",
+  "count": 21,
+  "rows": [
+    {
+      "_id": "6a822295f16a6d73c5d97a9c",
+      "auditId": "75cf8fc9-4ac9-4848-af18-02a291c0b629",
+      "language": "fr",
+      "reportTemplateVersion": 1,
+      "analysisGeneratedAt": "2026-08-02T22:51:04.583Z",
+      "fileRef": "reports/2026-08-16T20-50-29Z-fr.pdf",
+      "generatedAt": "2026-08-16T20:50:29.167Z",
+      "__v": 0
+    },
+    {
+      "_id": "6a8db1f0b82d0a88fd77a034",
+      "auditId": "f1ed627a-8e12-4677-8ca1-723032d4466c",
+      "language": "fr",
+      "reportTemplateVersion": 1,
+      "analysisGeneratedAt": "2026-08-02T21:33:55.741Z",
+      "fileRef": "reports/2026-08-25T15-17-04Z-fr.pdf",
+      "generatedAt": "2026-08-25T15:17:04.831Z",
+      "__v": 0
+    },
+    {
+      "_id": "6a96db68ed272091e3520963",
+      "reportId": "57c66a00-b255-4307-ad6d-738ca2a54777",
+      "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+      "analysisId": "81f77d6b-c098-4b97-8252-da53a80f485b",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "3c929f623820fd02",
+        "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "efada91",
+      "pdfDigest": "sha256:22c7e1b344efcf09b367849d4a7eb003469571c37bdeb57ab64ecdf249547e8c",
+      "language": "fr",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-08-02T21:33:55.741Z",
+      "fileRef": "reports/2026-09-01T14-04-21Z-t2-efada91-57c66a00-b255-4307-ad6d-738ca2a54777-fr.pdf",
+      "generatedAt": "2026-09-01T14:04:21.540Z",
+      "pageCount": 34,
+      "__v": 0
+    },
+    {
+      "_id": "6a96db6aed272091e3520964",
+      "reportId": "b8d04635-ae93-409f-a5a2-359f9575d798",
+      "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+      "analysisId": "7b145fa8-b93a-423f-8c69-1715eede26ce",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "3c929f623820fd02",
+        "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "efada91",
+      "pdfDigest": "sha256:7e661f417d13ec70be64e816fae967bcfa90e3f4c83e73b3fd5e4eb466eddbe8",
+      "language": "en",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-08-02T18:30:16.575Z",
+      "fileRef": "reports/2026-09-01T14-04-24Z-t2-efada91-b8d04635-ae93-409f-a5a2-359f9575d798-en.pdf",
+      "generatedAt": "2026-09-01T14:04:24.176Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a96dca02068ff199edc95e7",
+      "reportId": "d124411c-b86d-48c5-a864-2484d5f1635f",
+      "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+      "analysisId": "88048b10-8872-4a01-8efa-72cbb319f633",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "3c929f623820fd02",
+        "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "efada91",
+      "pdfDigest": "sha256:c4fa83f97f424cd03151ee805e6510656e47f79f0a24e76cb009dee64881eb88",
+      "language": "fr",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-09-01T14:06:26.715Z",
+      "fileRef": "reports/2026-09-01T14-09-33Z-t2-efada91-d124411c-b86d-48c5-a864-2484d5f1635f-fr.pdf",
+      "generatedAt": "2026-09-01T14:09:33.918Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a96dcba02f2e1c6a8293d53",
+      "reportId": "0702fc6a-2d8b-4930-9a25-981d86b1d3c6",
+      "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+      "analysisId": "88048b10-8872-4a01-8efa-72cbb319f633",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "3c929f623820fd02",
+        "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "efada91",
+      "pdfDigest": "sha256:b0db25644f310a64abec0c880c65e519c4b2dc73e8ecf79d1f877a557f995437",
+      "language": "fr",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-09-01T14:06:26.715Z",
+      "fileRef": "reports/2026-09-01T14-09-59Z-t2-efada91-0702fc6a-2d8b-4930-9a25-981d86b1d3c6-fr.pdf",
+      "generatedAt": "2026-09-01T14:09:59.501Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a96ddcfadd6cde71d92ae84",
+      "reportId": "5973cfda-000e-4b09-b860-01d2ff318a78",
+      "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+      "analysisId": "cf4fea1c-e438-4600-ac62-72cc5cceba0d",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "3c929f623820fd02",
+        "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "efada91",
+      "pdfDigest": "sha256:68945b8455b96c7a2b4e4408caf2bfcad4cac8ec6e74272f053d58a75950eccc",
+      "language": "en",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-09-01T14:12:09.168Z",
+      "fileRef": "reports/2026-09-01T14-14-36Z-t2-efada91-5973cfda-000e-4b09-b860-01d2ff318a78-en.pdf",
+      "generatedAt": "2026-09-01T14:14:36.789Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a96e5ce61d88a5fe6df2623",
+      "reportId": "28921d1d-3da9-44c5-a01e-2d82543007b9",
+      "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+      "analysisId": "81f77d6b-c098-4b97-8252-da53a80f485b",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "3c929f623820fd02",
+        "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "7a41759",
+      "pdfDigest": "sha256:c9668c4568080761cd924301c8d0b935ec26181bd4540cab91af043a757637f8",
+      "language": "fr",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-08-02T21:33:55.741Z",
+      "fileRef": "reports/2026-09-01T14-48-43Z-t2-7a41759-28921d1d-3da9-44c5-a01e-2d82543007b9-fr.pdf",
+      "generatedAt": "2026-09-01T14:48:43.956Z",
+      "pageCount": 34,
+      "__v": 0
+    },
+    {
+      "_id": "6a96e5d161d88a5fe6df2624",
+      "reportId": "5c7a25c1-42d1-4d91-aae3-a7151a600c64",
+      "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+      "analysisId": "7b145fa8-b93a-423f-8c69-1715eede26ce",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "3c929f623820fd02",
+        "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "7a41759",
+      "pdfDigest": "sha256:c01b6f702c68a8f57f74771f5657e664816403a77a088c995bda9ac07c525556",
+      "language": "en",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-08-02T18:30:16.575Z",
+      "fileRef": "reports/2026-09-01T14-48-46Z-t2-7a41759-5c7a25c1-42d1-4d91-aae3-a7151a600c64-en.pdf",
+      "generatedAt": "2026-09-01T14:48:46.712Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a96e5db8b8f64a6e7d5ae41",
+      "reportId": "f4e9c56b-461a-4553-a9a6-5fcee6ab12f8",
+      "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+      "analysisId": "88048b10-8872-4a01-8efa-72cbb319f633",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "3c929f623820fd02",
+        "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "7a41759",
+      "pdfDigest": "sha256:044da7feaee822e19a1703748f89b91648da9e15e1b94310286bdd1bd2b9ccaf",
+      "language": "fr",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-09-01T14:06:26.715Z",
+      "fileRef": "reports/2026-09-01T14-48-56Z-t2-7a41759-f4e9c56b-461a-4553-a9a6-5fcee6ab12f8-fr.pdf",
+      "generatedAt": "2026-09-01T14:48:56.545Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a96e5dd8b8f64a6e7d5ae42",
+      "reportId": "5c2ae5de-b878-4f92-8e80-be77909df3af",
+      "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+      "analysisId": "cf4fea1c-e438-4600-ac62-72cc5cceba0d",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "3c929f623820fd02",
+        "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "7a41759",
+      "pdfDigest": "sha256:9a1ea63dd8d330d4b0c195d9246e7db599ef271ed8c78edb54584691eaabb572",
+      "language": "en",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-09-01T14:12:09.168Z",
+      "fileRef": "reports/2026-09-01T14-48-59Z-t2-7a41759-5c2ae5de-b878-4f92-8e80-be77909df3af-en.pdf",
+      "generatedAt": "2026-09-01T14:48:59.149Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a983f6b08905882d551f9f2",
+      "reportId": "5046812b-ade9-490d-9075-3a26d611afb0",
+      "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+      "analysisId": "81f77d6b-c098-4b97-8252-da53a80f485b",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "5caf9d184d538f8b",
+        "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "3b79441",
+      "pdfDigest": "sha256:1e5c0fa396094998f8c9908ce96171ea646fbac6fd8e481dfd8a921dac20a1da",
+      "language": "fr",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-08-02T21:33:55.741Z",
+      "fileRef": "reports/2026-09-02T15-23-21Z-t2-3b79441-5046812b-ade9-490d-9075-3a26d611afb0-fr.pdf",
+      "generatedAt": "2026-09-02T15:23:21.503Z",
+      "pageCount": 34,
+      "__v": 0
+    },
+    {
+      "_id": "6a983f6e08905882d551f9f3",
+      "reportId": "054f4ddb-3461-475c-b1df-9001006273d3",
+      "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+      "analysisId": "7b145fa8-b93a-423f-8c69-1715eede26ce",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "5caf9d184d538f8b",
+        "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "3b79441",
+      "pdfDigest": "sha256:4a816cc8f156c0bb9a66e78066a0f1964839b73dcf9feed99b21000a479410f9",
+      "language": "en",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-08-02T18:30:16.575Z",
+      "fileRef": "reports/2026-09-02T15-23-24Z-t2-3b79441-054f4ddb-3461-475c-b1df-9001006273d3-en.pdf",
+      "generatedAt": "2026-09-02T15:23:24.042Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a984007dd569e5214e1f58f",
+      "reportId": "21eeef0f-8877-475c-ae3c-af66155fcd5c",
+      "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+      "analysisId": "2e09fcb0-9402-45f4-aa62-121a3a47e271",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "5caf9d184d538f8b",
+        "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "3b79441",
+      "pdfDigest": "sha256:d6e3966cf4dca4ef296a67eac2af94ab5db1d77b20042cd94e62c54b6fe23464",
+      "language": "fr",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-09-02T15:24:29.290Z",
+      "fileRef": "reports/2026-09-02T15-25-56Z-t2-3b79441-21eeef0f-8877-475c-ae3c-af66155fcd5c-fr.pdf",
+      "generatedAt": "2026-09-02T15:25:56.847Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a984009dd569e5214e1f590",
+      "reportId": "0f0d1da0-a222-49dd-acf1-609c2b4d0949",
+      "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+      "analysisId": "6955744f-93e0-4081-aaa4-4df2b023110b",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "5caf9d184d538f8b",
+        "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "3b79441",
+      "pdfDigest": "sha256:3ee146f44a023b0ab863b6cb97e0f509b1f988d368d1009d171e35ea03842704",
+      "language": "en",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-09-02T15:25:12.949Z",
+      "fileRef": "reports/2026-09-02T15-25-59Z-t2-3b79441-0f0d1da0-a222-49dd-acf1-609c2b4d0949-en.pdf",
+      "generatedAt": "2026-09-02T15:25:59.467Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a98692b3821a25b8e532ab2",
+      "reportId": "a9b763ed-c8e5-4095-9e17-6f6ffe854e9f",
+      "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+      "analysisId": "81f77d6b-c098-4b97-8252-da53a80f485b",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "5caf9d184d538f8b",
+        "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "7a963bf",
+      "pdfDigest": "sha256:4afb4ac6c3aa985df8ce2e2c3c8fb429191bd3b1056f4831a6debdc9d6919b01",
+      "language": "fr",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-08-02T21:33:55.741Z",
+      "fileRef": "reports/2026-09-02T18-21-28Z-t2-7a963bf-a9b763ed-c8e5-4095-9e17-6f6ffe854e9f-fr.pdf",
+      "generatedAt": "2026-09-02T18:21:28.949Z",
+      "pageCount": 34,
+      "__v": 0
+    },
+    {
+      "_id": "6a98692e3821a25b8e532ab3",
+      "reportId": "2ab6e995-a51d-4e20-bc1c-b41fedbde9f5",
+      "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+      "analysisId": "7b145fa8-b93a-423f-8c69-1715eede26ce",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "5caf9d184d538f8b",
+        "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "7a963bf",
+      "pdfDigest": "sha256:ae85446b3c25122bb54560c8930537f6e6af6122238c85ff1110f65174f837fc",
+      "language": "en",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-08-02T18:30:16.575Z",
+      "fileRef": "reports/2026-09-02T18-21-31Z-t2-7a963bf-2ab6e995-a51d-4e20-bc1c-b41fedbde9f5-en.pdf",
+      "generatedAt": "2026-09-02T18:21:31.690Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a98693893c90a2138b388c6",
+      "reportId": "bf247fe3-7d79-4348-881b-44acb1d2ff1e",
+      "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+      "analysisId": "2e09fcb0-9402-45f4-aa62-121a3a47e271",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "5caf9d184d538f8b",
+        "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "7a963bf",
+      "pdfDigest": "sha256:051601d5a7276cc55149250f90c112635045859e45d7bd5a085ae9a960a20d1c",
+      "language": "fr",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-09-02T15:24:29.290Z",
+      "fileRef": "reports/2026-09-02T18-21-41Z-t2-7a963bf-bf247fe3-7d79-4348-881b-44acb1d2ff1e-fr.pdf",
+      "generatedAt": "2026-09-02T18:21:41.670Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a98693a93c90a2138b388c7",
+      "reportId": "e83afc16-8833-46eb-a5d5-dcebb3fd07ce",
+      "auditId": "cc9e1d97-ec00-40ea-8aed-33e57ebff2a5",
+      "analysisId": "6955744f-93e0-4081-aaa4-4df2b023110b",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "5caf9d184d538f8b",
+        "findingsDigest": "sha256:270929664e0b9133170b93cb0f40e7fe1620a57d648aa44601b94e966097b4f4"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "7a963bf",
+      "pdfDigest": "sha256:a20ec14dabb23822545cdc1a8fe147d5c2cca4e49b53ef556ad326c45e9d21a1",
+      "language": "en",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-09-02T15:25:12.949Z",
+      "fileRef": "reports/2026-09-02T18-21-44Z-t2-7a963bf-e83afc16-8833-46eb-a5d5-dcebb3fd07ce-en.pdf",
+      "generatedAt": "2026-09-02T18:21:44.344Z",
+      "pageCount": 33,
+      "__v": 0
+    },
+    {
+      "_id": "6a98772539b0a33322844cd2",
+      "reportId": "d0c13692-4ae6-4d6b-b320-a611b1864720",
+      "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+      "analysisId": "81f77d6b-c098-4b97-8252-da53a80f485b",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "5caf9d184d538f8b",
+        "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "74f5464",
+      "pdfDigest": "sha256:de6ca4e1fe5a1403c15ab29cde9161b7e20479306c467ca12e5915791ec3525c",
+      "language": "fr",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-08-02T21:33:55.741Z",
+      "fileRef": "reports/2026-09-02T19-21-07Z-t2-74f5464-d0c13692-4ae6-4d6b-b320-a611b1864720-fr.pdf",
+      "generatedAt": "2026-09-02T19:21:07.223Z",
+      "pageCount": 34,
+      "__v": 0
+    },
+    {
+      "_id": "6a98772fa97a0c1990e552ef",
+      "reportId": "d7f48eef-2784-4753-a9de-c9e311516e48",
+      "auditId": "76811c8b-aa08-4581-8198-2f39d5833ea1",
+      "analysisId": "7b145fa8-b93a-423f-8c69-1715eede26ce",
+      "findingsProvenance": {
+        "findingsSchemaVersion": 1,
+        "normalizationFingerprint": "5caf9d184d538f8b",
+        "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
+      },
+      "rendererVersion": 2,
+      "rendererBuild": "74f5464",
+      "pdfDigest": "sha256:4ae991f1ef94176bf0b953ec8eb3c6a44ec4b75e7774669b33a913f065e9e27d",
+      "language": "en",
+      "reportTemplateVersion": 2,
+      "analysisGeneratedAt": "2026-08-02T18:30:16.575Z",
+      "fileRef": "reports/2026-09-02T19-21-17Z-t2-74f5464-d7f48eef-2784-4753-a9de-c9e311516e48-en.pdf",
+      "generatedAt": "2026-09-02T19:21:17.476Z",
+      "pageCount": 33,
+      "__v": 0
+    }
+  ]
+}
