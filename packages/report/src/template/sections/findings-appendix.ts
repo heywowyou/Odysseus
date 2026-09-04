@@ -490,18 +490,29 @@ function renderRuleGroup(
   // text-wrapping keep the badge adjacent to the title's first line -
   // only the title's own overflow text wraps, not the badge.
   //
-  // Issue #45, second half - the column header is NOT repeated when a
-  // rule group's rows continue onto a new page, and this file cannot fix
-  // that: the `table thead { display: table-header-group }` rule that
-  // should repeat it is already in paged.css, and Paged.js 0.4.3 does not
-  // implement table-header-group repetition (confirmed against a real
-  // 38-page report, paged.css's D3 comment) - repeating the header needs
-  // an engine-level handler in the render pipeline, not a markup or CSS
-  // change here. Splitting each group into one table per page-worth of
-  // rows cannot work either: sheet layout is decided by Paged.js at render
-  // time, and a hand-split table would just break at different, equally
-  // arbitrary points. What this file CAN do, and does since the
-  // atomic-row change above, is make sure a continuation page can only
+  // Issue #45, second half - the column header used to never repeat when a
+  // rule group's rows continued onto a new page, and this file cannot fix
+  // that alone: the `table thead { display: table-header-group }` rule in
+  // paged.css does not get honoured by Paged.js 0.4.3 (confirmed against a
+  // real 38-page report, paged.css's D3 comment) - repeating the header
+  // needs an engine-level handler in the render pipeline. What this file
+  // contributes is the `data-appendix-rule-id` marker on the table above:
+  // Paged.js clones the whole `<table>` element (attributes intact) into
+  // each page fragment it splits a group across, so pdf.ts can find every
+  // fragment belonging to the same rule group after layout and, if a
+  // fragment lost its `<thead>`, clone the header back in from the first
+  // fragment and re-paginate once. The cloned header carries
+  // `break-after:avoid` for exactly this reason: without it, a header
+  // inserted right before a continuation row can itself land alone at the
+  // very bottom of a page (an empty table fragment holding nothing but the
+  // header) while its own first row gets pushed to a further Paged.js
+  // continuation clone that lacks a header again - measured directly
+  // against a 30-row synthetic rule group before this rule was added.
+  // Splitting each group into one table per
+  // page-worth of rows cannot work either: sheet layout is decided by
+  // Paged.js at render time, and a hand-split table would just break at
+  // different, equally arbitrary points. What this file also does, since
+  // the atomic-row change above, is make sure a continuation page can only
   // ever open on a complete finding row, so the reader paging back needs
   // to find the row's own id, never a fragment.
   return `
@@ -517,9 +528,9 @@ function renderRuleGroup(
         ${vendorTag}
         <span style="font-size:11px;opacity:0.6">${renderRuleSum(strings, language, group)}</span>
       </div>
-      <table style="${APPENDIX_TABLE_STYLE}">
+      <table style="${APPENDIX_TABLE_STYLE}" data-appendix-rule-id="${escapeHtml(group.ruleId)}">
         <colgroup>${APPENDIX_COLUMN_WIDTHS.map((w) => `<col style="width:${w}">`).join('')}</colgroup>
-        <thead>
+        <thead style="break-after:avoid">
           <tr>
             ${headCell(a.findingIdColumnLabel, APPENDIX_COLUMN_WIDTHS[0])}
             ${headCell(a.pagesColumnLabel, APPENDIX_COLUMN_WIDTHS[1])}

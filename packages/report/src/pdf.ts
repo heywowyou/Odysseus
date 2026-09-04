@@ -71,7 +71,9 @@ const PAGEDJS_LAYOUT_REPEATED_MARKER = 'Layout repeated';
  *  Scoped to those classes rather than every element on the page so a
  *  deliberately repeated short string (a rule id like "f001" appearing
  *  in both a priority card and the annex, for instance) never false-
- *  positives. */
+ *  positives. Deliberately excludes `table`/`thead`: the appendix
+ *  thead-repair pass below (issue #45) intentionally clones a rule group's
+ *  header onto more than one page, which must never trip this check. */
 const ATOMIC_BLOCK_SELECTOR = '.card, .render-card, .theme-card, .glossary-entry, .section-head';
 
 /** One `.pagedjs_page` fragment's content, reduced to exactly what the
@@ -184,6 +186,115 @@ export interface RenderedPdfWithPageCount {
   pageCount: number;
 }
 
+/** Issue #45, second half. Paged.js clones a `<table data-appendix-rule-id>`
+ *  (findings-appendix.ts) into every page fragment it splits a rule group
+ *  across, attributes intact, but drops the `<thead>` from every fragment
+ *  after the first - Paged.js 0.4.3 does not implement CSS's
+ *  table-header-group repetition, confirmed against a real 38-page report
+ *  (paged.css's D3 comment). `continuationRowId` is the `annexref-<id>` id
+ *  of the first finding row on a fragment found missing its header. */
+export interface AppendixTableSplitPoint {
+  ruleId: string;
+  continuationRowId: string;
+}
+
+const MAX_APPENDIX_THEAD_REPAIR_PASSES = 3;
+
+/** Reads the live, post-layout DOM for any appendix table Paged.js split
+ *  across pages without repeating the header on a continuation fragment.
+ *  Pure detection, no mutation - the fix is applied to the pre-pagination
+ *  HTML source and re-laid-out from scratch (see insertRepeatedTheadsIntoHtml),
+ *  not by patching the DOM Paged.js already fragmented. */
+export async function detectAppendixTableSplits(page: Page): Promise<AppendixTableSplitPoint[]> {
+  return page.evaluate(() => {
+    const tables = Array.from(document.querySelectorAll('table[data-appendix-rule-id]'));
+    const byRuleId = new Map<string, Element[]>();
+    for (const table of tables) {
+      const ruleId = table.getAttribute('data-appendix-rule-id') ?? '';
+      const list = byRuleId.get(ruleId) ?? [];
+      list.push(table);
+      byRuleId.set(ruleId, list);
+    }
+    const splits: { ruleId: string; continuationRowId: string }[] = [];
+    for (const [ruleId, tablesForRule] of byRuleId) {
+      if (tablesForRule.length < 2) continue;
+      // The first element in document order is always the fragment that
+      // opened with the real header; only later fragments can have lost it.
+      for (let i = 1; i < tablesForRule.length; i++) {
+        const table = tablesForRule[i];
+        if (!table || table.querySelector('thead')) continue;
+        const firstRow = table.querySelector('tr[id^="annexref-"]');
+        if (firstRow?.id) splits.push({ ruleId, continuationRowId: firstRow.id });
+      }
+    }
+    return splits;
+  });
+}
+
+/** Extracts, per rule id, the exact source markup from a table's opening
+ *  `<table data-appendix-rule-id="...">` tag through its opening `<tbody>`
+ *  tag inclusive (colgroup + thead + tbody-open) - keyed by the first
+ *  occurrence in document order, which is always the one still carrying the
+ *  real header. Exported for unit testing without a browser. */
+export function extractAppendixTablePreambles(html: string): Map<string, string> {
+  const preambles = new Map<string, string>();
+  const regex = /<table[^>]*data-appendix-rule-id="([^"]*)"[^>]*>[\s\S]*?<tbody>/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(html)) !== null) {
+    const ruleId = match[1] ?? '';
+    if (!preambles.has(ruleId)) preambles.set(ruleId, match[0]);
+  }
+  return preambles;
+}
+
+/** Removes a degenerate side effect of insertRepeatedTheadsIntoHtml: Paged.js
+ *  can still open the freshly-reopened table right at a page boundary,
+ *  keeping only its cloned `<thead>` on the page being closed (an empty,
+ *  header-only box, measured at 28.5px) and pushing every row of that same
+ *  table onto the next page inside yet another reopened fragment that keeps
+ *  its own header. The real header the reader needs is the one on that next
+ *  fragment; this one is a duplicate with no rows under it, so it is deleted
+ *  from the DOM rather than left to print as a stray floating header line.
+ *  Safe to run unconditionally after layout has settled: nothing else can
+ *  reflow onto the space it leaves behind, since Paged.js already decided no
+ *  more content fit there. */
+async function removeEmptyAppendixTableGhosts(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const tables = Array.from(document.querySelectorAll('table[data-appendix-rule-id]'));
+    for (const table of tables) {
+      const hasThead = table.querySelector('thead');
+      const hasRow = table.querySelector('tr[id^="annexref-"]');
+      if (hasThead && !hasRow) table.remove();
+    }
+  });
+}
+
+/** Pure string transform, no browser needed: for each detected split point,
+ *  closes the currently-open table right before the continuation row and
+ *  reopens a fresh, valid sibling `<table>` (same rule id, colgroup and a
+ *  cloned header) starting at that row. This produces two ordinary,
+ *  well-formed tables in the source rather than one non-conforming table
+ *  with two `<thead>` elements, and mirrors what Paged.js already treats
+ *  each page's fragment as. Never forces a whole rule group onto one page
+ *  (trade-off 17): it only ever duplicates the header markup that was
+ *  already going to render at that exact row. */
+export function insertRepeatedTheadsIntoHtml(
+  html: string,
+  splits: readonly AppendixTableSplitPoint[],
+  tablePreambleByRuleId: ReadonlyMap<string, string>,
+): string {
+  let result = html;
+  for (const { ruleId, continuationRowId } of splits) {
+    const preamble = tablePreambleByRuleId.get(ruleId);
+    if (!preamble) continue;
+    const rowMarker = `<tr id="${continuationRowId}"`;
+    const rowIndex = result.indexOf(rowMarker);
+    if (rowIndex === -1) continue;
+    result = `${result.slice(0, rowIndex)}</tbody></table>${preamble}${result.slice(rowIndex)}`;
+  }
+  return result;
+}
+
 export async function renderPdfWithPageCountFromHtml(
   html: string,
   browser: Browser,
@@ -192,16 +303,6 @@ export async function renderPdfWithPageCountFromHtml(
   const context = await browser.newContext();
   const page = await context.newPage();
   try {
-    // The HTML is fully self-contained (CSS and fonts inlined as data
-    // URIs), so there is nothing to wait on network-wise; 'load' is
-    // enough. document.fonts.ready still matters even so: font-display:
-    // block means Chromium's own layout can proceed before the woff2
-    // decode finishes, and Paged.js measures element heights to decide
-    // page breaks - a font swap after that measurement produces different
-    // page breaks on every run (nocturne.css's own font-display comment).
-    await page.setContent(html, { waitUntil: 'load' });
-    await page.evaluate(() => document.fonts.ready);
-
     let pagedjsLayoutFailure: string | undefined;
     let debugNodePromise: Promise<void> | undefined;
     page.on('console', (msg) => {
@@ -229,22 +330,55 @@ export async function renderPdfWithPageCountFromHtml(
       }
     });
 
-    await page.addScriptTag({ content: pagedjsSource });
-    await page.evaluate(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const Paged = (globalThis as any).Paged;
-      const previewer = new Paged.Previewer();
-      await previewer.preview();
-    });
-
-    if (debugNodePromise) await debugNodePromise;
-    if (pagedjsLayoutFailure !== undefined) {
-      throw new Error(
-        `Report generation aborted: Paged.js hit its own layout-repeated guard and stopped ` +
-          `laying out the document early, which silently drops every page after that point. ` +
-          `Never shipped to a client. Paged.js message: "${pagedjsLayoutFailure}"`,
-      );
+    // The HTML is fully self-contained (CSS and fonts inlined as data
+    // URIs), so there is nothing to wait on network-wise; 'load' is
+    // enough. document.fonts.ready still matters even so: font-display:
+    // block means Chromium's own layout can proceed before the woff2
+    // decode finishes, and Paged.js measures element heights to decide
+    // page breaks - a font swap after that measurement produces different
+    // page breaks on every run (nocturne.css's own font-display comment).
+    async function runPagedjsPreview(currentHtml: string): Promise<void> {
+      pagedjsLayoutFailure = undefined;
+      debugNodePromise = undefined;
+      await page.setContent(currentHtml, { waitUntil: 'load' });
+      await page.evaluate(() => document.fonts.ready);
+      await page.addScriptTag({ content: pagedjsSource });
+      await page.evaluate(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const Paged = (globalThis as any).Paged;
+        const previewer = new Paged.Previewer();
+        await previewer.preview();
+      });
+      if (debugNodePromise) await debugNodePromise;
+      if (pagedjsLayoutFailure !== undefined) {
+        throw new Error(
+          `Report generation aborted: Paged.js hit its own layout-repeated guard and stopped ` +
+            `laying out the document early, which silently drops every page after that point. ` +
+            `Never shipped to a client. Paged.js message: "${pagedjsLayoutFailure}"`,
+        );
+      }
     }
+
+    let currentHtml = html;
+    await runPagedjsPreview(currentHtml);
+
+    // Issue #45, second half: repair any appendix rule-group table that
+    // lost its column header on a continuation page. Reports with no
+    // multi-page rule group pay nothing extra - detection finds no splits
+    // and the loop exits after the very first pass, exactly as before this
+    // fix. Bounded per MAX_APPENDIX_THEAD_REPAIR_PASSES: each pass can only
+    // ever push a fragment's own later rows onto a further page, matching
+    // trade-off 17's "no group-level atomicity, bounded per-row only".
+    for (let attempt = 0; attempt < MAX_APPENDIX_THEAD_REPAIR_PASSES; attempt++) {
+      const splits = await detectAppendixTableSplits(page);
+      if (splits.length === 0) break;
+      const preambles = extractAppendixTablePreambles(currentHtml);
+      const patched = insertRepeatedTheadsIntoHtml(currentHtml, splits, preambles);
+      if (patched === currentHtml) break;
+      currentHtml = patched;
+      await runPagedjsPreview(currentHtml);
+    }
+    await removeEmptyAppendixTableGhosts(page);
 
     const structure = await analyzePagedjsPagesInBrowser(page);
     const structuralFailure = describePagedjsStructuralFailure(structure);
