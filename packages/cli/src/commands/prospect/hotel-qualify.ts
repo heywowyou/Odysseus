@@ -4,6 +4,7 @@ import {
   disconnectFromMongo,
   getHotelCandidateYield,
   getHotelQualificationYield,
+  getLatestHotelQualificationVersion,
   listHotelQualifications,
 } from '@odysseus/store';
 import { OriginLock, getCrawlDelayMs, getCrawlerUserAgent } from '@odysseus/scanner';
@@ -341,28 +342,40 @@ export function registerHotelQualifyCommand(prospect: Command): void {
     .description('Print the coverage and loss-reason table for a qualification version.')
     .option(
       '--qualification-version <version>',
-      'Qualification generation to summarize',
-      CURRENT_QUALIFICATION_VERSION,
+      'Qualification generation to summarize (defaults to the newest persisted generation)',
     )
     .option(
       '--resolution-version <version>',
       'Resolution generation to summarize alongside it',
       CURRENT_RESOLUTION_VERSION,
     )
-    .action(async (opts: { qualificationVersion: string; resolutionVersion: string }) => {
+    .action(async (opts: { qualificationVersion?: string; resolutionVersion: string }) => {
       let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
       try {
         mongoConnection = await connectToMongo();
+        const qualificationVersion =
+          opts.qualificationVersion ??
+          (await getLatestHotelQualificationVersion(mongoConnection)) ??
+          CURRENT_QUALIFICATION_VERSION;
+        if (
+          opts.qualificationVersion === undefined &&
+          qualificationVersion !== CURRENT_QUALIFICATION_VERSION
+        ) {
+          console.error(
+            `odysseus prospect hotel-qualify report: no --qualification-version supplied; ` +
+              `using newest persisted generation '${qualificationVersion}'.`,
+          );
+        }
         const qualification = await getHotelQualificationYield(
           mongoConnection,
-          opts.qualificationVersion,
+          qualificationVersion,
         );
         const catalogue = await getHotelCandidateYield(mongoConnection, opts.resolutionVersion);
         console.log(
           JSON.stringify(
             {
               resolutionVersion: opts.resolutionVersion,
-              qualificationVersion: opts.qualificationVersion,
+              qualificationVersion,
               catalogue,
               qualification,
               // Printed rather than acted on: binding decision 3 requires the
@@ -388,19 +401,31 @@ export function registerHotelQualifyCommand(prospect: Command): void {
     .description('List individual parked or rejected candidates and why.')
     .option(
       '--qualification-version <version>',
-      'Qualification generation to read',
-      CURRENT_QUALIFICATION_VERSION,
+      'Qualification generation to read (defaults to the newest persisted generation)',
     )
     .option('--outcome <outcome>', 'qualified | parked | rejected | already-engaged | group-routed')
     .option('--limit <n>', 'Maximum rows to print', parsePositiveInt, 50)
-    .action(async (opts: { qualificationVersion: string; outcome?: string; limit: number }) => {
+    .action(async (opts: { qualificationVersion?: string; outcome?: string; limit: number }) => {
       let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
       try {
         mongoConnection = await connectToMongo();
+        const qualificationVersion =
+          opts.qualificationVersion ??
+          (await getLatestHotelQualificationVersion(mongoConnection)) ??
+          CURRENT_QUALIFICATION_VERSION;
+        if (
+          opts.qualificationVersion === undefined &&
+          qualificationVersion !== CURRENT_QUALIFICATION_VERSION
+        ) {
+          console.error(
+            `odysseus prospect hotel-qualify reasons: no --qualification-version supplied; ` +
+              `using newest persisted generation '${qualificationVersion}'.`,
+          );
+        }
         const rows = await listHotelQualifications(
           mongoConnection,
           {
-            qualificationVersion: opts.qualificationVersion,
+            qualificationVersion,
             ...(opts.outcome === undefined
               ? {}
               : { outcome: opts.outcome as HotelQualificationOutcome }),

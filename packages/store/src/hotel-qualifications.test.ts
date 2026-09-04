@@ -4,6 +4,7 @@ import type { HotelCandidate, HotelSiteFacts } from '@odysseus/core';
 import {
   recordHotelQualifications,
   getHotelQualification,
+  getLatestHotelQualificationVersion,
   listHotelQualifications,
   getHotelQualificationYield,
   listQualificationsByCandidate,
@@ -280,6 +281,23 @@ describe.skipIf(!mongoAvailable)('hotel_qualifications', () => {
     });
     expect(rejected).toHaveLength(1);
     expect(rejected[0]?.reasons).toEqual(['http-error']);
+  });
+
+  it('finds the generation with the most recently persisted evaluation', async () => {
+    const olderVersion = `qv-${randomUUID()}`;
+    const newerVersion = `qv-${randomUUID()}`;
+    await recordHotelQualifications(connection!, [
+      qualification({
+        qualificationVersion: olderVersion,
+        evaluatedAt: new Date('9998-01-01T00:00:00.000Z'),
+      }),
+      qualification({
+        qualificationVersion: newerVersion,
+        evaluatedAt: new Date('9999-01-01T00:00:00.000Z'),
+      }),
+    ]);
+
+    expect(await getLatestHotelQualificationVersion(connection!)).toBe(newerVersion);
   });
 
   describe('the redirect reconciliation helpers', () => {

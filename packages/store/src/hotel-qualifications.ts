@@ -149,6 +149,23 @@ export interface HotelQualificationFilter {
   outcome?: HotelQualificationOutcome;
 }
 
+/** The qualification generation whose latest persisted evaluation is newest.
+ *
+ * Read-only operator commands use this when no generation is named. Versions
+ * are immutable but the configured next write version may not have been run
+ * against the current catalogue yet, so blindly defaulting to that version
+ * turns an existing catalogue into an unexplained empty result. */
+export async function getLatestHotelQualificationVersion(
+  connection: Connection,
+): Promise<string | null> {
+  const Model = createHotelQualificationModel(connection);
+  const latest = await Model.findOne()
+    .sort({ evaluatedAt: -1, qualificationVersion: -1 })
+    .select({ qualificationVersion: 1 })
+    .lean<Pick<HotelQualificationDocument, 'qualificationVersion'>>();
+  return latest?.qualificationVersion ?? null;
+}
+
 export async function listHotelQualifications(
   connection: Connection,
   filter: HotelQualificationFilter = {},

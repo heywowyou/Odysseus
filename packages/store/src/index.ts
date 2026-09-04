@@ -161,6 +161,7 @@ export type {
 export {
   recordHotelQualifications,
   getHotelQualification,
+  getLatestHotelQualificationVersion,
   listHotelQualifications,
   listQualificationsByCandidate,
   countCandidatesByOwnDomain,
