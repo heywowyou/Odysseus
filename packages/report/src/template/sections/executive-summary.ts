@@ -1,4 +1,5 @@
-import type { AuditManifest, Finding } from '@odysseus/core';
+import type { AuditManifest, Finding, ObligationAssessment } from '@odysseus/core';
+import { EAA_REGIME_ID, eaaSanctionFigureSentence } from '@odysseus/core';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
@@ -11,6 +12,7 @@ import {
 } from '../html-utils.js';
 import { computeStatistics } from '../statistics.js';
 import { sectionTitle } from '../section-registry.js';
+import { pickPrimaryBasis } from './methodology.js';
 import { selectRenderedThemes } from './themes.js';
 import { type RenderedPriority, summarizePriorityOwnership } from '../rendered-priorities.js';
 
@@ -205,6 +207,41 @@ function renderCoveredByPrioritiesNote(
   return `<p style="font-size:12px;opacity:0.6;margin-top:var(--space-2);max-width:66ch">${escapeHtml(text)}</p>`;
 }
 
+/** Issue #57: the executive pages previously carried no trace of the
+ *  regulatory regime, so a reader who stopped after section 01 never
+ *  learned one was involved. This block states the criterion, splices
+ *  the unchanged general EAA sanction sentence from core (byte-identical
+ *  to legal-exposure.ts's own card - both call eaaSanctionFigureSentence,
+ *  neither restates it), and recommends legal confirmation. Gated on the
+ *  exact same determination as renderGeneralEaaReference: status
+ *  in_scope or likely_in_scope with EAA as the primary basis. Deliberately
+ *  adds no deadline and no verdict; docs/rules/obligation-basis.md
+ *  section 7 amended 2026-09-04 names this as the sentence's second
+ *  permitted location. */
+function renderRegulatoryContextNote(
+  strings: ReportStrings,
+  language: StoredAnalysis['language'],
+  obligationAssessment: ObligationAssessment | undefined,
+): string {
+  if (
+    !obligationAssessment ||
+    (obligationAssessment.status !== 'in_scope' &&
+      obligationAssessment.status !== 'likely_in_scope') ||
+    pickPrimaryBasis(obligationAssessment)?.regimeId !== EAA_REGIME_ID
+  )
+    return '';
+
+  const e = strings.executiveSummary;
+  return `
+    <div class="card elev-sm" style="margin-top:var(--space-4)" data-executive-regulatory-context>
+      <div class="card-kicker">${escapeHtml(e.regulatoryContextKicker)}</div>
+      <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(e.regulatoryContextCriterion)}</p>
+      <p style="font-size:12.5px;margin-top:var(--space-2);max-width:66ch">${escapeHtml(eaaSanctionFigureSentence(language))}</p>
+      <p style="font-size:11.5px;margin-top:var(--space-2);max-width:66ch" class="text-muted">${escapeHtml(e.regulatoryContextCounsel)}</p>
+    </div>
+  `;
+}
+
 export function renderExecutiveSummary(
   strings: ReportStrings,
   ordinal: number,
@@ -254,6 +291,7 @@ export function renderExecutiveSummary(
     ${renderThirdPartySplitNote(strings, stats)}
     ${renderCategoryImbalanceNote(strings, stats)}
     ${priorities ? renderTopPriorityLegalNoteFromPriorities(strings, priorities) : renderTopPriorityLegalNote(strings, analysis.themes, findingsById)}
+    ${renderRegulatoryContextNote(strings, analysis.language, analysis.obligationAssessment)}
     ${priorities ? renderStartHerePriorities(strings, priorities) : renderStartHere(strings, analysis.themes)}
   `,
     '',

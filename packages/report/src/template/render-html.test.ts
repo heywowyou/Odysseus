@@ -212,9 +212,9 @@ describe('renderHtml, the conformance summary, legal exposure, and methodology s
   });
 });
 
-describe('plan 020 general EAA reference placement', () => {
+describe('plan 020 general EAA reference placement, as amended 2026-09-04 (issue #57)', () => {
   it.each(['fr', 'en'] as const)(
-    'renders the unchanged %s sentence exactly once inside detailed legal content',
+    'renders the unchanged %s sentence exactly once in the executive block and once in detailed legal content, nowhere else',
     async (language) => {
       const manifest = await loadSmallSiteManifest();
       const findings = await loadSmallSiteFindings();
@@ -228,13 +228,19 @@ describe('plan 020 general EAA reference placement', () => {
 
       const html = await renderHtml({ manifest, findings, analysis, renderDiffEvidencePages: [] });
       const sentence = escapeHtml(eaaSanctionFigureSentence(language));
+      const execStart = html.indexOf('id="section-01"');
       const legalStart = html.indexOf('id="section-02"');
       const legalEnd = html.indexOf('id="section-11"', legalStart);
       const legalSection = html.slice(legalStart, legalEnd);
 
-      expect(html.split(sentence)).toHaveLength(2);
+      // docs/rules/obligation-basis.md section 7 permits the sentence in
+      // exactly two locations: the executive regulatory-context block and
+      // the detailed legal section, at most once each.
+      expect(html.split(sentence)).toHaveLength(3);
+      expect(html.slice(execStart, legalStart)).toContain(sentence);
+      expect(html.slice(execStart, legalStart)).toContain('data-executive-regulatory-context');
       expect(legalSection).toContain(sentence);
-      expect(html.slice(0, legalStart)).not.toContain(sentence);
+      expect(html.slice(0, execStart)).not.toContain(sentence);
       expect(html.slice(legalEnd)).not.toContain(sentence);
     },
   );

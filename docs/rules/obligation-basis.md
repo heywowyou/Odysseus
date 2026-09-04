@@ -239,10 +239,13 @@ Permitted:
   data
 - describing the current state of the case law including the split
 - reproducing the existing primary-sourced, deterministic EUR 7,500 EAA
-  sentence as a general legal reference, only in the detailed legal section
-  when the report includes the EAA context. It remains grammatically general,
-  is separated from client facts and finding counts, and is never described as
-  this client's sanction or exposure
+  sentence as a general legal reference, in the detailed legal section
+  when the report includes the EAA context, and since 2026-09-04
+  (issue #57) additionally in the executive section's own
+  regulatory-context block under the same in-scope gate. It remains
+  grammatically general in both locations, is separated from client
+  facts and finding counts, and is never described as this client's
+  sanction or exposure
 - recommending that scope be confirmed by a lawyer
 
 Not permitted:
@@ -253,10 +256,17 @@ Not permitted:
 
 The general EAA reference is a narrow exception to the presentation rule, not
 to the legal-advice rule. It uses `eaaSanctionFigureSentence(...)` unchanged,
-appears at most once, and permits no arithmetic, procedural claim, client name,
-possessive wording, deadline, or conclusion about whether the amount could
-apply to this company. The EUR 50,000 article 47 figure remains prohibited in
-an EAA context. LCEN sanctions remain unverified and never render.
+appears at most once in each of the two permitted locations (executive
+regulatory-context block, detailed legal section) and nowhere else, and
+permits no arithmetic, procedural claim, client name, possessive wording,
+deadline, or conclusion about whether the amount could apply to this company.
+The EUR 50,000 article 47 figure remains prohibited in an EAA context. LCEN
+sanctions remain unverified and never render. The 2026-09-04 executive
+amendment exists because a reader who stops after the executive pages was
+left with no sense that a regulatory regime is involved at all; the executive
+block carries the criterion, the unchanged general sentence, and the
+lawyer-confirmation recommendation, and adds no client-specific claim the
+detailed section does not already make.
 
 The distinction is between informing and advising, and it is thinner
 than it looks, which is why the wording lives in template code rather

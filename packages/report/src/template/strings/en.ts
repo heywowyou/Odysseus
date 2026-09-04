@@ -217,6 +217,13 @@ export const en: ReportStrings = {
   executiveSummary: {
     eyebrow: 'Summary',
     heading: 'What to take away',
+    // Issue #57: see the fr.ts comment; the sanction figure between these
+    // two sentences is spliced from core (eaaSanctionFigureSentence).
+    regulatoryContextKicker: 'Regulatory context',
+    regulatoryContextCriterion:
+      'The accessibility obligations addressed in this report fall under the European Accessibility Act, transposed into French law by loi n° 2023-171. Depending on the size of the company and its sector, conformance requirements may apply to your site: the applicable criteria and your situation, as verified by this audit, are detailed in the "Legal exposure" section.',
+    regulatoryContextCounsel:
+      'The amount above is a general legal reference, not a sanction applying to your company. Have your situation confirmed by a legal adviser.',
     priorityOwnershipTemplate:
       'Within the priorities: {firstParty} to fix directly, {thirdParty} to pass on, and {verifyIntent} to verify by intent.',
     startHereKicker: 'Where to start',

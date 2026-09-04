@@ -236,6 +236,16 @@ export const fr: ReportStrings = {
   executiveSummary: {
     eyebrow: 'Résumé',
     heading: "Ce qu'il faut retenir",
+    // Issue #57: the executive pages previously carried no trace of the
+    // regulatory regime at all. This block states the criterion only;
+    // the general sanction figure rendered between these two sentences
+    // is spliced from core (eaaSanctionFigureSentence), never restated
+    // here.
+    regulatoryContextKicker: 'Cadre réglementaire',
+    regulatoryContextCriterion:
+      "Les obligations d'accessibilité traitées dans ce rapport s'inscrivent dans le cadre de l'European Accessibility Act, transposé en droit français par la loi n° 2023-171. Selon la taille de l'entreprise et le secteur d'activité, des exigences de conformité peuvent concerner votre site : les critères applicables et votre situation, telle que vérifiée par cet audit, sont détaillés dans la section « Exposition légale ».",
+    regulatoryContextCounsel:
+      'Le montant ci-dessus est une référence légale générale, et non une sanction vous concernant. Faites confirmer votre situation par un conseil juridique.',
     priorityOwnershipTemplate:
       'Dans les priorités : {firstParty} constats à corriger directement, {thirdParty} à transmettre à un tiers et {verifyIntent} à vérifier selon votre contexte.',
     startHereKicker: 'Par où commencer',

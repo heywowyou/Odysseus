@@ -360,6 +360,20 @@ export interface ReportStrings {
   executiveSummary: {
     eyebrow: string;
     heading: string;
+    /** Issue #57: the executive regulatory-context block, rendered only
+     *  when the obligation engine's gate holds (status in_scope or
+     *  likely_in_scope with EAA as the primary basis), the same gate as
+     *  legal-exposure.ts's general EAA reference card. Carries the
+     *  criterion, the unchanged eaaSanctionFigureSentence spliced from
+     *  core (never restated here), and the lawyer-confirmation
+     *  recommendation - never a deadline, never a verdict. */
+    regulatoryContextKicker: string;
+    /** The criterion-stating sentence; names the detailed legal section
+     *  by title, not number. */
+    regulatoryContextCriterion: string;
+    /** States that the general figure above is not this client's
+     *  sanction, and recommends legal confirmation. */
+    regulatoryContextCounsel: string;
     /** Template: {firstParty}, {thirdParty}, {verifyIntent}. */
     priorityOwnershipTemplate: string;
     /** Kicker over the "where to start" jump-link box (doc §3 section 01:
