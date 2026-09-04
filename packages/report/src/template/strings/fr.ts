@@ -469,7 +469,8 @@ export const fr: ReportStrings = {
   coreWebVitals: {
     eyebrow: 'Performance',
     heading: 'Mesures de performance',
-    introTemplate:
+    labHeading: 'Mesures de laboratoire (Lighthouse)',
+    labIntroTemplate:
       'Valeurs médianes agrégées sur {pages}. Simulation mobile avec limitation réseau, passage unique, données de laboratoire (Lighthouse) et non de terrain.',
     pageSingular: 'page',
     pagePlural: 'pages',

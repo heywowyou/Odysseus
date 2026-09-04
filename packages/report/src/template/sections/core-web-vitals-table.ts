@@ -366,7 +366,8 @@ export function renderCoreWebVitalsTable(
     `
     ${renderSheetHeader(ordinal, c.eyebrow, c.heading, 'var(--space-2)')}
     ${renderRealUserDataBlock(strings, language, manifest.cruxFieldData, true)}
-    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.introTemplate, { pages: `${formatNumber(pagesScanned, language)} ${pluralize(pagesScanned, c.pageSingular, c.pagePlural)}` }))}</p>
+    <h3 style="font-size:14px;margin-top:var(--space-6);margin-bottom:var(--space-2)">${escapeHtml(c.labHeading)}</h3>
+    <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(fillTemplate(c.labIntroTemplate, { pages: `${formatNumber(pagesScanned, language)} ${pluralize(pagesScanned, c.pageSingular, c.pagePlural)}` }))}</p>
     <p style="font-size:11px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(coverage.summary)}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <thead>

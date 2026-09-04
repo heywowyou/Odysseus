@@ -415,6 +415,31 @@ describe('renderCoreWebVitalsTable', () => {
       expect(html).toContain('1.8 s');
     });
 
+    it('labels the Lighthouse note and table after the real-user table, in both languages', () => {
+      const manifest = measuredManifestWith({
+        available: true,
+        lcp: { p75: 2427 },
+        inp: { p75: 234 },
+        cls: { p75: 0.36 },
+      });
+      for (const language of ['en', 'fr'] as const) {
+        const strings = getStrings(language);
+        const html = renderCoreWebVitalsTable(strings, 9, language, manifest);
+        const labNote = strings.coreWebVitals.labIntroTemplate.replace('{pages}', '1 page');
+
+        expect(html.indexOf(strings.coreWebVitals.realUserValueColumnLabel)).toBeLessThan(
+          html.indexOf(strings.coreWebVitals.labHeading),
+        );
+        expect(html.indexOf(strings.coreWebVitals.labHeading)).toBeLessThan(html.indexOf(labNote));
+        expect(html.indexOf(labNote)).toBeLessThan(
+          html.indexOf(
+            strings.coreWebVitals.valueColumnLabel,
+            html.indexOf(labNote) + labNote.length,
+          ),
+        );
+      }
+    });
+
     it('never shows the gap-explanation note when CrUX has no data to compare against', () => {
       const manifest = measuredManifestWith({ available: false });
       const html = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);

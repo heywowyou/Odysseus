@@ -742,9 +742,12 @@ export interface ReportStrings {
   coreWebVitals: {
     eyebrow: string;
     heading: string;
+    /** Labels the simulated Lighthouse block so it cannot be mistaken for
+     *  the preceding Chrome UX Report field-data table. */
+    labHeading: string;
     /** Template: {pages}, a full "N page(s)" phrase built with
      *  pageSingular/pagePlural below, not a bare count - issue #28. */
-    introTemplate: string;
+    labIntroTemplate: string;
     pageSingular: string;
     pagePlural: string;
     metricColumnLabel: string;

@@ -381,7 +381,8 @@ export const en: ReportStrings = {
   coreWebVitals: {
     eyebrow: 'Performance',
     heading: 'Performance measurements',
-    introTemplate:
+    labHeading: 'Lab measurements (Lighthouse)',
+    labIntroTemplate:
       'Median values aggregated across {pages}. Simulated mobile with network throttling, single run, lab data (Lighthouse) rather than field data.',
     pageSingular: 'page',
     pagePlural: 'pages',
