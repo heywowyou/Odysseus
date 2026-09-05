@@ -23,6 +23,10 @@ coverage/
 # repo root; it must never be committed.
 /.env.smoke
 
+# odysseus-deploy.sh's real VPS host/key/compose settings for this machine.
+# Copy deploy/.deploy.local.env.example to fill this in; never commit it.
+/deploy/.deploy.local.env
+
 # Crash-recovery session log. Ephemeral by design: written continuously from
 # docs/agents/session-template.md, folded into canonical docs, and retained
 # while uncommitted work still needs provenance.
