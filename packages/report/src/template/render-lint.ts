@@ -61,10 +61,18 @@ const FORBIDDEN_PATTERNS: readonly { label: string; pattern: RegExp }[] = [
   // snake_case identifier that happens to contain two underscores
   // matches - `.pagedjs_page_content` in the stylesheet did exactly that
   // on the first attempt at this rule.
+  //
+  // Issue #70: a Lighthouse finding's evidence listing can carry a
+  // Next.js chunk filename like "/_next/static/immutable/chunks/
+  // 0vw0c0r7hvkh_.js" - two underscores belonging to unrelated tokens
+  // joined only by an intervening file path, not one identifier, so the
+  // boundary check above lets it through. Excluding "/" from the
+  // underscore alternatives' interior rejects any path-like span; a
+  // genuine emphasis span in this report's prose never contains a slash.
   {
     label: 'leaked markdown emphasis in rendered prose',
     pattern:
-      /(?:\*\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*\*|\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*|(?<![\w-])__(?=\S)[^_\n<>]{1,80}(?<=\S)__(?![\w-])|(?<![\w-])_(?=\S)[^_\n<>]{1,80}(?<=\S)_(?![\w-]))/,
+      /(?:\*\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*\*|\*(?=\S)[^*\n<>]{1,80}(?<=\S)\*|(?<![\w-])__(?=\S)[^_\n<>/]{1,80}(?<=\S)__(?![\w-])|(?<![\w-])_(?=\S)[^_\n<>/]{1,80}(?<=\S)_(?![\w-]))/,
   },
 ];
 

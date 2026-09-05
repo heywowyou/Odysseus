@@ -86,6 +86,21 @@ describe('A6: leaked markdown emphasis', () => {
     expect(clean('<p>Les temps de chargement sont trop longs sur 23 pages.</p>')).toEqual([]);
     expect(clean('<p>Contactez-nous à contact@odysseusaudit.com.</p>')).toEqual([]);
   });
+
+  // Issue #70: a real audit's Lighthouse finding evidence listed a Next.js
+  // chunk filename in a url-cell, which the underscore-emphasis pattern
+  // matched across the intervening path as if it were emphasis.
+  it('does not flag a path-like span between two unrelated underscores', () => {
+    const clean = (html: string) =>
+      findRenderLintViolations(html).filter(
+        (v) => v.label === 'leaked markdown emphasis in rendered prose',
+      );
+    expect(
+      clean(
+        '<div class="url-cell">Fichiers : /_next/static/immutable/chunks/0vw0c0r7hvkh_.js</div>',
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe('A6: prose rules never scan style or script bodies', () => {
