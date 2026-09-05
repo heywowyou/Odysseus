@@ -411,7 +411,13 @@ function aggregateSamePageOccurrences(
     // merge (a "previous slide" and a "next slide" arrow, one component, one
     // fix, two rows). Candidates with no identity and one title behave
     // exactly as they did before either change.
-    const coarseKey = `${first.source}|${first.ruleId}|${first.title}|${[...pageUrls][0]}`;
+    // 1dfe513 then unified every alt-text heuristic title so no single
+    // signal is presented as the meaning of the rule (issue #68), which
+    // removed the very separator this key relies on and merged those two
+    // instructions back into one finding. coarseGroupIdentity is how a rule
+    // with a deliberately broad title says so explicitly, instead of the
+    // separation depending on title wording nobody realises is load-bearing.
+    const coarseKey = `${first.source}|${first.ruleId}|${first.title}|${first.coarseGroupIdentity ?? ''}|${[...pageUrls][0]}`;
     coarseKeyByFineKey.set(fineKey, coarseKey);
     const fineKeys = fineKeysByCoarseKey.get(coarseKey);
     if (fineKeys) {

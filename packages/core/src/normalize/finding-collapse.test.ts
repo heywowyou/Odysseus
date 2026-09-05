@@ -88,8 +88,18 @@ describe('D4a: the alt-text heuristic collapses per reason, with the files named
       ]),
     ]).filter((f) => f.ruleId === 'alt-text-quality-heuristic');
 
-    expect(findings.length).toBeGreaterThan(1);
-    expect(new Set(findings.map((f) => f.title)).size).toBe(findings.length);
+    expect(findings.length).toBe(2);
+    // Not the titles: every signal this rule covers deliberately shares one
+    // broad title, so that no single signal is presented as the meaning of
+    // the rule. What must stay distinct is the instruction each finding
+    // carries, which is the reason.
+    const reasons = findings.map(
+      (f) =>
+        (f.rawEvidence as { perPage?: Record<string, { reason?: string }> }).perPage?.[
+          'https://example.com/'
+        ]?.reason,
+    );
+    expect(new Set(reasons).size).toBe(findings.length);
   });
 
   it('collapses the same image across pages into one finding', () => {

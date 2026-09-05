@@ -47,6 +47,20 @@ export interface FindingCandidate {
    *  it undefined keeps the original selector-based behaviour, which stays
    *  correct for every element-scoped rule. */
   dedupeIdentity?: string;
+  /** Keeps this candidate out of the same-page coarse group as another
+   *  candidate of the same rule that carries a different value here.
+   *
+   *  The same-page pass in normalize.ts groups on the title, because two
+   *  candidates that would print the same title are the positional-selector
+   *  duplicates that pass exists to merge. That reasoning fails for a rule
+   *  whose title is deliberately broad because it covers several distinct
+   *  observations: there the shared title is a presentation choice, not
+   *  evidence that the two candidates say the same thing.
+   *
+   *  Set it only on such a rule, to whatever names the observation. Leaving
+   *  it undefined keeps the title-only behaviour, which stays correct for
+   *  every rule whose title already tracks its meaning. */
+  coarseGroupIdentity?: string;
   /** This candidate's contribution to the eventual Finding.rawEvidence.
    *  Scoped to a single page; the merge step in normalize.ts shapes these
    *  into rawEvidence.perPage[pageUrl]. */

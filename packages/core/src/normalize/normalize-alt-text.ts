@@ -99,6 +99,10 @@ function candidate(
     // problems hides findings. Two findings on the review site, not one and
     // not ninety five.
     dedupeIdentity: reason,
+    // The title is one broad phrase for every signal this rule covers, so
+    // it cannot separate "write alt text for this image" from "these images
+    // share one alt text" in the same-page pass. The reason can.
+    coarseGroupIdentity: reason,
     // The image file, carried the same way Lighthouse resource findings
     // carry theirs, so the annex names the files instead of printing a
     // positional selector no developer can act on.
