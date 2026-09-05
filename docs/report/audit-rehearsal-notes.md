@@ -237,3 +237,50 @@ Each entry:
     FR/EN pair
   - #69 hotel-qualify reasons defaults to qualificationVersion v3 while all
     catalogue rows are at v2
+
+## 2026-09-05 — www.les-flotsbleus.com
+
+- URL: https://www.les-flotsbleus.com/fr/
+- Audit ID: e1b32de5-3f74-43db-8143-7ad3e6a894e9
+- Environment note: first rehearsal run through the VPS dashboard's job
+  queue (`app.odysseusaudit.com`) rather than the local `odysseus` CLI, per
+  this session's update to `.claude/skills/audit-rehearsal/SKILL.md`
+  (standing rule from here on, local CLI kept only as a documented
+  fallback). No local `artifacts/` directory exists for this run; the
+  scan, both analyses, and both reports live only in the VPS's MongoDB and
+  its report store, reachable via the dashboard API.
+- Render note: the first render was blocked by the cover identity guard
+  (`nomCommercial: "Site Officiel"`, boilerplate text, not a brand name).
+  Verified the correct values externally (Sirene registry for
+  `raisonSociale`, live site title/header for the real brand) and
+  corrected via `PATCH /api/audits/<auditId>/manual-fields` +
+  `POST .../regenerate-report`, the intended operator path. Final PDFs:
+  FR 35 pages, EN 33 pages.
+- Verdict: a well-organized, useful report undermined by one direct
+  self-contradiction in the section a nervous owner reads most carefully.
+  The findings themselves are clearly explained and sensibly prioritized
+  in both languages; layout and pagination are clean throughout.
+- Top concerns beyond the filed issues:
+  - The Legal Exposure status card reads "Threshold or flow not observed"
+    (implying the EAA does not apply) immediately followed by a paragraph
+    naming the exact pages where a transactional flow *was* found —
+    identical contradiction in FR and EN, traced to the SME/turnover
+    exemption resolving the status before the transactional-flow evidence
+    is ever consulted, while the report template renders that evidence
+    unconditionally regardless.
+  - "Facts verified for this audit: headcount band 00 and turnover of €0"
+    reads as alarming/literal to a lay owner without a one-line gloss that
+    these are registry size-bracket figures, not actual revenue.
+- Nits (not filed as issues):
+  - The Sirene-derived turnover/headcount figures are presented with no
+    context sentence explaining they are registry brackets rather than the
+    business's real financials (see above; judged not to rise to an issue
+    on its own, distinct from the contradiction it feeds into).
+- Issues filed 2026-09-05, two in total, labelled needs-triage:
+  - #71 Legal Exposure section contradicts its own obligation status when
+    the SME exemption applies (root cause identified: `checkSmeExemption`
+    short-circuits before the transactional-flow branch runs, but
+    `renderTransactionalFlowScopeNote` renders off raw evidence regardless)
+  - #72 `nomCommercial` detector picks up boilerplate ("Site Officiel")
+    instead of the real brand name; caught by the existing identity guard
+    before it reached a report, but the underlying detector is still wrong
