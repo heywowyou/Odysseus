@@ -36,6 +36,17 @@ const WORKER_GRACE_MS = 15_000;
  *  other in-flight scan). */
 const WORKER_MAX_OLD_SPACE_MB = 1024;
 
+/** tsx is how this repo's entry points run from source (see the root
+ *  "serve" script), and a .ts worker cannot execute without it. A built
+ *  .js worker can, and loading tsx there costs a module resolution hook on
+ *  every Lighthouse fork - once per performance-measured page - to
+ *  translate nothing. Keyed off the same extension resolveWorkerPath
+ *  already decides on, so the two can never disagree. */
+const WORKER_EXEC_ARGV = [
+  ...(WORKER_PATH.endsWith('.ts') ? ['--import', 'tsx'] : []),
+  `--max-old-space-size=${WORKER_MAX_OLD_SPACE_MB}`,
+];
+
 export interface RunLighthouseIsolatedOptions {
   timeoutMs?: number;
 }
@@ -73,10 +84,7 @@ export async function runLighthouseIsolated(
 
   return new Promise((resolve, reject) => {
     const child = fork(WORKER_PATH, [], {
-      // tsx is how every entry point in this repo actually runs (see the
-      // root "serve" script); the child needs the same loader to execute a
-      // .ts file directly.
-      execArgv: ['--import', 'tsx', `--max-old-space-size=${WORKER_MAX_OLD_SPACE_MB}`],
+      execArgv: WORKER_EXEC_ARGV,
       // stderr is piped, not ignored: a crash before the worker's own
       // try/catch can send a message (a module-load failure, an uncaught
       // exception thrown outside the awaited call) exits the process with
