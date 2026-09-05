@@ -69,6 +69,26 @@ describe('deriveSiteName', () => {
     expect(deriveSiteName(metadata({}))).toBeUndefined();
     expect(deriveSiteName(undefined)).toBeUndefined();
   });
+
+  it('issue #72: ignores an og:site_name that is itself boilerplate, falling back to the bare title, exactly as the real Les Flots Bleus homepage carried it', () => {
+    const result = deriveSiteName(
+      metadata({
+        title: 'Les Flots Bleus',
+        openGraphTags: { 'og:site_name': 'Site Officiel' },
+      }),
+    );
+    expect(result).toBe('Les Flots Bleus');
+  });
+
+  it('issue #72: falls all the way through to undefined when both og:site_name and the title are pure boilerplate', () => {
+    const result = deriveSiteName(
+      metadata({
+        title: 'Site Officiel',
+        openGraphTags: { 'og:site_name': 'Site Officiel' },
+      }),
+    );
+    expect(result).toBeUndefined();
+  });
 });
 
 /**

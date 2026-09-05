@@ -151,6 +151,27 @@ const TITLE_BOILERPLATE_SEGMENTS = [
 // word character, so a \b after "5*****" never matches.
 const TITLE_STAR_RATING = /\s*\b[1-5]\s*(?:\*{1,5}|(?:étoiles?|etoiles?|stars?)\b)/giu;
 
+function normalizeForBoilerplateCompare(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/gu, '');
+}
+
+/** Issue #72: a real Les Flots Bleus audit had \`og:site_name\` set to
+ *  literally "Site Officiel" - a site owner filling in marketing
+ *  boilerplate rather than a brand, not a page-title artifact. That value
+ *  used to win outright, ahead of the title-derived boilerplate stripping
+ *  below, because \`deriveSiteName\` returned \`og:site_name\` unconditionally
+ *  whenever present. Reused for both the tag itself and for title
+ *  segments so the two checks can never drift apart. */
+function isBoilerplateSegment(segment: string): boolean {
+  const normalized = normalizeForBoilerplateCompare(segment);
+  return TITLE_BOILERPLATE_SEGMENTS.some(
+    (entry) => normalizeForBoilerplateCompare(entry) === normalized,
+  );
+}
+
 function stripTitleMarketing(title: string): string {
   const withoutRating = title
     .replace(TITLE_STAR_RATING, ' ')
@@ -160,14 +181,11 @@ function stripTitleMarketing(title: string): string {
     .split(/\s+[-–]\s+/u)
     .map((segment) => segment.trim())
     .filter(Boolean);
-  while (segments.length > 1) {
-    const last = segments[segments.length - 1]!.toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/gu, '');
-    const isBoilerplate = TITLE_BOILERPLATE_SEGMENTS.some(
-      (entry) => entry.normalize('NFD').replace(/[\u0300-\u036f]/gu, '') === last,
-    );
-    if (!isBoilerplate) break;
+  // Issue #72: a title that is nothing but a single boilerplate segment
+  // ("Site Officiel" alone, no separator) must still end up empty rather
+  // than being kept because only one segment remains - popping all the
+  // way to zero is deliberate.
+  while (segments.length > 0 && isBoilerplateSegment(segments[segments.length - 1]!)) {
     segments.pop();
   }
   return segments
@@ -180,7 +198,7 @@ export function deriveSiteName(
   headMetadata: WriteAuditArtifactsInput['siteResult']['pages'][number]['headMetadata'],
 ): string | undefined {
   const ogSiteName = headMetadata?.openGraphTags?.['og:site_name']?.trim();
-  if (ogSiteName) return ogSiteName;
+  if (ogSiteName && !isBoilerplateSegment(ogSiteName)) return ogSiteName;
 
   const title = headMetadata?.title?.trim();
   if (!title) return undefined;
@@ -326,12 +344,14 @@ function buildSiteSignals(
   const siren = mentionsLegalesPage?.mentionsLegales?.siren;
 
   // og:site_name is the hand-authored signal a site sets to name itself, so
-  // it still wins outright where it exists. Only when no page publishes one
-  // does the title-frequency pass run, ahead of the single-page title
-  // heuristic that produced the Lagnonu cover defect.
+  // it still wins outright where it exists. Only when no page publishes a
+  // usable one does the title-frequency pass run, ahead of the single-page
+  // title heuristic that produced the Lagnonu cover defect. Issue #72: a
+  // page whose og:site_name is itself boilerplate ("Site Officiel") is
+  // treated as not publishing one at all, same as deriveSiteName below.
   const explicitSiteName = siteResult.pages
     .map((page) => page.headMetadata?.openGraphTags?.['og:site_name']?.trim())
-    .find((name): name is string => Boolean(name));
+    .find((name): name is string => Boolean(name) && !isBoilerplateSegment(name!));
   const recurringSiteName = deriveSiteNameFromTitleFrequency(
     siteResult.pages.map((page) => page.headMetadata?.title ?? ''),
   );
