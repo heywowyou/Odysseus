@@ -46,6 +46,15 @@ services:
       # caddy container; inside the compose network 0.0.0.0 is private to
       # it, and Caddy remains the only path in from the internet.
       ODYSSEUS_INTERFACE_HOST: 0.0.0.0
+      # The production database on the shared Atlas cluster, pinned here so
+      # the app never falls into a driver default when MONGODB_URI names no
+      # database in its path. Without this pin, a scan run from any machine
+      # sharing the URI surfaced in this dashboard with none of its
+      # artifacts (issue #38). The name is historical: it is where the
+      # records have always landed. Local machines set their own
+      # MONGODB_DB_NAME (see .env.example), and a database named in a URI
+      # path wins over this value, so the server .env must not grow one.
+      MONGODB_DB_NAME: test
       ODYSSEUS_ARTIFACTS_ROOT: /data/artifacts
       # Rootless container Chromium cannot create its sandbox namespaces.
       # Deployment flags arrive via this env hook (parsed in

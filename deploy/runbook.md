@@ -109,6 +109,12 @@ nano .env
 Fill in exactly these, leave everything else as shipped:
 
 - `MONGODB_URI`: the Atlas connection string for the production cluster.
+  Leave the database out of its path: `deploy/compose.yaml` pins
+  `MONGODB_DB_NAME` to the production database (`test`, the name the
+  records have always landed in), and a database in the URI path would
+  override that pin and empty the dashboard. A scan run from any other
+  machine against this URI cannot surface in the dashboard unless it
+  names this same database, which is the point (issue #38).
 - `ODYSSEUS_DASHBOARD_PASSWORD_HASH`: generated on your LOCAL machine, from
   your local checkout, so the plaintext password never touches the server's
   shell history or a CLI argument. Run locally:

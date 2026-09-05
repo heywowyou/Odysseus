@@ -3598,3 +3598,46 @@ Do not reintroduce a runtime `git` call as the primary source, and do not
 interpolate a build identity straight into client copy without gating it.
 Found by the audit-rehearsal pass on the Villas Foch report, filed as issue
 #58.
+
+### 73. A connection with no named database refuses to run, and production's database is pinned in compose (issue #38)
+
+`connectToMongo()` passed the URI to Mongoose untouched. The operator's
+`.env` and the server's `/srv/odysseus/.env` both name the same Atlas
+cluster with no database in the URI path, so records from either machine
+landed in whichever database the driver falls back to (`test`), and the
+dashboard read all of it. A full audit run from the laptop therefore
+produced a real production job row while the screenshots, manifest, and
+per-page JSON stayed in the laptop's `artifacts/` directory: the dashboard
+showed scans whose evidence did not exist where the server could serve it.
+Observed 2026-09-03 on four villasfoch jobs; a read-only Atlas inspection
+on 2026-09-05 confirmed all 5 jobs and 7 audits live in database `test`
+and that no other non-system database exists on the cluster.
+
+Two decisions, and both matter:
+
+**Naming a database is fail-closed.** `connectToMongo()` resolves the
+database from the URI path first, then `MONGODB_DB_NAME`, and throws when
+neither names one. It never completes the name with a driver default, the
+same posture `getMongoUri()` already takes toward the URI itself. A
+database named in the URI always wins so the store suite's
+`MONGODB_TEST_URI` per-worker test databases stay exact even when `.env`
+sets `MONGODB_DB_NAME`.
+
+**Production's database is pinned where the repository controls it.** The
+production `.env` is hand-maintained outside the repository (runbook
+section 4), so a fix that relied on editing it would not deploy.
+`deploy/compose.yaml` sets `MONGODB_DB_NAME: test` in the app environment,
+which overrides any `env_file` value; the name is historical, being where
+the records have always landed. The server `.env`'s URI must keep carrying
+no database in its path, because a path database would override the pin
+and silently empty the dashboard.
+
+Do not soften the refusal into a default database, and do not remove the
+compose pin: the first re-opens the accident, the second makes production
+depend on a hand-edited file outside the repository. Local prospecting
+runs now write into the local database and are invisible to the server
+dashboard; that separation is the point of the fix, not a regression to
+revisit. It leaves the deeper issue open: artifacts still live only on the
+machine that ran the scan, so cross-machine recovery still means copying
+directories by hand until issue #38's option 2 (uploadable artifacts) is
+built.

@@ -423,6 +423,11 @@ means numbered entry 24, not a literal Markdown heading anchor.
     client-facing copy gates every build identity on `isKnownBuildId` rather
     than printing the `unknown` sentinel. → trade-offs.md#72
 
+73. A MongoDB connection with no named database refuses to run: the URI
+    path wins, then `MONGODB_DB_NAME`, never a driver default; production's
+    database is pinned in `deploy/compose.yaml` (issue #38).
+    → trade-offs.md#73
+
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
 module, Mongoose 9, Zod, Commander, Vitest, pino, `openai`.
