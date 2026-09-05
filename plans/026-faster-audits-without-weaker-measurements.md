@@ -22,6 +22,55 @@
 - **Category**: performance
 - **Planned at**: commit `991b434`, 2026-09-05
 - **Issue**: not yet filed
+- **Progress**: Steps 1, 2 and 3 shipped and measured on the VPS
+  2026-09-05 (`dde3241`, `0e0002d`, `c7f2fbe`). Step 4 deliberately not
+  taken, see below. Steps 5, 6, 7 untouched.
+
+## Result of Steps 1 to 3, measured on the VPS 2026-09-05
+
+Same site both runs, `https://www.les-flotsbleus.com/fr/`, 29 pages,
+submitted through the dashboard queue.
+
+| | baseline `6ac1b7aa` | after `a7ad846f` | delta |
+| --- | --- | --- | --- |
+| build stamped in the manifest | `unknown` | `1d3365b` | |
+| total | 570 s | 498 s | **-72 s, -12.6 %** |
+| Lighthouse segment | 439 s | 366 s | **-73 s, -16.6 %** |
+| analyze-fr | 40 s | 40 s | unchanged |
+| analyze-en | 11 s | ~5 s | unchanged |
+
+The two analyse stages were untouched by these changes and did not move,
+which is the control: essentially the whole saving is in the Lighthouse
+segment, which is what Steps 2 and 3 target.
+
+Both changes verified in the stored audit rather than inferred from timing:
+all 29 pages record `lighthouseExcludedCategoryScores` as
+`{accessibility: null, bestPractices: null}`, against real scores on the
+baseline.
+
+**Accuracy held.** Coverage 29/29 on both runs with no failed passes.
+Distinct findings 55 to 58 (critical 18 to 19, serious 5 to 7): nothing
+lost. Per-rule counts move slightly in both directions (`button-name` 14
+to 13, `layout-shifts` 4 to 3), which is ordinary run-to-run variation on
+a live site plus Lighthouse's own metric variance.
+
+### Step 4 was deliberately not taken
+
+Stage timing on the baseline put the content-scan phase at ~40 s of a
+~500 s run. Raising rendered-lane concurrency can only act on that phase,
+so it cannot move the total meaningfully, and it would spend the
+settle-timeout risk recorded in Step 4 to buy nothing. Revisit only if the
+Lighthouse segment stops dominating.
+
+### Measuring this needed two deployment defects fixed first
+
+The first attempt at an after-measurement compared a build against itself:
+the Hostinger panel's rollout button runs `pull` + `up` and never `build`,
+so a stale image rolled out reporting success. Fixed in `1d3365b`, which
+also made the deploy verify the running container's build id. The compose
+divergence that fix uncovered is issue #74. Neither is part of this plan;
+both are recorded so the next reader knows why the run log has three
+"after" runs and only one of them counts.
 
 ## Step 0 results, measured 2026-09-05
 
