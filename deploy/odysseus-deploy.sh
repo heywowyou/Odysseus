@@ -48,8 +48,36 @@ rsync -az --delete \
   -e "ssh ${SSH_OPTS[*]}" \
   "$REPO_ROOT/" "$ODYSSEUS_DEPLOY_HOST:$ODYSSEUS_DEPLOY_REMOTE_PATH/"
 
-log "building the app image on the server ($ODYSSEUS_DEPLOY_COMPOSE_DIR, project $ODYSSEUS_DEPLOY_COMPOSE_PROJECT)"
-ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
-  "docker compose -p '$ODYSSEUS_DEPLOY_COMPOSE_PROJECT' -f '$ODYSSEUS_DEPLOY_COMPOSE_DIR/docker-compose.yml' build app"
+# Stamped into the image so a stored audit can name the code that produced
+# it (trade-off 72). Deliberately not ODYSSEUS_IMAGE_TAG: that also names the
+# image, and tagging anything but :latest would leave the Hostinger panel
+# looking for a tag that does not exist.
+BUILD_ID="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo '')"
+if [[ -n "$BUILD_ID" && -n "$(git -C "$REPO_ROOT" status --porcelain 2>/dev/null)" ]]; then
+  log "warning: working tree is dirty, so the image is stamped $BUILD_ID but does not match that commit exactly"
+fi
 
-log "done. Image built and ready. Click Deployer in the Hostinger Docker Manager panel to roll it out."
+COMPOSE="docker compose -p '$ODYSSEUS_DEPLOY_COMPOSE_PROJECT' -f '$ODYSSEUS_DEPLOY_COMPOSE_DIR/docker-compose.yml'"
+
+log "building the app image on the server ($ODYSSEUS_DEPLOY_COMPOSE_DIR, project $ODYSSEUS_DEPLOY_COMPOSE_PROJECT, build ${BUILD_ID:-unstamped})"
+ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
+  "ODYSSEUS_BUILD_ID='$BUILD_ID' $COMPOSE build app"
+
+# The Hostinger panel's Deployer/Renouveler button runs `pull` + `up` and
+# never `build`. odysseus-app is built here and exists in no registry, so its
+# pull always fails; the panel logs that failure, recreates the container from
+# whatever image is already on disk, and still reports success. A stale image
+# rolls out looking exactly like a good deploy - which is how a measured
+# before/after once compared a build against itself. Rolling out here, in the
+# same run as the build, is what makes that impossible.
+log "rolling out the new image"
+ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
+  "ODYSSEUS_BUILD_ID='$BUILD_ID' $COMPOSE up -d app"
+
+log "verifying the running container came from this build"
+RUNNING_BUILD="$(ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
+  "$COMPOSE exec -T app printenv ODYSSEUS_BUILD_ID" 2>/dev/null | tr -d '\r\n')"
+[[ "$RUNNING_BUILD" == "$BUILD_ID" ]] ||
+  fail "rolled out, but the running container reports build '${RUNNING_BUILD:-<none>}' rather than '${BUILD_ID:-<none>}'"
+
+log "done. Running build: ${RUNNING_BUILD:-unstamped}. No panel click needed."

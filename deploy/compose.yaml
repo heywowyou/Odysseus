@@ -21,7 +21,14 @@ services:
         # the build and the up, so the image records the commit it was built
         # from (issue #58). Empty for a local build, where the tag defaults
         # to "latest" and naming that as a build would be a lie.
-        ODYSSEUS_BUILD_ID: ${ODYSSEUS_IMAGE_TAG:-}
+        #
+        # An explicit ODYSSEUS_BUILD_ID wins, so the rsync deploy path
+        # (odysseus-deploy.sh) can stamp its commit without also renaming the
+        # image: that path has to keep the :latest tag, because the Hostinger
+        # panel's own button looks for exactly that and nothing else. Without
+        # this, every audit produced through that path recorded its build as
+        # "unknown", which is what made a stale deploy invisible.
+        ODYSSEUS_BUILD_ID: ${ODYSSEUS_BUILD_ID:-${ODYSSEUS_IMAGE_TAG:-}}
     # Automated releases set this to the verified Git commit. Local and legacy
     # deployments keep the existing latest tag.
     image: odysseus-app:${ODYSSEUS_IMAGE_TAG:-latest}
