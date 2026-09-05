@@ -427,6 +427,29 @@ Restore drill log (add one dated line per drill, never delete old ones):
   drill and removed from the live volume afterwards; the drill archive stays
   in the bucket as evidence. Re-run after every backup-path change and once
   real VPS artifacts exist.
+- 2026-09-05: operator + Claude, Hostinger migration. Two drills. (1) The
+  Hostinger box's own first backup (empty artifacts volume, no audits run
+  there yet) archived, uploaded, and pruned correctly after fixing
+  `backup-artifacts.sh`'s project-name resolution (see below). (2) Restore
+  drill against a real archive already in the bucket from the still-running
+  Scaleway box, `odysseus-artifacts-20260903-222012.tar.gz`: extracted
+  cleanly, manifest parsed as JSON, 43 files restored for one real audit
+  (www.villasfoch.fr). No PNG survived in that archive despite `scan.json`
+  referencing `pages/*/raw.png` paths; most likely pruning (trade-off 2)
+  removed every screenshot for this audit rather than a restore defect, but
+  this was not confirmed against the source volume and is worth checking
+  before relying on this archive for evidence recovery. Also found:
+  `backup-artifacts.sh`'s `docker compose -f <path> ps` could not match
+  running containers to their project from a systemd service's default
+  working directory, so every scheduled backup would have silently skipped
+  with "nothing to back up" on this host; fixed by adding
+  `ODYSSEUS_BACKUP_COMPOSE_PROJECT` to pin the project name explicitly
+  (unset preserves prior behavior, so the Scaleway box's already-working
+  timer is unaffected). Also discovered mid-migration: the Scaleway box has
+  produced real backups since 2026-09-01 (up to 3 GB), so the "clean
+  cutover, no data on the box" assumption this migration started from is
+  now stale — real audit artifacts exist there and were not migrated to the
+  new box before cutover.
 
 ## 9. In-container PDF glyph smoke
 
