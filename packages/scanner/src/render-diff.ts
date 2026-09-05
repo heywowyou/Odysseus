@@ -6,6 +6,7 @@ import { DEFAULT_TIMEOUT_MS } from './browser.js';
 import { getCrawlerUserAgent, getRenderSettleTimeoutMs } from './config.js';
 import { computeMissingPercent, extractTextFromHtml } from './extract-text.js';
 import { buildPageDir } from './artifacts/paths.js';
+import { couldEverBeKept } from './artifacts/prune-screenshots.js';
 
 export interface RenderDiffOptions {
   timeoutMs?: number;
@@ -39,6 +40,13 @@ export interface RenderDiffOptions {
    *  RENDER_SETTLE_TIMEOUT_MS. Exceeding it is a normal outcome, not an
    *  error: see the settle block in renderDiff below. */
   settleTimeoutMs?: number;
+
+  /** Whether this page is the site's homepage. The homepage's screenshot
+   *  pair is kept unconditionally, so it is captured unconditionally too.
+   *  Defaults to false: a caller that does not say gets the same treatment
+   *  as an ordinary page, which is the safe direction (the pair is skipped
+   *  only when the render gap also says it could never be kept). */
+  isHomepage?: boolean;
 }
 
 /**
@@ -65,9 +73,18 @@ export async function renderDiff(
   const rawScreenshotRef = path.join(runDir, 'raw.png');
   const renderedScreenshotRef = path.join(runDir, 'rendered.png');
 
+  // The raw context stays open across the rendered pass. Whether this
+  // page's screenshots are worth writing at all depends on missingPercent,
+  // which needs both text lengths, and the raw page has to still exist to
+  // be photographed once that is known. It is a javaScriptEnabled: false
+  // context holding one settled document, so the cost of keeping it is
+  // small next to writing two full-page PNGs that get deleted at the end
+  // of the scan. See couldEverBeKept in artifacts/prune-screenshots.ts.
   const rawContext = await browser.newContext({ javaScriptEnabled: false, userAgent });
   let rawTextLength: number;
   let httpStatus: number;
+  let renderedTextLength: number;
+  const consoleErrors: string[] = [];
   try {
     rawContext.setDefaultTimeout(timeoutMs);
     rawContext.setDefaultNavigationTimeout(timeoutMs);
@@ -79,54 +96,68 @@ export async function renderDiff(
     httpStatus = rawResponse.status();
     const rawHtml = await rawPage.content();
     rawTextLength = extractTextFromHtml(rawHtml).length;
-    await rawPage.screenshot({ path: path.resolve(rawScreenshotRef), fullPage: true });
+
+    if (options.preRenderedDelayMs) {
+      await new Promise((resolve) => setTimeout(resolve, options.preRenderedDelayMs));
+    }
+
+    const renderedContext = await browser.newContext({ userAgent });
+    try {
+      renderedContext.setDefaultTimeout(timeoutMs);
+      renderedContext.setDefaultNavigationTimeout(timeoutMs);
+      const renderedPage = await renderedContext.newPage();
+      renderedPage.on('console', (msg) => {
+        if (msg.type() === 'error') consoleErrors.push(msg.text());
+      });
+      renderedPage.on('pageerror', (err) => {
+        consoleErrors.push(err.message);
+      });
+      await options.onRenderedPageCreated?.(renderedPage);
+      // 'load' rather than 'networkidle', with idle demoted to a bounded,
+      // best-effort settle below. networkidle is unreachable on real sites
+      // that hold a request open forever (chat widget, analytics heartbeat,
+      // autoplaying video), and treating it as a hard precondition made one
+      // unreachable condition fail three scanners at once: render-diff, the
+      // axe pass, and every onRenderedPage custom check all hang off this
+      // single navigation. Measured on www.lagnonu.fr (2026-08-24): idle
+      // never arrived in 120s, while the rendered text was already complete
+      // and byte-identical in length at 4.3s under 'load'.
+      await renderedPage.goto(url, { waitUntil: 'load' });
+      try {
+        await renderedPage.waitForLoadState('networkidle', { timeout: settleTimeoutMs });
+      } catch {
+        // Deliberately swallowed. A page that never falls idle is still
+        // fully rendered and worth scanning; losing the accessibility pass
+        // over it is the worse outcome. Timing out here is not recorded as
+        // a page error for the same reason - it is an expected shape of
+        // real site, not a failure of this scan.
+      }
+      const renderedText = await renderedPage.evaluate(() => document.body.innerText);
+      renderedTextLength = renderedText.trim().length;
+
+      // Both screenshots or neither: a raw/rendered pair only means anything
+      // read side by side, and the pruner deletes them as a pair too.
+      // Captured before onRenderedPage, because the extended pass's reflow
+      // check resizes the viewport out from under the rendered page.
+      if (
+        couldEverBeKept({
+          missingPercent: computeMissingPercent(rawTextLength, renderedTextLength),
+          isHomepage: options.isHomepage ?? false,
+        })
+      ) {
+        await rawPage.screenshot({ path: path.resolve(rawScreenshotRef), fullPage: true });
+        await renderedPage.screenshot({
+          path: path.resolve(renderedScreenshotRef),
+          fullPage: true,
+        });
+      }
+
+      await options.onRenderedPage?.(renderedPage);
+    } finally {
+      await renderedContext.close();
+    }
   } finally {
     await rawContext.close();
-  }
-
-  if (options.preRenderedDelayMs) {
-    await new Promise((resolve) => setTimeout(resolve, options.preRenderedDelayMs));
-  }
-
-  const renderedContext = await browser.newContext({ userAgent });
-  let renderedTextLength: number;
-  const consoleErrors: string[] = [];
-  try {
-    renderedContext.setDefaultTimeout(timeoutMs);
-    renderedContext.setDefaultNavigationTimeout(timeoutMs);
-    const renderedPage = await renderedContext.newPage();
-    renderedPage.on('console', (msg) => {
-      if (msg.type() === 'error') consoleErrors.push(msg.text());
-    });
-    renderedPage.on('pageerror', (err) => {
-      consoleErrors.push(err.message);
-    });
-    await options.onRenderedPageCreated?.(renderedPage);
-    // 'load' rather than 'networkidle', with idle demoted to a bounded,
-    // best-effort settle below. networkidle is unreachable on real sites
-    // that hold a request open forever (chat widget, analytics heartbeat,
-    // autoplaying video), and treating it as a hard precondition made one
-    // unreachable condition fail three scanners at once: render-diff, the
-    // axe pass, and every onRenderedPage custom check all hang off this
-    // single navigation. Measured on www.lagnonu.fr (2026-08-24): idle
-    // never arrived in 120s, while the rendered text was already complete
-    // and byte-identical in length at 4.3s under 'load'.
-    await renderedPage.goto(url, { waitUntil: 'load' });
-    try {
-      await renderedPage.waitForLoadState('networkidle', { timeout: settleTimeoutMs });
-    } catch {
-      // Deliberately swallowed. A page that never falls idle is still
-      // fully rendered and worth scanning; losing the accessibility pass
-      // over it is the worse outcome. Timing out here is not recorded as
-      // a page error for the same reason - it is an expected shape of
-      // real site, not a failure of this scan.
-    }
-    const renderedText = await renderedPage.evaluate(() => document.body.innerText);
-    renderedTextLength = renderedText.trim().length;
-    await renderedPage.screenshot({ path: path.resolve(renderedScreenshotRef), fullPage: true });
-    await options.onRenderedPage?.(renderedPage);
-  } finally {
-    await renderedContext.close();
   }
 
   return {

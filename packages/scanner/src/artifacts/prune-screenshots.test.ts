@@ -4,11 +4,55 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  couldEverBeKept,
   pruneScreenshots,
   selectPageDirsToKeep,
   SCREENSHOT_PRUNE_KEEP_TOP_N,
   type PrunePageInfo,
 } from './prune-screenshots.js';
+
+describe('couldEverBeKept', () => {
+  it('admits the homepage regardless of render gap', () => {
+    expect(couldEverBeKept({ missingPercent: 0, isHomepage: true })).toBe(true);
+    expect(couldEverBeKept({ missingPercent: undefined, isHomepage: true })).toBe(true);
+  });
+
+  it('rejects an ordinary page below the emission threshold', () => {
+    expect(couldEverBeKept({ missingPercent: 19, isHomepage: false })).toBe(false);
+    expect(couldEverBeKept({ missingPercent: undefined, isHomepage: false })).toBe(false);
+  });
+
+  it('admits an ordinary page at or above the emission threshold', () => {
+    expect(couldEverBeKept({ missingPercent: 20, isHomepage: false })).toBe(true);
+  });
+
+  // The capture gate is only safe if it can never exclude a page the
+  // canonical retention decision would have kept. Asserting the direction
+  // of the implication is the whole point: a page skipped at capture time
+  // can never be recovered, so a drift here silently loses evidence.
+  it('admits every page selectPageDirsToKeep would keep', () => {
+    const pages: PrunePageInfo[] = [
+      { pageUrl: 'https://example.com/', pageDir: 'root', missingPercent: 3, isHomepage: true },
+      { pageUrl: 'https://example.com/a', pageDir: 'a', missingPercent: 95, isHomepage: false },
+      { pageUrl: 'https://example.com/b', pageDir: 'b', missingPercent: 20, isHomepage: false },
+      { pageUrl: 'https://example.com/c', pageDir: 'c', missingPercent: 19, isHomepage: false },
+      {
+        pageUrl: 'https://example.com/d',
+        pageDir: 'd',
+        missingPercent: undefined,
+        isHomepage: false,
+      },
+    ];
+
+    const kept = selectPageDirsToKeep(pages);
+    for (const page of pages) {
+      if (kept.has(page.pageDir)) expect(couldEverBeKept(page)).toBe(true);
+    }
+    // and it is genuinely weaker, not just equal
+    expect(kept.has('c')).toBe(false);
+    expect(couldEverBeKept({ missingPercent: 19, isHomepage: false })).toBe(false);
+  });
+});
 
 describe('selectPageDirsToKeep', () => {
   it('always keeps the homepage, even below the emission threshold', () => {

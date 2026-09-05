@@ -35,6 +35,35 @@ export interface PrunePageInfo {
   isHomepage: boolean;
 }
 
+/**
+ * Whether a page is even a candidate for retention, judged from that page
+ * alone. Deliberately weaker than selectPageDirsToKeep, which also applies
+ * the site-wide top-N ranking that no single page can know while it is
+ * still being scanned: every page selectPageDirsToKeep keeps satisfies
+ * this, and some pages that satisfy this are still ranked out.
+ *
+ * It exists so render-diff can skip capturing a pair it can already prove
+ * will never survive, rather than writing two full-page PNGs and deleting
+ * them minutes later. Capture avoided is stronger than capture deleted:
+ * a full-page screenshot of a client site incidentally holds personal
+ * data, which is the same reasoning this module's own header gives.
+ *
+ * Both the homepage rule and the threshold live here, once, so the
+ * capture gate and the retention decision cannot drift apart.
+ */
+export function couldEverBeKept(page: {
+  missingPercent: number | undefined;
+  isHomepage: boolean;
+}): boolean {
+  return page.isHomepage || meetsEmissionThreshold(page.missingPercent);
+}
+
+/** The render-diff emission threshold test, in one place so the capture
+ *  gate and the top-N ranking below always read the same constant. */
+function meetsEmissionThreshold(missingPercent: number | undefined): boolean {
+  return missingPercent !== undefined && missingPercent >= RENDER_DIFF_EMISSION_THRESHOLD_PERCENT;
+}
+
 export function selectPageDirsToKeep(
   pages: readonly PrunePageInfo[],
   options: { topN?: number } = {},
@@ -47,11 +76,7 @@ export function selectPageDirsToKeep(
   }
 
   const qualifying = pages
-    .filter(
-      (page) =>
-        page.missingPercent !== undefined &&
-        page.missingPercent >= RENDER_DIFF_EMISSION_THRESHOLD_PERCENT,
-    )
+    .filter((page) => meetsEmissionThreshold(page.missingPercent))
     .sort((a, b) => (b.missingPercent ?? 0) - (a.missingPercent ?? 0));
 
   for (const page of qualifying.slice(0, topN)) {

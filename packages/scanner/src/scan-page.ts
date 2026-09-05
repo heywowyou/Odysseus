@@ -316,6 +316,7 @@ export async function runRenderedAnalysis(
 
     result.renderDiff = await renderDiff(browser, url, {
       screenshotDir: options.screenshotDir,
+      isHomepage: url === options.homepageUrl,
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
       ...(options.delayMs !== undefined ? { preRenderedDelayMs: options.delayMs } : {}),
