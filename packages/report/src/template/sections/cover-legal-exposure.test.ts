@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  EAA_REGIME_ID,
   eaaSanctionFigureSentence,
   type AuditManifest,
   type ObligationAssessment,
@@ -529,6 +530,40 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
       [],
     );
     expect(html).not.toContain('parcours transactionnel identifié');
+  });
+
+  // Issue #71: a real Les Flots Bleus report printed "Threshold or flow
+  // not observed" (SME-exempt) immediately followed by a paragraph naming
+  // the exact transactional flow found on the site - the SME exemption
+  // resolves out_of_scope without ever consulting hasTransactionalFlow,
+  // so the flow evidence was never load-bearing for that headline.
+  it('renders nothing when the SME exemption resolved the status, even with transactional-flow evidence present', () => {
+    const manifest = fakeManifest({
+      siteSignals: {
+        hasTransactionalFlow: true,
+        transactionalFlowEvidence: [
+          {
+            kind: 'checkout-form',
+            selector: 'form#booking',
+            pageUrl: 'https://example.com/reserver',
+            detail: 'action=/reserver',
+          },
+        ],
+      },
+    });
+    const assessment: ObligationAssessment = {
+      status: 'out_of_scope',
+      basis: [
+        {
+          regimeId: EAA_REGIME_ID,
+          facts: [{ kind: 'sme-exemption', effectifCode: '02', turnoverEur: 500_000 }],
+        },
+      ],
+    };
+    const html = renderLegalExposure(fr, 2, 'fr', assessment, new Date('2026-08-17'), manifest, []);
+    expect(html).not.toContain('parcours transactionnel identifié');
+    expect(html).not.toContain('example.com/reserver');
+    expect(html).toContain('Seuil ou parcours non observé');
   });
 });
 

@@ -181,10 +181,31 @@ function renderTransactionalFlowConflictNote(
  *  'delegated-booking-redirect' entry means the flow was resolved to an
  *  off-domain provider that check followed but the crawl itself never
  *  visited as a page. */
-function renderTransactionalFlowScopeNote(strings: ReportStrings, manifest: AuditManifest): string {
+function renderTransactionalFlowScopeNote(
+  strings: ReportStrings,
+  manifest: AuditManifest,
+  obligationAssessment: ObligationAssessment | undefined,
+): string {
   const l = strings.legalExposure;
   const evidence = manifest.siteSignals?.transactionalFlowEvidence ?? [];
   if (evidence.length === 0) return '';
+
+  // Issue #71: this note names the transactional flow found on the site,
+  // which reads as a direct contradiction next to an "obligation does not
+  // apply" status headline when the SME exemption is what actually
+  // resolved that status. checkSmeExemption
+  // (packages/core/src/compliance/assessObligations.ts) short-circuits to
+  // out_of_scope before ever inspecting siteSignals.hasTransactionalFlow,
+  // so a real site can carry transactional-flow evidence that played no
+  // part in the printed status at all. The 'sme-exemption' fact kind is
+  // only ever attached on that exempt branch, so its presence is a
+  // reliable signal that the flow evidence below is not load-bearing for
+  // the status this section just printed - suppress the note rather than
+  // let it contradict the headline. Assessments computed without the SME
+  // exemption applying (or with no assessment at all) are unaffected.
+  const eaaBasis = obligationAssessment?.basis.find((b) => b.regimeId === EAA_REGIME_ID);
+  const smeExempt = eaaBasis?.facts.some((f) => f.kind === 'sme-exemption') ?? false;
+  if (smeExempt) return '';
 
   const delegated = evidence.filter((e) => e.kind === 'delegated-booking-redirect');
   // item 0.2: `detail` is internal English classification reasoning, never
@@ -418,7 +439,7 @@ export function renderLegalExposure(
       </div>
     </div>
     <p style="font-size:13.5px;opacity:0.85;max-width:66ch">${escapeHtml(paragraph)}</p>
-    ${renderTransactionalFlowScopeNote(strings, manifest)}
+    ${renderTransactionalFlowScopeNote(strings, manifest, obligationAssessment)}
     ${renderTransactionalFlowInconclusiveNote(strings, manifest, obligationAssessment)}
     ${renderTransactionalFlowConflictNote(strings, obligationAssessment)}
     ${lcenBlock}
