@@ -23,6 +23,43 @@ The paid full-audit report only (crawl, scan, normalize, analyze, PDF).
 The outreach preview (9c) and the operator dashboard are separate surfaces
 with their own QA needs and are out of scope here.
 
+## Environment: run the scan on the VPS, not the local machine
+
+The hosted dashboard at `app.odysseusaudit.com` (trade-off #60) runs on a
+provisioned VPS with more consistent CPU and network conditions than a
+personal machine, which is exactly what the scan, render diff, and
+Lighthouse passes are sensitive to. **Step 2 (the scan) runs through the
+dashboard's job queue, not the local `odysseus audit` CLI.** This is a
+standing rule, not a one-off choice for a single run.
+
+Everything else in this skill that is read-only or lightweight (picking a
+hotel in step 1, reading the resulting PDFs in step 4, filing issues in
+step 5, writing the log in step 6) still runs locally as before — only the
+actual scan/analyze/report pipeline moves to the VPS.
+
+Authenticate once per rehearsal session and reuse the session cookie for
+every subsequent call:
+
+```bash
+set -a; . ./.env; set +a
+curl -s -c /tmp/odysseus-dashboard-cookies.txt -X POST \
+  https://app.odysseusaudit.com/api/session/login \
+  -H 'content-type: application/json' \
+  -d "{\"password\":\"$ODYSSEUS_DASHBOARD_PASSWORD\"}"
+```
+
+This needs `ODYSSEUS_DASHBOARD_PASSWORD` in the local, gitignored `.env`
+(there is no dedicated env var for this documented yet elsewhere — it is
+specific to this workflow). Never print the password or the session
+cookie value to output; pass it through `$ODYSSEUS_DASHBOARD_PASSWORD`
+inside the JSON body, not as a literal in a command that could echo it,
+and quote the `.env` line's value so shell metacharacters in the password
+cannot break sourcing.
+
+Local `odysseus audit`/`analyze`/`report` remain a documented fallback
+(kept below, marked as such) for when the VPS is unreachable — do not
+delete that path, just don't default to it.
+
 ## Steps
 
 ### 1. Pick a hotel
@@ -31,7 +68,11 @@ Eligible means both of:
 
 - `qualification.outcome` is `qualified` under the current qualification
   version, and
-- not already scanned: no existing `artifacts/<hostname>/` directory.
+- not already scanned: no existing `audits` document for that hostname
+  (query via the mongodb-readonly MCP server) **and** no local
+  `artifacts/<hostname>/` directory. Scans can now originate from either
+  the VPS dashboard or a local CLI run against the same shared database,
+  so checking only the local directory is no longer sufficient.
 
 The outcome test is a positive filter on `qualified`, not merely "not
 `already-engaged`". The outcome vocabulary also holds `parked`, `rejected`,
@@ -74,41 +115,61 @@ veto point before a multi-hour run is sunk into it.
 
 ### 2. Scan
 
-Run the audit uncapped, the same way a real client's audit would run:
+Submit the audit through the VPS dashboard's job queue (see "Environment"
+above) — uncapped, the same way a real client's audit would run:
 
-```
-odysseus audit <finalUrl> --siren <siren>
+```bash
+curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
+  https://app.odysseusaudit.com/api/scans \
+  -H 'content-type: application/json' \
+  -d '{"type":"full-audit","url":"<finalUrl>","options":{"siren":"<siren>"}}'
 ```
 
-No `--max-pages`. A real audit is deliberately uncapped (non-negotiable
+This returns `{"jobId": "..."}`. Do not set `options.maxPages` or
+`options.maxDepth`: a real audit is deliberately uncapped (non-negotiable
 rule 5's 2026-08-24 amendment exists because a page cap once silently
 under-reported a real site by more than a third) and a capped rehearsal
 could hide exactly the kind of defect this workflow is meant to catch
 (see trade-offs.md#64, where an uncapped real audit reached ~672 URLs).
-Accept the multi-hour runtime as the cost of a realistic test.
+Accept the multi-hour runtime as the cost of a realistic test. (The local
+fallback's `MAX_PAGES` env-var gotcha does not apply here — the VPS's own
+environment governs its default, and the job route only applies a cap
+when one is explicitly passed in `options`.)
 
-Omitting `--max-pages` is not by itself enough to be uncapped. `getMaxPages()`
-reads a `MAX_PAGES` environment variable (`packages/scanner/src/config.ts`)
-and `codysseus` sources `.env`, so a cap left there applies silently to a run
-this skill believes is uncapped. Confirm it is unset before starting.
-
-Pass `--siren`. Without it, `assessObligations` takes its `siren-missing`
+Pass `siren`. Without it, `assessObligations` takes its `siren-missing`
 path (`packages/core/src/compliance/assessObligations.ts`), and the legal
 section, the most sensitive copy in the report and the part non-negotiable
 rule 6 governs directly, is rehearsed in a configuration no real client's
 audit would run in. The catalogue holds a SIREN for these hotels, so a real
 engagement would supply one.
 
-Note the printed `auditId` and `artifacts/<host>/<timestamp>/` path.
+Poll the job until it finishes:
 
-Record hostname, URL, `auditId`, and artifacts path in
-`docs/session/current-session.md` as soon as the run starts, per CLAUDE.md's
-session-log rule. A multi-hour uncapped scan is precisely the crash case
-that rule exists for.
+```bash
+curl -s -b /tmp/odysseus-dashboard-cookies.txt \
+  https://app.odysseusaudit.com/api/scans/<jobId>
+```
+
+`status` moves `queued` → `running` → `complete` (or `failed`/`cancelled`);
+`phase` shows progress through crawl, scan, content-scan,
+select-performance, lighthouse, normalize, analyze-fr, analyze-en,
+report-fr, report-en, complete. A `full-audit` job runs the entire
+pipeline automatically, including both-language analysis and both-language
+report rendering — there is no separate analyze/report step to trigger
+once the job reaches `complete` (contrast with the local fallback below).
+Once `status` is `complete`, the job document carries `auditId`; note it.
+
+Record hostname, URL, `jobId`, and `auditId` in
+`docs/session/current-session.md` as soon as the job is submitted, per
+CLAUDE.md's session-log rule. A multi-hour uncapped scan is precisely the
+crash case that rule exists for. There is no local `artifacts/` path to
+record for a VPS-run scan; `auditId` plus the dashboard URL
+(`https://app.odysseusaudit.com`) is the way back to the data.
 
 If the crawl is blocked by robots.txt or the homepage turns out to be
-unreachable, that is a hotel to discard rather than a defect to file. Pick
-another and note the discarded one in the log.
+unreachable, that is a hotel to discard rather than a defect to file (the
+job will land in `failed`). Pick another and note the discarded one in the
+log.
 
 **There is no schema field yet to mark an audit as a rehearsal rather
 than a real client engagement** (`packages/store/src/schemas/audit.schema.ts`
@@ -120,27 +181,63 @@ feeding a real prospecting/outreach pipeline), that is a real gap worth
 raising to the user as its own piece of work, not something to patch
 here.
 
+If the detected transactional flow looks wrong once the job completes
+(hotels often take bookings through an off-domain vendor the detector can
+miss, and `hasTransactionalFlow` feeds `assessObligations` alongside the
+SIREN), correct it via the dashboard's manual-fields endpoint and
+regenerate, rather than resubmitting the scan:
+
+```bash
+curl -s -b /tmp/odysseus-dashboard-cookies.txt -X PATCH \
+  https://app.odysseusaudit.com/api/audits/<auditId>/manual-fields \
+  -H 'content-type: application/json' \
+  -d '{"transactionalFlowOverride":{"value":true,"reason":"<why>"}}'
+curl -s -b /tmp/odysseus-dashboard-cookies.txt -X POST \
+  https://app.odysseusaudit.com/api/audits/<auditId>/regenerate-report
+```
+
 ### 3. Generate the report
 
+Nothing to do here for a VPS-run scan: step 2's job already produced both
+bilingual analyses and both PDFs as part of the same pipeline run. Skip to
+step 4.
+
+#### Local fallback (only when the VPS is unreachable)
+
 ```
+odysseus audit <finalUrl> --siren <siren>
 odysseus analyze <artifacts-dir> --language fr
 odysseus analyze <artifacts-dir> --language en
 odysseus report <artifacts-dir> --all
 ```
 
-This produces both bilingual PDFs from the stored analyses, without
-re-scanning the site. `report --all` prints the written path per language;
-note both, step 4 reads them.
-
-Before analyzing, check the audit's detected transactional flow against
-what the site plainly does. Hotels take bookings, often through an
-off-domain vendor the detector can miss, and `hasTransactionalFlow` feeds
-`assessObligations` alongside the SIREN. If it is wrong, do not re-scan:
-a standalone `analyze` consults `--override-transactional-flow` and
-`--siren` exactly because no audit process is holding an obligation
-determination already.
+Omitting `--max-pages` is not by itself enough to be uncapped locally.
+`getMaxPages()` reads a `MAX_PAGES` environment variable
+(`packages/scanner/src/config.ts`) and `codysseus` sources `.env`, so a cap
+left there applies silently to a run this skill believes is uncapped.
+Confirm it is unset before starting. `report --all` prints the written PDF
+path per language; note both, step 4 reads them. Before analyzing, check
+the detected transactional flow as described above; a standalone `analyze`
+consults `--override-transactional-flow` and `--siren` for the same reason
+the dashboard's manual-fields endpoint exists.
 
 ### 4. Read both PDFs and write the critique
+
+For a VPS-run scan, fetch each PDF with the authenticated session cookie
+before reading it (the `/preview` route serves the current fresh report
+without requiring approval, which fits a rehearsal read rather than a
+client delivery):
+
+```bash
+curl -s -b /tmp/odysseus-dashboard-cookies.txt \
+  https://app.odysseusaudit.com/api/audits/<auditId>/report/fr/preview \
+  -o /tmp/claude-*/scratchpad/rehearsal-<hostname>-fr.pdf
+curl -s -b /tmp/odysseus-dashboard-cookies.txt \
+  https://app.odysseusaudit.com/api/audits/<auditId>/report/en/preview \
+  -o /tmp/claude-*/scratchpad/rehearsal-<hostname>-en.pdf
+```
+
+(Use the session's actual scratchpad path, not the literal glob above.)
 
 Read the actual rendered PDF for both languages, not just the underlying
 `findings.json`/analysis JSON — layout and rendering defects (see
