@@ -3358,6 +3358,23 @@ build the moment a listed fixture's stamp does not match the code in the
 tree, so staleness is a red test, not a fact discovered by reading `git log`
 months later.
 
+Amended 2026-09-05 (issue #75, third recurrence): the committed,
+de-identified copies under `fixtures/test-audits/` are a separate derived
+artifact `fixtures:refresh` never touches, so three fingerprint bumps
+(af8054d, 3b79441, 5095a29) shipped while those copies still carried the
+old stamp, and the report command failed closed on any machine with a live
+`MONGODB_URI`. `fixture-freshness.test.ts` now also ratchets the committed
+copies: every stamped manifest and analysis must carry the current
+fingerprint and the digest current code computes over the committed
+`findings.json`, which makes the re-stamp a required part of the
+fingerprint-bump commit itself. That ratchet proves stamps against content;
+it cannot prove the content is what today's code would re-derive from the
+original raw scans, which only a real `fixtures:refresh` on the machine
+holding `artifacts/` can do. Re-stamping without a refresh is legitimate
+only when the bump is established output-neutral, as 3b79441 did; where it
+is not, the content delta must be folded in with the stamp, as #75 did for
+the alt-text title unification.
+
 `rule-coverage.test.ts` adds two more measured ratchets distinguishing
 recall (the scanner finding a real issue at all, bounded by what automated
 detection can reach and never moved by fixture work alone) from precision

@@ -11557,7 +11557,7 @@
     "category": "accessibility",
     "severity": "minor",
     "wcagCriteria": ["1.1.1"],
-    "title": "Alt text is identical across visually different images",
+    "title": "Alt text may be low-value",
     "description": "2 images on this page share the exact alt text \"Large Rule Families 2 home chambres 9\" but have different sources. If they show different content, sharing identical alt text does not describe any of them individually.",
     "pageUrls": [
       "https://large-rule-families.test/la-galerie-photos-hotel-luxe-dune-du-large-rule-families-6/",
@@ -11730,7 +11730,7 @@
     "category": "accessibility",
     "severity": "minor",
     "wcagCriteria": ["1.1.1"],
-    "title": "Empty alt text on an image that may not be decorative",
+    "title": "Alt text may be low-value",
     "description": "This image (53x60px) has alt=\"\" but is not marked role=\"presentation\"/\"none\" or aria-hidden=\"true\". Empty alt text is only correct for genuinely decorative images - if this one carries real content, it is currently invisible to screen readers.",
     "pageUrls": [
       "https://large-rule-families.test/",
