@@ -50,6 +50,7 @@ const STATUS_OPTIONS: readonly JobStatus[] = [
   'running',
   'complete',
   'failed',
+  'needs-input',
   'cancelled',
 ];
 

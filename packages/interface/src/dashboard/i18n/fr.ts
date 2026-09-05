@@ -29,6 +29,7 @@ export const fr: DashboardStrings = {
       complete: 'Terminé',
       failed: 'Échoué',
       cancelled: 'Arrêté',
+      'needs-input': 'Action requise',
     },
     typeLabels: { fullAudit: 'Audit complet', prospecting: 'Présélection d’hôtels' },
     downloadReport: 'Télécharger le rapport',
@@ -174,6 +175,10 @@ export const fr: DashboardStrings = {
     completeHeading: 'Scan terminé',
     viewDetailLink: 'Voir le rapport complet',
     failedHeading: 'Le scan a échoué',
+    needsInputHeading: 'En attente de confirmation',
+    needsInputNote:
+      'Le scan est terminé. Confirmez les champs ci-dessous sur la page de l’audit, puis régénérez le rapport.',
+    goToAuditLink: 'Aller à la page de l’audit',
     urlResultsHeading: 'Résultat par site',
     notFound: 'Scan introuvable.',
     stopButton: 'Arrêter le scan',

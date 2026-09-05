@@ -12,10 +12,12 @@
 
 import type { Connection } from 'mongoose';
 import { OriginLock } from '@odysseus/scanner';
+import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import {
   cancelJob,
   claimNextQueuedJob,
   failJob,
+  markJobNeedsInput,
   reconcileFailedAuditJobs,
   resetOrphanedRunningJobs,
   type JobDocument,
@@ -176,6 +178,11 @@ export class JobQueue {
         // registry but the document write raced. failJob would mislabel a
         // stopped scan as a failure, so it must not run for this case.
         await cancelJob(this.connection, job.jobId, 'cancelled by operator');
+      } else if (error instanceof ReportIdentityUnconfirmedError) {
+        // Issue #73: the pipeline finished and stopped deliberately on the
+        // D8 identity-confirmation gate - not a crash. failJob would make
+        // this indistinguishable from a real failure on the dashboard.
+        await markJobNeedsInput(this.connection, job.jobId, error.fields, error.message);
       } else {
         const message = error instanceof Error ? error.message : String(error);
         await failJob(this.connection, job.jobId, message);

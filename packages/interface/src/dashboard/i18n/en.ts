@@ -29,6 +29,7 @@ export const en: DashboardStrings = {
       complete: 'Complete',
       failed: 'Failed',
       cancelled: 'Cancelled',
+      'needs-input': 'Needs input',
     },
     typeLabels: { fullAudit: 'Full audit', prospecting: 'Shortlist hotels' },
     downloadReport: 'Download report',
@@ -174,6 +175,10 @@ export const en: DashboardStrings = {
     completeHeading: 'Scan complete',
     viewDetailLink: 'View the full report',
     failedHeading: 'The scan failed',
+    needsInputHeading: 'Waiting on confirmation',
+    needsInputNote:
+      'The scan finished. Confirm the fields below on the audit page, then regenerate the report.',
+    goToAuditLink: 'Go to the audit page',
     urlResultsHeading: 'Per-site results',
     notFound: 'Scan not found.',
     stopButton: 'Stop the scan',

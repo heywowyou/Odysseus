@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { FindingsProvenance } from '@odysseus/core';
-import { completeJob, createJob, failJob, getJob, updateJobProgress } from './jobs.js';
+import {
+  completeJob,
+  createJob,
+  failJob,
+  getJob,
+  markJobNeedsInput,
+  updateJobProgress,
+} from './jobs.js';
 import { reconcileFailedAuditJobs } from './reconcile-jobs.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createReportModel } from './schemas/report.schema.js';
@@ -95,6 +102,25 @@ async function storeFailedFullAuditJob(auditId: string): Promise<string> {
   return job.jobId;
 }
 
+/** Issue #73's shape of the same defect: the report stage stopped
+ *  deliberately on the D8 identity-confirmation gate rather than
+ *  crashing, so the queue wrote 'needs-input' instead of 'failed'. */
+async function storeNeedsInputFullAuditJob(auditId: string): Promise<string> {
+  const job = await createJob(connection!, {
+    type: 'full-audit',
+    siteUrl: 'https://example.com/',
+    options: {},
+  });
+  await updateJobProgress(connection!, job.jobId, { phase: 'report-fr', auditId });
+  await markJobNeedsInput(
+    connection!,
+    job.jobId,
+    [{ field: 'nomCommercial', value: 'Site Officiel' }],
+    'identity fields not confirmed',
+  );
+  return job.jobId;
+}
+
 describe.skipIf(!mongoAvailable)('reconcileFailedAuditJobs', () => {
   it('advances a failed full-audit job whose audit gained a current bilingual report pair', async () => {
     const auditId = randomUUID();
@@ -115,6 +141,27 @@ describe.skipIf(!mongoAvailable)('reconcileFailedAuditJobs', () => {
     expect(job?.error).toBe('report stage failed');
     expect(job?.auditId).toBe(auditId);
     expect(job?.finishedAt).toBeInstanceOf(Date);
+  });
+
+  it('advances a needs-input full-audit job whose audit gained a current bilingual report pair', async () => {
+    const auditId = randomUUID();
+    const pair = provenance(`digest-${auditId}`);
+    await storeAudit(auditId, pair);
+    await storeReport(auditId, 'fr', pair);
+    await storeReport(auditId, 'en', pair);
+    const jobId = await storeNeedsInputFullAuditJob(auditId);
+
+    const advanced = await reconcileFailedAuditJobs(connection!);
+    expect(advanced).toBeGreaterThanOrEqual(1);
+
+    const job = await getJob(connection!, jobId);
+    expect(job?.status).toBe('complete');
+    expect(job?.phase).toBe('complete');
+    // The stop's own record survives the relabel, same as a recovered
+    // 'failed' job's error text does.
+    expect(job?.error).toBe('identity fields not confirmed');
+    expect(job?.needsInputFields).toEqual([{ field: 'nomCommercial', value: 'Site Officiel' }]);
+    expect(job?.auditId).toBe(auditId);
   });
 
   it('leaves the job failed when only one language has a report', async () => {

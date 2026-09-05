@@ -25,6 +25,7 @@ export { hasMeasuredCoreWebVitals } from './template/sections/core-web-vitals-ta
 export { generateOutreachPreviewHtml } from './outreach-preview/render-html.js';
 export { embedOutreachEvidenceAsset } from './outreach-preview/evidence-input.js';
 export type { OutreachEvidenceSlot } from './outreach-preview/evidence-input.js';
+export { ReportIdentityUnconfirmedError } from './errors.js';
 export {
   lintOutreachPreviewHtml,
   OutreachPreviewLintError,
@@ -44,6 +45,7 @@ import { findRenderLintViolations } from './template/render-lint.js';
 import { findUnconfirmedIdentityFields } from './template/unconfirmed-fields.js';
 import { renderPdfWithPageCountFromHtml } from './pdf.js';
 import type { RenderedPdfWithPageCount } from './pdf.js';
+import { ReportIdentityUnconfirmedError } from './errors.js';
 
 /** Chromium is launched once for the whole report and used solely for the
  *  final Paged.js print (pdf.ts) - resolveRenderDiffEvidence no longer
@@ -79,7 +81,8 @@ export async function generateReportPdf(
     const details = unconfirmed
       .map((f) => `  - ${f.field}: "${f.value}" (detected, not confirmed)`)
       .join('\n');
-    throw new Error(
+    throw new ReportIdentityUnconfirmedError(
+      unconfirmed,
       'Report generation aborted: the client identity on the cover is still a detected guess, ' +
         `never shipped to a client unconfirmed:\n${details}\n` +
         'Confirm or correct these fields in the dashboard, then regenerate.',

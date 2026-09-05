@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@odysseus/store', () => ({
   claimNextQueuedJob: vi.fn(),
   failJob: vi.fn(),
+  markJobNeedsInput: vi.fn(),
   resetOrphanedRunningJobs: vi.fn(),
   reconcileFailedAuditJobs: vi.fn(),
 }));
@@ -11,9 +12,11 @@ vi.mock('../logger.js', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: 
 import {
   claimNextQueuedJob,
   failJob,
+  markJobNeedsInput,
   reconcileFailedAuditJobs,
   resetOrphanedRunningJobs,
 } from '@odysseus/store';
+import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import { logger } from '../logger.js';
 import { JobQueue } from './job-queue.js';
 
@@ -58,6 +61,7 @@ beforeEach(() => {
   vi.mocked(reconcileFailedAuditJobs).mockResolvedValue(0);
   vi.mocked(claimNextQueuedJob).mockResolvedValue(null);
   vi.mocked(failJob).mockResolvedValue(undefined);
+  vi.mocked(markJobNeedsInput).mockResolvedValue(undefined);
 });
 
 afterEach(async () => {
@@ -280,6 +284,37 @@ describe('JobQueue', () => {
     await waitFor(() => vi.mocked(failJob).mock.calls.length >= 1);
 
     expect(failJob).toHaveBeenCalledWith(fakeConnection, 'job-boom', 'boom');
+  });
+
+  it('marks a job needs-input, not failed, when the report gate throws ReportIdentityUnconfirmedError', async () => {
+    const job = fakeJob({ jobId: 'job-needs-input' });
+    vi.mocked(claimNextQueuedJob).mockResolvedValueOnce(job).mockResolvedValue(null);
+    const fields = [{ field: 'nomCommercial' as const, value: 'Site Officiel' }];
+    const runFullAuditJob = vi
+      .fn()
+      .mockRejectedValue(new ReportIdentityUnconfirmedError(fields, 'confirm the fields'));
+
+    queue = new JobQueue({
+      connection: fakeConnection,
+      pollIntervalMs: 20,
+      runners: {
+        'full-audit': runFullAuditJob,
+        prospecting: vi.fn(),
+        'prospect-ingestion': vi.fn(),
+        'hotel-prescan': vi.fn(),
+      },
+    });
+    await queue.start();
+    queue.notify();
+    await waitFor(() => vi.mocked(markJobNeedsInput).mock.calls.length >= 1);
+
+    expect(markJobNeedsInput).toHaveBeenCalledWith(
+      fakeConnection,
+      'job-needs-input',
+      fields,
+      'confirm the fields',
+    );
+    expect(failJob).not.toHaveBeenCalled();
   });
 
   it('keeps polling after claimNextQueuedJob rejects once', async () => {

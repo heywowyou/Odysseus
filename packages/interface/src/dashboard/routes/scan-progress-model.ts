@@ -46,7 +46,12 @@ const UNLIMITED_MAX_PAGES = Number.MAX_SAFE_INTEGER;
  *  counts: the stop takes effect at the end of the page in flight and no
  *  counter moves afterwards. */
 export function isTerminal(status: JobStatus | undefined): boolean {
-  return status === 'complete' || status === 'failed' || status === 'cancelled';
+  return (
+    status === 'complete' ||
+    status === 'failed' ||
+    status === 'cancelled' ||
+    status === 'needs-input'
+  );
 }
 
 function clampPercent(value: number): number {

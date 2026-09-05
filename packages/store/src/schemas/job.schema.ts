@@ -13,7 +13,7 @@ import { Schema, type Connection, type Model } from 'mongoose';
 import type { ProspectQualificationReason } from './prospect.schema.js';
 
 export type JobType = 'full-audit' | 'prospecting' | 'prospect-ingestion' | 'hotel-prescan';
-export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled';
+export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
 export type JobPhase =
   | 'queued'
   | 'crawl'
@@ -32,7 +32,8 @@ export type JobPhase =
   | 'prescanning'
   | 'complete'
   | 'failed'
-  | 'cancelled';
+  | 'cancelled'
+  | 'needs-input';
 
 export interface JobOptionsSnapshot {
   maxPages?: number;
@@ -186,6 +187,18 @@ export interface JobDocumentFields {
    *  report did generate - this only flags that one advertised section
    *  came back empty and the report itself explains why. */
   needsReview?: string;
+  /** Issue #73: set when the pipeline stopped deliberately on the D8
+   *  identity-confirmation gate (packages/report's
+   *  ReportIdentityUnconfirmedError) rather than crashing. status/phase
+   *  are 'needs-input' whenever this is present, so the dashboard can
+   *  link straight to the awaited fields instead of reading the error
+   *  string. */
+  needsInputFields?: JobNeedsInputField[];
+}
+
+export interface JobNeedsInputField {
+  field: 'nomCommercial' | 'raisonSociale';
+  value: string;
 }
 
 export type JobDocument = JobDocumentFields;
@@ -287,6 +300,14 @@ const urlResultSchema = new Schema(
   { _id: false },
 );
 
+const jobNeedsInputFieldSchema = new Schema(
+  {
+    field: { type: String, required: true, enum: ['nomCommercial', 'raisonSociale'] },
+    value: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const jobIngestionResultSchema = new Schema(
   {
     domain: { type: String, required: true },
@@ -321,7 +342,7 @@ const jobSchema = new Schema<JobDocument>(
     status: {
       type: String,
       required: true,
-      enum: ['queued', 'running', 'complete', 'failed', 'cancelled'],
+      enum: ['queued', 'running', 'complete', 'failed', 'cancelled', 'needs-input'],
     },
     phase: {
       type: String,
@@ -345,6 +366,7 @@ const jobSchema = new Schema<JobDocument>(
         'complete',
         'failed',
         'cancelled',
+        'needs-input',
       ],
     },
     siteUrl: { type: String },
@@ -361,6 +383,7 @@ const jobSchema = new Schema<JobDocument>(
     error: { type: String },
     orphaned: { type: Boolean },
     needsReview: { type: String },
+    needsInputFields: { type: [jobNeedsInputFieldSchema] },
   },
   { collection: 'jobs' },
 );

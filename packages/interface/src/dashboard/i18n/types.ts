@@ -201,6 +201,12 @@ export interface DashboardStrings {
     completeHeading: string;
     viewDetailLink: string;
     failedHeading: string;
+    /** Issue #73: a job stopped deliberately on the D8 identity-
+     *  confirmation gate, not crashed - its own card, distinct from
+     *  failedHeading. */
+    needsInputHeading: string;
+    needsInputNote: string;
+    goToAuditLink: string;
     urlResultsHeading: string;
     notFound: string;
     /** Stop control of the live progress page and its confirmation and

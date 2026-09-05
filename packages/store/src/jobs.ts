@@ -12,6 +12,7 @@ import {
   createJobModel,
   type JobDocument,
   type JobDocumentFields,
+  type JobNeedsInputField,
   type JobOptionsSnapshot,
   type JobPhase,
   type JobProgress,
@@ -125,6 +126,32 @@ export async function failJob(connection: Connection, jobId: string, error: stri
   await JobModel.updateOne(
     { jobId },
     { $set: { status: 'failed', phase: 'failed', finishedAt: new Date(), error } },
+  );
+}
+
+/** Issue #73: the pipeline stopped deliberately on the D8 identity-
+ *  confirmation gate, not a crash - a distinct terminal status from
+ *  'failed' so the dashboard can tell "needs thirty seconds of data
+ *  entry" apart from "needs debugging" and link straight to the awaited
+ *  fields instead of the operator parsing an error string. */
+export async function markJobNeedsInput(
+  connection: Connection,
+  jobId: string,
+  fields: JobNeedsInputField[],
+  error: string,
+): Promise<void> {
+  const JobModel = createJobModel(connection);
+  await JobModel.updateOne(
+    { jobId },
+    {
+      $set: {
+        status: 'needs-input',
+        phase: 'needs-input',
+        finishedAt: new Date(),
+        error,
+        needsInputFields: fields,
+      },
+    },
   );
 }
 

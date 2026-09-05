@@ -264,6 +264,7 @@ function FullAuditView({ job, terminal }: { job: ScanJobDetail; terminal: boolea
   if (terminal) {
     if (job.status === 'failed') return <FailedCard job={job} />;
     if (job.status === 'cancelled') return <CancelledCard />;
+    if (job.status === 'needs-input') return <NeedsInputCard job={job} />;
     return <CompleteCard job={job} />;
   }
 
@@ -444,6 +445,47 @@ function CancelledCard(): JSX.Element {
   return (
     <Card title={strings.progress.stoppedHeading}>
       <p className="text-sm text-ink-soft">{strings.progress.cancelledNote}</p>
+    </Card>
+  );
+}
+
+/** Field labels are reused from auditDetail's manual-fields form (the same
+ *  two identity fields, same copy) rather than duplicating them here. */
+function needsInputFieldLabel(
+  field: string,
+  strings: ReturnType<typeof useI18n>['strings'],
+): string {
+  if (field === 'nomCommercial') return strings.auditDetail.nomCommercialLabel;
+  if (field === 'raisonSociale') return strings.auditDetail.raisonSocialeLabel;
+  return field;
+}
+
+/** Issue #73: the pipeline finished and stopped deliberately on the D8
+ *  identity-confirmation gate, not a crash - its own card, amber rather
+ *  than the danger styling FailedCard uses, listing exactly which fields
+ *  are awaited and linking to where they get confirmed. */
+function NeedsInputCard({ job }: { job: ScanJobDetail }): JSX.Element {
+  const { strings } = useI18n();
+  return (
+    <Card title={strings.progress.needsInputHeading} className="border-sev-moderate/40">
+      <p className="text-sm text-ink-soft">{strings.progress.needsInputNote}</p>
+      {job.needsInputFields !== undefined && job.needsInputFields.length > 0 ? (
+        <ul className="mt-3 flex flex-col gap-1 text-sm text-ink-soft">
+          {job.needsInputFields.map((entry) => (
+            <li key={entry.field}>
+              <span className="font-medium text-ink">
+                {needsInputFieldLabel(entry.field, strings)}:
+              </span>{' '}
+              {entry.value}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {job.auditId !== undefined ? (
+        <Link to={`/audits/${job.auditId}`} className={cn(buttonStyles('primary', 'sm'), 'mt-4')}>
+          {strings.progress.goToAuditLink}
+        </Link>
+      ) : null}
     </Card>
   );
 }

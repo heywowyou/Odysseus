@@ -8,6 +8,12 @@
  * paths writes the job row, so the dashboard keeps listing an audit that
  * shipped to the client as "failed".
  *
+ * Issue #73 widened this to also cover 'needs-input' jobs: a job stopped
+ * deliberately on the D8 identity-confirmation gate, not crashed, and once
+ * the operator confirms the fields and regenerates both reports through
+ * the same audit-detail endpoints, the fresher-report test below is
+ * exactly what proves the job is genuinely done.
+ *
  * This is the issue's option 1 ("advance the status when the completing
  * work succeeds"), applied where store can see it. A job is advanced only
  * when its audit is demonstrably finished by the same standard the job
@@ -42,12 +48,13 @@ function provenanceMatches(
 }
 
 /**
- * Advances every failed full-audit job whose audit now carries a current
- * bilingual report pair to status 'complete'. The failure's own record
- * (error text and the finishedAt stamp the failure wrote) is deliberately
- * preserved: the recovery is not replayed here, only the present state is
- * corrected. Only 'full-audit' jobs are considered; the other job types
- * have different completion facts and no reported defect behind them.
+ * Advances every failed or needs-input full-audit job whose audit now
+ * carries a current bilingual report pair to status 'complete'. The
+ * original record (error text and the finishedAt stamp the stop wrote,
+ * plus needsInputFields if present) is deliberately preserved: the
+ * recovery is not replayed here, only the present state is corrected.
+ * Only 'full-audit' jobs are considered; the other job types have
+ * different completion facts and no reported defect behind them.
  *
  * Returns the number of job documents advanced.
  */
@@ -58,7 +65,7 @@ export async function reconcileFailedAuditJobs(connection: Connection): Promise<
 
   const failedJobs = await JobModel.find({
     type: 'full-audit',
-    status: 'failed',
+    status: { $in: ['failed', 'needs-input'] },
     auditId: { $exists: true },
   })
     .sort({ createdAt: -1 })
@@ -89,9 +96,10 @@ export async function reconcileFailedAuditJobs(connection: Connection): Promise<
 
     // The status guard in the filter makes the write idempotent and keeps
     // a job that turned terminal in another way between the read and this
-    // write from being relabelled.
+    // write from being relabelled. Matching job.status (not a hardcoded
+    // 'failed') is what lets this same guard cover both starting statuses.
     const result = await JobModel.updateOne(
-      { jobId: job.jobId, status: 'failed' },
+      { jobId: job.jobId, status: job.status },
       { $set: { status: 'complete', phase: 'complete' } },
     );
     advanced += result.modifiedCount;

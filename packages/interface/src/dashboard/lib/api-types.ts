@@ -1,4 +1,4 @@
-export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled';
+export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
 export type JobType = 'full-audit' | 'prospecting';
 
 export interface SeverityRollup {
@@ -74,4 +74,12 @@ export interface ScanJobDetail {
   urlResults?: ScanUrlResult[];
   progress: ScanJobProgress;
   error?: string;
+  /** Issue #73: present only when status is 'needs-input' - which detected
+   *  identity fields the D8 report gate is waiting to have confirmed. */
+  needsInputFields?: ScanJobNeedsInputField[];
+}
+
+export interface ScanJobNeedsInputField {
+  field: string;
+  value: string;
 }

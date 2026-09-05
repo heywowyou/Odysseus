@@ -32,6 +32,7 @@ export { createJobModel } from './schemas/job.schema.js';
 export type {
   JobDocument,
   JobDocumentFields,
+  JobNeedsInputField,
   JobOptionsSnapshot,
   JobPhase,
   JobProgress,
@@ -57,6 +58,7 @@ export {
   failJob,
   getJob,
   listJobs,
+  markJobNeedsInput,
   resetOrphanedRunningJobs,
   updateJobProgress,
 } from './jobs.js';
