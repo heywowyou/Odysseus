@@ -24,10 +24,27 @@
 
 ## Why this matters
 
-We moved to a bigger VPS to make audits finish sooner, and the obvious lever
-looks like running several Lighthouse passes at once instead of one at a
-time. Reading the shipped scanner first changes that picture in two ways,
-one encouraging and one cautionary.
+**The problem is single-audit latency, not throughput.** The operator
+confirmed this on 2026-09-05: the complaint is sitting and waiting for one
+site to finish, as during an audit rehearsal, not a backlog of hotels
+clearing too slowly. That distinction decides which lever is even relevant,
+because this repository has two unrelated ones and only one of them helps.
+
+The lever this plan does **not** use is `QUEUE_CONCURRENCY`
+(`packages/interface/src/config.ts:15`, default 1), which controls how many
+whole audit jobs the dashboard runs at once. Each job already launches its
+own Chromium on its own free debug port (`browser.ts`), so raising it is a
+legitimate throughput fix and needs no code change. It is the wrong tool
+here and actively counterproductive: a second concurrent job competes with
+the audit you are waiting on for the same cores, so the run in front of you
+gets slower, not faster. Recorded because the two levers are easy to
+confuse, and because raising that env var is a one-line change nothing
+reviews.
+
+What is left is the work inside one audit, and the obvious lever there looks
+like running several Lighthouse passes at once instead of one at a time.
+Reading the shipped scanner first changes that picture in two ways, one
+encouraging and one cautionary.
 
 The encouraging half: the reason the queue exists no longer applies. The
 scan used to run Lighthouse inside its own process, where two simultaneous
@@ -134,9 +151,29 @@ VPS, for one real audit of a representative hotel site:
 - confirmation of the VPS core count and RAM, rather than assuming a KVM 4
   is 4 vCPU.
 
-The reason-code breakdown is the point of this step. If most Lighthouse runs
-carry `unknown-or-fallback-role`, the audit is slow because classification is
+Two things in that list are the point of this step, not filler.
+
+The reason-code breakdown is the first. If most Lighthouse runs carry
+`unknown-or-fallback-role`, the audit is slow because classification is
 weak, and that is a different plan than this one.
+
+The crawl timing is the second, and it exists because a claim in the code is
+currently unverified. `scan-site.ts:477` states that the crawl stays
+sequential partly because "it is not the bottleneck". That was plausible
+when a page cap was mandatory. It is an assertion, not a measurement, and
+the numbers that make it doubtful are already in the repository: plan 021
+records an uncapped audit that explored 672 URLs, and the crawl walks those
+one at a time with a one second delay plus a real navigation each. If that
+stage is twenty or thirty minutes of a single audit's wall clock, then
+parallelising Lighthouse is optimising the wrong end and the operator is
+still going to be sitting there waiting.
+
+Measuring it does not imply changing it. Non-negotiable rule 5 names the
+crawl most directly and binding decision 6 keeps it sequential. But an
+honest split is what tells us whether this plan can deliver a felt
+improvement at all, or whether the answer is that a large site is slow for a
+reason we have deliberately chosen and should surface in the dashboard as an
+expected duration instead.
 
 Coordinate with the operator before running: an audit rehearsal was active in
 another session when this plan was written, and two concurrent real audits
@@ -273,6 +310,13 @@ trade-offs.md.
 - Step 0 shows most Lighthouse selections carry `unknown-or-fallback-role`.
   Stop and report: the cause is classification, not serialization, and
   narrowing coverage is explicitly out of scope here per binding decision 7.
+- Step 0 shows the sequential crawl, not Lighthouse, dominates single-audit
+  wall clock. Stop and report before doing Steps 3 or 4. Rule 5 keeps the
+  crawl sequential, so the honest response is a truthful expected-duration
+  signal in the dashboard rather than shaving the stage that was not the
+  problem. Correct the "it is not the bottleneck" claim at
+  `scan-site.ts:477` either way, since it will then be measured rather than
+  assumed.
 - Step 1's manifest nulls are not acceptable to the operator and no decision
   is reached on dropping the fields instead.
 - Step 4's drift gate fails. Report the numbers, keep the queue, complete
