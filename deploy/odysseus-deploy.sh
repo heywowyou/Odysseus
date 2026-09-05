@@ -38,6 +38,28 @@ ODYSSEUS_DEPLOY_COMPOSE_PROJECT="${ODYSSEUS_DEPLOY_COMPOSE_PROJECT:-odysseus}"
 
 SSH_OPTS=(-i "$ODYSSEUS_DEPLOY_SSH_KEY" -o BatchMode=yes)
 
+# Issue #74: $ODYSSEUS_DEPLOY_COMPOSE_DIR/docker-compose.yml used to be a
+# hand-copied fork of deploy/compose.yaml (needed because the Hostinger
+# Docker Manager panel requires the project to live in its own directory,
+# separate from the rsynced repo checkout). The two drifted silently and an
+# edit to deploy/compose.yaml stopped taking effect in production with no
+# error. Generating the server file from the repo's own compose.yaml on
+# every run makes it derived rather than maintained, so it cannot drift
+# again. The path-rewriting itself lives in render-server-compose.sh, a
+# small pure script with its own test (render-server-compose.test.sh), so
+# it's verifiable without faking ssh/rsync for an end-to-end run of this
+# whole script. release.sh (the CI-dispatched production path) already runs
+# deploy/compose.yaml directly from the release checkout and is unaffected.
+GENERATED_COMPOSE_FILE="$(mktemp)"
+trap 'rm -f "$GENERATED_COMPOSE_FILE"' EXIT
+"$SCRIPT_DIR/render-server-compose.sh" "$ODYSSEUS_DEPLOY_REMOTE_PATH" \
+  <"$REPO_ROOT/deploy/compose.yaml" >"$GENERATED_COMPOSE_FILE"
+
+log "writing the generated compose file to $ODYSSEUS_DEPLOY_HOST:$ODYSSEUS_DEPLOY_COMPOSE_DIR/docker-compose.yml"
+ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
+  "mkdir -p '$ODYSSEUS_DEPLOY_COMPOSE_DIR' && cat > '$ODYSSEUS_DEPLOY_COMPOSE_DIR/docker-compose.yml'" \
+  <"$GENERATED_COMPOSE_FILE"
+
 log "syncing $REPO_ROOT/ to $ODYSSEUS_DEPLOY_HOST:$ODYSSEUS_DEPLOY_REMOTE_PATH/"
 rsync -az --delete \
   --exclude .git \
