@@ -208,9 +208,10 @@ describe('runReportStage', () => {
   });
 
   it('preserves an analysis-time transactional-flow override when fields have no newer override', async () => {
+    const obligationAssessment = { status: 'in_scope', basis: [] } as never;
     const analysis = {
       ...fakeAnalysis(),
-      obligationAssessment: { status: 'in_scope', basis: [] },
+      obligationAssessment,
     } as never;
     vi.mocked(getAuditManualFields).mockResolvedValue({
       siren: { value: '309585578', source: 'detected' },
@@ -222,7 +223,7 @@ describe('runReportStage', () => {
     expect(runObligationStage).not.toHaveBeenCalled();
     expect(generateReportPdf).toHaveBeenCalledWith(
       expect.objectContaining({
-        analysis: expect.objectContaining({ obligationAssessment: analysis.obligationAssessment }),
+        analysis: expect.objectContaining({ obligationAssessment }),
       }),
     );
   });
