@@ -23,6 +23,92 @@
 - **Planned at**: commit `991b434`, 2026-09-05
 - **Issue**: not yet filed
 
+## Step 0 results, measured 2026-09-05
+
+Measured from stored artifacts on the local dev box, with no live scan and
+no new audit run. These are counts and ratios, which is what the decision
+turns on; VPS wall-clock timings are still outstanding.
+
+**Step 0's stated STOP condition fired.** It read: "Step 0 shows most
+Lighthouse selections carry `unknown-or-fallback-role`. Stop and report: the
+cause is classification, not serialization." That is what the data says, and
+by a wider margin than the condition anticipated.
+
+### Lighthouse is not being stratified at all
+
+From `artifacts/www.briketenia.com/2026-09-04T19-06-02Z/manifest.json`, a
+real 33-page hotel audit, 32 pages carrying coverage:
+
+| Measure | Value |
+| --- | --- |
+| Pages with Lighthouse outcome `completed` | 32 of 32 |
+| Pages with `role: unknown` | 32 of 32 |
+| Pages with `confidence: fallback` | 32 of 32 |
+| Reason code `unknown-or-fallback-role` | 31 |
+| Reason code `unique-template-family` | 30 |
+| Reason code `insufficient-listing-signals` | 28 |
+
+`isMandatoryRegardlessOfFamily` selects every page whose role is `unknown`
+or whose confidence is `fallback`. Classification returns exactly that for
+every page on this site, so the mandatory arm fires site-wide and plan 021's
+family stratification removes **nothing**. `unique-template-family` at 30 of
+32 shows template grouping collapsed too, so the second arm fires as well.
+
+The paid audit is therefore paying for a Lighthouse run on every single
+page, serialized, which is the behaviour trade-off 64 was written to avoid.
+
+### The cost, and one audit that never finished
+
+| Audit | Pages | Duration | Per page |
+| --- | --- | --- | --- |
+| briketenia (finished) | 33 | 10.0 min | ~18 s |
+| villasfoch (finished) | 32 | 9.2 min | ~17 s |
+| chateaudetilly | 2,532 dirs | **7h19m, never finished** | n/a |
+
+`artifacts/chateaudetilly.fr/2026-09-04T13-37-21Z/` holds 2,532 page
+directories and no `manifest.json` or `findings.json`. It started 13:37:21,
+wrote its last file at 20:56:59, and produced no audit. At the ~17 to 18
+seconds per page the finished audits show, 2,532 pages projects to roughly
+12 hours, which is consistent with a run that died at 7h19m.
+
+### The crawl ran away, plausibly from the same root cause
+
+Page directory names collapse into a few families repeated with numeric
+suffixes: one family appears 139 times, the next 137, the next 127, with a
+long tail of the same `-1-`, `-1-1-`, `-10-` shape. That is an infinite
+pagination or attachment family, exactly what the continuation guard exists
+to bound.
+
+The guard is wired (`crawl.ts:255`, `:521`), so the question is why it did
+not fire. It governs only a link it classifies as a continuation, and
+`isConfirmedListing` needs two independent listing signal kinds, which the
+table above shows are absent site-wide. **Hypothesis, not proven:** one
+classification failure disarms both Lighthouse stratification and the
+continuation guard. Unproven for this site specifically, because the run
+left no manifest to read.
+
+### Screenshot waste, confirmed at scale
+
+| Audit | PNGs on disk | Size |
+| --- | --- | --- |
+| chateaudetilly (unfinished, never pruned) | 5,050 | **12 GB** |
+| briketenia (finished, pruned) | 2 | 39 MB total |
+| villasfoch (finished, pruned) | 0 | 52 MB total |
+
+Step 1's premise holds at scale: capture is nearly all waste. A separate
+question this raised, not yet diagnosed: villasfoch kept zero PNGs although
+`selectPageDirsToKeep` adds the homepage unconditionally.
+
+### What this does to the plan's ranking
+
+The plan assumed the Lighthouse serialization queue was the thing to attack.
+It is real, and it is second order. The audit is slow because every page is
+a Lighthouse page. Fixing classification changes how much work exists;
+unqueueing Lighthouse only changes how fast a needlessly large workload is
+processed. Steps 5 and 6 stay parked until the operator decides on the
+classification question, which is deliberately **not** in this plan's scope
+(binding decision 6) and needs its own.
+
 ## Why this matters
 
 The goal is one full audit finishing sooner, confirmed with the operator on
