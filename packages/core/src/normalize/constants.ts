@@ -37,9 +37,14 @@ export const RENDER_DIFF_EMISSION_THRESHOLD_PERCENT = 20;
  * alongside the custom checks. Do not re-add either category to finding
  * emission without that table; see CLAUDE.md.
  *
- * Both categories' scores are still recorded per page in the audit
- * manifest, via extractLighthouseExcludedCategoryScores in
- * normalize-lighthouse.ts, so the numbers are not lost.
+ * Amended 2026-09-05, plan 026. Neither category is requested from
+ * Lighthouse any more (`onlyCategories` in scanner's lighthouse.ts), so
+ * their scores are absent from the result and
+ * extractLighthouseExcludedCategoryScores now records null for both on new
+ * audits. Nothing ever read those manifest fields, and running the
+ * accessibility category meant paying for a second axe pass on every page
+ * on top of our own. The extractor and the manifest field are kept so
+ * stored audits that do carry the numbers still parse.
  */
 export const LIGHTHOUSE_EXCLUDED_CATEGORIES = ['accessibility', 'best-practices'] as const;
 

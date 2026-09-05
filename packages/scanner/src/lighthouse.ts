@@ -31,7 +31,14 @@ export async function runLighthouse(
     port: debugPort,
     logLevel: 'error',
     maxWaitForLoad: maxWaitForLoadedMs,
-    onlyCategories: ['performance', 'accessibility', 'seo', 'best-practices'],
+    // Only the two categories whose audits can become findings. The
+    // accessibility and best-practices categories were requested purely so
+    // their scores could be recorded on the manifest, but no consumer ever
+    // read those fields, and Lighthouse's accessibility category runs a
+    // second axe pass we already run ourselves. Asking for them costs real
+    // time per page for a number nobody looks at. See
+    // LIGHTHOUSE_EXCLUDED_CATEGORIES in @odysseus/core.
+    onlyCategories: ['performance', 'seo'],
   });
 
   if (!runnerResult) {
