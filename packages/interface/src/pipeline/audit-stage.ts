@@ -116,15 +116,21 @@ export async function runAuditStage(
 
   try {
     const hostname = new URL(url).hostname;
-    const screenshotDir = path.join(
-      buildAuditDir(getArtifactsRoot(), hostname, startedAt),
-      'pages',
-    );
+    const auditDir = buildAuditDir(getArtifactsRoot(), hostname, startedAt);
+    const screenshotDir = path.join(auditDir, 'pages');
 
     const siteResult = await scanSite(url, {
       browser,
       debugPort,
       screenshotDir,
+      auditDir,
+      // Issue #64: a real full audit can run for hours over thousands of
+      // pages. Without this, every page's full result (axe/Lighthouse
+      // JSON, evidence arrays) stayed in memory for the run's whole
+      // duration and eventually exhausted the Node heap, losing the
+      // entire run even though screenshots had already streamed to disk.
+      // writeAuditArtifacts below reads pages back from disk instead.
+      writePagesAsScanned: true,
       ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
       ...(options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}),
       ...(options.delayMs !== undefined ? { delayMs: options.delayMs } : {}),

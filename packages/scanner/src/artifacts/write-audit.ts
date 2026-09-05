@@ -6,6 +6,14 @@
  * into scanSite's screenshotDir option before scanning starts), so there
  * is no write-then-move step here.
  *
+ * Issue #64: for a page whose full result isn't in siteResult.pages (the
+ * real full-audit path opts scanSite into writing each page's scan.json as
+ * it completes, via writePagesAsScanned, rather than holding every page's
+ * result in memory for the whole multi-hour run), this reads that
+ * already-written scan.json back from disk instead of re-deriving it -
+ * assembling the manifest and normalizeAudit's input from disk, not from
+ * an in-memory accumulator.
+ *
  * Deliberately never calls @odysseus/core's normalizeAudit or writes
  * findings.json: scanner is I/O, core is pure normalization, and only the
  * CLI composes the two together (plus persistence via @odysseus/store).
@@ -35,9 +43,9 @@ import type { CrawlResult } from '../crawl.js';
 import type { PageScanResult } from '../scan-page.js';
 import type { NormalizePageInput } from '@odysseus/core';
 import { buildAuditDir, buildPageDir } from './paths.js';
-import { toAuditRelativeRefs } from './relativize.js';
 import { collectToolVersions } from './versions.js';
 import { buildManifest } from './manifest.js';
+import { readPageScanJson, writePageScanJson } from './page-scan-io.js';
 
 export interface WriteAuditArtifactsInput {
   kind: ManifestKind;
@@ -62,89 +70,6 @@ export interface WriteAuditArtifactsResult {
   /** Relativized and ready to hand straight to @odysseus/core's
    *  normalizeAudit(). */
   pages: NormalizePageInput[];
-}
-
-function buildScanJson(
-  scanResult: PageScanResult,
-  relativizedRenderDiff: PageScanResult['renderDiff'],
-): PageScanResult {
-  return {
-    url: scanResult.url,
-    ...(relativizedRenderDiff !== undefined ? { renderDiff: relativizedRenderDiff } : {}),
-    ...(scanResult.renderDiffError !== undefined
-      ? { renderDiffError: scanResult.renderDiffError }
-      : {}),
-    ...(scanResult.axe !== undefined ? { axe: scanResult.axe } : {}),
-    ...(scanResult.axeError !== undefined ? { axeError: scanResult.axeError } : {}),
-    ...(scanResult.lighthouse !== undefined ? { lighthouse: scanResult.lighthouse } : {}),
-    ...(scanResult.lighthouseError !== undefined
-      ? { lighthouseError: scanResult.lighthouseError }
-      : {}),
-    ...(scanResult.mentionsLegales !== undefined
-      ? { mentionsLegales: scanResult.mentionsLegales }
-      : {}),
-    ...(scanResult.mentionsLegalesError !== undefined
-      ? { mentionsLegalesError: scanResult.mentionsLegalesError }
-      : {}),
-    ...(scanResult.transactionalFlowEvidence !== undefined
-      ? { transactionalFlowEvidence: scanResult.transactionalFlowEvidence }
-      : {}),
-    ...(scanResult.transactionalFlowRedirectChecks !== undefined
-      ? { transactionalFlowRedirectChecks: scanResult.transactionalFlowRedirectChecks }
-      : {}),
-    ...(scanResult.transactionalFlowAmbiguities !== undefined
-      ? { transactionalFlowAmbiguities: scanResult.transactionalFlowAmbiguities }
-      : {}),
-    ...(scanResult.headMetadata !== undefined ? { headMetadata: scanResult.headMetadata } : {}),
-    ...(scanResult.headMetadataError !== undefined
-      ? { headMetadataError: scanResult.headMetadataError }
-      : {}),
-    ...(scanResult.canonicalTarget !== undefined
-      ? { canonicalTarget: scanResult.canonicalTarget }
-      : {}),
-    ...(scanResult.sitemapCheck !== undefined ? { sitemapCheck: scanResult.sitemapCheck } : {}),
-    ...(scanResult.llmsTxtCheck !== undefined ? { llmsTxtCheck: scanResult.llmsTxtCheck } : {}),
-    ...(scanResult.mixedContent !== undefined ? { mixedContent: scanResult.mixedContent } : {}),
-    ...(scanResult.mixedContentError !== undefined
-      ? { mixedContentError: scanResult.mixedContentError }
-      : {}),
-    ...(scanResult.keyboardNavigation !== undefined
-      ? { keyboardNavigation: scanResult.keyboardNavigation }
-      : {}),
-    ...(scanResult.keyboardNavigationError !== undefined
-      ? { keyboardNavigationError: scanResult.keyboardNavigationError }
-      : {}),
-    ...(scanResult.formErrorHandling !== undefined
-      ? { formErrorHandling: scanResult.formErrorHandling }
-      : {}),
-    ...(scanResult.formErrorHandlingError !== undefined
-      ? { formErrorHandlingError: scanResult.formErrorHandlingError }
-      : {}),
-    ...(scanResult.videoCaptions !== undefined ? { videoCaptions: scanResult.videoCaptions } : {}),
-    ...(scanResult.videoCaptionsError !== undefined
-      ? { videoCaptionsError: scanResult.videoCaptionsError }
-      : {}),
-    ...(scanResult.altText !== undefined ? { altText: scanResult.altText } : {}),
-    ...(scanResult.altTextError !== undefined ? { altTextError: scanResult.altTextError } : {}),
-    ...(scanResult.securityHeaders !== undefined
-      ? { securityHeaders: scanResult.securityHeaders }
-      : {}),
-    ...(scanResult.cookieConsent !== undefined ? { cookieConsent: scanResult.cookieConsent } : {}),
-    ...(scanResult.accessibilityStatement !== undefined
-      ? { accessibilityStatement: scanResult.accessibilityStatement }
-      : {}),
-    ...(scanResult.napConsistency !== undefined
-      ? { napConsistency: scanResult.napConsistency }
-      : {}),
-    ...(scanResult.reflow !== undefined ? { reflow: scanResult.reflow } : {}),
-    ...(scanResult.htmlValidity !== undefined ? { htmlValidity: scanResult.htmlValidity } : {}),
-    ...(scanResult.structuredData !== undefined
-      ? { structuredData: scanResult.structuredData }
-      : {}),
-    ...(scanResult.structuredDataError !== undefined
-      ? { structuredDataError: scanResult.structuredDataError }
-      : {}),
-  };
 }
 
 function buildPrivacySecurityCoverage(
@@ -448,39 +373,63 @@ export async function writeAuditArtifacts(
   const scanByUrl = new Map(input.siteResult.pages.map((page) => [page.url, page]));
   const manifestPages: ManifestPageEntry[] = [];
   const normalizePages: NormalizePageInput[] = [];
+  // Every visited page's resolved scan.json, whichever source it came
+  // from - fed to collectToolVersions/buildSiteSignals/etc below in place
+  // of input.siteResult.pages, since under writePagesAsScanned that array
+  // is empty (issue #64: the real full-audit path never accumulates full
+  // page results in memory - see scan-site.ts).
+  const resolvedPages: PageScanResult[] = [];
+
+  function pushCrawlOnlyEntry(crawledPage: CrawlResult['pages'][number]): void {
+    manifestPages.push({
+      url: crawledPage.url,
+      depth: crawledPage.depth,
+      status: crawledPage.status,
+      discoveryMethod: crawledPage.discoveryMethod,
+      ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
+      ...(crawledPage.error !== undefined ? { crawlError: crawledPage.error } : {}),
+      ...(crawledPage.discoveredFrom !== undefined
+        ? { discoveredFrom: crawledPage.discoveredFrom }
+        : {}),
+      errors: {},
+    });
+  }
 
   for (const crawledPage of input.siteResult.crawl.pages) {
-    const scanResult = scanByUrl.get(crawledPage.url);
-
-    if (crawledPage.status !== 'visited' || !scanResult) {
-      manifestPages.push({
-        url: crawledPage.url,
-        depth: crawledPage.depth,
-        status: crawledPage.status,
-        discoveryMethod: crawledPage.discoveryMethod,
-        ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
-        ...(crawledPage.error !== undefined ? { crawlError: crawledPage.error } : {}),
-        ...(crawledPage.discoveredFrom !== undefined
-          ? { discoveredFrom: crawledPage.discoveredFrom }
-          : {}),
-        errors: {},
-      });
+    if (crawledPage.status !== 'visited') {
+      pushCrawlOnlyEntry(crawledPage);
       continue;
     }
 
-    const pageDir = buildPageDir(scanResult.url);
-    const pageDirPath = path.join(pagesDir, pageDir);
-    fs.mkdirSync(pageDirPath, { recursive: true });
+    const inMemoryScanResult = scanByUrl.get(crawledPage.url);
+    let pageDir: string;
+    let scanJson: PageScanResult;
 
-    const relativizedRenderDiff = scanResult.renderDiff
-      ? toAuditRelativeRefs(scanResult.renderDiff, auditDir)
-      : undefined;
+    if (inMemoryScanResult !== undefined) {
+      const written = writePageScanJson(pagesDir, auditDir, inMemoryScanResult);
+      pageDir = written.pageDir;
+      scanJson = written.scanJson;
+    } else {
+      // scan-site.ts already wrote this page's scan.json as soon as it
+      // finished (writePagesAsScanned), so it isn't in siteResult.pages -
+      // read it back rather than re-deriving it. A visited page with
+      // neither an in-memory result nor a scan.json on disk shouldn't
+      // happen (every visited page's lane produces a result, even a
+      // watchdog-timeout one), but is handled the same defensive way this
+      // branch always has: a crawl-only manifest entry, not a crash.
+      const fromDisk = readPageScanJson(pagesDir, crawledPage.url);
+      if (fromDisk === undefined) {
+        pushCrawlOnlyEntry(crawledPage);
+        continue;
+      }
+      pageDir = buildPageDir(crawledPage.url);
+      scanJson = fromDisk;
+    }
 
-    const scanJson = buildScanJson(scanResult, relativizedRenderDiff);
-    fs.writeFileSync(path.join(pageDirPath, 'scan.json'), JSON.stringify(scanJson, null, 2));
+    resolvedPages.push(scanJson);
 
     manifestPages.push({
-      url: scanResult.url,
+      url: scanJson.url,
       pageDir: path.join('pages', pageDir),
       depth: crawledPage.depth,
       status: 'visited',
@@ -489,40 +438,42 @@ export async function writeAuditArtifacts(
       ...(crawledPage.discoveredFrom !== undefined
         ? { discoveredFrom: crawledPage.discoveredFrom }
         : {}),
-      ...(input.siteResult.analysisCoverageByUrl?.get(scanResult.url) !== undefined
-        ? { analysisCoverage: input.siteResult.analysisCoverageByUrl.get(scanResult.url)! }
+      ...(input.siteResult.analysisCoverageByUrl?.get(scanJson.url) !== undefined
+        ? { analysisCoverage: input.siteResult.analysisCoverageByUrl.get(scanJson.url)! }
         : {}),
-      ...(scanResult.renderDiff !== undefined
-        ? { renderDiffMissingPercent: scanResult.renderDiff.missingPercent }
+      ...(scanJson.renderDiff !== undefined
+        ? { renderDiffMissingPercent: scanJson.renderDiff.missingPercent }
         : {}),
-      ...(scanResult.lighthouse !== undefined
+      ...(scanJson.lighthouse !== undefined
         ? {
             lighthouseExcludedCategoryScores: extractLighthouseExcludedCategoryScores(
-              scanResult.lighthouse,
+              scanJson.lighthouse,
             ),
           }
         : {}),
-      ...(scanResult.lighthouse !== undefined
-        ? { coreWebVitals: extractCoreWebVitals(scanResult.lighthouse) }
+      ...(scanJson.lighthouse !== undefined
+        ? { coreWebVitals: extractCoreWebVitals(scanJson.lighthouse) }
         : {}),
       errors: {
-        ...(scanResult.renderDiffError !== undefined
-          ? { renderDiff: scanResult.renderDiffError }
-          : {}),
-        ...(scanResult.axeError !== undefined ? { axe: scanResult.axeError } : {}),
-        ...(scanResult.lighthouseError !== undefined
-          ? { lighthouse: scanResult.lighthouseError }
-          : {}),
+        ...(scanJson.renderDiffError !== undefined ? { renderDiff: scanJson.renderDiffError } : {}),
+        ...(scanJson.axeError !== undefined ? { axe: scanJson.axeError } : {}),
+        ...(scanJson.lighthouseError !== undefined ? { lighthouse: scanJson.lighthouseError } : {}),
       },
     });
 
-    // Passed the relativized render-diff result too, so a Finding merged
-    // from this page carries portable, directory-relative screenshot refs
-    // in rawEvidence.perPage rather than machine-specific absolute paths.
-    normalizePages.push(buildScanJson(scanResult, relativizedRenderDiff));
+    // Already carries the relativized render-diff result, so a Finding
+    // merged from this page carries portable, directory-relative
+    // screenshot refs in rawEvidence.perPage rather than machine-specific
+    // absolute paths - true whether scanJson came from an in-memory write
+    // just now or a disk read of one scan-site.ts already wrote.
+    normalizePages.push(scanJson);
   }
 
-  const tool = await collectToolVersions(input.browser, input.siteResult.pages);
+  const tool = await collectToolVersions(input.browser, resolvedPages);
+  // Same reasoning as resolvedPages above: siteResult.pages is empty under
+  // writePagesAsScanned, so every site-level aggregation below reads the
+  // resolved (in-memory-or-disk) set instead of the input as given.
+  const resolvedSiteResult = { ...input.siteResult, pages: resolvedPages };
   const manifest = buildManifest({
     auditId,
     kind: input.kind,
@@ -533,16 +484,16 @@ export async function writeAuditArtifacts(
     config: input.config,
     crawl: input.siteResult.crawl,
     pages: manifestPages,
-    siteSignals: buildSiteSignals(input.siteResult),
+    siteSignals: buildSiteSignals(resolvedSiteResult),
     privacySecurityCoverage: buildPrivacySecurityCoverage(
       input.siteResult.crawl.startUrl,
-      input.siteResult.pages,
+      resolvedPages,
     ),
     // B2 (2026-08-24): recorded on the manifest rather than recomputed by
     // each consumer, so `normalize <dir>` reaches the same grouping
     // offline without re-reading every page's head metadata.
     translationClusters: buildTranslationClusters(
-      input.siteResult.pages.map((page) => ({
+      resolvedPages.map((page) => ({
         pageUrl: page.url,
         hreflangLinks: page.headMetadata?.hreflangLinks ?? [],
       })),

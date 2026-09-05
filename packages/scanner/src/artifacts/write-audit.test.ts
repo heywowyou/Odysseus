@@ -13,6 +13,8 @@ vi.mock('./versions.js', () => ({
 }));
 
 import { writeAuditArtifacts } from './write-audit.js';
+import { writePageScanJson } from './page-scan-io.js';
+import { buildAuditDir } from './paths.js';
 
 let root: string;
 let previousRoot: string | undefined;
@@ -190,5 +192,84 @@ describe('writeAuditArtifacts characterization', () => {
     });
     expect(result.manifest.pages[2]?.analysisCoverage).toBeUndefined();
     expect(result.manifest.continuationGuardSummary?.totalOmittedUrlCount).toBe(3);
+  });
+
+  it('issue #64: falls back to a scan.json already on disk for a visited page absent from siteResult.pages', async () => {
+    const home = 'https://example.com/';
+    const staged = 'https://example.com/staged';
+    const startedAt = new Date('2026-09-05T10:00:00.000Z');
+
+    // Simulates what scanSite's writePagesAsScanned already wrote to disk
+    // for `staged` during the run, before writeAuditArtifacts ever sees it.
+    const auditDir = buildAuditDir(root, 'example.com', startedAt);
+    const pagesDir = path.join(auditDir, 'pages');
+    writePageScanJson(pagesDir, auditDir, {
+      url: staged,
+      axe: {
+        violations: [],
+        passes: [],
+        testEngine: { name: 'axe-core', version: '4.0.0' },
+      } as never,
+      headMetadata: {
+        title: 'Staged',
+        openGraphTags: {},
+        hreflangLinks: [],
+      } as never,
+    });
+
+    const result = await writeAuditArtifacts({
+      auditId: 'audit-disk-fallback',
+      kind: 'audit',
+      browser: {} as never,
+      startedAt,
+      finishedAt: new Date('2026-09-05T10:01:00.000Z'),
+      config: {
+        maxPages: 2,
+        maxDepth: 2,
+        crawlDelayMs: 0,
+        pageTimeoutMs: 30_000,
+        lighthouseTimeoutMs: 60_000,
+        userAgent: 'test',
+        scanConcurrency: 2,
+        sitemapMode: 'supplement',
+      },
+      siteResult: {
+        crawl: {
+          startUrl: home,
+          pages: [
+            { url: home, depth: 0, status: 'visited', discoveryMethod: 'link', httpStatus: 200 },
+            {
+              url: staged,
+              depth: 1,
+              status: 'visited',
+              discoveryMethod: 'link',
+              httpStatus: 200,
+            },
+          ],
+          effectiveDelayMs: 0,
+          visitedCount: 2,
+          maxPages: 2,
+          maxDepth: 2,
+          robotsTxtFound: true,
+          robotsDisallowMatches: [],
+          aiCrawlerBlocks: [],
+          linkDiscoveredUrls: [staged],
+        } as never,
+        // `staged` is deliberately absent here: writeAuditArtifacts must
+        // fall back to the scan.json already on disk instead of dropping
+        // it to a crawl-only manifest entry.
+        pages: [{ url: home } as never],
+      },
+    });
+
+    expect(result.auditDir).toBe(auditDir);
+    const stagedEntry = result.manifest.pages.find((page) => page.url === staged);
+    expect(stagedEntry?.status).toBe('visited');
+    expect(stagedEntry?.pageDir).toBeDefined();
+
+    const normalizedStaged = result.pages.find((page) => page.url === staged);
+    expect(normalizedStaged).toBeDefined();
+    expect(normalizedStaged?.axe?.violations).toEqual([]);
+    expect(normalizedStaged?.headMetadata?.title).toBe('Staged');
   });
 });

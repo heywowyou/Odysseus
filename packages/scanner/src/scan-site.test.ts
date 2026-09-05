@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./crawl.js', () => ({ crawlSite: vi.fn() }));
 vi.mock('./scan-page.js', () => ({
@@ -25,6 +28,20 @@ import { checkLlmsTxt } from './checks/llms-txt.js';
 import { checkSecurityHeaders } from './checks/security-headers.js';
 import { checkCookieConsent } from './checks/cookie-consent.js';
 import { scanSite, type ScanProgressEvent } from './scan-site.js';
+import { readPageScanJson } from './artifacts/page-scan-io.js';
+
+let writtenTempDirs: string[] = [];
+
+async function makeTempAuditDir(prefix: string): Promise<{ auditDir: string; pagesDir: string }> {
+  const auditDir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
+  writtenTempDirs.push(auditDir);
+  return { auditDir, pagesDir: path.join(auditDir, 'pages') };
+}
+
+afterEach(async () => {
+  await Promise.all(writtenTempDirs.map((dir) => fs.rm(dir, { recursive: true, force: true })));
+  writtenTempDirs = [];
+});
 
 const startUrl = 'https://example.com/';
 const visited = (url: string, discoveryMethod = 'link') => ({
@@ -127,6 +144,47 @@ describe('scanSite characterization', () => {
     expect(checkLlmsTxt).toHaveBeenCalledOnce();
     expect(checkSecurityHeaders).toHaveBeenCalledOnce();
     expect(checkCookieConsent).toHaveBeenCalledOnce();
+  });
+
+  it('issue #64: writes each page scan.json to disk as it completes and keeps result.pages empty when writePagesAsScanned is set', async () => {
+    const { auditDir, pagesDir } = await makeTempAuditDir('scan-site-legacy-');
+    vi.mocked(scanPage).mockImplementation(async (_browser, _port, url) => ({
+      url,
+      axe: {
+        violations: [],
+        passes: [],
+        testEngine: { name: 'axe-core', version: '4.0.0' },
+      } as never,
+    }));
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: pagesDir,
+      auditDir,
+      writePagesAsScanned: true,
+      concurrency: 4,
+    });
+
+    expect(result.pages).toHaveLength(0);
+
+    for (const url of [startUrl, `${startUrl}a`, `${startUrl}b`, `${startUrl}legal`]) {
+      const written = readPageScanJson(pagesDir, url);
+      expect(written).toBeDefined();
+      expect(written?.url).toBe(url);
+      expect(written?.axe?.testEngine.version).toBe('4.0.0');
+    }
+  });
+
+  it('issue #64: requires auditDir when writePagesAsScanned is set', async () => {
+    await expect(
+      scanSite(startUrl, {
+        browser: {} as never,
+        debugPort: 9222,
+        screenshotDir: '/tmp/pages',
+        writePagesAsScanned: true,
+      }),
+    ).rejects.toThrow(/auditDir/);
   });
 });
 
@@ -308,5 +366,40 @@ describe('scanSite with fullAuditPlanning', () => {
         fullAuditPlanning: true,
       }),
     ).rejects.toThrow(/audit profile/);
+  });
+
+  it('issue #64: writes each page scan.json to disk during the staged content-scan/Lighthouse phases and keeps result.pages empty when writePagesAsScanned is set', async () => {
+    const { auditDir, pagesDir } = await makeTempAuditDir('scan-site-staged-');
+
+    const result = await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: pagesDir,
+      auditDir,
+      writePagesAsScanned: true,
+      concurrency: 3,
+      fullAuditPlanning: true,
+    });
+
+    expect(result.pages).toHaveLength(0);
+
+    const home = readPageScanJson(pagesDir, startUrl);
+    const a = readPageScanJson(pagesDir, pageA);
+    const b = readPageScanJson(pagesDir, pageB);
+
+    expect(home).toBeDefined();
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+
+    // Content is written for every page; only the planner-selected pages
+    // (home and page A) end up with a lighthouse result merged in.
+    expect(home?.lighthouse).toBeDefined();
+    expect(a?.lighthouse).toBeDefined();
+    expect(b?.lighthouse).toBeUndefined();
+
+    for (const written of [home, a, b]) {
+      expect(written).not.toHaveProperty('checkOutcomes');
+      expect(written).not.toHaveProperty('renderedCostProfile');
+    }
   });
 });

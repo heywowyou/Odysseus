@@ -31,6 +31,7 @@ import {
 } from './full-audit-plan.js';
 import type { PageAuditProfile } from './page-audit-profile.js';
 import { derivePageAnalysisCoverage } from './analysis-coverage.js';
+import { readPageScanJson, writePageScanJson } from './artifacts/page-scan-io.js';
 
 /** Extends crawl's own events with the scan phase's. scan-start fires
  *  once, after the crawl finishes (the total page count isn't known
@@ -65,6 +66,23 @@ export interface ScanSiteOptions {
    *  written under; renderDiff appends its own <slug>-<hash> subdirectory
    *  per page. */
   screenshotDir: string;
+  /** The audit directory screenshotDir's `pages/` lives under
+   *  (screenshotDir's parent). Required when writePagesAsScanned is set,
+   *  to relativize each page's screenshot refs the same way
+   *  writeAuditArtifacts does. */
+  auditDir?: string;
+  /** Issue #64: when set, each page's scan.json is written to disk as
+   *  soon as that page finishes (mirroring the screenshot writes
+   *  renderDiff already does), and its full result is then dropped from
+   *  the `pages` array this function returns (only `{ url }` is kept) so
+   *  the heavy per-page fields (axe/Lighthouse JSON, evidence arrays) can
+   *  be garbage-collected instead of accumulating in memory for the whole
+   *  run. writeAuditArtifacts reads these pages back from disk instead of
+   *  from siteResult.pages. Requires auditDir. Off by default: the
+   *  standalone `scan` CLI command still dumps the full in-memory
+   *  SiteScanResult to stdout by design, and existing callers/tests rely
+   *  on the full result being returned. */
+  writePagesAsScanned?: boolean;
   onProgress?: (event: ScanProgressEvent) => void;
   /** Manual-input-layer milestone, forwarded to crawlSite as-is. */
   seeds?: string[];
@@ -96,6 +114,11 @@ export interface ScanSiteOptions {
 
 export interface SiteScanResult {
   crawl: CrawlResult;
+  /** Issue #64: empty when the run was made with writePagesAsScanned -
+   *  every page's full result was written to disk (under screenshotDir's
+   *  parent, auditDir) as soon as that page finished and is never held in
+   *  memory for the run's duration. writeAuditArtifacts reads pages back
+   *  from disk instead of from this array in that case. */
   pages: PageScanResult[];
   /** Milestone 8.6: origin-level, fetched once here (not per page) - see
    *  CruxFieldDataResult's own doc comment for why. Absent (not merely
@@ -114,6 +137,31 @@ export interface SiteScanResult {
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Issue #64: when writePagesAsScanned is set, writes pageResult's
+ * scan.json immediately (mirroring the screenshot writes renderDiff
+ * already does per page) and returns undefined, so the caller's own
+ * accumulator never retains it - a full round trip through `pages` (even
+ * as a url-only stand-in) would make writeAuditArtifacts's
+ * "is this page already in memory" check see a (falsely) defined entry
+ * and skip the disk it was actually written to. Returns pageResult
+ * unchanged when unset, the default every existing caller (the `scan` CLI
+ * command, tests) still gets.
+ */
+function persistPageIfConfigured(
+  pageResult: PageScanResult,
+  screenshotDir: string,
+  auditDir: string | undefined,
+  writePagesAsScanned: boolean | undefined,
+): PageScanResult | undefined {
+  if (!writePagesAsScanned) return pageResult;
+  if (auditDir === undefined) {
+    throw new Error('scanSite: writePagesAsScanned requires auditDir to be set.');
+  }
+  writePageScanJson(screenshotDir, auditDir, pageResult);
+  return undefined;
 }
 
 /**
@@ -231,6 +279,8 @@ async function runScanLane(
  *  threaded as a long positional parameter list a second time. */
 interface StagedScanContext {
   screenshotDir: string;
+  auditDir: string | undefined;
+  writePagesAsScanned: boolean | undefined;
   timeoutMs: number | undefined;
   userAgent: string | undefined;
   mentionsLegalesUrl: string | undefined;
@@ -366,9 +416,31 @@ async function runStagedFullAuditScan(
           laneIndex * delayMs,
           context,
           (url, result) => {
-            renderedResults.set(url, result);
-            if (result.renderedCostProfile !== undefined) {
-              renderedCosts.set(url, result.renderedCostProfile);
+            const { checkOutcomes, renderedCostProfile, ...content } = result;
+            if (context.writePagesAsScanned) {
+              // Issue #64: the content-scan phase must wait for every
+              // lane's rendered result before Lighthouse selection can
+              // run (finalizeLighthousePlan needs every renderedCosts
+              // entry), so this map would otherwise hold every page's
+              // full rendered payload (axe/headMetadata/evidence, the
+              // bulk of a page's size) simultaneously for as long as the
+              // content-scan phase takes - the actual accumulator behind
+              // the reported OOM, since this phase covers every page, not
+              // just the Lighthouse-selected minority. Write the rendered
+              // content to disk now and keep only what emit() needs
+              // in-memory (checkOutcomes, for analysisCoverage) - emit()
+              // reads the content back from disk once Lighthouse
+              // selection is known.
+              if (context.auditDir === undefined) {
+                throw new Error('scanSite: writePagesAsScanned requires auditDir to be set.');
+              }
+              writePageScanJson(context.screenshotDir, context.auditDir, content as PageScanResult);
+              renderedResults.set(url, { url, checkOutcomes } as RenderedAnalysisResult);
+            } else {
+              renderedResults.set(url, result);
+            }
+            if (renderedCostProfile !== undefined) {
+              renderedCosts.set(url, renderedCostProfile);
             }
             contentCompleted += 1;
             onProgress?.({
@@ -419,17 +491,36 @@ async function runStagedFullAuditScan(
           : {}),
       }),
     );
-    const {
-      checkOutcomes: _checkOutcomes,
-      renderedCostProfile: _renderedCostProfile,
-      ...content
-    } = rendered;
-    const pageResult: PageScanResult = { ...content };
+    let pageResult: PageScanResult;
+    if (context.writePagesAsScanned) {
+      // The content-scan lane already wrote this page's rendered-only
+      // scan.json and shed the full payload from `rendered` (see the lane
+      // callback above) - read it back rather than spreading `rendered`,
+      // which no longer carries it.
+      const fromDisk = readPageScanJson(context.screenshotDir, url);
+      if (fromDisk === undefined) {
+        throw new Error(`writePagesAsScanned: expected a scan.json already written for ${url}.`);
+      }
+      pageResult = fromDisk;
+    } else {
+      const {
+        checkOutcomes: _checkOutcomes,
+        renderedCostProfile: _renderedCostProfile,
+        ...content
+      } = rendered;
+      pageResult = { ...content };
+    }
     if (lighthouseResult?.lighthouse !== undefined)
       pageResult.lighthouse = lighthouseResult.lighthouse;
     if (lighthouseResult?.lighthouseError !== undefined)
       pageResult.lighthouseError = lighthouseResult.lighthouseError;
-    pages.push(pageResult);
+    const kept = persistPageIfConfigured(
+      pageResult,
+      context.screenshotDir,
+      context.auditDir,
+      context.writePagesAsScanned,
+    );
+    if (kept !== undefined) pages.push(kept);
     scanned += 1;
     onProgress?.({ type: 'scan-page', scanned, totalPages: pagesToScan.length, url });
   };
@@ -487,6 +578,9 @@ export async function scanSite(
   startUrl: string,
   options: ScanSiteOptions,
 ): Promise<SiteScanResult> {
+  if (options.writePagesAsScanned && options.auditDir === undefined) {
+    throw new Error('scanSite: writePagesAsScanned requires auditDir to be set.');
+  }
   const sitemapMode = options.sitemapMode ?? 'supplement';
   const crawl = await crawlSite(startUrl, {
     browser: options.browser,
@@ -606,6 +700,8 @@ export async function scanSite(
   if (options.fullAuditPlanning) {
     const context: StagedScanContext = {
       screenshotDir: options.screenshotDir,
+      auditDir: options.auditDir,
+      writePagesAsScanned: options.writePagesAsScanned,
       timeoutMs: options.timeoutMs,
       userAgent: options.userAgent,
       mentionsLegalesUrl: mentionsLegalesUrlForScan,
@@ -645,11 +741,19 @@ export async function scanSite(
   });
 
   const pages: PageScanResult[] = [];
+  let scannedCount = 0;
   const onPageDone = (pageResult: PageScanResult): void => {
-    pages.push(pageResult);
+    const kept = persistPageIfConfigured(
+      pageResult,
+      options.screenshotDir,
+      options.auditDir,
+      options.writePagesAsScanned,
+    );
+    if (kept !== undefined) pages.push(kept);
+    scannedCount += 1;
     options.onProgress?.({
       type: 'scan-page',
-      scanned: pages.length,
+      scanned: scannedCount,
       totalPages: pagesToScan.length,
       url: pageResult.url,
     });
