@@ -153,4 +153,47 @@ describe('extractMentionsLegales', () => {
     expect(result.siren).toBe('790852578');
     expect(result.siren).not.toBe('443748397');
   });
+
+  // Issue #76 (Hotel Tandem, audit dcf21a89-824f-4a07-9c3e-2fb08638fe55): a
+  // page with distinct "EDITEUR" and "Hebergement" sections put the web
+  // host's (O2Switch) SIRET before the site editor's (HOTELIFE) SIREN in
+  // document order. The old first-match-in-document-order scan returned
+  // the host's number, which then fed into assessObligations() as the
+  // audited company's own legal identity.
+  it('prefers the SIREN under an EDITEUR section over one under a Hebergement section (real Hotel Tandem case)', () => {
+    const bodyText = `
+      EDITEUR
+      SASU HOTELIFE, RCS Colmar, SIREN 835138645
+
+      Hebergement
+      O2 Switch, SIRET 510 909 807 00032, RCS Clermont-Ferrand
+    `;
+    const result = extractMentionsLegales(pageUrl, bodyText);
+    expect(result.siren).toBe('835138645');
+    expect(result.siren).not.toBe('510909807');
+  });
+
+  it('still finds a SIREN that only appears under a Hebergement section', () => {
+    const bodyText = `
+      Hebergement
+      O2 Switch, SIRET 510 909 807 00032, RCS Clermont-Ferrand
+    `;
+    const result = extractMentionsLegales(pageUrl, bodyText);
+    expect(result.siren).toBe('510909807');
+  });
+
+  it('does not treat "hebergement" used as ordinary hotel-lodging text as a section header', () => {
+    // The word "hebergement" (lodging) is extremely common on the hotel
+    // sites this product audits, in the ordinary sense of accommodation,
+    // not as a legal web-hosting disclosure label - it must not be
+    // mistaken for one just because it appears mid-sentence.
+    const bodyText = `
+      Notre hebergement propose des chambres tout confort a partir de 89 euros.
+
+      EDITEUR
+      SASU HOTELIFE, RCS Colmar, SIREN 835138645
+    `;
+    const result = extractMentionsLegales(pageUrl, bodyText);
+    expect(result.siren).toBe('835138645');
+  });
 });

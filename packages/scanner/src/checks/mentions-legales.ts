@@ -85,13 +85,91 @@ function firstValidSiren(bodyText: string): string | undefined {
   return undefined;
 }
 
+// Issue #76 (Hotel Tandem case): a mentions-legales page with distinct
+// "EDITEUR" and "Hebergement" blocks put the host's (O2Switch) SIRET
+// before the site editor's (HOTELIFE) SIREN in document order, so the
+// plain first-match scan above picked the host - a wrong SIREN then fed
+// straight into assessObligations() as the audited company's own
+// identity (non-negotiable rule 6). These patterns only match at the
+// start of a line: "hebergement" alone, anywhere in body text, is an
+// extremely common word on the hotel sites this product actually audits
+// (lodging/accommodation, not web hosting), so a bare substring match
+// would misfire constantly on this product's own target market. Real
+// mentions-legales pages mark this distinction with a heading or a
+// "Label : valeur" line, which the ^ (line-start) anchor captures without
+// needing an HTML parser.
+const EDITOR_SECTION_HEADER_PATTERN =
+  /^[ \t]*(?:[ée]diteur(?:\s+du\s+site)?|responsable\s+de\s+la\s+publication)[ \t]*:?/gim;
+const HOST_SECTION_HEADER_PATTERN = /^[ \t]*h[ée]berg(?:ement|eur)(?:\s+du\s+site)?[ \t]*:?/gim;
+
+type LegalSectionType = 'editor' | 'host' | 'unlabeled';
+
+/**
+ * Splits body text into ordered segments by which labeled section (if any)
+ * each stretch of text falls under. A segment runs from one recognized
+ * header to the next (or to the end of the text); any text before the
+ * first header is 'unlabeled'. Pages with no labeled sections at all
+ * (the common case, and every pre-existing fixture) come back as a single
+ * 'unlabeled' segment covering the whole text, preserving prior behavior.
+ */
+function splitLegalSections(bodyText: string): { type: LegalSectionType; text: string }[] {
+  const headers: { index: number; type: LegalSectionType }[] = [];
+  for (const match of bodyText.matchAll(EDITOR_SECTION_HEADER_PATTERN)) {
+    if (match.index === undefined) continue;
+    headers.push({ index: match.index, type: 'editor' });
+  }
+  for (const match of bodyText.matchAll(HOST_SECTION_HEADER_PATTERN)) {
+    if (match.index === undefined) continue;
+    headers.push({ index: match.index, type: 'host' });
+  }
+  if (headers.length === 0) return [{ type: 'unlabeled', text: bodyText }];
+  headers.sort((a, b) => a.index - b.index);
+  const firstHeader = headers[0];
+  if (firstHeader === undefined) return [{ type: 'unlabeled', text: bodyText }];
+
+  const segments: { type: LegalSectionType; text: string }[] = [];
+  if (firstHeader.index > 0) {
+    segments.push({ type: 'unlabeled', text: bodyText.slice(0, firstHeader.index) });
+  }
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i];
+    if (header === undefined) continue;
+    const next = headers[i + 1];
+    const end = next === undefined ? bodyText.length : next.index;
+    segments.push({ type: header.type, text: bodyText.slice(header.index, end) });
+  }
+  return segments;
+}
+
+/**
+ * Section-aware wrapper around firstValidSiren: tries the editor-labeled
+ * text first, then any unlabeled text, and only falls back to
+ * host-labeled text last - a hosting provider's own SIRET can still win
+ * when it is genuinely the only one on the page, just not by virtue of
+ * appearing earlier in the raw text.
+ */
+function firstValidSirenPreferringEditor(bodyText: string): string | undefined {
+  const sections = splitLegalSections(bodyText);
+  const priorityOrder: readonly LegalSectionType[] = ['editor', 'unlabeled', 'host'];
+  for (const wantedType of priorityOrder) {
+    const text = sections
+      .filter((section) => section.type === wantedType)
+      .map((section) => section.text)
+      .join('\n');
+    if (!text) continue;
+    const found = firstValidSiren(text);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 export function extractMentionsLegales(
   pageUrl: string,
   bodyText: string,
 ): MentionsLegalesExtraction {
   const result: MentionsLegalesExtraction = { pageUrl };
 
-  const siren = firstValidSiren(bodyText);
+  const siren = firstValidSirenPreferringEditor(bodyText);
   if (siren !== undefined) result.siren = siren;
 
   const rcsMatch = bodyText.match(RCS_PATTERN);
