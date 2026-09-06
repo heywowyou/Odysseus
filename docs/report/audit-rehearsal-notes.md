@@ -284,3 +284,48 @@ Each entry:
   - #72 `nomCommercial` detector picks up boilerplate ("Site Officiel")
     instead of the real brand name; caught by the existing identity guard
     before it reached a report, but the underlying detector is still wrong
+
+## 2026-09-06 — hotel-tandem.fr
+
+- URL: https://hotel-tandem.fr/
+- Audit ID: dcf21a89-824f-4a07-9c3e-2fb08638fe55
+- Environment note: VPS dashboard job queue, uncapped. jobId
+  afc43a56-9b3c-49f8-8146-9eae93ae4a92. No local `artifacts/` directory;
+  scan, both analyses, and both reports live only in the VPS's MongoDB and
+  report store. Crawl: 94 pages visited, 33 content-scanned/lighthouse-
+  measured.
+- Render note: the first render paused at `needs-input` on a detected
+  `raisonSociale: "O2SWITCH"` (the hosting provider, not the hotel).
+  Checked the source mentions-légales page directly and confirmed the real
+  identity externally (SASU HOTELIFE, SIREN 835138645, via
+  annuaire-entreprises.data.gouv.fr). Corrected via the dashboard's
+  manual-fields PATCH + regenerate-report. Final PDFs: FR 48 pages, EN 45
+  pages.
+- Verdict: substance a client can act on and a legal section that hedges
+  correctly rather than overclaiming, undermined by two arithmetic/data
+  problems sitting on the pages meant to be the report's factual anchor:
+  a wrong-company SIREN that had to be caught by eye before the report
+  could even render, and a "33/28" stat that looks like broken math to a
+  reader who doesn't already know the report silently switches between two
+  different page counts.
+- Top concerns beyond the filed issues:
+  - The wrong SIREN was not a one-off render-time surprise: it had already
+    propagated into `hotel_qualifications.siteFacts.siren` at the
+    prospecting stage, before this rehearsal ever touched the audit.
+  - The "33/28" conflation is not confined to the KPI card; the
+    Methodology page's "Coverage detail: 33 pages analyzed" sentence
+    directly contradicts "28 pages analyzed" stated one paragraph above it
+    on the same page, in both languages.
+- Nits (not filed as issues):
+  - Methodology states a language (Italian, "it") was published on the
+    site but not analyzed, with no one-line reason given — technically
+    correct (discovered-not-scanned per trade-off 31) but reads as an
+    unexplained gap to a lay reader.
+- Issues filed 2026-09-06, two in total, labelled needs-triage:
+  - #76 mentions-légales SIREN detector picks the web host's SIRET
+    (`firstValidSiren`, first-match-in-document-order, no section-label
+    awareness) over the site editor's
+  - #77 report reuses "pages analyzed" for two different populations
+    (28 content-checked vs 33 Lighthouse-measured), producing a
+    self-contradicting "33/28" stat and a contradictory Methodology
+    sentence, identical in both languages
