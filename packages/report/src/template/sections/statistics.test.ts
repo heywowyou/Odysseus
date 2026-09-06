@@ -220,8 +220,31 @@ describe('renderStatistics against the real small-site.test scan', () => {
       manifest,
     );
 
-    // Exactly 1 page has an (uncapped) critical finding, out of 1 scanned.
-    expect(html).toContain('>1/1</div>');
+    // Exactly 1 page has an (uncapped) critical finding.
+    expect(html).toContain('>1</div>');
+  });
+});
+
+// Issue #77 (Hotel Tandem, audit dcf21a89-824f-4a07-9c3e-2fb08638fe55): the
+// tile used to render "N/M" where N (pagesWithCritical, unioned across every
+// critical finding regardless of pass or category) could exceed M
+// (pagesScanned, content-analysis-completed pages only) - a site-wide
+// finding can legitimately name more pages than were content-checked. The
+// tile must never render a fraction whose numerator can exceed its own
+// denominator.
+describe('issue #77: pagesWithCritical tile never renders as a fraction', () => {
+  it('renders pagesWithCritical as a bare count even when it exceeds pagesScanned', () => {
+    const siteWideCritical: Finding = {
+      ...buildCategoryFinding('performance', 1),
+      severity: 'critical',
+      pageUrls: ['https://example.com/', 'https://example.com/a', 'https://example.com/b'],
+    };
+    const manifest = buildMinimalManifest();
+
+    const html = renderStatistics(getStrings('en'), 3, 'en', [siteWideCritical], manifest);
+
+    expect(html).not.toMatch(/>3\/\d+</);
+    expect(html).toContain('>3</div>');
   });
 });
 

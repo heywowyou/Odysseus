@@ -810,10 +810,19 @@ export const fr: ReportStrings = {
     languageCoverageTemplate: 'Langues couvertes par cette analyse : {languages}.',
     languageNotScannedTemplate:
       "Aucune page n'a été analysée pour les langues suivantes, bien que le site en publie : {languages}.",
+    // Issue #77 : {total} correspond ici a analyzedPages.length (toute page
+    // au statut 'visited'), une population differente, plus large, que le
+    // nombre de pages a analyse de contenu terminee que le paragraphe
+    // outillage plus haut appelle deja "{pages} analysees" - reutiliser
+    // "analysees" pour les deux produisait deux nombres differents sous le
+    // meme mot sur la meme page. "Visitees" reprend le vocabulaire deja
+    // utilise ailleurs dans ce fichier pour status === 'visited' (les
+    // phrases SIREN/RCS/TVA sur les "pages visitees") et ne recoupe pas le
+    // nombre de pages analysees.
     sitemapCoverageTemplate:
-      "Détail du périmètre : {total} pages analysées, dont {linked} atteintes depuis la page d'accueil ou par des liens internes et {sitemapOnly} ajoutées depuis le sitemap.",
+      "Détail du périmètre : {total} pages visitées, dont {linked} atteintes depuis la page d'accueil ou par des liens internes et {sitemapOnly} ajoutées depuis le sitemap.",
     sitemapCoverageWithSeedsTemplate:
-      "Détail du périmètre : {total} pages analysées, dont {linked} atteintes depuis la page d'accueil ou par des liens internes, {seeded} fournies explicitement et {sitemapOnly} ajoutées depuis le sitemap.",
+      "Détail du périmètre : {total} pages visitées, dont {linked} atteintes depuis la page d'accueil ou par des liens internes, {seeded} fournies explicitement et {sitemapOnly} ajoutées depuis le sitemap.",
     sitemapIncompleteTemplate:
       "La couverture du sitemap est incomplète. Fichiers sitemap non lus : {failed}. URL de pages déclarées hors du périmètre autorisé ou filtrées par les règles de l'audit : {filtered}. Pages éligibles omises en raison du plafond configuré : {omitted}.",
     toolingParagraphTemplate:

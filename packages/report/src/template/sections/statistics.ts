@@ -112,10 +112,17 @@ export function renderStatistics(
     ),
     renderNumberTile(n(stats.totalFindings), s.findingsTileLabel),
     renderNumberTile(n(stats.accessibilityOccurrences), s.accessibilityOccurrencesTileLabel),
-    renderNumberTile(
-      `${n(stats.pagesWithCritical)}/${n(stats.pagesScanned)}`,
-      s.pagesWithCriticalTileLabel,
-    ),
+    // Issue #77: this used to render as "{pagesWithCritical}/{pagesScanned}",
+    // which reads as a fraction out of the tile above - but pagesWithCritical
+    // unions pageUrls across every critical finding regardless of pass or
+    // category, while pagesScanned counts only pages with completed content
+    // analysis (axe/render-diff/extended). A site-wide finding (e.g. a
+    // Lighthouse resource issue, trade-off 30) can legitimately name more
+    // pages than pagesScanned, producing a numerator bigger than the
+    // denominator right next to it. Two correctly-distinct, non-nested
+    // counts, so shown as a bare count rather than a fraction that implies
+    // "N out of D".
+    renderNumberTile(n(stats.pagesWithCritical), s.pagesWithCriticalTileLabel),
   ].join('');
 
   const severityMeanings = {

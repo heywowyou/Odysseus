@@ -706,10 +706,18 @@ export const en: ReportStrings = {
     languageCoverageTemplate: 'Languages covered by this analysis: {languages}.',
     languageNotScannedTemplate:
       'No page was analyzed for the following languages, although the site publishes them: {languages}.',
+    // Issue #77: {total} here is analyzedPages.length (every page with
+    // status 'visited'), a different, larger population than the
+    // content-analysis-completed count the tooling paragraph above states
+    // as "{pages} analyzed" - reusing "analyzed" for both produced two
+    // different numbers under the same word on the same page. "Visited"
+    // matches this codebase's existing vocabulary for status === 'visited'
+    // (see the SIREN/RCS/TVA "pages visitées" sentences elsewhere in this
+    // file) and does not collide with the content-analysis count.
     sitemapCoverageTemplate:
-      'Coverage detail: {total} pages analyzed, including {linked} reached from the homepage or internal links and {sitemapOnly} added from the sitemap.',
+      'Coverage detail: {total} pages visited, including {linked} reached from the homepage or internal links and {sitemapOnly} added from the sitemap.',
     sitemapCoverageWithSeedsTemplate:
-      'Coverage detail: {total} pages analyzed, including {linked} reached from the homepage or internal links, {seeded} supplied explicitly, and {sitemapOnly} added from the sitemap.',
+      'Coverage detail: {total} pages visited, including {linked} reached from the homepage or internal links, {seeded} supplied explicitly, and {sitemapOnly} added from the sitemap.',
     sitemapIncompleteTemplate:
       'Sitemap coverage was incomplete. Sitemap documents not read: {failed}. Declared page URLs outside the authorized scope or filtered by the audit rules: {filtered}. Eligible pages omitted by the configured cap: {omitted}.',
     toolingParagraphTemplate:
