@@ -329,3 +329,115 @@ Each entry:
     (28 content-checked vs 33 Lighthouse-measured), producing a
     self-contradicting "33/28" stat and a contradictory Methodology
     sentence, identical in both languages
+
+## 2026-09-06 — www.le-grand-chalet.fr
+
+- URL: https://www.le-grand-chalet.fr/
+- Audit ID: d9d9ec5e-ed0d-471e-9721-c2e4d979cc06
+- Hotel: HOTEL LE GRAND CHALET, La Tremblade (17390), 3-star, 25 rooms,
+  independent. SIREN 849964887 (raison sociale "LA CEPE"). Picked at random
+  with `shuf` from a `$sample` of v2-qualified rows, not hand-picked.
+- Environment note: VPS dashboard job queue, uncapped, build `53e0955`.
+  jobId 9f0a909c-4665-4b56-9311-f40f5c760e11. No local `artifacts/`
+  directory; scan, both analyses, and both reports live only in the VPS's
+  MongoDB and report store. Crawl 91 URLs, 86 content-checked, 90
+  Lighthouse-measured, 109 distinct findings (12 critical, 62 serious, 7
+  moderate, 28 minor). Final PDFs: FR 41 pages, EN 39 pages.
+- Start-URL deviation: qualification stored
+  `finalUrl: https://www.le-grand-chalet.fr/de`, but bounded read-only curl
+  showed that is an `Accept-Language` content-negotiation artifact, not a
+  redirect target (no header and `fr-FR` both return 200 at `/`). Scanned
+  the site root instead, with operator go-ahead. Worth watching whether
+  other catalogue rows carry a `finalUrl` negotiated into a foreign-language
+  subtree the same way.
+- Render note: the first render paused at `needs-input` on a detected
+  `nomCommercial: "Hôtel La Tremblade, quartier Ronce-les-Bains"` — an SEO
+  location phrase. Corrected via the dashboard's manual-fields PATCH
+  (`nomCommercial: "Hôtel Le Grand Chalet"`, `raisonSociale: "LA CEPE"`) plus
+  regenerate-report. Second rehearsal running of the identity guard, second
+  time it earned its keep.
+- Catalogue/CLI environment fact: `odysseus prospect hotel-qualify reasons`
+  returns `[]` locally because the local `.env` points `MONGODB_DB_NAME` at
+  `odysseus-local` while the catalogue lives in `test`. Picked through the
+  mongodb-readonly MCP server instead. Not a defect; recorded so the next
+  run does not rediscover it.
+- Verdict: a report worth paying for and acting on, with genuinely useful
+  substance — 109 ranked findings, remediation written as instructions the
+  owner can forward verbatim, an honest statement of automated testing's
+  30-40% coverage limit, and a legal section that declines to conclude — but
+  one an owner would send back before using. Four numbers on the summary
+  spread are wrong or contradictory, the legal section states a false fact
+  about the client's own business, and the English half has a typographic
+  tic on every priority card. None are hard problems; together they make a
+  reader wonder whether the 109 findings were checked as carelessly as the
+  four numbers on page 6.
+- Top concerns beyond the filed issues:
+  - Three separate arithmetic contradictions land on the same two-page
+    spread (89 vs 86 pages, 80 vs 63+19+0, 1 611 vs 1 565 occurrences). Each
+    is filed separately, but the pattern is one missing invariant, not three
+    bugs: no render-time check asserts that a count shown to a client is
+    consistent with the count shown beside it.
+  - Page-count denominators are not just inconsistent between two cards —
+    the report gives 86, 90, and 91 across different sentences depending on
+    which coverage population each was derived from. The vocabulary to
+    distinguish them already exists (CLAUDE.md rule 5's coverage terms); it
+    has simply never reached the client-facing copy.
+- Checked and ruled out (recorded so it is not re-investigated): Lighthouse
+  ran 90/90 with 0 `not-planned`, which initially looked like a
+  family-stratification failure against trade-off 64. It is not. Trade-off
+  64 allows a representative plus a cost outlier **per family and per
+  language**, and this site has roughly 18 templates across 5 languages, so
+  nearly every family+language pair has a single member and stratification
+  legitimately removes almost nothing. The one French family with two
+  members (`/` and `/fr`, `v1:623431ea96e420d3`) is within the allowance.
+- Nits (not filed as issues):
+  - The French side uses ASCII `0x20` before its colons (232 occurrences)
+    where French typography wants U+00A0 — the same orphaning risk #46 fixed
+    for the cover's question mark, still open for colons. No orphaned colon
+    was actually observed in this run, so it is latent, not a current defect.
+  - The legal section prints the raw INSEE code "tranche d'effectif 02" to a
+    lay reader when the human label ("3 à 5 salariés") is present in the same
+    cached payload. Folded into #78 rather than filed separately.
+  - "ci-dessus" is used twice for content that appears below the sentence
+    referring to it.
+  - `raisonSociale` is taken from the registry's `nom_complet`
+    (`LA CEPE (HOTEL LE GRAND CHALET- RESTAURANT LE BRISE LAMES)`) rather
+    than `nom_raison_sociale` (`LA CEPE`). Checked and judged **by design**:
+    `normalizeRegistryDisplayName` collapses `X (Y)` only when Y repeats X,
+    and its comment states a genuinely different trading name in parentheses
+    is real information and stays.
+  - The build line prints "modèle 2" to the client. Checked: it is the
+    template version, deliberate and covered by `next-steps.test.ts`, not a
+    residue of #58's `unknown` placeholders. Reads as jargon to an owner, but
+    it is a wording judgment, not a defect.
+- Issues filed 2026-09-06, eight in total, all labelled needs-triage:
+  - #78 absent registry turnover (`ca: 0`, the API's missing-value sentinel,
+    alongside €64,713 net profit) printed as a verified "0 €" and used to
+    claim the SME exemption — bypassing `checkSmeExemption`'s own
+    `turnover === null` guard, whose comment forbids claiming an exemption
+    without positive evidence. Non-negotiable rule 6 territory.
+  - #79 brand-name detector promotes an SEO location phrase when one page's
+    title is counted twice (trailing-slash duplicate plus a rendered redirect
+    stub clear the `>= 2` frequency gate; the length tie-break then favours
+    the terser SEO segment; `og:title` carries the correct name and is never
+    consulted). Same field as the closed #72, different mechanism.
+  - #80 "89 pages with at least one critical finding" beside "86 pages
+    analysed" — the #41 / #77 / `53e0955` family again, with the fraction
+    removed but the contradiction intact.
+  - #81 WCAG 2.1.3 (level AAA) listed with a blank name inside a "niveau AA"
+    conformance line; `isAuditedConformanceLevel` exists and is applied only
+    in `conformance-rollup.ts`, never in `buildLegalRelevance`.
+  - #82 English report uses French colon spacing ("Complexity : Low") on
+    every priority card, 136 occurrences, with "Ownership:" correct two lines
+    above it in the same card.
+  - #83 "80 findings covered by the priorities" contradicts the 63 + 19 + 0
+    breakdown beneath it; findings in two priorities counted once distinctly
+    and twice in the sums, with page overlap disclosed but finding overlap
+    not.
+  - #84 accessibility priority illustrated by a performance metric (CLS),
+    sharing its representative finding with the performance priority, and
+    reporting 1 611 occurrences against a site-wide accessibility total of
+    1 565.
+  - #85 a 200-response redirect stub (`/fr`) counted as an analysed page,
+    contradicting the report's own methodology sentence, and the mechanism
+    that defeated the brand-name heuristic in #79.
