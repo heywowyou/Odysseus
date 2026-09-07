@@ -56,7 +56,7 @@ function incrementPassOutcome(counts: AuditPassOutcomeCounts, outcome: AuditPass
   counts[outcome] += 1;
 }
 
-function contentOutcome(coverage: PageAnalysisCoverage): keyof ContentCoverageCounts {
+export function contentOutcome(coverage: PageAnalysisCoverage): keyof ContentCoverageCounts {
   const outcomes = [
     coverage.passes.rendered.outcome,
     coverage.passes.axe.outcome,
@@ -128,4 +128,32 @@ export function summarizeAuditCoverage(
     pagesWithoutContentAnalysis,
     templateFamilyCount: templateFamilies.size,
   };
+}
+
+/** Issue #80: the stats page showed "89 pages avec au moins un constat
+ *  critique" beside "86 pages analysées" because pagesScanned counts the
+ *  content-checked population (completed or partial, per contentOutcome)
+ *  while the critical-pages count was built by unconditionally unioning
+ *  every critical finding's own pageUrls, which can include a page outside
+ *  that population (the same #41 pattern: a finding recorded against a
+ *  discovered-but-not-scanned or otherwise uncovered page). This is the one
+ *  place that computes that population's URL set, so pagesScanned and any
+ *  numerator sharing its row scope to the exact same pages. */
+export function contentCheckedPageUrls(
+  manifest: Pick<AuditManifest, 'pages' | 'continuationGuardSummary'>,
+): ReadonlySet<string> {
+  const coverage = summarizeAuditCoverage(manifest);
+  if (coverage.kind === 'legacy-unknown') {
+    return new Set(
+      manifest.pages.filter((page) => page.status === 'visited').map((page) => page.url),
+    );
+  }
+  return new Set(
+    manifest.pages
+      .filter(
+        (page): page is ManifestPageEntry & { analysisCoverage: PageAnalysisCoverage } =>
+          page.analysisCoverage !== undefined && contentOutcome(page.analysisCoverage) !== 'failed',
+      )
+      .map((page) => page.url),
+  );
 }

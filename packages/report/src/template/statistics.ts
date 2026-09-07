@@ -1,5 +1,6 @@
 import type { AuditManifest, Finding } from '@odysseus/core';
 import {
+  contentCheckedPageUrls,
   HEURISTIC_RULE_IDS,
   RENDER_DIFF_EMISSION_THRESHOLD_PERCENT,
   summarizeAuditCoverage,
@@ -84,6 +85,10 @@ export function computeStatistics(
     coverage.kind === 'current'
       ? coverage.content.completed + coverage.content.partial
       : manifest.pages.filter((page) => page.status === 'visited').length;
+  // Issue #80: pagesWithCritical must never exceed pagesScanned on the same
+  // stats row, so it is confined to the identical content-checked
+  // population.
+  const contentCheckedUrls = contentCheckedPageUrls(manifest);
 
   let accessibilityOccurrences = 0;
   let accessibilityHeuristicOccurrences = 0;
@@ -123,7 +128,9 @@ export function computeStatistics(
     switch (finding.severity) {
       case 'critical':
         critical += 1;
-        for (const url of finding.pageUrls) pagesWithCriticalSet.add(url);
+        for (const url of finding.pageUrls) {
+          if (contentCheckedUrls.has(url)) pagesWithCriticalSet.add(url);
+        }
         break;
       case 'serious':
         serious += 1;

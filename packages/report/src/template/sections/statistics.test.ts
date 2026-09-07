@@ -228,23 +228,31 @@ describe('renderStatistics against the real small-site.test scan', () => {
 // Issue #77 (Hotel Tandem, audit dcf21a89-824f-4a07-9c3e-2fb08638fe55): the
 // tile used to render "N/M" where N (pagesWithCritical, unioned across every
 // critical finding regardless of pass or category) could exceed M
-// (pagesScanned, content-analysis-completed pages only) - a site-wide
-// finding can legitimately name more pages than were content-checked. The
-// tile must never render a fraction whose numerator can exceed its own
-// denominator.
-describe('issue #77: pagesWithCritical tile never renders as a fraction', () => {
-  it('renders pagesWithCritical as a bare count even when it exceeds pagesScanned', () => {
+// (pagesScanned, content-analysis-completed pages only). The tile must never
+// render a fraction.
+//
+// Issue #80: removing the fraction was not enough - the two counts still sat
+// side by side on the same row and could still disagree ("86 pages
+// analysées" beside "89 pages avec au moins un constat critique"), because
+// pagesWithCritical was never actually confined to the content-checked
+// population pagesScanned counts. A finding naming a page outside that
+// population (the same #41 pattern) no longer contributes to this tile.
+describe('issue #77/#80: pagesWithCritical never renders as a fraction and never exceeds pagesScanned', () => {
+  it('confines pagesWithCritical to the content-checked population, dropping a page outside it', () => {
     const siteWideCritical: Finding = {
       ...buildCategoryFinding('performance', 1),
       severity: 'critical',
+      // Only the manifest's single visited page is content-checked; the
+      // other two are outside that population and must not inflate the tile.
       pageUrls: ['https://example.com/', 'https://example.com/a', 'https://example.com/b'],
     };
     const manifest = buildMinimalManifest();
 
     const html = renderStatistics(getStrings('en'), 3, 'en', [siteWideCritical], manifest);
 
-    expect(html).not.toMatch(/>3\/\d+</);
-    expect(html).toContain('>3</div>');
+    expect(html).not.toMatch(/>\d+\/\d+</);
+    expect(html).toContain('>1</div>');
+    expect(html).not.toContain('>3</div>');
   });
 });
 
