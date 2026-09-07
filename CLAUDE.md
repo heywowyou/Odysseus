@@ -164,9 +164,9 @@ means numbered entry 24, not a literal Markdown heading anchor.
    derive tokens from source CSS, never invent them. → trade-offs.md#9
 10. Render-diff/axe/Lighthouse run across `SCAN_CONCURRENCY` lanes; the
     crawl stays sequential; Lighthouse calls are serialized behind an
-    in-process queue (confirmed `perf_hooks` collision). Do not remove
-    that queue without re-confirming the collision is gone.
-    → trade-offs.md#10
+    in-process queue, now for memory and measurement validity, not the
+    original `perf_hooks` collision. Do not remove that queue without a
+    measured drift budget on client-facing metrics. → trade-offs.md#10
 11. Legal content (Argument B) is a deterministic splice from
     `assessObligations()`, byte-identical-validated, never model prose.
     Do not revert to a "be careful" prompt instruction instead of
@@ -427,6 +427,12 @@ means numbered entry 24, not a literal Markdown heading anchor.
     path wins, then `MONGODB_DB_NAME`, never a driver default; production's
     database is pinned in `deploy/compose.yaml` (issue #38).
     → trade-offs.md#73
+
+74. Screenshot capture is gated on the same predicate that governs retention
+    (trade-off 2 now covers capture too), and Lighthouse is asked only for
+    the categories that can become findings. Do not let the two screenshot
+    predicates drift, and do not reach for scan concurrency before page
+    classification is fixed. → trade-offs.md#74
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node

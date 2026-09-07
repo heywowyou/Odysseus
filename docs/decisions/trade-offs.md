@@ -192,14 +192,42 @@ cap instead; that decision is the operator's.
     at a time, with the per-origin politeness delay unchanged in every lane,
     per the "concurrency, not a shorter delay" rule already in the project
     brief. Lighthouse calls are additionally serialized behind a small
-    in-process queue even though the lanes themselves run in parallel:
-    concurrent `lighthouse()` calls collide on Node's process-global
-    `perf_hooks` marks, confirmed 100% reproducible against the spa-demo
-    fixture, and unrelated to the CDP debug port each lane already gets its
-    own connection to. Do not remove that serialization queue to "let
-    Lighthouse run in the lanes too" without re-confirming the collision is
-    gone; `scanConcurrency` is recorded on `AuditConfigSnapshot` for the
-    same provenance reason other scan config fields are.
+    in-process queue even though the lanes themselves run in parallel.
+    `scanConcurrency` is recorded on `AuditConfigSnapshot` for the same
+    provenance reason other scan config fields are.
+
+    **Why the queue exists, restated 2026-09-07 (plan 026 Step 7).** The
+    original reason is gone and this entry used to still cite it. Concurrent
+    `lighthouse()` calls did collide on Node's process-global `perf_hooks`
+    marks, 100% reproducible against the spa-demo fixture and unrelated to the
+    CDP debug port each lane connects to separately. That collision was
+    structurally removed when the call moved into a forked child process
+    (`lighthouse-isolated.ts`, for an unrelated OOM-crash reason): each fork
+    gets its own fresh globals, so two forks cannot step on each other's
+    marks. "Re-confirm the collision is gone" is therefore a bar that is
+    trivially met, and anyone who met it would have been pointed at the wrong
+    risk.
+
+    Two real justifications remain, and they are what a future removal has to
+    answer:
+
+    - **Memory.** Removing the queue means N Lighthouse children at once, each
+      holding a Chromium page load's worth of memory, instead of one. The
+      existing 1024 MB per-child heap cap is the unit that gets multiplied.
+    - **Measurement validity, the stronger one.** Lighthouse is the only pass
+      in the audit that measures time. Its throttling observes how long real
+      work takes and scales it up to model a slower device, so sibling runs
+      competing for the same cores do not scatter noise around a true value,
+      they bias every number in the same direction. The numbers we would be
+      biasing are Core Web Vitals figures shown to a paying client.
+
+    Plan 026 resolved neither: its Step 6 was dropped without being attempted,
+    because Step 0 measured that the audit is slow for a different reason
+    (every page is a Lighthouse page, see entry 74's classification finding),
+    so unqueueing would only process a needlessly large workload faster. Do
+    not remove the queue to "let Lighthouse run in the lanes too" without a
+    measured drift budget on the metrics the client is shown, compared serially
+    against concurrently on the target machine, and a peak-RSS figure.
 
 11. **Argument B (the legal content) is a deterministic splice, in both
     the report and outreach, never model prose**, decided 2026-08-15
@@ -3658,3 +3686,64 @@ revisit. It leaves the deeper issue open: artifacts still live only on the
 machine that ran the scan, so cross-machine recovery still means copying
 directories by hand until issue #38's option 2 (uploadable artifacts) is
 built.
+
+### 74. Screenshot capture is gated on the same predicate that governs retention, and Lighthouse is asked only for the categories that can become findings (plan 026)
+
+Plan 026 asked a narrow question: make a single full audit finish sooner
+without weakening anything it measures. The answer turned out to be mostly
+about work the scan was doing and then discarding.
+
+**Capture is gated on retention now, and the two predicates must never
+drift.** Every page used to write two full-page PNGs, raw and rendered. At
+the end of the audit `selectPageDirsToKeep` keeps the homepage plus at most
+three pages, ranked by render-diff percentage above a 20 percent threshold,
+and deletes the rest. Measured on real audits, that is nearly all waste: an
+unfinished 2,532-page run left 5,050 PNGs and 12 GB on disk, while the two
+finished hotel audits kept two files and zero files respectively. Full-page
+capture of a long page is not cheap, and the cost was paid inside the
+rendered stage, on every lane, for output provably deleted a stage later.
+
+Capture is now gated on the same predicate that governs retention. Trade-off
+2 already forbids a second implementation of the keep decision for pruning;
+that prohibition now extends to capture. If the two ever diverge, the scan
+either throws away a screenshot the pruner wanted or keeps paying for one it
+does not, and the failure is silent in both directions. The change was
+accepted only because it can be made provably invisible: the before-and-after
+artifact directories must be identical, which was the shipping gate.
+
+**Lighthouse is asked only for the categories that can become findings.**
+`accessibility` and `best-practices` were already excluded from finding
+emission (trade-off 1) but were still being computed and then discarded.
+They are no longer requested. The excluded categories' scores are recorded as
+explicit nulls on the manifest rather than dropped, so a stored audit still
+says what was not measured instead of looking like a run that never had them.
+
+**Measured effect**, same site both runs (`www.les-flotsbleus.com`, 29 pages,
+through the dashboard queue): 570 s to 498 s total, minus 12.6 percent, with
+the Lighthouse segment falling 439 s to 366 s, minus 16.6 percent. The two
+analysis stages were untouched and did not move, which is the control:
+essentially the whole saving is where the changes were aimed. Coverage was
+29 of 29 on both runs with no failed passes, and the distinct finding count
+moved 55 to 58 (critical 18 to 19), which is ordinary run-to-run variation on
+a live site plus Lighthouse's own metric variance, not a loss.
+
+**Two levers were considered and dropped rather than deferred.** Raising
+rendered-lane concurrency was declined on measurement: the content-scan phase
+was about 40 s of a 500 s run, so the lever cannot move the total meaningfully
+and would spend the render-settle-timeout risk to buy nothing. Unqueueing
+Lighthouse and putting the sequential crawl to the operator as a rule 5
+question were both dropped for the reason in the next paragraph.
+
+**The real finding was classification, not serialization.** On a real 33-page
+hotel audit, all 32 pages carrying coverage came back `role: unknown` and
+`confidence: fallback`, so the mandatory arm of Lighthouse selection fired
+site-wide and plan 021's family stratification removed nothing at all;
+`unique-template-family` at 30 of 32 shows template grouping collapsed too.
+The paid audit is paying for a Lighthouse run on every single page, which is
+exactly the behaviour trade-off 64 was written to avoid. That reorders
+everything: the audit is slow because every page is a Lighthouse page, so
+fixing classification changes how much work exists, while unqueueing
+Lighthouse only changes how fast a needlessly large workload is processed.
+Do not reach for concurrency here before classification is fixed. The defect
+is filed separately; narrowing coverage to compensate is not an option, per
+plan 026's own binding decision and trade-off 64.

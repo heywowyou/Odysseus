@@ -22,9 +22,12 @@
 - **Category**: performance
 - **Planned at**: commit `991b434`, 2026-09-05
 - **Issue**: not yet filed
-- **Progress**: Steps 1, 2 and 3 shipped and measured on the VPS
-  2026-09-05 (`dde3241`, `0e0002d`, `c7f2fbe`). Step 4 deliberately not
-  taken, see below. Steps 5, 6, 7 untouched.
+- **Progress**: COMPLETE 2026-09-07. Steps 1, 2 and 3 shipped and measured
+  on the VPS 2026-09-05 (`dde3241`, `0e0002d`, `c7f2fbe`). Step 4
+  deliberately not taken, see below. Steps 5 and 6 dropped by operator
+  decision 2026-09-07, see below. Step 7 done 2026-09-07: trade-off 10
+  rewritten, trade-off 74 added, CLAUDE.md's two imperatives updated,
+  `scan-site.ts`'s unmeasured bottleneck claim removed.
 
 ## Result of Steps 1 to 3, measured on the VPS 2026-09-05
 
@@ -53,6 +56,27 @@ Distinct findings 55 to 58 (critical 18 to 19, serious 5 to 7): nothing
 lost. Per-rule counts move slightly in both directions (`button-name` 14
 to 13, `layout-shifts` 4 to 3), which is ordinary run-to-run variation on
 a live site plus Lighthouse's own metric variance.
+
+### Steps 5 and 6 were dropped, not deferred
+
+Operator decision, 2026-09-07. Until then neither step had a recorded
+outcome anywhere in the repository: the plan's ranking paragraph had parked
+them, which reads to a later session as unfinished work rather than as a
+decision. It is a decision now.
+
+Both attack the wrong layer, on Step 0's own evidence. The audit is slow
+because every page is a Lighthouse page (classification returns
+`role: unknown` and `confidence: fallback` on 32 of 32 pages, so plan 021's
+stratification removes nothing). Step 6 would process a needlessly large
+workload faster; Step 5 would spend an operator ruling on non-negotiable
+rule 5 to speed a stage whose share of wall clock Step 0 never measured.
+Neither is worth its cost before classification is fixed, and fixing
+classification changes how much work exists rather than how fast it is done.
+
+The classification defect is filed as its own GitHub issue. Step 6's
+remaining justifications and the bar for ever revisiting it are recorded in
+trade-off 10; the drift-budget requirement there is not waived by this
+decision, it is what a future attempt still has to clear.
 
 ### Step 4 was deliberately not taken
 

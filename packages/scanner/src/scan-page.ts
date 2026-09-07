@@ -212,10 +212,15 @@ async function sleep(ms: number): Promise<void> {
  * own forked child process rather than in this one, which incidentally
  * means the perf_hooks collision this queue exists for can no longer
  * happen either (each fork gets its own fresh globals) - but the queue
- * stays. Removing it would mean N Lighthouse children (each holding a
- * Chromium page load's worth of memory) running at once instead of one,
- * and that tradeoff hasn't been evaluated; per the project's trade-off
- * log, don't remove this without confirming that separately.
+ * stays, now for two other reasons. Removing it would mean N Lighthouse
+ * children (each holding a Chromium page load's worth of memory) running at
+ * once instead of one. More importantly, Lighthouse is the only pass that
+ * measures time: its throttling scales observed work up to model a slower
+ * device, so siblings competing for the same cores bias every number the
+ * same direction rather than scattering noise around a true value, and
+ * those numbers are the Core Web Vitals a paying client is shown. Don't
+ * remove this without a measured drift budget on those metrics; see the
+ * trade-off log, entry 10.
  */
 let lighthouseQueue: Promise<unknown> = Promise.resolve();
 

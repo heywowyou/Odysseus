@@ -567,7 +567,12 @@ async function runStagedFullAuditScan(
  *
  * The crawl phase itself stays fully sequential (unaffected by
  * concurrency): it is the phase CLAUDE.md's politeness rule names most
- * directly, and it is not the bottleneck. Only the scan phase (render-diff
+ * directly. This used to add "and it is not the bottleneck", which was
+ * never measured; plan 026 measured the Lighthouse segment at roughly
+ * three quarters of a real audit's wall clock but left the crawl's own
+ * share unmeasured, so make no claim about it either way here. Making the
+ * crawl concurrent is a rule 5 question for the operator, not a free
+ * optimisation. Only the scan phase (render-diff
  * + axe + Lighthouse per page) is split into `concurrency` lanes, each a
  * contiguous round-robin slice of pagesToScan so lane sizes stay balanced.
  * The resulting `pages` array is in completion order, not crawl order;
