@@ -213,7 +213,11 @@ html {
 .render-card,
 .theme-card,
 .glossary-entry,
-.section-head {
+.section-head,
+/* The executive-summary jump panel is one bounded heading plus at most three
+   rows. Fragmenting it stranded the heading at a page foot in a real report,
+   so move the whole panel to the next page when it does not fit. */
+.start-here {
   break-inside: avoid;
 }
 

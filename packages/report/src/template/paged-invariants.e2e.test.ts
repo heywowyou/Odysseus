@@ -107,6 +107,17 @@ async function buildStressHtml(): Promise<string> {
   });
 }
 
+/** Reproduces the real Villas Foch failure shape: the legal context leaves
+ * too little space for the bounded executive-summary jump panel. The panel
+ * must move as one unit, never leave its heading at a page bottom while its
+ * rows start the next page. */
+function addStartHereBoundaryPressure(html: string): string {
+  return html.replace(
+    '<div class="start-here"',
+    '<div style="height:120mm" data-start-here-pressure></div><div class="start-here"',
+  );
+}
+
 /** Every sheet eyebrow in source document order. html-utils.ts's sheet()
  *  helper, toc.ts, and metadata-sheet.ts are the only h6 emitters in the
  *  package (verified by plan 018's step-2 work), so each h6 marks exactly
@@ -262,6 +273,32 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
         ).length,
     );
     expect(overflowing).toBe(0);
+  });
+
+  it('invariant 6a: the bounded start-here panel never fragments across physical pages', async () => {
+    const pressured = await paginate(
+      browser,
+      addStartHereBoundaryPressure(stressHtml),
+      pagedjsSource,
+    );
+    try {
+      const pageIndexes = await pressured.page.evaluate(() =>
+        Array.from(document.querySelectorAll('.pagedjs_page')).flatMap((physicalPage, index) =>
+          physicalPage.querySelector('[data-start-here]') === null ? [] : [index],
+        ),
+      );
+      expect(pageIndexes).toHaveLength(1);
+    } finally {
+      await pressured.page.context().close();
+    }
+  });
+
+  it('invariant 6b: the bounded start-here panel declares the keep-together rule', async () => {
+    const breakInside = await doc.page.evaluate(() => {
+      const panel = document.querySelector<HTMLElement>('[data-start-here]');
+      return panel === null ? undefined : getComputedStyle(panel).breakInside;
+    });
+    expect(breakInside).toBe('avoid');
   });
 
   // Plan 027 step 5: raising businessImpact's ceiling to 5 sentences and
