@@ -146,6 +146,19 @@ describe('buildContentAuditPlan', () => {
     expect(plan.decisions[0]!.confidence).toBe('high');
   });
 
+  // Issue #86: a hotel handing booking off to a third-party engine has no
+  // same-document form, so this signal must promote the same way.
+  it('promotes an external transactional link to transactional regardless of other signals', () => {
+    const plan = buildContentAuditPlan([
+      profile('https://example.com/book', [
+        { kind: 'external-transactional-link', detail: '1 link(s)' },
+        ...listingSignals,
+      ]),
+    ]);
+    expect(plan.decisions[0]!.role).toBe('transactional');
+    expect(plan.decisions[0]!.confidence).toBe('high');
+  });
+
   it('falls back to unknown on conflicting listing and content signals', () => {
     const plan = buildContentAuditPlan([
       profile('https://example.com/conflicting', [contentSignal, ...listingSignals]),

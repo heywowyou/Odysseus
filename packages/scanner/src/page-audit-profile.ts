@@ -30,6 +30,7 @@ export type PageRoleSignalKind =
   | 'homepage-url'
   | 'operator-seed'
   | 'transactional-form'
+  | 'external-transactional-link'
   | 'pagination-relation'
   | 'numbered-pagination-control'
   | 'listing-structural-class'
@@ -76,6 +77,13 @@ export interface RawPageAuditFacts {
    *  contact/quote intent, not merely present forms (a newsletter
    *  signup is not a transactional signal). */
   transactionalFormSignalCount: number;
+  /** Links to a different origin whose visible text matches the same
+   *  booking/checkout/contact/quote intent as transactionalFormSignalCount,
+   *  e.g. "Reserver un sejour" pointing at a third-party booking engine.
+   *  Issue #86: a hotel handing booking off to a PMS/booking engine has no
+   *  same-document form at all, so this signal exists specifically for
+   *  that real-world pattern rather than one this table only imagines. */
+  externalTransactionalLinkCount: number;
   /** Largest group of near-identical repeated link/card structures found
    *  (e.g. a list of post teasers). Zero when no such repetition exists. */
   repeatedTeaserLinkGroupSize: number;
@@ -98,6 +106,10 @@ const CONTENT_JSON_LD_TYPES = new Set([
   'NewsArticle',
   'Product',
   'FAQPage',
+  'Hotel',
+  'LodgingBusiness',
+  'Resort',
+  'BedAndBreakfast',
 ]);
 const LISTING_CLASS_PATTERN =
   /\b(archive|blog-index|category|tag|taxonomy|listing|search-results|pagination)\b/i;
@@ -116,6 +128,9 @@ export function classifyPageRoleSignals(facts: RawPageAuditFacts): PageRoleSigna
 
   if (facts.transactionalFormSignalCount > 0) {
     addOnce('transactional-form', `${facts.transactionalFormSignalCount} form(s)`);
+  }
+  if (facts.externalTransactionalLinkCount > 0) {
+    addOnce('external-transactional-link', `${facts.externalTransactionalLinkCount} link(s)`);
   }
   if (facts.paginationRelNext || facts.paginationRelPrev) {
     const rels = [
@@ -269,6 +284,26 @@ export async function extractRawPageAuditFacts(
       if (transactionalPattern.test(haystack)) transactionalFormSignalCount += 1;
     }
 
+    // Issue #86: a booking/checkout/contact link-out to a different origin
+    // is the dominant transactional pattern on a real hotel site, which
+    // typically hands booking off to a third-party PMS/booking engine
+    // rather than hosting its own form. Read from the anchor's visible
+    // text, since the destination is an opaque third-party URL with no
+    // reliable naming convention to match on.
+    let externalTransactionalLinkCount = 0;
+    for (const anchor of Array.from(doc.querySelectorAll('a[href]'))) {
+      const href = anchor.getAttribute('href') ?? '';
+      let isExternal: boolean;
+      try {
+        isExternal = new URL(href, location.href).origin !== location.origin;
+      } catch {
+        isExternal = false;
+      }
+      if (isExternal && transactionalPattern.test((anchor.textContent ?? '').trim())) {
+        externalTransactionalLinkCount += 1;
+      }
+    }
+
     // Largest set of sibling elements sharing the same tag and class
     // signature: a cheap, DOM-agnostic proxy for "list of teaser cards"
     // that works across unfamiliar CMS markup without a hand-picked
@@ -308,6 +343,7 @@ export async function extractRawPageAuditFacts(
       numberedPaginationControlCount,
       bodyClassTokens,
       transactionalFormSignalCount,
+      externalTransactionalLinkCount,
       repeatedTeaserLinkGroupSize,
       structuralTokens,
     };

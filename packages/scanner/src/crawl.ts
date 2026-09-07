@@ -423,6 +423,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                   numberedPaginationControlCount: 0,
                   bodyClassTokens: [],
                   transactionalFormSignalCount: 0,
+                  externalTransactionalLinkCount: 0,
                   repeatedTeaserLinkGroupSize: 0,
                   structuralTokens: [],
                 };

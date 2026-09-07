@@ -95,8 +95,11 @@ function classifyRole(profile: PageAuditProfile): RoleClassification {
   // A form/booking signal promotes to transactional unconditionally: it is
   // the strongest, least ambiguous signal available and this repository
   // would rather over-schedule a page that turned out not to transact
-  // than under-schedule one that does.
-  if (kinds.has('transactional-form')) {
+  // than under-schedule one that does. A link-out to a third-party
+  // booking engine (issue #86) carries the same intent and the same
+  // reasoning, since a hotel handing booking off to a PMS has no
+  // same-document form to detect at all.
+  if (kinds.has('transactional-form') || kinds.has('external-transactional-link')) {
     return {
       role: 'transactional',
       confidence: 'high',

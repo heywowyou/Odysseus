@@ -15,6 +15,7 @@ function facts(overrides: Partial<RawPageAuditFacts> = {}): RawPageAuditFacts {
     numberedPaginationControlCount: 0,
     bodyClassTokens: [],
     transactionalFormSignalCount: 0,
+    externalTransactionalLinkCount: 0,
     repeatedTeaserLinkGroupSize: 0,
     structuralTokens: [],
     ...overrides,
@@ -29,6 +30,14 @@ describe('classifyPageRoleSignals', () => {
   it('detects a transactional form regardless of other signals', () => {
     const signals = classifyPageRoleSignals(facts({ transactionalFormSignalCount: 1 }));
     expect(signals).toEqual([{ kind: 'transactional-form', detail: '1 form(s)' }]);
+  });
+
+  // Issue #86: a hotel site that hands booking off to a third-party PMS
+  // has no same-document form at all, so this signal exists specifically
+  // for that real-world case.
+  it('detects an external transactional link regardless of other signals', () => {
+    const signals = classifyPageRoleSignals(facts({ externalTransactionalLinkCount: 1 }));
+    expect(signals).toEqual([{ kind: 'external-transactional-link', detail: '1 link(s)' }]);
   });
 
   it('deduplicates repeated listing class tokens into one signal', () => {
