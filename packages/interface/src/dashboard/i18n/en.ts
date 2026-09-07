@@ -441,6 +441,7 @@ export const en: DashboardStrings = {
     openScore: 'Open score',
     openEvidence: 'Open evidence',
     openPreview: 'Open preview',
+    openOutreach: 'Open outreach',
     openSite: 'Open the site in a new tab',
     launchAudit: 'Run an audit',
     sourcesHeading: 'Sources',
@@ -532,8 +533,36 @@ export const en: DashboardStrings = {
     expiresLabel: 'Expires at',
     states: { live: 'Live', revoked: 'Taken down', expired: 'Expired', none: 'None' },
     openPublic: 'Open public preview',
-    rendererNote: 'Shown exactly as the public page will appear.',
+    rendererNote: 'The public link is deliberately not recovered here.',
+    showCurrentPreview: 'Show current preview',
+    hideCurrentPreview: 'Hide current preview',
+    currentPreviewNote:
+      'This is rendered from the current stored evidence. It can differ from a preview already sent if the site was rescanned.',
+    currentPreviewUnavailable: 'The current evidence cannot produce a preview.',
+    currentPreviewError: 'Could not render the current preview.',
     empty: 'No preview has been published for this prospect.',
+  },
+  outreachThread: {
+    title: 'Outreach',
+    description: 'Draft the first email or a due follow-up for this prospect.',
+    noThread: 'No outreach thread yet for this prospect.',
+    generateFirstEmail: 'Generate first email',
+    generateFollowUp: 'Generate follow-up',
+    stateLabel: 'State',
+    touchLabel: 'Touch',
+    states: {
+      'e1-drafted': 'First email drafted',
+      'e1-sent': 'First email sent',
+      'e2-drafted': 'Follow-up drafted',
+      'e2-sent': 'Follow-up sent',
+      'e3-drafted': 'Second follow-up drafted',
+      'e3-sent': 'Second follow-up sent',
+      closed: 'Closed',
+    },
+    draftCreated: 'Draft created. Check Outreach > Drafts.',
+    followUpCreated: 'Follow-up drafted. Check Outreach > Drafts.',
+    actionRefused: 'Nothing was drafted; the orchestrator declined this action.',
+    actionError: 'Could not complete this action.',
   },
   vendors: {
     title: 'Booking systems seen',
@@ -563,6 +592,15 @@ export const en: DashboardStrings = {
       suppressionsDescription: 'Check one address against the do-not-contact list.',
       outcomesTitle: 'Outcomes',
       outcomesDescription: 'Operator-set outcomes and campaign aggregates.',
+    },
+    batch: {
+      draftBatchLabel: 'Draft first emails for the contactable cohort',
+      draftBatchButton: 'Draft first emails',
+      followUpBatchLabel: 'Draft follow-ups currently due',
+      followUpBatchButton: 'Draft due follow-ups',
+      limitLabel: 'Limit',
+      started: 'Job started. It will appear as new drafts once it finishes.',
+      error: 'Could not start the job.',
     },
   },
   drafts: {
@@ -755,6 +793,8 @@ export const en: DashboardStrings = {
       'Timestamped screenshots of the problems found, meant to illustrate the work to the hotel.',
     preview:
       'A public preview of the work: one page dedicated to the hotel, published behind a private link that expires automatically.',
+    outreach:
+      'Generate the first email or a due follow-up. Every draft lands in Gmail as a draft, never sent automatically.',
     qualification:
       'An automatic eligibility decision: qualified, on hold, rejected, already engaged, or handled by the group.',
     review:

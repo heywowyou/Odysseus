@@ -445,6 +445,7 @@ export const fr: DashboardStrings = {
     openScore: 'Ouvrir le score',
     openEvidence: 'Ouvrir les preuves',
     openPreview: 'Ouvrir l’aperçu',
+    openOutreach: 'Ouvrir la démarche',
     openSite: 'Ouvrir le site dans un nouvel onglet',
     launchAudit: 'Lancer un audit',
     sourcesHeading: 'Sources',
@@ -542,8 +543,36 @@ export const fr: DashboardStrings = {
     expiresLabel: 'Expire le',
     states: { live: 'En ligne', revoked: 'Retiré', expired: 'Expiré', none: 'Aucun' },
     openPublic: 'Ouvrir l’aperçu public',
-    rendererNote: 'Affiché exactement comme la page publique apparaîtra.',
+    rendererNote: 'Le lien public n’est volontairement pas récupéré ici.',
+    showCurrentPreview: 'Afficher l’aperçu actuel',
+    hideCurrentPreview: 'Masquer l’aperçu actuel',
+    currentPreviewNote:
+      'Cet aperçu est généré depuis les preuves actuellement enregistrées. Il peut différer de celui déjà envoyé si le site a été contrôlé à nouveau.',
+    currentPreviewUnavailable: 'Les preuves actuelles ne permettent pas de générer un aperçu.',
+    currentPreviewError: 'Impossible de générer l’aperçu actuel.',
     empty: 'Aucun aperçu publié pour ce prospect.',
+  },
+  outreachThread: {
+    title: 'Démarche',
+    description: 'Rédiger le premier email ou une relance due pour ce prospect.',
+    noThread: 'Aucune démarche commencée pour ce prospect.',
+    generateFirstEmail: 'Générer le premier email',
+    generateFollowUp: 'Générer une relance',
+    stateLabel: 'État',
+    touchLabel: 'Étape',
+    states: {
+      'e1-drafted': 'Premier email en brouillon',
+      'e1-sent': 'Premier email envoyé',
+      'e2-drafted': 'Relance en brouillon',
+      'e2-sent': 'Relance envoyée',
+      'e3-drafted': 'Deuxième relance en brouillon',
+      'e3-sent': 'Deuxième relance envoyée',
+      closed: 'Clôturée',
+    },
+    draftCreated: 'Brouillon créé. Voir Démarche > Brouillons.',
+    followUpCreated: 'Relance rédigée. Voir Démarche > Brouillons.',
+    actionRefused: 'Rien n’a été rédigé ; l’orchestrateur a refusé cette action.',
+    actionError: 'Impossible de terminer cette action.',
   },
   vendors: {
     title: 'Systèmes de réservation observés',
@@ -574,6 +603,15 @@ export const fr: DashboardStrings = {
       suppressionsDescription: 'Vérifier une adresse dans la liste à ne pas contacter.',
       outcomesTitle: 'Résultats',
       outcomesDescription: 'Résultats définis par l’opérateur et agrégats de campagne.',
+    },
+    batch: {
+      draftBatchLabel: 'Rédiger les premiers emails pour la cohorte contactable',
+      draftBatchButton: 'Rédiger les premiers emails',
+      followUpBatchLabel: 'Rédiger les relances actuellement dues',
+      followUpBatchButton: 'Rédiger les relances dues',
+      limitLabel: 'Limite',
+      started: 'Tâche démarrée. Elle apparaîtra comme nouveaux brouillons une fois terminée.',
+      error: 'Impossible de démarrer la tâche.',
     },
   },
   drafts: {
@@ -768,6 +806,8 @@ export const fr: DashboardStrings = {
       'Captures d’écran horodatées des problèmes constatés, destinées à illustrer la démarche auprès de l’hôtel.',
     preview:
       'Aperçu public de démarche : une page dédiée à l’hôtel, publiée derrière un lien privé qui expire automatiquement.',
+    outreach:
+      'Générer le premier email ou une relance due. Chaque brouillon atterrit dans Gmail sans jamais être envoyé automatiquement.',
     qualification:
       'Décision automatique d’éligibilité : qualifié, mis de côté, rejeté, déjà démarché ou géré par le groupe.',
     review:

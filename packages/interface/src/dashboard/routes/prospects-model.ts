@@ -320,7 +320,7 @@ export interface ProspectDetailResponse {
 /** Sibling pages of one prospect; the detail page links to them instead of
  *  duplicating their sections. */
 export function prospectSubPages(candidateId: string): {
-  key: 'prescan' | 'score' | 'evidence' | 'preview';
+  key: 'prescan' | 'score' | 'evidence' | 'preview' | 'outreach';
   path: string;
 }[] {
   const encoded = encodeURIComponent(candidateId);
@@ -329,6 +329,7 @@ export function prospectSubPages(candidateId: string): {
     { key: 'score', path: `/prospects/${encoded}/score` },
     { key: 'evidence', path: `/prospects/${encoded}/evidence` },
     { key: 'preview', path: `/prospects/${encoded}/preview` },
+    { key: 'outreach', path: `/prospects/${encoded}/outreach` },
   ];
 }
 
@@ -343,4 +344,32 @@ export interface ProspectReviewResponse {
   candidateId: string;
   reviewState: string;
   changed: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Outreach thread (prospects-scoped: single-candidate draft generation)
+// ---------------------------------------------------------------------------
+
+/** Body of GET /api/prospects/:candidateId/outreach. */
+export interface OutreachThreadResponse {
+  thread: { threadId: string; state: string; currentTouch: number } | null;
+}
+
+/** Shared response shape of both draft-generation actions
+ *  (POST .../outreach/draft and .../outreach/follow-up): a refusal is a
+ *  successful, informative outcome, not an HTTP error, so the caller reads
+ *  `created`/`refusal` to decide what to tell the operator. */
+export interface OutreachDraftActionResponse {
+  created: boolean;
+  refusal?: string;
+  draftId?: string;
+  threadId?: string;
+}
+
+/** Thread states that can still receive an action from this page; every
+ *  other state (drafted-but-not-sent, closed) is read-only here so the
+ *  operator is never invited to create a duplicate the backend would
+ *  refuse anyway. */
+export function canGenerateFollowUp(state: string): boolean {
+  return state === 'e1-sent' || state === 'e2-sent';
 }

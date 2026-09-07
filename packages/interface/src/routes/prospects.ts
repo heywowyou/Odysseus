@@ -7,12 +7,24 @@ import type {
   HotelQualificationOutcome,
 } from '@odysseus/core';
 import {
+  HOTEL_EVIDENCE_MIN_SUMMARIES,
+  HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
+} from '@odysseus/core';
+import { generateOutreachPreviewHtml } from '@odysseus/report';
+import {
+  findOutreachThreadByCandidate,
   getOperatorProspect,
   getProspectQualificationHistory,
   listOperatorProspects,
   recordHotelCandidateReview,
 } from '@odysseus/store';
 import type { ListOperatorProspectsOptions, OperatorProspectQueue } from '@odysseus/store';
+import { getPreviewPublicBaseUrl } from '../config.js';
+import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
+import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-preview-store.js';
+import { buildPreviewInput, type PublishPreviewRefusal } from '../outreach/publish-preview.js';
+import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
+import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import type { Router } from '../router.js';
 import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
 
@@ -193,6 +205,15 @@ const REVIEW_REASON_FALLBACK = 'dashboard-review';
 
 const REASON_MAX_LENGTH = 500;
 
+type PreviewRenderRefusal = Exclude<PublishPreviewRefusal, 'suppressed'>;
+
+type PreviewRenderResponse =
+  { rendered: true; html: string } | { rendered: false; refusal: PreviewRenderRefusal };
+
+function previewRenderRefusal(refusal: PreviewRenderRefusal): PreviewRenderResponse {
+  return { rendered: false, refusal };
+}
+
 interface ReviewBody {
   decision: 'accepted' | 'rejected';
   reason: string;
@@ -307,5 +328,130 @@ export function registerProspectRoutes(router: Router, connection: Connection): 
       reviewState: parsed.decision,
       changed: result.changed,
     });
+  });
+
+  // Milestone 9c plan 030. The dashboard's Outreach sub-page reads this to
+  // decide which action it can offer: nothing yet (first draft), due for a
+  // follow-up, or an existing thread with no action available.
+  router.get('/api/prospects/:candidateId/outreach', async ({ res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const thread = await findOutreachThreadByCandidate(connection, candidateId);
+    if (thread === null) {
+      sendJson(res, 200, { thread: null });
+      return;
+    }
+    sendJson(res, 200, {
+      thread: {
+        threadId: thread.threadId,
+        state: thread.state,
+        currentTouch: thread.currentTouch,
+      },
+    });
+  });
+
+  // This renders from the current stored evidence rather than attempting to
+  // recover the bearer-token URL or published object. The same mapping as
+  // publication makes a re-render safe to inspect while leaving publication
+  // state and every bucket operation out of this read path.
+  router.get('/api/prospects/:candidateId/outreach/preview-render', async ({ res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+
+    const store = createMongoOutreachPreviewStore(connection, {
+      prescanVersion: CURRENT_PRESCAN_VERSION,
+      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+    });
+    const row = await store.findPublicationRow(candidateId);
+    // The port deliberately collapses a missing candidate and a missing
+    // current-version prescan, exactly as publication does. It must not add a
+    // second store read solely to make this dashboard response more specific.
+    if (row === null) {
+      sendJson(res, 200, previewRenderRefusal('candidate-unknown'));
+      return;
+    }
+
+    const evidence = row.evidence;
+    if (evidence === undefined || evidence.status !== 'complete') {
+      sendJson(res, 200, previewRenderRefusal('evidence-incomplete'));
+      return;
+    }
+    if (evidence.schemaVersion !== HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION) {
+      sendJson(res, 200, previewRenderRefusal('evidence-schema-outdated'));
+      return;
+    }
+    if (evidence.summaries.length < HOTEL_EVIDENCE_MIN_SUMMARIES) {
+      sendJson(res, 200, previewRenderRefusal('evidence-incomplete'));
+      return;
+    }
+    if (row.prescanExpiresAt.getTime() <= Date.now()) {
+      sendJson(res, 200, previewRenderRefusal('prescan-expired'));
+      return;
+    }
+
+    const input = await buildPreviewInput({
+      row,
+      evidence,
+      language: 'fr',
+      publicBaseUrl: getPreviewPublicBaseUrl(),
+    });
+    sendJson(res, 200, { rendered: true, html: generateOutreachPreviewHtml(input) });
+  });
+
+  // Single-candidate, single-touch action: one LLM call, one preview
+  // publish, one Gmail draft call, the same synchronous-route shape as
+  // `/review` above rather than the job queue, which plan 030 reserves for
+  // multi-candidate batches. `createTouchOneDraft` refuses (never throws)
+  // when a thread already exists or the candidate is not contactable; a
+  // refusal is a correct, complete outcome, so it comes back 200 with the
+  // typed refusal code in the body for the dashboard to read, exactly like
+  // the CLI's own JSON output. Only "no mailbox configured" is a genuine
+  // operator setup problem, so that alone is a non-2xx (503).
+  router.post('/api/prospects/:candidateId/outreach/draft', async ({ res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const outcome = await createTouchOneDraft(connection, candidateId, {
+      language: 'fr',
+      dryRun: false,
+    });
+    if (!outcome.configured) {
+      sendError(res, 503, `no mailbox is configured (${outcome.refusal})`);
+      return;
+    }
+    const { configured: _configured, ...result } = outcome;
+    sendJson(res, 200, result);
+  });
+
+  // Follow-up (touch 2 or 3) for a candidate's existing thread. 404s if no
+  // thread exists yet, since a follow-up is only ever a continuation.
+  router.post('/api/prospects/:candidateId/outreach/follow-up', async ({ res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const thread = await findOutreachThreadByCandidate(connection, candidateId);
+    if (thread === null) {
+      sendError(res, 404, 'no outreach thread for this candidate yet');
+      return;
+    }
+    const outcome = await createFollowUpForCandidate(connection, thread.threadId, {
+      dryRun: false,
+    });
+    if (!outcome.configured) {
+      sendError(res, 503, `no mailbox is configured (${outcome.refusal})`);
+      return;
+    }
+    const { configured: _configured, ...result } = outcome;
+    sendJson(res, 200, result);
   });
 }

@@ -8,7 +8,10 @@
   risk, but its natural continuation crosses package boundaries)
 - **Depends on**: 027 (closed), 028 (closed)
 - **Category**: LLM writing pass
-- **Planned at**: 2026-09-07, not yet started
+- **Planned at**: 2026-09-07
+- **Closed**: 2026-09-08. Step 1 measured and deferred (production
+  unchanged, stays at `reasoning_effort: 'none'`); Steps 2 and 3 shipped
+  2026-09-07.
 
 ## Why this matters
 
@@ -151,12 +154,23 @@ STOP condition never came close: the writing pass never sees them).
 An earlier run of this same comparison exists in the session log; its
 numbers tell the same story.
 
-**Open: the explicit ship/defer call.** The measurement half of the done
-condition is met; the operator still owes the manual register comparison
-(`pnpm exec tsx packages/llm/src/measure-reasoning-effort.ts --print`) and
-the call itself. On the current numbers, the burden of proof sits with
-raising the effort: no measured gain, a real per-report cost, and the
-Villas Foch French regression to weigh.
+**Ship/defer call (2026-09-08): defer.** Production stays at
+`reasoning_effort: 'none'` for the writing pass. Reasoning: the burden of
+proof was on raising the setting (trade-off 55's "measure before
+promoting" doctrine), and the measured evidence points one direction, not
+both - `low` showed no repetition gain and one real regression (Villas
+Foch French impact openings, 2/9 -> 6/9), and `medium` tripped the
+`positional-reference` guard on a real stored document, which is this
+plan's own recorded STOP for continuing into `medium`/`high`. The
+underlying limitation (n=1 per cell, only two real audits available
+locally) was considered and not treated as reason to gather more data
+first: more samples could only sharpen the `low` reading, since a guard
+trip already forecloses `medium`/`high` regardless of sample size, and
+nothing in the existing data hints that a larger `low` sample would
+reverse a result that is currently negative. Revisit only if a future,
+unrelated measurement against a larger and more diverse set of real
+audits shows a clear gain - not on a schedule, and not as an open item
+this plan carries forward.
 
 #### Follow-up measurement attempt (2026-09-07): STOP condition
 

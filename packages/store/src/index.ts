@@ -43,6 +43,7 @@ export type {
   JobProgressScan,
   JobStatus,
   JobType,
+  OutreachBatchResult,
   ProspectIngestionResult,
   ProspectIngestionResultStatus,
   UrlResult,

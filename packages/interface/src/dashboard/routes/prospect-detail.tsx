@@ -500,7 +500,9 @@ export function ProspectDetailPage(): JSX.Element {
                     ? strings.prospectDetail.openScore
                     : page.key === 'evidence'
                       ? strings.prospectDetail.openEvidence
-                      : strings.prospectDetail.openPreview;
+                      : page.key === 'preview'
+                        ? strings.prospectDetail.openPreview
+                        : strings.prospectDetail.openOutreach;
               return (
                 <span key={page.key} className="inline-flex items-center gap-1">
                   <Link to={page.path} className={buttonStyles('secondary', 'sm')}>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   PROSPECT_PAGE_SIZE,
   buildProspectsPath,
+  canGenerateFollowUp,
   clampOffset,
   createEmptyFilters,
   currentPage,
@@ -141,16 +142,32 @@ describe('filter value guards', () => {
 });
 
 describe('prospectSubPages', () => {
-  it('links the four sibling pages of a candidate', () => {
+  it('links the five sibling pages of a candidate', () => {
     expect(prospectSubPages('cand-1').map((page) => page.path)).toEqual([
       '/prospects/cand-1/prescan',
       '/prospects/cand-1/score',
       '/prospects/cand-1/evidence',
       '/prospects/cand-1/preview',
+      '/prospects/cand-1/outreach',
     ]);
   });
 
   it('encodes the candidate id into the paths', () => {
     expect(prospectSubPages('a/b').every((page) => !page.path.includes('a/b'))).toBe(true);
+  });
+});
+
+describe('canGenerateFollowUp', () => {
+  it('allows a follow-up only right after touch 1 or touch 2 was sent', () => {
+    expect(canGenerateFollowUp('e1-sent')).toBe(true);
+    expect(canGenerateFollowUp('e2-sent')).toBe(true);
+  });
+
+  it('refuses every other thread state', () => {
+    expect(canGenerateFollowUp('e1-drafted')).toBe(false);
+    expect(canGenerateFollowUp('e2-drafted')).toBe(false);
+    expect(canGenerateFollowUp('e3-drafted')).toBe(false);
+    expect(canGenerateFollowUp('e3-sent')).toBe(false);
+    expect(canGenerateFollowUp('closed')).toBe(false);
   });
 });

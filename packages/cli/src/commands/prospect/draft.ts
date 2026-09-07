@@ -12,13 +12,9 @@ import {
   CURRENT_OUTREACH_PROMPT_VERSION,
   CURRENT_PRESCAN_VERSION,
   CURRENT_QUALIFICATION_VERSION,
-  createInMemoryPreviewPublisher,
-  createConfiguredPreviewPublisher,
-  createMongoOutreachDraftStore,
-  createMongoOutreachPreviewStore,
-  createOutreachDraft,
-  getPreviewPublicBaseUrl,
-  publishPreview,
+  createConfiguredMailboxDraftAdapter,
+  createTouchOneDraft,
+  missingMailboxEnvVars,
 } from '@odysseus/interface';
 import { mailboxFor, parsePositiveInt } from './shared.js';
 
@@ -71,49 +67,27 @@ export function registerDraftCommand(prospect: Command): void {
           process.exitCode = 1;
           return;
         }
-        const mailbox = mailboxFor(opts.dryRun, 'draft create');
-        if (mailbox === null) return;
 
         let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
         try {
           mongoConnection = await connectToMongo();
-          const result = await createOutreachDraft({
-            store: createMongoOutreachDraftStore(mongoConnection, {
-              prescanVersion: opts.prescanVersion,
-              qualificationVersion: opts.qualificationVersion,
-              contactVersion: opts.contactVersion,
-            }),
-            mailbox,
-            preview: {
-              publish: async (id, language) => {
-                const published = await publishPreview({
-                  store: createMongoOutreachPreviewStore(mongoConnection!, {
-                    prescanVersion: opts.prescanVersion,
-                    qualificationVersion: opts.qualificationVersion,
-                  }),
-                  publisher: opts.dryRun
-                    ? createInMemoryPreviewPublisher()
-                    : createConfiguredPreviewPublisher(),
-                  publicBaseUrl: getPreviewPublicBaseUrl(),
-                  candidateId: id,
-                  language,
-                  dryRun: false,
-                });
-                if (!published.published || published.url === undefined) {
-                  return { refusal: published.refusal ?? 'unknown' };
-                }
-                return {
-                  previewId: published.previewId as string,
-                  url: published.url,
-                  publicExpiresAt: published.publicExpiresAt as Date,
-                };
-              },
-            },
-            publicBaseUrl: getPreviewPublicBaseUrl(),
-            candidateId,
+          const outcome = await createTouchOneDraft(mongoConnection, candidateId, {
             language: opts.language,
+            prescanVersion: opts.prescanVersion,
+            qualificationVersion: opts.qualificationVersion,
+            contactVersion: opts.contactVersion,
             dryRun: opts.dryRun,
           });
+
+          if (!outcome.configured) {
+            console.error(
+              `odysseus prospect draft create: no mailbox is configured. Set ` +
+                `${missingMailboxEnvVars().join(', ')}, or re-run with --dry-run.`,
+            );
+            process.exitCode = 1;
+            return;
+          }
+          const { configured: _configured, ...result } = outcome;
 
           console.log(
             JSON.stringify({ promptVersion: CURRENT_OUTREACH_PROMPT_VERSION, ...result }, null, 2),
@@ -167,8 +141,14 @@ export function registerDraftCommand(prospect: Command): void {
           process.exitCode = 1;
           return;
         }
-        const mailbox = mailboxFor(opts.dryRun, 'draft batch');
-        if (mailbox === null) return;
+        if (!opts.dryRun && createConfiguredMailboxDraftAdapter() === null) {
+          console.error(
+            `odysseus prospect draft batch: no mailbox is configured. Set ` +
+              `${missingMailboxEnvVars().join(', ')}, or re-run with --dry-run.`,
+          );
+          process.exitCode = 1;
+          return;
+        }
 
         let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
         try {
@@ -179,51 +159,26 @@ export function registerDraftCommand(prospect: Command): void {
             limit: opts.limit,
           });
 
-          const store = createMongoOutreachDraftStore(connection, {
-            prescanVersion: opts.prescanVersion,
-            qualificationVersion: opts.qualificationVersion,
-            contactVersion: opts.contactVersion,
-          });
-
           const outcomes: { candidateId: string; created: boolean; refusal?: string }[] = [];
           for (const member of members) {
-            const result = await createOutreachDraft({
-              store,
-              mailbox,
-              preview: {
-                publish: async (id, language) => {
-                  const published = await publishPreview({
-                    store: createMongoOutreachPreviewStore(connection, {
-                      prescanVersion: opts.prescanVersion,
-                      qualificationVersion: opts.qualificationVersion,
-                    }),
-                    publisher: opts.dryRun
-                      ? createInMemoryPreviewPublisher()
-                      : createConfiguredPreviewPublisher(),
-                    publicBaseUrl: getPreviewPublicBaseUrl(),
-                    candidateId: id,
-                    language,
-                    dryRun: false,
-                  });
-                  if (!published.published || published.url === undefined) {
-                    return { refusal: published.refusal ?? 'unknown' };
-                  }
-                  return {
-                    previewId: published.previewId as string,
-                    url: published.url,
-                    publicExpiresAt: published.publicExpiresAt as Date,
-                  };
-                },
-              },
-              publicBaseUrl: getPreviewPublicBaseUrl(),
-              candidateId: member.candidateId,
+            const outcome = await createTouchOneDraft(connection, member.candidateId, {
               language: opts.language,
+              prescanVersion: opts.prescanVersion,
+              qualificationVersion: opts.qualificationVersion,
+              contactVersion: opts.contactVersion,
               dryRun: opts.dryRun,
             });
+            if (!outcome.configured) {
+              // A mailbox that stopped authenticating mid-batch is the same
+              // "stop the whole run" case the catch block below handles.
+              throw new Error(
+                `no mailbox is configured. Set ${missingMailboxEnvVars().join(', ')}.`,
+              );
+            }
             outcomes.push({
               candidateId: member.candidateId,
-              created: result.created,
-              ...(result.refusal === undefined ? {} : { refusal: result.refusal }),
+              created: outcome.created,
+              ...(outcome.refusal === undefined ? {} : { refusal: outcome.refusal }),
             });
           }
 

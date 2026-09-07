@@ -12,7 +12,13 @@
 import { Schema, type Connection, type Model } from 'mongoose';
 import type { ProspectQualificationReason } from './prospect.schema.js';
 
-export type JobType = 'full-audit' | 'prospecting' | 'prospect-ingestion' | 'hotel-prescan';
+export type JobType =
+  | 'full-audit'
+  | 'prospecting'
+  | 'prospect-ingestion'
+  | 'hotel-prescan'
+  | 'outreach-draft-batch'
+  | 'outreach-followup-batch';
 export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
 export type JobPhase =
   | 'queued'
@@ -30,6 +36,7 @@ export type JobPhase =
   | 'afnic-scan'
   | 'fetch-qualify'
   | 'prescanning'
+  | 'drafting'
   | 'complete'
   | 'failed'
   | 'cancelled'
@@ -85,6 +92,13 @@ export interface JobOptionsSnapshot {
    *  document itself says which site was authorized, rather than leaving
    *  that to be inferred from whichever candidate happened to sort first. */
   domain?: string;
+  /** outreach-draft-batch and outreach-followup-batch jobs only (milestone
+   *  9c plan 030): maximum drafts/follow-ups this batch prepares, the same
+   *  bound the CLI's own `--limit` has always used. */
+  limit?: number;
+  /** outreach-draft-batch jobs only. Follow-up drafts read the thread's own
+   *  stored language instead - there is nothing to override. */
+  language?: 'fr' | 'en';
 }
 
 export interface JobProgressCrawl {
@@ -160,6 +174,17 @@ export interface ProspectIngestionResult {
   error?: string;
 }
 
+/** One entry per item in the current outreach-draft-batch or
+ *  outreach-followup-batch job only, same bounded-batch reasoning as
+ *  ProspectIngestionResult above. `id` is a candidateId for a draft batch
+ *  and a threadId for a follow-up batch - the two job types never mix, so
+ *  one shared shape is enough rather than two near-identical ones. */
+export interface OutreachBatchResult {
+  id: string;
+  created: boolean;
+  refusal?: string;
+}
+
 export interface JobDocumentFields {
   jobId: string;
   type: JobType;
@@ -175,6 +200,7 @@ export interface JobDocumentFields {
   auditIds?: string[];
   urlResults?: UrlResult[];
   ingestionResults?: ProspectIngestionResult[];
+  outreachBatchResults?: OutreachBatchResult[];
   progress: JobProgress;
   error?: string;
   orphaned?: boolean;
@@ -221,6 +247,8 @@ const jobOptionsSchema = new Schema(
     concurrency: { type: Number },
     rescan: { type: Boolean },
     domain: { type: String },
+    limit: { type: Number },
+    language: { type: String, enum: ['fr', 'en'] },
   },
   { _id: false },
 );
@@ -331,13 +359,29 @@ const jobIngestionResultSchema = new Schema(
   { _id: false },
 );
 
+const outreachBatchResultSchema = new Schema(
+  {
+    id: { type: String, required: true },
+    created: { type: Boolean, required: true },
+    refusal: { type: String },
+  },
+  { _id: false },
+);
+
 const jobSchema = new Schema<JobDocument>(
   {
     jobId: { type: String, required: true, unique: true },
     type: {
       type: String,
       required: true,
-      enum: ['full-audit', 'prospecting', 'prospect-ingestion', 'hotel-prescan'],
+      enum: [
+        'full-audit',
+        'prospecting',
+        'prospect-ingestion',
+        'hotel-prescan',
+        'outreach-draft-batch',
+        'outreach-followup-batch',
+      ],
     },
     status: {
       type: String,
@@ -363,6 +407,7 @@ const jobSchema = new Schema<JobDocument>(
         'afnic-scan',
         'fetch-qualify',
         'prescanning',
+        'drafting',
         'complete',
         'failed',
         'cancelled',
@@ -379,6 +424,7 @@ const jobSchema = new Schema<JobDocument>(
     auditIds: { type: [String] },
     urlResults: { type: [urlResultSchema] },
     ingestionResults: { type: [jobIngestionResultSchema] },
+    outreachBatchResults: { type: [outreachBatchResultSchema] },
     progress: { type: jobProgressSchema, required: true, default: {} },
     error: { type: String },
     orphaned: { type: Boolean },

@@ -135,6 +135,21 @@ export interface PreviewResponse {
   previewContentVersion: string;
 }
 
+/** The current preview is rendered on demand from the prescan evidence, not
+ *  retrieved from the published object. A refusal is an expected result of
+ *  that evidence gate, while a rejected request remains an ApiError. */
+export type PreviewRenderResponse =
+  | { rendered: true; html: string }
+  | {
+      rendered: false;
+      refusal:
+        | 'candidate-unknown'
+        | 'no-prescan'
+        | 'evidence-incomplete'
+        | 'evidence-schema-outdated'
+        | 'prescan-expired';
+    };
+
 export interface VendorFingerprintResponse {
   value: string;
   hotels: number;

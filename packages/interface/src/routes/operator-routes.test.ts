@@ -3,9 +3,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Connection } from 'mongoose';
 import { describe, expect, it, vi } from 'vitest';
 import { Router } from '../router.js';
+import type { JobQueue } from '../queue/job-queue.js';
 import { registerOutreachRoutes } from './outreach.js';
 import { registerProspectInsightRoutes } from './prospect-insights.js';
 import { registerProspectRoutes } from './prospects.js';
+
+const fakeQueue = { notify: vi.fn(), requestCancel: vi.fn() } as unknown as JobQueue;
 
 /** Plan 013's static guarantee, held across every operator route module at
  *  once: the private interface can inspect and mark state, but it can
@@ -28,7 +31,7 @@ function registerAll(router: Router): void {
   const connection = {} as Connection;
   registerProspectRoutes(router, connection);
   registerProspectInsightRoutes(router, connection);
-  registerOutreachRoutes(router, connection);
+  registerOutreachRoutes(router, connection, fakeQueue);
 }
 
 function fakeReq(url: string, method = 'GET'): IncomingMessage {

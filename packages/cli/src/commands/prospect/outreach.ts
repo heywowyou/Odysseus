@@ -19,8 +19,7 @@ import {
   CURRENT_QUALIFICATION_VERSION,
   createConfiguredMailboxDraftAdapter,
   createConfiguredPreviewPublisher,
-  createFollowUpDraft,
-  createMongoFollowUpDraftStore,
+  createFollowUpForCandidate,
   createMongoMailboxReconciliationStore,
   createMongoOutreachPreviewStore,
   getMailboxSenderAddress,
@@ -28,7 +27,7 @@ import {
   reconcileMailbox,
   revokePreviewsForDomain,
 } from '@odysseus/interface';
-import { deleteLiveDraftsForDomain, mailboxFor, parsePositiveInt } from './shared.js';
+import { deleteLiveDraftsForDomain, parsePositiveInt } from './shared.js';
 
 /**
  * Milestone 9c plan 012. Reads the mailbox and writes thread state; never
@@ -276,8 +275,6 @@ export function registerOutreachCommand(prospect: Command): void {
           process.exitCode = 1;
           return;
         }
-        const mailbox = mailboxFor(opts.dryRun, 'draft draft-due');
-        if (mailbox === null) return;
 
         let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
         try {
@@ -297,19 +294,19 @@ export function registerOutreachCommand(prospect: Command): void {
             limit: opts.limit,
           });
 
-          const store = createMongoFollowUpDraftStore(mongoConnection, {
-            prescanVersion: opts.prescanVersion,
-            qualificationVersion: opts.qualificationVersion,
-          });
-
           const results = [];
           for (const thread of due) {
-            const result = await createFollowUpDraft({
-              store,
-              mailbox,
-              threadId: thread.threadId,
+            const outcome = await createFollowUpForCandidate(mongoConnection, thread.threadId, {
+              prescanVersion: opts.prescanVersion,
+              qualificationVersion: opts.qualificationVersion,
               dryRun: opts.dryRun,
             });
+            if (!outcome.configured) {
+              throw new Error(
+                `no mailbox is configured. Set ${missingMailboxEnvVars().join(', ')}.`,
+              );
+            }
+            const { configured: _configured, ...result } = outcome;
             results.push({ threadId: thread.threadId, ...result });
           }
 

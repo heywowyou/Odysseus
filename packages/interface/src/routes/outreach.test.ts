@@ -18,11 +18,13 @@ vi.mock('@odysseus/store', () => ({
   listLivePreviewsForDomain: vi.fn(),
   revokeOutreachPreview: vi.fn(),
   closeOutreachThreadsForDomain: vi.fn(),
+  createJob: vi.fn(),
 }));
 
 import {
   addSuppressionEntry,
   closeOutreachThreadsForDomain,
+  createJob,
   findOutreachDraftById,
   findOutreachThreadById,
   getHotelCandidate,
@@ -40,6 +42,7 @@ import {
   type OutreachDraftDocument,
 } from '@odysseus/store';
 import { Router } from '../router.js';
+import type { JobQueue } from '../queue/job-queue.js';
 import { registerOutreachRoutes } from './outreach.js';
 
 const DRAFT_ID = '3f2504e0-4f89-11d3-9a0c-0305e82c3301';
@@ -83,6 +86,7 @@ function fakeRes(): ServerResponse & { statusCode: number; body: string | undefi
 }
 
 const fakeConnection = {} as never;
+const fakeQueue = { notify: vi.fn(), requestCancel: vi.fn() } as unknown as JobQueue;
 
 /** Registers the routes on a router that records every registered pattern
  *  alongside the real ones, so tests can assert what this module exposes
@@ -97,7 +101,7 @@ function registerAndCapture(): { patterns: string[] } {
       original(pattern, handler);
     }) as never;
   }
-  registerOutreachRoutes(router, fakeConnection);
+  registerOutreachRoutes(router, fakeConnection, fakeQueue);
   return { patterns };
 }
 
@@ -126,7 +130,7 @@ describe('GET /api/outreach/drafts', () => {
     });
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakeGetReq('/api/outreach/drafts?limit=5&offset=10'), res);
 
@@ -147,7 +151,7 @@ describe('GET /api/outreach/drafts', () => {
     });
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakeGetReq('/api/outreach/drafts'), res);
 
@@ -179,7 +183,7 @@ describe('GET /api/outreach/drafts/:draftId/text', () => {
     } as unknown as HotelCandidateDocument);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakeGetReq(`/api/outreach/drafts/${DRAFT_ID}/text`), res);
 
@@ -205,7 +209,7 @@ describe('GET /api/outreach/drafts/:draftId/text', () => {
     vi.mocked(getHotelCandidate).mockResolvedValue(null);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakeGetReq(`/api/outreach/drafts/${DRAFT_ID}/text`), res);
 
@@ -217,7 +221,7 @@ describe('GET /api/outreach/drafts/:draftId/text', () => {
     vi.mocked(findOutreachDraftById).mockResolvedValue({ ...liveDraft, status: 'deleted' });
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakeGetReq(`/api/outreach/drafts/${DRAFT_ID}/text`), res);
 
@@ -229,7 +233,7 @@ describe('GET /api/outreach/drafts/:draftId/text', () => {
     vi.mocked(findOutreachDraftById).mockResolvedValue(null);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakeGetReq(`/api/outreach/drafts/${DRAFT_ID}/text`), res);
 
@@ -238,7 +242,7 @@ describe('GET /api/outreach/drafts/:draftId/text', () => {
 
   it('rejects a malformed draft id with 400 and reads nothing', async () => {
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakeGetReq('/api/outreach/drafts/not-a-uuid/text'), res);
 
@@ -256,7 +260,7 @@ describe('POST /api/outreach/drafts/:draftId/review', () => {
     vi.mocked(markOutreachDraftDeleted).mockResolvedValue({ changed: true });
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq(`/api/outreach/drafts/${DRAFT_ID}/review`, { action: 'approve' }),
@@ -277,7 +281,7 @@ describe('POST /api/outreach/drafts/:draftId/review', () => {
     vi.mocked(markOutreachDraftDeleted).mockResolvedValue({ changed: true });
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq(`/api/outreach/drafts/${DRAFT_ID}/review`, { action: 'skip' }),
@@ -296,7 +300,7 @@ describe('POST /api/outreach/drafts/:draftId/review', () => {
     vi.mocked(markOutreachDraftDeleted).mockResolvedValue({ changed: false });
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq(`/api/outreach/drafts/${DRAFT_ID}/review`, { action: 'approve' }),
@@ -309,7 +313,7 @@ describe('POST /api/outreach/drafts/:draftId/review', () => {
 
   it('rejects an unknown action with 400 and never touches the draft', async () => {
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq(`/api/outreach/drafts/${DRAFT_ID}/review`, { action: 'send' }),
@@ -325,7 +329,7 @@ describe('POST /api/outreach/drafts/:draftId/review', () => {
     vi.mocked(findOutreachDraftById).mockResolvedValue(null);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq(`/api/outreach/drafts/${DRAFT_ID}/review`, { action: 'approve' }),
@@ -359,7 +363,7 @@ describe('GET /api/outreach/replies', () => {
     });
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakeGetReq('/api/outreach/replies'), res);
 
@@ -389,7 +393,7 @@ describe('POST /api/outreach/replies/:threadId/review', () => {
     } as never);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakePostReq(`/api/outreach/replies/${THREAD_ID}/review`), res);
 
@@ -405,7 +409,7 @@ describe('POST /api/outreach/replies/:threadId/review', () => {
     vi.mocked(findOutreachThreadById).mockResolvedValue(null);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakePostReq(`/api/outreach/replies/${THREAD_ID}/review`), res);
 
@@ -419,7 +423,7 @@ describe('POST /api/outreach/suppression-check', () => {
     vi.mocked(isSuppressed).mockResolvedValue(true);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq('/api/outreach/suppression-check', { address: 'Role@Hotel-Exemple.fr' }),
@@ -440,7 +444,7 @@ describe('POST /api/outreach/suppression-check', () => {
     vi.mocked(isSuppressed).mockResolvedValue(false);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq('/api/outreach/suppression-check', { address: 'someone@example.com' }),
@@ -453,7 +457,7 @@ describe('POST /api/outreach/suppression-check', () => {
 
   it('rejects a malformed address with 400 and checks nothing', async () => {
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq('/api/outreach/suppression-check', { address: 'not-an-address' }),
@@ -468,7 +472,7 @@ describe('POST /api/outreach/suppression-check', () => {
     vi.mocked(isSuppressed).mockResolvedValue(false);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq('/api/outreach/suppression-check', { address: 'someone@example.com' }),
@@ -501,7 +505,7 @@ describe('GET /api/outreach/outcomes', () => {
     ]);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakeGetReq('/api/outreach/outcomes?limit=50&offset=0'), res);
 
@@ -540,7 +544,7 @@ describe('POST /api/outreach/threads/:threadId/outcome', () => {
     } as never);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq(`/api/outreach/threads/${THREAD_ID}/outcome`, { outcome: 'won' }),
@@ -557,7 +561,7 @@ describe('POST /api/outreach/threads/:threadId/outcome', () => {
 
   it('rejects an unknown outcome value with 400 and records nothing', async () => {
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq(`/api/outreach/threads/${THREAD_ID}/outcome`, { outcome: 'maybe' }),
@@ -570,7 +574,7 @@ describe('POST /api/outreach/threads/:threadId/outcome', () => {
 
   it('rejects a lost reason outside the controlled vocabulary', async () => {
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq(`/api/outreach/threads/${THREAD_ID}/outcome`, {
@@ -586,7 +590,7 @@ describe('POST /api/outreach/threads/:threadId/outcome', () => {
 
   it('rejects a lost reason on an outcome that is not lost', async () => {
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq(`/api/outreach/threads/${THREAD_ID}/outcome`, {
@@ -607,7 +611,7 @@ describe('POST /api/outreach/threads/:threadId/outcome', () => {
     });
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(
       fakePostReq(`/api/outreach/threads/${THREAD_ID}/outcome`, { outcome: 'won' }),
@@ -637,7 +641,7 @@ describe('POST /api/outreach/threads/:threadId/opt-out', () => {
     vi.mocked(closeOutreachThreadsForDomain).mockResolvedValue({ closed: 1 });
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakePostReq(`/api/outreach/threads/${THREAD_ID}/opt-out`), res);
 
@@ -675,7 +679,7 @@ describe('POST /api/outreach/threads/:threadId/opt-out', () => {
       .mockResolvedValue({ closed: 0 });
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const first = fakeRes();
     await router.handle(fakePostReq(`/api/outreach/threads/${THREAD_ID}/opt-out`), first);
     const repeat = fakeRes();
@@ -695,7 +699,7 @@ describe('POST /api/outreach/threads/:threadId/opt-out', () => {
     vi.mocked(findOutreachThreadById).mockResolvedValue(null);
 
     const router = new Router();
-    registerOutreachRoutes(router, fakeConnection);
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakePostReq(`/api/outreach/threads/${THREAD_ID}/opt-out`), res);
 
@@ -703,6 +707,80 @@ describe('POST /api/outreach/threads/:threadId/opt-out', () => {
     expect(addSuppressionEntry).not.toHaveBeenCalled();
     expect(listLivePreviewsForDomain).not.toHaveBeenCalled();
     expect(closeOutreachThreadsForDomain).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/outreach/draft-batch', () => {
+  it('enqueues an outreach-draft-batch job and notifies the queue', async () => {
+    vi.mocked(createJob).mockResolvedValue({ jobId: 'job-1' } as never);
+
+    const router = new Router();
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(
+      fakePostReq('/api/outreach/draft-batch', { limit: 5, language: 'en' }),
+      res,
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect(createJob).toHaveBeenCalledWith(fakeConnection, {
+      type: 'outreach-draft-batch',
+      options: { limit: 5, language: 'en' },
+    });
+    expect(fakeQueue.notify).toHaveBeenCalled();
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ jobId: 'job-1' });
+  });
+
+  it('rejects a missing or non-positive limit without creating a job', async () => {
+    const router = new Router();
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(fakePostReq('/api/outreach/draft-batch', { limit: 0 }), res);
+
+    expect(res.statusCode).toBe(400);
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unsupported language', async () => {
+    const router = new Router();
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(
+      fakePostReq('/api/outreach/draft-batch', { limit: 5, language: 'de' }),
+      res,
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(createJob).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/outreach/followup-batch', () => {
+  it('enqueues an outreach-followup-batch job and notifies the queue', async () => {
+    vi.mocked(createJob).mockResolvedValue({ jobId: 'job-2' } as never);
+
+    const router = new Router();
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(fakePostReq('/api/outreach/followup-batch', { limit: 3 }), res);
+
+    expect(res.statusCode).toBe(201);
+    expect(createJob).toHaveBeenCalledWith(fakeConnection, {
+      type: 'outreach-followup-batch',
+      options: { limit: 3 },
+    });
+    expect(fakeQueue.notify).toHaveBeenCalled();
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ jobId: 'job-2' });
+  });
+
+  it('rejects a missing or non-positive limit without creating a job', async () => {
+    const router = new Router();
+    registerOutreachRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(fakePostReq('/api/outreach/followup-batch', {}), res);
+
+    expect(res.statusCode).toBe(400);
+    expect(createJob).not.toHaveBeenCalled();
   });
 });
 

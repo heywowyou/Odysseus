@@ -1,5 +1,6 @@
 import { Readable } from 'node:stream';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION } from '@odysseus/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
@@ -7,14 +8,37 @@ vi.mock('@odysseus/store', () => ({
   getOperatorProspect: vi.fn(),
   getProspectQualificationHistory: vi.fn(),
   recordHotelCandidateReview: vi.fn(),
+  findOutreachThreadByCandidate: vi.fn(),
+}));
+
+vi.mock('../outreach/draft-runtime.js', () => ({
+  createTouchOneDraft: vi.fn(),
+  createFollowUpForCandidate: vi.fn(),
+}));
+
+vi.mock('../outreach/mongo-outreach-preview-store.js', () => ({
+  createMongoOutreachPreviewStore: vi.fn(),
+}));
+
+vi.mock('../outreach/publish-preview.js', () => ({
+  buildPreviewInput: vi.fn(),
+}));
+
+vi.mock('@odysseus/report', () => ({
+  generateOutreachPreviewHtml: vi.fn(),
 }));
 
 import {
+  findOutreachThreadByCandidate,
   getOperatorProspect,
   getProspectQualificationHistory,
   listOperatorProspects,
   recordHotelCandidateReview,
 } from '@odysseus/store';
+import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
+import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-preview-store.js';
+import { buildPreviewInput } from '../outreach/publish-preview.js';
+import { generateOutreachPreviewHtml } from '@odysseus/report';
 import { Router } from '../router.js';
 import { registerProspectRoutes } from './prospects.js';
 
@@ -51,6 +75,26 @@ function fakeRes(): ServerResponse & { statusCode: number; body: string | undefi
 }
 
 const fakeConnection = {} as never;
+const previewStore = { findPublicationRow: vi.fn() };
+
+function completePreviewEvidence(overrides: Record<string, unknown> = {}): unknown {
+  return {
+    status: 'complete',
+    schemaVersion: HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
+    summaries: [{}, {}, {}],
+    ...overrides,
+  };
+}
+
+function previewRow(overrides: Record<string, unknown> = {}): unknown {
+  return {
+    artifactsDir: '/tmp/prescan',
+    observedAt: new Date('2026-09-01T00:00:00.000Z'),
+    prescanExpiresAt: new Date('2026-10-01T00:00:00.000Z'),
+    evidence: completePreviewEvidence(),
+    ...overrides,
+  };
+}
 
 function makeDetail(): Record<string, unknown> {
   // Every key of OperatorProspectDetail (packages/store/src/operator-views.ts),
@@ -146,6 +190,10 @@ beforeEach(() => {
     offset: 0,
   } as never);
   vi.mocked(recordHotelCandidateReview).mockResolvedValue({ changed: true, found: true } as never);
+  vi.mocked(createMongoOutreachPreviewStore).mockReturnValue(previewStore as never);
+  vi.mocked(previewStore.findPublicationRow).mockResolvedValue(null);
+  vi.mocked(buildPreviewInput).mockResolvedValue({} as never);
+  vi.mocked(generateOutreachPreviewHtml).mockReturnValue('<main>Current preview</main>');
 });
 
 async function handle(url: string, options: FakeReqOptions = {}) {
@@ -394,5 +442,181 @@ describe('POST /api/prospects/:candidateId/review', () => {
     });
     expect(res.statusCode).toBe(415);
     expect(recordHotelCandidateReview).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/prospects/:candidateId/outreach', () => {
+  it('returns thread: null when the candidate has no thread yet', async () => {
+    vi.mocked(findOutreachThreadByCandidate).mockResolvedValue(null);
+    const res = await handle('/api/prospects/cand-1/outreach');
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ thread: null });
+  });
+
+  it('returns the thread summary when one exists', async () => {
+    vi.mocked(findOutreachThreadByCandidate).mockResolvedValue({
+      threadId: 'thread-1',
+      state: 'e1-sent',
+      currentTouch: 1,
+    } as never);
+    const res = await handle('/api/prospects/cand-1/outreach');
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      thread: { threadId: 'thread-1', state: 'e1-sent', currentTouch: 1 },
+    });
+  });
+});
+
+describe('GET /api/prospects/:candidateId/outreach/preview-render', () => {
+  it('renders the current evidence through the shared publication mapping', async () => {
+    const row = previewRow();
+    vi.mocked(previewStore.findPublicationRow).mockResolvedValue(row as never);
+
+    const res = await handle('/api/prospects/cand-1/outreach/preview-render');
+
+    expect(res.statusCode).toBe(200);
+    expect(createMongoOutreachPreviewStore).toHaveBeenCalledWith(fakeConnection, {
+      prescanVersion: 'v3',
+      qualificationVersion: 'v3',
+    });
+    expect(buildPreviewInput).toHaveBeenCalledWith(
+      expect.objectContaining({ row, language: 'fr' }),
+    );
+    expect(generateOutreachPreviewHtml).toHaveBeenCalledWith({});
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      rendered: true,
+      html: '<main>Current preview</main>',
+    });
+  });
+
+  it.each([
+    ['the candidate or its current prescan is absent', null, 'candidate-unknown'],
+    ['evidence was not recorded', previewRow({ evidence: undefined }), 'evidence-incomplete'],
+    [
+      'evidence has an older schema',
+      previewRow({ evidence: completePreviewEvidence({ schemaVersion: 0 }) }),
+      'evidence-schema-outdated',
+    ],
+    [
+      'evidence has too few public summaries',
+      previewRow({ evidence: completePreviewEvidence({ summaries: [] }) }),
+      'evidence-incomplete',
+    ],
+    [
+      'the prescan has expired',
+      previewRow({ prescanExpiresAt: new Date('2020-01-01T00:00:00.000Z') }),
+      'prescan-expired',
+    ],
+  ])('returns a 200 refusal when %s', async (_reason, row, refusal) => {
+    vi.mocked(previewStore.findPublicationRow).mockResolvedValue(row as never);
+
+    const res = await handle('/api/prospects/cand-1/outreach/preview-render');
+
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ rendered: false, refusal });
+    expect(buildPreviewInput).not.toHaveBeenCalled();
+    expect(generateOutreachPreviewHtml).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed candidate id without reading the preview store', async () => {
+    const res = await handle('/api/prospects/bad%0Aid/outreach/preview-render');
+
+    expect(res.statusCode).toBe(400);
+    expect(previewStore.findPublicationRow).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/prospects/:candidateId/outreach/draft', () => {
+  it('returns 200 and the result when a draft is created', async () => {
+    vi.mocked(createTouchOneDraft).mockResolvedValue({
+      configured: true,
+      created: true,
+      draftId: 'draft-1',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/draft', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ created: true, draftId: 'draft-1' });
+  });
+
+  it('returns 200 with the refusal code when the orchestrator refuses', async () => {
+    vi.mocked(createTouchOneDraft).mockResolvedValue({
+      configured: true,
+      created: false,
+      refusal: 'draft-already-live',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/draft', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      created: false,
+      refusal: 'draft-already-live',
+    });
+  });
+
+  it('returns 503 when no mailbox is configured', async () => {
+    vi.mocked(createTouchOneDraft).mockResolvedValue({
+      configured: false,
+      refusal: 'no-mailbox-configured',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/draft', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(503);
+  });
+});
+
+describe('POST /api/prospects/:candidateId/outreach/follow-up', () => {
+  it('returns 404 when the candidate has no thread yet', async () => {
+    vi.mocked(findOutreachThreadByCandidate).mockResolvedValue(null);
+    const res = await handle('/api/prospects/cand-1/outreach/follow-up', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(404);
+    expect(createFollowUpForCandidate).not.toHaveBeenCalled();
+  });
+
+  it('returns 200 and the result when a follow-up is created', async () => {
+    vi.mocked(findOutreachThreadByCandidate).mockResolvedValue({
+      threadId: 'thread-1',
+      state: 'e1-sent',
+      currentTouch: 1,
+    } as never);
+    vi.mocked(createFollowUpForCandidate).mockResolvedValue({
+      configured: true,
+      created: true,
+      draftId: 'draft-2',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/follow-up', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(createFollowUpForCandidate).toHaveBeenCalledWith(fakeConnection, 'thread-1', {
+      dryRun: false,
+    });
+  });
+
+  it('returns 503 when no mailbox is configured', async () => {
+    vi.mocked(findOutreachThreadByCandidate).mockResolvedValue({
+      threadId: 'thread-1',
+      state: 'e1-sent',
+      currentTouch: 1,
+    } as never);
+    vi.mocked(createFollowUpForCandidate).mockResolvedValue({
+      configured: false,
+      refusal: 'no-mailbox-configured',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/follow-up', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(503);
   });
 });

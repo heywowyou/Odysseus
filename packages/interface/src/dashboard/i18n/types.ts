@@ -474,6 +474,7 @@ export interface DashboardStrings {
     openScore: string;
     openEvidence: string;
     openPreview: string;
+    openOutreach: string;
     openSite: string;
     launchAudit: string;
     sourcesHeading: string;
@@ -563,7 +564,34 @@ export interface DashboardStrings {
     states: Record<'live' | 'revoked' | 'expired' | 'none', string>;
     openPublic: string;
     rendererNote: string;
+    showCurrentPreview: string;
+    hideCurrentPreview: string;
+    currentPreviewNote: string;
+    currentPreviewUnavailable: string;
+    currentPreviewError: string;
     empty: string;
+  };
+  outreachThread: {
+    title: string;
+    description: string;
+    noThread: string;
+    generateFirstEmail: string;
+    generateFollowUp: string;
+    stateLabel: string;
+    touchLabel: string;
+    states: Record<
+      'e1-drafted' | 'e1-sent' | 'e2-drafted' | 'e2-sent' | 'e3-drafted' | 'e3-sent' | 'closed',
+      string
+    >;
+    draftCreated: string;
+    followUpCreated: string;
+    /** One generic refusal toast for every typed refusal code, the same
+     *  discipline prospect-detail.tsx already uses for its review action:
+     *  the private single-operator console shows one message, not a
+     *  per-code table that would have to track two orchestrators' refusal
+     *  unions. */
+    actionRefused: string;
+    actionError: string;
   };
   vendors: {
     title: string;
@@ -584,6 +612,15 @@ export interface DashboardStrings {
       suppressionsDescription: string;
       outcomesTitle: string;
       outcomesDescription: string;
+    };
+    batch: {
+      draftBatchLabel: string;
+      draftBatchButton: string;
+      followUpBatchLabel: string;
+      followUpBatchButton: string;
+      limitLabel: string;
+      started: string;
+      error: string;
     };
   };
   drafts: {
@@ -725,6 +762,7 @@ export interface DashboardStrings {
     score: string;
     evidence: string;
     preview: string;
+    outreach: string;
     qualification: string;
     review: string;
   };

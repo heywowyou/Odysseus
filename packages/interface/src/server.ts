@@ -18,6 +18,8 @@ import { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
 import { runHotelPrescanJob } from './queue/pipeline/run-hotel-prescan-job.js';
 import { runProspectIngestionJob } from './queue/pipeline/run-prospect-ingestion-job.js';
+import { runOutreachDraftBatchJob } from './queue/pipeline/run-outreach-draft-batch-job.js';
+import { runOutreachFollowupBatchJob } from './queue/pipeline/run-outreach-followup-batch-job.js';
 import {
   DASHBOARD_PASSWORD_HASH_ENV_VAR,
   getDashboardPasswordHash,
@@ -89,6 +91,8 @@ export async function startInterfaceServer(
       prospecting: runProspectingJob,
       'prospect-ingestion': runProspectIngestionJob,
       'hotel-prescan': runHotelPrescanJob,
+      'outreach-draft-batch': runOutreachDraftBatchJob,
+      'outreach-followup-batch': runOutreachFollowupBatchJob,
     },
   });
 
@@ -102,7 +106,7 @@ export async function startInterfaceServer(
   registerProspectingRoutes(router, connection, queue);
   registerProspectRoutes(router, connection);
   registerProspectInsightRoutes(router, connection);
-  registerOutreachRoutes(router, connection);
+  registerOutreachRoutes(router, connection, queue);
   registerSessionRoutes(router, { getPasswordHash, sessionStore, rateLimiter });
   registerStaticFallback(router);
 

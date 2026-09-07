@@ -4,6 +4,7 @@ import { isOutreachLostReason, isOutreachOutcome } from '@odysseus/core';
 import {
   addSuppressionEntry,
   closeOutreachThreadsForDomain,
+  createJob,
   findOutreachDraftById,
   findOutreachThreadById,
   getHotelCandidate,
@@ -20,13 +21,16 @@ import {
 } from '@odysseus/store';
 import type { Router } from '../router.js';
 import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
+import type { JobQueue } from '../queue/job-queue.js';
 
 /** Plan 013 step 4: pending Gmail draft review, replies needing review,
  *  suppression lookup by entered value, and operator outcome actions. Every
  *  handler calls exported @odysseus/store helpers, never queries Mongoose
- *  models directly, and the module deliberately contains no send, deliver,
- *  or provider request endpoint: reviewing a draft marks it reviewed and
- *  nothing else. */
+ *  models directly, and nothing here sends, delivers, or makes a provider
+ *  request beyond creating a Gmail draft: reviewing a draft marks it
+ *  reviewed and nothing else. Plan 030 adds the two batch-drafting
+ *  endpoints, which only enqueue a job the queue then runs through the same
+ *  refusal-not-throw orchestrators the single-candidate routes use. */
 
 const DEFAULT_PAGE_LIMIT = 50;
 const MAX_PAGE_LIMIT = 200;
@@ -82,7 +86,18 @@ async function readJsonObjectBody(
   return body as Record<string, unknown>;
 }
 
-export function registerOutreachRoutes(router: Router, connection: Connection): void {
+/** Body shape shared by both batch-enqueue routes below. */
+function parseBatchLimit(body: Record<string, unknown>): number | null {
+  const raw = body['limit'];
+  if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 1) return null;
+  return raw;
+}
+
+export function registerOutreachRoutes(
+  router: Router,
+  connection: Connection,
+  queue: JobQueue,
+): void {
   // Pending review Gmail drafts across candidates, metadata only.
   router.get('/api/outreach/drafts', async ({ res, query }) => {
     const page = await listOutreachReviewDrafts(connection, parsePageQuery(query));
@@ -303,5 +318,48 @@ export function registerOutreachRoutes(router: Router, connection: Connection): 
       previewsRevoked,
       threadsClosed: threads.closed,
     });
+  });
+
+  // Milestone 9c plan 030: dashboard-triggered equivalent of
+  // `odysseus prospect draft batch`. Runs through the job queue, not
+  // synchronously, because a real batch is tens of seconds to minutes of
+  // LLM and Gmail round trips - see run-outreach-draft-batch-job.ts.
+  router.post('/api/outreach/draft-batch', async ({ req, res }) => {
+    const body = await readJsonObjectBody(req, res);
+    if (body === null) return;
+    const limit = parseBatchLimit(body);
+    if (limit === null) {
+      sendError(res, 400, 'limit must be a positive integer');
+      return;
+    }
+    const rawLanguage = body['language'];
+    if (rawLanguage !== undefined && rawLanguage !== 'fr' && rawLanguage !== 'en') {
+      sendError(res, 400, 'language must be "fr" or "en"');
+      return;
+    }
+    const job = await createJob(connection, {
+      type: 'outreach-draft-batch',
+      options: { limit, ...(rawLanguage === undefined ? {} : { language: rawLanguage }) },
+    });
+    queue.notify();
+    sendJson(res, 201, { jobId: job.jobId });
+  });
+
+  // Follow-up counterpart of draft-batch above, running
+  // run-outreach-followup-batch-job.ts.
+  router.post('/api/outreach/followup-batch', async ({ req, res }) => {
+    const body = await readJsonObjectBody(req, res);
+    if (body === null) return;
+    const limit = parseBatchLimit(body);
+    if (limit === null) {
+      sendError(res, 400, 'limit must be a positive integer');
+      return;
+    }
+    const job = await createJob(connection, {
+      type: 'outreach-followup-batch',
+      options: { limit },
+    });
+    queue.notify();
+    sendJson(res, 201, { jobId: job.jobId });
   });
 }

@@ -7,6 +7,7 @@ import { EvidencePage } from './routes/evidence';
 import { LoginPage } from './routes/login';
 import { NewScanPage } from './routes/new-scan';
 import { OutcomesPage } from './routes/outcomes';
+import { OutreachThreadPage } from './routes/outreach-thread';
 import { PrescanPage } from './routes/prescan';
 import { PreviewPage } from './routes/preview';
 import { ProspectDetailPage } from './routes/prospect-detail';
@@ -36,6 +37,7 @@ export function App() {
         <Route path="prospects/:candidateId/score" element={<ScorePage />} />
         <Route path="prospects/:candidateId/evidence" element={<EvidencePage />} />
         <Route path="prospects/:candidateId/preview" element={<PreviewPage />} />
+        <Route path="prospects/:candidateId/outreach" element={<OutreachThreadPage />} />
         <Route path="vendors" element={<VendorsPage />} />
         <Route path="outreach" element={<OutreachIndexPage />} />
         <Route path="outreach/drafts" element={<DraftsPage />} />

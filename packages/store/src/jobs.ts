@@ -17,6 +17,7 @@ import {
   type JobPhase,
   type JobProgress,
   type JobType,
+  type OutreachBatchResult,
   type ProspectIngestionResult,
   type UrlResult,
 } from './schemas/job.schema.js';
@@ -67,6 +68,10 @@ export interface JobProgressPatch {
   /** Same reasoning as urlResults above, for prospect-ingestion jobs:
    *  one entry per candidate in the current batch only. */
   ingestionResults?: ProspectIngestionResult[];
+  /** Same reasoning again, for outreach-draft-batch and
+   *  outreach-followup-batch jobs: one entry per item in the current
+   *  batch only. */
+  outreachBatchResults?: OutreachBatchResult[];
   /** Written as soon as the audit stage resolves, well before completeJob
    *  runs, so a later report-stage failure still leaves the dashboard able
    *  to link the job to its persisted audit (rowTarget in
@@ -96,6 +101,8 @@ export async function updateJobProgress(
   if (patch.progress?.message !== undefined) $set['progress.message'] = patch.progress.message;
   if (patch.urlResults !== undefined) $set['urlResults'] = patch.urlResults;
   if (patch.ingestionResults !== undefined) $set['ingestionResults'] = patch.ingestionResults;
+  if (patch.outreachBatchResults !== undefined)
+    $set['outreachBatchResults'] = patch.outreachBatchResults;
   if (patch.auditId !== undefined) $set['auditId'] = patch.auditId;
   if (Object.keys($set).length === 0) return;
   await JobModel.updateOne({ jobId }, { $set });
@@ -106,6 +113,7 @@ export interface CompleteJobPatch {
   auditIds?: string[];
   urlResults?: UrlResult[];
   ingestionResults?: ProspectIngestionResult[];
+  outreachBatchResults?: OutreachBatchResult[];
   needsReview?: string;
 }
 

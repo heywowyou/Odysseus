@@ -355,3 +355,16 @@ export type {
 } from './outreach/create-follow-up-draft.js';
 export { createMongoFollowUpDraftStore } from './outreach/mongo-follow-up-draft-store.js';
 export type { MongoFollowUpDraftStoreOptions } from './outreach/mongo-follow-up-draft-store.js';
+
+// Milestone 9c plan 030: the one shared runtime that builds real adapters
+// (Mongo, mailbox, preview) for both drafting orchestrators, used by the CLI
+// and by the interface's own routes and job runners so there is exactly one
+// definition of "a real draft".
+export { createTouchOneDraft, createFollowUpForCandidate } from './outreach/draft-runtime.js';
+export type {
+  CreateTouchOneDraftOptions,
+  CreateTouchOneDraftResult,
+  CreateFollowUpForCandidateOptions,
+  CreateFollowUpForCandidateResult,
+  DraftRuntimeRefusal,
+} from './outreach/draft-runtime.js';

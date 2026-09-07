@@ -355,7 +355,12 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [024](archive/024-report-feedback-followups.md) | Close three small gaps between the report and Conseil papa | P2 | S | 018, 019 | DONE (trade-off 44 order amended to glossary-last 2026-09-01; the reference HTML's stale remaining-work region moved to issue #25) |
 | [025](archive/025-llm-provider-switch.md) | Switch the LLM provider from Mistral to OpenAI gpt-5.4-mini | P1 | M | none | DONE (operator accepted the rendered French and English reports 2026-09-03) |
 | [026](archive/026-faster-audits-without-weaker-measurements.md) | Make a single full audit faster without weakening what it measures | P2 | M | none | DONE (Steps 1-3 shipped and measured on the VPS 2026-09-05: 570 s to 498 s on a 29-page site, Lighthouse segment -16.6 %, coverage and findings unaffected. Step 4 declined on measurement; Steps 5 and 6 dropped 2026-09-07 because Step 0 showed the cost is page classification, not serialization; Step 7 done, trade-off 74 added) |
-| [027](./027-french-report-prose-quality.md) | Make the French report read like consulting prose | P1 | M | 018, 019, 025 | TODO |
+| [027](archive/027-french-report-prose-quality.md) | Make the French report read like consulting prose | P1 | M | 018, 019, 025 | DONE (operator read and accepted both stored French PDFs 2026-09-07; three residual copy defects fixed in follow-up commits) |
+| [028](archive/028-writing-pass-consistency-guards.md) | Close the writing-pass consistency gaps plan 027 didn't cover | P2 | S | 027 | DONE (three additive guards shipped, `packages/llm` suite green, `pnpm run check` clean, 2026-09-07) |
+| [029](archive/029-writing-pass-open-levers.md) | The two writing-pass levers plan 027 left as operator decisions | P3 | M | 027, 028 | DONE (Steps 2-3 shipped 2026-09-07; Step 1 measured and deferred 2026-09-08 - production stays at `reasoning_effort: 'none'`, no measured gain and one regression at `low`, a guard trip at `medium`) |
+| [030](./030-outreach-dashboard-wiring.md) | Wire outreach draft generation into the operator dashboard | P2 | M | 011-013 | TODO |
+| [031](archive/031-operator-preview-render.md) | Let the operator view the pre-purchase preview's current content | P3 | S | 008, 009 | DONE |
+| [032](./032-site-context-from-catalogue.md) | Populate the writing pass's site context from the hotel catalogue | P3 | M | 029 | TODO (stub only, not started) |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
