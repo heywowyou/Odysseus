@@ -3,6 +3,7 @@ import { getOpenAiApiKey, getOpenAiBaseUrl } from './config.js';
 import {
   OPENAI_MODEL,
   OPENAI_TEMPERATURE,
+  WRITING_OPENAI_TEMPERATURE,
   MAX_OUTPUT_TOKENS,
   REVIEWER_MAX_OUTPUT_TOKENS,
 } from './constants.js';
@@ -176,7 +177,7 @@ export async function callOpenAiForWriting(
     client.chat.completions.create({
       model: OPENAI_MODEL,
       max_completion_tokens: MAX_OUTPUT_TOKENS,
-      temperature: OPENAI_TEMPERATURE,
+      temperature: WRITING_OPENAI_TEMPERATURE,
       reasoning_effort: 'none',
       messages: [
         {

@@ -1,8 +1,21 @@
 import { z } from 'zod';
 import type { FindingCategory, LlmInput, ReportLanguage } from '@odysseus/core';
 
-const MAX_BUSINESS_IMPACT_SENTENCES = 2;
-const MAX_RECOMMENDED_ACTIONS = 3;
+/** Plan 027: raised from a hard 2-sentence ceiling, which was measured to
+ *  force every businessImpact in every stored French analysis to exactly two
+ *  sentences - the ceiling was doing the model's writing for it. A floor is
+ *  added alongside the raised ceiling so the model doesn't simply keep
+ *  writing two sentences out of habit; three to five gives room for
+ *  consulting-length prose without inviting padding. See
+ *  plans/027-french-report-prose-quality.md and
+ *  docs/rules/report-writing-style.md section 5. */
+export const MIN_BUSINESS_IMPACT_SENTENCES = 3;
+export const MAX_BUSINESS_IMPACT_SENTENCES = 5;
+/** Plan 027: raised from a hard 3-item ceiling for the same reason as the
+ *  sentence cap above, with a floor so a theme still gets at least two
+ *  concrete next steps. */
+export const MIN_RECOMMENDED_ACTIONS = 2;
+export const MAX_RECOMMENDED_ACTIONS = 5;
 
 /** Rough sentence count: splits on ./!/? followed by whitespace or end of
  *  string. Doesn't parse abbreviations, but businessImpact is short,
@@ -16,9 +29,15 @@ function countSentences(value: string): number {
 const businessImpactSchema = z
   .string()
   .min(1)
-  .refine((value) => countSentences(value) <= MAX_BUSINESS_IMPACT_SENTENCES, {
-    message: `businessImpact must be at most ${MAX_BUSINESS_IMPACT_SENTENCES} sentences`,
-  });
+  .refine(
+    (value) => {
+      const count = countSentences(value);
+      return count >= MIN_BUSINESS_IMPACT_SENTENCES && count <= MAX_BUSINESS_IMPACT_SENTENCES;
+    },
+    {
+      message: `businessImpact must be between ${MIN_BUSINESS_IMPACT_SENTENCES} and ${MAX_BUSINESS_IMPACT_SENTENCES} sentences`,
+    },
+  );
 
 /** New, non-locked schema. Deliberately has no findingIds, effort,
  *  impact, priorityRank, category, quickWins, or overallRisk field at
@@ -36,7 +55,10 @@ export const writingThemeSchema = z
     themeKey: z.string().min(1),
     title: z.string().min(1),
     businessImpact: businessImpactSchema,
-    recommendedActions: z.array(z.string()).min(1).max(MAX_RECOMMENDED_ACTIONS),
+    recommendedActions: z
+      .array(z.string())
+      .min(MIN_RECOMMENDED_ACTIONS)
+      .max(MAX_RECOMMENDED_ACTIONS),
   })
   .strict();
 

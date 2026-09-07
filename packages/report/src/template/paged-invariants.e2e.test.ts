@@ -264,6 +264,36 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     expect(overflowing).toBe(0);
   });
 
+  // Plan 027 step 5: raising businessImpact's ceiling to 5 sentences and
+  // recommendedActions' to 5 entries (writing-schema.ts) is only safe if a
+  // theme-card at that new maximum still fits on one physical page -
+  // paged.css declares `.theme-card { break-inside: avoid }` (trade-off
+  // 17's atomicity rule), which does not itself guarantee the block fits;
+  // it only guarantees Paged.js will not split it, so an oversized card
+  // would silently overflow onto whatever page it landed on instead of
+  // fragmenting visibly. This is the only place that guarantee is checked
+  // against a real measured height rather than assumed from the CSS
+  // declaration. 261mm matches paged.css's own `.sheet-metadata` non-cover
+  // content-box comment (297mm A4 minus the 18mm top and bottom @page
+  // margins); Paged.js lays out at print resolution, so a generous
+  // px-per-mm estimate is used rather than assuming a fixed 96dpi.
+  it("invariant 7: every theme card fits within one page's content-box height, even at the raised businessImpact/recommendedActions maxima", async () => {
+    const CONTENT_BOX_HEIGHT_MM = 261;
+    const PX_PER_MM = 3.7795;
+    const maxContentBoxHeightPx = CONTENT_BOX_HEIGHT_MM * PX_PER_MM;
+
+    const cardHeights = await doc.page.evaluate(() =>
+      Array.from(document.querySelectorAll('.theme-card')).map(
+        (card) => card.getBoundingClientRect().height,
+      ),
+    );
+
+    expect(cardHeights.length).toBeGreaterThan(0);
+    for (const height of cardHeights) {
+      expect(height).toBeLessThanOrEqual(maxContentBoxHeightPx);
+    }
+  });
+
   // Plan 018's replacement for the retired three-per-page cap: every
   // numbered .sheet starts on a fresh physical page, so a page carries at
   // most one sheet eyebrow (the metadata sheet, the TOC, and every

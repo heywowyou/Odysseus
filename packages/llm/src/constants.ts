@@ -29,6 +29,24 @@ export const OPENAI_MODEL = 'gpt-5.4-mini';
  *  changing. */
 export const OPENAI_TEMPERATURE = 0.2;
 
+/** Plan 027: the writing pass's own temperature, distinct from
+ *  OPENAI_TEMPERATURE above (which still governs the structure and
+ *  reviewer passes). The determinism argument for 0.2 is about repeatable
+ *  priorities over the same findings; priorities are decided entirely by
+ *  the structure pass, which keeps 0.2 unchanged. The writing pass only
+ *  produces prose, which has no repeatability requirement, and 0.2 was
+ *  measured to make near-verbatim reproduction of the prompt's own
+ *  examples likely (see plans/027-french-report-prose-quality.md). Raised
+ *  from an initial 0.7 to 1.0 (operator decision, 2026-09-07) for a
+ *  stronger break from that pattern; still inside the range where strict
+ *  JSON structured output remains reliable. This is not the per-pass model
+ *  split trade-off 67 rejected - that rejection was about the single
+ *  `model` provenance field on a reused structure pass, not temperature,
+ *  and the persisted `temperature` field already records specifically the
+ *  writing pass's own call (see docs/rules/llm-layer-rules.md section 3),
+ *  so recording this value there stays accurate with no new field. */
+export const WRITING_OPENAI_TEMPERATURE = 1.0;
+
 /** Generous enough for up to 20 themes of French or English prose (writing
  *  pass) or a full findings echo across findingIds and quickWins (structure
  *  pass), per the locked llmOutputSchema's max theme count. Raised from

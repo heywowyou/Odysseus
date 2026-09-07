@@ -274,7 +274,7 @@ function buildThemes(findings: readonly Finding[]): Theme[] {
     return {
       title: i === 0 ? LONG_THEME_TITLE : `Chantier prioritaire numéro ${i + 1}`,
       category,
-      businessImpact: `Impact commercial décrit pour le chantier ${i + 1}, en langage clair, sans jargon technique.`,
+      businessImpact: buildLongBusinessImpact(i + 1),
       legalRelevance:
         category === 'accessibility'
           ? `Critère WCAG concerné pour le chantier ${i + 1}.`
@@ -283,9 +283,42 @@ function buildThemes(findings: readonly Finding[]): Theme[] {
       impact: impactLevels[(i + 1) % impactLevels.length]!,
       priorityRank: i + 1,
       findingIds,
-      recommendedActions: [`Action recommandée ${i + 1}.1`, `Action recommandée ${i + 1}.2`],
+      recommendedActions: buildLongRecommendedActions(i + 1),
     };
   });
+}
+
+/**
+ * Plan 027 step 5: businessImpact's raised ceiling (5 sentences, see
+ * writing-schema.ts) needs a pagination stress case, not just a raised
+ * number in a test. Every theme here reaches the new maximum instead of a
+ * single short sentence, so the stress fixture actually exercises the
+ * height it now allows.
+ */
+function buildLongBusinessImpact(themeNumber: number): string {
+  return [
+    `Ce chantier prioritaire numéro ${themeNumber} touche une part importante des visiteurs du site.`,
+    'Les clients concernés rencontrent une gêne concrète au moment où ils cherchent à réserver ou à obtenir une information clé.',
+    'Cette gêne se traduit par des abandons qui ne sont pas visibles dans les statistiques habituelles, sans un audit dédié.',
+    'Le préjudice commercial se cumule mois après mois tant que le chantier reste ouvert.',
+    'Une correction rapide limite ce préjudice avant la prochaine période de forte affluence.',
+  ].join(' ');
+}
+
+/**
+ * Plan 027 step 5: recommendedActions' raised ceiling (5 entries) using the
+ * longest approved provider phrase, so the stress fixture also exercises
+ * the longest realistic recommendedActions text width, not just its count.
+ */
+function buildLongRecommendedActions(themeNumber: number): string[] {
+  const provider = "l'équipe technique en charge de votre site";
+  return [
+    `Demandez à ${provider} de corriger ce point pour le chantier ${themeNumber} dans les meilleurs délais.`,
+    `Faites confirmer par ${provider} que la correction du chantier ${themeNumber} a bien été déployée en production.`,
+    `Demandez à ${provider} de vérifier qu'aucune régression similaire n'affecte les pages voisines du chantier ${themeNumber}.`,
+    `Faites documenter par ${provider} la correction apportée au chantier ${themeNumber} pour un suivi ultérieur.`,
+    `Demandez à ${provider} de reformuler le contenu concerné par le chantier ${themeNumber} de manière plus claire pour les clients.`,
+  ];
 }
 
 const OBLIGATION_ASSESSMENT: ObligationAssessment = {

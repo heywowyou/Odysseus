@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
+import { OPENAI_MODEL, WRITING_OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import type { WritingInput, WritingPassOutput } from './writing-schema.js';
 
 vi.mock('./client.js', () => ({
@@ -135,7 +135,7 @@ describe('analyzeWriting', () => {
 
     expect(result.output.themes).toHaveLength(1);
     expect(result.model).toBe(OPENAI_MODEL);
-    expect(result.temperature).toBe(OPENAI_TEMPERATURE);
+    expect(result.temperature).toBe(WRITING_OPENAI_TEMPERATURE);
     expect(callOpenAiForWriting).toHaveBeenCalledTimes(1);
   });
 

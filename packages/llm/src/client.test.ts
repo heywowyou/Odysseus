@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { WRITING_OPENAI_TEMPERATURE } from './constants.js';
 
 const completeMock = vi.fn();
 
@@ -54,8 +55,9 @@ const validWritingResponse = {
   themes: {
     'theme-1': {
       title: 'Missing alt text',
-      businessImpact: 'Screen reader users cannot understand the images.',
-      recommendedActions: ['Add alt text to all images.'],
+      businessImpact:
+        'Screen reader users cannot understand the images. This makes core content inaccessible to them. It also puts the site at legal risk.',
+      recommendedActions: ['Add alt text to all images.', 'Review new uploads for alt text.'],
     },
   },
   executiveSummary: 'The site has one accessibility issue worth fixing.',
@@ -69,8 +71,9 @@ const validWritingOutput = {
     {
       themeKey: 'theme-1',
       title: 'Missing alt text',
-      businessImpact: 'Screen reader users cannot understand the images.',
-      recommendedActions: ['Add alt text to all images.'],
+      businessImpact:
+        'Screen reader users cannot understand the images. This makes core content inaccessible to them. It also puts the site at legal risk.',
+      recommendedActions: ['Add alt text to all images.', 'Review new uploads for alt text.'],
     },
   ],
   executiveSummary: 'The site has one accessibility issue worth fixing.',
@@ -182,6 +185,17 @@ describe('callOpenAiForWriting', () => {
     completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingResponse) }));
     const result = await callOpenAiForWriting(writingInput, false);
     expect(result.output).toEqual(validWritingOutput);
+  });
+
+  // Plan 027: the writing pass uses its own, higher temperature than the
+  // structure pass above - prose has no repeatability requirement, and 0.2
+  // was measured to make near-verbatim example copying likely.
+  it("uses the writing pass's own temperature, not the structure pass's", async () => {
+    completeMock.mockResolvedValue(choice({ content: JSON.stringify(validWritingResponse) }));
+    await callOpenAiForWriting(writingInput, false);
+    expect(completeMock).toHaveBeenCalledWith(
+      expect.objectContaining({ temperature: WRITING_OPENAI_TEMPERATURE }),
+    );
   });
 
   it('asks the provider for a schema keyed by the theme keys it shows (issue #36)', async () => {

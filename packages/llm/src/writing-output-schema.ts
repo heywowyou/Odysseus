@@ -37,7 +37,10 @@ const WRITING_THEME_VALUE_JSON_SCHEMA = {
   properties: {
     title: { type: 'string' },
     businessImpact: { type: 'string' },
-    recommendedActions: { type: 'array', items: { type: 'string' }, maxItems: 3 },
+    // Plan 027: raised 3 -> 5 alongside writing-schema.ts's own ceiling.
+    // minItems stays unsupported under OpenAI strict mode (see this file's
+    // module comment) - the floor is Zod-only, per trade-off 7.
+    recommendedActions: { type: 'array', items: { type: 'string' }, maxItems: 5 },
   },
   required: ['title', 'businessImpact', 'recommendedActions'],
   additionalProperties: false,

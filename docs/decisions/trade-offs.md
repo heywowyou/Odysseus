@@ -3364,6 +3364,21 @@ accepted the prose for production. The single objection was the deterministic
 template's underlined jump-link labels, not the model output; it was removed
 the same day and recorded in the report design tokens document.
 
+**Addendum, 2026-09-07, plan 027.** The writing pass alone now runs at
+`temperature: 1.0` (`WRITING_OPENAI_TEMPERATURE`, raised same-day from an
+initial 0.7 by operator decision), while the structure and reviewer passes
+stay at this entry's `temperature: 0.2`. This is distinct from the per-pass
+**model** split already rejected above: that rejection was about the single
+`model` provenance field becoming ambiguous when a structure pass is reused
+across a later `--language` run, and still holds - all three passes share
+one `OPENAI_MODEL`. Temperature has no such reuse ambiguity: the persisted
+`temperature` field already records specifically the writing pass's own
+call (`docs/rules/llm-layer-rules.md` section 3), so giving that pass its
+own value costs nothing new. The change was made because 0.2 measured
+near-verbatim reproduction of the prompt's own worked examples across all
+18 stored French themes (plan 027's diagnosis); 1.0 pushes further past
+that pattern while strict JSON output remained reliable in testing at 0.7.
+
 ### 68. Real-scan fixtures go stale silently; a freshness ratchet catches it instead of a changelog
 
 Discovered 2026-08-25: the whole suite was green while

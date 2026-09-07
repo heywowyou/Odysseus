@@ -197,9 +197,14 @@ to trust implicitly.
 alternative groupings on a task that calls for a stable, repeatable
 answer over the same findings. This is a client deliverable, not a
 brainstorm, and two runs over the same findings should not produce
-materially different priorities. Both passes use the same
-`OPENAI_MODEL`/`OPENAI_TEMPERATURE` constants; there is no separate
-configuration tier per pass. Every call sets `reasoning_effort: 'none'`:
+materially different priorities. The structure and reviewer passes use
+`OPENAI_TEMPERATURE` (0.2) for exactly that reason. The writing pass has
+no such repeatability requirement - it produces prose, not a priority
+ranking - and (plan 027) uses its own `WRITING_OPENAI_TEMPERATURE` (1.0,
+raised from an initial 0.7 on 2026-09-07) instead, because 0.2 was
+measured to reproduce the prompt's own worked examples in the model's
+output almost verbatim. All three passes still
+share `OPENAI_MODEL`. Every call sets `reasoning_effort: 'none'`:
 report grouping and writing do not need hidden reasoning tokens sharing the
 same completion budget, the failure mode that already forced
 `MAX_OUTPUT_TOKENS` to 16000 once under an earlier provider (see constants.ts).
@@ -209,14 +214,14 @@ for the same reason the audit manifest records axe and Lighthouse
 versions: a model or temperature change between two monitoring
 runs would otherwise read as the client's site having changed. Not
 retrofittable onto stored analyses. The persisted per-language document's
-`model`/`temperature` reflect the writing pass's call. Since both passes
-always use the same constants this is a non-issue today; if the
-constants were ever changed between a structure pass being generated and
-a later `--language` run reusing it via cache-hit (section 5), that
-reused run's actual structure-pass model/temperature would not be
-separately recorded - the locked `AnalysisDocumentFields` shape has one
-`model`/`temperature` slot, and adding a second pair was judged out of
-scope for this fix.
+`model`/`temperature` reflect the writing pass's own call specifically
+(so, since plan 027, `temperature` reads 1.0, not the structure pass's
+0.2) - the locked `AnalysisDocumentFields` shape has one `model`/
+`temperature` slot, not one per pass. If the constants were ever changed
+between a structure pass being generated and a later `--language` run
+reusing it via cache-hit (section 5), that reused run's actual
+structure-pass model/temperature would not be separately recorded;
+adding a second pair was judged out of scope for this fix.
 
 OpenAI exposes an explicit `message.refusal` signal. A refusal is thrown and
 caught by the same retry loop as any other malformed response (see section 2);
@@ -396,6 +401,57 @@ luck, and at the configured low temperature a French run reached for
 the guard's own `BANNED_SEVERITY_SYNONYMS` table; a two-direction test
 holds that table against the guard's enforcement patterns so neither can
 drift from the other, and the guard's rejecting behaviour is unchanged.
+
+**Added 2026-09-07, plan 027.** Lever A replaced the single mandated
+provider phrase with a per-language set the response picks from, so that
+eighteen separate reports stop opening every action with the same string.
+That change needs its own guard for the same reason the severity one does:
+the prompt says in both languages never to mix two of them, and every
+regenerated French analysis mixed two anyway, at 0.7 and at 1.0 alike
+(Villas Foch: twenty-seven "votre prestataire technique" alongside nine
+"votre prestataire web"). `findProviderPhraseViolations`
+(`provider-phrase-guard.ts`, which owns the phrase table the prompt imports)
+runs last among the rejecting guards, because naming the provider two ways
+is a presentation defect rather than a claim the report should not make, so
+a response failing this and a substantive guard records the substantive
+reason. It rejects only mixing; a response that never names the provider is
+left to the prompt.
+
+Its rejection reason carries a guard-specific correction
+(`PROVIDER_PHRASE_RETRY_HINT`) rather than the generic retry text alone.
+Measured, not anticipated: with the generic text the retried Villas Foch
+response satisfied "be consistent" the cheapest possible way, opening all
+twenty-nine of its recommendedActions with "Demandez à votre prestataire
+technique de" - the templated prose plan 027 exists to remove, at a worse
+rate than the 100-percent baseline it replaced. With the hint naming which
+words must match and which must not, the same audit came back at
+fifteen-of-thirty-five shared openings with the phrasing still consistent.
+
+**Known cost, and the recommended way out.** Offering the model several
+approved phrasings and then forbidding their mixture is a standing tension: the
+guard fires on most first attempts, and both stored audits have exhausted their
+retries at least once, producing no analysis at all. It gets worse with every
+instruction that asks for more variety elsewhere in the prose, because varying
+the provider's name is one of the ways the model satisfies such a request. The
+structural fix is to stop asking: have code pick one phrase per report from
+`TECHNICAL_PROVIDER_PHRASES` and show the model only that one. Mixing then
+becomes unrepresentable rather than policed, the retries disappear, and lever
+A's cross-report variety improves, since a choosing model tends to take the
+first option listed. It needs the audit's identity threaded into
+`buildWritingSystemPrompt`; `WritingInput.siteContext` carries no stable
+site key today, so it is a small signature change through `client.ts`.
+
+**A prompt example is an anchor, not an illustration.** Measured 2026-09-07 on
+the executive summary's closing sentence: three example closings with an
+explicit instruction not to reuse them produced four consecutive French runs
+opening on the second example's words, one reproducing twenty-three in a row,
+and adding "do not open on the same first words" did not change it. Removing
+the examples and stating that no template is provided cleared it immediately.
+The same effect appeared in miniature when a single recommendedActions
+illustration was reworded: every action in the next run copied its opening
+verb. Prefer describing the structure wanted over showing a sentence that
+fills it, and treat any concrete sentence left in a prompt as something the
+output will contain.
 
 ---
 

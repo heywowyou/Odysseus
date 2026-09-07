@@ -1,10 +1,14 @@
 import { callOpenAiForWriting } from './client.js';
-import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
+import { OPENAI_MODEL, WRITING_OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { findBusinessClaimViolations } from './business-claim-guard.js';
 import { findExecutiveSummaryDigitViolations } from './executive-summary-digit-guard.js';
 import { findLanguageComplianceViolations } from './language-guard.js';
 import { findLegalConsequenceViolations } from './legal-consequence-guard.js';
 import { findPageCountViolations } from './page-count-guard.js';
+import {
+  findProviderPhraseViolations,
+  PROVIDER_PHRASE_RETRY_HINT,
+} from './provider-phrase-guard.js';
 import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js';
 import { buildWritingRetryFeedback } from './writing-prompt.js';
 import { normalizeWritingOutputTypography } from './typography.js';
@@ -155,12 +159,28 @@ export async function analyzeWriting(
       continue;
     }
 
+    // Last of the rejecting guards deliberately: naming the provider two
+    // ways is a presentation defect, not a claim the report should not be
+    // making, so a response tripping this and a substantive guard records
+    // the substantive reason. Prompt text alone did not hold this - every
+    // regenerated French analysis mixed two approved phrasings at both 0.7
+    // and 1.0 (see provider-phrase-guard.ts).
+    const providerPhraseViolations = findProviderPhraseViolations(result.output, input.language);
+    if (providerPhraseViolations.length > 0) {
+      lastFailureReason = `provider phrasing is not consistent across the response: ${providerPhraseViolations.map((v) => `${v.field} (${v.matched})`).join(', ')}. ${PROVIDER_PHRASE_RETRY_HINT}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
     // Normalization, not validation: applied after every rejecting guard
     // has passed, so a guard never inspects text this rewrote.
     return {
       output: normalizeWritingOutputTypography(result.output, input.language),
       model: OPENAI_MODEL,
-      temperature: OPENAI_TEMPERATURE,
+      temperature: WRITING_OPENAI_TEMPERATURE,
     };
   }
 
