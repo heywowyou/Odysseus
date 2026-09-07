@@ -1,5 +1,5 @@
 import type { ReferenceStat, ReportLanguage } from '@odysseus/core';
-import { escapeHtml } from './html-utils.js';
+import { escapeHtml, labelSeparator } from './html-utils.js';
 import { SEVERITY } from './design-tokens.js';
 
 /**
@@ -62,7 +62,7 @@ export function renderReferenceStatNote(
   const gapLine = measuredGapNote
     ? `<p class="text-muted" style="font-size:12px;margin:0">${escapeHtml(measuredGapNote)}</p>`
     : '';
-  const citationLine = `<p class="text-muted" style="font-size:12px;margin:${gapLine ? '2px' : '0'} 0 0">${escapeHtml(labelText)} : ${escapeHtml(stat.citation[language])}${badge}</p>`;
+  const citationLine = `<p class="text-muted" style="font-size:12px;margin:${gapLine ? '2px' : '0'} 0 0">${escapeHtml(labelText)}${labelSeparator(language)}${escapeHtml(stat.citation[language])}${badge}</p>`;
   const revenueLine = revenueImpactNote
     ? `<p class="text-muted" style="font-size:12px;margin:2px 0 0">${escapeHtml(revenueImpactNote)}</p>`
     : '';

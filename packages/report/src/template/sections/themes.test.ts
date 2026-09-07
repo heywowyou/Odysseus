@@ -1581,8 +1581,9 @@ describe('issue #47: each metadata unit keeps its label and value together, and 
 
     expect(html).toContain('display:flex;flex-wrap:wrap;align-items:baseline');
     for (const label of ['Complexity', 'Business impact', 'Affected pages']) {
+      // Issue #82: English closes the colon up to the label, unlike French.
       expect(html).toContain(
-        `<span class="text-muted" style="white-space:nowrap">${label} : <strong`,
+        `<span class="text-muted" style="white-space:nowrap">${label}: <strong`,
       );
     }
   });
@@ -2135,7 +2136,8 @@ describe('plan 018 step 6: priority card order and the deterministic observation
     for (const marker of ['Why it matters', 'What we observed', 'What you can do']) {
       expect(html).toContain(marker);
     }
-    expect(html).toContain('Complexity :');
+    // Issue #82: English closes the colon up to the label.
+    expect(html).toContain('Complexity:');
     // The English report resolves the label to the scanner's own English
     // title through the same shared helper.
     expect(html).toContain('observed for example on the page https://example.com/.');

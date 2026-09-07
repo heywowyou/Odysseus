@@ -23,6 +23,7 @@ import {
   fillTemplate,
   formatCappedFindingIdLinks,
   formatNumber,
+  labelSeparator,
   pluralize,
   renderSheetHeader,
   sheet,
@@ -462,8 +463,8 @@ function renderTheme(
   // (issue #47's related duplication); the explanation still appears
   // exactly where "Sans objet" is first encountered.
   const legalBox = theme.legalRelevance
-    ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(theme.legalRelevance)}</p>`
-    : `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)} : ${escapeHtml(t.conformityNotApplicable)}${showConformityGloss ? ` <span style="font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</p>`;
+    ? `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)}${labelSeparator(language)}${escapeHtml(theme.legalRelevance)}</p>`
+    : `<p style="font-size:12px;opacity:0.6;margin:0">${escapeHtml(t.legalTagLabel)}${labelSeparator(language)}${escapeHtml(t.conformityNotApplicable)}${showConformityGloss ? ` <span style="font-weight:400">(${escapeHtml(t.conformityNotApplicableGloss)})</span>` : ''}</p>`;
 
   const gapNote = citationStat
     ? measuredCoreWebVitalGapNote(strings, language, citationStat, themeFindings, manifest)
@@ -574,11 +575,11 @@ function renderTheme(
       ${citationBox}
       ${renderLcenCrossReferenceNote(strings, themeFindings)}
       <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:2px var(--space-4);font-size:12px;margin-top:4px">
-        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.complexityLabel)} : <strong style="color:var(--color-text)">${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
-        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.impactLabel)} : <strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
-        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.affectedPagesLabel)} : <strong style="color:var(--color-text)">${escapeHtml(pagesText)}</strong></span>
-        ${isNonConformant ? `<span class="text-muted" style="white-space:nowrap">${escapeHtml(t.conformityLabel)} : <strong style="color:${SEVERITY.critical.color}">${escapeHtml(conformityValue)}</strong></span>` : ''}
-        <span class="text-muted">${escapeHtml(t.refsLabel)} : ${formatCappedFindingIdLinks(theme.findingIds, language, strings.findingsAppendix)}</span>
+        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.complexityLabel)}${labelSeparator(language)}<strong style="color:var(--color-text)">${escapeHtml(t.effortImpactLevels[theme.effort])}</strong></span>
+        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.impactLabel)}${labelSeparator(language)}<strong style="color:${LEVEL_COLOR[theme.impact].color}">${escapeHtml(t.effortImpactLevels[theme.impact])}</strong></span>
+        <span class="text-muted" style="white-space:nowrap">${escapeHtml(t.affectedPagesLabel)}${labelSeparator(language)}<strong style="color:var(--color-text)">${escapeHtml(pagesText)}</strong></span>
+        ${isNonConformant ? `<span class="text-muted" style="white-space:nowrap">${escapeHtml(t.conformityLabel)}${labelSeparator(language)}<strong style="color:${SEVERITY.critical.color}">${escapeHtml(conformityValue)}</strong></span>` : ''}
+        <span class="text-muted">${escapeHtml(t.refsLabel)}${labelSeparator(language)}${formatCappedFindingIdLinks(theme.findingIds, language, strings.findingsAppendix)}</span>
       </div>
     </div>
   `;

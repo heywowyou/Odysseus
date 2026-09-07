@@ -18,6 +18,7 @@ import {
   fillTemplate,
   formatAndNMore,
   formatNumber,
+  labelSeparator,
   pluralize,
   renderSheetHeader,
   sheet,
@@ -188,7 +189,7 @@ function renderPageUrlList(
   // grid - the old separate continuation <tr> could be stranded alone at
   // the top of a page, opening 15 of 26 pages of a real delivered PDF
   // mid-row with no finding id, rule or column header in sight.
-  return `<div class="url-cell" style="padding-top:6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.pagesColumnLabel)} : ${escapeHtml(urlsText)}</div>`;
+  return `<div class="url-cell" style="padding-top:6px;font-size:10.5px;opacity:0.6">${escapeHtml(a.pagesColumnLabel)}${labelSeparator(language)}${escapeHtml(urlsText)}</div>`;
 }
 
 /** item 3.1's own suggested cap. */
@@ -279,7 +280,7 @@ function renderResourceUrlList(
 
   // Issue #45: rendered inside the finding's own atomic <tr>, like the
   // pages line above (see renderSubTableRow).
-  return `<div class="url-cell" style="padding-top:6px;font-size:10.5px;opacity:0.6">${escapeHtml(label)} : ${escapeHtml(text)}</div>`;
+  return `<div class="url-cell" style="padding-top:6px;font-size:10.5px;opacity:0.6">${escapeHtml(label)}${labelSeparator(language)}${escapeHtml(text)}</div>`;
 }
 
 /** item 3.3: the anchor formatFindingIdLinks (html-utils.ts) links to from

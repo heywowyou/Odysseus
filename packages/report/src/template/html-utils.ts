@@ -167,6 +167,16 @@ export function pluralize(count: number, singular: string, plural: string): stri
   return count === 1 ? singular : plural;
 }
 
+/** Issue #82: French typography puts a space before a colon; English
+ *  closes it up to the preceding word. The label-value rows in theme
+ *  cards and the findings appendix (`Complexity : Low`, `Pages : ...`)
+ *  hardcoded the French spacing regardless of language. This is the one
+ *  place that joins a label to its colon, so every such row reads
+ *  correctly in both languages by construction. */
+export function labelSeparator(language: 'fr' | 'en'): string {
+  return language === 'fr' ? ' : ' : ': ';
+}
+
 /** Fills `{key}` placeholders in a static ReportStrings template with
  *  values already known safe (numbers, or strings escaped by the caller
  *  before being passed in) - used wherever a sentence's word order
