@@ -158,6 +158,25 @@ the call itself. On the current numbers, the burden of proof sits with
 raising the effort: no measured gain, a real per-report cost, and the
 Villas Foch French regression to weigh.
 
+#### Follow-up measurement attempt (2026-09-07): STOP condition
+
+A later `--effort medium` run was started through a persistent terminal after
+the short command runner had interrupted an earlier attempt. Briketenia
+completed cleanly in both languages, but with no useful gain:
+
+| run | latency none -> medium | total tokens none -> medium | reasoning tokens | repetition change |
+| --- | --- | --- | --- | --- |
+| Briketenia fr | 16 898 -> 51 844 ms | 9 445 -> 15 904 | 6 251 | actions 1/23 -> 1/23, impacts 1/7 -> 1/7 |
+| Briketenia en | 14 397 -> 47 811 ms | 8 339 -> 14 602 | 6 542 | actions 1/23 -> 1/23, impacts 2/7 -> 1/7 |
+
+The Villas Foch French baseline then triggered the `positional-reference`
+guard (20 340 ms, 39 795 total tokens, actions 2/36, impacts 2/9), before
+its medium arm was called. This is the plan's STOP condition: do not run the
+remaining medium or high arms, and do not ship a raised setting. The original
+low comparison remains the only complete four-cell experiment; this partial
+run is evidence that a fresh measurement must be guard-clean before an
+operator can reconsider the setting.
+
 ### Step 2: Define the `llm`-side `siteContext` shape (F)
 
 Widen `WritingInput['siteContext']` (currently `LlmInput['siteContext']`,
