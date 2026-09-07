@@ -355,6 +355,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [024](archive/024-report-feedback-followups.md) | Close three small gaps between the report and Conseil papa | P2 | S | 018, 019 | DONE (trade-off 44 order amended to glossary-last 2026-09-01; the reference HTML's stale remaining-work region moved to issue #25) |
 | [025](archive/025-llm-provider-switch.md) | Switch the LLM provider from Mistral to OpenAI gpt-5.4-mini | P1 | M | none | DONE (operator accepted the rendered French and English reports 2026-09-03) |
 | [026](archive/026-faster-audits-without-weaker-measurements.md) | Make a single full audit faster without weakening what it measures | P2 | M | none | DONE (Steps 1-3 shipped and measured on the VPS 2026-09-05: 570 s to 498 s on a 29-page site, Lighthouse segment -16.6 %, coverage and findings unaffected. Step 4 declined on measurement; Steps 5 and 6 dropped 2026-09-07 because Step 0 showed the cost is page classification, not serialization; Step 7 done, trade-off 74 added) |
+| [027](./027-french-report-prose-quality.md) | Make the French report read like consulting prose | P1 | M | 018, 019, 025 | TODO |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
