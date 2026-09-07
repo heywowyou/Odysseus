@@ -276,6 +276,62 @@ describe('analyzeWriting', () => {
     await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
     expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
   });
+
+  // plan 028, lever L: audit-rehearsal notes recorded reports
+  // contradicting their own finding counts in prose.
+  it('retries once when a recommended action states an invented finding count, then succeeds', async () => {
+    const violating = buildCleanFrenchOutput();
+    violating.themes[0]!.recommendedActions = [
+      'Ce thème regroupe 12 constats modérés à corriger en priorité.',
+    ];
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: violating })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(result.output.themes[0]!.recommendedActions[0]).not.toMatch(/\d/);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws after exhausting retries when every attempt states an invented finding count', async () => {
+    const violating = buildCleanFrenchOutput();
+    violating.themes[0]!.recommendedActions = [
+      'Ce thème regroupe 12 constats modérés à corriger en priorité.',
+    ];
+    vi.mocked(callOpenAiForWriting).mockReset().mockResolvedValue({ output: violating });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+  });
+
+  // plan 028, lever J: audit-rehearsal notes recorded "la priorité 1
+  // ci-dessus" pointing at content that rendered below it.
+  it('retries once when businessImpact references another theme by page position, then succeeds', async () => {
+    const violating = buildCleanFrenchOutput();
+    violating.themes[0]!.businessImpact =
+      'Comme indiqué ci-dessus, ce thème doit être corrigé en priorité pour vos visiteurs.';
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: violating })
+      .mockResolvedValueOnce({ output: buildCleanFrenchOutput() });
+
+    const result = await analyzeWriting(input, ['t1'], false);
+
+    expect(result.output.themes[0]!.businessImpact).not.toContain('ci-dessus');
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws after exhausting retries when every attempt uses a positional reference', async () => {
+    const violating = buildCleanFrenchOutput();
+    violating.themes[0]!.businessImpact =
+      'Comme indiqué ci-dessus, ce thème doit être corrigé en priorité pour vos visiteurs.';
+    vi.mocked(callOpenAiForWriting).mockReset().mockResolvedValue({ output: violating });
+
+    await expect(analyzeWriting(input, ['t1'], false)).rejects.toThrow(/exhausted \d+ attempts/);
+    expect(callOpenAiForWriting).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+  });
 });
 
 function buildGravesSummaryOutput(): WritingPassOutput {

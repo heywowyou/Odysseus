@@ -222,3 +222,22 @@ reprendre l'une de ces trois formulations telle quelle.
 > vingt-trois mots d'affilée, y compris après l'ajout d'une interdiction
 > explicite de réutiliser leurs premiers mots. Le prompt indique désormais
 > qu'aucun modèle de phrase n'est fourni, et le tic a disparu.
+
+## 8. Ne jamais désigner un autre passage du rapport par sa position
+
+Ajouté pour le plan 028, après un défaut relevé dans plusieurs répétitions
+d'audit : un rapport réel désignait « la priorité 1 ci-dessus » alors que ce
+thème s'affichait plus bas sur la page. La passe de rédaction n'a aucune
+visibilité sur la mise en page finale du rapport, donc toute référence à une
+position (« ci-dessus », « ci-dessous ») est une supposition qui peut pointer
+au mauvais endroit.
+
+Désignez toujours un autre thème par son nom ou son rang de priorité (« le
+thème classé en priorité 1 », « le thème sur les contrastes »), jamais par sa
+position sur la page. Cela ne concerne pas les expressions numériques comme
+« en dessous du seuil requis », qui restent normales et ne sont pas visées
+par cette règle.
+
+Vérifié par un contrôle automatique (`positional-reference-guard.ts`), même
+posture que la section 4 : la consigne écrite seule ne suffit pas à garantir
+qu'elle sera suivie.

@@ -2,9 +2,11 @@ import { callOpenAiForWriting } from './client.js';
 import { OPENAI_MODEL, WRITING_OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { findBusinessClaimViolations } from './business-claim-guard.js';
 import { findExecutiveSummaryDigitViolations } from './executive-summary-digit-guard.js';
+import { findFindingCountViolations } from './finding-count-guard.js';
 import { findLanguageComplianceViolations } from './language-guard.js';
 import { findLegalConsequenceViolations } from './legal-consequence-guard.js';
 import { findPageCountViolations } from './page-count-guard.js';
+import { findPositionalReferenceViolations } from './positional-reference-guard.js';
 import {
   findProviderPhraseViolations,
   PROVIDER_PHRASE_RETRY_HINT,
@@ -108,6 +110,36 @@ export async function analyzeWriting(
     const pageCountViolations = findPageCountViolations(result.output, input.language);
     if (pageCountViolations.length > 0) {
       lastFailureReason = `invented page count in field(s): ${pageCountViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    // Same reasoning as the page-count guard above, generalized to the
+    // finding noun and severity words: audit-rehearsal notes recorded
+    // reports contradicting their own finding counts in prose, which the
+    // report template already owns and renders correctly.
+    const findingCountViolations = findFindingCountViolations(result.output, input.language);
+    if (findingCountViolations.length > 0) {
+      lastFailureReason = `invented finding count in field(s): ${findingCountViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      previousRejection = buildWritingRetryFeedback(lastFailureReason);
+      console.error(
+        `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
+      );
+      continue;
+    }
+
+    // Audit-rehearsal notes recorded "la priorité 1 ci-dessus" pointing
+    // at content that rendered below it - the writing pass has no
+    // visibility into final page layout.
+    const positionalReferenceViolations = findPositionalReferenceViolations(
+      result.output,
+      input.language,
+    );
+    if (positionalReferenceViolations.length > 0) {
+      lastFailureReason = `positional reference to other report content in field(s): ${positionalReferenceViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
       previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,

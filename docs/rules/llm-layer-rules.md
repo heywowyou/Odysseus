@@ -453,6 +453,50 @@ verb. Prefer describing the structure wanted over showing a sentence that
 fills it, and treat any concrete sentence left in a prompt as something the
 output will contain.
 
+**Added 2026-09-07, plan 028, three further guards from audit-rehearsal
+notes plan 027 did not cover.** All three follow the same
+"no legitimate reason for this pattern to appear here" reasoning as the
+guards above, run inside `analyzeWriting`'s retry loop, and are
+rejected wholesale rather than repaired, same posture as
+`findPageCountViolations`.
+
+- **Finding counts, generalized from page counts.**
+  `findPageCountViolations` only matches a digit next to "page(s)", so a
+  digit next to the finding noun or a severity word passed it silently -
+  audit-rehearsal notes recorded reports contradicting their own finding
+  counts in prose ("80 findings" beside "63+19+0" elsewhere in the same
+  report). `findFindingCountViolations` (`finding-count-guard.ts`) closes
+  that gap with the identical reasoning: the writing pass is shown a
+  severity-floor-filtered, page-truncated slice of findings, never the
+  true total, and the report template already owns and renders every
+  count from `WritingSiteStats`.
+- **Positional references to other report content.**
+  Audit-rehearsal notes recorded "la priorité 1 ci-dessus" pointing at
+  content that rendered below it, recurring across three different hotel
+  reports. `findPositionalReferenceViolations`
+  (`positional-reference-guard.ts`) rejects a French "ci-dessus"/
+  "ci-dessous" or an English positional-referencing phrase ("as noted
+  above", "the theme below") anywhere in prose, on the same reasoning as
+  the page-count guard: the writing pass has no visibility into where its
+  text will land once the report is paginated, so any claim about
+  position is a guess. Scoped narrowly to document-referencing
+  constructions, not a bare ban on "above"/"below", which have
+  legitimate technical readings this guard must not catch (a contrast
+  ratio "below the required minimum").
+- **A shared meaning for rule IDs the two language passes have described
+  differently.** Audit-rehearsal notes (#67/#68) recorded the
+  `alt-text-quality-heuristic` finding explained with two different
+  meanings across the French and English passes of the same audit - a
+  substantive disagreement, not just a wording one, since the structure
+  pass is shared between languages but each writing-pass call
+  independently free-describes what a rule means. `buildRuleMeaningNote`
+  (`rule-meaning-notes.ts`) is not a rejecting guard: it appends a fixed,
+  bilingual anchor description to the user prompt, for whichever rule IDs
+  from its small table actually appear among the findings a given call is
+  shown. Starts with one entry; add another only when a new drift case is
+  actually observed against real output, same discipline
+  `LIGHTHOUSE_EXCLUDED_AUDITS` uses.
+
 ---
 
 ## 7. Analysis variance across runs

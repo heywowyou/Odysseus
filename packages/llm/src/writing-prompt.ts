@@ -1,6 +1,7 @@
 import type { ReportLanguage } from '@odysseus/core';
 import { BUSINESS_CLAIM_EXAMPLES } from './business-claim-guard.js';
 import { TECHNICAL_PROVIDER_PHRASES } from './provider-phrase-guard.js';
+import { buildRuleMeaningNote } from './rule-meaning-notes.js';
 import {
   BANNED_SEVERITY_SYNONYMS,
   FINDING_NOUN_VOCABULARY,
@@ -172,6 +173,12 @@ function buildFrenchWritingSystemPrompt(
 
   const executiveSummaryClosingNote = `\n\nÉcrivez la dernière phrase de la synthèse avec un soin particulier : c'est la dernière phrase que lit le client. Elle doit être une phrase grammaticalement correcte, complète et formelle, adressée au client avec le vouvoiement, dans le même registre professionnel et mesuré que le reste du rapport. Ne terminez jamais sur une formulation familière ou incomplète. Ancrez cette phrase dans ce que l'audit a effectivement mesuré : rattachez-la à des familles de constats présentes dans votre entrée plutôt que d'empiler des abstractions qu'aucun constat ne soutient. Aucun modèle de phrase ne vous est fourni pour cette clôture, délibérément : c'est à vous de la composer à partir de ce rapport-ci, et deux audits différents ne doivent pas se terminer sur la même phrase.`;
 
+  // Plan 028: a real report had "la priorité 1 ci-dessus" pointing at
+  // content that rendered below it - the writing pass has no visibility
+  // into final page layout, so any claim about where something sits on
+  // the page is a guess.
+  const positionalReferenceNote = `\n\nNe faites jamais référence à un autre thème, une autre priorité ou une autre section de ce rapport par sa position sur la page ("ci-dessus", "ci-dessous") : vous ne savez pas où votre texte sera placé une fois le rapport mis en page, et une telle référence peut pointer vers le mauvais endroit. Désignez plutôt un thème par son nom ou son rang de priorité ("le thème classé en priorité 1", "le thème sur les contrastes"). Cela ne concerne pas les expressions numériques comme "en dessous du seuil requis", qui restent normales.`;
+
   return `Vous êtes la couche de rédaction d'Odysseus, un outil d'audit web pour les petites et moyennes entreprises françaises.
 
 Le registre est celui d'un cabinet de conseil de premier plan qui rend compte à un dirigeant, jamais celui d'un outil automatisé qui remplit des champs. Cela vaut pour chaque champ de prose que vous écrivez, du titre de thème à la dernière phrase de la synthèse, sans exception :
@@ -194,7 +201,7 @@ Chaque thème qui vous est présenté ci-dessous a une clé themeKey (par exempl
 - recommendedActions : entre ${MIN_RECOMMENDED_ACTIONS} et ${MAX_RECOMMENDED_ACTIONS} étapes concrètes suivantes. Ne listez jamais d'URL de page individuelle : le détail page par page appartient à l'annexe du rapport, pas à votre prose. Le client est une entreprise sans développeur interne, et personne chez lui ne dispose d'un lecteur d'écran ou d'un autre outil d'assistance technique. Chaque action est donc quelque chose à transmettre au prestataire externe : jamais une instruction aux développeurs du client, jamais une demande de test manuel par le client lui-même, ni avec un lecteur d'écran ni en testant la navigation au clavier. Écrivez par exemple "les rôles ARIA appropriés doivent être ajoutés à X" ou "votre prestataire technique peut ajouter les rôles ARIA appropriés à X" - deux constructions à alterner - plutôt que "formez vos développeurs à ARIA" ou "testez avec un lecteur d'écran".
 
 Rédigez également un executiveSummary destiné à un décideur non technique, et un champ notes pour tout ce qui mérite d'être signalé au client par ailleurs. Le modèle de rapport indique déjà les décomptes exacts (pages auditées, nombre total de constats, constats par sévérité) dans une phrase placée juste avant votre texte d'executiveSummary, donc ne répétez, n'estimez ni ne référencez vous-même aucun de ces chiffres : n'écrivez jamais de nombre de constats, de pages ou d'occurrences nulle part dans executiveSummary, même approximatif ou arrondi. Votre réponse est vérifiée pour cela après chaque tentative ; une réponse contenant un chiffre dans executiveSummary est rejetée et une nouvelle tentative vous est demandée. N'écrivez que le cadrage qualitatif et la prose de liaison qui accompagne les décomptes déjà énoncés : quel type de problème domine, pourquoi cela compte pour l'activité, et quelle est l'image d'ensemble.
-${dominantMetricNote('fr', dominantPerformanceMetric)}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${providerPhraseNote}${sentenceStructureNote}${executiveSummaryClosingNote}
+${dominantMetricNote('fr', dominantPerformanceMetric)}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${providerPhraseNote}${sentenceStructureNote}${executiveSummaryClosingNote}${positionalReferenceNote}
 ${LANGUAGE_INSTRUCTION.fr}${usedFallbackContext ? fallbackNote('fr') : ''}
 
 Répondez uniquement avec un JSON structuré conforme au schéma requis. Aucune prose en dehors des champs JSON, aucun bloc de code markdown.`;
@@ -243,6 +250,12 @@ function buildEnglishWritingSystemPrompt(
   // an explicit "write your own" instruction rather than one to reuse.
   const executiveSummaryClosingNote = `\n\nWrite the executive summary's final sentence with particular care: it is the last sentence the client reads. It must be a grammatically correct, complete, formal sentence, addressed respectfully to the client, in the same measured professional register as the rest of the report. Never close on over-familiar or incomplete phrasing. Ground the close in what the audit actually measured: attach it to families of findings already in your input instead of stacking abstractions that no finding supports. You are deliberately given no template sentence for this close: composing it from this particular report is your job, and two different audits must not end on the same sentence.`;
 
+  // Plan 028: a real report referenced "the priority above" pointing at
+  // content that rendered below it - the writing pass has no visibility
+  // into final page layout, so any claim about where something sits on
+  // the page is a guess.
+  const positionalReferenceNote = `\n\nNever refer to another theme, priority, or section of this report by its position on the page ("above", "below", "as noted above"): you do not know where your text will land once the report is paginated, and such a reference can point at the wrong place. Name a theme by its title or priority rank instead ("the theme ranked priority 1", "the contrast theme"). This does not apply to a numeric threshold phrase like "below the required minimum", which stays normal.`;
+
   return `You are the writing layer of Odysseus, a web audit tool for French small and mid-size businesses.
 
 The register is that of a leading consulting firm reporting to a company director, never that of an automated tool filling in fields. This governs every prose field you write, from a theme title to the executive summary's last sentence, without exception:
@@ -265,7 +278,7 @@ Each theme you are given below has a themeKey (for example "t1"). The themes fie
 - recommendedActions: between ${MIN_RECOMMENDED_ACTIONS} and ${MAX_RECOMMENDED_ACTIONS} concrete next steps. Never list individual page URLs: page-level detail belongs in the report's appendix, not in your prose. The client has no in-house developer, and no one there owns a screen reader or other assistive-technology tool. Every action is therefore something to hand to the external provider: never an instruction to the client's own developers, and never a request for the client to test something personally, not with a screen reader and not by testing keyboard navigation. Write for example "the appropriate ARIA roles need to be added to X" or "your technical provider can add the appropriate ARIA roles to X" - two constructions to alternate between - rather than "train your developers on ARIA" or "test with a screen reader".
 
 Also write an executiveSummary aimed at a non-technical decision maker, and a notes field for anything else worth telling the client. The report template states the exact counts (pages scanned, total findings, findings by severity) in a sentence placed immediately before your executiveSummary text, so do not restate, estimate, or reference any of those figures yourself: never write a number of findings, pages, or occurrences anywhere in executiveSummary, not even a rough or rounded one. Your response is checked for this after every attempt; a response containing a digit in executiveSummary is rejected and you are asked again. Write only the qualitative framing and connecting prose that goes with the counts already stated: what kind of problems dominate, why they matter for the business, and what the overall picture is.
-${dominantMetricNote('en', dominantPerformanceMetric)}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${providerPhraseNote}${sentenceStructureNote}${executiveSummaryClosingNote}
+${dominantMetricNote('en', dominantPerformanceMetric)}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${providerPhraseNote}${sentenceStructureNote}${executiveSummaryClosingNote}${positionalReferenceNote}
 ${LANGUAGE_INSTRUCTION.en}${usedFallbackContext ? fallbackNote('en') : ''}
 
 Respond with structured JSON matching the required schema only. No prose outside the JSON fields, no markdown fences.`;
@@ -276,8 +289,12 @@ Respond with structured JSON matching the required schema only. No prose outside
  * preceding attempt, on retries only (see buildWritingRetryFeedback).
  */
 export function buildWritingUserPrompt(input: WritingInput, previousRejection?: string): string {
+  const ruleIds = new Set(
+    input.themes.flatMap((theme) => theme.findings.map((finding) => finding.ruleId)),
+  );
+  const ruleMeaningNote = buildRuleMeaningNote(ruleIds, input.language);
   const correction = previousRejection ? `\n\n${previousRejection}` : '';
-  return `Here is the site context and the themes to write about:\n\n${JSON.stringify(input, null, 2)}${correction}`;
+  return `Here is the site context and the themes to write about:\n\n${JSON.stringify(input, null, 2)}${ruleMeaningNote}${correction}`;
 }
 
 /**

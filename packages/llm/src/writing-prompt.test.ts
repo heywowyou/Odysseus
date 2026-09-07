@@ -1,3 +1,4 @@
+import { ALT_TEXT_QUALITY_HEURISTIC_RULE_ID } from '@odysseus/core';
 import { describe, expect, it } from 'vitest';
 import { BANNED_SEVERITY_SYNONYMS } from './severity-vocabulary-guard.js';
 import { TECHNICAL_PROVIDER_PHRASES } from './provider-phrase-guard.js';
@@ -459,5 +460,101 @@ describe('the writing prompt sets one formal consulting register for every field
       expect(register).toBeGreaterThan(-1);
       expect(register).toBeLessThan(prompt.indexOf('recommendedActions'));
     }
+  });
+});
+
+// plan 028, lever J: a real report referenced "la priorité 1 ci-dessus"
+// pointing at content that rendered below it.
+describe('plan 028: the writing prompt forbids positional references to other report content', () => {
+  it('forbids "ci-dessus"/"ci-dessous" and asks for a name or rank instead, in French', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain('"ci-dessus", "ci-dessous"');
+    expect(prompt).toContain('son nom ou son rang de priorité');
+  });
+
+  it('forbids positional references and asks for a name or rank instead, in English', () => {
+    const prompt = buildWritingSystemPrompt('en', false, null);
+    expect(prompt).toContain('"above", "below"');
+    expect(prompt).toContain('by its title or priority rank instead');
+  });
+
+  it('carves out the legitimate numeric-threshold reading of below/en dessous, in both languages', () => {
+    const fr = buildWritingSystemPrompt('fr', false, null);
+    expect(fr).toContain('en dessous du seuil requis');
+    const en = buildWritingSystemPrompt('en', false, null);
+    expect(en).toContain('below the required minimum');
+  });
+});
+
+// plan 028, lever K: the alt-text-quality-heuristic finding was explained
+// with two different meanings across the French and English passes of the
+// same audit (audit-rehearsal notes #67/#68).
+describe('plan 028: buildWritingUserPrompt grounds known-drift rule IDs in a shared meaning', () => {
+  const baseInput = {
+    language: 'fr' as const,
+    siteContext: {
+      businessType: 'e-commerce',
+      primaryGoal: 'sales',
+      languagesServed: ['fr'],
+      targetMarkets: ['fr'],
+    },
+    siteStats: {
+      pagesScanned: 1,
+      totalFindings: 1,
+      critical: 0,
+      serious: 0,
+      moderate: 1,
+      minor: 0,
+    },
+    dominantPerformanceMetric: null,
+  };
+
+  function themeWithFinding(ruleId: string) {
+    return [
+      {
+        themeKey: 't1',
+        category: 'accessibility' as const,
+        findings: [
+          {
+            findingId: 'f1',
+            source: 'custom' as const,
+            ruleId,
+            category: 'accessibility' as const,
+            severity: 'moderate' as const,
+            wcagCriteria: [],
+            title: 'Alt text may be low-value',
+            description: 'description',
+            pageUrls: ['https://example.com/'],
+            occurrences: 1,
+          },
+        ],
+      },
+    ];
+  }
+
+  it('adds the shared meaning note when the alt-text heuristic finding is present, in French', () => {
+    const prompt = buildWritingUserPrompt({
+      ...baseInput,
+      themes: themeWithFinding(ALT_TEXT_QUALITY_HEURISTIC_RULE_ID),
+    });
+    expect(prompt).toContain('alt-text-quality-heuristic');
+    expect(prompt).toContain('un signal à vérifier manuellement');
+  });
+
+  it('adds the English meaning note when the language is English', () => {
+    const prompt = buildWritingUserPrompt({
+      ...baseInput,
+      language: 'en',
+      themes: themeWithFinding(ALT_TEXT_QUALITY_HEURISTIC_RULE_ID),
+    });
+    expect(prompt).toContain('a signal worth checking manually');
+  });
+
+  it('adds no note when the finding is not present', () => {
+    const prompt = buildWritingUserPrompt({
+      ...baseInput,
+      themes: themeWithFinding('some-other-rule'),
+    });
+    expect(prompt).not.toContain('alt-text-quality-heuristic');
   });
 });
