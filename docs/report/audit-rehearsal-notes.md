@@ -170,8 +170,8 @@ Each entry:
 - Artifacts: `artifacts/www.briketenia.com/2026-09-04T19-06-02Z/`
 - Discarded before this pick: **chateaudetilly.fr** (hash rank 1). Its
   uncapped audit ran 5h22 and died of a Node heap OOM at 2,532 pages
-  (evidence kept in `artifacts/chateaudetilly.fr/2026-09-04T13-37-21Z/`,
-  issue drafted). Hash rank 2, hoteljardinsdemademoiselle.com, discarded:
+  (issue #64, since closed; its artifacts directory was deleted 2026-09-07
+  once the measurements taken from it were recorded in plan 026's archive). Hash rank 2, hoteljardinsdemademoiselle.com, discarded:
   no SIREN on candidate or qualification row, so `--siren` could not be
   supplied. Briketenia is hash rank 3.
 - Render note: the first render was blocked by the cover identity guard

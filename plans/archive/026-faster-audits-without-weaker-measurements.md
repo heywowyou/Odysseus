@@ -138,8 +138,10 @@ page, serialized, which is the behaviour trade-off 64 was written to avoid.
 | villasfoch (finished) | 32 | 9.2 min | ~17 s |
 | chateaudetilly | 2,532 dirs | **7h19m, never finished** | n/a |
 
-`artifacts/chateaudetilly.fr/2026-09-04T13-37-21Z/` holds 2,532 page
-directories and no `manifest.json` or `findings.json`. It started 13:37:21,
+`artifacts/chateaudetilly.fr/2026-09-04T13-37-21Z/` held 2,532 page
+directories and no `manifest.json` or `findings.json`. It was deleted
+2026-09-07, after issue #64 closed: with no manifest it could never be
+re-analyzed, and the figures on this page are its surviving record. It started 13:37:21,
 wrote its last file at 20:56:59, and produced no audit. At the ~17 to 18
 seconds per page the finished audits show, 2,532 pages projects to roughly
 12 hours, which is consistent with a run that died at 7h19m.
