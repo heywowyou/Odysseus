@@ -65,7 +65,15 @@ function latestTurnover(finances: RawSireneFinances | null | undefined): number 
   const years = Object.keys(finances).sort().reverse();
   for (const year of years) {
     const ca = finances[year]?.ca;
-    if (typeof ca === 'number') return ca;
+    // Issue #78: the API's own missing-value sentinel for this field is 0,
+    // not null or absent - a real hotel with EUR 64,713 of net profit the
+    // same year reported ca: 0. Treating 0 as a measurement let
+    // checkSmeExemption's "turnover === null" unknown-guard sail past a
+    // value that is not a measurement at all, and a client was told, as a
+    // verified registry fact, that their turnover was EUR 0. Falling
+    // through to an earlier year on a 0 is deliberate: a real turnover of
+    // exactly EUR 0 is not a thing an operating business has.
+    if (typeof ca === 'number' && ca > 0) return ca;
   }
   return null;
 }

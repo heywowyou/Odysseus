@@ -50,6 +50,25 @@ describe('assessObligations', () => {
     });
   });
 
+  // Issue #78: a turnover of exactly 0 must never be treated as positive
+  // evidence for the SME exemption. The adapter (sirene-client.ts) is
+  // meant to map the registry's own missing-value sentinel to null before
+  // this function ever sees it, but this guard is belt and braces against
+  // a future caller (or a stubbed test profile like this one) supplying 0
+  // directly.
+  it('does not claim the SME exemption on a turnover of exactly 0', () => {
+    const profile = buildProfile({ effectifCode: '02', turnover: 0 });
+    const result = assessObligations(profile, withFlow);
+    expect(result.basis[0]?.facts).not.toContainEqual(
+      expect.objectContaining({ kind: 'sme-exemption' }),
+    );
+    expect(result.basis[0]?.facts).toContainEqual({
+      kind: 'effectif-band',
+      code: '02',
+      label: 'Band 02',
+    });
+  });
+
   it('is in_scope by headcount alone', () => {
     const profile = buildProfile({ effectifCode: '22', turnover: null });
     const result = assessObligations(profile, withFlow);

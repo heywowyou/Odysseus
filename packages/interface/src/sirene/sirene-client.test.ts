@@ -68,6 +68,57 @@ describe('fetchSireneProfile', () => {
     expect(result.profile.turnover.source).toBe('sirene-api:turnover-unreliable-for-band');
   });
 
+  // Issue #78: ca: 0 is the API's own missing-value sentinel, not a real
+  // measurement - a real 25-room hotel reported ca: 0 alongside
+  // resultat_net: 64713 for the same year. Treating 0 as a value let
+  // checkSmeExemption's turnover===null guard sail past it and claim the
+  // SME exemption on the strength of an absent figure.
+  it('treats a reported turnover of exactly 0 as no value, falling back to an earlier year', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      jsonResponse({
+        results: [
+          {
+            siren: '849964887',
+            nom_complet: 'LE GRAND CHALET',
+            etat_administratif: 'A',
+            tranche_effectif_salarie: '02',
+            finances: {
+              2024: { ca: 0, resultat_net: 64_713 },
+              2023: { ca: 512_000, resultat_net: 12_000 },
+            },
+          },
+        ],
+      }),
+    );
+
+    const result = await fetchSireneProfile('849964887');
+    expect(result.status).toBe('found');
+    if (result.status !== 'found') throw new Error('expected found');
+    expect(result.profile.turnover.value).toBe(512_000);
+  });
+
+  it('reports no turnover value at all when every year is 0', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      jsonResponse({
+        results: [
+          {
+            siren: '849964887',
+            nom_complet: 'LE GRAND CHALET',
+            etat_administratif: 'A',
+            tranche_effectif_salarie: '02',
+            finances: { 2024: { ca: 0, resultat_net: 64_713 } },
+          },
+        ],
+      }),
+    );
+
+    const result = await fetchSireneProfile('849964887');
+    expect(result.status).toBe('found');
+    if (result.status !== 'found') throw new Error('expected found');
+    expect(result.profile.turnover.value).toBeNull();
+    expect(result.profile.turnover.source).toBe('sirene-api');
+  });
+
   it('renders the effectif band label with correct French accents, not the ASCII-folded typo', async () => {
     vi.mocked(global.fetch).mockResolvedValueOnce(
       jsonResponse({

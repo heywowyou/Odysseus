@@ -103,7 +103,13 @@ function checkSmeExemption(profile: OperatorProfile): {
   }
 
   const turnover = profile.turnover.value;
-  if (turnover === null) {
+  // Issue #78: a strictly-positive requirement, not just non-null. The
+  // adapter boundary (sirene-client.ts's latestTurnover) is now the one
+  // place that maps the registry's own missing-value sentinel to null, but
+  // this guard is belt and braces so a future adapter for a different
+  // turnover source cannot reintroduce the same bypass by returning 0
+  // instead of null for "no data".
+  if (turnover === null || turnover <= 0) {
     // Low enough band that the exemption could apply, but turnover is
     // unknown: no exemption is claimed without positive evidence.
     return { exempt: false, fact: { kind: 'effectif-band', code: band.code, label: band.label } };
