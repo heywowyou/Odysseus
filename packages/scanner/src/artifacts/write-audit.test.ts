@@ -273,3 +273,136 @@ describe('writeAuditArtifacts characterization', () => {
     expect(normalizedStaged?.headMetadata?.title).toBe('Staged');
   });
 });
+
+// Issue #79 (Le Grand Chalet, real audit d9d9ec5e-ed0d-471e-9721-c2e4d979cc06):
+// the brand detector proposed an SEO location phrase as the hotel's name.
+// Two independent causes combined: the homepage voted twice in the title
+// frequency count (once for its trailing-slash URL, once for the bare-host
+// spelling the sitemap declares), and a length-based tiebreak favoured the
+// shorter, wrong segment. og:title, which this site published correctly,
+// was never consulted.
+describe('writeAuditArtifacts characterization: issue #79 site-name detection', () => {
+  const baseConfig = {
+    maxPages: 4,
+    maxDepth: 2,
+    crawlDelayMs: 0,
+    pageTimeoutMs: 30_000,
+    lighthouseTimeoutMs: 60_000,
+    userAgent: 'test',
+    scanConcurrency: 2,
+    sitemapMode: 'supplement',
+  } as const;
+
+  it('prefers a correct og:title over the hostile title-frequency winner', async () => {
+    const hostileTitle =
+      'Hôtel La Tremblade, quartier Ronce-les-Bains | Hôtel Le Grand Chalet en bord de mer avec vue mer';
+    const result = await writeAuditArtifacts({
+      auditId: 'audit-issue-79-og-title',
+      kind: 'audit',
+      browser: {} as never,
+      startedAt: new Date('2026-09-06T10:00:00.000Z'),
+      finishedAt: new Date('2026-09-06T10:01:00.000Z'),
+      config: baseConfig,
+      siteResult: {
+        crawl: {
+          startUrl: 'https://www.le-grand-chalet.fr/',
+          pages: [
+            { url: 'https://www.le-grand-chalet.fr/', depth: 0, status: 'visited' },
+            { url: 'https://www.le-grand-chalet.fr', depth: 0, status: 'visited' },
+            { url: 'https://www.le-grand-chalet.fr/galerie', depth: 1, status: 'visited' },
+          ],
+          effectiveDelayMs: 0,
+          visitedCount: 3,
+          maxPages: 4,
+          maxDepth: 2,
+          robotsTxtFound: false,
+          robotsDisallowMatches: [],
+          aiCrawlerBlocks: [],
+          linkDiscoveredUrls: [],
+        } as never,
+        pages: [
+          {
+            url: 'https://www.le-grand-chalet.fr/',
+            headMetadata: {
+              title: hostileTitle,
+              openGraphTags: { 'og:title': 'Hôtel Le Grand Chalet' },
+              hreflangLinks: [],
+            } as never,
+          },
+          // Sitemap-spelling duplicate of the same homepage: same title,
+          // no og:title of its own (as a real duplicate page fetch would
+          // return only the tags present in that particular HTML response
+          // in this synthetic case, absent entirely).
+          {
+            url: 'https://www.le-grand-chalet.fr',
+            headMetadata: { title: hostileTitle, openGraphTags: {}, hreflangLinks: [] } as never,
+          },
+          {
+            url: 'https://www.le-grand-chalet.fr/galerie',
+            headMetadata: { title: 'Galerie', openGraphTags: {}, hreflangLinks: [] } as never,
+          },
+        ],
+      },
+    });
+
+    expect(result.manifest.siteSignals?.siteName).toBe('Hôtel Le Grand Chalet');
+  });
+
+  it('does not let a trailing-slash duplicate of the homepage manufacture a false brand-name match', async () => {
+    const hostileTitle =
+      'Hôtel La Tremblade, quartier Ronce-les-Bains | Hôtel Le Grand Chalet en bord de mer avec vue mer';
+    const result = await writeAuditArtifacts({
+      auditId: 'audit-issue-79-dedupe',
+      kind: 'audit',
+      browser: {} as never,
+      startedAt: new Date('2026-09-06T10:00:00.000Z'),
+      finishedAt: new Date('2026-09-06T10:01:00.000Z'),
+      config: baseConfig,
+      siteResult: {
+        crawl: {
+          startUrl: 'https://www.le-grand-chalet.fr/',
+          pages: [
+            { url: 'https://www.le-grand-chalet.fr/', depth: 0, status: 'visited' },
+            { url: 'https://www.le-grand-chalet.fr', depth: 0, status: 'visited' },
+            { url: 'https://www.le-grand-chalet.fr/galerie', depth: 1, status: 'visited' },
+            { url: 'https://www.le-grand-chalet.fr/tarifs', depth: 1, status: 'visited' },
+          ],
+          effectiveDelayMs: 0,
+          visitedCount: 4,
+          maxPages: 4,
+          maxDepth: 2,
+          robotsTxtFound: false,
+          robotsDisallowMatches: [],
+          aiCrawlerBlocks: [],
+          linkDiscoveredUrls: [],
+        } as never,
+        // No og:title or og:site_name published anywhere: the only signal
+        // available is title frequency, and the homepage's two URL
+        // spellings must not be allowed to out-vote a genuine per-page
+        // heuristic result on their own.
+        pages: [
+          {
+            url: 'https://www.le-grand-chalet.fr/',
+            headMetadata: { title: hostileTitle, openGraphTags: {}, hreflangLinks: [] } as never,
+          },
+          {
+            url: 'https://www.le-grand-chalet.fr',
+            headMetadata: { title: hostileTitle, openGraphTags: {}, hreflangLinks: [] } as never,
+          },
+          {
+            url: 'https://www.le-grand-chalet.fr/galerie',
+            headMetadata: { title: 'Galerie', openGraphTags: {}, hreflangLinks: [] } as never,
+          },
+          {
+            url: 'https://www.le-grand-chalet.fr/tarifs',
+            headMetadata: { title: 'Tarifs', openGraphTags: {}, hreflangLinks: [] } as never,
+          },
+        ],
+      },
+    });
+
+    expect(result.manifest.siteSignals?.siteName).not.toBe(
+      'Hôtel La Tremblade, quartier Ronce-les-Bains',
+    );
+  });
+});

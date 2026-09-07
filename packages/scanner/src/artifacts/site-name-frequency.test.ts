@@ -59,4 +59,30 @@ describe('deriveSiteNameFromTitleFrequency', () => {
   it('counts a segment once per title, so one repetitive title cannot win alone', () => {
     expect(deriveSiteNameFromTitleFrequency(['Marque | Marque | Marque'])).toBeUndefined();
   });
+
+  // Issue #79 (Le Grand Chalet, real audit d9d9ec5e-ed0d-471e-9721-c2e4d979cc06):
+  // an SEO location phrase ("Hôtel La Tremblade, quartier Ronce-les-Bains")
+  // tied an actual brand segment on vote count, and the old length-based
+  // tiebreak picked the shorter phrase - the location keyword phrase - as
+  // "the brand" every time, since terse keyword phrases tend to be shorter
+  // than a descriptive brand-plus-tagline segment.
+  it('returns undefined on a genuine tie rather than picking the shorter segment', () => {
+    const titles = [
+      'Hôtel La Tremblade, quartier Ronce-les-Bains | Hôtel Le Grand Chalet en bord de mer avec vue mer',
+      'Hôtel La Tremblade, quartier Ronce-les-Bains | Hôtel Le Grand Chalet en bord de mer avec vue mer',
+      'Galerie',
+      'Tarifs',
+    ];
+    expect(deriveSiteNameFromTitleFrequency(titles)).toBeUndefined();
+  });
+
+  it('still picks a clear winner when one segment recurs strictly more than the other', () => {
+    const titles = [
+      'Chambres | Hôtel Bellevue',
+      'Contact | Hôtel Bellevue',
+      'Restaurant | Hôtel Bellevue',
+      'Notre histoire | Bellevue Location Vacances',
+    ];
+    expect(deriveSiteNameFromTitleFrequency(titles)).toBe('Hôtel Bellevue');
+  });
 });

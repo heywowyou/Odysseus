@@ -286,27 +286,75 @@ export function deriveSiteNameFromTitleFrequency(titles: readonly string[]): str
     }
   }
 
+  // Issue #79: a length-based tiebreak has no relationship to which segment
+  // is the actual brand name - a terse SEO keyword phrase reliably beats a
+  // descriptive brand-plus-tagline segment on length alone. Sorted only for
+  // a deterministic tie check below; localeCompare never decides the winner.
   const ranked = [...countsBySegment.entries()]
     .filter(([, count]) => count >= 2)
     .sort(([aSegment, aCount], [bSegment, bCount]) => {
       if (aCount !== bCount) return bCount - aCount;
-      if (aSegment.length !== bSegment.length) return aSegment.length - bSegment.length;
       return aSegment.localeCompare(bSegment);
     });
 
-  return ranked.at(0)?.[0];
+  if (ranked.length === 0) return undefined;
+  // Two segments tying on vote count is genuine ambiguity about which one is
+  // the brand. Guessing via any tiebreak manufactures a false positive;
+  // returning undefined here falls through to the per-page heuristics below,
+  // which is more honest than picking arbitrarily.
+  if (ranked.length > 1 && ranked[0]![1] === ranked[1]![1]) return undefined;
+  return ranked[0]![0];
 }
 
-function findSiteNameSource(
-  siteResult: WriteAuditArtifactsInput['siteResult'],
-): WriteAuditArtifactsInput['siteResult']['pages'][number] | undefined {
-  const hasMetadata = (page: WriteAuditArtifactsInput['siteResult']['pages'][number]): boolean =>
-    deriveSiteName(page.headMetadata) !== undefined;
+/** Issue #79: two crawled URLs (a trailing-slash spelling of the homepage,
+ *  or a redirect stub that resolves to it) can carry the identical
+ *  rendered title, letting one real page vote twice in the frequency
+ *  count above and manufacture the >= 2 threshold for a page-specific
+ *  phrase. Prefers the page's own declared canonical URL (only when
+ *  exactly one is declared, the same reliability bar checkCanonicalTarget
+ *  uses) since that is the site's own statement of identity; falls back
+ *  to the page URL with a bare trailing slash removed, which collapses
+ *  only the exact "same origin, with or without /" duplicate this issue's
+ *  audit produced. */
+function titleVotingIdentity(
+  page: WriteAuditArtifactsInput['siteResult']['pages'][number],
+): string {
+  if (page.headMetadata?.canonicalUrls?.length === 1) return page.headMetadata.canonicalUrls[0]!;
+  try {
+    const url = new URL(page.url);
+    if (url.pathname === '/') url.pathname = '';
+    return url.toString();
+  } catch {
+    return page.url;
+  }
+}
 
+function dedupeByTitleVotingIdentity(
+  pages: readonly WriteAuditArtifactsInput['siteResult']['pages'][number][],
+): WriteAuditArtifactsInput['siteResult']['pages'][number][] {
+  const seen = new Set<string>();
+  const result: WriteAuditArtifactsInput['siteResult']['pages'][number][] = [];
+  for (const page of pages) {
+    const identity = titleVotingIdentity(page);
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    result.push(page);
+  }
+  return result;
+}
+
+/** Homepage first, then the www/apex counterpart, then the shallowest page
+ *  carrying the signal - shared by findSiteNameSource and the og:title
+ *  lookup so both prefer the same "the homepage or the next thing to it"
+ *  page rather than an arbitrary deep one. */
+function findPageWithSignal(
+  siteResult: WriteAuditArtifactsInput['siteResult'],
+  hasSignal: (page: WriteAuditArtifactsInput['siteResult']['pages'][number]) => boolean,
+): WriteAuditArtifactsInput['siteResult']['pages'][number] | undefined {
   const byUrl = (url: string | undefined) =>
     url === undefined
       ? undefined
-      : siteResult.pages.find((page) => page.url === url && hasMetadata(page));
+      : siteResult.pages.find((page) => page.url === url && hasSignal(page));
 
   const homepage = byUrl(siteResult.crawl.startUrl);
   if (homepage) return homepage;
@@ -316,13 +364,38 @@ function findSiteNameSource(
 
   const depthByUrl = new Map(siteResult.crawl.pages.map((page) => [page.url, page.depth]));
   return siteResult.pages
-    .filter(hasMetadata)
+    .filter(hasSignal)
     .sort(
       (a, b) =>
         (depthByUrl.get(a.url) ?? Number.MAX_SAFE_INTEGER) -
         (depthByUrl.get(b.url) ?? Number.MAX_SAFE_INTEGER),
     )
     .at(0);
+}
+
+function findSiteNameSource(
+  siteResult: WriteAuditArtifactsInput['siteResult'],
+): WriteAuditArtifactsInput['siteResult']['pages'][number] | undefined {
+  return findPageWithSignal(siteResult, (page) => deriveSiteName(page.headMetadata) !== undefined);
+}
+
+/** Issue #79: `og:title` is hand-authored the same way `og:site_name` is -
+ *  it is literally what the site tells social platforms to call the page -
+ *  but it was never consulted. Read from the homepage-like page (see
+ *  findPageWithSignal) rather than any page on the site, since the brand
+ *  signal that matters is the one the site states about itself, not a
+ *  page-specific og:title deep in the crawl. */
+function findOgTitleSiteName(
+  siteResult: WriteAuditArtifactsInput['siteResult'],
+): string | undefined {
+  const hasUsableOgTitle = (
+    page: WriteAuditArtifactsInput['siteResult']['pages'][number],
+  ): boolean => {
+    const value = page.headMetadata?.openGraphTags?.['og:title']?.trim();
+    return Boolean(value) && !isBoilerplateSegment(value!);
+  };
+  const source = findPageWithSignal(siteResult, hasUsableOgTitle);
+  return source?.headMetadata?.openGraphTags?.['og:title']?.trim();
 }
 
 function buildSiteSignals(
@@ -352,11 +425,20 @@ function buildSiteSignals(
   const explicitSiteName = siteResult.pages
     .map((page) => page.headMetadata?.openGraphTags?.['og:site_name']?.trim())
     .find((name): name is string => Boolean(name) && !isBoilerplateSegment(name!));
+  // Issue #79: og:title is hand-authored the same way og:site_name is, so
+  // it wins ahead of the title-frequency heuristic (which can be fooled
+  // when the same page is voted twice, see titleVotingIdentity) and the
+  // single-page title fallback.
+  const ogTitleSiteName = findOgTitleSiteName(siteResult);
+  // Issue #79: dedupe by page identity first, so a trailing-slash spelling
+  // of the homepage or a redirect stub resolving to it cannot vote twice
+  // and manufacture the >= 2 threshold for a page-specific phrase.
   const recurringSiteName = deriveSiteNameFromTitleFrequency(
-    siteResult.pages.map((page) => page.headMetadata?.title ?? ''),
+    dedupeByTitleVotingIdentity(siteResult.pages).map((page) => page.headMetadata?.title ?? ''),
   );
   const siteName =
     explicitSiteName ??
+    ogTitleSiteName ??
     recurringSiteName ??
     deriveSiteName(findSiteNameSource(siteResult)?.headMetadata);
 
