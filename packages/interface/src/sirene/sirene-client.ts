@@ -85,7 +85,14 @@ function provenanced<T>(value: T, source: string, retrievedAt: Date): Provenance
 function mapResultToProfile(result: RawSireneResult, retrievedAt: Date): OperatorProfile {
   const source = 'sirene-api';
   const code = result.tranche_effectif_salarie ?? 'NN';
-  const label = EFFECTIF_BAND_LABELS_FR[code] ?? code;
+  // Issue #87: EFFECTIF_BAND_LABELS_FR only covers INSEE's 16 documented
+  // codes. Falling back to the raw code itself (`label = ... ?? code`)
+  // would print a bare registry code like "53" where a client-facing
+  // French sentence is expected, the same class of defect as the
+  // accents-stripped label regression this file already guards against.
+  // A code outside the table is honestly unrecognised, not a silently
+  // acceptable label.
+  const label = EFFECTIF_BAND_LABELS_FR[code] ?? `Tranche d'effectif non reconnue (code ${code})`;
   const turnoverReliable = SIRENE_TURNOVER_RELIABLE_EFFECTIF_CODES.includes(code);
 
   return {

@@ -142,6 +142,32 @@ describe('fetchSireneProfile', () => {
     expect(result.profile.effectifBand.value?.label).toBe('100 à 199 salariés');
   });
 
+  // Issue #87: a code outside the 16 documented INSEE bands used to fall
+  // back to the raw code itself as the label, so a client-facing string
+  // could read as a bare "99" instead of a French sentence.
+  it('never renders the raw code as the label for a code outside the known table', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      jsonResponse({
+        results: [
+          {
+            siren: '503932568',
+            nom_complet: 'CARREFOUR',
+            etat_administratif: 'A',
+            tranche_effectif_salarie: '99',
+            finances: {},
+          },
+        ],
+      }),
+    );
+
+    const result = await fetchSireneProfile('503932568');
+    expect(result.status).toBe('found');
+    if (result.status !== 'found') throw new Error('expected found');
+    expect(result.profile.effectifBand.value?.code).toBe('99');
+    expect(result.profile.effectifBand.value?.label).not.toBe('99');
+    expect(result.profile.effectifBand.value?.label).toContain('99');
+  });
+
   it('returns not-found when the API returns zero results', async () => {
     vi.mocked(global.fetch).mockResolvedValueOnce(jsonResponse({ results: [] }));
     expect(await fetchSireneProfile('000000000')).toEqual({
