@@ -270,7 +270,7 @@ export function renderExecutiveSummary(
     total: formatNumber(stats.totalFindings, analysis.language),
   });
   const findingsById = new Map(findings.map((finding) => [finding.findingId, finding]));
-  const ownership = priorities ? summarizePriorityOwnership(priorities) : undefined;
+  const ownership = priorities ? summarizePriorityOwnership(priorities, manifest) : undefined;
   const ownershipNote = ownership
     ? `<p style="font-size:12px;opacity:0.65;margin-top:var(--space-2);max-width:66ch">${escapeHtml(
         fillTemplate(e.priorityOwnershipTemplate, {

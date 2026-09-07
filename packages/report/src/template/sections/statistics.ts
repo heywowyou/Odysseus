@@ -223,7 +223,7 @@ export function renderStatistics(
           }),
         )}</p>`
       : '';
-  const ownership = priorities ? summarizePriorityOwnership(priorities) : undefined;
+  const ownership = priorities ? summarizePriorityOwnership(priorities, manifest) : undefined;
   const priorityOwnershipNote = ownership
     ? `<p style="font-size:11px;opacity:0.55;margin-bottom:4px">${escapeHtml(
         fillTemplate(s.priorityOwnershipTemplate, {

@@ -163,6 +163,16 @@ function buildPriorityEvidence(
    *  manifest's own visited-page URL set, computed once by the caller from
    *  the same pages the "sur {totalPages}" denominator counts. */
   scopePageUrls: ReadonlySet<string>,
+  /** Issue #84: a theme's own category. The observation sentence names the
+   *  priority by this category ("Accessibilité"), so its representative
+   *  finding and its page/occurrence counts must come from findings that
+   *  actually belong to it - otherwise a critical finding from an unrelated
+   *  category (CLS, a performance metric, inside an accessibility theme)
+   *  can become the accessibility example, and its occurrences inflate an
+   *  accessibility total past the site's own accessibility figure. Falls
+   *  back to the full finding set only when the theme has no same-category
+   *  finding at all, which should not normally happen but must not throw. */
+  category: Theme['category'],
 ): PriorityEvidence {
   if (findings.length === 0) {
     // Unreachable through buildRenderedPriorities (selectThemes only keeps
@@ -170,17 +180,19 @@ function buildPriorityEvidence(
     // a future caller from silently rendering an empty observation.
     throw new Error('Priority evidence requires at least one resolved finding');
   }
+  const sameCategory = findings.filter((finding) => finding.category === category);
+  const scoped = sameCategory.length > 0 ? sameCategory : findings;
   // Strict code-point lexicographic order for the findingId tie-break, not
   // localeCompare: the plan's selection rule is lexicographic, and a locale
   // collation could reorder ids differently across ICU versions.
-  const representative = [...findings].sort(
+  const representative = [...scoped].sort(
     (a, b) =>
       SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] ||
       (a.findingId < b.findingId ? -1 : a.findingId > b.findingId ? 1 : 0),
   )[0]!;
   const pageUrls = [
     ...new Set(
-      findings
+      scoped
         .flatMap((finding) => finding.pageUrls)
         // Issue #41: both surfaces rendering this count state it against the
         // visited-page total, so both sides must count the same population.
@@ -196,7 +208,7 @@ function buildPriorityEvidence(
     ),
     representativePageUrl: [...new Set(representative.pageUrls)].sort()[0],
     uniquePageCount: pageUrls.length,
-    occurrenceCount: findings.reduce((total, finding) => total + finding.occurrences, 0),
+    occurrenceCount: scoped.reduce((total, finding) => total + finding.occurrences, 0),
   };
 }
 
@@ -229,7 +241,7 @@ export function buildLegacyPriority(
       'verify-intent': 0,
     },
     remediations: [],
-    evidence: buildPriorityEvidence(findings, language, scopePageUrls),
+    evidence: buildPriorityEvidence(findings, language, scopePageUrls, theme.category),
   };
 }
 
@@ -283,7 +295,7 @@ export function buildRenderedPriorities(
       findings: priorityFindings,
       ownershipCounts,
       remediations,
-      evidence: buildPriorityEvidence(priorityFindings, language, scopePageUrls),
+      evidence: buildPriorityEvidence(priorityFindings, language, scopePageUrls, theme.category),
     };
   });
 
@@ -302,6 +314,23 @@ export function buildRenderedPriorities(
       `Missing reviewed report remediation for rule IDs: ${missingRuleIds.join(', ')}`,
     );
   }
+
+  // Issue #84: two priorities quoting the identical example finding read as
+  // indistinguishable at the exact moment the report is asking which one to
+  // fund first. Category-scoped selection above should already prevent
+  // this; this is a hard-fail safety net rather than a silent overlap.
+  const representativeIdOwners = new Map<string, number>();
+  for (const priority of priorities) {
+    const id = priority.evidence.representativeFinding.findingId;
+    const owner = representativeIdOwners.get(id);
+    if (owner !== undefined) {
+      throw new Error(
+        `Priorities ${owner} and ${priority.displayRank} share the same representative finding (${id})`,
+      );
+    }
+    representativeIdOwners.set(id, priority.displayRank);
+  }
+
   return priorities;
 }
 
@@ -314,17 +343,38 @@ export function selectRenderedThemes(
   return selectThemes(themes, findingsById);
 }
 
+/** Issue #83: a finding that belongs to two priorities (a real, disclosed
+ *  case - "une meme page peut relever des deux" already covers pages, but
+ *  nothing said so for findings) used to be counted once per priority it
+ *  appeared in, so this total could exceed the distinct-finding coverage
+ *  figure printed two lines above it in the executive summary (82 vs 80 in
+ *  the report that surfaced this). Each priority's own ownershipCounts
+ *  (rendered on that priority's own card) is unchanged and still counts a
+ *  shared finding under every priority it belongs to - only this
+ *  cross-priority total dedupes, by findingId, so it sums the same
+ *  distinct-finding population renderCoveredByPrioritiesNote does.
+ *  classifyPriorityOwnership is a pure function of the finding and the
+ *  manifest, so a finding shared between two priorities always classifies
+ *  the same way regardless of which priority's pass encounters it first. */
 export function summarizePriorityOwnership(
   priorities: readonly RenderedPriority[],
+  manifest: AuditManifest,
 ): Record<PriorityOwnership, number> {
-  return priorities.reduce<Record<PriorityOwnership, number>>(
-    (total, priority) => ({
-      'first-party-action':
-        total['first-party-action'] + priority.ownershipCounts['first-party-action'],
-      'third-party-escalation':
-        total['third-party-escalation'] + priority.ownershipCounts['third-party-escalation'],
-      'verify-intent': total['verify-intent'] + priority.ownershipCounts['verify-intent'],
-    }),
-    { 'first-party-action': 0, 'third-party-escalation': 0, 'verify-intent': 0 },
-  );
+  const ownershipByFindingId = new Map<string, PriorityOwnership>();
+  for (const priority of priorities) {
+    for (const finding of priority.findings) {
+      if (ownershipByFindingId.has(finding.findingId)) continue;
+      ownershipByFindingId.set(finding.findingId, classifyPriorityOwnership(finding, manifest));
+    }
+  }
+
+  const total: Record<PriorityOwnership, number> = {
+    'first-party-action': 0,
+    'third-party-escalation': 0,
+    'verify-intent': 0,
+  };
+  for (const ownership of ownershipByFindingId.values()) {
+    total[ownership] += 1;
+  }
+  return total;
 }

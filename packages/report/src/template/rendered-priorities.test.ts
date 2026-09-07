@@ -6,7 +6,7 @@ import {
   loadSmallSiteFindings,
   loadSmallSiteManifest,
 } from '../test-fixtures.js';
-import { buildRenderedPriorities } from './rendered-priorities.js';
+import { buildRenderedPriorities, summarizePriorityOwnership } from './rendered-priorities.js';
 import { renderThemes } from './sections/themes.js';
 import { getStrings } from './strings/i18n.js';
 
@@ -96,6 +96,30 @@ describe('buildRenderedPriorities', () => {
     expect(() => buildRenderedPriorities(analysis.themes, changed, manifest, 'fr')).toThrow(
       'Regenerate the analysis structure',
     );
+  });
+});
+
+describe('summarizePriorityOwnership', () => {
+  // Issue #83: a finding shared between two priorities used to be counted
+  // once per priority it appeared in, so this total could exceed the
+  // distinct-finding count printed elsewhere in the executive summary.
+  it('counts a finding shared between two priorities exactly once', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const shared = buildFinding({ findingId: 'shared-1' });
+    const onlyInB = buildFinding({ findingId: 'only-in-b' });
+    const themeA = buildTheme([shared.findingId]);
+    const themeB = { ...buildTheme([shared.findingId, onlyInB.findingId]), priorityRank: 2 };
+    const priorities = buildRenderedPriorities([themeA, themeB], [shared, onlyInB], manifest, 'en');
+
+    const naiveSum = priorities.reduce(
+      (sum, priority) => sum + Object.values(priority.ownershipCounts).reduce((a, b) => a + b, 0),
+      0,
+    );
+    expect(naiveSum).toBe(3);
+
+    const total = summarizePriorityOwnership(priorities, manifest);
+    const totalCount = Object.values(total).reduce((a, b) => a + b, 0);
+    expect(totalCount).toBe(2);
   });
 });
 
@@ -291,5 +315,77 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
 
     expect(html).not.toContain('<img src=x onerror=alert(1)>');
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+  });
+
+  // Issue #84: a critical off-category finding (a CLS performance metric
+  // grouped into an accessibility theme) was winning representative
+  // selection over a same-category finding, and its occurrences were
+  // inflating the accessibility total past the site's own accessibility
+  // figure.
+  it('prefers a same-category finding as representative over a higher-severity finding from another category', () => {
+    const findings = [
+      buildFinding({ findingId: 'f001', category: 'accessibility', severity: 'serious' }),
+      buildFinding({ findingId: 'f002', category: 'performance', severity: 'critical' }),
+    ];
+    const themes = [{ ...buildTheme(['f001', 'f002']), category: 'accessibility' as const }];
+
+    const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
+    const priority = priorities[0]!;
+
+    expect(priority.evidence.representativeFinding.findingId).toBe('f001');
+  });
+
+  it('confines occurrence and page counts to the theme own category when a same-category finding exists', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        category: 'accessibility',
+        severity: 'serious',
+        occurrences: 5,
+        pageUrls: ['https://example.com/a'],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        category: 'performance',
+        severity: 'critical',
+        occurrences: 46,
+        pageUrls: ['https://example.com/b'],
+      }),
+    ];
+    const themes = [{ ...buildTheme(['f001', 'f002']), category: 'accessibility' as const }];
+    const scopedManifest = {
+      pages: [
+        { url: 'https://example.com/a', status: 'visited' },
+        { url: 'https://example.com/b', status: 'visited' },
+      ],
+    } as never;
+
+    const priorities = buildRenderedPriorities(themes, findings, scopedManifest, 'en');
+    const priority = priorities[0]!;
+
+    expect(priority.evidence.occurrenceCount).toBe(5);
+    expect(priority.evidence.uniquePageCount).toBe(1);
+  });
+
+  it('falls back to the full finding set when the theme has no same-category finding at all', () => {
+    const findings = [
+      buildFinding({ findingId: 'f001', category: 'performance', severity: 'critical' }),
+    ];
+    const themes = [{ ...buildTheme(['f001']), category: 'accessibility' as const }];
+
+    const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
+    const priority = priorities[0]!;
+
+    expect(priority.evidence.representativeFinding.findingId).toBe('f001');
+  });
+
+  it('throws rather than let two priorities quote the same representative finding', () => {
+    const findings = [buildFinding({ findingId: 'f001', category: 'performance' })];
+    const themeA = { ...buildTheme(['f001']), category: 'performance' as const, priorityRank: 1 };
+    const themeB = { ...buildTheme(['f001']), category: 'performance' as const, priorityRank: 2 };
+
+    expect(() => buildRenderedPriorities([themeA, themeB], findings, manifest, 'en')).toThrow(
+      'share the same representative finding',
+    );
   });
 });
