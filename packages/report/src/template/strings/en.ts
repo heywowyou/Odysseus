@@ -411,7 +411,7 @@ export const en: ReportStrings = {
       'Performance measurement (Lighthouse) did not complete for this site on this audit, so no performance finding is reported here. See the "Methodology and limitations" section for detail.',
     realUserHeading: 'Real-user data (Chrome UX Report)',
     realUserIntro:
-      'Field data from real Chrome visitors to this site over the last 28 days, where public data exists, complementing the simulated lab measurements above.',
+      'Field data from real Chrome visitors to this site over the last 28 days, where public data exists, in addition to the Lighthouse lab measurements.',
     realUserNoDataNote:
       "No public Chrome UX Report data exists for this site, most often because it does not yet receive enough Chrome traffic to meet Google's reporting threshold. This is not a pass or a fail, it simply means no real-user comparison is available for this audit.",
     realUserGapNote:
@@ -491,7 +491,7 @@ export const en: ReportStrings = {
       {
         id: 'quick-win',
         term: 'Quick win',
-        definition: 'Low-complexity, high-impact fix, worth prioritizing.',
+        definition: 'Low-complexity fix with a medium or high impact, worth prioritizing.',
       },
       {
         id: 'lcp',
@@ -722,7 +722,7 @@ export const en: ReportStrings = {
     sitemapIncompleteTemplate:
       'Sitemap coverage was incomplete. Sitemap documents not read: {failed}. Declared page URLs outside the authorized scope or filtered by the audit rules: {filtered}. Eligible pages omitted by the configured cap: {omitted}.',
     toolingParagraphTemplate:
-      'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} analyzed on {date} starting from the homepage. A URL that merely leads to the homepage for a language (for example /en) is not counted as an analyzed page, because it carries no content of its own; the pages in that language are crawled normally.',
+      'This audit combines several automated detection tools, all deterministic: no finding is invented or guessed. Accessibility engine axe-core {axeVersion}, performance engine Lighthouse {lighthouseVersion} on a simulated mobile profile, render comparison via two loads of each page, JavaScript disabled then enabled. Standard audited: WCAG 2.2, level AA. Scope: {pages} analyzed on {date} starting from the homepage. A URL that merely leads to the homepage for a language (for example /en) carries no content of its own: it is counted as an analyzed page only when it declares hreflang annotations; the pages in that language are crawled normally.',
     pagesScannedSingular: 'page',
     pagesScannedPlural: 'pages',
     automatedCoverageCaveat:

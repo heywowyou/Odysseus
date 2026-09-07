@@ -226,3 +226,27 @@ describe('item 3.5: the 8 previously-missing glossary terms', () => {
     expect(withoutGeo).not.toContain('Recherche émergente');
   });
 });
+
+// Issue #105: the glossary defined "Gain rapide" as "fort impact" while
+// the badge rule (and the next-steps count in the same report) admits a
+// medium impact - a real report carried the badge on a "Impact
+// commercial : Moyen" priority, contradicting its own glossary.
+describe('quick-win glossary definition (issue #105)', () => {
+  it('states the medium-or-high impact range in both languages, never the old high-impact claim', () => {
+    for (const language of ['fr', 'en'] as const) {
+      const html = renderGlossary(getStrings(language), 13, {
+        findings: [buildFinding('seo')],
+        obligationAssessment: undefined,
+        transactionalFlowEvaluated: false,
+        hasMeasuredCoreWebVitals: true,
+      });
+      if (language === 'fr') {
+        expect(html).toContain('à impact moyen ou élevé');
+        expect(html).not.toContain('fort impact');
+      } else {
+        expect(html).toContain('medium or high impact');
+        expect(html).not.toContain('high-impact fix');
+      }
+    }
+  });
+});

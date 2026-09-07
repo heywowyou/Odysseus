@@ -817,3 +817,24 @@ describe('Lighthouse failure detail is plain language, never the raw tool messag
     expect(occurrences).toBe(1);
   });
 });
+
+// Issue #103: the methodology stated that a bare language home is never
+// an analyzed page, while the same report's annex lists Briketenia's /en
+// as analyzed - the crawl scans and counts a language home exactly when
+// it declares hreflang, and the copy must state that exception rather
+// than contradict the report's own scope list.
+describe('language-home scope sentence (issue #103)', () => {
+  it('states the hreflang exception instead of a blanket never-counted rule, in both languages', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const fr = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
+    expect(fr).toContain('que si elle déclare des annotations hreflang');
+    expect(fr).not.toContain(
+      "n'est pas comptée comme une page analysée, car elle ne porte pas de contenu propre",
+    );
+    const en = renderMethodology(getStrings('en'), 11, manifest, 'en');
+    expect(en).toContain('only when it declares hreflang annotations');
+    expect(en).not.toContain(
+      'is not counted as an analyzed page, because it carries no content of its own',
+    );
+  });
+});

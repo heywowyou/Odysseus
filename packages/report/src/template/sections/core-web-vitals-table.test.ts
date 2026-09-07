@@ -402,6 +402,29 @@ describe('renderCoreWebVitalsTable', () => {
       expect(html).toContain('A large gap between the values above and below is expected');
     });
 
+    // Issue #104: the field-data intro pointed at "the lab measurements
+    // above" while the lab table renders below the field table on the same
+    // page, in every report and both languages. A positional word in a
+    // fixed template is wrong whenever the sections reorder, so the intro
+    // names the lab source instead of pointing at it.
+    it('names the Lighthouse lab source instead of pointing at it by position, in both languages (issue #104)', () => {
+      const manifest = measuredManifestWith({
+        available: true,
+        lcp: { p75: 1200 },
+        inp: { p75: 550 },
+        cls: { p75: 0.3 },
+      });
+      const en = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+      expect(en).toContain('in addition to the Lighthouse lab measurements');
+      expect(en).not.toContain('measurements above');
+      const fr = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
+      expect(fr).toContain('mesures de laboratoire Lighthouse');
+      // The two-way divergence note ("ci-dessus et ci-dessous") is a
+      // different, accurate sentence; only the intro's one-way pointer
+      // was the defect.
+      expect(fr).not.toContain('mesures de laboratoire ci-dessus');
+    });
+
     it('leads with field data and keeps the simulated lab values as the diagnostic below it', () => {
       const manifest = measuredManifestWith({
         available: true,

@@ -502,7 +502,7 @@ export const fr: ReportStrings = {
       "La mesure de performance (Lighthouse) n'a pas abouti sur ce site pour cet audit et aucun constat de performance n'est donc rapporté ici. Voir la section « Méthodologie et limites » pour le détail.",
     realUserHeading: 'Données réelles (Chrome UX Report)',
     realUserIntro:
-      'Données de terrain issues des visiteurs Chrome réels de ce site sur les 28 derniers jours, lorsque des données publiques existent, en complément des mesures de laboratoire ci-dessus.',
+      'Données de terrain issues des visiteurs Chrome réels de ce site sur les 28 derniers jours, lorsque des données publiques existent, en complément des mesures de laboratoire Lighthouse.',
     realUserNoDataNote:
       "Aucune donnée Chrome UX Report publique n'existe pour ce site, le plus souvent parce qu'il ne reçoit pas encore assez de trafic Chrome pour atteindre le seuil de publication de Google. Ce n'est ni un succès ni un échec, cela signifie simplement qu'aucune comparaison avec des utilisateurs réels n'est disponible pour cet audit.",
     realUserGapNote:
@@ -583,7 +583,8 @@ export const fr: ReportStrings = {
       {
         id: 'quick-win',
         term: 'Gain rapide',
-        definition: 'Correctif à faible complexité et fort impact, à traiter en priorité.',
+        definition:
+          'Correctif à faible complexité et à impact moyen ou élevé, à traiter en priorité.',
       },
       {
         id: 'lcp',
@@ -830,7 +831,7 @@ export const fr: ReportStrings = {
     sitemapIncompleteTemplate:
       "La couverture du sitemap est incomplète. Fichiers sitemap non lus : {failed}. URL de pages déclarées hors du périmètre autorisé ou filtrées par les règles de l'audit : {filtered}. Pages éligibles omises en raison du plafond configuré : {omitted}.",
     toolingParagraphTemplate:
-      "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} analysées le {date} à partir de la page d'accueil. Une URL qui ne fait que mener à l'accueil d'une langue (par exemple /en) n'est pas comptée comme une page analysée, car elle ne porte pas de contenu propre ; les pages de cette langue sont explorées normalement.",
+      "L'audit combine des outils de détection automatisée, tous déterministes : aucun constat n'est inventé ou deviné. Moteur d'accessibilité axe-core {axeVersion}, moteur de performance Lighthouse {lighthouseVersion} sur profil mobile simulé, comparaison de rendu par double chargement de chaque page, JavaScript désactivé puis activé. Référentiel audité : WCAG 2.2, niveau AA. Périmètre : {pages} analysées le {date} à partir de la page d'accueil. Une URL qui ne fait que mener à l'accueil d'une langue (par exemple /en) ne porte pas de contenu propre : elle n'est comptée comme une page analysée que si elle déclare des annotations hreflang ; les pages de cette langue sont explorées normalement.",
     pagesScannedSingular: 'page',
     pagesScannedPlural: 'pages',
     automatedCoverageCaveat:
