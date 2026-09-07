@@ -489,6 +489,51 @@ describe('item 29: the list of crawled URLs is printed', () => {
   });
 });
 
+// Issue #85: a redirect-interstitial page's rendered content genuinely
+// belongs to another URL, so it must never appear in the "pages
+// analysées" list a client uses to verify their scope.
+describe('issue #85: a redirect-interstitial page is absent from the crawled-pages list', () => {
+  it('omits a redirect-interstitial page while keeping normally-covered pages', () => {
+    const covered = 'https://example.com/';
+    const redirect = 'https://example.com/fr';
+    const manifest: AuditManifest = {
+      ...buildManifest(),
+      pages: [
+        {
+          url: covered,
+          depth: 0,
+          status: 'visited',
+          errors: {},
+          analysisCoverage: {
+            plannerVersion: 'v1',
+            role: 'content',
+            confidence: 'high',
+            reasonCodes: [],
+            passes: {
+              rendered: { outcome: 'completed' },
+              axe: { outcome: 'completed' },
+              extended: { outcome: 'completed' },
+              lighthouse: { outcome: 'completed' },
+            },
+          },
+        },
+        {
+          url: redirect,
+          depth: 1,
+          status: 'redirect-interstitial',
+          redirectTargetUrl: covered,
+          errors: {},
+        },
+      ],
+    };
+
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', [], manifest, 'general');
+
+    expect(html).toContain(covered);
+    expect(html).not.toContain(redirect);
+  });
+});
+
 // item 40: the GEO citation (Phocuswright, 56%) visually outweighed the
 // single minor finding it was attached to - it rendered right under the
 // section heading, ahead of every finding row, reading as a headline stat

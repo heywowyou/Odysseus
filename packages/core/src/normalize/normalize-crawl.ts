@@ -47,6 +47,10 @@ export type CrawlPageStatus =
    *  ManifestPageStatus by hand; historical manifests recorded the same
    *  outcome as 'visited', which isBrokenTarget still reads. */
   | 'http-error-status'
+  /** A resolved 200 whose content belongs to another URL (issue #85), not
+   *  a broken target - isBrokenTarget must not flag it. Kept in sync with
+   *  ManifestPageStatus by hand. */
+  | 'redirect-interstitial'
   | 'error';
 
 export interface CrawlPageInput {

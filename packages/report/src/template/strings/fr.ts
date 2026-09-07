@@ -149,6 +149,10 @@ export const fr: ReportStrings = {
       },
       error: { singular: 'erreur d’exploration', plural: 'erreurs d’exploration' },
       'http-error-status': { singular: 'erreur HTTP', plural: 'erreurs HTTP' },
+      'redirect-interstitial': {
+        singular: 'page de redirection',
+        plural: 'pages de redirection',
+      },
       'coverage-missing': {
         singular: 'donnée de couverture indisponible',
         plural: 'données de couverture indisponibles',

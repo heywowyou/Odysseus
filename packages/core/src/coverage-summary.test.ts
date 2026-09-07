@@ -124,6 +124,39 @@ describe('summarizeAuditCoverage', () => {
     });
   });
 
+  // Issue #85: a redirect-interstitial page carries no analysisCoverage,
+  // the same as every other non-'visited' status, so it must land in
+  // pagesWithoutContentAnalysis under its own reason and never count as
+  // content, with no special-cased branch for the new status.
+  it('excludes a redirect-interstitial page from the content-checked population', () => {
+    const summary = summarizeAuditCoverage(
+      manifest({
+        pages: [
+          {
+            url: 'https://example.com/',
+            depth: 0,
+            status: 'visited',
+            analysisCoverage: coverage({ templateFamilyId: 'family-a' }),
+            errors: {},
+          },
+          {
+            url: 'https://example.com/fr',
+            depth: 1,
+            status: 'redirect-interstitial',
+            redirectTargetUrl: 'https://example.com/',
+            errors: {},
+          },
+        ],
+      }),
+    );
+
+    expect(summary.kind).toBe('current');
+    if (summary.kind !== 'current') throw new Error('expected current');
+    expect(summary.inventoriedUrlCount).toBe(2);
+    expect(summary.content).toEqual({ completed: 1, partial: 0, failed: 0 });
+    expect(summary.pagesWithoutContentAnalysis).toEqual({ 'redirect-interstitial': 1 });
+  });
+
   it('keeps historical manifests explicit instead of inventing pass counts', () => {
     expect(
       summarizeAuditCoverage(

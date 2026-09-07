@@ -109,6 +109,31 @@ describe('buildCoverageDisclosure', () => {
     expect(disclosureFr.details.join(' ')).not.toContain('1 bloquées par robots.txt');
   });
 
+  // Issue #85: a redirect-interstitial page must show up in the
+  // without-content reasons with its own bilingual label, not silently
+  // folded into another reason or dropped.
+  it('names a redirect-interstitial page as its own reason, in both languages', () => {
+    const manifest: AuditManifest = {
+      siteUrl: 'https://example.com/',
+      pages: [
+        coveredPage('home', 'completed', 'completed'),
+        {
+          url: 'https://example.com/fr',
+          depth: 1,
+          status: 'redirect-interstitial',
+          redirectTargetUrl: 'https://example.com/',
+          errors: {},
+        },
+      ],
+    } as unknown as AuditManifest;
+
+    const disclosureEn = buildCoverageDisclosure(getStrings('en'), manifest, 'en');
+    expect(disclosureEn.details.join(' ')).toContain('1 redirect page');
+
+    const disclosureFr = buildCoverageDisclosure(getStrings('fr'), manifest, 'fr');
+    expect(disclosureFr.details.join(' ')).toContain('1 page de redirection');
+  });
+
   it('states that pass coverage is unknown for a historical manifest', () => {
     const manifest = {
       ...currentManifest(),

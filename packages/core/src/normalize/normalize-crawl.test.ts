@@ -168,6 +168,26 @@ describe('broken-internal-link', () => {
     expect(broken[0]?.element?.selector).not.toBe(broken[1]?.element?.selector);
   });
 
+  // Issue #85: a redirect-interstitial page is a resolved 200 whose
+  // content belongs elsewhere, not a broken target - it must not be
+  // flagged as a broken internal link.
+  it('skips a page marked redirect-interstitial (never treated as broken)', () => {
+    const candidates = extractCrawlCandidates(
+      baseInput({
+        pages: [
+          { url: START_URL, status: 'visited', httpStatus: 200 },
+          {
+            url: 'https://example.com/fr',
+            status: 'redirect-interstitial',
+            httpStatus: 200,
+            discoveredFrom: START_URL,
+          },
+        ],
+      }),
+    );
+    expect(candidates.filter((c) => c.ruleId === BROKEN_INTERNAL_LINK_RULE_ID)).toEqual([]);
+  });
+
   it('skips a page marked skipped-non-html (never treated as broken)', () => {
     const candidates = extractCrawlCandidates(
       baseInput({

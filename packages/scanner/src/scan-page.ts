@@ -1,14 +1,13 @@
 import type { Browser } from 'playwright';
 import type { Result as LighthouseResult } from 'lighthouse';
 import type {
-  RenderDiffResult,
   TransactionalFlowAmbiguity,
   TransactionalFlowEvidence,
   TransactionalFlowRedirectCheck,
 } from '@odysseus/core';
 import { type AxeResults, runAxe } from './axe.js';
 import { runLighthouseIsolated } from './lighthouse-isolated.js';
-import { renderDiff } from './render-diff.js';
+import { renderDiff, type RenderDiffOutcome } from './render-diff.js';
 import {
   extractMentionsLegales,
   type MentionsLegalesExtraction,
@@ -114,7 +113,7 @@ export interface ScanPageOptions {
  */
 export interface PageScanResult {
   url: string;
-  renderDiff?: RenderDiffResult;
+  renderDiff?: RenderDiffOutcome;
   renderDiffError?: string;
   axe?: AxeResults;
   axeError?: string;

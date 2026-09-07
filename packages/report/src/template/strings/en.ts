@@ -131,6 +131,7 @@ export const en: ReportStrings = {
       'skipped-external-redirect': { singular: 'external redirect', plural: 'external redirects' },
       error: { singular: 'crawl error', plural: 'crawl errors' },
       'http-error-status': { singular: 'HTTP error', plural: 'HTTP errors' },
+      'redirect-interstitial': { singular: 'redirect page', plural: 'redirect pages' },
       'coverage-missing': {
         singular: 'coverage record unavailable',
         plural: 'coverage records unavailable',

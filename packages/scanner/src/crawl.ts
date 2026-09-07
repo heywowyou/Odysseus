@@ -90,6 +90,15 @@ export type CrawledPageStatus =
   | 'http-error-status'
   | 'error';
 
+/** packages/core's ManifestPageStatus also carries 'redirect-interstitial'
+ *  (issue #85), deliberately absent here: the crawl phase itself never
+ *  assigns it, since detecting a client-side redirect stub needs
+ *  render-diff's settled rendered URL, which does not exist until after
+ *  this page has already been scanned. write-audit.ts downgrades a
+ *  'visited' CrawledPage to that status when it builds the manifest
+ *  entry, not the other way around. Do not add it here expecting a
+ *  crawl.ts branch to assign it - there isn't one. */
+
 export interface CrawledPage {
   url: string;
   depth: number;

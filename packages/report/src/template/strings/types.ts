@@ -231,6 +231,7 @@ export interface ReportStrings {
       | 'skipped-external-redirect'
       | 'error'
       | 'http-error-status'
+      | 'redirect-interstitial'
       | 'coverage-missing',
       { singular: string; plural: string }
     >;

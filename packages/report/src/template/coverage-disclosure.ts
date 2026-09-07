@@ -14,6 +14,7 @@ const WITHOUT_CONTENT_REASON_ORDER: readonly PageWithoutContentAnalysisReason[] 
   'skipped-external-redirect',
   'error',
   'http-error-status',
+  'redirect-interstitial',
   'coverage-missing',
 ];
 

@@ -272,6 +272,96 @@ describe('writeAuditArtifacts characterization', () => {
     expect(normalizedStaged?.axe?.violations).toEqual([]);
     expect(normalizedStaged?.headMetadata?.title).toBe('Staged');
   });
+
+  // Issue #85: render-diff's settled rendered URL can differ from the
+  // requested URL when a client-side redirect fires after 'load' but
+  // before the best-effort networkidle wait finishes. That page's
+  // rendered content genuinely belongs to another URL, so it must be
+  // excluded from analysis coverage rather than counted as visited.
+  it('issue #85: marks a page redirect-interstitial when render diff settles on another URL', async () => {
+    const home = 'https://example.com/';
+    const frRedirect = 'https://example.com/fr';
+    const startedAt = new Date('2026-09-06T10:00:00.000Z');
+
+    const result = await writeAuditArtifacts({
+      auditId: 'audit-redirect-interstitial',
+      kind: 'audit',
+      browser: {} as never,
+      startedAt,
+      finishedAt: new Date('2026-09-06T10:01:00.000Z'),
+      config: {
+        maxPages: 2,
+        maxDepth: 2,
+        crawlDelayMs: 0,
+        pageTimeoutMs: 30_000,
+        lighthouseTimeoutMs: 60_000,
+        userAgent: 'test',
+        scanConcurrency: 2,
+        sitemapMode: 'supplement',
+      },
+      siteResult: {
+        analysisCoverageByUrl: new Map([
+          [
+            frRedirect,
+            {
+              plannerVersion: 'v1',
+              role: 'content',
+              confidence: 'high',
+              reasonCodes: ['content-json-ld'],
+              passes: {
+                rendered: { outcome: 'completed' },
+                axe: { outcome: 'completed' },
+                extended: { outcome: 'completed' },
+                lighthouse: { outcome: 'completed' },
+              },
+            } as never,
+          ],
+        ]),
+        crawl: {
+          startUrl: home,
+          pages: [
+            { url: home, depth: 0, status: 'visited', discoveryMethod: 'link', httpStatus: 200 },
+            {
+              url: frRedirect,
+              depth: 1,
+              status: 'visited',
+              discoveryMethod: 'link',
+              httpStatus: 200,
+              discoveredFrom: home,
+            },
+          ],
+          effectiveDelayMs: 0,
+          visitedCount: 2,
+          maxPages: 2,
+          maxDepth: 2,
+          robotsTxtFound: true,
+          robotsDisallowMatches: [],
+          aiCrawlerBlocks: [],
+          linkDiscoveredUrls: [frRedirect],
+        } as never,
+        pages: [
+          { url: home } as never,
+          {
+            url: frRedirect,
+            renderDiff: {
+              rawScreenshotRef: path.join(root, 'raw.png'),
+              renderedScreenshotRef: path.join(root, 'rendered.png'),
+              missingPercent: 0,
+              renderedLandedUrl: home,
+            } as never,
+          },
+        ],
+      },
+    });
+
+    const redirectEntry = result.manifest.pages.find((page) => page.url === frRedirect);
+    expect(redirectEntry?.status).toBe('redirect-interstitial');
+    expect(redirectEntry?.redirectTargetUrl).toBe(home);
+    expect(redirectEntry?.analysisCoverage).toBeUndefined();
+
+    const homeEntry = result.manifest.pages.find((page) => page.url === home);
+    expect(homeEntry?.status).toBe('visited');
+  });
 });
 
 // Issue #79 (Le Grand Chalet, real audit d9d9ec5e-ed0d-471e-9721-c2e4d979cc06):

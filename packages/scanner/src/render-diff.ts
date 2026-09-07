@@ -8,6 +8,17 @@ import { computeMissingPercent, extractTextFromHtml } from './extract-text.js';
 import { buildPageDir } from './artifacts/paths.js';
 import { couldEverBeKept } from './artifacts/prune-screenshots.js';
 
+/** RenderDiffResult (packages/core) is a locked contract; this widens it
+ *  with a scanner-only fact rather than touching that file. renderedUrl
+ *  is page.url() read right after the existing best-effort networkidle
+ *  settle wait below - the same window that already lets a delayed
+ *  client-side redirect (issue #85) actually complete before rendered
+ *  text is captured, letting a caller compare it against the requested
+ *  URL to detect a redirect interstitial. */
+export interface RenderDiffOutcome extends RenderDiffResult {
+  renderedLandedUrl: string;
+}
+
 export interface RenderDiffOptions {
   timeoutMs?: number;
   /** The `pages/` parent directory for this run (see artifacts/paths.ts
@@ -62,7 +73,7 @@ export async function renderDiff(
   browser: Browser,
   url: string,
   options: RenderDiffOptions,
-): Promise<RenderDiffResult> {
+): Promise<RenderDiffOutcome> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const settleTimeoutMs = options.settleTimeoutMs ?? getRenderSettleTimeoutMs();
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
@@ -72,6 +83,7 @@ export async function renderDiff(
   await fs.mkdir(runDir, { recursive: true });
   const rawScreenshotRef = path.join(runDir, 'raw.png');
   const renderedScreenshotRef = path.join(runDir, 'rendered.png');
+  let renderedLandedUrl: string;
 
   // The raw context stays open across the rendered pass. Whether this
   // page's screenshots are worth writing at all depends on missingPercent,
@@ -132,6 +144,12 @@ export async function renderDiff(
         // a page error for the same reason - it is an expected shape of
         // real site, not a failure of this scan.
       }
+      // Read after the settle wait above, not right after goto: a
+      // client-side redirect (issue #85) fired from a load handler or a
+      // short timer has not necessarily navigated yet at 'load', but is
+      // reliably settled by the time the best-effort idle wait above
+      // returns or times out.
+      renderedLandedUrl = renderedPage.url();
       const renderedText = await renderedPage.evaluate(() => document.body.innerText);
       renderedTextLength = renderedText.trim().length;
 
@@ -169,5 +187,6 @@ export async function renderDiff(
     renderedScreenshotRef,
     consoleErrors,
     httpStatus,
+    renderedLandedUrl,
   };
 }

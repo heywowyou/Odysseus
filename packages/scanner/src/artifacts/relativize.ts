@@ -11,8 +11,8 @@
 import path from 'node:path';
 import type { RenderDiffResult } from '@odysseus/core';
 
-export function toAuditRelativeRefs(result: RenderDiffResult, auditDir: string): RenderDiffResult {
-  const relativized: RenderDiffResult = { ...result };
+export function toAuditRelativeRefs<T extends RenderDiffResult>(result: T, auditDir: string): T {
+  const relativized: T = { ...result };
 
   if (result.rawScreenshotRef !== undefined) {
     relativized.rawScreenshotRef = path.relative(auditDir, path.resolve(result.rawScreenshotRef));

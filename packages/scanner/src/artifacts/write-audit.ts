@@ -40,6 +40,7 @@ import {
 } from '@odysseus/core';
 import { getArtifactsRoot } from '../config.js';
 import type { CrawlResult } from '../crawl.js';
+import { normalizePageUrl } from '../links.js';
 import type { PageScanResult } from '../scan-page.js';
 import type { NormalizePageInput } from '@odysseus/core';
 import { buildAuditDir, buildPageDir } from './paths.js';
@@ -457,6 +458,22 @@ function buildSiteSignals(
   };
 }
 
+/** Issue #85: true when render-diff's settled rendered URL is not the
+ *  same page as the one requested, meaning the browser was carried away
+ *  by a client-side redirect (meta refresh or a delayed script) before
+ *  rendered content was captured - the rendered content genuinely
+ *  belongs to another URL. Reuses the crawler's own identity normalizer
+ *  (trailing slash, hash) rather than a fresh string comparison, the
+ *  same trailing-slash-identity class of bug issue #79 hit. An
+ *  off-origin landing normalizes to undefined, which still compares
+ *  unequal to the requested URL's own normalization, so it is correctly
+ *  treated as a redirect away rather than silently ignored. */
+function isRedirectInterstitial(requestedUrl: string, renderedLandedUrl: string): boolean {
+  const requested = normalizePageUrl(requestedUrl, requestedUrl);
+  const landed = normalizePageUrl(renderedLandedUrl, requestedUrl);
+  return requested !== landed;
+}
+
 export async function writeAuditArtifacts(
   input: WriteAuditArtifactsInput,
 ): Promise<WriteAuditArtifactsResult> {
@@ -530,17 +547,32 @@ export async function writeAuditArtifacts(
 
     resolvedPages.push(scanJson);
 
+    // Issue #85: detected only now, after this page has already been
+    // scanned - render-diff's settled rendered URL is the earliest point
+    // this signal exists. A redirect-interstitial page never gets
+    // analysisCoverage, the same as every other non-'visited' status
+    // here, which is what excludes it from the content-checked
+    // population and the report's analysed-page list with no further
+    // logic needed in either place.
+    const redirectTargetUrl =
+      scanJson.renderDiff !== undefined &&
+      isRedirectInterstitial(scanJson.url, scanJson.renderDiff.renderedLandedUrl)
+        ? scanJson.renderDiff.renderedLandedUrl
+        : undefined;
+
     manifestPages.push({
       url: scanJson.url,
       pageDir: path.join('pages', pageDir),
       depth: crawledPage.depth,
-      status: 'visited',
+      status: redirectTargetUrl !== undefined ? 'redirect-interstitial' : 'visited',
       discoveryMethod: crawledPage.discoveryMethod,
       ...(crawledPage.httpStatus !== undefined ? { httpStatus: crawledPage.httpStatus } : {}),
       ...(crawledPage.discoveredFrom !== undefined
         ? { discoveredFrom: crawledPage.discoveredFrom }
         : {}),
-      ...(input.siteResult.analysisCoverageByUrl?.get(scanJson.url) !== undefined
+      ...(redirectTargetUrl !== undefined ? { redirectTargetUrl } : {}),
+      ...(redirectTargetUrl === undefined &&
+      input.siteResult.analysisCoverageByUrl?.get(scanJson.url) !== undefined
         ? { analysisCoverage: input.siteResult.analysisCoverageByUrl.get(scanJson.url)! }
         : {}),
       ...(scanJson.renderDiff !== undefined

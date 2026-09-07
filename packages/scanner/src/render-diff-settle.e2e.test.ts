@@ -105,3 +105,56 @@ describe('renderDiff against a page that never reaches network idle', () => {
     expect(elapsedMs).toBeLessThan(20_000);
   }, 60_000);
 });
+
+// Issue #85: a page whose script sends the browser elsewhere shortly after
+// 'load' (a delayed client-side redirect, as opposed to a synchronous one
+// that would already be resolved by the time 'load' fires). The existing
+// best-effort networkidle settle wait above is the only window in this
+// pipeline long enough to observe it before rendered content is captured.
+describe('renderDiff against a page that redirects itself shortly after load', () => {
+  let redirectServer: http.Server;
+  let redirectBrowser: Browser;
+  let redirectScreenshotDir: string;
+  let sourceUrl: string;
+  let destinationUrl: string;
+
+  beforeAll(async () => {
+    redirectServer = http.createServer((req, res) => {
+      if (req.url === '/destination') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end('<!doctype html><html><body><h1>Destination</h1></body></html>');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(`<!doctype html><html><body>
+<h1>Redirecting</h1>
+<script>setTimeout(() => { location.href = '/destination'; }, 200);</script>
+</body></html>`);
+    });
+    await new Promise<void>((resolve) => redirectServer.listen(0, '127.0.0.1', resolve));
+    const address = redirectServer.address();
+    if (address === null || typeof address === 'string')
+      throw new Error('server did not bind a port');
+    sourceUrl = `http://127.0.0.1:${address.port}/`;
+    destinationUrl = `http://127.0.0.1:${address.port}/destination`;
+    ({ browser: redirectBrowser } = await launchBrowser());
+    redirectScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-redirect-'));
+  }, 60_000);
+
+  afterAll(async () => {
+    await redirectBrowser?.close();
+    await new Promise<void>((resolve) => {
+      redirectServer.closeAllConnections?.();
+      redirectServer.close(() => resolve());
+    });
+    if (redirectScreenshotDir) await fs.rm(redirectScreenshotDir, { recursive: true, force: true });
+  });
+
+  it('reports the settled destination URL, not the originally requested one', async () => {
+    const result = await renderDiff(redirectBrowser, sourceUrl, {
+      screenshotDir: redirectScreenshotDir,
+    });
+
+    expect(result.renderedLandedUrl).toBe(destinationUrl);
+  }, 60_000);
+});

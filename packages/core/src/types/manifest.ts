@@ -133,6 +133,17 @@ export type ManifestPageStatus =
    *  recorded these as 'visited'; keep the broken-internal-link rule
    *  reading both shapes. */
   | 'http-error-status'
+  /** A 200 response whose page is a client-side redirect interstitial
+   *  (issue #85): the browser navigated away from the requested URL by
+   *  the time render-diff's settle wait completed, so the rendered
+   *  content actually belongs to another URL, not this one. Detected
+   *  post-hoc in write-audit.ts, after the page has already been
+   *  scanned - unlike every other non-'visited' status here, which is
+   *  decided before scanning starts. The URL stays inventoried; no
+   *  analysisCoverage is ever set for it, which is what excludes it from
+   *  the content-checked population and the report's analysed-page list
+   *  with no extra logic in either place. */
+  | 'redirect-interstitial'
   | 'error';
 
 /**
@@ -242,6 +253,10 @@ export interface ManifestPageEntry {
    *  the in-memory crawl result, so `normalize <dir>` can re-derive that
    *  finding offline from stored artifacts alone. */
   discoveredFrom?: string;
+  /** Populated only for status 'redirect-interstitial': the URL the
+   *  browser actually landed on. Traceability only, not required for any
+   *  coverage or dedupe logic. */
+  redirectTargetUrl?: string;
   /** Plan 021. Optional for historical manifests; absence on a current
    *  inventory-only page means no content analysis was planned because the
    *  page was not successfully crawled HTML. */
