@@ -62,31 +62,37 @@ function phrasesUsedIn(text: string, language: ReportLanguage): string[] {
  * "reads as two different parties" defect the varied-phrase change was
  * designed to avoid.
  *
- * Only mixing is a violation. A response that never names the provider at
- * all is left to the prompt: that would be a different, unmeasured
- * complaint, and this guard deliberately does not invent one.
+ * Since 2026-09-07 the phrase is chosen in code before the call (see
+ * selectProviderPhrase below) and the prompt shows only that one, so this
+ * guard no longer arbitrates between two phrasings the model was invited
+ * to choose from. It asserts a single fact: nothing but the assigned
+ * phrase names the provider.
+ *
+ * Using a non-assigned phrase is the only violation. A response that never
+ * names the provider at all is left to the prompt: that would be a
+ * different, unmeasured complaint, and this guard deliberately does not
+ * invent one.
  */
 export function findProviderPhraseViolationsInFields(
   fields: readonly ProseField[],
   language: ReportLanguage,
+  selectedPhrase: string,
 ): ProviderPhraseViolation[] {
   const violations: ProviderPhraseViolation[] = [];
-  let committed: { phrase: string; field: string } | undefined;
 
   for (const { field, text } of fields) {
     for (const phrase of phrasesUsedIn(text, language)) {
-      if (!committed) {
-        committed = { phrase, field };
-        continue;
-      }
-      // Anything other than the response's first phrase is a mix, and the
-      // violation names both sides so the retry feedback can say which two
-      // phrasings collided rather than just that something did.
-      if (phrase !== committed.phrase) {
+      // Anything other than the phrase this report was assigned is a
+      // violation. The anchor is the code-chosen phrase, never "whichever
+      // approved phrase appeared in the earliest-scanned field": that older
+      // rule made the verdict depend on scan order, so a single stray
+      // mention in `notes` could condemn sixteen internally consistent
+      // recommendedActions (Briketenia EN, 2026-09-07).
+      if (phrase !== selectedPhrase) {
         violations.push({
           field,
           text,
-          matched: `"${phrase}" after committing to "${committed.phrase}" in ${committed.field}`,
+          matched: `"${phrase}" instead of the assigned "${selectedPhrase}"`,
         });
       }
     }
@@ -101,6 +107,7 @@ export function findProviderPhraseViolationsInFields(
 export function findProviderPhraseViolations(
   output: WritingPassOutput,
   language: ReportLanguage,
+  selectedPhrase: string,
 ): ProviderPhraseViolation[] {
   const fields: ProseField[] = [
     { field: 'executiveSummary', text: output.executiveSummary },
@@ -116,7 +123,46 @@ export function findProviderPhraseViolations(
     });
   });
 
-  return findProviderPhraseViolationsInFields(fields, language);
+  return findProviderPhraseViolationsInFields(fields, language, selectedPhrase);
+}
+
+/**
+ * Picks the one phrase a given report may use, before the model is called.
+ *
+ * Why this exists, measured 2026-09-07: offering the model three approved
+ * synonyms and then forbidding their mixture put two instructions in
+ * tension, and the model resolved that tension the wrong way on five of
+ * five live runs. Three of those five exhausted the retry budget and
+ * produced no analysis at all, which under trade-off 44 means no
+ * deliverable, since the paid deliverable is the French and English pair.
+ *
+ * Showing exactly one phrase makes the mixture unrepresentable in the same
+ * spirit as trade-off 70's per-call theme-key schema: the failure is
+ * removed by construction rather than caught after the fact. The guard
+ * above survives as the assertion that should now never fire.
+ *
+ * The index is derived from the audit's identity, not the language, so the
+ * French and English reports of one audit name the provider correspondingly
+ * rather than drifting apart. A missing seed resolves to the first phrase,
+ * which keeps stored-analysis tooling and fixtures deterministic.
+ */
+export function selectProviderPhrase(language: ReportLanguage, seed?: string): string {
+  const phrases = TECHNICAL_PROVIDER_PHRASES[language];
+  return phrases[selectProviderPhraseIndex(seed, phrases.length)] as string;
+}
+
+/** FNV-1a, chosen because it is a few lines of arithmetic with no
+ *  dependency and a stable result across machines and Node versions - a
+ *  report regenerated next year must land on the same phrase it shipped
+ *  with, or a client comparing two copies sees their provider renamed. */
+export function selectProviderPhraseIndex(seed: string | undefined, count: number): number {
+  if (!seed) return 0;
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash % count;
 }
 
 /**
@@ -132,5 +178,6 @@ export function findProviderPhraseViolations(
  * exists to remove, so the correction has to say which words must match
  * and which must not.
  */
-export const PROVIDER_PHRASE_RETRY_HINT =
-  'Keep the phrasing you used first and change only the words that name the provider elsewhere. Do not make the sentences themselves uniform: the openings of your recommendedActions entries must still vary from theme to theme, and repeating one opening formula across every entry is its own defect.';
+export function providerPhraseRetryHint(selectedPhrase: string): string {
+  return `Use exactly "${selectedPhrase}" everywhere you name the provider, and no other wording for it. Do not make the sentences themselves uniform: the openings of your recommendedActions entries must still vary from theme to theme, and repeating one opening formula across every entry is its own defect.`;
+}

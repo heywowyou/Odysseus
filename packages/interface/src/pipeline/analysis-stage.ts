@@ -244,6 +244,10 @@ export async function runAnalysisStage(
     siteStats,
     dominantPerformanceMetric,
     transactionalFlowStatus(obligationAssessment),
+    // Seeds the provider-phrase choice. The auditId is stable across a
+    // re-run and across both languages, so regenerating a report never
+    // renames the client's provider and the FR/EN pair stays consistent.
+    manifest.auditId,
   );
   const generatedAt = new Date();
   const writingResult = await analyzeWriting(

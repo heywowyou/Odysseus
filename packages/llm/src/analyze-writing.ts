@@ -4,12 +4,13 @@ import { findBusinessClaimViolations } from './business-claim-guard.js';
 import { findExecutiveSummaryDigitViolations } from './executive-summary-digit-guard.js';
 import { findFindingCountViolations } from './finding-count-guard.js';
 import { findLanguageComplianceViolations } from './language-guard.js';
-import { findLegalConsequenceViolations } from './legal-consequence-guard.js';
+import { findLegalConsequenceViolations, excerptAroundMatch } from './legal-consequence-guard.js';
 import { findPageCountViolations } from './page-count-guard.js';
 import { findPositionalReferenceViolations } from './positional-reference-guard.js';
 import {
   findProviderPhraseViolations,
-  PROVIDER_PHRASE_RETRY_HINT,
+  providerPhraseRetryHint,
+  selectProviderPhrase,
 } from './provider-phrase-guard.js';
 import { findSeverityVocabularyViolations } from './severity-vocabulary-guard.js';
 import { buildWritingRetryFeedback } from './writing-prompt.js';
@@ -47,6 +48,9 @@ export async function analyzeWriting(
 ): Promise<AnalyzeWritingResult> {
   let lastFailureReason = '';
   let previousRejection: string | undefined;
+  // Resolved once rather than per attempt: the retry feedback must name the
+  // same phrase across every attempt, or a retry contradicts its predecessor.
+  const assignedProviderPhrase = input.providerPhrase ?? selectProviderPhrase(input.language);
 
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
     let result: Awaited<ReturnType<typeof callOpenAiForWriting>>;
@@ -99,7 +103,7 @@ export async function analyzeWriting(
     // response trips both.
     const legalViolations = findLegalConsequenceViolations(result.output, input.language);
     if (legalViolations.length > 0) {
-      lastFailureReason = `legal-consequence claim in field(s): ${legalViolations.map((v) => `${v.field} ("${v.matched}")`).join(', ')}`;
+      lastFailureReason = `legal-consequence claim in field(s): ${legalViolations.map((v) => `${v.field} ("${v.matched}" in "${excerptAroundMatch(v.text, v.matched)}")`).join(', ')}`;
       previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
@@ -194,12 +198,17 @@ export async function analyzeWriting(
     // Last of the rejecting guards deliberately: naming the provider two
     // ways is a presentation defect, not a claim the report should not be
     // making, so a response tripping this and a substantive guard records
-    // the substantive reason. Prompt text alone did not hold this - every
-    // regenerated French analysis mixed two approved phrasings at both 0.7
-    // and 1.0 (see provider-phrase-guard.ts).
-    const providerPhraseViolations = findProviderPhraseViolations(result.output, input.language);
+    // the substantive reason. Since the phrase is now assigned in code and
+    // the prompt shows only that one, this should be a guard that never
+    // fires; it stays because the model can still reach for an approved
+    // synonym it was never shown (see provider-phrase-guard.ts).
+    const providerPhraseViolations = findProviderPhraseViolations(
+      result.output,
+      input.language,
+      assignedProviderPhrase,
+    );
     if (providerPhraseViolations.length > 0) {
-      lastFailureReason = `provider phrasing is not consistent across the response: ${providerPhraseViolations.map((v) => `${v.field} (${v.matched})`).join(', ')}. ${PROVIDER_PHRASE_RETRY_HINT}`;
+      lastFailureReason = `provider phrasing does not match the one assigned to this report: ${providerPhraseViolations.map((v) => `${v.field} (${v.matched})`).join(', ')}. ${providerPhraseRetryHint(assignedProviderPhrase)}`;
       previousRejection = buildWritingRetryFeedback(lastFailureReason);
       console.error(
         `odysseus analyze (writing pass, language=${input.language}): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,

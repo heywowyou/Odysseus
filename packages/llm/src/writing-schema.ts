@@ -114,4 +114,10 @@ export interface WritingInput {
   /** Optional only for compatibility with stored-analysis tooling and test
    * fixtures that predate the guard. New analysis-stage calls always set it. */
   transactionalFlowStatus?: TransactionalFlowStatus;
+  /** The one phrasing this report may use to name the client's external
+   *  provider, chosen in code by selectProviderPhrase before the model is
+   *  called. Optional for the same reason as transactionalFlowStatus:
+   *  fixtures and stored-analysis tooling predate it, and consumers fall
+   *  back to the first approved phrase. */
+  providerPhrase?: string;
 }

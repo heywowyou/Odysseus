@@ -7,6 +7,7 @@ import type {
   WritingSiteStats,
   WritingThemeInput,
 } from './writing-schema.js';
+import { selectProviderPhrase } from './provider-phrase-guard.js';
 
 export type SiteContextInput = StructureInput['siteContext'];
 
@@ -81,6 +82,10 @@ export function buildWritingInput(
   siteStats: WritingSiteStats,
   dominantPerformanceMetric: 'lcp' | 'cls' | 'tbt' | null,
   transactionalFlowStatus: TransactionalFlowStatus = 'unknown',
+  /** Stable per-audit key (the auditId in the pipeline) that decides which
+   *  approved provider phrasing this report uses. Omitted by fixtures and
+   *  offline tooling, which then all resolve to the first phrase. */
+  providerPhraseSeed?: string,
 ): WritingInput {
   const byId = new Map(filteredFindings.map((f) => [f.findingId, f]));
 
@@ -106,6 +111,7 @@ export function buildWritingInput(
     siteStats,
     dominantPerformanceMetric,
     transactionalFlowStatus,
+    providerPhrase: selectProviderPhrase(language, providerPhraseSeed),
   };
 }
 

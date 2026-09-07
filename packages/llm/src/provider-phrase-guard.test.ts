@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   findProviderPhraseViolations,
   findProviderPhraseViolationsInFields,
-  PROVIDER_PHRASE_RETRY_HINT,
+  providerPhraseRetryHint,
+  selectProviderPhrase,
+  selectProviderPhraseIndex,
   TECHNICAL_PROVIDER_PHRASES,
 } from './provider-phrase-guard.js';
 import type { WritingPassOutput } from './writing-schema.js';
@@ -23,202 +25,167 @@ function output(overrides: Partial<WritingPassOutput> = {}): WritingPassOutput {
   } as WritingPassOutput;
 }
 
-describe('provider phrase consistency', () => {
-  it('accepts a response that uses one approved phrase throughout', () => {
-    const violations = findProviderPhraseViolations(
-      output({
-        themes: [
-          {
-            themeKey: 't1',
-            title: 'Un thème',
-            businessImpact: 'Un impact. Un deuxième. Un troisième.',
-            recommendedActions: [
-              'Demandez à votre prestataire technique de corriger ce point.',
-              'Faites confirmer par votre prestataire technique que la correction est en ligne.',
-            ],
-          },
-        ],
-      } as Partial<WritingPassOutput>),
-      'fr',
-    );
-    expect(violations).toEqual([]);
+function withActions(actions: string[], extra: Partial<WritingPassOutput> = {}): WritingPassOutput {
+  return output({
+    themes: [
+      {
+        themeKey: 't1',
+        title: 'Un thème',
+        businessImpact: 'Un impact. Un deuxième. Un troisième.',
+        recommendedActions: actions,
+      },
+    ],
+    ...extra,
+  } as Partial<WritingPassOutput>);
+}
+
+describe('provider phrase assignment', () => {
+  it('resolves to the first approved phrase when no seed is given', () => {
+    expect(selectProviderPhrase('fr')).toBe(TECHNICAL_PROVIDER_PHRASES.fr[0]);
+    expect(selectProviderPhrase('en')).toBe(TECHNICAL_PROVIDER_PHRASES.en[0]);
   });
 
-  // The measured defect: at both 0.7 and 1.0 every regenerated French
-  // analysis named the provider two ways inside one report.
-  it('rejects a response that mixes two approved phrases', () => {
-    const violations = findProviderPhraseViolations(
-      output({
-        themes: [
-          {
-            themeKey: 't1',
-            title: 'Un thème',
-            businessImpact: 'Un impact. Un deuxième. Un troisième.',
-            recommendedActions: [
-              'Demandez à votre prestataire technique de corriger ce point.',
-              'Demandez à votre prestataire web de corriger cet autre point.',
-            ],
-          },
-        ],
-      } as Partial<WritingPassOutput>),
-      'fr',
-    );
-    expect(violations).toHaveLength(1);
-    expect(violations[0]!.matched).toContain('votre prestataire web');
-    expect(violations[0]!.matched).toContain('votre prestataire technique');
+  it('is stable for the same seed', () => {
+    const seed = 'cb8bad97-1cfb-4897-92bb-bef9d7266780';
+    expect(selectProviderPhrase('fr', seed)).toBe(selectProviderPhrase('fr', seed));
   });
 
-  it('names the field the collision happened in', () => {
-    const violations = findProviderPhraseViolations(
-      output({
-        themes: [
-          {
-            themeKey: 't1',
-            title: 'Un thème',
-            businessImpact: 'Un impact. Un deuxième. Un troisième.',
-            recommendedActions: [
-              'Demandez à votre prestataire technique de corriger ce point.',
-              'Demandez à votre prestataire web de corriger cet autre point.',
-            ],
-          },
-        ],
-      } as Partial<WritingPassOutput>),
-      'fr',
-    );
-    expect(violations[0]!.field).toBe('themes[0](t1).recommendedActions[1]');
+  // The FR and EN reports of one audit are the paid deliverable (trade-off
+  // 44). Naming the provider differently between them would be the same
+  // "two parties" defect the guard exists to prevent, one document apart.
+  it('picks the same index in both languages for one audit', () => {
+    for (const seed of ['audit-a', 'audit-b', 'audit-c', 'audit-d', 'audit-e']) {
+      const fr = TECHNICAL_PROVIDER_PHRASES.fr.indexOf(selectProviderPhrase('fr', seed));
+      const en = TECHNICAL_PROVIDER_PHRASES.en.indexOf(selectProviderPhrase('en', seed));
+      expect(fr).toBe(en);
+    }
   });
 
-  it('catches a mix that spans two different themes', () => {
-    const violations = findProviderPhraseViolationsInFields(
-      [
-        { field: 'themes[0].recommendedActions[0]', text: 'Voyez avec votre prestataire web.' },
-        {
-          field: 'themes[1].recommendedActions[0]',
-          text: 'Voyez avec votre prestataire technique.',
-        },
-      ],
-      'fr',
-    );
-    expect(violations).toHaveLength(1);
+  it('always returns an approved phrase', () => {
+    for (let i = 0; i < 200; i++) {
+      expect(TECHNICAL_PROVIDER_PHRASES.fr).toContain(selectProviderPhrase('fr', `seed-${i}`));
+    }
   });
 
-  it('catches a mix that spans a businessImpact and a recommendedAction', () => {
-    const violations = findProviderPhraseViolationsInFields(
-      [
-        { field: 'themes[0].businessImpact', text: 'Votre prestataire web gère ce point.' },
-        {
-          field: 'themes[0].recommendedActions[0]',
-          text: 'Demandez à votre prestataire technique de le corriger.',
-        },
-      ],
-      'fr',
-    );
-    expect(violations).toHaveLength(1);
+  // Cross-report variety was lever A's whole purpose; a hash that collapsed
+  // every audit onto one phrase would silently restore the defect plan 027
+  // set out to remove.
+  it('spreads different audits across every approved phrase', () => {
+    const seen = new Set<number>();
+    for (let i = 0; i < 200; i++) seen.add(selectProviderPhraseIndex(`audit-${i}`, 3));
+    expect(seen.size).toBe(3);
   });
 
-  // The model emits a typographic apostrophe as readily as a straight one,
-  // and typography normalization runs only after the guards.
-  it('matches the apostrophe-bearing phrase in both its straight and typographic forms', () => {
-    const straight = findProviderPhraseViolationsInFields(
-      [
-        { field: 'a', text: "Demandez à l'équipe technique en charge de votre site." },
-        { field: 'b', text: 'Demandez à votre prestataire web.' },
-      ],
-      'fr',
-    );
-    const typographic = findProviderPhraseViolationsInFields(
-      [
-        { field: 'a', text: 'Demandez à l’équipe technique en charge de votre site.' },
-        { field: 'b', text: 'Demandez à votre prestataire web.' },
-      ],
-      'fr',
-    );
-    expect(straight).toHaveLength(1);
-    expect(typographic).toHaveLength(1);
-  });
-
-  it('matches a phrase capitalized at the start of a sentence', () => {
-    const violations = findProviderPhraseViolationsInFields(
-      [
-        { field: 'a', text: 'Votre prestataire technique doit corriger ce point.' },
-        { field: 'b', text: 'Votre prestataire web doit corriger cet autre point.' },
-      ],
-      'fr',
-    );
-    expect(violations).toHaveLength(1);
-  });
-
-  // Deliberate non-behaviour: silence about the provider is the prompt's
-  // business, not this guard's. Asserted so a future edit that starts
-  // rejecting it is a visible decision rather than a drive-by widening.
-  it('accepts a response that never names the provider at all', () => {
-    expect(findProviderPhraseViolations(output(), 'fr')).toEqual([]);
-  });
-
-  it('applies the same rule to English', () => {
-    const violations = findProviderPhraseViolationsInFields(
-      [
-        { field: 'a', text: 'Ask your technical provider to fix this.' },
-        { field: 'b', text: 'Ask your website provider to fix that.' },
-      ],
-      'en',
-    );
-    expect(violations).toHaveLength(1);
-  });
-
-  it('does not treat one language’s phrases as the other’s', () => {
-    const violations = findProviderPhraseViolationsInFields(
-      [
-        { field: 'a', text: 'Ask your technical provider to fix this.' },
-        { field: 'b', text: 'Demandez à votre prestataire web de corriger cela.' },
-      ],
-      'en',
-    );
-    expect(violations).toEqual([]);
-  });
-
-  it('reports one violation per offending field, not one per response', () => {
-    const violations = findProviderPhraseViolationsInFields(
-      [
-        { field: 'a', text: 'Ask your technical provider to fix this.' },
-        { field: 'b', text: 'Ask your website provider to fix that.' },
-        { field: 'c', text: 'Ask your website provider to fix the other thing.' },
-      ],
-      'en',
-    );
-    expect(violations).toHaveLength(2);
-    expect(violations.map((v) => v.field)).toEqual(['b', 'c']);
-  });
-});
-
-describe('the approved phrase table', () => {
-  it('offers more than one phrasing per language, which is the whole point', () => {
-    expect(TECHNICAL_PROVIDER_PHRASES.fr.length).toBeGreaterThan(1);
-    expect(TECHNICAL_PROVIDER_PHRASES.en.length).toBeGreaterThan(1);
-  });
-
-  // If one phrase contained another, the substring match would report a
-  // spurious mix every time the longer one was used.
-  it('has no phrase that contains another, in either language', () => {
-    for (const language of ['fr', 'en'] as const) {
-      const phrases = TECHNICAL_PROVIDER_PHRASES[language];
-      for (const a of phrases) {
-        for (const b of phrases) {
-          if (a === b) continue;
-          expect(a.includes(b)).toBe(false);
-        }
-      }
+  it('keeps the index inside the phrase list', () => {
+    for (let i = 0; i < 500; i++) {
+      const index = selectProviderPhraseIndex(`x${i}`, 3);
+      expect(index).toBeGreaterThanOrEqual(0);
+      expect(index).toBeLessThan(3);
     }
   });
 });
 
-describe('the retry hint', () => {
-  // The guard's first live run fixed the mixing and produced twenty-nine
-  // identically-opening actions instead, because "be consistent" was the
-  // last instruction the model read. The hint exists to stop that, so it
-  // has to keep saying both halves.
-  it('tells the model to keep varying sentence openings, not just the phrase', () => {
-    expect(PROVIDER_PHRASE_RETRY_HINT).toMatch(/vary/i);
-    expect(PROVIDER_PHRASE_RETRY_HINT).toMatch(/recommendedActions/);
+describe('provider phrase guard', () => {
+  it('accepts a response that uses the assigned phrase throughout', () => {
+    const violations = findProviderPhraseViolations(
+      withActions([
+        'Demandez à votre prestataire technique de corriger ce point.',
+        'Faites confirmer par votre prestataire technique que la correction est en ligne.',
+      ]),
+      'fr',
+      'votre prestataire technique',
+    );
+    expect(violations).toEqual([]);
+  });
+
+  it('rejects an approved phrase that is not the assigned one', () => {
+    const violations = findProviderPhraseViolations(
+      withActions([
+        'Demandez à votre prestataire technique de corriger ce point.',
+        'Demandez à votre prestataire web de corriger cet autre point.',
+      ]),
+      'fr',
+      'votre prestataire technique',
+    );
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.matched).toContain('votre prestataire web');
+    expect(violations[0]?.matched).toContain('votre prestataire technique');
+  });
+
+  // The defect that made the old first-wins anchor unsafe: `notes` is
+  // scanned second, so one stray mention there used to condemn every
+  // internally consistent action. The verdict must follow the assigned
+  // phrase, not scan order.
+  it('blames the stray field, not the consistent majority', () => {
+    const violations = findProviderPhraseViolations(
+      withActions(
+        [
+          'Demandez à votre prestataire web de corriger ce point.',
+          'Faites vérifier par votre prestataire web que la correction tient.',
+        ],
+        { notes: 'Un point à confier à votre prestataire technique.' },
+      ),
+      'fr',
+      'votre prestataire web',
+    );
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.field).toBe('notes');
+  });
+
+  it('accepts a response that never names the provider', () => {
+    expect(
+      findProviderPhraseViolations(
+        withActions(['Corrigez le contraste du bouton.']),
+        'fr',
+        'votre prestataire technique',
+      ),
+    ).toEqual([]);
+  });
+
+  it('matches the assigned phrase written with a typographic apostrophe', () => {
+    const assigned = "l'équipe technique en charge de votre site";
+    const violations = findProviderPhraseViolationsInFields(
+      [{ field: 'notes', text: 'Confiez ce point à l’équipe technique en charge de votre site.' }],
+      'fr',
+      assigned,
+    );
+    expect(violations).toEqual([]);
+  });
+
+  it('applies the same rule in English', () => {
+    const violations = findProviderPhraseViolations(
+      withActions([
+        'Have your website provider correct this.',
+        'Have your technical provider confirm the fix.',
+      ]),
+      'en',
+      'your website provider',
+    );
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.matched).toContain('your technical provider');
+  });
+
+  it('reports every field that uses a non-assigned phrase', () => {
+    const violations = findProviderPhraseViolationsInFields(
+      [
+        { field: 'a', text: 'confiez ce point à votre prestataire web' },
+        { field: 'b', text: 'confiez ce point à votre prestataire web' },
+      ],
+      'fr',
+      'votre prestataire technique',
+    );
+    expect(violations.map((v) => v.field)).toEqual(['a', 'b']);
+  });
+});
+
+describe('provider phrase retry hint', () => {
+  it('names the assigned phrase so the retry knows what to use', () => {
+    expect(providerPhraseRetryHint('votre prestataire web')).toContain('votre prestataire web');
+  });
+
+  // The measured regression the hint exists to prevent: told only to "be
+  // consistent", the model made all 29 actions identical.
+  it('still forbids making the sentences themselves uniform', () => {
+    expect(providerPhraseRetryHint('votre prestataire web')).toMatch(/vary|uniform/i);
   });
 });

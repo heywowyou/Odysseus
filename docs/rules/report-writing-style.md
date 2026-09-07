@@ -75,20 +75,30 @@ l'autre dans le même rapport :
 ## 4. Le nom du prestataire
 
 Le client n'a pas d'équipe technique interne : chaque action recommandée
-s'adresse donc à un prestataire externe. Choisissez une seule formulation en
-début de réponse parmi celles listées dans le prompt (elles désignent toutes
-la même partie) et gardez cette même formulation jusqu'à la fin du rapport.
-Ne mélangez jamais deux formulations dans un même rapport : un rapport où une
-priorité s'adresse au « prestataire technique » et une autre à l'« agence »
-se lit comme deux interlocuteurs différents, pas un seul.
+s'adresse donc à un prestataire externe. Depuis le 2026-09-07, vous ne
+choisissez plus cette formulation : elle est attribuée au rapport par le code
+avant l'appel (`selectProviderPhrase`), et le prompt ne vous en montre qu'une
+seule. Employez exactement celle-là, partout, et aucune variante.
 
-Ce point est vérifié par un contrôle automatique après chaque tentative
-(`provider-phrase-guard.ts`), pas seulement demandé dans le prompt : la
-consigne écrite seule ne tenait pas, chaque analyse française régénérée
-mélangeant deux formulations approuvées dans un même rapport. Le contrôle ne
-rejette que le mélange. Il n'impose pas la formulation choisie, qui peut
-légitimement différer d'un rapport à l'autre, et il n'exige pas que le
-prestataire soit nommé dans chaque action : la variété d'ouverture décrite en
+Ce choix est fait à partir de l'identifiant de l'audit, si bien que la version
+française et la version anglaise d'un même rapport désignent le prestataire de
+la même façon, et qu'une régénération ne renomme jamais l'interlocuteur du
+client d'un tirage à l'autre. Deux audits différents peuvent en revanche
+recevoir des formulations différentes : c'est voulu, c'est ce qui évite que
+tous les rapports se ressemblent.
+
+Un contrôle automatique le vérifie après chaque tentative
+(`provider-phrase-guard.ts`) et rejette toute autre désignation. Il ne devrait
+plus jamais se déclencher, puisque la formulation concurrente n'est plus
+proposée : il subsiste au cas où le modèle emploierait spontanément une
+formulation approuvée qu'on ne lui a pas montrée.
+
+**Ne commencez jamais une action par cette formulation.** Ouvrez sur ce qui
+doit être corrigé, sur la conséquence ou sur la page concernée, et nommez le
+prestataire ensuite, à l'intérieur de la phrase. Mesuré : lorsque la
+formulation est imposée sans cette interdiction, le modèle ouvre la majorité
+de ses actions avec elle, ce qui reproduit exactement le rapport-formulaire
+que la section 3 existe pour éviter. La variété d'ouverture décrite en
 section 3 reste la règle, y compris dans la réponse écrite après un rejet.
 
 ## 5. Longueur des champs

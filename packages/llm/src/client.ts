@@ -186,6 +186,7 @@ export async function callOpenAiForWriting(
             input.language,
             usedFallbackContext,
             input.dominantPerformanceMetric,
+            input.providerPhrase,
           ),
         },
         { role: 'user', content: buildWritingUserPrompt(input, previousRejection) },

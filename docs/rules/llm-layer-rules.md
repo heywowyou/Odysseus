@@ -427,19 +427,49 @@ rate than the 100-percent baseline it replaced. With the hint naming which
 words must match and which must not, the same audit came back at
 fifteen-of-thirty-five shared openings with the phrasing still consistent.
 
-**Known cost, and the recommended way out.** Offering the model several
-approved phrasings and then forbidding their mixture is a standing tension: the
-guard fires on most first attempts, and both stored audits have exhausted their
-retries at least once, producing no analysis at all. It gets worse with every
-instruction that asks for more variety elsewhere in the prose, because varying
-the provider's name is one of the ways the model satisfies such a request. The
-structural fix is to stop asking: have code pick one phrase per report from
-`TECHNICAL_PROVIDER_PHRASES` and show the model only that one. Mixing then
-becomes unrepresentable rather than policed, the retries disappear, and lever
-A's cross-report variety improves, since a choosing model tends to take the
-first option listed. It needs the audit's identity threaded into
-`buildWritingSystemPrompt`; `WritingInput.siteContext` carries no stable
-site key today, so it is a small signature change through `client.ts`.
+**Amended 2026-09-07: the phrase is now assigned in code, not chosen by the
+model.** The arrangement above was measured again after plan 028 landed and
+had to be replaced. Offering three approved phrasings and then forbidding
+their mixture put two instructions in tension, and the model resolved that
+tension the wrong way on five of five live runs: the guard fired on the
+first attempt every time, and three of the five exhausted the retry budget
+and produced no analysis at all. Under trade-off 44 that means no
+deliverable, since the paid deliverable is the French and English pair, and
+neither stored audit could produce one.
+
+`selectProviderPhrase(language, seed)` now picks the phrase before the call
+and `buildWritingSystemPrompt` shows only that one. The mixture is
+unrepresentable rather than policed, in the same spirit as trade-off 70's
+per-call theme-key schema. The seed is the `auditId`, threaded through
+`buildWritingInput` and `WritingInput.providerPhrase`, so that:
+
+- regenerating a report never renames the client's provider, and
+- the French and English halves of one audit land on the same index, which
+  matters because they ship together.
+
+The guard survives as the assertion that should now never fire, and its
+anchor changed with it. It used to treat whichever approved phrase appeared
+in the earliest-scanned field as the commitment, which made the verdict a
+scan-order artifact: `notes` is scanned second, so one stray mention there
+condemned sixteen internally consistent recommendedActions (Briketenia EN,
+2026-09-07). It now compares against the assigned phrase and nothing else,
+and `providerPhraseRetryHint` names that phrase in the correction.
+
+Measured after the change, same two audits, same stored structure passes:
+four of four runs succeeded with zero retries, against three failures in
+five before it.
+
+**One prose regression it caused, and the fix.** Removing the choice let the
+model satisfy the constraint the lazy way instead: the first English run
+opened twenty-one of thirty-six actions with "Your website provider". The
+prompt permitted this, saying only that using the phrase "does not mean
+starting with it". Because the phrase is now fixed, a variety instruction can
+no longer be satisfied by swapping it, so the instruction became a
+prohibition in both languages: never begin a recommendedActions entry with
+the provider wording, name it later inside the sentence. Re-measured, the
+same run fell to two of thirty-six, and shared five-word openings across all
+four runs sit between zero and seven percent, against one hundred percent at
+the pre-plan-027 baseline.
 
 **A prompt example is an anchor, not an illustration.** Measured 2026-09-07 on
 the executive summary's closing sentence: three example closings with an

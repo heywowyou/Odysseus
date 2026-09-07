@@ -39,7 +39,13 @@ const LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {
     /\bamendes?\b/i,
     /\bsanctions?\b/i,
     /\bp[ée]nalit[ée]s?\b/i,
-    /\bpoursuites?\b/i,
+    // "poursuite" is a homonym: "la poursuite de vos objectifs" is
+    // "continuing", not "prosecution", and the bare pattern rejected a whole
+    // French run over it on 2026-09-07. The legal sense in this register is
+    // either the plural on its own ("passible de poursuites") or the
+    // singular carrying an explicit legal qualifier.
+    /\bpoursuites\b/i,
+    /\bpoursuite\s+(?:judiciaire|p[ée]nale|civile)\b/i,
     /\brisques? juridiques?\b/i,
     /\bcontentieux\b/i,
     /\bmise en demeure\b/i,
@@ -109,4 +115,16 @@ export function findLegalConsequenceViolations(
   ];
 
   return findLegalConsequenceViolationsInFields(fields, language);
+}
+
+/** A matched word alone is not diagnosable: several of the French patterns
+ *  above are ambiguous in ordinary business prose ("poursuite" is as often
+ *  "continuation" as "prosecution"), so the surrounding clause is what tells
+ *  an operator whether a rejection was a real rule 6 breach or a homonym. */
+export function excerptAroundMatch(text: string, matched: string, radius = 60): string {
+  const index = text.toLowerCase().indexOf(matched.toLowerCase());
+  if (index < 0) return text.slice(0, radius * 2);
+  const start = Math.max(0, index - radius);
+  const end = Math.min(text.length, index + matched.length + radius);
+  return `${start > 0 ? '...' : ''}${text.slice(start, end)}${end < text.length ? '...' : ''}`;
 }

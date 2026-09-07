@@ -106,20 +106,48 @@ describe('item 3.7: the writing prompt assumes no in-house developer', () => {
 // plan 027, lever A: one consistent addressee phrase per response, chosen
 // from a small approved set, never mixed within one response.
 describe('plan 027: the writing prompt uses one consistent addressee phrase per response, never mixed', () => {
-  it('instructs the model to use the same chosen phrasing throughout, in French', () => {
-    const prompt = buildWritingSystemPrompt('fr', false, null);
-    expect(prompt).toContain('Ne mélangez jamais deux de ces formulations dans une même réponse');
-    for (const phrase of TECHNICAL_PROVIDER_PHRASES.fr) {
-      expect(prompt).toContain(phrase);
+  // The regression this replaces: the prompt used to list all three approved
+  // phrases and ask the model to pick one and never mix them. Measured over
+  // five live runs on 2026-09-07, the model mixed them every time and three
+  // of the five exhausted the retry budget entirely. Showing exactly one
+  // phrase is what makes the mixture unrepresentable, so a prompt that
+  // reintroduces an alternative reintroduces the failure.
+  it('shows only the assigned phrase and never an alternative, in French', () => {
+    for (const assigned of TECHNICAL_PROVIDER_PHRASES.fr) {
+      const prompt = buildWritingSystemPrompt('fr', false, null, assigned);
+      expect(prompt).toContain(assigned);
+      for (const other of TECHNICAL_PROVIDER_PHRASES.fr.filter((p) => p !== assigned)) {
+        expect(prompt).not.toContain(other);
+      }
     }
   });
 
-  it('instructs the model to use the same chosen phrasing throughout, in English', () => {
-    const prompt = buildWritingSystemPrompt('en', false, null);
-    expect(prompt).toContain('Never mix two of these phrasings within one response');
-    for (const phrase of TECHNICAL_PROVIDER_PHRASES.en) {
-      expect(prompt).toContain(phrase);
+  it('shows only the assigned phrase and never an alternative, in English', () => {
+    for (const assigned of TECHNICAL_PROVIDER_PHRASES.en) {
+      const prompt = buildWritingSystemPrompt('en', false, null, assigned);
+      expect(prompt).toContain(assigned);
+      for (const other of TECHNICAL_PROVIDER_PHRASES.en.filter((p) => p !== assigned)) {
+        expect(prompt).not.toContain(other);
+      }
     }
+  });
+
+  it('states that naming the provider any other way is rejected, in both languages', () => {
+    expect(buildWritingSystemPrompt('fr', false, null)).toContain(
+      'rejette une réponse qui nomme le prestataire autrement',
+    );
+    expect(buildWritingSystemPrompt('en', false, null)).toContain(
+      'rejects a response that names the provider any other way',
+    );
+  });
+
+  it('falls back to a valid approved phrase when none is assigned', () => {
+    expect(buildWritingSystemPrompt('fr', false, null)).toContain(
+      TECHNICAL_PROVIDER_PHRASES.fr[0] as string,
+    );
+    expect(buildWritingSystemPrompt('en', false, null)).toContain(
+      TECHNICAL_PROVIDER_PHRASES.en[0] as string,
+    );
   });
 
   // Same guard-mirroring rule the WCAG and severity notes follow: the
@@ -143,13 +171,15 @@ describe('plan 027: the writing prompt uses one consistent addressee phrase per 
   it('separates naming the provider from opening on it, in French', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null);
     expect(prompt).toContain('Employez cette formulation dans chaque entrée de recommendedActions');
-    expect(prompt).toContain('et surtout pas de commencer par elle');
+    expect(prompt).toContain(
+      'ne commencez jamais une entrée de recommendedActions par cette formulation',
+    );
   });
 
   it('separates naming the provider from opening on it, in English', () => {
     const prompt = buildWritingSystemPrompt('en', false, null);
-    expect(prompt).toContain('Use that phrasing in every recommendedActions entry');
-    expect(prompt).toContain('specifically does not mean starting with it');
+    expect(prompt).toContain('Use that wording in every recommendedActions entry');
+    expect(prompt).toContain('Never begin a recommendedActions entry with that wording');
   });
 });
 

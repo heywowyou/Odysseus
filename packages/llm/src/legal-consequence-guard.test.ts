@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { findLegalConsequenceViolations } from './legal-consequence-guard.js';
+import {
+  excerptAroundMatch,
+  findLegalConsequenceViolationsInFields,
+  findLegalConsequenceViolations,
+} from './legal-consequence-guard.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
 function buildOutput(overrides: Partial<WritingPassOutput> = {}): WritingPassOutput {
@@ -157,5 +161,59 @@ describe('findLegalConsequenceViolations', () => {
       field: 'themes[0](t1).title',
       matched: 'risques juridiques',
     });
+  });
+});
+
+// "poursuite" is a homonym. On 2026-09-07 the bare /\bpoursuites?\b/ pattern
+// rejected an entire French run three attempts running, producing no analysis
+// at all, on prose that was about continuing the client's work. The legal
+// sense still has to be caught; the everyday one must not be.
+describe('poursuite: prosecution versus continuation', () => {
+  const fires = (text: string): boolean =>
+    findLegalConsequenceViolationsInFields([{ field: 'executiveSummary', text }], 'fr').length > 0;
+
+  it('allows the everyday sense of continuing something', () => {
+    expect(
+      fires('La poursuite de votre développement en ligne dépend de la fiabilité du site.'),
+    ).toBe(false);
+    expect(fires('Ces corrections permettront la poursuite de vos objectifs commerciaux.')).toBe(
+      false,
+    );
+    expect(fires('Nous recommandons la poursuite des efforts engagés sur le référencement.')).toBe(
+      false,
+    );
+  });
+
+  it('still catches the legal sense', () => {
+    expect(fires('Corrigez cette page, faute de quoi vous êtes passible de poursuites.')).toBe(
+      true,
+    );
+    expect(fires('Une poursuite judiciaire reste possible.')).toBe(true);
+    expect(fires('Une poursuite pénale peut être engagée.')).toBe(true);
+  });
+});
+
+// A rejection that prints one bare word is not diagnosable: it was exactly
+// this that hid the poursuite homonym until a run was traced by hand.
+describe('excerptAroundMatch', () => {
+  it('returns the clause around the match', () => {
+    const excerpt = excerptAroundMatch(
+      'Votre site presente plusieurs defauts. Vous etes passible de poursuites. Corrigez-les.',
+      'poursuites',
+    );
+    expect(excerpt).toContain('poursuites');
+    expect(excerpt).toContain('passible de');
+  });
+
+  it('marks that it trimmed each side', () => {
+    const long = `${'a'.repeat(200)} amende ${'b'.repeat(200)}`;
+    const excerpt = excerptAroundMatch(long, 'amende');
+    expect(excerpt.startsWith('...')).toBe(true);
+    expect(excerpt.endsWith('...')).toBe(true);
+    expect(excerpt.length).toBeLessThan(long.length);
+  });
+
+  it('falls back to the start of the text when the match is not found', () => {
+    expect(excerptAroundMatch('un texte neutre', 'absent')).toBe('un texte neutre');
   });
 });
