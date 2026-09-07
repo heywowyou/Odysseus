@@ -99,11 +99,21 @@ function classifyRole(profile: PageAuditProfile): RoleClassification {
   // booking engine (issue #86) carries the same intent and the same
   // reasoning, since a hotel handing booking off to a PMS has no
   // same-document form to detect at all.
+  //
+  // Issue #89: the reason code names the mechanism that actually fired.
+  // Collapsing both kinds under 'transactional-form-detected' recorded a
+  // form as the provenance for a decision no form was involved in, on
+  // every page of every site whose booking is a link-out - which is the
+  // population the link-out signal exists for.
   if (kinds.has('transactional-form') || kinds.has('external-transactional-link')) {
+    const reasonCodes = [
+      ...(kinds.has('transactional-form') ? ['transactional-form-detected'] : []),
+      ...(kinds.has('external-transactional-link') ? ['transactional-link-out-detected'] : []),
+    ];
     return {
       role: 'transactional',
       confidence: 'high',
-      reasonCodes: ['transactional-form-detected'],
+      reasonCodes,
     };
   }
 

@@ -114,6 +114,20 @@ const CONTENT_JSON_LD_TYPES = new Set([
 const LISTING_CLASS_PATTERN =
   /\b(archive|blog-index|category|tag|taxonomy|listing|search-results|pagination)\b/i;
 
+/** Issue #88: containers that exist once per page across the whole site.
+ *  An external transactional link inside one of them is site navigation,
+ *  not a fact about the page it appears on, so it contributes nothing to
+ *  the page's transactional signal. Exported so the jsdom test pins the
+ *  vocabulary; extractRawPageAuditFacts inlines the same selector because
+ *  an evaluate closure cannot reference module scope - keep the two in
+ *  sync. */
+export const SITE_WIDE_CHROME_SELECTOR =
+  'header, footer, nav, [role="navigation"], [role="banner"], [role="contentinfo"]';
+
+export function anchorIsInSiteWideChrome(anchor: Element): boolean {
+  return anchor.closest(SITE_WIDE_CHROME_SELECTOR) !== null;
+}
+
 /** One signal per matching class token, deduplicated by kind: the planner
  *  only ever counts a kind once regardless of how many class names or
  *  JSON-LD blocks produced it. */
@@ -290,8 +304,27 @@ export async function extractRawPageAuditFacts(
     // rather than hosting its own form. Read from the anchor's visible
     // text, since the destination is an opaque third-party URL with no
     // reliable naming convention to match on.
+    //
+    // Issue #88: anchors inside site-wide chrome are excluded. A booking
+    // link in the global header or footer is present on every page of the
+    // site, so it carries no page-specific signal; counting it classified
+    // every page of a hotel site (the target market) transactional with
+    // high confidence, including the privacy policy, and disarmed plan
+    // 026's Lighthouse stratification by construction. A page that links
+    // out to booking from its content area still fires. Unlike the form
+    // signal it was modelled on, which is page-local by nature, a link
+    // needs this exclusion to mean anything about the page it appears on.
+    // The selector is SITE_WIDE_CHROME_SELECTOR, inlined because an
+    // evaluate closure cannot reference module scope; keep the two in sync.
     let externalTransactionalLinkCount = 0;
     for (const anchor of Array.from(doc.querySelectorAll('a[href]'))) {
+      if (
+        anchor.closest(
+          'header, footer, nav, [role="navigation"], [role="banner"], [role="contentinfo"]',
+        ) !== null
+      ) {
+        continue;
+      }
       const href = anchor.getAttribute('href') ?? '';
       let isExternal: boolean;
       try {

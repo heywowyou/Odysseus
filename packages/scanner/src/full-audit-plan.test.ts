@@ -159,6 +159,37 @@ describe('buildContentAuditPlan', () => {
     expect(plan.decisions[0]!.confidence).toBe('high');
   });
 
+  // Issue #89: the reason code is the audit trail naming the mechanism
+  // that fired, so a link-out-only page must not record "form detected".
+  it('records the form reason code only for a form signal', () => {
+    const plan = buildContentAuditPlan([
+      profile('https://example.com/book', [transactionalSignal]),
+    ]);
+    expect(plan.decisions[0]!.reasonCodes).toContain('transactional-form-detected');
+    expect(plan.decisions[0]!.reasonCodes).not.toContain('transactional-link-out-detected');
+  });
+
+  it('records the link-out reason code, not the form one, for a link-out-only page', () => {
+    const plan = buildContentAuditPlan([
+      profile('https://example.com/book', [
+        { kind: 'external-transactional-link', detail: '1 link(s)' },
+      ]),
+    ]);
+    expect(plan.decisions[0]!.reasonCodes).toContain('transactional-link-out-detected');
+    expect(plan.decisions[0]!.reasonCodes).not.toContain('transactional-form-detected');
+  });
+
+  it('records both reason codes when both transactional signal kinds fired', () => {
+    const plan = buildContentAuditPlan([
+      profile('https://example.com/book', [
+        transactionalSignal,
+        { kind: 'external-transactional-link', detail: '1 link(s)' },
+      ]),
+    ]);
+    expect(plan.decisions[0]!.reasonCodes).toContain('transactional-form-detected');
+    expect(plan.decisions[0]!.reasonCodes).toContain('transactional-link-out-detected');
+  });
+
   it('falls back to unknown on conflicting listing and content signals', () => {
     const plan = buildContentAuditPlan([
       profile('https://example.com/conflicting', [contentSignal, ...listingSignals]),

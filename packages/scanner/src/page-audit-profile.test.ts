@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
+// jsdom ships no type declarations resolvable from this workspace, and
+// adding one for a single test is not warranted; the test needs only the
+// constructor and its window.document slice.
+// @ts-expect-error - no declaration file for 'jsdom'
+import { JSDOM } from 'jsdom';
 import {
+  anchorIsInSiteWideChrome,
   buildPageAuditProfile,
   classifyPageRoleSignals,
   hashTemplateFamily,
@@ -166,5 +172,51 @@ describe('buildPageAuditProfile', () => {
   it('omits template family id when there is no structural evidence', () => {
     const profile = buildPageAuditProfile(facts(), baseContext);
     expect(profile).not.toHaveProperty('templateFamilyId');
+  });
+});
+
+// Issue #88: a booking link in site-wide chrome appears on every page, so
+// it must contribute nothing to a page's transactional signal. These tests
+// pin the exclusion predicate (and its selector vocabulary) that
+// extractRawPageAuditFacts inlines inside its evaluate closure, which a
+// unit test cannot execute directly.
+describe('anchorIsInSiteWideChrome (issue #88)', () => {
+  function jsdomAnchors(html: string): Element[] {
+    const dom = new JSDOM(`<html><body>${html}</body></html>`) as {
+      window: { document: { querySelectorAll(selectors: string): ArrayLike<Element> } };
+    };
+    return Array.from(dom.window.document.querySelectorAll('a[href]'));
+  }
+
+  it('excludes booking links in header, footer, nav, and ARIA landmark roles', () => {
+    const anchors = jsdomAnchors(
+      [
+        '<header><a href="https://booking.example.com/h">Reserver un sejour</a></header>',
+        '<footer><a href="https://booking.example.com/f">Reserver un sejour</a></footer>',
+        '<nav><a href="https://booking.example.com/n">Reserver un sejour</a></nav>',
+        '<div role="banner"><a href="https://booking.example.com/b">Reserver un sejour</a></div>',
+        '<div role="navigation"><a href="https://booking.example.com/r">Reserver un sejour</a></div>',
+        '<div role="contentinfo"><a href="https://booking.example.com/c">Reserver un sejour</a></div>',
+      ].join(''),
+    );
+    expect(anchors).toHaveLength(6);
+    for (const anchor of anchors) {
+      expect(anchorIsInSiteWideChrome(anchor)).toBe(true);
+    }
+  });
+
+  it('keeps a booking link that sits in the page content area', () => {
+    const anchors = jsdomAnchors(
+      '<main><p><a href="https://booking.example.com/w">Reserver un sejour</a></p></main>',
+    );
+    expect(anchors).toHaveLength(1);
+    expect(anchorIsInSiteWideChrome(anchors[0]!)).toBe(false);
+  });
+
+  it('excludes through ancestry, not just the anchor itself', () => {
+    const anchors = jsdomAnchors(
+      '<header><div><span><a href="https://booking.example.com/d">Reserver un sejour</a></span></div></header>',
+    );
+    expect(anchorIsInSiteWideChrome(anchors[0]!)).toBe(true);
   });
 });
