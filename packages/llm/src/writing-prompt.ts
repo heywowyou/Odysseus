@@ -7,7 +7,7 @@ import {
   FINDING_NOUN_VOCABULARY,
   SEVERITY_VOCABULARY,
 } from './severity-vocabulary-guard.js';
-import type { WritingInput } from './writing-schema.js';
+import type { WritingInput, WritingSiteContext } from './writing-schema.js';
 import {
   MAX_BUSINESS_IMPACT_SENTENCES,
   MAX_RECOMMENDED_ACTIONS,
@@ -109,6 +109,49 @@ function dominantMetricNote(
     : `\n\nThe dominant performance problem on this site is ${label}. For any performance-category theme, recommendedActions must address this cause first, before any advice about image weight, CSS, or caching. Do not lead with image or CSS advice when the actual bottleneck is something else.`;
 }
 
+/** Plan 029 lever F: turns concrete, verified site facts into a prompt
+ *  note. Returns an empty string when none are present, which keeps the
+ *  prompt byte-identical to the pre-plan-029 text - the common case until
+ *  the follow-up plan wires the catalogue into these fields. Present facts
+ *  license concreteness (naming the city, the property type, the size of
+ *  the property), never invention beyond them and never a comparative
+ *  ("the largest in town") that no stated fact supports; the note says so
+ *  because the existing guards cover superlatives and counts, not silent
+ *  extrapolation from a new fact source. */
+export function businessFactsNote(
+  language: ReportLanguage,
+  siteContext: WritingSiteContext | undefined,
+): string {
+  const facts: string[] = [];
+  if (siteContext?.propertyType !== undefined) {
+    facts.push(
+      language === 'fr'
+        ? `type d'établissement : ${siteContext.propertyType}`
+        : `property type: ${siteContext.propertyType}`,
+    );
+  }
+  if (siteContext?.roomCount !== undefined) {
+    facts.push(
+      language === 'fr'
+        ? `nombre de chambres : ${siteContext.roomCount}`
+        : `room count: ${siteContext.roomCount}`,
+    );
+  }
+  if (siteContext?.city !== undefined) {
+    facts.push(language === 'fr' ? `ville : ${siteContext.city}` : `city: ${siteContext.city}`);
+  }
+  if (siteContext?.sector !== undefined) {
+    facts.push(
+      language === 'fr' ? `secteur : ${siteContext.sector}` : `sector: ${siteContext.sector}`,
+    );
+  }
+  if (facts.length === 0) return '';
+  const list = facts.join('; ');
+  return language === 'fr'
+    ? `\n\nVous disposez de faits vérifiés sur cet établissement, issus des données d'entrée de l'audit : ${list}. Servez-vous en pour rendre votre prose concrète quand cela éclaire la conséquence pour ce client précis : nommer la ville, le type d'établissement ou l'ordre de grandeur du site dans businessImpact, executiveSummary et recommendedActions. Ces faits se limitent à ceux énoncés ci-dessus : n'en inventez aucun autre (ni standing, ni chaîne, ni clientèle), et ils ne lèvent aucune des règles de ce prompt - toujours aucun nombre de pages, aucune conséquence légale, aucun superlatif commercial non nuancé, et jamais de comparaison avec d'autres établissements ("le plus grand de la ville"), qu'aucune donnée ne soutient.`
+    : `\n\nYou have verified facts about this property, from the audit's input data: ${list}. Use them to make your prose concrete where it clarifies the consequence for this particular client: name the city, the property type, or the size of the property in businessImpact, executiveSummary, and recommendedActions. These facts are limited to the ones stated above: invent no others (no star rating, no brand, no clientele), and they lift none of this prompt's rules - still no page counts, no legal consequences, no unhedged commercial superlatives, and never a comparison with other properties ("the largest in town"), which no stated fact supports.`;
+}
+
 /** System prompt for the writing pass: prose only, grouping decisions
  *  are already final. usedFallbackContext per docs/rules/llm-layer-rules.md
  *  section 4.
@@ -129,13 +172,22 @@ export function buildWritingSystemPrompt(
    *  by fixtures and offline tooling, which fall back to the first approved
    *  phrase for the language. */
   assignedPhrase?: string,
+  /** Plan 029 lever F: concrete site facts. Omitted, or carrying none of
+   *  the new fields, the prompt is byte-identical to before. */
+  siteContext?: WritingSiteContext,
 ): string {
   return language === 'fr'
-    ? buildFrenchWritingSystemPrompt(usedFallbackContext, dominantPerformanceMetric, assignedPhrase)
+    ? buildFrenchWritingSystemPrompt(
+        usedFallbackContext,
+        dominantPerformanceMetric,
+        assignedPhrase,
+        siteContext,
+      )
     : buildEnglishWritingSystemPrompt(
         usedFallbackContext,
         dominantPerformanceMetric,
         assignedPhrase,
+        siteContext,
       );
 }
 
@@ -152,6 +204,7 @@ function buildFrenchWritingSystemPrompt(
   usedFallbackContext: boolean,
   dominantPerformanceMetric: 'lcp' | 'cls' | 'tbt' | null,
   assignedPhrase?: string,
+  siteContext?: WritingSiteContext,
 ): string {
   const v = SEVERITY_VOCABULARY.fr;
   const fn = FINDING_NOUN_VOCABULARY.fr;
@@ -210,7 +263,7 @@ Chaque thème qui vous est présenté ci-dessous a une clé themeKey (par exempl
 - recommendedActions : entre ${MIN_RECOMMENDED_ACTIONS} et ${MAX_RECOMMENDED_ACTIONS} étapes concrètes suivantes. Ne listez jamais d'URL de page individuelle : le détail page par page appartient à l'annexe du rapport, pas à votre prose. Le client est une entreprise sans développeur interne, et personne chez lui ne dispose d'un lecteur d'écran ou d'un autre outil d'assistance technique. Chaque action est donc quelque chose à transmettre au prestataire externe : jamais une instruction aux développeurs du client, jamais une demande de test manuel par le client lui-même, ni avec un lecteur d'écran ni en testant la navigation au clavier. Écrivez par exemple "les rôles ARIA appropriés doivent être ajoutés à X" ou "${providerPhrase} peut ajouter les rôles ARIA appropriés à X" - deux constructions à alterner - plutôt que "formez vos développeurs à ARIA" ou "testez avec un lecteur d'écran".
 
 Rédigez également un executiveSummary destiné à un décideur non technique, et un champ notes pour tout ce qui mérite d'être signalé au client par ailleurs. Le modèle de rapport indique déjà les décomptes exacts (pages auditées, nombre total de constats, constats par sévérité) dans une phrase placée juste avant votre texte d'executiveSummary, donc ne répétez, n'estimez ni ne référencez vous-même aucun de ces chiffres : n'écrivez jamais de nombre de constats, de pages ou d'occurrences nulle part dans executiveSummary, même approximatif ou arrondi. Votre réponse est vérifiée pour cela après chaque tentative ; une réponse contenant un chiffre dans executiveSummary est rejetée et une nouvelle tentative vous est demandée. N'écrivez que le cadrage qualitatif et la prose de liaison qui accompagne les décomptes déjà énoncés : quel type de problème domine, pourquoi cela compte pour l'activité, et quelle est l'image d'ensemble.
-${dominantMetricNote('fr', dominantPerformanceMetric)}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${providerPhraseNote}${sentenceStructureNote}${executiveSummaryClosingNote}${positionalReferenceNote}
+${dominantMetricNote('fr', dominantPerformanceMetric)}${businessFactsNote('fr', siteContext)}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${providerPhraseNote}${sentenceStructureNote}${executiveSummaryClosingNote}${positionalReferenceNote}
 ${LANGUAGE_INSTRUCTION.fr}${usedFallbackContext ? fallbackNote('fr') : ''}
 
 Répondez uniquement avec un JSON structuré conforme au schéma requis. Aucune prose en dehors des champs JSON, aucun bloc de code markdown.`;
@@ -220,6 +273,7 @@ function buildEnglishWritingSystemPrompt(
   usedFallbackContext: boolean,
   dominantPerformanceMetric: 'lcp' | 'cls' | 'tbt' | null,
   assignedPhrase?: string,
+  siteContext?: WritingSiteContext,
 ): string {
   const v = SEVERITY_VOCABULARY.en;
   const fn = FINDING_NOUN_VOCABULARY.en;
@@ -288,7 +342,7 @@ Each theme you are given below has a themeKey (for example "t1"). The themes fie
 - recommendedActions: between ${MIN_RECOMMENDED_ACTIONS} and ${MAX_RECOMMENDED_ACTIONS} concrete next steps. Never list individual page URLs: page-level detail belongs in the report's appendix, not in your prose. The client has no in-house developer, and no one there owns a screen reader or other assistive-technology tool. Every action is therefore something to hand to the external provider: never an instruction to the client's own developers, and never a request for the client to test something personally, not with a screen reader and not by testing keyboard navigation. Write for example "the appropriate ARIA roles need to be added to X" or "${providerPhrase} can add the appropriate ARIA roles to X" - two constructions to alternate between - rather than "train your developers on ARIA" or "test with a screen reader".
 
 Also write an executiveSummary aimed at a non-technical decision maker, and a notes field for anything else worth telling the client. The report template states the exact counts (pages scanned, total findings, findings by severity) in a sentence placed immediately before your executiveSummary text, so do not restate, estimate, or reference any of those figures yourself: never write a number of findings, pages, or occurrences anywhere in executiveSummary, not even a rough or rounded one. Your response is checked for this after every attempt; a response containing a digit in executiveSummary is rejected and you are asked again. Write only the qualitative framing and connecting prose that goes with the counts already stated: what kind of problems dominate, why they matter for the business, and what the overall picture is.
-${dominantMetricNote('en', dominantPerformanceMetric)}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${providerPhraseNote}${sentenceStructureNote}${executiveSummaryClosingNote}${positionalReferenceNote}
+${dominantMetricNote('en', dominantPerformanceMetric)}${businessFactsNote('en', siteContext)}${severityVocabularyNote}${findingNounNote}${wcagVersionNote}${businessClaimNote}${causationNote}${providerPhraseNote}${sentenceStructureNote}${executiveSummaryClosingNote}${positionalReferenceNote}
 ${LANGUAGE_INSTRUCTION.en}${usedFallbackContext ? fallbackNote('en') : ''}
 
 Respond with structured JSON matching the required schema only. No prose outside the JSON fields, no markdown fences.`;

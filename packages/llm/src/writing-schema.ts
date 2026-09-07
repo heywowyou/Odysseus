@@ -101,9 +101,27 @@ export interface WritingSiteStats {
  * cannot change it, and its output is rejected when it claims the opposite. */
 export type TransactionalFlowStatus = 'present' | 'absent' | 'inconclusive' | 'unknown';
 
+/** Plan 029 lever F: llm-side widening of the site context with the
+ *  concrete, non-financial facts plan 027 named (property type, room
+ *  count, city, sector). Deliberately local to this package: the shared
+ *  `LlmInput['siteContext']` shape in core is a locked contract, and no
+ *  caller outside this package's tests populates the new fields yet -
+ *  wiring them from the intake data at call time is a separate plan
+ *  (plans/029-writing-pass-open-levers.md step 3). All four are optional;
+ *  when they are absent the writing prompt is byte-identical to the
+ *  pre-plan-029 text and `fallbackNote` behaves exactly as before.
+ *  A type intersection, not an interface extending the indexed access:
+ *  interfaces cannot carry members out of `LlmInput['siteContext']`. */
+export type WritingSiteContext = LlmInput['siteContext'] & {
+  propertyType?: string;
+  roomCount?: number;
+  city?: string;
+  sector?: string;
+};
+
 export interface WritingInput {
   language: ReportLanguage;
-  siteContext: LlmInput['siteContext'];
+  siteContext: WritingSiteContext;
   themes: WritingThemeInput[];
   siteStats: WritingSiteStats;
   /** Which Core Web Vital dominates the site's performance problem, so

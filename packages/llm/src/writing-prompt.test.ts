@@ -12,6 +12,7 @@ import {
   buildWritingRetryFeedback,
   buildWritingSystemPrompt,
   buildWritingUserPrompt,
+  businessFactsNote,
 } from './writing-prompt.js';
 
 const BANNED_SECOND_PARTY_NOUNS = [
@@ -586,5 +587,105 @@ describe('plan 028: buildWritingUserPrompt grounds known-drift rule IDs in a sha
       themes: themeWithFinding('some-other-rule'),
     });
     expect(prompt).not.toContain('alt-text-quality-heuristic');
+  });
+});
+
+// Plan 029 lever F: the siteContext widening. When the new fields are
+// absent, the prompt must be byte-identical to the pre-plan-029 text and
+// the fallbackNote trigger unchanged; when present, the facts must appear
+// in the prompt under their guardrails.
+describe('plan 029 lever F: concrete site facts in the writing prompt', () => {
+  const coreOnlyContext = {
+    businessType: 'hotel',
+    primaryGoal: 'direct bookings',
+    languagesServed: ['fr'],
+    targetMarkets: ['fr'],
+  };
+  const factsContext = {
+    ...coreOnlyContext,
+    propertyType: 'hôtel 3 étoiles',
+    roomCount: 24,
+    city: 'Bordeaux',
+    sector: 'hébergement touristique',
+  };
+
+  it('leaves the prompt byte-identical when the new fields are absent', () => {
+    const legacy = buildWritingSystemPrompt('fr', true, null, 'votre prestataire technique');
+    const widened = buildWritingSystemPrompt('fr', true, null, 'votre prestataire technique', {
+      ...coreOnlyContext,
+    });
+    expect(widened).toBe(legacy);
+    expect(buildWritingSystemPrompt('en', false, null)).toBe(
+      buildWritingSystemPrompt('en', false, null, undefined, { ...coreOnlyContext }),
+    );
+  });
+
+  it('returns no facts note when none of the new fields are present', () => {
+    expect(businessFactsNote('fr', { ...coreOnlyContext })).toBe('');
+    expect(businessFactsNote('en', { ...coreOnlyContext })).toBe('');
+    expect(businessFactsNote('fr', undefined)).toBe('');
+  });
+
+  it('does not change the fallbackNote trigger', () => {
+    const withFallback = buildWritingSystemPrompt('fr', true, null, undefined, {
+      ...coreOnlyContext,
+    });
+    const withoutFallback = buildWritingSystemPrompt('fr', false, null, undefined, {
+      ...coreOnlyContext,
+    });
+    expect(withFallback).toContain("Aucun contexte issu d'un questionnaire d'intake");
+    expect(withoutFallback).not.toContain("Aucun contexte issu d'un questionnaire d'intake");
+  });
+
+  it('weaves present facts into the French prompt', () => {
+    const prompt = buildWritingSystemPrompt('fr', true, null, undefined, { ...factsContext });
+    expect(prompt).toContain('hôtel 3 étoiles');
+    expect(prompt).toContain('nombre de chambres : 24');
+    expect(prompt).toContain('ville : Bordeaux');
+    expect(prompt).toContain('secteur : hébergement touristique');
+    expect(prompt).toContain("n'en inventez aucun autre");
+    expect(prompt).toContain("jamais de comparaison avec d'autres établissements");
+    expect(prompt).not.toBe(buildWritingSystemPrompt('fr', true, null, undefined));
+  });
+
+  it('weaves present facts into the English prompt', () => {
+    const prompt = buildWritingSystemPrompt('en', false, null, undefined, {
+      ...coreOnlyContext,
+      propertyType: 'three-star hotel',
+      roomCount: 24,
+      city: 'Bordeaux',
+      sector: 'tourist accommodation',
+    });
+    expect(prompt).toContain('property type: three-star hotel');
+    expect(prompt).toContain('room count: 24');
+    expect(prompt).toContain('city: Bordeaux');
+    expect(prompt).toContain('never a comparison with other properties');
+  });
+
+  it('lists only the facts that are present', () => {
+    const note = businessFactsNote('fr', { ...coreOnlyContext, city: 'Bordeaux' });
+    expect(note).toContain('ville : Bordeaux');
+    expect(note).not.toContain('nombre de chambres');
+    expect(note).not.toContain('hôtel 3 étoiles');
+    expect(note).not.toContain('hébergement touristique');
+  });
+
+  it('the user prompt serializes present facts so the model sees the values', () => {
+    const userPrompt = buildWritingUserPrompt({
+      language: 'fr',
+      siteContext: { ...factsContext },
+      themes: [],
+      siteStats: {
+        pagesScanned: 1,
+        totalFindings: 1,
+        critical: 0,
+        serious: 0,
+        moderate: 1,
+        minor: 0,
+      },
+      dominantPerformanceMetric: null,
+    });
+    expect(userPrompt).toContain('"city": "Bordeaux"');
+    expect(userPrompt).toContain('"roomCount": 24');
   });
 });

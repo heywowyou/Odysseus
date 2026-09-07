@@ -56,8 +56,28 @@ export interface RawStructureCallResult {
   output: StructurePassOutput;
 }
 
+/** Token usage as reported by the provider for one call. Populated when
+ *  the response carries usage; the production analysis path ignores it -
+ *  it exists so the plan 029 lever E measurement script can compare cost
+ *  across reasoning_effort settings without a second request shape. */
+export interface WritingCallUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  /** Tokens spent on reasoning above the visible completion, when the
+   *  provider breaks them out; the whole point of lever E's comparison. */
+  reasoningTokens?: number;
+}
+
+/** The reasoning_effort values the API accepts for the configured model.
+ *  Production runs every pass at 'none' (trade-off 67); the raised values
+ *  exist for plan 029 lever E's measurement script and are never set by
+ *  the production path. */
+export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high';
+
 export interface RawWritingCallResult {
   output: WritingPassOutput;
+  usage?: WritingCallUsage;
 }
 
 /** Single call to OpenAI for the structure pass. Returns a
@@ -169,6 +189,9 @@ export async function callOpenAiForWriting(
   input: WritingInput,
   usedFallbackContext: boolean,
   previousRejection?: string,
+  /** Plan 029 lever E measurement only; production keeps the trade-off 67
+   *  default of 'none', so every existing caller is unchanged. */
+  reasoningEffort: ReasoningEffort = 'none',
 ): Promise<RawWritingCallResult> {
   const client = createClient();
   const themeKeys = input.themes.map((theme) => theme.themeKey);
@@ -178,7 +201,7 @@ export async function callOpenAiForWriting(
       model: OPENAI_MODEL,
       max_completion_tokens: MAX_OUTPUT_TOKENS,
       temperature: WRITING_OPENAI_TEMPERATURE,
-      reasoning_effort: 'none',
+      reasoning_effort: reasoningEffort,
       messages: [
         {
           role: 'system',
@@ -187,6 +210,7 @@ export async function callOpenAiForWriting(
             usedFallbackContext,
             input.dominantPerformanceMetric,
             input.providerPhrase,
+            input.siteContext,
           ),
         },
         { role: 'user', content: buildWritingUserPrompt(input, previousRejection) },
@@ -235,7 +259,22 @@ export async function callOpenAiForWriting(
       ? { ...raw, themes: toThemeArray(themeKeys, raw.themes) }
       : parsed,
   );
-  return { output };
+  const usage = response.usage;
+  return {
+    output,
+    ...(usage
+      ? {
+          usage: {
+            promptTokens: usage.prompt_tokens,
+            completionTokens: usage.completion_tokens,
+            totalTokens: usage.total_tokens,
+            ...(usage.completion_tokens_details?.reasoning_tokens !== undefined
+              ? { reasoningTokens: usage.completion_tokens_details.reasoning_tokens }
+              : {}),
+          },
+        }
+      : {}),
+  };
 }
 
 export interface RawReviewerCallResult {

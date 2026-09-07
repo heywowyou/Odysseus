@@ -112,6 +112,52 @@ register comparison of the raised-effort output, and made an explicit
 ship/defer call. Record that call and its reasoning back into this
 document before closing it out.
 
+#### Step 1 result (2026-09-07): script built and run; ship/defer pending operator
+
+`packages/llm/src/measure-reasoning-effort.ts` exists (follows the
+`lint-stored-analyses.ts` precedent, `pnpm exec tsx` entry point, `.env`
+sourced). It loads each audit's newest stored structure document, runs the
+writing pass once per effort arm, sweeps every guard log-only (reporting
+all that fire, not just the first), and prints the repetition metrics,
+token usage (including the provider's reasoning-token breakout), and
+wall-clock latency. `--print` dumps each normalized response for the
+manual register comparison. Nothing is persisted. To let the script and
+the lint share one metric implementation, the repetition metrics moved to
+`packages/llm/src/repetition-metrics.ts`; both scripts import them, and
+`callOpenAiForWriting` gained an optional `reasoningEffort` parameter
+(default `'none'`, so every production caller is unchanged) plus a
+harvested `usage` field.
+
+Measured (`--effort low`, one attempt per arm, both stored structure
+documents, fr+en, second run after the script's own provider-phrase-seed
+bug was fixed):
+
+| run | latency none -> low | total tokens none -> low | reasoning tokens | repetition change |
+| --- | --- | --- | --- | --- |
+| Briketenia fr | 13 080 -> 15 134 ms | 9 344 -> 9 647 | 69 | actions 1/23 -> 1/21, impacts 1/7 -> 1/7 |
+| Briketenia en | 13 221 -> 13 423 ms | 8 232 -> 8 475 | 77 | actions 1/23 -> 1/27, impacts 2/7 -> 2/7 |
+| Villas Foch fr | 16 041 -> 19 495 ms | 39 338 -> 40 022 | 48 | actions 2/27 -> 2/36, impacts 2/9 -> **6/9** |
+| Villas Foch en | 15 747 -> 16 922 ms | 38 286 -> 38 496 | 49 | actions 1/27 -> 1/36, impacts 1/9 -> 3/9 |
+
+Reading: at `low`, every run gets slower (+0.2 to +3.5 s) and more
+expensive (+210 to +684 tokens), and the repetition metrics do not
+improve; the Villas Foch French impact openings got notably more
+repetitive. n=1 per cell and run-to-run variance is real (a first
+run measured different shares in both arms), so this is not proof that
+`low` hurts - but there is no measured signal that it helps. No guard
+fired on any arm, and nothing moved priorities or theme groupings (the
+STOP condition never came close: the writing pass never sees them).
+
+An earlier run of this same comparison exists in the session log; its
+numbers tell the same story.
+
+**Open: the explicit ship/defer call.** The measurement half of the done
+condition is met; the operator still owes the manual register comparison
+(`pnpm exec tsx packages/llm/src/measure-reasoning-effort.ts --print`) and
+the call itself. On the current numbers, the burden of proof sits with
+raising the effort: no measured gain, a real per-report cost, and the
+Villas Foch French regression to weigh.
+
 ### Step 2: Define the `llm`-side `siteContext` shape (F)
 
 Widen `WritingInput['siteContext']` (currently `LlmInput['siteContext']`,
@@ -130,6 +176,23 @@ not have this data populated until the follow-up plan wires it in. A
 second test proves the prompt actually changes when the fields are
 present, with a real fact reflected in the output text.
 
+#### Step 2 result (2026-09-07): done
+
+`WritingSiteContext` in `writing-schema.ts` widens the llm-side
+`WritingInput['siteContext']` by intersection with four optional fields
+(`propertyType`, `roomCount`, `city`, `sector`; a type intersection
+because an interface cannot extend the indexed access). `writing-prompt.ts`
+gains `businessFactsNote(language, siteContext)`, which returns an empty
+string when none of the four fields are present - the prompt is
+byte-identical to before, and `fallbackNote` triggers exactly as it did -
+and otherwise states the facts as verified input with the guardrails
+spelled out: invent nothing beyond them, no new license for counts,
+legal consequences, or commercial superlatives, and no comparisons with
+other establishments. `client.ts` passes `input.siteContext` through; the
+user prompt already serialized it. Tests cover absent/present/partial in
+both languages plus the unchanged `fallbackNote` trigger (7 new,
+packages/llm suite 492 green).
+
 ### Step 3: Name the follow-up plan
 
 Write a short new plan stub (or a `docs/report/report-feedback-deferred-items.md`
@@ -137,6 +200,12 @@ entry, whichever this repo's convention favors at the time) naming the
 `core`/`interface`/intake work needed to actually populate the new
 `siteContext` fields from the hotel catalogue for the 9c campaign. Do not
 build that wiring here.
+
+**Step 3 result (2026-09-07): done.** `plans/032-site-context-from-catalogue.md`
+is the stub: catalogue-source discovery, a pure typed resolver with typed
+missing-fact reasons, pipeline wiring behind the existing `--context`
+override, and the persistence question, with a STOP for an empty
+catalogue.
 
 ## Test plan
 
