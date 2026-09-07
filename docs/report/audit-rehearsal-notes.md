@@ -441,3 +441,39 @@ Each entry:
   - #85 a 200-response redirect stub (`/fr`) counted as an analysed page,
     contradicting the report's own methodology sentence, and the mechanism
     that defeated the brand-name heuristic in #79.
+
+## Briketenia + Villas Foch report-quality read, 2026-09-07 (build 5e0c120)
+
+Read as the client would, both languages, both stored audits, after the
+plan 027/028 writing-pass fixes. Defects found were filed as #100 to #105;
+the cosmetic residue, none blocking on its own:
+
+- Orphaned appendix group/section headings at page bottoms (FR Briketenia
+  p32, FR Villas Foch p46, EN Villas Foch p42/44/46/47/49/50) and one
+  group title alone on an otherwise empty page (EN Villas Foch p17).
+- Appendix table header row missing at the top of two EN Villas Foch
+  continuation pages (p33, p38) while other continuation pages repeat it.
+- Capped finding-id list renders with no visible gap before the tail:
+  "f233et 1 autre" / "f233and 1 more" (Villas Foch, both languages). The
+  helpers emit a plain space (html-utils.ts formatCappedFindingIdLinks),
+  so the collapse happens at render: the link's underline runs into the
+  tail text.
+- Every priority card stacks "CE QUE VOUS POUVEZ FAIRE" directly above
+  "ACTIONS RECOMMANDÉES" (EN: "WHAT YOU CAN DO" / "RECOMMENDED ACTIONS"),
+  two labels for one block, reading as a duplicated heading.
+- Mixed en-GB/en-US in the EN reports: "Stabilise" (cumulative-layout-shift
+  remediation) beside "Stabilize" (crux-cls-poor remediation) in one box;
+  "programme"/"behaviour" in the Villas Foch EN summary. The
+  analysed/analyzed mix noted earlier is part of this pattern.
+- Near-empty pages: the CrUX/lab page before the prose section (Briketenia
+  EN p21), the "par où commencer" page (both languages), and a single
+  leftover group page before section 07 (EN Villas Foch p17).
+- Provenance line prints "modèle 2" (template 2) to clients; opaque to
+  them, already noted in an earlier rehearsal.
+- Writing-pass tuning observation, not a guard defect: mid-sentence
+  "votre prestataire technique peut..." closes most recommended actions in
+  every report (8 of 19 in Briketenia EN end on the same tail), and the EN
+  reports still open 3-4 actions with the provider phrase despite the
+  prompt prohibition. Openings are varied, so the plan 027 metric holds;
+  the residue is the connective scaffold, worth one more wording pass if
+  the operator wants it.
