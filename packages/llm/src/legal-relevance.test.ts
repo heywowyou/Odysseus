@@ -77,4 +77,18 @@ describe('buildLegalRelevance', () => {
   it('returns an empty string for an empty criteria list', () => {
     expect(buildLegalRelevance([], 'fr')).toBe('');
   });
+
+  // Issue #81: a real La Corniche report listed 2.1.3 (level AAA, tagged
+  // by axe onto scrollable-region-focusable) in a sentence that itself
+  // says "WCAG 2.2 niveau AA", with a blank name cell since
+  // WCAG_CRITERION_NAMES is deliberately scoped to A/AA. The AAA filter
+  // (isAuditedConformanceLevel) used to be applied only in
+  // conformance-rollup.ts; this is the second call site it never reached.
+  it('drops a level AAA criterion rather than rendering it nameless', () => {
+    expect(buildLegalRelevance(['2.1.1', '2.1.3', '2.4.4'], 'fr')).toBe(
+      buildLegalRelevance(['2.1.1', '2.4.4'], 'fr'),
+    );
+    expect(buildLegalRelevance(['2.1.3'], 'fr')).toBe('');
+    expect(buildLegalRelevance(['2.1.3'], 'en')).toBe('');
+  });
 });

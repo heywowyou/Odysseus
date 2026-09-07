@@ -1,4 +1,4 @@
-import { compareCriteria, type ReportLanguage } from '@odysseus/core';
+import { compareCriteria, isAuditedConformanceLevel, type ReportLanguage } from '@odysseus/core';
 
 /**
  * WCAG 2.2 level A and AA success criterion names, French and English,
@@ -166,7 +166,15 @@ export function buildLegalRelevance(
   wcagCriteria: readonly string[],
   language: ReportLanguage,
 ): string {
-  const sorted = [...new Set(wcagCriteria)].sort(compareCriteria);
+  // Issue #81: this sentence states "WCAG 2.2 niveau AA" / "level AA", so a
+  // level AAA criterion (axe tags 2.1.3 onto scrollable-region-focusable,
+  // the same rule as the original A8 incident this filter was written for
+  // - see conformance-rollup.ts, which applies it but was the only call
+  // site to do so) must never appear in it. WCAG_CRITERION_NAMES is
+  // deliberately scoped to A/AA and has no entry for an AAA code, which is
+  // what produced the original blank-name symptom: this filter removes the
+  // out-of-scope criterion itself rather than only hiding its name.
+  const sorted = [...new Set(wcagCriteria)].filter(isAuditedConformanceLevel).sort(compareCriteria);
   if (sorted.length === 0) return '';
 
   const formatted = sorted.map((code) => formatCriterion(code, language));

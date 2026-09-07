@@ -61,8 +61,16 @@ export function mergeAnalysisPasses(
       structureTheme.category === 'accessibility'
         ? themeWcagCriteria(structureTheme, findingsById)
         : [];
+    // Issue #81: buildLegalRelevance now drops AAA-only criteria (out of
+    // scope for the "WCAG 2.2 level AA" sentence it builds), so a theme
+    // whose only wcagCriteria are AAA gets '' back rather than a sentence -
+    // normalized to undefined here, same as a theme with no criteria at
+    // all, so the legal-relevance box never renders on the strength of an
+    // empty string.
     const legalRelevance =
-      wcagCriteria.length > 0 ? buildLegalRelevance(wcagCriteria, language) : undefined;
+      wcagCriteria.length > 0
+        ? buildLegalRelevance(wcagCriteria, language) || undefined
+        : undefined;
 
     return {
       title: writingTheme.title,
