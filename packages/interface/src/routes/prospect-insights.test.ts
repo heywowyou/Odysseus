@@ -55,6 +55,9 @@ const fakeConnection = {} as never;
 
 const prescanView: OperatorPrescanView = {
   prescanId: 'prescan-1',
+  name: 'Hotel Exemple',
+  commune: 'GRENOBLE',
+  postcode: '38000',
   prescanVersion: 'v3',
   status: 'complete',
   domain: 'hotel-exemple.fr',
@@ -88,6 +91,9 @@ const prescanView: OperatorPrescanView = {
 const scoreView: OperatorScoreView = {
   scoreId: 'score-1',
   candidateId: 'cand-1',
+  name: 'Hotel Exemple',
+  commune: 'GRENOBLE',
+  postcode: '38000',
   scoringVersion: 'hotel-outreach-v1',
   prescanId: 'prescan-1',
   computedAt: new Date('2026-08-29T11:00:00.000Z'),
@@ -115,6 +121,9 @@ const diffView: OperatorScoreDiffView = {
 
 const evidenceView: OperatorEvidenceView = {
   prescanId: 'prescan-1',
+  name: 'Hotel Exemple',
+  commune: 'GRENOBLE',
+  postcode: '38000',
   evidenceStatus: 'complete',
   renderComparison: {
     state: 'captured',
@@ -130,6 +139,9 @@ const evidenceView: OperatorEvidenceView = {
 
 const previewView: OperatorPreviewView = {
   previewId: 'preview-1',
+  name: 'Hotel Exemple',
+  commune: 'GRENOBLE',
+  postcode: '38000',
   domain: 'hotel-exemple.fr',
   language: 'fr',
   status: 'live',

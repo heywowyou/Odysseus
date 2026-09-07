@@ -20,7 +20,12 @@ import { useI18n } from '../i18n/provider';
 import type { DashboardStrings } from '../i18n/types';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { formatDateTime } from '../lib/format';
-import { diffVersionOptions, scoreDiffRows, useInsightView } from './insights-model';
+import {
+  candidateCityLabel,
+  diffVersionOptions,
+  scoreDiffRows,
+  useInsightView,
+} from './insights-model';
 import type { ScoreDiffResponse, ScoreResponse } from './insights-model';
 
 /** Both scoring sides, in the order the qualification gate reads them.
@@ -229,16 +234,20 @@ export function ScorePage(): JSX.Element {
   return (
     <article className={PAGE_WIDTH.surface}>
       <PageHeader
-        title={strings.score.title}
-        subject={candidateId}
+        eyebrow={strings.score.title}
+        title={score.data?.name ?? strings.score.title}
+        subject={score.data === undefined ? undefined : candidateCityLabel(score.data)}
         description={strings.score.description}
         meta={
           score.data === undefined ? null : (
-            <ScoreReadout
-              version={score.data.scoringVersion}
-              computedAt={formatDateTime(score.data.computedAt, language)}
-              strings={strings}
-            />
+            <div className="flex flex-col gap-3">
+              <p className="ident text-xs text-ink-muted">{score.data.candidateId}</p>
+              <ScoreReadout
+                version={score.data.scoringVersion}
+                computedAt={formatDateTime(score.data.computedAt, language)}
+                strings={strings}
+              />
+            </div>
           )
         }
         actions={

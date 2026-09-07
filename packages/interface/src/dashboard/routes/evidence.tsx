@@ -16,7 +16,12 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
-import { evidenceAssetRows, formatByteSize, useInsightView } from './insights-model';
+import {
+  candidateCityLabel,
+  evidenceAssetRows,
+  formatByteSize,
+  useInsightView,
+} from './insights-model';
 import type { EvidenceResponse, Severity } from './insights-model';
 
 const SEVERITY_TONES: Record<Severity, BadgeTone> = {
@@ -119,8 +124,13 @@ export function EvidencePage(): JSX.Element {
   return (
     <article className={PAGE_WIDTH.reading}>
       <PageHeader
-        title={strings.evidence.title}
+        eyebrow={strings.evidence.title}
+        title={data?.name ?? strings.evidence.title}
+        subject={data === undefined ? undefined : candidateCityLabel(data)}
         description={strings.evidence.description}
+        meta={
+          data === undefined ? null : <p className="ident text-xs text-ink-muted">{candidateId}</p>
+        }
         actions={
           candidateId !== undefined ? (
             <Link

@@ -18,7 +18,12 @@ import {
 import { useI18n } from '../i18n/provider';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { formatDateTime } from '../lib/format';
-import { distinctBookingKinds, prescanRows, useInsightView } from './insights-model';
+import {
+  candidateCityLabel,
+  distinctBookingKinds,
+  prescanRows,
+  useInsightView,
+} from './insights-model';
 import type { PrescanResponse, PrescanStatus } from './insights-model';
 
 const STATUS_TONES: Record<PrescanStatus, BadgeTone> = {
@@ -124,8 +129,13 @@ export function PrescanPage(): JSX.Element {
   return (
     <article className={PAGE_WIDTH.surface}>
       <PageHeader
-        title={strings.prescan.title}
+        eyebrow={strings.prescan.title}
+        title={data?.name ?? strings.prescan.title}
+        subject={data === undefined ? undefined : candidateCityLabel(data)}
         description={strings.prescan.description}
+        meta={
+          data === undefined ? null : <p className="ident text-xs text-ink-muted">{candidateId}</p>
+        }
         actions={
           candidateId !== undefined ? (
             <Link

@@ -817,17 +817,23 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       expect(detail?.prescan?.pages).toHaveLength(2);
       expect(detail?.prescan?.pages[0]?.metrics?.largestContentfulPaintMs).toBe(5200);
       expect(detail?.prescan?.pages[0]?.axe?.violationCount).toBe(3);
+      // Issue 94: prescan, evidence, score, and preview sub-views each carry
+      // the hotel's own identity so their pages can headline it.
+      expect(detail?.prescan?.name).toBe('Hôtel cand-detail');
       expect(detail?.evidence?.specificFailure.state).toBe('captured');
       expect(detail?.evidence?.summaries).toHaveLength(3);
+      expect(detail?.evidence?.name).toBe('Hôtel cand-detail');
       expect(detail?.score?.brokenness.total).toBe(42);
       expect(detail?.score?.ability.total).toBe(65);
       expect(detail?.score?.brokenness.components[0]?.reason).toBe('render-gap-severe');
+      expect(detail?.score?.name).toBe('Hôtel cand-detail');
       expect(detail?.contact?.state).toBe('found');
       expect(detail?.contact?.mxStatus).toBe('has-mx');
       expect(detail?.thread?.state).toBe('open');
       expect(detail?.thread?.currentOutcome?.outcome).toBe('reply-positive');
       expect(detail?.thread?.drafts[0]?.status).toBe('created');
       expect(detail?.preview?.status).toBe('live');
+      expect(detail?.preview?.name).toBe('Hôtel cand-detail');
       expect(detail?.outcomes.rows[0]?.outcome).toBe('reply-positive');
       expect(detail?.conflicts).toEqual([]);
       expect(detail?.sourceRefs).toHaveLength(1);
@@ -843,7 +849,8 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
     it('returns the latest score with complete breakdown and version', async () => {
       if (!connection) return;
       const candidateId = 'cand-score';
-      await upsertHotelCandidates(connection!, [candidateInput({ candidateId })]);
+      const candidate = candidateInput({ candidateId });
+      await upsertHotelCandidates(connection!, [candidate]);
       await recordHotelScores(connection!, [
         scoreInput(candidateId, SCORING_VERSION, 10, 20, {
           computedAt: new Date('2026-08-22T08:00:00.000Z'),
@@ -859,6 +866,21 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
       // remains a document beside it.
       expect(view?.brokenness.total).toBe(30);
       expect(view?.brokenness.components[0]?.id).toBe('render-gap');
+      // Issue 94: the sub-page header names the hotel instead of the raw id.
+      expect(view?.name).toBe(candidate.name);
+      expect(view?.commune).toBe(candidate.commune);
+      expect(view?.postcode).toBe(candidate.postcode);
+    });
+
+    it('falls back to the candidateId when the candidate record is gone', async () => {
+      if (!connection) return;
+      const candidateId = 'cand-score-orphan';
+      await recordHotelScores(connection!, [scoreInput(candidateId, SCORING_VERSION, 10, 20)]);
+
+      const view = await getProspectScoreView(connection!, candidateId);
+      expect(view?.name).toBe(candidateId);
+      expect(view?.commune).toBeNull();
+      expect(view?.postcode).toBeNull();
     });
 
     it('diffs two scoring versions for one candidate', async () => {

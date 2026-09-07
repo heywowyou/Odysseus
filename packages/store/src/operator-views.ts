@@ -626,6 +626,30 @@ export async function getProspectQualificationHistory(
 // Prescan and evidence
 // ---------------------------------------------------------------------------
 
+/** The identity fields every insight sub-view (prescan, score, evidence,
+ *  preview) borrows from the candidate, so its own page can headline the
+ *  hotel instead of the opaque candidateId in the URL. Falls back to the id
+ *  itself if the candidate record is gone by the time the sub-view is read:
+ *  the sub-record can outlive a deleted candidate, and a blank heading would
+ *  be worse than the id it replaces. */
+interface OperatorCandidateIdentity {
+  name: string;
+  commune: string | null;
+  postcode: string | null;
+}
+
+async function candidateIdentityView(
+  connection: Connection,
+  candidateId: string,
+): Promise<OperatorCandidateIdentity> {
+  const candidate = await getHotelCandidate(connection, candidateId);
+  return {
+    name: candidate?.name ?? candidateId,
+    commune: candidate?.commune ?? null,
+    postcode: candidate?.postcode ?? null,
+  };
+}
+
 export interface OperatorPrescanPageView {
   role: HotelPrescanPageRole;
   httpStatus: number | null;
@@ -657,6 +681,9 @@ export interface OperatorPrescanPageView {
 
 export interface OperatorPrescanView {
   prescanId: string;
+  name: string;
+  commune: string | null;
+  postcode: string | null;
   prescanVersion: string;
   status: HotelPrescanStatus;
   domain: string;
@@ -684,8 +711,10 @@ export async function getProspectPrescanView(
 ): Promise<OperatorPrescanView | null> {
   const prescan = await latestPrescanForCandidate(connection, candidateId, options.prescanVersion);
   if (prescan === null) return null;
+  const identity = await candidateIdentityView(connection, candidateId);
   return {
     prescanId: prescan.prescanId,
+    ...identity,
     prescanVersion: prescan.prescanVersion,
     status: prescan.status,
     domain: prescan.domain,
@@ -754,6 +783,9 @@ export interface OperatorEvidenceSummaryView {
 
 export interface OperatorEvidenceView {
   prescanId: string;
+  name: string;
+  commune: string | null;
+  postcode: string | null;
   evidenceStatus: 'complete' | 'incomplete';
   renderComparison: OperatorEvidenceAssetView;
   specificFailure: OperatorEvidenceAssetView;
@@ -776,8 +808,10 @@ export async function getProspectEvidenceView(
   const prescan = await latestPrescanForCandidate(connection, candidateId, options.prescanVersion);
   if (prescan === null || prescan.evidence === undefined) return null;
   const evidence = prescan.evidence;
+  const identity = await candidateIdentityView(connection, candidateId);
   return {
     prescanId: prescan.prescanId,
+    ...identity,
     evidenceStatus: evidence.status,
     renderComparison: projectEvidenceAsset(evidence.renderComparison),
     specificFailure: projectEvidenceAsset(evidence.specificFailure),
@@ -838,6 +872,9 @@ export interface OperatorScoreBreakdownView {
 export interface OperatorScoreView {
   scoreId: string;
   candidateId: string;
+  name: string;
+  commune: string | null;
+  postcode: string | null;
   scoringVersion: string;
   prescanId: string;
   computedAt: Date;
@@ -852,7 +889,10 @@ export interface GetProspectScoreViewOptions {
   scoringVersion?: string;
 }
 
-function projectScore(score: HotelScoreDocument): OperatorScoreView {
+function projectScore(
+  score: HotelScoreDocument,
+  identity: OperatorCandidateIdentity,
+): OperatorScoreView {
   const projectComponents = (breakdown: {
     total: number;
     components: {
@@ -871,6 +911,7 @@ function projectScore(score: HotelScoreDocument): OperatorScoreView {
   return {
     scoreId: score.scoreId,
     candidateId: score.candidateId,
+    ...identity,
     scoringVersion: score.scoringVersion,
     prescanId: score.prescanId,
     computedAt: score.computedAt,
@@ -895,7 +936,9 @@ export async function getProspectScoreView(
           .findOne({ candidateId })
           .sort({ computedAt: -1, scoreId: 1 })
           .lean<HotelScoreDocument>();
-  return score === null ? null : projectScore(score);
+  if (score === null) return null;
+  const identity = await candidateIdentityView(connection, candidateId);
+  return projectScore(score, identity);
 }
 
 export interface OperatorScoreDiffView {
@@ -987,6 +1030,9 @@ export async function getProspectContactView(
 
 export interface OperatorPreviewView {
   previewId: string;
+  name: string;
+  commune: string | null;
+  postcode: string | null;
   domain: string;
   language: 'fr' | 'en';
   status: OutreachPreviewStatus;
@@ -1009,8 +1055,10 @@ export async function getProspectPreviewView(
 ): Promise<OperatorPreviewView | null> {
   const [latest] = await listOutreachPreviews(connection, { candidateId, limit: 1 });
   if (latest === undefined) return null;
+  const identity = await candidateIdentityView(connection, candidateId);
   return {
     previewId: latest.previewId,
+    ...identity,
     domain: latest.domain,
     language: latest.language,
     status: latest.status,

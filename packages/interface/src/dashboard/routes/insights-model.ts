@@ -51,6 +51,9 @@ export interface PrescanPageResponse {
 
 export interface PrescanResponse {
   prescanId: string;
+  name: string;
+  commune: string | null;
+  postcode: string | null;
   prescanVersion: string;
   status: PrescanStatus;
   domain: string;
@@ -76,6 +79,9 @@ export interface ScoreBreakdownResponse {
 export interface ScoreResponse {
   scoreId: string;
   candidateId: string;
+  name: string;
+  commune: string | null;
+  postcode: string | null;
   scoringVersion: string;
   prescanId: string;
   computedAt: string;
@@ -110,6 +116,9 @@ export type EvidenceAssetResponse =
 
 export interface EvidenceResponse {
   prescanId: string;
+  name: string;
+  commune: string | null;
+  postcode: string | null;
   evidenceStatus: 'complete' | 'incomplete';
   renderComparison: EvidenceAssetResponse;
   specificFailure: EvidenceAssetResponse;
@@ -123,6 +132,9 @@ export interface EvidenceResponse {
 
 export interface PreviewResponse {
   previewId: string;
+  name: string;
+  commune: string | null;
+  postcode: string | null;
   domain: string;
   language: 'fr' | 'en';
   status: 'live' | 'revoked';
@@ -162,6 +174,23 @@ export interface VendorAggregateResponse {
   bookingHosts: VendorFingerprintResponse[];
   bookingMechanisms: VendorFingerprintResponse[];
   failureRules: VendorFingerprintResponse[];
+}
+
+// ---------------------------------------------------------------------------
+// Shared header identity
+// ---------------------------------------------------------------------------
+
+/** The hotel's city line for a sub-page header, joined the same way the
+ *  prospect detail page's own commune/postcode row is. Undefined when
+ *  neither is known, so the header renders no empty subject line. */
+export function candidateCityLabel(identity: {
+  commune: string | null;
+  postcode: string | null;
+}): string | undefined {
+  const parts = [identity.commune, identity.postcode].filter(
+    (part): part is string => part !== null && part !== '',
+  );
+  return parts.length === 0 ? undefined : parts.join(' ');
 }
 
 // ---------------------------------------------------------------------------

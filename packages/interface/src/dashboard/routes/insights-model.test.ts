@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  candidateCityLabel,
   diffVersionOptions,
   distinctBookingKinds,
   evidenceAssetRows,
@@ -21,6 +22,9 @@ import type {
 
 const prescan: PrescanResponse = {
   prescanId: 'prescan-1',
+  name: 'Hotel Exemple',
+  commune: 'GRENOBLE',
+  postcode: '38000',
   prescanVersion: 'v3',
   status: 'complete',
   domain: 'hotel-exemple.fr',
@@ -62,6 +66,9 @@ const prescan: PrescanResponse = {
 const score: ScoreResponse = {
   scoreId: 'score-1',
   candidateId: 'cand-1',
+  name: 'Hotel Exemple',
+  commune: 'GRENOBLE',
+  postcode: '38000',
   scoringVersion: 'hotel-outreach-v1',
   prescanId: 'prescan-1',
   computedAt: '2026-08-29T11:00:00.000Z',
@@ -73,6 +80,21 @@ const score: ScoreResponse = {
   },
   ability: { total: 3, components: [{ id: 'no-booking', points: 3, reason: 'no-evidence' }] },
 };
+
+describe('candidateCityLabel', () => {
+  it('joins commune and postcode the same way the prospect detail page does', () => {
+    expect(candidateCityLabel({ commune: 'GRENOBLE', postcode: '38000' })).toBe('GRENOBLE 38000');
+  });
+
+  it('falls back to whichever half is known', () => {
+    expect(candidateCityLabel({ commune: 'GRENOBLE', postcode: null })).toBe('GRENOBLE');
+    expect(candidateCityLabel({ commune: null, postcode: '38000' })).toBe('38000');
+  });
+
+  it('is undefined when neither is known', () => {
+    expect(candidateCityLabel({ commune: null, postcode: null })).toBeUndefined();
+  });
+});
 
 describe('distinctBookingKinds', () => {
   it('unions the kinds of every page in stable order', () => {
@@ -159,6 +181,9 @@ describe('evidenceAssetRows', () => {
   it('returns the two assets in slot order', () => {
     const evidence: EvidenceResponse = {
       prescanId: 'prescan-1',
+      name: 'Hotel Exemple',
+      commune: 'GRENOBLE',
+      postcode: '38000',
       evidenceStatus: 'complete',
       renderComparison: {
         state: 'captured',
@@ -195,6 +220,9 @@ describe('formatByteSize', () => {
 describe('previewState', () => {
   const preview: PreviewResponse = {
     previewId: 'preview-1',
+    name: 'Hotel Exemple',
+    commune: 'GRENOBLE',
+    postcode: '38000',
     domain: 'hotel-exemple.fr',
     language: 'fr',
     status: 'live',

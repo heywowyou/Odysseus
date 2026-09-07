@@ -12,7 +12,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { useI18n } from '../i18n/provider';
 import { fetchJson } from '../lib/api';
 import { formatDateTime } from '../lib/format';
-import { previewState, useInsightView } from './insights-model';
+import { candidateCityLabel, previewState, useInsightView } from './insights-model';
 import type { PreviewRenderResponse, PreviewResponse, PreviewState } from './insights-model';
 
 const STATE_TONES: Record<PreviewState, BadgeTone> = {
@@ -158,8 +158,13 @@ export function PreviewPage(): JSX.Element {
   return (
     <article className={PAGE_WIDTH.reading}>
       <PageHeader
-        title={strings.preview.title}
+        eyebrow={strings.preview.title}
+        title={data?.name ?? strings.preview.title}
+        subject={data === undefined ? undefined : candidateCityLabel(data)}
         description={strings.preview.description}
+        meta={
+          data === undefined ? null : <p className="ident text-xs text-ink-muted">{candidateId}</p>
+        }
         actions={
           candidateId !== undefined ? (
             <Link
