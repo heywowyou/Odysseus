@@ -83,6 +83,13 @@ describe('prospecting privacy page', () => {
     expect(privacy).toContain('Nous n&apos;achetons aucun fichier');
     expect(privacy).toContain('We buy no prospecting lists');
   });
+
+  it('does not overstate what an unsalted suppression fingerprint protects', () => {
+    expect(privacy).toContain('Cette liste ne conserve pas');
+    expect(privacy).toContain('This list does not retain');
+    expect(privacy).not.toContain('ne permet pas de retrouver');
+    expect(privacy).not.toContain('cannot be turned back');
+  });
 });
 
 describe('opt-out page', () => {
@@ -98,6 +105,11 @@ describe('opt-out page', () => {
     expect(optOut).toContain('fingerprints');
     expect(optOut).toContain('permanente');
     expect(optOut).toContain('permanent objection list');
+  });
+
+  it('does not claim a suppression fingerprint cannot be reconstructed', () => {
+    expect(optOut).not.toContain('pas de reconstituer votre adresse');
+    expect(optOut).not.toContain('cannot be turned back into your address');
   });
 
   it('does not claim an automated one-click database action, because there is none', () => {

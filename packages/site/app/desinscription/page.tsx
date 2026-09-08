@@ -76,9 +76,9 @@ export default function OptOutPage() {
               </li>
               <li className="mb-2">
                 Votre domaine, et l&apos;adresse email si vous en indiquez une, sont inscrits sur
-                une liste d&apos;opposition permanente. Elle ne contient que des empreintes
-                cryptographiques : elle permet de reconnaître votre domaine s&apos;il réapparaît
-                dans une source publique, mais pas de reconstituer votre adresse.
+                une liste d&apos;opposition permanente. Elle ne contient pas votre adresse
+                elle-même, seulement des empreintes qui permettent de reconnaître votre domaine
+                s&apos;il réapparaît dans une source publique.
               </li>
               <li className="mb-2">
                 Les autres données de prospection vous concernant sont supprimées, comme elles
@@ -144,8 +144,8 @@ export default function OptOutPage() {
               </li>
               <li className="mb-2">
                 Your domain, and your email address if you give one, go on a permanent objection
-                list. It holds cryptographic fingerprints only: it lets us recognise your domain if
-                it reappears in a public source, but it cannot be turned back into your address.
+                list. It does not hold your address itself, only fingerprints that let us recognise
+                your domain if it reappears in a public source.
               </li>
               <li className="mb-2">
                 The other prospecting data about you is deleted, as it would have been in any case

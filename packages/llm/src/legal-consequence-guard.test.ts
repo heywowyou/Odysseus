@@ -162,6 +162,28 @@ describe('findLegalConsequenceViolations', () => {
       matched: 'risques juridiques',
     });
   });
+
+  it.each([
+    'Votre établissement est soumis à l’obligation.',
+    'Votre société est assujettie à cette obligation.',
+    'Vous êtes tenu de corriger ce point.',
+    'Vous devez vous conformer à cette exigence.',
+    'Vous devez agir avant la fin de l’année.',
+  ])('flags a French legal conclusion or worded deadline: %s', (text) => {
+    expect(findLegalConsequenceViolationsInFields([{ field: 'opening', text }], 'fr')).toHaveLength(
+      1,
+    );
+  });
+
+  it.each([
+    'Your business is subject to the obligation.',
+    'You are required to comply with this requirement.',
+    'You must comply by the end of the year.',
+  ])('flags the English equivalent: %s', (text) => {
+    expect(findLegalConsequenceViolationsInFields([{ field: 'opening', text }], 'en')).toHaveLength(
+      1,
+    );
+  });
 });
 
 // "poursuite" is a homonym. On 2026-09-07 the bare /\bpoursuites?\b/ pattern

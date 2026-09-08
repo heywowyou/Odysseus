@@ -2534,6 +2534,12 @@ do not per-field-log its verdicts to the console (single summary line
 only), and read `unsupported` on businessImpact fields as "states
 consequences" until the bias is re-measured as gone.
 
+**Issue #115 amendment, 2026-09-09.** The deterministic legal-consequence
+guard now also rejects direct client-specific obligation claims and worded
+deadlines in French and English. The outreach path already uses this guard as
+a retry gate, so the additional patterns block unsafe generated prose without
+promoting the shadow reviewer or changing the deterministic facts splice.
+
 **Plan 033 addendum, 2026-09-08.** A separate correction-review artifact now
 measures bounded editorial proposals without changing the historical reviewer
 stream, accepted analysis, or report input. It has its own schema, prompt,

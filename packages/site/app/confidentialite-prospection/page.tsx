@@ -133,9 +133,9 @@ export default function ProspectingPrivacyPage() {
             <p className="mb-4">
               Une seule exception, et elle joue en votre faveur : si vous vous opposez, nous
               conservons de façon permanente une empreinte cryptographique de votre domaine et de
-              votre adresse, afin de ne jamais vous recontacter. Une empreinte ne permet pas de
-              retrouver l&apos;adresse ; elle permet seulement de reconnaître la même adresse si
-              elle réapparaît dans une source publique. Sans cela, la suppression au bout de
+              votre adresse, afin de ne jamais vous recontacter. Cette liste ne conserve pas
+              l&apos;adresse elle-même, seulement une empreinte qui permet de la reconnaître si elle
+              réapparaît dans une source publique. Sans cela, la suppression au bout de
               quatre-vingt-dix jours vous ferait réapparaître comme un nouveau prospect.
             </p>
 
@@ -244,9 +244,9 @@ export default function ProspectingPrivacyPage() {
             <p className="mb-4">
               One exception, and it works in your favour: if you object, we keep a permanent
               cryptographic fingerprint of your domain and address so that we never contact you
-              again. A fingerprint cannot be turned back into an address; it only lets us recognise
-              the same address if it reappears in a public source. Without it, deleting everything
-              after ninety days would make you reappear as a new prospect.
+              again. This list does not retain the address itself, only a fingerprint that lets us
+              recognise it if it reappears in a public source. Without it, deleting everything after
+              ninety days would make you reappear as a new prospect.
             </p>
 
             <h2 className="mb-4 text-xl font-semibold">Who else has access</h2>

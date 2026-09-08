@@ -52,6 +52,16 @@ const LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {
     /\bill[ée]gal\w*\b/i,
     /\bpassible\b/i,
     /\bobligatoire l[ée]galement\b/i,
+    // These are prohibited client-specific legal conclusions, not neutral
+    // descriptions of criteria. The model never writes argument B, so it has
+    // no legitimate reason to use them in outreach or report prose.
+    /\bsoumis(?:e|es)?\s+[àa]\s+l['’]obligation\b/i,
+    /\bassujetti(?:e|s|es)?\b/i,
+    /\btenu(?:e|s|es)?\s+(?:de|d['’])/i,
+    /\bvous devez\s+(?:vous\s+)?conformer\b/i,
+    // A deadline stated in words bypasses the numeric guard. These are not
+    // allowed in model prose even when they do not name a legal sanction.
+    /\b(?:avant|d['’]ici)\s+(?:la fin de l['’]ann[ée]e|cet [ée]t[ée]|la fin du mois|la fin de la semaine)\b/i,
   ],
   en: [
     /\bfines?\b/i,
@@ -64,6 +74,10 @@ const LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {
     /\bunlawful\b/i,
     /\billegal\w*\b/i,
     /\blegally required\b/i,
+    /\bsubject to (?:the )?obligation\b/i,
+    /\brequired to comply\b/i,
+    /\byou must comply\b/i,
+    /\b(?:by|before) (?:the end of (?:the )?year|this summer|the end of (?:the )?month|the end of (?:the )?week)\b/i,
   ],
 };
 
