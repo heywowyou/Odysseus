@@ -38,7 +38,9 @@ import {
   toHotelEvidenceFact,
   type HotelEvidenceFact,
   type HotelPrescanEvidence,
+  type TransactionalFlowAmbiguity,
   type TransactionalFlowEvidence,
+  type TransactionalFlowRedirectCheck,
 } from '@odysseus/core';
 import { DEFAULT_TIMEOUT_MS } from '../browser.js';
 import {
@@ -50,7 +52,16 @@ import {
 import { fetchRobotsRules, isAllowedByRobots, type RobotsRules } from '../robots.js';
 import { renderDiff } from '../render-diff.js';
 import { runAxe, type AxeResults } from '../axe.js';
-import { detectTransactionalFlow, type AnchorLike } from '../checks/transactional-flow.js';
+import {
+  detectTransactionalFlow,
+  detectUnresolvedBookingControls,
+  BOOKING_INTENT_TEXT_PATTERN,
+  findBookingIntentLinks,
+  findDelegatedBookingRedirectChecks,
+  type AnchorLike,
+  type RedirectFollowBudget,
+  type RedirectHostCache,
+} from '../checks/transactional-flow.js';
 import { checkFormErrorHandling } from '../checks/form-error-handling.js';
 import { extractHeadMetadata, type HeadMetadataExtraction } from '../checks/head-metadata.js';
 import { walkKeyboardNavigation } from '../checks/keyboard-navigation.js';
@@ -109,6 +120,15 @@ export interface PrescanPageResult {
   /** Present on every page, since a booking widget can sit anywhere. */
   bookingEvidence?: TransactionalFlowEvidence[];
   bookingEvidenceError?: string;
+  /** Booking controls that visibly express intent but expose no navigable
+   * destination. These are transient scanner observations; persistence keeps
+   * only their fixed kind, never selectors or href values. */
+  bookingAmbiguities?: TransactionalFlowAmbiguity[];
+  bookingAmbiguitiesError?: string;
+  /** Conditional checks of external booking-intent links. Like the other raw
+   * booking observations, exact links and details stop at the scanner. */
+  bookingRedirectChecks?: TransactionalFlowRedirectCheck[];
+  bookingRedirectChecksError?: string;
   /** Set when the page could not be loaded or was disallowed. The result
    *  still lists the page, so "we could not read the booking page" is
    *  distinguishable from "this hotel has no booking page". */
@@ -213,7 +233,7 @@ function isBookingCallToAction(
   snippet: string,
   bookingEvidence: readonly TransactionalFlowEvidence[],
 ): boolean {
-  if (/r[ée]serv|\bbook(ing)?\b|disponibilit|availab/i.test(snippet)) return true;
+  if (BOOKING_INTENT_TEXT_PATTERN.test(snippet)) return true;
   return bookingEvidence.some(
     (evidence) => selector.startsWith(evidence.selector) || evidence.selector.startsWith(selector),
   );
@@ -237,6 +257,9 @@ async function prescanOnePage(
     settleTimeoutMs: number;
     delayMs: number;
     collectAnchors: boolean;
+    redirectHostCache: RedirectHostCache;
+    redirectFollowBudget: RedirectFollowBudget;
+    beforeRedirectNavigate: (host: string) => Promise<void>;
   },
 ): Promise<LoadedPageOutcome> {
   const startedAt = Date.now();
@@ -257,6 +280,10 @@ async function prescanOnePage(
   let metricsError: string | undefined;
   let bookingEvidence: TransactionalFlowEvidence[] | undefined;
   let bookingEvidenceError: string | undefined;
+  let bookingAmbiguities: TransactionalFlowAmbiguity[] | undefined;
+  let bookingAmbiguitiesError: string | undefined;
+  let bookingRedirectChecks: TransactionalFlowRedirectCheck[] | undefined;
+  let bookingRedirectChecksError: string | undefined;
   let anchors: AnchorLike[] = [];
   const facts: HotelEvidenceFact[] = [];
   let failureCapture: CapturedFailureCandidate | null = null;
@@ -295,11 +322,27 @@ async function prescanOnePage(
         } catch (error) {
           bookingEvidenceError = messageOf(error);
         }
+        try {
+          bookingAmbiguities = await detectUnresolvedBookingControls(page, url);
+        } catch (error) {
+          bookingAmbiguitiesError = messageOf(error);
+        }
+        const renderedAnchors = await extractAnchors(page).catch((): AnchorLike[] => []);
         if (options.collectAnchors) {
+          anchors = renderedAnchors;
+        }
+        if (findBookingIntentLinks(url, renderedAnchors).length > 0) {
           try {
-            anchors = await extractAnchors(page);
-          } catch {
-            anchors = [];
+            bookingRedirectChecks = await findDelegatedBookingRedirectChecks(page, url, {
+              browser: options.browser,
+              timeoutMs: options.timeoutMs,
+              userAgent: options.userAgent,
+              hostCache: options.redirectHostCache,
+              followBudget: options.redirectFollowBudget,
+              beforeNavigate: options.beforeRedirectNavigate,
+            });
+          } catch (error) {
+            bookingRedirectChecksError = messageOf(error);
           }
         }
         try {
@@ -409,6 +452,10 @@ async function prescanOnePage(
         ...(metricsError !== undefined ? { metricsError } : {}),
         ...(bookingEvidence !== undefined ? { bookingEvidence } : {}),
         ...(bookingEvidenceError !== undefined ? { bookingEvidenceError } : {}),
+        ...(bookingAmbiguities !== undefined ? { bookingAmbiguities } : {}),
+        ...(bookingAmbiguitiesError !== undefined ? { bookingAmbiguitiesError } : {}),
+        ...(bookingRedirectChecks !== undefined ? { bookingRedirectChecks } : {}),
+        ...(bookingRedirectChecksError !== undefined ? { bookingRedirectChecksError } : {}),
         durationMs: Date.now() - startedAt,
       },
       anchors,
@@ -451,6 +498,8 @@ export async function prescanSite(
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
   const settleTimeoutMs = options.settleTimeoutMs ?? getRenderSettleTimeoutMs();
   const configuredDelayMs = options.delayMs ?? getCrawlDelayMs();
+  const redirectHostCache: RedirectHostCache = new Map();
+  const redirectFollowBudget: RedirectFollowBudget = { remaining: 3 };
   const origin = new URL(startUrl).origin;
 
   await fs.mkdir(options.artifactsDir, { recursive: true });
@@ -459,6 +508,15 @@ export async function prescanSite(
   // Stricter of the two, exactly as crawlSite computes it: a site asking for
   // more space than we configured gets it.
   const effectiveDelayMs = Math.max(configuredDelayMs, robots.crawlDelayMs ?? 0);
+  const lastRedirectNavigationByHost = new Map<string, number>();
+  const beforeRedirectNavigate = async (host: string): Promise<void> => {
+    const lastNavigationAt = lastRedirectNavigationByHost.get(host);
+    if (lastNavigationAt !== undefined) {
+      const remainingDelay = effectiveDelayMs - (Date.now() - lastNavigationAt);
+      if (remainingDelay > 0) await sleep(remainingDelay);
+    }
+    lastRedirectNavigationByHost.set(host, Date.now());
+  };
 
   const browserVersion = options.browser.version();
 
@@ -505,6 +563,9 @@ export async function prescanSite(
     userAgent,
     settleTimeoutMs,
     delayMs: effectiveDelayMs,
+    redirectHostCache,
+    redirectFollowBudget,
+    beforeRedirectNavigate,
   };
 
   options.onProgress?.({

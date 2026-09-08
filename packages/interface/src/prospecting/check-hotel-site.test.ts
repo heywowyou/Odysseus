@@ -210,6 +210,15 @@ describe('checkHotelSite', () => {
     expect(facts.bookingVendors).toEqual([]);
   });
 
+  it('uses the shared booking-intent pattern for a same-origin check-in path', async () => {
+    mockFetch((url) => {
+      if (url.endsWith('/robots.txt')) return { status: 404 };
+      return { body: '<html><body><a href="/check-in">Arrivée</a></body></html>' };
+    });
+
+    expect((await check()).reservationUrl).toBe('https://hotel-exemple.fr/check-in');
+  });
+
   it('records an OTA link as a vendor fact, never as a reservation path', async () => {
     mockFetch((url) => {
       if (url.endsWith('/robots.txt')) return { status: 404 };

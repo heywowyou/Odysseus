@@ -362,7 +362,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [031](archive/031-operator-preview-render.md) | Let the operator view the pre-purchase preview's current content | P3 | S | 008, 009 | DONE |
 | [032](./032-site-context-from-catalogue.md) | Populate the writing pass's site context from the hotel catalogue | P3 | M | 029 | TODO (stub only, not started) |
 | [033](./033-report-render-qa-and-copy-review-trial.md) | Gate delivery on deterministic render QA and measure an advisory copy-review pass | P1 | L | none | TODO (planned 2026-09-07; indexed 2026-09-08 after being found unindexed) |
-| [034](./034-hotel-outreach-v2-booking-detection.md) | Port booking detection to prospecting and ship hotel-outreach-v2 | P1 | M | none; gates 014 Step 3 | TODO |
+| [034](./034-hotel-outreach-v2-booking-detection.md) | Port booking detection to prospecting and ship hotel-outreach-v2 | P1 | M | none; gates 014 Step 3 | IN PROGRESS (v4 and unapproved v2 implemented 2026-09-08; bounded batch, score diff, and operator approval remain) |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the

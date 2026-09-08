@@ -110,10 +110,10 @@ function options(overrides: Partial<PrescanHotelsOptions> = {}): PrescanHotelsOp
 
 describe('prescanHotels', () => {
   // Pinned on purpose, so a bump is a decision rather than a diff nobody
-  // reads. v3 (2026-08-28) came from widening evidence completeness: v2
-  // records carry the older rule's status and must not be mixed with these.
-  it('uses the evidence-bearing prescan v3 contract', () => {
-    expect(CURRENT_PRESCAN_VERSION).toBe('v3');
+  // reads. v4 (2026-09-08) adds unresolved booking controls and bounded
+  // delegated-booking checks; older records did not measure them.
+  it('uses the booking-evidence-bearing prescan v4 contract', () => {
+    expect(CURRENT_PRESCAN_VERSION).toBe('v4');
   });
 
   it('prescans every selected candidate and records one document each', async () => {

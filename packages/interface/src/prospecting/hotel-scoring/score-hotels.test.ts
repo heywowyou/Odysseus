@@ -224,6 +224,41 @@ describe('scoreHotels', () => {
     expect(recorded[0]?.score.ability.total).toBe(30 + 20 + 15 + 15);
   });
 
+  it('feeds v4 prescan booking kinds into the unapproved v2 configuration', async () => {
+    const { store, recorded } = stubStore({
+      candidates: [candidate('1')],
+      prescans: {
+        'prescan-1': prescan('1', {
+          prescanVersion: 'v4',
+          pages: [
+            {
+              role: 'homepage',
+              url: 'https://hotel-1.fr/',
+              bookingEvidenceKinds: ['delegated-booking-single-property'],
+              durationMs: 3000,
+            },
+          ],
+        }),
+      },
+    });
+
+    const report = await scoreHotels({
+      ...baseOptions,
+      scoringVersion: 'hotel-outreach-v2',
+      prescanVersion: 'v4',
+      store,
+    });
+
+    expect(report.approved).toBe(false);
+    expect(
+      recorded[0]?.score.ability.components.find((part) => part.id === 'direct-booking'),
+    ).toEqual({
+      id: 'direct-booking',
+      points: 30,
+      reason: 'direct-booking-detected-by-prescan',
+    });
+  });
+
   it('reads the company size band from the stored qualification, not the candidate', async () => {
     // The identifier only exists once the qualification pass has fetched the
     // hotel's own page, so this is the only document that can carry it.

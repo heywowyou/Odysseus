@@ -554,6 +554,14 @@ export type RedirectHostCache = Map<
   Promise<Omit<TransactionalFlowRedirectCheck, 'pageUrl'>>
 >;
 
+/** Mutable only within one bounded scan. Decrement immediately before a new
+ * third-party navigation starts, so concurrent callers cannot overspend the
+ * limit while they await the same browser work. Cached and known-marketplace
+ * results cost no navigation budget. */
+export interface RedirectFollowBudget {
+  remaining: number;
+}
+
 export interface DelegatedBookingRedirectOptions {
   browser: Browser;
   timeoutMs?: number;
@@ -563,6 +571,13 @@ export interface DelegatedBookingRedirectOptions {
    *  candidate list without requiring a caller to wire one up. scanSite()
    *  passes one shared cache through every page's scanPage() call. */
   hostCache?: RedirectHostCache;
+  /** Optional scan-wide navigation budget. The full audit keeps its existing
+   * per-page cap when this is absent; the bounded hotel prescan supplies one
+   * shared budget across all of its rendered pages. */
+  followBudget?: RedirectFollowBudget;
+  /** Called immediately before a new third-party navigation. The prescan uses
+   * this to preserve its per-host crawl delay for delegated booking engines. */
+  beforeNavigate?: (host: string) => Promise<void>;
   /** Manual-input-layer milestone: a known off-domain booking destination
    *  the operator has already confirmed. A followed redirect landing on
    *  this origin short-circuits straight to 'single-property' instead of
@@ -625,10 +640,23 @@ export async function findDelegatedBookingRedirectChecks(
 
     let resultPromise = hostCache.get(cacheKey);
     if (!resultPromise) {
+      const isMarketplace = OUTBOUND_BOOKING_HOSTS.some((pattern) => pattern.test(hostname));
+      if (!isMarketplace && options.followBudget !== undefined) {
+        if (options.followBudget.remaining === 0) {
+          checks.push({
+            linkUrl,
+            pageUrl,
+            resolution: 'undetermined',
+            detail: 'Redirect was not followed because the scan navigation budget was exhausted.',
+          });
+          continue;
+        }
+        options.followBudget.remaining -= 1;
+      }
       // Set before awaiting: a concurrent lane checking the same host
       // between this line and the await below must see this promise
       // already in the map, not start a second navigation.
-      resultPromise = OUTBOUND_BOOKING_HOSTS.some((pattern) => pattern.test(hostname))
+      resultPromise = isMarketplace
         ? Promise.resolve({
             linkUrl,
             resolution: 'marketplace' as const,
@@ -641,7 +669,16 @@ export async function findDelegatedBookingRedirectChecks(
               destinationUrl: linkUrl,
               detail: 'operator-supplied booking engine URL',
             })
-          : inspectDestinationPage(options.browser, linkUrl, originName, timeoutMs, userAgent);
+          : (async () => {
+              await options.beforeNavigate?.(hostname);
+              return inspectDestinationPage(
+                options.browser,
+                linkUrl,
+                originName,
+                timeoutMs,
+                userAgent,
+              );
+            })();
       hostCache.set(cacheKey, resultPromise);
     }
 

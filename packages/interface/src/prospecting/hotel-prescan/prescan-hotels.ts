@@ -31,10 +31,10 @@ import { toLanes } from '../to-lanes.js';
  *  place - the same discipline, and the same reason, as
  *  CURRENT_QUALIFICATION_VERSION: a later comparison must not silently mix
  *  two definitions of the same number. */
-// v3 (2026-08-28): evidence completeness no longer requires the render
-// composite. Records written at v2 carry the older, stricter status and must
-// not be mixed with these.
-export const CURRENT_PRESCAN_VERSION = 'v3';
+// v4 (2026-09-08): booking evidence now includes unresolved JS controls and
+// bounded delegated-booking redirect outcomes. Records written at earlier
+// versions did not measure those signals and must not be mixed with these.
+export const CURRENT_PRESCAN_VERSION = 'v4';
 
 export const PRESCAN_BATCH_SIZE = 100;
 

@@ -177,6 +177,7 @@ describe('findDelegatedBookingRedirectChecks with a shared RedirectHostCache', (
     browserRef: Browser,
     pageHtml: string,
     hostCache: RedirectHostCache,
+    followBudget?: { remaining: number },
   ): Promise<Awaited<ReturnType<typeof findDelegatedBookingRedirectChecks>>> {
     const origin = await startCountingServer({ '/': pageHtml });
     const context = await browserRef.newContext();
@@ -187,6 +188,7 @@ describe('findDelegatedBookingRedirectChecks with a shared RedirectHostCache', (
         browser: browserRef,
         timeoutMs: 10_000,
         hostCache,
+        ...(followBudget === undefined ? {} : { followBudget }),
       });
     } finally {
       await context.close();
@@ -249,6 +251,37 @@ describe('findDelegatedBookingRedirectChecks with a shared RedirectHostCache', (
       expect(checks.find((c) => c.linkUrl.includes(destinationB.origin))?.resolution).toBe(
         'marketplace',
       );
+    } finally {
+      destinationA.server.close();
+      destinationB.server.close();
+    }
+  });
+
+  it('stops new third-party navigations when the shared prescan budget is exhausted', async () => {
+    const destinationA = await startCountingServer({
+      '/single-property': `<title>Hotel La Coorniche</title><body>4 Avenue de la Coorniche.</body>`,
+    });
+    const destinationB = await startCountingServer({
+      '/single-property': `<title>Hotel La Coorniche</title><body>4 Avenue de la Coorniche.</body>`,
+    });
+    try {
+      const checks = await checkPage(
+        browser,
+        `<title>Hotel La Coorniche</title><body>
+          <a href="${destinationA.origin}/single-property">Réserver</a>
+          <a href="${destinationB.origin}/single-property">Book now</a>
+        </body>`,
+        new Map(),
+        { remaining: 1 },
+      );
+
+      expect(destinationA.requestCount()).toBe(1);
+      expect(destinationB.requestCount()).toBe(0);
+      expect(checks).toHaveLength(2);
+      expect(checks[1]).toMatchObject({
+        resolution: 'undetermined',
+        detail: expect.stringMatching(/budget was exhausted/i),
+      });
     } finally {
       destinationA.server.close();
       destinationB.server.close();

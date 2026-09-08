@@ -92,6 +92,7 @@ export type HotelScoreReason =
   | 'metrics-acceptable'
   | 'metrics-unobserved'
   | 'direct-booking-on-own-domain'
+  | 'direct-booking-detected-by-prescan'
   | 'booking-offsite-only'
   | 'booking-path-undetected'
   | 'star-rating-four-or-five'
@@ -102,6 +103,10 @@ export type HotelScoreReason =
   | 'capacity-unknown'
   | 'effectif-ten-or-more'
   | 'effectif-under-ten-or-unmatched'
+  | 'room-count-fifty-or-more'
+  | 'room-count-twenty-five-to-forty-nine'
+  | 'room-count-under-twenty-five'
+  | 'room-count-unknown'
   | 'independent'
   | 'not-independent';
 
@@ -119,6 +124,10 @@ export interface HotelOutreachScoreConfig {
   approved: boolean;
   brokenness: Record<HotelBrokennessComponentId, readonly number[]>;
   ability: Record<HotelAbilityComponentId, readonly number[]>;
+  abilitySources: {
+    directBooking: 'site-facts' | 'prescan-v4';
+    effectif: 'sirene' | 'room-count-with-sirene-fallback';
+  };
 }
 
 /**
@@ -148,6 +157,37 @@ export const HOTEL_OUTREACH_SCORE_CONFIGS: Readonly<Record<string, HotelOutreach
       capacity: [15],
       effectif: [20],
       independence: [15],
+    },
+    abilitySources: {
+      directBooking: 'site-facts',
+      effectif: 'sirene',
+    },
+  },
+  /** Calibration only until the operator reviews the v1-to-v2 score diff.
+   * This is deliberately a new configuration rather than an edit of v1:
+   * prescan booking evidence and Atout France room counts widen the facts the
+   * score reads, so the resulting rows must remain comparable by version. */
+  'hotel-outreach-v2': {
+    version: 'hotel-outreach-v2',
+    approved: false,
+    brokenness: {
+      'render-gap': [30, 18],
+      'booking-failure': [25, 12],
+      'axe-critical': [20, 12],
+      'axe-serious': [12, 7, 3],
+      'console-errors': [8, 4],
+      metrics: [5],
+    },
+    ability: {
+      'direct-booking': [30, 10],
+      'star-rating': [20, 12],
+      capacity: [15],
+      effectif: [20, 12],
+      independence: [15],
+    },
+    abilitySources: {
+      directBooking: 'prescan-v4',
+      effectif: 'room-count-with-sirene-fallback',
     },
   },
 };
@@ -181,11 +221,30 @@ export interface HotelOutreachScoreInput {
   roomCount?: number | null;
   groupStatus: HotelGroupStatus;
   effectifBandCode?: string | null;
+  /** Fixed booking-mechanism labels from a v4 prescan. The raw scanner
+   * observations that produced them, including selectors and exact URLs, are
+   * intentionally never available to the scorer. */
+  bookingEvidenceKinds?: readonly string[];
+  /** The persisted prescan contract that supplied bookingEvidenceKinds. */
+  prescanVersion?: string;
   /** A same-origin reservation path, from the qualification's site facts. */
   reservationUrl?: string | null;
   /** Off-domain booking destinations. Proves a funnel exists, not that the
    *  hotel controls it. */
   offsiteBookingCount?: number | null;
+}
+
+const DIRECT_BOOKING_EVIDENCE_KINDS = new Set([
+  'booking-engine-script',
+  'checkout-form',
+  'payment-embed',
+  'booking-engine-domain-reference',
+  'booking-iframe',
+  'delegated-booking-single-property',
+]);
+
+function hasDirectBookingEvidence(kinds: readonly string[] | undefined): boolean {
+  return kinds?.some((kind) => DIRECT_BOOKING_EVIDENCE_KINDS.has(kind)) ?? false;
 }
 
 export interface HotelOutreachScore {
@@ -331,16 +390,23 @@ function scoreAbility(
   const weights = config.ability;
   const components: HotelScoreComponent<HotelAbilityComponentId>[] = [];
 
-  if (
+  const reservationUrlPresent =
     input.reservationUrl !== null &&
     input.reservationUrl !== undefined &&
-    input.reservationUrl !== ''
+    input.reservationUrl !== '';
+  const hasV4DirectBookingEvidence =
+    input.prescanVersion === 'v4' && hasDirectBookingEvidence(input.bookingEvidenceKinds);
+  if (
+    (config.abilitySources.directBooking === 'prescan-v4' && hasV4DirectBookingEvidence) ||
+    reservationUrlPresent
   )
     components.push(
       band(
         'direct-booking',
         weights['direct-booking'][0] as number,
-        'direct-booking-on-own-domain',
+        config.abilitySources.directBooking === 'prescan-v4' && hasV4DirectBookingEvidence
+          ? 'direct-booking-detected-by-prescan'
+          : 'direct-booking-on-own-domain',
       ),
     );
   else if ((input.offsiteBookingCount ?? 0) > 0)
@@ -368,7 +434,19 @@ function scoreAbility(
     components.push(band('capacity', weights.capacity[0] as number, 'capacity-meaningful'));
   else components.push(band('capacity', 0, 'capacity-small'));
 
-  if (meetsEffectifThreshold(input.effectifBandCode))
+  if (config.abilitySources.effectif === 'room-count-with-sirene-fallback') {
+    const roomCount = input.roomCount ?? null;
+    if (roomCount !== null && roomCount >= 50)
+      components.push(band('effectif', weights.effectif[0] as number, 'room-count-fifty-or-more'));
+    else if (roomCount !== null && roomCount >= 25)
+      components.push(
+        band('effectif', weights.effectif[1] as number, 'room-count-twenty-five-to-forty-nine'),
+      );
+    else if (meetsEffectifThreshold(input.effectifBandCode))
+      components.push(band('effectif', weights.effectif[0] as number, 'effectif-ten-or-more'));
+    else if (roomCount === null) components.push(band('effectif', 0, 'room-count-unknown'));
+    else components.push(band('effectif', 0, 'room-count-under-twenty-five'));
+  } else if (meetsEffectifThreshold(input.effectifBandCode))
     components.push(band('effectif', weights.effectif[0] as number, 'effectif-ten-or-more'));
   else components.push(band('effectif', 0, 'effectif-under-ten-or-unmatched'));
 

@@ -24,6 +24,7 @@
 
 import type { OriginLock } from '@odysseus/scanner';
 import {
+  BOOKING_INTENT_TEXT_PATTERN,
   extractMentionsLegales,
   fetchRobotsRules,
   findAccessibilityStatementUrl,
@@ -45,14 +46,6 @@ export interface CheckHotelSiteOptions {
   userAgent: string;
   timeoutMs: number;
 }
-
-/** Path fragments that mean "book a room here" on a real French or English
- *  hotel site. Narrow on purpose, in the spirit of accessibility-statement.ts's
- *  own note about /chambres-accessibles/: 'offre' and 'tarif' describe prices
- *  on almost every hotel site without being a booking route, and matching them
- *  would report a reservation path for a brochure site. */
-const RESERVATION_PATTERN =
-  /reserv(?:er|ation|ez)|booking|book-now|book-online|disponibilit|chambres-libres/iu;
 
 /** The probe's failure vocabulary maps one-to-one onto the reachability the
  *  decision reads. Written as a total map rather than a cast so a new probe
@@ -144,7 +137,7 @@ function findReservationUrl(sameOriginUrls: readonly string[]): string | null {
     } catch {
       continue;
     }
-    if (RESERVATION_PATTERN.test(pathname)) return url;
+    if (BOOKING_INTENT_TEXT_PATTERN.test(pathname)) return url;
   }
   return null;
 }

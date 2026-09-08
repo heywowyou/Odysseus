@@ -50,13 +50,25 @@ import type { PipelineContext } from '../job-queue.js';
  * forbids a public preview from containing; storing only the kinds means the
  * prohibited detail is never in the record a preview is built from, rather
  * than being present and relied on to be filtered later. */
-function toStoredPages(result: PrescanResult): HotelPrescanPage[] {
+export function toStoredPages(result: PrescanResult): HotelPrescanPage[] {
   return result.pages.map((page) => {
-    const kinds = [...new Set((page.bookingEvidence ?? []).map((item) => item.kind))].sort();
-    const { bookingEvidence: _dropped, ...rest } = page;
+    const kinds = new Set<string>((page.bookingEvidence ?? []).map((item) => item.kind));
+    if ((page.bookingAmbiguities?.length ?? 0) > 0) kinds.add('booking-control-unresolved');
+    for (const check of page.bookingRedirectChecks ?? []) {
+      kinds.add(`delegated-booking-${check.resolution}`);
+    }
+    const {
+      bookingEvidence: _droppedEvidence,
+      bookingEvidenceError: _droppedEvidenceError,
+      bookingAmbiguities: _droppedAmbiguities,
+      bookingAmbiguitiesError: _droppedAmbiguitiesError,
+      bookingRedirectChecks: _droppedRedirectChecks,
+      bookingRedirectChecksError: _droppedRedirectChecksError,
+      ...rest
+    } = page;
     return {
       ...rest,
-      ...(kinds.length > 0 ? { bookingEvidenceKinds: kinds } : {}),
+      ...(kinds.size > 0 ? { bookingEvidenceKinds: [...kinds].sort() } : {}),
     };
   });
 }

@@ -82,6 +82,23 @@ columns at full coverage. Trade-off 38 pre-reserved both changes as the
    returns anyone. Scoring contacts nobody; the only live work in this
    plan is step 5's bounded prescan batch.
 
+## Implementation status
+
+Steps 1 through 4 are implemented as of 2026-09-08. Prescan v4 records only
+fixed booking-kind labels for the new unresolved-control and redirect outcomes;
+the transient scanner observations carrying selectors, hrefs, destination URLs,
+and details are discarded before persistence. The redirect budget is shared
+across a prescan's pages and limits new third-party navigations to three.
+
+`hotel-outreach-v2` is present but intentionally unapproved. It reads direct
+booking only from v4 kinds that prove an on-site or single-property booking
+flow, with `reservationUrl` as fallback; unresolved and marketplace outcomes
+do not earn the direct-booking weight. Its effectif component reads room-count
+bands, with the existing Sirene effectif code retained as an alternative path.
+
+Steps 5 through 7 remain pending: no live batch, rescore, score diff, cohort
+selection, or approval was run during implementation.
+
 ## Steps
 
 1. Prescan v4 part 1: call `detectUnresolvedBookingControls` in

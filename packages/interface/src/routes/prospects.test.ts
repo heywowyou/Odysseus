@@ -495,7 +495,7 @@ describe('GET /api/prospects/:candidateId/outreach/preview-render', () => {
 
     expect(res.statusCode).toBe(200);
     expect(createMongoOutreachPreviewStore).toHaveBeenCalledWith(fakeConnection, {
-      prescanVersion: 'v3',
+      prescanVersion: 'v4',
       qualificationVersion: 'v3',
     });
     expect(buildPreviewInput).toHaveBeenCalledWith(

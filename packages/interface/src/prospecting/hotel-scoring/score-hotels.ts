@@ -171,6 +171,8 @@ export function scoreInputFor(
     roomCount: candidate.roomCount ?? null,
     groupStatus: candidate.groupStatus,
     effectifBandCode: qualification?.sireneJoin?.effectifBandCode ?? null,
+    bookingEvidenceKinds: prescan.pages.flatMap((page) => page.bookingEvidenceKinds ?? []),
+    prescanVersion: prescan.prescanVersion,
     reservationUrl: site?.reservationUrl ?? null,
     offsiteBookingCount: site?.bookingVendors?.length ?? prescan.offsiteBookingLinks.length,
   };

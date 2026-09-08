@@ -233,6 +233,44 @@ describe('computeHotelOutreachScore ability', () => {
     });
   });
 
+  it('lets v2 use only direct booking evidence captured by a v4 prescan', () => {
+    const config = getHotelOutreachScoreConfig('hotel-outreach-v2');
+    const detected = computeHotelOutreachScore(
+      input({
+        prescanVersion: 'v4',
+        bookingEvidenceKinds: ['delegated-booking-single-property'],
+      }),
+      config,
+    );
+    const olderPrescan = computeHotelOutreachScore(
+      input({
+        prescanVersion: 'v3',
+        bookingEvidenceKinds: ['delegated-booking-single-property'],
+      }),
+      config,
+    );
+    const inconclusive = computeHotelOutreachScore(
+      input({
+        prescanVersion: 'v4',
+        bookingEvidenceKinds: ['booking-control-unresolved', 'delegated-booking-undetermined'],
+      }),
+      config,
+    );
+
+    expect(component(detected, 'ability', 'direct-booking')).toEqual({
+      points: 30,
+      reason: 'direct-booking-detected-by-prescan',
+    });
+    expect(component(olderPrescan, 'ability', 'direct-booking')).toEqual({
+      points: 0,
+      reason: 'booking-path-undetected',
+    });
+    expect(component(inconclusive, 'ability', 'direct-booking')).toEqual({
+      points: 0,
+      reason: 'booking-path-undetected',
+    });
+  });
+
   it('scores four and five stars above three', () => {
     expect(
       component(computeHotelOutreachScore(input({ starRating: 5 })), 'ability', 'star-rating'),
@@ -296,6 +334,34 @@ describe('computeHotelOutreachScore ability', () => {
     ).toBe(0);
   });
 
+  it('uses Atout France room bands in the unapproved v2 configuration', () => {
+    const config = getHotelOutreachScoreConfig('hotel-outreach-v2');
+    const large = computeHotelOutreachScore(input({ roomCount: 50 }), config);
+    const medium = computeHotelOutreachScore(input({ roomCount: 25 }), config);
+    const small = computeHotelOutreachScore(input({ roomCount: 24 }), config);
+    const sireneFallback = computeHotelOutreachScore(
+      input({ roomCount: null, effectifBandCode: '21' }),
+      config,
+    );
+
+    expect(component(large, 'ability', 'effectif')).toEqual({
+      points: 20,
+      reason: 'room-count-fifty-or-more',
+    });
+    expect(component(medium, 'ability', 'effectif')).toEqual({
+      points: 12,
+      reason: 'room-count-twenty-five-to-forty-nine',
+    });
+    expect(component(small, 'ability', 'effectif')).toEqual({
+      points: 0,
+      reason: 'room-count-under-twenty-five',
+    });
+    expect(component(sireneFallback, 'ability', 'effectif')).toEqual({
+      points: 20,
+      reason: 'effectif-ten-or-more',
+    });
+  });
+
   it('scores independence only for an independent hotel', () => {
     expect(
       component(
@@ -345,6 +411,10 @@ describe('computeHotelOutreachScore determinism', () => {
     expect(() => getHotelOutreachScoreConfig('hotel-outreach-v9')).toThrow(
       /Unknown hotel outreach/,
     );
+  });
+
+  it('keeps v2 unapproved until the operator reviews its score diff', () => {
+    expect(getHotelOutreachScoreConfig('hotel-outreach-v2').approved).toBe(false);
   });
 });
 

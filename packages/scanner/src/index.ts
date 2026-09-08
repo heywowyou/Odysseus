@@ -43,6 +43,7 @@ export {
 export type { RobotsRules, AiCrawlerAccessResult } from './robots.js';
 export { checkSecurityHeaders } from './checks/security-headers.js';
 export type { SecurityHeadersCheckResult } from './checks/security-headers.js';
+export { BOOKING_INTENT_TEXT_PATTERN } from './checks/transactional-flow.js';
 export { checkStructuredData } from './checks/structured-data.js';
 export type {
   StructuredDataCheckResult,
