@@ -344,7 +344,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [017](archive/017-dashboard-ui-overhaul.md) | Overhaul the operator dashboard UI to shippable quality | P2 | L | 001-012 | DONE |
 | [013](archive/013-outreach-operator-interface.md) | Add the private outreach operator interface | P2 | L | 001-012 | DONE |
 | [016](archive/016-hosted-operator-dashboard.md) | Host the operator dashboard on a public EU server | P2 | M | 001-013 | DONE |
-| [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013, 016 | TODO |
+| [014](./014-first-100-hotel-rollout.md) | Run the controlled first-100 hotel rollout | P2 | M | 001-013, 016 | IN PROGRESS (Step 1 gates recorded 2026-09-08; runbook at [docs/product/first-100-rollout-runbook.md](../docs/product/first-100-rollout-runbook.md)) |
 | [015](archive/015-consolidate-work-tracking.md) | Make plans and issue lifecycle unambiguous | P1 | M | none | DONE |
 | [018](archive/018-report-executive-readability.md) | Make the paid report readable as an executive decision document | P1 | L | none | DONE |
 | [019](archive/019-report-preparation-and-personalization.md) | Prepare and personalize the paid report safely | P1 | L | 018 | DONE |

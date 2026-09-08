@@ -21,6 +21,8 @@
   line was the operator's explicit sequencing decision)
 - **Category**: direction
 - **Planned at**: commit `f7ef7cf`, 2026-08-27
+- **Runbook**: `docs/product/first-100-rollout-runbook.md` (opened 2026-09-08;
+  holds the Step 1 gate record, the drift reconciliation, and the decision log)
 
 ## Why this matters
 
