@@ -145,6 +145,9 @@ export interface ListCandidatesToPrescanOptions {
    *  browser at whichever hotel sorts first - not at the one somebody
    *  actually authorized. */
   domain?: string;
+  /** The fixed candidate list for a limit-bound queued job. It is captured
+   *  before the browser work starts so recovery cannot select a new site. */
+  candidateIds?: string[];
 }
 
 /**
@@ -172,7 +175,10 @@ export async function listCandidatesToPrescan(
     ownRegistrableDomain: { $exists: true, $ne: null },
   };
   if (options.domain !== undefined) filter['ownRegistrableDomain'] = options.domain;
-  if (options.after !== undefined) filter['candidateId'] = { $gt: options.after };
+  const candidateIdFilter: Record<string, string | string[]> = {};
+  if (options.candidateIds !== undefined) candidateIdFilter.$in = options.candidateIds;
+  if (options.after !== undefined) candidateIdFilter.$gt = options.after;
+  if (Object.keys(candidateIdFilter).length > 0) filter['candidateId'] = candidateIdFilter;
   if (options.skipAlreadyPrescanned) {
     filter['prescan.prescanVersion'] = { $ne: options.prescanVersion };
   }

@@ -76,10 +76,18 @@ function fakeStore(candidates: HotelCandidateDocument[]): {
     recorded,
     prescannedIds,
     port: {
-      listCandidatesToPrescan: async ({ limit, after, skipAlreadyPrescanned, domain }) => {
+      listCandidatesToPrescan: async ({
+        limit,
+        after,
+        skipAlreadyPrescanned,
+        domain,
+        candidateIds,
+      }) => {
         let rows = [...candidates].sort((a, b) => a.candidateId.localeCompare(b.candidateId));
         if (after !== undefined) rows = rows.filter((row) => row.candidateId > after);
         if (domain !== undefined) rows = rows.filter((row) => row.ownRegistrableDomain === domain);
+        if (candidateIds !== undefined)
+          rows = rows.filter((row) => candidateIds.includes(row.candidateId));
         if (skipAlreadyPrescanned) rows = rows.filter((row) => !prescannedIds.has(row.candidateId));
         return rows.slice(0, limit);
       },
@@ -155,6 +163,29 @@ describe('prescanHotels', () => {
     const report = await prescanHotels(options({ store: store.port, prescan, limit: 5 }));
     expect(report.candidatesPrescanned).toBe(5);
     expect(prescan).toHaveBeenCalledTimes(5);
+  });
+
+  it('resumes only the candidate IDs captured for a limit-bound batch', async () => {
+    const store = fakeStore([candidate('a'), candidate('b'), candidate('c')]);
+    // The original run completed a before recovery. A fresh eligibility query
+    // would next return b and c, but c was never in the approved batch.
+    store.prescannedIds.add('a');
+    const visited: string[] = [];
+
+    const report = await prescanHotels(
+      options({
+        store: store.port,
+        limit: 2,
+        candidateIds: ['a', 'b'],
+        prescan: async (row) => {
+          visited.push(row.candidateId);
+          return measurement();
+        },
+      }),
+    );
+
+    expect(visited).toEqual(['b']);
+    expect(report.candidatesPrescanned).toBe(1);
   });
 
   it('a dry run visits nothing and writes nothing', async () => {

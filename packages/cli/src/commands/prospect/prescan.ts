@@ -147,6 +147,19 @@ export function registerPrescanCommand(prospect: Command): void {
             return;
           }
 
+          const prescanCandidateIds =
+            opts.domain === undefined
+              ? (
+                  await listCandidatesToPrescan(mongoConnection, {
+                    resolutionVersion: opts.resolutionVersion,
+                    qualificationVersion: opts.qualificationVersion,
+                    prescanVersion: opts.prescanVersion,
+                    limit,
+                    skipAlreadyPrescanned: !opts.rescan,
+                  })
+                ).map((candidate) => candidate.candidateId)
+              : undefined;
+
           const job = await createJob(mongoConnection, {
             type: 'hotel-prescan',
             options: {
@@ -155,6 +168,7 @@ export function registerPrescanCommand(prospect: Command): void {
               prescanVersion: opts.prescanVersion,
               maxPages: limit,
               ...(opts.domain === undefined ? {} : { domain: opts.domain }),
+              ...(prescanCandidateIds === undefined ? {} : { prescanCandidateIds }),
               concurrency: opts.concurrency,
               rescan: opts.rescan,
             },

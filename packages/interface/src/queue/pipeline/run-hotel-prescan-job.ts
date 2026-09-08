@@ -103,6 +103,16 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
     );
   }
   const prescanVersion = options.prescanVersion ?? CURRENT_PRESCAN_VERSION;
+  if (
+    options.domain === undefined &&
+    options.maxPages !== undefined &&
+    options.prescanCandidateIds === undefined
+  ) {
+    throw new Error(
+      `odysseus interface: hotel-prescan job ${job.jobId} has no persisted candidate scope; ` +
+        'recreate the batch from its approved list before running it',
+    );
+  }
 
   await updateJobProgress(connection, job.jobId, {
     phase: 'prescanning',
@@ -182,6 +192,9 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
       prescanVersion,
       ...(options.maxPages !== undefined ? { limit: options.maxPages } : {}),
       ...(options.domain !== undefined ? { domain: options.domain } : {}),
+      ...(options.prescanCandidateIds === undefined
+        ? {}
+        : { candidateIds: options.prescanCandidateIds }),
       concurrency: options.concurrency ?? PROSPECTING_JOB_CONCURRENCY,
       rescan: options.rescan ?? false,
       dryRun: false,

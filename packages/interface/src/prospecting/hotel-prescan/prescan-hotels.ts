@@ -48,6 +48,7 @@ export interface HotelPrescanStorePort {
     after?: string;
     skipAlreadyPrescanned: boolean;
     domain?: string;
+    candidateIds?: string[];
   }): Promise<HotelCandidateDocument[]>;
   record(input: RecordPrescanInput): Promise<{ prescanId: string; pointerWritten: boolean }>;
 }
@@ -85,6 +86,8 @@ export interface PrescanHotelsOptions {
    *  `--limit 1` over an id-ordered listing, is bounded but points somewhere
    *  nobody chose. */
   domain?: string;
+  /** Fixed candidate list captured by a limit-bound queue job. */
+  candidateIds?: string[];
   /** Measure again even where a prescan already exists at this version. */
   rescan: boolean;
   dryRun: boolean;
@@ -165,6 +168,7 @@ export async function prescanHotels(options: PrescanHotelsOptions): Promise<Hote
       limit: pageSize,
       ...(after === undefined ? {} : { after }),
       ...(options.domain === undefined ? {} : { domain: options.domain }),
+      ...(options.candidateIds === undefined ? {} : { candidateIds: options.candidateIds }),
       skipAlreadyPrescanned: !options.rescan,
     });
     if (page.length === 0) break;

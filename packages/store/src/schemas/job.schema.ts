@@ -100,6 +100,10 @@ export interface JobOptionsSnapshot {
    *  document itself says which site was authorized, rather than leaving
    *  that to be inferred from whichever candidate happened to sort first. */
   domain?: string;
+  /** Limit-bound hotel-prescan jobs only. The exact candidate list selected
+   *  at enqueue time, retained so a recovered job cannot continue past the
+   *  operator-approved scope after earlier candidates were recorded. */
+  prescanCandidateIds?: string[];
   /** outreach-draft-batch and outreach-followup-batch jobs only (milestone
    *  9c plan 030): maximum drafts/follow-ups this batch prepares, the same
    *  bound the CLI's own `--limit` has always used. */
@@ -259,6 +263,7 @@ const jobOptionsSchema = new Schema(
     concurrency: { type: Number },
     rescan: { type: Boolean },
     domain: { type: String },
+    prescanCandidateIds: { type: [String] },
     limit: { type: Number },
     language: { type: String, enum: ['fr', 'en'] },
   },

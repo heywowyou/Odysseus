@@ -65,6 +65,25 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     await completeJob(connection!, job.jobId);
   });
 
+  it('persists the approved candidate scope of a limit-bound prescan job', async () => {
+    const job = await createJob(connection!, {
+      type: 'hotel-prescan',
+      options: {
+        resolutionVersion: 'rv1',
+        qualificationVersion: 'qv1',
+        prescanVersion: 'pv1',
+        maxPages: 2,
+        prescanCandidateIds: ['candidate-a', 'candidate-b'],
+      },
+    });
+
+    expect((await getJob(connection!, job.jobId))?.options.prescanCandidateIds).toEqual([
+      'candidate-a',
+      'candidate-b',
+    ]);
+    await completeJob(connection!, job.jobId);
+  });
+
   it('claims the oldest queued job atomically and marks it running', async () => {
     const first = await createJob(connection!, {
       type: 'full-audit',

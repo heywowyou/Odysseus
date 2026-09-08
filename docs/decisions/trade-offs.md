@@ -3809,10 +3809,16 @@ of the original list wasn't yet recorded (the 35 duplicates) and then walks
 straight past the end of the approved list into whatever qualifies next (the
 110 unapproved domains), with nothing to stop at the operator's actual
 boundary. `--domain`-bound single-site batches are immune, since the domain
-is fixed regardless of restarts. This second part is still open, tracked as
-issue #114, and means any future `--limit`-bound live batch remains exposed
-to the same failure mode on a genuine crash-and-recover, not only the
-already-fixed spurious reclaim.
+is fixed regardless of restarts.
+
+**Resolved 2026-09-08, issue #114.** A new limit-bound job snapshots its
+ordered candidate IDs when it is enqueued. Every run and recovery filters the
+candidate listing to that snapshot before applying the normal already-prescanned
+skip, so it can finish only approved candidates, never replace them with the
+next eligible rows. A pre-fix limit-bound job lacks the information needed to
+recover its approved scope, so it fails closed and must be recreated from the
+approved list. This is deliberately stricter than continuing a job whose
+boundary cannot be proved.
 
 **What is usable, decided with the operator 2026-09-08.** The 119 approved
 domains that actually received a v4 prescan (all but `hotel-victoria.fr`) are
@@ -3828,8 +3834,6 @@ authorization scope; this is a scope/authorization incident, not a
 politeness one, as far as verified from the stored `robotsTxtFound` and
 `effectiveDelayMs` fields on the affected records.
 
-Do not treat a `--limit`-bound prescan job as restart-safe against its
-approved scope until issue #114 is fixed. A live batch that must not exceed
-a specific named list should use `--domain` per site, or the operator should
-be told explicitly that a `--limit` batch's approval is a count, not a
-guarantee of which sites, until then.
+Limit-bound prescan jobs are restart-safe only when their persisted candidate
+snapshot is present. A legacy job without it must be recreated rather than
+recovered.

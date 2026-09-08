@@ -102,6 +102,33 @@ describe('hotel prescan cancellation', () => {
       ),
     ).rejects.toBeInstanceOf(JobCancelledError);
   });
+
+  it('refuses a legacy limit-bound job without a persisted candidate scope', async () => {
+    const ctx: PipelineContext = {
+      connection: {} as never,
+      originLock: {} as never,
+      cancellation: new CancellationRegistry(),
+    };
+
+    await expect(
+      runHotelPrescanJob(
+        {
+          jobId: 'legacy-job',
+          type: 'hotel-prescan',
+          status: 'running',
+          phase: 'prescanning',
+          options: {
+            resolutionVersion: 'rv1',
+            qualificationVersion: 'qv1',
+            maxPages: 10,
+          },
+          createdAt: new Date(),
+          progress: {},
+        } as never,
+        ctx,
+      ),
+    ).rejects.toThrow('has no persisted candidate scope');
+  });
 });
 
 describe('toStoredPages', () => {

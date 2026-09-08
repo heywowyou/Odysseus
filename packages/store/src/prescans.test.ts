@@ -363,6 +363,31 @@ describe.skipIf(!mongoAvailable)('prescans', () => {
     expect(absent).toEqual([]);
   });
 
+  it('restricts a recovered batch to its persisted candidate IDs', async () => {
+    const resolutionVersion = `rv-${randomUUID()}`;
+    const qualificationVersion = `qv-${randomUUID()}`;
+    const prescanVersion = `pv-${randomUUID()}`;
+    const first = await qualifiedCandidate(resolutionVersion, qualificationVersion);
+    const second = await qualifiedCandidate(resolutionVersion, qualificationVersion);
+    await qualifiedCandidate(resolutionVersion, qualificationVersion);
+
+    await recordPrescan(
+      connection!,
+      prescan({ candidateId: first, resolutionVersion, qualificationVersion, prescanVersion }),
+    );
+
+    const remaining = await listCandidatesToPrescan(connection!, {
+      resolutionVersion,
+      qualificationVersion,
+      prescanVersion,
+      limit: 50,
+      candidateIds: [first, second],
+      skipAlreadyPrescanned: true,
+    });
+
+    expect(remaining.map((row) => row.candidateId)).toEqual([second]);
+  });
+
   it('skips a candidate already prescanned at this version, unless rescanning', async () => {
     const resolutionVersion = `rv-${randomUUID()}`;
     const qualificationVersion = `qv-${randomUUID()}`;
