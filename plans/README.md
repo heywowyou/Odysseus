@@ -358,7 +358,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [027](archive/027-french-report-prose-quality.md) | Make the French report read like consulting prose | P1 | M | 018, 019, 025 | DONE (operator read and accepted both stored French PDFs 2026-09-07; three residual copy defects fixed in follow-up commits) |
 | [028](archive/028-writing-pass-consistency-guards.md) | Close the writing-pass consistency gaps plan 027 didn't cover | P2 | S | 027 | DONE (three additive guards shipped, `packages/llm` suite green, `pnpm run check` clean, 2026-09-07) |
 | [029](archive/029-writing-pass-open-levers.md) | The two writing-pass levers plan 027 left as operator decisions | P3 | M | 027, 028 | DONE (Steps 2-3 shipped 2026-09-07; Step 1 measured and deferred 2026-09-08 - production stays at `reasoning_effort: 'none'`, no measured gain and one regression at `low`, a guard trip at `medium`) |
-| [030](./030-outreach-dashboard-wiring.md) | Wire outreach draft generation into the operator dashboard | P2 | M | 011-013 | TODO |
+| [030](archive/030-outreach-dashboard-wiring.md) | Wire outreach draft generation into the operator dashboard | P2 | M | 011-013 | DONE (shipped in d5ce20b 2026-09-08; the manual real-hotel pass from the plan's Verification section remains an operator step) |
 | [031](archive/031-operator-preview-render.md) | Let the operator view the pre-purchase preview's current content | P3 | S | 008, 009 | DONE |
 | [032](./032-site-context-from-catalogue.md) | Populate the writing pass's site context from the hotel catalogue | P3 | M | 029 | TODO (stub only, not started) |
 

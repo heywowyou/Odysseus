@@ -10,7 +10,8 @@
 - **Depends on**: 011 (Gmail drafts without send), 012 (replies, suppressions,
   outcomes), 013 (outreach operator interface) — all DONE
 - **Category**: Milestone 9c, operator interface
-- **Planned at**: 2026-09-07, not yet started
+- **Planned at**: 2026-09-07
+- **Completed at**: 2026-09-08 (shipped in d5ce20b: draft runtime, both synchronous routes, both batch job types and runners, the candidate outreach sub-page, and the hub batch buttons; the manual real-hotel pass from the Verification section remains an operator step)
 
 ## Why this matters
 
