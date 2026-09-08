@@ -7,10 +7,14 @@
  * attempt, and changing what an attempt said destroys the only record of what
  * the operator was actually shown.
  *
- * The one mutation is `markOutreachDraftDeleted`, which is a state transition
- * rather than an edit and is idempotent for the same reason
- * `PreviewPublisher.delete` is: rejecting a draft must not fail because the
- * operator already discarded it in the mail client.
+ * Two mutations, both state transitions rather than edits, both idempotent
+ * for the same reason `PreviewPublisher.delete` is: reviewing a draft must not
+ * fail because the operator already discarded it in the mail client.
+ * `markOutreachDraftDeleted` is the CLI discard path. `recordOutreachDraftReview`
+ * (issue #96) is the dashboard review path: it makes the same `deleted`
+ * transition and additionally records which way the operator went, so campaign
+ * analysis can distinguish "reviewed and approved" from "reviewed and
+ * discarded" without re-semanting the status every other consumer reads.
  *
  * `recordFailedOutreachDraft` exists so a refusal leaves evidence. A run that
  * correctly declined to create a draft and stored nothing is indistinguishable
@@ -23,8 +27,11 @@ import type { Connection } from 'mongoose';
 import {
   createOutreachDraftModel,
   type OutreachDraftDocument,
+  type OutreachDraftReviewOutcome,
 } from './schemas/outreach-draft.schema.js';
 import type { OutreachEvidenceSlot } from '@odysseus/core';
+
+export type { OutreachDraftReviewOutcome };
 
 /** Operational retention, per docs/rules/prospect-qualification.md section 7. */
 export const OUTREACH_DRAFT_RETENTION_DAYS = 90;
@@ -211,6 +218,44 @@ export async function markOutreachDraftDeleted(
   const result = await DraftModel.updateOne(
     { draftId, status: 'created' },
     { $set: { status: 'deleted', deletedAt: new Date() } },
+  );
+  return { changed: result.modifiedCount === 1 };
+}
+
+export interface RecordOutreachDraftReviewResult {
+  /** False when the draft was already reviewed or discarded, so a repeat
+   *  stays quiet and, crucially, never overwrites the first outcome: the
+   *  filter only matches a `created` row, so the recorded decision is the
+   *  first one the operator made. */
+  changed: boolean;
+}
+
+/**
+ * Record the operator's review of a draft (issue #96).
+ *
+ * The status transition is exactly `markOutreachDraftDeleted`'s - approve and
+ * skip both end the draft's life in the review flow, and neither sends,
+ * edits, or creates anything. What this adds is the outcome: the field that
+ * lets plan 014's campaign analysis tell an approved draft from a discarded
+ * one months later. Reviewing never touches the Gmail draft itself.
+ */
+export async function recordOutreachDraftReview(
+  connection: Connection,
+  draftId: string,
+  outcome: OutreachDraftReviewOutcome,
+): Promise<RecordOutreachDraftReviewResult> {
+  const DraftModel = createOutreachDraftModel(connection);
+  const now = new Date();
+  const result = await DraftModel.updateOne(
+    { draftId, status: 'created' },
+    {
+      $set: {
+        status: 'deleted',
+        deletedAt: now,
+        reviewOutcome: outcome,
+        reviewedAt: now,
+      },
+    },
   );
   return { changed: result.modifiedCount === 1 };
 }

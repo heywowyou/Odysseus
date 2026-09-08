@@ -74,6 +74,7 @@ import type { OutreachThreadDocument } from './schemas/outreach-thread.schema.js
 import { listOutreachDrafts } from './outreach-drafts.js';
 import type {
   OutreachDraftDocument,
+  OutreachDraftReviewOutcome,
   OutreachDraftStatus,
 } from './schemas/outreach-draft.schema.js';
 import { listOutreachPreviews } from './outreach-previews.js';
@@ -1082,6 +1083,10 @@ export interface OperatorDraftView {
   hasProviderDraft: boolean;
   createdAt: Date;
   deletedAt: Date | null;
+  /** Issue #96: how the operator resolved the review. Null on rows that left
+   *  `created` before the outcome was recorded or by another path. */
+  reviewOutcome: OutreachDraftReviewOutcome | null;
+  reviewedAt: Date | null;
 }
 
 export interface OperatorThreadView {
@@ -1164,6 +1169,8 @@ function projectDraft(draft: OutreachDraftDocument): OperatorDraftView {
     hasProviderDraft: draft.providerDraftId !== undefined,
     createdAt: draft.createdAt,
     deletedAt: draft.deletedAt ?? null,
+    reviewOutcome: draft.reviewOutcome ?? null,
+    reviewedAt: draft.reviewedAt ?? null,
   };
 }
 

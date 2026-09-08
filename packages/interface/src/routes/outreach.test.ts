@@ -6,7 +6,7 @@ vi.mock('@odysseus/store', () => ({
   listOutreachReviewDrafts: vi.fn(),
   findOutreachDraftById: vi.fn(),
   getHotelCandidate: vi.fn(),
-  markOutreachDraftDeleted: vi.fn(),
+  recordOutreachDraftReview: vi.fn(),
   listRepliesNeedingReview: vi.fn(),
   findOutreachThreadById: vi.fn(),
   markOutreachThreadSynced: vi.fn(),
@@ -34,8 +34,8 @@ import {
   listOutreachOutcomes,
   listOutreachReviewDrafts,
   listRepliesNeedingReview,
-  markOutreachDraftDeleted,
   markOutreachThreadSynced,
+  recordOutreachDraftReview,
   recordOutreachOutcome,
   revokeOutreachPreview,
   type HotelCandidateDocument,
@@ -252,12 +252,12 @@ describe('GET /api/outreach/drafts/:draftId/text', () => {
 });
 
 describe('POST /api/outreach/drafts/:draftId/review', () => {
-  it('marks the draft reviewed on approve without any other store write', async () => {
+  it('persists the approved outcome on approve without any other store write', async () => {
     vi.mocked(findOutreachDraftById).mockResolvedValue({
       draftId: DRAFT_ID,
       status: 'created',
     } as never);
-    vi.mocked(markOutreachDraftDeleted).mockResolvedValue({ changed: true });
+    vi.mocked(recordOutreachDraftReview).mockResolvedValue({ changed: true });
 
     const router = new Router();
     registerOutreachRoutes(router, fakeConnection, fakeQueue);
@@ -268,17 +268,17 @@ describe('POST /api/outreach/drafts/:draftId/review', () => {
     );
 
     expect(res.statusCode).toBe(200);
-    expect(markOutreachDraftDeleted).toHaveBeenCalledWith(fakeConnection, DRAFT_ID);
+    expect(recordOutreachDraftReview).toHaveBeenCalledWith(fakeConnection, DRAFT_ID, 'approved');
     const body = JSON.parse(res.body ?? '{}');
     expect(body).toEqual({ draftId: DRAFT_ID, action: 'approve', changed: true });
   });
 
-  it('marks the draft reviewed on skip too', async () => {
+  it('persists the skipped outcome on skip, distinct from approve (issue #96)', async () => {
     vi.mocked(findOutreachDraftById).mockResolvedValue({
       draftId: DRAFT_ID,
       status: 'created',
     } as never);
-    vi.mocked(markOutreachDraftDeleted).mockResolvedValue({ changed: true });
+    vi.mocked(recordOutreachDraftReview).mockResolvedValue({ changed: true });
 
     const router = new Router();
     registerOutreachRoutes(router, fakeConnection, fakeQueue);
@@ -289,6 +289,7 @@ describe('POST /api/outreach/drafts/:draftId/review', () => {
     );
 
     expect(res.statusCode).toBe(200);
+    expect(recordOutreachDraftReview).toHaveBeenCalledWith(fakeConnection, DRAFT_ID, 'skipped');
     expect(JSON.parse(res.body ?? '{}').action).toBe('skip');
   });
 
@@ -297,7 +298,7 @@ describe('POST /api/outreach/drafts/:draftId/review', () => {
       draftId: DRAFT_ID,
       status: 'deleted',
     } as never);
-    vi.mocked(markOutreachDraftDeleted).mockResolvedValue({ changed: false });
+    vi.mocked(recordOutreachDraftReview).mockResolvedValue({ changed: false });
 
     const router = new Router();
     registerOutreachRoutes(router, fakeConnection, fakeQueue);
@@ -322,7 +323,7 @@ describe('POST /api/outreach/drafts/:draftId/review', () => {
 
     expect(res.statusCode).toBe(400);
     expect(findOutreachDraftById).not.toHaveBeenCalled();
-    expect(markOutreachDraftDeleted).not.toHaveBeenCalled();
+    expect(recordOutreachDraftReview).not.toHaveBeenCalled();
   });
 
   it('returns 404 for an unknown draft', async () => {
@@ -337,7 +338,7 @@ describe('POST /api/outreach/drafts/:draftId/review', () => {
     );
 
     expect(res.statusCode).toBe(404);
-    expect(markOutreachDraftDeleted).not.toHaveBeenCalled();
+    expect(recordOutreachDraftReview).not.toHaveBeenCalled();
   });
 });
 

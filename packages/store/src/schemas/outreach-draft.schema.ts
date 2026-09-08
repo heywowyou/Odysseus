@@ -31,6 +31,13 @@ import type { OutreachEvidenceSlot } from '@odysseus/core';
  *  refused for a good reason leaves evidence instead of nothing. */
 export type OutreachDraftStatus = 'created' | 'deleted' | 'failed';
 
+/** Issue #96: how the operator resolved a review, recorded when the row
+ *  leaves the review flow. Both values keep the same `deleted` status
+ *  transition review has always made, so the live-draft partial index and
+ *  every status consumer keep their exact meaning; the outcome is the
+ *  additive distinction campaign analysis reads later. */
+export type OutreachDraftReviewOutcome = 'approved' | 'skipped';
+
 export interface OutreachDraftDocumentFields {
   draftId: string;
   threadId: string;
@@ -63,6 +70,12 @@ export interface OutreachDraftDocumentFields {
   /** Set on `failed`: the orchestrator's typed refusal, never free prose, so
    *  the reasons stay countable. */
   failureReason?: string;
+  /** Set when the operator reviewed the draft (issue #96): `approved` keeps
+   *  the campaign's approved set distinct from `skipped`'s discarded set.
+   *  Absent on rows reviewed before the field existed and on rows that left
+   *  `created` by another path. */
+  reviewOutcome?: OutreachDraftReviewOutcome;
+  reviewedAt?: Date;
   createdAt: Date;
   deletedAt?: Date;
   expiresAt: Date;
@@ -105,6 +118,8 @@ const outreachDraftSchema = new Schema<OutreachDraftDocument>(
     providerThreadId: { type: String },
     status: { type: String, required: true, enum: ['created', 'deleted', 'failed'] },
     failureReason: { type: String },
+    reviewOutcome: { type: String, enum: ['approved', 'skipped'] },
+    reviewedAt: { type: Date },
     createdAt: { type: Date, required: true },
     deletedAt: { type: Date },
     expiresAt: { type: Date, required: true },

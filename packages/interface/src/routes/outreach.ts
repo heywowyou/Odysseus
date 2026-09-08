@@ -14,8 +14,8 @@ import {
   listOutreachOutcomes,
   listOutreachReviewDrafts,
   listRepliesNeedingReview,
-  markOutreachDraftDeleted,
   markOutreachThreadSynced,
+  recordOutreachDraftReview,
   recordOutreachOutcome,
   revokeOutreachPreview,
 } from '@odysseus/store';
@@ -27,10 +27,11 @@ import type { JobQueue } from '../queue/job-queue.js';
  *  suppression lookup by entered value, and operator outcome actions. Every
  *  handler calls exported @odysseus/store helpers, never queries Mongoose
  *  models directly, and nothing here sends, delivers, or makes a provider
- *  request beyond creating a Gmail draft: reviewing a draft marks it
- *  reviewed and nothing else. Plan 030 adds the two batch-drafting
- *  endpoints, which only enqueue a job the queue then runs through the same
- *  refusal-not-throw orchestrators the single-candidate routes use. */
+ *  request beyond creating a Gmail draft: reviewing a draft records the
+ *  operator's outcome (issue #96) and nothing else. Plan 030 adds the two
+ *  batch-drafting endpoints, which only enqueue a job the queue then runs
+ *  through the same refusal-not-throw orchestrators the single-candidate
+ *  routes use. */
 
 const DEFAULT_PAGE_LIMIT = 50;
 const MAX_PAGE_LIMIT = 200;
@@ -142,8 +143,10 @@ export function registerOutreachRoutes(
     });
   });
 
-  // Approve/skip both mean "reviewed" and nothing else: the draft leaves the
-  // pending list and no message is sent, edited, or created anywhere.
+  // Issue #96: approve and skip now persist distinct review outcomes on the
+  // draft row (approved vs skipped) while making the same `deleted` status
+  // transition review has always made. Still nothing is sent, edited, or
+  // created anywhere, and the Gmail draft itself is untouched.
   router.post('/api/outreach/drafts/:draftId/review', async ({ req, res, params }) => {
     const draftId = params['draftId'] ?? '';
     if (!UUID_PATTERN.test(draftId)) {
@@ -162,7 +165,11 @@ export function registerOutreachRoutes(
       sendError(res, 404, 'draft not found');
       return;
     }
-    const { changed } = await markOutreachDraftDeleted(connection, draftId);
+    const { changed } = await recordOutreachDraftReview(
+      connection,
+      draftId,
+      action === 'approve' ? 'approved' : 'skipped',
+    );
     sendJson(res, 200, { draftId, action, changed });
   });
 

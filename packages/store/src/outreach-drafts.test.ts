@@ -9,6 +9,7 @@ import {
   OUTREACH_DRAFT_RETENTION_DAYS,
   recordFailedOutreachDraft,
   recordOutreachDraft,
+  recordOutreachDraftReview,
   type RecordOutreachDraftInput,
 } from './outreach-drafts.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
@@ -130,6 +131,67 @@ describe.skipIf(!mongoAvailable)('outreach drafts', () => {
 
     await markOutreachDraftDeleted(connection, draft.draftId);
     expect(await findLiveOutreachDraft(connection, 'thread-a', 1)).toBeNull();
+  });
+
+  it('records the approved review outcome with the same deleted transition (issue #96)', async () => {
+    if (!connection) return;
+    const draft = await recordOutreachDraft(connection, input());
+
+    await expect(recordOutreachDraftReview(connection, draft.draftId, 'approved')).resolves.toEqual(
+      { changed: true },
+    );
+    const stored = await findOutreachDraftById(connection, draft.draftId);
+    expect(stored?.status).toBe('deleted');
+    expect(stored?.reviewOutcome).toBe('approved');
+    expect(stored?.reviewedAt).toBeInstanceOf(Date);
+    // The Gmail draft itself is never touched by a review.
+    expect(stored?.providerDraftId).toBe('draft-1');
+  });
+
+  it('records the skipped review outcome, distinct from approve (issue #96)', async () => {
+    if (!connection) return;
+    const draft = await recordOutreachDraft(connection, input());
+
+    await expect(recordOutreachDraftReview(connection, draft.draftId, 'skipped')).resolves.toEqual({
+      changed: true,
+    });
+    const stored = await findOutreachDraftById(connection, draft.draftId);
+    expect(stored?.reviewOutcome).toBe('skipped');
+  });
+
+  it('keeps the first review outcome on a repeat review (issue #96)', async () => {
+    if (!connection) return;
+    const draft = await recordOutreachDraft(connection, input());
+    await recordOutreachDraftReview(connection, draft.draftId, 'approved');
+
+    await expect(recordOutreachDraftReview(connection, draft.draftId, 'skipped')).resolves.toEqual({
+      changed: false,
+    });
+    const stored = await findOutreachDraftById(connection, draft.draftId);
+    expect(stored?.reviewOutcome).toBe('approved');
+  });
+
+  it('does not review a draft that never reached the review flow', async () => {
+    if (!connection) return;
+    const failed = await recordFailedOutreachDraft(connection, {
+      threadId: 'thread-a',
+      candidateId: 'candidate-a',
+      touch: 1,
+      language: 'fr',
+      roleAddress: 'direction@hotel-exemple.fr',
+      prescanVersion: 'v3',
+      evidenceVersion: 'v2',
+      outreachPromptVersion: 'v1',
+      failureReason: 'preview-expired',
+      createdAt: CREATED_AT,
+    });
+
+    await expect(
+      recordOutreachDraftReview(connection, failed.draftId, 'approved'),
+    ).resolves.toEqual({ changed: false });
+    const stored = await findOutreachDraftById(connection, failed.draftId);
+    expect(stored?.status).toBe('failed');
+    expect(stored?.reviewOutcome).toBeUndefined();
   });
 
   it('records a refusal with no draft text and a typed reason', async () => {

@@ -328,11 +328,13 @@ export type {
 export { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 export type {
   OutreachDraftDocument,
+  OutreachDraftReviewOutcome,
   OutreachDraftStatus,
 } from './schemas/outreach-draft.schema.js';
 export {
   recordOutreachDraft,
   recordFailedOutreachDraft,
+  recordOutreachDraftReview,
   findLiveOutreachDraft,
   findOutreachDraftById,
   markOutreachDraftDeleted,
