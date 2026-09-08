@@ -80,9 +80,40 @@ ruling recorded in the decision log below before the pilot starts.
    schedule the privacy and legitimate-interest review pass with them
    (gates L and G).
 3. Confirm no competing blackout when the wave is scheduled (gate K).
-4. The 10 named pilot domains with current scan permission, plus the
-   leftover plan 030 manual real-hotel dashboard pass, due before the
-   pilot.
+4. Obtain current explicit scan permission for each of the 10 named pilot
+   domains below (plan 014 Step 4's own requirement; identifying the list is
+   not permission), plus the leftover plan 030 manual real-hotel dashboard
+   pass, due before the pilot.
+
+## Pilot domain list (plan 014 Step 4), identified 2026-09-08
+
+The `hotel-outreach-v2` cohort algorithm (`selectOutreachCohort`: top ability
+half, then top brokenness decile within it) produced exactly 6 hotels for the
+110-hotel eligible population - a formula result, not a shortfall. The
+operator directed extending to 10 named domains by continuing the same
+ranking (ability-half population, ordered by brokenness) past the decile
+cutoff, verified by rerunning the real selection pipeline read-only and
+confirming ranks 1-6 match the recorded cohort exactly:
+
+| Rank | Domain | In recorded cohort `3b5c6b0c-...`? |
+| --- | --- | --- |
+| 1 | lescorderies.com | yes |
+| 2 | hotelplatdetain.com | yes |
+| 3 | hotel-espace-champerret.com | yes |
+| 4 | belleval-hotel-paris.com | yes |
+| 5 | hotel-maitagaria.com | yes |
+| 6 | hotelmontsegur.com | yes |
+| 7 | hotel-joyet-maubec.com | no (extension) |
+| 8 | hotelsaintpaulparis.com | no (extension) |
+| 9 | hotel-national-lourdes.fr | no (extension) |
+| 10 | hotel-lancaster.com | no (extension) |
+
+Ranks 7-10 hold no `hotel-outreach-v2` cohort membership of record (the
+`hotel_score_cohorts` document only stores selected/calibration rows, not
+every ranked one) - they are pilot-only, identified for this rollout step,
+not a second cohort selection run. Scan permission for all 10 is still
+outstanding (item 4 above); none of the 10 has been scanned or contacted
+under this pilot designation.
 
 ## Decision log
 
@@ -98,6 +129,7 @@ ruling recorded in the decision log below before the pilot starts.
 | 2026-09-08 | E | Plan 034 implementation completed: prescan v4 adds kinds-only unresolved-control and bounded redirect outcomes; `hotel-outreach-v2` is present and unapproved. No live prescan, rescore, score diff, selection, or approval was performed. |
 | 2026-09-08 | E | Incident: the v4 prescan batch job (`dfcc1deb-...`) scanned 110 hotels never on the operator-approved 120-site list, via a restart that does not resume the original scope (root cause and full evidence: `docs/decisions/trade-offs.md#75`; residual defect tracked as issue #114). Operator decision: treat as an incident, not a data-destroying rollback. The 119 approved-and-scanned domains are the batch of record (true evidence-incomplete count 9, not the reported 2; 1 true failure, `hotel-victoria.fr`, no record). The 110 unapproved prescans stay stored for evidence but are excluded from `hotel-outreach-v2` scoring, the v1-to-v2 diff, and wave-1 cohort selection. Gate E remains OPEN; plan 034 continues from the corrected exceptions list. |
 | 2026-09-08 | E | `hotel-victoria.fr` excluded (no retry). `hotel-outreach-v2` approved by the operator against the weight table itself. Scored one domain at a time for exactly the 119 approved domains (never a bulk run), so the 110 unapproved-scan candidates hold no v2 score and cannot enter cohort selection, which reads by version. The v1-to-v2 diff (120 v1 rows, 119 v2 rows) was reviewed by the operator, who approved proceeding. `prospect score select` recorded cohort `3b5c6b0c-6d93-4c51-bdf8-3b78449d9baa` (6 hotels). Gate E closes. Contact discovery and outreach drafting remain separately gated. |
+| 2026-09-08 | Step 4 | Operator directed extending the pilot from the 6-hotel recorded cohort to plan 014's literal "10 named candidate domains" by continuing the same ability-half/brokenness ranking to rank 10 (list above). Scan permission for the 4 extension domains is still outstanding; nothing has been scanned under this designation. |
 
 ## Standing operating rules (unchanged from the plan)
 
