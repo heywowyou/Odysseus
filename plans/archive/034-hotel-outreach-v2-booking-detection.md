@@ -99,6 +99,38 @@ bands, with the existing Sirene effectif code retained as an alternative path.
 Steps 5 through 7 remain pending: no live batch, rescore, score diff, cohort
 selection, or approval was run during implementation.
 
+**Incident, 2026-09-08.** Step 5's bounded batch (job `dfcc1deb-...`, 120
+approved sites) was reported complete but had scanned 229 distinct
+candidates, 110 of them never approved, via a job restart that does not
+preserve the original scope. Full write-up and root cause:
+`docs/decisions/trade-offs.md#75`; residual defect tracked as issue #114.
+Operator decision: the 119 approved-and-scanned domains are the batch of
+record (true counts: 110 evidence-complete, 9 evidence-incomplete, 1 true
+failure - `hotel-victoria.fr`, no record); the 110 unapproved prescans stay
+stored but are excluded from any `hotel-outreach-v2` scoring, diff, or
+cohort work. Step 5 is not repeated without further explicit authorization.
+
+**Step 6, 2026-09-08.** The operator excluded `hotel-victoria.fr` (no v4
+evidence, no retry) and approved the `hotel-outreach-v2` weight table as
+shown, against the table itself rather than the diff, per the operator's
+own explicit sequencing. `hotel-outreach-v2` is now `approved: true`;
+`CURRENT_SCORING_VERSION` stays `hotel-outreach-v1` until the operator
+says otherwise. `prospect score run` was then invoked once per domain
+(never a bulk `--limit` run) for exactly the 119 approved domains, so the
+110 unapproved-scan candidates were never scored under v2 and cannot
+reach `prospect score select`, which reads scores by version. The v1-to-v2
+diff is generated (120 v1 rows against 119 v2 rows, `onlyInFrom: 1` is
+`hotel-victoria.fr` as expected) and was reviewed by the operator, who
+approved proceeding. `prospect score select --scoring-version
+hotel-outreach-v2 --qualification-version v3` recorded cohort
+`3b5c6b0c-6d93-4c51-bdf8-3b78449d9baa`: 6 hotels selected from a
+110-candidate eligible population (119 scored minus 9 evidence-incomplete),
+cutoffs ability >= 72 and brokenness >= 92 (`lescorderies.com`,
+`hotelplatdetain.com`, `hotel-espace-champerret.com`,
+`belleval-hotel-paris.com`, `hotel-maitagaria.com`, `hotelmontsegur.com`).
+Step 5 (cohort selection) is done. No contact discovery or outreach
+drafting has been run; both remain separately gated.
+
 ## Steps
 
 1. Prescan v4 part 1: call `detectUnresolvedBookingControls` in
@@ -120,14 +152,18 @@ selection, or approval was run during implementation.
 
 ## Done criteria
 
-- [ ] Prescans store `prescanVersion: 'v4'` with the new kinds and no
+- [x] Prescans store `prescanVersion: 'v4'` with the new kinds and no
       selectors; old prescans unread and untouched.
-- [ ] `hotel-outreach-v2` exists approved only after the operator's
+- [x] `hotel-outreach-v2` exists approved only after the operator's
       recorded approval; v1 rows and configs unchanged.
-- [ ] The v1-to-v2 score diff is reviewed by the operator before
+- [x] The v1-to-v2 score diff is reviewed by the operator before
       selection.
-- [ ] Focused suites, `pnpm run check`, and the store suite are green.
-- [ ] Plans index and the rollout runbook record the outcome.
+- [x] Focused suites, `pnpm run check`, and the store suite are green
+      (2026-09-08: `docs:check`, `lint`, `typecheck` clean; the one
+      `format:check` warning is a pre-existing, gitignored Next.js-generated
+      file, not this plan's work; focused `hotel-outreach-score.test.ts`
+      24/24 and the full store suite 27 files / 245 tests, both green).
+- [x] Plans index and the rollout runbook record the outcome.
 
 ## STOP conditions
 
