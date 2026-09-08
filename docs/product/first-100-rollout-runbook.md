@@ -59,7 +59,7 @@ Carry-forward notes from the reconciliation:
 | B | Atout France contract, Sirene join provenance, reconciled ambiguity report | PASS by record | Measured source facts and the 187-item manual-review queue recorded in `plans/README.md`. Owner: re-pull the current ambiguity queue immediately before cohort selection (Step 3). |
 | C | Verified 3-5 star eligibility, lower and unknown parked | PASS by record | Hard gate in the identity and qualification path; 3,536 parked `below-three-stars` measured. Re-checked per hotel at prescan review. |
 | D | Usable own-domain yield 8,000-15,000, or approved Overpass | PASS (waived) | Measured v2 yield is 5,995, below the 8,000 floor. Waived by the operator on 2026-09-08 with reference to the recorded 2026-08-27 Overpass deferral (`plans/README.md`, "Explicitly deferred"): the floor was set against a national-campaign target, and 5,995 supports the first-100 experiment many times over. |
-| E | `hotel-outreach-v1` score calibration approved | PASS | Operator-approved weight table (trade-off 38), confirmed unchanged for the campaign freeze by the operator on 2026-09-08. Pre-freeze review the same day found the weight table byte-unchanged since approval; findings and deferrals in the decision log. |
+| E | `hotel-outreach-v1` score calibration approved | OPEN (v2 in build) | Operator direction 2026-09-08, superseding the same-day keep-v1 ruling: port the better booking detection into the prescan and re-source the weak weights as `hotel-outreach-v2` before the freeze rather than defer. Plan 033 owns the work. Gate closes on the operator-approved v2 weight table plus a reviewed v1-to-v2 score diff. |
 | F | Preview 200/410/revoke/noindex/robots, privacy-safe logs | PASS | Suite covers publish, expiry, revoke, and log behavior. Live probe 2026-09-08 against `www.odysseusaudit.com`: robots.txt `Disallow: /apercu/`; unknown token returns 404 with `x-robots-tag: noindex, nofollow, noarchive`, `cache-control: private, no-store`, `referrer-policy: no-referrer`, CSP `default-src 'none'`. |
 | G | Privacy, opt-out, bot, identity, postal/SIRET, legitimate-interest review | OPEN | Pages are live (`confidentialite-prospection`, `desinscription`, `bot`, `offre`). Owner: the operator's recorded review pass; may be combined with gate L's reviewer. |
 | H | Role-address-only and permanent suppression tests | PASS | Suite green 2026-09-08: allowlist and MX tests for role addresses, suppression-gate tests on both draft paths. |
@@ -76,11 +76,14 @@ ruling recorded in the decision log below before the pilot starts.
 1. Provision `odysseusaudit.fr` (mailbox, SPF/DKIM/DMARC) and begin warmup;
    the wave-timing decision is taken, the execution is operator-side
    (gate I).
-2. Name the second human reviewer for disclosures and argument-B copy, and
+2. Approve the final `hotel-outreach-v2` weight table after plan 033's
+   measurement and diff steps; that approval is the plan's STOP gate and
+   what closes gate E (plan 033).
+3. Name the second human reviewer for disclosures and argument-B copy, and
    schedule the privacy and legitimate-interest review pass with them
    (gates L and G).
-3. Confirm no competing blackout when the wave is scheduled (gate K).
-4. The 10 named pilot domains with current scan permission, plus the
+4. Confirm no competing blackout when the wave is scheduled (gate K).
+5. The 10 named pilot domains with current scan permission, plus the
    leftover plan 030 manual real-hotel dashboard pass, due before the
    pilot.
 
@@ -94,6 +97,7 @@ ruling recorded in the decision log below before the pilot starts.
 | 2026-09-08 | E | `hotel-outreach-v1` weights confirmed unchanged for the campaign freeze. |
 | 2026-09-08 | L | `obligation-basis.md` governs: the deterministic argument-B facts block is permitted for hotel drafts from the first send; the stale e-commerce sentence amended the same day. Reviewer name still owed. |
 | 2026-09-08 | E | Pre-freeze score review, two agents over code and history: no weight's meaning changed in place; v1 kept for wave 1. Recorded carry-forwards: (1) the reserved `hotel-outreach-v2` trigger stands (re-source the 30-point direct-booking weight from prescan `bookingEvidenceKinds`; today it reads the weak href probe and 26 percent of the population scores 0-10 of 30 on detection weakness); (2) the 20-point `effectif` weight is constant zero for the whole population until the operator supplies the INSEE stock file for the offline `backfillSirene`, which is ranking-neutral because it shifts every ability score equally; (3) the worthiness gate's evidence-completeness input was deliberately redefined on 08-29 as a measured defect fix, before the cohort of record, so no action. Both deferred changes are revisited only after the first-100 analysis, per plan 006: the sends decide whether the score predicts replies. |
+| 2026-09-08 | E (supersedes the row above) | The operator overturned the deferral: no deadline exists, and a recorded carry-forward is a deferral that gets lost. Direction: port the September audit-side booking-detection fixes into the prescan (v4) and ship `hotel-outreach-v2` before anything real runs. The effectif weight re-sources from Atout France size data instead of waiting on the INSEE stock file; measured the same day: room count and capacity are populated for 9,765 of 9,765 eligible rows, 100 percent. Plan 033 owns the work; the prescan's existing JS-aware transactional detection stays, the missing September pieces are ported. |
 
 ## Standing operating rules (unchanged from the plan)
 

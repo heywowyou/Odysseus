@@ -361,6 +361,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [030](archive/030-outreach-dashboard-wiring.md) | Wire outreach draft generation into the operator dashboard | P2 | M | 011-013 | DONE (shipped in d5ce20b 2026-09-08; the manual real-hotel pass from the plan's Verification section remains an operator step) |
 | [031](archive/031-operator-preview-render.md) | Let the operator view the pre-purchase preview's current content | P3 | S | 008, 009 | DONE |
 | [032](./032-site-context-from-catalogue.md) | Populate the writing pass's site context from the hotel catalogue | P3 | M | 029 | TODO (stub only, not started) |
+| [033](./033-hotel-outreach-v2-booking-detection.md) | Port booking detection to prospecting and ship hotel-outreach-v2 | P1 | M | none; gates 014 Step 3 | TODO |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
@@ -501,6 +502,12 @@ Each kind of work has exactly one home:
    holds only in-flight recovery state and never becomes a backlog.
 
 ## Dependency notes
+
+- Plan 033 (operator-directed 2026-09-08) gates plan 014's Step 3 freeze:
+  the rollout runbook's gate E reopens until the v2 weight table is
+  operator-approved and a v1-to-v2 score diff is reviewed. Its prescan
+  work is bounded and read-only per the standing authorization; its only
+  live batch is step 5's bounded prescan over the selection population.
 
 - Plan 025 is independent of the 018 through 021 report sequence and of 022
   through 024, and may run as a separate session. Its `CLAUDE.md`,
