@@ -13,6 +13,7 @@ import {
   resetOrphanedRunningJobs,
   updateJobProgress,
 } from './jobs.js';
+import { createJobModel } from './schemas/job.schema.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -187,28 +188,29 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
       siteUrl: 'https://f.example/',
       options: {},
     });
-    const claimed = await claimNextQueuedJob(connection!);
-    // Drain any other queued jobs left by earlier tests so `claimed` is deterministic.
-    expect(claimed?.status).toBe('running');
+    const claimedAt = new Date();
+    await createJobModel(connection!).updateOne(
+      { jobId: job.jobId },
+      { $set: { status: 'running', startedAt: claimedAt, lastHeartbeatAt: claimedAt } },
+    );
 
-    const before = await getJob(connection!, claimed!.jobId);
-    const freshNow = new Date(Date.now() + ORPHANED_JOB_TIMEOUT_MS - 1);
+    const before = await getJob(connection!, job.jobId);
+    const freshNow = new Date(claimedAt.getTime() + ORPHANED_JOB_TIMEOUT_MS - 1000);
     await resetOrphanedRunningJobs(connection!, freshNow);
 
-    const stillRunning = await getJob(connection!, claimed!.jobId);
+    const stillRunning = await getJob(connection!, job.jobId);
     expect(stillRunning?.status).toBe('running');
 
     const resetCount = await resetOrphanedRunningJobs(
       connection!,
-      new Date(freshNow.getTime() + 2),
+      new Date(freshNow.getTime() + 2000),
     );
     expect(resetCount).toBeGreaterThanOrEqual(1);
 
-    const after = await getJob(connection!, claimed!.jobId);
+    const after = await getJob(connection!, job.jobId);
     expect(after?.status).toBe('queued');
     expect(after?.orphaned).toBe(true);
     expect(new Date(after!.createdAt).getTime()).toBe(new Date(before!.createdAt).getTime());
-    void job;
   });
 
   it('cancelJob cancels a queued job so the claim filter never picks it up', async () => {

@@ -107,7 +107,7 @@ export async function updateJobProgress(
   if (patch.auditId !== undefined) $set['auditId'] = patch.auditId;
   if (Object.keys($set).length === 0) return;
   await JobModel.updateOne(
-    { jobId, status: 'running' },
+    { jobId, status: { $ne: 'cancelled' } },
     { $set: { ...$set, lastHeartbeatAt: new Date() } },
   );
 }
@@ -128,7 +128,7 @@ export async function completeJob(
 ): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId, status: { $in: ['queued', 'running'] } },
+    { jobId, status: { $ne: 'cancelled' } },
     { $set: { status: 'complete', phase: 'complete', finishedAt: new Date(), ...patch } },
   );
 }
@@ -136,7 +136,7 @@ export async function completeJob(
 export async function failJob(connection: Connection, jobId: string, error: string): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId, status: { $in: ['queued', 'running'] } },
+    { jobId, status: { $ne: 'cancelled' } },
     { $set: { status: 'failed', phase: 'failed', finishedAt: new Date(), error } },
   );
 }
@@ -154,7 +154,7 @@ export async function markJobNeedsInput(
 ): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId, status: { $in: ['queued', 'running'] } },
+    { jobId, status: { $ne: 'cancelled' } },
     {
       $set: {
         status: 'needs-input',
