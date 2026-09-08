@@ -2,6 +2,7 @@ import type { Browser } from 'playwright';
 import type {
   AuditManifest,
   AuditManualFields,
+  AnalysisSiteContext,
   Finding,
   FindingsProvenance,
   LlmOutput,
@@ -34,6 +35,9 @@ export interface StoredAnalysis extends LlmOutput {
    *  rendering (packages/report/src/template) varies by language.
    *  Optional: analyses generated before this milestone predate it. */
   obligationAssessment?: ObligationAssessment;
+  /** The exact intake or catalogue facts shown to the writing pass. Optional
+   * for analyses created before writing-context provenance was recorded. */
+  siteContext?: AnalysisSiteContext;
 }
 
 export interface VerifiedStoredAnalysis extends StoredAnalysis {

@@ -115,6 +115,7 @@ describe('resolveHotels', () => {
     const [stored] = store.list(resolutionVersion);
     expect(stored?.ownRegistrableDomain).toBe('hotel-a.fr');
     expect(stored?.identityKey).toBe('domain:hotel-a.fr');
+    expect(stored?.accommodationType).toBe('HÔTEL DE TOURISME');
     expect(stored?.review.state).toBe('not-required');
   });
 

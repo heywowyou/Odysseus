@@ -141,6 +141,7 @@ export {
   upsertHotelCandidates,
   listHotelCandidates,
   getHotelCandidate,
+  getLatestHotelCandidateByOwnRegistrableDomain,
   getHotelCandidateYield,
   recordHotelCandidateReview,
 } from './hotel-candidates.js';

@@ -45,6 +45,7 @@ const REFRESHABLE_FIELDS = [
   'address',
   'postcode',
   'commune',
+  'accommodationType',
   'starRating',
   'roomCount',
   'capacity',
@@ -249,6 +250,21 @@ export async function getHotelCandidate(
 ): Promise<HotelCandidateDocument | null> {
   const Model = createHotelCandidateModel(connection);
   return Model.findOne({ candidateId }).lean<HotelCandidateDocument>();
+}
+
+/**
+ * Current candidate projection for a registrable domain. Candidate generations
+ * are versioned side by side, so newest `updatedAt` is the current catalogue
+ * belief rather than an arbitrary row from an older resolution run.
+ */
+export async function getLatestHotelCandidateByOwnRegistrableDomain(
+  connection: Connection,
+  registrableDomain: string,
+): Promise<HotelCandidateDocument | null> {
+  const Model = createHotelCandidateModel(connection);
+  return Model.findOne({ ownRegistrableDomain: registrableDomain })
+    .sort({ updatedAt: -1, candidateId: 1 })
+    .lean<HotelCandidateDocument>();
 }
 
 export interface HotelCandidateYield {

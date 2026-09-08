@@ -9,6 +9,7 @@
 import { Schema, type Connection, type Model } from 'mongoose';
 import type {
   FindingsProvenance,
+  AnalysisSiteContext,
   ObligationAssessment,
   ReportLanguage,
   Theme,
@@ -38,6 +39,9 @@ export interface AnalysisDocumentFields {
    *  by the model - see entity.ts's doc comment. Optional: older
    *  analyses predate this milestone. */
   obligationAssessment?: ObligationAssessment;
+  /** The exact facts shown to the writing pass. Optional for historical
+   * analyses that predate writing-context provenance. */
+  siteContext?: AnalysisSiteContext;
 }
 
 export type AnalysisDocument = AnalysisDocumentFields;
@@ -138,6 +142,20 @@ const findingsProvenanceSchemaMongo = new Schema(
   { _id: false },
 );
 
+const analysisSiteContextSchemaMongo = new Schema<AnalysisSiteContext>(
+  {
+    businessType: { type: String, required: true },
+    primaryGoal: { type: String, required: true },
+    languagesServed: { type: [String], required: true },
+    targetMarkets: { type: [String], required: true },
+    propertyType: { type: String },
+    roomCount: { type: Number },
+    city: { type: String },
+    sector: { type: String },
+  },
+  { _id: false },
+);
+
 const analysisSchema = new Schema<AnalysisDocument>(
   {
     analysisId: { type: String, required: true },
@@ -153,6 +171,7 @@ const analysisSchema = new Schema<AnalysisDocument>(
     quickWins: { type: [String], default: [] },
     notes: { type: String, required: true },
     obligationAssessment: { type: obligationAssessmentSchemaMongo },
+    siteContext: { type: analysisSiteContextSchemaMongo },
   },
   { collection: 'analyses' },
 );

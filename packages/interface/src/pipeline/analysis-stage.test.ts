@@ -10,13 +10,23 @@ vi.mock('@odysseus/llm', async (importOriginal) => {
     analyzeStructure: vi.fn(),
     analyzeWriting: vi.fn(),
     analyzeReview: vi.fn(),
+    analyzeCorrectionReview: vi.fn(),
   };
 });
-vi.mock('@odysseus/store', () => ({ persistAnalysis: vi.fn() }));
+vi.mock('@odysseus/store', () => ({
+  persistAnalysis: vi.fn(),
+  getLatestHotelCandidateByOwnRegistrableDomain: vi.fn(),
+}));
 vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 
-import { analyzeReview, analyzeStructure, analyzeWriting } from '@odysseus/llm';
-import { persistAnalysis } from '@odysseus/store';
+import {
+  analyzeReview,
+  analyzeCorrectionReview,
+  analyzeStructure,
+  analyzeWriting,
+  buildFallbackSiteContext,
+} from '@odysseus/llm';
+import { getLatestHotelCandidateByOwnRegistrableDomain, persistAnalysis } from '@odysseus/store';
 import {
   FINDINGS_SCHEMA_VERSION,
   buildFindingsProvenance,
@@ -128,6 +138,7 @@ beforeEach(async () => {
     temperature: 0.2,
   });
   vi.mocked(persistAnalysis).mockResolvedValue(undefined);
+  vi.mocked(getLatestHotelCandidateByOwnRegistrableDomain).mockResolvedValue(null);
   vi.mocked(runObligationStage).mockResolvedValue({ status: 'undetermined', basis: [] });
   vi.mocked(analyzeReview).mockResolvedValue({
     status: 'ok',
@@ -141,6 +152,34 @@ beforeEach(async () => {
       ],
       executiveSummary: { verdict: 'supported', reason: 'generic framing only' },
       notes: { verdict: 'supported', reason: 'empty' },
+    },
+    model: 'openai-test',
+    temperature: 0.2,
+  });
+  vi.mocked(analyzeCorrectionReview).mockResolvedValue({
+    status: 'ok',
+    output: {
+      proposals: [
+        {
+          field: 'executiveSummary',
+          checks: [],
+          verdict: 'keep',
+          reason: 'No unsupported claim.',
+        },
+        { field: 'notes', checks: [], verdict: 'keep', reason: 'Empty notes are appropriate.' },
+        {
+          field: 'themes(t1).businessImpact',
+          checks: [],
+          verdict: 'keep',
+          reason: 'Generic impact is permitted.',
+        },
+        {
+          field: 'themes(t1).recommendedActions[0]',
+          checks: [],
+          verdict: 'keep',
+          reason: 'Action matches the finding.',
+        },
+      ],
     },
     model: 'openai-test',
     temperature: 0.2,
@@ -175,6 +214,22 @@ describe('runAnalysisStage', () => {
     const files = await fs.readdir(analysesDir);
     expect(files.some((f) => f.endsWith('-structure.json'))).toBe(true);
     expect(files.some((f) => f.endsWith('-fr.json'))).toBe(true);
+    const correctionFile = files.find((f) => f.endsWith('-correction-review.json'));
+    expect(correctionFile).toBeDefined();
+    const correction = JSON.parse(
+      await fs.readFile(path.join(analysesDir, correctionFile!), 'utf-8'),
+    );
+    expect(correction).toMatchObject({
+      outcome: 'ok',
+      sourceAnalysisFilename: path.basename(result.analysisPath),
+      proposals: expect.arrayContaining([
+        expect.objectContaining({ field: 'executiveSummary', verdict: 'keep' }),
+      ]),
+    });
+    expect(analyzeCorrectionReview).toHaveBeenCalledWith({
+      writingInput: expect.objectContaining({ language: 'fr' }),
+      written: expect.objectContaining({ executiveSummary: 'Summary' }),
+    });
 
     expect(persistAnalysis).toHaveBeenCalledWith(
       fakeConnection,
@@ -370,6 +425,72 @@ describe('runAnalysisStage', () => {
     );
 
     expect(result.usedFallbackContext).toBe(false);
+    expect(getLatestHotelCandidateByOwnRegistrableDomain).not.toHaveBeenCalled();
+    expect(result.analysis.siteContext).toEqual({
+      businessType: 'wine estate',
+      primaryGoal: 'leads',
+      languagesServed: ['fr'],
+      targetMarkets: ['FR'],
+    });
+  });
+
+  it('enriches the writing pass from the matched catalogue candidate and persists the facts', async () => {
+    vi.mocked(getLatestHotelCandidateByOwnRegistrableDomain).mockResolvedValue({
+      accommodationType: 'HÔTEL DE TOURISME',
+      starRating: 3,
+      roomCount: 25,
+      commune: 'LA TREMBLADE',
+    } as never);
+
+    const result = await runAnalysisStage(
+      auditDir,
+      fakeManifest(),
+      [buildFinding()],
+      { language: 'fr' },
+      fakeConnection,
+    );
+
+    const expectedContext = {
+      ...buildFallbackSiteContext(),
+      propertyType: 'HÔTEL DE TOURISME (3 étoiles)',
+      roomCount: 25,
+      city: 'LA TREMBLADE',
+      sector: 'hospitality',
+    };
+    expect(getLatestHotelCandidateByOwnRegistrableDomain).toHaveBeenCalledWith(
+      fakeConnection,
+      'example.com',
+    );
+    expect(analyzeWriting).toHaveBeenCalledWith(
+      expect.objectContaining({ siteContext: expectedContext }),
+      ['t1'],
+      true,
+    );
+    expect(result.analysis.siteContext).toEqual(expectedContext);
+    expect(persistAnalysis).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({ siteContext: expectedContext }),
+    );
+  });
+
+  it('keeps the fallback writing input byte-for-byte when no catalogue candidate exists', async () => {
+    await runAnalysisStage(
+      auditDir,
+      fakeManifest(),
+      [buildFinding()],
+      { language: 'fr' },
+      fakeConnection,
+    );
+
+    expect(analyzeWriting).toHaveBeenCalledWith(
+      expect.objectContaining({ siteContext: buildFallbackSiteContext() }),
+      ['t1'],
+      true,
+    );
+    expect(persistAnalysis).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.not.objectContaining({ siteContext: expect.anything() }),
+    );
   });
 
   it('runs the shadow reviewer after persisting and writes a review file next to the analysis', async () => {
@@ -391,9 +512,13 @@ describe('runAnalysisStage', () => {
     );
 
     const files = await fs.readdir(path.join(auditDir, 'analyses'));
-    expect(files.some((f) => f.endsWith('-review.json'))).toBe(true);
+    expect(
+      files.some((f) => f.endsWith('-review.json') && !f.endsWith('-correction-review.json')),
+    ).toBe(true);
 
-    const reviewFile = files.find((f) => f.endsWith('-review.json'))!;
+    const reviewFile = files.find(
+      (f) => f.endsWith('-review.json') && !f.endsWith('-correction-review.json'),
+    )!;
     const review = JSON.parse(
       await fs.readFile(path.join(auditDir, 'analyses', reviewFile), 'utf-8'),
     );
@@ -424,7 +549,9 @@ describe('runAnalysisStage', () => {
       expect(persistAnalysis).toHaveBeenCalledTimes(1);
       const files = await fs.readdir(path.join(auditDir, 'analyses'));
       expect(files.some((f) => f.endsWith('-fr.json'))).toBe(true);
-      expect(files.some((f) => f.endsWith('-review.json'))).toBe(false);
+      expect(
+        files.some((f) => f.endsWith('-review.json') && !f.endsWith('-correction-review.json')),
+      ).toBe(false);
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('skipped - HTTP 429'));
     } finally {
       warn.mockRestore();

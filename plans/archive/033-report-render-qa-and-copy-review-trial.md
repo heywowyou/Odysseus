@@ -20,6 +20,14 @@
 - **Category**: report quality and LLM writing
 - **Planned at**: commit `e986196`, 2026-09-07
 
+**Archived 2026-09-08 by operator direction.** Delivered: the declared atomic
+render-split gate and the advisory correction-review artifact. Deferred: the
+generic geometry-overflow gate after its false positive on normal Paged.js
+fragments ([#118](https://github.com/heywowyou/Odysseus/issues/118)), the
+read-only measurement command because historical artifacts do
+not retain the exact writer input, and the 20-pair provider campaign pending
+current named-audit authorisation.
+
 ## Why this matters
 
 A fresh Villas Foch report exposed a real Paged.js failure: the bounded

@@ -10,6 +10,19 @@ import {
   type PagedPageModel,
 } from './pdf.js';
 
+function page(
+  text: string,
+  atomicBlockTexts: string[] = [],
+  overrides: Partial<Omit<PagedPageModel, 'text' | 'atomicBlockTexts'>> = {},
+): PagedPageModel {
+  return {
+    text,
+    atomicBlockTexts,
+    renderAtomicMarkers: [],
+    ...overrides,
+  };
+}
+
 function check(pages: readonly PagedPageModel[]): string | undefined {
   return describePagedjsStructuralFailure(analyzePagedjsPages(pages));
 }
@@ -17,9 +30,9 @@ function check(pages: readonly PagedPageModel[]): string | undefined {
 describe('analyzePagedjsPages / describePagedjsStructuralFailure', () => {
   it('reports no failure for a normal multi-page document', () => {
     const pages: PagedPageModel[] = [
-      { text: 'Cover page', atomicBlockTexts: [] },
-      { text: 'Section one content', atomicBlockTexts: ['Card A'] },
-      { text: 'Section two content', atomicBlockTexts: ['Card B'] },
+      page('Cover page'),
+      page('Section one content', ['Card A']),
+      page('Section two content', ['Card B']),
     ];
 
     expect(check(pages)).toBeUndefined();
@@ -27,10 +40,10 @@ describe('analyzePagedjsPages / describePagedjsStructuralFailure', () => {
 
   it('fails when an interior page is blank', () => {
     const pages: PagedPageModel[] = [
-      { text: 'Cover page', atomicBlockTexts: [] },
-      { text: 'Section one content', atomicBlockTexts: ['Card A'] },
-      { text: '   ', atomicBlockTexts: [] },
-      { text: 'Section two content', atomicBlockTexts: ['Card B'] },
+      page('Cover page'),
+      page('Section one content', ['Card A']),
+      page('   '),
+      page('Section two content', ['Card B']),
     ];
 
     const message = check(pages);
@@ -40,9 +53,9 @@ describe('analyzePagedjsPages / describePagedjsStructuralFailure', () => {
 
   it('allows a blank cover page (index 0) as an exemption', () => {
     const pages: PagedPageModel[] = [
-      { text: '', atomicBlockTexts: [] },
-      { text: 'Section one content', atomicBlockTexts: ['Card A'] },
-      { text: 'Section two content', atomicBlockTexts: ['Card B'] },
+      page(''),
+      page('Section one content', ['Card A']),
+      page('Section two content', ['Card B']),
     ];
 
     expect(check(pages)).toBeUndefined();
@@ -50,9 +63,9 @@ describe('analyzePagedjsPages / describePagedjsStructuralFailure', () => {
 
   it("fails when an atomic block's text is duplicated across two different pages", () => {
     const pages: PagedPageModel[] = [
-      { text: 'Cover page', atomicBlockTexts: [] },
-      { text: 'Section one content', atomicBlockTexts: ['Glossary entry: WCAG'] },
-      { text: 'Section two content', atomicBlockTexts: ['Glossary entry: WCAG'] },
+      page('Cover page'),
+      page('Section one content', ['Glossary entry: WCAG']),
+      page('Section two content', ['Glossary entry: WCAG']),
     ];
 
     const message = check(pages);
@@ -62,11 +75,28 @@ describe('analyzePagedjsPages / describePagedjsStructuralFailure', () => {
 
   it('does not flag the same block text repeated within a single page', () => {
     const pages: PagedPageModel[] = [
-      { text: 'Cover page', atomicBlockTexts: [] },
-      { text: 'Section one content', atomicBlockTexts: ['f001', 'f001'] },
+      page('Cover page'),
+      page('Section one content', ['f001', 'f001']),
     ];
 
     expect(check(pages)).toBeUndefined();
+  });
+
+  it('fails when one declared bounded render unit spans physical pages', () => {
+    const message = check([
+      page('Cover page'),
+      page('Summary', [], { renderAtomicMarkers: ['start-here'] }),
+      page('Summary continuation', [], { renderAtomicMarkers: ['start-here'] }),
+    ]);
+
+    expect(message).toContain('Declared bounded render unit "start-here"');
+    expect(message).toContain('pages 2, 3 of 3');
+  });
+
+  it('allows a declared bounded unit that appears once on one physical page', () => {
+    expect(
+      check([page('Cover page'), page('Summary', [], { renderAtomicMarkers: ['start-here'] })]),
+    ).toBeUndefined();
   });
 });
 

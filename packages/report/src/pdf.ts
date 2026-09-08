@@ -76,6 +76,13 @@ const PAGEDJS_LAYOUT_REPEATED_MARKER = 'Layout repeated';
  *  header onto more than one page, which must never trip this check. */
 const ATOMIC_BLOCK_SELECTOR = '.card, .render-card, .theme-card, .glossary-entry, .section-head';
 
+/** Explicit opt-in only: unlike the legacy duplicate-fragment selector above,
+ * this marker means the component is structurally bounded by its template and
+ * must therefore occupy exactly one physical Paged.js page. It must never be
+ * inferred from a `break-inside` CSS declaration: appendix groups and other
+ * potentially page-tall content intentionally use paged fragments. */
+const RENDER_ATOMIC_SELECTOR = '[data-render-atomic]';
+
 /** One `.pagedjs_page` fragment's content, reduced to exactly what the
  *  structural check needs. Extracted via page.evaluate (real DOM,
  *  requires a browser) and handed to the pure functions below so the
@@ -83,11 +90,13 @@ const ATOMIC_BLOCK_SELECTOR = '.card, .render-card, .theme-card, .glossary-entry
 export interface PagedPageModel {
   text: string;
   atomicBlockTexts: string[];
+  renderAtomicMarkers: string[];
 }
 
 export interface PagedjsStructuralCheckResult {
   blankPageIndex: number;
   duplicateText: string | undefined;
+  splitAtomicMarker: { marker: string; pageIndexes: number[] } | undefined;
   pageCount: number;
 }
 
@@ -117,7 +126,19 @@ export function analyzePagedjsPages(
     if (duplicateText !== undefined) break;
   }
 
-  return { blankPageIndex, duplicateText, pageCount: pages.length };
+  const pagesByAtomicMarker = new Map<string, number[]>();
+  for (const [pageIndex, p] of pages.entries()) {
+    for (const marker of new Set(p.renderAtomicMarkers.filter(Boolean))) {
+      const pageIndexes = pagesByAtomicMarker.get(marker) ?? [];
+      pageIndexes.push(pageIndex);
+      pagesByAtomicMarker.set(marker, pageIndexes);
+    }
+  }
+  const splitAtomicMarker = [...pagesByAtomicMarker.entries()]
+    .map(([marker, pageIndexes]) => ({ marker, pageIndexes }))
+    .find(({ pageIndexes }) => pageIndexes.length > 1);
+
+  return { blankPageIndex, duplicateText, splitAtomicMarker, pageCount: pages.length };
 }
 
 export function describePagedjsStructuralFailure(
@@ -135,6 +156,13 @@ export function describePagedjsStructuralFailure(
       `which never happens for legitimate report content - a layout fragment was duplicated.`
     );
   }
+  if (result.splitAtomicMarker !== undefined) {
+    const { marker, pageIndexes } = result.splitAtomicMarker;
+    return (
+      `Declared bounded render unit "${marker}" spans physical pages ` +
+      `${pageIndexes.map((pageIndex) => pageIndex + 1).join(', ')} of ${result.pageCount}.`
+    );
+  }
   return undefined;
 }
 
@@ -143,14 +171,20 @@ export function describePagedjsStructuralFailure(
  *  only measured page count this package ever produces: the final PDF is
  *  never parsed to rediscover it. */
 async function analyzePagedjsPagesInBrowser(page: Page): Promise<PagedjsStructuralCheckResult> {
-  const pages = await page.evaluate((selector) => {
-    return Array.from(document.querySelectorAll('.pagedjs_page')).map((p) => ({
-      text: p.textContent ?? '',
-      atomicBlockTexts: Array.from(p.querySelectorAll(selector)).map(
-        (block) => block.textContent ?? '',
-      ),
-    }));
-  }, ATOMIC_BLOCK_SELECTOR);
+  const pages = await page.evaluate(
+    ({ atomicBlockSelector, renderAtomicSelector }) => {
+      return Array.from(document.querySelectorAll('.pagedjs_page')).map((p) => ({
+        text: p.textContent ?? '',
+        atomicBlockTexts: Array.from(p.querySelectorAll(atomicBlockSelector)).map(
+          (block) => block.textContent ?? '',
+        ),
+        renderAtomicMarkers: Array.from(p.querySelectorAll(renderAtomicSelector)).map(
+          (block) => block.getAttribute('data-render-atomic') ?? '',
+        ),
+      }));
+    },
+    { atomicBlockSelector: ATOMIC_BLOCK_SELECTOR, renderAtomicSelector: RENDER_ATOMIC_SELECTOR },
+  );
 
   return analyzePagedjsPages(pages);
 }

@@ -112,7 +112,7 @@ function renderStartHere(strings: ReportStrings, themes: StoredAnalysis['themes'
     .join('');
 
   return `
-    <div class="start-here" data-start-here style="margin-top:var(--space-6);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-lg)">
+    <div class="start-here" data-render-atomic="start-here" style="margin-top:var(--space-6);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-lg)">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:var(--color-accent-300);margin-bottom:var(--space-3)">${escapeHtml(e.startHereKicker)}</div>
       ${rows}
     </div>
@@ -130,7 +130,7 @@ function renderStartHerePriorities(
     return `<a href="#theme-${displayRank}" style="display:flex;align-items:center;gap:var(--space-3);text-decoration:none;color:var(--color-text);padding:var(--space-3) 0;break-inside:avoid;background:linear-gradient(to right,transparent,var(--color-divider) 0,var(--color-divider) 100%,transparent) no-repeat bottom/100% 1px"><span style="width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--color-accent);color:var(--color-accent);font-size:11px;display:flex;align-items:center;justify-content:center">${displayRank}</span><span style="font-size:14px;flex:1">${escapeProse(theme.title)}</span><span style="font-size:11px;color:var(--color-accent-300)">${escapeHtml(label)}</span></a>`;
   });
   if (rows.length === 0) return '';
-  return `<div class="start-here" data-start-here style="margin-top:var(--space-6);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-lg)"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:var(--color-accent-300);margin-bottom:var(--space-3)">${escapeHtml(strings.executiveSummary.startHereKicker)}</div>${rows.join('')}</div>`;
+  return `<div class="start-here" data-render-atomic="start-here" style="margin-top:var(--space-6);padding:var(--space-4);background:var(--color-surface);border-radius:var(--radius-lg)"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:var(--color-accent-300);margin-bottom:var(--space-3)">${escapeHtml(strings.executiveSummary.startHereKicker)}</div>${rows.join('')}</div>`;
 }
 
 /** P1.2 (2026-08-21 La Corniche feedback pass): same headline fact as

@@ -124,6 +124,7 @@ const hotelCandidateSchema = new Schema<HotelCandidateDocument>(
     address: { type: String },
     postcode: { type: String },
     commune: { type: String },
+    accommodationType: { type: String },
     starRating: { type: Number, enum: [1, 2, 3, 4, 5] },
     roomCount: { type: Number },
     capacity: { type: Number },

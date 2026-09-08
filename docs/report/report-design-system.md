@@ -298,6 +298,36 @@ must not come back.
    above 60 pages renders successfully and returns a warning; it never fails.
 9. The generated PDF passes axe-core and carries a bookmark outline.
 
+## 5. Deterministic render-QA contract
+
+The PDF renderer is the sole delivery authority. After the final Paged.js
+preview and any bounded appendix-header repair, it runs this checklist before
+Chromium emits PDF bytes. These are structural checks, not a visual-quality
+score:
+
+- **Delivery blockers:** Paged.js's `Layout repeated` bailout, a blank
+  non-cover physical page, a duplicated declared atomic block, or a declared
+  bounded `data-render-atomic` unit spanning physical pages.
+- **Regression fixtures only:** synthetic Paged.js boundary-pressure fixtures
+  and the stable checklist print pixel baseline. A human visually reviews any
+  intentional baseline replacement before it is committed.
+- **Operator observation only:** sparse pages, page count, visual taste, and
+  copy density. None is a delivery failure.
+
+Only components whose maximum content is bounded by their template may opt in
+with `data-render-atomic`, and every opt-in receives a physical-page pressure
+fixture. `data-render-atomic="start-here"` protects the three-row executive
+summary jump panel that previously split at a page boundary in the Villas Foch
+report. Appendix groups, themes, and any other potentially page-tall content
+remain splittable.
+
+A generic painted-content overflow gate remains deliberately uninstalled. The
+plan 033 evaluation found a normal PDF text-integrity fixture whose ordinary
+Paged.js fragment exceeded a broad `<div>` geometry selector. That is a false
+positive and triggers the plan's stop rule: no overflow blocker returns unless
+a selector and box rule are demonstrated against both that fixture and the
+appendix continuation cases.
+
 ## 5. Stress fixture
 
 Layout is never iterated against a real client scan. `packages/report/fixtures/stress.findings.json`

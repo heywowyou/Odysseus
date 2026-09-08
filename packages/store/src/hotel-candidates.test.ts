@@ -6,6 +6,7 @@ import {
   listHotelCandidates,
   getHotelCandidate,
   getHotelCandidateYield,
+  getLatestHotelCandidateByOwnRegistrableDomain,
   recordHotelCandidateReview,
 } from './hotel-candidates.js';
 import { createHotelCandidateModel } from './schemas/hotel-candidate.schema.js';
@@ -70,6 +71,23 @@ describe.skipIf(!mongoAvailable)('hotel_candidates', () => {
     expect(stored?.createdAt).toBeInstanceOf(Date);
     const days = (stored!.expiresAt.getTime() - stored!.createdAt.getTime()) / 86_400_000;
     expect(Math.round(days)).toBe(90);
+  });
+
+  it('reads the current candidate projection for an exact own domain', async () => {
+    const domain = `hotel-${randomUUID()}.fr`;
+    const input = baseCandidate({
+      identityKey: `domain:${domain}`,
+      ownRegistrableDomain: domain,
+      accommodationType: 'HÔTEL DE TOURISME',
+    });
+    await upsertHotelCandidates(connection!, [input]);
+
+    const stored = await getLatestHotelCandidateByOwnRegistrableDomain(connection!, domain);
+
+    expect(stored).toMatchObject({
+      candidateId: input.candidateId,
+      accommodationType: 'HÔTEL DE TOURISME',
+    });
   });
 
   it('converges on one candidate per identity rather than accumulating', async () => {

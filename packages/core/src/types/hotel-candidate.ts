@@ -197,6 +197,10 @@ export interface HotelCandidate {
   address?: string;
   postcode?: string;
   commune?: string;
+  /** The Atout France typology carried forward from the source record. Older
+   * candidate generations predate this field, so its absence stays an unknown
+   * rather than being filled from the hotel campaign assumption. */
+  accommodationType?: string;
   starRating?: HotelStarRating;
   roomCount?: number;
   capacity?: number;

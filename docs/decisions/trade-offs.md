@@ -2534,6 +2534,13 @@ do not per-field-log its verdicts to the console (single summary line
 only), and read `unsupported` on businessImpact fields as "states
 consequences" until the bias is re-measured as gone.
 
+**Plan 033 addendum, 2026-09-08.** A separate correction-review artifact now
+measures bounded editorial proposals without changing the historical reviewer
+stream, accepted analysis, or report input. It has its own schema, prompt,
+correlation guard, and one-shot skip behavior. The campaign has not run: it
+requires current operator authorization naming the stored audits. No promotion
+decision follows from implementation alone.
+
 
 ### 56. The tool cannot send, and the only thing making that true is the shape of the port
 

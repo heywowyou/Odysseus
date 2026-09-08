@@ -22,9 +22,15 @@ import type {
   ReportLanguage,
   SiteSignalOverrides,
 } from '@odysseus/core';
-import { assertFindingsProvenance, buildFindingsProvenance } from '@odysseus/core';
+import {
+  assertFindingsProvenance,
+  buildFindingsProvenance,
+  normalizeDeclaredWebsite,
+  resolveHotelCatalogueWritingSiteContext,
+} from '@odysseus/core';
 import {
   analyzeReview,
+  analyzeCorrectionReview,
   analyzeStructure,
   analyzeWriting,
   buildFallbackSiteContext,
@@ -38,11 +44,13 @@ import {
   parseStructureDocument,
   partitionFindings,
   summarizeUnsupportedReviews,
+  CORRECTION_REVIEW_PROMPT_VERSION,
   type SiteContextInput,
   type StructureDocument,
   type TransactionalFlowStatus,
+  type WritingSiteContext,
 } from '@odysseus/llm';
-import { persistAnalysis } from '@odysseus/store';
+import { getLatestHotelCandidateByOwnRegistrableDomain, persistAnalysis } from '@odysseus/store';
 import type { VerifiedStoredAnalysis } from '@odysseus/report';
 import { runObligationStage } from './obligation-stage.js';
 
@@ -102,6 +110,34 @@ function transactionalFlowStatus(assessment: ObligationAssessment): Transactiona
   }
   if (facts.some((fact) => fact.kind === 'transactional-flow-unknown')) return 'unknown';
   return 'absent';
+}
+
+/**
+ * The CLI may supply full intake context, which remains the operator's
+ * override. Without it, enrich only the writing pass with a candidate whose
+ * own registrable domain exactly matches this audit's site. The structure pass
+ * keeps its established fallback context, because catalogue facts are prose
+ * context rather than ranking evidence.
+ */
+async function resolveWritingSiteContext(
+  manifest: AuditManifest,
+  connection: Connection,
+  fallbackSiteContext: SiteContextInput,
+): Promise<{ siteContext: WritingSiteContext; hasCatalogueFacts: boolean }> {
+  const normalizedSite = normalizeDeclaredWebsite(manifest.siteUrl);
+  const candidate =
+    normalizedSite.kind === 'own-domain'
+      ? await getLatestHotelCandidateByOwnRegistrableDomain(
+          connection,
+          normalizedSite.registrableDomain,
+        )
+      : undefined;
+  const resolution = resolveHotelCatalogueWritingSiteContext(candidate ?? undefined);
+  const hasCatalogueFacts = Object.keys(resolution.siteContext).length > 0;
+  return {
+    siteContext: { ...fallbackSiteContext, ...resolution.siteContext },
+    hasCatalogueFacts,
+  };
 }
 
 /** Newest existing analyses/<timestamp>-structure.json for this audit, by
@@ -199,6 +235,13 @@ export async function runAnalysisStage(
   assertFindingsProvenance(manifest.findingsProvenance, findingsProvenance, 'legacy manifest');
   const usedFallbackContext = options.siteContext === undefined;
   const siteContext = options.siteContext ?? buildFallbackSiteContext();
+  const catalogueContext =
+    options.siteContext === undefined
+      ? await resolveWritingSiteContext(manifest, connection, siteContext)
+      : undefined;
+  const writingSiteContext = catalogueContext?.siteContext ?? siteContext;
+  const persistsSiteContext =
+    options.siteContext !== undefined || catalogueContext?.hasCatalogueFacts === true;
   // Diversion (docs/archive/report-v2-refactor.md 4.1) runs after the severity
   // floor, on the same set: forModel must be exactly what reaches the
   // structure and writing passes and their guards, never allFindings.
@@ -239,7 +282,7 @@ export async function runAnalysisStage(
   const writingInput = buildWritingInput(
     structureDoc.themes,
     forModel,
-    siteContext,
+    writingSiteContext,
     options.language,
     siteStats,
     dominantPerformanceMetric,
@@ -277,6 +320,7 @@ export async function runAnalysisStage(
     temperature: writingResult.temperature,
     generatedAt,
     obligationAssessment,
+    ...(persistsSiteContext ? { siteContext: writingSiteContext } : {}),
   };
 
   await fs.mkdir(analysesDir, { recursive: true });
@@ -299,10 +343,59 @@ export async function runAnalysisStage(
     themes: analysis.themes,
     quickWins: analysis.quickWins,
     notes: analysis.notes,
+    ...(analysis.siteContext !== undefined ? { siteContext: analysis.siteContext } : {}),
     ...(analysis.obligationAssessment
       ? { obligationAssessment: analysis.obligationAssessment }
       : {}),
   });
+
+  // Plan 033: a distinct advisory correction pass. It gets the exact writer
+  // input/output, never the merged analysis, HTML, PDF, screenshots, or a
+  // fetched page. The artifact is insert-only and intentionally has no path
+  // back into analysis selection or report rendering.
+  try {
+    const correctionReview = await analyzeCorrectionReview({
+      writingInput,
+      written: writingResult.output,
+    });
+    const correctionReviewPath = path.join(
+      analysesDir,
+      `${timestampForFilename(generatedAt)}-${analysisId}-correction-review.json`,
+    );
+    await fs.writeFile(
+      correctionReviewPath,
+      JSON.stringify(
+        {
+          auditId: manifest.auditId,
+          analysisId,
+          language: options.language,
+          generatedAt,
+          sourceAnalysisFilename: path.basename(analysisPath),
+          reviewSchemaVersion: '033-v1',
+          promptVersion: CORRECTION_REVIEW_PROMPT_VERSION,
+          model: correctionReview.model,
+          temperature: correctionReview.temperature,
+          outcome: correctionReview.status,
+          ...(correctionReview.status === 'ok'
+            ? { proposals: correctionReview.output.proposals }
+            : { skipReason: correctionReview.reason }),
+        },
+        null,
+        2,
+      ),
+      { flag: 'wx' },
+    );
+    console.warn(
+      correctionReview.status === 'ok'
+        ? `odysseus analyze (correction review, language=${options.language}): ${correctionReview.output.proposals.filter((proposal) => proposal.verdict === 'propose-change').length} proposal(s) recorded`
+        : `odysseus analyze (correction review, language=${options.language}): skipped`,
+    );
+  } catch {
+    // An advisory-artifact filesystem failure is no more allowed to alter a
+    // delivered analysis than a provider failure. Deliberately no reason is
+    // printed: this channel is summary-only and must not expose client prose.
+    console.warn(`odysseus analyze (correction review, language=${options.language}): skipped`);
+  }
 
   // Shadow reviewer (docs/rules/llm-layer-rules.md section 12): runs after the
   // analysis is fully written and persisted, and its whole body is

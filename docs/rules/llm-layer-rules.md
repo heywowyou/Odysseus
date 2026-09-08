@@ -922,6 +922,31 @@ reviewer skips it (also by design).
 
 ---
 
+### 12a. Advisory correction-review trial (plan 033)
+
+The correction reviewer is not the shadow reviewer. It receives exactly the
+accepted `WritingInput` and `WritingPassOutput`, returns one correlated record
+per eligible prose field, and writes an insert-only
+`*-correction-review.json` artifact. It has no access to HTML, PDFs,
+screenshots, fetched pages, the merged analysis, or report output, and no path
+to alter any of them.
+
+Its closed checklist is `unsupported-specific-claim`, `unhedged-causality`,
+`language-quality`, `repetition`, and `translation-parity`. Theme titles,
+finding facts, legal splices, priorities, and template text are excluded.
+Generic commercial consequences are explicitly not unsupported. Provider,
+schema, and correlation failures are a single `skipped` outcome with no retry;
+the analysis and the existing reviewer proceed unchanged.
+
+This is a measurement instrument, not a promotion. It cannot be assessed on
+stored client data until the operator gives current, audit-specific permission
+for named analysis paths. A later operator decision needs at least 20 paired
+French/English outputs, zero unsafe proposals, and a documented useful-catch
+rate that outweighs false-positive review burden. Until then it remains an
+advisory artifact only.
+
+---
+
 ## 13. GitHub issue lifecycle for model-driven work
 
 Issue lifecycle is a standard part of completing model-driven work, not

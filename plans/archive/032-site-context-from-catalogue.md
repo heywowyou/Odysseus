@@ -9,7 +9,7 @@
 - **Depends on**: 029 (its Step 2 shipped the receiving `llm`-side schema;
   this plan is the Step 3 follow-up it named)
 - **Category**: LLM writing pass / 9c campaign data wiring
-- **Planned at**: 2026-09-07, stub only, not started
+- **Completed at**: 2026-09-08
 
 ## Why this matters
 

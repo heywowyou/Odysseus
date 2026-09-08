@@ -65,3 +65,8 @@ export const MAX_OUTPUT_TOKENS = 16000;
  *  needs. Kept as its own constant so tuning the reviewer never silently
  *  retunes a production pass. Same value as MAX_OUTPUT_TOKENS today. */
 export const REVIEWER_MAX_OUTPUT_TOKENS = 16000;
+
+/** Advisory correction proposals are kept separate from the support-verdict
+ * reviewer so their budget can be measured and tuned without retuning either
+ * production writing or the existing shadow-review stream. */
+export const CORRECTION_REVIEW_MAX_OUTPUT_TOKENS = 16000;

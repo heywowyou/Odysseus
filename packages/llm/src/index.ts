@@ -45,6 +45,22 @@ export type { AnalyzeWritingResult } from './analyze-writing.js';
 export { analyzeReview, summarizeUnsupportedReviews } from './analyze-review.js';
 export type { ReviewOutcome } from './analyze-review.js';
 export type { ReviewerInput, ReviewerPassOutput } from './reviewer-schema.js';
+export { analyzeCorrectionReview } from './analyze-correction-review.js';
+export type { CorrectionReviewOutcome } from './analyze-correction-review.js';
+export {
+  correctionCheckSchema,
+  correctionFieldSchema,
+  correctionProposalSchema,
+  correctionReviewOutputSchema,
+  describeCorrectionFieldMismatch,
+  eligibleCorrectionFields,
+} from './correction-review-schema.js';
+export type {
+  CorrectionProposal,
+  CorrectionReviewInput,
+  CorrectionReviewOutput,
+} from './correction-review-schema.js';
+export { CORRECTION_REVIEW_PROMPT_VERSION } from './correction-review-prompt.js';
 
 export { mergeAnalysisPasses } from './merge.js';
 
@@ -59,6 +75,7 @@ export type {
 export type {
   TransactionalFlowStatus,
   WritingInput,
+  WritingSiteContext,
   WritingThemeInput,
   WritingPassOutput,
   WritingTheme,

@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import type { FindingCategory, LlmInput, ReportLanguage } from '@odysseus/core';
+import type {
+  FindingCategory,
+  HotelCatalogueWritingSiteContext,
+  LlmInput,
+  ReportLanguage,
+} from '@odysseus/core';
 
 /** Plan 027: raised from a hard 2-sentence ceiling, which was measured to
  *  force every businessImpact in every stored French analysis to exactly two
@@ -112,12 +117,7 @@ export type TransactionalFlowStatus = 'present' | 'absent' | 'inconclusive' | 'u
  *  pre-plan-029 text and `fallbackNote` behaves exactly as before.
  *  A type intersection, not an interface extending the indexed access:
  *  interfaces cannot carry members out of `LlmInput['siteContext']`. */
-export type WritingSiteContext = LlmInput['siteContext'] & {
-  propertyType?: string;
-  roomCount?: number;
-  city?: string;
-  sector?: string;
-};
+export type WritingSiteContext = LlmInput['siteContext'] & HotelCatalogueWritingSiteContext;
 
 export interface WritingInput {
   language: ReportLanguage;

@@ -4,6 +4,7 @@ import type { StructureInput, StructureThemeWithKey } from './structure-schema.j
 import type {
   TransactionalFlowStatus,
   WritingInput,
+  WritingSiteContext,
   WritingSiteStats,
   WritingThemeInput,
 } from './writing-schema.js';
@@ -77,7 +78,7 @@ export function buildStructureInput(
 export function buildWritingInput(
   structureThemes: readonly StructureThemeWithKey[],
   filteredFindings: readonly Finding[],
-  siteContext: SiteContextInput,
+  siteContext: WritingSiteContext,
   language: ReportLanguage,
   siteStats: WritingSiteStats,
   dominantPerformanceMetric: 'lcp' | 'cls' | 'tbt' | null,

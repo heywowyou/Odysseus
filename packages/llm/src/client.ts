@@ -6,6 +6,7 @@ import {
   WRITING_OPENAI_TEMPERATURE,
   MAX_OUTPUT_TOKENS,
   REVIEWER_MAX_OUTPUT_TOKENS,
+  CORRECTION_REVIEW_MAX_OUTPUT_TOKENS,
 } from './constants.js';
 import {
   structurePassOutputSchema,
@@ -28,6 +29,17 @@ import {
 } from './reviewer-schema.js';
 import { REVIEWER_OUTPUT_JSON_SCHEMA } from './reviewer-output-schema.js';
 import { buildReviewerSystemPrompt, buildReviewerUserPrompt } from './reviewer-prompt.js';
+import {
+  correctionReviewOutputSchema,
+  eligibleCorrectionFields,
+  type CorrectionReviewInput,
+  type CorrectionReviewOutput,
+} from './correction-review-schema.js';
+import { buildCorrectionReviewOutputJsonSchema } from './correction-review-output-schema.js';
+import {
+  buildCorrectionReviewSystemPrompt,
+  buildCorrectionReviewUserPrompt,
+} from './correction-review-prompt.js';
 import { appendProviderRetryAfterHint, extractProviderRetryAfterMs } from './rate-limit-pacing.js';
 
 function createClient(): OpenAI {
@@ -338,4 +350,59 @@ export async function callOpenAiForReview(input: ReviewerInput): Promise<RawRevi
 
   const output = reviewerPassOutputSchema.parse(JSON.parse(content));
   return { output };
+}
+
+export interface RawCorrectionReviewCallResult {
+  output: CorrectionReviewOutput;
+}
+
+/** A separate, one-shot structured call for advisory correction proposals.
+ * Unlike writing, it deliberately has no retry path and never returns a
+ * replacement to the report pipeline: analyzeCorrectionReview converts every
+ * failure to a skipped artifact for later operator measurement. */
+export async function callOpenAiForCorrectionReview(
+  input: CorrectionReviewInput,
+): Promise<RawCorrectionReviewCallResult> {
+  const client = createClient();
+  const response = await withProviderRetryAfterHint(() =>
+    client.chat.completions.create({
+      model: OPENAI_MODEL,
+      max_completion_tokens: CORRECTION_REVIEW_MAX_OUTPUT_TOKENS,
+      temperature: OPENAI_TEMPERATURE,
+      reasoning_effort: 'none',
+      messages: [
+        { role: 'system', content: buildCorrectionReviewSystemPrompt() },
+        { role: 'user', content: buildCorrectionReviewUserPrompt(input) },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'correction_review_output',
+          schema: buildCorrectionReviewOutputJsonSchema(eligibleCorrectionFields(input)),
+          strict: true,
+        },
+      },
+    }),
+  );
+  const choice = response.choices?.[0];
+  if (!choice) {
+    throw new Error('odysseus analyze (correction review): OpenAI response contained no choices');
+  }
+  if (choice.finish_reason === 'length') {
+    throw new Error(
+      'odysseus analyze (correction review): OpenAI response was truncated (finish_reason: length)',
+    );
+  }
+  if (choice.message.refusal) {
+    throw new Error(
+      `odysseus analyze (correction review): OpenAI refused the request: ${choice.message.refusal}`,
+    );
+  }
+  const content = choice.message.content;
+  if (typeof content !== 'string') {
+    throw new Error(
+      'odysseus analyze (correction review): OpenAI response content was not a plain string (unexpected shape)',
+    );
+  }
+  return { output: correctionReviewOutputSchema.parse(JSON.parse(content)) };
 }

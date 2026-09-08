@@ -393,6 +393,7 @@ export async function resolveHotels(options: ResolveHotelsOptions): Promise<Reso
       ...(record.address !== undefined ? { address: record.address } : {}),
       ...(record.postcode !== undefined ? { postcode: record.postcode } : {}),
       ...(record.commune !== undefined ? { commune: record.commune } : {}),
+      accommodationType: record.accommodationType,
       ...(record.starRating !== undefined ? { starRating: record.starRating } : {}),
       ...(record.roomCount !== undefined ? { roomCount: record.roomCount } : {}),
       ...(record.capacity !== undefined ? { capacity: record.capacity } : {}),

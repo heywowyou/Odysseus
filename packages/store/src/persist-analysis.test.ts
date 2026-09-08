@@ -106,6 +106,41 @@ describe.skipIf(!mongoAvailable)('persistAnalysis', () => {
     expect(stored?.obligationAssessment).toBeUndefined();
   });
 
+  it('round-trips the exact writing site context when one was supplied', async () => {
+    await persistAnalysis(connection!, {
+      ...buildFields(
+        '00000000-0000-4000-8000-000000000005',
+        'persist-analysis-test-4',
+        'fr',
+        new Date('2026-08-02T00:00:00.000Z'),
+      ),
+      siteContext: {
+        businessType: 'unknown (no intake context provided)',
+        primaryGoal: 'unknown (no intake context provided)',
+        languagesServed: [],
+        targetMarkets: [],
+        propertyType: 'HÔTEL DE TOURISME (3 étoiles)',
+        roomCount: 25,
+        city: 'LA TREMBLADE',
+        sector: 'hospitality',
+      },
+    });
+
+    const AnalysisModel = createAnalysisModel(connection!);
+    const stored = await AnalysisModel.findOne({ auditId: 'persist-analysis-test-4' });
+
+    expect(stored?.siteContext).toEqual({
+      businessType: 'unknown (no intake context provided)',
+      primaryGoal: 'unknown (no intake context provided)',
+      languagesServed: [],
+      targetMarkets: [],
+      propertyType: 'HÔTEL DE TOURISME (3 étoiles)',
+      roomCount: 25,
+      city: 'LA TREMBLADE',
+      sector: 'hospitality',
+    });
+  });
+
   it('round-trips findingsSchemaVersion as a number, never a string (live-found defect)', async () => {
     // The Mongo mirror typed this field String, so Mongoose cast the
     // numeric stamp to "1" on write and every strict comparison against

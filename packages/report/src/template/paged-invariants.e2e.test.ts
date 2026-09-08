@@ -284,7 +284,7 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     try {
       const pageIndexes = await pressured.page.evaluate(() =>
         Array.from(document.querySelectorAll('.pagedjs_page')).flatMap((physicalPage, index) =>
-          physicalPage.querySelector('[data-start-here]') === null ? [] : [index],
+          physicalPage.querySelector('[data-render-atomic="start-here"]') === null ? [] : [index],
         ),
       );
       expect(pageIndexes).toHaveLength(1);
@@ -295,7 +295,7 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
 
   it('invariant 6b: the bounded start-here panel declares the keep-together rule', async () => {
     const breakInside = await doc.page.evaluate(() => {
-      const panel = document.querySelector<HTMLElement>('[data-start-here]');
+      const panel = document.querySelector<HTMLElement>('[data-render-atomic="start-here"]');
       return panel === null ? undefined : getComputedStyle(panel).breakInside;
     });
     expect(breakInside).toBe('avoid');
