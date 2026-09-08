@@ -63,9 +63,9 @@ Carry-forward notes from the reconciliation:
 | F | Preview 200/410/revoke/noindex/robots, privacy-safe logs | PASS | Suite covers publish, expiry, revoke, and log behavior. Live probe 2026-09-08 against `www.odysseusaudit.com`: robots.txt `Disallow: /apercu/`; unknown token returns 404 with `x-robots-tag: noindex, nofollow, noarchive`, `cache-control: private, no-store`, `referrer-policy: no-referrer`, CSP `default-src 'none'`. |
 | G | Privacy, opt-out, bot, identity, postal/SIRET, legitimate-interest review | OPEN | Pages are live (`confidentialite-prospection`, `desinscription`, `bot`, `offre`). Owner: the operator's recorded review pass; may be combined with gate L's reviewer. |
 | H | Role-address-only and permanent suppression tests | PASS | Suite green 2026-09-08: allowlist and MX tests for role addresses, suppression-gate tests on both draft paths. |
-| I | Sending domain separation, SPF/DKIM/DMARC, monitored replies, warmup complete | OPEN (provisioning pending) | Decision recorded 2026-09-08: provision `odysseusaudit.fr` now and size the first wave to warmup state, a reduced pilot at first, reaching the full 20 to 30 daily volume only after warmup completes. Interim sender `contact@odysseusaudit.com` remains a recorded knowing deviation (`outreach-rules.md` section 10) until the switch. Gate closes on evidence: SPF, DKIM and DMARC verified on `.fr`, warmup begun, and `ODYSSEUS_MAILBOX_SENDER_ADDRESS` repointed before the first real send. Owner: operator provisioning; agent verifies and records. |
+| I | Sending domain separation, SPF/DKIM/DMARC, monitored replies, warmup complete | OPEN (warmup in progress) | Decision recorded 2026-09-08: provision `odysseusaudit.fr` now and size the first wave to warmup state, a reduced pilot at first, reaching the full 20 to 30 daily volume only after warmup completes. Operator reports warmup phase 1 under way: low daily volume to known mailboxes with limited back-and-forth exchanges, the standard warmup pattern. Interim sender `contact@odysseusaudit.com` remains a recorded knowing deviation (`outreach-rules.md` section 10) until the switch. Gate closes on evidence: SPF, DKIM and DMARC verified on `.fr`, warmup complete (not just begun), and `ODYSSEUS_MAILBOX_SENDER_ADDRESS` repointed before the first real send. Owner: operator provisioning; agent verifies and records. |
 | J | Gmail adapter static proof of no send capability | PASS | Frozen endpoint table and scope list re-read 2026-09-08; forbidden-capability assertion in `mailbox-draft-adapter.test.ts`. |
-| K | Date no earlier than 2026-09-15, no competing blackout | PASS for now | No send is possible before 2026-09-15 under any path. Owner: operator confirms no competing blackout when the wave is scheduled. |
+| K | Date no earlier than 2026-09-15, no competing blackout | PASS | No send is possible before 2026-09-15 under any path. Operator confirmed 2026-09-08 no competing blackout is anticipated; reconfirm at actual scheduling if the date slips. |
 | L | Legal-copy gate: approved deterministic block, or argument-A-only, reconciled in canonical docs | OPEN (reviewer name pending) | Ruled 2026-09-08: `obligation-basis.md` governs; hotels at `secondary` status may receive the deterministic argument-B facts block from the first send, superseding the trade-offs 9c note's primary-status requirement; the stale e-commerce sentence in `obligation-basis.md` is amended accordingly. Still open before the first real send: name the second human reviewer and complete the disclosure review the plan's test section requires. |
 
 Reconciliation rule: no gate is waived verbally. Each OPEN gate gets its
@@ -80,10 +80,9 @@ ruling recorded in the decision log below before the pilot starts.
    schedule the privacy and legitimate-interest review pass with them
    (gates L and G).
 3. Confirm no competing blackout when the wave is scheduled (gate K).
-4. Obtain current explicit scan permission for each of the 10 named pilot
-   domains below (plan 014 Step 4's own requirement; identifying the list is
-   not permission), plus the leftover plan 030 manual real-hotel dashboard
-   pass, due before the pilot.
+4. Scan permission for all 10 named pilot domains: **granted 2026-09-08.**
+   The leftover plan 030 manual real-hotel dashboard pass is still due before
+   the pilot.
 
 ## Pilot domain list (plan 014 Step 4), identified 2026-09-08
 
@@ -111,9 +110,10 @@ confirming ranks 1-6 match the recorded cohort exactly:
 Ranks 7-10 hold no `hotel-outreach-v2` cohort membership of record (the
 `hotel_score_cohorts` document only stores selected/calibration rows, not
 every ranked one) - they are pilot-only, identified for this rollout step,
-not a second cohort selection run. Scan permission for all 10 is still
-outstanding (item 4 above); none of the 10 has been scanned or contacted
-under this pilot designation.
+not a second cohort selection run. Scan permission for all 10 was granted by
+the operator 2026-09-08; item 4 above is closed. None of the 10 has actually
+been scanned or contacted yet - the bounded prescan and manual review in plan
+014 Step 4 are still to run.
 
 ## Decision log
 
@@ -130,6 +130,9 @@ under this pilot designation.
 | 2026-09-08 | E | Incident: the v4 prescan batch job (`dfcc1deb-...`) scanned 110 hotels never on the operator-approved 120-site list, via a restart that does not resume the original scope (root cause and full evidence: `docs/decisions/trade-offs.md#75`; residual defect tracked as issue #114). Operator decision: treat as an incident, not a data-destroying rollback. The 119 approved-and-scanned domains are the batch of record (true evidence-incomplete count 9, not the reported 2; 1 true failure, `hotel-victoria.fr`, no record). The 110 unapproved prescans stay stored for evidence but are excluded from `hotel-outreach-v2` scoring, the v1-to-v2 diff, and wave-1 cohort selection. Gate E remains OPEN; plan 034 continues from the corrected exceptions list. |
 | 2026-09-08 | E | `hotel-victoria.fr` excluded (no retry). `hotel-outreach-v2` approved by the operator against the weight table itself. Scored one domain at a time for exactly the 119 approved domains (never a bulk run), so the 110 unapproved-scan candidates hold no v2 score and cannot enter cohort selection, which reads by version. The v1-to-v2 diff (120 v1 rows, 119 v2 rows) was reviewed by the operator, who approved proceeding. `prospect score select` recorded cohort `3b5c6b0c-6d93-4c51-bdf8-3b78449d9baa` (6 hotels). Gate E closes. Contact discovery and outreach drafting remain separately gated. |
 | 2026-09-08 | Step 4 | Operator directed extending the pilot from the 6-hotel recorded cohort to plan 014's literal "10 named candidate domains" by continuing the same ability-half/brokenness ranking to rank 10 (list above). Scan permission for the 4 extension domains is still outstanding; nothing has been scanned under this designation. |
+| 2026-09-08 | Step 4 | Operator granted current scan permission for all 10 pilot domains. |
+| 2026-09-08 | I | Operator reports warmup phase 1 in progress on the new sending setup: low daily volume to known mailboxes, limited exchanges. Gate stays OPEN until SPF/DKIM/DMARC are verified and warmup is reported complete, not merely begun. |
+| 2026-09-08 | K | Operator confirmed no competing blackout is anticipated for the eventual wave date. |
 
 ## Standing operating rules (unchanged from the plan)
 
