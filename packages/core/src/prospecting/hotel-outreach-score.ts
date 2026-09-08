@@ -163,13 +163,17 @@ export const HOTEL_OUTREACH_SCORE_CONFIGS: Readonly<Record<string, HotelOutreach
       effectif: 'sirene',
     },
   },
-  /** Calibration only until the operator reviews the v1-to-v2 score diff.
-   * This is deliberately a new configuration rather than an edit of v1:
-   * prescan booking evidence and Atout France room counts widen the facts the
-   * score reads, so the resulting rows must remain comparable by version. */
+  /** Approved by the operator on 2026-09-08, against the weight table itself
+   * (direct-booking re-sourced to prescan v4, effectif re-sourced to Atout
+   * France room counts, everything else byte-identical to v1) rather than
+   * against the v1-to-v2 score diff, which follows this approval per the
+   * operator's explicit sequencing for plan 034. This is deliberately a new
+   * configuration rather than an edit of v1: prescan booking evidence and
+   * Atout France room counts widen the facts the score reads, so the
+   * resulting rows must remain comparable by version. */
   'hotel-outreach-v2': {
     version: 'hotel-outreach-v2',
-    approved: false,
+    approved: true,
     brokenness: {
       'render-gap': [30, 18],
       'booking-failure': [25, 12],

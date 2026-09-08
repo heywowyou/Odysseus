@@ -362,7 +362,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [031](archive/031-operator-preview-render.md) | Let the operator view the pre-purchase preview's current content | P3 | S | 008, 009 | DONE |
 | [032](./032-site-context-from-catalogue.md) | Populate the writing pass's site context from the hotel catalogue | P3 | M | 029 | TODO (stub only, not started) |
 | [033](./033-report-render-qa-and-copy-review-trial.md) | Gate delivery on deterministic render QA and measure an advisory copy-review pass | P1 | L | none | TODO (planned 2026-09-07; indexed 2026-09-08 after being found unindexed) |
-| [034](./034-hotel-outreach-v2-booking-detection.md) | Port booking detection to prospecting and ship hotel-outreach-v2 | P1 | M | none; gates 014 Step 3 | IN PROGRESS (v4 and unapproved v2 implemented 2026-09-08; bounded batch, score diff, and operator approval remain) |
+| [034](archive/034-hotel-outreach-v2-booking-detection.md) | Port booking detection to prospecting and ship hotel-outreach-v2 | P1 | M | none; gates 014 Step 3 | DONE (2026-09-08; incident during the bounded batch documented in trade-offs.md#75/issue #114; v2 approved, scored, diffed, and wave-1 cohort selected under it) |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
@@ -504,11 +504,12 @@ Each kind of work has exactly one home:
 
 ## Dependency notes
 
-- Plan 034 (operator-directed 2026-09-08) gates plan 014's Step 3 freeze:
-  the rollout runbook's gate E reopens until the v2 weight table is
-  operator-approved and a v1-to-v2 score diff is reviewed. Its prescan
-  work is bounded and read-only per the standing authorization; its only
-  live batch is step 5's bounded prescan over the selection population.
+- Plan 034 (operator-directed 2026-09-08) gated plan 014's Step 3 freeze via
+  the rollout runbook's gate E; closed the same day once the v2 weight
+  table was operator-approved, the v1-to-v2 score diff reviewed, and the
+  wave-1 cohort selected under it. Its bounded prescan batch surfaced a
+  scope incident (`docs/decisions/trade-offs.md#75`, issue #114 open);
+  scoring and selection ran only over the operator-approved subset.
 
 - Plan 025 is independent of the 018 through 021 report sequence and of 022
   through 024, and may run as a separate session. Its `CLAUDE.md`,

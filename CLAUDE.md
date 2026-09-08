@@ -433,6 +433,15 @@ means numbered entry 24, not a literal Markdown heading anchor.
     the categories that can become findings. Do not let the two screenshot
     predicates drift, and do not reach for scan concurrency before page
     classification is fixed. → trade-offs.md#74
+75. A `--limit`-bound hotel prescan job (no `--domain`) is not restart-safe
+    against its operator-approved scope: it persists only a count, not the
+    candidate IDs, so a restart re-lists "next unscanned qualified
+    candidates" and can silently drift past the approved list, as plan
+    034's v4 batch did (110 of 229 scanned domains unapproved). The
+    2026-09-08 spurious-reclaim fix (`24d7ac0`/`b6461ab`) does not close
+    this; issue #114 tracks the remainder. Treat a `--limit`-only batch's
+    approval as a count, not a site guarantee, until then.
+    → trade-offs.md#75
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node

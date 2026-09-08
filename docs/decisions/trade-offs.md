@@ -3762,3 +3762,65 @@ Lighthouse only changes how fast a needlessly large workload is processed.
 Do not reach for concurrency here before classification is fixed. The defect
 is filed separately; narrowing coverage to compensate is not an option, per
 plan 026's own binding decision and trade-off 64.
+
+### 75. Plan 034's v4 prescan batch scanned 110 hotels the operator never approved, via a job restart that does not resume the original candidate list (incident, 2026-09-08)
+
+Job `dfcc1deb-8218-42d1-a322-2fb968f4df9a` was enqueued as
+`prospect prescan run --limit 120` against the exact 120-domain list the
+operator approved (`docs/session/plan-034-v4-prescan-selection.txt`). It was
+reported complete with `"120 hotels prescanned, ... 2 evidence-incomplete, 1
+failed"`. Read-only inspection of the `prescans` collection in Atlas `test`
+before any further plan 034 work found that untrue: the job's `prescanVersion:
+'v4'` records cover **229 distinct candidates**, not 120, and **110 of them
+are domains that never appeared on the approved list** - live Chromium visits
+to real third-party hotel sites nobody authorized. 35 of the approved 120
+were also prescanned twice. The job's own progress message reflects only its
+last internal pass, not the batch's cumulative reality: restricted to just
+the 120 approved domains and taking each one's latest prescan, the true split
+is 110 evidence-complete, 9 evidence-incomplete (not 2), and 1 true failure
+with no record at all (`hotel-victoria.fr`) - matching the "1 failed" but not
+the "2 evidence-incomplete."
+
+**Root cause, in two parts, only one of which was already fixed.** The job
+was reclaimed by a new worker mid-run: pre-`24d7ac0` code unconditionally
+reset any `status: running` job to `queued` at server startup with no
+heartbeat check, so a job that was still genuinely in progress could be
+stolen and restarted, exactly as this one's `orphaned: true` flag records.
+`24d7ac0` and `b6461ab`, both landing chronologically after this job finished
+(15:48 and 16:09 against a 13:54 finish), fix that false-positive reclaim
+with a heartbeat. They do not fix the second part: `prescanHotels`
+(`packages/interface/src/prospecting/hotel-prescan/prescan-hotels.ts`) never
+persists the actual candidate IDs a `--limit`-bound batch plans to visit,
+only the count (`options.maxPages` on the job document). Every fresh
+invocation starts its own paging cursor at the beginning and asks
+`listCandidatesToPrescan` for "the next N qualified candidates in
+`candidateId` order without a prescan yet" - a different set every time part
+of the previous set already has one. A restart therefore re-visits whatever
+of the original list wasn't yet recorded (the 35 duplicates) and then walks
+straight past the end of the approved list into whatever qualifies next (the
+110 unapproved domains), with nothing to stop at the operator's actual
+boundary. `--domain`-bound single-site batches are immune, since the domain
+is fixed regardless of restarts. This second part is still open, tracked as
+issue #114, and means any future `--limit`-bound live batch remains exposed
+to the same failure mode on a genuine crash-and-recover, not only the
+already-fixed spurious reclaim.
+
+**What is usable, decided with the operator 2026-09-08.** The 119 approved
+domains that actually received a v4 prescan (all but `hotel-victoria.fr`) are
+the batch of record for plan 034: legitimately authorized, and their
+evidence-incomplete count is 9, not the reported 2. The 110 unapproved
+prescans stay in the store rather than being deleted - they are real
+measurements and deleting them would erase the incident's own evidence - but
+are excluded from `hotel-outreach-v2` scoring, the v1-to-v2 diff, and any
+wave-1 cohort selection. Politeness mechanics (robots.txt, identified user
+agent, per-host delay, timeout) were still enforced by the scanner
+regardless of which candidates were selected, since they do not depend on
+authorization scope; this is a scope/authorization incident, not a
+politeness one, as far as verified from the stored `robotsTxtFound` and
+`effectiveDelayMs` fields on the affected records.
+
+Do not treat a `--limit`-bound prescan job as restart-safe against its
+approved scope until issue #114 is fixed. A live batch that must not exceed
+a specific named list should use `--domain` per site, or the operator should
+be told explicitly that a `--limit` batch's approval is a count, not a
+guarantee of which sites, until then.

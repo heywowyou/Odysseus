@@ -413,8 +413,8 @@ describe('computeHotelOutreachScore determinism', () => {
     );
   });
 
-  it('keeps v2 unapproved until the operator reviews its score diff', () => {
-    expect(getHotelOutreachScoreConfig('hotel-outreach-v2').approved).toBe(false);
+  it('marks v2 approved only after the operator reviewed the weight table (2026-09-08)', () => {
+    expect(getHotelOutreachScoreConfig('hotel-outreach-v2').approved).toBe(true);
   });
 });
 
