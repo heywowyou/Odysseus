@@ -50,6 +50,7 @@ import {
 } from './audit-detail-model';
 import type {
   ManualFieldKey,
+  ManualFieldsPatch,
   ManualFieldValues,
   RuleCopyMap,
   SectorChoice,
@@ -605,9 +606,11 @@ function EnrichmentCard(props: {
   auditId: string;
   manualFields: ManualFieldsResponse | null;
   detectedTransactionalFlow: boolean | undefined;
+  awaitingIdentityFields: AuditFailureResponse['needsInputFields'];
   refresh: () => void;
 }): JSX.Element {
-  const { auditId, manualFields, detectedTransactionalFlow, refresh } = props;
+  const { auditId, manualFields, detectedTransactionalFlow, awaitingIdentityFields, refresh } =
+    props;
   const { strings } = useI18n();
   const baseline = useMemo(() => manualFieldValuesFromResponse(manualFields), [manualFields]);
   const [values, setValues] = useState<ManualFieldValues>(baseline);
@@ -712,7 +715,18 @@ function EnrichmentCard(props: {
     }
   };
 
-  const handleSave = async (): Promise<void> => {
+  const detectedIdentityPatch = (): ManualFieldsPatch => {
+    const patch: ManualFieldsPatch = {};
+    for (const awaiting of awaitingIdentityFields ?? []) {
+      if (awaiting.field !== 'nomCommercial' && awaiting.field !== 'raisonSociale') continue;
+      if (manualFields?.[awaiting.field]?.provenance !== 'detected') continue;
+      const value = values[awaiting.field].trim();
+      if (value !== '') patch[awaiting.field] = value;
+    }
+    return patch;
+  };
+
+  const handleSave = async (confirmDetected = false): Promise<void> => {
     const patch = buildManualFieldsPatch(values, baseline);
     const siren = patch['siren'];
     if (siren !== undefined && !isValidSiren(siren)) {
@@ -733,7 +747,11 @@ function EnrichmentCard(props: {
         existingOverride.reason !== normalizedReason)
         ? { transactionalFlowOverride: { value: flowValue, reason: normalizedReason } }
         : {};
-    const requestPatch = { ...patch, ...transactionalFlowPatch };
+    const requestPatch = {
+      ...patch,
+      ...(confirmDetected ? detectedIdentityPatch() : {}),
+      ...transactionalFlowPatch,
+    };
     if (Object.keys(requestPatch).length === 0) {
       // Nothing the server recognizes changed; sending anyway would only
       // earn a 400 for an empty patch. The stored values already match.
@@ -903,7 +921,12 @@ function EnrichmentCard(props: {
           </p>
         </div>
       </div>
-      <div className="mt-5 flex justify-end border-t border-line pt-4">
+      <div className="mt-5 flex justify-end gap-2 border-t border-line pt-4">
+        {Object.keys(detectedIdentityPatch()).length > 0 ? (
+          <Button variant="secondary" isLoading={isSaving} onClick={() => void handleSave(true)}>
+            {strings.auditDetail.confirmDetectedFieldsButton}
+          </Button>
+        ) : null}
         <Button isLoading={isSaving} onClick={() => void handleSave()}>
           {strings.auditDetail.saveButton}
         </Button>
@@ -1095,6 +1118,7 @@ export function AuditDetailPage(): JSX.Element {
             auditId={data.auditId}
             manualFields={data.manualFields ?? null}
             detectedTransactionalFlow={data.detectedTransactionalFlow}
+            awaitingIdentityFields={data.failure?.needsInputFields}
             refresh={refresh}
           />
         </div>

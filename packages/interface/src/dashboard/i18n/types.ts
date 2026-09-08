@@ -280,6 +280,7 @@ export interface DashboardStrings {
     /** Template: {value}. */
     transactionalFlowDetectedTemplate: string;
     transactionalFlowSavedHint: string;
+    confirmDetectedFieldsButton: string;
     saveButton: string;
     savedMessage: string;
     regenerateButton: string;

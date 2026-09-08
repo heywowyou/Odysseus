@@ -248,6 +248,7 @@ export const en: DashboardStrings = {
     transactionalFlowDetectedTemplate: 'Scan result: {value}',
     transactionalFlowSavedHint:
       'After saving, regenerate the writing in “Prepare report” before generating the PDF.',
+    confirmDetectedFieldsButton: 'Confirm detected fields',
     saveButton: 'Save',
     savedMessage: 'Saved.',
     regenerateButton: 'Regenerate the report',

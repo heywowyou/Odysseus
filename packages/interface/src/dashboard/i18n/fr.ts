@@ -248,6 +248,7 @@ export const fr: DashboardStrings = {
     transactionalFlowDetectedTemplate: 'Résultat du scan : {value}',
     transactionalFlowSavedHint:
       'Après enregistrement, régénérez la rédaction dans « Préparer le rapport » avant de générer le PDF.',
+    confirmDetectedFieldsButton: 'Confirmer les champs détectés',
     saveButton: 'Enregistrer',
     savedMessage: 'Enregistré.',
     regenerateButton: 'Régénérer le rapport',

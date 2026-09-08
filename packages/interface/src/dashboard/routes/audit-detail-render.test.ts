@@ -197,6 +197,50 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     expect(container.textContent).not.toContain('Le rapport n’a pas pu être généré');
     root.unmount();
   });
+
+  it('confirms the unchanged detected identity fields that blocked report generation', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes('report-preparation')) return notFoundResponse();
+      return jsonResponse({
+        ...emptyAudit,
+        manualFields: {
+          nomCommercial: { value: 'Site Officiel', provenance: 'detected' },
+          raisonSociale: { value: "L'ESPRIT DU SUD", provenance: 'detected' },
+          updatedAt: '2026-09-01T10:20:00.000Z',
+        },
+        failure: {
+          jobId: 'job-1',
+          status: 'needs-input',
+          error: IDENTITY_ERROR,
+          needsInputFields: [
+            { field: 'nomCommercial', value: 'Site Officiel' },
+            { field: 'raisonSociale', value: "L'ESPRIT DU SUD" },
+          ],
+        },
+      });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Confirmer les champs détectés');
+    const confirmButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Confirmer les champs détectés',
+    );
+    expect(confirmButton).toBeDefined();
+    await act(async () => {
+      confirmButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    const patchCall = fetchSpy.mock.calls.find(([input]) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      return url.includes('/manual-fields');
+    });
+    expect(patchCall?.[1]).toMatchObject({
+      method: 'PATCH',
+      body: JSON.stringify({ nomCommercial: 'Site Officiel', raisonSociale: "L'ESPRIT DU SUD" }),
+    });
+    root.unmount();
+  });
 });
 
 describe('reports card PDF availability (issue #91)', () => {
