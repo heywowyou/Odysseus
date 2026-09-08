@@ -145,6 +145,23 @@ async function getFreshVerifiedPair(
   return verifyFreshPair(fr, en, resolution, auditDir, currentFindings, hostname, startedAt, store);
 }
 
+/** Issue #91: whether this machine can actually serve a report's PDF
+ *  bytes, by the same digest-verified read the preview and download
+ *  endpoints run. False when there is no report row at all. A bucket hit
+ *  is cached locally by resolveArtifactFile, so one dashboard visit
+ *  repairs availability for the next. */
+async function reportPdfAvailable(
+  report: ReportDocument | null,
+  auditDir: string,
+  hostname: string,
+  startedAt: Date,
+  store: ArtifactStore | undefined,
+): Promise<boolean> {
+  if (report === null) return false;
+  const pdf = await readVerifiedReport(auditDir, report, hostname, startedAt, store);
+  return pdf !== undefined;
+}
+
 const MANUAL_TEXT_FIELDS = [
   'sirenSourceUrl',
   'raisonSociale',
@@ -153,6 +170,7 @@ const MANUAL_TEXT_FIELDS = [
   'declarationContactEmail',
   'recipientName',
 ] as const;
+
 function isStatSector(value: unknown): value is StatSector {
   return value === 'general' || value === 'hospitality';
 }
@@ -255,6 +273,16 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       getLatestReport(connection, auditId, 'en'),
       getFailedJobForAudit(connection, auditId),
     ]);
+    const hostname = new URL(audit.siteUrl).hostname;
+    const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
+    // Issue #91: resolve each language's PDF availability up front, so the
+    // dashboard can render report rows that tell "the report is fine but
+    // elsewhere" apart from "the report is gone" instead of asserting a
+    // freshness the endpoints cannot honour.
+    const [frPdfAvailable, enPdfAvailable] = await Promise.all([
+      reportPdfAvailable(frReport, auditDir, hostname, audit.startedAt, artifactStore),
+      reportPdfAvailable(enReport, auditDir, hostname, audit.startedAt, artifactStore),
+    ]);
     const reports = (['fr', 'en'] as const).map((language) => {
       const report = language === 'fr' ? frReport : enReport;
       return {
@@ -266,10 +294,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         // a legacy document without one: the dashboard's length warning
         // must never be derived from an inferred value.
         ...(report?.pageCount !== undefined ? { pageCount: report.pageCount } : {}),
+        pdfAvailable: language === 'fr' ? frPdfAvailable : enPdfAvailable,
       };
     });
-    const hostname = new URL(audit.siteUrl).hostname;
-    const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
     const verifiedPair = await verifyFreshPair(
       frReport,
       enReport,

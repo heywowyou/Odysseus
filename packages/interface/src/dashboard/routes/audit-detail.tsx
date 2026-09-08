@@ -56,6 +56,7 @@ import type {
   FindingResponse,
   ManualFieldsResponse,
   ReportFreshness,
+  ReportLanguage,
   Severity,
   SeverityRollup,
   SirenPreviewResponse,
@@ -196,10 +197,74 @@ function FailureCard(props: {
   );
 }
 
-function ReportsCard({ detail }: { detail: AuditDetailResponse }): JSX.Element {
+/** Issue #91: the report endpoints answer conflicts with a JSON body the
+ *  browser would render as a raw page, so the click is handled instead of
+ *  navigated: the bytes are fetched first, then handed to the browser as
+ *  a blob (new tab for the preview, a download for the file). Any non-OK
+ *  answer becomes a thrown Error carrying the server's detail line for
+ *  the caller's toast. */
+async function openReportPdf(
+  url: string,
+  mode: 'preview' | 'download',
+  fileName: string,
+): Promise<void> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => ({}));
+    const detail =
+      body !== null && typeof body === 'object' && 'error' in body
+        ? String((body as Record<string, unknown>)['error'])
+        : String(response.status);
+    throw new Error(detail);
+  }
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  if (mode === 'preview') {
+    window.open(objectUrl, '_blank', 'noopener,noreferrer');
+  } else {
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+  // Revoke late: a preview tab the operator opens from the notification
+  // may still be loading; a leaked URL for a minute is the smaller harm.
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+}
+
+function ReportsCard(props: {
+  detail: AuditDetailResponse;
+  onRegenerate: () => void;
+  isRegenerating: boolean;
+}): JSX.Element {
+  const { detail, onRegenerate, isRegenerating } = props;
   const { strings } = useI18n();
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
   const hasReports = detail.reportLanguages.length > 0 && detail.reports.length > 0;
   const reportBase = `/api/audits/${encodeURIComponent(detail.auditId)}/report`;
+
+  const openReport = async (
+    language: ReportLanguage,
+    mode: 'preview' | 'download',
+  ): Promise<void> => {
+    setIsLoadingReport(true);
+    try {
+      await openReportPdf(
+        mode === 'preview' ? `${reportBase}/${language}/preview` : `${reportBase}/${language}`,
+        mode,
+        `odysseus-rapport-${language}.pdf`,
+      );
+    } catch (error) {
+      toast.error(strings.auditDetail.reportUnavailableError, {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setIsLoadingReport(false);
+    }
+  };
+
   return (
     <Card title={strings.auditDetail.reportsHeading}>
       {!hasReports ? (
@@ -211,36 +276,74 @@ function ReportsCard({ detail }: { detail: AuditDetailResponse }): JSX.Element {
               <span className="w-14 text-sm font-medium text-ink">
                 {strings.auditDetail.languageLabels[report.language]}
               </span>
-              <Badge tone={FRESHNESS_TONES[report.status]}>
-                {strings.auditDetail.reportFreshness[report.status]}
-              </Badge>
-              {/* Non-blocking length warning (plan 018): the report stays
-                  previewable and deliverable, the row only grows a badge. */}
-              {hasPageCountWarning(report.pageCount) ? (
-                <Badge tone="moderate">
-                  {strings.auditDetail.reportPageCountWarning.replace(
-                    '{count}',
-                    String(report.pageCount),
-                  )}
-                </Badge>
-              ) : null}
-              <a
-                className={buttonStyles('ghost', 'sm')}
-                href={`${reportBase}/${report.language}/preview`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {strings.auditDetail.previewReport}
-              </a>
-              <a
-                className={buttonStyles('ghost', 'sm')}
-                href={`${reportBase}/${report.language}`}
-                download
-              >
-                {detail.lifecycle === 'approved'
-                  ? strings.auditDetail.approvedDownload
-                  : strings.common.downloadReport}
-              </a>
+              {report.pdfAvailable ? (
+                <>
+                  <Badge tone={FRESHNESS_TONES[report.status]}>
+                    {strings.auditDetail.reportFreshness[report.status]}
+                  </Badge>
+                  {/* Non-blocking length warning (plan 018): the report stays
+                      previewable and deliverable, the row only grows a badge. */}
+                  {hasPageCountWarning(report.pageCount) ? (
+                    <Badge tone="moderate">
+                      {strings.auditDetail.reportPageCountWarning.replace(
+                        '{count}',
+                        String(report.pageCount),
+                      )}
+                    </Badge>
+                  ) : null}
+                  <a
+                    className={buttonStyles('ghost', 'sm')}
+                    href={`${reportBase}/${report.language}/preview`}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-disabled={isLoadingReport}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      void openReport(report.language, 'preview');
+                    }}
+                  >
+                    {strings.auditDetail.previewReport}
+                  </a>
+                  <a
+                    className={buttonStyles('ghost', 'sm')}
+                    href={`${reportBase}/${report.language}`}
+                    download
+                    aria-disabled={isLoadingReport}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      void openReport(report.language, 'download');
+                    }}
+                  >
+                    {detail.lifecycle === 'approved'
+                      ? strings.auditDetail.approvedDownload
+                      : strings.common.downloadReport}
+                  </a>
+                </>
+              ) : (
+                <>
+                  {/* Issue #91: a freshness badge asserts an availability the
+                      endpoints cannot honour from this machine, so an
+                      unreachable report reads as its own state instead. */}
+                  <Badge tone={report.status === 'unverified' ? 'neutral' : 'serious'}>
+                    {report.status === 'unverified'
+                      ? strings.auditDetail.reportFreshness.unverified
+                      : strings.auditDetail.reportPdfUnavailableBadge}
+                  </Badge>
+                  <p className="w-full text-xs text-ink-muted">
+                    {report.status === 'unverified'
+                      ? strings.auditDetail.reportPdfMissingNote
+                      : strings.auditDetail.reportPdfUnavailableNote}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isLoading={isRegenerating}
+                    onClick={onRegenerate}
+                  >
+                    {strings.auditDetail.regenerateButton}
+                  </Button>
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -836,7 +939,11 @@ export function AuditDetailPage(): JSX.Element {
             isRegenerating={isRegenerating}
           />
         ) : null}
-        <ReportsCard detail={data} />
+        <ReportsCard
+          detail={data}
+          onRegenerate={() => void handleRegenerate()}
+          isRegenerating={isRegenerating}
+        />
         <PrepareReportCard auditId={data.auditId} />
         {/* Anchor target of the failure card's "go to the fields" action. */}
         <div id="audit-hotel-fields">

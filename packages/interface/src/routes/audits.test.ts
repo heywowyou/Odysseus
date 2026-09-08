@@ -341,8 +341,8 @@ describe('GET /api/audits/:auditId', () => {
     await router.handle(req, res);
 
     expect(JSON.parse(res.body ?? '{}').reports).toEqual([
-      { language: 'fr', status: 'fresh', pageCount: 44 },
-      { language: 'en', status: 'stale', pageCount: 44 },
+      { language: 'fr', status: 'fresh', pageCount: 44, pdfAvailable: false },
+      { language: 'en', status: 'stale', pageCount: 44, pdfAvailable: false },
     ]);
   });
 
@@ -372,10 +372,46 @@ describe('GET /api/audits/:auditId', () => {
 
     const body = JSON.parse(res.body ?? '{}');
     expect(body.reports).toEqual([
-      { language: 'fr', status: 'fresh', pageCount: 61 },
-      { language: 'en', status: 'fresh' },
+      { language: 'fr', status: 'fresh', pageCount: 61, pdfAvailable: false },
+      { language: 'en', status: 'fresh', pdfAvailable: false },
     ]);
     expect(body.reports[1]).not.toHaveProperty('pageCount');
+  });
+
+  it('marks a report pdfAvailable only when this machine resolves its bytes (issue #91)', async () => {
+    // A real PDF whose digest matches what the report row records: the
+    // same read the preview and download endpoints run.
+    const bytes = Buffer.from('%PDF-1.4 fake bytes for availability');
+    await fs.mkdir('/tmp/fake-audit-dir/reports', { recursive: true });
+    await fs.writeFile('/tmp/fake-audit-dir/reports/fr.pdf', bytes);
+    vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) => ({
+      reportId: `report-${language}`,
+      auditId: 'audit-1',
+      analysisId: `analysis-${language}`,
+      findingsProvenance,
+      rendererVersion: 2,
+      pdfDigest: `sha256:${createHash('sha256').update(bytes).digest('hex')}`,
+      language,
+      reportTemplateVersion: 2,
+      analysisGeneratedAt: new Date(),
+      fileRef: 'reports/fr.pdf',
+      generatedAt: new Date(),
+    }));
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    const body = JSON.parse(res.body ?? '{}');
+    // Both rows point at the same resolvable file ref; a digest mismatch
+    // or a missing file would answer false, the local unresolvable state
+    // the issue describes.
+    expect(body.reports).toEqual([
+      { language: 'fr', status: 'fresh', pdfAvailable: true },
+      { language: 'en', status: 'fresh', pdfAvailable: true },
+    ]);
   });
 
   it('reads each report and the analysis-pair resolution only once per request (issue #4)', async () => {

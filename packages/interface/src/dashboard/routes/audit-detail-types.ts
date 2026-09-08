@@ -114,6 +114,11 @@ export interface ReportStatusResponse {
   /** Measured Paged.js page count of the stored PDF (plan 018); absent on
    *  legacy reports generated before it was recorded. */
   pageCount?: number;
+  /** Issue #91: whether the machine serving the dashboard can resolve the
+   *  PDF bytes (file ref plus bucket/artifact fallback and the stored
+   *  digest check, the exact read the preview and download endpoints
+   *  run). False also when no report document exists for the language. */
+  pdfAvailable: boolean;
 }
 
 export interface ApprovedReportRefResponse {

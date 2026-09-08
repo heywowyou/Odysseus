@@ -267,6 +267,13 @@ export const fr: DashboardStrings = {
       'Le site a déjà été exploré et analysé : corrigez la cause puis régénérez le rapport depuis cette page. Inutile de relancer un scan.',
     failureJobLink: 'Voir le détail du scan',
     failureScrollToFields: 'Aller aux champs à confirmer',
+    reportPdfUnavailableBadge: 'PDF non disponible ici',
+    reportPdfUnavailableNote:
+      'Ce PDF a été généré sur une autre machine et n’est pas accessible depuis celle-ci. Régénérez le rapport pour l’obtenir ici.',
+    reportPdfMissingNote:
+      'Aucun PDF exploitable pour cette langue. Régénérez le rapport pour le créer.',
+    reportUnavailableError:
+      'Ce PDF n’est pas disponible depuis cette machine. Régénérez le rapport, puis réessayez.',
     findingsFilterAll: 'Toutes les gravités',
     findingsEmpty: 'Aucun problème constaté pour cet audit.',
     categoryLabels: {

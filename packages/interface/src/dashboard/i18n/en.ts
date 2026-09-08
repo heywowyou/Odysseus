@@ -267,6 +267,13 @@ export const en: DashboardStrings = {
       'The site has already been crawled and analysed: fix the cause and regenerate the report from this page. A new scan is not needed.',
     failureJobLink: 'View scan details',
     failureScrollToFields: 'Go to the fields to confirm',
+    reportPdfUnavailableBadge: 'PDF not available here',
+    reportPdfUnavailableNote:
+      'This PDF was generated on another machine and is not reachable from this one. Regenerate the report to obtain it here.',
+    reportPdfMissingNote:
+      'No usable PDF exists for this language. Regenerate the report to create it.',
+    reportUnavailableError:
+      'This PDF is not available from this machine. Regenerate the report, then try again.',
     findingsFilterAll: 'All severities',
     findingsEmpty: 'No problems found for this audit.',
     categoryLabels: {

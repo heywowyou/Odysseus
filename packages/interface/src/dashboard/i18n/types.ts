@@ -302,6 +302,16 @@ export interface DashboardStrings {
     failureHintReportStage: string;
     failureJobLink: string;
     failureScrollToFields: string;
+    /** Issue #91: a report row whose PDF bytes this machine cannot serve.
+     *  The freshness badge is replaced by one of these two states: the
+     *  document exists but is out of reach, or no usable document exists
+     *  for that language. Both offer the regenerate action. */
+    reportPdfUnavailableBadge: string;
+    reportPdfUnavailableNote: string;
+    reportPdfMissingNote: string;
+    /** Toast headline when a report fetch still fails; the server's error
+     *  string is demoted to the description line. */
+    reportUnavailableError: string;
     /** Default option of the findings severity filter. */
     findingsFilterAll: string;
     /** Shown when the findings table has no rows, overall or at the

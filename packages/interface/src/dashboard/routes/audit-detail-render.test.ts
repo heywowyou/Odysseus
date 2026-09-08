@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router';
+import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/provider';
 import { AuditDetailPage } from './audit-detail';
@@ -194,6 +195,96 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
     await settle(container, 'exemple.fr');
     expect(container.textContent).not.toContain('Le rapport n’a pas pu être généré');
+    root.unmount();
+  });
+});
+
+describe('reports card PDF availability (issue #91)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  const auditWithReports = (pdfAvailable: boolean): Record<string, unknown> => ({
+    ...emptyAudit,
+    lifecycle: 'analysed',
+    reportLanguages: ['fr'],
+    reports: [
+      {
+        language: 'fr',
+        status: 'fresh',
+        pdfAvailable,
+      },
+      { language: 'en', status: 'unverified', pdfAvailable: false },
+    ],
+  });
+
+  it('renders the unavailable state instead of live-looking anchors', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': auditWithReports(false),
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'PDF non disponible ici');
+    expect(container.querySelector('a[href="/api/audits/audit-1/report/fr/preview"]')).toBeNull();
+    // The row keeps an actionable path: regenerate from this machine.
+    expect(container.textContent).toContain('Régénérer le rapport');
+    root.unmount();
+  });
+
+  it('keeps the anchors when this machine can serve the bytes', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': auditWithReports(true),
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Prévisualiser');
+    expect(container.textContent).not.toContain('PDF non disponible ici');
+    expect(
+      container.querySelector('a[href="/api/audits/audit-1/report/fr/preview"]'),
+    ).not.toBeNull();
+    root.unmount();
+  });
+
+  it('answers a residual 409 with a friendly toast, not a raw JSON page', async () => {
+    // sonner's toast.error returns a toast id, so the spy must too.
+    const errorSpy = vi.spyOn(toast, 'error').mockImplementation(() => 'test-toast');
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': auditWithReports(true),
+    });
+    // The click fetches the endpoint, which answers the conflict the
+    // browser would otherwise render as a raw JSON page.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : '';
+        if (url.includes('/report/fr/preview')) {
+          return {
+            ok: false,
+            status: 409,
+            json: async () => ({ error: 'report PDF is missing or its digest does not match' }),
+          } as unknown as Response;
+        }
+        if (url.includes('report-preparation')) return notFoundResponse();
+        return jsonResponse(auditWithReports(true));
+      }),
+    );
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Prévisualiser');
+    const previewAnchor = container.querySelector<HTMLAnchorElement>(
+      'a[href="/api/audits/audit-1/report/fr/preview"]',
+    );
+    expect(previewAnchor).not.toBeNull();
+    await act(async () => {
+      previewAnchor?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Ce PDF n’est pas disponible depuis cette machine. Régénérez le rapport, puis réessayez.',
+      { description: 'report PDF is missing or its digest does not match' },
+    );
     root.unmount();
   });
 });
