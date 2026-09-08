@@ -68,6 +68,18 @@ export function registerDraftCommand(prospect: Command): void {
           return;
         }
 
+        // Refuse before connecting, so an operator without a mailbox sees the
+        // real cause rather than a database error standing in front of it.
+        // Same guard, in the same place, as the batch action below.
+        if (!opts.dryRun && createConfiguredMailboxDraftAdapter() === null) {
+          console.error(
+            `odysseus prospect draft create: no mailbox is configured. Set ` +
+              `${missingMailboxEnvVars().join(', ')}, or re-run with --dry-run.`,
+          );
+          process.exitCode = 1;
+          return;
+        }
+
         let mongoConnection: Awaited<ReturnType<typeof connectToMongo>> | undefined;
         try {
           mongoConnection = await connectToMongo();
