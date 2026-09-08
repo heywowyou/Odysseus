@@ -1,4 +1,4 @@
-# Plan 033: Port booking detection to prospecting and ship hotel-outreach-v2
+# Plan 034: Port booking detection to prospecting and ship hotel-outreach-v2
 
 ## Status
 
