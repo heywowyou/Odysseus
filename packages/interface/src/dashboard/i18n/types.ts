@@ -525,6 +525,16 @@ export interface DashboardStrings {
     };
     qualificationHeading: string;
     qualification: { outcome: string; reason: string; events: string };
+    /** Contact section rows (issue #95): operator labels for the store's
+     *  contact evaluation fields. A field with no value is omitted rather
+     *  than rendered as an empty labelled row. */
+    contact: {
+      decision: string;
+      reason: string;
+      mailbox: string;
+      source: string;
+      validatedAt: string;
+    };
     threadHeading: string;
     thread: { state: string; touch: string; lastEventAt: string };
     outcomeHeading: string;
@@ -745,6 +755,15 @@ export interface DashboardStrings {
       string
     >;
     contact: Record<'found' | 'parked' | 'rejected' | 'suppressed', string>;
+    /** Why a contact evaluation concluded what it did: core's closed
+     *  HotelContactReason vocabulary. A newer store value falls back to the
+     *  raw code, like every other map here. */
+    contactReason: Record<string, string>;
+    /** Whether the address's domain publishes mail exchangers. `unknown` is a
+     *  real outcome and its copy must not read as a failure of the hotel. */
+    mailDomain: Record<'has-mx' | 'no-mx' | 'unknown', string>;
+    /** Where a usable address was found; closed core ContactSourceKind. */
+    contactSource: Record<'homepage' | 'mentions-legales' | 'contact-page', string>;
     thread: Record<
       | 'open'
       | 'e1-drafted'

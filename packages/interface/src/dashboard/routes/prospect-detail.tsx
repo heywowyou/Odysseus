@@ -89,28 +89,6 @@ function DefinitionRow(props: { label: string; value: ReactNode }): JSX.Element 
   );
 }
 
-function FieldValueTable(props: { rows: [string, string][] }): JSX.Element {
-  const { strings } = useI18n();
-  return (
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableHeaderCell className="w-40">{strings.prospectDetail.sources.field}</TableHeaderCell>
-          <TableHeaderCell>{strings.prospectDetail.sources.value}</TableHeaderCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {props.rows.map(([field, value]) => (
-          <TableRow key={field}>
-            <TableCell className="text-xs text-ink-muted">{field}</TableCell>
-            <TableCell className="text-ink">{value}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
 export function ProspectDetailPage(): JSX.Element {
   const { candidateId } = useParams<{ candidateId: string }>();
   const { strings, language } = useI18n();
@@ -427,17 +405,51 @@ export function ProspectDetailPage(): JSX.Element {
 
         {data.contact !== null ? (
           <Card title={strings.prospectDetail.sections.contact}>
-            {/* Field names are the API's; the store contact view carries no
-                address material, so nothing here can leak one. */}
-            <FieldValueTable
-              rows={[
-                ['state', data.contact.state],
-                ['reason', data.contact.reason],
-                ['mxStatus', data.contact.mxStatus],
-                ['sourceKind', data.contact.sourceKind ?? ''],
-                ['validatedAt', formatDateTime(data.contact.validatedAt, language)],
-              ]}
-            />
+            {/* Field values are the store's typed vocabularies mapped to
+                operator copy (issue #95), and a field with no value is
+                omitted instead of rendering an empty labelled row. The store
+                contact view carries no address material, so nothing here can
+                leak one. */}
+            <div>
+              <DefinitionRow
+                label={strings.prospectDetail.contact.decision}
+                value={vocabularyLabel(
+                  strings.labels.contact,
+                  data.contact.state,
+                  strings.common.vocabularyFallback,
+                )}
+              />
+              <DefinitionRow
+                label={strings.prospectDetail.contact.reason}
+                value={vocabularyLabel(
+                  strings.labels.contactReason,
+                  data.contact.reason,
+                  strings.common.vocabularyFallback,
+                )}
+              />
+              <DefinitionRow
+                label={strings.prospectDetail.contact.mailbox}
+                value={vocabularyLabel(
+                  strings.labels.mailDomain,
+                  data.contact.mxStatus,
+                  strings.common.vocabularyFallback,
+                )}
+              />
+              {data.contact.sourceKind !== null ? (
+                <DefinitionRow
+                  label={strings.prospectDetail.contact.source}
+                  value={vocabularyLabel(
+                    strings.labels.contactSource,
+                    data.contact.sourceKind,
+                    strings.common.vocabularyFallback,
+                  )}
+                />
+              ) : null}
+              <DefinitionRow
+                label={strings.prospectDetail.contact.validatedAt}
+                value={formatDateTime(data.contact.validatedAt, language)}
+              />
+            </div>
           </Card>
         ) : null}
 
