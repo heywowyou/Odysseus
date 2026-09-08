@@ -564,6 +564,8 @@ export const fr: DashboardStrings = {
       sourceUrl: 'URL source',
       status: 'Statut',
     },
+    unavailable:
+      'Cette capture n’a pas pu être chargée. Le fichier a peut-être été supprimé après l’expiration de son contrôle rapide, ou le contrôle a tourné sur une autre machine.',
     empty: 'Aucune preuve capturée pour ce prospect.',
   },
   preview: {

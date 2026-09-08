@@ -601,6 +601,10 @@ export interface DashboardStrings {
     description: string;
     assetNames: { homepage: string; contact: string };
     columns: { asset: string; capturedAt: string; sourceUrl: string; status: string };
+    /** Issue #92: shown in place of a screenshot whose bytes cannot be
+     *  resolved from this machine (swept artifacts, or the quick check ran
+     *  elsewhere). */
+    unavailable: string;
     empty: string;
   };
   preview: {

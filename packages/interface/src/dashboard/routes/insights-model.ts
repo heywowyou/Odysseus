@@ -111,6 +111,7 @@ export type EvidenceAssetResponse =
       byteSize: number;
       width: number;
       height: number;
+      altText: { fr: string; en: string };
     }
   | { state: 'omitted'; reason: string };
 
@@ -296,6 +297,15 @@ export function evidenceAssetRows(evidence: EvidenceResponse): {
     { slot: 'homepage', asset: evidence.renderComparison },
     { slot: 'contact', asset: evidence.specificFailure },
   ];
+}
+
+/** Issue #92: the URL of one evidence asset's bytes. The dashboard slot
+ *  names the assets by page (homepage, contact); the endpoint names them by
+ *  the store's evidence field names, so this is where the two vocabularies
+ *  meet. */
+export function evidenceAssetSrc(candidateId: string, slot: EvidenceSlotKey): string {
+  const urlSlot = slot === 'homepage' ? 'render-comparison' : 'specific-failure';
+  return `/api/prospects/${encodeURIComponent(candidateId)}/evidence/assets/${urlSlot}`;
 }
 
 /** Byte size with a neutral unit symbol, so numbers stay readable without

@@ -35,6 +35,7 @@ import type {
   HotelCandidateReviewState,
   HotelContactState,
   HotelEvidenceAsset,
+  HotelEvidenceBilingualText,
   HotelEvidenceOmissionReason,
   HotelEvidenceSelectionReason,
   HotelGroupStatus,
@@ -772,6 +773,10 @@ export type OperatorEvidenceAssetView =
       byteSize: number;
       width: number;
       height: number;
+      /** The evidence record's own bilingual alternative text (issue #92), so
+       *  the dashboard can render the asset accessibly. Part of the public
+       *  preview already, so nothing new leaves the operator boundary. */
+      altText: HotelEvidenceBilingualText;
     }
   | { state: 'omitted'; reason: HotelEvidenceOmissionReason };
 
@@ -825,6 +830,60 @@ export async function getProspectEvidenceView(
   };
 }
 
+/** Which of the two evidence assets is asked for. The dashboard slot names
+ *  the same two assets by page (homepage, contact); this is the store's
+ *  evidence-field naming. */
+export type OperatorEvidenceAssetSlot = 'renderComparison' | 'specificFailure';
+
+/** What a route needs to resolve one evidence asset's bytes without the JSON
+ *  view ever carrying an artifact address (issue #92): the prescan's own
+ *  location facts plus the asset ref and digest it already stores. This type
+ *  is for the byte-serving path only - a caller that sends it to a client
+ *  verbatim would defeat the projection rule above. */
+export interface OperatorEvidenceAssetSource {
+  prescanId: string;
+  /** The prescan's domain: the hostname of the artifacts layout. */
+  domain: string;
+  startedAt: Date;
+  /** Prescan directory relative to the prescans root, exactly as stored. */
+  artifactsDir: string;
+  /** Asset ref relative to the prescan directory (evidence/<sha256>.png). */
+  ref: string;
+  sha256: string;
+  mimeType: 'image/png';
+  byteSize: number;
+}
+
+export interface GetProspectEvidenceAssetSourceOptions {
+  prescanVersion?: string;
+}
+
+/** The stored facts needed to resolve one captured evidence asset's bytes.
+ *  Null when there is no prescan, no evidence, or the slot's asset was
+ *  omitted: a missing asset has nothing to serve, and the caller answers 404
+ *  rather than inventing a placeholder. */
+export async function getProspectEvidenceAssetSource(
+  connection: Connection,
+  candidateId: string,
+  slot: OperatorEvidenceAssetSlot,
+  options: GetProspectEvidenceAssetSourceOptions = {},
+): Promise<OperatorEvidenceAssetSource | null> {
+  const prescan = await latestPrescanForCandidate(connection, candidateId, options.prescanVersion);
+  if (prescan === null || prescan.evidence === undefined) return null;
+  const asset: HotelEvidenceAsset = prescan.evidence[slot];
+  if (asset.state !== 'captured') return null;
+  return {
+    prescanId: prescan.prescanId,
+    domain: prescan.domain,
+    startedAt: prescan.startedAt,
+    artifactsDir: prescan.artifactsDir,
+    ref: asset.ref,
+    sha256: asset.sha256,
+    mimeType: asset.mimeType,
+    byteSize: asset.byteSize,
+  };
+}
+
 function projectEvidenceAsset(asset: HotelEvidenceAsset): OperatorEvidenceAssetView {
   if (asset.state === 'omitted') {
     return { state: 'omitted', reason: asset.reason };
@@ -836,6 +895,7 @@ function projectEvidenceAsset(asset: HotelEvidenceAsset): OperatorEvidenceAssetV
     byteSize: asset.byteSize,
     width: asset.width,
     height: asset.height,
+    altText: { fr: asset.altText.fr, en: asset.altText.en },
   };
 }
 

@@ -8,18 +8,37 @@ vi.mock('@odysseus/store', () => ({
   getProspectScoreView: vi.fn(),
   getProspectScoreDiffView: vi.fn(),
   getProspectEvidenceView: vi.fn(),
+  getProspectEvidenceAssetSource: vi.fn(),
   getProspectPreviewView: vi.fn(),
   getVendorFingerprintAggregate: vi.fn(),
 }));
 
+vi.mock('@odysseus/scanner', () => ({
+  getPrescansRoot: vi.fn(() => '/prescans'),
+  buildArtifactBucketKey: vi.fn(
+    (hostname: string, startedAt: Date, relativePath: string) => `${hostname}/${relativePath}`,
+  ),
+}));
+
+vi.mock('../artifacts/resolve-artifact.js', () => ({
+  resolveArtifactFile: vi.fn(),
+}));
+
+vi.mock('../artifacts/configured-artifact-store.js', () => ({
+  createConfiguredArtifactStore: vi.fn(() => ({ configured: true })),
+}));
+
+import { createHash } from 'node:crypto';
 import {
   getHotelCandidate,
+  getProspectEvidenceAssetSource,
   getProspectEvidenceView,
   getProspectPreviewView,
   getProspectPrescanView,
   getProspectScoreDiffView,
   getProspectScoreView,
   getVendorFingerprintAggregate,
+  type OperatorEvidenceAssetSource,
   type OperatorEvidenceView,
   type OperatorPreviewView,
   type OperatorPrescanView,
@@ -29,6 +48,7 @@ import {
 } from '@odysseus/store';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { Router } from '../router.js';
+import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import { registerProspectInsightRoutes } from './prospect-insights.js';
 
 function fakeReq(url: string): IncomingMessage {
@@ -132,6 +152,10 @@ const evidenceView: OperatorEvidenceView = {
     byteSize: 204_800,
     width: 1280,
     height: 720,
+    altText: {
+      fr: 'Comparaison du site brut et du site rendu.',
+      en: 'Raw and rendered site comparison.',
+    },
   },
   specificFailure: { state: 'omitted', reason: 'no-eligible-failure' },
   summaries: [],
@@ -163,9 +187,22 @@ const vendorAggregate: PrescanVendorAggregate = {
   failureRules: [{ value: 'color-contrast', hotels: 8 }],
 };
 
+const assetSource: OperatorEvidenceAssetSource = {
+  prescanId: 'prescan-1',
+  domain: 'hotel-exemple.fr',
+  startedAt: new Date('2026-08-29T10:00:00.000Z'),
+  artifactsDir: 'hotel-exemple.fr/20260829T100000Z',
+  ref: `evidence/${'a'.repeat(64)}.png`,
+  sha256: createHash('sha256').update('png-bytes').digest('hex'),
+  mimeType: 'image/png',
+  byteSize: 9,
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getHotelCandidate).mockResolvedValue({ candidateId: 'cand-1' } as never);
+  vi.mocked(getProspectEvidenceAssetSource).mockResolvedValue(assetSource);
+  vi.mocked(resolveArtifactFile).mockResolvedValue(Buffer.from('png-bytes', 'utf-8'));
   vi.mocked(getProspectPrescanView).mockResolvedValue(prescanView);
   vi.mocked(getProspectScoreView).mockResolvedValue(scoreView);
   vi.mocked(getProspectScoreDiffView).mockResolvedValue(diffView);
@@ -272,6 +309,55 @@ describe('GET /api/prospects/:candidateId/evidence', () => {
     vi.mocked(getProspectEvidenceView).mockResolvedValue(null);
     const { statusCode } = await handle('/api/prospects/cand-1/evidence');
     expect(statusCode).toBe(404);
+  });
+});
+
+describe('GET /api/prospects/:candidateId/evidence/assets/:slot (issue #92)', () => {
+  it('serves the captured bytes as sandboxed png with no shared caching', async () => {
+    const router = new Router();
+    registerProspectInsightRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(fakeReq('/api/prospects/cand-1/evidence/assets/render-comparison'), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.setHeader).toHaveBeenCalledWith('content-type', 'image/png');
+    expect(res.setHeader).toHaveBeenCalledWith('x-content-type-options', 'nosniff');
+    expect(res.setHeader).toHaveBeenCalledWith('cache-control', 'private, no-store');
+    expect((res.body as unknown as Buffer).toString('utf-8')).toBe('png-bytes');
+    expect(resolveArtifactFile).toHaveBeenCalledWith(
+      '/prescans/hotel-exemple.fr/20260829T100000Z/evidence/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png',
+      'hotel-exemple.fr/evidence/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png',
+      { configured: true },
+    );
+    expect(getProspectEvidenceAssetSource).toHaveBeenCalledWith(
+      fakeConnection,
+      'cand-1',
+      'renderComparison',
+    );
+  });
+
+  it('rejects an unknown slot name with 400 before reading the store', async () => {
+    const { statusCode } = await handle('/api/prospects/cand-1/evidence/assets/homepage');
+    expect(statusCode).toBe(400);
+    expect(getProspectEvidenceAssetSource).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when the slot has no captured asset', async () => {
+    vi.mocked(getProspectEvidenceAssetSource).mockResolvedValue(null);
+    const { statusCode } = await handle('/api/prospects/cand-1/evidence/assets/specific-failure');
+    expect(statusCode).toBe(404);
+  });
+
+  it('returns 404 when the bytes cannot be resolved locally or from the bucket', async () => {
+    vi.mocked(resolveArtifactFile).mockRejectedValue(new Error('not found'));
+    const { statusCode } = await handle('/api/prospects/cand-1/evidence/assets/render-comparison');
+    expect(statusCode).toBe(404);
+  });
+
+  it('answers 409 when the served bytes fail their sha256 provenance check', async () => {
+    vi.mocked(resolveArtifactFile).mockResolvedValue(Buffer.from('tampered', 'utf-8'));
+    const { statusCode } = await handle('/api/prospects/cand-1/evidence/assets/render-comparison');
+    expect(statusCode).toBe(409);
   });
 });
 

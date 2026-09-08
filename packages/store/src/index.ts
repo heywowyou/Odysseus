@@ -380,6 +380,7 @@ export {
   getOperatorProspect,
   getOutcomeSummary,
   getProspectContactView,
+  getProspectEvidenceAssetSource,
   getProspectEvidenceView,
   getProspectOutcomeView,
   getProspectPrescanView,
@@ -396,7 +397,10 @@ export {
 } from './operator-views.js';
 export type {
   GetProspectContactViewOptions,
+  GetProspectEvidenceAssetSourceOptions,
   GetProspectEvidenceViewOptions,
+  OperatorEvidenceAssetSlot,
+  OperatorEvidenceAssetSource,
   GetProspectPrescanViewOptions,
   GetProspectScoreViewOptions,
   ListOperatorProspectsOptions,

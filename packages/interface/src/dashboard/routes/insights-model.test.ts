@@ -192,6 +192,7 @@ describe('evidenceAssetRows', () => {
         byteSize: 204_800,
         width: 1280,
         height: 720,
+        altText: { fr: 'Comparaison des deux rendus.', en: 'Render comparison.' },
       },
       specificFailure: { state: 'omitted', reason: 'no-specific-failure' },
       summaries: [],

@@ -554,6 +554,8 @@ export const en: DashboardStrings = {
       sourceUrl: 'Source URL',
       status: 'Status',
     },
+    unavailable:
+      'This screenshot could not be loaded. The file may have been removed after its quick check expired, or the check ran on another machine.',
     empty: 'No evidence has been captured for this prospect.',
   },
   preview: {

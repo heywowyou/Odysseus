@@ -1,6 +1,9 @@
+import { createHash } from 'node:crypto';
+import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
   getHotelCandidate,
+  getProspectEvidenceAssetSource,
   getProspectEvidenceView,
   getProspectPreviewView,
   getProspectPrescanView,
@@ -8,9 +11,13 @@ import {
   getProspectScoreView,
   getVendorFingerprintAggregate,
 } from '@odysseus/store';
+import { buildArtifactBucketKey, getPrescansRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { sendError, sendJson } from '../http-utils.js';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
+import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
+import type { ArtifactStore } from '../artifacts/artifact-store.js';
 
 /** Plan 013 slice 3 owns this module: prescan, score, evidence, preview
  *  inspection, and vendor aggregate views. Routes here must call
@@ -18,6 +25,14 @@ import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-ho
  *  every response body is the store view unchanged: the projections already
  *  exclude token hashes, object keys, artifact paths, and address material,
  *  and this boundary never adds any of it back. */
+
+/** Issue #92: URL names for the two evidence assets, kebab-case forms of the
+ *  store's evidence field names. The JSON evidence view keeps carrying no
+ *  artifact address; the bytes are what this endpoint hands over. */
+const EVIDENCE_ASSET_SLOTS: Record<string, 'renderComparison' | 'specificFailure'> = {
+  'render-comparison': 'renderComparison',
+  'specific-failure': 'specificFailure',
+};
 
 /** Candidate ids, prescan versions and scoring versions are opaque tokens at
  *  this boundary: non-empty, bounded, and free of whitespace and control
@@ -53,6 +68,10 @@ function requireCandidateId(params: Record<string, string>): string | null {
 }
 
 export function registerProspectInsightRoutes(router: Router, connection: Connection): void {
+  // Issue #63: built once, since a caller with no bucket configured must
+  // never pay a per-request cost for constructing one, and both readers
+  // below share the same fallback behaviour.
+  const artifactStore: ArtifactStore | undefined = createConfiguredArtifactStore();
   router.get('/api/prospects/:candidateId/prescan', async ({ res, params }) => {
     const candidateId = requireCandidateId(params);
     if (candidateId === null) {
@@ -124,6 +143,50 @@ export function registerProspectInsightRoutes(router: Router, connection: Connec
       return;
     }
     sendJson(res, 200, view);
+  });
+
+  // Issue #92: the two evidence screenshots themselves. The JSON view above
+  // deliberately carries no artifact address, so the bytes travel through
+  // their own endpoint, resolved through the same local-first, bucket-second
+  // path as the report PDFs (issue #63). A sha256 mismatch answers 409: the
+  // operator sees an explicit unavailable state, never bytes the record did
+  // not vouch for. The response is operator-only content, so it is served
+  // with nosniff and no shared caching.
+  router.get('/api/prospects/:candidateId/evidence/assets/:slot', async ({ res, params }) => {
+    const candidateId = requireCandidateId(params);
+    if (candidateId === null) {
+      sendError(res, 400, 'candidateId must be a non-empty identifier');
+      return;
+    }
+    const slot = EVIDENCE_ASSET_SLOTS[params['slot'] ?? ''];
+    if (slot === undefined) {
+      sendError(res, 400, 'slot must be "render-comparison" or "specific-failure"');
+      return;
+    }
+    const source = await getProspectEvidenceAssetSource(connection, candidateId, slot);
+    if (source === null) {
+      sendError(res, 404, 'no captured evidence asset for this slot');
+      return;
+    }
+    const localPath = path.resolve(getPrescansRoot(), source.artifactsDir, source.ref);
+    const bucketKey = buildArtifactBucketKey(source.domain, source.startedAt, source.ref);
+    let png: Buffer;
+    try {
+      png = await resolveArtifactFile(localPath, bucketKey, artifactStore);
+    } catch {
+      sendError(res, 404, 'evidence asset not found on disk or in the bucket');
+      return;
+    }
+    const digest = createHash('sha256').update(png).digest('hex');
+    if (digest !== source.sha256) {
+      sendError(res, 409, 'evidence asset digest does not match its provenance record');
+      return;
+    }
+    res.statusCode = 200;
+    res.setHeader('content-type', 'image/png');
+    res.setHeader('x-content-type-options', 'nosniff');
+    res.setHeader('cache-control', 'private, no-store');
+    res.end(png);
   });
 
   router.get('/api/prospects/:candidateId/preview', async ({ res, params }) => {
