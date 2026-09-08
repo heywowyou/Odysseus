@@ -311,6 +311,31 @@ describe('prescanHotels', () => {
     expect(seen.at(-1)).toBe(4);
   });
 
+  it('stops before starting another hotel when its caller requests cancellation', async () => {
+    const store = fakeStore([candidate('a'), candidate('b'), candidate('c')]);
+    const stopped = new Error('stop requested');
+    let completed = 0;
+
+    await expect(
+      prescanHotels(
+        options({
+          store: store.port,
+          concurrency: 1,
+          prescan: async () => {
+            completed += 1;
+            return measurement();
+          },
+          checkForCancellation: () => {
+            if (completed >= 1) throw stopped;
+          },
+        }),
+      ),
+    ).rejects.toBe(stopped);
+
+    expect(completed).toBe(1);
+    expect(store.recorded).toHaveLength(1);
+  });
+
   it('visits only the named domain, not whichever candidate sorts first', async () => {
     // The reason this option exists: the listing is ordered by candidateId, so
     // a one-hotel batch expressed as a limit alone lands on 'a'. An

@@ -69,6 +69,9 @@ function typeBadge(
   if (summary.type === 'full-audit') {
     return { tone: 'accent', label: strings.common.typeLabels.fullAudit };
   }
+  if (summary.type === 'hotel-prescan') {
+    return { tone: 'neutral', label: strings.common.typeLabels.hotelPrescan };
+  }
   return { tone: 'neutral', label: strings.common.typeLabels.prospecting };
 }
 
@@ -254,9 +257,9 @@ export function AuditsPage(): JSX.Element {
                         <div className="flex items-center justify-end gap-1">
                           {canStop(summary.status) ? (
                             <Button
-                              variant="ghost"
+                              variant="danger"
                               size="sm"
-                              className="px-2"
+                              className="gap-1.5 px-2"
                               aria-label={strings.audits.stopAction}
                               title={strings.audits.stopAction}
                               onClick={(event) => {
@@ -264,7 +267,8 @@ export function AuditsPage(): JSX.Element {
                                 setPendingAction({ kind: 'stop', row: summary });
                               }}
                             >
-                              <Square className="size-4" aria-hidden="true" />
+                              <Square className="size-3 fill-current" aria-hidden="true" />
+                              <span className="text-xs">{strings.audits.stopAction}</span>
                             </Button>
                           ) : null}
                           {canDelete(summary.status) ? (

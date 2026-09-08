@@ -220,6 +220,29 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
     root.unmount();
   });
 
+  it('offers an explicit stop control for a running hotel pre-scan', async () => {
+    stubRoutes({
+      '/api/scans/job-hotel': {
+        jobId: 'job-hotel',
+        type: 'hotel-prescan',
+        status: 'running',
+        phase: 'prescanning',
+        progress: { message: '12 hôtels pré-analysés' },
+      },
+    });
+    const { container, root } = await renderPage(createElement(ScanProgressPage), {
+      path: '/scans/job-hotel',
+      pattern: 'scans/:jobId',
+    });
+    await settle(container, '12 hôtels pré-analysés');
+    expect(
+      [...container.querySelectorAll('button')].some(
+        (button) => button.textContent === 'Arrêter le scan',
+      ),
+    ).toBe(true);
+    root.unmount();
+  });
+
   it('prospects list has no axe violations in its empty state', async () => {
     const { container, root } = await renderPage(createElement(ProspectsPage));
     await settle(container, 'Aucun prospect ne correspond à ces filtres.');

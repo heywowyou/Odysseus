@@ -88,6 +88,10 @@ export interface PrescanHotelsOptions {
   /** Measure again even where a prescan already exists at this version. */
   rescan: boolean;
   dryRun: boolean;
+  /** Called before each hotel begins. The queue adapter throws from this
+   *  guard after an operator stop, which lets this batching module stay
+   *  independent from the queue's cancellation types. */
+  checkForCancellation?: () => void;
   onProgress?: (prescanned: number) => void;
 }
 
@@ -187,6 +191,7 @@ export async function prescanHotels(options: PrescanHotelsOptions): Promise<Hote
     await Promise.all(
       toLanes(page, options.concurrency).map(async (lane) => {
         for (const candidate of lane) {
+          options.checkForCancellation?.();
           let result: Awaited<ReturnType<HotelPrescanner>> | null;
           try {
             result = await options.prescan(candidate);

@@ -221,10 +221,8 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
 
   /** Operator stop for one job. The document is terminal from this moment
    *  (so the dashboard and the claim filter both react at once); a running
-   *  job's in-flight pipeline work aborts at its next page boundary via
-   *  the queue's cancellation registry. Job types without cooperative
-   *  cancellation (hotel-prescan, prospect-ingestion) refuse the request
-   *  rather than pretending: they would keep running to completion. */
+   *  job's in-flight pipeline work aborts at its next safe boundary via
+   *  the queue's cancellation registry. */
   router.post('/api/scans/:jobId/cancel', async ({ res, params }) => {
     const jobId = params['jobId']!;
     const job = await getJob(connection, jobId);
@@ -236,7 +234,12 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       sendError(res, 409, `job is already ${job.status}`);
       return;
     }
-    if (job.status === 'running' && job.type !== 'full-audit' && job.type !== 'prospecting') {
+    if (
+      job.status === 'running' &&
+      job.type !== 'full-audit' &&
+      job.type !== 'prospecting' &&
+      job.type !== 'hotel-prescan'
+    ) {
       sendError(
         res,
         409,

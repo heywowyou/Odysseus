@@ -266,21 +266,22 @@ describe('POST /api/scans/:jobId/cancel', () => {
     expect(cancelJob).toHaveBeenCalled();
   });
 
-  it('refuses a running job type with no cooperative cancellation', async () => {
+  it('registers the stop and cancels a running hotel-prescan job', async () => {
     vi.mocked(getJob).mockResolvedValue({
       jobId: 'job-3',
       type: 'hotel-prescan',
       status: 'running',
     } as never);
+    vi.mocked(cancelJob).mockResolvedValue(true);
 
     const router = new Router();
     registerScanRoutes(router, fakeConnection, fakeQueue);
     const res = fakeRes();
     await router.handle(fakeReq(undefined, 'POST', '/api/scans/job-3/cancel'), res);
 
-    expect(res.statusCode).toBe(409);
-    expect(fakeQueue.requestCancel).not.toHaveBeenCalled();
-    expect(cancelJob).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+    expect(fakeQueue.requestCancel).toHaveBeenCalledWith('job-3');
+    expect(cancelJob).toHaveBeenCalledWith(fakeConnection, 'job-3', 'cancelled by operator');
   });
 
   it('answers 409 for an already terminal job', async () => {

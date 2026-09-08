@@ -29,9 +29,8 @@ export interface DashboardStrings {
   common: {
     severityLabels: { critical: string; serious: string; moderate: string; minor: string };
     statusLabels: Record<JobStatus, string>;
-    /** camelCase keys (the ported string-table shape); pages map the API's
-     *  'full-audit' value to `fullAudit`. */
-    typeLabels: { fullAudit: string; prospecting: string };
+    /** camelCase keys mirror the API job types displayed by the dashboard. */
+    typeLabels: { fullAudit: string; prospecting: string; hotelPrescan: string };
     downloadReport: string;
     viewDetails: string;
     error: string;

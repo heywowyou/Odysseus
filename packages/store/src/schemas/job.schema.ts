@@ -203,6 +203,9 @@ export interface JobDocumentFields {
   options: JobOptionsSnapshot;
   createdAt: Date;
   startedAt?: Date;
+  /** Updated whenever a running job reports progress. Startup recovery only
+   *  requeues jobs whose worker has been silent past the orphan timeout. */
+  lastHeartbeatAt?: Date;
   finishedAt?: Date;
   auditId?: string;
   auditIds?: string[];
@@ -428,6 +431,7 @@ const jobSchema = new Schema<JobDocument>(
     options: { type: jobOptionsSchema, required: true, default: {} },
     createdAt: { type: Date, required: true },
     startedAt: { type: Date },
+    lastHeartbeatAt: { type: Date },
     finishedAt: { type: Date },
     auditId: { type: String },
     auditIds: { type: [String] },

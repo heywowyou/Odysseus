@@ -50,9 +50,10 @@ export async function createJob(connection: Connection, input: NewJobInput): Pro
  *  so two worker slots racing to dequeue never claim the same job twice. */
 export async function claimNextQueuedJob(connection: Connection): Promise<JobDocument | null> {
   const JobModel = createJobModel(connection);
+  const claimedAt = new Date();
   return JobModel.findOneAndUpdate(
     { status: 'queued' },
-    { $set: { status: 'running', startedAt: new Date() } },
+    { $set: { status: 'running', startedAt: claimedAt, lastHeartbeatAt: claimedAt } },
     { sort: { createdAt: 1 }, returnDocument: 'after' },
   ).lean<JobDocument>();
 }
@@ -105,7 +106,10 @@ export async function updateJobProgress(
     $set['outreachBatchResults'] = patch.outreachBatchResults;
   if (patch.auditId !== undefined) $set['auditId'] = patch.auditId;
   if (Object.keys($set).length === 0) return;
-  await JobModel.updateOne({ jobId }, { $set });
+  await JobModel.updateOne(
+    { jobId, status: 'running' },
+    { $set: { ...$set, lastHeartbeatAt: new Date() } },
+  );
 }
 
 export interface CompleteJobPatch {
@@ -124,7 +128,7 @@ export async function completeJob(
 ): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId },
+    { jobId, status: { $in: ['queued', 'running'] } },
     { $set: { status: 'complete', phase: 'complete', finishedAt: new Date(), ...patch } },
   );
 }
@@ -132,7 +136,7 @@ export async function completeJob(
 export async function failJob(connection: Connection, jobId: string, error: string): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId },
+    { jobId, status: { $in: ['queued', 'running'] } },
     { $set: { status: 'failed', phase: 'failed', finishedAt: new Date(), error } },
   );
 }
@@ -150,7 +154,7 @@ export async function markJobNeedsInput(
 ): Promise<void> {
   const JobModel = createJobModel(connection);
   await JobModel.updateOne(
-    { jobId },
+    { jobId, status: { $in: ['queued', 'running'] } },
     {
       $set: {
         status: 'needs-input',
@@ -213,17 +217,35 @@ export async function getJob(connection: Connection, jobId: string): Promise<Job
   return JobModel.findOne({ jobId }).lean<JobDocument>();
 }
 
-/** Called once at server startup, before the worker loop starts. A job
- *  stuck at status 'running' after an unclean shutdown has nothing
- *  actually running it; reset it to 'queued' so the queue picks it back
- *  up. createdAt is untouched, so claimNextQueuedJob's createdAt-ascending
- *  sort naturally restores it to its original FIFO position rather than
- *  requeuing it to the back. Returns the number of jobs reset. */
-export async function resetOrphanedRunningJobs(connection: Connection): Promise<number> {
+/** A worker that has not reported progress for this long is treated as
+ *  stopped. The bound exceeds one hotel's three-page prescan timeout, so a
+ *  slow but live browser is never reclaimed by a second worker. */
+export const ORPHANED_JOB_TIMEOUT_MS = 10 * 60 * 1000;
+
+/** Called once at server startup, before the worker loop starts. A job that
+ *  has been silent past ORPHANED_JOB_TIMEOUT_MS was left running by an
+ *  unclean shutdown, so reset it to 'queued'. A fresh heartbeat means a live
+ *  worker owns it and must never be reclaimed. createdAt is untouched, so
+ *  claimNextQueuedJob's createdAt-ascending sort restores the original FIFO
+ *  position rather than requeuing it to the back. Returns the number reset. */
+export async function resetOrphanedRunningJobs(
+  connection: Connection,
+  now = new Date(),
+): Promise<number> {
   const JobModel = createJobModel(connection);
+  const staleBefore = new Date(now.getTime() - ORPHANED_JOB_TIMEOUT_MS);
   const result = await JobModel.updateMany(
-    { status: 'running' },
-    { $set: { status: 'queued', orphaned: true }, $unset: { startedAt: '' } },
+    {
+      status: 'running',
+      $or: [
+        { lastHeartbeatAt: { $lt: staleBefore } },
+        { lastHeartbeatAt: { $exists: false }, startedAt: { $lt: staleBefore } },
+      ],
+    },
+    {
+      $set: { status: 'queued', orphaned: true },
+      $unset: { startedAt: '', lastHeartbeatAt: '' },
+    },
   );
   return result.modifiedCount;
 }

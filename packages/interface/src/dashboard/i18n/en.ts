@@ -31,7 +31,11 @@ export const en: DashboardStrings = {
       cancelled: 'Cancelled',
       'needs-input': 'Needs input',
     },
-    typeLabels: { fullAudit: 'Full audit', prospecting: 'Shortlist hotels' },
+    typeLabels: {
+      fullAudit: 'Full audit',
+      prospecting: 'Shortlist hotels',
+      hotelPrescan: 'Hotel pre-scan',
+    },
     downloadReport: 'Download report',
     viewDetails: 'View details',
     error: 'Error',

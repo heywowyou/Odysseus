@@ -31,7 +31,11 @@ export const fr: DashboardStrings = {
       cancelled: 'Arrêté',
       'needs-input': 'Action requise',
     },
-    typeLabels: { fullAudit: 'Audit complet', prospecting: 'Présélection d’hôtels' },
+    typeLabels: {
+      fullAudit: 'Audit complet',
+      prospecting: 'Présélection d’hôtels',
+      hotelPrescan: 'Pré-analyse d’hôtel',
+    },
     downloadReport: 'Télécharger le rapport',
     viewDetails: 'Voir le détail',
     error: 'Erreur',

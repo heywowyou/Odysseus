@@ -41,6 +41,7 @@ import {
   prescanHotels,
   type HotelPrescanReport,
 } from '../../prospecting/hotel-prescan/prescan-hotels.js';
+import { JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
 
 /** The scanner's in-flight result, reduced to the stored shape.
@@ -89,6 +90,10 @@ export async function persistPrescanWithArtifactCleanup(
 export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
   const { connection, originLock } = ctx;
   const options = job.options;
+
+  if (ctx.cancellation.isRequested(job.jobId)) {
+    throw new JobCancelledError(job.jobId);
+  }
 
   const resolutionVersion = options.resolutionVersion;
   const qualificationVersion = options.qualificationVersion;
@@ -180,6 +185,11 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
       concurrency: options.concurrency ?? PROSPECTING_JOB_CONCURRENCY,
       rescan: options.rescan ?? false,
       dryRun: false,
+      checkForCancellation: () => {
+        if (ctx.cancellation.isRequested(job.jobId)) {
+          throw new JobCancelledError(job.jobId);
+        }
+      },
       onProgress: (prescanned) => {
         void updateJobProgress(connection, job.jobId, {
           progress: { message: `${prescanned} hotels prescanned` },
@@ -188,6 +198,10 @@ export async function runHotelPrescanJob(job: JobDocument, ctx: PipelineContext)
     });
   } finally {
     await browser.close();
+  }
+
+  if (ctx.cancellation.isRequested(job.jobId)) {
+    throw new JobCancelledError(job.jobId);
   }
 
   // The summary goes through updateJobProgress rather than completeJob:

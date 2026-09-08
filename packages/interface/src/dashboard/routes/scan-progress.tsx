@@ -99,7 +99,7 @@ export function ScanProgressPage(): JSX.Element {
   const stoppable =
     job !== undefined &&
     !isTerminal(job.status) &&
-    (job.type === 'full-audit' || job.type === 'prospecting') &&
+    (job.type === 'full-audit' || job.type === 'prospecting' || job.type === 'hotel-prescan') &&
     canStop(job.status);
 
   const stopJob = async (): Promise<void> => {
@@ -149,7 +149,11 @@ export function ScanProgressPage(): JSX.Element {
         eyebrow={
           job === undefined
             ? undefined
-            : strings.common.typeLabels[job.type === 'full-audit' ? 'fullAudit' : 'prospecting']
+            : job.type === 'full-audit'
+              ? strings.common.typeLabels.fullAudit
+              : job.type === 'hotel-prescan'
+                ? strings.common.typeLabels.hotelPrescan
+                : strings.common.typeLabels.prospecting
         }
         subject={job?.siteUrl === undefined ? undefined : hostnameOf(job.siteUrl)}
         title={strings.progress.title}
@@ -244,7 +248,7 @@ function PhaseRow(props: {
  *  carries the phase copy instead, so the label never shows twice. */
 function JobView({ job }: { job: ScanJobDetail }): JSX.Element {
   const terminal = isTerminal(job.status);
-  const prospecting = job.type === 'prospecting';
+  const prospecting = job.type === 'prospecting' || job.type === 'hotel-prescan';
   return (
     <div className="flex flex-col gap-4">
       {prospecting ? (
@@ -364,13 +368,15 @@ function ProspectingView({
           ) : null}
         </Card>
       ) : null}
-      <Card title={strings.progress.urlResultsHeading}>
-        <ul className="divide-y divide-line">
-          {(job.urlResults ?? []).map((row) => (
-            <UrlRow key={row.url} row={row} linked={job.status === 'complete'} />
-          ))}
-        </ul>
-      </Card>
+      {job.type === 'prospecting' ? (
+        <Card title={strings.progress.urlResultsHeading}>
+          <ul className="divide-y divide-line">
+            {(job.urlResults ?? []).map((row) => (
+              <UrlRow key={row.url} row={row} linked={job.status === 'complete'} />
+            ))}
+          </ul>
+        </Card>
+      ) : null}
       {terminal ? (
         job.status === 'failed' ? (
           <FailedCard job={job} />

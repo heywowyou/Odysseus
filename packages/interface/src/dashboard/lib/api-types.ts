@@ -1,5 +1,5 @@
 export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
-export type JobType = 'full-audit' | 'prospecting';
+export type JobType = 'full-audit' | 'prospecting' | 'hotel-prescan';
 
 export interface SeverityRollup {
   critical: number;

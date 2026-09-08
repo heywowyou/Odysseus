@@ -9,6 +9,7 @@ import {
   failJob,
   getJob,
   listJobs,
+  ORPHANED_JOB_TIMEOUT_MS,
   resetOrphanedRunningJobs,
   updateJobProgress,
 } from './jobs.js';
@@ -80,6 +81,7 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect(claimed?.jobId).toBe(first.jobId);
     expect(claimed?.status).toBe('running');
     expect(claimed?.startedAt).toBeInstanceOf(Date);
+    expect(claimed?.lastHeartbeatAt).toBeInstanceOf(Date);
 
     const stored = await getJob(connection!, first.jobId);
     expect(stored?.status).toBe('running');
@@ -179,7 +181,7 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect(createdAts).toEqual(sorted);
   });
 
-  it('resetOrphanedRunningJobs requeues running jobs, preserving createdAt', async () => {
+  it('resetOrphanedRunningJobs leaves a fresh job running and requeues a stale one, preserving createdAt', async () => {
     const job = await createJob(connection!, {
       type: 'full-audit',
       siteUrl: 'https://f.example/',
@@ -190,7 +192,16 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect(claimed?.status).toBe('running');
 
     const before = await getJob(connection!, claimed!.jobId);
-    const resetCount = await resetOrphanedRunningJobs(connection!);
+    const freshNow = new Date(Date.now() + ORPHANED_JOB_TIMEOUT_MS - 1);
+    await resetOrphanedRunningJobs(connection!, freshNow);
+
+    const stillRunning = await getJob(connection!, claimed!.jobId);
+    expect(stillRunning?.status).toBe('running');
+
+    const resetCount = await resetOrphanedRunningJobs(
+      connection!,
+      new Date(freshNow.getTime() + 2),
+    );
     expect(resetCount).toBeGreaterThanOrEqual(1);
 
     const after = await getJob(connection!, claimed!.jobId);
@@ -241,6 +252,22 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
 
     const stored = await getJob(connection!, job.jobId);
     expect(stored?.status).toBe('complete');
+  });
+
+  it('keeps an operator-cancelled job terminal when its old runner later finishes', async () => {
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://completion-race.example/',
+      options: {},
+    });
+
+    await cancelJob(connection!, job.jobId, 'cancelled by operator');
+    await completeJob(connection!, job.jobId);
+    await failJob(connection!, job.jobId, 'late worker error');
+
+    const stored = await getJob(connection!, job.jobId);
+    expect(stored?.status).toBe('cancelled');
+    expect(stored?.phase).toBe('cancelled');
   });
 
   it('cancelJob cancels a running job (the runner notices through the registry)', async () => {

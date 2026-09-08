@@ -5,7 +5,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION } from '@odysseus/core';
 import type { RecordPrescanInput } from '@odysseus/store';
 import type { PrescanResult } from '@odysseus/scanner';
-import { persistPrescanWithArtifactCleanup, toStoredPages } from './run-hotel-prescan-job.js';
+import {
+  persistPrescanWithArtifactCleanup,
+  runHotelPrescanJob,
+  toStoredPages,
+} from './run-hotel-prescan-job.js';
+import { CancellationRegistry, JobCancelledError } from '../cancellation.js';
+import type { PipelineContext } from '../job-queue.js';
 
 let scratchDir = '';
 
@@ -68,6 +74,33 @@ describe('prescan persistence artifact cleanup', () => {
     );
     expect(result.pointerWritten).toBe(false);
     await expect(fs.stat(runDir)).resolves.toBeDefined();
+  });
+});
+
+describe('hotel prescan cancellation', () => {
+  it('stops before launching a browser when the queue already has a stop request', async () => {
+    const cancellation = new CancellationRegistry();
+    cancellation.request('job-1');
+    const ctx: PipelineContext = {
+      connection: {} as never,
+      originLock: {} as never,
+      cancellation,
+    };
+
+    await expect(
+      runHotelPrescanJob(
+        {
+          jobId: 'job-1',
+          type: 'hotel-prescan',
+          status: 'running',
+          phase: 'prescanning',
+          options: { resolutionVersion: 'rv1', qualificationVersion: 'qv1' },
+          createdAt: new Date(),
+          progress: {},
+        } as never,
+        ctx,
+      ),
+    ).rejects.toBeInstanceOf(JobCancelledError);
   });
 });
 
