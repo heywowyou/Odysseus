@@ -22,14 +22,88 @@ export interface StoredAnalysisShape {
  *  three additions measure the same shape of problem for any *future*
  *  prompt regression, without gating anything - promotion to a guard is
  *  the same "measure first" doctrine trade-off 55 already applies to the
- *  shadow reviewer. */
+ *  shadow reviewer.
+ *
+ *  Issue #106 adds the construction level: the fa1a598 fix removed the
+ *  word-level tic, and the templating moved one level down into the
+ *  grammar. The stored post-fix analyses open 20/21 (Villas Foch FR) and
+ *  24/26 (Briketenia FR) action entries on a subject immediately followed
+ *  by the devoir modal, while the word-level opening share reports near
+ *  zero because "Les boutons", "Les zones", "Le temps" all differ. English
+ *  shows the same shift at the sentence end: many actions close on one
+ *  final-clause formula (", and your technical provider can..."). The two
+ *  new counts catch both, and constructionRepetitionFlags interprets them
+ *  against the documented limits. Still measurement only: nothing here
+ *  rejects a response. */
 export interface RepetitionMetrics {
   recommendedActionsTotal: number;
   recommendedActionsSharingFirstFiveWords: number;
+  /** Entries whose opening sentence reaches a present form of devoir
+   *  (doit/doivent/doive) within the first DEVOIR_MODAL_POSITION_LIMIT
+   *  words, i.e. the subject + devoir frame the issue describes. */
+  recommendedActionsOpeningWithDevoirModal: number;
+  /** Entries sharing the most common sentence-final tail, plus that tail
+   *  (empty string when no tail recurs or entries carry no final comma
+   *  clause). */
+  recommendedActionsSharingSentenceFinalTail: number;
+  recommendedActionsMostSharedSentenceFinalTail: string;
   businessImpactTotal: number;
   businessImpactSharingFirstTwoWords: number;
   verbatimPromptExampleMatches: string[];
+  /** Human-readable construction-level flags for the lint output, empty
+   *  when the report is inside both limits. */
+  constructionRepetitionFlags: string[];
 }
+
+/**
+ * An action entry counts as opening on the subject + devoir construction
+ * when one of these forms appears early in its first sentence. Only the
+ * present forms matter: the stored tic is "X doit être/Y doivent recevoir",
+ * and the participle/infinitive forms (dû, devoir) would match ordinary
+ * nouns and infinitive clauses.
+ */
+const DEVOIR_MODAL_PRESENT_FORMS = new Set(['doit', 'doivent', 'doive']);
+
+/**
+ * How far into the sentence the devoir form may sit and still read as the
+ * opening construction. Measured on the stored post-fix analyses: subject
+ * phrases before the verb run from 2 to 16 words ("Les titres qui ont été
+ * mis en avant... doivent") because remediation subjects carry relative
+ * clauses. The limit must cover that span. The cost of a generous limit is
+ * a rare miscount of an action opening on a purpose clause ("Pour corriger
+ * X, le formulaire doit..."); the 2/3 share limit absorbs scattered
+ * miscounts, and a lint metric needs recall more than it needs lexical
+ * purity.
+ */
+const DEVOIR_MODAL_POSITION_LIMIT = 18;
+
+/**
+ * Flag a report whose share of subject + devoir openings exceeds 2/3.
+ * Calibrated against every stored analysis (2026-09-08): the templated
+ * post-fa1a598 files sit at 67-100%, while the register document's own
+ * worked exemplar actions (docs/rules/report-writing-style.md section 6)
+ * reach 6/10 = 60% - natural remediation-register usage that must stay a
+ * pass. Two thirds separates a recurring frame from ordinary usage.
+ */
+export const DEVOIR_OPENING_SHARE_LIMIT = 2 / 3;
+
+/**
+ * The sentence-final tail of an entry is the first TAIL_WORD_COUNT words
+ * after its last comma. Four words: long enough that ordinary connective
+ * variation breaks the match (et/que/afin differ at word one), short
+ * enough to group ", and your technical provider can/should..." into one
+ * tail despite the verb differing at word five.
+ */
+const TAIL_WORD_COUNT = 4;
+
+/**
+ * Flag a report whose most common sentence-final tail exceeds 1/4 of the
+ * action entries. Calibrated against every stored analysis: templated
+ * files share one tail across 26-100% of entries, acceptable files at or
+ * below 24%. Above a quarter, one closing formula is carrying several
+ * themes at once, which is the "client reads the scaffold" defect.
+ */
+export const SHARED_SENTENCE_FINAL_TAIL_SHARE_LIMIT = 1 / 4;
 
 function firstWords(text: string, count: number): string {
   return text.trim().split(/\s+/).slice(0, count).join(' ').toLowerCase();
@@ -112,13 +186,94 @@ function findVerbatimPromptExampleMatches(
   return matches;
 }
 
+/** The opening words of the clause that closes the entry: everything after
+ *  its last comma, punctuation-trimmed and normalized the same way as the
+ *  verbatim comparison (lowercase, straightened apostrophes), so grouped
+ *  tails differ only when the words really differ. An entry without a
+ *  comma has no final clause and yields an empty tail: its ending is its
+ *  whole sentence, and identical one-clause endings already share their
+ *  first five words, which the word-level metric counts - letting the
+ *  whole sentence stand in for the tail here would double-report shared
+ *  openings as shared endings. */
+function sentenceFinalTail(text: string): string {
+  const lastComma = text.lastIndexOf(',');
+  if (lastComma < 0) return '';
+  const words = wordsOf(straighten(text.slice(lastComma + 1)).replace(/[.!?]?\s*$/, ''));
+  return words.slice(0, TAIL_WORD_COUNT).join(' ');
+}
+
+/** True when the entry's first sentence reaches a present form of devoir
+ *  within DEVOIR_MODAL_POSITION_LIMIT words, i.e. it opens on a subject
+ *  (however long its relative clauses) whose finite verb is the devoir
+ *  modal. Only the entry's opening sentence counts: the tic is where the
+ *  action starts, not whether devoir appears anywhere later. */
+function opensWithDevoirModal(text: string): boolean {
+  const firstSentence = text.split(/(?<=[.!?])\s+/)[0] ?? '';
+  const words = wordsOf(firstSentence.replace(/[.,;:!?]/g, ''));
+  const position = words.findIndex((word) => DEVOIR_MODAL_PRESENT_FORMS.has(word));
+  return position >= 0 && position < DEVOIR_MODAL_POSITION_LIMIT;
+}
+
+/** The most common tail and how many entries carry it. An empty tail means
+ *  "this entry has no final comma clause", which is an absence of tail, not
+ *  a shared one, so callers treat an empty winner as count zero. */
+function mostCommonTail(tails: readonly string[]): { tail: string; count: number } {
+  const counts = new Map<string, number>();
+  for (const tail of tails) {
+    counts.set(tail, (counts.get(tail) ?? 0) + 1);
+  }
+  let best = { tail: '', count: 0 };
+  for (const [tail, count] of counts) {
+    if (count > best.count) best = { tail, count };
+  }
+  return best;
+}
+
+/**
+ * Below these absolute counts a share carries no signal: a one-action
+ * report shares 100% of its tails no matter how varied the prose is. The
+ * raw counts stay reported either way; only the flags need the floor.
+ */
+const DEVOIR_FLAG_MIN_COUNT = 4;
+const TAIL_FLAG_MIN_COUNT = 3;
+
+function findConstructionRepetitionFlags(
+  devoirOpenings: number,
+  tails: readonly string[],
+): string[] {
+  const flags: string[] = [];
+  const total = tails.length;
+  if (total === 0) return flags;
+  if (
+    devoirOpenings >= DEVOIR_FLAG_MIN_COUNT &&
+    devoirOpenings / total > DEVOIR_OPENING_SHARE_LIMIT
+  ) {
+    flags.push(
+      `${devoirOpenings}/${total} recommendedActions open on the subject + devoir construction (limit: more than 2/3 of entries)`,
+    );
+  }
+  const { tail, count } = mostCommonTail(tails);
+  if (
+    tail !== '' &&
+    count >= TAIL_FLAG_MIN_COUNT &&
+    count / total > SHARED_SENTENCE_FINAL_TAIL_SHARE_LIMIT
+  ) {
+    flags.push(
+      `${count}/${total} recommendedActions end on the same final clause "${tail}" (limit: more than 1/4 of entries)`,
+    );
+  }
+  return flags;
+}
+
 export function computeRepetitionMetrics(
   fields: readonly ProseField[],
   language: ReportLanguage,
 ): RepetitionMetrics {
-  const recommendedActions = fields
-    .filter((f) => /recommendedActions\[\d+\]$/.test(f.field))
-    .map((f) => firstWords(f.text, 5));
+  const recommendedActionFields = fields.filter((f) => /recommendedActions\[\d+\]$/.test(f.field));
+  const recommendedActions = recommendedActionFields.map((f) => firstWords(f.text, 5));
+  const devoirOpenings = recommendedActionFields.filter((f) => opensWithDevoirModal(f.text)).length;
+  const tails = recommendedActionFields.map((f) => sentenceFinalTail(f.text));
+  const sharedTail = mostCommonTail(tails);
   const businessImpact = fields
     .filter((f) => f.field.endsWith('.businessImpact'))
     .map((f) => firstWords(f.text, 2));
@@ -128,11 +283,15 @@ export function computeRepetitionMetrics(
     recommendedActionsSharingFirstFiveWords: Math.round(
       mostCommonShare(recommendedActions) * recommendedActions.length,
     ),
+    recommendedActionsOpeningWithDevoirModal: devoirOpenings,
+    recommendedActionsSharingSentenceFinalTail: sharedTail.tail === '' ? 0 : sharedTail.count,
+    recommendedActionsMostSharedSentenceFinalTail: sharedTail.tail,
     businessImpactTotal: businessImpact.length,
     businessImpactSharingFirstTwoWords: Math.round(
       mostCommonShare(businessImpact) * businessImpact.length,
     ),
     verbatimPromptExampleMatches: findVerbatimPromptExampleMatches(fields, language),
+    constructionRepetitionFlags: findConstructionRepetitionFlags(devoirOpenings, tails),
   };
 }
 

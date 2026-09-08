@@ -463,6 +463,107 @@ describe('buildWritingRetryFeedback and the user-prompt correction', () => {
   });
 });
 
+// issue #106: the fa1a598 fix removed the word-level opening tic, and the
+// templating moved one level down into the grammar: real stored reports
+// opened 20/21 French actions on subject + devoir and closed many English
+// actions on one shared final clause, all with distinct first words. The
+// prompt names both constructions and caps them, the same mechanism the
+// assigned-phrase prohibition uses; docs/rules/report-writing-style.md
+// section 3 is the source document and must move with this.
+describe('issue #106: the writing prompt caps the subject + devoir frame and shared endings', () => {
+  it('names the subject + devoir construction and caps it, in French', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain('suivi immédiatement du verbe devoir');
+    expect(prompt).toContain('Les boutons concernés doivent recevoir un libellé explicite');
+    expect(prompt).toContain('au plus un tiers toutes priorités confondues');
+  });
+
+  it('names the obligation-modal frame and caps it, in English', () => {
+    const prompt = buildWritingSystemPrompt('en', false, null);
+    expect(prompt).toContain('followed straight away by an obligation modal');
+    expect(prompt).toContain('The broken link must be replaced');
+    expect(prompt).toContain('at most a third across all priorities');
+  });
+
+  it('requires varied sentence endings and names the measured closing tic, in French', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain('les mêmes mots après sa dernière virgule');
+    expect(prompt).toContain(', et votre prestataire technique peut ajouter');
+  });
+
+  it('requires varied sentence endings and names the measured closing tic, in English', () => {
+    const prompt = buildWritingSystemPrompt('en', false, null);
+    expect(prompt).toContain('the same words after its last comma');
+    expect(prompt).toContain(', and your technical provider can add');
+  });
+
+  it('shows the ending tic with the assigned phrase, never a fixed provider wording', () => {
+    for (const assigned of TECHNICAL_PROVIDER_PHRASES.fr) {
+      const prompt = buildWritingSystemPrompt('fr', false, null, assigned);
+      expect(prompt).toContain(`..., et ${assigned} peut ajouter`);
+      expect(prompt).not.toContain(
+        `..., et ${TECHNICAL_PROVIDER_PHRASES.fr.find((p) => p !== assigned)} peut ajouter`,
+      );
+    }
+    for (const assigned of TECHNICAL_PROVIDER_PHRASES.en) {
+      const prompt = buildWritingSystemPrompt('en', false, null, assigned);
+      expect(prompt).toContain(`..., and ${assigned} can add`);
+      expect(prompt).not.toContain(
+        `..., and ${TECHNICAL_PROVIDER_PHRASES.en.find((p) => p !== assigned)} can add`,
+      );
+    }
+  });
+
+  // Round 1 of the issue #106 measurement (2026-09-08): the global cap in
+  // the sentence-structure note alone left the stored structures at 24/25
+  // and 20/21 devoir openings, so the cap is also stated where the model
+  // writes actions, as a per-theme quota it can actually track. Round 2
+  // measured the quota working: the same structures came back at 15/27 and
+  // 9/15 devoir openings, under the 2/3 limit for the first time. Round 3
+  // tried replacing the worked tail examples with an abstract description
+  // plus a provider-tail quota and the devoir frame snapped back (27/27),
+  // so the worked-example version is the one kept.
+  it('states the per-theme quota in the recommendedActions bullet, in French', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null);
+    expect(prompt).toContain(
+      "au plus une action par thème peut s'ouvrir sur un sujet suivi du verbe devoir",
+    );
+    expect(prompt).toContain('ne terminez jamais deux actions du même thème par les mêmes mots');
+  });
+
+  it('states the per-theme quota in the recommendedActions bullet, in English', () => {
+    const prompt = buildWritingSystemPrompt('en', false, null);
+    expect(prompt).toContain(
+      'at most one action per theme may open on a subject followed by an obligation modal',
+    );
+    expect(prompt).toContain('never close two actions of the same theme on the same words');
+  });
+
+  it('keeps the provider-name carve-out intact next to the new construction rule', () => {
+    const fr = buildWritingSystemPrompt('fr', false, null);
+    expect(fr).toContain("Cette exigence de variété ne s'applique jamais au nom du prestataire");
+    const en = buildWritingSystemPrompt('en', false, null);
+    expect(en).toContain('This variety requirement never applies to the provider');
+  });
+
+  // The recommendedActions bullet used to model opening an action with the
+  // provider phrase ("${providerPhrase} peut ajouter..."), the exact frame
+  // fa1a598 forbids and this issue caps; the model follows examples over
+  // rules, so the example had to go.
+  it('no longer models opening an action with the assigned provider phrase', () => {
+    for (const language of ['fr', 'en'] as const) {
+      const phrases = TECHNICAL_PROVIDER_PHRASES[language];
+      for (const assigned of phrases) {
+        const prompt = buildWritingSystemPrompt(language, false, null, assigned);
+        for (const phrase of phrases) {
+          const sentenceStart = language === 'fr' ? `"${phrase} peut` : `"${phrase} can`;
+          expect(prompt).not.toContain(sentenceStart);
+        }
+      }
+    }
+  });
+});
+
 // Operator instruction, 2026-09-07: the report must hold a high-end
 // consulting register and formal address across every field. The rule
 // existed only in docs/rules/report-writing-style.md section 1, which the

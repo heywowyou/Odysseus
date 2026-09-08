@@ -71,6 +71,29 @@ l'autre dans le même rapport :
   l'action elle-même. Ne commencez pas deux actions du même rapport par la
   même formule d'ouverture (« Demandez à... », par exemple, ne doit pas
   ouvrir toutes les actions).
+- **La charpente grammaticale de chaque action recommandée.** Ajoutée le
+  2026-09-08 (issue #106) : varier les premiers mots ne suffit pas si toutes
+  les actions partagent la même construction. Dans les analyses stockées du
+  2026-09-07, 20 des 21 actions de Villas Foch et 24 des 26 actions de
+  Briketenia s'ouvraient sur un sujet grammatical suivi du verbe devoir, le
+  plus souvent au passif (« Les boutons concernés doivent recevoir... »,
+  « Le lien interne cassé doit être remplacé... »), tous premiers mots
+  différents ; la version anglaise du même rapport terminait pour sa part
+  une grande partie de ses actions par la même formule de fin («..., and
+  your technical provider can... »). C'est la charpente que le client lit,
+  pas les premiers mots. La construction sujet + devoir reste disponible,
+  mais elle ne porte qu'une minorité des actions d'un rapport, au plus un
+  tiers toutes priorités confondues ; le prompt l'opérationne thème par
+  thème (au plus une action par thème sur cette construction, jamais deux
+  actions de thèmes consécutifs) parce qu'une consigne globale seule n'a
+  pas tenu à la mesure. La fin obéit à la même règle : les mêmes premiers
+  mots après la dernière virgule ne doivent pas revenir d'une action à
+  l'autre au point de devenir une formule. Cette règle est
+  mesurée par `lint-stored-analyses.ts` : un rapport est signalé au-delà de
+  deux tiers d'ouvertures sujet + devoir, ou quand une formule de fin est
+  partagée par plus d'un quart des actions, seuils calibrés sur les
+  analyses stockées (les actions d'exemple de la section 6 culminent à
+  60 pour cent d'ouvertures sujet + devoir et doivent rester un passage).
 
 ## 4. Le nom du prestataire
 

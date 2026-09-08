@@ -22,7 +22,15 @@
  * artifacts). Run from the workspace root with .env sourced:
  *   set -a; . ./.env; set +a
  *   pnpm exec tsx packages/llm/src/measure-reasoning-effort.ts \
- *     [--effort low|medium|high] [--languages fr,en] [auditDir ...]
+ *     [--effort low|medium|high] [--languages fr,en] [--baseline-only] \
+ *     [auditDir ...]
+ *
+ * --baseline-only (added for issue #106) runs only the production arm,
+ * one attempt per stored structure document. Issue #106's comparison is
+ * across prompt versions, not effort levels: the same command run before
+ * and after a writing-prompt change, with the repetition metrics as the
+ * yardstick. Running the raised arm in that comparison would double the
+ * live calls to produce a number the question never asked about.
  */
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -191,6 +199,7 @@ async function main(): Promise<void> {
   let raisedEffort: ReasoningEffort = 'low';
   let languages: ReportLanguage[] = ['fr', 'en'];
   let printOutputs = false;
+  let baselineOnly = false;
   const auditDirs: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--effort') {
@@ -207,6 +216,8 @@ async function main(): Promise<void> {
       }
     } else if (argv[i] === '--print') {
       printOutputs = true;
+    } else if (argv[i] === '--baseline-only') {
+      baselineOnly = true;
     } else {
       auditDirs.push(path.resolve(argv[i]!));
     }
@@ -214,7 +225,9 @@ async function main(): Promise<void> {
   const dirs = auditDirs.length > 0 ? auditDirs : DEFAULT_AUDIT_DIRS;
 
   console.log(
-    `Writing-pass reasoning_effort measurement: baseline 'none' vs '${raisedEffort}', one attempt per run, nothing persisted.\n`,
+    baselineOnly
+      ? `Writing-pass measurement, production arm only ('none'), one attempt per run, nothing persisted.\n`
+      : `Writing-pass reasoning_effort measurement: baseline 'none' vs '${raisedEffort}', one attempt per run, nothing persisted.\n`,
   );
 
   for (const auditDir of dirs) {
@@ -258,8 +271,9 @@ async function main(): Promise<void> {
         'unknown',
         manifest.auditId,
       );
+      const efforts: ReasoningEffort[] = baselineOnly ? ['none'] : ['none', raisedEffort];
       const runs: RunResult[] = [];
-      for (const effort of ['none', raisedEffort] as const) {
+      for (const effort of efforts) {
         const run = await runWritingPass(
           writingInput,
           expectedThemeKeys,
@@ -281,10 +295,16 @@ async function main(): Promise<void> {
           console.log(
             `    actions opening share: ${r.recommendedActionsSharingFirstFiveWords}/${r.recommendedActionsTotal} (5w), impacts: ${r.businessImpactSharingFirstTwoWords}/${r.businessImpactTotal} (2w), verbatim example matches: ${r.verbatimPromptExampleMatches.length}`,
           );
+          console.log(
+            `    construction (issue #106): subject+devoir openings ${r.recommendedActionsOpeningWithDevoirModal}/${r.recommendedActionsTotal}, most shared final tail "${r.recommendedActionsMostSharedSentenceFinalTail}" ${r.recommendedActionsSharingSentenceFinalTail}/${r.recommendedActionsTotal}`,
+          );
+          for (const flag of r.constructionRepetitionFlags) {
+            console.log(`    [construction] ${flag}`);
+          }
         }
       }
       const [none, raised] = runs;
-      if (none?.ok && raised?.ok) {
+      if (!baselineOnly && none?.ok && raised?.ok) {
         console.log(`  side by side (${language}):`);
         console.log(metricLine('actions 5-word opening share', none, raised));
         const ai = none.repetition?.businessImpactSharingFirstTwoWords;

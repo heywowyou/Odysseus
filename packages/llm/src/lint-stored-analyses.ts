@@ -63,9 +63,12 @@ async function main(): Promise<void> {
   const repetitionTotals = {
     recommendedActionsTotal: 0,
     recommendedActionsSharingFirstFiveWords: 0,
+    recommendedActionsOpeningWithDevoirModal: 0,
+    recommendedActionsSharingSentenceFinalTail: 0,
     businessImpactTotal: 0,
     businessImpactSharingFirstTwoWords: 0,
     verbatimPromptExampleMatches: 0,
+    constructionFlags: 0,
   };
   const perFile: string[] = [];
 
@@ -84,21 +87,28 @@ async function main(): Promise<void> {
     repetitionTotals.recommendedActionsTotal += repetition.recommendedActionsTotal;
     repetitionTotals.recommendedActionsSharingFirstFiveWords +=
       repetition.recommendedActionsSharingFirstFiveWords;
+    repetitionTotals.recommendedActionsOpeningWithDevoirModal +=
+      repetition.recommendedActionsOpeningWithDevoirModal;
+    repetitionTotals.recommendedActionsSharingSentenceFinalTail +=
+      repetition.recommendedActionsSharingSentenceFinalTail;
     repetitionTotals.businessImpactTotal += repetition.businessImpactTotal;
     repetitionTotals.businessImpactSharingFirstTwoWords +=
       repetition.businessImpactSharingFirstTwoWords;
     repetitionTotals.verbatimPromptExampleMatches += repetition.verbatimPromptExampleMatches.length;
+    repetitionTotals.constructionFlags += repetition.constructionRepetitionFlags.length;
 
     if (
       wcag.length > 0 ||
       business.length > 0 ||
-      repetition.verbatimPromptExampleMatches.length > 0
+      repetition.verbatimPromptExampleMatches.length > 0 ||
+      repetition.constructionRepetitionFlags.length > 0
     ) {
       const lines = [
         `${path.relative(artifactsDir, file)} (${language}):`,
         ...wcag.map((v) => `  [wcag-citation] ${v.field} matched "${v.matched}"`),
         ...business.map((v) => `  [business-claim] ${v.field} matched "${v.matched}"`),
         ...repetition.verbatimPromptExampleMatches.map((m) => `  [verbatim-example] ${m}`),
+        ...repetition.constructionRepetitionFlags.map((m) => `  [construction] ${m}`),
       ];
       perFile.push(lines.join('\n'));
     }
@@ -112,9 +122,16 @@ async function main(): Promise<void> {
     `recommendedActions sharing their first five words: ${repetitionTotals.recommendedActionsSharingFirstFiveWords}/${repetitionTotals.recommendedActionsTotal} (most common opening, per-file share summed)`,
   );
   console.log(
+    `recommendedActions opening on subject + devoir: ${repetitionTotals.recommendedActionsOpeningWithDevoirModal}/${repetitionTotals.recommendedActionsTotal} (per-file count summed, issue #106)`,
+  );
+  console.log(
+    `recommendedActions sharing one sentence-final tail: ${repetitionTotals.recommendedActionsSharingSentenceFinalTail}/${repetitionTotals.recommendedActionsTotal} (most common tail, per-file count summed, issue #106)`,
+  );
+  console.log(
     `businessImpact sharing their first two words: ${repetitionTotals.businessImpactSharingFirstTwoWords}/${repetitionTotals.businessImpactTotal} (most common opening, per-file share summed)`,
   );
   console.log(`Verbatim prompt-example matches: ${repetitionTotals.verbatimPromptExampleMatches}`);
+  console.log(`Construction-level flags raised: ${repetitionTotals.constructionFlags}`);
 }
 
 void main();
