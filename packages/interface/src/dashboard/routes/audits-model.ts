@@ -50,12 +50,26 @@ export function computeKpis(summaries: ScanSummary[]): AuditsKpis {
 
 /** Rows whose status matches the filter; the empty string keeps every row.
  *  Always returns a new array so callers can sort without touching the
- *  polled data. */
+ *  polled data. Filtering runs on the displayed status (listStatus), so a
+ *  row never reads one way in the table and another in the filter. */
 export function filterSummaries(summaries: ScanSummary[], status: StatusFilter): ScanSummary[] {
   if (status === '') {
     return [...summaries];
   }
-  return summaries.filter((summary) => summary.status === status);
+  return summaries.filter((summary) => listStatus(summary) === status);
+}
+
+/** Issue #90: the status a list row shows. A full-audit job that failed
+ *  after its audit was persisted failed at the analysis or report stage:
+ *  the crawl is done, and the prescribed fix lives on the audit page, so
+ *  the row reads "Action requise" instead of inviting a re-scan. Only the
+ *  display changes; the KPI failure count and the API keep the real
+ *  status. */
+export function listStatus(summary: ScanSummary): JobStatus {
+  if (summary.status === 'failed' && summary.auditId !== undefined) {
+    return 'needs-input';
+  }
+  return summary.status;
 }
 
 /** Hostname of a site URL for display and search. A malformed URL falls back

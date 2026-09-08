@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
@@ -34,8 +34,10 @@ import {
   buildManualFieldsPatch,
   countOccurrences,
   countPages,
+  failureReasonKind,
   hasPageCountWarning,
   hostnameOf,
+  isReportStageFailure,
   isSeverity,
   isValidSiren,
   manualFieldValuesFromResponse,
@@ -50,6 +52,7 @@ import type {
 } from './audit-detail-model';
 import type {
   AuditDetailResponse,
+  AuditFailureResponse,
   FindingResponse,
   ManualFieldsResponse,
   ReportFreshness,
@@ -108,6 +111,90 @@ const FRESHNESS_TONES: Record<ReportFreshness, BadgeTone> = {
   stale: 'serious',
   unverified: 'neutral',
 };
+
+/** Field labels reused from this page's own manual-fields form: the two
+ *  identity fields are the same two fields, so the copy cannot drift. */
+function failureFieldLabel(field: string, strings: DashboardStrings): string {
+  if (field === 'nomCommercial') return strings.auditDetail.nomCommercialLabel;
+  if (field === 'raisonSociale') return strings.auditDetail.raisonSocialeLabel;
+  return field;
+}
+
+/** Issue #90: a report-stage failure is a needs-input state, and the
+ *  reason exists only on the linked job row until this card surfaces it.
+ *  The stored message is the pipeline's own English prescription and is
+ *  shown verbatim as a technical detail; the bilingual hint above the
+ *  actions carries the remediation, keyed on the typed failure case. */
+function FailureCard(props: {
+  failure: AuditFailureResponse;
+  onRegenerate: () => void;
+  isRegenerating: boolean;
+}): JSX.Element {
+  const { failure, onRegenerate, isRegenerating } = props;
+  const { strings } = useI18n();
+  const isIdentity = failureReasonKind(failure) === 'identity-confirmation';
+  const awaitingFields = failure.needsInputFields ?? [];
+  // jsdom ships no layout engine, so scrollIntoView is feature-tested
+  // rather than assumed.
+  const scrollToFields = (): void => {
+    document.getElementById('audit-hotel-fields')?.scrollIntoView(true);
+  };
+  return (
+    <Card
+      title={strings.auditDetail.failureHeading}
+      className={isIdentity ? 'border-sev-moderate/40' : 'border-danger/40'}
+    >
+      {isIdentity && awaitingFields.length > 0 ? (
+        <div className="mb-3">
+          <p className="text-sm font-medium text-ink">
+            {strings.auditDetail.failureAwaitingFieldsLabel}
+          </p>
+          <ul className="mt-1 flex flex-col gap-1 text-sm text-ink-soft">
+            {awaitingFields.map((entry) => (
+              <li key={entry.field}>
+                <span className="font-medium text-ink">
+                  {failureFieldLabel(entry.field, strings)}:
+                </span>{' '}
+                {entry.value}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <p className="text-sm text-ink-soft">
+        {isIdentity
+          ? strings.auditDetail.failureHintIdentity
+          : strings.auditDetail.failureHintReportStage}
+      </p>
+      {failure.error !== '' ? (
+        <div className="mt-3">
+          <p className="text-xs font-medium text-ink-muted">
+            {strings.auditDetail.failureMessageLabel}
+          </p>
+          <pre className="mt-1 overflow-x-auto rounded-lg border border-line bg-raised p-3 font-mono text-xs whitespace-pre-wrap text-ink-soft">
+            {failure.error}
+          </pre>
+        </div>
+      ) : null}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Button size="sm" isLoading={isRegenerating} onClick={onRegenerate}>
+          {strings.auditDetail.regenerateButton}
+        </Button>
+        {isIdentity ? (
+          <Button variant="secondary" size="sm" onClick={scrollToFields}>
+            {strings.auditDetail.failureScrollToFields}
+          </Button>
+        ) : null}
+        <Link
+          to={`/scans/${encodeURIComponent(failure.jobId)}`}
+          className={buttonStyles('ghost', 'sm')}
+        >
+          {strings.auditDetail.failureJobLink}
+        </Link>
+      </div>
+    </Card>
+  );
+}
 
 function ReportsCard({ detail }: { detail: AuditDetailResponse }): JSX.Element {
   const { strings } = useI18n();
@@ -741,14 +828,25 @@ export function AuditDetailPage(): JSX.Element {
         }
       />
       <div className="flex flex-col gap-6">
+        {isReportStageFailure({ failure: data.failure, lifecycle: data.lifecycle }) &&
+        data.failure !== undefined ? (
+          <FailureCard
+            failure={data.failure}
+            onRegenerate={() => void handleRegenerate()}
+            isRegenerating={isRegenerating}
+          />
+        ) : null}
         <ReportsCard detail={data} />
         <PrepareReportCard auditId={data.auditId} />
-        <EnrichmentCard
-          auditId={data.auditId}
-          manualFields={data.manualFields ?? null}
-          detectedTransactionalFlow={data.detectedTransactionalFlow}
-          refresh={refresh}
-        />
+        {/* Anchor target of the failure card's "go to the fields" action. */}
+        <div id="audit-hotel-fields">
+          <EnrichmentCard
+            auditId={data.auditId}
+            manualFields={data.manualFields ?? null}
+            detectedTransactionalFlow={data.detectedTransactionalFlow}
+            refresh={refresh}
+          />
+        </div>
         <FindingsCard findings={data.findings} />
       </div>
       <ConfirmDialog

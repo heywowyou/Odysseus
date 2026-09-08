@@ -434,6 +434,17 @@ function FailedCard({ job }: { job: ScanJobDetail }): JSX.Element {
   return (
     <Card title={strings.progress.failedHeading} className="border-danger/40">
       {job.error !== undefined ? <p className="text-sm text-ink-soft">{job.error}</p> : null}
+      {/* Issue #90: a failed job whose audit was persisted failed after the
+          crawl, so the fix lives on the audit page; say so instead of
+          leaving the re-scan reflex as the only visible path. */}
+      {job.auditId !== undefined ? (
+        <div className="mt-3 flex flex-col items-start gap-3">
+          <p className="text-xs text-ink-muted">{strings.progress.failedRescanHint}</p>
+          <Link to={`/audits/${job.auditId}`} className={buttonStyles('primary', 'sm')}>
+            {strings.progress.goToAuditLink}
+          </Link>
+        </div>
+      ) : null}
     </Card>
   );
 }

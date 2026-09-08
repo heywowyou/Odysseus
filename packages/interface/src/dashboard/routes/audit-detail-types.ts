@@ -96,6 +96,18 @@ export interface ManualFieldsResponse {
   updatedAt: string;
 }
 
+/** Issue #90: the job row of the pipeline run that produced this audit,
+ *  present only when that run stopped at 'failed' or 'needs-input' after
+ *  the audit was persisted. `error` is the stored pipeline message, which
+ *  is only ever English; the pages pair it with bilingual remediation copy
+ *  keyed on the typed case (needsInputFields means the identity gate). */
+export interface AuditFailureResponse {
+  jobId: string;
+  status: 'failed' | 'needs-input';
+  error: string;
+  needsInputFields?: { field: string; value: string }[];
+}
+
 export interface ReportStatusResponse {
   language: ReportLanguage;
   status: ReportFreshness;
@@ -133,6 +145,9 @@ export interface AuditDetailResponse {
   manualFields: ManualFieldsResponse | null;
   /** The scan's original signal, before a possible operator correction. */
   detectedTransactionalFlow?: boolean;
+  /** Issue #90: the failed pipeline run behind this audit, when there was
+   *  one. Absent while the run is healthy. */
+  failure?: AuditFailureResponse;
 }
 
 /** POST /api/audits/:auditId/manual-fields/siren-preview. 200 even when

@@ -3,6 +3,7 @@ import {
   computeKpis,
   filterSummaries,
   hostnameOf,
+  listStatus,
   rowTarget,
   searchMatches,
   severityBadges,
@@ -69,6 +70,36 @@ describe('filterSummaries', () => {
   it('does not mutate the polled array', () => {
     filterSummaries(summaries, 'failed');
     expect(summaries).toHaveLength(3);
+  });
+
+  it('issue 90: files a failed post-scan row under the needs-input filter', () => {
+    const summaries = [
+      makeSummary({ jobId: 'a', status: 'failed', auditId: 'audit-a' }),
+      makeSummary({ jobId: 'b', status: 'failed' }),
+    ];
+    expect(filterSummaries(summaries, 'needs-input').map((summary) => summary.jobId)).toEqual([
+      'a',
+    ]);
+    expect(filterSummaries(summaries, 'failed').map((summary) => summary.jobId)).toEqual(['b']);
+  });
+});
+
+describe('listStatus (issue 90)', () => {
+  it('shows a failed job with an audit as needing operator action', () => {
+    const summary = makeSummary({ status: 'failed', auditId: 'audit-1' });
+    expect(listStatus(summary)).toBe('needs-input');
+  });
+
+  it('leaves a failed job without an audit as failed', () => {
+    expect(listStatus(makeSummary({ status: 'failed' }))).toBe('failed');
+  });
+
+  it('leaves every other status untouched', () => {
+    expect(listStatus(makeSummary({ status: 'needs-input', auditId: 'audit-1' }))).toBe(
+      'needs-input',
+    );
+    expect(listStatus(makeSummary({ status: 'complete', auditId: 'audit-1' }))).toBe('complete');
+    expect(listStatus(makeSummary({ status: 'queued' }))).toBe('queued');
   });
 });
 

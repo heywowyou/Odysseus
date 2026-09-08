@@ -187,6 +187,8 @@ export const en: DashboardStrings = {
       'The stop takes effect at the end of the current page. Phases already finished are kept and the scan will not resume.',
     stoppedHeading: 'Scan stopped',
     cancelledNote: 'This scan was stopped at the operator’s request.',
+    failedRescanHint:
+      'The site has already been crawled and analysed. Open the audit to fix the cause and regenerate the report; a new scan is not needed.',
   },
   auditDetail: {
     title: 'Audit detail',
@@ -256,6 +258,15 @@ export const en: DashboardStrings = {
       'Approval authorises delivery of both PDF reports (French and English) to the client. Review both previews before continuing.',
     notFound: 'Audit not found.',
     languageLabels: { fr: 'Français', en: 'English' },
+    failureHeading: 'The report could not be generated',
+    failureMessageLabel: 'Message from the generation step',
+    failureAwaitingFieldsLabel: 'Fields waiting for confirmation',
+    failureHintIdentity:
+      'The scan itself finished: confirm or correct the fields above in the “Hotel details” card, then regenerate the report. A new scan is not needed.',
+    failureHintReportStage:
+      'The site has already been crawled and analysed: fix the cause and regenerate the report from this page. A new scan is not needed.',
+    failureJobLink: 'View scan details',
+    failureScrollToFields: 'Go to the fields to confirm',
     findingsFilterAll: 'All severities',
     findingsEmpty: 'No problems found for this audit.',
     categoryLabels: {

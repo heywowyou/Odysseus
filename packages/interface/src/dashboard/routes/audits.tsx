@@ -34,6 +34,7 @@ import { usePolling } from '../lib/use-polling';
 import {
   computeKpis,
   filterSummaries,
+  listStatus,
   rowTarget,
   searchMatches,
   severityBadges,
@@ -236,8 +237,11 @@ export function AuditsPage(): JSX.Element {
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <span className="inline-flex items-center gap-2">
-                          <StatusDot status={summary.status} />
-                          {strings.common.statusLabels[summary.status]}
+                          {/* Issue #90: the displayed status, not the raw one:
+                              a failed post-scan job reads as needing operator
+                              action, since the fix lives on the audit page. */}
+                          <StatusDot status={listStatus(summary)} />
+                          {strings.common.statusLabels[listStatus(summary)]}
                         </span>
                       </TableCell>
                       <TableCell>

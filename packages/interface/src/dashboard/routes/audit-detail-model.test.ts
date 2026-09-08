@@ -3,8 +3,10 @@ import {
   buildManualFieldsPatch,
   countOccurrences,
   countPages,
+  failureReasonKind,
   hasPageCountWarning,
   hostnameOf,
+  isReportStageFailure,
   isSeverity,
   isValidSiren,
   manualFieldValuesFromResponse,
@@ -13,7 +15,11 @@ import {
   sortFindings,
 } from './audit-detail-model';
 import type { ManualFieldValues } from './audit-detail-model';
-import type { FindingResponse, ManualFieldsResponse } from './audit-detail-types';
+import type {
+  AuditFailureResponse,
+  FindingResponse,
+  ManualFieldsResponse,
+} from './audit-detail-types';
 
 /** Minimal well-formed finding row; tests override only what they look
  *  at. Field values mirror the locked findings contract. */
@@ -221,5 +227,39 @@ describe('manualFieldValuesFromResponse', () => {
       declarationContactEmail: '',
       recipientName: '',
     });
+  });
+});
+
+describe('failureReasonKind and isReportStageFailure (issue 90)', () => {
+  const identityFailure: AuditFailureResponse = {
+    jobId: 'job-1',
+    status: 'needs-input',
+    error: 'Report generation aborted: the client identity on the cover is still a detected guess.',
+    needsInputFields: [
+      { field: 'nomCommercial', value: 'Site Officiel' },
+      { field: 'raisonSociale', value: "L'ESPRIT DU SUD" },
+    ],
+  };
+  const plainFailure: AuditFailureResponse = {
+    jobId: 'job-2',
+    status: 'failed',
+    error: 'Report generation aborted: rendered HTML contains 1 render-lint violation(s).',
+  };
+
+  it('keys the identity-confirmation case on the typed fields', () => {
+    expect(failureReasonKind(identityFailure)).toBe('identity-confirmation');
+    expect(failureReasonKind(plainFailure)).toBe('report-stage');
+  });
+
+  it('treats an empty typed-field list as the generic case', () => {
+    expect(failureReasonKind({ ...identityFailure, needsInputFields: [] })).toBe('report-stage');
+  });
+
+  it('shows the failure card only while the reports are not usable', () => {
+    expect(isReportStageFailure({ failure: identityFailure, lifecycle: 'analysed' })).toBe(true);
+    expect(isReportStageFailure({ failure: plainFailure, lifecycle: 'scanned' })).toBe(true);
+    expect(isReportStageFailure({ failure: identityFailure, lifecycle: 'rendered' })).toBe(false);
+    expect(isReportStageFailure({ failure: plainFailure, lifecycle: 'approved' })).toBe(false);
+    expect(isReportStageFailure({ failure: undefined, lifecycle: 'analysed' })).toBe(false);
   });
 });

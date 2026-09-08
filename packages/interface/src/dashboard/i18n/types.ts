@@ -216,6 +216,10 @@ export interface DashboardStrings {
     confirmStopBody: string;
     stoppedHeading: string;
     cancelledNote: string;
+    /** Issue #90: shown on a failed full-audit job whose audit was
+     *  persisted, so the operator opens the audit instead of re-scanning.
+     *  The link label reuses goToAuditLink. */
+    failedRescanHint: string;
   };
   auditDetail: {
     title: string;
@@ -286,6 +290,18 @@ export interface DashboardStrings {
     notFound: string;
     /** Report rows show the language's endonym, never a locale code. */
     languageLabels: Record<'fr' | 'en', string>;
+    /** Issue #90: the report-stage failure card. The stored error text is
+     *  the pipeline's own English message and is shown as-is; the hint is
+     *  the bilingual remediation paired with it, keyed on the typed
+     *  failure case (identity confirmation vs any other report-stage
+     *  failure). */
+    failureHeading: string;
+    failureMessageLabel: string;
+    failureAwaitingFieldsLabel: string;
+    failureHintIdentity: string;
+    failureHintReportStage: string;
+    failureJobLink: string;
+    failureScrollToFields: string;
     /** Default option of the findings severity filter. */
     findingsFilterAll: string;
     /** Shown when the findings table has no rows, overall or at the

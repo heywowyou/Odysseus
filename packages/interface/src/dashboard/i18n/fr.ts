@@ -187,6 +187,8 @@ export const fr: DashboardStrings = {
       'L’arrêt prend effet à la fin de la page en cours. Les phases déjà terminées sont conservées et le scan ne reprendra pas.',
     stoppedHeading: 'Scan arrêté',
     cancelledNote: 'Ce scan a été arrêté à la demande de l’opérateur.',
+    failedRescanHint:
+      'Le site a déjà été exploré et analysé. Ouvrez l’audit pour corriger la cause puis régénérer le rapport : inutile de relancer un scan.',
   },
   auditDetail: {
     title: 'Détail de l’audit',
@@ -256,6 +258,15 @@ export const fr: DashboardStrings = {
       'L’approbation autorise la livraison des deux rapports PDF (français et anglais) au client. Vérifiez les deux aperçus avant de continuer.',
     notFound: 'Audit introuvable.',
     languageLabels: { fr: 'Français', en: 'English' },
+    failureHeading: 'Le rapport n’a pas pu être généré',
+    failureMessageLabel: 'Message renvoyé par la génération',
+    failureAwaitingFieldsLabel: 'Champs en attente de confirmation',
+    failureHintIdentity:
+      'Le scan est terminé : confirmez ou corrigez les champs ci-dessus dans la carte « Informations sur l’hôtel », puis régénérez le rapport. Inutile de relancer un scan.',
+    failureHintReportStage:
+      'Le site a déjà été exploré et analysé : corrigez la cause puis régénérez le rapport depuis cette page. Inutile de relancer un scan.',
+    failureJobLink: 'Voir le détail du scan',
+    failureScrollToFields: 'Aller aux champs à confirmer',
     findingsFilterAll: 'Toutes les gravités',
     findingsEmpty: 'Aucun problème constaté pour cet audit.',
     categoryLabels: {

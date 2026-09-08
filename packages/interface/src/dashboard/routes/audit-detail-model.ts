@@ -4,7 +4,13 @@
  * component tree, the same split as the other rebuilt dashboard routes.
  */
 
-import type { FindingResponse, ManualFieldsResponse, Severity } from './audit-detail-types';
+import type {
+  AuditFailureResponse,
+  AuditLifecycle,
+  FindingResponse,
+  ManualFieldsResponse,
+  Severity,
+} from './audit-detail-types';
 
 /** Display order for severities, most severe first. */
 export const SEVERITIES: readonly Severity[] = ['critical', 'serious', 'moderate', 'minor'];
@@ -86,6 +92,38 @@ export function countOccurrences(finding: FindingResponse): number {
  *  writer. */
 export function countPages(finding: FindingResponse): number {
   return new Set(finding.pageUrls).size;
+}
+
+// ---------------------------------------------------------------------------
+// Issue #90: report-stage failure
+// ---------------------------------------------------------------------------
+
+/** The two remediation cases a stored failure can name. The typed one is
+ *  the D8 identity gate: the job carries exactly which detected fields it
+ *  is waiting to have confirmed. Everything else (a render crash, a lint
+ *  refusal) is still a report-stage failure whose crawl is done, but the
+ *  only prescription available is the generic one. */
+export type FailureReasonKind = 'identity-confirmation' | 'report-stage';
+
+export function failureReasonKind(failure: AuditFailureResponse): FailureReasonKind {
+  return failure.needsInputFields !== undefined && failure.needsInputFields.length > 0
+    ? 'identity-confirmation'
+    : 'report-stage';
+}
+
+/** Whether the audit detail page should render the failure card: only
+ *  while the reports are not usable. Once a fresh bilingual pair exists
+ *  (the operator confirmed the fields and regenerated), the failure
+ *  history stays in the API response but must not read as a current
+ *  problem over a page whose reports are fine. */
+export function isReportStageFailure(detail: {
+  failure: AuditFailureResponse | undefined;
+  lifecycle: AuditLifecycle;
+}): boolean {
+  return (
+    detail.failure !== undefined &&
+    (detail.lifecycle === 'scanned' || detail.lifecycle === 'analysed')
+  );
 }
 
 export function normalizeSiren(value: string): string {

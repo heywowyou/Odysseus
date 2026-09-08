@@ -16,6 +16,15 @@ vi.mock('@odysseus/store', () => ({
   persistReportApproval: vi.fn(),
   listReportLanguages: vi.fn(),
   setAuditManualFields: vi.fn(),
+  // Issue #90: the failed-job lookup goes through the model factory;
+  // tests stub the findOne chain through this factory fn.
+  createJobModel: vi.fn(() => ({
+    findOne: vi.fn(() => ({
+      sort: vi.fn(() => ({
+        lean: vi.fn(async () => null),
+      })),
+    })),
+  })),
 }));
 
 vi.mock('@odysseus/scanner', () => ({
@@ -39,6 +48,7 @@ import {
   getSeverityRollup,
   listReportLanguages,
   setAuditManualFields,
+  createJobModel,
 } from '@odysseus/store';
 import { Router } from '../router.js';
 import { registerAuditRoutes } from './audits.js';
@@ -387,6 +397,52 @@ describe('GET /api/audits/:auditId', () => {
     expect(getLatestReport).toHaveBeenCalledWith(fakeConnection, 'audit-1', 'fr');
     expect(getLatestReport).toHaveBeenCalledWith(fakeConnection, 'audit-1', 'en');
     expect(resolveSelectedAnalysisPairForAudit).toHaveBeenCalledTimes(1);
+  });
+
+  it('carries the failed job behind the audit (issue #90)', async () => {
+    vi.mocked(createJobModel).mockImplementationOnce(
+      () =>
+        ({
+          findOne: () => ({
+            sort: () => ({
+              lean: async () => ({
+                jobId: 'job-1',
+                type: 'full-audit',
+                status: 'needs-input',
+                phase: 'needs-input',
+                error:
+                  'Report generation aborted: the client identity on the cover is still a detected guess.',
+                needsInputFields: [{ field: 'nomCommercial', value: 'Site Officiel' }],
+              }),
+            }),
+          }),
+        }) as never,
+    );
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}').failure).toEqual({
+      jobId: 'job-1',
+      status: 'needs-input',
+      error:
+        'Report generation aborted: the client identity on the cover is still a detected guess.',
+      needsInputFields: [{ field: 'nomCommercial', value: 'Site Officiel' }],
+    });
+  });
+
+  it('omits the failure field while no failed job is linked (issue #90)', async () => {
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(JSON.parse(res.body ?? '{}')).not.toHaveProperty('failure');
   });
 });
 

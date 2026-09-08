@@ -12,6 +12,7 @@ import {
   type StatSector,
 } from '@odysseus/core';
 import {
+  createJobModel,
   getAudit,
   getFindingsForAudit,
   getLatestReport,
@@ -22,6 +23,7 @@ import {
   persistReportApproval,
   resolveSelectedAnalysisPairForAudit,
   setAuditManualFields,
+  type JobDocument,
   type ReportDocument,
   type SelectedAuditAnalysisPairResolution,
 } from '@odysseus/store';
@@ -151,7 +153,6 @@ const MANUAL_TEXT_FIELDS = [
   'declarationContactEmail',
   'recipientName',
 ] as const;
-
 function isStatSector(value: unknown): value is StatSector {
   return value === 'general' || value === 'hospitality';
 }
@@ -203,6 +204,24 @@ function parseManualFieldsBody(raw: unknown): Omit<AuditManualFields, 'updatedAt
   return result;
 }
 
+/** Issue #90: the job row whose pipeline run produced this audit, when that
+ *  run stopped at 'failed' or 'needs-input' after the audit itself was
+ *  persisted. The auditId is written onto the job as soon as the audit
+ *  stage resolves (the #35 fix), so the job is resolvable from the audit;
+ *  a re-run of the same site creates its own audit, so the match is exact.
+ *  The job's stored error is the only place the report-stage failure
+ *  reason exists, and the needs-input case additionally carries the typed
+ *  fields the operator must confirm. */
+async function getFailedJobForAudit(
+  connection: Connection,
+  auditId: string,
+): Promise<JobDocument | null> {
+  return createJobModel(connection)
+    .findOne({ auditId, status: { $in: ['failed', 'needs-input'] } })
+    .sort({ createdAt: -1 })
+    .lean<JobDocument | null>();
+}
+
 export function registerAuditRoutes(router: Router, connection: Connection): void {
   // Issue #63: built once, since a caller with no bucket configured must
   // never pay a per-request cost for constructing one, and every read
@@ -217,16 +236,25 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const [findings, severityRollup, reportLanguages, selectedPair, approval, frReport, enReport] =
-      await Promise.all([
-        getFindingsForAudit(connection, auditId),
-        getSeverityRollup(connection, auditId),
-        listReportLanguages(connection, auditId),
-        resolveSelectedAnalysisPairForAudit(connection, auditId),
-        getLatestReportApproval(connection, auditId),
-        getLatestReport(connection, auditId, 'fr'),
-        getLatestReport(connection, auditId, 'en'),
-      ]);
+    const [
+      findings,
+      severityRollup,
+      reportLanguages,
+      selectedPair,
+      approval,
+      frReport,
+      enReport,
+      failureJob,
+    ] = await Promise.all([
+      getFindingsForAudit(connection, auditId),
+      getSeverityRollup(connection, auditId),
+      listReportLanguages(connection, auditId),
+      resolveSelectedAnalysisPairForAudit(connection, auditId),
+      getLatestReportApproval(connection, auditId),
+      getLatestReport(connection, auditId, 'fr'),
+      getLatestReport(connection, auditId, 'en'),
+      getFailedJobForAudit(connection, auditId),
+    ]);
     const reports = (['fr', 'en'] as const).map((language) => {
       const report = language === 'fr' ? frReport : enReport;
       return {
@@ -282,6 +310,20 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       lifecycle,
       approval: approved ? approval : null,
       manualFields: audit.manualFields,
+      // Issue #90: the failed job's own record, so the audit pages can show
+      // the reason and its prescribed fix instead of a bare failed badge.
+      ...(failureJob !== null
+        ? {
+            failure: {
+              jobId: failureJob.jobId,
+              status: failureJob.status,
+              error: failureJob.error ?? '',
+              ...(failureJob.needsInputFields !== undefined
+                ? { needsInputFields: failureJob.needsInputFields }
+                : {}),
+            },
+          }
+        : {}),
       ...(audit.siteSignals?.hasTransactionalFlow !== undefined
         ? { detectedTransactionalFlow: audit.siteSignals.hasTransactionalFlow }
         : {}),
