@@ -288,3 +288,108 @@ describe('reports card PDF availability (issue #91)', () => {
     root.unmount();
   });
 });
+
+describe('findings table rows and expansion (issue #93)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  const element = {
+    pageUrl: 'https://exemple.fr/contact',
+    selector: '#formulaire > button:nth-child(3)',
+    snippet: '<button class="valider"></button>',
+  };
+
+  const auditWithFindings = {
+    ...emptyAudit,
+    findings: [
+      {
+        findingId: 'f001',
+        auditId: 'audit-1',
+        schemaVersion: 1,
+        source: 'axe',
+        ruleId: 'button-name',
+        category: 'accessibility',
+        severity: 'serious',
+        wcagCriteria: ['4.1.2'],
+        title: 'Buttons must have discernible text',
+        description: 'The button has no accessible name.',
+        pageUrls: ['https://exemple.fr/', 'https://exemple.fr/contact'],
+        occurrences: 6,
+        elements: [element],
+        rawEvidence: {},
+        dedupeKey: 'dedupe-1',
+        firstSeenAt: '2026-09-01T10:00:00.000Z',
+        lastSeenAt: '2026-09-01T10:00:00.000Z',
+      },
+      {
+        findingId: 'f002',
+        auditId: 'audit-1',
+        schemaVersion: 1,
+        source: 'axe',
+        ruleId: 'button-name',
+        category: 'accessibility',
+        severity: 'serious',
+        wcagCriteria: ['4.1.2'],
+        title: 'Buttons must have discernible text',
+        description: 'The button has no accessible name.',
+        pageUrls: ['https://exemple.fr/galerie'],
+        occurrences: 1,
+        elements: [{ ...element, pageUrl: 'https://exemple.fr/galerie' }],
+        rawEvidence: {},
+        dedupeKey: 'dedupe-2',
+        firstSeenAt: '2026-09-01T10:00:00.000Z',
+        lastSeenAt: '2026-09-01T10:00:00.000Z',
+      },
+    ],
+    ruleCopy: {
+      'button-name': {
+        titleFr: 'Les boutons doivent avoir un texte explicite',
+        glossFr: 'Un bouton sans texte lisible ne dit pas à quoi il sert.',
+        remediationFr: 'Ajoutez un texte visible dans chaque bouton.',
+        remediationEn: 'Add visible text inside every button.',
+      },
+    },
+  };
+
+  it('distinguishes duplicate detector titles by id and selector, in French', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': auditWithFindings,
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Les boutons doivent avoir un texte explicite');
+    // The raw detector title no longer shows; both rows carry the reviewed
+    // French title, told apart by id and first selector.
+    expect(container.textContent).not.toContain('Buttons must have discernible text');
+    expect(container.textContent).toContain('f001');
+    expect(container.textContent).toContain('f002');
+    expect(container.textContent).toContain('#formulaire > button:nth-child(3)');
+    root.unmount();
+  });
+
+  it('expands a row into reviewed copy, affected pages, and element identity', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': auditWithFindings,
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'f001');
+    const toggle = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Afficher le détail du constat"]',
+    );
+    expect(toggle).not.toBeNull();
+    await act(async () => {
+      toggle?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    expect(container.textContent).toContain(
+      'Un bouton sans texte lisible ne dit pas à quoi il sert.',
+    );
+    expect(container.textContent).toContain('Ajoutez un texte visible dans chaque bouton.');
+    expect(container.textContent).toContain('https://exemple.fr/contact');
+    expect(container.textContent).toContain('<button class="valider"></button>');
+    root.unmount();
+  });
+});

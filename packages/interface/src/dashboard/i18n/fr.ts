@@ -274,6 +274,12 @@ export const fr: DashboardStrings = {
       'Aucun PDF exploitable pour cette langue. Régénérez le rapport pour le créer.',
     reportUnavailableError:
       'Ce PDF n’est pas disponible depuis cette machine. Régénérez le rapport, puis réessayez.',
+    findingDetailsToggle: 'Afficher le détail du constat',
+    findingGlossLabel: 'De quoi il s’agit',
+    findingRemediationLabel: 'Piste de correction',
+    findingElementsLabel: 'Éléments concernés',
+    findingMorePages: '+ {count} autres pages',
+    findingMoreElements: '+ {count} autres occurrences',
     findingsFilterAll: 'Toutes les gravités',
     findingsEmpty: 'Aucun problème constaté pour cet audit.',
     categoryLabels: {

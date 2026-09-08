@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
@@ -22,7 +23,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
-import type { DashboardStrings } from '../i18n/types';
+import type { DashboardLanguage, DashboardStrings } from '../i18n/types';
 import { vocabularyLabel } from '../lib/vocabulary';
 import { PrepareReportCard } from './prepare-report-card';
 import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
@@ -35,6 +36,9 @@ import {
   countOccurrences,
   countPages,
   failureReasonKind,
+  findingDisplayTitle,
+  findingExpansionView,
+  firstElementSelector,
   hasPageCountWarning,
   hostnameOf,
   isReportStageFailure,
@@ -47,6 +51,7 @@ import {
 import type {
   ManualFieldKey,
   ManualFieldValues,
+  RuleCopyMap,
   SectorChoice,
   TextManualFieldKey,
 } from './audit-detail-model';
@@ -352,11 +357,22 @@ function ReportsCard(props: {
   );
 }
 
-function FindingsCard({ findings }: { findings: FindingResponse[] }): JSX.Element {
+function FindingsCard(props: {
+  findings: FindingResponse[];
+  ruleCopy: RuleCopyMap | undefined;
+  language: DashboardLanguage;
+}): JSX.Element {
+  const { findings, ruleCopy, language } = props;
   const { strings } = useI18n();
   const [filter, setFilter] = useState<SeverityFilter>('');
+  // One expanded row at a time: the operator compares rows by their
+  // discriminator column, then drills into exactly one of them.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const sorted = useMemo(() => sortFindings(findings), [findings]);
   const visible = filter === '' ? sorted : sorted.filter((finding) => finding.severity === filter);
+  const toggleRow = (findingId: string): void => {
+    setExpandedId((current) => (current === findingId ? null : findingId));
+  };
   return (
     <Card
       title={strings.auditDetail.findingsHeading}
@@ -402,29 +418,157 @@ function FindingsCard({ findings }: { findings: FindingResponse[] }): JSX.Elemen
             </TableRow>
           </TableHead>
           <TableBody>
-            {visible.map((finding) => (
-              <TableRow key={finding.findingId}>
-                <TableCell>
-                  <Badge tone={finding.severity}>
-                    {strings.common.severityLabels[finding.severity]}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {vocabularyLabel(
-                    strings.auditDetail.categoryLabels,
-                    finding.category,
-                    finding.category,
-                  )}
-                </TableCell>
-                <TableCell className="text-ink">{finding.title}</TableCell>
-                <TableCell className="numeric text-right">{countOccurrences(finding)}</TableCell>
-                <TableCell className="numeric text-right">{countPages(finding)}</TableCell>
-              </TableRow>
-            ))}
+            {visible.map((finding) => {
+              const isExpanded = expandedId === finding.findingId;
+              const selector = firstElementSelector(finding);
+              return (
+                <FindingRowGroup
+                  key={finding.findingId}
+                  finding={finding}
+                  ruleCopy={ruleCopy}
+                  language={language}
+                  isExpanded={isExpanded}
+                  selector={selector}
+                  onToggle={() => toggleRow(finding.findingId)}
+                />
+              );
+            })}
           </TableBody>
         </Table>
       )}
     </Card>
+  );
+}
+
+/** One finding: the summary row with its visible discriminator (the short
+ *  finding id and the first occurrence's selector, which is what makes
+ *  repeated detector titles distinguishable), plus the expansion row when
+ *  open. The expansion renders the reviewed FR/EN copy the API resolved
+ *  for the rule, then the affected pages and the stored element identity
+ *  (selector, snippet, page). */
+function FindingRowGroup(props: {
+  finding: FindingResponse;
+  ruleCopy: RuleCopyMap | undefined;
+  language: DashboardLanguage;
+  isExpanded: boolean;
+  selector: string | undefined;
+  onToggle: () => void;
+}): JSX.Element {
+  const { finding, ruleCopy, language, isExpanded, selector, onToggle } = props;
+  const { strings } = useI18n();
+  const expansion = isExpanded ? findingExpansionView(finding, ruleCopy, language) : undefined;
+  return (
+    <>
+      <TableRow onClick={onToggle} className="cursor-pointer">
+        <TableCell>
+          <Badge tone={finding.severity}>{strings.common.severityLabels[finding.severity]}</Badge>
+        </TableCell>
+        <TableCell>
+          {vocabularyLabel(strings.auditDetail.categoryLabels, finding.category, finding.category)}
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded p-0.5 text-ink-muted transition-colors hover:text-accent-bright"
+              aria-expanded={isExpanded}
+              aria-label={strings.auditDetail.findingDetailsToggle}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggle();
+              }}
+            >
+              <ChevronDown
+                className={cn('size-4 transition-transform', isExpanded && 'rotate-180')}
+                aria-hidden="true"
+              />
+            </button>
+            <span className="min-w-0">
+              <span className="block text-ink">
+                {findingDisplayTitle(finding, ruleCopy, language)}
+              </span>
+              <span className="numeric block font-mono text-xs text-ink-muted">
+                {finding.findingId}
+                {selector !== undefined ? (
+                  <span className="ml-2 max-w-72 truncate align-baseline">{selector}</span>
+                ) : null}
+              </span>
+            </span>
+          </div>
+        </TableCell>
+        <TableCell className="numeric text-right">{countOccurrences(finding)}</TableCell>
+        <TableCell className="numeric text-right">{countPages(finding)}</TableCell>
+      </TableRow>
+      {expansion !== undefined ? (
+        <TableRow>
+          <TableCell colSpan={5} className="bg-raised">
+            {expansion.gloss !== undefined ? (
+              <p className="max-w-reading text-sm text-ink-soft">
+                <span className="font-medium text-ink">
+                  {strings.auditDetail.findingGlossLabel} :
+                </span>{' '}
+                {expansion.gloss}
+              </p>
+            ) : null}
+            {expansion.remediation !== undefined ? (
+              <p className="mt-2 max-w-reading text-sm text-ink-soft">
+                <span className="font-medium text-ink">
+                  {strings.auditDetail.findingRemediationLabel} :
+                </span>{' '}
+                {expansion.remediation}
+              </p>
+            ) : null}
+            <p className="mt-3 text-xs font-medium text-ink-muted">
+              {strings.auditDetail.pagesColumn}
+            </p>
+            <ul className="mt-1 flex flex-col gap-0.5">
+              {expansion.pages.map((pageUrl) => (
+                <li key={pageUrl} className="break-all font-mono text-xs text-ink-muted">
+                  {pageUrl}
+                </li>
+              ))}
+            </ul>
+            {expansion.hiddenPageCount > 0 ? (
+              <p className="numeric mt-1 text-xs text-ink-muted">
+                {strings.auditDetail.findingMorePages.replace(
+                  '{count}',
+                  String(expansion.hiddenPageCount),
+                )}
+              </p>
+            ) : null}
+            {expansion.elements.length > 0 ? (
+              <>
+                <p className="mt-3 text-xs font-medium text-ink-muted">
+                  {strings.auditDetail.findingElementsLabel}
+                </p>
+                <ul className="mt-1 flex flex-col gap-2">
+                  {expansion.elements.map((element) => (
+                    <li
+                      key={`${element.pageUrl} ${element.selector}`}
+                      className="rounded-lg border border-line bg-panel p-2"
+                    >
+                      <p className="break-all font-mono text-xs text-ink">{element.selector}</p>
+                      <p className="mt-1 text-xs text-ink-soft">{element.snippet}</p>
+                      <p className="mt-1 break-all font-mono text-xs text-ink-muted">
+                        {element.pageUrl}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                {expansion.hiddenElementCount > 0 ? (
+                  <p className="numeric mt-1 text-xs text-ink-muted">
+                    {strings.auditDetail.findingMoreElements.replace(
+                      '{count}',
+                      String(expansion.hiddenElementCount),
+                    )}
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+          </TableCell>
+        </TableRow>
+      ) : null}
+    </>
   );
 }
 
@@ -954,7 +1098,7 @@ export function AuditDetailPage(): JSX.Element {
             refresh={refresh}
           />
         </div>
-        <FindingsCard findings={data.findings} />
+        <FindingsCard findings={data.findings} ruleCopy={data.ruleCopy} language={language} />
       </div>
       <ConfirmDialog
         open={isApproveOpen}

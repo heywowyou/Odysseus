@@ -4,6 +4,9 @@ import {
   countOccurrences,
   countPages,
   failureReasonKind,
+  findingDisplayTitle,
+  findingExpansionView,
+  findingRemediation,
   hasPageCountWarning,
   hostnameOf,
   isReportStageFailure,
@@ -14,7 +17,7 @@ import {
   REPORT_PAGE_COUNT_WARNING_THRESHOLD,
   sortFindings,
 } from './audit-detail-model';
-import type { ManualFieldValues } from './audit-detail-model';
+import type { ManualFieldValues, RuleCopyMap } from './audit-detail-model';
 import type {
   AuditFailureResponse,
   FindingResponse,
@@ -261,5 +264,66 @@ describe('failureReasonKind and isReportStageFailure (issue 90)', () => {
     expect(isReportStageFailure({ failure: identityFailure, lifecycle: 'rendered' })).toBe(false);
     expect(isReportStageFailure({ failure: plainFailure, lifecycle: 'approved' })).toBe(false);
     expect(isReportStageFailure({ failure: undefined, lifecycle: 'analysed' })).toBe(false);
+  });
+});
+
+describe('finding display copy (issue 93)', () => {
+  const ruleCopy: RuleCopyMap = {
+    'button-name': {
+      titleFr: 'Les boutons doivent avoir un texte explicite',
+      glossFr: 'Un bouton sans texte lisible ne dit pas à quoi il sert.',
+      remediationFr: 'Ajoutez un texte visible dans chaque bouton.',
+      remediationEn: 'Add visible text inside every button.',
+    },
+  };
+
+  const buttonFinding = finding({ ruleId: 'button-name' });
+  const unknownFinding = finding({ ruleId: 'never-observed-rule', title: 'Raw detector' });
+
+  it('replaces the raw detector title with the reviewed French title', () => {
+    expect(findingDisplayTitle(buttonFinding, ruleCopy, 'fr')).toBe(
+      'Les boutons doivent avoir un texte explicite',
+    );
+  });
+
+  it('keeps the finding title in English and falls back to the raw title', () => {
+    expect(findingDisplayTitle(buttonFinding, ruleCopy, 'en')).toBe(buttonFinding.title);
+    expect(findingDisplayTitle(unknownFinding, ruleCopy, 'fr')).toBe('Raw detector');
+    expect(findingDisplayTitle(unknownFinding, ruleCopy, 'en')).toBe('Raw detector');
+  });
+
+  it('resolves remediation per language and shows nothing without reviewed copy', () => {
+    expect(findingRemediation(buttonFinding, ruleCopy, 'fr')).toBe(
+      'Ajoutez un texte visible dans chaque bouton.',
+    );
+    expect(findingRemediation(buttonFinding, ruleCopy, 'en')).toBe(
+      'Add visible text inside every button.',
+    );
+    expect(findingRemediation(unknownFinding, ruleCopy, 'fr')).toBeUndefined();
+    expect(findingRemediation(unknownFinding, undefined, 'en')).toBeUndefined();
+  });
+
+  it('expands pages and elements with the hidden counts beyond the preview', () => {
+    const manyPages = finding({
+      ruleId: 'button-name',
+      pageUrls: Array.from({ length: 12 }, (_, index) => `https://exemple.fr/page-${index}`),
+    });
+    const view = findingExpansionView(manyPages, ruleCopy, 'fr');
+    expect(view.pages).toHaveLength(8);
+    expect(view.hiddenPageCount).toBe(4);
+    expect(view.remediation).toBe('Ajoutez un texte visible dans chaque bouton.');
+    expect(view.gloss).toBe('Un bouton sans texte lisible ne dit pas à quoi il sert.');
+    expect(view.elements).toEqual([]);
+    expect(view.hiddenElementCount).toBe(0);
+  });
+
+  it('deduplicates pageUrls in the expansion', () => {
+    const duplicated = finding({
+      pageUrls: ['https://exemple.fr/', 'https://exemple.fr/', 'https://exemple.fr/contact'],
+    });
+    const view = findingExpansionView(duplicated, undefined, 'en');
+    expect(view.pages).toEqual(['https://exemple.fr/', 'https://exemple.fr/contact']);
+    expect(view.remediation).toBeUndefined();
+    expect(view.gloss).toBeUndefined();
   });
 });

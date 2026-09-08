@@ -4,11 +4,14 @@
  * component tree, the same split as the other rebuilt dashboard routes.
  */
 
+import type { DashboardLanguage } from '../i18n/types';
 import type {
   AuditFailureResponse,
   AuditLifecycle,
+  FindingElementResponse,
   FindingResponse,
   ManualFieldsResponse,
+  RuleCopyResponse,
   Severity,
 } from './audit-detail-types';
 
@@ -124,6 +127,97 @@ export function isReportStageFailure(detail: {
     detail.failure !== undefined &&
     (detail.lifecycle === 'scanned' || detail.lifecycle === 'analysed')
   );
+}
+
+// ---------------------------------------------------------------------------
+// Issue #93: findings table discriminators, expansion, reviewed copy
+// ---------------------------------------------------------------------------
+
+/** Rule-id keyed view of the API's reviewed rule copy. */
+export type RuleCopyMap = Record<string, RuleCopyResponse>;
+
+/** The row title: English reports use the finding's own (English) title
+ *  verbatim, the same rule the PDF follows; French replaces it with the
+ *  reviewed translation when one exists and falls back to the raw
+ *  detector title only when the rule genuinely has no copy. */
+export function findingDisplayTitle(
+  finding: FindingResponse,
+  ruleCopy: RuleCopyMap | undefined,
+  language: DashboardLanguage,
+): string {
+  if (language !== 'fr') return finding.title;
+  return ruleCopy?.[finding.ruleId]?.titleFr ?? finding.title;
+}
+
+/** Short French gloss under the rule, for the cryptic detector codes the
+ *  report itself explains; English reports render none, again matching
+ *  the PDF. */
+export function findingGloss(
+  finding: FindingResponse,
+  ruleCopy: RuleCopyMap | undefined,
+): string | undefined {
+  return ruleCopy?.[finding.ruleId]?.glossFr;
+}
+
+/** Reviewed remediation line in the interface language, or undefined
+ *  when the rule has no reviewed copy: absence is rendered as nothing,
+ *  never as a reworded guess. */
+export function findingRemediation(
+  finding: FindingResponse,
+  ruleCopy: RuleCopyMap | undefined,
+  language: DashboardLanguage,
+): string | undefined {
+  const copy = ruleCopy?.[finding.ruleId];
+  if (copy === undefined) return undefined;
+  return language === 'fr' ? copy.remediationFr : copy.remediationEn;
+}
+
+/** The element identity that makes duplicate detector titles
+ *  distinguishable at a glance: the finding id is already short and
+ *  sequential (f001, f002, ...), and the first occurrence's selector
+ *  says which element on the page it is. */
+export function firstElementSelector(finding: FindingResponse): string | undefined {
+  const selector = finding.elements[0]?.selector;
+  return selector === undefined || selector === '' ? undefined : selector;
+}
+
+/** How many affected pages the expansion lists before the "+ N autres"
+ *  line; pageUrls is uncapped in storage, so the slice is what keeps a
+ *  90-page finding from taking over the card. */
+export const FINDING_PAGE_PREVIEW_COUNT = 8;
+
+/** How many occurrences (selector, snippet, page) the expansion lists
+ *  before the "+ N autres" line; elements are already a capped sample in
+ *  storage, this only bounds the rendered height. */
+export const FINDING_ELEMENT_PREVIEW_COUNT = 5;
+
+export interface FindingExpansionView {
+  remediation: string | undefined;
+  gloss: string | undefined;
+  pages: string[];
+  hiddenPageCount: number;
+  elements: FindingElementResponse[];
+  hiddenElementCount: number;
+}
+
+/** Everything an expanded row shows, computed in one pass so the
+ *  component stays presentational. */
+export function findingExpansionView(
+  finding: FindingResponse,
+  ruleCopy: RuleCopyMap | undefined,
+  language: DashboardLanguage,
+): FindingExpansionView {
+  const pages = [...new Set(finding.pageUrls)];
+  const previewCount = Math.min(pages.length, FINDING_PAGE_PREVIEW_COUNT);
+  const elementCount = Math.min(finding.elements.length, FINDING_ELEMENT_PREVIEW_COUNT);
+  return {
+    remediation: findingRemediation(finding, ruleCopy, language),
+    gloss: findingGloss(finding, ruleCopy),
+    pages: pages.slice(0, previewCount),
+    hiddenPageCount: pages.length - previewCount,
+    elements: finding.elements.slice(0, elementCount),
+    hiddenElementCount: finding.elements.length - elementCount,
+  };
 }
 
 export function normalizeSiren(value: string): string {

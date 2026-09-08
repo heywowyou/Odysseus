@@ -274,6 +274,12 @@ export const en: DashboardStrings = {
       'No usable PDF exists for this language. Regenerate the report to create it.',
     reportUnavailableError:
       'This PDF is not available from this machine. Regenerate the report, then try again.',
+    findingDetailsToggle: 'Show the finding details',
+    findingGlossLabel: 'What this means',
+    findingRemediationLabel: 'How to fix it',
+    findingElementsLabel: 'Affected elements',
+    findingMorePages: '+ {count} more pages',
+    findingMoreElements: '+ {count} more occurrences',
     findingsFilterAll: 'All severities',
     findingsEmpty: 'No problems found for this audit.',
     categoryLabels: {

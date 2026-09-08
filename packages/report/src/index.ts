@@ -70,6 +70,14 @@ import { ReportIdentityUnconfirmedError } from './errors.js';
  *  which never renders to PDF and has no reason to change. */
 export const REPORT_PDF_CHROMIUM_ARGS = ['--font-render-hinting=none'];
 
+/** Issue #93: the reviewed FR/EN remediation copy per scanner rule and the
+ *  French rule-title translations, re-exported so the operator dashboard's
+ *  audit-detail route serves the same reviewed copy the PDF renders,
+ *  instead of a mirror table drifting from it. */
+export { remediationFor } from './template/remediation/index.js';
+export { RULE_TRANSLATIONS_FR } from './template/rule-translations.js';
+export type { RuleTranslation } from './template/rule-translations.js';
+
 export async function generateReportPdf(
   input: GenerateReportInput,
 ): Promise<RenderedPdfWithPageCount> {

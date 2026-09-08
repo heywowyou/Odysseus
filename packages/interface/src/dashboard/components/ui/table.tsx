@@ -57,9 +57,16 @@ export function TableHeaderCell({
 export function TableCell({
   children,
   className,
+  /** Used by expansion rows that span the whole table width. */
+  colSpan,
 }: {
   children: ReactNode;
   className?: string;
+  colSpan?: number;
 }): JSX.Element {
-  return <td className={cn('px-3 py-2.5 align-middle text-ink-soft', className)}>{children}</td>;
+  return (
+    <td colSpan={colSpan} className={cn('px-3 py-2.5 align-middle text-ink-soft', className)}>
+      {children}
+    </td>
+  );
 }

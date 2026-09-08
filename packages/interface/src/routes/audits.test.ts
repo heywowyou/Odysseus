@@ -480,6 +480,30 @@ describe('GET /api/audits/:auditId', () => {
 
     expect(JSON.parse(res.body ?? '{}')).not.toHaveProperty('failure');
   });
+
+  it('carries reviewed rule copy keyed by rule id (issue #93)', async () => {
+    // 'button-name' is an observed rule with reviewed FR/EN tables; the
+    // invented id has none, so it must be an empty entry rather than a
+    // guess. The copy values come from the real report tables.
+    vi.mocked(getFindingsForAudit).mockResolvedValue([
+      { ruleId: 'button-name' },
+      { ruleId: 'never-observed-rule' },
+    ] as never);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    const body = JSON.parse(res.body ?? '{}');
+    expect(typeof body.ruleCopy).toBe('object');
+    expect(body.ruleCopy['never-observed-rule']).toEqual({});
+    const buttonCopy = body.ruleCopy['button-name'];
+    expect(typeof buttonCopy.titleFr).toBe('string');
+    expect(typeof buttonCopy.remediationFr).toBe('string');
+    expect(typeof buttonCopy.remediationEn).toBe('string');
+  });
 });
 
 describe('GET /api/audits/:auditId/report/:language', () => {

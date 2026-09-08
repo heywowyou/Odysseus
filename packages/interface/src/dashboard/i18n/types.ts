@@ -312,6 +312,18 @@ export interface DashboardStrings {
     /** Toast headline when a report fetch still fails; the server's error
      *  string is demoted to the description line. */
     reportUnavailableError: string;
+    /** Issue #93: the findings row expansion. Pages and occurrences are
+     *  real data from the stored finding; the gloss and remediation lines
+     *  render only when the API supplied reviewed copy for that rule. */
+    findingDetailsToggle: string;
+    findingGlossLabel: string;
+    findingRemediationLabel: string;
+    findingElementsLabel: string;
+    /** {count} is replaced with the number of further pages by the page. */
+    findingMorePages: string;
+    /** {count} is replaced with the number of further occurrences by the
+     *  page. */
+    findingMoreElements: string;
     /** Default option of the findings severity filter. */
     findingsFilterAll: string;
     /** Shown when the findings table has no rows, overall or at the

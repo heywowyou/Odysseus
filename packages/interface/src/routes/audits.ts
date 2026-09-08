@@ -30,6 +30,8 @@ import {
 import { buildArtifactBucketKey, buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import {
   classifyReportFreshness,
+  remediationFor,
+  RULE_TRANSLATIONS_FR,
   type ReportFreshness,
   type StoredAnalysis,
 } from '@odysseus/report';
@@ -160,6 +162,37 @@ async function reportPdfAvailable(
   if (report === null) return false;
   const pdf = await readVerifiedReport(auditDir, report, hostname, startedAt, store);
   return pdf !== undefined;
+}
+
+/** Issue #93: the reviewed remediation and French title copy per detector
+ *  rule (trade-off 71), keyed by rule id over the audit's findings. The
+ *  report package's tables are the single source, so the dashboard reads
+ *  the same copy the PDF renders; a rule with no reviewed copy is simply
+ *  absent and the page falls back to the finding's raw title. */
+function buildRuleCopy(findings: readonly Finding[]): Record<string, ReviewedRuleCopy> {
+  const copy: Record<string, ReviewedRuleCopy> = {};
+  for (const finding of findings) {
+    if (copy[finding.ruleId] !== undefined) continue;
+    const translation = RULE_TRANSLATIONS_FR[finding.ruleId];
+    const remediationFr = remediationFor(finding.ruleId, 'fr');
+    const remediationEn = remediationFor(finding.ruleId, 'en');
+    copy[finding.ruleId] = {
+      ...(translation !== undefined ? { titleFr: translation.label } : {}),
+      ...(translation !== undefined && translation.gloss !== ''
+        ? { glossFr: translation.gloss }
+        : {}),
+      ...(remediationFr !== undefined ? { remediationFr } : {}),
+      ...(remediationEn !== undefined ? { remediationEn } : {}),
+    };
+  }
+  return copy;
+}
+
+interface ReviewedRuleCopy {
+  titleFr?: string;
+  glossFr?: string;
+  remediationFr?: string;
+  remediationEn?: string;
 }
 
 const MANUAL_TEXT_FIELDS = [
@@ -332,6 +365,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       coverageSummary: summarizeAuditCoverage(audit),
       severityRollup,
       findings,
+      // Issue #93: reviewed FR/EN copy per rule id referenced by the
+      // findings above.
+      ruleCopy: buildRuleCopy(findings),
       reportLanguages,
       reports,
       lifecycle,

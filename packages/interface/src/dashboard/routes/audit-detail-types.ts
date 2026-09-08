@@ -134,6 +134,21 @@ export interface ReportApprovalResponse {
   approvedAt: string;
 }
 
+/** Issue #93: the reviewed copy for one detector rule (trade-off 71),
+ *  keyed by ruleId in AuditDetailResponse.ruleCopy. Every field is absent
+ *  when the report package's reviewed tables have no entry for the rule;
+ *  the page then falls back to the finding's raw title and shows no
+ *  remediation rather than a guess. */
+export interface RuleCopyResponse {
+  /** Reviewed French title (the report's rule-translation table);
+   *  English reports use the finding's own title verbatim. */
+  titleFr?: string;
+  /** Short plain-language French gloss under the rule code. */
+  glossFr?: string;
+  remediationFr?: string;
+  remediationEn?: string;
+}
+
 /** The whole GET /api/audits/:auditId body. */
 export interface AuditDetailResponse {
   auditId: string;
@@ -143,6 +158,8 @@ export interface AuditDetailResponse {
   pagesVisited: number;
   severityRollup: SeverityRollup;
   findings: FindingResponse[];
+  /** Issue #93: reviewed copy per rule id referenced by `findings`. */
+  ruleCopy?: Record<string, RuleCopyResponse>;
   reportLanguages: ReportLanguage[];
   reports: ReportStatusResponse[];
   lifecycle: AuditLifecycle;
