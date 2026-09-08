@@ -13,6 +13,7 @@ import type { Connection } from 'mongoose';
 import type { Browser } from 'playwright';
 import {
   assertFindingsProvenance,
+  assertSufficientCrawlCoverage,
   buildFindingsProvenance,
   buildReportPreparationPreview,
   type AuditManifest,
@@ -73,6 +74,15 @@ export async function runReportStage(
    *  generateReportPdf, unchanged from before. */
   browser?: Browser,
 ): Promise<ReportStageResult> {
+  // Recheck persisted crawl facts before every render. This covers reports
+  // regenerated after an interrupted queue run as well as the normal job
+  // path, and prevents a client-facing PDF from describing a rejected crawl.
+  assertSufficientCrawlCoverage({
+    pages: manifest.pages,
+    ...(manifest.crawl.sitemapCoverage !== undefined
+      ? { sitemapCoverage: manifest.crawl.sitemapCoverage }
+      : {}),
+  });
   const findingsProvenance = buildFindingsProvenance(findings);
   assertFindingsProvenance(manifest.findingsProvenance, findingsProvenance, 'manifest');
   assertFindingsProvenance(analysis.findingsProvenance, findingsProvenance, 'analysis');

@@ -146,6 +146,42 @@ describe('scanSite characterization', () => {
     expect(checkCookieConsent).toHaveBeenCalledOnce();
   });
 
+  it('stops a full audit before content scans when the crawl is mass-rejected', async () => {
+    vi.mocked(crawlSite).mockResolvedValue({
+      startUrl,
+      pages: [
+        ...Array.from({ length: 3 }, (_, index) => visited(`${startUrl}ok-${index}`)),
+        ...Array.from({ length: 7 }, (_, index) => ({
+          url: `${startUrl}rejected-${index}`,
+          status: 'http-error-status',
+          httpStatus: 503,
+          discoveryMethod: 'link',
+        })),
+      ],
+      effectiveDelayMs: 100,
+      visitedCount: 10,
+      maxPages: 10,
+      maxDepth: 2,
+      robotsTxtFound: true,
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      linkDiscoveredUrls: [],
+    } as never);
+
+    await expect(
+      scanSite(startUrl, {
+        browser: {} as never,
+        debugPort: 9222,
+        screenshotDir: '/tmp/pages',
+        fullAuditPlanning: true,
+      }),
+    ).rejects.toThrow(/coverage is too incomplete/i);
+
+    expect(scanPage).not.toHaveBeenCalled();
+    expect(runRenderedAnalysis).not.toHaveBeenCalled();
+    expect(checkLlmsTxt).not.toHaveBeenCalled();
+  });
+
   it('issue #64: writes each page scan.json to disk as it completes and keeps result.pages empty when writePagesAsScanned is set', async () => {
     const { auditDir, pagesDir } = await makeTempAuditDir('scan-site-legacy-');
     vi.mocked(scanPage).mockImplementation(async (_browser, _port, url) => ({

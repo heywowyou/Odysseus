@@ -104,6 +104,22 @@ function fakeAnalysis() {
   };
 }
 
+function massRejectedManifest(): AuditManifest {
+  const manifest = fakeManifest();
+  const pages = Array.from({ length: 10 }, (_, index) => ({
+    url: `https://example.com/page-${index}`,
+    depth: 1,
+    status: index < 3 ? ('visited' as const) : ('http-error-status' as const),
+    ...(index < 3 ? {} : { httpStatus: 503 }),
+    errors: {},
+  }));
+  return {
+    ...manifest,
+    crawl: { ...manifest.crawl, visitedCount: pages.length },
+    pages,
+  };
+}
+
 let auditDir: string;
 
 beforeEach(async () => {
@@ -278,6 +294,14 @@ describe('runReportStage', () => {
     await expect(runReportStage(auditDir, manifest, [], analysis, fakeConnection)).rejects.toThrow(
       /stale analysis.*findings digest/i,
     );
+    expect(generateReportPdf).not.toHaveBeenCalled();
+  });
+
+  it('refuses report generation when mass crawl failures leave the site materially uncovered', async () => {
+    await expect(
+      runReportStage(auditDir, massRejectedManifest(), [], fakeAnalysis(), fakeConnection),
+    ).rejects.toThrow(/coverage is too incomplete/i);
+
     expect(generateReportPdf).not.toHaveBeenCalled();
   });
 

@@ -11,6 +11,7 @@ export * from './types/findings.js';
 export * from './types/llm-output.js';
 export * from './types/manifest.js';
 export * from './coverage-summary.js';
+export * from './crawl-coverage-gate.js';
 export * from './build-identity.js';
 export * from './types/manual-fields.js';
 export * from './types/entity.js';

@@ -1,5 +1,10 @@
 import type { Browser } from 'playwright';
-import type { CruxFieldDataResult, PageAnalysisCoverage, SitemapMode } from '@odysseus/core';
+import {
+  assertSufficientCrawlCoverage,
+  type CruxFieldDataResult,
+  type PageAnalysisCoverage,
+  type SitemapMode,
+} from '@odysseus/core';
 import { getCruxApiKey, getPageTimeoutMs, getScanConcurrency } from './config.js';
 import type { RedirectHostCache } from './checks/transactional-flow.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
@@ -599,6 +604,18 @@ export async function scanSite(
     ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
     sitemapMode,
   });
+
+  // A full audit must not continue from the handful of pages served before
+  // a target begins rejecting the crawl. This is a truthful stop, not an
+  // invitation to evade protections: retry only with a slower cadence or an
+  // explicit allowlist. Prospecting does not produce a paid report, so its
+  // bounded inspection path is deliberately outside this gate.
+  if (options.fullAuditPlanning) {
+    assertSufficientCrawlCoverage({
+      pages: crawl.pages,
+      ...(crawl.sitemapCoverage !== undefined ? { sitemapCoverage: crawl.sitemapCoverage } : {}),
+    });
+  }
 
   const pagesToScan = crawl.pages.filter((page) => page.status === 'visited');
 
