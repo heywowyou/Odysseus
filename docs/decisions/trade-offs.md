@@ -3276,7 +3276,9 @@ removed rather than relabelled are all in numbered entry 37.
 
 Legal copy remains source-gated: hotel-specific material in
 `docs/rules/obligation-basis.md` cannot enter a real draft until it reaches primary
-status. Source schemas/licences, score weights, preview storage, Gmail OAuth,
+status. This requirement was superseded for the first hotel wave on 2026-09-08:
+the deterministic argument B facts block may be used from the first send under
+the rule in `docs/rules/obligation-basis.md`, "First-wave application". Source schemas/licences, score weights, preview storage, Gmail OAuth,
 mailbox setup, live deployment, and every named-site scan remain explicit STOP
 gates in the relevant numbered plans. The first real wave cannot land before
 2026-09-15. Paid full-audit sitemap coverage from 9b.5 remains independent of
