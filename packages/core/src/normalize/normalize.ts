@@ -51,7 +51,11 @@ import {
   type HeadMetadataCheckInput,
 } from './normalize-head-metadata.js';
 import { extractSitemapCandidates, type SitemapCheckInput } from './normalize-sitemap.js';
-import { extractCrawlCandidates, type NormalizeCrawlInput } from './normalize-crawl.js';
+import {
+  extractCrawlCandidates,
+  type CrawlPageInput,
+  type NormalizeCrawlInput,
+} from './normalize-crawl.js';
 import { extractHreflangCandidates } from './normalize-hreflang.js';
 import {
   extractMixedContentCandidates,
@@ -172,6 +176,45 @@ export interface NormalizeAuditInput {
   translationClusters?: readonly TranslationCluster[];
 }
 
+/**
+ * Issue #101: the one anchor for every site-level finding (CrUX field
+ * data, hreflang-missing, structured-data-entity-missing). These findings
+ * are facts about the site, but a Finding must still name a page, and the
+ * report's appendix prints that page as where the fact was established.
+ * The crawl start URL used to win unconditionally, so on a site whose
+ * start URL redirects or is a bare language root recorded
+ * discovered-not-scanned, the report attributed real-user metrics and
+ * missing-markup facts to a page no scanner ever ran - and the executive
+ * summary then claimed one more affected page than the analyzed scope
+ * contained (the real Villas Foch report said 29 pages over a 28-page
+ * scope). Trade-off 64's principle binds here: a finding is never
+ * propagated to a page no scanner actually ran on.
+ *
+ * The start URL keeps the anchor when it was itself content-checked (the
+ * common case, and byte-identical output for every audit where it was).
+ * Only when it was not does the anchor move to the content-checked page
+ * closest to the homepage: shallowest crawl depth first, then URL
+ * ascending so the choice is deterministic regardless of page order,
+ * which differs between a live run (crawl order) and `normalize <dir>`
+ * (directory read order). Undefined only when nothing was content-checked
+ * at all, in which case no site-level candidate is emitted rather than a
+ * mis-anchored one.
+ */
+function resolveSiteLevelAnchorUrl(input: NormalizeAuditInput): string | undefined {
+  const startUrl = input.crawl?.startUrl;
+  if (startUrl !== undefined && input.pages.some((page) => page.url === startUrl)) {
+    return startUrl;
+  }
+  const depthByUrl = new Map(
+    (input.crawl?.pages ?? [])
+      .filter((page): page is CrawlPageInput & { depth: number } => page.depth !== undefined)
+      .map((page) => [page.url, page.depth]),
+  );
+  return [...input.pages]
+    .map((page) => ({ url: page.url, depth: depthByUrl.get(page.url) ?? Number.MAX_SAFE_INTEGER }))
+    .sort((a, b) => a.depth - b.depth || a.url.localeCompare(b.url))[0]?.url;
+}
+
 function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
   // D13: resolved over every page before any page is normalized, so a
@@ -219,7 +262,7 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   if (input.crawl) candidates.push(...extractCrawlCandidates(input.crawl));
 
   if (input.cruxFieldData) {
-    const homepageUrl = input.crawl?.startUrl ?? input.pages[0]?.url;
+    const homepageUrl = resolveSiteLevelAnchorUrl(input);
     if (homepageUrl) candidates.push(...extractCruxCandidates(input.cruxFieldData, homepageUrl));
   }
 
@@ -236,9 +279,7 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     .filter((page) => page.headMetadata)
     .map((page) => ({ url: page.url, hreflangLinks: page.headMetadata!.hreflangLinks }));
   if (hreflangPages.length > 0) {
-    candidates.push(
-      ...extractHreflangCandidates(hreflangPages, input.crawl?.startUrl ?? input.pages[0]?.url),
-    );
+    candidates.push(...extractHreflangCandidates(hreflangPages, resolveSiteLevelAnchorUrl(input)));
   }
 
   const pagesWithHeadMetadata = input.pages.filter((page) => page.headMetadata);
@@ -261,8 +302,8 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
         hasFaqSchema: jsonLdTypes.some((type) => /^(faqpage|qapage)$/i.test(type)),
       };
     });
-    const homepageUrl = input.crawl?.startUrl ?? pagesWithHeadMetadata[0]!.url;
-    candidates.push(...extractGeoCandidates(geoPages, homepageUrl));
+    const homepageUrl = resolveSiteLevelAnchorUrl(input);
+    if (homepageUrl) candidates.push(...extractGeoCandidates(geoPages, homepageUrl));
   }
 
   return candidates;

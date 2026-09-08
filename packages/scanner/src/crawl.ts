@@ -11,6 +11,7 @@ import {
   isLanguageHomepagePath,
   isSameSiteHostname,
   normalizeInternalLinks,
+  normalizePageIdentityUrl,
   normalizePageUrl,
 } from './links.js';
 import {
@@ -214,6 +215,15 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
 
   const start = new URL(startUrl);
+  // Issue #102: the start URL goes through the same page-identity rule as
+  // every discovered link and sitemap entry, so a trailing-slash spelling
+  // is the same page as its bare form before anything is enqueued - the
+  // Briketenia audit crawled /fr and /fr/ as two visited pages and counted
+  // both in every analyzed-page denominator. Applied once here and reused
+  // for the queue seed, the visited-set bookkeeping, and CrawlResult.startUrl,
+  // so every downstream "is this the homepage" comparison reads one
+  // identity, and the duplicate variant is never fetched at all.
+  const startUrlIdentity = normalizePageIdentityUrl(start.toString()) ?? start.toString();
   // Fetched once as raw text (not via fetchRobotsRules) so the same
   // response can also be parsed against each AI_CRAWLER_USER_AGENTS
   // token below, without a second request to robots.txt.
@@ -235,7 +245,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   let filteredSitemapPageCount = 0;
   if (sitemap !== undefined) {
     for (const entry of sitemap.pageEntries) {
-      const normalized = normalizePageUrl(entry.url, start.toString(), {
+      const normalized = normalizePageUrl(entry.url, startUrlIdentity, {
         allowWwwApex: true,
         exclusionPatterns: options.exclusions ?? [],
       });
@@ -254,10 +264,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   const pages: CrawledPage[] = [];
   const pagesByUrl = new Map<string, CrawledPage>();
   const visited = new Set<string>();
-  const linkDiscoveredUrls = new Set<string>([start.toString()]);
+  const linkDiscoveredUrls = new Set<string>([startUrlIdentity]);
   const linkDiscoveredFrom = new Map<string, string>();
-  const enqueued = new Set<string>([start.toString()]);
-  const queue: QueueItem[] = [{ url: start.toString(), depth: 0, discoveryMethod: 'link' }];
+  const enqueued = new Set<string>([startUrlIdentity]);
+  const queue: QueueItem[] = [{ url: startUrlIdentity, depth: 0, discoveryMethod: 'link' }];
   // Plan 021 Step 6: one guard per crawlSite call, never shared across
   // crawls - a family key is only meaningful within the site it was
   // discovered on.
@@ -269,15 +279,18 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // rule normalizeInternalLinks already enforces for discovered links);
   // an unparsable seed is dropped the same way a malformed href is.
   for (const seed of options.seeds ?? []) {
+    // Issue #102: seeds go through the same page-identity rule as the start
+    // URL, so a seed spelled with a trailing slash cannot enqueue a second
+    // copy of a page the start URL already carries (or become one itself).
+    const normalizedSeed = normalizePageIdentityUrl(seed);
+    if (normalizedSeed === undefined) continue;
     let resolvedSeed: URL;
     try {
-      resolvedSeed = new URL(seed);
+      resolvedSeed = new URL(normalizedSeed);
     } catch {
       continue;
     }
     if (resolvedSeed.origin !== start.origin) continue;
-    resolvedSeed.hash = '';
-    const normalizedSeed = resolvedSeed.toString();
     if (enqueued.has(normalizedSeed)) continue;
     enqueued.add(normalizedSeed);
     queue.push({ url: normalizedSeed, depth: 0, discoveryMethod: 'seed' });
@@ -417,7 +430,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             if (!discoverOnly) {
               const profileContext = {
                 url: item.url,
-                isHomepage: item.url === start.toString(),
+                isHomepage: item.url === startUrlIdentity,
                 isOperatorSeed: item.discoveryMethod === 'seed',
               };
               try {
@@ -660,7 +673,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   }
 
   return {
-    startUrl: start.toString(),
+    startUrl: startUrlIdentity,
     pages,
     visitedCount: visited.size,
     maxPages,

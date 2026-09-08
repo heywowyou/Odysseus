@@ -3,6 +3,7 @@ import {
   globToRegExp,
   isLanguageHomepagePath,
   normalizeInternalLinks,
+  normalizePageIdentityUrl,
   normalizePageUrl,
 } from './links.js';
 
@@ -234,5 +235,46 @@ describe('B3: non-public WordPress objects', () => {
     expect(normalizeInternalLinks(['/?post_type=chambre&p=12'], 'https://haaitza.com/')).toEqual([
       'https://haaitza.com/?post_type=chambre&p=12',
     ]);
+  });
+});
+
+/**
+ * Issue #102: the page-identity half of normalizePageUrl, applied by the
+ * crawl to its own start URL and to operator seeds. Discovered links and
+ * sitemap entries already get the same rule through normalizePageUrl, so
+ * these two doors were the only ones left where a trailing-slash spelling
+ * could be enqueued as a second, distinct page.
+ */
+describe('normalizePageIdentityUrl (issue #102)', () => {
+  it('collapses a trailing-slash spelling onto the bare form', () => {
+    expect(normalizePageIdentityUrl('https://www.briketenia.com/fr/')).toBe(
+      'https://www.briketenia.com/fr',
+    );
+    expect(normalizePageIdentityUrl('https://www.briketenia.com/fr')).toBe(
+      'https://www.briketenia.com/fr',
+    );
+  });
+
+  it('preserves the bare root path, which has no shorter spelling', () => {
+    expect(normalizePageIdentityUrl('https://client.example/')).toBe('https://client.example/');
+  });
+
+  it('strips a fragment, which identifies a position in the page, not a page', () => {
+    expect(normalizePageIdentityUrl('https://client.example/contact#equipe')).toBe(
+      'https://client.example/contact',
+    );
+  });
+
+  it('keeps query strings, which can be genuinely distinct pages', () => {
+    expect(normalizePageIdentityUrl('https://client.example/blog?page=2')).toBe(
+      'https://client.example/blog?page=2',
+    );
+    expect(normalizePageIdentityUrl('https://client.example/blog/?page=2')).toBe(
+      'https://client.example/blog?page=2',
+    );
+  });
+
+  it('returns undefined for an unparsable URL instead of throwing', () => {
+    expect(normalizePageIdentityUrl('not a url')).toBeUndefined();
   });
 });

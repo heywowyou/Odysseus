@@ -242,6 +242,65 @@ it does mean the audit trail says nothing about extension-dropped URLs.
 
 ---
 
+## 5a. Page URL identity: trailing-slash equivalence (issue #102)
+
+`https://site.example/fr` and `https://site.example/fr/` are one page. No
+document ever recorded a decision that they are distinct, and a real audit
+(Briketenia) content-checked both spellings of the same homepage - two
+render diffs, two axe passes, two Lighthouse runs - and counted both in
+every "X pages analysed" figure. The identity rule is therefore:
+
+**One page identity, decided before enqueue.** A URL's page identity is its
+URL with the fragment stripped and a trailing slash removed from any path
+longer than one character. The bare root path is preserved: it has no
+shorter spelling. This is the same rule `normalizePageUrl` always applied
+to discovered links; issue #102's defect was that two doors bypassed it.
+Both now go through `normalizePageIdentityUrl` (`packages/scanner/src/
+links.ts`), which holds the identity rule in one place:
+
+- **link discovery** and **sitemap supplementation**, via `normalizePageUrl`,
+  unchanged;
+- **the crawl start URL** (issue #102's live case: the configured start URL
+  carried the slash, so every internal link to the bare spelling of the
+  same homepage looked like a distinct page);
+- **operator seeds**, which previously stripped only the fragment.
+
+Because the identity is decided before enqueueing, the duplicate variant
+never costs a fetch, a crawl-budget slot, a politeness delay, or a page-cap
+unit - merging after the fact cannot un-spend those, which is why the fix
+lives in the crawler and not in normalization. Consequences worth stating:
+
+- **Only one variant is ever linked, either spelling**: the linked spelling
+  is canonicalized to the same identity as the start URL, so nothing new is
+  enqueued either way.
+- **The sitemap declares both variants**: they collapse onto one identity
+  in `eligibleSitemapUrls` and are counted once in sitemap coverage.
+- **The site root**: unchanged; `/` stays `/`.
+- **Page-cap accounting**: the duplicate never enters the queue, so it
+  never consumes capacity.
+- **The prescan path is ruled out**: a prescan renders at most the homepage
+  plus role pages chosen from `normalizePageUrl`-normalized links and never
+  maintains a crawl frontier, so it has no second door for a slash variant
+  (and must not grow one; trade-off 35).
+
+**Legacy stored audits are not repaired by normalization, deliberately.**
+A stored audit that crawled both spellings carries two `scan.json` files
+and two page inventories. `normalize <dir>` can only re-judge scanner
+output that exists; it cannot know which variant's per-page evidence
+(rawEvidence.perPage) is authoritative, and the same element seen on both
+variants is two candidates in a merged group, so `occurrences` would
+double-count once the pages collapse. A collapse at normalize time would
+also reorder or merge findings and renumber every later finding ID
+(trade-off 32), invalidating stored analyses, to fix data the next re-scan
+produces correctly. So: no normalize-side collapse; the repair for a
+stored audit with duplicate variants is a re-scan. Reports rendering such
+an audit keep its own (inflated) page inventory, honestly listing what
+that audit actually crawled.
+
+---
+
+---
+
 ## 6. Artifacts
 
 ```
@@ -308,3 +367,34 @@ Known-good numbers from the 2026-08-02 scan, useful as a regression check:
 four findings across 35 occurrences with its three footer selectors
 staying separate at 11 pages each, and `link-in-text-block` as one finding
 with 69 occurrences on `/mentions-legales/`.
+
+---
+
+## 8. Site-level finding anchors (issue #101)
+
+Some findings are facts about the site, not about one page: CrUX field
+data (origin-level), `hreflang-missing` (absence across every crawled
+page), `structured-data-entity-missing` (absence across every crawled
+page). A Finding still names a page, and the report's appendix prints that
+name as where the fact was established, so the anchor must be a page the
+audit actually examined.
+
+**The anchor is the crawl start URL when the start URL was itself
+content-checked** (its scan.json exists among the normalized pages), which
+is the common case and byte-identical to the pre-#101 behaviour. **When it
+was not** - the start URL redirected and was recorded under another
+status, or it is a bare language root crawled for links only, as on the
+real Villas Foch audit - **the anchor is the content-checked page closest
+to the homepage**: shallowest crawl depth first, ties broken by URL
+ascending so the choice is deterministic regardless of page order (a live
+run normalizes in crawl order, `normalize <dir>` in directory read order).
+The depths come from the crawl inventory through `CrawlPageInput.depth`.
+
+A site-level fact is never attributed to a page no scanner ran on, and is
+never emitted when nothing was content-checked (no anchor means no
+candidate, not an anchored-to-nothing one). This is trade-off 64's
+no-propagation principle applied to the one place a site-wide emitter
+could still violate it. The report's executive-summary page count is the
+union of findings' own pageUrls, so the anchor rule is what keeps that
+count inside the analyzed scope; the count itself is deliberately not
+independently filtered.

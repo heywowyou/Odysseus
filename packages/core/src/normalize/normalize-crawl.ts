@@ -57,6 +57,12 @@ export interface CrawlPageInput {
   url: string;
   status: CrawlPageStatus;
   httpStatus?: number;
+  /** Crawl depth from the start URL (0 for the start URL itself). Optional
+   *  so manifests predating the field still parse; it feeds only the
+   *  site-level anchor choice in normalize.ts (issue #101): when the start
+   *  URL was never content-checked, the shallowest content-checked page is
+   *  the closest thing to a homepage to anchor a site-wide fact to. */
+  depth?: number;
   /** The one page that first linked to this URL, if any. Absent for the
    *  start URL itself. */
   discoveredFrom?: string;

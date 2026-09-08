@@ -130,6 +130,7 @@ export function registerNormalizeCommand(program: Command): void {
             pages: manifest.pages.map((page) => ({
               url: page.url,
               status: page.status,
+              ...(page.depth !== undefined ? { depth: page.depth } : {}),
               ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
               ...(page.discoveredFrom !== undefined ? { discoveredFrom: page.discoveredFrom } : {}),
             })),

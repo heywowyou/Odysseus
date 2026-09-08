@@ -146,10 +146,12 @@ function detectMissingHreflang(
   if (prefixes.size < 2) return undefined;
 
   const languages = [...prefixes].sort();
-  // Attributed to the crawl start URL, following the llms-txt/sitemap/CrUX
-  // precedent for a fact that is true of the site rather than of one page.
-  // pages[0] is whatever the crawl happened to reach first, which on a real
-  // trilingual site anchored this finding to an English activities page.
+  // Attributed to the site-level anchor resolveSiteLevelAnchorUrl picked
+  // (normalize.ts): the start URL when it was itself content-checked, else
+  // the content-checked page closest to the homepage (issue #101). The raw
+  // start URL alone could be a page no scanner ever ran on, and pages[0]
+  // is whatever the crawl happened to reach first - on a real trilingual
+  // site it once anchored this finding to an English activities page.
   const anchorUrl = siteLevelPageUrl ?? pages[0]!.url;
 
   return {

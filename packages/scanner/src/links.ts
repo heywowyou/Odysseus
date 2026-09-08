@@ -183,6 +183,32 @@ export function normalizePageUrl(
   return normalized;
 }
 
+/** The page-identity half of normalizePageUrl, on its own: trailing-slash
+ *  equivalence and fragment stripping, with no origin, extension, or
+ *  exclusion judgment. Issue #102: this rule must hold at every door a URL
+ *  can enter the crawl through, not only link discovery, or two spellings
+ *  of one page are both enqueued, both content-checked, and both counted in
+ *  every analyzed-page denominator. The crawl applies it to its own start
+ *  URL and to operator seeds (discovered links and sitemap entries already
+ *  get it through normalizePageUrl), so a duplicate variant never costs a
+ *  second crawl - the politeness rule makes the prevention, not a
+ *  post-hoc merge, the only acceptable fix. The bare root path is
+ *  deliberately preserved: "https://site.example/" has no shorter
+ *  spelling to collapse to. */
+export function normalizePageIdentityUrl(url: string): string | undefined {
+  let resolved: URL;
+  try {
+    resolved = new URL(url);
+  } catch {
+    return undefined;
+  }
+  resolved.hash = '';
+  if (resolved.pathname.length > 1 && resolved.pathname.endsWith('/')) {
+    resolved.pathname = resolved.pathname.slice(0, -1);
+  }
+  return resolved.toString();
+}
+
 /**
  * Resolves a page's raw href attributes into absolute, deduped internal
  * URLs. "Internal" means exact origin match (protocol + hostname +

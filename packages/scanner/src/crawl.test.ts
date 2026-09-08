@@ -299,12 +299,14 @@ describe('crawlSite continuation-family guard wiring', () => {
 
     // The seed was enqueued directly, never classified, never admitted -
     // so it is visited even though the /page/{n} family is over budget.
-    const seedPage = result.pages.find((page) => page.url === 'https://example.com/page/999/');
+    // Issue #102: the seed's trailing slash is page identity, not part of
+    // it, so the visited page is recorded under the bare spelling.
+    const seedPage = result.pages.find((page) => page.url === 'https://example.com/page/999');
     expect(seedPage?.status).toBe('visited');
     expect(seedPage?.discoveryMethod).toBe('seed');
     const summary = result.continuationGuardSummary;
     expect(summary).toBeDefined();
-    expect(summary!.families[0]!.omittedExampleUrls).not.toContain('https://example.com/page/999/');
+    expect(summary!.families[0]!.omittedExampleUrls).not.toContain('https://example.com/page/999');
   });
 
   it('never governs an eligible sitemap-declared URL even one resembling a continuation', async () => {
@@ -438,5 +440,103 @@ describe('crawlSite non-2xx responses (issue #39)', () => {
 
     expect(result.pages[0]?.status).toBe('visited');
     expect(result.pages[0]?.httpStatus).toBe(204);
+  });
+});
+
+/**
+ * Issue #102: a trailing-slash spelling of a page is the same page as the
+ * bare form. The crawl now applies that identity rule to its own start URL
+ * and to operator seeds (discovered links and sitemap entries already had
+ * it through normalizePageUrl), so the duplicate variant is never enqueued
+ * and never costs a second crawl - a real Briketenia audit content-checked
+ * /fr and /fr/ as two pages and counted both in every analyzed-page
+ * denominator. The recording fake below proves the prevention at the
+ * navigation level, not just in the manifest.
+ */
+describe('crawlSite trailing-slash page identity (issue #102)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function makeRecordingFakeBrowser(anchorsFor: (url: string) => FakeAnchorSpec[]): {
+    browser: Browser;
+    navigated: string[];
+  } {
+    const navigated: string[] = [];
+    const context = {
+      setDefaultTimeout: () => {},
+      setDefaultNavigationTimeout: () => {},
+      newPage: async () => {
+        let currentUrl = 'about:blank';
+        return {
+          goto: async (url: string) => {
+            navigated.push(url);
+            currentUrl = url;
+            return {
+              status: () => 200,
+              headers: () => ({ 'content-type': 'text/html; charset=utf-8' }),
+            };
+          },
+          url: () => currentUrl,
+          $$eval: async (_selector: string, fn: (elements: unknown[]) => unknown) =>
+            fn(anchorsFor(currentUrl).map(fakeAnchorElement)),
+          evaluate: async () => {
+            throw new Error('no DOM in unit mock');
+          },
+          close: async () => {},
+        };
+      },
+      close: async () => {},
+    };
+    return { browser: { newContext: async () => context } as unknown as Browser, navigated };
+  }
+
+  it('never fetches the bare variant of a trailing-slash start URL it links to', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const { browser, navigated } = makeRecordingFakeBrowser((url) =>
+      url === 'https://example.com/hotel' ? [{ href: '/hotel' }, { href: '/chambres' }] : [],
+    );
+    const result = await crawlSite('https://example.com/hotel/', {
+      browser,
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    expect(navigated).toEqual(['https://example.com/hotel', 'https://example.com/chambres']);
+    expect(result.startUrl).toBe('https://example.com/hotel');
+    expect(result.pages.filter((page) => page.status === 'visited')).toHaveLength(2);
+    expect(result.visitedCount).toBe(2);
+  });
+
+  it('collapses a trailing-slash seed onto the start page already enqueued', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const { browser, navigated } = makeRecordingFakeBrowser(() => []);
+    const result = await crawlSite('https://example.com/hotel', {
+      browser,
+      seeds: ['https://example.com/hotel/'],
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    expect(navigated).toEqual(['https://example.com/hotel']);
+    expect(result.startUrl).toBe('https://example.com/hotel');
+    expect(result.visitedCount).toBe(1);
+  });
+
+  it('leaves the bare root start URL unchanged, the one spelling with no shorter form', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const { browser, navigated } = makeRecordingFakeBrowser(() => []);
+    const result = await crawlSite('https://example.com/', {
+      browser,
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    expect(navigated).toEqual(['https://example.com/']);
+    expect(result.startUrl).toBe('https://example.com/');
+    expect(result.visitedCount).toBe(1);
   });
 });

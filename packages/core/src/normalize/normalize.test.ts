@@ -201,7 +201,7 @@ describe('normalizeAudit', () => {
       expect(findings[0]?.category).toBe('geo');
     });
 
-    it('wires the site-wide GEO entity check across every page, attributed to the crawl start URL', () => {
+    it('wires the site-wide GEO entity check across every page, attributed to a content-checked page', () => {
       const findings = normalizeAudit({
         auditId: 'audit-1',
         startedAt: STARTED_AT,
@@ -225,7 +225,9 @@ describe('normalizeAudit', () => {
       });
       const entityMissing = findings.filter((f) => f.ruleId === 'structured-data-entity-missing');
       expect(entityMissing).toHaveLength(1);
-      expect(entityMissing[0]?.pageUrls).toEqual(['https://example.com/']);
+      // Issue #101: the start URL carries no scan here, so the site-level
+      // fact must anchor to the page that was actually content-checked.
+      expect(entityMissing[0]?.pageUrls).toEqual(['https://example.com/about']);
     });
 
     it('wires robots-disallow-broad from the crawl input', () => {
@@ -365,7 +367,7 @@ describe('normalizeAudit hreflang wiring', () => {
     expect(missing[0]?.description).toContain('en, es, fr');
   });
 
-  it('attributes the site-level finding to the crawl start URL, not the first page reached', () => {
+  it('anchors to a content-checked page when the crawl start URL was never scanned (issue #101)', () => {
     const findings = normalizeAudit({
       auditId: 'audit-1',
       startedAt: STARTED_AT,
@@ -374,6 +376,33 @@ describe('normalizeAudit hreflang wiring', () => {
         pageWithHreflang('https://example.com/fr/accueil', []),
       ],
       crawl: { startUrl: 'https://example.com/', pages: [] },
+    });
+    const missing = findings.filter((f) => f.ruleId === 'hreflang-missing');
+    expect(missing).toHaveLength(1);
+    // The start URL carries no scan here, so anchoring the site-level fact
+    // to it would attribute it to a page no scanner ran on (and pushed the
+    // report's affected-page count past its own analyzed scope). Ties on
+    // depth break by URL ascending, hence /en/activities.
+    expect(missing[0]?.pageUrls).toEqual(['https://example.com/en/activities']);
+  });
+
+  it('keeps anchoring to the crawl start URL when the start URL itself was content-checked', () => {
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [
+        pageWithHreflang('https://example.com/', []),
+        pageWithHreflang('https://example.com/fr/accueil', []),
+        pageWithHreflang('https://example.com/en/activities', []),
+      ],
+      crawl: {
+        startUrl: 'https://example.com/',
+        pages: [
+          { url: 'https://example.com/', status: 'visited', depth: 0 },
+          { url: 'https://example.com/fr/accueil', status: 'visited', depth: 1 },
+          { url: 'https://example.com/en/activities', status: 'visited', depth: 1 },
+        ],
+      },
     });
     const missing = findings.filter((f) => f.ruleId === 'hreflang-missing');
     expect(missing).toHaveLength(1);
@@ -422,5 +451,97 @@ describe('normalizeAudit hreflang wiring', () => {
       ],
     });
     expect(findings.filter((f) => f.ruleId === 'hreflang-no-return-link')).toHaveLength(1);
+  });
+});
+
+/**
+ * Issue #101 regression cover, shaped after the real Villas Foch audit:
+ * the crawl start URL (and every language root) was recorded
+ * discovered-not-scanned, yet the three site-level findings carried it as
+ * their affected page. The executive summary then claimed findings on 29
+ * pages of a 28-page analyzed scope, and the appendix attributed CrUX
+ * field data, a hreflang absence, and a structured-data absence to a page
+ * on which no check ever ran. Every site-level emitter must anchor to a
+ * page that was actually content-checked.
+ */
+describe('site-level findings anchor to a content-checked page (issue #101)', () => {
+  const START_URL = 'https://villasfoch.test/';
+
+  function pageWithoutHeadMarkup(url: string) {
+    return buildNormalizePageInput({
+      url,
+      headMetadata: {
+        pageUrl: url,
+        title: null,
+        metaDescription: null,
+        canonicalUrls: [],
+        openGraphTags: {},
+        jsonLdBlocks: [],
+        headings: [],
+        hreflangLinks: [],
+        robotsMeta: null,
+      },
+    });
+  }
+
+  const input = {
+    auditId: 'audit-1',
+    startedAt: STARTED_AT,
+    // The shallowest content-checked page wins the anchor; the language
+    // roots were crawled for links only, so no scanner ran on them.
+    pages: [
+      pageWithoutHeadMarkup('https://villasfoch.test/fr/chambres'),
+      pageWithoutHeadMarkup('https://villasfoch.test/en/rooms'),
+    ],
+    crawl: {
+      startUrl: START_URL,
+      pages: [
+        { url: START_URL, status: 'discovered-not-scanned' as const, depth: 0 },
+        { url: 'https://villasfoch.test/fr', status: 'discovered-not-scanned' as const, depth: 0 },
+        { url: 'https://villasfoch.test/en', status: 'discovered-not-scanned' as const, depth: 0 },
+        {
+          url: 'https://villasfoch.test/fr/chambres',
+          status: 'visited' as const,
+          depth: 1,
+          httpStatus: 200,
+        },
+        {
+          url: 'https://villasfoch.test/en/rooms',
+          status: 'visited' as const,
+          depth: 2,
+          httpStatus: 200,
+        },
+      ],
+    },
+    cruxFieldData: { available: true, cls: { p75: 0.3 } },
+  };
+
+  it('anchors crux-cls-poor to the shallowest content-checked page, not the start URL', () => {
+    const findings = normalizeAudit(input);
+    const crux = findings.filter((f) => f.ruleId === 'crux-cls-poor');
+    expect(crux).toHaveLength(1);
+    expect(crux[0]?.pageUrls).toEqual(['https://villasfoch.test/fr/chambres']);
+  });
+
+  it('anchors hreflang-missing to a content-checked page, not the start URL', () => {
+    const findings = normalizeAudit(input);
+    const missing = findings.filter((f) => f.ruleId === 'hreflang-missing');
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.pageUrls).toEqual(['https://villasfoch.test/fr/chambres']);
+  });
+
+  it('anchors structured-data-entity-missing to a content-checked page, not the start URL', () => {
+    const findings = normalizeAudit(input);
+    const entity = findings.filter((f) => f.ruleId === 'structured-data-entity-missing');
+    expect(entity).toHaveLength(1);
+    expect(entity[0]?.pageUrls).toEqual(['https://villasfoch.test/fr/chambres']);
+  });
+
+  it('emits no site-level finding at all when nothing was content-checked', () => {
+    const findings = normalizeAudit({ ...input, pages: [] });
+    const ruleIds = findings.map((f) => f.ruleId);
+    expect(ruleIds).not.toContain('crux-cls-poor');
+    expect(ruleIds).not.toContain('hreflang-missing');
+    expect(ruleIds).not.toContain('structured-data-entity-missing');
   });
 });
