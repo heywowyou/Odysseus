@@ -107,9 +107,15 @@ prospects on the same terms as any other e-commerce prospect, not held
 back out of caution. It may state that a booking flow concluding a
 contract online is generally treated as an electronic commerce service,
 attributed as a general reading rather than as this company's settled
-position, per section 7's report-not-conclude rule. First study and
-first outreach wave still target unambiguous e-commerce, chosen for
-volume and clarity of framing, not because hotels are legally weaker.
+position, per section 7's report-not-conclude rule.
+
+**First-wave application.** The first outreach wave targets hotels.
+Ruled by the operator on 2026-09-08 and recorded in
+`docs/product/first-100-rollout-runbook.md`: this section's practical
+effect governs the first wave, superseding the older primary-status
+requirement in the 9c milestone note of `docs/decisions/trade-offs.md`.
+The argument B facts block may be used with hotel drafts from the first
+send, still subject to section 7's report-not-conclude rule.
 
 **Known objection, unresolved: "my site predates June 2025."** Some
 commercial sources state that services or content published before 2025
