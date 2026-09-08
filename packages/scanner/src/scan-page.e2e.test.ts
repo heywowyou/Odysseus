@@ -50,8 +50,11 @@ describe('scanPage against fixtures/spa-demo', () => {
       result.axe?.violations.map((violation: { id: string }) => violation.id) ?? [];
     expect(violationIds).toEqual(expect.arrayContaining(['color-contrast', 'image-alt']));
 
+    // Lighthouse is asked only for the two categories whose audits can
+    // become findings (trade-offs 1 and 74); the other two scores stopped
+    // being recorded by design, so they must not be asserted here.
     const categories = result.lighthouse?.categories ?? {};
-    for (const key of ['performance', 'accessibility', 'seo', 'best-practices']) {
+    for (const key of ['performance', 'seo']) {
       expect(categories).toHaveProperty(key);
       expect(typeof categories[key]?.score).toBe('number');
     }

@@ -8,6 +8,7 @@ import { normalizeAudit } from '@odysseus/core';
 import { launchBrowser } from '../browser.js';
 import { scanSite } from '../scan-site.js';
 import { buildAuditDir, buildPageDir } from './paths.js';
+import { couldEverBeKept } from './prune-screenshots.js';
 import { writeAuditArtifacts } from './write-audit.js';
 import { writeFindingsFile } from './write-findings.js';
 
@@ -105,8 +106,16 @@ describe('writeAuditArtifacts against fixtures/spa-demo', () => {
       const pageDir = buildPageDir(pageResult.url);
       const pageDirPath = path.join(result.auditDir, 'pages', pageDir);
       expect(existsSync(path.join(pageDirPath, 'scan.json'))).toBe(true);
-      expect(existsSync(path.join(pageDirPath, 'raw.png'))).toBe(true);
-      expect(existsSync(path.join(pageDirPath, 'rendered.png'))).toBe(true);
+
+      // Capture is gated on couldEverBeKept (both screenshots or neither):
+      // a page the pruner would rank out carries no pair at all, and the
+      // homepage here is the visited seed URL, matching scanSite.
+      const captured = couldEverBeKept({
+        missingPercent: pageResult.renderDiff?.missingPercent,
+        isHomepage: pageResult.url === TEST_URL,
+      });
+      expect(existsSync(path.join(pageDirPath, 'raw.png'))).toBe(captured);
+      expect(existsSync(path.join(pageDirPath, 'rendered.png'))).toBe(captured);
 
       const scanJson = JSON.parse(
         await fs.readFile(path.join(pageDirPath, 'scan.json'), 'utf-8'),
