@@ -42,9 +42,11 @@ export interface PriorityEvidence {
    *  the finding the sentence actually quotes, so the two can never
    *  disagree. */
   representativePageUrl: string | undefined;
-  /** Exact count of distinct pages across the whole priority. */
+  /** Exact count of distinct pages across the whole priority's finding
+   *  set, confined to the visited scope (see buildPriorityEvidence). */
   uniquePageCount: number;
-  /** Exact sum of every finding's occurrence count in this priority. */
+  /** Exact sum of the occurrence totals of the priority's visited-scope
+   *  findings (see buildPriorityEvidence). */
   occurrenceCount: number;
 }
 
@@ -148,14 +150,23 @@ export function classifyPriorityOwnership(
  *    is an artifact of scan timing, not something a reader should see
  *    wobble between renders;
  *  - counts: the exact distinct-page count and the exact occurrence sum
- *    across every finding in the priority, never an approximation. The
- *    page count is confined to {scopePageUrls} when the caller supplies
- *    the analyzed scope (issue #41): a finding can cite a URL outside the
- *    visited scope (an origin-level finding recorded against a
- *    discovered-but-not-scanned page), and a priority card and the
- *    checklist both render that count against the visited-page
- *    denominator - a numerator from a wider population than the
- *    denominator rendered a real report as "29 pages sur 28". */
+ *    across the priority's full resolved finding set, the same set the
+ *    card prints under its finding references and its ownership line
+ *    counts (issue #100: letting the category narrowing below shrink the
+ *    counts made a real card print "32 occurrences" while listing
+ *    findings carrying 33, against its own annex). Both counts are
+ *    confined to the same visited scope (issue #41 keeps the pages half
+ *    confined, since it renders against the visited-page denominator, so
+ *    the occurrences half is confined to match): a finding whose every
+ *    cited page sits outside the visited scope contributes to neither
+ *    count, so the pages half and the occurrences half of the sentence
+ *    always describe one population. Occurrences are stored as one
+ *    per-finding total, so a finding cited on both scopes contributes
+ *    its in-scope pages and its full occurrence total; per-page
+ *    occurrence attribution below the finding does not exist in the
+ *    stored document. A finding citing no page at all cannot be placed
+ *    outside the scope by anything in the document, so it keeps its
+ *    occurrences. */
 function buildPriorityEvidence(
   findings: readonly Finding[],
   language: ReportLanguage,
@@ -164,13 +175,14 @@ function buildPriorityEvidence(
    *  the same pages the "sur {totalPages}" denominator counts. */
   scopePageUrls: ReadonlySet<string>,
   /** Issue #84: a theme's own category. The observation sentence names the
-   *  priority by this category ("Accessibilité"), so its representative
-   *  finding and its page/occurrence counts must come from findings that
+   *  priority by this category ("Accessibilité") and quotes one finding's
+   *  label, so the representative finding must come from findings that
    *  actually belong to it - otherwise a critical finding from an unrelated
    *  category (CLS, a performance metric, inside an accessibility theme)
-   *  can become the accessibility example, and its occurrences inflate an
-   *  accessibility total past the site's own accessibility figure. Falls
-   *  back to the full finding set only when the theme has no same-category
+   *  can become the accessibility example. Issue #100 confines the
+   *  narrowing to this one selection: the page and occurrence counts are
+   *  computed over the card's full resolved finding set. Falls back to the
+   *  full finding set only when the theme has no same-category
    *  finding at all, which should not normally happen but must not throw. */
   category: Theme['category'],
 ): PriorityEvidence {
@@ -181,21 +193,27 @@ function buildPriorityEvidence(
     throw new Error('Priority evidence requires at least one resolved finding');
   }
   const sameCategory = findings.filter((finding) => finding.category === category);
-  const scoped = sameCategory.length > 0 ? sameCategory : findings;
+  const representativePool = sameCategory.length > 0 ? sameCategory : findings;
   // Strict code-point lexicographic order for the findingId tie-break, not
   // localeCompare: the plan's selection rule is lexicographic, and a locale
   // collation could reorder ids differently across ICU versions.
-  const representative = [...scoped].sort(
+  const representative = [...representativePool].sort(
     (a, b) =>
       SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] ||
       (a.findingId < b.findingId ? -1 : a.findingId > b.findingId ? 1 : 0),
   )[0]!;
+  // Issue #100: the counted population is the card's whole finding set
+  // minus the findings the visited scope cannot see, not the
+  // category-narrowed subset above.
+  const inScope = findings.filter(
+    (finding) =>
+      finding.pageUrls.length === 0 || finding.pageUrls.some((url) => scopePageUrls.has(url)),
+  );
   const pageUrls = [
     ...new Set(
-      scoped
+      inScope
         .flatMap((finding) => finding.pageUrls)
-        // Issue #41: both surfaces rendering this count state it against the
-        // visited-page total, so both sides must count the same population.
+        // A finding cited on both scopes keeps only its in-scope pages.
         .filter((url) => scopePageUrls.has(url)),
     ),
   ].sort();
@@ -208,7 +226,7 @@ function buildPriorityEvidence(
     ),
     representativePageUrl: [...new Set(representative.pageUrls)].sort()[0],
     uniquePageCount: pageUrls.length,
-    occurrenceCount: scoped.reduce((total, finding) => total + finding.occurrences, 0),
+    occurrenceCount: inScope.reduce((total, finding) => total + finding.occurrences, 0),
   };
 }
 
@@ -218,9 +236,10 @@ function buildPriorityEvidence(
  *  is always built so even this path renders a concrete observation;
  *  ownership counts stay zeroed because no manifest is available here.
  *  scopePageUrls defaults to an empty set, i.e. "no analyzed scope known":
- *  the page count is a scope-relative figure (see buildPriorityEvidence),
- *  so a caller that cannot supply the manifest's visited pages gets zero,
- *  never a count from an unstated population. */
+ *  both counts are scope-relative figures (see buildPriorityEvidence), so
+ *  a caller that cannot supply the manifest's visited pages gets zero for
+ *  every finding that cites a page, never a count from an unstated
+ *  population. */
 export function buildLegacyPriority(
   theme: Theme,
   displayRank: number,

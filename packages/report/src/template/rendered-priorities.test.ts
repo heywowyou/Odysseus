@@ -129,8 +129,9 @@ describe('summarizePriorityOwnership', () => {
 // finding by highest severity then lexicographically smallest findingId,
 // representative page as the lexicographically first entry of that
 // finding's own pageUrls (issue #40), and exact unique-page and occurrence
-// counts, with the page count confined to the manifest's visited pages
-// (issue #41).
+// counts, with both counts confined to the same visited-page population
+// (issue #41 for pages, issue #100 for occurrences) and computed over the
+// card's full finding set (issue #100).
 describe('plan 018 step 6: deterministic priority evidence', () => {
   const manifest = { pages: [] } as never;
 
@@ -335,7 +336,14 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
     expect(priority.evidence.representativeFinding.findingId).toBe('f001');
   });
 
-  it('confines occurrence and page counts to the theme own category when a same-category finding exists', () => {
+  // Issue #100: the card's counts cover its full resolved finding set, the
+  // same set the card lists under its finding references and its ownership
+  // line counts. The category narrowing (issue #84) survives only in
+  // representative selection: the same-category f001 still wins the quoted
+  // slot over the higher-severity cross-category f002, but f002's page and
+  // its 46 occurrences are now counted (the old code printed 5 occurrences
+  // on 1 page for a card listing findings carrying 51 on 2).
+  it('counts the full finding set across categories while the representative stays same-category', () => {
     const findings = [
       buildFinding({
         findingId: 'f001',
@@ -363,8 +371,54 @@ describe('plan 018 step 6: deterministic priority evidence', () => {
     const priorities = buildRenderedPriorities(themes, findings, scopedManifest, 'en');
     const priority = priorities[0]!;
 
-    expect(priority.evidence.occurrenceCount).toBe(5);
-    expect(priority.evidence.uniquePageCount).toBe(1);
+    expect(priority.evidence.occurrenceCount).toBe(51);
+    expect(priority.evidence.uniquePageCount).toBe(2);
+    expect(priority.evidence.representativeFinding.findingId).toBe('f001');
+  });
+
+  // Issue #100, second asymmetry: both counts describe one population. A
+  // finding whose every cited page sits outside the visited scope
+  // contributes to neither count (the old code counted its occurrence
+  // while excluding its page, so the pages half and the occurrences half
+  // of one sentence disagreed about a page). A finding cited on both
+  // scopes contributes its in-scope pages and its full occurrence total:
+  // occurrences are stored as one per-finding number, so there is nothing
+  // to apportion a partially out-of-scope finding by.
+  it('excludes a wholly out-of-scope finding from the occurrence count exactly as from the page count', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        occurrences: 3,
+        pageUrls: ['https://example.com/a', 'https://example.com/b'],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        occurrences: 1,
+        pageUrls: ['https://example.com/not-crawled'],
+      }),
+      buildFinding({
+        findingId: 'f003',
+        occurrences: 5,
+        pageUrls: ['https://example.com/a', 'https://example.com/also-not-crawled'],
+      }),
+    ];
+    const themes = [buildTheme(['f001', 'f002', 'f003'])];
+    const manifest = {
+      pages: [
+        { url: 'https://example.com/a', status: 'visited' },
+        { url: 'https://example.com/b', status: 'visited' },
+        { url: 'https://example.com/not-crawled', status: 'discovered-not-scanned' },
+      ],
+    } as never;
+
+    const priorities = buildRenderedPriorities(themes, findings, manifest, 'en');
+    const priority = priorities[0]!;
+
+    // f002 is wholly outside the visited scope: no page, no occurrence.
+    // f003 spans both scopes: only its in-scope /a enters the page count,
+    // and its occurrences stay its stored total of 5. 3 + 0 + 5 = 8.
+    expect(priority.evidence.occurrenceCount).toBe(8);
+    expect(priority.evidence.uniquePageCount).toBe(2);
   });
 
   it('falls back to the full finding set when the theme has no same-category finding at all', () => {
