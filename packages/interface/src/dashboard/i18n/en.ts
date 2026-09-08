@@ -133,6 +133,11 @@ export const en: DashboardStrings = {
       'Leave empty to explore the whole site: a large site can take several hours. For a quick trial, set a page limit.',
     maxDepthLabel: 'How many clicks from the home page to follow',
     delayLabel: 'Pause between page loads (ms)',
+    delayHint:
+      'Leave empty for the default. Values below the default are raised to it, so this can only slow the crawl down.',
+    scanConcurrencyLabel: 'Pages scanned at once',
+    scanConcurrencyHint:
+      'Leave empty for the default. Values above the default are lowered to it, so this can only reduce the load on the site. Useful for sites that reject bursts of requests.',
     seedsLabel: 'Extra starting pages to include (one per line)',
     seedsPlaceholder: 'https://example.co.uk/unlinked-page',
     exclusionsLabel: 'Addresses to skip (use * as a wildcard, one per line)',

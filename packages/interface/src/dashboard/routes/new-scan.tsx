@@ -180,7 +180,7 @@ export function NewScanPage() {
               </Button>
               {advancedOpen ? (
                 <div className="mt-4 flex flex-col gap-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <Field
                       label={copy.maxPagesLabel}
                       htmlFor="new-scan-max-pages"
@@ -203,13 +203,30 @@ export function NewScanPage() {
                         onChange={(event) => setField('maxDepth', event.target.value)}
                       />
                     </Field>
-                    <Field label={copy.delayLabel} htmlFor="new-scan-delay-ms">
+                    <Field
+                      label={copy.delayLabel}
+                      htmlFor="new-scan-delay-ms"
+                      hint={copy.delayHint}
+                    >
                       <Input
                         id="new-scan-delay-ms"
                         type="number"
                         min={0}
                         value={form.delayMs}
                         onChange={(event) => setField('delayMs', event.target.value)}
+                      />
+                    </Field>
+                    <Field
+                      label={copy.scanConcurrencyLabel}
+                      htmlFor="new-scan-scan-concurrency"
+                      hint={copy.scanConcurrencyHint}
+                    >
+                      <Input
+                        id="new-scan-scan-concurrency"
+                        type="number"
+                        min={1}
+                        value={form.scanConcurrency}
+                        onChange={(event) => setField('scanConcurrency', event.target.value)}
                       />
                     </Field>
                   </div>

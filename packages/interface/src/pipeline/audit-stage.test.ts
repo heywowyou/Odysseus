@@ -66,6 +66,13 @@ function fakeManifest() {
   };
 }
 
+/** The config snapshot is the audit's own disclosure of the pacing that
+ *  actually applied, so the clamp tests assert on it as well as on what
+ *  scanSite received. */
+function capturedConfig() {
+  return vi.mocked(writeAuditArtifacts).mock.calls[0]?.[0]?.config;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(launchBrowser).mockResolvedValue({ browser: fakeBrowser, debugPort: 9222 });
@@ -219,6 +226,69 @@ describe('runAuditStage', () => {
     const options = vi.mocked(scanSite).mock.calls[0]?.[1];
     expect(options).not.toHaveProperty('maxPages');
     expect(options).not.toHaveProperty('maxDepth');
+  });
+
+  // Issue #111: a per-job pacing option may only ever slow the crawl down.
+  // The delay is clamped up to the configured CRAWL_DELAY_MS (robots.txt's
+  // own crawl-delay stays a further floor inside crawlSite); the scan
+  // concurrency is clamped down to the configured SCAN_CONCURRENCY. The
+  // config snapshot passed to writeAuditArtifacts must record the effective
+  // values, so a report generated under per-site slow pacing is
+  // self-documenting like a MAX_PAGES cap.
+  it('passes a per-job crawl delay above the configured default through unchanged', async () => {
+    await runAuditStage('https://example.com/', { delayMs: 60_000 }, fakeConnection);
+
+    expect(scanSite).toHaveBeenCalledWith(
+      'https://example.com/',
+      expect.objectContaining({ delayMs: 60_000 }),
+    );
+    expect(capturedConfig()?.crawlDelayMs).toBe(60_000);
+  });
+
+  it('raises a per-job crawl delay below the configured default up to it', async () => {
+    await runAuditStage('https://example.com/', { delayMs: 100 }, fakeConnection);
+
+    expect(scanSite).toHaveBeenCalledWith(
+      'https://example.com/',
+      expect.objectContaining({ delayMs: 1000 }),
+    );
+    expect(capturedConfig()?.crawlDelayMs).toBe(1000);
+  });
+
+  it('records the configured default crawl delay when no per-job delay was requested', async () => {
+    await runAuditStage('https://example.com/', {}, fakeConnection);
+
+    const options = vi.mocked(scanSite).mock.calls[0]?.[1];
+    expect(options).not.toHaveProperty('delayMs');
+    expect(capturedConfig()?.crawlDelayMs).toBe(1000);
+  });
+
+  it('lowers a per-job scan concurrency above the configured default down to it', async () => {
+    await runAuditStage('https://example.com/', { scanConcurrency: 10 }, fakeConnection);
+
+    expect(scanSite).toHaveBeenCalledWith(
+      'https://example.com/',
+      expect.objectContaining({ concurrency: 3 }),
+    );
+    expect(capturedConfig()?.scanConcurrency).toBe(3);
+  });
+
+  it('passes a per-job scan concurrency at or below the configured default through unchanged', async () => {
+    await runAuditStage('https://example.com/', { scanConcurrency: 1 }, fakeConnection);
+
+    expect(scanSite).toHaveBeenCalledWith(
+      'https://example.com/',
+      expect.objectContaining({ concurrency: 1 }),
+    );
+    expect(capturedConfig()?.scanConcurrency).toBe(1);
+  });
+
+  it('records the configured default scan concurrency when no per-job value was requested', async () => {
+    await runAuditStage('https://example.com/', {}, fakeConnection);
+
+    const options = vi.mocked(scanSite).mock.calls[0]?.[1];
+    expect(options).not.toHaveProperty('concurrency');
+    expect(capturedConfig()?.scanConcurrency).toBe(3);
   });
 
   it('enables the staged full-audit planner when Lighthouse is not skipped', async () => {

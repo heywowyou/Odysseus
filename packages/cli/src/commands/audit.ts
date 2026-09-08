@@ -63,6 +63,20 @@ export function registerAuditCommand(program: Command): void {
     .option('--max-pages <n>', 'Maximum number of pages to visit', parsePositiveInt)
     .option('--max-depth <n>', 'Maximum link depth from the homepage', parsePositiveInt)
     .option(
+      '--crawl-delay-ms <n>',
+      "Minimum pause in milliseconds between this audit's requests to the site (issue #111: the " +
+        'coverage gate\'s "slow the crawl" remedy for one site). Values below the configured ' +
+        "default are raised to it, and robots.txt's own crawl-delay still applies as a floor, " +
+        'so this can only slow the crawl down.',
+      parsePositiveInt,
+    )
+    .option(
+      '--scan-concurrency <n>',
+      'Maximum number of pages scanned at once for this audit. Values above the configured ' +
+        'default are lowered to it, so this can only reduce the load on the site.',
+      parsePositiveInt,
+    )
+    .option(
       '--siren <number>',
       'Manually supplied SIREN, used for the obligation determination when the site itself does ' +
         'not publish one (or to cross-check one that does). Never suppresses the LCEN finding.',
@@ -86,6 +100,8 @@ export function registerAuditCommand(program: Command): void {
         opts: {
           maxPages?: number;
           maxDepth?: number;
+          crawlDelayMs?: number;
+          scanConcurrency?: number;
           siren?: string;
           overrideTransactionalFlow?: boolean;
           overrideTransactionalFlowReason?: string;
@@ -120,6 +136,10 @@ export function registerAuditCommand(program: Command): void {
             {
               ...(opts.maxPages !== undefined ? { maxPages: opts.maxPages } : {}),
               ...(opts.maxDepth !== undefined ? { maxDepth: opts.maxDepth } : {}),
+              ...(opts.crawlDelayMs !== undefined ? { delayMs: opts.crawlDelayMs } : {}),
+              ...(opts.scanConcurrency !== undefined
+                ? { scanConcurrency: opts.scanConcurrency }
+                : {}),
               ...(opts.siren !== undefined ? { manualSiren: opts.siren } : {}),
               ...(siteSignalOverrides !== undefined ? { siteSignalOverrides } : {}),
             },

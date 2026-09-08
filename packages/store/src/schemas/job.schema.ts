@@ -46,6 +46,14 @@ export interface JobOptionsSnapshot {
   maxPages?: number;
   maxDepth?: number;
   delayMs?: number;
+  /** Full-audit jobs only (issue #111): how many pages this job's scan
+   *  phase may process at once. The audit stage clamps it down to the
+   *  configured SCAN_CONCURRENCY, and delayMs up to the configured
+   *  CRAWL_DELAY_MS, so a per-job pacing option can only ever reduce the
+   *  load a crawl puts on a site, never raise it past production config
+   *  or robots.txt. The applied values are what the audit's config
+   *  snapshot records. */
+  scanConcurrency?: number;
   /** Checksum-validated by the route handler before a job is ever
    *  created (see the manual-SIREN milestone) - full-audit jobs only,
    *  never read for a prospecting job. */
@@ -234,6 +242,7 @@ const jobOptionsSchema = new Schema(
     maxPages: { type: Number },
     maxDepth: { type: Number },
     delayMs: { type: Number },
+    scanConcurrency: { type: Number },
     siren: { type: String },
     transactionalFlow: { type: Boolean },
     transactionalFlowReason: { type: String },

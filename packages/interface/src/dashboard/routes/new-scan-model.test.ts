@@ -107,6 +107,7 @@ describe('buildScanRequest', () => {
         maxPages: '50',
         maxDepth: '3',
         delayMs: '700',
+        scanConcurrency: '2',
         seeds: ' https://exemple.fr/a \n\n https://exemple.fr/b ',
         exclusions: 'https://exemple.fr/blog/*',
         bookingEngineUrl: ' https://booking.example.fr/x ',
@@ -119,6 +120,7 @@ describe('buildScanRequest', () => {
         maxPages: 50,
         maxDepth: 3,
         delayMs: 700,
+        scanConcurrency: 2,
         siren: '552100554',
         transactionalFlow: true,
         transactionalFlowReason: 'Moteur de reservation dedie',
@@ -165,12 +167,25 @@ describe('buildScanRequest', () => {
         maxPages: '25',
         maxDepth: '0',
         delayMs: 'not-a-number',
+        scanConcurrency: 'nope',
       }),
     );
     if (request.type !== 'full-audit') {
       throw new Error('expected a full-audit request');
     }
     expect(request.options).toEqual({ maxPages: 25 });
+  });
+
+  it('drops a scanConcurrency that is zero or negative, like the other numeric options', () => {
+    for (const raw of ['0', '-3']) {
+      const request = buildScanRequest(
+        formValues({ url: 'https://exemple.fr', scanConcurrency: raw }),
+      );
+      if (request.type !== 'full-audit') {
+        throw new Error('expected a full-audit request');
+      }
+      expect(request.options).toEqual({});
+    }
   });
 
   it('builds a prospecting body by splitting lines, trimming, and dropping empties', () => {

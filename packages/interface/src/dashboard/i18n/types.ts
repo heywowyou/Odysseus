@@ -161,6 +161,15 @@ export interface DashboardStrings {
     maxPagesHint: string;
     maxDepthLabel: string;
     delayLabel: string;
+    /** Stands under the delay input: the server raises values below its
+     *  configured default up to it, so the option only slows the crawl. */
+    delayHint: string;
+    scanConcurrencyLabel: string;
+    /** Stands under the scan-concurrency input: the server lowers values
+     *  above its configured default down to it, so the option only reduces
+     *  the load on the scanned site. The default itself is not shown here;
+     *  the operator reads it from the server env config. */
+    scanConcurrencyHint: string;
     seedsLabel: string;
     seedsPlaceholder: string;
     exclusionsLabel: string;

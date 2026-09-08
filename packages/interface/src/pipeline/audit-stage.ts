@@ -50,11 +50,17 @@ import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 export interface RunAuditStageOptions {
   maxPages?: number;
   maxDepth?: number;
-  /** Not exposed by the `odysseus audit` CLI flags today, but needed by
-   *  the interface's advanced-options delay override (brief section
-   *  7.1) - a real, disclosed extension of this stage's scope beyond
-   *  what the CLI command it was extracted from did. */
+  /** Per-job crawl pacing (issue #111). Exposed by the `odysseus audit`
+   *  CLI (--crawl-delay-ms) and the interface's advanced-options delay
+   *  override (brief section 7.1). Clamped up to the configured
+   *  CRAWL_DELAY_MS before it reaches scanSite, so a job can slow its own
+   *  crawl below production defaults but never speed it up; robots.txt's
+   *  own crawl-delay stays a further floor inside crawlSite. */
   delayMs?: number;
+  /** Per-job scan-lane bound (issue #111, --scan-concurrency on the CLI).
+   *  Clamped down to the configured SCAN_CONCURRENCY for the same reason:
+   *  the option can only reduce load, never raise it. */
+  scanConcurrency?: number;
   onProgress?: (event: ScanProgressEvent) => void;
   /** Checksum-validated at the CLI/interface boundary before it ever
    *  reaches this stage (see the manual-SIREN milestone) - runObligationStage
@@ -119,6 +125,21 @@ export async function runAuditStage(
     const auditDir = buildAuditDir(getArtifactsRoot(), hostname, startedAt);
     const screenshotDir = path.join(auditDir, 'pages');
 
+    // Issue #111: a per-job pacing option may only ever slow the crawl
+    // down, so it can also serve as the coverage gate's "slow the crawl"
+    // remediation for one site without reconfiguring production. The delay
+    // is raised to the configured default (robots.txt's crawl-delay stays a
+    // further floor inside crawlSite); the scan concurrency is lowered to
+    // the configured default. The config snapshot below records these
+    // effective values, keeping a report generated under per-site slow
+    // pacing self-documenting, like a MAX_PAGES cap today.
+    const effectiveDelayMs =
+      options.delayMs !== undefined ? Math.max(options.delayMs, getCrawlDelayMs()) : undefined;
+    const effectiveScanConcurrency =
+      options.scanConcurrency !== undefined
+        ? Math.min(options.scanConcurrency, getScanConcurrency())
+        : undefined;
+
     const siteResult = await scanSite(url, {
       browser,
       debugPort,
@@ -133,7 +154,8 @@ export async function runAuditStage(
       writePagesAsScanned: true,
       ...(options.maxPages !== undefined ? { maxPages: options.maxPages } : {}),
       ...(options.maxDepth !== undefined ? { maxDepth: options.maxDepth } : {}),
-      ...(options.delayMs !== undefined ? { delayMs: options.delayMs } : {}),
+      ...(effectiveDelayMs !== undefined ? { delayMs: effectiveDelayMs } : {}),
+      ...(effectiveScanConcurrency !== undefined ? { concurrency: effectiveScanConcurrency } : {}),
       ...(options.onProgress !== undefined ? { onProgress: options.onProgress } : {}),
       ...(options.seeds !== undefined ? { seeds: options.seeds } : {}),
       ...(options.exclusions !== undefined ? { exclusions: options.exclusions } : {}),
@@ -158,12 +180,12 @@ export async function runAuditStage(
     const config: AuditConfigSnapshot = {
       maxPages: options.maxPages ?? getMaxPages(),
       maxDepth: options.maxDepth ?? getMaxCrawlDepth(),
-      crawlDelayMs: options.delayMs ?? getCrawlDelayMs(),
+      crawlDelayMs: effectiveDelayMs ?? getCrawlDelayMs(),
       pageTimeoutMs: getPageTimeoutMs(),
       lighthouseTimeoutMs: getLighthouseTimeoutMs(),
       renderSettleTimeoutMs: getRenderSettleTimeoutMs(),
       userAgent: getCrawlerUserAgent(),
-      scanConcurrency: getScanConcurrency(),
+      scanConcurrency: effectiveScanConcurrency ?? getScanConcurrency(),
       sitemapMode: options.sitemapMode ?? 'supplement',
     };
 

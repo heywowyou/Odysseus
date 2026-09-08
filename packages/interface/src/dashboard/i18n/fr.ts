@@ -133,6 +133,11 @@ export const fr: DashboardStrings = {
       'Laisser vide signifie que tout le site est exploré : un grand site peut demander plusieurs heures. Pour un essai rapide, fixez une limite de pages.',
     maxDepthLabel: 'Nombre de clics depuis la page d’accueil à suivre',
     delayLabel: 'Pause entre deux pages chargées (ms)',
+    delayHint:
+      'Laisser vide pour la valeur par défaut. Une valeur inférieure à la valeur par défaut est relevée jusqu’à elle : cette option ne peut donc que ralentir l’exploration.',
+    scanConcurrencyLabel: 'Pages analysées en même temps',
+    scanConcurrencyHint:
+      'Laisser vide pour la valeur par défaut. Une valeur supérieure à la valeur par défaut est abaissée jusqu’à elle : cette option ne peut donc que réduire la charge sur le site. Utile pour les sites qui refusent les rafales de requêtes.',
     seedsLabel: 'Pages de départ supplémentaires à inclure (une par ligne)',
     seedsPlaceholder: 'https://exemple.fr/page-non-liee',
     exclusionsLabel: 'Adresses à ignorer (utilisez * comme joker, une par ligne)',

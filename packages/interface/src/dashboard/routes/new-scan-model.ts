@@ -7,6 +7,10 @@ export interface FullAuditScanOptions {
   maxPages?: number;
   maxDepth?: number;
   delayMs?: number;
+  /** Number of pages scanned at once. The server clamps values above its
+   *  configured default downward, so this option can only reduce the load
+   *  on the scanned site, never increase it. */
+  scanConcurrency?: number;
   siren?: string;
   transactionalFlow?: boolean;
   transactionalFlowReason?: string;
@@ -45,6 +49,7 @@ export interface NewScanFormValues {
   maxPages: string;
   maxDepth: string;
   delayMs: string;
+  scanConcurrency: string;
   seeds: string;
   exclusions: string;
   bookingEngineUrl: string;
@@ -61,6 +66,7 @@ export function createEmptyFormValues(): NewScanFormValues {
     maxPages: '',
     maxDepth: '',
     delayMs: '',
+    scanConcurrency: '',
     seeds: '',
     exclusions: '',
     bookingEngineUrl: '',
@@ -156,6 +162,7 @@ export function buildScanRequest(form: NewScanFormValues): ScanRequest {
   const maxPages = parsePositiveIntOption(form.maxPages);
   const maxDepth = parsePositiveIntOption(form.maxDepth);
   const delayMs = parsePositiveIntOption(form.delayMs);
+  const scanConcurrency = parsePositiveIntOption(form.scanConcurrency);
   const siren = form.siren.trim();
   const transactionalFlow = form.transactionalFlow;
   const transactionalFlowReason = form.transactionalFlowReason.trim();
@@ -166,6 +173,7 @@ export function buildScanRequest(form: NewScanFormValues): ScanRequest {
     ...(maxPages !== undefined ? { maxPages } : {}),
     ...(maxDepth !== undefined ? { maxDepth } : {}),
     ...(delayMs !== undefined ? { delayMs } : {}),
+    ...(scanConcurrency !== undefined ? { scanConcurrency } : {}),
     ...(siren !== '' ? { siren: siren.replace(/\s/g, '') } : {}),
     ...(transactionalFlow !== '' ? { transactionalFlow: transactionalFlow === 'true' } : {}),
     ...(transactionalFlow !== '' && transactionalFlowReason !== ''

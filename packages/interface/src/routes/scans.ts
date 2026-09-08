@@ -35,12 +35,12 @@ class OptionsValidationError extends Error {}
 /** A crawl option must be a positive whole number when present. Zero or
  *  a negative value is not "no limit": the crawler applies a stored
  *  option as-is (only an absent one falls back to config), so zero pages
- *  empties the audit, zero depth strands the crawl, and zero delay strips
- *  the politeness pacing of CLAUDE.md rule 5. A fraction cannot be a page
- *  count at all. */
+ *  empties the audit, zero depth strands the crawl, zero delay strips
+ *  the politeness pacing of CLAUDE.md rule 5, and zero scan lanes cannot
+ *  run at all. A fraction cannot be a page count at all. */
 function requirePositiveIntOptions(
   record: Record<string, unknown>,
-  keys: readonly ('maxPages' | 'maxDepth' | 'delayMs')[],
+  keys: readonly ('maxPages' | 'maxDepth' | 'delayMs' | 'scanConcurrency')[],
 ): void {
   for (const key of keys) {
     const raw = record[key];
@@ -55,10 +55,13 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
   const options: JobOptionsSnapshot = {};
   if (raw === undefined || raw === null || typeof raw !== 'object') return options;
   const record = raw as Record<string, unknown>;
-  requirePositiveIntOptions(record, ['maxPages', 'maxDepth', 'delayMs']);
+  requirePositiveIntOptions(record, ['maxPages', 'maxDepth', 'delayMs', 'scanConcurrency']);
   if (typeof record['maxPages'] === 'number') options.maxPages = record['maxPages'];
   if (typeof record['maxDepth'] === 'number') options.maxDepth = record['maxDepth'];
   if (typeof record['delayMs'] === 'number') options.delayMs = record['delayMs'];
+  if (typeof record['scanConcurrency'] === 'number') {
+    options.scanConcurrency = record['scanConcurrency'];
+  }
 
   const rawSiren = record['siren'];
   if (typeof rawSiren === 'string' && rawSiren.trim() !== '') {

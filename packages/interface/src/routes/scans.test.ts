@@ -124,6 +124,9 @@ describe('POST /api/scans numeric crawl option validation', () => {
     ['delayMs', 0],
     ['delayMs', -1000],
     ['delayMs', 99.9],
+    ['scanConcurrency', 0],
+    ['scanConcurrency', -2],
+    ['scanConcurrency', 1.5],
   ] as const)('rejects %s = %s with 400, never creating a job', async (key, value) => {
     const router = new Router();
     registerScanRoutes(router, fakeConnection, fakeQueue);
@@ -148,14 +151,14 @@ describe('POST /api/scans numeric crawl option validation', () => {
     const req = fakeReq({
       type: 'full-audit',
       url: 'https://example.com/',
-      options: { maxPages: 50, maxDepth: 3, delayMs: 1000 },
+      options: { maxPages: 50, maxDepth: 3, delayMs: 1000, scanConcurrency: 2 },
     });
     const res = fakeRes();
     await router.handle(req, res);
 
     expect(res.statusCode).toBe(201);
     const options = vi.mocked(createJob).mock.calls[0]?.[1]?.options;
-    expect(options).toMatchObject({ maxPages: 50, maxDepth: 3, delayMs: 1000 });
+    expect(options).toMatchObject({ maxPages: 50, maxDepth: 3, delayMs: 1000, scanConcurrency: 2 });
   });
 });
 

@@ -51,6 +51,9 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
         ...(job.options.maxPages !== undefined ? { maxPages: job.options.maxPages } : {}),
         ...(job.options.maxDepth !== undefined ? { maxDepth: job.options.maxDepth } : {}),
         ...(job.options.delayMs !== undefined ? { delayMs: job.options.delayMs } : {}),
+        ...(job.options.scanConcurrency !== undefined
+          ? { scanConcurrency: job.options.scanConcurrency }
+          : {}),
         ...(job.options.siren !== undefined ? { manualSiren: job.options.siren } : {}),
         ...(siteSignalOverrides !== undefined ? { siteSignalOverrides } : {}),
         ...(job.options.seeds !== undefined ? { seeds: job.options.seeds } : {}),

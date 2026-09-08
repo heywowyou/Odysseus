@@ -184,12 +184,14 @@ describe('runFullAuditJob', () => {
   });
 
   it('passes job.options through to runAuditStage', async () => {
-    const job = fakeJob({ options: { maxPages: 5, maxDepth: 1, delayMs: 250 } });
+    const job = fakeJob({
+      options: { maxPages: 5, maxDepth: 1, delayMs: 250, scanConcurrency: 1 },
+    });
     await runFullAuditJob(job, ctx);
 
     expect(runAuditStage).toHaveBeenCalledWith(
       'https://example.com/',
-      expect.objectContaining({ maxPages: 5, maxDepth: 1, delayMs: 250 }),
+      expect.objectContaining({ maxPages: 5, maxDepth: 1, delayMs: 250, scanConcurrency: 1 }),
       fakeConnection,
     );
   });
