@@ -14,6 +14,7 @@ import { generateOutreachPreviewHtml } from '@odysseus/report';
 import {
   findOutreachThreadByCandidate,
   getOperatorProspect,
+  getProspectPreviewView,
   getProspectQualificationHistory,
   listOperatorProspects,
   recordHotelCandidateReview,
@@ -21,8 +22,14 @@ import {
 import type { ListOperatorProspectsOptions, OperatorProspectQueue } from '@odysseus/store';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
+import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-preview-store.js';
-import { buildPreviewInput, type PublishPreviewRefusal } from '../outreach/publish-preview.js';
+import {
+  buildPreviewInput,
+  publishPreview,
+  revokePreviewsForDomain,
+  type PublishPreviewRefusal,
+} from '../outreach/publish-preview.js';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import type { Router } from '../router.js';
@@ -85,6 +92,10 @@ const CAMPAIGN_ELIGIBILITIES: readonly HotelCampaignEligibility[] = [
  *  query from carrying a pathological payload while staying far above any
  *  name, commune, or candidate id an operator would paste. */
 const SEARCH_MAX_LENGTH = 100;
+
+/** Revocation reason for dashboard-triggered withdrawals, matching the CLI
+ *  revoke command's default: a fixed string, never operator free prose. */
+const DASHBOARD_REVOKE_REASON = 'operator request';
 
 /** Thrown at this module's boundary so a bad query or body fails fast with
  *  400 instead of travelling into the store (rule: fail fast at the
@@ -453,5 +464,114 @@ export function registerProspectRoutes(router: Router, connection: Connection): 
     }
     const { configured: _configured, ...result } = outcome;
     sendJson(res, 200, result);
+  });
+
+  // Issue #97: the dashboard counterpart of `odysseus prospect preview
+  // publish`, reusing the very same server-side function (publishPreview) and
+  // the same input contract and evidence guards, so neither path can drift.
+  // Serves both dashboard actions that create a link: the first publish for a
+  // candidate with no preview, and re-issue for one that already has a record.
+  // The raw bearer token exists only in this response body (plan 009): it is
+  // never stored, never logged, and the response is marked no-store so no
+  // cache holds what the UI shows exactly once. A refusal is an expected
+  // evidence-gate outcome (200 with the typed refusal), while an unconfigured
+  // bucket is an operator setup problem (503), the same split the draft
+  // routes make.
+  router.post('/api/prospects/:candidateId/preview/publish', async ({ req, res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    // Optional body; the dashboard normally sends none. The only recognised
+    // field is language, the one publish option the CLI also takes.
+    let body: unknown;
+    try {
+      body = await readJsonBody(req);
+    } catch (error) {
+      if (error instanceof PayloadTooLargeError) {
+        sendError(res, 413, 'request body is too large');
+        return;
+      }
+      sendError(res, 400, 'request body must be valid JSON');
+      return;
+    }
+    const rawLanguage =
+      body !== null && typeof body === 'object'
+        ? (body as Record<string, unknown>)['language']
+        : undefined;
+    if (rawLanguage !== undefined && rawLanguage !== 'fr' && rawLanguage !== 'en') {
+      sendError(res, 400, 'language must be "fr" or "en"');
+      return;
+    }
+
+    let publisher;
+    try {
+      publisher = createConfiguredPreviewPublisher();
+    } catch {
+      sendError(res, 503, 'the preview bucket is not configured on this machine');
+      return;
+    }
+    const result = await publishPreview({
+      store: createMongoOutreachPreviewStore(connection, {
+        prescanVersion: CURRENT_PRESCAN_VERSION,
+        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+      }),
+      publisher,
+      publicBaseUrl: getPreviewPublicBaseUrl(),
+      candidateId,
+      language: rawLanguage === 'en' ? 'en' : 'fr',
+      dryRun: false,
+    });
+    if (result.published) {
+      res.setHeader('cache-control', 'no-store');
+      sendJson(res, 200, {
+        published: true,
+        previewId: result.previewId,
+        url: result.url,
+        publicExpiresAt: result.publicExpiresAt,
+      });
+      return;
+    }
+    if (result.refusal === 'candidate-unknown') {
+      sendError(res, 404, 'candidate not found');
+      return;
+    }
+    sendJson(res, 200, { published: false, refusal: result.refusal });
+  });
+
+  // Issue #97: the dashboard counterpart of `odysseus prospect preview
+  // revoke`, again through the same server-side function. The domain comes
+  // from the candidate's own latest preview record, so the route never takes
+  // a domain from the client. Like the CLI path, the stored object is deleted
+  // first: a record can never read revoked while the link still serves.
+  router.post('/api/prospects/:candidateId/preview/revoke', async ({ res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const preview = await getProspectPreviewView(connection, candidateId);
+    if (preview === null) {
+      sendError(res, 404, 'no preview found for this candidate');
+      return;
+    }
+    let publisher;
+    try {
+      publisher = createConfiguredPreviewPublisher();
+    } catch {
+      sendError(res, 503, 'the preview bucket is not configured on this machine');
+      return;
+    }
+    const result = await revokePreviewsForDomain({
+      store: createMongoOutreachPreviewStore(connection, {
+        prescanVersion: CURRENT_PRESCAN_VERSION,
+        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+      }),
+      publisher,
+      domain: preview.domain,
+      reason: DASHBOARD_REVOKE_REASON,
+    });
+    sendJson(res, 200, { revoked: result.revoked, alreadyRevoked: result.alreadyRevoked });
   });
 }

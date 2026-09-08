@@ -583,6 +583,26 @@ export const fr: DashboardStrings = {
       'Cet aperçu est généré depuis les preuves actuellement enregistrées. Il peut différer de celui déjà envoyé si le site a été contrôlé à nouveau.',
     currentPreviewUnavailable: 'Les preuves actuelles ne permettent pas de générer un aperçu.',
     currentPreviewError: 'Impossible de générer l’aperçu actuel.',
+    publishAction: 'Publier l’aperçu',
+    reissueAction: 'Réémettre un lien',
+    revokeAction: 'Retirer l’aperçu',
+    publishConfirmTitle: 'Publier cet aperçu ?',
+    publishConfirmBody:
+      'Un lien public sera créé à partir des preuves actuelles. Il n’est affiché qu’une seule fois : préparez-vous à le copier.',
+    reissueConfirmTitle: 'Émettre un nouveau lien ?',
+    reissueConfirmBody:
+      'Un nouveau lien public sera créé et affiché une seule fois. Le lien précédent continue de fonctionner jusqu’à son expiration ou son retrait.',
+    revokeConfirmTitle: 'Retirer cet aperçu ?',
+    revokeConfirmBody:
+      'Tous les liens publics de cet hôtel cessent de fonctionner immédiatement. C’est irréversible.',
+    actionRefused: 'Rien n’a été publié : le contrôle des preuves a refusé cette action.',
+    actionError: 'Impossible de terminer cette action.',
+    linkOnceTitle: 'Conservez ce lien maintenant',
+    linkOnceWarning:
+      'Par confidentialité, ce lien n’est affiché qu’une seule fois et Odysseus ne le conserve jamais. Copiez-le dans un endroit sûr avant de fermer cette carte ; il ne pourra plus être affiché.',
+    linkCopy: 'Copier le lien',
+    linkCopied: 'Copié',
+    linkConfirmButton: 'J’ai enregistré le lien',
     empty: 'Aucun aperçu publié pour ce prospect.',
   },
   outreachThread: {

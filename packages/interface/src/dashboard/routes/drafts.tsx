@@ -5,6 +5,7 @@ import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { CopyButton } from '../components/ui/copy-button';
 import {
   Dialog,
   DialogContent,
@@ -31,32 +32,6 @@ import type { OutreachDraftRow, OutreachDraftsPage, OutreachDraftText } from './
 
 const POLL_INTERVAL_MS = 5000;
 const SKELETON_ROW_COUNT = 8;
-
-/** Copies one text field and flips to the copied label for a moment. The
- *  clipboard can refuse (permissions, insecure context); the button then
- *  stays usable and quiet, because the text is still on screen to select. */
-function CopyButton(props: { text: string; label: string; copiedLabel: string }): JSX.Element {
-  const [copied, setCopied] = useState(false);
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => {
-        void navigator.clipboard
-          .writeText(props.text)
-          .then(() => {
-            setCopied(true);
-            window.setTimeout(() => {
-              setCopied(false);
-            }, 2000);
-          })
-          .catch(() => {});
-      }}
-    >
-      {copied ? props.copiedLabel : props.label}
-    </Button>
-  );
-}
 
 export function DraftsPage(): JSX.Element {
   const { strings, language } = useI18n();

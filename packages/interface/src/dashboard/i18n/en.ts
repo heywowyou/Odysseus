@@ -573,6 +573,26 @@ export const en: DashboardStrings = {
       'This is rendered from the current stored evidence. It can differ from a preview already sent if the site was rescanned.',
     currentPreviewUnavailable: 'The current evidence cannot produce a preview.',
     currentPreviewError: 'Could not render the current preview.',
+    publishAction: 'Publish the preview',
+    reissueAction: 'Re-issue the link',
+    revokeAction: 'Take the preview down',
+    publishConfirmTitle: 'Publish this preview?',
+    publishConfirmBody:
+      'A public link will be created from the current evidence. It is shown only once, so be ready to copy it.',
+    reissueConfirmTitle: 'Issue a new link?',
+    reissueConfirmBody:
+      'A new public link will be created and shown only once. The previous link keeps working until it expires or is taken down.',
+    revokeConfirmTitle: 'Take the preview down?',
+    revokeConfirmBody:
+      'Every public link for this hotel stops working immediately. This cannot be undone.',
+    actionRefused: 'Nothing was published; the evidence gate declined this action.',
+    actionError: 'Could not complete this action.',
+    linkOnceTitle: 'Save this link now',
+    linkOnceWarning:
+      'For privacy, this link is shown only once and Odysseus never stores it. Copy it somewhere safe before closing this card; it cannot be shown again.',
+    linkCopy: 'Copy the link',
+    linkCopied: 'Copied',
+    linkConfirmButton: 'I saved the link',
     empty: 'No preview has been published for this prospect.',
   },
   outreachThread: {

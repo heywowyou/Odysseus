@@ -25,7 +25,7 @@ import {
   formatByteSize,
   useInsightView,
 } from './insights-model';
-import type { EvidenceResponse, EvidenceSlotKey, Severity } from './insights-model';
+import type { EvidenceResponse, Severity } from './insights-model';
 
 const SEVERITY_TONES: Record<Severity, BadgeTone> = {
   critical: 'critical',

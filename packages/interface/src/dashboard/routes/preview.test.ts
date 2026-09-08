@@ -120,3 +120,85 @@ describe('PreviewPage current preview disclosure', () => {
     });
   });
 });
+
+describe('PreviewPage publication actions (issue #97)', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async (url: string) => {
+      if (String(url).endsWith('/preview/publish')) {
+        return jsonResponse({
+          published: true,
+          previewId: 'preview-2',
+          url: 'https://www.odysseusaudit.com/apercu/one-time-token',
+          publicExpiresAt: '2026-10-08T00:00:00.000Z',
+        });
+      }
+      if (String(url).endsWith('/preview')) {
+        return jsonResponse({
+          previewId: 'preview-1',
+          domain: 'hotel-exemple.fr',
+          language: 'fr',
+          status: 'live',
+          publishedAt: '2026-09-01T00:00:00.000Z',
+          publicExpiresAt: '2026-10-01T00:00:00.000Z',
+          revokedAt: null,
+          revokedReason: null,
+          prescanVersion: 'v3',
+          evidenceVersion: 'v2',
+          previewContentVersion: 'v1',
+        });
+      }
+      return jsonResponse({ rendered: true, html: '<main>Current preview</main>' });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  async function clickButton(label: string): Promise<void> {
+    const button = await waitFor(() =>
+      [...document.querySelectorAll('button')].find((element) =>
+        element.textContent?.includes(label),
+      ),
+    );
+    if (button === undefined) throw new Error(`button not found: ${label}`);
+    await act(async () => {
+      button.click();
+    });
+    await pause();
+  }
+
+  it('shows the re-issued link exactly once, then drops it after confirmation', async () => {
+    const { root } = await renderPreview();
+    await waitFor(() =>
+      fetchMock.mock.calls.some(([url]) => String(url).endsWith('/preview')) ? true : undefined,
+    );
+    await pause();
+
+    await clickButton('Réémettre un lien');
+    // The confirm dialog is radix-mounted at the end of body, so its footer
+    // button is the last match for the action label.
+    const confirm = [...document.querySelectorAll('button')].at(-1);
+    expect(confirm?.textContent).toContain('Réémettre un lien');
+    await act(async () => {
+      confirm?.click();
+    });
+
+    await waitFor(() =>
+      (document.body.textContent ?? '').includes('one-time-token') ? true : undefined,
+    );
+    expect(document.body.textContent ?? '').toContain('une seule fois');
+
+    await clickButton('J’ai enregistré le lien');
+    expect(document.body.textContent ?? '').not.toContain('one-time-token');
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});

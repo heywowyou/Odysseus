@@ -9,11 +9,16 @@ vi.mock('@odysseus/store', () => ({
   getProspectQualificationHistory: vi.fn(),
   recordHotelCandidateReview: vi.fn(),
   findOutreachThreadByCandidate: vi.fn(),
+  getProspectPreviewView: vi.fn(),
 }));
 
 vi.mock('../outreach/draft-runtime.js', () => ({
   createTouchOneDraft: vi.fn(),
   createFollowUpForCandidate: vi.fn(),
+}));
+
+vi.mock('../outreach/configured-preview-publisher.js', () => ({
+  createConfiguredPreviewPublisher: vi.fn(() => ({ configured: true })),
 }));
 
 vi.mock('../outreach/mongo-outreach-preview-store.js', () => ({
@@ -22,6 +27,8 @@ vi.mock('../outreach/mongo-outreach-preview-store.js', () => ({
 
 vi.mock('../outreach/publish-preview.js', () => ({
   buildPreviewInput: vi.fn(),
+  publishPreview: vi.fn(),
+  revokePreviewsForDomain: vi.fn(),
 }));
 
 vi.mock('@odysseus/report', () => ({
@@ -31,13 +38,19 @@ vi.mock('@odysseus/report', () => ({
 import {
   findOutreachThreadByCandidate,
   getOperatorProspect,
+  getProspectPreviewView,
   getProspectQualificationHistory,
   listOperatorProspects,
   recordHotelCandidateReview,
 } from '@odysseus/store';
 import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
+import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-preview-store.js';
-import { buildPreviewInput } from '../outreach/publish-preview.js';
+import {
+  buildPreviewInput,
+  publishPreview,
+  revokePreviewsForDomain,
+} from '../outreach/publish-preview.js';
 import { generateOutreachPreviewHtml } from '@odysseus/report';
 import { Router } from '../router.js';
 import { registerProspectRoutes } from './prospects.js';
@@ -194,6 +207,12 @@ beforeEach(() => {
   vi.mocked(previewStore.findPublicationRow).mockResolvedValue(null);
   vi.mocked(buildPreviewInput).mockResolvedValue({} as never);
   vi.mocked(generateOutreachPreviewHtml).mockReturnValue('<main>Current preview</main>');
+  vi.mocked(getProspectPreviewView).mockResolvedValue(null);
+  vi.mocked(publishPreview).mockResolvedValue({ published: false } as never);
+  vi.mocked(revokePreviewsForDomain).mockResolvedValue({
+    revoked: 0,
+    alreadyRevoked: 0,
+  } as never);
 });
 
 async function handle(url: string, options: FakeReqOptions = {}) {
@@ -618,5 +637,145 @@ describe('POST /api/prospects/:candidateId/outreach/follow-up', () => {
       body: {},
     });
     expect(res.statusCode).toBe(503);
+  });
+});
+
+describe('POST /api/prospects/:candidateId/preview/publish (issue #97)', () => {
+  const published = {
+    published: true,
+    previewId: 'preview-1',
+    url: 'https://www.odysseusaudit.com/apercu/raw-token',
+    publicExpiresAt: new Date('2026-10-08T00:00:00.000Z'),
+  };
+
+  it('publishes through the shared function and returns the one-time link once', async () => {
+    vi.mocked(publishPreview).mockResolvedValue(published as never);
+    const res = await handle('/api/prospects/cand-1/preview/publish', {
+      method: 'POST',
+      body: {},
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.setHeader).toHaveBeenCalledWith('cache-control', 'no-store');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.published).toBe(true);
+    expect(body.url).toBe('https://www.odysseusaudit.com/apercu/raw-token');
+    expect(publishPreview).toHaveBeenCalledWith(
+      expect.objectContaining({ candidateId: 'cand-1', language: 'fr', dryRun: false }),
+    );
+  });
+
+  it('answers 200 with the typed refusal for an expected evidence gate outcome', async () => {
+    vi.mocked(publishPreview).mockResolvedValue({
+      published: false,
+      refusal: 'evidence-incomplete',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/preview/publish', {
+      method: 'POST',
+      body: {},
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      published: false,
+      refusal: 'evidence-incomplete',
+    });
+  });
+
+  it('answers 404 when the candidate itself is unknown', async () => {
+    vi.mocked(publishPreview).mockResolvedValue({
+      published: false,
+      refusal: 'candidate-unknown',
+    } as never);
+    const res = await handle('/api/prospects/cand-1/preview/publish', {
+      method: 'POST',
+      body: {},
+    });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('answers 503 when the preview bucket is not configured', async () => {
+    vi.mocked(createConfiguredPreviewPublisher).mockImplementationOnce(() => {
+      throw new Error('ODYSSEUS_PREVIEW_BUCKET_NAME is not set');
+    });
+    const res = await handle('/api/prospects/cand-1/preview/publish', {
+      method: 'POST',
+      body: {},
+    });
+
+    expect(res.statusCode).toBe(503);
+    expect(publishPreview).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown language with 400 before touching the publisher', async () => {
+    const res = await handle('/api/prospects/cand-1/preview/publish', {
+      method: 'POST',
+      body: { language: 'de' },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(createConfiguredPreviewPublisher).not.toHaveBeenCalled();
+    expect(publishPreview).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed candidateId with 400', async () => {
+    const res = await handle('/api/prospects/bad%0Aid/preview/publish', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(400);
+    expect(publishPreview).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/prospects/:candidateId/preview/revoke (issue #97)', () => {
+  it('withdraws every live preview of the candidate domain through the shared function', async () => {
+    vi.mocked(getProspectPreviewView).mockResolvedValue({
+      previewId: 'preview-1',
+      domain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(revokePreviewsForDomain).mockResolvedValue({
+      revoked: 2,
+      alreadyRevoked: 0,
+    } as never);
+    const res = await handle('/api/prospects/cand-1/preview/revoke', {
+      method: 'POST',
+      body: {},
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ revoked: 2, alreadyRevoked: 0 });
+    expect(revokePreviewsForDomain).toHaveBeenCalledWith(
+      expect.objectContaining({ domain: 'hotel-exemple.fr', reason: 'operator request' }),
+    );
+  });
+
+  it('answers 404 when the candidate has no preview at all', async () => {
+    vi.mocked(getProspectPreviewView).mockResolvedValue(null);
+    const res = await handle('/api/prospects/cand-1/preview/revoke', {
+      method: 'POST',
+      body: {},
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(revokePreviewsForDomain).not.toHaveBeenCalled();
+  });
+
+  it('answers 503 when the preview bucket is not configured', async () => {
+    vi.mocked(getProspectPreviewView).mockResolvedValue({
+      previewId: 'preview-1',
+      domain: 'hotel-exemple.fr',
+    } as never);
+    vi.mocked(createConfiguredPreviewPublisher).mockImplementationOnce(() => {
+      throw new Error('ODYSSEUS_PREVIEW_BUCKET_NAME is not set');
+    });
+    const res = await handle('/api/prospects/cand-1/preview/revoke', {
+      method: 'POST',
+      body: {},
+    });
+
+    expect(res.statusCode).toBe(503);
+    expect(revokePreviewsForDomain).not.toHaveBeenCalled();
   });
 });

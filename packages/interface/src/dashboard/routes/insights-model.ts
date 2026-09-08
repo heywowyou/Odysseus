@@ -163,6 +163,33 @@ export type PreviewRenderResponse =
         | 'prescan-expired';
     };
 
+/** Issue #97: result of the publish action (first publish and re-issue
+ *  alike). The url carries the raw bearer token and exists only in this one
+ *  response, exactly as the CLI's one-time output does. */
+export type PreviewPublishResponse =
+  | {
+      published: true;
+      previewId: string;
+      url: string;
+      publicExpiresAt: string;
+    }
+  | {
+      published: false;
+      refusal:
+        | 'no-prescan'
+        | 'evidence-incomplete'
+        | 'evidence-schema-outdated'
+        | 'prescan-expired'
+        | 'suppressed';
+    };
+
+/** Issue #97: result of the revoke action over every live preview of the
+ *  hotel's domain. */
+export interface PreviewRevokeResponse {
+  revoked: number;
+  alreadyRevoked: number;
+}
+
 export interface VendorFingerprintResponse {
   value: string;
   hotels: number;

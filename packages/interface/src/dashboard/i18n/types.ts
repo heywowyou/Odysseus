@@ -621,6 +621,26 @@ export interface DashboardStrings {
     currentPreviewNote: string;
     currentPreviewUnavailable: string;
     currentPreviewError: string;
+    /** Issue #97: the three publication actions. Re-issue is the same
+     *  publish endpoint called when a preview already exists; only the
+     *  copy differs. */
+    publishAction: string;
+    reissueAction: string;
+    revokeAction: string;
+    publishConfirmTitle: string;
+    publishConfirmBody: string;
+    reissueConfirmTitle: string;
+    reissueConfirmBody: string;
+    revokeConfirmTitle: string;
+    revokeConfirmBody: string;
+    actionRefused: string;
+    actionError: string;
+    /** The once-only display of a freshly published bearer link. */
+    linkOnceTitle: string;
+    linkOnceWarning: string;
+    linkCopy: string;
+    linkCopied: string;
+    linkConfirmButton: string;
     empty: string;
   };
   outreachThread: {
