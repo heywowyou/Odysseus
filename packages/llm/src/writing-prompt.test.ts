@@ -78,6 +78,10 @@ describe('item 0.4: the writing prompt forbids the model from writing any count 
 
   it('keeps a numeric room count out of the French executiveSummary', () => {
     const prompt = buildWritingSystemPrompt('fr', false, null, undefined, {
+      businessType: 'hôtellerie',
+      primaryGoal: 'réservations',
+      languagesServed: ['fr'],
+      targetMarkets: ['fr'],
       propertyType: 'hôtel',
       roomCount: 8,
     });
@@ -88,6 +92,10 @@ describe('item 0.4: the writing prompt forbids the model from writing any count 
 
   it('keeps a numeric room count out of the English executiveSummary', () => {
     const prompt = buildWritingSystemPrompt('en', false, null, undefined, {
+      businessType: 'hospitality',
+      primaryGoal: 'bookings',
+      languagesServed: ['en'],
+      targetMarkets: ['uk'],
       propertyType: 'hotel',
       roomCount: 8,
     });
