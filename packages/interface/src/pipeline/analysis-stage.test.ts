@@ -200,6 +200,9 @@ describe('runAnalysisStage', () => {
       { language: 'fr' },
       fakeConnection,
     );
+    // Issue #145: the stage starts the advisory passes without awaiting
+    // them, so assertions on their artifacts synchronize here.
+    await Promise.all(result.advisoryPasses);
 
     expect(analyzeStructure).toHaveBeenCalledTimes(1);
     expect(result.structureReused).toBe(false);
@@ -502,6 +505,9 @@ describe('runAnalysisStage', () => {
       { language: 'fr' },
       fakeConnection,
     );
+    // Issue #145: synchronize with the advisory passes before reading their
+    // artifacts.
+    await Promise.all(result.advisoryPasses);
 
     expect(analyzeReview).toHaveBeenCalledTimes(1);
     expect(analyzeReview).toHaveBeenCalledWith(
@@ -544,6 +550,7 @@ describe('runAnalysisStage', () => {
         { language: 'fr' },
         fakeConnection,
       );
+      await Promise.all(result.advisoryPasses);
 
       expect(result.analysisPath).toBeDefined();
       expect(persistAnalysis).toHaveBeenCalledTimes(1);
@@ -571,6 +578,7 @@ describe('runAnalysisStage', () => {
         { language: 'fr' },
         fakeConnection,
       );
+      await Promise.all(result.advisoryPasses);
 
       expect(result.analysis.executiveSummary).toBe('Summary');
       expect(persistAnalysis).toHaveBeenCalledTimes(1);
@@ -608,6 +616,9 @@ describe('runAnalysisStage', () => {
       expect(analyzeCorrectionReview).not.toHaveBeenCalled();
       expect(analyzeReview).not.toHaveBeenCalled();
       expect(warn).not.toHaveBeenCalled();
+      // Issue #145 interaction: no advisory pass is started, so there is
+      // nothing for a caller boundary to settle.
+      expect(result.advisoryPasses).toEqual([]);
 
       // No structure file exists in this mode, and nothing may claim to
       // reuse one later.
@@ -646,6 +657,104 @@ describe('runAnalysisStage', () => {
           generationMode: 'static-fallback',
         }),
       );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  // Issue #145: the stage starts the advisory passes but resolves before
+  // they do, so the job runner can overlap the two provider round trips
+  // with the report stage instead of serializing them ahead of it.
+  it('resolves while manually deferred advisory passes are still pending', async () => {
+    const manifest = fakeManifest();
+    let releaseCorrection!: (outcome: Awaited<ReturnType<typeof analyzeCorrectionReview>>) => void;
+    const correctionDeferred = new Promise<Awaited<ReturnType<typeof analyzeCorrectionReview>>>(
+      (resolve) => {
+        releaseCorrection = resolve;
+      },
+    );
+    let releaseReview!: (outcome: Awaited<ReturnType<typeof analyzeReview>>) => void;
+    const reviewDeferred = new Promise<Awaited<ReturnType<typeof analyzeReview>>>((resolve) => {
+      releaseReview = resolve;
+    });
+    vi.mocked(analyzeCorrectionReview).mockImplementationOnce(() => correctionDeferred);
+    vi.mocked(analyzeReview).mockImplementationOnce(() => reviewDeferred);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = await runAnalysisStage(
+        auditDir,
+        manifest,
+        [buildFinding()],
+        { language: 'fr' },
+        fakeConnection,
+      );
+
+      // The stage resolved while both advisory deferreds are still pending,
+      // and the result reports exactly the two passes.
+      expect(result.advisoryPasses.length).toBe(2);
+      expect(analyzeCorrectionReview).toHaveBeenCalledTimes(1);
+      expect(analyzeReview).toHaveBeenCalledTimes(1);
+      expect(persistAnalysis).toHaveBeenCalledTimes(1);
+
+      releaseCorrection({
+        status: 'skipped',
+        reason: 'released after the stage resolved',
+        model: 'openai-test',
+        temperature: 0.2,
+      });
+      releaseReview({ status: 'skipped', reason: 'released after the stage resolved' });
+      const settled = await Promise.allSettled(result.advisoryPasses);
+
+      // Settling the passes changed nothing about the stage's own output.
+      expect(settled.every((outcome) => outcome.status === 'fulfilled')).toBe(true);
+      expect(result.analysis.executiveSummary).toBe('Summary');
+      expect(result.analysisPath).toBeDefined();
+      const analysesDir = path.join(auditDir, 'analyses');
+      const files = await fs.readdir(analysesDir);
+      expect(files.some((f) => f.endsWith('-fr.json'))).toBe(true);
+      // The correction pass's skipped outcome still produced its artifact.
+      expect(files.some((f) => f.endsWith('-correction-review.json'))).toBe(true);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  // Each advisory IIFE swallows its own errors, so a rejected provider call
+  // settles fulfilled: the passes can never reject a caller that settles
+  // them, and the analysis artifact is unaffected.
+  it('settles both advisory passes fulfilled when the reviewer rejects but the correction pass resolves', async () => {
+    const manifest = fakeManifest();
+    vi.mocked(analyzeReview).mockRejectedValueOnce(new Error('reviewer boom'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = await runAnalysisStage(
+        auditDir,
+        manifest,
+        [buildFinding()],
+        { language: 'fr' },
+        fakeConnection,
+      );
+      const settled = await Promise.allSettled(result.advisoryPasses);
+
+      expect(settled).toHaveLength(2);
+      expect(settled.every((outcome) => outcome.status === 'fulfilled')).toBe(true);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('reviewer boom'));
+
+      const analysesDir = path.join(auditDir, 'analyses');
+      const files = await fs.readdir(analysesDir);
+      expect(files.some((f) => f.endsWith('-fr.json'))).toBe(true);
+      const stored = JSON.parse(
+        await fs.readFile(
+          path.join(
+            analysesDir,
+            files.find((f) => f.endsWith('-fr.json'))!,
+          ),
+          'utf-8',
+        ),
+      );
+      expect(stored.executiveSummary).toBe('Summary');
     } finally {
       warn.mockRestore();
     }

@@ -504,6 +504,9 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
         structureReused: true,
         unreferencedFindingCount: 0,
         usedFallbackContext: true,
+        // Issue #145: regenerateWriting settles this field before recording
+        // the candidate, so the mocked stage result has to carry it.
+        advisoryPasses: [],
       } as never;
     });
     vi.mocked(

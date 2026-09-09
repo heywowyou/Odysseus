@@ -167,6 +167,12 @@ export async function regenerateWriting(
       frAnalysisId: frStage.analysis.analysisId,
       enAnalysisId: enStage.analysis.analysisId,
     };
+    // The route awaits the whole regeneration, and this function previously
+    // resolved only once the advisory passes were done (they were awaited
+    // inside the stage). The stages now start the passes without awaiting
+    // them (issue #145), so settling them here preserves that behaviour:
+    // the candidate is never recorded while advisory writes are pending.
+    await Promise.allSettled([...frStage.advisoryPasses, ...enStage.advisoryPasses]);
 
     const pair: AnalysisPairRef = {
       frAnalysisId: frStage.analysis.analysisId,

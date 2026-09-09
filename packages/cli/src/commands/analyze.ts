@@ -111,6 +111,12 @@ export function registerAnalyzeCommand(program: Command): void {
             mongoConnection,
           );
 
+          // The stage starts the advisory passes without awaiting them
+          // (issue #145); the CLI process must not exit with advisory
+          // artifact writes still pending, and the advisory warnings should
+          // print before the summary lines below.
+          await Promise.all(result.advisoryPasses);
+
           console.log(
             `  Structure: ${result.structureReused ? 'reused' : 'generated'} (${path.basename(result.structurePath)}, ${result.analysis.themes.length} themes)`,
           );

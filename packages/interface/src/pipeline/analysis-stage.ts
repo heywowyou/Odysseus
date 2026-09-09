@@ -94,6 +94,13 @@ export interface AnalysisStageResult {
   structureReused: boolean;
   unreferencedFindingCount: number;
   usedFallbackContext: boolean;
+  /** The two advisory passes (correction review, shadow reviewer), started
+   *  but not awaited so the stage resolves before they do. Each promise
+   *  contains its own try/catch and can never reject; callers that must
+   *  not exit or complete while advisory writes are pending await them
+   *  (Promise.allSettled) at their own boundary. Empty on the static
+   *  fallback path (issue #162), which makes zero model calls. */
+  advisoryPasses: readonly Promise<void>[];
 }
 
 function timestampForFilename(date: Date): string {
@@ -408,55 +415,63 @@ export async function runAnalysisStage(
   // Both advisory passes live inside the not-eligible path (modelPasses is
   // set exactly there): a static fallback analysis has no writer output to
   // review, and zero provider calls is the point of the gate (issue #162).
+  // Each body keeps its own try/catch inside an async IIFE, so the promise
+  // can never reject; the stage starts both passes without awaiting them
+  // (issue #145) and callers settle the returned promises at their own
+  // boundary, so the two provider round trips overlap the report stage
+  // instead of serializing ahead of it.
+  let advisoryPasses: readonly Promise<void>[] = [];
   if (modelPasses !== undefined) {
     const { writingInput, writingResult, generatedAt } = modelPasses;
     // Plan 033: a distinct advisory correction pass. It gets the exact writer
     // input/output, never the merged analysis, HTML, PDF, screenshots, or a
     // fetched page. The artifact is insert-only and intentionally has no path
     // back into analysis selection or report rendering.
-    try {
-      const correctionReview = await analyzeCorrectionReview({
-        writingInput,
-        written: writingResult.output,
-      });
-      const correctionReviewPath = path.join(
-        analysesDir,
-        `${timestampForFilename(generatedAt)}-${analysisId}-correction-review.json`,
-      );
-      await fs.writeFile(
-        correctionReviewPath,
-        JSON.stringify(
-          {
-            auditId: manifest.auditId,
-            analysisId,
-            language: options.language,
-            generatedAt,
-            sourceAnalysisFilename: path.basename(analysisPath),
-            reviewSchemaVersion: '033-v1',
-            promptVersion: CORRECTION_REVIEW_PROMPT_VERSION,
-            model: correctionReview.model,
-            temperature: correctionReview.temperature,
-            outcome: correctionReview.status,
-            ...(correctionReview.status === 'ok'
-              ? { proposals: correctionReview.output.proposals }
-              : { skipReason: correctionReview.reason }),
-          },
-          null,
-          2,
-        ),
-        { flag: 'wx' },
-      );
-      console.warn(
-        correctionReview.status === 'ok'
-          ? `odysseus analyze (correction review, language=${options.language}): ${correctionReview.output.proposals.filter((proposal) => proposal.verdict === 'propose-change').length} proposal(s) recorded`
-          : `odysseus analyze (correction review, language=${options.language}): skipped`,
-      );
-    } catch {
-      // An advisory-artifact filesystem failure is no more allowed to alter a
-      // delivered analysis than a provider failure. Deliberately no reason is
-      // printed: this channel is summary-only and must not expose client prose.
-      console.warn(`odysseus analyze (correction review, language=${options.language}): skipped`);
-    }
+    const correctionReviewPromise: Promise<void> = (async () => {
+      try {
+        const correctionReview = await analyzeCorrectionReview({
+          writingInput,
+          written: writingResult.output,
+        });
+        const correctionReviewPath = path.join(
+          analysesDir,
+          `${timestampForFilename(generatedAt)}-${analysisId}-correction-review.json`,
+        );
+        await fs.writeFile(
+          correctionReviewPath,
+          JSON.stringify(
+            {
+              auditId: manifest.auditId,
+              analysisId,
+              language: options.language,
+              generatedAt,
+              sourceAnalysisFilename: path.basename(analysisPath),
+              reviewSchemaVersion: '033-v1',
+              promptVersion: CORRECTION_REVIEW_PROMPT_VERSION,
+              model: correctionReview.model,
+              temperature: correctionReview.temperature,
+              outcome: correctionReview.status,
+              ...(correctionReview.status === 'ok'
+                ? { proposals: correctionReview.output.proposals }
+                : { skipReason: correctionReview.reason }),
+            },
+            null,
+            2,
+          ),
+          { flag: 'wx' },
+        );
+        console.warn(
+          correctionReview.status === 'ok'
+            ? `odysseus analyze (correction review, language=${options.language}): ${correctionReview.output.proposals.filter((proposal) => proposal.verdict === 'propose-change').length} proposal(s) recorded`
+            : `odysseus analyze (correction review, language=${options.language}): skipped`,
+        );
+      } catch {
+        // An advisory-artifact filesystem failure is no more allowed to alter a
+        // delivered analysis than a provider failure. Deliberately no reason is
+        // printed: this channel is summary-only and must not expose client prose.
+        console.warn(`odysseus analyze (correction review, language=${options.language}): skipped`);
+      }
+    })();
 
     // Shadow reviewer (docs/rules/llm-layer-rules.md section 12): runs after the
     // analysis is fully written and persisted, and its whole body is
@@ -464,51 +479,60 @@ export async function runAnalysisStage(
     // delay the analysis it reviews. One extra provider call per analysis
     // by operator decision, always on; verdicts are data for a later
     // promotion decision, not a gate.
-    try {
-      const review = await analyzeReview({ writingInput, written: writingResult.output });
-      if (review.status === 'skipped') {
-        console.warn(
-          `odysseus analyze (review pass, language=${options.language}): skipped - ${review.reason}`,
-        );
-      } else {
-        // One line only. The validation campaign (2026-08-29) measured the
-        // medium-tier reviewer flagging every businessImpact field for
-        // stating the generic commercial consequences the writing prompt
-        // itself requires, so per-field console output would be a wall of
-        // misleading warnings; the per-field reasons live in the review
-        // file, where a human reads them with that bias in mind.
-        const unsupportedCount = summarizeUnsupportedReviews(review.output).length;
-        if (unsupportedCount > 0) {
+    const reviewPromise: Promise<void> = (async () => {
+      try {
+        const review = await analyzeReview({ writingInput, written: writingResult.output });
+        if (review.status === 'skipped') {
           console.warn(
-            `odysseus analyze (review pass, language=${options.language}): ${unsupportedCount} prose field(s) reviewed unsupported - see the -review.json file for the reasons`,
+            `odysseus analyze (review pass, language=${options.language}): skipped - ${review.reason}`,
+          );
+        } else {
+          // One line only. The validation campaign (2026-08-29) measured the
+          // medium-tier reviewer flagging every businessImpact field for
+          // stating the generic commercial consequences the writing prompt
+          // itself requires, so per-field console output would be a wall of
+          // misleading warnings; the per-field reasons live in the review
+          // file, where a human reads them with that bias in mind.
+          const unsupportedCount = summarizeUnsupportedReviews(review.output).length;
+          if (unsupportedCount > 0) {
+            console.warn(
+              `odysseus analyze (review pass, language=${options.language}): ${unsupportedCount} prose field(s) reviewed unsupported - see the -review.json file for the reasons`,
+            );
+          }
+          const reviewPath = path.join(
+            analysesDir,
+            `${timestampForFilename(generatedAt)}-review.json`,
+          );
+          await fs.writeFile(
+            reviewPath,
+            JSON.stringify(
+              {
+                auditId: manifest.auditId,
+                analysisId,
+                language: options.language,
+                model: review.model,
+                temperature: review.temperature,
+                generatedAt,
+                reviews: review.output,
+              },
+              null,
+              2,
+            ),
           );
         }
-        const reviewPath = path.join(
-          analysesDir,
-          `${timestampForFilename(generatedAt)}-review.json`,
-        );
-        await fs.writeFile(
-          reviewPath,
-          JSON.stringify(
-            {
-              auditId: manifest.auditId,
-              analysisId,
-              language: options.language,
-              model: review.model,
-              temperature: review.temperature,
-              generatedAt,
-              reviews: review.output,
-            },
-            null,
-            2,
-          ),
+      } catch (error) {
+        console.warn(
+          `odysseus analyze (review pass, language=${options.language}): skipped - ${error instanceof Error ? error.message : String(error)}`,
         );
       }
-    } catch (error) {
-      console.warn(
-        `odysseus analyze (review pass, language=${options.language}): skipped - ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+    })();
+
+    // Same start order as before the deferral (correction review first), but
+    // the two starts now overlap: the reviewer's provider call no longer
+    // waits for the correction pass to finish. Neither pass reads the
+    // other's output and their artifact names never collide, so the
+    // overlap changes only when the stage waits, not what the passes do.
+    advisoryPasses = [correctionReviewPromise, reviewPromise];
   }
 
   return {
@@ -518,5 +542,6 @@ export async function runAnalysisStage(
     structureReused,
     unreferencedFindingCount,
     usedFallbackContext,
+    advisoryPasses,
   };
 }

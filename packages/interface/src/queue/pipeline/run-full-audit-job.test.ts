@@ -82,6 +82,9 @@ function fakeAnalysisResult(language: 'fr' | 'en') {
     structureReused: language === 'en',
     unreferencedFindingCount: 0,
     usedFallbackContext: true,
+    // Issue #145: the runner settles this field after the report stage, so
+    // the mocked stage result has to carry it (empty: nothing pending).
+    advisoryPasses: [] as Promise<void>[],
   };
 }
 

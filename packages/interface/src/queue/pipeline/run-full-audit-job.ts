@@ -23,6 +23,7 @@ import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
+import { JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
 import { createScanProgressReporter } from '../report-progress.js';
 
@@ -132,6 +133,21 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
     const needsReview = hasMeasuredCoreWebVitals(auditResult.manifest)
       ? undefined
       : 'Performance measurement (Lighthouse) failed on every scanned page: the report has no Core Web Vitals data.';
+
+    // The advisory passes are pure advisory value and were started inside
+    // the analysis stages; settling them here keeps shutdown semantics (no
+    // silently dropped work) while no longer serializing four provider
+    // round trips ahead of the report stage.
+    await Promise.allSettled([...frAnalysis.advisoryPasses, ...enAnalysis.advisoryPasses]);
+    // The registry is only forgotten in runJob's finally, after this runner
+    // resolves, so a stop requested during the long analyze or report window
+    // still gets observed here instead of being overwritten by 'complete'.
+    // The audit, analyses, and reports are already persisted and the job
+    // already carries the auditId (updateJobProgress above), so the
+    // dashboard still reaches the work.
+    if (ctx.cancellation.isRequested(job.jobId)) {
+      throw new JobCancelledError(job.jobId);
+    }
 
     await completeJob(connection, job.jobId, {
       auditId: auditResult.auditId,
