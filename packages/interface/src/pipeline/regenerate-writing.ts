@@ -110,15 +110,34 @@ export async function regenerateWriting(
       'odysseus: a writing regeneration is already running for this audit',
     );
   }
+  // The add must stay adjacent to the has check with no await in between:
+  // Node serves requests concurrently, and the previous check-then-await-
+  // then-add ordering let two simultaneous submits pass the guard, race on
+  // the writing candidate, and insert duplicate analysis versions
+  // (issue #143).
+  inFlight.add(auditId);
 
-  const { auditDir, manifest, findings } = await readAuditEvidence(audit);
-  const preparation = await getReportPreparation(connection, auditId);
-  const { digest, warnings } = currentWarningDigest(audit, preparation, manifest, findings);
-  if (!isAcknowledgementCurrent(preparation.warningAcknowledgement, digest)) {
-    throw new MissingAcknowledgementError(warnings);
+  // Pre-flight: load the evidence and the stored preparation, then validate
+  // the warning acknowledgement. Nothing is generated yet, so a failure here
+  // releases the marker and propagates unchanged: no failed candidate is
+  // recorded, and the route maps the original error exactly as before.
+  let auditDir: string;
+  let manifest: AuditManifest;
+  let findings: Finding[];
+  try {
+    ({ auditDir, manifest, findings } = await readAuditEvidence(audit));
+    const preparation = await getReportPreparation(connection, auditId);
+    const { digest, warnings } = currentWarningDigest(audit, preparation, manifest, findings);
+    if (!isAcknowledgementCurrent(preparation.warningAcknowledgement, digest)) {
+      throw new MissingAcknowledgementError(warnings);
+    }
+  } catch (error) {
+    // Set.delete is idempotent, so a delete of an already absent marker
+    // changes nothing.
+    inFlight.delete(auditId);
+    throw error;
   }
 
-  inFlight.add(auditId);
   let partialPair: { frAnalysisId?: string; enAnalysisId?: string } = {};
   try {
     const frStage = await runAnalysisStage(

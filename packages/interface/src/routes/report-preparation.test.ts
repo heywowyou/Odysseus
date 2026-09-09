@@ -59,10 +59,13 @@ import {
   getAudit,
   getReportPreparation,
   patchReportPreparationInputs,
+  recordFailedWritingCandidate,
+  recordReadyWritingCandidate,
   setWarningAcknowledgement,
   WritingSelectionConflictError,
 } from '@odysseus/store';
 import { runAnalysisStage } from '../pipeline/analysis-stage.js';
+import { isWritingRegenerationInFlight } from '../pipeline/regenerate-writing.js';
 import { generateReportPdf } from '@odysseus/report';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { getAnalysisById, getAuditManualFields } from '@odysseus/store';
@@ -562,6 +565,150 @@ describe('POST /api/audits/:auditId/report-preparation/regenerate-writing', () =
     );
     expect(res.statusCode).toBe(409);
     expect(res.body).toContain('artifacts not found');
+  });
+
+  it('rejects a concurrent second submit with 409 while the first run holds the in-flight marker', async () => {
+    await writeEvidence();
+    const preview = buildReportPreparationPreview({
+      preparation: emptyReportPreparation(),
+      manifest: JSON.parse(await fs.readFile(AUDIT_DIR + '/manifest.json', 'utf-8')),
+      findings: [],
+    });
+    storedPreparation = {
+      ...emptyReportPreparation(),
+      warningAcknowledgement: {
+        digest: preview.warningDigest,
+        acknowledgedAt: '2026-09-01T00:00:00.000Z',
+      },
+    };
+    let releaseFr!: () => void;
+    const frGate = new Promise<void>((resolve) => {
+      releaseFr = resolve;
+    });
+    vi.mocked(pauseBetweenLanguagePasses).mockResolvedValue(undefined);
+    vi.mocked(runAnalysisStage).mockImplementation(async (_dir, _manifest, _findings, options) => {
+      // The French pass waits on the gate so the first run stays in flight
+      // until the test releases it; a real second submit would arrive in
+      // that window.
+      if (options.language === 'fr') {
+        await frGate;
+      }
+      return {
+        analysis: {
+          analysisId: `analysis-${options.language}`,
+          auditId: 'audit-1',
+          findingsProvenance: {
+            findingsSchemaVersion: 1 as const,
+            normalizationFingerprint: 'fp',
+            findingsDigest: 'sha256:digest',
+          },
+          language: options.language,
+        },
+        analysisPath: `/tmp/${options.language}.json`,
+        structurePath: '/tmp/structure.json',
+        structureReused: true,
+        unreferencedFindingCount: 0,
+        usedFallbackContext: true,
+        advisoryPasses: [],
+      } as never;
+    });
+    vi.mocked(recordReadyWritingCandidate).mockImplementation(
+      async (_connection, _auditId, pair) => {
+        storedPreparation = {
+          ...storedPreparation,
+          writingSelection: {
+            candidate: { status: 'ready', pair, createdAt: '2026-09-01T12:00:00.000Z' },
+          },
+        };
+        return storedPreparation;
+      },
+    );
+
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    // The marker is module state shared by every test in this file, so this
+    // opening check keeps the suite hermetic.
+    expect(isWritingRegenerationInFlight('audit-1')).toBe(false);
+
+    const firstRes = fakeRes();
+    const first = router.handle(
+      fakeReq(
+        '/api/audits/audit-1/report-preparation/regenerate-writing',
+        { costWarningConfirmed: true },
+        'POST',
+      ),
+      firstRes,
+    );
+    // The guard must take the marker before the run's first await, so this
+    // settles while the French stage is still gated.
+    await vi.waitFor(() => expect(isWritingRegenerationInFlight('audit-1')).toBe(true));
+
+    const secondRes = fakeRes();
+    await router.handle(
+      fakeReq(
+        '/api/audits/audit-1/report-preparation/regenerate-writing',
+        { costWarningConfirmed: true },
+        'POST',
+      ),
+      secondRes,
+    );
+    expect(secondRes.statusCode).toBe(409);
+    expect(secondRes.body).toContain('already running');
+
+    releaseFr();
+    await first;
+    expect(firstRes.statusCode).toBe(201);
+    expect(isWritingRegenerationInFlight('audit-1')).toBe(false);
+  });
+
+  it('releases the in-flight marker when the warning acknowledgement is stale', async () => {
+    await writeEvidence();
+    storedPreparation = {
+      ...emptyReportPreparation(),
+      warningAcknowledgement: {
+        digest: 'stale',
+        acknowledgedAt: '2026-09-01T00:00:00.000Z',
+      },
+    };
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(
+      fakeReq(
+        '/api/audits/audit-1/report-preparation/regenerate-writing',
+        { costWarningConfirmed: true },
+        'POST',
+      ),
+      res,
+    );
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toContain('warnings must be confirmed');
+    expect(runAnalysisStage).not.toHaveBeenCalled();
+    expect(isWritingRegenerationInFlight('audit-1')).toBe(false);
+  });
+
+  it('releases the in-flight marker when a pre-flight read fails', async () => {
+    await writeEvidence();
+    vi.mocked(getReportPreparation).mockRejectedValue(
+      new Error('odysseus: preparation read failed'),
+    );
+    const router = new Router();
+    registerReportPreparationRoutes(router, fakeConnection);
+    const res = fakeRes();
+    await router.handle(
+      fakeReq(
+        '/api/audits/audit-1/report-preparation/regenerate-writing',
+        { costWarningConfirmed: true },
+        'POST',
+      ),
+      res,
+    );
+    // A raw pre-flight failure keeps its 500 and must not become a phantom
+    // failed writing candidate.
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toContain('could not regenerate writing');
+    expect(recordFailedWritingCandidate).not.toHaveBeenCalled();
+    expect(isWritingRegenerationInFlight('audit-1')).toBe(false);
   });
 });
 
