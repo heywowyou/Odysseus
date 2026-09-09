@@ -33,7 +33,7 @@ import {
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import type { Router } from '../router.js';
-import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
+import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 
 /** How many qualification generations one detail response carries. The
  *  catalogue pointer holds only the current generation; the history page is
@@ -302,17 +302,8 @@ export function registerProspectRoutes(router: Router, connection: Connection): 
       return;
     }
 
-    let body: unknown;
-    try {
-      body = await readJsonBody(req);
-    } catch (error) {
-      if (error instanceof PayloadTooLargeError) {
-        sendError(res, 413, 'request body is too large');
-        return;
-      }
-      sendError(res, 400, 'request body must be valid JSON');
-      return;
-    }
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
 
     let parsed: ReviewBody;
     try {
@@ -485,17 +476,8 @@ export function registerProspectRoutes(router: Router, connection: Connection): 
     }
     // Optional body; the dashboard normally sends none. The only recognised
     // field is language, the one publish option the CLI also takes.
-    let body: unknown;
-    try {
-      body = await readJsonBody(req);
-    } catch (error) {
-      if (error instanceof PayloadTooLargeError) {
-        sendError(res, 413, 'request body is too large');
-        return;
-      }
-      sendError(res, 400, 'request body must be valid JSON');
-      return;
-    }
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
     const rawLanguage =
       body !== null && typeof body === 'object'
         ? (body as Record<string, unknown>)['language']

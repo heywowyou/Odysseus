@@ -20,7 +20,7 @@ import {
   revokeOutreachPreview,
 } from '@odysseus/store';
 import type { Router } from '../router.js';
-import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
+import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
 
 /** Plan 013 step 4: pending Gmail draft review, replies needing review,
@@ -69,17 +69,8 @@ async function readJsonObjectBody(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<Record<string, unknown> | null> {
-  let body: unknown;
-  try {
-    body = await readJsonBody(req);
-  } catch (error) {
-    if (error instanceof PayloadTooLargeError) {
-      sendError(res, 413, 'request body is too large');
-      return null;
-    }
-    sendError(res, 400, 'request body must be valid JSON');
-    return null;
-  }
+  const body = await readJsonBodyOrRespond(req, res);
+  if (body === jsonBodyNotRead) return null;
   if (body === null || typeof body !== 'object' || Array.isArray(body)) {
     sendError(res, 400, 'request body must be a JSON object');
     return null;

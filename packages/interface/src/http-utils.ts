@@ -30,6 +30,32 @@ export async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(raw);
 }
 
+/** Returned by readJsonBodyOrRespond when it has already answered 413 or
+ *  400 and the caller must stop. A symbol, not undefined, because empty
+ *  bodies and JSON null are legitimate readJsonBody successes callers still
+ *  inspect. */
+export const jsonBodyNotRead: unique symbol = Symbol('jsonBodyNotRead');
+
+/** Shared body-reading error contract for the routes: one copy of the 413
+ *  and 400 mapping so no endpoint drifts to a different status or message
+ *  for the same client mistake. Returns the sentinel instead of throwing,
+ *  so every hand-rolled field guard after the call keeps working verbatim. */
+export async function readJsonBodyOrRespond(
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<unknown> {
+  try {
+    return await readJsonBody(req);
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      sendError(res, 413, 'request body is too large');
+    } else {
+      sendError(res, 400, 'request body must be valid JSON');
+    }
+    return jsonBodyNotRead;
+  }
+}
+
 export function sendJson(res: ServerResponse, statusCode: number, body: unknown): void {
   const payload = JSON.stringify(body);
   res.statusCode = statusCode;

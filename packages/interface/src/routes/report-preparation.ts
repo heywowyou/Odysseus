@@ -34,7 +34,7 @@ import {
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
-import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
+import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import {
   MissingAcknowledgementError,
   regenerateWriting,
@@ -126,17 +126,8 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
     const audit = await readAudit(connection, auditId, res);
     if (!audit) return;
 
-    let body: unknown;
-    try {
-      body = await readJsonBody(req);
-    } catch (error) {
-      if (error instanceof PayloadTooLargeError) {
-        sendError(res, 413, 'request body is too large');
-        return;
-      }
-      sendError(res, 400, 'request body must be valid JSON');
-      return;
-    }
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
 
     let patch;
     try {
@@ -176,17 +167,8 @@ export function registerReportPreparationRoutes(router: Router, connection: Conn
       const audit = await readAudit(connection, auditId, res);
       if (!audit) return;
 
-      let body: unknown;
-      try {
-        body = await readJsonBody(req);
-      } catch (error) {
-        if (error instanceof PayloadTooLargeError) {
-          sendError(res, 413, 'request body is too large');
-          return;
-        }
-        sendError(res, 400, 'request body must be valid JSON');
-        return;
-      }
+      const body = await readJsonBodyOrRespond(req, res);
+      if (body === jsonBodyNotRead) return;
       const costWarningConfirmed =
         body !== null &&
         typeof body === 'object' &&

@@ -37,7 +37,7 @@ import {
   type StoredAnalysis,
 } from '@odysseus/report';
 import type { Router } from '../router.js';
-import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
+import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { runAllReportsStage } from '../pipeline/report-stage.js';
 import { pdfDigestOf } from '../pipeline/pdf-digest.js';
@@ -416,17 +416,8 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    let body: unknown;
-    try {
-      body = await readJsonBody(req);
-    } catch (error) {
-      if (error instanceof PayloadTooLargeError) {
-        sendError(res, 413, 'request body is too large');
-        return;
-      }
-      sendError(res, 400, 'request body must be valid JSON');
-      return;
-    }
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
     const rawSiren =
       body !== null && typeof body === 'object'
         ? (body as Record<string, unknown>)['siren']
@@ -465,17 +456,8 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    let body: unknown;
-    try {
-      body = await readJsonBody(req);
-    } catch (error) {
-      if (error instanceof PayloadTooLargeError) {
-        sendError(res, 413, 'request body is too large');
-        return;
-      }
-      sendError(res, 400, 'request body must be valid JSON');
-      return;
-    }
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
     if (body === null || typeof body !== 'object') {
       sendError(res, 400, 'request body must be a JSON object');
       return;

@@ -14,7 +14,7 @@ import {
 } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
-import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
+import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import { getSeverityRollupsForPoll } from './severity-rollup-cache.js';
 
@@ -116,17 +116,8 @@ function parseOptionsSnapshot(raw: unknown): JobOptionsSnapshot {
  *  promptly rather than waiting out the queue's poll interval. */
 export function registerScanRoutes(router: Router, connection: Connection, queue: JobQueue): void {
   router.post('/api/scans', async ({ req, res }) => {
-    let body: unknown;
-    try {
-      body = await readJsonBody(req);
-    } catch (error) {
-      if (error instanceof PayloadTooLargeError) {
-        sendError(res, 413, 'request body is too large');
-        return;
-      }
-      sendError(res, 400, 'request body must be valid JSON');
-      return;
-    }
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
 
     if (body === undefined || body === null || typeof body !== 'object') {
       sendError(res, 400, 'request body must be a JSON object');
