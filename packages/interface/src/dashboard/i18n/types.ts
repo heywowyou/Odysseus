@@ -1,4 +1,5 @@
 import type { JobStatus } from '../lib/api-types';
+import type { ProgressPhase } from '../lib/phase-order';
 
 export type DashboardLanguage = 'fr' | 'en';
 
@@ -190,22 +191,10 @@ export interface DashboardStrings {
     lighthouseProgressMessage: string;
     etaLabel: string;
     etaRoughSuffix: string;
-    phaseLabels: {
-      queued: string;
-      crawl: string;
-      scan: string;
-      'content-scan': string;
-      'select-performance': string;
-      lighthouse: string;
-      normalize: string;
-      'analyze-fr': string;
-      'analyze-en': string;
-      'report-fr': string;
-      'report-en': string;
-      scanning: string;
-      complete: string;
-      failed: string;
-    };
+    /** Operator copy per pipeline phase, keyed by the vocabulary derived
+     *  from the checked-in order fixture (lib/phase-order.ts), so a phase
+     *  added there fails to compile until both languages cover it. */
+    phaseLabels: Record<ProgressPhase, string>;
     completeHeading: string;
     viewDetailLink: string;
     failedHeading: string;

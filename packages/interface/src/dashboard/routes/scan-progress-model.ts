@@ -1,29 +1,20 @@
 import type { CoverageSegment } from '../components/ui/coverage-bar';
 import type { DashboardStrings } from '../i18n/types';
 import type { JobStatus, ScanJobDetail } from '../lib/api-types';
+import {
+  AFTER_CONTENT_PHASES,
+  AFTER_LIGHTHOUSE_PHASES,
+  PHASE_KEYS,
+  type ProgressPhase,
+} from '../lib/phase-order.js';
 
-/** Phase values the copy table covers. Anything outside this list
- *  (afnic-scan, fetch-qualify, prescanning, ...) has no dashboard copy yet
- *  and renders as its raw value, so a new pipeline phase degrades to a
- *  technical label instead of a blank line. */
-const PHASE_KEYS = [
-  'queued',
-  'crawl',
-  'scan',
-  'content-scan',
-  'select-performance',
-  'lighthouse',
-  'normalize',
-  'analyze-fr',
-  'analyze-en',
-  'report-fr',
-  'report-en',
-  'scanning',
-  'complete',
-  'failed',
-] as const;
-
-export type ProgressPhase = (typeof PHASE_KEYS)[number];
+/** Phase values come from the checked-in pipeline order fixture
+ *  (../fixtures/full-audit-phase-order.ts) via lib/phase-order.ts, not from
+ *  a hand list here. Anything outside that list (afnic-scan, fetch-qualify,
+ *  prescanning, ...) has no dashboard copy yet and renders as its raw value,
+ *  so a new pipeline phase degrades to a technical label instead of a blank
+ *  line. */
+export type { ProgressPhase };
 
 export type ProgressPhaseLabels = DashboardStrings['progress']['phaseLabels'];
 
@@ -143,26 +134,6 @@ export function scanProgress(job: ScanJobDetail): number {
   }
   return job.phase === 'queued' || job.phase === 'crawl' ? 0 : 100;
 }
-
-const AFTER_CONTENT_PHASES = new Set([
-  'select-performance',
-  'lighthouse',
-  'normalize',
-  'analyze-fr',
-  'analyze-en',
-  'report-fr',
-  'report-en',
-  'complete',
-]);
-
-const AFTER_LIGHTHOUSE_PHASES = new Set([
-  'normalize',
-  'analyze-fr',
-  'analyze-en',
-  'report-fr',
-  'report-en',
-  'complete',
-]);
 
 function stagedProgress(
   bucket: { completed: number; target: number } | undefined,
