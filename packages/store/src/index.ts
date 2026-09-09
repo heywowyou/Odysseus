@@ -104,7 +104,12 @@ export type {
   ProspectDocumentFields,
   ProspectQualificationReason,
 } from './schemas/prospect.schema.js';
-export { createProspect, getProspect, listQualifiedProspects } from './prospects.js';
+export {
+  createProspect,
+  findProspectByDomainAndSourceVersion,
+  getProspect,
+  listQualifiedProspects,
+} from './prospects.js';
 export type { NewProspectInput } from './prospects.js';
 export { createSuppressionModel } from './schemas/suppression.schema.js';
 export type {

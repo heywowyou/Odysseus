@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import {
   createProspect,
+  findProspectByDomainAndSourceVersion,
   getProspect,
   listQualifiedProspects,
   type NewProspectInput,
@@ -58,6 +59,39 @@ describe.skipIf(!mongoAvailable)('prospects', () => {
     const first = await createProspect(connection!, baseInput({ domain: 'insert-only.fr' }));
     const second = await createProspect(connection!, baseInput({ domain: 'insert-only.fr' }));
     expect(first.prospectId).not.toBe(second.prospectId);
+  });
+
+  it('findProspectByDomainAndSourceVersion matches the domain and file version pair only', async () => {
+    await createProspect(connection!, baseInput({ domain: 'lookup.fr' }));
+    await createProspect(
+      connection!,
+      baseInput({
+        domain: 'lookup.fr',
+        dataOrigin: { ...baseInput().dataOrigin, domainListVersion: 'older-fingerprint' },
+      }),
+    );
+
+    const current = await findProspectByDomainAndSourceVersion(
+      connection!,
+      'lookup.fr',
+      'test-fingerprint',
+    );
+    expect(current?.domain).toBe('lookup.fr');
+    expect(current?.dataOrigin.domainListVersion).toBe('test-fingerprint');
+
+    // A row of the same domain under a different AFNIC file version must
+    // not suppress the lookup for the current version - and an
+    // un-ingested domain matches nothing.
+    expect(
+      await findProspectByDomainAndSourceVersion(connection!, 'lookup.fr', 'other-fingerprint'),
+    ).toBeNull();
+    expect(
+      await findProspectByDomainAndSourceVersion(
+        connection!,
+        'not-ingested.fr',
+        'test-fingerprint',
+      ),
+    ).toBeNull();
   });
 
   it('stores contactAddress only when supplied', async () => {

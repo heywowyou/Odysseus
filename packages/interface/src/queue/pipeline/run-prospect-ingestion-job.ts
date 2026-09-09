@@ -18,6 +18,7 @@ import { statSync } from 'node:fs';
 import {
   completeJob,
   createProspect,
+  findProspectByDomainAndSourceVersion,
   getCheckpoint,
   isSuppressed,
   updateJobProgress,
@@ -102,9 +103,13 @@ export async function runProspectIngestionJob(
     },
   });
 
+  // The current batch's own starting offset: the checkpoint only ever
+  // advances to a batch end (its single write happens after the
+  // candidate loop), so a crash re-streams this batch from exactly here.
+  const batchStartOffset = startByteOffset;
   const afnicResult = await streamAfnicCandidates(
     afnicPath,
-    startByteOffset,
+    batchStartOffset,
     batchSize,
     headerColumns,
   );
@@ -144,6 +149,29 @@ export async function runProspectIngestionJob(
 
   for (let i = 0; i < afnicResult.candidates.length; i++) {
     const candidate = afnicResult.candidates[i] as AfnicRow;
+
+    // Redo guard: because the checkpoint only moves at batch end (its
+    // single write comes after this loop), a crash mid-batch re-streams
+    // this batch from its start and candidates an earlier attempt already
+    // ingested reappear here. Their stored row is the source of truth, so
+    // reconstruct the result from it and move on before any fetch work -
+    // the redo must neither duplicate prospect rows nor re-fetch sites.
+    const existing = await findProspectByDomainAndSourceVersion(
+      connection,
+      candidate.domain,
+      currentAfnicVersion,
+    );
+    if (existing) {
+      ingestionResults[i] = {
+        domain: candidate.domain,
+        status: existing.qualification.qualified ? 'qualified' : 'not-qualified',
+        siren: existing.siren.value,
+        reasons: existing.qualification.reasons,
+      };
+      if (existing.qualification.qualified) qualifiedCount++;
+      continue;
+    }
+
     ingestionResults[i] = { domain: candidate.domain, status: 'fetching' };
 
     const siteUrl = `https://${candidate.domain}/`;
@@ -223,9 +251,8 @@ export async function runProspectIngestionJob(
     }
 
     // Full-array $set on every candidate is O(n^2) write volume over a
-    // batch - throttle to the same interval already used for checkpoint
-    // persistence below, and rely on completeJob's own final write (after
-    // the loop) for exact end state.
+    // batch - throttle to PROSPECT_CHECKPOINT_WRITE_INTERVAL and rely on
+    // completeJob's own final write (after the loop) for exact end state.
     if ((i + 1) % PROSPECT_CHECKPOINT_WRITE_INTERVAL === 0) {
       await updateJobProgress(connection, job.jobId, {
         progress: {
@@ -239,10 +266,15 @@ export async function runProspectIngestionJob(
         },
         ingestionResults,
       });
-      await persistCheckpoint();
     }
   }
 
+  // The batch's only checkpoint write, deliberately after the loop: a
+  // mid-batch checkpoint would name an offset past candidates that had
+  // not been processed yet, so a crash after one would silently skip
+  // them on the next attempt. Crash before here instead redoes the
+  // batch from batchStartOffset, and the loop's already-ingested guard
+  // keeps that redo from duplicating rows or re-fetching sites.
   await persistCheckpoint();
   await completeJob(connection, job.jobId, { ingestionResults });
 }

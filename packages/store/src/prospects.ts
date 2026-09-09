@@ -44,6 +44,27 @@ export async function getProspect(
   return ProspectModel.findOne({ prospectId }).lean<ProspectDocument>();
 }
 
+/**
+ * Dedupe guard for the ingestion runner's batch redo: the collection is
+ * insert-only, so a resumed batch that re-reads candidates an earlier
+ * attempt already processed must detect the existing row instead of
+ * inserting a second one. The domainListVersion filter is the point, not
+ * an extra: a prospect recorded against an older AFNIC file must never
+ * suppress ingesting the same domain under a newer one.
+ */
+export async function findProspectByDomainAndSourceVersion(
+  connection: Connection,
+  domain: string,
+  domainListVersion: string,
+): Promise<ProspectDocument | null> {
+  const ProspectModel = createProspectModel(connection);
+  return ProspectModel.findOne({
+    domain,
+    'dataOrigin.domainSource': 'afnic-fichier-a',
+    'dataOrigin.domainListVersion': domainListVersion,
+  }).lean<ProspectDocument>();
+}
+
 export async function listQualifiedProspects(
   connection: Connection,
   limit = 200,
