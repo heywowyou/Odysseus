@@ -15,7 +15,6 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { Connection } from 'mongoose';
 import {
   FINDINGS_SCHEMA_VERSION,
   NORMALIZATION_FINGERPRINT,
