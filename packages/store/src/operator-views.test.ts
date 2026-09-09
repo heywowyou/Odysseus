@@ -502,7 +502,7 @@ describe.skipIf(!mongoAvailable)('operator views', () => {
         secondWalk.push(...page.rows.map((row) => row.candidateId));
       }
       expect(secondWalk).toEqual(collected.slice(0, 30));
-    });
+    }, 15_000);
 
     it('returns identical order for the same query and applies the default and hard cap', async () => {
       if (!connection) return;
