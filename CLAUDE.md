@@ -734,6 +734,9 @@ facts no host listing has (audit-rehearsal) and for routing.
   another agent to execute; never implements itself.
 - **find-skills** (vercel-labs) — find a capability no listed skill covers;
   verify install count and source reputation before recommending one.
+- **frontend-design** (anthropics/skills) — visual design guidance when
+  building new UI or reshaping existing UI: aesthetic direction,
+  typography, and choices that do not read as templated defaults.
 - **audit-rehearsal** — asked to "dogfood a hotel" or "run an audit
   rehearsal": audits a real, not-yet-scanned catalogue hotel end to end,
   then critiques the bilingual report in character as the hotel's
@@ -741,6 +744,22 @@ facts no host listing has (audit-rehearsal) and for routing.
   GitHub issues; cosmetic nits go to
   `docs/report/audit-rehearsal-notes.md`. Scoped to the paid full-audit
   report only, not the outreach preview or dashboard.
+
+## Operator interaction
+
+Applies on every host and overrides any harness default toward longer
+answers. Full guidance: `docs/agents/coding-conventions.md`,
+"Operator interaction".
+
+- Ask the operator decision questions through the host's interactive
+  question mechanism (structured, clickable options) whenever the host
+  provides one and the question fits its format; plain text only when it
+  does not.
+- Keep everything the operator reads in conversation short, plain, and
+  simply explained: answers, summaries, status updates, questions. State
+  the outcome first, include only what changes what the operator does
+  next, and stop. Depth belongs in plans, internal reasoning, and
+  committed documents, not in chat.
 
 ## Style
 

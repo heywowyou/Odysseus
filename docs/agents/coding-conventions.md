@@ -132,6 +132,27 @@ safe.
   canonical documents routed by `AGENTS.md`. Where the charter requires
   deterministic text, the model does not rewrite it.
 
+## Operator interaction
+
+How agents talk to the operator, on every host. These rules govern
+conversation only: plans, session logs, and committed documents keep
+their own standards.
+
+- Prefer the host's interactive question mechanism for decision
+  questions (Claude Code and ZCode: the AskUserQuestion tool; Codex: its
+  equivalent structured prompt). One question per decision, two to four
+  concrete options, each a short label plus a one-line description, the
+  recommended option first. Ask in plain text only when the mechanism
+  does not fit, such as open-ended input or more than four real options.
+- Lead with the outcome. The first sentence answers the question or
+  names the result; supporting detail follows only when it changes what
+  the operator does next.
+- Keep sentences short and words everyday. Expand jargon and acronyms on
+  first use.
+- When two answers are both complete, the shorter one wins.
+- Never pad for thoroughness. If the operator wants more depth, they
+  will ask.
+
 ## Documentation and decisions
 
 - Update the document that owns a durable fact. Do not create a second summary

@@ -85,6 +85,15 @@ before the session ends, and a fixed one is closed with its commit hash and
 verification evidence. The full lifecycle, including uniqueness and labeling
 rules, is binding on every agent: `docs/agents/issue-tracker.md`.
 
+## Operator interaction
+
+- Ask the operator decision questions through the host's interactive
+  question mechanism (clickable options) whenever it is available and
+  fits; plain text otherwise.
+- Keep everything the operator reads in conversation short, plain, and
+  simply explained, outcome first. Full rules:
+  `docs/agents/coding-conventions.md`, "Operator interaction".
+
 ## Model and effort
 
 Per-host model identity, effort defaults, and current prompting deltas from
