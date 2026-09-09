@@ -38,6 +38,14 @@ vi.mock('@odysseus/scanner', () => ({
   findWorkspaceRoot: vi.fn(() => '/tmp'),
 }));
 
+// Issue #139: wrap, but keep, the real resolver so the per-request read
+// count is observable while every other test keeps reading the real files
+// it writes under /tmp/fake-audit-dir.
+vi.mock('../artifacts/resolve-artifact.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../artifacts/resolve-artifact.js')>();
+  return { ...actual, resolveArtifactFile: vi.fn(actual.resolveArtifactFile) };
+});
+
 import {
   getAudit,
   getFindingsForAudit,
@@ -50,6 +58,7 @@ import {
   setAuditManualFields,
   createJobModel,
 } from '@odysseus/store';
+import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import { Router } from '../router.js';
 import { registerAuditRoutes } from './audits.js';
 
@@ -456,6 +465,81 @@ describe('GET /api/audits/:auditId', () => {
     expect(getLatestReport).toHaveBeenCalledWith(fakeConnection, 'audit-1', 'fr');
     expect(getLatestReport).toHaveBeenCalledWith(fakeConnection, 'audit-1', 'en');
     expect(resolveSelectedAnalysisPairForAudit).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads each report PDF at most once per request (issue #139)', async () => {
+    // Fixture modelled on the approve-reports test: real on-disk PDFs whose
+    // digest matches what the report rows record, a selected pair carrying
+    // that provenance, so verifyFreshPair succeeds on the served bytes.
+    const pdf = Buffer.from('%PDF-1.4 single-read bytes');
+    const pdfDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
+    await fs.mkdir('/tmp/fake-audit-dir/reports', { recursive: true });
+    await Promise.all([
+      fs.writeFile('/tmp/fake-audit-dir/reports/fr.pdf', pdf),
+      fs.writeFile('/tmp/fake-audit-dir/reports/en.pdf', pdf),
+    ]);
+    vi.mocked(resolveSelectedAnalysisPairForAudit).mockImplementation(
+      async () =>
+        ({
+          kind: 'selected',
+          fr: {
+            analysisId: 'analysis-fr',
+            auditId: 'audit-1',
+            language: 'fr',
+            findingsProvenance,
+            generatedAt: new Date(),
+          },
+          en: {
+            analysisId: 'analysis-en',
+            auditId: 'audit-1',
+            language: 'en',
+            findingsProvenance,
+            generatedAt: new Date(),
+          },
+        }) as never,
+    );
+    vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) => ({
+      reportId: `report-${language}`,
+      auditId: 'audit-1',
+      analysisId: `analysis-${language}`,
+      findingsProvenance,
+      rendererVersion: 2,
+      rendererBuild: 'build',
+      pdfDigest,
+      language,
+      reportTemplateVersion: 2,
+      analysisGeneratedAt: new Date(),
+      fileRef: `reports/${language}.pdf`,
+      generatedAt: new Date(),
+    }));
+    vi.mocked(resolveArtifactFile).mockClear();
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.reports).toEqual([
+      { language: 'fr', status: 'fresh', pdfAvailable: true },
+      { language: 'en', status: 'fresh', pdfAvailable: true },
+    ]);
+    // The pair verified over the shared buffers, so the freshness decision
+    // consumed exactly the availability reads above.
+    expect(body.lifecycle).toBe('rendered');
+    // Before #139 the availability flags and verifyFreshPair each paid for
+    // the same digest-verified read: two full reads and hashes per language
+    // on every dashboard open.
+    const frReads = vi
+      .mocked(resolveArtifactFile)
+      .mock.calls.filter(([localPath]) => String(localPath).endsWith('reports/fr.pdf')).length;
+    const enReads = vi
+      .mocked(resolveArtifactFile)
+      .mock.calls.filter(([localPath]) => String(localPath).endsWith('reports/en.pdf')).length;
+    expect(frReads).toBeLessThanOrEqual(1);
+    expect(enReads).toBeLessThanOrEqual(1);
   });
 
   it('carries the failed job behind the audit (issue #90)', async () => {

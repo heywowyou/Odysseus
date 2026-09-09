@@ -87,7 +87,12 @@ async function readVerifiedReport(
 
 /** Pure over already-fetched reports and resolution, so a caller that has
  *  already paid for those reads (the dashboard's GET handler, which needs
- *  them for other fields anyway) does not pay for them twice. */
+ *  them for other fields anyway) does not pay for them twice. preReadPdfs
+ *  carries those already-paid reads, produced by readVerifiedReport itself:
+ *  a buffer exists exactly when the fresh read would have returned bytes,
+ *  so supplying one cannot change the verdict. When it is absent (the
+ *  approve-reports path via getFreshVerifiedPair, whose transaction must
+ *  re-verify live) the pair is read fresh here, as before. */
 async function verifyFreshPair(
   fr: ReportDocument | null,
   en: ReportDocument | null,
@@ -97,6 +102,7 @@ async function verifyFreshPair(
   hostname: string,
   startedAt: Date,
   store: ArtifactStore | undefined,
+  preReadPdfs?: { fr: Buffer | undefined; en: Buffer | undefined },
 ): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en: Buffer } } | undefined> {
   // Plan 019: the current analysis pair is the selected one (or, for a
   // legacy audit without a selection, the latest complete pair from the
@@ -118,10 +124,12 @@ async function verifyFreshPair(
     classifyReportFreshness(en, currentFindings) !== 'fresh'
   )
     return undefined;
-  const [frPdf, enPdf] = await Promise.all([
-    readVerifiedReport(auditDir, fr, hostname, startedAt, store),
-    readVerifiedReport(auditDir, en, hostname, startedAt, store),
-  ]);
+  const [frPdf, enPdf] = preReadPdfs
+    ? [preReadPdfs.fr, preReadPdfs.en]
+    : await Promise.all([
+        readVerifiedReport(auditDir, fr, hostname, startedAt, store),
+        readVerifiedReport(auditDir, en, hostname, startedAt, store),
+      ]);
   if (!frPdf || !enPdf) return undefined;
   return { reports: { fr, en }, pdfs: { fr: frPdf, en: enPdf } };
 }
@@ -146,23 +154,6 @@ async function getFreshVerifiedPair(
     resolveSelectedAnalysisPairForAudit(connection, auditId),
   ]);
   return verifyFreshPair(fr, en, resolution, auditDir, currentFindings, hostname, startedAt, store);
-}
-
-/** Issue #91: whether this machine can actually serve a report's PDF
- *  bytes, by the same digest-verified read the preview and download
- *  endpoints run. False when there is no report row at all. A bucket hit
- *  is cached locally by resolveArtifactFile, so one dashboard visit
- *  repairs availability for the next. */
-async function reportPdfAvailable(
-  report: ReportDocument | null,
-  auditDir: string,
-  hostname: string,
-  startedAt: Date,
-  store: ArtifactStore | undefined,
-): Promise<boolean> {
-  if (report === null) return false;
-  const pdf = await readVerifiedReport(auditDir, report, hostname, startedAt, store);
-  return pdf !== undefined;
 }
 
 /** Issue #93: the reviewed remediation and French title copy per detector
@@ -312,11 +303,22 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     // Issue #91: resolve each language's PDF availability up front, so the
     // dashboard can render report rows that tell "the report is fine but
     // elsewhere" apart from "the report is gone" instead of asserting a
-    // freshness the endpoints cannot honour.
-    const [frPdfAvailable, enPdfAvailable] = await Promise.all([
-      reportPdfAvailable(frReport, auditDir, hostname, audit.startedAt, artifactStore),
-      reportPdfAvailable(enReport, auditDir, hostname, audit.startedAt, artifactStore),
+    // freshness the endpoints cannot honour. These are the same
+    // digest-verified reads verifyFreshPair consumes below, so each
+    // language's PDF is read at most once per request (issue #139) and the
+    // buffers are shared; a bucket hit is cached locally by
+    // resolveArtifactFile, so one dashboard visit repairs availability for
+    // the next.
+    const [frPdf, enPdf] = await Promise.all([
+      frReport === null
+        ? Promise.resolve(undefined)
+        : readVerifiedReport(auditDir, frReport, hostname, audit.startedAt, artifactStore),
+      enReport === null
+        ? Promise.resolve(undefined)
+        : readVerifiedReport(auditDir, enReport, hostname, audit.startedAt, artifactStore),
     ]);
+    const frPdfAvailable = frPdf !== undefined;
+    const enPdfAvailable = enPdf !== undefined;
     const reports = (['fr', 'en'] as const).map((language) => {
       const report = language === 'fr' ? frReport : enReport;
       return {
@@ -340,6 +342,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       hostname,
       audit.startedAt,
       artifactStore,
+      { fr: frPdf, en: enPdf },
     );
     const analysed = Boolean(
       selectedPair.kind !== 'none' &&
