@@ -1,10 +1,17 @@
 /**
  * Batch scan for prospecting: same engine as a full audit (runAuditStage
  * is the identical function full-audit jobs call), but bounded to a
- * light config. computeBrokennessScore and the two LLM cost gates
- * (@odysseus/core, milestone 9b) are available for a caller that wants to
- * score these results; the LLM/PDF stages themselves are still skipped
- * entirely here, and outreach email drafts remain milestone 9c.
+ * light config. Nothing on this path is brokenness-gated: the LLM and
+ * PDF stages are skipped unconditionally here, so no LLM cost gate runs.
+ * Of the milestone 9b gates in @odysseus/core
+ * (cost-gating/brokenness.ts), isAuditFallbackEligible is wired into the
+ * audit analysis stage as of issue #162 (see the trade-off 23
+ * amendment), while computeBrokennessScore and isProspectingWorthy
+ * remain unwired by decision (trade-off 23). The hotel prospecting
+ * path's real worthiness gate is isHotelOutreachWorthy and
+ * computeHotelOutreachScore in prospecting/hotel-outreach-score.ts,
+ * which scores prescan facts instead of findings. Outreach email drafts
+ * remain milestone 9c.
  *
  * Milestone 9b: the serial for-loop became a bounded worker pool
  * (PROSPECTING_JOB_CONCURRENCY workers pulling from a shared cursor)
