@@ -477,3 +477,22 @@ the cosmetic residue, none blocking on its own:
   prompt prohibition. Openings are varied, so the plan 027 metric holds;
   the residue is the connective scaffold, worth one more wording pass if
   the operator wants it.
+
+## 2026-09-09 — hautsdesancerre.com
+
+- URL: https://hautsdesancerre.com/
+- Audit ID: 332f8bcd-0166-4cd8-860b-5af27214b9b4
+- Environment note: one uncapped VPS dashboard-queue rehearsal. The crawl
+  honoured a 1,000 ms effective delay, reached 59 URLs, and completed content
+  checks and Lighthouse on all 59 before the model stages began.
+- Verdict: the scanner completed cleanly, but the paid-deliverable path could
+  not complete. The French writing pass exhausted all three attempts because
+  its executive summary repeated the verified room count as a digit, which the
+  template-owned-count guard correctly rejects. No French or English analysis
+  or PDF exists, so the owner/GM critique and language-pair review could not
+  run.
+- Top concerns: the failure appears only after the full, costly scan has
+  completed. The prompt tells the model that property size may make the
+  executive summary concrete, but the same field forbids every digit.
+- Nits: none assessed; no report was rendered.
+- Issues filed: #119.
