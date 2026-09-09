@@ -1,14 +1,10 @@
 export { getMongoUri, connectToMongo, disconnectFromMongo } from './connection.js';
 export { createAuditModel } from './schemas/audit.schema.js';
 export type { AuditDocument, AuditDocumentFields } from './schemas/audit.schema.js';
-export { createFindingModel } from './schemas/finding.schema.js';
 export type { FindingDocument } from './schemas/finding.schema.js';
 export { persistAudit } from './persist-audit.js';
-export { createAnalysisModel } from './schemas/analysis.schema.js';
 export type { AnalysisDocument, AnalysisDocumentFields } from './schemas/analysis.schema.js';
 export { persistAnalysis } from './persist-analysis.js';
-export { getLatestAnalysis } from './analyses.js';
-export { createSireneCacheModel } from './schemas/sirene-cache.schema.js';
 export type {
   SireneCacheDocument,
   SireneCacheDocumentFields,
@@ -17,7 +13,6 @@ export { upsertSireneCache, getCachedSireneProfile } from './persist-sirene-cach
 export { createReportModel } from './schemas/report.schema.js';
 export type { ReportDocument, ReportDocumentFields } from './schemas/report.schema.js';
 export { persistReport } from './persist-report.js';
-export { createReportApprovalModel } from './schemas/report-approval.schema.js';
 export type {
   ApprovedReportRef,
   ReportApprovalDocument,
@@ -86,7 +81,6 @@ export {
   clearStaleWarningAcknowledgement,
   getAnalysisById,
   getReportPreparation,
-  listAnalysesForAudit,
   patchReportPreparationInputs,
   recordFailedWritingCandidate,
   recordReadyWritingCandidate,
@@ -96,7 +90,6 @@ export {
 } from './report-preparations.js';
 export type { SelectedAuditAnalysisPairResolution } from './report-preparations.js';
 export { getLatestReport, listReportLanguages } from './reports.js';
-export { createProspectModel } from './schemas/prospect.schema.js';
 export type {
   ProspectContactAddress,
   ProspectDataOrigin,
@@ -104,33 +97,23 @@ export type {
   ProspectDocumentFields,
   ProspectQualificationReason,
 } from './schemas/prospect.schema.js';
-export {
-  createProspect,
-  findProspectByDomainAndSourceVersion,
-  getProspect,
-  listQualifiedProspects,
-} from './prospects.js';
+export { createProspect, findProspectByDomainAndSourceVersion, getProspect } from './prospects.js';
 export type { NewProspectInput } from './prospects.js';
-export { createSuppressionModel } from './schemas/suppression.schema.js';
 export type {
   SuppressionDocument,
   SuppressionDocumentFields,
 } from './schemas/suppression.schema.js';
 export { addSuppressionEntry, isSuppressed, findSuppressedDomains } from './suppression.js';
 export type { AddSuppressionEntryInput } from './suppression.js';
-export { createProspectIngestionCheckpointModel } from './schemas/prospect-ingestion-checkpoint.schema.js';
 export type { ProspectIngestionCheckpointFields } from './schemas/prospect-ingestion-checkpoint.schema.js';
 export { getCheckpoint, upsertCheckpoint } from './prospect-ingestion-checkpoint.js';
 export type { CheckpointPatch } from './prospect-ingestion-checkpoint.js';
-export { createHotelSourceRecordModel } from './schemas/hotel-source-record.schema.js';
 export type {
   HotelSourceRecordDocument,
   HotelSourceRecordDocumentFields,
 } from './schemas/hotel-source-record.schema.js';
 export {
   insertHotelSourceRecords,
-  getHotelSourceYield,
-  listHotelSourceRecords,
   streamHotelSourceRecords,
   getLatestHotelIngestRunId,
 } from './hotel-source-records.js';
@@ -139,7 +122,6 @@ export type {
   InsertHotelSourceRecordsResult,
   HotelSourceYield,
 } from './hotel-source-records.js';
-export { createHotelCandidateModel } from './schemas/hotel-candidate.schema.js';
 export type {
   HotelCandidateDocument,
   HotelCandidateDocumentFields,
@@ -188,7 +170,6 @@ export type {
 // Milestone 9c plan 004: the prescan collection. Inserted, never upserted -
 // see schemas/prescan.schema.ts for why a re-run is a new observation rather
 // than a correction of the previous one.
-export { createPrescanModel } from './schemas/prescan.schema.js';
 export type { PrescanDocument, PrescanDocumentFields } from './schemas/prescan.schema.js';
 export {
   recordPrescan,
@@ -210,9 +191,7 @@ export type {
 // Milestone 9c plan 006: immutable outreach scores and the cohorts selected
 // from them. Both collections are inserted, never updated - see
 // schemas/score.schema.ts and schemas/score-cohort.schema.ts.
-export { createHotelScoreModel } from './schemas/score.schema.js';
 export type { HotelScoreDocument, HotelScoreDocumentFields } from './schemas/score.schema.js';
-export { createHotelScoreCohortModel } from './schemas/score-cohort.schema.js';
 export type {
   HotelScoreCohortDocument,
   HotelScoreCohortDocumentFields,
@@ -220,9 +199,7 @@ export type {
 } from './schemas/score-cohort.schema.js';
 export {
   recordHotelScores,
-  getLatestHotelScore,
   listLatestHotelScores,
-  listHotelScores,
   listCandidatesToScore,
   findScoredCandidateIds,
   getHotelScoreSummary,
@@ -244,7 +221,6 @@ export type {
 // Milestone 9c plan 007: the contact collection. Upserted on
 // (contactVersion, candidateId) - see schemas/hotel-contact.schema.ts for why a
 // re-run over a bounded cohort is a retry rather than a new observation.
-export { createHotelContactModel } from './schemas/hotel-contact.schema.js';
 export type {
   HotelContactDocument,
   HotelContactDocumentFields,
@@ -268,7 +244,6 @@ export type {
 // Milestone 9c plan 009: published outreach previews. Inserted at publication
 // and transitioned once at revocation - see schemas/outreach-preview.schema.ts
 // for why the raw token has no field to live in.
-export { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
 export type {
   OutreachPreviewDocument,
   OutreachPreviewDocumentFields,
@@ -276,13 +251,9 @@ export type {
 } from './schemas/outreach-preview.schema.js';
 export {
   recordOutreachPreview,
-  findOutreachPreviewByTokenHash,
-  getOutreachPreview,
   revokeOutreachPreview,
   listOutreachPreviews,
   listLivePreviewsForDomain,
-  PREVIEW_PUBLIC_LIFETIME_DAYS,
-  PREVIEW_RETENTION_DAYS,
 } from './outreach-previews.js';
 export type {
   RecordOutreachPreviewInput,
@@ -292,10 +263,7 @@ export type {
 } from './outreach-previews.js';
 
 // Milestone 9c plans 011 and 012: outreach threads and draft attempts.
-export {
-  createOutreachThreadModel,
-  OUTREACH_THREAD_STATES,
-} from './schemas/outreach-thread.schema.js';
+export { OUTREACH_THREAD_STATES } from './schemas/outreach-thread.schema.js';
 export type {
   OutreachThreadDocument,
   OutreachLanguageSource,
@@ -312,13 +280,11 @@ export {
   transitionOutreachThread,
   recordOutreachThreadTouchSent,
   markOutreachThreadSynced,
-  setOutreachThreadOutcome,
   closeOutreachThreadsForDomain,
   listOutreachThreads,
   listThreadsDueForFollowUp,
   completeOutreachSequence,
   listThreadsToSync,
-  OUTREACH_THREAD_RETENTION_DAYS,
 } from './outreach-threads.js';
 export type {
   OpenOutreachThreadInput,
@@ -333,7 +299,6 @@ export type {
   ListThreadsToSyncOptions,
 } from './outreach-threads.js';
 
-export { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 export type {
   OutreachDraftDocument,
   OutreachDraftReviewOutcome,
@@ -347,8 +312,6 @@ export {
   findOutreachDraftById,
   markOutreachDraftDeleted,
   listOutreachDrafts,
-  DuplicateLiveDraftError,
-  OUTREACH_DRAFT_RETENTION_DAYS,
 } from './outreach-drafts.js';
 export type {
   RecordOutreachDraftInput,
@@ -357,27 +320,16 @@ export type {
   ListOutreachDraftsOptions,
 } from './outreach-drafts.js';
 
-export { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
 export type {
   OutreachOutcomeDocument,
   OutreachOutcomeDocumentFields,
 } from './schemas/outreach-outcome.schema.js';
-export {
-  recordOutreachOutcome,
-  listOutreachOutcomes,
-  OUTREACH_OUTCOME_RETENTION_DAYS,
-} from './outreach-outcomes.js';
+export { recordOutreachOutcome, listOutreachOutcomes } from './outreach-outcomes.js';
 export type {
   RecordOutreachOutcomeInput,
   RecordOutreachOutcomeResult,
   ListOutreachOutcomesOptions,
 } from './outreach-outcomes.js';
-export { getOutreachCampaignAggregate } from './outreach-campaign-aggregate.js';
-export type {
-  GetOutreachCampaignAggregateOptions,
-  OutreachCampaignAggregate,
-  OutreachCampaignAggregateRow,
-} from './outreach-campaign-aggregate.js';
 export type { ContactableCohortMember } from './hotel-contacts.js';
 
 // Milestone 9c plan 013: bounded operator view projections. Compositions of
