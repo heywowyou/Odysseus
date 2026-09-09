@@ -13,7 +13,7 @@ set -Eeuo pipefail
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/.deploy.local.env"
+CONFIG_FILE="${ODYSSEUS_DEPLOY_CONFIG_FILE:-$SCRIPT_DIR/.deploy.local.env}"
 
 log() {
   printf '%s odysseus-deploy: %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
@@ -33,8 +33,11 @@ ODYSSEUS_DEPLOY_SSH_KEY="${ODYSSEUS_DEPLOY_SSH_KEY:-$HOME/.ssh/id_ed25519}"
 ODYSSEUS_DEPLOY_REMOTE_PATH="${ODYSSEUS_DEPLOY_REMOTE_PATH:-/srv/odysseus}"
 ODYSSEUS_DEPLOY_COMPOSE_DIR="${ODYSSEUS_DEPLOY_COMPOSE_DIR:-/docker/odysseus}"
 ODYSSEUS_DEPLOY_COMPOSE_PROJECT="${ODYSSEUS_DEPLOY_COMPOSE_PROJECT:-odysseus}"
+ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP="${ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP:-4GB}"
 
 [[ "$ODYSSEUS_DEPLOY_COMPOSE_PROJECT" != deploy ]] || fail "ODYSSEUS_DEPLOY_COMPOSE_PROJECT must not be 'deploy' (collides with the old release.sh project name and recreates a container/volume mismatch already fixed once on this box)"
+[[ "$ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP" =~ ^[1-9][0-9]*(B|KB|MB|GB|TB)$ ]] ||
+  fail "ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP must be a positive whole-byte Docker size, such as 4GB"
 
 SSH_OPTS=(-i "$ODYSSEUS_DEPLOY_SSH_KEY" -o BatchMode=yes)
 
@@ -101,5 +104,9 @@ RUNNING_BUILD="$(ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
   "$COMPOSE exec -T app printenv ODYSSEUS_BUILD_ID" 2>/dev/null | tr -d '\r\n')"
 [[ "$RUNNING_BUILD" == "$BUILD_ID" ]] ||
   fail "rolled out, but the running container reports build '${RUNNING_BUILD:-<none>}' rather than '${BUILD_ID:-<none>}'"
+
+log "pruning dangling Docker images and unused build cache (keeping $ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP)"
+ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
+  "docker image prune -f && docker builder prune -f -a --keep-storage '$ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP'"
 
 log "done. Running build: ${RUNNING_BUILD:-unstamped}. No panel click needed."
