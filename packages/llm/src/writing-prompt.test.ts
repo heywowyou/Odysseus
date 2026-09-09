@@ -75,6 +75,26 @@ describe('item 0.4: the writing prompt forbids the model from writing any count 
       'never write a number of findings, pages, or occurrences anywhere in executiveSummary',
     );
   });
+
+  it('keeps a numeric room count out of the French executiveSummary', () => {
+    const prompt = buildWritingSystemPrompt('fr', false, null, undefined, {
+      propertyType: 'hôtel',
+      roomCount: 8,
+    });
+
+    expect(prompt).toContain('ne reprenez jamais le nombre de chambres avec un chiffre');
+    expect(prompt).toContain('écrivez-le en toutes lettres ou décrivez-le qualitativement');
+  });
+
+  it('keeps a numeric room count out of the English executiveSummary', () => {
+    const prompt = buildWritingSystemPrompt('en', false, null, undefined, {
+      propertyType: 'hotel',
+      roomCount: 8,
+    });
+
+    expect(prompt).toContain('never repeat the room count as a digit');
+    expect(prompt).toContain('write it out in words or describe it qualitatively');
+  });
 });
 
 // item 3.7: a real report addressed some priorities to a French phrase and

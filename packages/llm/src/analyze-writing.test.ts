@@ -84,6 +84,13 @@ function buildDigitInSummaryOutput(): WritingPassOutput {
   return output;
 }
 
+function buildNumericRoomCountSummaryOutput(): WritingPassOutput {
+  const output = buildCleanFrenchOutput();
+  output.executiveSummary =
+    'Cet hôtel de 8 chambres présente plusieurs problèmes qui affectent son efficacité commerciale.';
+  return output;
+}
+
 function buildNonCanonicalSeverityWordOutput(): WritingPassOutput {
   // Verbatim from the real observed failure, artifacts/haaitza.com/
   // 2026-08-08T11-07-43Z/analyses/2026-08-08T11-23-48Z-fr.json, except for
@@ -245,6 +252,32 @@ describe('analyzeWriting', () => {
 
     expect(result.output.executiveSummary).not.toMatch(/\d/);
     expect(callOpenAiForWriting).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries a numeric room count in executiveSummary with feedback that names the guard', async () => {
+    const roomCountInput: WritingInput = {
+      ...input,
+      siteContext: {
+        ...input.siteContext,
+        propertyType: 'hôtel',
+        roomCount: 8,
+      },
+    };
+    const corrected = buildCleanFrenchOutput();
+    corrected.executiveSummary =
+      'Cet hôtel de huit chambres présente plusieurs problèmes qui affectent son efficacité commerciale.';
+    vi.mocked(callOpenAiForWriting)
+      .mockReset()
+      .mockResolvedValueOnce({ output: buildNumericRoomCountSummaryOutput() })
+      .mockResolvedValueOnce({ output: corrected });
+
+    const result = await analyzeWriting(roomCountInput, ['t1'], false);
+
+    expect(result.output.executiveSummary).toContain('huit chambres');
+    expect(result.output.executiveSummary).not.toMatch(/\d/);
+    const calls = vi.mocked(callOpenAiForWriting).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[1]![2]).toContain('executiveSummary contains a digit');
   });
 
   it('throws after exhausting retries when every attempt puts a digit in executiveSummary', async () => {
