@@ -1,3 +1,6 @@
+import * as fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/scanner', () => ({
@@ -56,6 +59,7 @@ import { runAuditStage } from './audit-stage.js';
 const browserClose = vi.fn();
 const fakeBrowser = { close: browserClose } as never;
 const fakeConnection = {} as never;
+const defaultAuditDir = path.join(os.tmpdir(), 'odysseus-audit-stage-default');
 
 function fakeManifest() {
   return {
@@ -79,6 +83,8 @@ function capturedConfig() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fs.rmSync(defaultAuditDir, { recursive: true, force: true });
+  vi.mocked(buildAuditDir).mockReturnValue(defaultAuditDir);
   vi.mocked(launchBrowser).mockResolvedValue({ browser: fakeBrowser, debugPort: 9222 });
   vi.mocked(scanSite).mockResolvedValue({
     crawl: {
@@ -167,6 +173,26 @@ describe('runAuditStage', () => {
       'deleteCrawlCheckpoint',
       'deleteCrawlStateFile',
     ]);
+  });
+
+  it('creates the audit directory before scanSite can write a crawl frontier checkpoint', async () => {
+    const auditDir = fs.mkdtempSync(path.join(os.tmpdir(), 'odysseus-audit-stage-'));
+    fs.rmSync(auditDir, { recursive: true, force: true });
+    vi.mocked(buildAuditDir).mockReturnValue(auditDir);
+    vi.mocked(scanSite).mockImplementation(async (_url, options) => {
+      const stateFile = path.join(options.auditDir ?? '', '.crawl-state.json.tmp');
+      fs.writeFileSync(stateFile, '{}');
+      fs.renameSync(stateFile, path.join(options.auditDir ?? '', 'crawl-state.json'));
+      return { crawl: { visitedCount: 2 }, pages: [] } as never;
+    });
+
+    try {
+      await runAuditStage('https://example.com/', {}, fakeConnection);
+
+      expect(fs.existsSync(path.join(auditDir, 'crawl-state.json'))).toBe(true);
+    } finally {
+      fs.rmSync(auditDir, { recursive: true, force: true });
+    }
   });
 
   it('stamps the manifest and persistence input with the exact findings provenance', async () => {
@@ -440,7 +466,7 @@ describe('runAuditStage', () => {
     expect(scanSite).toHaveBeenCalledWith(
       'https://example.com/',
       expect.objectContaining({
-        screenshotDir: '/artifacts/example.com/2026-08-04T00-00-00Z/pages',
+        screenshotDir: path.join(defaultAuditDir, 'pages'),
       }),
     );
   });

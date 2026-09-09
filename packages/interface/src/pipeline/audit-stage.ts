@@ -7,6 +7,7 @@
  * rather than left as accepted duplication.
  */
 
+import * as fs from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
@@ -137,6 +138,11 @@ export async function runAuditStage(
     const hostname = new URL(url).hostname;
     const auditDir = buildAuditDir(getArtifactsRoot(), hostname, startedAt);
     const screenshotDir = path.join(auditDir, 'pages');
+
+    // The resumable crawl writes its frontier snapshot before
+    // writeAuditArtifacts runs. Create the stable run directory first so
+    // its atomic temp-file write cannot fail on a fresh full audit (#129).
+    fs.mkdirSync(auditDir, { recursive: true });
 
     // Issue #111: a per-job pacing option may only ever slow the crawl
     // down, so it can also serve as the coverage gate's "slow the crawl"
