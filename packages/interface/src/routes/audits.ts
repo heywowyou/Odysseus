@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
@@ -39,6 +39,7 @@ import type { Router } from '../router.js';
 import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
 import { runAllReportsStage } from '../pipeline/report-stage.js';
+import { pdfDigestOf } from '../pipeline/pdf-digest.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
@@ -80,7 +81,7 @@ async function readVerifiedReport(
   } catch {
     return undefined;
   }
-  const digest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
+  const digest = pdfDigestOf(pdf);
   return digest === report.pdfDigest ? pdf : undefined;
 }
 
@@ -735,7 +736,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'report file not found on disk or in the bucket');
       return;
     }
-    const actualDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
+    const actualDigest = pdfDigestOf(pdf);
     if (actualDigest !== report.pdfDigest) {
       sendError(res, 409, 'report PDF digest does not match its provenance record');
       return;

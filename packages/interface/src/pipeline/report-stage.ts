@@ -6,7 +6,7 @@
  */
 
 import { promises as fs } from 'node:fs';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { hostname } from 'node:os';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
@@ -31,6 +31,7 @@ import {
 import { launchBrowser, readOdysseusBuildId } from '@odysseus/scanner';
 import { getAuditManualFields, getReportPreparation, persistReport } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
+import { pdfDigestOf } from './pdf-digest.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { syncArtifactFilesToBucket } from '../artifacts/sync-audit-artifacts.js';
 
@@ -155,7 +156,7 @@ export async function runReportStage(
     ...(browser !== undefined ? { browser } : {}),
   });
 
-  const pdfDigest = `sha256:${createHash('sha256').update(pdf).digest('hex')}`;
+  const pdfDigest = pdfDigestOf(pdf);
   const reportsDir = path.join(auditDir, 'reports');
   await fs.mkdir(reportsDir, { recursive: true });
   const reportPath = path.join(

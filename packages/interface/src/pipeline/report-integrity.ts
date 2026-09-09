@@ -9,9 +9,10 @@
  *
  * The classification is a pure function over rows plus an fs adapter so
  * it is unit-testable without Mongo or a filesystem; the sweep below is
- * the thin IO wrapper. Verification reuses the same digest convention
- * routes/audits.ts's readVerifiedReport established (sha256 over the
- * file bytes, `sha256:` prefixed in the row's pdfDigest).
+ * the thin IO wrapper. Verification uses pdfDigestOf from
+ * pipeline/pdf-digest.ts, the single definition of the stored-report
+ * digest convention (sha256 over the file bytes, `sha256:` prefixed in
+ * the row's pdfDigest).
  *
  * Why a missing file is not automatically "lost": the artifacts root is
  * per-machine (the local workspace's artifacts/ vs the deployment's
@@ -21,13 +22,13 @@
  * leaving the operator to re-derive it.
  */
 
-import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { hostname } from 'node:os';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import { createAuditModel, createReportModel, type ReportDocument } from '@odysseus/store';
+import { pdfDigestOf } from './pdf-digest.js';
 
 export type ReportIntegrityStatus =
   'ok' | 'file-missing' | 'digest-mismatch' | 'digest-unrecorded' | 'audit-dir-unknown';
@@ -72,10 +73,6 @@ export interface ReportIntegrityEntry {
   /** Operator-facing explanation of the status, including the
    *  rendered-elsewhere annotation when the row names a different host. */
   detail: string;
-}
-
-function digestOf(buffer: Buffer): string {
-  return `sha256:${createHash('sha256').update(buffer).digest('hex')}`;
 }
 
 function renderedElsewhereNote(row: ReportIntegrityInputRow, currentHost: string): string {
@@ -133,7 +130,7 @@ export async function classifyReportRows(
       continue;
     }
 
-    const actualDigest = digestOf(await fsx.read(filePath));
+    const actualDigest = pdfDigestOf(await fsx.read(filePath));
     const stored = row.pdfDigest.replace(/^sha256:/, '');
     if (actualDigest.replace(/^sha256:/, '') !== stored) {
       entries.push({
