@@ -206,6 +206,12 @@ export const en: DashboardStrings = {
     dateLabel: 'Date',
     pagesVisitedLabel: 'Pages visited',
     findingsHeading: 'Problems found',
+    publisherIdentificationHeading: 'Review website identification details',
+    publisherIdentificationObserved:
+      'The scan found no SIREN, RCS or VAT number published on the pages of this site it visited.',
+    publisherIdentificationLimit:
+      'This observation concerns only the pages visited and does not conclude on the business’s situation.',
+    publisherIdentificationAction: 'View the finding and remediation',
     severityColumn: 'Severity',
     categoryColumn: 'Category',
     titleColumn: 'Problem',

@@ -236,6 +236,13 @@ export interface DashboardStrings {
     dateLabel: string;
     pagesVisitedLabel: string;
     findingsHeading: string;
+    /** Issue #120: a dedicated, bounded observation for the LCEN publisher-
+     * identification scanner rule. It opens the existing finding rather
+     * than duplicating remediation or making a legal conclusion. */
+    publisherIdentificationHeading: string;
+    publisherIdentificationObserved: string;
+    publisherIdentificationLimit: string;
+    publisherIdentificationAction: string;
     severityColumn: string;
     categoryColumn: string;
     titleColumn: string;

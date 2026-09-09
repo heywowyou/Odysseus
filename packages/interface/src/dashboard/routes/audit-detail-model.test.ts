@@ -7,6 +7,7 @@ import {
   findingDisplayTitle,
   findingExpansionView,
   findingRemediation,
+  findPublisherIdentificationFinding,
   hasPageCountWarning,
   hostnameOf,
   isReportStageFailure,
@@ -95,6 +96,29 @@ describe('sortFindings', () => {
     const sorted = sortFindings(rows);
     expect(sorted.map((row) => row.findingId)).toEqual(['first', 'second']);
     expect(sorted).not.toBe(rows);
+  });
+});
+
+describe('findPublisherIdentificationFinding', () => {
+  it('returns only the persisted publisher-identification finding', () => {
+    const publisherIdentification = finding({
+      findingId: 'lcen-1',
+      ruleId: 'lcen-mentions-legales-missing',
+      severity: 'serious',
+    });
+
+    expect(
+      findPublisherIdentificationFinding([
+        finding({ findingId: 'contrast-1', ruleId: 'color-contrast' }),
+        publisherIdentification,
+      ]),
+    ).toBe(publisherIdentification);
+  });
+
+  it('stays absent without the dedicated scanner rule', () => {
+    expect(
+      findPublisherIdentificationFinding([finding({ ruleId: 'color-contrast' })]),
+    ).toBeUndefined();
   });
 });
 

@@ -206,6 +206,12 @@ export const fr: DashboardStrings = {
     dateLabel: 'Date',
     pagesVisitedLabel: 'Pages visitées',
     findingsHeading: 'Constats',
+    publisherIdentificationHeading: 'Vérifier les informations d’identification du site',
+    publisherIdentificationObserved:
+      'Le scan n’a trouvé aucun numéro SIREN, RCS ou de TVA publié sur les pages de ce site qu’il a visitées.',
+    publisherIdentificationLimit:
+      'Cette observation concerne uniquement les pages visitées et ne conclut pas sur la situation de l’entreprise.',
+    publisherIdentificationAction: 'Voir le constat et la piste de correction',
     severityColumn: 'Gravité',
     categoryColumn: 'Catégorie',
     titleColumn: 'Problème',

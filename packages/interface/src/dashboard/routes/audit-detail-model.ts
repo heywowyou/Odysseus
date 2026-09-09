@@ -72,6 +72,17 @@ export function sortFindings(findings: readonly FindingResponse[]): FindingRespo
   return [...findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 }
 
+/** The dashboard consumes this persisted scanner rule through its HTTP
+ * boundary, so it identifies the dedicated alert by the stable rule ID
+ * rather than trying to infer it from translated titles or category. */
+const PUBLISHER_IDENTIFICATION_RULE_ID = 'lcen-mentions-legales-missing';
+
+export function findPublisherIdentificationFinding(
+  findings: readonly FindingResponse[],
+): FindingResponse | undefined {
+  return findings.find((finding) => finding.ruleId === PUBLISHER_IDENTIFICATION_RULE_ID);
+}
+
 /** By-value mirror of @odysseus/report's REPORT_PAGE_COUNT_WARNING_THRESHOLD:
  *  this project reads no workspace packages, the same discipline as
  *  audit-detail-types.ts. A report above it is still previewable and

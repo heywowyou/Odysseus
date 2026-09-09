@@ -36,6 +36,7 @@ import {
   countOccurrences,
   countPages,
   failureReasonKind,
+  findPublisherIdentificationFinding,
   findingDisplayTitle,
   findingExpansionView,
   firstElementSelector,
@@ -362,18 +363,24 @@ function FindingsCard(props: {
   findings: FindingResponse[];
   ruleCopy: RuleCopyMap | undefined;
   language: DashboardLanguage;
+  expandedFindingId: string | null;
+  onExpandedFindingChange: (findingId: string | null) => void;
 }): JSX.Element {
-  const { findings, ruleCopy, language } = props;
+  const { findings, ruleCopy, language, expandedFindingId, onExpandedFindingChange } = props;
   const { strings } = useI18n();
   const [filter, setFilter] = useState<SeverityFilter>('');
-  // One expanded row at a time: the operator compares rows by their
-  // discriminator column, then drills into exactly one of them.
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const sorted = useMemo(() => sortFindings(findings), [findings]);
   const visible = filter === '' ? sorted : sorted.filter((finding) => finding.severity === filter);
-  const toggleRow = (findingId: string): void => {
-    setExpandedId((current) => (current === findingId ? null : findingId));
-  };
+  // The dedicated alert lands on the same actionable control as a direct
+  // table click, so its remediation remains the existing reviewed copy.
+  useEffect(() => {
+    if (expandedFindingId === null) return;
+    const control = document.getElementById(`finding-toggle-${expandedFindingId}`);
+    if (typeof control?.scrollIntoView === 'function') {
+      control.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    (control as HTMLButtonElement | null)?.focus({ preventScroll: true });
+  }, [expandedFindingId]);
   return (
     <Card
       title={strings.auditDetail.findingsHeading}
@@ -420,7 +427,7 @@ function FindingsCard(props: {
           </TableHead>
           <TableBody>
             {visible.map((finding) => {
-              const isExpanded = expandedId === finding.findingId;
+              const isExpanded = expandedFindingId === finding.findingId;
               const selector = firstElementSelector(finding);
               return (
                 <FindingRowGroup
@@ -430,7 +437,7 @@ function FindingsCard(props: {
                   language={language}
                   isExpanded={isExpanded}
                   selector={selector}
-                  onToggle={() => toggleRow(finding.findingId)}
+                  onToggle={() => onExpandedFindingChange(isExpanded ? null : finding.findingId)}
                 />
               );
             })}
@@ -470,6 +477,7 @@ function FindingRowGroup(props: {
         <TableCell>
           <div className="flex items-center gap-2">
             <button
+              id={`finding-toggle-${finding.findingId}`}
               type="button"
               className="rounded p-0.5 text-ink-muted transition-colors hover:text-accent-bright"
               aria-expanded={isExpanded}
@@ -570,6 +578,36 @@ function FindingRowGroup(props: {
         </TableRow>
       ) : null}
     </>
+  );
+}
+
+/** Issue #120: the scanner's serious publisher-identification observation
+ * gets an obvious entry point, without duplicating its reviewed remediation
+ * or turning limited scan coverage into a conclusion about the business. */
+function PublisherIdentificationAlert(props: {
+  finding: FindingResponse;
+  onRevealFinding: () => void;
+}): JSX.Element {
+  const { finding, onRevealFinding } = props;
+  const { strings } = useI18n();
+  return (
+    <Card
+      title={strings.auditDetail.publisherIdentificationHeading}
+      className="border-sev-serious/40"
+      actions={
+        <Badge tone={finding.severity}>{strings.common.severityLabels[finding.severity]}</Badge>
+      }
+    >
+      <p className="max-w-reading text-sm text-ink-soft">
+        {strings.auditDetail.publisherIdentificationObserved}
+      </p>
+      <p className="mt-2 max-w-reading text-xs text-ink-muted">
+        {strings.auditDetail.publisherIdentificationLimit}
+      </p>
+      <Button variant="secondary" size="sm" className="mt-4" onClick={onRevealFinding}>
+        {strings.auditDetail.publisherIdentificationAction}
+      </Button>
+    </Card>
   );
 }
 
@@ -986,6 +1024,7 @@ export function AuditDetailPage(): JSX.Element {
   const { data, error, refresh, isNotFound } = useAuditDetail(auditId);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isApproveOpen, setIsApproveOpen] = useState(false);
+  const [expandedFindingId, setExpandedFindingId] = useState<string | null>(null);
 
   const handleRegenerate = async (): Promise<void> => {
     if (auditId === undefined) return;
@@ -1059,6 +1098,8 @@ export function AuditDetailPage(): JSX.Element {
     );
   }
 
+  const publisherIdentificationFinding = findPublisherIdentificationFinding(data.findings);
+
   return (
     <article className={PAGE_WIDTH.surface}>
       <PageHeader
@@ -1106,6 +1147,12 @@ export function AuditDetailPage(): JSX.Element {
             isRegenerating={isRegenerating}
           />
         ) : null}
+        {publisherIdentificationFinding !== undefined ? (
+          <PublisherIdentificationAlert
+            finding={publisherIdentificationFinding}
+            onRevealFinding={() => setExpandedFindingId(publisherIdentificationFinding.findingId)}
+          />
+        ) : null}
         <ReportsCard
           detail={data}
           onRegenerate={() => void handleRegenerate()}
@@ -1122,7 +1169,13 @@ export function AuditDetailPage(): JSX.Element {
             refresh={refresh}
           />
         </div>
-        <FindingsCard findings={data.findings} ruleCopy={data.ruleCopy} language={language} />
+        <FindingsCard
+          findings={data.findings}
+          ruleCopy={data.ruleCopy}
+          language={language}
+          expandedFindingId={expandedFindingId}
+          onExpandedFindingChange={setExpandedFindingId}
+        />
       </div>
       <ConfirmDialog
         open={isApproveOpen}

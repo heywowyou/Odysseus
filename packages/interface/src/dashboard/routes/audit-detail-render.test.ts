@@ -243,6 +243,69 @@ describe('audit detail report-stage failure card (issue #90)', () => {
   });
 });
 
+describe('publisher-identification alert (issue #120)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('shows the bounded alert and opens its existing finding remediation', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': {
+        ...emptyAudit,
+        severityRollup: { critical: 0, serious: 1, moderate: 0, minor: 0 },
+        findings: [
+          {
+            findingId: 'lcen-1',
+            auditId: 'audit-1',
+            schemaVersion: 1,
+            source: 'custom',
+            ruleId: 'lcen-mentions-legales-missing',
+            category: 'seo',
+            severity: 'serious',
+            wcagCriteria: [],
+            title: 'No publisher identification found',
+            description: 'No identifier found.',
+            pageUrls: ['https://exemple.fr/'],
+            occurrences: 1,
+            elements: [],
+            rawEvidence: {},
+            dedupeKey: 'lcen-1',
+            firstSeenAt: '2026-09-01T10:00:00.000Z',
+            lastSeenAt: '2026-09-01T10:00:00.000Z',
+          },
+        ],
+        ruleCopy: {
+          'lcen-mentions-legales-missing': {
+            titleFr: 'Aucun numéro SIREN, RCS ou de TVA trouvé sur le site',
+            remediationFr: "Publiez les informations d'identification de l'entreprise.",
+            remediationEn: "Publish the company's identification information.",
+          },
+        },
+      },
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Vérifier les informations d’identification du site');
+    expect(container.textContent).toContain(
+      'Le scan n’a trouvé aucun numéro SIREN, RCS ou de TVA publié sur les pages de ce site qu’il a visitées.',
+    );
+    const revealButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Voir le constat et la piste de correction',
+    );
+    expect(revealButton).toBeDefined();
+    await act(async () => {
+      revealButton?.click();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+    expect(container.textContent).toContain(
+      "Publiez les informations d'identification de l'entreprise.",
+    );
+    expect(container.querySelector('button[aria-expanded="true"]')).not.toBeNull();
+    root.unmount();
+  });
+});
+
 describe('reports card PDF availability (issue #91)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
