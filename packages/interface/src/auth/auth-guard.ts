@@ -3,10 +3,20 @@ import { sendError } from '../http-utils.js';
 import { LOGIN_PATH, LOGOUT_PATH } from './session-routes.js';
 import { readSessionCookieToken, type SessionStore } from './session-store.js';
 
-/** Last-segment file extension test: everything the built SPA loads by URL
- *  (hashed /assets/* bundles, fonts, a direct /index.html hit) names a
- *  file, while every client-side route (/audits, /scans, /) does not. */
-const FILE_EXTENSION_PATTERN = /\.[A-Za-z0-9]+$/;
+/** Extensions the built SPA actually loads by URL (hashed /assets/* bundles,
+ *  self-hosted fonts, the shell's own index.html, the favicon). An explicit
+ *  set replaces the old "any dot-plus-alphanumerics last segment" rule,
+ *  which let arbitrary dotted paths through without a session. */
+const STATIC_ASSET_EXTENSIONS: ReadonlySet<string> = new Set([
+  'html',
+  'js',
+  'css',
+  'woff2',
+  'woff',
+  'png',
+  'svg',
+  'ico',
+]);
 
 /** Returns true when the request may continue into the router. When it
  *  returns false the response has already been written in full: a JSON 401
@@ -30,10 +40,11 @@ export function createAuthGuard(deps: { sessionStore: SessionStore }): AuthGuard
     }
 
     const lastSegment = pathname.slice(pathname.lastIndexOf('/') + 1);
+    const extension = lastSegment.slice(lastSegment.lastIndexOf('.') + 1).toLowerCase();
     if (
       pathname === '/login' ||
       pathname === '/login/' ||
-      FILE_EXTENSION_PATTERN.test(lastSegment)
+      (lastSegment.includes('.') && STATIC_ASSET_EXTENSIONS.has(extension))
     ) {
       return true;
     }

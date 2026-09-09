@@ -97,6 +97,21 @@ describe('auth guard', () => {
     }
   });
 
+  it('redirects unknown dotted paths to /login instead of bypassing the session', async () => {
+    const { guard } = buildGuard();
+    // The old "any dot-plus-alphanumerics last segment" rule let these
+    // through with no session; only real SPA asset extensions bypass now.
+    for (const path of ['/audits/report.backup', '/scans/job-1.html2', '/x.evil']) {
+      const res = fakeRes();
+      expect(await guard(fakeReq(path), res), path).toBe(false);
+      expect(res.statusCode, path).toBe(302);
+      const calls = (res.setHeader as ReturnType<typeof vi.fn>).mock.calls as Array<
+        [string, string]
+      >;
+      expect(calls.find(([name]) => name === 'location')?.[1], path).toBe('/login');
+    }
+  });
+
   it('stops redirecting once the browser holds a valid session', async () => {
     const { store, guard } = buildGuard();
     const cookie = cookieFor(store.create());
