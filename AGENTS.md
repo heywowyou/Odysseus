@@ -40,6 +40,7 @@ historical, and research documents.
 | Offer, pricing, or sales claims | `docs/rules/offer-positioning.md` |
 | Report design or PDF layout | `docs/report/report-design-system.md`, `docs/report/report-design-tokens.md`, canonical flat sources in `docs/report/design/` |
 | Package vocabulary or architectural decisions | `docs/agents/domain.md`, relevant `CONTEXT.md` / ADRs if present |
+| Deploying to production | `deploy/runbook.md` and trade-off 77: the operator deploys locally with `deploy/odysseus-deploy.sh`; never use or suggest the GitHub release workflow unless the local path is genuinely blocked |
 | GitHub issues | `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` |
 | Code style, naming, tests, comments, or product prose | `docs/agents/coding-conventions.md` |
 

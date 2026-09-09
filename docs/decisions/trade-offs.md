@@ -2793,6 +2793,11 @@ allowlist caution, and the restore drill live in `deploy/runbook.md`.
 
 ### 61. Production releases are CI-verified, operator-triggered, immutable, and driven by a shell-restricted VPS key
 
+Superseded as the production path by trade-off 77 (operator decision,
+2026-09-09): production is deployed locally through `odysseus-deploy` and the
+GitHub workflow is deliberately disabled. This entry is kept for its mechanics
+and threat model in case that decision is ever reversed.
+
 Routine updates to `app.odysseusaudit.com` now start only when the operator
 manually dispatches the production workflow on `main`. The workflow refuses to
 deploy unless that exact commit has a successful `CI` push run, then streams
@@ -3931,3 +3936,30 @@ trade-off 61's posture intact: still CI-verified, operator-triggered,
 immutable releases. Fail-closed was chosen over warn-and-proceed because
 the deploy's whole purpose here is to not guess about hours of third-party
 site load.
+
+### 77. Production deploys run locally through odysseus-deploy; the GitHub release workflow is retired unless the local path becomes a roadblock (operator decision, 2026-09-09)
+
+The Hostinger box serving `app.odysseusaudit.com` is updated by the local
+sequence `deploy/odysseus-deploy.sh` performs: sync the tree to
+`/srv/odysseus`, render `deploy/compose.yaml` to
+`/docker/odysseus/docker-compose.yml`, build `odysseus-app:latest` with the
+short commit stamped as `ODYSSEUS_BUILD_ID`, `up -d`, then verify the running
+container reports that build id. The operator chose this over the
+GitHub-dispatched release controller of trade-off 61: one script from the
+working machine is simpler for a one-operator product, and issue #127 showed
+the cost of keeping a second, unused deploy path pointing at production
+(a stale path hid a stale production behind a green health check).
+
+Consequences, binding on every agent:
+
+- Do not propose dispatching the `Deploy production` workflow, and do not
+  propose migrating the box to the release-controller layout (`deploy` user,
+  `releases/` tree, `deploy_*` volumes), unless the local path is genuinely
+  blocked and the operator asks for an alternative.
+- `PRODUCTION_DEPLOY_ENABLED` is `false`, so the workflow is deliberately
+  skipped. `PRODUCTION_HOST` stays pointed at the real box so a stray
+  re-enable fails closed on the missing deploy key instead of reaching the
+  abandoned box (issue #127).
+- Trade-off 61's mechanics and its 2026-09-09 hardening stay merged and
+  accurate for if this decision is ever reversed. What is retired is the
+  suggestion, not the code.

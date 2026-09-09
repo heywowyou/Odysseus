@@ -223,7 +223,14 @@ and the timer stack came back on their own.
 
 ## 7A. Configure controlled production releases
 
-Routine releases start only when the operator runs the `Deploy production`
+> Operator decision, 2026-09-09: production (the Hostinger box serving
+> `app.odysseusaudit.com`) is deployed locally with
+> `deploy/odysseus-deploy.sh`; this GitHub workflow is deliberately disabled
+> (`PRODUCTION_DEPLOY_ENABLED=false`) and agents must not suggest it unless
+> the local path is genuinely blocked (trade-off 77). This section stays as
+> reference for the mechanism, its guards, and its rollback design.
+
+Routine releases had started only when the operator ran the `Deploy production`
 workflow on `main`. The workflow refuses to deploy unless that exact commit has
 a successful `CI` push run. It does not pull whatever happens to be at the tip
 of a branch later.
