@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Router } from './router.js';
+import { sendJson } from './http-utils.js';
 
 function fakeReq(
   method: string,
@@ -34,6 +35,19 @@ describe('Router', () => {
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler.mock.calls[0]?.[0]).toMatchObject({ params: {} });
+  });
+
+  it('applies the base security headers before any handler runs', async () => {
+    const router = new Router();
+    router.get('/api/scans', (ctx) => {
+      sendJson(ctx.res, 200, {});
+    });
+
+    const res = fakeRes();
+    await router.handle(fakeReq('GET', '/api/scans'), res);
+
+    expect(res.setHeader).toHaveBeenCalledWith('x-content-type-options', 'nosniff');
+    expect(res.setHeader).toHaveBeenCalledWith('referrer-policy', 'no-referrer');
   });
 
   it('captures :param segments and decodes them', async () => {

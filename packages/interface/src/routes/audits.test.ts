@@ -548,5 +548,7 @@ describe('GET /api/audits/:auditId/report/:language', () => {
 
     expect(res.statusCode).toBe(409);
     expect(res.body).toContain('unverified');
+    expect(res.setHeader).toHaveBeenCalledWith('x-content-type-options', 'nosniff');
+    expect(res.setHeader).toHaveBeenCalledWith('referrer-policy', 'no-referrer');
   });
 });

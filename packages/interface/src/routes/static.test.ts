@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveStaticPath } from './static.js';
+import { isHtmlContentType, SPA_CONTENT_SECURITY_POLICY } from '../security-headers.js';
 
 let publicDir: string;
 
@@ -97,5 +98,19 @@ describe('resolveStaticPath', () => {
   it('refuses traversal outside publicDir', async () => {
     const resolution = await resolveStaticPath(publicDir, '/../secrets.txt');
     expect(resolution).toEqual({ kind: 'forbidden' });
+  });
+});
+
+describe('SPA shell content security policy', () => {
+  it('gates the policy on the HTML content type the fallback computes', () => {
+    expect(isHtmlContentType('text/html; charset=utf-8')).toBe(true);
+    expect(isHtmlContentType('text/css; charset=utf-8')).toBe(false);
+    expect(isHtmlContentType('text/javascript; charset=utf-8')).toBe(false);
+    expect(isHtmlContentType('application/octet-stream')).toBe(false);
+  });
+
+  it('keeps the policy scoped to self-hosted assets with no framing', () => {
+    expect(SPA_CONTENT_SECURITY_POLICY).toContain("script-src 'self'");
+    expect(SPA_CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'");
   });
 });

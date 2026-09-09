@@ -10,6 +10,7 @@ import { registerProspectInsightRoutes } from './routes/prospect-insights.js';
 import { registerOutreachRoutes } from './routes/outreach.js';
 import { registerStaticFallback } from './routes/static.js';
 import { createAuthGuard, type AuthGuard } from './auth/auth-guard.js';
+import { applyBaseSecurityHeaders } from './security-headers.js';
 import { registerSessionRoutes } from './auth/session-routes.js';
 import { createLoginRateLimiter, type LoginRateLimiter } from './auth/rate-limit.js';
 import { createInMemorySessionStore, type SessionStore } from './auth/session-store.js';
@@ -118,6 +119,9 @@ export async function startInterfaceServer(
   }
 
   const server = createServer((req, res) => {
+    // Baseline hardening before anything else, so guard rejections and the
+    // catch-handler 500 carry the same headers as routed responses.
+    applyBaseSecurityHeaders(res);
     void (async () => {
       if (guard !== undefined && !(await guard(req, res))) return;
       await router.handle(req, res);

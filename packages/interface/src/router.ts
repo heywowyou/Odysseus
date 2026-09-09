@@ -7,6 +7,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { sendError } from './http-utils.js';
+import { applyBaseSecurityHeaders } from './security-headers.js';
 
 const STATE_CHANGING_METHODS = new Set(['POST', 'PATCH', 'DELETE']);
 
@@ -113,6 +114,10 @@ export class Router {
   }
 
   async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    // Every routed response, the fallback, and the bare 404 get the baseline
+    // headers here; the server applies them too so guard and error paths,
+    // which never reach this method, are covered as well.
+    applyBaseSecurityHeaders(res);
     const url = new URL(req.url ?? '/', 'http://internal');
     const pathSegments = splitPath(url.pathname);
     const method = req.method ?? 'GET';

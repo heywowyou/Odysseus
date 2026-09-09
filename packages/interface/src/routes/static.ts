@@ -3,6 +3,7 @@ import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import { APP_ROUTE_PREFIXES } from '../app-routes.js';
 import { getPublicDir } from '../config.js';
+import { isHtmlContentType, SPA_CONTENT_SECURITY_POLICY } from '../security-headers.js';
 import type { Router } from '../router.js';
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -95,6 +96,11 @@ export function registerStaticFallback(router: Router): void {
       CONTENT_TYPES[path.extname(resolution.filePath)] ?? 'application/octet-stream';
     res.statusCode = 200;
     res.setHeader('content-type', contentType);
+    // The CSP belongs on the SPA shell only; hashed assets and unknown
+    // binaries keep their bare content type.
+    if (isHtmlContentType(contentType)) {
+      res.setHeader('content-security-policy', SPA_CONTENT_SECURITY_POLICY);
+    }
     createReadStream(resolution.filePath).pipe(res);
   });
 }
