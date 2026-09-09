@@ -12,8 +12,6 @@ import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
   buildAuditDir,
-  deleteCrawlCheckpoint,
-  deleteCrawlStateFile,
   getArtifactsRoot,
   getCrawlDelayMs,
   getCrawlerUserAgent,
@@ -309,12 +307,15 @@ export async function runAuditStage(
 
     await persistAudit(connection, manifest, findings);
 
-    // Plan 035: the checkpoint's job is done once the audit is persisted;
-    // a crash after this point re-runs the post-scan stages idempotently
-    // (persistAudit upserts by auditId, analyses are insert-only and
-    // reuse-existing on disk), never re-crawling.
-    deleteCrawlCheckpoint(artifacts.auditDir);
-    deleteCrawlStateFile(artifacts.auditDir);
+    // Plan 002 (issue #132): no checkpoint deletion here. The checkpoint
+    // must survive until the JOB reaches its terminal state, because a
+    // crash in the analysis or report stages of the same job re-runs this
+    // stage (persistAudit upserts by auditId, so that re-persist is
+    // harmless), and the checkpoint is the only thing that keeps that
+    // re-run from re-crawling the whole site. Deleting it at persist time
+    // turned every post-audit crash into exactly the full second crawl the
+    // resume feature exists to prevent. The job runner and the CLI audit
+    // command delete it once their run is complete.
 
     // Issue #63: sync after the local write and the DB row both succeeded,
     // never before - a bucket failure must not block an already-valid

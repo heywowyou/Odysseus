@@ -3,15 +3,18 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@odysseus/scanner', () => ({
+// Plan 002 (issue #132): importOriginal keeps the real crawl checkpoint
+// reader and writer, so the survival test below asserts against actual
+// disk state; everything with effects the stage drives (browser, scan,
+// artifact writes) stays a stub.
+vi.mock('@odysseus/scanner', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@odysseus/scanner')>()),
   launchBrowser: vi.fn(),
   scanSite: vi.fn(),
   writeAuditArtifacts: vi.fn(),
   writeFindingsFile: vi.fn(),
   writeManifestFile: vi.fn(),
   pruneScreenshots: vi.fn(),
-  deleteCrawlCheckpoint: vi.fn(),
-  deleteCrawlStateFile: vi.fn(),
   buildAuditDir: vi.fn(() => '/artifacts/example.com/2026-08-04T00-00-00Z'),
   buildArtifactBucketKey: vi.fn(
     (hostname: string, startedAt: Date, relativePath: string) =>
@@ -42,12 +45,12 @@ vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 
 import {
   buildAuditDir,
-  deleteCrawlCheckpoint,
-  deleteCrawlStateFile,
   launchBrowser,
   pruneScreenshots,
+  readCrawlCheckpoint,
   scanSite,
   writeAuditArtifacts,
+  writeCrawlCheckpoint,
   writeFindingsFile,
   writeManifestFile,
 } from '@odysseus/scanner';
@@ -149,12 +152,6 @@ describe('runAuditStage', () => {
     vi.mocked(persistAudit).mockImplementation(async () => {
       calls.push('persistAudit');
     });
-    vi.mocked(deleteCrawlCheckpoint).mockImplementation(() => {
-      calls.push('deleteCrawlCheckpoint');
-    });
-    vi.mocked(deleteCrawlStateFile).mockImplementation(() => {
-      calls.push('deleteCrawlStateFile');
-    });
 
     await runAuditStage('https://example.com/', {}, fakeConnection);
 
@@ -167,11 +164,6 @@ describe('runAuditStage', () => {
       'writeManifestFile',
       'pruneScreenshots',
       'persistAudit',
-      // Plan 035: the crawl checkpoint's job is done once the audit is
-      // persisted; a crash after this point re-runs the post-scan stages
-      // idempotently instead of re-crawling.
-      'deleteCrawlCheckpoint',
-      'deleteCrawlStateFile',
     ]);
   });
 
@@ -474,8 +466,8 @@ describe('runAuditStage', () => {
   // Plan 035 (issue #124): the job's run identity drives the audit
   // directory's timestamp and the persisted auditId, so an orphan re-claim
   // of the same job lands in the same directory and reuses what is already
-  // on disk. The checkpoint files are cleaned once persistAudit succeeds.
-  it('plan 035: a run identity drives buildAuditDir, writeAuditArtifacts and the auditId, and cleans the checkpoint files after persistAudit', async () => {
+  // on disk.
+  it('plan 035: a run identity drives buildAuditDir, writeAuditArtifacts and the auditId', async () => {
     const startedAt = new Date('2026-09-01T08:00:00.000Z');
     const runIdentity = { startedAt, auditId: 'run-audit-42' };
 
@@ -485,8 +477,48 @@ describe('runAuditStage', () => {
     const writeInput = vi.mocked(writeAuditArtifacts).mock.calls[0]?.[0];
     expect(writeInput?.startedAt).toBe(startedAt);
     expect(writeInput?.auditId).toBe('run-audit-42');
-    expect(deleteCrawlCheckpoint).toHaveBeenCalledWith(result.auditDir);
-    expect(deleteCrawlStateFile).toHaveBeenCalledWith(result.auditDir);
+    expect(result.auditDir).toBe('/artifacts/example.com/2026-08-04T00-00-00Z');
+  });
+
+  // Plan 002 (issue #132): the checkpoint must survive the audit stage. A
+  // crash in a later stage of the same job re-runs this stage, and the
+  // checkpoint is the only thing that keeps that re-run from re-crawling
+  // the whole site, so the stage itself never deletes it.
+  it('leaves the crawl checkpoint on disk when the stage completes', async () => {
+    const auditDir = fs.mkdtempSync(path.join(os.tmpdir(), 'odysseus-audit-stage-checkpoint-'));
+    try {
+      vi.mocked(buildAuditDir).mockReturnValue(auditDir);
+      vi.mocked(writeAuditArtifacts).mockResolvedValue({
+        auditId: 'audit-123',
+        auditDir,
+        manifest: fakeManifest(),
+        pages: [],
+      } as never);
+      // The real scanSite writes the checkpoint the moment its coverage
+      // gate passes; the mock replays that disk effect so the assertion
+      // below sees a checkpoint a deletion would have removed.
+      vi.mocked(scanSite).mockImplementation(async (_url, options) => {
+        writeCrawlCheckpoint(options.auditDir ?? '', {
+          checkpointVersion: 'v1',
+          startedAt: new Date('2026-09-01T08:00:00.000Z').toISOString(),
+          config: {} as never,
+          toolIdentity: {
+            format: 'full-audit-crawl-checkpoint-v1',
+            scannerVersion: 'test',
+            plannerVersion: 'v1',
+          },
+          crawl: { visitedCount: 2 } as never,
+        });
+        return { crawl: { visitedCount: 2 }, pages: [] } as never;
+      });
+
+      const result = await runAuditStage('https://example.com/', {}, fakeConnection);
+
+      expect(result.auditDir).toBe(auditDir);
+      expect(readCrawlCheckpoint(auditDir)).toBeDefined();
+    } finally {
+      fs.rmSync(auditDir, { recursive: true, force: true });
+    }
   });
 
   it('plan 035: without a run identity the stage mints startedAt as before and leaves the auditId mint to writeAuditArtifacts', async () => {

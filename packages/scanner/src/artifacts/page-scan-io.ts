@@ -109,16 +109,26 @@ export interface WrittenPageScanJson {
 }
 
 /** Reads back a page's already-written scan.json, or undefined if none
- *  exists yet at that page's directory. Used wherever a caller needs a
- *  page's full result but (issue #64) never retained it in memory -
- *  scan-site.ts's staged full-audit path re-reads a page's rendered-only
- *  scan.json before merging in its Lighthouse result, and
- *  write-audit.ts falls back to this when a visited page isn't in
- *  siteResult.pages. */
+ *  exists yet at that page's directory, or the file cannot be read or
+ *  parsed. The undefined-on-corruption case is deliberate (issue #132): a
+ *  scan.json truncated by a crash mid-write must degrade to "page pending
+ *  re-scan" on the next resume, never throw out of the resume partition
+ *  (scan-site.ts hands this reader to partitionPagesForResume as its
+ *  readExisting callback, where one throw would poison every later resume
+ *  attempt of the audit until a human deleted the file by hand). Used
+ *  wherever a caller needs a page's full result but (issue #64) never
+ *  retained it in memory - scan-site.ts's staged full-audit path re-reads
+ *  a page's rendered-only scan.json before merging in its Lighthouse
+ *  result, and write-audit.ts falls back to this when a visited page
+ *  isn't in siteResult.pages. */
 export function readPageScanJson(pagesDir: string, url: string): PageScanResult | undefined {
   const scanJsonPath = path.join(pagesDir, buildPageDir(url), 'scan.json');
   if (!fs.existsSync(scanJsonPath)) return undefined;
-  return JSON.parse(fs.readFileSync(scanJsonPath, 'utf-8')) as PageScanResult;
+  try {
+    return JSON.parse(fs.readFileSync(scanJsonPath, 'utf-8')) as PageScanResult;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -141,7 +151,14 @@ export function writePageScanJson(
     ? toAuditRelativeRefs(scanResult.renderDiff, auditDir)
     : undefined;
   const scanJson = buildScanJson(scanResult, relativizedRenderDiff);
-  fs.writeFileSync(path.join(pageDirPath, 'scan.json'), JSON.stringify(scanJson, null, 2));
+  // Temp-file write plus same-volume rename, matching crawl-checkpoint-io.ts
+  // (issue #132): a run killed mid-write must never leave a truncated
+  // scan.json at the final path, where it used to make every later resume
+  // attempt of that audit throw until the file was removed by hand.
+  const target = path.join(pageDirPath, 'scan.json');
+  const temp = path.join(pageDirPath, '.scan.json.tmp');
+  fs.writeFileSync(temp, JSON.stringify(scanJson, null, 2));
+  fs.renameSync(temp, target);
 
   return { pageDir, scanJson };
 }

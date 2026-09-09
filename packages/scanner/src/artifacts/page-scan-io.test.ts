@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import * as fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { CheckExecutionOutcome, CheckId } from '../check-scope-coverage.js';
 import type { RenderedCostProfile } from '../full-audit-plan.js';
 import type { PageScanResult } from '../scan-page.js';
-import { buildScanJson } from './page-scan-io.js';
+import { buildPageDir } from './paths.js';
+import { buildScanJson, readPageScanJson, writePageScanJson } from './page-scan-io.js';
 
 const checkOutcomes: Partial<Record<CheckId, CheckExecutionOutcome>> = {
   'render-diff': 'completed',
@@ -53,5 +57,60 @@ describe('buildScanJson', () => {
     expect(scanJson.lighthouse).toEqual(scanResult.lighthouse);
     expect(scanJson.checkOutcomes).toEqual(checkOutcomes);
     expect(scanJson).not.toHaveProperty('renderedCostProfile');
+  });
+});
+
+let writtenTempDirs: string[] = [];
+
+async function makeTempPagesDir(): Promise<{ auditDir: string; pagesDir: string }> {
+  const auditDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'odysseus-page-scan-io-'));
+  writtenTempDirs.push(auditDir);
+  return { auditDir, pagesDir: path.join(auditDir, 'pages') };
+}
+
+afterEach(async () => {
+  await Promise.all(
+    writtenTempDirs.map((dir) => fs.promises.rm(dir, { recursive: true, force: true })),
+  );
+  writtenTempDirs = [];
+});
+
+describe('writePageScanJson and readPageScanJson', () => {
+  it('round trips a written scan.json through readPageScanJson', async () => {
+    const { auditDir, pagesDir } = await makeTempPagesDir();
+    const scanResult: PageScanResult = { url: 'https://example.com/', renderDiffError: 'gone' };
+
+    const { scanJson } = writePageScanJson(pagesDir, auditDir, scanResult);
+
+    expect(readPageScanJson(pagesDir, scanResult.url)).toEqual(scanJson);
+  });
+
+  it('writes atomically, leaving no temp file behind', async () => {
+    const { auditDir, pagesDir } = await makeTempPagesDir();
+
+    writePageScanJson(pagesDir, auditDir, { url: 'https://example.com/' });
+
+    const pageDirPath = path.join(pagesDir, buildPageDir('https://example.com/'));
+    expect(fs.readdirSync(pageDirPath)).toEqual(['scan.json']);
+  });
+
+  // Issue #132: one scan.json truncated by a crash mid-write must not
+  // throw out of the resume partition and poison every later resume
+  // attempt of the audit; it degrades to that page pending a re-scan.
+  it('reads a truncated file as undefined instead of throwing', async () => {
+    const { auditDir, pagesDir } = await makeTempPagesDir();
+    writePageScanJson(pagesDir, auditDir, { url: 'https://example.com/' });
+    fs.writeFileSync(
+      path.join(pagesDir, buildPageDir('https://example.com/'), 'scan.json'),
+      '{ truncated',
+    );
+
+    expect(readPageScanJson(pagesDir, 'https://example.com/')).toBeUndefined();
+  });
+
+  it('reads a missing file as undefined', async () => {
+    const { pagesDir } = await makeTempPagesDir();
+
+    expect(readPageScanJson(pagesDir, 'https://example.com/')).toBeUndefined();
   });
 });

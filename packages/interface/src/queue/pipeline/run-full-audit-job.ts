@@ -17,6 +17,7 @@ import {
   type JobDocument,
 } from '@odysseus/store';
 import type { SiteSignalOverrides } from '@odysseus/core';
+import { deleteCrawlCheckpoint, deleteCrawlStateFile } from '@odysseus/scanner';
 import { hasMeasuredCoreWebVitals } from '@odysseus/report';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
@@ -136,6 +137,14 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       auditId: auditResult.auditId,
       ...(needsReview !== undefined ? { needsReview } : {}),
     });
+
+    // Plan 002 (issue #132): the crawl checkpoint deliberately outlives the
+    // audit stage, so only now is it safe to drop. It sits after
+    // completeJob inside this try on purpose: a crash in any stage above,
+    // or in completeJob itself, requeues the job, and the checkpoint is
+    // what keeps that retry from re-crawling the whole site.
+    deleteCrawlCheckpoint(auditResult.auditDir);
+    deleteCrawlStateFile(auditResult.auditDir);
   } finally {
     release();
   }

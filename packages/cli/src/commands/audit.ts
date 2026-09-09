@@ -6,6 +6,7 @@ import {
   type AuditCoverageSummary,
   type SiteSignalOverrides,
 } from '@odysseus/core';
+import { deleteCrawlCheckpoint, deleteCrawlStateFile } from '@odysseus/scanner';
 import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
 import { parseSirenOption } from '../parse-siren-option.js';
 import { parseBooleanOption } from '../parse-boolean-option.js';
@@ -145,6 +146,14 @@ export function registerAuditCommand(program: Command): void {
             },
             mongoConnection,
           );
+
+          // Plan 002 (issue #132): the audit stage keeps the crawl
+          // checkpoint on disk so a crash before this point can resume
+          // without re-crawling. This command is the whole pipeline for a
+          // manual run (audit stage only, nothing after it), so a completed
+          // run is the terminal point where the checkpoint can go.
+          deleteCrawlCheckpoint(result.auditDir);
+          deleteCrawlStateFile(result.auditDir);
 
           const bySeverity = { critical: 0, serious: 0, moderate: 0, minor: 0 };
           for (const finding of result.findings) bySeverity[finding.severity]++;

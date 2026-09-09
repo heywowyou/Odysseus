@@ -3883,6 +3883,14 @@ and every job read would carry it. A post-crawl crash therefore resumes with
 zero re-crawling, which also stops re-hammering a site that may have been
 rejecting the crawl in the first place.
 
+**Amended 2026-09-09, issue #132.** The checkpoint is no longer deleted when
+the audit stage succeeds: it now lives until the whole job reaches its
+terminal state, deleted by the job runner after `completeJob` (and by the
+`odysseus audit` CLI command after its audit stage), because a crash in the
+analysis or report stages re-runs the audit stage and needs the checkpoint
+to avoid re-crawling. Every resume validation, the coverage gate re-run,
+and the mismatch cleanup are unchanged.
+
 **Resume validation fails closed toward a fresh crawl, and a fresh crawl
 under the same directory starts clean.** A checkpoint is reused only when
 the recomputed effective config (job options plus environment-derived
