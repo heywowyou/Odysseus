@@ -18,6 +18,13 @@ vi.mock('@odysseus/store', () => ({
   getLatestHotelCandidateByOwnRegistrableDomain: vi.fn(),
 }));
 vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
+/** Partial mock: buildFindingsProvenance stays a pass-through to the real
+ *  implementation but its call count becomes observable, pinning that a
+ *  supplied provenance is used as-is instead of recomputed. */
+vi.mock('@odysseus/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@odysseus/core')>();
+  return { ...actual, buildFindingsProvenance: vi.fn(actual.buildFindingsProvenance) };
+});
 
 import {
   analyzeReview,
@@ -32,6 +39,7 @@ import {
   buildFindingsProvenance,
   type AuditManifest,
   type Finding,
+  type FindingsProvenance,
 } from '@odysseus/core';
 import { runObligationStage } from './obligation-stage.js';
 import { runAnalysisStage } from './analysis-stage.js';
@@ -262,6 +270,70 @@ describe('runAnalysisStage', () => {
     ).rejects.toThrow(/legacy manifest.*normalize.*regenerate/i);
     expect(analyzeStructure).not.toHaveBeenCalled();
     expect(analyzeWriting).not.toHaveBeenCalled();
+  });
+
+  // The queued pipeline computes the provenance once per job and threads it
+  // down (perf): these pin that a supplied value is used as-is and that the
+  // fail-closed assert still fires over it, exactly as for a self-computed
+  // one.
+  it('uses a supplied findingsProvenance as-is and persists it instead of recomputing one', async () => {
+    const manifest = fakeManifest();
+    const supplied: FindingsProvenance = manifest.findingsProvenance!;
+    // fakeManifest builds its own provenance through the mocked core export;
+    // clear so only the stage's own behaviour is counted below.
+    vi.mocked(buildFindingsProvenance).mockClear();
+
+    const result = await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'fr', findingsProvenance: supplied },
+      fakeConnection,
+    );
+    await Promise.all(result.advisoryPasses);
+
+    expect(buildFindingsProvenance).not.toHaveBeenCalled();
+    expect(result.analysis.findingsProvenance).toBe(supplied);
+    expect(persistAnalysis).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({ findingsProvenance: supplied }),
+    );
+  });
+
+  it('fails closed before any model call when a supplied findingsProvenance disagrees with the manifest', async () => {
+    const manifest = fakeManifest();
+    const staleProvenance: FindingsProvenance = {
+      ...manifest.findingsProvenance!,
+      findingsDigest: `sha256:${'f'.repeat(64)}`,
+    };
+
+    await expect(
+      runAnalysisStage(
+        auditDir,
+        manifest,
+        [buildFinding()],
+        { language: 'fr', findingsProvenance: staleProvenance },
+        fakeConnection,
+      ),
+    ).rejects.toThrow(/stale legacy manifest.*findings digest/i);
+    expect(analyzeStructure).not.toHaveBeenCalled();
+    expect(analyzeWriting).not.toHaveBeenCalled();
+  });
+
+  it('computes the provenance exactly once when no findingsProvenance is supplied', async () => {
+    const manifest = fakeManifest();
+    vi.mocked(buildFindingsProvenance).mockClear();
+
+    const result = await runAnalysisStage(
+      auditDir,
+      manifest,
+      [buildFinding()],
+      { language: 'fr' },
+      fakeConnection,
+    );
+
+    expect(buildFindingsProvenance).toHaveBeenCalledTimes(1);
+    expect(result.analysis.findingsProvenance).toEqual(manifest.findingsProvenance);
   });
 
   it('reuses an existing structure file for a second language call, without calling analyzeStructure again', async () => {

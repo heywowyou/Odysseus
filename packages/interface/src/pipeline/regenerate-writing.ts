@@ -15,6 +15,7 @@
 import type { Connection } from 'mongoose';
 import type { AnalysisPairRef, AuditManifest, Finding } from '@odysseus/core';
 import {
+  buildFindingsProvenance,
   buildReportPreparationPreview,
   isAcknowledgementCurrent,
   type MissingContextField,
@@ -138,6 +139,12 @@ export async function regenerateWriting(
     throw error;
   }
 
+  // Computed once over the evidence both language passes receive: the full
+  // array canonicalize plus hash used to run once per language inside
+  // runAnalysisStage. Each stage still asserts the supplied value against
+  // the manifest, so fail-closed behaviour is unchanged.
+  const findingsProvenance = buildFindingsProvenance(findings);
+
   let partialPair: { frAnalysisId?: string; enAnalysisId?: string } = {};
   try {
     const frStage = await runAnalysisStage(
@@ -146,6 +153,7 @@ export async function regenerateWriting(
       findings,
       {
         language: 'fr',
+        findingsProvenance,
         ...(audit.manualFields?.siren !== undefined
           ? { manualSiren: audit.manualFields.siren.value }
           : {}),
@@ -169,6 +177,7 @@ export async function regenerateWriting(
       findings,
       {
         language: 'en',
+        findingsProvenance,
         ...(audit.manualFields?.siren !== undefined
           ? { manualSiren: audit.manualFields.siren.value }
           : {}),

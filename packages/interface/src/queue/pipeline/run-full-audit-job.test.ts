@@ -183,6 +183,10 @@ describe('runFullAuditJob', () => {
         en: expect.objectContaining({ language: 'en' }),
       }),
       fakeConnection,
+      // Issue #140: the runner computes the provenance once over the audit
+      // findings and threads the same value down as the new trailing
+      // argument.
+      expect.anything(),
     );
   });
 

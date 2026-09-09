@@ -18,6 +18,7 @@ import {
   buildReportPreparationPreview,
   type AuditManifest,
   type Finding,
+  type FindingsProvenance,
   type ReportLanguage,
 } from '@odysseus/core';
 import {
@@ -74,6 +75,11 @@ export async function runReportStage(
    *  (the CLI's `odysseus report`), which still gets its own browser from
    *  generateReportPdf, unchanged from before. */
   browser?: Browser,
+  /** Computed once per job by the queued pipeline over the same findings
+   *  array both language passes receive, so the canonicalize plus hash
+   *  runs once per job instead of twice. Omitted means a standalone
+   *  single-language render, which computes it here exactly as before. */
+  findingsProvenance?: FindingsProvenance,
 ): Promise<ReportStageResult> {
   // Recheck persisted crawl facts before every render. This covers reports
   // regenerated after an interrupted queue run as well as the normal job
@@ -84,9 +90,9 @@ export async function runReportStage(
       ? { sitemapCoverage: manifest.crawl.sitemapCoverage }
       : {}),
   });
-  const findingsProvenance = buildFindingsProvenance(findings);
-  assertFindingsProvenance(manifest.findingsProvenance, findingsProvenance, 'manifest');
-  assertFindingsProvenance(analysis.findingsProvenance, findingsProvenance, 'analysis');
+  const resolvedFindingsProvenance = findingsProvenance ?? buildFindingsProvenance(findings);
+  assertFindingsProvenance(manifest.findingsProvenance, resolvedFindingsProvenance, 'manifest');
+  assertFindingsProvenance(analysis.findingsProvenance, resolvedFindingsProvenance, 'analysis');
   if (analysis.analysisId === undefined) {
     throw new Error(
       'Report generation aborted: legacy analysis has no analysis ID. Run normalize, ' +
@@ -169,7 +175,7 @@ export async function runReportStage(
   const reportProvenance = {
     reportId,
     analysisId: analysis.analysisId,
-    findingsProvenance,
+    findingsProvenance: resolvedFindingsProvenance,
     rendererVersion: REPORT_TEMPLATE_VERSION,
     rendererBuild,
     reportTemplateVersion: REPORT_TEMPLATE_VERSION,
@@ -256,6 +262,11 @@ export async function runAllReportsStage(
   findings: Finding[],
   analyses: { fr: StoredAnalysis; en: StoredAnalysis },
   connection: Connection,
+  /** Threaded through to each runReportStage call so the fr and en passes
+   *  share one provenance computation instead of hashing the same findings
+   *  array twice. Omitted means each pass computes its own, exactly as
+   *  before. */
+  findingsProvenance?: FindingsProvenance,
 ): Promise<AllReportsStageResult[]> {
   const results: AllReportsStageResult[] = [];
 
@@ -269,6 +280,7 @@ export async function runAllReportsStage(
         analyses[language],
         connection,
         browser,
+        findingsProvenance,
       );
       results.push({
         language,

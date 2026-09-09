@@ -38,11 +38,22 @@ vi.mock('@odysseus/scanner', () => ({
   findWorkspaceRoot: vi.fn(() => '/tmp'),
 }));
 vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
+/** Partial mock: buildFindingsProvenance stays a pass-through to the real
+ *  implementation but its call count becomes observable, pinning that a
+ *  supplied provenance is used as-is instead of recomputed. */
+vi.mock('@odysseus/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@odysseus/core')>();
+  return { ...actual, buildFindingsProvenance: vi.fn(actual.buildFindingsProvenance) };
+});
 
 import { generateReportPdf } from '@odysseus/report';
 import { launchBrowser } from '@odysseus/scanner';
 import { getAuditManualFields, persistReport } from '@odysseus/store';
-import { buildFindingsProvenance, type AuditManifest } from '@odysseus/core';
+import {
+  buildFindingsProvenance,
+  type AuditManifest,
+  type FindingsProvenance,
+} from '@odysseus/core';
 import { runObligationStage } from './obligation-stage.js';
 import { runAllReportsStage, runReportStage } from './report-stage.js';
 
@@ -294,6 +305,59 @@ describe('runReportStage', () => {
     await expect(runReportStage(auditDir, manifest, [], analysis, fakeConnection)).rejects.toThrow(
       /stale analysis.*findings digest/i,
     );
+    expect(generateReportPdf).not.toHaveBeenCalled();
+  });
+
+  // The queued pipeline computes the provenance once per job and threads it
+  // down (perf): these pin that a supplied value lands in the sidecar and
+  // the persisted row as-is, and that the fail-closed assert still fires
+  // over it before Chromium starts.
+  it('uses a supplied findingsProvenance in the sidecar instead of recomputing one', async () => {
+    const manifest = fakeManifest();
+    const analysis = fakeAnalysis();
+    const supplied: FindingsProvenance = manifest.findingsProvenance!;
+    // fakeManifest and fakeAnalysis build their own provenance through the
+    // mocked core export; clear so only the stage's own behaviour is
+    // counted below.
+    vi.mocked(buildFindingsProvenance).mockClear();
+
+    const result = await runReportStage(
+      auditDir,
+      manifest,
+      [],
+      analysis,
+      fakeConnection,
+      undefined,
+      supplied,
+    );
+
+    expect(buildFindingsProvenance).not.toHaveBeenCalled();
+    const sidecar = JSON.parse(await fs.readFile(result.provenancePath, 'utf-8'));
+    expect(sidecar.findingsProvenance).toEqual(supplied);
+    expect(persistReport).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({ findingsProvenance: supplied }),
+    );
+  });
+
+  it('rejects a supplied findingsProvenance that disagrees with the manifest before Chromium starts', async () => {
+    const manifest = fakeManifest();
+    const staleProvenance: FindingsProvenance = {
+      ...manifest.findingsProvenance!,
+      findingsDigest: `sha256:${'e'.repeat(64)}`,
+    };
+
+    await expect(
+      runReportStage(
+        auditDir,
+        manifest,
+        [],
+        fakeAnalysis(),
+        fakeConnection,
+        undefined,
+        staleProvenance,
+      ),
+    ).rejects.toThrow(/stale manifest.*findings digest/i);
     expect(generateReportPdf).not.toHaveBeenCalled();
   });
 

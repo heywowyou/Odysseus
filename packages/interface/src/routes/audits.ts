@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
+  buildFindingsProvenance,
   isValidSiren,
   summarizeAuditCoverage,
   type AuditManifest,
@@ -545,6 +546,13 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
+    // Computed once over the parsed findings: the report stage used to
+    // canonicalize and hash the full array once per language, twice per
+    // request. The stage still asserts the supplied value against the
+    // manifest and the analyses, so a stale artifact still fails closed
+    // exactly as before.
+    const findingsProvenance = buildFindingsProvenance(findings);
+
     // Selection-aware resolution (plan 019): the selected exact pair, or
     // the legacy latest complete pair for audits without a selection. A
     // ready-but-unapproved candidate is never rendered as the paid report.
@@ -570,6 +578,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         findings,
         { fr, en },
         connection,
+        findingsProvenance,
       );
       sendJson(res, 200, { reports: results });
     } catch (error) {

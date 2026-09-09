@@ -18,6 +18,7 @@ import type { Connection } from 'mongoose';
 import type {
   AuditManifest,
   Finding,
+  FindingsProvenance,
   ObligationAssessment,
   ReportLanguage,
   SiteSignalOverrides,
@@ -85,6 +86,11 @@ export interface RunAnalysisStageOptions {
    *  the same two flags `audit` does, for this exact case. */
   manualSiren?: string;
   siteSignalOverrides?: SiteSignalOverrides;
+  /** Computed once per job by the queued pipeline over the same findings
+   *  array both languages receive, so the canonicalize plus hash runs once
+   *  instead of twice per job. Omitted means the standalone CLI path,
+   *  which computes it here exactly as before. */
+  findingsProvenance?: FindingsProvenance;
 }
 
 export interface AnalysisStageResult {
@@ -241,7 +247,7 @@ export async function runAnalysisStage(
   options: RunAnalysisStageOptions,
   connection: Connection,
 ): Promise<AnalysisStageResult> {
-  const findingsProvenance = buildFindingsProvenance(allFindings);
+  const findingsProvenance = options.findingsProvenance ?? buildFindingsProvenance(allFindings);
   assertFindingsProvenance(manifest.findingsProvenance, findingsProvenance, 'legacy manifest');
   const usedFallbackContext = options.siteContext === undefined;
   const siteContext = options.siteContext ?? buildFallbackSiteContext();

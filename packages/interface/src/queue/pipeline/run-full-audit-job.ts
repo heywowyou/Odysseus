@@ -16,7 +16,7 @@ import {
   updateJobProgress,
   type JobDocument,
 } from '@odysseus/store';
-import type { SiteSignalOverrides } from '@odysseus/core';
+import { buildFindingsProvenance, type SiteSignalOverrides } from '@odysseus/core';
 import { deleteCrawlCheckpoint, deleteCrawlStateFile } from '@odysseus/scanner';
 import { hasMeasuredCoreWebVitals } from '@odysseus/report';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
@@ -80,6 +80,14 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       connection,
     );
 
+    // Computed once here over the same findings array every later stage
+    // receives: the analysis and report stages each used to canonicalize
+    // and hash the full array per language, four times per job. Computing
+    // from the live findings (not the manifest's copy of the stamp) keeps
+    // the stages' manifest-versus-findings asserts meaningful: they still
+    // compare two independently obtained values.
+    const findingsProvenance = buildFindingsProvenance(auditResult.findings);
+
     // Written now, not only in completeJob at the end: a report-stage
     // failure below still leaves the audit and both analyses persisted,
     // and the operator needs the dashboard link to reach them. See #35.
@@ -91,7 +99,11 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       auditResult.auditDir,
       auditResult.manifest,
       auditResult.findings,
-      { language: 'fr', obligationAssessment: auditResult.obligationAssessment },
+      {
+        language: 'fr',
+        obligationAssessment: auditResult.obligationAssessment,
+        findingsProvenance,
+      },
       connection,
     );
 
@@ -106,7 +118,11 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       auditResult.auditDir,
       auditResult.manifest,
       auditResult.findings,
-      { language: 'en', obligationAssessment: auditResult.obligationAssessment },
+      {
+        language: 'en',
+        obligationAssessment: auditResult.obligationAssessment,
+        findingsProvenance,
+      },
       connection,
     );
 
@@ -120,6 +136,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       auditResult.findings,
       { fr: frAnalysis.analysis, en: enAnalysis.analysis },
       connection,
+      findingsProvenance,
     );
     await updateJobProgress(connection, job.jobId, { phase: 'report-en' });
 
