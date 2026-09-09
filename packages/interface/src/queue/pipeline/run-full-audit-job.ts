@@ -10,7 +10,12 @@
  * operator come back for a second language later.
  */
 
-import { completeJob, updateJobProgress, type JobDocument } from '@odysseus/store';
+import {
+  completeJob,
+  ensureJobRunIdentity,
+  updateJobProgress,
+  type JobDocument,
+} from '@odysseus/store';
 import type { SiteSignalOverrides } from '@odysseus/core';
 import { hasMeasuredCoreWebVitals } from '@odysseus/report';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
@@ -31,6 +36,12 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
   const release = await originLock.acquire(origin);
 
   try {
+    // Plan 035 (issue #124): one identity per job, minted once, reused by
+    // every orphan re-claim. Its startedAt is the audit directory's
+    // timestamp, so a re-claimed job lands in the same directory the
+    // interrupted attempt was writing and its per-page results are reused.
+    const runIdentity = await ensureJobRunIdentity(connection, job.jobId);
+
     const onProgress = createScanProgressReporter(connection, job.jobId, ctx.cancellation);
 
     const siteSignalOverrides: SiteSignalOverrides | undefined =
@@ -62,6 +73,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
           ? { bookingEngineUrl: job.options.bookingEngineUrl }
           : {}),
         onProgress,
+        runIdentity,
       },
       connection,
     );

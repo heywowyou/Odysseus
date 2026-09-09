@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../pipeline/audit-stage.js', () => ({ runAuditStage: vi.fn() }));
 vi.mock('../../pipeline/analysis-stage.js', () => ({ runAnalysisStage: vi.fn() }));
 vi.mock('../../pipeline/report-stage.js', () => ({ runAllReportsStage: vi.fn() }));
-vi.mock('@odysseus/store', () => ({ completeJob: vi.fn(), updateJobProgress: vi.fn() }));
+vi.mock('@odysseus/store', () => ({
+  completeJob: vi.fn(),
+  updateJobProgress: vi.fn(),
+  ensureJobRunIdentity: vi.fn(),
+}));
 vi.mock('@odysseus/llm', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   pauseBetweenLanguagePasses: vi.fn(),
@@ -12,7 +16,7 @@ vi.mock('@odysseus/llm', async (importOriginal) => ({
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
-import { completeJob, updateJobProgress } from '@odysseus/store';
+import { completeJob, ensureJobRunIdentity, updateJobProgress } from '@odysseus/store';
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runFullAuditJob } from './run-full-audit-job.js';
 import { CancellationRegistry } from '../cancellation.js';
@@ -113,6 +117,10 @@ beforeEach(() => {
   ]);
   vi.mocked(completeJob).mockResolvedValue(undefined);
   vi.mocked(updateJobProgress).mockResolvedValue(undefined);
+  vi.mocked(ensureJobRunIdentity).mockResolvedValue({
+    startedAt: new Date('2026-09-09T00:00:00.000Z'),
+    auditId: 'run-audit-1',
+  });
 });
 
 describe('runFullAuditJob', () => {
@@ -192,6 +200,24 @@ describe('runFullAuditJob', () => {
     expect(runAuditStage).toHaveBeenCalledWith(
       'https://example.com/',
       expect.objectContaining({ maxPages: 5, maxDepth: 1, delayMs: 250, scanConcurrency: 1 }),
+      fakeConnection,
+    );
+  });
+
+  // Plan 035 (issue #124): one identity per job, minted once, reused by
+  // every orphan re-claim, and handed to the audit stage so the audit
+  // directory is stable across re-claims.
+  it('stamps the job run identity once and forwards it into runAuditStage options', async () => {
+    const runIdentity = { startedAt: new Date('2026-09-09T00:00:00.000Z'), auditId: 'run-audit-1' };
+    vi.mocked(ensureJobRunIdentity).mockResolvedValue(runIdentity);
+    const job = fakeJob();
+    await runFullAuditJob(job, ctx);
+
+    expect(ensureJobRunIdentity).toHaveBeenCalledTimes(1);
+    expect(ensureJobRunIdentity).toHaveBeenCalledWith(fakeConnection, 'job-1');
+    expect(runAuditStage).toHaveBeenCalledWith(
+      'https://example.com/',
+      expect.objectContaining({ runIdentity }),
       fakeConnection,
     );
   });

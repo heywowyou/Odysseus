@@ -1,11 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Browser } from 'playwright';
+import { ContinuationGuard, CONTINUATION_FAMILY_MAX_ENQUEUED } from './continuation-guard.js';
 import {
   crawlSite,
   isNonHtmlContentType,
   isSameSiteHostname,
+  restoreCrawlFrontierLoopState,
+  type CrawlFrontierSnapshot,
   type CrawlProgressEvent,
 } from './crawl.js';
+import type { PageAuditProfile } from './page-audit-profile.js';
+import type { SitemapCheckResult } from './checks/sitemap.js';
 
 describe('isNonHtmlContentType', () => {
   it('treats a missing Content-Type as HTML', () => {
@@ -538,5 +543,329 @@ describe('crawlSite trailing-slash page identity (issue #102)', () => {
     expect(navigated).toEqual(['https://example.com/']);
     expect(result.startUrl).toBe('https://example.com/');
     expect(result.visitedCount).toBe(1);
+  });
+});
+
+/** Plan 035 crawl-frontier resume: pure serialization contract for the
+ *  loop state crawl.ts owns. A snapshot must survive a JSON round trip
+ *  and rebuild structures a resumed crawl cannot tell from the live ones,
+ *  including the enqueued invariant (every dequeued URL is recorded, every
+ *  enqueued URL is queued or recorded, so enqueued is exactly pages
+ *  union queue; a guard-omitted URL is discovered but in neither). */
+describe('crawl frontier state round trip', () => {
+  const relNextClassification = { basis: 'rel-next' as const, familyKey: 'path:/blog/page/{n}' };
+
+  function guardAtCap(): ContinuationGuard {
+    const guard = new ContinuationGuard();
+    for (let i = 1; i <= CONTINUATION_FAMILY_MAX_ENQUEUED; i++) {
+      guard.admit(relNextClassification, `https://example.com/blog/page/${i}`);
+    }
+    guard.admit(relNextClassification, 'https://example.com/blog/page/61');
+    return guard;
+  }
+
+  function midCrawlState(): CrawlFrontierSnapshot {
+    return {
+      startUrlIdentity: 'https://example.com',
+      robotsText: 'User-agent: *\nDisallow: /private\nSitemap: https://example.com/sitemap.xml\n',
+      supplementalPhaseStarted: true,
+      queue: [
+        {
+          url: 'https://example.com/p2',
+          depth: 2,
+          discoveredFrom: 'https://example.com/p1',
+          discoveryMethod: 'link',
+        },
+        { url: 'https://example.com/sitemap-only', depth: 0, discoveryMethod: 'sitemap-only' },
+      ],
+      visited: ['https://example.com', 'https://example.com/p1'],
+      pages: [
+        {
+          url: 'https://example.com',
+          depth: 0,
+          status: 'visited',
+          httpStatus: 200,
+          discoveryMethod: 'link',
+          auditProfile: {
+            url: 'https://example.com',
+            profileVersion: 'v1',
+            roleSignals: [{ kind: 'homepage-url', detail: 'https://example.com' }],
+            templateFamilyId: 'v1:abcd1234abcd1234',
+          } satisfies PageAuditProfile,
+        },
+        {
+          url: 'https://example.com/p1',
+          depth: 1,
+          status: 'visited',
+          httpStatus: 200,
+          discoveredFrom: 'https://example.com',
+          discoveryMethod: 'link',
+          auditProfile: {
+            url: 'https://example.com/p1',
+            profileVersion: 'v1',
+            language: 'fr',
+            roleSignals: [],
+          } satisfies PageAuditProfile,
+        },
+      ],
+      // /blog/page/61 was discovered but omitted by the guard: it is in
+      // neither pages nor queue, so it must not land in the rebuilt
+      // enqueued set.
+      linkDiscoveredUrls: [
+        'https://example.com',
+        'https://example.com/p1',
+        'https://example.com/p2',
+        'https://example.com/sitemap-only',
+        'https://example.com/blog/page/61',
+      ],
+      linkDiscoveredFrom: [
+        ['https://example.com/p1', 'https://example.com'],
+        ['https://example.com/p2', 'https://example.com/p1'],
+        ['https://example.com/blog/page/61', 'https://example.com/blog'],
+      ],
+      guard: guardAtCap().snapshot(),
+      sitemap: {
+        sitemapUrl: 'https://example.com/sitemap.xml',
+        found: true,
+        isSitemapIndex: false,
+        entries: [{ url: 'https://example.com/sitemap-only' }],
+        pageEntries: [{ url: 'https://example.com/sitemap-only' }],
+        fetchedDocuments: [
+          {
+            url: 'https://example.com/sitemap.xml',
+            isRoot: true,
+            isSitemapIndex: false,
+            entryCount: 1,
+          },
+        ],
+        fetchedSitemapUrls: ['https://example.com/sitemap.xml'],
+        fetchErrors: [],
+      } satisfies SitemapCheckResult,
+      eligibleSitemapUrls: ['https://example.com/sitemap-only'],
+      filteredSitemapPageCount: 1,
+    };
+  }
+
+  it('rebuilds identical structures from a JSON-serialized mid-crawl state', () => {
+    const state = midCrawlState();
+    const serialized = JSON.parse(JSON.stringify(state)) as CrawlFrontierSnapshot;
+
+    const restored = restoreCrawlFrontierLoopState(serialized);
+
+    expect(restored.pages).toEqual(state.pages);
+    expect(restored.queue).toEqual(state.queue);
+    expect(restored.visited).toEqual(new Set(state.visited));
+    expect(restored.linkDiscoveredUrls).toEqual(new Set(state.linkDiscoveredUrls));
+    expect(restored.linkDiscoveredFrom).toEqual(new Map(state.linkDiscoveredFrom));
+    expect(restored.guard.summary()).toEqual(guardAtCap().summary());
+    // The restored family is still at its cap: the next admit is omitted.
+    expect(restored.guard.admit(relNextClassification, 'https://example.com/blog/page/62')).toBe(
+      false,
+    );
+    // Copies, not aliases: mutating the rebuild must not touch the
+    // snapshot the caller holds.
+    expect(restored.pages[0]).not.toBe(state.pages[0]);
+    expect(restored.queue[0]).not.toBe(state.queue[0]);
+  });
+
+  it('rebuilds enqueued as exactly recorded pages union queued URLs', () => {
+    const state = midCrawlState();
+    const restored = restoreCrawlFrontierLoopState(
+      JSON.parse(JSON.stringify(state)) as CrawlFrontierSnapshot,
+    );
+
+    const union = [...state.pages.map((page) => page.url), ...state.queue.map((q) => q.url)];
+    expect([...restored.enqueued].sort()).toEqual([...union].sort());
+    // A guard-omitted URL was discovered but never enqueued.
+    expect(restored.enqueued.has('https://example.com/blog/page/61')).toBe(false);
+    // A discovered-only sitemap URL that was already queued stays queued
+    // with its sitemap-only method intact.
+    expect(restored.queue.some((item) => item.url === 'https://example.com/sitemap-only')).toBe(
+      true,
+    );
+  });
+});
+
+/** Plan 035 crawl-frontier resume against the real loop: a capped fresh
+ *  crawl snapshots every page (everyPages 1, minIntervalMs 0), the resumed
+ *  crawl drains the queue without re-visiting or re-fetching robots.txt,
+ *  and its visited inventory equals a control uninterrupted crawl's. */
+describe('crawlSite frontier snapshots and resume', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** Plain same-origin chain (no rel=next, no pagination controls), so
+   *  the continuation guard never fires and every link is enqueued. */
+  function linkChain(pageCount: number): (url: string) => FakeAnchorSpec[] {
+    return (url) => {
+      if (url === 'https://example.com/') return [{ href: '/p1' }];
+      const match = url.match(/\/p(\d+)$/);
+      if (match === null) return [];
+      const next = Number(match[1]) + 1;
+      if (next > pageCount) return [];
+      return [{ href: `/p${next}` }];
+    };
+  }
+
+  function installCountingFetchStub(routes: Record<string, string>): { calls: string[] } {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        const body = routes[url];
+        if (body === undefined) throw new Error(`unexpected fetch in test: ${url}`);
+        calls.push(url);
+        return new Response(body, { status: 200 });
+      }),
+    );
+    return { calls };
+  }
+
+  function makeRecordingChainBrowser(anchorsFor: (url: string) => FakeAnchorSpec[]): {
+    browser: Browser;
+    navigated: string[];
+  } {
+    const navigated: string[] = [];
+    const context = {
+      setDefaultTimeout: () => {},
+      setDefaultNavigationTimeout: () => {},
+      newPage: async () => {
+        let currentUrl = 'about:blank';
+        return {
+          goto: async (url: string) => {
+            navigated.push(url);
+            currentUrl = url;
+            return {
+              status: () => 200,
+              headers: () => ({ 'content-type': 'text/html; charset=utf-8' }),
+            };
+          },
+          url: () => currentUrl,
+          $$eval: async (_selector: string, fn: (elements: unknown[]) => unknown) =>
+            fn(anchorsFor(currentUrl).map(fakeAnchorElement)),
+          evaluate: async () => {
+            throw new Error('no DOM in unit mock');
+          },
+          close: async () => {},
+        };
+      },
+      close: async () => {},
+    };
+    return { browser: { newContext: async () => context } as unknown as Browser, navigated };
+  }
+
+  it('snapshots at the cadence, resumes without re-visiting, and matches a control crawl', async () => {
+    const { calls } = installCountingFetchStub({
+      'https://example.com/robots.txt': ROBOTS_BODY,
+    });
+    const chain = linkChain(6);
+
+    const firstRun = makeRecordingChainBrowser(chain);
+    const firstSnapshots: CrawlFrontierSnapshot[] = [];
+    const first = await crawlSite('https://example.com', {
+      browser: firstRun.browser,
+      maxPages: 2,
+      maxDepth: 100,
+      delayMs: 0,
+      frontier: {
+        writeState: (state) => firstSnapshots.push(state),
+        everyPages: 1,
+        minIntervalMs: 0,
+      },
+    });
+
+    expect(first.visitedCount).toBe(2);
+    expect(firstSnapshots).toHaveLength(2);
+    const lastSnapshot = firstSnapshots.at(-1);
+    expect(lastSnapshot?.visited).toEqual(['https://example.com/', 'https://example.com/p1']);
+    expect(lastSnapshot?.queue.map((item) => item.url)).toEqual(['https://example.com/p2']);
+
+    // The resume input goes through a real serialization round trip, the
+    // same path a frontier file on disk takes.
+    const resumeState = JSON.parse(JSON.stringify(lastSnapshot)) as CrawlFrontierSnapshot;
+
+    const secondRun = makeRecordingChainBrowser(chain);
+    const resumedSnapshots: CrawlFrontierSnapshot[] = [];
+    const second = await crawlSite('https://example.com', {
+      browser: secondRun.browser,
+      maxDepth: 100,
+      delayMs: 0,
+      frontier: {
+        resumeState,
+        writeState: (state) => resumedSnapshots.push(state),
+        everyPages: 1,
+        minIntervalMs: 0,
+      },
+    });
+
+    expect(second.visitedCount).toBe(7);
+    // The resumed crawl fetched exactly the five pages still queued, in
+    // order: not one URL re-visited, robots.txt re-fetched only once in
+    // total (by the first crawl).
+    expect(secondRun.navigated).toEqual([
+      'https://example.com/p2',
+      'https://example.com/p3',
+      'https://example.com/p4',
+      'https://example.com/p5',
+      'https://example.com/p6',
+    ]);
+    expect(calls).toEqual(['https://example.com/robots.txt']);
+    expect(second.robotsTxtFound).toBe(true);
+    // No URL appears twice in the combined visited inventory.
+    const combined = [...firstRun.navigated, ...secondRun.navigated];
+    expect(new Set(combined).size).toBe(combined.length);
+    // The resumed result carries the complete inventory, restored records
+    // included, so a downstream consumer cannot tell it from a fresh run.
+    expect(second.pages.map((page) => page.url)).toHaveLength(7);
+
+    const controlRun = makeRecordingChainBrowser(chain);
+    const control = await crawlSite('https://example.com', {
+      browser: controlRun.browser,
+      maxDepth: 100,
+      delayMs: 0,
+    });
+    const visitedOf = (result: typeof control): string[] =>
+      result.pages
+        .filter((page) => page.status === 'visited')
+        .map((page) => page.url)
+        .sort();
+    expect(visitedOf(second)).toEqual(visitedOf(control));
+    expect(second.visitedCount).toBe(control.visitedCount);
+
+    // Snapshotting continued to completion on the resumed crawl, then
+    // stopped: the last snapshot holds the fully drained frontier, and no
+    // snapshot fires past it.
+    const finalSnapshot = resumedSnapshots.at(-1);
+    expect(finalSnapshot?.visited).toHaveLength(7);
+    expect(finalSnapshot?.queue).toEqual([]);
+    expect(second.continuationGuardSummary).toBeUndefined();
+  });
+
+  it('refuses to resume a snapshot that belongs to a different start URL', async () => {
+    installCountingFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const snapshots: CrawlFrontierSnapshot[] = [];
+    await crawlSite('https://example.com', {
+      browser: makeFakeBrowser(linkChain(2)),
+      maxPages: 1,
+      maxDepth: 100,
+      delayMs: 0,
+      frontier: { writeState: (state) => snapshots.push(state), everyPages: 1, minIntervalMs: 0 },
+    });
+
+    await expect(
+      crawlSite('https://example.org', {
+        browser: makeFakeBrowser(() => []),
+        maxDepth: 100,
+        delayMs: 0,
+        frontier: {
+          resumeState: snapshots.at(-1)!,
+          writeState: () => {},
+          everyPages: 1,
+          minIntervalMs: 0,
+        },
+      }),
+    ).rejects.toThrow(/different start URL/);
   });
 });

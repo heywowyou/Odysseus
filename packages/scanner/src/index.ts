@@ -10,7 +10,13 @@ export type {
   CrawlResult,
   CrawledPage,
   CrawledPageStatus,
+  CrawlFrontierOptions,
+  CrawlFrontierSnapshot,
+  CrawlFrontierState,
 } from './crawl.js';
+export { restoreCrawlFrontierLoopState } from './crawl.js';
+export type { CrawlFrontierLoopState } from './crawl.js';
+export type { ContinuationGuardSnapshot } from './continuation-guard.js';
 export { OriginLock } from './origin-lock.js';
 export { runAxe, WCAG22AA_TAGS } from './axe.js';
 export type { AxeResults } from './axe.js';
@@ -19,7 +25,12 @@ export type { LighthouseOptions } from './lighthouse.js';
 export { scanPage } from './scan-page.js';
 export type { PageScanResult, ScanPageOptions } from './scan-page.js';
 export { scanSite } from './scan-site.js';
-export type { SiteScanResult, ScanSiteOptions, ScanProgressEvent } from './scan-site.js';
+export type {
+  SiteScanResult,
+  ScanSiteOptions,
+  ScanProgressEvent,
+  CrawlCheckpointResumeDecision,
+} from './scan-site.js';
 export { findMentionsLegalesUrl, extractMentionsLegales } from './checks/mentions-legales.js';
 export type { MentionsLegalesExtraction } from './checks/mentions-legales.js';
 export {
@@ -82,8 +93,36 @@ export {
   parseAuditTimestampDir,
 } from './artifacts/paths.js';
 export { toAuditRelativeRefs } from './artifacts/relativize.js';
+// Plan 035: the crawl checkpoint files (crawl-checkpoint.json, and the
+// crawl-state.json name consumed by a later slice) and their resume verdict.
+export {
+  CRAWL_CHECKPOINT_FILENAME,
+  CRAWL_STATE_FILENAME,
+  buildScanToolIdentity,
+  deleteCrawlCheckpoint,
+  deleteCrawlStateFile,
+  isReusableCheckpoint,
+  jsonDeepEqual,
+  readCrawlCheckpoint,
+  writeCrawlCheckpoint,
+} from './artifacts/crawl-checkpoint-io.js';
+export type {
+  CheckpointRejectionReason,
+  CheckpointReuseVerdict,
+  CrawlCheckpoint,
+  ScanToolIdentity,
+} from './artifacts/crawl-checkpoint-io.js';
 export { collectToolVersions } from './artifacts/versions.js';
 export type { CollectedToolVersions } from './artifacts/versions.js';
+// Plan 035 step 4: the crawl-state.json frontier file a crashed full
+// audit resumes its mid-crawl state from.
+export {
+  deleteCrawlFrontierState,
+  isReusableFrontierState,
+  readCrawlFrontierState,
+  writeCrawlFrontierState,
+} from './artifacts/crawl-frontier-io.js';
+export type { CrawlFrontierReuseVerdict } from './artifacts/crawl-frontier-io.js';
 export { buildManifest, readOdysseusBuildId } from './artifacts/manifest.js';
 export type { BuildManifestInput } from './artifacts/manifest.js';
 export {

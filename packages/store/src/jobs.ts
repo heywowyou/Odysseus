@@ -16,6 +16,7 @@ import {
   type JobOptionsSnapshot,
   type JobPhase,
   type JobProgress,
+  type JobRunIdentity,
   type JobType,
   type OutreachBatchResult,
   type ProspectIngestionResult,
@@ -79,6 +80,30 @@ export interface JobProgressPatch {
    *  dashboard/routes/audits-model.ts reads this field regardless of job
    *  status). */
   auditId?: string;
+}
+
+/** Plan 035 (issue #124): create-or-return the audit run's stable identity
+ *  (JobRunIdentity in job.schema.ts). Two workers racing to run the same
+ *  job, or a re-claim after a crash, must converge on one identity, never
+ *  mint a second: the findOneAndUpdate filter matches only a document that
+ *  has no runIdentity yet, so exactly one racing caller's $set can apply
+ *  and every other caller falls through to reading the winner's stamp. */
+export async function ensureJobRunIdentity(
+  connection: Connection,
+  jobId: string,
+): Promise<JobRunIdentity> {
+  const JobModel = createJobModel(connection);
+  const minted = await JobModel.findOneAndUpdate(
+    { jobId, runIdentity: { $exists: false } },
+    { $set: { runIdentity: { startedAt: new Date(), auditId: randomUUID() } } },
+    { returnDocument: 'after' },
+  ).lean<JobDocument>();
+  if (minted?.runIdentity) return minted.runIdentity;
+  const existing = await JobModel.findOne({ jobId }).lean<JobDocument>();
+  if (!existing?.runIdentity) {
+    throw new Error(`ensureJobRunIdentity: job ${jobId} has no document to stamp an identity on`);
+  }
+  return existing.runIdentity;
 }
 
 export async function updateJobProgress(
@@ -227,20 +252,35 @@ export const ORPHANED_JOB_TIMEOUT_MS = 10 * 60 * 1000;
  *  unclean shutdown, so reset it to 'queued'. A fresh heartbeat means a live
  *  worker owns it and must never be reclaimed. createdAt is untouched, so
  *  claimNextQueuedJob's createdAt-ascending sort restores the original FIFO
- *  position rather than requeuing it to the back. Returns the number reset. */
+ *  position rather than requeuing it to the back. Returns the number reset.
+ *
+ *  includeFreshHeartbeats drops the staleness guard and requeues every
+ *  'running' job. It exists for JobQueue.start() in the single-container
+ *  deployment: the app container was just recreated, so no worker can own
+ *  any running job, and a heartbeat written by the previous container
+ *  (issue #124: restart sooner than ORPHANED_JOB_TIMEOUT_MS after the kill)
+ *  would otherwise wedge the job as 'running' forever, recoverable only by
+ *  another restart past the timeout. The stale-only default stays correct
+ *  for any future multi-worker caller, where a live worker may legitimately
+ *  hold a fresh-heartbeat job. */
 export async function resetOrphanedRunningJobs(
   connection: Connection,
   now = new Date(),
+  options?: { includeFreshHeartbeats?: boolean },
 ): Promise<number> {
   const JobModel = createJobModel(connection);
   const staleBefore = new Date(now.getTime() - ORPHANED_JOB_TIMEOUT_MS);
   const result = await JobModel.updateMany(
     {
       status: 'running',
-      $or: [
-        { lastHeartbeatAt: { $lt: staleBefore } },
-        { lastHeartbeatAt: { $exists: false }, startedAt: { $lt: staleBefore } },
-      ],
+      ...(options?.includeFreshHeartbeats
+        ? {}
+        : {
+            $or: [
+              { lastHeartbeatAt: { $lt: staleBefore } },
+              { lastHeartbeatAt: { $exists: false }, startedAt: { $lt: staleBefore } },
+            ],
+          }),
     },
     {
       $set: { status: 'queued', orphaned: true },

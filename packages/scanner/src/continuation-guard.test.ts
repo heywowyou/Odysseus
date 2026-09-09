@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CONTINUATION_FAMILY_MAX_ENQUEUED,
+  CONTINUATION_GUARD_VERSION,
   ContinuationGuard,
   classifyContinuationLink,
   computeRepeatedQueryKeys,
+  type ContinuationGuardSnapshot,
 } from './continuation-guard.js';
 
 describe('classifyContinuationLink', () => {
@@ -170,5 +173,112 @@ describe('ContinuationGuard', () => {
       'https://example.com/blog?paged=2',
     );
     expect(guard.summary().families).toHaveLength(0);
+  });
+});
+
+/** Plan 035 crawl-frontier resume: the guard's per-family state must
+ *  survive a process restart exactly, so a resumed crawl cannot re-admit
+ *  URLs a family had already exhausted. */
+describe('ContinuationGuard snapshot and restore', () => {
+  const classification = { basis: 'rel-next' as const, familyKey: 'path:/blog/page/{n}' };
+
+  it('produces plain JSON with no Maps or class instances', () => {
+    const guard = new ContinuationGuard();
+    guard.admit(classification, 'https://example.com/blog/page/1');
+    guard.admit(classification, 'https://example.com/blog/page/2');
+
+    const snapshot = guard.snapshot();
+
+    expect(JSON.parse(JSON.stringify(snapshot))).toEqual(snapshot);
+    expect(snapshot.guardVersion).toBe(CONTINUATION_GUARD_VERSION);
+    expect(snapshot.familyMaxEnqueued).toBe(CONTINUATION_FAMILY_MAX_ENQUEUED);
+  });
+
+  it('round trips admit decisions exactly: a family at its cap keeps omitting, counts and examples intact', () => {
+    const guard = new ContinuationGuard();
+    for (let i = 1; i <= CONTINUATION_FAMILY_MAX_ENQUEUED; i++) {
+      expect(guard.admit(classification, `https://example.com/blog/page/${i}`)).toBe(true);
+    }
+    expect(guard.admit(classification, 'https://example.com/blog/page/61')).toBe(false);
+    expect(guard.admit(classification, 'https://example.com/blog/page/62')).toBe(false);
+
+    const restored = ContinuationGuard.fromSnapshot(guard.snapshot());
+
+    // The restored family is still at its cap: the next admit is omitted
+    // with the example recorded, exactly as the uninterrupted guard would.
+    expect(restored.admit(classification, 'https://example.com/blog/page/63')).toBe(false);
+
+    const expected = new ContinuationGuard();
+    for (let i = 1; i <= CONTINUATION_FAMILY_MAX_ENQUEUED + 3; i++) {
+      expected.admit(classification, `https://example.com/blog/page/${i}`);
+    }
+    expect(restored.summary()).toEqual(expected.summary());
+    const family = restored.summary().families[0];
+    expect(family?.enqueuedCount).toBe(CONTINUATION_FAMILY_MAX_ENQUEUED);
+    expect(family?.omittedCount).toBe(3);
+    expect(family?.omittedExampleUrls).toEqual([
+      'https://example.com/blog/page/61',
+      'https://example.com/blog/page/62',
+      'https://example.com/blog/page/63',
+    ]);
+  });
+
+  it('restores every family independently and starts unknown families from zero', () => {
+    const guard = new ContinuationGuard();
+    const queryClassification = {
+      basis: 'query-key-family' as const,
+      familyKey: 'query:/blog:paged',
+    };
+    // Drive both families past the default cap so each holds counters a
+    // resume must preserve.
+    for (let i = 1; i <= CONTINUATION_FAMILY_MAX_ENQUEUED + 1; i++) {
+      guard.admit(classification, `https://example.com/blog/page/${i}`);
+      guard.admit(queryClassification, `https://example.com/blog?paged=${i}`);
+    }
+
+    const restored = ContinuationGuard.fromSnapshot(guard.snapshot());
+
+    // Both restored families are over budget and keep omitting.
+    expect(restored.admit(classification, 'https://example.com/blog/page/999')).toBe(false);
+    expect(restored.admit(queryClassification, 'https://example.com/blog?paged=999')).toBe(false);
+
+    const expected = new ContinuationGuard();
+    for (let i = 1; i <= CONTINUATION_FAMILY_MAX_ENQUEUED + 1; i++) {
+      expected.admit(classification, `https://example.com/blog/page/${i}`);
+      expected.admit(queryClassification, `https://example.com/blog?paged=${i}`);
+    }
+    expected.admit(classification, 'https://example.com/blog/page/999');
+    expected.admit(queryClassification, 'https://example.com/blog?paged=999');
+    expect(restored.summary()).toEqual(expected.summary());
+
+    // A family the interrupted run never saw starts fresh.
+    expect(
+      restored.admit(
+        { basis: 'numbered-pagination-control', familyKey: 'path:/author/x/page/{n}' },
+        'https://example.com/author/x/page/1',
+      ),
+    ).toBe(true);
+  });
+
+  it('rejects a snapshot written by a different guard version', () => {
+    const guard = new ContinuationGuard();
+    guard.admit(classification, 'https://example.com/blog/page/1');
+    const future = {
+      ...guard.snapshot(),
+      guardVersion: 'v999',
+    } as unknown as ContinuationGuardSnapshot;
+
+    expect(() => ContinuationGuard.fromSnapshot(future)).toThrow(/guard version/);
+  });
+
+  it('rejects a snapshot whose family cap does not match the current constant', () => {
+    const guard = new ContinuationGuard();
+    guard.admit(classification, 'https://example.com/blog/page/1');
+    const retuned = {
+      ...guard.snapshot(),
+      familyMaxEnqueued: 1,
+    } as unknown as ContinuationGuardSnapshot;
+
+    expect(() => ContinuationGuard.fromSnapshot(retuned)).toThrow(/family cap/);
   });
 });

@@ -3843,3 +3843,91 @@ politeness one, as far as verified from the stored `robotsTxtFound` and
 Limit-bound prescan jobs are restart-safe only when their persisted candidate
 snapshot is present. A legacy job without it must be recreated rather than
 recovered.
+
+### 76. A full audit checkpoints its stages and resumes across re-claims; the release flow refuses to deploy over running jobs (plan 035, issue #124)
+
+Every release recreates the app container, and the queue's SIGTERM drain can
+only mark the interruption, not preserve progress: a redeploy or crash
+silently forfeited the whole run. The 2026-09-08 incident lost a five-hour
+audit at content-scan 79 of 202 to a routine deploy, and issue #111's slow
+pacing makes 10-plus-hour audits a routine operating mode, so the exposure
+window was no longer rare. Per-page results already streamed to disk
+(`writePagesAsScanned`, trade-off 64 / issue #64), but the audit directory
+was keyed by that attempt's `startedAt`, which a re-claim re-mints, so
+nothing ever read them back.
+
+**The run's identity lives on the job, not in the directory name's
+mutability.** A full-audit job stamps `runIdentity: { startedAt, auditId }`
+once (atomic create-or-return, so racing re-claims converge) and every
+attempt reuses it: `buildAuditDir` resolves to the same directory,
+`writeAuditArtifacts` persists under the same auditId (an upsert, so
+trade-off 5's "a re-run is a retry" semantics hold unchanged), and the
+per-claim `startedAt` keeps its existing orphan-detection meaning. Deriving
+the directory from the jobId instead was rejected: the timestamp directory
+name is a de facto contract (`parseAuditTimestampDir` throws on deviations,
+bucket keys mirror it, `normalize <dir>` depends on it), and compatibly
+reusing the existing layout needs no migration of any stored audit.
+
+**The crawl inventory is checkpointed once, as a file in the audit
+directory.** The moment the coverage gate passes and before any content
+work, the complete `CrawlResult` plus the effective `AuditConfigSnapshot`
+plus a tool-identity block are written atomically to
+`crawl-checkpoint.json`, deleted only after the audit stage fully succeeds.
+Storing it in the Mongo job document was rejected: it grows with page count
+and every job read would carry it. A post-crawl crash therefore resumes with
+zero re-crawling, which also stops re-hammering a site that may have been
+rejecting the crawl in the first place.
+
+**Resume validation fails closed toward a fresh crawl, and a fresh crawl
+under the same directory starts clean.** A checkpoint is reused only when
+the recomputed effective config (job options plus environment-derived
+clamps, which a redeploy can change), the tool identity (scanner package
+version, planner version, checkpoint format), and the run's `startedAt` all
+match exactly. On any mismatch the checkpoint, the frontier snapshot, and
+that run's partial `pages/` directory are deleted before crawling fresh, so
+stale artifacts can never leak into a new configuration's manifest, and the
+skip-existing rule is structurally unreachable outside a validated resume.
+The coverage gate re-runs on the checkpointed inventory, so a resume can
+never launder a crawl the gate would reject today. Version fields catch
+known shape changes but do not claim deep semantic equivalence across a
+scanner upgrade; the fresh-start-on-mismatch posture is what keeps that
+honest.
+
+**The planner replay is deterministic because its inputs are persisted.**
+`scan.json` gained two additive fields, `checkOutcomes` and
+`renderedCostProfile`: `finalizeLighthousePlan` needs every page's rendered
+cost to reproduce the interrupted run's Lighthouse selection, and those were
+previously memory-only. A page whose `scan.json` exists is done, including a
+page whose recorded Lighthouse outcome is a failure: a recorded failure is a
+fact about the run, not something a resume retries. A pre-plan-035
+`scan.json` without a cost profile is treated as pending rather than
+trusted.
+
+**A crash during the crawl itself resumes from a persisted frontier.**
+Periodic atomic snapshots (`crawl-state.json`, throttled by page count and
+time) carry the queue, visited set, inventory, discovered-URL bookkeeping,
+continuation-guard family state, robots text, and sitemap result. The
+restored crawl re-parses the persisted robots text instead of re-fetching,
+never exempts its first fetch from the politeness delay, and restores the
+guard's family counters exactly, so a resumed crawl cannot re-admit URLs a
+family had already bounded.
+
+**Startup resets every running job, not only stale-hearted ones.** The
+10-minute heartbeat window left a fast container bounce wedging a job as
+`running` forever: no worker owned it, and nothing would ever look again
+until a later restart past the window. Production is one app container, so
+at `JobQueue.start()` every `running` job is by definition unowned; startup
+resets all of them (createdAt untouched, FIFO position preserved). The
+stale-only default remains for any future multi-worker caller.
+
+**The release flow refuses to recreate the container over running jobs.**
+Immediately before `compose up -d`, `release.sh` asks the currently running
+app container how many jobs are running. Any running job aborts the release
+naming them; a probe failure or unreadable answer aborts as unknown; a
+container that is not running at all has nothing live to protect and
+proceeds. The override is one explicit token on the deploy command
+(`force-running`, or the environment variable for manual SSH runs), keeping
+trade-off 61's posture intact: still CI-verified, operator-triggered,
+immutable releases. Fail-closed was chosen over warn-and-proceed because
+the deploy's whole purpose here is to not guess about hours of third-party
+site load.

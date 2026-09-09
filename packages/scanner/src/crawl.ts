@@ -1,5 +1,10 @@
 import type { Browser } from 'playwright';
-import type { PageDiscoveryMethod, SitemapCoverageSummary, SitemapMode } from '@odysseus/core';
+import type {
+  AuditConfigSnapshot,
+  PageDiscoveryMethod,
+  SitemapCoverageSummary,
+  SitemapMode,
+} from '@odysseus/core';
 import {
   getCrawlDelayMs,
   getCrawlerUserAgent,
@@ -36,9 +41,11 @@ import {
   ContinuationGuard,
   classifyContinuationLink,
   computeRepeatedQueryKeys,
+  type ContinuationGuardSnapshot,
   type ContinuationGuardSummary,
 } from './continuation-guard.js';
 import { isConfirmedListing } from './full-audit-plan.js';
+import type { ScanToolIdentity } from './artifacts/crawl-checkpoint-io.js';
 
 export { isSameSiteHostname } from './links.js';
 
@@ -79,6 +86,65 @@ export interface CrawlOptions {
    *  sitemap without scheduling its pages, and `supplement` appends eligible
    *  sitemap-only pages after the link frontier. */
   sitemapMode?: SitemapMode;
+  /** Plan 035 (issue #124): when set, the crawl writes periodic frontier
+   *  snapshots through writeState, and a snapshot supplied as resumeState
+   *  turns the crawl into a continuation of the interrupted run instead of
+   *  a restart. Absent (the default) leaves the crawl's behavior exactly
+   *  as it was before this option existed. */
+  frontier?: CrawlFrontierOptions;
+}
+
+/** Per-iteration loop state the resumable crawl must survive a process
+ *  restart with. crawl.ts owns this shape; the caller owns the file
+ *  (scan-site.ts persists it via crawl-frontier-io.ts). */
+export interface CrawlFrontierSnapshot {
+  startUrlIdentity: string;
+  /** Raw robots.txt text, persisted so the post-loop computations
+   *  (robotsDisallowMatches, aiCrawlerBlocks) and the sitemap directive
+   *  passthrough are identical on resume without re-fetching. */
+  robotsText: string | null;
+  supplementalPhaseStarted: boolean;
+  queue: QueueItem[];
+  visited: string[];
+  pages: CrawledPage[];
+  linkDiscoveredUrls: string[];
+  linkDiscoveredFrom: [string, string][];
+  guard: ContinuationGuardSnapshot;
+  sitemap: SitemapCheckResult | undefined;
+  eligibleSitemapUrls: string[];
+  filteredSitemapPageCount: number;
+}
+
+/** The frontier file's envelope (crawl-state.json): the same identity and
+ *  config validation block the crawl checkpoint uses, wrapped around the
+ *  loop state. Not persisted here: `enqueued` is rebuilt on restore as the
+ *  union of every recorded page URL and every queue URL, and
+ *  `effectiveDelayMs` is recomputed from the restored robotsText with the
+ *  same parseRobotsTxt call the fresh path uses. */
+export interface CrawlFrontierState {
+  format: 'full-audit-crawl-frontier-v1';
+  startedAt: string;
+  config: AuditConfigSnapshot;
+  toolIdentity: ScanToolIdentity;
+  state: CrawlFrontierSnapshot;
+}
+
+export interface CrawlFrontierOptions {
+  /** Absent: fresh crawl that writes periodic snapshots. Present: resume
+   *  exactly from this snapshot (its guard snapshot rides inside) and keep
+   *  snapshotting under the same cadence with the restored state as the
+   *  baseline. Its startUrlIdentity must match the crawl's own. */
+  resumeState?: CrawlFrontierSnapshot;
+  /** Called only at whole-iteration boundaries, never mid-page, with a
+   *  fully consistent loop state. Must serialize synchronously: the
+   *  snapshot aliases live in-memory structures, so a callback that
+   *  defers the write can observe later mutations. writeCrawlFrontierState
+   *  (sync temp-file write plus rename) is the intended implementation. */
+  writeState: (state: CrawlFrontierSnapshot) => void;
+  /** Minimum recorded pages between snapshots. Default 50. */
+  everyPages?: number;
+  /** Minimum milliseconds between snapshots. Default 60_000. */
+  minIntervalMs?: number;
 }
 
 export type CrawledPageStatus =
@@ -173,7 +239,7 @@ export interface CrawlResult {
   sitemapCoverage?: SitemapCoverageSummary;
 }
 
-interface QueueItem {
+export interface QueueItem {
   url: string;
   depth: number;
   discoveredFrom?: string;
@@ -189,6 +255,57 @@ interface QueueItem {
  */
 export function isNonHtmlContentType(contentType: string | undefined): boolean {
   return contentType !== undefined && !contentType.toLowerCase().includes('text/html');
+}
+
+/** The crawl loop's mutable in-memory structures, rebuilt wholesale from a
+ *  frontier snapshot on resume. */
+export interface CrawlFrontierLoopState {
+  pages: CrawledPage[];
+  pagesByUrl: Map<string, CrawledPage>;
+  visited: Set<string>;
+  linkDiscoveredUrls: Set<string>;
+  linkDiscoveredFrom: Map<string, string>;
+  /** Rebuilt, never persisted: every dequeued URL is recorded in pages,
+   *  and every enqueued URL is either still queued or already recorded,
+   *  so this set is exactly the union of both. */
+  enqueued: Set<string>;
+  queue: QueueItem[];
+  guard: ContinuationGuard;
+}
+
+/** Pure rebuild of the crawl loop's bookkeeping from a frontier snapshot,
+ *  so a resumed crawl makes identical enqueue and admit decisions to the
+ *  uninterrupted crawl it replaces. Page and queue entries are shallow
+ *  copies, so later link-discovery upgrades (a recorded page's
+ *  discoveryMethod becoming 'link') mutate the rebuild, never the
+ *  snapshot the caller passed in. Throws when the snapshot's guard state
+ *  was written by a different guard version or family cap. */
+export function restoreCrawlFrontierLoopState(
+  state: CrawlFrontierSnapshot,
+): CrawlFrontierLoopState {
+  const pages = state.pages.map((page) => ({ ...page }));
+  const pagesByUrl = new Map(pages.map((page) => [page.url, page]));
+  const visited = new Set(state.visited);
+  const linkDiscoveredUrls = new Set(state.linkDiscoveredUrls);
+  const linkDiscoveredFrom = new Map(
+    state.linkDiscoveredFrom.map(([url, discoveredFrom]) => [url, discoveredFrom] as const),
+  );
+  const queue = state.queue.map((item) => ({ ...item }));
+  const enqueued = new Set<string>([
+    ...pages.map((page) => page.url),
+    ...queue.map((item) => item.url),
+  ]);
+  const guard = ContinuationGuard.fromSnapshot(state.guard);
+  return {
+    pages,
+    pagesByUrl,
+    visited,
+    linkDiscoveredUrls,
+    linkDiscoveredFrom,
+    enqueued,
+    queue,
+    guard,
+  };
 }
 
 /** browserPage.url() is "about:blank" before any navigation commits and
@@ -211,6 +328,17 @@ function safeHostname(url: string): string | null {
  * delay is the larger of the configured delay and the site's own
  * Crawl-delay, since a site's stated preference should never be
  * overridden downward by local config.
+ *
+ * Plan 035 (issue #124): with `frontier` set the loop state (queue,
+ * visited set, recorded pages, guard counters, robots/sitemap facts) is
+ * snapshotted through writeState at a throttled cadence, and a snapshot
+ * supplied as resumeState continues the interrupted crawl exactly - same
+ * robots enforcement, same delay semantics, same guard decisions - without
+ * re-visiting a single URL. On resume the robots.txt and sitemap fetches
+ * are skipped entirely (their persisted results are used), and the first
+ * resumed fetch still pays the politeness delay: a fast restart must never
+ * fire immediately at a site that may be rejecting crawls. Without
+ * `frontier` the behavior is unchanged.
  */
 export async function crawlSite(startUrl: string, options: CrawlOptions): Promise<CrawlResult> {
   const maxPages = options.maxPages ?? getMaxPages();
@@ -233,34 +361,71 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // active crawl work from the moment the crawler owns it, not only once
   // the first page is dequeued (issue #121).
   options.onProgress?.({ type: 'crawl-setup', maxPages, delayMs });
+
+  const frontier = options.frontier;
+  const resumeState = frontier?.resumeState;
+  if (resumeState !== undefined && resumeState.startUrlIdentity !== startUrlIdentity) {
+    throw new Error(
+      'crawlSite: frontier resume state belongs to a different start URL than this crawl.',
+    );
+  }
+
   // Fetched once as raw text (not via fetchRobotsRules) so the same
   // response can also be parsed against each AI_CRAWLER_USER_AGENTS
-  // token below, without a second request to robots.txt.
-  const robotsText = await fetchRobotsText(start.origin, timeoutMs);
-  const robotsRules: RobotsRules =
-    robotsText === null
-      ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
-      : parseRobotsTxt(robotsText, userAgent);
+  // token below, without a second request to robots.txt. On resume the
+  // persisted text is reused verbatim instead of re-fetched, so the
+  // post-loop computations (robotsDisallowMatches, aiCrawlerBlocks) and
+  // the sitemap directive passthrough are identical without a request.
+  let robotsText: string | null;
+  let robotsRules: RobotsRules;
+  if (resumeState === undefined) {
+    robotsText = await fetchRobotsText(start.origin, timeoutMs);
+    robotsRules =
+      robotsText === null
+        ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
+        : parseRobotsTxt(robotsText, userAgent);
+  } else {
+    robotsText = resumeState.robotsText;
+    robotsRules =
+      robotsText === null
+        ? { found: false, disallow: [], allow: [], sitemapUrls: [] }
+        : parseRobotsTxt(robotsText, userAgent);
+  }
+  // Never persisted: recomputed from the restored robotsText with the
+  // same parse the fresh path uses, under a config the resume validation
+  // has already pinned.
   const effectiveDelayMs = Math.max(delayMs, robotsRules.crawlDelayMs ?? 0);
   const sitemapMode = options.sitemapMode ?? 'none';
-  const sitemap =
-    sitemapMode === 'none'
-      ? undefined
-      : await checkSitemap(start.origin, robotsRules.sitemapUrls, timeoutMs, {
-          userAgent,
-          delayMs: effectiveDelayMs,
-        });
   const eligibleSitemapUrls = new Set<string>();
   let filteredSitemapPageCount = 0;
-  if (sitemap !== undefined) {
-    for (const entry of sitemap.pageEntries) {
-      const normalized = normalizePageUrl(entry.url, startUrlIdentity, {
-        allowWwwApex: true,
-        exclusionPatterns: options.exclusions ?? [],
-      });
-      if (normalized === undefined) filteredSitemapPageCount += 1;
-      else eligibleSitemapUrls.add(normalized);
+  let sitemap: SitemapCheckResult | undefined;
+  let supplementalPhaseStarted = false;
+  if (resumeState === undefined) {
+    sitemap =
+      sitemapMode === 'none'
+        ? undefined
+        : await checkSitemap(start.origin, robotsRules.sitemapUrls, timeoutMs, {
+            userAgent,
+            delayMs: effectiveDelayMs,
+          });
+    if (sitemap !== undefined) {
+      for (const entry of sitemap.pageEntries) {
+        const normalized = normalizePageUrl(entry.url, startUrlIdentity, {
+          allowWwwApex: true,
+          exclusionPatterns: options.exclusions ?? [],
+        });
+        if (normalized === undefined) filteredSitemapPageCount += 1;
+        else eligibleSitemapUrls.add(normalized);
+      }
     }
+  } else {
+    // The sitemap was resolved under the same config on the interrupted
+    // run; restore its result and the eligibility bookkeeping computed
+    // from it instead of refetching anything.
+    sitemap = resumeState.sitemap;
+    for (const url of resumeState.eligibleSitemapUrls) eligibleSitemapUrls.add(url);
+    filteredSitemapPageCount = resumeState.filteredSitemapPageCount;
+    supplementalPhaseStarted = resumeState.supplementalPhaseStarted;
   }
 
   options.onProgress?.({
@@ -270,23 +435,31 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     robotsTxtFound: robotsRules.found,
   });
 
-  const pages: CrawledPage[] = [];
-  const pagesByUrl = new Map<string, CrawledPage>();
-  const visited = new Set<string>();
-  const linkDiscoveredUrls = new Set<string>([startUrlIdentity]);
-  const linkDiscoveredFrom = new Map<string, string>();
-  const enqueued = new Set<string>([startUrlIdentity]);
-  const queue: QueueItem[] = [{ url: startUrlIdentity, depth: 0, discoveryMethod: 'link' }];
+  const restored =
+    resumeState !== undefined ? restoreCrawlFrontierLoopState(resumeState) : undefined;
+  const pages: CrawledPage[] = restored?.pages ?? [];
+  const pagesByUrl = restored?.pagesByUrl ?? new Map<string, CrawledPage>();
+  const visited = restored?.visited ?? new Set<string>();
+  const linkDiscoveredUrls = restored?.linkDiscoveredUrls ?? new Set<string>([startUrlIdentity]);
+  const linkDiscoveredFrom = restored?.linkDiscoveredFrom ?? new Map<string, string>();
+  const enqueued = restored?.enqueued ?? new Set<string>([startUrlIdentity]);
+  const queue: QueueItem[] = restored?.queue ?? [
+    { url: startUrlIdentity, depth: 0, discoveryMethod: 'link' },
+  ];
   // Plan 021 Step 6: one guard per crawlSite call, never shared across
   // crawls - a family key is only meaningful within the site it was
-  // discovered on.
-  const continuationGuard = new ContinuationGuard();
+  // discovered on. A resumed crawl restores the interrupted run's guard
+  // state instead, so it cannot re-admit URLs a family had exhausted.
+  const continuationGuard = restored?.guard ?? new ContinuationGuard();
 
   // Manual-input-layer milestone: extra seed URLs are enqueued at depth 0,
   // same as the start URL, before the crawl loop begins. Off-origin seeds
   // are silently dropped (this crawler only ever audits one origin, same
   // rule normalizeInternalLinks already enforces for discovered links);
   // an unparsable seed is dropped the same way a malformed href is.
+  // Safe to run on resume too: every seed the interrupted run enqueued is
+  // already queued or recorded, so the enqueued check below makes this a
+  // no-op for anything already in the restored state.
   for (const seed of options.seeds ?? []) {
     // Issue #102: seeds go through the same page-identity rule as the start
     // URL, so a seed spelled with a trailing slash cannot enqueue a second
@@ -314,9 +487,50 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     pagesByUrl.set(page.url, page);
   };
 
+  // Frontier snapshot cadence (plan 035): a snapshot fires only once at
+  // least everyPages pages have been recorded since the last one AND at
+  // least minIntervalMs have elapsed, so a fast fixture-sized crawl does
+  // not write per page and a slow real crawl still checkpoints at bounded
+  // staleness. On resume the restored state is the baseline, so the first
+  // new snapshot waits for the same amount of fresh progress.
+  const frontierWrite = frontier?.writeState;
+  const frontierEveryPages = frontier?.everyPages ?? 50;
+  const frontierMinIntervalMs = frontier?.minIntervalMs ?? 60_000;
+  let pagesAtLastFrontierSnapshot = resumeState?.pages.length ?? 0;
+  let lastFrontierSnapshotMs = Date.now();
+
+  const buildFrontierSnapshot = (): CrawlFrontierSnapshot => ({
+    startUrlIdentity,
+    robotsText,
+    supplementalPhaseStarted,
+    queue: queue.map((item) => ({ ...item })),
+    visited: [...visited],
+    pages: pages.map((page) => ({ ...page })),
+    linkDiscoveredUrls: [...linkDiscoveredUrls],
+    linkDiscoveredFrom: [...linkDiscoveredFrom],
+    guard: continuationGuard.snapshot(),
+    sitemap,
+    eligibleSitemapUrls: [...eligibleSitemapUrls],
+    filteredSitemapPageCount,
+  });
+
+  // Called only at whole-iteration boundaries, where queue, visited, and
+  // pages are mutually consistent (never mid-page), so restoring a
+  // snapshot reproduces a state the loop could actually have been in.
+  const maybeSnapshotFrontier = (): void => {
+    if (frontierWrite === undefined) return;
+    if (pages.length - pagesAtLastFrontierSnapshot < frontierEveryPages) return;
+    if (Date.now() - lastFrontierSnapshotMs < frontierMinIntervalMs) return;
+    frontierWrite(buildFrontierSnapshot());
+    pagesAtLastFrontierSnapshot = pages.length;
+    lastFrontierSnapshotMs = Date.now();
+  };
+
   try {
-    let isFirstNavigation = true;
-    let supplementalPhaseStarted = false;
+    // A resumed crawl starts false on purpose: the first resumed fetch
+    // must pay the politeness delay, since a fast restart would otherwise
+    // fire immediately at a site that may be rejecting crawls.
+    let isFirstNavigation = resumeState === undefined;
 
     while (true) {
       while (queue.length > 0 && visited.size < maxPages) {
@@ -332,6 +546,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             discoveryMethod,
             ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
           });
+          maybeSnapshotFrontier();
           continue;
         }
 
@@ -598,6 +813,9 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         } finally {
           await browserPage.close();
         }
+        // Whole-iteration boundary: the page is fully recorded and its
+        // links enqueued, so the structures are consistent for a snapshot.
+        maybeSnapshotFrontier();
       }
 
       if (supplementalPhaseStarted || sitemapMode !== 'supplement') break;

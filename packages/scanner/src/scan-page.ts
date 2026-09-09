@@ -151,6 +151,16 @@ export interface PageScanResult {
   htmlValidity?: HtmlValidityCheckResult;
   structuredData?: StructuredDataCheckResult;
   structuredDataError?: string;
+  /** Plan 035 (issue #124): persisted into scan.json by buildScanJson so a
+   *  resumed run can rebuild every finalizeLighthousePlan input from disk.
+   *  Always present on a RenderedAnalysisResult (which redeclares it
+   *  required); optional here only because a PageScanResult can also be
+   *  assembled without a rendered pass. */
+  checkOutcomes?: Partial<Record<CheckId, CheckExecutionOutcome>>;
+  /** Plan 035: persisted alongside checkOutcomes for the same reason; the
+   *  planner replay needs every page's rendered-cost profile, so a
+   *  completed page without one is never trusted on resume. */
+  renderedCostProfile?: RenderedCostProfile;
 }
 
 /**

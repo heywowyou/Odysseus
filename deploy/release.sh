@@ -207,6 +207,92 @@ prune_old_releases() {
   docker builder prune -f -a --keep-storage "$BUILD_CACHE_KEEP" >/dev/null 2>&1 || true
 }
 
+# One-shot probe the deploy guard runs inside the currently running app
+# container before recreating it. Stdout must stay exactly one JSON line,
+# the running jobs as an array; the per-job lines go to stderr and land in
+# the deploy log. The script carries no single quotes so it embeds in the
+# single-quoted shell string below unchanged, and it never prints the URI.
+JOBS_PROBE='
+  import mongoose from "mongoose";
+  const options = {};
+  if (process.env.MONGODB_DB_NAME) {
+    options.dbName = process.env.MONGODB_DB_NAME;
+  }
+  await mongoose.connect(process.env.MONGODB_URI, options);
+  const running = await mongoose.connection
+    .collection("jobs")
+    .find({ status: "running" })
+    .project({ jobId: 1, phase: 1, type: 1, siteUrl: 1 })
+    .toArray();
+  for (const job of running) {
+    console.error(
+      "running job: jobId=" + job.jobId + " type=" + job.type +
+        " phase=" + job.phase + " site=" + (job.siteUrl ?? "-"),
+    );
+  }
+  await mongoose.disconnect();
+  process.stdout.write(JSON.stringify(running) + "\n", (error) => {
+    process.exit(error ? 1 : 0);
+  });
+'
+
+# Issue #124: recreating the app container kills any job it is running (the
+# 2026-09-08 redeploy destroyed a five-hour audit mid-content-scan), so the
+# deploy refuses while the jobs collection still reports a running job. The
+# probe is deliberately fail-closed: a running container that cannot be
+# asked about the queue, or that answers with anything unreadable, refuses
+# the deploy rather than guessing. A container that is not running at all
+# has nothing live to protect; startup recovery requeues whatever Mongo
+# still calls running. ODYSSEUS_DEPLOY_FORCE_RUNNING lifts the refusal for
+# the operator who accepts interrupting the listed jobs.
+assert_no_running_jobs() {
+  local previous_path="$1"
+  local previous_tag ps_running probe_output job_count jobs_left
+  previous_tag="$(release_tag_for "$previous_path")"
+
+  if ! ps_running="$(compose "$previous_path" "$previous_tag" ps --status running --quiet app)"; then
+    fail 'could not inspect the running app container; the job queue state is unknown, so the deploy is refused'
+  fi
+  if [[ -z "$ps_running" ]]; then
+    log 'no running app container; no live audit to protect'
+    return 0
+  fi
+
+  # The probe cannot go through the compose helper: timeout cannot wrap a
+  # shell function, so the helper's docker compose arguments are repeated
+  # here. The workdir is store's package directory, the one place in the
+  # image whose node_modules resolves mongoose (pnpm installs per package).
+  if ! probe_output="$(ODYSSEUS_IMAGE_TAG="$previous_tag" timeout 30 docker compose \
+    --project-name "$COMPOSE_PROJECT_NAME" \
+    --env-file "$DEPLOY_ROOT/.env" \
+    -f "$previous_path/deploy/compose.yaml" \
+    exec -T -w /app/packages/store app \
+    node --input-type=module --eval "$JOBS_PROBE")"; then
+    fail 'the running-jobs probe failed; the job queue state is unknown, so recreating the app container is refused'
+  fi
+  if [[ "$probe_output" != "["*"]" || "$probe_output" == *$'\n'* ]]; then
+    fail 'the running-jobs probe returned an unreadable answer; the job queue state is unknown, so recreating the app container is refused'
+  fi
+  if [[ "$probe_output" == '[]' ]]; then
+    log 'no jobs are running; the app container can be recreated safely'
+    return 0
+  fi
+
+  job_count=0
+  jobs_left="$probe_output"
+  while [[ "$jobs_left" == *'"jobId"'* ]]; do
+    job_count=$((job_count + 1))
+    jobs_left="${jobs_left#*\"jobId\"}"
+  done
+
+  if [[ -n "${ODYSSEUS_DEPLOY_FORCE_RUNNING:-}" ]]; then
+    log "ODYSSEUS_DEPLOY_FORCE_RUNNING is set: recreating the app container over $job_count running job(s) at the operator's explicit request"
+    log 'the jobs listed above are interrupted by this deploy; a full-audit job resumes from its checkpoint on next startup'
+    return 0
+  fi
+  fail "$job_count job(s) are running; recreating the app container now would kill them. To deploy anyway, add the force-running token to the deploy command, or set ODYSSEUS_DEPLOY_FORCE_RUNNING=1 for this run"
+}
+
 deploy_release() {
   local archive="$1"
   local release_id="$2"
@@ -222,6 +308,7 @@ deploy_release() {
 
   log "building release $release_id"
   compose "$release_path" "$release_id" build app
+  assert_no_running_jobs "$previous_path"
   log "starting release $release_id"
   compose "$release_path" "$release_id" up -d --remove-orphans
 

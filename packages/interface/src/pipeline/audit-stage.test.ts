@@ -7,6 +7,8 @@ vi.mock('@odysseus/scanner', () => ({
   writeFindingsFile: vi.fn(),
   writeManifestFile: vi.fn(),
   pruneScreenshots: vi.fn(),
+  deleteCrawlCheckpoint: vi.fn(),
+  deleteCrawlStateFile: vi.fn(),
   buildAuditDir: vi.fn(() => '/artifacts/example.com/2026-08-04T00-00-00Z'),
   buildArtifactBucketKey: vi.fn(
     (hostname: string, startedAt: Date, relativePath: string) =>
@@ -37,6 +39,8 @@ vi.mock('./obligation-stage.js', () => ({ runObligationStage: vi.fn() }));
 
 import {
   buildAuditDir,
+  deleteCrawlCheckpoint,
+  deleteCrawlStateFile,
   launchBrowser,
   pruneScreenshots,
   scanSite,
@@ -139,6 +143,12 @@ describe('runAuditStage', () => {
     vi.mocked(persistAudit).mockImplementation(async () => {
       calls.push('persistAudit');
     });
+    vi.mocked(deleteCrawlCheckpoint).mockImplementation(() => {
+      calls.push('deleteCrawlCheckpoint');
+    });
+    vi.mocked(deleteCrawlStateFile).mockImplementation(() => {
+      calls.push('deleteCrawlStateFile');
+    });
 
     await runAuditStage('https://example.com/', {}, fakeConnection);
 
@@ -151,6 +161,11 @@ describe('runAuditStage', () => {
       'writeManifestFile',
       'pruneScreenshots',
       'persistAudit',
+      // Plan 035: the crawl checkpoint's job is done once the audit is
+      // persisted; a crash after this point re-runs the post-scan stages
+      // idempotently instead of re-crawling.
+      'deleteCrawlCheckpoint',
+      'deleteCrawlStateFile',
     ]);
   });
 
@@ -428,5 +443,48 @@ describe('runAuditStage', () => {
         screenshotDir: '/artifacts/example.com/2026-08-04T00-00-00Z/pages',
       }),
     );
+  });
+
+  // Plan 035 (issue #124): the job's run identity drives the audit
+  // directory's timestamp and the persisted auditId, so an orphan re-claim
+  // of the same job lands in the same directory and reuses what is already
+  // on disk. The checkpoint files are cleaned once persistAudit succeeds.
+  it('plan 035: a run identity drives buildAuditDir, writeAuditArtifacts and the auditId, and cleans the checkpoint files after persistAudit', async () => {
+    const startedAt = new Date('2026-09-01T08:00:00.000Z');
+    const runIdentity = { startedAt, auditId: 'run-audit-42' };
+
+    const result = await runAuditStage('https://example.com/', { runIdentity }, fakeConnection);
+
+    expect(buildAuditDir).toHaveBeenCalledWith('/artifacts', 'example.com', startedAt);
+    const writeInput = vi.mocked(writeAuditArtifacts).mock.calls[0]?.[0];
+    expect(writeInput?.startedAt).toBe(startedAt);
+    expect(writeInput?.auditId).toBe('run-audit-42');
+    expect(deleteCrawlCheckpoint).toHaveBeenCalledWith(result.auditDir);
+    expect(deleteCrawlStateFile).toHaveBeenCalledWith(result.auditDir);
+  });
+
+  it('plan 035: without a run identity the stage mints startedAt as before and leaves the auditId mint to writeAuditArtifacts', async () => {
+    await runAuditStage('https://example.com/', {}, fakeConnection);
+
+    expect(buildAuditDir).toHaveBeenCalledWith('/artifacts', 'example.com', expect.any(Date));
+    const writeInput = vi.mocked(writeAuditArtifacts).mock.calls[0]?.[0];
+    expect(writeInput).not.toHaveProperty('auditId');
+  });
+
+  it('plan 035: passes a checkpointContext carrying the same startedAt and config snapshot given to writeAuditArtifacts', async () => {
+    await runAuditStage('https://example.com/', {}, fakeConnection);
+
+    const scanOptions = vi.mocked(scanSite).mock.calls[0]?.[1];
+    expect(scanOptions?.checkpointContext?.startedAt).toBeInstanceOf(Date);
+    expect(scanOptions?.checkpointContext?.config).toEqual(capturedConfig());
+    expect(scanOptions?.onResumeDecision).toBeTypeOf('function');
+  });
+
+  it('plan 035: never passes checkpointContext on the prospecting path (skipLighthouse)', async () => {
+    await runAuditStage('https://example.com/', { skipLighthouse: true }, fakeConnection);
+
+    const scanOptions = vi.mocked(scanSite).mock.calls[0]?.[1];
+    expect(scanOptions).not.toHaveProperty('checkpointContext');
+    expect(scanOptions).not.toHaveProperty('onResumeDecision');
   });
 });

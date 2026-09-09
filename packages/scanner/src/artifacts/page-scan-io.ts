@@ -94,6 +94,12 @@ export function buildScanJson(
     ...(scanResult.structuredDataError !== undefined
       ? { structuredDataError: scanResult.structuredDataError }
       : {}),
+    // Persisted so a resumed run can rebuild every finalizeLighthousePlan
+    // input from disk (issue #124 / plan 035).
+    ...(scanResult.checkOutcomes !== undefined ? { checkOutcomes: scanResult.checkOutcomes } : {}),
+    ...(scanResult.renderedCostProfile !== undefined
+      ? { renderedCostProfile: scanResult.renderedCostProfile }
+      : {}),
   };
 }
 

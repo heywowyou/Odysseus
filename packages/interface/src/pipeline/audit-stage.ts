@@ -11,6 +11,8 @@ import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
   buildAuditDir,
+  deleteCrawlCheckpoint,
+  deleteCrawlStateFile,
   getArtifactsRoot,
   getCrawlDelayMs,
   getCrawlerUserAgent,
@@ -46,6 +48,7 @@ import { persistAudit, prefillAuditManualFields } from '@odysseus/store';
 import { runObligationStage } from './obligation-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
+import { logger } from '../logger.js';
 
 export interface RunAuditStageOptions {
   maxPages?: number;
@@ -85,6 +88,13 @@ export interface RunAuditStageOptions {
   skipLighthouse?: boolean;
   /** Full audits default to `supplement`; prospecting passes `inspect`. */
   sitemapMode?: Exclude<SitemapMode, 'none'>;
+  /** Plan 035 (issue #124): the job's stable run identity. When present,
+   *  its startedAt drives buildAuditDir and the manifest, so the audit
+   *  directory (keyed by hostname plus timestamp) is stable across orphan
+   *  re-claims and every per-page result already on disk stays reusable;
+   *  its auditId becomes the persisted audit's id. When absent (the CLI
+   *  path) the stage mints a fresh startedAt exactly as before. */
+  runIdentity?: { startedAt: Date; auditId: string };
 }
 
 export interface AuditStageResult {
@@ -117,7 +127,10 @@ export async function runAuditStage(
   options: RunAuditStageOptions,
   connection: Connection,
 ): Promise<AuditStageResult> {
-  const startedAt = new Date();
+  // Plan 035: the run identity's startedAt (or a minted one on the CLI
+  // path) is the audit's timestamp end to end: directory name, manifest,
+  // and normalize input all come from this one value.
+  const startedAt = options.runIdentity?.startedAt ?? new Date();
   const { browser, debugPort } = await launchBrowser();
 
   try {
@@ -139,6 +152,22 @@ export async function runAuditStage(
       options.scanConcurrency !== undefined
         ? Math.min(options.scanConcurrency, getScanConcurrency())
         : undefined;
+
+    // Plan 035: assembled before the scan so the crawl checkpoint can
+    // record the exact configuration the crawl ran under; the same object
+    // is reused for writeAuditArtifacts, so the manifest and the
+    // checkpoint can never disagree.
+    const config: AuditConfigSnapshot = {
+      maxPages: options.maxPages ?? getMaxPages(),
+      maxDepth: options.maxDepth ?? getMaxCrawlDepth(),
+      crawlDelayMs: effectiveDelayMs ?? getCrawlDelayMs(),
+      pageTimeoutMs: getPageTimeoutMs(),
+      lighthouseTimeoutMs: getLighthouseTimeoutMs(),
+      renderSettleTimeoutMs: getRenderSettleTimeoutMs(),
+      userAgent: getCrawlerUserAgent(),
+      scanConcurrency: effectiveScanConcurrency ?? getScanConcurrency(),
+      sitemapMode: options.sitemapMode ?? 'supplement',
+    };
 
     const siteResult = await scanSite(url, {
       browser,
@@ -173,21 +202,38 @@ export async function runAuditStage(
       // Lighthouse never fires anyway" reasoning is a weaker guarantee
       // than simply never entering that code path at all.
       fullAuditPlanning: !options.skipLighthouse,
+      // Plan 035: full audits stamp the crawl checkpoint with this run's
+      // identity and config, and resume from one when a previous attempt
+      // left it behind. Never set on the prospecting path.
+      ...(!options.skipLighthouse
+        ? {
+            checkpointContext: { startedAt, config },
+            onResumeDecision: (decision) => {
+              if (decision.mode === 'resumed') {
+                logger.info(
+                  {
+                    reusedPages: decision.reusedPages,
+                    // Plan 035 step 4: distinguishes a mid-crawl frontier
+                    // resume (crawl-state.json) from a post-gate checkpoint
+                    // resume; absent on the checkpoint path.
+                    ...(decision.frontierResumed === true ? { frontierResumed: true } : {}),
+                  },
+                  'full audit resumed from the crawl checkpoint',
+                );
+              } else {
+                // A mismatch after a config or scanner upgrade is normal
+                // operation, not an error.
+                logger.info(
+                  { reason: decision.reason },
+                  'full audit starting a fresh crawl (no reusable checkpoint)',
+                );
+              }
+            },
+          }
+        : {}),
     });
 
     const finishedAt = new Date();
-
-    const config: AuditConfigSnapshot = {
-      maxPages: options.maxPages ?? getMaxPages(),
-      maxDepth: options.maxDepth ?? getMaxCrawlDepth(),
-      crawlDelayMs: effectiveDelayMs ?? getCrawlDelayMs(),
-      pageTimeoutMs: getPageTimeoutMs(),
-      lighthouseTimeoutMs: getLighthouseTimeoutMs(),
-      renderSettleTimeoutMs: getRenderSettleTimeoutMs(),
-      userAgent: getCrawlerUserAgent(),
-      scanConcurrency: effectiveScanConcurrency ?? getScanConcurrency(),
-      sitemapMode: options.sitemapMode ?? 'supplement',
-    };
 
     const artifacts = await writeAuditArtifacts({
       kind: 'audit',
@@ -196,6 +242,10 @@ export async function runAuditStage(
       startedAt,
       finishedAt,
       config,
+      // Plan 035: a queued run's auditId is the job's run identity stamp,
+      // minted once per job; writeAuditArtifacts keeps its own randomUUID
+      // mint as the fallback when no run identity was supplied (CLI path).
+      ...(options.runIdentity !== undefined ? { auditId: options.runIdentity.auditId } : {}),
     });
 
     // Runs before normalizeAudit deliberately: it only needs manifest.
@@ -252,6 +302,13 @@ export async function runAuditStage(
     );
 
     await persistAudit(connection, manifest, findings);
+
+    // Plan 035: the checkpoint's job is done once the audit is persisted;
+    // a crash after this point re-runs the post-scan stages idempotently
+    // (persistAudit upserts by auditId, analyses are insert-only and
+    // reuse-existing on disk), never re-crawling.
+    deleteCrawlCheckpoint(artifacts.auditDir);
+    deleteCrawlStateFile(artifacts.auditDir);
 
     // Issue #63: sync after the local write and the DB row both succeeded,
     // never before - a bucket failure must not block an already-valid

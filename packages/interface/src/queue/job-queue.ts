@@ -78,10 +78,17 @@ export class JobQueue {
    *  full-audit job whose audit has since gained a current bilingual
    *  report pair (see reconcileFailedAuditJobs, issue #56), then starts
    *  the claim loop. Returns the number of jobs reset, for the caller to
-   *  log. A reconciliation failure must never keep the queue from
-   *  starting: it is a bookkeeping pass, not a prerequisite for work. */
+   *  log. includeFreshHeartbeats is required by the single-container
+   *  deployment (issue #124): at start() every running job is by
+   *  definition unowned because the container that wrote its heartbeat
+   *  no longer exists, so waiting out the staleness window would only
+   *  delay recovery after a fast bounce. A reconciliation failure must
+   *  never keep the queue from starting: it is a bookkeeping pass, not a
+   *  prerequisite for work. */
   async start(): Promise<number> {
-    const orphanedCount = await resetOrphanedRunningJobs(this.connection);
+    const orphanedCount = await resetOrphanedRunningJobs(this.connection, new Date(), {
+      includeFreshHeartbeats: true,
+    });
     try {
       const reconciled = await reconcileFailedAuditJobs(this.connection);
       if (reconciled > 0) {

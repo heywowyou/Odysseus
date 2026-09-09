@@ -87,7 +87,9 @@ describe('JobQueue', () => {
 
     const orphaned = await queue.start();
     expect(orphaned).toBe(3);
-    expect(resetOrphanedRunningJobs).toHaveBeenCalledWith(fakeConnection);
+    expect(resetOrphanedRunningJobs).toHaveBeenCalledWith(fakeConnection, expect.any(Date), {
+      includeFreshHeartbeats: true,
+    });
   });
 
   // Issue #56: a failed full-audit job whose audit was later completed

@@ -197,6 +197,13 @@ export interface OutreachBatchResult {
   refusal?: string;
 }
 
+/** Plan 035 (issue #124): the audit run's stable identity, stamped once by
+ *  ensureJobRunIdentity and reused by every orphan re-claim. */
+export interface JobRunIdentity {
+  startedAt: Date;
+  auditId: string;
+}
+
 export interface JobDocumentFields {
   jobId: string;
   type: JobType;
@@ -207,6 +214,16 @@ export interface JobDocumentFields {
   options: JobOptionsSnapshot;
   createdAt: Date;
   startedAt?: Date;
+  /** The audit run's stable identity across orphan re-claims, distinct
+   *  from the per-claim startedAt above (which resetOrphanedRunningJobs
+   *  unsets on every requeue). runIdentity.startedAt is what buildAuditDir
+   *  receives, which is what keeps the audit directory (keyed by hostname
+   *  plus this timestamp) stable, so the per-page results already streamed
+   *  to disk (writePagesAsScanned) stay reusable when a crashed full-audit
+   *  job is re-claimed (issue #124). Written once, never re-minted: two
+   *  workers racing, or a re-claim after a crash, must converge on one
+   *  identity. */
+  runIdentity?: JobRunIdentity;
   /** Updated whenever a running job reports progress. Startup recovery only
    *  requeues jobs whose worker has been silent past the orphan timeout. */
   lastHeartbeatAt?: Date;
@@ -385,6 +402,14 @@ const outreachBatchResultSchema = new Schema(
   { _id: false },
 );
 
+const jobRunIdentitySchema = new Schema(
+  {
+    startedAt: { type: Date, required: true },
+    auditId: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const jobSchema = new Schema<JobDocument>(
   {
     jobId: { type: String, required: true, unique: true },
@@ -436,6 +461,7 @@ const jobSchema = new Schema<JobDocument>(
     options: { type: jobOptionsSchema, required: true, default: {} },
     createdAt: { type: Date, required: true },
     startedAt: { type: Date },
+    runIdentity: { type: jobRunIdentitySchema },
     lastHeartbeatAt: { type: Date },
     finishedAt: { type: Date },
     auditId: { type: String },

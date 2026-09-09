@@ -232,6 +232,36 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect(new Date(after!.createdAt).getTime()).toBe(new Date(before!.createdAt).getTime());
   });
 
+  it('resetOrphanedRunningJobs with includeFreshHeartbeats requeues a fresh-heartbeat running job (#124)', async () => {
+    // Production is a single app container: after a fast bounce the fresh
+    // container sees a heartbeat written seconds before by the container
+    // that no longer exists, so the default staleness guard would leave
+    // the job 'running' forever.
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://orphan-fresh.example/',
+      options: {},
+    });
+    const claimedAt = new Date();
+    await createJobModel(connection!).updateOne(
+      { jobId: job.jobId },
+      { $set: { status: 'running', startedAt: claimedAt, lastHeartbeatAt: claimedAt } },
+    );
+
+    const before = await getJob(connection!, job.jobId);
+    const resetCount = await resetOrphanedRunningJobs(connection!, new Date(), {
+      includeFreshHeartbeats: true,
+    });
+    expect(resetCount).toBeGreaterThanOrEqual(1);
+
+    const after = await getJob(connection!, job.jobId);
+    expect(after?.status).toBe('queued');
+    expect(after?.orphaned).toBe(true);
+    expect(after?.startedAt).toBeUndefined();
+    expect(after?.lastHeartbeatAt).toBeUndefined();
+    expect(new Date(after!.createdAt).getTime()).toBe(new Date(before!.createdAt).getTime());
+  });
+
   it('cancelJob cancels a queued job so the claim filter never picks it up', async () => {
     const job = await createJob(connection!, {
       type: 'full-audit',

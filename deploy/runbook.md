@@ -265,7 +265,8 @@ ssh deploy@VPS_IP /srv/odysseus/deploy/install-github-deploy-key.sh \
 
 `restrict` disables port, agent, X11, and terminal forwarding. The forced
 command accepts only `deploy <40-character-sha>` with an archive on standard
-input, or `rollback`. It cannot open a shell or print `/srv/odysseus/.env`.
+input, that same command with the single literal token `force-running`
+appended, or `rollback`. It cannot open a shell or print `/srv/odysseus/.env`.
 
 ### Configure the GitHub production environment
 
@@ -302,6 +303,16 @@ commit-tagged app image, restarts Compose, and requires the public unauthenticat
 request to return a 302 redirect to `/login`. A failed live check restores the
 previous release automatically.
 
+Before recreating the app container, the controller asks the currently running
+container for the jobs whose status is `running`. The guard is fail-closed: any
+running job refuses the deploy, and so does a probe that fails or answers with
+anything unreadable, because an unknown queue state is not a safe state to
+restart in. When no app container is running at all the deploy proceeds;
+startup recovery requeues whatever Mongo still calls running. To deploy anyway,
+append the literal token `force-running` to the deploy command, or set
+`ODYSSEUS_DEPLOY_FORCE_RUNNING=1` for a manual SSH run; the controller then
+logs the running jobs and proceeds over them.
+
 To roll back intentionally, open Actions, `Deploy production`, Run workflow,
 and choose `rollback`. From a normal operator SSH session, the equivalent
 recovery command is:
@@ -313,8 +324,11 @@ recovery command is:
 Rollback swaps the current and previous pointers, so it can be reversed by
 running it again. Five recent releases are retained in addition to whichever
 older release is the active rollback target. Every deployment restarts the app,
-which logs out the in-memory dashboard session. A job interrupted during the
-restart is returned to the persistent queue when the new process starts.
+which logs out the in-memory dashboard session. With the guard above that can
+no longer interrupt a running job unless the deploy was forced; an interrupted
+job is returned to the persistent queue when the new process starts, and since
+plan 035 (issue #124) a full-audit job resumes from its checkpoint on the next
+startup instead of restarting from zero.
 
 ### Disk usage on the VPS
 

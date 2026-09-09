@@ -443,6 +443,14 @@ means numbered entry 24, not a literal Markdown heading anchor.
     approval as a count, not a site guarantee, until then.
     → trade-offs.md#75
 
+76. A full audit stamps a stable run identity on its job, checkpoints the
+    crawl (and the mid-crawl frontier) into the audit directory, and
+    resumes across re-claims; resume requires the same effective config and
+    tool identity, re-runs the coverage gate, and startup resets every
+    running job (single container). The release flow refuses to recreate
+    the container over running jobs unless explicitly forced.
+    → trade-offs.md#76
+
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
 module, Mongoose 9, Zod, Commander, Vitest, pino, `openai`.

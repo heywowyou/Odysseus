@@ -174,6 +174,25 @@ interface FamilyState {
   omittedExampleUrls: string[];
 }
 
+/** One family's survived state (plan 035 crawl-frontier resume): a
+ *  restored guard must keep refusing a family its original crawl had
+ *  already bounded, with the same counts and examples. */
+export interface ContinuationGuardFamilySnapshot {
+  familyKey: string;
+  basis: ContinuationBasis;
+  enqueuedCount: number;
+  omittedCount: number;
+  omittedExampleUrls: string[];
+}
+
+/** Plain JSON, no Maps or class instances, so it survives a
+ *  JSON.stringify/parse round trip unchanged. */
+export interface ContinuationGuardSnapshot {
+  guardVersion: typeof CONTINUATION_GUARD_VERSION;
+  familyMaxEnqueued: number;
+  families: ContinuationGuardFamilySnapshot[];
+}
+
 /** Tracks per-family enqueue counts across one whole crawl. One instance
  *  per crawlSite call - never shared across crawls, since a family key is
  *  only meaningful within the site it was discovered on. */
@@ -183,6 +202,51 @@ export class ContinuationGuard {
 
   constructor(familyMaxEnqueued: number = CONTINUATION_FAMILY_MAX_ENQUEUED) {
     this.familyMaxEnqueued = familyMaxEnqueued;
+  }
+
+  /** Plain-JSON view of this guard's per-family state for a crawl-frontier
+   *  snapshot. Insertion order of the families array is preserved but is
+   *  not meaningful; admit decisions depend only on per-family state. */
+  snapshot(): ContinuationGuardSnapshot {
+    return {
+      guardVersion: CONTINUATION_GUARD_VERSION,
+      familyMaxEnqueued: this.familyMaxEnqueued,
+      families: Array.from(this.families.entries()).map(([familyKey, state]) => ({
+        familyKey,
+        basis: state.basis,
+        enqueuedCount: state.enqueuedCount,
+        omittedCount: state.omittedCount,
+        omittedExampleUrls: [...state.omittedExampleUrls],
+      })),
+    };
+  }
+
+  /** Restores a snapshot exactly, so a resumed crawl cannot re-admit URLs
+   *  a family had already exhausted. Rejects a snapshot produced by a
+   *  different guard version or family cap: its counters were tuned by
+   *  different rules and must never be mixed into this version's
+   *  decisions. */
+  static fromSnapshot(snapshot: ContinuationGuardSnapshot): ContinuationGuard {
+    if (snapshot.guardVersion !== CONTINUATION_GUARD_VERSION) {
+      throw new Error(
+        `ContinuationGuard: snapshot guard version ${snapshot.guardVersion} does not match this code's ${CONTINUATION_GUARD_VERSION}; refusing to restore.`,
+      );
+    }
+    if (snapshot.familyMaxEnqueued !== CONTINUATION_FAMILY_MAX_ENQUEUED) {
+      throw new Error(
+        `ContinuationGuard: snapshot family cap ${snapshot.familyMaxEnqueued} does not match this code's ${CONTINUATION_FAMILY_MAX_ENQUEUED}; refusing to restore.`,
+      );
+    }
+    const guard = new ContinuationGuard(snapshot.familyMaxEnqueued);
+    for (const entry of snapshot.families) {
+      guard.families.set(entry.familyKey, {
+        basis: entry.basis,
+        enqueuedCount: entry.enqueuedCount,
+        omittedCount: entry.omittedCount,
+        omittedExampleUrls: [...entry.omittedExampleUrls],
+      });
+    }
+    return guard;
   }
 
   /** Decides whether a continuation-classified link may be enqueued.

@@ -406,6 +406,21 @@ describe('scanSite with fullAuditPlanning', () => {
 
   it('issue #64: writes each page scan.json to disk during the staged content-scan/Lighthouse phases and keeps result.pages empty when writePagesAsScanned is set', async () => {
     const { auditDir, pagesDir } = await makeTempAuditDir('scan-site-staged-');
+    // Plan 035: the staged lanes persist checkOutcomes and the rendered
+    // cost profile alongside the content, so a resumed run can rebuild
+    // every finalizeLighthousePlan input from disk.
+    vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => ({
+      url,
+      renderedCostProfile: {
+        url,
+        domNodeCount: 10,
+        imageCount: 1,
+        resourceCount: 5,
+        knownTransferBytes: 1_000,
+        unknownTransferSizeCount: 0,
+      },
+      checkOutcomes: { 'render-diff': 'completed', axe: 'completed' },
+    }));
 
     const result = await scanSite(startUrl, {
       browser: {} as never,
@@ -434,8 +449,8 @@ describe('scanSite with fullAuditPlanning', () => {
     expect(b?.lighthouse).toBeUndefined();
 
     for (const written of [home, a, b]) {
-      expect(written).not.toHaveProperty('checkOutcomes');
-      expect(written).not.toHaveProperty('renderedCostProfile');
+      expect(written?.checkOutcomes).toEqual({ 'render-diff': 'completed', axe: 'completed' });
+      expect(written?.renderedCostProfile?.url).toBeDefined();
     }
   });
 });
