@@ -57,13 +57,15 @@ real audit end to end. The other variables have documented defaults in
 
 ```bash
 pnpm run test:store:up    # starts the local mongo-test container
-pnpm run test             # runs the full Vitest suite
+pnpm run test             # runs the unit Vitest project (excludes browser e2e)
+pnpm run test:e2e         # runs the browser e2e project; needs Chromium (below) and mongo-test
+pnpm run test:all         # runs both projects; this is what CI gates on
 pnpm run test:store:down  # stops it again
 ```
 
-Some tests spin up the `fixtures/spa-demo` fixture themselves and drive a
-real Chromium instance via Playwright; run `pnpm exec playwright install
-chromium` once if you haven't already.
+The `test:e2e` and `test:all` projects are what drive a real Chromium via
+Playwright. Some tests spin up the `fixtures/spa-demo` fixture themselves;
+run `pnpm exec playwright install chromium` once if you haven't already.
 
 ## Typechecking and building
 

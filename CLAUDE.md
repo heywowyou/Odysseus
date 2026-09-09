@@ -353,8 +353,8 @@ means numbered entry 24, not a literal Markdown heading anchor.
 55. WCAG-citation and business-claim guards run in the writing pass's retry
     loop (measured promotion, zero false positives over stored analyses), and
     an always-on shadow reviewer returns evidence-bound prose verdicts without
-    ever blocking; it is not promotable to a gate on the current medium model,
-    which flags required generic commercial consequences as unsupported.
+    ever blocking; it was measured not promotable on the Mistral-era medium
+    model; re-measure on the current provider before any promotion decision.
     → trade-offs.md#55
 61. Production deployment starts only when the operator manually dispatches it
     for `main`, and it must verify successful CI for that exact commit. Deploy
@@ -396,7 +396,9 @@ means numbered entry 24, not a literal Markdown heading anchor.
     → trade-offs.md#66
 
 67. Every model pass uses OpenAI `gpt-5.4-mini` through strict structured
-    output with temperature 0.2 and reasoning effort `none`. The generic alias
+    output with reasoning effort `none`, the structure and reviewer passes at
+    temperature 0.2, and the writing pass at its own measured setting; read
+    the entry before touching either. The generic alias
     is an operator-approved automatic-upgrade trade-off; recheck bilingual
     report quality after an alias repoint. Never split models per pass while
     persisted analysis provenance has only one model field.

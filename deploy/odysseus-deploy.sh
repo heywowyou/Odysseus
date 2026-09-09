@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Local helper: rsync the repo to the VPS and rebuild the app image there.
-# Run from the operator's own machine, not on the server.
+# Local helper: deploy the current checkout to the VPS from the operator's
+# own machine, not on the server. It renders the server compose file from the
+# repo's own deploy/compose.yaml and writes it to the server, rsyncs the repo
+# to the VPS, builds the app image there, rolls it out with `up -d app`,
+# verifies the running container's build id, and prunes build cache.
 #
-# This does NOT run `docker compose up`. Hostinger's Docker Manager panel's
-# own "Deployer" button runs `pull` + `up` but never `build`, even though the
-# compose file declares a `build:` section, so the image has to be rebuilt by
-# hand before every click or the panel silently redeploys stale code. This
-# script does that rebuild; clicking "Deployer" in the panel afterward stays
-# the deliberate final step.
+# No Hostinger panel click is needed afterward, and the panel's own
+# "Deployer" button must NOT be clicked after a rollout: it re-runs `pull` +
+# `up` from the panel's own context instead of the build-and-verify sequence
+# above.
 set -Eeuo pipefail
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"

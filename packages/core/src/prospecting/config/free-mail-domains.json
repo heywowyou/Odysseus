@@ -1,6 +1,6 @@
 {
   "version": "2026-08-16",
-  "sourceNote": "Consumer/free-mail domains treated as personal addresses per docs/prospect-qualification.md section 6: B2B opt-out prospecting covers professional addresses, a personal mailbox used for business does not qualify and would need consent. Illustrative starter set, not exhaustive - the operator refines it.",
+  "sourceNote": "Consumer/free-mail domains treated as personal addresses per docs/rules/prospect-qualification.md section 6: B2B opt-out prospecting covers professional addresses, a personal mailbox used for business does not qualify and would need consent. Illustrative starter set, not exhaustive - the operator refines it.",
   "domains": [
     "gmail.com",
     "googlemail.com",

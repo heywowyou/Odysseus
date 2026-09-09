@@ -2,10 +2,16 @@
 
 Initial provisioning commands are meant to be run as shown, in order, by the
 operator with an assistant walking through them. Do not skip the STOP boxes.
-Once provisioning is complete, section 7A replaces routine source syncing and
-rebuilds with a CI-verified, operator-triggered deployment.
+Sections 1 through 6 are the historical record of the original Scaleway box.
+Routine production deployment is section 7B: run `deploy/odysseus-deploy.sh`
+from the operator's machine against the Hostinger box. Section 7A stays as
+reference for the disabled workflow mechanism.
 
 ## 1. What this stack is
+
+> Sections 1 through 6 describe the original 2025-08 provisioning on the
+> retired Scaleway VPS and are kept as history. Production now runs on the
+> Hostinger box; see section 7B.
 
 One Scaleway VPS runs two containers: the Odysseus app (built from this
 repo's Dockerfile) and Caddy, which terminates HTTPS and is the only thing
@@ -167,6 +173,11 @@ In Atlas, under Network Access, add the VPS IPv4 address with comment
 > working machine out of production data.
 
 ## 7. Start and verify
+
+> The `docker compose -f deploy/compose.yaml` commands in this section are
+> release-controller and Scaleway-era. On the Hostinger box, compose is run
+> via `deploy/odysseus-deploy.sh` with project name `odysseus` from
+> `/docker/odysseus`; do not run these commands there.
 
 ```sh
 cd /srv/odysseus
@@ -349,8 +360,9 @@ data-first disk policy after every successful deploy (`prune_old_releases` in
   the database, off-box.
 - Pruned: app images for every other release (a rollback to one of those
   rebuilds the image first; the controller handles a missing image), dangling
-  images, and Docker build cache above 4 GB
-  (`ODYSSEUS_BUILD_CACHE_KEEP` overrides the ceiling).
+  images, and Docker build cache above 4 GB (`ODYSSEUS_BUILD_CACHE_KEEP`, the
+  release controller's own knob and not section 7B's
+  `ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP`, overrides the ceiling).
 
 Before the controller had this policy the disk filled on 2026-09-03 and
 deploys died with `no space left on device` during the image build. If that
@@ -369,6 +381,49 @@ df -h /
 
 A deploy can then be re-run from Actions. Never prune volumes: the artifacts
 volume is the data of record on this box (see section 11).
+
+## 7B. Routine local deployments
+
+> Operator decision, 2026-09-09 (trade-off 77): production on the Hostinger
+> box is deployed by running `deploy/odysseus-deploy.sh` from the operator's
+> own machine. The GitHub workflow of section 7A stays disabled. This section
+> is the routine procedure.
+
+One-time setup, on the operator's machine:
+
+```sh
+cp deploy/.deploy.local.env.example deploy/.deploy.local.env
+```
+
+Fill in `ODYSSEUS_DEPLOY_HOST` (the `user@host` for the box) and the SSH key
+path `ODYSSEUS_DEPLOY_SSH_KEY` unless your default `~/.ssh/id_ed25519` is
+already authorized there. The other values have working defaults you normally
+leave alone: `ODYSSEUS_DEPLOY_REMOTE_PATH` (`/srv/odysseus`),
+`ODYSSEUS_DEPLOY_COMPOSE_DIR` (`/docker/odysseus`),
+`ODYSSEUS_DEPLOY_COMPOSE_PROJECT` (`odysseus`), and
+`ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP` (`4GB`).
+
+Routine deploy, from the operator's machine:
+
+```sh
+bash deploy/odysseus-deploy.sh
+```
+
+The script, in order: renders the server compose file from the repo's own
+`deploy/compose.yaml` and writes it to the server, rsyncs the repo, builds
+the app image stamped with `ODYSSEUS_BUILD_ID`, rolls it out with
+`up -d app`, verifies the running container reports that build id, and prunes
+build cache down to `ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP` (default `4GB`).
+
+Two standing rules:
+
+- `ODYSSEUS_DEPLOY_COMPOSE_PROJECT` must never be `deploy`. The script
+  hard-fails that value: it collides with the old release controller's
+  project name, and that collision once caused a container/volume mismatch
+  on the old box. The default `odysseus` is correct.
+- No Hostinger panel click is needed or wanted. The script rolls the image
+  out itself; do not click the panel's own Deployer button after a rollout,
+  because it re-runs `pull` + `up` from the panel's own context.
 
 ## 8. Backups
 
@@ -480,6 +535,11 @@ Restore drill log (add one dated line per drill, never delete old ones):
 
 ## 9. In-container PDF glyph smoke
 
+> The `docker compose -f deploy/compose.yaml` commands in this section are
+> release-controller and Scaleway-era. On the Hostinger box, compose is run
+> via `deploy/odysseus-deploy.sh` with project name `odysseus` from
+> `/docker/odysseus`; do not run these commands there.
+
 Trade-off 19: Chromium's font hinting splits some Inter glyphs in
 print-to-PDF; the report launches its browser with
 `--font-render-hinting=none` to prevent it. That flag is passed ONLY by the
@@ -527,6 +587,11 @@ Then open `glyph-smoke.pdf` on your local machine (scp it over first).
 > deliverable is a defect regardless of how the rest of the stack behaves.
 
 ## 10. Local smoke (before ever touching the VPS)
+
+> The `docker compose -f deploy/compose.yaml` commands in this section run on
+> your own machine only; they date from the Scaleway era. On the Hostinger
+> box, compose is run via `deploy/odysseus-deploy.sh` with project name
+> `odysseus` from `/docker/odysseus`; never run this section's commands there.
 
 Run the whole stack on your machine against the repo's test Mongo. This is
 the dry run for sections 7 and 9.
@@ -586,6 +651,11 @@ process left running). Re-comment the `extra_hosts` lines in
 `deploy/compose.yaml` before committing anything.
 
 ## 11. Rollback / teardown
+
+> The `docker compose -f deploy/compose.yaml` commands in this section are
+> release-controller and Scaleway-era. On the Hostinger box, compose is run
+> via `deploy/odysseus-deploy.sh` with project name `odysseus` from
+> `/docker/odysseus`; do not run these commands there.
 
 Stop the stack while KEEPING all data:
 
