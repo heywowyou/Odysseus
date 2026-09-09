@@ -53,6 +53,7 @@ import {
   getFindingsForAudit,
   getLatestReport,
   getLatestReportApproval,
+  approvalMatchesReportPair,
   resolveSelectedAnalysisPairForAudit,
   persistReportApproval,
   getSeverityRollup,
@@ -667,6 +668,25 @@ describe('GET /api/audits/:auditId', () => {
 });
 
 describe('GET /api/audits/:auditId/report/:language', () => {
+  // Complete fresh report row: every field classifyReportFreshness needs so
+  // the freshness gate passes unless a test overrides one field on purpose.
+  function freshReport(language: 'fr' | 'en', pdfDigest: string) {
+    return {
+      reportId: `report-${language}`,
+      auditId: 'audit-1',
+      analysisId: `analysis-${language}`,
+      findingsProvenance,
+      rendererVersion: 2,
+      rendererBuild: 'build',
+      pdfDigest,
+      language,
+      reportTemplateVersion: 2,
+      analysisGeneratedAt: new Date(),
+      fileRef: `reports/${language}.pdf`,
+      generatedAt: new Date(),
+    };
+  }
+
   it('returns a conflict instead of serving a legacy unverified PDF', async () => {
     vi.mocked(getLatestReport).mockResolvedValue({
       auditId: 'audit-1',
@@ -687,5 +707,92 @@ describe('GET /api/audits/:auditId/report/:language', () => {
     expect(res.body).toContain('unverified');
     expect(res.setHeader).toHaveBeenCalledWith('x-content-type-options', 'nosniff');
     expect(res.setHeader).toHaveBeenCalledWith('referrer-policy', 'no-referrer');
+  });
+
+  it('returns a conflict when the stored template version makes the report stale', async () => {
+    vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) => ({
+      ...freshReport(language, `sha256:${'0'.repeat(64)}`),
+      reportTemplateVersion: 1,
+    }));
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/report/fr');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toContain('stale');
+  });
+
+  it('returns a conflict when the bilingual pair has not been approved', async () => {
+    vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) =>
+      freshReport(language, `sha256:${'0'.repeat(64)}`),
+    );
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/report/fr');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toContain('not been approved');
+  });
+
+  it('returns a conflict when the served bytes do not hash to the recorded digest', async () => {
+    const recordedPdf = Buffer.from('%PDF-recorded');
+    const servedPdf = Buffer.from('%PDF-tampered');
+    const recordedDigest = `sha256:${createHash('sha256').update(recordedPdf).digest('hex')}`;
+    await fs.mkdir('/tmp/fake-audit-dir/reports', { recursive: true });
+    await fs.writeFile('/tmp/fake-audit-dir/reports/fr.pdf', servedPdf);
+    vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) =>
+      freshReport(language, recordedDigest),
+    );
+    vi.mocked(getLatestReportApproval).mockResolvedValue({ auditId: 'audit-1' } as never);
+    vi.mocked(approvalMatchesReportPair).mockReturnValue(true);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/report/fr');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toContain('digest does not match');
+  });
+
+  it('serves the exact digest-verified bytes as application/pdf', async () => {
+    const recordedPdf = Buffer.from('%PDF-recorded');
+    const recordedDigest = `sha256:${createHash('sha256').update(recordedPdf).digest('hex')}`;
+    await fs.mkdir('/tmp/fake-audit-dir/reports', { recursive: true });
+    await fs.writeFile('/tmp/fake-audit-dir/reports/fr.pdf', recordedPdf);
+    vi.mocked(getLatestReport).mockImplementation(async (_connection, _auditId, language) =>
+      freshReport(language, recordedDigest),
+    );
+    vi.mocked(getLatestReportApproval).mockResolvedValue({ auditId: 'audit-1' } as never);
+    vi.mocked(approvalMatchesReportPair).mockReturnValue(true);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/report/fr');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(vi.mocked(res.setHeader).mock.calls).toContainEqual(['content-type', 'application/pdf']);
+    expect(res.body).toEqual(recordedPdf);
+  });
+
+  it('rejects a language outside the bilingual pair before any store read', async () => {
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/report/es');
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toContain('language must be');
+    expect(getLatestReport).not.toHaveBeenCalled();
   });
 });
