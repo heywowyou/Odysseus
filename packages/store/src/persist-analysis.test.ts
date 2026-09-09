@@ -127,7 +127,10 @@ describe.skipIf(!mongoAvailable)('persistAnalysis', () => {
     });
 
     const AnalysisModel = createAnalysisModel(connection!);
-    const stored = await AnalysisModel.findOne({ auditId: 'persist-analysis-test-4' });
+    // Read through the plain-object boundary: comparing the hydrated
+    // Mongoose subdocument directly asserts ODM wrapper internals, not the
+    // persisted shape this test exists to pin.
+    const stored = await AnalysisModel.findOne({ auditId: 'persist-analysis-test-4' }).lean();
 
     expect(stored?.siteContext).toEqual({
       businessType: 'unknown (no intake context provided)',
