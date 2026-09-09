@@ -224,7 +224,9 @@ describe('scoreHotels', () => {
     expect(recorded[0]?.score.ability.total).toBe(30 + 20 + 15 + 15);
   });
 
-  it('feeds v4 prescan booking kinds into the unapproved v2 configuration', async () => {
+  it('feeds v4 prescan booking kinds into the operator-approved v2 configuration', async () => {
+    // v2 was approved on 2026-09-08 for plan 034, so the run reports approved:
+    // approval gates cohort selection, never the scoring run itself.
     const { store, recorded } = stubStore({
       candidates: [candidate('1')],
       prescans: {
@@ -249,7 +251,7 @@ describe('scoreHotels', () => {
       store,
     });
 
-    expect(report.approved).toBe(false);
+    expect(report.approved).toBe(true);
     expect(
       recorded[0]?.score.ability.components.find((part) => part.id === 'direct-booking'),
     ).toEqual({

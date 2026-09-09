@@ -334,7 +334,7 @@ describe('computeHotelOutreachScore ability', () => {
     ).toBe(0);
   });
 
-  it('uses Atout France room bands in the unapproved v2 configuration', () => {
+  it('uses Atout France room bands in the operator-approved v2 configuration', () => {
     const config = getHotelOutreachScoreConfig('hotel-outreach-v2');
     const large = computeHotelOutreachScore(input({ roomCount: 50 }), config);
     const medium = computeHotelOutreachScore(input({ roomCount: 25 }), config);
