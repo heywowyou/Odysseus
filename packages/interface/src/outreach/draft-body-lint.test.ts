@@ -48,8 +48,22 @@ describe('lintOutreachDraftBody', () => {
     expect(lintOutreachDraftBody('https://tracker.example.com/x', [])).toBe('off-domain-link');
   });
 
+  it('catches a subdomain of an approved host, proving exact-host matching', () => {
+    expect(lintOutreachDraftBody('https://app.odysseusaudit.com/x', [])).toBe('off-domain-link');
+  });
+
   it('does not flag our own domain link', () => {
     expect(lintOutreachDraftBody(`Voir ${PREVIEW_URL}`, [PREVIEW_URL])).toBeNull();
+  });
+
+  it('does not flag a link on the bare approved host', () => {
+    expect(lintOutreachDraftBody('https://odysseusaudit.com/apercu/abc123', [])).toBeNull();
+  });
+
+  it('treats a trailing-dot spelling of an approved host as that host', () => {
+    // hasOffDomainLink strips the trailing dot before comparing, so the
+    // root-qualified spelling of an approved host compares equal to it.
+    expect(lintOutreachDraftBody('https://www.odysseusaudit.com./x', [])).toBeNull();
   });
 
   it('strips an allowlisted URL before running the text-content check, so its path does not trip css-selector', () => {

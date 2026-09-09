@@ -19,6 +19,15 @@
 
 import { containsProhibitedPreviewContent } from '@odysseus/core';
 
+/** Hosts an outreach draft body may link to, exact match, no subdomain
+ *  wildcards: preview links are minted by the publisher, so any host not
+ *  listed here is a bug or an injection. Edit deliberately; see
+ *  `docs/product/first-100-rollout-runbook.md`, carry-forward 4 and gate I. */
+export const APPROVED_OUTREACH_LINK_HOSTS: readonly string[] = [
+  'odysseusaudit.com',
+  'www.odysseusaudit.com',
+];
+
 const RAW_BODY_RULES: Array<[string, RegExp]> = [
   ['markdown-emphasis', /(\*\*|__)[^*_]+\1/u],
   ['markdown-link', /\[[^\]]+\]\([^)]+\)/u],
@@ -28,7 +37,6 @@ const RAW_BODY_RULES: Array<[string, RegExp]> = [
   // provider. A name here means one got into the draft another way.
   ['reference-stat-source', /\b(?:W3C|WebAIM|Forrester|Deloitte|Nielsen)\b/u],
   ['insecure-url', /http:\/\//iu],
-  ['off-domain-link', /https:\/\/(?!(?:www\.)?odysseusaudit\.)\S+/iu],
 ];
 
 export class OutreachDraftLintError extends Error {
@@ -41,6 +49,26 @@ export class OutreachDraftLintError extends Error {
   }
 }
 
+/** Off-domain link check over the raw body, replacing the old wildcard
+ *  lookahead: every `https://` token must parse and name a host on
+ *  `APPROVED_OUTREACH_LINK_HOSTS` exactly, so a subdomain of an approved host
+ *  is foreign here. Unparsable tokens fail closed. A trailing dot is stripped
+ *  before comparing, so the root-qualified spelling of an approved host
+ *  compares equal to it. */
+function hasOffDomainLink(body: string): boolean {
+  for (const match of body.matchAll(/https:\/\/\S+/giu)) {
+    let host: string;
+    try {
+      host = new URL(match[0]).hostname.toLowerCase();
+    } catch {
+      return true;
+    }
+    if (host.endsWith('.')) host = host.slice(0, -1);
+    if (!APPROVED_OUTREACH_LINK_HOSTS.includes(host)) return true;
+  }
+  return false;
+}
+
 /** Returns the name of the first rule that fired, or null for a clean body.
  *  `allowedUrls` are stripped before the text-content check runs, exactly as
  *  `preview-lint.ts`'s `readableText` strips markup before its own. */
@@ -48,6 +76,8 @@ export function lintOutreachDraftBody(body: string, allowedUrls: string[]): stri
   for (const [name, pattern] of RAW_BODY_RULES) {
     if (pattern.test(body)) return name;
   }
+
+  if (hasOffDomainLink(body)) return 'off-domain-link';
 
   let stripped = body;
   for (const url of allowedUrls) stripped = stripped.split(url).join(' ');
