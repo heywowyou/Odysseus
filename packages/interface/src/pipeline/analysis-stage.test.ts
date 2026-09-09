@@ -579,4 +579,75 @@ describe('runAnalysisStage', () => {
       warn.mockRestore();
     }
   });
+
+  // Plan 032 (issue #162): the audit fallback gate. The provider mock
+  // assertions below are the point of the test: a thin findings set (no
+  // critical or serious, fewer than 5 moderate) must produce the static
+  // analysis with zero model calls, including both advisory passes.
+  it('skips every model pass on a thin findings set and ships the static fallback analysis', async () => {
+    const findings = [
+      buildFinding({ findingId: 'm1', dedupeKey: 'm1', severity: 'moderate' }),
+      buildFinding({ findingId: 'm2', dedupeKey: 'm2', severity: 'moderate' }),
+      buildFinding({ findingId: 'm3', dedupeKey: 'm3', severity: 'moderate' }),
+    ];
+    const manifest = fakeManifest(findings);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = await runAnalysisStage(
+        auditDir,
+        manifest,
+        findings,
+        { language: 'fr' },
+        fakeConnection,
+      );
+
+      // Zero provider calls: structure, writing, and both advisory passes.
+      expect(analyzeStructure).not.toHaveBeenCalled();
+      expect(analyzeWriting).not.toHaveBeenCalled();
+      expect(analyzeCorrectionReview).not.toHaveBeenCalled();
+      expect(analyzeReview).not.toHaveBeenCalled();
+      expect(warn).not.toHaveBeenCalled();
+
+      // No structure file exists in this mode, and nothing may claim to
+      // reuse one later.
+      expect(result.structureReused).toBe(false);
+      expect(result.structurePath).toBe('');
+      const analysesDir = path.join(auditDir, 'analyses');
+      const files = await fs.readdir(analysesDir);
+      expect(files.some((f) => f.endsWith('-structure.json'))).toBe(false);
+      expect(files.some((f) => f.endsWith('-review.json'))).toBe(false);
+      expect(files.some((f) => f.endsWith('-correction-review.json'))).toBe(false);
+
+      // The persisted artifact carries the marker and no invented content.
+      const analysisFile = files.find((f) => f.endsWith('-fr.json'))!;
+      const stored = JSON.parse(await fs.readFile(path.join(analysesDir, analysisFile), 'utf-8'));
+      expect(stored.generationMode).toBe('static-fallback');
+      expect(stored.model).toBe('static-fallback');
+      expect(stored.temperature).toBe(0);
+      expect(stored.overallRisk).toBe('low');
+      expect(stored.themes).toEqual([]);
+      expect(stored.quickWins).toEqual([]);
+      expect(stored.executiveSummary.length).toBeGreaterThan(0);
+      expect(stored.obligationAssessment).toEqual({ status: 'undetermined', basis: [] });
+
+      expect(result.analysis.generationMode).toBe('static-fallback');
+      expect(persistAnalysis).toHaveBeenCalledWith(
+        fakeConnection,
+        expect.objectContaining({
+          analysisId: result.analysis.analysisId,
+          auditId: 'audit-1',
+          language: 'fr',
+          model: 'static-fallback',
+          temperature: 0,
+          overallRisk: 'low',
+          themes: [],
+          quickWins: [],
+          generationMode: 'static-fallback',
+        }),
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
