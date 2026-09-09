@@ -25,6 +25,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser, Page } from 'playwright';
 import { launchBrowser } from '@odysseus/scanner';
 import { renderHtml } from './render-html.js';
+import { analyzePagedjsOverflow, collectPagedjsOverflowModels } from '../pdf.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import {
   buildStressFixture,
@@ -275,6 +276,16 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     expect(overflowing).toBe(0);
   });
 
+  // Issue #118: the overflow gate pdf.ts runs on every real render must
+  // stay silent across this whole 35-page document (cover gradient,
+  // running heads and footers, appendix continuation headers, tables,
+  // glossary). This is the broadest no-false-positive check the gate has,
+  // and it costs nothing here: the pages are already laid out above.
+  it('invariant 6c: the issue #118 overflow gate finds no painted content outside any printable content rectangle', async () => {
+    const violation = analyzePagedjsOverflow(await collectPagedjsOverflowModels(doc.page));
+    expect(violation).toBeUndefined();
+  });
+
   it('invariant 6a: the bounded start-here panel never fragments across physical pages', async () => {
     const pressured = await paginate(
       browser,
@@ -291,7 +302,7 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     } finally {
       await pressured.page.context().close();
     }
-  });
+  }, 60_000);
 
   it('invariant 6b: the bounded start-here panel declares the keep-together rule', async () => {
     const breakInside = await doc.page.evaluate(() => {

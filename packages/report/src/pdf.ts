@@ -189,6 +189,206 @@ async function analyzePagedjsPagesInBrowser(page: Page): Promise<PagedjsStructur
   return analyzePagedjsPages(pages);
 }
 
+/** Issue #118. Constrained successor to plan 033's removed geometry
+ *  collector. The removed version walked every element under each
+ *  .pagedjs_page and compared it against the printable rectangle, so it
+ *  reported ordinary Paged.js infrastructure as overflow: the margin boxes
+ *  that carry the running page counter and the footer sit outside the
+ *  content area by design, and a normal report (the small-site fixture,
+ *  physical page 4) died with "Painted content <div> exceeds printable
+ *  content rectangle ... at right" during the full test run. That tripped
+ *  plan 033's STOP condition and the collector was removed.
+ *
+ *  This version keeps the same failure class but narrows where it looks.
+ *  It walks only painted element boxes inside the .sheet fragments under
+ *  .pagedjs_page_content, because the design system's content unit is the
+ *  sheet (html-utils.ts wraps every section in one). Everything else on a
+ *  page is page surface, not content painted on it, and most of it spans
+ *  the full sheet width by construction: the margin boxes carrying the
+ *  running page counter and footer live outside the content area, and the
+ *  wrapper frames around the fragments (Paged.js's own page-content div
+ *  plus render-html's font-family div) measure the full page width and so
+ *  stick 18mm into the sheet padding on each side. Confirmed against the
+ *  real small-site render: those frames were the ONLY boxes a wider walk
+ *  reported on all 35 pages. The appendix continuation headers the issue
+ *  also names never need an exemption of their own: the repair pass
+ *  (insertRepeatedTheadsIntoHtml) rebuilds them as ordinary in-flow
+ *  tables inside a sheet, and the header-only ghost fragments are already
+ *  deleted (removeEmptyAppendixTableGhosts) before this gate runs.
+ *
+ *  Text that paints past its own element box (an unbreakable string
+ *  overflowing a fixed-width card) is deliberately out of scope: element
+ *  boxes stay put when only glyphs overflow, so that class needs text
+ *  range geometry, and paged.css's overflow-wrap defences plus
+ *  paged-invariants invariant 6 already own it. Precision is preferred
+ *  over recall throughout: a false positive aborts a normal client
+ *  deliverable, which is exactly what got the broad collector stopped. */
+
+/** Subpixel rounding at fractional print-resolution boundaries
+ *  (18mm is not a whole number of pixels) routinely moves an edge by a
+ *  fraction of a pixel. Below this, a difference is measurement noise,
+ *  not overflow; paged-invariants invariant 6 uses the same +1px slack. */
+export const PAGEDJS_OVERFLOW_TOLERANCE_PX = 1;
+
+/** A box smaller than this in BOTH dimensions is layout dust: rounding
+ *  shards and zero-size anchors like the hidden .footer-source node
+ *  (0x0 by design). Something that actually paints is at least a
+ *  hairline big on one axis. */
+export const PAGEDJS_NEGLIGIBLE_BOX_PX = 1;
+
+export interface PagedRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+export interface PagedOverflowCandidate {
+  /** Uppercase DOM tag name (DIV, TABLE, ...); lowercased for the error
+   *  message so the report matches the old gate's "<div>" style. */
+  tag: string;
+  /** False when the element cannot paint at all (display: none,
+   *  visibility: hidden, opacity: 0): such boxes exist in geometry but
+   *  never in ink, so they must never fire. */
+  painted: boolean;
+  rect: PagedRect;
+}
+
+export interface PagedPageOverflowModel {
+  pageIndex: number;
+  /** The printable content rectangle: .pagedjs_page_content's box inset
+   *  horizontally by the .sheet fragment's own computed padding, because
+   *  the sheet padding (not @page) is where this design puts its side
+   *  margins. */
+  contentRect: PagedRect;
+  candidates: PagedOverflowCandidate[];
+}
+
+export type PagedOverflowSide = 'right' | 'left' | 'bottom' | 'top';
+
+export interface PagedjsOverflowViolation {
+  pageIndex: number;
+  tag: string;
+  side: PagedOverflowSide;
+  amountPx: number;
+}
+
+/** Fixed side order so a box wider than the whole sheet reports its
+ *  dominant side deterministically instead of an arbitrary one. */
+function firstOverflowSide(
+  rect: PagedRect,
+  contentRect: PagedRect,
+): { side: PagedOverflowSide; amountPx: number } | undefined {
+  const sides: readonly (readonly [PagedOverflowSide, number])[] = [
+    ['right', rect.right - contentRect.right],
+    ['bottom', rect.bottom - contentRect.bottom],
+    ['left', contentRect.left - rect.left],
+    ['top', contentRect.top - rect.top],
+  ];
+  for (const [side, amount] of sides) {
+    if (amount > PAGEDJS_OVERFLOW_TOLERANCE_PX) {
+      return { side, amountPx: Math.round(amount * 10) / 10 };
+    }
+  }
+  return undefined;
+}
+
+/** Pure decision over the collected geometry, no DOM: returns the first
+ *  painted box that leaves its page's printable content rectangle by more
+ *  than the rounding tolerance, in document order, so the reported page is
+ *  always the earliest offender. A degenerate content rectangle (zero
+ *  sized) is skipped: that signature belongs to the structural gates,
+ *  which describe it far more precisely than geometry could. */
+export function analyzePagedjsOverflow(
+  pages: readonly PagedPageOverflowModel[],
+): PagedjsOverflowViolation | undefined {
+  for (const p of pages) {
+    if (p.contentRect.width <= 0 || p.contentRect.height <= 0) continue;
+    for (const candidate of p.candidates) {
+      if (!candidate.painted) continue;
+      if (
+        candidate.rect.width < PAGEDJS_NEGLIGIBLE_BOX_PX &&
+        candidate.rect.height < PAGEDJS_NEGLIGIBLE_BOX_PX
+      ) {
+        continue;
+      }
+      const overflow = firstOverflowSide(candidate.rect, p.contentRect);
+      if (overflow !== undefined) {
+        return { pageIndex: p.pageIndex, tag: candidate.tag, ...overflow };
+      }
+    }
+  }
+  return undefined;
+}
+
+export function describePagedjsOverflow(violation: PagedjsOverflowViolation): string {
+  return (
+    `Painted content <${violation.tag.toLowerCase()}> extends past the printable content rectangle ` +
+    `on physical page ${violation.pageIndex + 1} at ${violation.side} by ${violation.amountPx}px.`
+  );
+}
+
+/** Collects the geometry the pure check above decides over, off the live
+ *  post-pagination DOM. Exported so the e2e suites can run the collector
+ *  and the pure analysis against an already-paginated page (including one
+ *  that renders fine, to prove the gate stays silent there) without going
+ *  through the aborting render path. */
+export async function collectPagedjsOverflowModels(page: Page): Promise<PagedPageOverflowModel[]> {
+  return page.evaluate((): PagedPageOverflowModel[] => {
+    // The inline inset is identical on every .sheet fragment (one paged.css
+    // rule), so it is read once from the first fragment instead of per page.
+    const firstSheet = document.querySelector('.pagedjs_page_content .sheet');
+    const sheetStyle = firstSheet === null ? null : getComputedStyle(firstSheet);
+    const padLeft = sheetStyle === null ? 0 : Number.parseFloat(sheetStyle.paddingLeft) || 0;
+    const padRight = sheetStyle === null ? 0 : Number.parseFloat(sheetStyle.paddingRight) || 0;
+
+    return Array.from(document.querySelectorAll('.pagedjs_page')).map((pageEl, pageIndex) => {
+      const contentEl = pageEl.querySelector('.pagedjs_page_content');
+      const box = contentEl === null ? undefined : contentEl.getBoundingClientRect();
+      const contentRect: PagedRect = {
+        left: (box?.left ?? 0) + padLeft,
+        top: box?.top ?? 0,
+        right: (box?.right ?? 0) - padRight,
+        bottom: box?.bottom ?? 0,
+        width: box?.width ?? 0,
+        height: box?.height ?? 0,
+      };
+
+      const candidates: PagedOverflowCandidate[] = [];
+      if (contentEl !== null) {
+        // Only what the sheet fragments contain: see the block comment
+        // above for why the fragments themselves and the frames around
+        // them are page surface, not candidates.
+        for (const el of Array.from(contentEl.querySelectorAll('.sheet *'))) {
+          const style = getComputedStyle(el);
+          const opacity = Number.parseFloat(style.opacity);
+          const painted =
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            (Number.isNaN(opacity) || opacity > 0);
+          const r = el.getBoundingClientRect();
+          candidates.push({
+            tag: el.tagName,
+            painted,
+            rect: {
+              left: r.left,
+              top: r.top,
+              right: r.right,
+              bottom: r.bottom,
+              width: r.width,
+              height: r.height,
+            },
+          });
+        }
+      }
+
+      return { pageIndex, contentRect, candidates };
+    });
+  });
+}
+
 /** Plan 018: there is deliberately no hard page-count maximum. A document
  *  above this many measured pages is still generated, persisted, and
  *  deliverable; only a non-blocking warning travels with it (CLI output
@@ -418,6 +618,18 @@ export async function renderPdfWithPageCountFromHtml(
     const structuralFailure = describePagedjsStructuralFailure(structure);
     if (structuralFailure !== undefined) {
       throw new Error(`Report generation aborted: ${structuralFailure} Never shipped to a client.`);
+    }
+
+    // Issue #118. Geometry runs after the structural gates, never before
+    // them: a broken layout produces several signatures at once, and the
+    // structural ones name the failure more precisely than a box
+    // coordinate can.
+    const overflowViolation = analyzePagedjsOverflow(await collectPagedjsOverflowModels(page));
+    if (overflowViolation !== undefined) {
+      throw new Error(
+        `Report generation aborted: ${describePagedjsOverflow(overflowViolation)} ` +
+          `Never shipped to a client.`,
+      );
     }
 
     const pdf = await page.pdf({
