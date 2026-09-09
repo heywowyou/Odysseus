@@ -9,7 +9,6 @@ import {
   deleteJob,
   getAudit,
   getJob,
-  getSeverityRollups,
   listJobs,
   type JobOptionsSnapshot,
 } from '@odysseus/store';
@@ -17,6 +16,7 @@ import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { PayloadTooLargeError, readJsonBody, sendError, sendJson } from '../http-utils.js';
 import type { JobQueue } from '../queue/job-queue.js';
+import { getSeverityRollupsForPoll } from './severity-rollup-cache.js';
 
 /** Minimal glob shape check, not a compiler: routes/scans.ts's boundary
  *  only needs to reject garbage early (rule: fail fast at the boundary,
@@ -182,7 +182,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     );
 
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);
-    const rollups = await getSeverityRollups(connection, auditIds);
+    const rollups = await getSeverityRollupsForPoll(connection, auditIds);
 
     const summaries = jobs.map((job) => ({
       jobId: job.jobId,

@@ -60,7 +60,7 @@ export {
   resetOrphanedRunningJobs,
   updateJobProgress,
 } from './jobs.js';
-export type { CompleteJobPatch, JobProgressPatch, NewJobInput } from './jobs.js';
+export type { CompleteJobPatch, JobProgressPatch, JobSummaryFields, NewJobInput } from './jobs.js';
 export { reconcileFailedAuditJobs } from './reconcile-jobs.js';
 export { deleteAuditCascade } from './delete-audit.js';
 export type { AuditCascadeCounts } from './delete-audit.js';

@@ -258,6 +258,32 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
     expect(createdAts).toEqual(sorted);
   });
 
+  it('listJobs keeps the summary fields and projects away the heavy result arrays', async () => {
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://projection.example/',
+      options: {},
+    });
+    await createJobModel(connection!).updateOne(
+      { jobId: job.jobId },
+      { $set: { urlResults: [{ url: 'https://projection.example/page', status: 'complete' }] } },
+    );
+
+    const rows = await listJobs(connection!, 10);
+    const row = rows.find((candidate) => candidate.jobId === job.jobId);
+    expect(row).toBeDefined();
+    expect(row?.status).toBe('queued');
+    expect(row?.siteUrl).toBe('https://projection.example/');
+    expect(row?.createdAt).toBeInstanceOf(Date);
+    // The dashboard poll maps only the summary fields, so the per-page and
+    // per-batch arrays travel through every 5-second response for nothing.
+    expect(row).not.toHaveProperty('urlResults');
+    expect(row).not.toHaveProperty('ingestionResults');
+    expect(row).not.toHaveProperty('outreachBatchResults');
+
+    await completeJob(connection!, job.jobId);
+  });
+
   it('resetOrphanedRunningJobs leaves a fresh job running and requeues a stale one, preserving createdAt', async () => {
     const job = await createJob(connection!, {
       type: 'full-audit',

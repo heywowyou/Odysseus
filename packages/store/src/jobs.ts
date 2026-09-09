@@ -236,9 +236,46 @@ export async function deleteJob(connection: Connection, jobId: string): Promise<
   return result.deletedCount > 0;
 }
 
-export async function listJobs(connection: Connection, limit = 200): Promise<JobDocument[]> {
+/** The fields GET /api/scans maps into its per-row summary. The job
+ *  document's urlResults / ingestionResults / outreachBatchResults
+ *  arrays (job.schema.ts) are excluded: the poll runs every 5 seconds
+ *  per open dashboard tab and never reads them. */
+export type JobSummaryFields = Pick<
+  JobDocument,
+  | 'jobId'
+  | 'type'
+  | 'status'
+  | 'phase'
+  | 'siteUrl'
+  | 'urls'
+  | 'createdAt'
+  | 'finishedAt'
+  | 'auditId'
+  | 'auditIds'
+  | 'needsReview'
+>;
+
+export async function listJobs(connection: Connection, limit = 200): Promise<JobSummaryFields[]> {
   const JobModel = createJobModel(connection);
-  return JobModel.find().sort({ createdAt: -1 }).limit(limit).lean<JobDocument[]>();
+  return JobModel.find(
+    {},
+    {
+      jobId: 1,
+      type: 1,
+      status: 1,
+      phase: 1,
+      siteUrl: 1,
+      urls: 1,
+      createdAt: 1,
+      finishedAt: 1,
+      auditId: 1,
+      auditIds: 1,
+      needsReview: 1,
+    },
+  )
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean<JobSummaryFields[]>();
 }
 
 export async function getJob(connection: Connection, jobId: string): Promise<JobDocument | null> {

@@ -28,10 +28,13 @@ import {
   deleteJob,
   getAudit,
   getJob,
+  getSeverityRollups,
+  listJobs,
 } from '@odysseus/store';
 import { Router } from '../router.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import { registerScanRoutes } from './scans.js';
+import { resetSeverityRollupCacheForTests } from './severity-rollup-cache.js';
 
 function fakeReq(body: unknown, method = 'POST', url = '/api/scans'): IncomingMessage {
   const payload = Buffer.from(body === undefined ? '' : JSON.stringify(body));
@@ -327,6 +330,72 @@ describe('POST /api/scans/:jobId/cancel', () => {
     await router.handle(fakeReq(undefined, 'POST', '/api/scans/nope/cancel'), res);
 
     expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('GET /api/scans summary list', () => {
+  beforeEach(() => {
+    // The route reads rollups through the module-level poll cache, so each
+    // test starts from an empty cache and its own auditIds.
+    resetSeverityRollupCacheForTests();
+  });
+
+  it('maps each projected job row to the exact summary shape', async () => {
+    vi.mocked(listJobs).mockResolvedValue([
+      {
+        jobId: 'job-a',
+        type: 'full-audit',
+        status: 'complete',
+        phase: 'complete',
+        siteUrl: 'https://a.example/',
+        createdAt: new Date('2026-09-01T00:00:00Z'),
+        finishedAt: new Date('2026-09-01T00:10:00Z'),
+        auditId: 'audit-cache-a',
+        needsReview: 'performance',
+      },
+      {
+        jobId: 'job-b',
+        type: 'prospecting',
+        status: 'failed',
+        phase: 'failed',
+        urls: ['https://b.example/'],
+        createdAt: new Date('2026-09-02T00:00:00Z'),
+      },
+    ]);
+    vi.mocked(getSeverityRollups).mockResolvedValue(
+      new Map([['audit-cache-a', { critical: 1, serious: 2, moderate: 3, minor: 4 }]]),
+    );
+
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(fakeReq(undefined, 'GET', '/api/scans?limit=200'), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '[]')).toEqual([
+      {
+        jobId: 'job-a',
+        type: 'full-audit',
+        status: 'complete',
+        phase: 'complete',
+        siteUrl: 'https://a.example/',
+        createdAt: '2026-09-01T00:00:00.000Z',
+        finishedAt: '2026-09-01T00:10:00.000Z',
+        auditId: 'audit-cache-a',
+        severityRollup: { critical: 1, serious: 2, moderate: 3, minor: 4 },
+        needsReview: 'performance',
+      },
+      {
+        jobId: 'job-b',
+        type: 'prospecting',
+        status: 'failed',
+        phase: 'failed',
+        urls: ['https://b.example/'],
+        createdAt: '2026-09-02T00:00:00.000Z',
+      },
+    ]);
+    expect(listJobs).toHaveBeenCalledTimes(1);
+    expect(listJobs).toHaveBeenCalledWith(fakeConnection, 200);
   });
 });
 
