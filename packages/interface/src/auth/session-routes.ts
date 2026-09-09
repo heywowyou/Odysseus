@@ -24,15 +24,18 @@ export interface SessionRouteOptions {
   rateLimiter: LoginRateLimiter;
 }
 
-/** Behind Caddy the socket address is the proxy itself, so the forwarded
- *  chain's first entry is the client. Trusting it is safe here because only
- *  80/443 via Caddy are exposed: the app port is never published, so only
- *  our own proxy is ever in a position to set this header. */
+/** Our own reverse proxy is the last hop of the forwarded chain, so the
+ *  chain's last entry is the one our proxy appended; every entry before it
+ *  is client-supplied and must never be trusted for rate limiting, or an
+ *  attacker rotates the header per attempt and never enters lockout.
+ *  Direct access without a proxy sends no forwarded header at all, so the
+ *  socket address stays the fallback. */
 export function clientIpFor(req: IncomingMessage): string {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string') {
-    const first = forwarded.split(',')[0]?.trim();
-    if (first) return first;
+    const entries = forwarded.split(',');
+    const last = entries[entries.length - 1]?.trim();
+    if (last) return last;
   }
   return req.socket.remoteAddress ?? 'unknown';
 }

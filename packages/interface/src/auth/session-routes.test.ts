@@ -186,6 +186,39 @@ describe('POST /api/session/login', () => {
     expect(JSON.parse(locked.body!)).toEqual({ error: 'locked', retryAfterSeconds: 2 });
   });
 
+  it('keys the lockout to the proxy-appended last forwarded entry, not the first', async () => {
+    const { router } = buildFixture();
+    const headers = { 'x-forwarded-for': 'attacker-chosen, 203.0.113.7' };
+
+    // Repeated logins behind the proxy, all carrying the same spoofed first
+    // entry: they must count against 203.0.113.7, the entry our own proxy
+    // appended, so rotating the first entry cannot dodge the lockout.
+    for (let i = 0; i < 2; i++) {
+      if (i > 0) clock.now += 1_000; // let the first 1-second lock lapse
+      const failed = fakeRes();
+      await router.handle(fakeReq(LOGIN_PATH, headers, { password: `wrong attempt ${i}` }), failed);
+      expect(failed.statusCode).toBe(401);
+    }
+
+    // The last entry is locked: even the correct password gets the 429.
+    const locked = fakeRes();
+    await router.handle(fakeReq(LOGIN_PATH, headers, { password: PASSWORD }), locked);
+    expect(locked.statusCode).toBe(429);
+    expect(JSON.parse(locked.body!)).toEqual({ error: 'locked', retryAfterSeconds: 2 });
+
+    // A different last entry is a different lockout key: 401, not 429.
+    const other = fakeRes();
+    await router.handle(
+      fakeReq(
+        LOGIN_PATH,
+        { 'x-forwarded-for': 'attacker-chosen, 203.0.113.9' },
+        { password: 'wrong' },
+      ),
+      other,
+    );
+    expect(other.statusCode).toBe(401);
+  });
+
   it('answers 400 auth-not-configured when no hash is configured', async () => {
     const { router } = buildFixture(() => null);
     const res = fakeRes();
