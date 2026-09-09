@@ -316,8 +316,13 @@ export interface DashboardStrings {
     failureAwaitingFieldsLabel: string;
     failureHintIdentity: string;
     failureHintReportStage: string;
+    /** A failed audit whose lifecycle is still `scanned`: no bilingual
+     *  analysis pair exists, so the failure card points at the Prepare
+     *  report card instead of offering a regenerate that always 409s. */
+    failureHintAnalysisStage: string;
     failureJobLink: string;
     failureScrollToFields: string;
+    failureScrollToPrepare: string;
     /** Issue #91: a report row whose PDF bytes this machine cannot serve.
      *  The freshness badge is replaced by one of these two states: the
      *  document exists but is out of reach, or no usable document exists

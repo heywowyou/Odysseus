@@ -60,6 +60,7 @@ import type {
 import type {
   AuditDetailResponse,
   AuditFailureResponse,
+  AuditLifecycle,
   FindingResponse,
   ManualFieldsResponse,
   ReportFreshness,
@@ -132,20 +133,29 @@ function failureFieldLabel(field: string, strings: DashboardStrings): string {
  *  reason exists only on the linked job row until this card surfaces it.
  *  The stored message is the pipeline's own English prescription and is
  *  shown verbatim as a technical detail; the bilingual hint above the
- *  actions carries the remediation, keyed on the typed failure case. */
+ *  actions carries the remediation, keyed on the typed failure case.
+ *  A `scanned` audit stores no analysis pair, so regenerating the report
+ *  would answer 409 every time; the card points to the Prepare report
+ *  card's writing regeneration instead, the only action that creates a
+ *  pair. */
 function FailureCard(props: {
   failure: AuditFailureResponse;
+  lifecycle: AuditLifecycle;
   onRegenerate: () => void;
   isRegenerating: boolean;
 }): JSX.Element {
-  const { failure, onRegenerate, isRegenerating } = props;
+  const { failure, lifecycle, onRegenerate, isRegenerating } = props;
   const { strings } = useI18n();
   const isIdentity = failureReasonKind(failure) === 'identity-confirmation';
+  const hasPairToRegenerate = lifecycle !== 'scanned';
   const awaitingFields = failure.needsInputFields ?? [];
   // jsdom ships no layout engine, so scrollIntoView is feature-tested
   // rather than assumed.
   const scrollToFields = (): void => {
     document.getElementById('audit-hotel-fields')?.scrollIntoView(true);
+  };
+  const scrollToPrepare = (): void => {
+    document.getElementById('audit-prepare-report')?.scrollIntoView(true);
   };
   return (
     <Card
@@ -172,7 +182,9 @@ function FailureCard(props: {
       <p className="text-sm text-ink-soft">
         {isIdentity
           ? strings.auditDetail.failureHintIdentity
-          : strings.auditDetail.failureHintReportStage}
+          : hasPairToRegenerate
+            ? strings.auditDetail.failureHintReportStage
+            : strings.auditDetail.failureHintAnalysisStage}
       </p>
       {failure.error !== '' ? (
         <div className="mt-3">
@@ -185,9 +197,15 @@ function FailureCard(props: {
         </div>
       ) : null}
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Button size="sm" isLoading={isRegenerating} onClick={onRegenerate}>
-          {strings.auditDetail.regenerateButton}
-        </Button>
+        {hasPairToRegenerate ? (
+          <Button size="sm" isLoading={isRegenerating} onClick={onRegenerate}>
+            {strings.auditDetail.regenerateButton}
+          </Button>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={scrollToPrepare}>
+            {strings.auditDetail.failureScrollToPrepare}
+          </Button>
+        )}
         {isIdentity ? (
           <Button variant="secondary" size="sm" onClick={scrollToFields}>
             {strings.auditDetail.failureScrollToFields}
@@ -1143,6 +1161,7 @@ export function AuditDetailPage(): JSX.Element {
         data.failure !== undefined ? (
           <FailureCard
             failure={data.failure}
+            lifecycle={data.lifecycle}
             onRegenerate={() => void handleRegenerate()}
             isRegenerating={isRegenerating}
           />
@@ -1158,7 +1177,10 @@ export function AuditDetailPage(): JSX.Element {
           onRegenerate={() => void handleRegenerate()}
           isRegenerating={isRegenerating}
         />
-        <PrepareReportCard auditId={data.auditId} />
+        {/* Anchor target of the failure card's "go to Prepare report" action. */}
+        <div id="audit-prepare-report">
+          <PrepareReportCard auditId={data.auditId} />
+        </div>
         {/* Anchor target of the failure card's "go to the fields" action. */}
         <div id="audit-hotel-fields">
           <EnrichmentCard

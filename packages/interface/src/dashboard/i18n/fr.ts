@@ -281,8 +281,11 @@ export const fr: DashboardStrings = {
       'Le scan est terminé : confirmez ou corrigez les champs ci-dessus dans la carte « Informations sur l’hôtel », puis régénérez le rapport. Inutile de relancer un scan.',
     failureHintReportStage:
       'Le site a déjà été exploré et analysé : corrigez la cause puis régénérez le rapport depuis cette page. Inutile de relancer un scan.',
+    failureHintAnalysisStage:
+      'Le scan est terminé, mais aucune analyse bilingue n’a encore été enregistrée : il n’y a donc aucun rapport à régénérer. Lancez la rédaction dans la carte « Préparer le rapport » ci-dessous, puis approuvez le candidat.',
     failureJobLink: 'Voir le détail du scan',
     failureScrollToFields: 'Aller aux champs à confirmer',
+    failureScrollToPrepare: 'Aller à Préparer le rapport',
     reportPdfUnavailableBadge: 'PDF non disponible ici',
     reportPdfUnavailableNote:
       'Ce PDF a été généré sur une autre machine et n’est pas accessible depuis celle-ci. Régénérez le rapport pour l’obtenir ici.',

@@ -281,8 +281,11 @@ export const en: DashboardStrings = {
       'The scan itself finished: confirm or correct the fields above in the “Hotel details” card, then regenerate the report. A new scan is not needed.',
     failureHintReportStage:
       'The site has already been crawled and analysed: fix the cause and regenerate the report from this page. A new scan is not needed.',
+    failureHintAnalysisStage:
+      'The scan finished, but no bilingual analysis was stored yet, so there is no report to regenerate. Run the writing regeneration in the “Prepare report” card below, then approve the candidate.',
     failureJobLink: 'View scan details',
     failureScrollToFields: 'Go to the fields to confirm',
+    failureScrollToPrepare: 'Go to Prepare report',
     reportPdfUnavailableBadge: 'PDF not available here',
     reportPdfUnavailableNote:
       'This PDF was generated on another machine and is not reachable from this one. Regenerate the report to obtain it here.',

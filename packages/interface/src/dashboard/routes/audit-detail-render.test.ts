@@ -187,6 +187,40 @@ describe('audit detail report-stage failure card (issue #90)', () => {
     root.unmount();
   });
 
+  it('points a scanned audit at Prepare report instead of a regenerate that always 409s', async () => {
+    // hautsdesancerre.com case: the job failed inside the fr writing pass,
+    // before any analysis was stored. Regenerating the report cannot
+    // succeed, so the card must route the operator to the writing
+    // regeneration instead.
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': {
+        ...emptyAudit,
+        failure: {
+          jobId: 'job-1',
+          status: 'failed',
+          error:
+            'odysseus analyze (writing pass, language=fr): exhausted 3 attempts without a valid response.',
+        },
+      },
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Le rapport n’a pas pu être généré');
+    expect(container.textContent).toContain('aucune analyse bilingue n’a encore été enregistrée');
+    const prepareButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Aller à Préparer le rapport',
+    );
+    expect(prepareButton).toBeDefined();
+    expect(container.querySelector('#audit-prepare-report')).not.toBeNull();
+    // The only remaining report-regenerate button is the page header's;
+    // the failure card no longer offers one that cannot succeed.
+    const regenerateButtons = [...container.querySelectorAll('button')].filter(
+      (button) => button.textContent === 'Régénérer le rapport',
+    );
+    expect(regenerateButtons).toHaveLength(1);
+    root.unmount();
+  });
+
   it('stays quiet on a healthy audit', async () => {
     stubRoutes({
       '/api/audits/audit-1/report-preparation': null,

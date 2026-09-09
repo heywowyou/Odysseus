@@ -553,10 +553,13 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     // ready-but-unapproved candidate is never rendered as the paid report.
     const resolution = await resolveSelectedAnalysisPairForAudit(connection, auditId);
     if (resolution.kind === 'none') {
+      // Name the remedy, not just the precondition: this audit's job most
+      // likely failed at the writing stage, so no pair exists and only the
+      // Prepare report card's writing regeneration can create one.
       sendError(
         res,
         409,
-        'a complete bilingual analysis pair is required before a report can be regenerated',
+        'a complete bilingual analysis pair is required before a report can be regenerated; run the writing regeneration in the Prepare report card, then approve the candidate',
       );
       return;
     }

@@ -185,6 +185,29 @@ describe('POST /api/audits/:auditId/approve-reports', () => {
   });
 });
 
+describe('POST /api/audits/:auditId/regenerate-report', () => {
+  it('names the writing-regeneration remedy when no analysis pair is stored', async () => {
+    // The artifact read must succeed so the request reaches the pair
+    // resolution; the default beforeEach mock already answers kind 'none'.
+    await fs.mkdir('/tmp/fake-audit-dir', { recursive: true });
+    await Promise.all([
+      fs.writeFile('/tmp/fake-audit-dir/manifest.json', JSON.stringify({ auditId: 'audit-1' })),
+      fs.writeFile('/tmp/fake-audit-dir/findings.json', JSON.stringify([])),
+    ]);
+
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/regenerate-report');
+    req.method = 'POST';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toContain('a complete bilingual analysis pair is required');
+    expect(res.body).toContain('Prepare report card');
+  });
+});
+
 describe('PATCH /api/audits/:auditId/manual-fields transactional-flow override', () => {
   it('persists an operator override only with a boolean value and a non-empty reason', async () => {
     vi.mocked(setAuditManualFields).mockResolvedValue({
