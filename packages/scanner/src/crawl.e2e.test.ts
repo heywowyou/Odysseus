@@ -89,6 +89,10 @@ describe('crawlSite against fixtures/spa-demo', () => {
       onProgress: (event) => events.push(event),
     });
 
+    const setups = events.filter((event) => event.type === 'crawl-setup');
+    expect(setups).toHaveLength(1);
+    expect(events[0]).toMatchObject({ type: 'crawl-setup', maxPages: 10, delayMs: 0 });
+
     const starts = events.filter((event) => event.type === 'crawl-start');
     expect(starts).toHaveLength(1);
     expect(starts[0]).toMatchObject({ maxPages: 10, robotsTxtFound: true });

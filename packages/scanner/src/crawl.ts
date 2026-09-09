@@ -44,11 +44,16 @@ export { isSameSiteHostname } from './links.js';
 
 /** Progress events for a live ETA display. Purely additive: emitted only
  *  when a caller supplies onProgress, no behavior change otherwise.
+ *  crawl-setup fires once at the very start, before robots.txt and any
+ *  sitemap document is fetched, because the crawler paces those setup
+ *  fetches at the effective delay too and a slow-profile job would
+ *  otherwise read as a stuck queue for that whole window (issue #121).
  *  crawl-start fires once, right after effectiveDelayMs is known, so an
  *  ETA can be shown before the first page is even fetched. crawl-page
  *  fires once per page dequeued (visited, skipped, or errored alike),
  *  since all three consume one iteration of the politeness delay. */
 export type CrawlProgressEvent =
+  | { type: 'crawl-setup'; maxPages: number; delayMs: number }
   | { type: 'crawl-start'; maxPages: number; effectiveDelayMs: number; robotsTxtFound: boolean }
   | { type: 'crawl-page'; visited: number; maxPages: number; queued: number }
   | { type: 'continuation-guard'; omittedUrlCount: number; omittedFamilyCount: number };
@@ -224,6 +229,10 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
   // so every downstream "is this the homepage" comparison reads one
   // identity, and the duplicate variant is never fetched at all.
   const startUrlIdentity = normalizePageIdentityUrl(start.toString()) ?? start.toString();
+  // Fired before the paced setup fetches so a slow-profile job reads as
+  // active crawl work from the moment the crawler owns it, not only once
+  // the first page is dequeued (issue #121).
+  options.onProgress?.({ type: 'crawl-setup', maxPages, delayMs });
   // Fetched once as raw text (not via fetchRobotsRules) so the same
   // response can also be parsed against each AI_CRAWLER_USER_AGENTS
   // token below, without a second request to robots.txt.

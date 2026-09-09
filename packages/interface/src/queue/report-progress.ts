@@ -22,6 +22,32 @@ export function createScanProgressReporter(
   let lighthouseStartedAtMs: number | undefined;
 
   async function handle(event: ScanProgressEvent): Promise<void> {
+    if (event.type === 'crawl-setup') {
+      // Issue #121: robots.txt and sitemap retrieval are paced crawl work,
+      // so the job leaves the queued phase while they run. The configured
+      // delay stands in as effective until robots.txt can raise it; the
+      // crawl-start event that follows corrects both fields.
+      await updateJobProgress(connection, jobId, {
+        phase: 'crawl',
+        progress: {
+          crawl: {
+            visited: 0,
+            target: event.maxPages,
+            effectiveDelayMs: event.delayMs,
+            ...(() => {
+              const etaMs = computeCrawlEtaMs({
+                visited: 0,
+                maxPages: event.maxPages,
+                effectiveDelayMs: event.delayMs,
+              });
+              return etaMs !== undefined ? { etaMs } : {};
+            })(),
+          },
+        },
+      });
+      return;
+    }
+
     if (event.type === 'crawl-start') {
       effectiveDelayMs = event.effectiveDelayMs;
       await updateJobProgress(connection, jobId, {

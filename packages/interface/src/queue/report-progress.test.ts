@@ -58,4 +58,29 @@ describe('createScanProgressReporter staged full-audit progress', () => {
       progress: { continuationGuard: { omittedUrlCount: 7, omittedFamilyCount: 2 } },
     });
   });
+
+  it('leaves the queued phase at setup, before the paced robots and sitemap fetches finish', async () => {
+    // Issue #121: a slow-profile job used to sit on phase queued for the
+    // whole robots.txt plus sitemap window because the first event only
+    // fired after those paced fetches.
+    const report = createScanProgressReporter({} as never, 'job-1');
+    report({ type: 'crawl-setup', maxPages: 12, delayMs: 60_000 });
+    report({ type: 'crawl-start', maxPages: 12, effectiveDelayMs: 90_000, robotsTxtFound: true });
+
+    await vi.waitFor(() => expect(updateJobProgress).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(updateJobProgress).mock.calls.map((call) => call[2])).toEqual([
+      {
+        phase: 'crawl',
+        progress: {
+          crawl: { visited: 0, target: 12, effectiveDelayMs: 60_000, etaMs: 720_000 },
+        },
+      },
+      {
+        phase: 'crawl',
+        progress: {
+          crawl: { visited: 0, target: 12, effectiveDelayMs: 90_000, etaMs: 1_080_000 },
+        },
+      },
+    ]);
+  });
 });
