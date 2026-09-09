@@ -38,6 +38,7 @@ make_fake_commands() {
     '  : > "$FAKE_CURL_FAIL_ONCE_FILE"' \
     '  exit 7' \
     'fi' \
+    'printf "%s\\n" "$*" >> "$FAKE_CURL_LOG"' \
     'printf "302 https://app.odysseusaudit.com/login"' >"$bin_dir/curl"
   printf '%s\n' '#!/usr/bin/env bash' 'exit 0' >"$bin_dir/sleep"
   chmod +x "$bin_dir/docker" "$bin_dir/curl" "$bin_dir/sleep"
@@ -84,6 +85,7 @@ run_controller() {
 
 make_fake_commands "$TEST_ROOT/bin"
 : >"$TEST_ROOT/docker.log"
+export FAKE_CURL_LOG="$TEST_ROOT/curl.log"
 ARCHIVE="$TEST_ROOT/release.tar.gz"
 RELEASE_ID=0123456789abcdef0123456789abcdef01234567
 make_release_archive "$ARCHIVE"
@@ -129,6 +131,10 @@ done
 assert_not_contains "$TEST_ROOT/docker.log" "image rm odysseus-app:$RELEASE_ID"
 assert_contains "$TEST_ROOT/docker.log" 'image prune -f'
 assert_contains "$TEST_ROOT/docker.log" 'builder prune -f -a --keep-storage 4GB'
+
+# The live check must pin the domain to this machine: a plain request follows
+# public DNS and can green-light a deploy against a different box (2026-09-09).
+assert_contains "$FAKE_CURL_LOG" '--resolve app.odysseusaudit.com:443:127.0.0.1'
 
 run_controller "$DEPLOY_ROOT" rollback
 assert_eq "$(readlink -f "$DEPLOY_ROOT/current")" "$DEPLOY_ROOT"

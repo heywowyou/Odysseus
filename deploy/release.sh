@@ -17,6 +17,18 @@ HEALTH_DELAY_SECONDS="${ODYSSEUS_DEPLOY_HEALTH_DELAY_SECONDS:-2}"
 BUILD_CACHE_KEEP="${ODYSSEUS_BUILD_CACHE_KEEP:-4GB}"
 COMPOSE_PROJECT_NAME=deploy
 
+# The live check must validate THIS machine's stack, never whatever public DNS
+# currently points at: on 2026-09-09 the domain and PRODUCTION_HOST had drifted
+# apart (stale variable after the Hostinger migration), so a deploy to the
+# abandoned box passed its health gate against the real box still serving the
+# domain. The host and port are parsed from the health URL so an operator
+# override keeps working.
+HEALTH_HOST="$(printf '%s' "$HEALTH_URL" | sed -E 's#^[a-zA-Z]+://([^/:?]+).*#\1#')"
+case "$HEALTH_URL" in
+  http://*) HEALTH_PORT=80 ;;
+  *) HEALTH_PORT=443 ;;
+esac
+
 log() {
   printf '%s odysseus-deploy: %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*" >&2
 }
@@ -55,6 +67,7 @@ health_is_ready() {
   local response code redirect_url
   response="$(curl --silent --show-error --output /dev/null \
     --connect-timeout 5 --max-time 10 \
+    --resolve "$HEALTH_HOST:$HEALTH_PORT:127.0.0.1" \
     --write-out '%{http_code} %{redirect_url}' "$HEALTH_URL")" || return 1
   read -r code redirect_url <<<"$response"
   [[ "$code" == 302 && "$redirect_url" == */login ]]

@@ -104,8 +104,12 @@ jobs:
       - name: Verify the public login boundary
         run: |
           set -euo pipefail
+          # Pinned to the deployed host on purpose: a plain request follows
+          # public DNS, and on 2026-09-09 DNS and this variable had drifted
+          # apart, so this step green-lit a deploy on a box nobody visited.
           response="$(curl --silent --show-error --output /dev/null \
             --connect-timeout 5 --max-time 10 \
+            --resolve "app.odysseusaudit.com:443:$PRODUCTION_HOST" \
             --write-out '%{http_code} %{redirect_url}' \
             https://app.odysseusaudit.com/)"
           test "$response" = '302 https://app.odysseusaudit.com/login'
