@@ -123,11 +123,17 @@ export class JobQueue {
     this.wake?.();
   }
 
-  /** Registers an operator stop request for an in-flight job. The job
-   *  document's 'cancelled' status is written by the cancel route; this
-   *  registry is only the in-process signal the runner observes. Forgetting
-   *  the entry once the runner has acted keeps the set bounded over the
-   *  process's life. */
+  /** Registers an operator stop request for a job. The job document's
+   *  'cancelled' status is written by the cancel route; this registry is
+   *  only the in-process signal the runner observes. Forgetting the entry
+   *  once the runner has acted keeps the set bounded over the process's
+   *  life. The route also registers the stop for queued jobs, so a claim
+   *  landing between the route's read and its write still aborts the
+   *  pipeline; an entry for a job cancelled while queued and never claimed
+   *  then stays until process end (jobIds are randomUUID, never reused).
+   *  Forgetting on the claim path is forbidden: it would erase the entry
+   *  before the route's cancelJob write lands, and the running pipeline
+   *  would never abort. */
   requestCancel(jobId: string): void {
     this.cancellation.request(jobId);
   }

@@ -106,6 +106,10 @@ export async function ensureJobRunIdentity(
   return existing.runIdentity;
 }
 
+/** Progress writes are fire-and-forget, so a straggler write can land after
+ *  the job has already finished; the filter excludes every terminal status
+ *  so a late write can neither regress a finished job's phase nor refresh
+ *  its heartbeat. Only queued or running jobs still receive progress. */
 export async function updateJobProgress(
   connection: Connection,
   jobId: string,
@@ -132,7 +136,7 @@ export async function updateJobProgress(
   if (patch.auditId !== undefined) $set['auditId'] = patch.auditId;
   if (Object.keys($set).length === 0) return;
   await JobModel.updateOne(
-    { jobId, status: { $ne: 'cancelled' } },
+    { jobId, status: { $nin: ['cancelled', 'complete', 'failed', 'needs-input'] } },
     { $set: { ...$set, lastHeartbeatAt: new Date() } },
   );
 }

@@ -9,6 +9,7 @@ import {
   failJob,
   getJob,
   listJobs,
+  markJobNeedsInput,
   ORPHANED_JOB_TIMEOUT_MS,
   resetOrphanedRunningJobs,
   updateJobProgress,
@@ -145,6 +146,62 @@ describe.skipIf(!mongoAvailable)('jobs', () => {
       omittedUrlCount: 4,
       omittedFamilyCount: 1,
     });
+  });
+
+  it('updateJobProgress cannot regress a completed job or refresh its heartbeat', async () => {
+    // A fire-and-forget progress write from a straggler runner can land
+    // after completeJob; it must not flip the finished row back to a mid
+    // pipeline phase or make an ended job look alive again.
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://progress-immunity-complete.example/',
+      options: {},
+    });
+    await claimNextQueuedJob(connection!);
+    await completeJob(connection!, job.jobId);
+
+    const finished = await getJob(connection!, job.jobId);
+    expect(finished?.status).toBe('complete');
+
+    await updateJobProgress(connection!, job.jobId, {
+      phase: 'crawl',
+      progress: { crawl: { visited: 1, target: 2, effectiveDelayMs: 0 } },
+    });
+
+    const after = await getJob(connection!, job.jobId);
+    expect(after?.status).toBe('complete');
+    expect(after?.phase).toBe('complete');
+    expect(after?.progress.crawl).toBeUndefined();
+    expect(after?.lastHeartbeatAt).toEqual(finished?.lastHeartbeatAt);
+  });
+
+  it('updateJobProgress cannot regress a needs-input job or refresh its heartbeat', async () => {
+    const job = await createJob(connection!, {
+      type: 'full-audit',
+      siteUrl: 'https://progress-immunity-needs-input.example/',
+      options: {},
+    });
+    await claimNextQueuedJob(connection!);
+    await markJobNeedsInput(
+      connection!,
+      job.jobId,
+      [{ field: 'nomCommercial', value: '' }],
+      'awaiting operator',
+    );
+
+    const staged = await getJob(connection!, job.jobId);
+    expect(staged?.status).toBe('needs-input');
+
+    await updateJobProgress(connection!, job.jobId, {
+      phase: 'crawl',
+      progress: { crawl: { visited: 1, target: 2, effectiveDelayMs: 0 } },
+    });
+
+    const after = await getJob(connection!, job.jobId);
+    expect(after?.status).toBe('needs-input');
+    expect(after?.phase).toBe('needs-input');
+    expect(after?.progress.crawl).toBeUndefined();
+    expect(after?.lastHeartbeatAt).toEqual(staged?.lastHeartbeatAt);
   });
 
   it('completeJob sets status, phase, finishedAt and the auditId patch', async () => {

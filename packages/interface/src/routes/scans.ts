@@ -220,9 +220,11 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
   });
 
   /** Operator stop for one job. The document is terminal from this moment
-   *  (so the dashboard and the claim filter both react at once); a running
-   *  job's in-flight pipeline work aborts at its next safe boundary via
-   *  the queue's cancellation registry. */
+   *  (so the dashboard and the claim filter both react at once). The stop
+   *  is registered for any non-terminal read, queued or running, so a
+   *  queued-to-running claim transition between the read and the
+   *  registration still aborts the in-flight pipeline work at its next
+   *  safe boundary via the queue's cancellation registry. */
   router.post('/api/scans/:jobId/cancel', async ({ res, params }) => {
     const jobId = params['jobId']!;
     const job = await getJob(connection, jobId);
@@ -247,10 +249,12 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       );
       return;
     }
-    if (job.status === 'running') {
-      queue.requestCancel(jobId);
+    queue.requestCancel(jobId);
+    const cancelled = await cancelJob(connection, jobId, 'cancelled by operator');
+    if (!cancelled) {
+      sendError(res, 409, 'job is no longer queued or running');
+      return;
     }
-    await cancelJob(connection, jobId, 'cancelled by operator');
     sendJson(res, 200, { jobId, status: 'cancelled' });
   });
 

@@ -229,7 +229,7 @@ describe('POST /api/scans request body size limit', () => {
 });
 
 describe('POST /api/scans/:jobId/cancel', () => {
-  it('cancels a queued job without touching the cancellation registry', async () => {
+  it('registers the stop even when the job was read as queued', async () => {
     vi.mocked(getJob).mockResolvedValue({
       jobId: 'job-1',
       type: 'full-audit',
@@ -245,7 +245,7 @@ describe('POST /api/scans/:jobId/cancel', () => {
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res.body ?? '{}')).toMatchObject({ jobId: 'job-1', status: 'cancelled' });
     expect(cancelJob).toHaveBeenCalledWith(fakeConnection, 'job-1', 'cancelled by operator');
-    expect(fakeQueue.requestCancel).not.toHaveBeenCalled();
+    expect(fakeQueue.requestCancel).toHaveBeenCalledWith('job-1');
   });
 
   it('registers the stop and cancels a running full-audit job', async () => {
@@ -298,6 +298,24 @@ describe('POST /api/scans/:jobId/cancel', () => {
 
     expect(res.statusCode).toBe(409);
     expect(cancelJob).not.toHaveBeenCalled();
+  });
+
+  it('answers 409 when the job turned terminal before the cancel write landed', async () => {
+    vi.mocked(getJob).mockResolvedValue({
+      jobId: 'job-8',
+      type: 'full-audit',
+      status: 'running',
+    } as never);
+    vi.mocked(cancelJob).mockResolvedValue(false);
+
+    const router = new Router();
+    registerScanRoutes(router, fakeConnection, fakeQueue);
+    const res = fakeRes();
+    await router.handle(fakeReq(undefined, 'POST', '/api/scans/job-8/cancel'), res);
+
+    expect(res.statusCode).toBe(409);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ error: 'job is no longer queued or running' });
+    expect(fakeQueue.requestCancel).toHaveBeenCalledWith('job-8');
   });
 
   it('answers 404 for an unknown job', async () => {
