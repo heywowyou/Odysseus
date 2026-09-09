@@ -29,6 +29,27 @@ export async function getAuditManualFields(
   return audit?.manualFields;
 }
 
+/** Scalar fields the write and lookup handlers need: existence checks, the
+ *  audit directory inputs (siteUrl, startedAt), and the findings provenance
+ *  the approval flow compares against. Avoids deserializing the full
+ *  manifest pages array (audit.schema.ts) four times per operator action.
+ *  `_id: 0` keeps the returned object exactly this shape, no stray key. */
+export type AuditRuntimeFields = Pick<
+  AuditDocument,
+  'auditId' | 'siteUrl' | 'startedAt' | 'findingsProvenance'
+>;
+
+export async function getAuditRuntimeFields(
+  connection: Connection,
+  auditId: string,
+): Promise<AuditRuntimeFields | null> {
+  const AuditModel = createAuditModel(connection);
+  return AuditModel.findOne(
+    { auditId },
+    { _id: 0, auditId: 1, siteUrl: 1, startedAt: 1, findingsProvenance: 1 },
+  ).lean<AuditRuntimeFields | null>();
+}
+
 /** Merge semantics: only the keys present in `partial` are touched, every
  *  other previously saved field survives untouched - the operator edits
  *  one field at a time from the audit detail panel, not the whole

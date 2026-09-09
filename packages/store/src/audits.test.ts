@@ -4,6 +4,7 @@ import { persistAudit } from './persist-audit.js';
 import {
   getAudit,
   getAuditManualFields,
+  getAuditRuntimeFields,
   getFindingsForAudit,
   prefillAuditManualFields,
   setAuditManualFields,
@@ -98,6 +99,27 @@ describe.skipIf(!mongoAvailable)('audits read helpers', () => {
     expect(found?.auditId).toBe('audits-read-1');
 
     const missing = await getAudit(connection!, 'audits-read-missing');
+    expect(missing).toBeNull();
+  });
+
+  // The projection exists so the write and lookup handlers stop
+  // deserializing the manifest pages array for a null check or two scalar
+  // fields. toEqual (not toMatchObject) pins that no extra key, _id
+  // included, ever rides along with the four projected fields.
+  it('getAuditRuntimeFields returns exactly the projected scalar fields, and null for an unknown auditId', async () => {
+    await persistAudit(connection!, buildManifest('audits-proj-1'), []);
+
+    const found = await getAuditRuntimeFields(connection!, 'audits-proj-1');
+    expect(found).toEqual({
+      auditId: 'audits-proj-1',
+      siteUrl: 'https://example.com/',
+      startedAt: new Date('2026-08-02T00:00:00.000Z'),
+      // buildManifest sets no findingsProvenance, so nothing is persisted
+      // and the projected read returns undefined for it.
+      findingsProvenance: undefined,
+    });
+
+    const missing = await getAuditRuntimeFields(connection!, 'audits-proj-missing');
     expect(missing).toBeNull();
   });
 

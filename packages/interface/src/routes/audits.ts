@@ -14,6 +14,7 @@ import {
 import {
   createJobModel,
   getAudit,
+  getAuditRuntimeFields,
   getFindingsForAudit,
   getLatestReport,
   getLatestReportApproval,
@@ -399,7 +400,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
 
   router.post('/api/audits/:auditId/manual-fields/siren-preview', async ({ req, res, params }) => {
     const auditId = params['auditId']!;
-    const audit = await getAudit(connection, auditId);
+    const audit = await getAuditRuntimeFields(connection, auditId);
     if (!audit) {
       sendError(res, 404, 'audit not found');
       return;
@@ -448,7 +449,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
 
   router.patch('/api/audits/:auditId/manual-fields', async ({ req, res, params }) => {
     const auditId = params['auditId']!;
-    const audit = await getAudit(connection, auditId);
+    const audit = await getAuditRuntimeFields(connection, auditId);
     if (!audit) {
       sendError(res, 404, 'audit not found');
       return;
@@ -521,7 +522,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
   // runReportStage's own fresh-recompute step, not passed explicitly here.
   router.post('/api/audits/:auditId/regenerate-report', async ({ res, params }) => {
     const auditId = params['auditId']!;
-    const audit = await getAudit(connection, auditId);
+    const audit = await getAuditRuntimeFields(connection, auditId);
     if (!audit) {
       sendError(res, 404, 'audit not found');
       return;
@@ -586,7 +587,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
 
   router.post('/api/audits/:auditId/approve-reports', async ({ res, params }) => {
     const auditId = params['auditId']!;
-    const audit = await getAudit(connection, auditId);
+    const audit = await getAuditRuntimeFields(connection, auditId);
     if (!audit) {
       sendError(res, 404, 'audit not found');
       return;

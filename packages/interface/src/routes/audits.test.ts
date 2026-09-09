@@ -7,6 +7,7 @@ import { FINDINGS_SCHEMA_VERSION, NORMALIZATION_FINGERPRINT } from '@odysseus/co
 
 vi.mock('@odysseus/store', () => ({
   getAudit: vi.fn(),
+  getAuditRuntimeFields: vi.fn(),
   getFindingsForAudit: vi.fn(),
   getSeverityRollup: vi.fn(),
   getLatestReport: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock('../artifacts/resolve-artifact.js', async (importOriginal) => {
 
 import {
   getAudit,
+  getAuditRuntimeFields,
   getFindingsForAudit,
   getLatestReport,
   getLatestReportApproval,
@@ -104,6 +106,15 @@ beforeEach(() => {
     crawl: { visitedCount: 5 },
     pages: [],
   } as never);
+  // Same scalar subset the write and lookup handlers consume through the
+  // projected read; only the GET detail, preview, and download routes still
+  // touch the full-document getAudit mock above.
+  vi.mocked(getAuditRuntimeFields).mockResolvedValue({
+    auditId: 'audit-1',
+    siteUrl: 'https://example.com/',
+    startedAt: new Date('2026-08-08T10:00:00.000Z'),
+    findingsProvenance,
+  } as never);
   vi.mocked(getFindingsForAudit).mockResolvedValue([]);
   vi.mocked(getSeverityRollup).mockResolvedValue({} as never);
   vi.mocked(listReportLanguages).mockResolvedValue(['fr', 'en']);
@@ -129,6 +140,8 @@ describe('POST /api/audits/:auditId/approve-reports', () => {
     await router.handle(req, res);
     expect(res.statusCode).toBe(409);
     expect(res.body).toContain('French and English');
+    expect(getAuditRuntimeFields).toHaveBeenCalledWith(fakeConnection, 'audit-1');
+    expect(getAudit).not.toHaveBeenCalled();
   });
 
   it('approves the exact complete digest-verified bilingual pair', async () => {
@@ -214,6 +227,44 @@ describe('POST /api/audits/:auditId/regenerate-report', () => {
     expect(res.statusCode).toBe(409);
     expect(res.body).toContain('a complete bilingual analysis pair is required');
     expect(res.body).toContain('Prepare report card');
+    expect(getAuditRuntimeFields).toHaveBeenCalledWith(fakeConnection, 'audit-1');
+    expect(getAudit).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/audits/:auditId/manual-fields/siren-preview', () => {
+  it('checks audit existence through the projected runtime read (plan 011)', async () => {
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/manual-fields/siren-preview', {
+      siren: 'not-a-siren',
+    });
+    req.method = 'POST';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    // An invalid SIREN stops at the 400 below, so the route runs end to
+    // end without reaching the Sirene lookup; the pinned read path is the
+    // point of the test.
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toContain('valid SIREN');
+    expect(getAuditRuntimeFields).toHaveBeenCalledWith(fakeConnection, 'audit-1');
+    expect(getAudit).not.toHaveBeenCalled();
+  });
+
+  it('answers 404 from the projected read when the audit is missing', async () => {
+    vi.mocked(getAuditRuntimeFields).mockResolvedValueOnce(null);
+    const router = new Router();
+    registerAuditRoutes(router, fakeConnection);
+    const req = fakeReq('/api/audits/audit-1/manual-fields/siren-preview', {
+      siren: '732829321',
+    });
+    req.method = 'POST';
+    const res = fakeRes();
+    await router.handle(req, res);
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toContain('audit not found');
   });
 });
 
@@ -249,6 +300,8 @@ describe('PATCH /api/audits/:auditId/manual-fields transactional-flow override',
         },
       }),
     );
+    expect(getAuditRuntimeFields).toHaveBeenCalledWith(fakeConnection, 'audit-1');
+    expect(getAudit).not.toHaveBeenCalled();
   });
 
   it('rejects an override without an auditable reason', async () => {
