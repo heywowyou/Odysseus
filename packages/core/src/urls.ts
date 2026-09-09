@@ -49,6 +49,11 @@ export function isHttpUrlWithoutCredentials(value: unknown): value is string {
   try {
     const parsed = new URL(value);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    // A hostname with no alphanumeric character ('..' parsed from
+    // 'http://..', or '-') is never a real site, and the scanner's path
+    // builders join hostnames verbatim into artifact directories, so a
+    // dot-only host must not pass this validator.
+    if (!/[a-zA-Z0-9]/.test(parsed.hostname)) return false;
     return parsed.username === '' && parsed.password === '';
   } catch {
     return false;

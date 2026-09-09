@@ -35,6 +35,8 @@ describe('isHttpUrlWithoutCredentials', () => {
     'https://hotel-exemple.fr',
     'http://hotel-exemple.fr/chambres',
     'https://www.hotel-exemple.fr/reservation?nuit=2',
+    'https://www.hotel-exemple.fr',
+    'http://[::1]/health',
   ])('accepts %s', (url) => {
     expect(isHttpUrlWithoutCredentials(url)).toBe(true);
   });
@@ -46,6 +48,12 @@ describe('isHttpUrlWithoutCredentials', () => {
     'ftp://hotel-exemple.fr',
     'file:///etc/hostname',
     'javascript:alert(1)',
+    // Hostnames with no alphanumeric character are rejected even though
+    // they parse: the scanner joins hostnames verbatim into artifact
+    // directory paths.
+    'http://..',
+    'http://.',
+    'http://-',
     'not a url',
     '',
     42,

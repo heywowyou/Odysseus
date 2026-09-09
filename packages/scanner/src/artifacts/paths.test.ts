@@ -5,6 +5,7 @@ import {
   buildAuditDir,
   buildAuditTimestampDir,
   buildPageDir,
+  buildPrescanDir,
   hashUrl,
   parseAuditTimestampDir,
   slugify,
@@ -73,6 +74,37 @@ describe('buildAuditDir', () => {
     const a = buildAuditDir('/artifacts', 'www.example.com', date);
     const b = buildAuditDir('/artifacts', 'example.com', date);
     expect(a).not.toBe(b);
+  });
+});
+
+describe('hostname shape guard', () => {
+  // The URL validator in core rejects hostnames with no alphanumeric
+  // character; these builders are the last line before path.join, fs.rm, or
+  // a bucket key, so they must throw rather than join such a host verbatim.
+  const date = new Date('2026-08-02T14:32:05.000Z');
+
+  it('buildAuditDir throws on a dot-only hostname', () => {
+    expect(() => buildAuditDir('/artifacts', '..', date)).toThrow(
+      /contains no alphanumeric character/u,
+    );
+  });
+
+  it('buildArtifactBucketKey throws on a dot-only hostname', () => {
+    expect(() => buildArtifactBucketKey('..', date, 'manifest.json')).toThrow(
+      /contains no alphanumeric character/u,
+    );
+  });
+
+  it('buildPrescanDir throws on a dot-only hostname', () => {
+    expect(() => buildPrescanDir('/prescans', '..', date)).toThrow(
+      /contains no alphanumeric character/u,
+    );
+  });
+
+  it('still builds the unchanged joined path for a real hostname', () => {
+    expect(buildAuditDir('/artifacts', 'www.example.com', date)).toBe(
+      '/artifacts/www.example.com/2026-08-02T14-32-05Z',
+    );
   });
 });
 

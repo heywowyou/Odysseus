@@ -83,6 +83,10 @@ export function isValidAbsoluteHttpUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    // Same hostname shape rule as core's isHttpUrlWithoutCredentials: a
+    // hostname with no alphanumeric character ('..' from 'http://..') is
+    // never a real site.
+    if (!/[a-zA-Z0-9]/.test(parsed.hostname)) return false;
     return parsed.username === '' && parsed.password === '';
   } catch {
     return false;

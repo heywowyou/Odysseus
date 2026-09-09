@@ -73,7 +73,19 @@ export function buildPageDir(url: string): string {
   return `${slug}-${hashUrl(url)}`;
 }
 
+/** Defensive shape check before a hostname is joined into a filesystem path
+ *  or a bucket key: a host with no alphanumeric character ('..' parsed out
+ *  of 'http://..') must never reach path.join or fs.rm. The URL validator in
+ *  core gates the boundary; this throws so a future caller that skips the
+ *  validator fails loudly instead of silently building a surprising path. */
+function requirePlausibleHostname(hostname: string): void {
+  if (!/[a-zA-Z0-9]/.test(hostname)) {
+    throw new Error(`hostname "${hostname}" contains no alphanumeric character`);
+  }
+}
+
 export function buildAuditDir(artifactsRoot: string, hostname: string, startedAt: Date): string {
+  requirePlausibleHostname(hostname);
   return path.join(artifactsRoot, hostname, buildAuditTimestampDir(startedAt));
 }
 
@@ -88,6 +100,7 @@ export function buildArtifactBucketKey(
   startedAt: Date,
   relativePath: string,
 ): string {
+  requirePlausibleHostname(hostname);
   return [hostname, buildAuditTimestampDir(startedAt), relativePath.split(path.sep).join('/')].join(
     '/',
   );
@@ -98,5 +111,6 @@ export function buildArtifactBucketKey(
  *  navigable the same way, under a root that keeps them distinguishable.
  *  See getPrescansRoot() for why they are not siblings of audit directories. */
 export function buildPrescanDir(prescansRoot: string, hostname: string, startedAt: Date): string {
+  requirePlausibleHostname(hostname);
   return path.join(prescansRoot, hostname, buildAuditTimestampDir(startedAt));
 }
