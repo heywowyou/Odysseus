@@ -445,14 +445,15 @@ affected pages and occurrences. It follows plans 018 through 020 because it
 changes their final report coverage language and must not be layered over their
 in-flight files.
 
-Plan 022 (added 2026-09-01, operator-approved) runs the installed Impeccable
-workflow (skill 4.1.2, decision record in
-`docs/research/design-skill-alternatives.md`) over the two surfaces it is
-scoped to: the operator dashboard in Operate mode and the public site in
-Persuade mode. It has no file overlap with the report sequence and may be
-scheduled between 019 and 021 sessions, but never concurrently with another
-active plan in the same tree. The report and its docs stay excluded through
-`.impeccable/config.json`. Alongside the visual pass, it runs a dedicated
+Plan 022 (added 2026-09-01, operator-approved, DONE) ran the Impeccable
+workflow (skill 4.1.2, removed from the repository on 2026-09-09; decision
+record in `docs/research/design-skill-alternatives.md`) over the two
+surfaces it is scoped to: the operator dashboard in Operate mode and the
+public site in Persuade mode. It has no file overlap with the report
+sequence and may be scheduled between 019 and 021 sessions, but never
+concurrently with another active plan in the same tree. The report and its
+docs were excluded through the skill's project config while it was
+installed. Alongside the visual pass, it ran a dedicated
 naming and information-architecture audit of the dashboard, since the
 operator has found its section names, labels, and buttons unclear: every
 proposed rename is recorded in an inventory the operator approves, rejects,
@@ -522,10 +523,10 @@ Each kind of work has exactly one home:
 - Plans 018 through 020 form a strict report sequence. Do not begin 019 until
   018's section order and pagination contract are verified, and do not begin
   020 until 019's single preparation aggregate and interface are verified.
-- Plan 022 needs no report-sequence file and may run in parallel with 019
-  through 021 as separate sessions. Its scope is exactly the two surfaces in
-  its briefs; the report exclusion in `.impeccable/config.json` is part of its
-  contract.
+- Plan 022 needed no report-sequence file and ran in parallel with 019
+  through 021 as separate sessions. Its scope was exactly the two surfaces in
+  its briefs; its report exclusion lived in the Impeccable skill's project
+  config, removed with the skill.
 - Plan 023 follows plan 021 and adds its own operator gate: no design work
   before the evidence pack and the recorded direction pick. It is the only
   instrument that may revise the report visual design, and it moves the

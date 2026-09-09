@@ -705,8 +705,8 @@ documents and guardrails directly.
 
 Most of the skills below carry only a trigger note here because the active
 host already lists each installed skill with its own one-line description
-every session; this catalogue exists for the two that carry repo-specific
-facts no host listing has (impeccable, audit-rehearsal) and for routing.
+every session; this catalogue exists for the one that carries repo-specific
+facts no host listing has (audit-rehearsal) and for routing.
 
 - **ask-matt** — route to the right skill when unsure which fits.
 - **grill-with-docs** / **grilling** — stress-test a plan or idea before
@@ -734,23 +734,6 @@ facts no host listing has (impeccable, audit-rehearsal) and for routing.
   another agent to execute; never implements itself.
 - **find-skills** (vercel-labs) — find a capability no listed skill covers;
   verify install count and source reputation before recommending one.
-- **impeccable** (pbakaus/impeccable, skill bundle 4.1.2, added 2026-09-01
-  via its native installer at project scope for the claude and codex
-  providers, so it is deliberately not in `skills-lock.json`; `npx
-  impeccable doctor` and `npx impeccable update` own freshness) — UI
-  design and review work on the `packages/site` and `packages/interface`
-  surfaces: `/impeccable init`, `document`, `critique`, `audit`,
-  `polish`, and its other commands, plus a deterministic detector hook
-  (Claude Code via gitignored `.claude/settings.local.json`, Codex via
-  committed `.codex/hooks.json`, which needs the operator's `/hooks`
-  trust; ZCode loads the skill from `.agents/skills/` but gets no hook).
-  `packages/report/**` and `docs/report/**` are excluded in
-  `.impeccable/config.json`: the report design system is locked
-  (trade-off 9), and any report redesign goes through a numbered plan,
-  never through this skill. Until upstream fixes the bundle download's
-  double redirect (CLI 3.6.0), updates need `IMPECCABLE_BUNDLE_PATH`
-  pointed at the release zip. Decision record:
-  `docs/research/design-skill-alternatives.md`.
 - **audit-rehearsal** — asked to "dogfood a hotel" or "run an audit
   rehearsal": audits a real, not-yet-scanned catalogue hotel end to end,
   then critiques the bilingual report in character as the hotel's

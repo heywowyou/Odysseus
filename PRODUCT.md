@@ -1,7 +1,5 @@
 # Product
 
-<!-- impeccable:product-schema 1 -->
-
 ## Platform
 
 web
@@ -68,7 +66,7 @@ Explicitly undecided product facts, held for the operator:
 
 - Which site becomes the first public case study (brief section 11, open question 7).
 - Whether WCAG 2.2 AA applies as a binding internal standard to all new surfaces (dashboard, site) or only to the client-facing PDF, where it is already enforced.
-- The comp-first versus code-first build path default for new visual work (not yet recorded in `.impeccable/config.json`).
+- The comp-first versus code-first build path default for new visual work.
 
 ## Brand Commitments
 

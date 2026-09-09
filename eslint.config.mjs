@@ -29,7 +29,6 @@ export default defineConfig(
     '.agents/**',
     '.claude/**',
     '.codex/**',
-    '.impeccable/**',
     '.zcode/**',
   ]),
   {
