@@ -98,7 +98,7 @@ export class CrawlCoverageInsufficientError extends Error {
       ? ' The sitemap also shows that the crawl reached too little of the site it declares.'
       : '';
     super(
-      `Audit coverage is too incomplete to generate a report: ${failureDetail}${httpDetail ? `, including ${httpDetail}` : ''}.${sitemapDetail} The site appears to be rejecting the crawl. Do not use this partial audit. Slow the crawl, request an allowlist, then run a new audit.`,
+      `Audit coverage is too incomplete to generate a report: ${failureDetail}${httpDetail ? `, including ${httpDetail}` : ''}.${sitemapDetail} The site appears to be rejecting the crawl. Do not use this partial audit. Slow the crawl, request an allowlist, then run a new audit. The per-job crawl delay and scan concurrency options exist for this; they can only slow a crawl down, never speed it up.`,
     );
     this.name = 'CrawlCoverageInsufficientError';
     this.assessment = assessment;

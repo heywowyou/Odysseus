@@ -29,7 +29,7 @@ describe('crawl coverage gate', () => {
     expect(assessment.failedHttpStatusCounts).toEqual(new Map([[503, 8]]));
     expect(assessment.reasonCodes).toEqual(['crawl-failure-share']);
     expect(() => assertSufficientCrawlCoverage(input)).toThrow(
-      /8 of 10 inventoried URLs failed.*8 HTTP 503.*Slow the crawl, request an allowlist/i,
+      /8 of 10 inventoried URLs failed.*8 HTTP 503.*Slow the crawl, request an allowlist.*per-job crawl delay and scan concurrency options.*never speed it up/i,
     );
   });
 
