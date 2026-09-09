@@ -70,11 +70,17 @@ function useProspectDetail(candidateId: string | undefined): ProspectDetailState
   return { ...polling, isNotFound };
 }
 
-/** href for a raw websites value: the value when it already carries a
- *  scheme, https-prefixed otherwise, so 'www.exemple.fr' opens as a site
- *  instead of resolving as a path relative to the dashboard. */
-function websiteHref(raw: string): string {
-  return /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(raw) ? raw : `https://${raw}`;
+/** href for a raw websites value: the value when it already carries an
+ *  http(s) scheme, https-prefixed otherwise, so 'www.exemple.fr' opens as a
+ *  site instead of resolving as a path relative to the dashboard. Any other
+ *  scheme is undefined: the caller renders the raw string as plain text, so
+ *  an unusual stored scheme never becomes an anchor href (React 19 already
+ *  blocks javascript:, this keeps the rule in the code that builds the
+ *  href). */
+export function websiteHref(raw: string): string | undefined {
+  if (/^https?:/i.test(raw)) return raw;
+  if (/:/.test(raw)) return undefined;
+  return `https://${raw}`;
 }
 
 /** A labelled catalogue row: label from the strings table, value from the
@@ -312,26 +318,33 @@ export function ProspectDetailPage(): JSX.Element {
                     {ref.source}/{ref.sourceId} ({ref.sourceVersion}) · {ref.ingestRunId}
                   </li>
                 ))}
-                {data.websites.map((website) => (
-                  <li
-                    key={website.raw}
-                    className="font-mono text-xs text-ink-soft"
-                    title={website.unusableReason ?? undefined}
-                  >
-                    <a
-                      href={websiteHref(website.raw)}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={strings.prospectDetail.openSite}
-                      aria-label={strings.prospectDetail.openSite}
-                      className="hover:text-accent-bright"
+                {data.websites.map((website) => {
+                  const href = websiteHref(website.raw);
+                  return (
+                    <li
+                      key={website.raw}
+                      className="font-mono text-xs text-ink-soft"
+                      title={website.unusableReason ?? undefined}
                     >
-                      {website.raw}
-                    </a>{' '}
-                    [{website.kind}
-                    {website.registrableDomain !== null ? ` → ${website.registrableDomain}` : ''}]
-                  </li>
-                ))}
+                      {href === undefined ? (
+                        website.raw
+                      ) : (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={strings.prospectDetail.openSite}
+                          aria-label={strings.prospectDetail.openSite}
+                          className="hover:text-accent-bright"
+                        >
+                          {website.raw}
+                        </a>
+                      )}{' '}
+                      [{website.kind}
+                      {website.registrableDomain !== null ? ` → ${website.registrableDomain}` : ''}]
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>

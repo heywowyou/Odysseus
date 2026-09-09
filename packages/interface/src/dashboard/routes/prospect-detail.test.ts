@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/provider';
-import { ProspectDetailPage } from './prospect-detail';
+import { ProspectDetailPage, websiteHref } from './prospect-detail';
 import type { ProspectDetailResponse } from './prospects-model';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -104,6 +104,32 @@ function contactCard(): HTMLElement | undefined {
   );
   return heading?.closest('section') ?? undefined;
 }
+
+describe('websiteHref', () => {
+  it('keeps an https value unchanged', () => {
+    expect(websiteHref('https://ok.example')).toBe('https://ok.example');
+  });
+
+  it('keeps an http value unchanged', () => {
+    expect(websiteHref('http://ok.example/page')).toBe('http://ok.example/page');
+  });
+
+  it('https-prefixes a scheme-less host', () => {
+    expect(websiteHref('www.example.fr')).toBe('https://www.example.fr');
+  });
+
+  it('rejects a javascript scheme', () => {
+    expect(websiteHref('javascript:alert(1)')).toBeUndefined();
+  });
+
+  it('rejects a data scheme', () => {
+    expect(websiteHref('data:text/html,<h1>x</h1>')).toBeUndefined();
+  });
+
+  it('rejects a mailto scheme', () => {
+    expect(websiteHref('mailto:contact@example.fr')).toBeUndefined();
+  });
+});
 
 describe('ProspectDetailPage contact section (issue #95)', () => {
   const fetchMock = vi.fn();
