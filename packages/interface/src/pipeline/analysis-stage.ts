@@ -25,6 +25,7 @@ import type {
 import {
   assertFindingsProvenance,
   buildFindingsProvenance,
+  isAuditFallbackEligible,
   normalizeDeclaredWebsite,
   resolveHotelCatalogueWritingSiteContext,
 } from '@odysseus/core';
@@ -45,13 +46,15 @@ import {
   partitionFindings,
   summarizeUnsupportedReviews,
   CORRECTION_REVIEW_PROMPT_VERSION,
+  type AnalyzeWritingResult,
   type SiteContextInput,
   type StructureDocument,
   type TransactionalFlowStatus,
+  type WritingInput,
   type WritingSiteContext,
 } from '@odysseus/llm';
 import { getLatestHotelCandidateByOwnRegistrableDomain, persistAnalysis } from '@odysseus/store';
-import type { VerifiedStoredAnalysis } from '@odysseus/report';
+import { getStrings, type VerifiedStoredAnalysis } from '@odysseus/report';
 import { runObligationStage } from './obligation-stage.js';
 
 export interface RunAnalysisStageOptions {
@@ -247,24 +250,41 @@ export async function runAnalysisStage(
   // structure and writing passes and their guards, never allFindings.
   const severityFiltered = filterFindingsForLlm(allFindings);
   const { forModel } = partitionFindings(severityFiltered, manifest);
+  // Audit fallback gate (docs/rules/llm-layer-rules.md section 10, trade-off
+  // 23, wired explicitly by issue #162). Evaluated on allFindings, the
+  // audit's own findings, exactly as the rule reads: forModel is a
+  // presentation concern (severity floor plus diversion) and must not move
+  // the gate. When this holds, no model pass runs at all and the analysis
+  // below is built statically.
+  const fallbackEligible = isAuditFallbackEligible(allFindings);
   const analysesDir = path.join(auditDir, 'analyses');
 
-  const { structureDoc, reused, structurePath } = await loadOrGenerateStructure(
-    analysesDir,
-    manifest.auditId,
-    forModel,
-    siteContext,
-    usedFallbackContext,
-    options.regenerateStructure ?? false,
-    manifest,
-    findingsProvenance,
-  );
+  let structurePath = '';
+  let structureReused = false;
+  let structureDoc: StructureDocument | undefined;
+  if (!fallbackEligible) {
+    const structure = await loadOrGenerateStructure(
+      analysesDir,
+      manifest.auditId,
+      forModel,
+      siteContext,
+      usedFallbackContext,
+      options.regenerateStructure ?? false,
+      manifest,
+      findingsProvenance,
+    );
+    structureDoc = structure.structureDoc;
+    structurePath = structure.structurePath;
+    structureReused = structure.reused;
+  }
 
   // Not present in the queued pipeline (run-full-audit-job.ts passes it
   // through, computed once by runAuditStage), but the standalone
   // `odysseus analyze <dir>` CLI path calls this stage directly - computed
   // lazily here so that path stays independently runnable. The Sirene
   // cache absorbs the cost of a repeat lookup for the same SIREN.
+  // Deterministic (Sirene-backed) and needed by the report's legal
+  // sections, so the fallback gate never skips it.
   const obligationAssessment =
     options.obligationAssessment ??
     (await runObligationStage(
@@ -274,59 +294,94 @@ export async function runAnalysisStage(
       options.siteSignalOverrides,
     ));
 
-  // siteStats is computed from allFindings (unfiltered), not forModel, so
-  // the executive summary cites the audit's true scope rather than only
-  // what the model was shown. See docs/archive/report-v2-refactor.md B10.
-  const siteStats = computeSiteStats(allFindings, manifest);
-  const dominantPerformanceMetric = computeDominantPerformanceMetric(manifest);
-  const writingInput = buildWritingInput(
-    structureDoc.themes,
-    forModel,
-    writingSiteContext,
-    options.language,
-    siteStats,
-    dominantPerformanceMetric,
-    transactionalFlowStatus(obligationAssessment),
-    // Seeds the provider-phrase choice. The auditId is stable across a
-    // re-run and across both languages, so regenerating a report never
-    // renames the client's provider and the FR/EN pair stays consistent.
-    manifest.auditId,
-  );
-  const generatedAt = new Date();
-  const writingResult = await analyzeWriting(
-    writingInput,
-    structureDoc.themes.map((t) => t.themeKey),
-    usedFallbackContext,
-  );
-  const merged = mergeAnalysisPasses(
-    structureDoc,
-    writingResult.output,
-    forModel,
-    options.language,
-  );
-  const unreferencedFindingCount = findUnreferencedStructureFindingIds(
-    structureDoc,
-    forModel,
-  ).length;
-
   const analysisId = randomUUID();
-  const analysis: VerifiedStoredAnalysis = {
-    ...merged,
-    analysisId,
-    auditId: manifest.auditId,
-    findingsProvenance,
-    language: options.language,
-    model: writingResult.model,
-    temperature: writingResult.temperature,
-    generatedAt,
-    obligationAssessment,
-    ...(persistsSiteContext ? { siteContext: writingSiteContext } : {}),
-  };
+  let analysis: VerifiedStoredAnalysis;
+  let unreferencedFindingCount = 0;
+  // Only the model-generated path produces writer artifacts; the static
+  // fallback leaves this undefined so the advisory passes below have
+  // nothing to review and make zero provider calls.
+  let modelPasses:
+    | { writingInput: WritingInput; writingResult: AnalyzeWritingResult; generatedAt: Date }
+    | undefined;
+
+  if (fallbackEligible) {
+    // Static fallback analysis (issue #162): no structure pass, no writing
+    // pass, no advisory pass. The bilingual sentences come from the report
+    // strings module so the stored artifact and the rendered note share one
+    // source of truth. Nothing here invents themes, praise, or a risk the
+    // predicate does not already imply (no critical or serious finding and
+    // fewer than 5 moderate ones is what makes overallRisk 'low'
+    // defensible), and no structure file is written, so nothing downstream
+    // can later claim to reuse one.
+    const generatedAt = new Date();
+    const strings = getStrings(options.language);
+    analysis = {
+      analysisId,
+      auditId: manifest.auditId,
+      findingsProvenance,
+      language: options.language,
+      model: 'static-fallback',
+      temperature: 0,
+      generatedAt,
+      overallRisk: 'low',
+      themes: [],
+      quickWins: [],
+      executiveSummary: strings.fallbackAnalysis.summarySentence,
+      notes: strings.fallbackAnalysis.summarySentence,
+      obligationAssessment,
+      ...(persistsSiteContext ? { siteContext: writingSiteContext } : {}),
+      generationMode: 'static-fallback',
+    };
+  } else {
+    // Always assigned on this path: only the not-eligible branch reads it,
+    // and the structure stage above runs exactly there.
+    const doc = structureDoc!;
+    // siteStats is computed from allFindings (unfiltered), not forModel, so
+    // the executive summary cites the audit's true scope rather than only
+    // what the model was shown. See docs/archive/report-v2-refactor.md B10.
+    const siteStats = computeSiteStats(allFindings, manifest);
+    const dominantPerformanceMetric = computeDominantPerformanceMetric(manifest);
+    const writingInput = buildWritingInput(
+      doc.themes,
+      forModel,
+      writingSiteContext,
+      options.language,
+      siteStats,
+      dominantPerformanceMetric,
+      transactionalFlowStatus(obligationAssessment),
+      // Seeds the provider-phrase choice. The auditId is stable across a
+      // re-run and across both languages, so regenerating a report never
+      // renames the client's provider and the FR/EN pair stays consistent.
+      manifest.auditId,
+    );
+    const generatedAt = new Date();
+    const writingResult = await analyzeWriting(
+      writingInput,
+      doc.themes.map((t) => t.themeKey),
+      usedFallbackContext,
+    );
+    const merged = mergeAnalysisPasses(doc, writingResult.output, forModel, options.language);
+    unreferencedFindingCount = findUnreferencedStructureFindingIds(doc, forModel).length;
+
+    modelPasses = { writingInput, writingResult, generatedAt };
+    analysis = {
+      ...merged,
+      analysisId,
+      auditId: manifest.auditId,
+      findingsProvenance,
+      language: options.language,
+      model: writingResult.model,
+      temperature: writingResult.temperature,
+      generatedAt,
+      obligationAssessment,
+      ...(persistsSiteContext ? { siteContext: writingSiteContext } : {}),
+    };
+  }
 
   await fs.mkdir(analysesDir, { recursive: true });
   const analysisPath = path.join(
     analysesDir,
-    `${timestampForFilename(generatedAt)}-${options.language}.json`,
+    `${timestampForFilename(analysis.generatedAt)}-${options.language}.json`,
   );
   await fs.writeFile(analysisPath, JSON.stringify(analysis, null, 2));
 
@@ -347,110 +402,120 @@ export async function runAnalysisStage(
     ...(analysis.obligationAssessment
       ? { obligationAssessment: analysis.obligationAssessment }
       : {}),
+    ...(analysis.generationMode !== undefined ? { generationMode: analysis.generationMode } : {}),
   });
 
-  // Plan 033: a distinct advisory correction pass. It gets the exact writer
-  // input/output, never the merged analysis, HTML, PDF, screenshots, or a
-  // fetched page. The artifact is insert-only and intentionally has no path
-  // back into analysis selection or report rendering.
-  try {
-    const correctionReview = await analyzeCorrectionReview({
-      writingInput,
-      written: writingResult.output,
-    });
-    const correctionReviewPath = path.join(
-      analysesDir,
-      `${timestampForFilename(generatedAt)}-${analysisId}-correction-review.json`,
-    );
-    await fs.writeFile(
-      correctionReviewPath,
-      JSON.stringify(
-        {
-          auditId: manifest.auditId,
-          analysisId,
-          language: options.language,
-          generatedAt,
-          sourceAnalysisFilename: path.basename(analysisPath),
-          reviewSchemaVersion: '033-v1',
-          promptVersion: CORRECTION_REVIEW_PROMPT_VERSION,
-          model: correctionReview.model,
-          temperature: correctionReview.temperature,
-          outcome: correctionReview.status,
-          ...(correctionReview.status === 'ok'
-            ? { proposals: correctionReview.output.proposals }
-            : { skipReason: correctionReview.reason }),
-        },
-        null,
-        2,
-      ),
-      { flag: 'wx' },
-    );
-    console.warn(
-      correctionReview.status === 'ok'
-        ? `odysseus analyze (correction review, language=${options.language}): ${correctionReview.output.proposals.filter((proposal) => proposal.verdict === 'propose-change').length} proposal(s) recorded`
-        : `odysseus analyze (correction review, language=${options.language}): skipped`,
-    );
-  } catch {
-    // An advisory-artifact filesystem failure is no more allowed to alter a
-    // delivered analysis than a provider failure. Deliberately no reason is
-    // printed: this channel is summary-only and must not expose client prose.
-    console.warn(`odysseus analyze (correction review, language=${options.language}): skipped`);
-  }
-
-  // Shadow reviewer (docs/rules/llm-layer-rules.md section 12): runs after the
-  // analysis is fully written and persisted, and its whole body is
-  // wrapped so a reviewer failure of any kind can never block, fail, or
-  // delay the analysis it reviews. One extra provider call per analysis
-  // by operator decision, always on; verdicts are data for a later
-  // promotion decision, not a gate.
-  try {
-    const review = await analyzeReview({ writingInput, written: writingResult.output });
-    if (review.status === 'skipped') {
-      console.warn(
-        `odysseus analyze (review pass, language=${options.language}): skipped - ${review.reason}`,
+  // Both advisory passes live inside the not-eligible path (modelPasses is
+  // set exactly there): a static fallback analysis has no writer output to
+  // review, and zero provider calls is the point of the gate (issue #162).
+  if (modelPasses !== undefined) {
+    const { writingInput, writingResult, generatedAt } = modelPasses;
+    // Plan 033: a distinct advisory correction pass. It gets the exact writer
+    // input/output, never the merged analysis, HTML, PDF, screenshots, or a
+    // fetched page. The artifact is insert-only and intentionally has no path
+    // back into analysis selection or report rendering.
+    try {
+      const correctionReview = await analyzeCorrectionReview({
+        writingInput,
+        written: writingResult.output,
+      });
+      const correctionReviewPath = path.join(
+        analysesDir,
+        `${timestampForFilename(generatedAt)}-${analysisId}-correction-review.json`,
       );
-    } else {
-      // One line only. The validation campaign (2026-08-29) measured the
-      // medium-tier reviewer flagging every businessImpact field for
-      // stating the generic commercial consequences the writing prompt
-      // itself requires, so per-field console output would be a wall of
-      // misleading warnings; the per-field reasons live in the review
-      // file, where a human reads them with that bias in mind.
-      const unsupportedCount = summarizeUnsupportedReviews(review.output).length;
-      if (unsupportedCount > 0) {
-        console.warn(
-          `odysseus analyze (review pass, language=${options.language}): ${unsupportedCount} prose field(s) reviewed unsupported - see the -review.json file for the reasons`,
-        );
-      }
-      const reviewPath = path.join(analysesDir, `${timestampForFilename(generatedAt)}-review.json`);
       await fs.writeFile(
-        reviewPath,
+        correctionReviewPath,
         JSON.stringify(
           {
             auditId: manifest.auditId,
             analysisId,
             language: options.language,
-            model: review.model,
-            temperature: review.temperature,
             generatedAt,
-            reviews: review.output,
+            sourceAnalysisFilename: path.basename(analysisPath),
+            reviewSchemaVersion: '033-v1',
+            promptVersion: CORRECTION_REVIEW_PROMPT_VERSION,
+            model: correctionReview.model,
+            temperature: correctionReview.temperature,
+            outcome: correctionReview.status,
+            ...(correctionReview.status === 'ok'
+              ? { proposals: correctionReview.output.proposals }
+              : { skipReason: correctionReview.reason }),
           },
           null,
           2,
         ),
+        { flag: 'wx' },
+      );
+      console.warn(
+        correctionReview.status === 'ok'
+          ? `odysseus analyze (correction review, language=${options.language}): ${correctionReview.output.proposals.filter((proposal) => proposal.verdict === 'propose-change').length} proposal(s) recorded`
+          : `odysseus analyze (correction review, language=${options.language}): skipped`,
+      );
+    } catch {
+      // An advisory-artifact filesystem failure is no more allowed to alter a
+      // delivered analysis than a provider failure. Deliberately no reason is
+      // printed: this channel is summary-only and must not expose client prose.
+      console.warn(`odysseus analyze (correction review, language=${options.language}): skipped`);
+    }
+
+    // Shadow reviewer (docs/rules/llm-layer-rules.md section 12): runs after the
+    // analysis is fully written and persisted, and its whole body is
+    // wrapped so a reviewer failure of any kind can never block, fail, or
+    // delay the analysis it reviews. One extra provider call per analysis
+    // by operator decision, always on; verdicts are data for a later
+    // promotion decision, not a gate.
+    try {
+      const review = await analyzeReview({ writingInput, written: writingResult.output });
+      if (review.status === 'skipped') {
+        console.warn(
+          `odysseus analyze (review pass, language=${options.language}): skipped - ${review.reason}`,
+        );
+      } else {
+        // One line only. The validation campaign (2026-08-29) measured the
+        // medium-tier reviewer flagging every businessImpact field for
+        // stating the generic commercial consequences the writing prompt
+        // itself requires, so per-field console output would be a wall of
+        // misleading warnings; the per-field reasons live in the review
+        // file, where a human reads them with that bias in mind.
+        const unsupportedCount = summarizeUnsupportedReviews(review.output).length;
+        if (unsupportedCount > 0) {
+          console.warn(
+            `odysseus analyze (review pass, language=${options.language}): ${unsupportedCount} prose field(s) reviewed unsupported - see the -review.json file for the reasons`,
+          );
+        }
+        const reviewPath = path.join(
+          analysesDir,
+          `${timestampForFilename(generatedAt)}-review.json`,
+        );
+        await fs.writeFile(
+          reviewPath,
+          JSON.stringify(
+            {
+              auditId: manifest.auditId,
+              analysisId,
+              language: options.language,
+              model: review.model,
+              temperature: review.temperature,
+              generatedAt,
+              reviews: review.output,
+            },
+            null,
+            2,
+          ),
+        );
+      }
+    } catch (error) {
+      console.warn(
+        `odysseus analyze (review pass, language=${options.language}): skipped - ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-  } catch (error) {
-    console.warn(
-      `odysseus analyze (review pass, language=${options.language}): skipped - ${error instanceof Error ? error.message : String(error)}`,
-    );
   }
 
   return {
     analysis,
     analysisPath,
     structurePath,
-    structureReused: reused,
+    structureReused,
     unreferencedFindingCount,
     usedFallbackContext,
   };

@@ -36,6 +36,7 @@ import {
   countOccurrences,
   countPages,
   failureReasonKind,
+  fallbackNoticeText,
   findPublisherIdentificationFinding,
   findingDisplayTitle,
   findingExpansionView,
@@ -265,10 +266,14 @@ function ReportsCard(props: {
   isRegenerating: boolean;
 }): JSX.Element {
   const { detail, onRegenerate, isRegenerating } = props;
-  const { strings } = useI18n();
+  const { language, strings } = useI18n();
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const hasReports = detail.reportLanguages.length > 0 && detail.reports.length > 0;
   const reportBase = `/api/audits/${encodeURIComponent(detail.auditId)}/report`;
+  // Plan 032 (issue #162): the selected pair came from the audit fallback
+  // gate, so the card says why the report has no model-written themes
+  // instead of leaving the absence to be read as a failure.
+  const staticFallbackNotice = fallbackNoticeText(detail.analysisIsStaticFallback, language);
 
   const openReport = async (
     language: ReportLanguage,
@@ -292,6 +297,9 @@ function ReportsCard(props: {
 
   return (
     <Card title={strings.auditDetail.reportsHeading}>
+      {staticFallbackNotice !== undefined ? (
+        <p className="mb-3 max-w-reading text-xs text-ink-muted">{staticFallbackNotice}</p>
+      ) : null}
       {!hasReports ? (
         <p className="text-sm text-ink-muted">{strings.auditDetail.noReportsYet}</p>
       ) : (

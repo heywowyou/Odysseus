@@ -1239,4 +1239,19 @@ export interface ReportStrings {
     confidentialityLabel: string;
     pageLabel: string;
   };
+  /** Plan 032 (issue #162): the audit fallback gate
+   *  (docs/rules/llm-layer-rules.md section 10, trade-off 23) skips the
+   *  structure and writing passes when an audit's findings are thin, so
+   *  this static, honest note replaces the model-written prose. Strictly
+   *  factual: it invents no theme, praise, or risk level, claims no
+   *  manual pass, and scopes every statement to what the automated
+   *  tools actually detected. */
+  fallbackAnalysis: {
+    noteHeading: string;
+    noteBody: string;
+    /** The one static sentence the analysis stage stores as both the
+     *  fallback analysis' executiveSummary and notes, so the persisted
+     *  artifact states in plain language why its themes are empty. */
+    summarySentence: string;
+  };
 }

@@ -163,6 +163,10 @@ export interface AuditDetailResponse {
   reportLanguages: ReportLanguage[];
   reports: ReportStatusResponse[];
   lifecycle: AuditLifecycle;
+  /** Plan 032 (issue #162): the selected analysis pair was produced by the
+   *  audit fallback gate, so its reports carry no model-written analysis.
+   *  False also when no analysis pair exists at all. */
+  analysisIsStaticFallback: boolean;
   approval: ReportApprovalResponse | null;
   manualFields: ManualFieldsResponse | null;
   /** The scan's original signal, before a possible operator correction. */

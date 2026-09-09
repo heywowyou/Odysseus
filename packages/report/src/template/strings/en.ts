@@ -803,4 +803,11 @@ export const en: ReportStrings = {
     confidentialityLabel: 'Confidential report',
     pageLabel: 'Page',
   },
+  fallbackAnalysis: {
+    noteHeading: 'Report built from the scan findings only',
+    noteBody:
+      "The audit's tools found no critical or serious issue, and fewer than five moderate ones. This report therefore contains only their measured results, with no written analysis. A written analysis would normally group the findings into themes, prioritize them, and write a summary. It was not run here, because the volume of findings did not justify it.",
+    summarySentence:
+      "The scan found no critical or serious issue and fewer than five moderate ones, so the written analysis (grouping, prioritization, summary) was not run. The report's factual sections remain complete.",
+  },
 };

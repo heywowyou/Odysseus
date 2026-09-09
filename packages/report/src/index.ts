@@ -7,6 +7,11 @@ export type {
 } from './types.js';
 export { classifyReportFreshness } from './freshness.js';
 export type { ReportFreshness, ReportFreshnessMetadata } from './freshness.js';
+/** Plan 032 (issue #162): re-exported so the interface analysis stage's
+ *  static fallback analysis reads the exact same bilingual sentences the
+ *  report template renders, instead of inlining a second copy that could
+ *  drift from the report chrome. */
+export { getStrings } from './template/strings/i18n.js';
 /** Plan 018 page-count warning decision shared with interface (report
  *  stage) and the CLI; the count itself is measured in pdf.ts. */
 export { REPORT_PAGE_COUNT_WARNING_THRESHOLD, reportPageCountWarning } from './pdf.js';

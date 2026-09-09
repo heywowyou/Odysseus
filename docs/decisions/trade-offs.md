@@ -884,6 +884,16 @@ cap instead; that decision is the operator's.
     rather than something silently built or silently left claimed-but-
     missing.
 
+    **Amended 2026-09-09, issue #162.** The documented gap in the first
+    finding above is now closed explicitly: the analysis stage
+    (`packages/interface/src/pipeline/analysis-stage.ts`) evaluates
+    `isAuditFallbackEligible` on the audit's full findings and, when it
+    holds, skips the structure, writing, correction-review, and
+    shadow-review passes, persists the analysis with a
+    `generationMode: 'static-fallback'` marker, and the report renders a
+    static bilingual note instead of the model-written prose. The
+    predicate and its thresholds are unchanged.
+
     Second: enabling hospitality NAF codes for prospecting (an explicit
     ask this session, alongside the throughput work) surfaced that
     `docs/rules/prospect-qualification.md` section 4 had gone stale relative to

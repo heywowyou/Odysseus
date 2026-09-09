@@ -38,6 +38,11 @@ export interface StoredAnalysis extends LlmOutput {
   /** The exact intake or catalogue facts shown to the writing pass. Optional
    * for analyses created before writing-context provenance was recorded. */
   siteContext?: AnalysisSiteContext;
+  /** Present only on analyses produced by the audit fallback gate
+   *  (docs/rules/llm-layer-rules.md section 10): the structure and
+   *  writing passes never ran for this document. Absent on every
+   *  model-generated analysis, including all legacy artifacts. */
+  generationMode?: 'static-fallback';
 }
 
 export interface VerifiedStoredAnalysis extends StoredAnalysis {

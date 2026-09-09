@@ -219,6 +219,8 @@ export const fr: DashboardStrings = {
     pagesColumn: 'Pages concernées',
     reportsHeading: 'Rapports',
     noReportsYet: 'Aucun rapport généré pour le moment.',
+    analysisStaticFallbackNotice:
+      'Ce rapport a été rédigé à partir des seuls constats du scan. L’analyse rédigée automatiquement n’a pas été lancée, l’audit n’ayant détecté aucun problème critique ou grave et moins de cinq problèmes de gravité modérée.',
     reportFreshness: { fresh: 'À jour', stale: 'À régénérer', unverified: 'Non vérifié' },
     reportPageCountWarning: 'Rapport long : {count} pages. Il reste complet et livrable.',
     lifecycleLabel: 'Étape',

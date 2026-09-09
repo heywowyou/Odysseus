@@ -340,6 +340,45 @@ describe('publisher-identification alert (issue #120)', () => {
   });
 });
 
+describe('static fallback analysis notice (issue #162)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('shows the fallback notice on the reports card when the pair is a static fallback', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': {
+        ...emptyAudit,
+        analysisIsStaticFallback: true,
+      },
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Rapports');
+    expect(container.textContent).toContain(
+      'Ce rapport a été rédigé à partir des seuls constats du scan.',
+    );
+    root.unmount();
+  });
+
+  it('shows no fallback notice for a model-generated pair', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': {
+        ...emptyAudit,
+        analysisIsStaticFallback: false,
+      },
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Rapports');
+    expect(container.textContent).not.toContain(
+      'Ce rapport a été rédigé à partir des seuls constats du scan.',
+    );
+    root.unmount();
+  });
+});
+
 describe('reports card PDF availability (issue #91)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

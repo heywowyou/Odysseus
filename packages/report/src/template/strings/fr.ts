@@ -927,4 +927,11 @@ export const fr: ReportStrings = {
     confidentialityLabel: 'Rapport confidentiel',
     pageLabel: 'Page',
   },
+  fallbackAnalysis: {
+    noteHeading: 'Rapport fondé sur les seuls constats du scan',
+    noteBody:
+      "Les outils de l'audit n'ont détecté aucun problème critique ou grave, et moins de cinq problèmes de gravité modérée. Ce rapport rassemble donc uniquement leurs résultats mesurés, sans synthèse rédigée. Une analyse rédigée regroupe normalement les constats en thèmes, les hiérarchise et rédige un résumé. Elle n'a pas été lancée ici, le volume de constats ne le justifiant pas.",
+    summarySentence:
+      "Scan sans problème critique ou grave et avec moins de cinq problèmes de gravité modérée. L'analyse rédigée (regroupement, hiérarchisation, résumé) n'a pas été lancée. Les sections factuelles du rapport restent complètes.",
+  },
 };

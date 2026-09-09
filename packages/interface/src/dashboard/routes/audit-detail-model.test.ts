@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { en } from '../i18n/en';
+import { fr } from '../i18n/fr';
 import {
   buildManualFieldsPatch,
   countOccurrences,
   countPages,
   failureReasonKind,
+  fallbackNoticeText,
   findingDisplayTitle,
   findingExpansionView,
   findingRemediation,
@@ -135,6 +138,21 @@ describe('hasPageCountWarning', () => {
 
   it('never warns for a legacy row without a measured page count', () => {
     expect(hasPageCountWarning(undefined)).toBe(false);
+  });
+});
+
+describe('fallbackNoticeText (issue #162)', () => {
+  it('is undefined for a model-generated analysis pair', () => {
+    expect(fallbackNoticeText(false, 'fr')).toBeUndefined();
+    expect(fallbackNoticeText(false, 'en')).toBeUndefined();
+  });
+
+  it('returns the bilingual notice for a static fallback pair', () => {
+    expect(fallbackNoticeText(true, 'fr')).toBe(fr.auditDetail.analysisStaticFallbackNotice);
+    expect(fallbackNoticeText(true, 'en')).toBe(en.auditDetail.analysisStaticFallbackNotice);
+    expect(fr.auditDetail.analysisStaticFallbackNotice).not.toBe(
+      en.auditDetail.analysisStaticFallbackNotice,
+    );
   });
 });
 

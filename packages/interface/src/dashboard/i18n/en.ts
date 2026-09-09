@@ -219,6 +219,8 @@ export const en: DashboardStrings = {
     pagesColumn: 'Affected pages',
     reportsHeading: 'Reports',
     noReportsYet: 'No report generated yet.',
+    analysisStaticFallbackNotice:
+      'This report was written from the scan findings alone. The model-written analysis did not run, because the audit found no critical or serious issue and fewer than five moderate ones.',
     reportFreshness: { fresh: 'Fresh', stale: 'Out of date', unverified: 'Unverified' },
     reportPageCountWarning: 'Long report: {count} pages. It remains complete and deliverable.',
     lifecycleLabel: 'Stage',

@@ -5,6 +5,8 @@
  */
 
 import type { DashboardLanguage } from '../i18n/types';
+import { en } from '../i18n/en';
+import { fr } from '../i18n/fr';
 import type {
   AuditFailureResponse,
   AuditLifecycle,
@@ -93,6 +95,21 @@ export const REPORT_PAGE_COUNT_WARNING_THRESHOLD = 60;
  *  no measured page count never warns: absence is not read as a value. */
 export function hasPageCountWarning(pageCount: number | undefined): pageCount is number {
   return pageCount !== undefined && pageCount > REPORT_PAGE_COUNT_WARNING_THRESHOLD;
+}
+
+/** Plan 032 (issue #162): the reports card notice when the selected
+ *  analysis pair came from the audit fallback gate. Undefined when the
+ *  pair is model-generated, so the card renders nothing new for every
+ *  existing audit. Reads the language tables directly for the same
+ *  by-value discipline as the rest of this file. */
+export function fallbackNoticeText(
+  isStaticFallback: boolean,
+  language: DashboardLanguage,
+): string | undefined {
+  if (!isStaticFallback) return undefined;
+  return language === 'fr'
+    ? fr.auditDetail.analysisStaticFallbackNotice
+    : en.auditDetail.analysisStaticFallbackNotice;
 }
 
 /** The scanner's precomputed total (a site-wide issue is one row with a

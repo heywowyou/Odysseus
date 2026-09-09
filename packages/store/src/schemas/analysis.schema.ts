@@ -42,6 +42,11 @@ export interface AnalysisDocumentFields {
   /** The exact facts shown to the writing pass. Optional for historical
    * analyses that predate writing-context provenance. */
   siteContext?: AnalysisSiteContext;
+  /** Present only on analyses produced by the audit fallback gate
+   *  (docs/rules/llm-layer-rules.md section 10): the structure and
+   *  writing passes never ran for this document. Absent on every
+   *  model-generated analysis, including all legacy artifacts. */
+  generationMode?: 'static-fallback';
 }
 
 export type AnalysisDocument = AnalysisDocumentFields;
@@ -172,6 +177,7 @@ const analysisSchema = new Schema<AnalysisDocument>(
     notes: { type: String, required: true },
     obligationAssessment: { type: obligationAssessmentSchemaMongo },
     siteContext: { type: analysisSiteContextSchemaMongo },
+    generationMode: { type: String, enum: ['static-fallback'] },
   },
   { collection: 'analyses' },
 );

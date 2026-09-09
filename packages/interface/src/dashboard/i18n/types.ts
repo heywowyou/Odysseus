@@ -239,6 +239,11 @@ export interface DashboardStrings {
     pagesColumn: string;
     reportsHeading: string;
     noReportsYet: string;
+    /** Plan 032 (issue #162): notice on the reports card when the selected
+     *  analysis pair came from the audit fallback gate, so the absence of
+     *  model-written themes reads as the documented gate behavior, not a
+     *  failure. Scoped to what the automated scan detected. */
+    analysisStaticFallbackNotice: string;
     reportFreshness: Record<'fresh' | 'stale' | 'unverified', string>;
     /** Non-blocking warning on a report row whose measured page count is
      *  above the report package's threshold; {count} is replaced with the

@@ -350,6 +350,15 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       provenanceMatches(selectedPair.fr.findingsProvenance, audit.findingsProvenance) &&
       provenanceMatches(selectedPair.en.findingsProvenance, audit.findingsProvenance),
     );
+    // Plan 032 (issue #162): the selected pair was produced by the audit
+    // fallback gate, so its reports carry no model-written analysis. The
+    // operator sees why the report has no themes instead of reading the
+    // absence as a failure. Absent pair reads as false: no analysis exists
+    // to be a fallback one.
+    const analysisIsStaticFallback =
+      selectedPair.kind !== 'none' &&
+      (selectedPair.fr.generationMode === 'static-fallback' ||
+        selectedPair.en.generationMode === 'static-fallback');
     const approved = Boolean(
       verifiedPair && approvalMatchesReportPair(approval, verifiedPair.reports),
     );
@@ -376,6 +385,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       reportLanguages,
       reports,
       lifecycle,
+      analysisIsStaticFallback,
       approval: approved ? approval : null,
       manualFields: audit.manualFields,
       // Issue #90: the failed job's own record, so the audit pages can show

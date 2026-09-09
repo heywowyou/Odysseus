@@ -32,6 +32,7 @@ import { renderToc } from './sections/toc.js';
 import { renderStatistics } from './sections/statistics.js';
 import { renderExecutiveSummary } from './sections/executive-summary.js';
 import { renderReportIntro } from './sections/report-intro.js';
+import { renderFallbackAnalysisNote } from './sections/fallback-analysis-note.js';
 import { renderLegalExposure } from './sections/legal-exposure.js';
 import { renderConformanceSummary } from './sections/conformance-summary.js';
 import { renderThemes } from './sections/themes.js';
@@ -193,6 +194,10 @@ function renderBody(
       renderedPriorities,
       preparation,
     ),
+    // Plan 032 (issue #162): the audit fallback gate's static honest note,
+    // unnumbered chrome between the intro and the executive summary. ''
+    // for every model-generated analysis, so normal reports are unchanged.
+    renderFallbackAnalysisNote(strings, analysis),
     renderExecutiveSummary(
       strings,
       ord('section-01'),
