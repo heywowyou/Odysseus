@@ -18,12 +18,16 @@ import {
   applyRedirectReclassifications,
 } from './hotel-candidates.js';
 import { createHotelQualificationModel } from './schemas/hotel-qualification.schema.js';
-import { probeMongoAvailability } from './test-support.js';
+import { probeMongoAvailability, scopedMongoTestUri } from './test-support.js';
 
-const { available: mongoAvailable, connection } = await probeMongoAvailability();
+const { available: mongoAvailable, connection } = await probeMongoAvailability(
+  scopedMongoTestUri('hotel_qualifications'),
+);
 
 afterAll(async () => {
-  if (connection) await connection.close();
+  if (!connection) return;
+  await connection.dropDatabase();
+  await connection.close();
 });
 
 function siteFacts(overrides: Partial<HotelSiteFacts> = {}): HotelSiteFacts {

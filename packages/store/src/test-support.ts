@@ -17,6 +17,18 @@ export interface MongoProbeResult {
   connection?: Connection;
 }
 
+/** Gives an integration suite a private base database while preserving an
+ * optional URI query string. probeMongoAvailability adds its worker suffix
+ * afterwards, so two concurrently scheduled copies of the suite remain
+ * isolated as well. */
+export function scopedMongoTestUri(scope: string, uri: string = MONGODB_TEST_URI): string {
+  const parsed = new URL(uri);
+  const databaseName = parsed.pathname.slice(1) || 'odysseus_test';
+  const safeScope = scope.replace(/[^a-zA-Z0-9_-]/gu, '_');
+  parsed.pathname = `/${databaseName}_${safeScope}`;
+  return parsed.toString();
+}
+
 /** Read by scripts/vitest-global-setup.mjs, which prints one summary line
  *  for however many store integration test files skip in a run instead of
  *  each file warning separately. The literal path is duplicated there
