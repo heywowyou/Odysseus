@@ -91,4 +91,24 @@ describe('getOrBuildSireneStockIndex', () => {
     const index = await getOrBuildSireneStockIndex(fixturePath, cachePath);
     expect(index.version).toBeTruthy();
   });
+
+  it('omitting nafFilter reproduces the default outreach-allowlist behavior', async () => {
+    const cachePath = await tempCachePath();
+    const index = await getOrBuildSireneStockIndex(fixturePath, cachePath);
+    // 222222226 carries 47.19B, not in the shipped 47.91A/B allowlist.
+    expect(index.lookup('222222226')).toBeNull();
+  });
+
+  it('a custom nafFilter (division-47 prefix) admits a row the default allowlist rejects', async () => {
+    const cachePath = await tempCachePath();
+    const index = await getOrBuildSireneStockIndex(fixturePath, cachePath, (naf) =>
+      naf.startsWith('47.'),
+    );
+    const entry = index.lookup('222222226');
+    expect(entry).not.toBeNull();
+    expect(entry?.naf).toBe('47.19B');
+    // Still enforces effectifs and etat independently of the NAF filter.
+    expect(index.lookup('111111118')).toBeNull();
+    expect(index.lookup('444444442')).toBeNull();
+  });
 });

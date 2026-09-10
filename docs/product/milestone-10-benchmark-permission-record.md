@@ -129,9 +129,66 @@ Completed by the operator on 2026-09-10.
 
 ## 8. Post-approval record (filled before the first scan request)
 
-- Qualification run date, per-site outcomes, and the frozen ordered list with
-  pinned hosts: to be appended here.
-- Any reserve activation, with the reason and the replacement positions:
-  to be appended here.
+**Stage 1 qualification run, 2026-09-10.** Plain-HTTP qualification
+(`odysseus benchmark qualify run`) executed against all 43 candidates in
+section 4, at most two requests per site (homepage, then mentions-legales
+if linked), division-47 NAF extension per decision 2 option B. Storefront
+hosts resolved by following redirects at fetch time rather than pinned by
+hand in advance (operator decision, 2026-09-10): every resolved host was a
+plain `www.` prefix of the declared domain except `fr.aliexpress.com` and
+`fr.shopping.rakuten.com`, which already carried their own subdomain.
+
+Outcome: **2 of 43 qualified** (damart.fr, SIREN 333202083, NAF 47.91B;
+becquet.fr, SIREN 466500683, NAF 47.91B), far short of the 20-site floor.
+18 disqualified (mostly `no-siren-extracted`: the site was reached but its
+mentions-legales content is JS-rendered or not linked from the homepage in
+a way a plain-HTTP, no-Chromium fetch can read - an expected limit of
+stage 1's method, not a bug). 23 `fetch-failed` (the homepage fetch itself
+did not return usable content). Full per-domain detail is in the
+`benchmarkCandidates` collection (`cohortVersion:
+milestone-10-2026-09`), not duplicated here.
+
+**Diagnostic gap closed, 2026-09-10, no new site contact.** The runner
+could not originally tell "robots disallowed" apart from "a genuine
+network/timeout failure" within `fetch-failed` - both paths returned null
+with no recorded reason. `fetchMentionsLegalesData` now returns a
+`failureReason` (`'robots-disallowed' | 'homepage-unreachable' | null`),
+surfacing a distinction the code already computed internally but
+discarded; persisted on the candidate record as `fetchFailureReason`. This
+required no new request to any of the 23 already-failed sites - it only
+changes what a *future* run records. The already-recorded 23 fetch-failed
+outcomes from the 2026-09-10 run above predate this change and carry no
+reason; a re-run against them (operator decision, not yet taken) is
+needed to actually classify which were robots-declined versus genuinely
+unreachable.
+
+**Retry-and-classify pass, 2026-09-10.** With `--retry-failed`, re-fetched
+only the 23 already-failed candidates (one more request each, no new
+site). One (carrefour.fr) succeeded on retry and is now `disqualified`
+(`no-siren-extracted`) - a genuine transient failure. Final state:
+**2 of 43 qualified** (unchanged: damart.fr, becquet.fr), 19 disqualified,
+**22 fetch-failed, now classified**: 21 `homepage-unreachable`, 1
+`robots-disallowed`.
+
+This rules out robots.txt politeness as the shortfall's cause: only one
+of 22 unreachable sites actually declined to be crawled. The other 21,
+almost all large, well-resourced national retailers, could not be reached
+at the TCP/TLS/HTTP level at all from this fetch. The likely cause is
+anti-bot defense (WAF/CDN blocking on IP range, TLS fingerprint, or the
+identifying user agent) rather than the sites being genuinely down - a
+real, known limit of an honest, identified, no-Chromium fetch against
+large commercial sites' defended perimeters, not a defect in the runner.
+Stage 2's full-audit pipeline uses a real browser and may reach some of
+these where stage 1 could not; it may also encounter the same defenses.
+
+**Operator decision, 2026-09-10: wait for stage 2.** No reserve activated,
+no further site contacted. Stage 2's real-browser (Chromium) full-audit
+pipeline may reach some of the 21 `homepage-unreachable` sites a plain
+fetch could not; its actual reachability is the next real data point,
+read before deciding whether to try the section 7 reserves or accept a
+cohort below the 20-site floor. Stage 2 itself still waits for the
+2026-09-15 window and must never run concurrently with the rollout pilot,
+unchanged from decision 3.
+
 - Batch scan start date, dry-run output reference, and per-site completion
   checkpoints: to be appended here by the scan slice.

@@ -163,6 +163,15 @@ export function getSireneStockIndexCachePath(): string {
   return path.join(findWorkspaceRoot(), 'data', 'sirene', 'stock-index-cache.jsonl');
 }
 
+/** A separate cache file for milestone 10's benchmark cohort, built under a
+ *  benchmark-scoped NAF filter (division 47, not the outreach allowlist).
+ *  Never the same path as getSireneStockIndexCachePath(): the cache is
+ *  fingerprinted only against the stock file, not against which filter
+ *  built it, so sharing a path would silently mix the two row sets. */
+export function getBenchmarkSireneStockIndexCachePath(): string {
+  return path.join(findWorkspaceRoot(), 'data', 'sirene', 'benchmark-stock-index-cache.jsonl');
+}
+
 export function getProspectBatchSize(): number {
   ensureEnvLoaded();
   const raw = process.env['ODYSSEUS_PROSPECT_BATCH_SIZE'];

@@ -38,6 +38,7 @@ export {
   getAfnicFichierAPath,
   getSireneStockPath,
   getSireneStockIndexCachePath,
+  getBenchmarkSireneStockIndexCachePath,
   getProspectBatchSize,
   getAtoutFranceExportPath,
   // The preview's public base URL only. The bucket name, endpoint and
@@ -231,6 +232,11 @@ export { createMongoHotelContactStore } from './prospecting/hotel-contacts/mongo
 export type { MongoHotelContactStoreOptions } from './prospecting/hotel-contacts/mongo-hotel-contact-store.js';
 
 export { checkHotelSite } from './prospecting/check-hotel-site.js';
+export { toLanes } from './prospecting/to-lanes.js';
+export { fetchMentionsLegalesData } from './prospecting/mentions-legales-fetch.js';
+export type { CandidateFetchResult } from './prospecting/mentions-legales-fetch.js';
+export { getOrBuildSireneStockIndex } from './prospecting/sirene-stock-index.js';
+export type { SireneStockIndexHandle } from './prospecting/sirene-stock-index.js';
 export type { CheckHotelSiteOptions } from './prospecting/check-hotel-site.js';
 export type { HotelSireneJoiner } from './prospecting/hotel-identity/hotel-sirene-join.js';
 

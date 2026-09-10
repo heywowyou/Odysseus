@@ -107,6 +107,25 @@ export type {
 } from './schemas/suppression.schema.js';
 export { addSuppressionEntry, isSuppressed, findSuppressedDomains } from './suppression.js';
 export type { AddSuppressionEntryInput } from './suppression.js';
+export type {
+  BenchmarkCandidateDocument,
+  BenchmarkCandidateDocumentFields,
+  BenchmarkCandidateStatus,
+  BenchmarkFetchFailureReason,
+} from './schemas/benchmark-candidate.schema.js';
+export {
+  seedBenchmarkCandidates,
+  listBenchmarkCandidates,
+  listPendingBenchmarkCandidates,
+  listFetchFailedBenchmarkCandidates,
+  recordBenchmarkCandidateOutcome,
+  getBenchmarkQualificationSummary,
+} from './benchmark-candidates.js';
+export type {
+  BenchmarkCandidateSeed,
+  BenchmarkCandidateOutcome,
+  BenchmarkQualificationSummary,
+} from './benchmark-candidates.js';
 export type { ProspectIngestionCheckpointFields } from './schemas/prospect-ingestion-checkpoint.schema.js';
 export { getCheckpoint, upsertCheckpoint } from './prospect-ingestion-checkpoint.js';
 export type { CheckpointPatch } from './prospect-ingestion-checkpoint.js';

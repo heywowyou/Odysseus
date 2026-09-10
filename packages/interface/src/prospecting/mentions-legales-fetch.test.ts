@@ -80,10 +80,34 @@ describe('fetchMentionsLegalesData', () => {
 
     expect(result).toEqual({
       homepageText: null,
+      resolvedHomepageUrl: null,
       mentionsLegalesUrl: null,
       mentionsLegalesText: null,
+      failureReason: 'robots-disallowed',
     });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports homepage-unreachable, distinct from robots-disallowed, when the fetch itself fails', async () => {
+    mockFetch((url) => {
+      if (url.endsWith('/robots.txt')) return { ok: false };
+      if (url === 'https://example.fr/') return { ok: false };
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+
+    const result = await fetchMentionsLegalesData('https://example.fr/', new OriginLock(), {
+      crawlDelayMs: 0,
+      userAgent: 'OdysseusBot/1.0',
+      timeoutMs: 5000,
+    });
+
+    expect(result).toEqual({
+      homepageText: null,
+      resolvedHomepageUrl: null,
+      mentionsLegalesUrl: null,
+      mentionsLegalesText: null,
+      failureReason: 'homepage-unreachable',
+    });
   });
 
   it('skips the mentions-legales fetch when its path is individually disallowed', async () => {

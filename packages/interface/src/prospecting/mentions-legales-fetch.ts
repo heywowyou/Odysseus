@@ -22,10 +22,25 @@ import { findMentionsLegalesUrl, fetchRobotsRules, isAllowedByRobots } from '@od
 import { fetchPageText } from './fetch-candidate-page.js';
 import { sleep } from './sleep.js';
 
+/** Why homepageText ended up null. Distinguishes a site that declined to
+ *  be crawled (a legitimate, polite outcome) from one this fetch genuinely
+ *  could not reach - milestone 9a never needed the difference (a prospect
+ *  either has a readable SIREN or does not), but milestone 10's benchmark
+ *  cohort measures yield against a small, high-profile list where the two
+ *  read very differently. Null whenever homepageText is non-null. */
+export type FetchFailureReason = 'robots-disallowed' | 'homepage-unreachable' | null;
+
 export interface CandidateFetchResult {
   homepageText: string | null;
+  /** The homepage's own resolved URL after any redirect chain, e.g. a
+   *  bare apex landing on a locale subdomain. Null only when the homepage
+   *  fetch itself failed. Milestone 10's benchmark cohort uses this to
+   *  pin a storefront host at qualification time instead of hand-picking
+   *  one in advance. */
+  resolvedHomepageUrl: string | null;
   mentionsLegalesUrl: string | null;
   mentionsLegalesText: string | null;
+  failureReason: FetchFailureReason;
 }
 
 export async function fetchMentionsLegalesData(
@@ -41,13 +56,25 @@ export async function fetchMentionsLegalesData(
     const effectiveDelayMs = Math.max(options.crawlDelayMs, robotsRules.crawlDelayMs ?? 0);
 
     if (!isAllowedByRobots(robotsRules, new URL(siteUrl).pathname)) {
-      return { homepageText: null, mentionsLegalesUrl: null, mentionsLegalesText: null };
+      return {
+        homepageText: null,
+        resolvedHomepageUrl: null,
+        mentionsLegalesUrl: null,
+        mentionsLegalesText: null,
+        failureReason: 'robots-disallowed',
+      };
     }
 
     await sleep(effectiveDelayMs);
     const homepage = await fetchPageText(siteUrl, options.timeoutMs, options.userAgent);
     if (!homepage) {
-      return { homepageText: null, mentionsLegalesUrl: null, mentionsLegalesText: null };
+      return {
+        homepageText: null,
+        resolvedHomepageUrl: null,
+        mentionsLegalesUrl: null,
+        mentionsLegalesText: null,
+        failureReason: 'homepage-unreachable',
+      };
     }
 
     const mentionsLegalesUrl = findMentionsLegalesUrl(homepage.anchorUrls);
@@ -57,8 +84,10 @@ export async function fetchMentionsLegalesData(
     ) {
       return {
         homepageText: homepage.bodyText,
+        resolvedHomepageUrl: homepage.url,
         mentionsLegalesUrl: null,
         mentionsLegalesText: null,
+        failureReason: null,
       };
     }
 
@@ -74,8 +103,10 @@ export async function fetchMentionsLegalesData(
 
     return {
       homepageText: homepage.bodyText,
+      resolvedHomepageUrl: homepage.url,
       mentionsLegalesUrl,
       mentionsLegalesText: mentionsLegales?.bodyText ?? null,
+      failureReason: null,
     };
   } finally {
     release();

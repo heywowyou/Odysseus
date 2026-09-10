@@ -115,8 +115,8 @@ async function buildCache(
   stockFilePath: string,
   cacheFilePath: string,
   stockFingerprint: string,
+  nafFilter: (naf: string) => boolean,
 ): Promise<void> {
-  const enabledNafCodes = getEnabledNafCodes();
   const output = createWriteStream(cacheFilePath, { encoding: 'utf-8' });
   output.write(`${JSON.stringify({ fingerprint: stockFingerprint })}\n`);
 
@@ -133,7 +133,7 @@ async function buildCache(
         const etat = record['etatAdministratifUniteLegale'];
         if (!siren || !naf || !etat) continue;
         if (etat !== 'A') continue;
-        if (!enabledNafCodes.has(naf)) continue;
+        if (!nafFilter(naf)) continue;
         if (!meetsEffectifThreshold(effectifCode)) continue;
 
         const code = effectifCode ?? 'NN';
@@ -157,15 +157,24 @@ async function buildCache(
   });
 }
 
+/**
+ * `nafFilter` defaults to the shipped, operator-editable outreach allowlist.
+ * Milestone 10's benchmark cohort is the one caller that passes its own
+ * filter (a division-47 prefix test) instead: the cache this produces must
+ * never share a `cacheFilePath` with a call using a different filter, since
+ * the cache is fingerprinted only against the stock file, not against which
+ * filter built it.
+ */
 export async function getOrBuildSireneStockIndex(
   stockFilePath: string,
   cacheFilePath: string,
+  nafFilter: (naf: string) => boolean = (naf) => getEnabledNafCodes().has(naf),
 ): Promise<SireneStockIndexHandle> {
   const stockFingerprint = fingerprint(stockFilePath);
   const cachedFingerprint = await readCacheFingerprint(cacheFilePath);
 
   if (cachedFingerprint !== stockFingerprint) {
-    await buildCache(stockFilePath, cacheFilePath, stockFingerprint);
+    await buildCache(stockFilePath, cacheFilePath, stockFingerprint, nafFilter);
   }
 
   const index = await loadCacheIntoMap(cacheFilePath);
