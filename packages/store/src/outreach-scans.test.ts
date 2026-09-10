@@ -90,7 +90,7 @@ async function seedCohort(input: {
         scoreId: randomUUID(),
         rank: 1,
         state: input.state ?? 'selected',
-        reason: 'top-half-ability',
+        reason: 'top-brokenness-decile',
       },
     ],
     notSelectedByReason: {},
@@ -144,6 +144,8 @@ async function seedOutreachAudit(input: {
     tool: {
       odysseusVersion: '0.1.0',
       findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
+      axeCoreVersion: '4.10.2',
+      lighthouseVersion: '12.2.1',
       playwrightVersion: '1.49.0',
       chromiumVersion: '130.0.0.0',
     },
