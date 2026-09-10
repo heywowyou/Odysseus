@@ -216,7 +216,7 @@ export const REMEDIATION_FR: Readonly<Record<string, string>> = {
   'layout-shifts':
     'Donnez des dimensions explicites aux images et réservez la place des éléments injectés après coup.',
   'lcen-mentions-legales-missing':
-    "Publiez sur le site les informations d'identification de l'entreprise, dont le numéro SIREN ou RCS. Le critère exact et sa source figurent dans la section consacrée à l'exposition légale.",
+    "Publiez sur le site les informations d'identification de l'entreprise, dont le numéro SIREN ou RCS. Le critère exact et sa source figurent dans la section consacrée à l'exposition légale. Le contrôle automatique porte sur la page atteinte depuis le lien Mentions légales ; des informations légales peuvent exister ailleurs (page non visitée, document séparé, prestataire externe).",
   'inp-breakdown-insight':
     "Réduisez le délai entre le clic et la réponse visible de la page : allégez le code exécuté au moment de l'interaction et laissez le navigateur redessiner avant les traitements longs.",
   'lcp-breakdown-insight':

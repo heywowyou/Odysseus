@@ -8,12 +8,18 @@
  */
 
 import { isValidSiren } from '@odysseus/core';
+import type { MentionsLegalesCheckedPages } from '@odysseus/core';
 
 export interface MentionsLegalesExtraction {
   pageUrl: string;
   siren?: string;
   rcs?: string;
   tva?: string;
+  /** Plan 036: attached by scan-page.ts's call site, not by this pure
+   *  text-extraction function, since the searched-URL list is a crawl-level
+   *  fact this function never receives. See
+   *  normalize-custom.ts's MentionsLegalesCheckedPages doc comment. */
+  checkedPages?: MentionsLegalesCheckedPages;
 }
 
 const SIREN_CANDIDATE_PATTERN = /\b(\d{3}\s?\d{3}\s?\d{3})\b/g;

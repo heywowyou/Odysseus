@@ -313,6 +313,29 @@ const EXTENDED_PASS_RULE_IDS: readonly string[] = [
   VIDEO_MISSING_CAPTIONS_RULE_ID,
 ];
 
+/** Plan 036, binding decision 5 (both placements): the methodology-section
+ *  half of the LCEN coverage disclosure, next to legal-exposure.ts's own
+ *  observed-and-limit block and the finding's own description carrying the
+ *  same boundary. Reads the checked page from the finding's own evidence
+ *  payload (normalize-custom.ts's MentionsLegalesCheckedPages), never
+ *  hand-written per report, so the sentence can never drift from what the
+ *  finding itself recorded. Falls back to the finding's pageUrl for a
+ *  finding stored before this evidence upgrade landed (rawEvidence.
+ *  checkedPages absent, not null). Renders only when the finding actually
+ *  fired; a compliant site has nothing to disclose here. */
+function renderMentionsLegalesCoverageNote(
+  strings: ReportStrings,
+  findings: readonly (Pick<Finding, 'ruleId'> &
+    Partial<Pick<Finding, 'rawEvidence' | 'pageUrls'>>)[],
+): string {
+  const finding = findings.find((f) => f.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID);
+  if (!finding) return '';
+  const checkedPages = finding.rawEvidence?.checkedPages as { resolvedUrl?: unknown } | null;
+  const resolvedUrl = checkedPages?.resolvedUrl;
+  const checkedUrl = typeof resolvedUrl === 'string' ? resolvedUrl : (finding.pageUrls?.[0] ?? '');
+  return fillTemplate(strings.methodology.mentionsLegalesCoverageTemplate, { url: checkedUrl });
+}
+
 /** item 1.7 (La Corniche pass): a real report had a video-captions
  *  finding, which silently suppressed the whole note under the old
  *  all-or-nothing logic - so nothing said the other three checks
@@ -438,7 +461,7 @@ export function renderMethodology(
   language: ReportLanguage,
   obligationAssessment?: ObligationAssessment,
   findings: readonly (Pick<Finding, 'findingId' | 'ruleId'> &
-    Partial<Pick<Finding, 'category'>>)[] = [],
+    Partial<Pick<Finding, 'category' | 'pageUrls' | 'rawEvidence'>>)[] = [],
   resolvedSirenSourceUrl?: string,
 ): string {
   const m = strings.methodology;
@@ -521,6 +544,7 @@ export function renderMethodology(
     resolvedSirenSourceUrl,
   );
   const extendedPassNote = renderExtendedPassNote(strings, language, findings);
+  const mentionsLegalesCoverageNote = renderMentionsLegalesCoverageNote(strings, findings);
   const lighthouseFailureNote = summarizeLighthouseFailures(strings, manifest, language);
   const privacySecurityNote = privacySecurityCoverageNote(manifest, findings, strings);
 
@@ -566,6 +590,7 @@ export function renderMethodology(
     ${crawlCapNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(crawlCapNote)}</p>` : ''}
     ${socialExclusionNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(socialExclusionNote)}</p>` : ''}
     ${lighthouseFailureNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(lighthouseFailureNote)}</p>` : ''}
+    ${mentionsLegalesCoverageNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(mentionsLegalesCoverageNote)}</p>` : ''}
     ${privacySecurityNote ? `<p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(privacySecurityNote)}</p>` : ''}
     <div class="hr"></div>
     <p style="font-size:13.5px;opacity:0.85;max-width:68ch">${escapeHtml(m.automatedCoverageCaveat)}</p>

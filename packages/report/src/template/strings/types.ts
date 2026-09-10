@@ -1235,6 +1235,14 @@ export interface ReportStrings {
      *  missing finding is suppressed and this sentence states where it
      *  was found instead. Template: {url}. */
     sirenSourceResolvedTemplate: string;
+    /** Plan 036: the methodology-section half of the LCEN coverage
+     *  disclosure (binding decision 5, both placements), rendered only
+     *  when the lcen-mentions-legales-missing finding fired. States what
+     *  was checked, that legal information may exist elsewhere, and the
+     *  lawyer recommendation, per the design's approved coverage wording.
+     *  Never states breach, a deadline, or a sanction amount. Template:
+     *  {url}. */
+    mentionsLegalesCoverageTemplate: string;
     /** P0.1 (2026-08-21 La Corniche feedback pass): renders when Lighthouse
      *  failed on at least one page, giving the real per-reason failure
      *  counts instead of a dead-end pointer with no follow-through. */

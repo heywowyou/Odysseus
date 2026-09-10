@@ -527,6 +527,49 @@ describe('renderMethodology siren provenance note (manual-SIREN milestone)', () 
   });
 });
 
+describe('renderMethodology mentions-legales coverage note (plan 036)', () => {
+  it('renders nothing when the LCEN finding is absent', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, []);
+    expect(html).not.toContain('vérification automatique a porté sur la page');
+  });
+
+  it('names the checked page from the finding evidence payload', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const lcenFinding = {
+      findingId: 'f023',
+      ruleId: 'lcen-mentions-legales-missing',
+      pageUrls: ['https://example.com/mentions-legales'],
+      rawEvidence: {
+        siren: null,
+        rcs: null,
+        tva: null,
+        checkedPages: {
+          resolvedUrl: 'https://example.com/mentions-legales',
+          homepageFallback: false,
+          searchedUrls: ['https://example.com/', 'https://example.com/mentions-legales'],
+        },
+      },
+    };
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [lcenFinding]);
+    expect(html).toContain('vérification automatique a porté sur la page');
+    expect(html).toContain('https://example.com/mentions-legales');
+  });
+
+  it('falls back to the finding pageUrls when evidence has no checkedPages (finding stored before plan 036)', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const lcenFinding = {
+      findingId: 'f023',
+      ruleId: 'lcen-mentions-legales-missing',
+      pageUrls: ['https://example.com/legacy-mentions-legales'],
+      rawEvidence: { siren: null, rcs: null, tva: null },
+    };
+    const html = renderMethodology(getStrings('en'), 11, manifest, 'en', undefined, [lcenFinding]);
+    expect(html).toContain('https://example.com/legacy-mentions-legales');
+    expect(html).toContain('recognised identifier');
+  });
+});
+
 /** Milestone: the report must never disclose whether a given input
  *  (transactional-flow status, in particular) was detected automatically
  *  or confirmed manually by the auditor. The override still resolves

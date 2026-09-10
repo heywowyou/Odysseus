@@ -69,6 +69,7 @@ beforeEach(() => {
     robotsDisallowMatches: [],
     aiCrawlerBlocks: [],
     mentionsLegalesPageUrl: `${startUrl}legal`,
+    mentionsLegalesSearchedUrls: [startUrl, `${startUrl}a`, `${startUrl}legal`],
     linkDiscoveredUrls: [`${startUrl}a`, `${startUrl}legal`],
     sitemap: { available: true },
   } as never);
@@ -132,6 +133,52 @@ describe('scanSite characterization', () => {
       { type: 'scan-start', totalPages: 4 },
     ]);
     expect(events.filter((event) => event.type === 'scan-page')).toHaveLength(4);
+  });
+
+  it('threads the mentions-legales checked-page list to the resolved page, not the homepage fallback (plan 036)', async () => {
+    await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 4,
+    });
+    const legalOptions = vi
+      .mocked(scanPage)
+      .mock.calls.find((call) => call[2] === `${startUrl}legal`)?.[3];
+    expect(legalOptions).toMatchObject({
+      mentionsLegalesUrl: `${startUrl}legal`,
+      mentionsLegalesSearchedUrls: [startUrl, `${startUrl}a`, `${startUrl}legal`],
+    });
+    expect(legalOptions?.mentionsLegalesHomepageFallback).toBeFalsy();
+  });
+
+  it('marks the homepage fallback when no URL matched the mentions-legales heuristic (plan 036)', async () => {
+    vi.mocked(crawlSite).mockResolvedValue({
+      startUrl,
+      pages: [visited(startUrl), visited(`${startUrl}a`)],
+      effectiveDelayMs: 100,
+      visitedCount: 2,
+      maxPages: 10,
+      maxDepth: 2,
+      robotsTxtFound: true,
+      robotsDisallowMatches: [],
+      aiCrawlerBlocks: [],
+      mentionsLegalesSearchedUrls: [startUrl, `${startUrl}a`],
+      linkDiscoveredUrls: [`${startUrl}a`],
+    } as never);
+
+    await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 4,
+    });
+    const homeOptions = vi.mocked(scanPage).mock.calls.find((call) => call[2] === startUrl)?.[3];
+    expect(homeOptions).toMatchObject({
+      mentionsLegalesUrl: startUrl,
+      mentionsLegalesSearchedUrls: [startUrl, `${startUrl}a`],
+      mentionsLegalesHomepageFallback: true,
+    });
   });
 
   it('fetches each site-level check once', async () => {

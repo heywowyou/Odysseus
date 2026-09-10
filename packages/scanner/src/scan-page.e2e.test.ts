@@ -59,4 +59,31 @@ describe('scanPage against fixtures/spa-demo', () => {
       expect(typeof categories[key]?.score).toBe('number');
     }
   }, 120_000);
+
+  // Plan 036: firing case paired with the existing silent control
+  // (mentions-legales.html carries a valid SIREN/RCS/TVA and is exercised
+  // through write-audit.e2e.test.ts's full scanSite run). This page is
+  // reached directly, not through a crawl, so findMentionsLegalesUrl's
+  // first-match resolution over the real site is never touched.
+  it('extracts nothing and attaches the checked-page list when the mentions-legales page carries no identifier', async () => {
+    scratchScreenshotDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-scan-page-'));
+    const legalUrl = `${TEST_URL}/mentions-legales-sans-identifiant.html`;
+    const result = await scanPage(browser, debugPort, legalUrl, {
+      delayMs: 0,
+      screenshotDir: scratchScreenshotDir,
+      mentionsLegalesUrl: legalUrl,
+      mentionsLegalesSearchedUrls: [TEST_URL, legalUrl],
+      skipLighthouse: true,
+    });
+
+    expect(result.mentionsLegalesError).toBeUndefined();
+    expect(result.mentionsLegales?.siren).toBeUndefined();
+    expect(result.mentionsLegales?.rcs).toBeUndefined();
+    expect(result.mentionsLegales?.tva).toBeUndefined();
+    expect(result.mentionsLegales?.checkedPages).toEqual({
+      resolvedUrl: legalUrl,
+      homepageFallback: false,
+      searchedUrls: [TEST_URL, legalUrl],
+    });
+  }, 60_000);
 });

@@ -203,6 +203,12 @@ export interface CrawlResult {
    *  navigation. scanSite forwards this into scanPage so only that one
    *  page runs the SIREN/RCS/TVA text extraction. */
   mentionsLegalesPageUrl?: string;
+  /** Plan 036: every visited, non-error-status URL `findMentionsLegalesUrl`
+   *  searched to produce the winner above (or to find nothing), so the
+   *  finding's evidence can name what was actually checked, not just the
+   *  one resolved page. Optional only for older hand-built `CrawlResult`
+   *  fixtures in tests; the real crawl() always sets it. */
+  mentionsLegalesSearchedUrls?: string[];
   /** Sitemap: directive values from the already-fetched robots.txt (see
    *  RobotsRules.sitemapUrls), passed through so checks/sitemap.ts never
    *  fetches robots.txt a second time. */
@@ -908,6 +914,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     robotsTxtFound: robotsRules.found,
     effectiveDelayMs,
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
+    mentionsLegalesSearchedUrls: resolvedUrls,
     robotsSitemapUrls: robotsRules.sitemapUrls,
     robotsDisallowMatches,
     aiCrawlerBlocks,

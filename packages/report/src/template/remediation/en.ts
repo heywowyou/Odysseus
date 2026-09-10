@@ -194,7 +194,7 @@ export const REMEDIATION_EN: Readonly<Record<string, string>> = {
   'layout-shifts':
     'Give images explicit dimensions and reserve space for elements injected after the fact.',
   'lcen-mentions-legales-missing':
-    "Publish the company's identifying information on the site, including its SIREN or RCS number. The exact criterion and its source are set out in the legal exposure section.",
+    "Publish the company's identifying information on the site, including its SIREN or RCS number. The exact criterion and its source are set out in the legal exposure section. The automated check covers the page reached from the Mentions légales link; legal information may exist elsewhere (an unvisited page, a separate document, or an external provider).",
   'inp-breakdown-insight':
     'Shorten the delay between a click and the page responding: lighten the code run at the moment of the interaction, and let the browser repaint before any long processing.',
   'lcp-breakdown-insight':

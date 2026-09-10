@@ -102,6 +102,34 @@ describe('scanPage characterization', () => {
     expect(runLighthouseIsolated).not.toHaveBeenCalled();
   });
 
+  it('attaches the checked-page list to the mentions-legales extraction result (plan 036)', async () => {
+    const legal = await scanPage(browser, 9222, 'https://example.com/legal', {
+      screenshotDir: '/tmp/pages',
+      homepageUrl: 'https://example.com/',
+      mentionsLegalesUrl: 'https://example.com/legal',
+      mentionsLegalesSearchedUrls: ['https://example.com/', 'https://example.com/legal'],
+      mentionsLegalesHomepageFallback: false,
+      skipLighthouse: true,
+    });
+    expect(legal.mentionsLegales?.checkedPages).toEqual({
+      resolvedUrl: 'https://example.com/legal',
+      homepageFallback: false,
+      searchedUrls: ['https://example.com/', 'https://example.com/legal'],
+    });
+
+    const fallback = await scanPage(browser, 9222, 'https://example.com/', {
+      screenshotDir: '/tmp/pages',
+      homepageUrl: 'https://example.com/',
+      mentionsLegalesUrl: 'https://example.com/',
+      skipLighthouse: true,
+    });
+    expect(fallback.mentionsLegales?.checkedPages).toEqual({
+      resolvedUrl: 'https://example.com/',
+      homepageFallback: false,
+      searchedUrls: [],
+    });
+  });
+
   it('applies the pre-Lighthouse delay only when Lighthouse runs', async () => {
     vi.useFakeTimers();
     const pending = scanPage(browser, 9222, 'https://example.com/', {

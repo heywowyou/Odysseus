@@ -76,6 +76,18 @@ export interface ScanPageOptions {
    *  SIREN/RCS/TVA text extraction; every page runs transactional-flow
    *  detection, since checkout/cart UI can appear anywhere. */
   mentionsLegalesUrl?: string;
+  /** Plan 036: the full evidence trail for how mentionsLegalesUrl above was
+   *  resolved (crawl.ts's own mentionsLegalesSearchedUrls), attached to the
+   *  extraction result only for the one page that matches
+   *  mentionsLegalesUrl. Omitted (rather than an empty array) when the
+   *  caller has nothing to report, so the evidence payload can tell "not
+   *  supplied" apart from "searched, found nothing" if that distinction
+   *  ever matters. */
+  mentionsLegalesSearchedUrls?: string[];
+  /** Plan 036: true only when scan-site.ts's own homepage fallback picked
+   *  this URL because no page matched the mentions-legales heuristic, so
+   *  the evidence never implies a real URL match where there was none. */
+  mentionsLegalesHomepageFallback?: boolean;
   /** Shared across every page of one scanSite() run - see
    *  transactional-flow.ts's RedirectHostCache doc comment for why a
    *  per-page cache alone isn't enough. */
@@ -352,6 +364,11 @@ export async function runRenderedAnalysis(
           try {
             const bodyText = await page.evaluate(() => document.body.innerText);
             mentionsLegalesResult = extractMentionsLegales(url, bodyText);
+            mentionsLegalesResult.checkedPages = {
+              resolvedUrl: options.mentionsLegalesUrl,
+              homepageFallback: options.mentionsLegalesHomepageFallback ?? false,
+              searchedUrls: options.mentionsLegalesSearchedUrls ?? [],
+            };
             checkOutcomes['mentions-legales'] = 'completed';
           } catch (error) {
             mentionsLegalesError = toErrorMessage(error);

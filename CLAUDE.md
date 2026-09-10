@@ -454,6 +454,13 @@ means numbered entry 24, not a literal Markdown heading anchor.
     the container over running jobs unless explicitly forced.
     → trade-offs.md#76
 
+78. The LCEN publisher-identification finding's evidence carries the
+    checked-page list and the full article 1-1 field-presence table; a
+    detector-status row moves from absent-not-proven to detectably present
+    only when a reviewed deterministic extractor for that exact field
+    lands, never by rewording, severity, or copy. Full audits only.
+    → trade-offs.md#78
+
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
 module, Mongoose 9, Zod, Commander, Vitest, pino, `openai`.

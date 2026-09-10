@@ -35,4 +35,43 @@ describe('extractCustomCandidates (LCEN mentions-legales)', () => {
     expect(candidates[0]?.severity).toBe('serious');
     expect(candidates[0]?.element).toBeNull();
   });
+
+  it('names the checked page in the description (plan 036)', () => {
+    const candidates = extractCustomCandidates({ pageUrl: 'https://example.com/mentions-legales' });
+    expect(candidates[0]?.description).toContain('https://example.com/mentions-legales');
+  });
+
+  it('carries the full article 1-1 field-presence table, all null with zero widening (plan 036)', () => {
+    const candidates = extractCustomCandidates({ pageUrl: 'https://example.com/mentions-legales' });
+    const evidence = candidates[0]?.rawEvidenceForPage as {
+      siren: string | null;
+      rcs: string | null;
+      tva: string | null;
+      articleOneOneFields: { field: string; value: string | null }[];
+      checkedPages: unknown;
+    };
+    expect(evidence.siren).toBeNull();
+    expect(evidence.rcs).toBeNull();
+    expect(evidence.tva).toBeNull();
+    expect(evidence.articleOneOneFields).toHaveLength(17);
+    expect(evidence.articleOneOneFields.every((entry) => entry.value === null)).toBe(true);
+    expect(evidence.checkedPages).toBeNull();
+  });
+
+  it('carries the checked-page list in evidence when supplied (plan 036)', () => {
+    const candidates = extractCustomCandidates({
+      pageUrl: 'https://example.com/mentions-legales',
+      checkedPages: {
+        resolvedUrl: 'https://example.com/mentions-legales',
+        homepageFallback: false,
+        searchedUrls: ['https://example.com/', 'https://example.com/mentions-legales'],
+      },
+    });
+    const evidence = candidates[0]?.rawEvidenceForPage as { checkedPages: unknown };
+    expect(evidence.checkedPages).toEqual({
+      resolvedUrl: 'https://example.com/mentions-legales',
+      homepageFallback: false,
+      searchedUrls: ['https://example.com/', 'https://example.com/mentions-legales'],
+    });
+  });
 });

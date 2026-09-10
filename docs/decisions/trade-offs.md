@@ -3981,3 +3981,30 @@ Consequences, binding on every agent:
 - Trade-off 61's mechanics and its 2026-09-09 hardening stay merged and
   accurate for if this decision is ever reversed. What is retired is the
   suggestion, not the code.
+
+### 78. LCEN publisher-identification evidence: checked pages live in the finding, not in prose (plan 036, operator decision, 2026-09-10)
+
+The `lcen-mentions-legales-missing` finding's `rawEvidenceForPage` now
+carries the full article 1-1 field-presence table (one entry per row of
+`docs/research/lcen-identification-finding-design.md`'s detector-status
+table, extracted value or null) plus the checked-page list: the resolved
+mentions-legales URL, whether scan-site.ts's homepage fallback picked it,
+and every URL `findMentionsLegalesUrl` searched. The report's methodology
+section and the finding's own description both state this coverage,
+reading it from the payload rather than restating it by hand, per the
+design's approved wording.
+
+Durable rules, binding on every agent:
+
+- Checked pages are evidence, not prose. A future report sentence about
+  what this check covered must read the checked-page list from
+  `rawEvidenceForPage`/`Finding.rawEvidence`, never hand-write a page
+  reference that can drift from what the scan actually did.
+- A detector-status row moves from `absent-not-proven` to `detectably
+  present` only when a reviewed deterministic extractor for that exact
+  field lands in the tree. Rewording, severity, or copy changes never move
+  a row; SIREN and RCS/RNE registration number stay the only populated
+  rows until a widening decision adds its own extractor.
+- This finding's client-facing disclosure renders only in full audits
+  (prospecting and hotel prescans emit no findings at all, trade-off 35);
+  do not surface it in a prospecting or preview surface.

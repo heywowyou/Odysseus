@@ -917,6 +917,12 @@ export const fr: ReportStrings = {
       'Le plafond configuré pour cet audit est de {maxPages} pages, pas la totalité du site : le site peut compter des pages supplémentaires non analysées.',
     sirenSourceResolvedTemplate:
       'Le numéro SIREN a été confirmé comme affiché sur cette page du site : {url}.',
+    // Plan 036, binding decision 5: methodology-section half of the LCEN
+    // coverage disclosure, operator-approved wording with the checked page
+    // (read from the finding's own evidence payload) appended in
+    // parentheses. Never states breach, a deadline, or a sanction amount.
+    mentionsLegalesCoverageTemplate:
+      "La vérification automatique a porté sur la page atteinte depuis le lien Mentions légales ({url}). Aucun identifiant reconnu (numéro SIREN, mention RCS ou numéro de TVA) n'y a été trouvé. Des informations légales peuvent exister ailleurs, par exemple sur une page non visitée par le contrôle, dans un document séparé ou auprès d'un prestataire externe. Cette constatation décrit ce que le contrôle a observé et ne constitue pas une conclusion sur vos obligations. Nous vous recommandons de confirmer votre situation auprès d'un conseil juridique.",
     // P0.1 (2026-08-21 La Corniche feedback pass): the generic "n'a pas
     // abouti... voir Méthodologie" pointer in the performance section used
     // to lead here and find nothing further. This states the real,

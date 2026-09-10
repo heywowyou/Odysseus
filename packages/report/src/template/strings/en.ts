@@ -798,6 +798,12 @@ export const en: ReportStrings = {
       '{maxPages} pages is a configured cap for this audit, not the whole site: the site may have additional pages that were not analyzed.',
     sirenSourceResolvedTemplate:
       'The SIREN number was confirmed as displayed on this page of the site: {url}.',
+    // Plan 036, binding decision 5: methodology-section half of the LCEN
+    // coverage disclosure, operator-approved wording with the checked page
+    // (read from the finding's own evidence payload) appended in
+    // parentheses. Never states breach, a deadline, or a sanction amount.
+    mentionsLegalesCoverageTemplate:
+      'The automated check covered the page reached from the Mentions légales link ({url}). No recognised identifier (SIREN, RCS mention, or VAT number) was found on that page. Legal information may exist elsewhere, for example on a page the scan did not visit, in a separate document, or with an external provider. This statement describes what the check observed and is not a conclusion about your obligations. We recommend confirming your situation with a qualified legal adviser.',
     lighthouseFailureIntroSentence:
       'Performance measurement (Lighthouse) did not complete on this site for this audit. Failure detail:',
     lighthouseFailureReasonTemplate: '{count}/{total} pages: {reason}',

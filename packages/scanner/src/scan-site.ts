@@ -292,6 +292,8 @@ async function runScanLane(
   timeoutMs: number | undefined,
   userAgent: string | undefined,
   mentionsLegalesUrl: string | undefined,
+  mentionsLegalesSearchedUrls: string[] | undefined,
+  mentionsLegalesHomepageFallback: boolean,
   redirectHostCache: RedirectHostCache,
   homepageUrl: string | undefined,
   sitemapCheck:
@@ -321,6 +323,8 @@ async function runScanLane(
         ...(timeoutMs !== undefined ? { timeoutMs } : {}),
         ...(userAgent !== undefined ? { userAgent } : {}),
         ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
+        ...(mentionsLegalesSearchedUrls !== undefined ? { mentionsLegalesSearchedUrls } : {}),
+        ...(mentionsLegalesHomepageFallback ? { mentionsLegalesHomepageFallback } : {}),
         ...(homepageUrl !== undefined ? { homepageUrl } : {}),
         ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
         ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
@@ -952,6 +956,10 @@ export async function scanSite(
   const mentionsLegalesUrlForScan =
     crawl.mentionsLegalesPageUrl ??
     (pagesToScan.some((page) => page.url === crawl.startUrl) ? crawl.startUrl : undefined);
+  // Plan 036: true only when the fallback above actually fired (no URL
+  // matched the heuristic), so the evidence never implies a real match.
+  const mentionsLegalesHomepageFallback =
+    crawl.mentionsLegalesPageUrl === undefined && mentionsLegalesUrlForScan !== undefined;
 
   // Sitemap.xml is a site-level concept, not a per-page one, so its
   // check runs once here rather than inside scanPage, and its result is
@@ -1116,6 +1124,8 @@ export async function scanSite(
           options.timeoutMs,
           options.userAgent,
           mentionsLegalesUrlForScan,
+          crawl.mentionsLegalesSearchedUrls,
+          mentionsLegalesHomepageFallback,
           redirectHostCache,
           homepageUrlForScan,
           sitemapCheck,

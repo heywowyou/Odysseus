@@ -1,0 +1,25 @@
+<!doctype html>
+<!--
+  Fixture: mentions-legales-shaped page carrying no SIREN, RCS, or TVA
+  anywhere (plan 036's firing case, paired with mentions-legales.html's
+  existing silent control). Deliberately not linked from index.html or
+  about.html and not listed in public/sitemap.xml, so the crawler never
+  discovers it: findMentionsLegalesUrl's first-match resolution over the
+  real crawl must keep picking mentions-legales.html, exactly as
+  write-audit.e2e.test.ts already asserts. This page is reached only by
+  scan-page.e2e.test.ts navigating to it directly and passing its URL as
+  scanPage's own mentionsLegalesUrl option, the same "point the option at
+  a specific page" idiom scanSite uses in production.
+-->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Mentions legales" />
+    <title>Mentions legales</title>
+  </head>
+  <body>
+    <h1>Mentions legales</h1>
+    <p>Ce site est edite a titre personnel.</p>
+  </body>
+</html>
