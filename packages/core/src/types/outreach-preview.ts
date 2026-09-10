@@ -30,6 +30,16 @@
  * objects are strict, a caller that tries to pass a price is rejected rather
  * than quietly quoting a different one, which is what "sourced from one
  * code-owned constant" actually has to mean to be worth stating.
+ *
+ * **v1 and v2 (plan 037).** The `OutreachPreviewInput` shape below is the v1
+ * prescan-backed contract. It is retained so stored v1 publications keep a
+ * typed shape for listing, revocation, and expiry, but no new v1 preview may
+ * be created. New outreach builds an `OutreachPreviewSummary` instead: a
+ * versioned v2 aggregate scorecard of one candidate-linked outreach full
+ * scan, with coverage counts, aggregate finding totals, four severity totals,
+ * and exactly three deterministic text proof cards. It has no image field at
+ * all - the absence of a place to put one is the no-screenshots decision,
+ * enforced the same way every other prohibition here is.
  */
 
 import { z } from 'zod';
@@ -319,3 +329,179 @@ export function containsProhibitedPreviewContent(text: string): string | null {
 
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// v2: the full-scan aggregate scorecard (plan 037)
+// ---------------------------------------------------------------------------
+
+/** Content version recorded on the v2 document and on its publication row.
+ *  v1 rows keep `'v1'`; the two never mix in one document. */
+export const OUTREACH_PREVIEW_CONTENT_VERSION_V2 = 'v2' as const;
+
+export type OutreachDataOrigin =
+  'public-hotel-catalogue' | 'public-website' | 'public-business-registry';
+
+export type OutreachPreviewSeverity = 'critical' | 'serious' | 'moderate' | 'minor';
+
+export interface OutreachProofCard {
+  /** Selected deterministic copy from the reviewed proof-card catalog, kept
+   *  bilingual so the document language stays a rendering decision. */
+  title: { fr: string; en: string };
+  category: 'accessibility' | 'seo' | 'geo' | 'performance' | 'rendering' | 'privacy';
+  severity: OutreachPreviewSeverity;
+  /** Unique pages this rule was detected on. Never an occurrence count: one
+   *  problem affecting many elements on one page is still 1 here. */
+  affectedPageCount: number;
+}
+
+export interface OutreachCoverageFacts {
+  /** Pages the crawl inventoried: navigated, or recorded with a failure or
+   *  planned-skip reason. Continuation-omitted URLs are never folded in. */
+  inventoriedPageCount: number;
+  /** Pages that received the content-sensitive passes (render diff, axe,
+   *  extended accessibility). Completed plus partial: both were checked. */
+  contentCheckedPageCount: number;
+  /** Pages actually measured by Lighthouse, the disclosed performance
+   *  sample. Never presented as equal to the two counts above. */
+  performanceMeasuredPageCount: number;
+}
+
+export interface OutreachPreviewRecipientFacts {
+  businessName: string;
+  dataOrigins: OutreachDataOrigin[];
+}
+
+export interface OutreachPreviewSummary {
+  contentVersion: typeof OUTREACH_PREVIEW_CONTENT_VERSION_V2;
+  /** The one audit this document aggregates. A later or different audit of
+   *  the same domain can never be substituted for it. */
+  auditId: string;
+  observedAt: Date;
+  /** Rendering language of this document; proof-card titles stay bilingual
+   *  so the contract does not need rebuilding per language. */
+  language: OutreachPreviewLanguage;
+  recipient: OutreachPreviewRecipientFacts;
+  links: { offer: string; privacy: string; optOut: string };
+  coverage: OutreachCoverageFacts;
+  /** Distinct findings after dedupe, and the union of pages they name.
+   *  Occurrences are deliberately uncountable here. */
+  distinctFindingCount: number;
+  affectedPageCount: number;
+  severityTotals: Record<OutreachPreviewSeverity, number>;
+  proofCards: [OutreachProofCard, OutreachProofCard, OutreachProofCard];
+  /** Built by `buildOutreachFactsBlock`, same shape and same re-validation
+   *  as v1: deterministic paragraphs, or omitted when the sources do not
+   *  permit the block. */
+  facts: { state: 'omitted' } | { state: 'rendered'; heading: string; paragraphs: string[] };
+}
+
+const countSchema = (max: number) => z.number().int().min(0).max(max);
+
+const MAX_TOTAL_PAGES = 100_000;
+
+const severityTotalsSchema = z
+  .object({
+    critical: countSchema(MAX_TOTAL_PAGES),
+    serious: countSchema(MAX_TOTAL_PAGES),
+    moderate: countSchema(MAX_TOTAL_PAGES),
+    minor: countSchema(MAX_TOTAL_PAGES),
+  })
+  .strict();
+
+const proofCardSchema = z
+  .object({
+    title: bilingualSchema,
+    category: z.enum(['accessibility', 'seo', 'geo', 'performance', 'rendering', 'privacy']),
+    severity: z.enum(['critical', 'serious', 'moderate', 'minor']),
+    affectedPageCount: z.number().int().min(1).max(MAX_TOTAL_PAGES),
+  })
+  .strict();
+
+export const outreachPreviewSummarySchema: z.ZodType<OutreachPreviewSummary> = z
+  .object({
+    contentVersion: z.literal(OUTREACH_PREVIEW_CONTENT_VERSION_V2),
+    auditId: z.string().min(1).max(64),
+    observedAt: z.date(),
+    language: z.enum(['fr', 'en']),
+    recipient: z
+      .object({
+        businessName: z.string().min(1).max(MAX_BUSINESS_NAME_LENGTH),
+        dataOrigins: z
+          .array(z.enum(['public-hotel-catalogue', 'public-website', 'public-business-registry']))
+          .min(1),
+      })
+      .strict(),
+    links: z.object({ offer: linkSchema, privacy: linkSchema, optOut: linkSchema }).strict(),
+    coverage: z
+      .object({
+        inventoriedPageCount: countSchema(MAX_TOTAL_PAGES),
+        contentCheckedPageCount: countSchema(MAX_TOTAL_PAGES),
+        performanceMeasuredPageCount: countSchema(MAX_TOTAL_PAGES),
+      })
+      .strict(),
+    distinctFindingCount: countSchema(MAX_TOTAL_PAGES),
+    affectedPageCount: countSchema(MAX_TOTAL_PAGES),
+    severityTotals: severityTotalsSchema,
+    proofCards: z.tuple([proofCardSchema, proofCardSchema, proofCardSchema]),
+    facts: factsSchema,
+  })
+  .strict()
+  .superRefine((input, context) => {
+    const { coverage, severityTotals } = input;
+    if (
+      coverage.contentCheckedPageCount > coverage.inventoriedPageCount ||
+      coverage.performanceMeasuredPageCount > coverage.inventoriedPageCount
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'coverage subsets cannot exceed the inventoried page count',
+      });
+    }
+    const severitySum =
+      severityTotals.critical +
+      severityTotals.serious +
+      severityTotals.moderate +
+      severityTotals.minor;
+    if (severitySum !== input.distinctFindingCount) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'severity totals must sum to the distinct finding count',
+      });
+    }
+    if (input.distinctFindingCount < input.proofCards.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'proof cards cannot exceed distinct findings',
+      });
+    }
+    if (containsProhibitedPreviewContent(input.recipient.businessName) !== null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'businessName contains prohibited content',
+      });
+    }
+    // Proof-card titles are reviewed catalog copy, but the guard runs over
+    // them anyway: the document lint and this schema are the two layers that
+    // must both stay true regardless of what enters the catalog.
+    for (const card of input.proofCards) {
+      for (const language of ['fr', 'en'] as const) {
+        if (containsProhibitedPreviewContent(card.title[language]) !== null) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `proof card title contains prohibited content: ${card.title[language]}`,
+          });
+        }
+      }
+    }
+    if (input.facts.state === 'rendered') {
+      for (const paragraph of [input.facts.heading, ...input.facts.paragraphs]) {
+        const hit = containsProhibitedPreviewContent(paragraph);
+        if (hit !== null) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `facts paragraph contains prohibited content: ${hit}`,
+          });
+        }
+      }
+    }
+  });

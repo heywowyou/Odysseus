@@ -64,6 +64,7 @@ export * from './prospecting/outreach-thread-state.js';
 export * from './prospecting/outreach-outcome.js';
 export * from './prospecting/classify-mailbox-thread.js';
 export * from './prospecting/outreach-evidence-selection.js';
+export * from './prospecting/outreach-preview-summary.js';
 export * from './prospecting/parked-page-signatures.js';
 export * from './prospecting/overpass-decision.js';
 export * from './cost-gating/brokenness.js';

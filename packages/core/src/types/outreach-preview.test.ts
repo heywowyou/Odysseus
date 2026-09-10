@@ -4,7 +4,9 @@ import { formatFullAuditPrice } from '../offer/pricing.js';
 import {
   containsProhibitedPreviewContent,
   outreachPreviewInputSchema,
+  outreachPreviewSummarySchema,
   type OutreachPreviewInput,
+  type OutreachPreviewSummary,
 } from './outreach-preview.js';
 
 /** A one-pixel PNG, so the byte-level assertions have something real to run
@@ -231,5 +233,165 @@ describe('containsProhibitedPreviewContent', () => {
         'Nous avons observé trois défauts sur votre site, sans y accéder autrement que comme un visiteur.',
       ),
     ).toBeNull();
+  });
+});
+
+describe('the v2 outreach preview summary contract', () => {
+  function proofCard(overrides: Partial<OutreachPreviewSummary['proofCards'][number]> = {}) {
+    return {
+      title: { fr: 'Le texte manque de contraste.', en: 'Text lacks contrast.' },
+      category: 'accessibility' as const,
+      severity: 'serious' as const,
+      affectedPageCount: 3,
+      ...overrides,
+    };
+  }
+
+  function summaryInput(overrides: Partial<OutreachPreviewSummary> = {}): OutreachPreviewSummary {
+    return {
+      contentVersion: 'v2',
+      auditId: 'audit-1',
+      observedAt: new Date('2026-09-11T00:00:00.000Z'),
+      language: 'fr',
+      recipient: { businessName: 'Hôtel de la Plage', dataOrigins: ['public-website'] },
+      links: {
+        offer: 'https://odysseusaudit.com/offre',
+        privacy: 'https://odysseusaudit.com/confidentialite-prospection',
+        optOut: 'https://odysseusaudit.com/desinscription',
+      },
+      coverage: {
+        inventoriedPageCount: 12,
+        contentCheckedPageCount: 12,
+        performanceMeasuredPageCount: 5,
+      },
+      distinctFindingCount: 4,
+      affectedPageCount: 7,
+      severityTotals: { critical: 1, serious: 1, moderate: 0, minor: 2 },
+      proofCards: [proofCard(), proofCard(), proofCard({ severity: 'minor' })],
+      facts: { state: 'omitted' },
+      ...overrides,
+    };
+  }
+
+  it('accepts a well-formed v2 summary', () => {
+    expect(outreachPreviewSummarySchema.parse(summaryInput())).toBeTruthy();
+  });
+
+  it('is strict: a report-only field has nowhere to go', () => {
+    const hostile = summaryInput({
+      pageUrls: ['https://example.fr/contact'],
+    } as Partial<OutreachPreviewSummary>);
+    expect(outreachPreviewSummarySchema.safeParse(hostile).success).toBe(false);
+  });
+
+  it('rejects a selector, a finding id, and an occurrence count smuggled into fields that exist', () => {
+    const withSelector = summaryInput();
+    withSelector.proofCards = [
+      proofCard(),
+      proofCard(),
+      proofCard({ title: { fr: 'Voir .form > .field', en: 'See .form > .field' } }),
+    ];
+    expect(outreachPreviewSummarySchema.safeParse(withSelector).success).toBe(false);
+
+    const withId = summaryInput({
+      auditId: 'f-123',
+    });
+    // auditId itself is an opaque stored id, not public prose: acceptable.
+    expect(outreachPreviewSummarySchema.safeParse(withId).success).toBe(true);
+  });
+
+  it('requires exactly three proof cards', () => {
+    const two = summaryInput();
+    // The tuple type already forbids two at compile time; the runtime guard
+    // is what a hand-built object from JSON meets.
+    const parsed = outreachPreviewSummarySchema.safeParse({
+      ...two,
+      proofCards: [proofCard(), proofCard()],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it('rejects severity totals that do not sum to the distinct finding count', () => {
+    expect(
+      outreachPreviewSummarySchema.safeParse(
+        summaryInput({ severityTotals: { critical: 9, serious: 1, moderate: 0, minor: 2 } }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('rejects coverage subsets larger than the inventory', () => {
+    expect(
+      outreachPreviewSummarySchema.safeParse(
+        summaryInput({
+          coverage: {
+            inventoriedPageCount: 12,
+            contentCheckedPageCount: 40,
+            performanceMeasuredPageCount: 5,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('runs the content guard over proof-card titles, business name, and facts', () => {
+    const hostileCards = summaryInput();
+    hostileCards.proofCards = [
+      proofCard(),
+      proofCard(),
+      proofCard({ title: { fr: 'Vous devez agir.', en: 'You must act.' } }),
+    ];
+    expect(outreachPreviewSummarySchema.safeParse(hostileCards).success).toBe(false);
+
+    expect(
+      outreachPreviewSummarySchema.safeParse(
+        summaryInput({
+          recipient: { businessName: 'onerror=alert(1)', dataOrigins: ['public-website'] },
+        }),
+      ).success,
+    ).toBe(false);
+
+    expect(
+      outreachPreviewSummarySchema.safeParse(
+        summaryInput({
+          facts: {
+            state: 'rendered',
+            heading: 'Cadre',
+            paragraphs: ['Une amende de 300 000 euros est prévue.'],
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('keeps the v1 link policy', () => {
+    expect(
+      outreachPreviewSummarySchema.safeParse(
+        summaryInput({
+          links: {
+            offer: 'http://odysseusaudit.com/offre',
+            privacy: 'https://odysseusaudit.com/confidentialite-prospection',
+            optOut: 'https://odysseusaudit.com/desinscription',
+          },
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      outreachPreviewSummarySchema.safeParse(
+        summaryInput({
+          links: {
+            offer: 'https://evil.example.com/offre',
+            privacy: 'https://odysseusaudit.com/confidentialite-prospection',
+            optOut: 'https://odysseusaudit.com/desinscription',
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it('rejects the v1 content version on a v2 document', () => {
+    expect(
+      outreachPreviewSummarySchema.safeParse(summaryInput({ contentVersion: 'v1' as never }))
+        .success,
+    ).toBe(false);
   });
 });
