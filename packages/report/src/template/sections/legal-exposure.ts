@@ -208,23 +208,6 @@ function renderTransactionalFlowScopeNote(
   if (smeExempt) return '';
 
   const delegated = evidence.filter((e) => e.kind === 'delegated-booking-redirect');
-  // item 0.2: `detail` is internal English classification reasoning, never
-  // a client-facing domain - derive the actual hostname from providerUrl
-  // instead. A providerUrl that fails to parse is dropped rather than
-  // shown malformed.
-  const providerDomains = [
-    ...new Set(
-      delegated
-        .map((e) => {
-          try {
-            return e.providerUrl ? new URL(e.providerUrl).hostname : null;
-          } catch {
-            return null;
-          }
-        })
-        .filter((domain): domain is string => domain !== null),
-    ),
-  ];
   // P0.3: name the actual detected component(s) rather than dumping every
   // page the mechanism happens to appear on - it's a site-wide layout
   // component (e.g. a booking widget's own iframe or embedded script), not
@@ -244,12 +227,7 @@ function renderTransactionalFlowScopeNote(
 
   const text =
     delegated.length > 0
-      ? fillTemplate(l.transactionalFlowDelegatedTemplate, {
-          domain:
-            providerDomains.length > 0
-              ? providerDomains.join(', ')
-              : l.transactionalFlowDelegatedDomainUnknown,
-        })
+      ? l.transactionalFlowDelegatedTemplate
       : vendors.length > 0
         ? fillTemplate(l.transactionalFlowOnSiteTemplate, {
             vendors: vendors.join(', '),

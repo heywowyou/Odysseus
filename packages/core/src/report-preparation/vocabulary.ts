@@ -189,8 +189,8 @@ export const STAKEHOLDER_ROLE_COPY: Record<ReportStakeholderRole, BilingualCopy>
  *  when preparation exists. Remediation-neutral and claim-free. */
 export const HOOK_FAMILY_COPY: Record<HookFamily, BilingualCopy> = {
   accessibility: {
-    fr: "L'accessibilité de votre site est le sujet le plus urgent de ce rapport.",
-    en: 'Accessibility is the most urgent subject in this report.',
+    fr: "L'accessibilité de votre site concentre le plus de constats de ce rapport.",
+    en: 'Accessibility carries the most findings in this report.',
   },
   'speed-and-booking': {
     fr: 'La vitesse de votre site agit directement sur vos réservations.',
@@ -201,8 +201,8 @@ export const HOOK_FAMILY_COPY: Record<HookFamily, BilingualCopy> = {
     en: "Your site's visibility in search engines and AI assistants is the common thread of this report.",
   },
   privacy: {
-    fr: 'La protection des données de vos visiteurs est le sujet le plus urgent de ce rapport.',
-    en: "Protecting your visitors' data is the most urgent subject in this report.",
+    fr: 'La protection des données de vos visiteurs concentre le plus de constats sérieux de ce rapport.',
+    en: "Protecting your visitors' data carries the most weight among this report's findings.",
   },
   mixed: {
     fr: 'Ce rapport mélange plusieurs sujets urgents : accessibilité, performance, visibilité et protection des données.',

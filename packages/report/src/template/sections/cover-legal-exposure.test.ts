@@ -496,7 +496,14 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
     expect(html).toContain('composant présent sur plusieurs pages');
   });
 
-  it('names the delegated provider domain and states it was not crawled', () => {
+  it('never names the delegated provider domain, and states it was not crawled', () => {
+    // The booking-intent text match cannot reliably tell a room-booking
+    // engine apart from an unrelated activity/tour vendor using the same
+    // vocabulary (real case: a Paris tours partner misidentified as the
+    // room-booking provider). Naming a possibly-wrong provider in this
+    // legally sensitive section is worse than leaving it unnamed, so the
+    // domain is deliberately never rendered even when providerUrl is
+    // available on the evidence.
     const manifest = fakeManifest({
       siteSignals: {
         hasTransactionalFlow: true,
@@ -505,9 +512,6 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
             kind: 'delegated-booking-redirect',
             selector: 'a.book-now',
             pageUrl: 'https://example.com/',
-            // item 0.2: `detail` is internal English classification
-            // reasoning, never the domain shown to the client -
-            // providerUrl is what the report derives the hostname from.
             detail: 'Destination page shares the distinctive term "example" with the origin page.',
             providerUrl: 'https://booking.example-engine.com/reserver',
           },
@@ -515,7 +519,8 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
       },
     });
     const html = renderLegalExposure(fr, 2, 'fr', undefined, new Date('2026-08-17'), manifest, []);
-    expect(html).toContain('booking.example-engine.com');
+    expect(html).not.toContain('booking.example-engine.com');
+    expect(html).toContain('délégué à un prestataire tiers');
     expect(html).toContain('n&#39;a pas été exploré');
   });
 

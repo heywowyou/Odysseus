@@ -496,3 +496,93 @@ the cosmetic residue, none blocking on its own:
   executive summary concrete, but the same field forbids every digit.
 - Nits: none assessed; no report was rendered.
 - Issues filed: #119.
+
+## 2026-09-09 — www.lesmanoirstourgeville.com
+
+- URL: https://www.lesmanoirstourgeville.com/
+- Audit ID: 02d78c02-869c-4c79-9d2e-c009db484f2f
+- Environment note: one uncapped VPS dashboard-queue rehearsal, submitted
+  with catalogue SIREN 511100919. The crawl honoured a 1,000 ms effective
+  delay and reached 50 URLs.
+- Scope note: the run failed during the crawl before audit persistence,
+  analysis, and PDF rendering. No owner/GM critique or bilingual comparison
+  was possible.
+- Verdict: the paid-deliverable path is blocked by the new resumable-crawl
+  frontier checkpoint. Its first temporary-file write assumes the audit
+  directory exists, although the full-audit path creates it only after the
+  scan returns.
+- Top concerns: all VPS full audits that reach the periodic frontier snapshot
+  fail before producing a report, and this run has no checkpoint from which
+  to resume.
+- Nits: none assessed; no report was rendered.
+- Issues filed: #129.
+
+### Retry after #129 deployment
+
+- Audit ID: `1ee60c65-696c-4ef5-bcf5-e8b3b9438017`
+- Environment note: an uncapped VPS retry against verified build `71da99a`
+  honoured the 1,000 ms delay, crawled 138 URLs, and completed content checks
+  and Lighthouse on all 138. Both French and English analysis stages also
+  completed.
+- Scope note: report generation intentionally stopped before PDFs were
+  rendered because the dashboard requires an operator to confirm or correct
+  the detected commercial name and legal entity. No owner/GM critique or
+  language-pair review is possible until then.
+- Issues filed: none. This is the expected client-identity confirmation guard.
+
+### Regenerated bilingual reports
+
+- Rendered reports: French, 47 pages; English, 46 pages. Both were reviewed
+  through the decision, evidence, legal, technical-appendix, and glossary
+  sections.
+- Verdict: as the hotel's GM, I would find the scope, priorities, and
+  supporting evidence credible enough to keep reading. The truncated title on
+  the audit-numbers page, however, is an immediate visible production defect
+  in a paid deliverable and weakens confidence in the document's finish.
+- Top concern: page 7 clips the principal heading on the left in both PDFs:
+  French shows `ue l'analyse a relevé`; English shows `t the analysis found`.
+  The string source is correct, so this is a rendering/layout failure, not a
+  translation issue.
+- Nits: the report otherwise rendered cleanly in the reviewed pages, with
+  aligned French and English section content.
+- Issues filed: [#130](https://github.com/heywowyou/Odysseus/issues/130),
+  `Report PDF: statistics-page heading is clipped in both languages`.
+
+## 2026-09-10 — www.1k-paris.com
+
+- URL: https://www.1k-paris.com/
+- Audit ID: `dc7bf1bc-05cc-420d-9b74-c2015bf17326`
+- Discarded first: `www.hotel-lesventsdanges.com` (4-star, Beaune, SIREN
+  509642278) — job failed after 1 minute, 21 of 22 inventoried URLs returned
+  HTTP 429 even at the default 1,000 ms crawl delay. Site is rate-limiting
+  the crawl; treated as a site to skip, not a tool defect.
+- Verdict: as the hotel's owner/GM, I would pay for this and hand it to my
+  technical provider. The priorities are genuinely useful and the tone is
+  professional. Both languages rendered cleanly front to back (41/40 pages),
+  no layout defects, every internal number reconciled (severity totals,
+  category totals, priority coverage, WCAG criterion tables).
+- Top concern (fixed same session): the "Legal exposure" section stated the
+  booking system was "delegated to a third-party provider (www.tootbus.com)"
+  — Tootbus is the hotel's Paris tours/activities partner, confirmed live via
+  fetch, unrelated to the actual room-reservation engine (Mews,
+  `.mews-distributor` iframe visible on all 44 pages). Root cause: the
+  booking-intent text match in `packages/scanner/src/checks/
+  transactional-flow.ts` (`BOOKING_INTENT_TEXT_PATTERN`) cannot distinguish
+  "book a room" from "book a tour", and `classifyDestinationPage`'s
+  word-overlap heuristic then mistook a shared term for a same-property
+  match. Operator chose not to fix the detector itself but to stop naming
+  the provider in client-facing copy at all: `legal-exposure.ts` and the
+  FR/EN string tables no longer render the delegated provider's domain,
+  even when one was resolved. Verified against a regenerated report on the
+  redeployed VPS build. `pnpm run check` and the full `packages/report` +
+  `packages/core/src/report-preparation` suites (790 tests) green.
+- Nit (fixed same session, not filed as an issue): the opening-hook copy for
+  the accessibility and privacy families ("... is the most urgent subject in
+  this report") read as a fix-order claim that clashed with a non-accessibility
+  Priority #1 (a low-complexity HSTS quick win). Reworded in
+  `packages/core/src/report-preparation/vocabulary.ts` to describe severity
+  weight ("carries the most findings" / "carries the most weight") rather
+  than urgency/order, without touching the underlying family-resolution
+  algorithm.
+- Issues filed: none — both findings were fixed directly this session at the
+  operator's instruction rather than filed for later triage.

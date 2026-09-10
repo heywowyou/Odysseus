@@ -352,8 +352,7 @@ export const fr: ReportStrings = {
     transactionalFlowOnSiteNoVendorTemplate:
       'Le parcours transactionnel identifié est intégré directement sur le site, via un composant présent sur plusieurs pages du périmètre analysé. Exemples de pages où il a été relevé : {examplePages}.',
     transactionalFlowDelegatedTemplate:
-      "Le parcours transactionnel identifié est délégué à un prestataire tiers ({domain}). Ce domaine n'a pas été exploré dans le cadre de cet audit, qui reste circonscrit au domaine du site audité.",
-    transactionalFlowDelegatedDomainUnknown: 'domaine non identifié',
+      "Le parcours transactionnel identifié est délégué à un prestataire tiers. Le domaine de ce prestataire n'a pas été exploré dans le cadre de cet audit, qui reste circonscrit au domaine du site audité.",
   },
   checklist: {
     eyebrow: 'Check-list imprimable',

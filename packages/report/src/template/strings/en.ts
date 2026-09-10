@@ -300,8 +300,7 @@ export const en: ReportStrings = {
     transactionalFlowOnSiteNoVendorTemplate:
       'The identified transactional flow is integrated directly on the site, via a component present on several pages of the audited scope. Example pages where it was found: {examplePages}.',
     transactionalFlowDelegatedTemplate:
-      "The identified transactional flow is delegated to a third-party provider ({domain}). That domain was not crawled as part of this audit, which stays confined to the audited site's own domain.",
-    transactionalFlowDelegatedDomainUnknown: 'domain not identified',
+      "The identified transactional flow is delegated to a third-party provider. That provider's domain was not crawled as part of this audit, which stays confined to the audited site's own domain.",
   },
   checklist: {
     eyebrow: 'Printable checklist',

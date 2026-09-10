@@ -507,13 +507,16 @@ export interface ReportStrings {
      *  prefix matched any evidence selector - still a component, just not
      *  attributable to a named product. Template: {examplePages}. */
     transactionalFlowOnSiteNoVendorTemplate: string;
-    /** Template: {domain}, the delegated booking-engine provider domain
-     *  the redirect check resolved to (never crawled as part of this
-     *  audit - a single-origin crawl by design). */
+    /** No placeholders: deliberately does not name the delegated
+     *  provider's domain, even when the redirect check resolved one -
+     *  the detector's booking-intent text match cannot reliably tell a
+     *  room-booking engine apart from an unrelated activity/tour vendor
+     *  that happens to use the same "book"/"réserver" vocabulary, and a
+     *  wrongly named provider in this legally sensitive section is worse
+     *  than an unnamed one. The provider's domain was never crawled as
+     *  part of this audit (a single-origin crawl by design) either
+     *  way. */
     transactionalFlowDelegatedTemplate: string;
-    /** Fallback for {domain} above on the rare case a delegated
-     *  provider's URL couldn't be parsed into a hostname. */
-    transactionalFlowDelegatedDomainUnknown: string;
     /** item 0.1/1.11: printed instead of sirenTemplate whenever a real
      *  Sirene lookup succeeded (ObligationAssessment.registrySnapshot is
      *  set) - "report, don't conclude" requires every registry input
