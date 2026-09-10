@@ -88,10 +88,11 @@ linked issue without checking both.
 - `docs/archive/report-v2-refactor.md` is implementation history and rationale for the
   shipped report-v2 work, not the current task queue.
 - `docs/research/business-impact-statistics.md`,
-  `docs/research/sector-reference-stats/`, and
-  `docs/research/llm-provider-alternatives.md` retain vetted source research.
-  Only facts promoted through the canonical legal, outreach, offer, or
-  reference-stat rules may reach product output.
+  `docs/research/sector-reference-stats/`,
+  `docs/research/llm-provider-alternatives.md`, and
+  `docs/research/milestone-10-benchmark-cohort.md` retain vetted source
+  research. Only facts promoted through the canonical legal, outreach, offer,
+  or reference-stat rules may reach product output.
 
 ## Agent and workflow documents
 
