@@ -432,7 +432,7 @@ export interface AppendixTableSplitPoint {
   continuationRowId: string;
 }
 
-const MAX_APPENDIX_THEAD_REPAIR_PASSES = 3;
+const MAX_APPENDIX_LAYOUT_REPAIR_PASSES = 3;
 
 /** Reads the live, post-layout DOM for any appendix table Paged.js split
  *  across pages without repeating the header on a continuation fragment.
@@ -529,6 +529,125 @@ export function insertRepeatedTheadsIntoHtml(
   return result;
 }
 
+/** Issue #170. One annex rule group heading's placement on the paginated
+ *  page: `followedByRow` is true when the heading's own detail table sits
+ *  directly after it on the SAME page fragment with at least one finding
+ *  row under it. A heading left as the last content of a page - its table
+ *  moved wholly to the next page, or reduced to a row-less fragment - is
+ *  the strand the Les Corderies French report shipped (page 26, issue
+ *  #170): a paying client reads the hanging title as a layout error. */
+export interface AppendixHeadingPlacement {
+  ruleId: string;
+  followedByRow: boolean;
+}
+
+/** Reads the live, post-layout DOM for every annex rule group heading and
+ *  whether its table with at least one finding row followed it on the same
+ *  page. Pure detection, no mutation - the fix is applied to the
+ *  pre-pagination HTML source and re-laid-out from scratch (see
+ *  forceBreakBeforeAppendixRuleGroups), never by patching the DOM Paged.js
+ *  already fragmented. */
+export async function detectStrandedAppendixRuleHeadings(
+  page: Page,
+): Promise<AppendixHeadingPlacement[]> {
+  return page.evaluate(() => {
+    return Array.from(document.querySelectorAll('.appendix-rule-head[data-appendix-rule-id]')).map(
+      (heading) => {
+        const table = heading.nextElementSibling;
+        return {
+          ruleId: heading.getAttribute('data-appendix-rule-id') ?? '',
+          followedByRow:
+            table !== null &&
+            table.tagName === 'TABLE' &&
+            table.querySelector('tr[id^="annexref-"]') !== null,
+        };
+      },
+    );
+  });
+}
+
+/** Pure decision over the collected placements, no DOM: the rule ids of
+ *  stranded headings, deduplicated in document order. A heading whose rule
+ *  id is empty (the source always sets one, so this would mean markup
+ *  drift) is still reported - it cannot be repaired and must fail the gate
+ *  below rather than ship. */
+export function findStrandedAppendixRuleIds(
+  placements: readonly AppendixHeadingPlacement[],
+): string[] {
+  const stranded: string[] = [];
+  for (const { ruleId, followedByRow } of placements) {
+    if (!followedByRow && !stranded.includes(ruleId)) stranded.push(ruleId);
+  }
+  return stranded;
+}
+
+/** Why the repair patches the SOURCE instead of the paginated DOM: Paged.js
+ *  learns about forced breaks from STYLESHEET declarations only (inline
+ *  styles never reach its breaks parser), so the fix must be a rule the
+ *  breaks parser can see - one break-before: page per stranded group,
+ *  targeting the group wrapper (findings-appendix.ts's .appendix-rule-group
+ *  div). The same measurements killed the two simpler ideas: a declarative
+ *  CSS keep-with-next never holds (in the stranded shape the engine decides
+ *  the break INSIDE the group's table, whose rows cannot split under
+ *  paged.css's orphans/widows and row atomicity, so the whole table
+ *  retreats to the next page, and it never re-consults a marker on the
+ *  heading or the table - a filler-height sweep against the real pipeline,
+ *  filler 158-177mm, stranded the heading identically with and without a
+ *  stylesheet break-after: avoid on it), and Paged.js 0.4.3 does not
+ *  implement break-after: page as a forced break at all (its chunker only
+ *  honours left/right/verso/recto for break-after), so a break-carrying
+ *  spacer element is inert.
+ *
+ *  Measured against the stress fixture (2026-09-10): this repair resolved
+ *  all eight stranded headings with the correct heading set and every
+ *  finding row intact in the final DOM. Relocating the group's start is
+ *  exactly the reading order a client expects; the price is a shorter page
+ *  before it, the same cost any keep-together pays. This never keeps a
+ *  group on ONE page (trade-off 17): rows still flow across page breaks;
+ *  only the group's START moves.
+ *
+ *  Each stranded group's rule is injected at most once, so a repair pass
+ *  that cannot fix a remaining strand makes no source progress and the
+ *  bounded loop terminates; whatever is still stranded then fails the gate,
+ *  fail-closed. Ids are constrained to scanner-id characters for the
+ *  selector; anything else (markup drift) is skipped here and left for the
+ *  gate to abort on. */
+export function forceBreakBeforeAppendixRuleGroups(
+  html: string,
+  ruleIds: readonly string[],
+): string {
+  const pending = ruleIds.filter(
+    (ruleId) =>
+      /^[a-z0-9._-]+$/i.test(ruleId) &&
+      !html.includes(`.appendix-rule-group[data-appendix-rule-id="${ruleId}"]`),
+  );
+  if (pending.length === 0) return html;
+  const rules = pending
+    .map(
+      (ruleId) => `.appendix-rule-group[data-appendix-rule-id="${ruleId}"] { break-before: page; }`,
+    )
+    .join(' ');
+  const headClose = html.indexOf('</head>');
+  if (headClose === -1) return html;
+  return `${html.slice(0, headClose)}<style>${rules}</style>${html.slice(headClose)}`;
+}
+
+/** Pure gate description, no DOM: undefined when every annex heading sits
+ *  with at least one of its finding rows, otherwise the failure naming the
+ *  stranded rule ids. Runs after the bounded repair loop so a strand that
+ *  survived every pass aborts generation instead of shipping a report with
+ *  a hanging heading - the same never-ship-a-broken-layout contract as the
+ *  structural and overflow gates. */
+export function describeStrandedAppendixRuleHeadings(
+  ruleIds: readonly string[],
+): string | undefined {
+  if (ruleIds.length === 0) return undefined;
+  return (
+    `Annex rule group heading(s) ${ruleIds.join(', ')} are stranded at a page bottom with ` +
+    `none of their finding rows on the same page (issue #170).`
+  );
+}
+
 export async function renderPdfWithPageCountFromHtml(
   html: string,
   browser: Browser,
@@ -596,18 +715,30 @@ export async function renderPdfWithPageCountFromHtml(
     let currentHtml = html;
     await runPagedjsPreview(currentHtml);
 
-    // Issue #45, second half: repair any appendix rule-group table that
-    // lost its column header on a continuation page. Reports with no
-    // multi-page rule group pay nothing extra - detection finds no splits
-    // and the loop exits after the very first pass, exactly as before this
-    // fix. Bounded per MAX_APPENDIX_THEAD_REPAIR_PASSES: each pass can only
-    // ever push a fragment's own later rows onto a further page, matching
-    // trade-off 17's "no group-level atomicity, bounded per-row only".
-    for (let attempt = 0; attempt < MAX_APPENDIX_THEAD_REPAIR_PASSES; attempt++) {
+    // Issue #45, second half + issue #170: repair, against the real
+    // post-layout DOM, the two appendix pagination defects the layout
+    // engine itself cannot be talked out of - a rule group continuation
+    // fragment missing its column header (#45), and a rule group heading
+    // stranded at a page bottom with its whole table on the next page
+    // (#170). Both repairs patch the pre-pagination HTML source and
+    // re-lay-out from scratch. Reports with neither defect pay nothing
+    // extra - detection finds nothing and the loop exits after the very
+    // first pass, exactly as before these fixes. Bounded per
+    // MAX_APPENDIX_LAYOUT_REPAIR_PASSES: each pass only ever pushes
+    // content downward (a repeated header adds markup at an existing row
+    // boundary; a break spacer moves a group start to a fresh page), so
+    // one pass can expose a strand or a split further down that
+    // a later pass then repairs, but nothing can loop - and anything still
+    // stranded after the bound is caught by the gate below and aborts.
+    for (let attempt = 0; attempt < MAX_APPENDIX_LAYOUT_REPAIR_PASSES; attempt++) {
       const splits = await detectAppendixTableSplits(page);
-      if (splits.length === 0) break;
+      const stranded = findStrandedAppendixRuleIds(await detectStrandedAppendixRuleHeadings(page));
+      if (splits.length === 0 && stranded.length === 0) break;
       const preambles = extractAppendixTablePreambles(currentHtml);
-      const patched = insertRepeatedTheadsIntoHtml(currentHtml, splits, preambles);
+      const patched = forceBreakBeforeAppendixRuleGroups(
+        insertRepeatedTheadsIntoHtml(currentHtml, splits, preambles),
+        stranded,
+      );
       if (patched === currentHtml) break;
       currentHtml = patched;
       await runPagedjsPreview(currentHtml);
@@ -618,6 +749,15 @@ export async function renderPdfWithPageCountFromHtml(
     const structuralFailure = describePagedjsStructuralFailure(structure);
     if (structuralFailure !== undefined) {
       throw new Error(`Report generation aborted: ${structuralFailure} Never shipped to a client.`);
+    }
+
+    // Issue #170's fail-closed floor: whatever the bounded repair loop
+    // could not fix is a hanging heading in a paying client's hands.
+    const strandedFailure = describeStrandedAppendixRuleHeadings(
+      findStrandedAppendixRuleIds(await detectStrandedAppendixRuleHeadings(page)),
+    );
+    if (strandedFailure !== undefined) {
+      throw new Error(`Report generation aborted: ${strandedFailure} Never shipped to a client.`);
     }
 
     // Issue #118. Geometry runs after the structural gates, never before

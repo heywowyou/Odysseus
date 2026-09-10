@@ -56,6 +56,33 @@ describe('2026-08-24: annex finding ids never break mid-token across a page frag
     }
   });
 
+  // Issue #170: pdf.ts's stranded-heading detection and repair anchors on
+  // this exact markup - the heading's class and its copy of the group's
+  // rule id, plus the wrapper's id that the break-spacer insertion anchors
+  // on. If this drifts, detection finds no headings and the repair
+  // silently has nothing to defend.
+  it('marks every rule group heading with the class and rule id the repair pass anchors on', async () => {
+    const html = await render();
+    const headingRuleIds =
+      html
+        .match(/class="appendix-rule-head" data-appendix-rule-id="([^"]+)"/gu)
+        ?.map((m) => m.match(/data-appendix-rule-id="([^"]+)"/u)?.[1] ?? '') ?? [];
+    const tableRuleIds =
+      html
+        .match(/<table[^>]*data-appendix-rule-id="([^"]+)"/gu)
+        ?.map((m) => m.match(/data-appendix-rule-id="([^"]+)"/u)?.[1] ?? '') ?? [];
+    const wrapperRuleIds =
+      html
+        .match(/class="appendix-rule-group" data-appendix-rule-id="([^"]+)"/gu)
+        ?.map((m) => m.match(/data-appendix-rule-id="([^"]+)"/u)?.[1] ?? '') ?? [];
+    expect(headingRuleIds.length).toBeGreaterThan(0);
+    expect(tableRuleIds.length).toBeGreaterThan(0);
+    // One group, one heading, one wrapper: exactly the same set of rule ids
+    // the group's own table carries, in the same order.
+    expect(headingRuleIds).toEqual(tableRuleIds);
+    expect(wrapperRuleIds).toEqual(tableRuleIds);
+  });
+
   it('gives every finding row its own column widths, not just the header row', async () => {
     const html = await render();
     // Issue #45 moved each finding's four cells into a per-row grid inside

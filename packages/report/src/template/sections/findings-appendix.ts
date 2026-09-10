@@ -516,9 +516,18 @@ function renderRuleGroup(
   // the atomic-row change above, is make sure a continuation page can only
   // ever open on a complete finding row, so the reader paging back needs
   // to find the row's own id, never a fragment.
+  // Issue #170: this wrapper and its heading are the units whose pagination
+  // pdf.ts defends. Both carry the group's data-appendix-rule-id so the
+  // render pipeline can detect a heading that Paged.js left stranded at a
+  // page bottom (its table moved wholly to the next page) and relocate the
+  // group's start to a fresh page with an injected break-before: page rule
+  // for this wrapper - see the stranded-heading repair in pdf.ts and
+  // paged.css's issue #170 note for why no CSS-only keep-with-next can hold
+  // here. The attribute mirrors the table below, whose own
+  // data-appendix-rule-id the thead-repair pass already keys on.
   return `
-    <div style="margin-bottom:var(--space-4)">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
+    <div class="appendix-rule-group" data-appendix-rule-id="${escapeHtml(group.ruleId)}" style="margin-bottom:var(--space-4)">
+      <div class="appendix-rule-head" data-appendix-rule-id="${escapeHtml(group.ruleId)}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
         <span style="display:inline">
           ${renderSeverityBadge(strings, group.severity)}
           <span style="font-size:14px;font-weight:500">${escapeHtml(representativeTitle)}</span>

@@ -330,6 +330,17 @@ table tbody {
   break-before: avoid;
 }
 
+/* Issue #170: an annex rule group's heading must never be the last content
+   on a page with its detail table on the next one. A CSS keep-with-next on
+   the heading was measured to NOT hold here (2026-09-10 filler-height sweep
+   against the real pipeline): the engine decides the break inside the
+   group's own table when its rows cannot split, and never re-consults a
+   marker on the heading or the table. The guarantee is enforced after
+   layout instead, by pdf.ts's stranded-heading detection and repair pass,
+   which anchors on the heading's .appendix-rule-head class and injects a
+   break-before: page rule for the stranded group's .appendix-rule-group
+   wrapper (Paged.js reads forced breaks from stylesheet rules only). */
+
 /* D1 (2026-08-25, Lagnonu review): a real report broke the "Repartition par
    categorie" row mid-tile - the ACCESSIBILITE label sat alone in an empty box
    at the foot of one page while its value, 228, appeared in an unlabelled box

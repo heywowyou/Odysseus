@@ -4,7 +4,10 @@ import {
   analyzePagedjsPages,
   describePagedjsOverflow,
   describePagedjsStructuralFailure,
+  describeStrandedAppendixRuleHeadings,
   extractAppendixTablePreambles,
+  findStrandedAppendixRuleIds,
+  forceBreakBeforeAppendixRuleGroups,
   insertRepeatedTheadsIntoHtml,
   PAGEDJS_NEGLIGIBLE_BOX_PX,
   PAGEDJS_OVERFLOW_TOLERANCE_PX,
@@ -354,5 +357,75 @@ describe('analyzePagedjsOverflow / describePagedjsOverflow (issue #118)', () => 
       overflowPageModel([paintedBox()]),
     ];
     expect(analyzePagedjsOverflow(pages)).toBeUndefined();
+  });
+});
+
+describe('findStrandedAppendixRuleIds', () => {
+  it('returns the rule ids of headings without a followed row, deduplicated in order', () => {
+    expect(
+      findStrandedAppendixRuleIds([
+        { ruleId: 'select-name', followedByRow: true },
+        { ruleId: 'color-contrast', followedByRow: false },
+        { ruleId: 'select-name', followedByRow: true },
+        { ruleId: 'color-contrast', followedByRow: true },
+        { ruleId: 'image-weight', followedByRow: false },
+        { ruleId: 'image-weight', followedByRow: false },
+      ]),
+    ).toEqual(['color-contrast', 'image-weight']);
+  });
+
+  it('returns nothing when every heading sits with at least one of its rows', () => {
+    expect(findStrandedAppendixRuleIds([{ ruleId: 'select-name', followedByRow: true }])).toEqual(
+      [],
+    );
+  });
+
+  it('reports a heading with an empty rule id so the gate can fail closed on markup drift', () => {
+    expect(findStrandedAppendixRuleIds([{ ruleId: '', followedByRow: false }])).toEqual(['']);
+  });
+});
+
+describe('forceBreakBeforeAppendixRuleGroups', () => {
+  const doc =
+    '<html><head><style>body{}</style></head><body><div class="appendix-rule-group" data-appendix-rule-id="select-name">group</div></body></html>';
+
+  it('injects one page-break rule per stranded group before the head closes', () => {
+    const patched = forceBreakBeforeAppendixRuleGroups(doc, ['select-name', 'color-contrast']);
+    expect(patched).toContain(
+      '<style>' +
+        '.appendix-rule-group[data-appendix-rule-id="select-name"] { break-before: page; } ' +
+        '.appendix-rule-group[data-appendix-rule-id="color-contrast"] { break-before: page; }' +
+        '</style></head>',
+    );
+  });
+
+  it('leaves the document unchanged for an empty list', () => {
+    expect(forceBreakBeforeAppendixRuleGroups(doc, [])).toBe(doc);
+  });
+
+  it('never injects a second rule for a group already carrying one', () => {
+    const once = forceBreakBeforeAppendixRuleGroups(doc, ['select-name']);
+    expect(forceBreakBeforeAppendixRuleGroups(once, ['select-name'])).toBe(once);
+  });
+
+  it('skips ids with characters a CSS attribute selector cannot carry', () => {
+    expect(forceBreakBeforeAppendixRuleGroups(doc, ['bad"id'])).toBe(doc);
+  });
+
+  it('returns the document unchanged when there is no head to inject into', () => {
+    expect(forceBreakBeforeAppendixRuleGroups('<p>fragment</p>', ['select-name'])).toBe(
+      '<p>fragment</p>',
+    );
+  });
+});
+
+describe('describeStrandedAppendixRuleHeadings', () => {
+  it('is silent when nothing is stranded', () => {
+    expect(describeStrandedAppendixRuleHeadings([])).toBeUndefined();
+  });
+
+  it('names the stranded rule ids', () => {
+    expect(describeStrandedAppendixRuleHeadings(['select-name'])).toContain('select-name');
+    expect(describeStrandedAppendixRuleHeadings(['select-name'])).toContain('issue #170');
   });
 });
