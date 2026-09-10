@@ -47,6 +47,15 @@ describe('findExecutiveSummaryDigitViolations', () => {
     expect(findExecutiveSummaryDigitViolations(output)).toEqual([]);
   });
 
+  it('does not mistake a Paris arrondissement ordinal for an audit count', () => {
+    const output = buildOutput({
+      executiveSummary:
+        'Pour un hôtel de taille humaine situé à Paris 8e arrondissement, ces constats peuvent freiner la consultation des chambres et des informations pratiques.',
+    });
+
+    expect(findExecutiveSummaryDigitViolations(output)).toEqual([]);
+  });
+
   it('does not flag a digit in recommendedActions, which is explicitly allowed to state a page count', () => {
     const output = buildOutput();
 

@@ -12,7 +12,10 @@ import type { WritingPassOutput } from './writing-schema.js';
  * moves every count in this sentence into the report template
  * (executive-summary.ts's summaryCountsTemplate, bound from the same
  * resolvedFindings every other count reads), so the writing pass has no
- * legitimate reason left to write a digit anywhere in executiveSummary.
+ * legitimate reason left to write an audit count anywhere in
+ * executiveSummary. A French or English arrondissement ordinal is the
+ * narrow exception: it identifies a Paris location, not an audit quantity,
+ * and its number cannot drift from a report statistic.
  * Scoped to that one field only: recommendedActions is explicitly
  * allowed to state a page count (the prompt's own "18 pages" example),
  * and businessImpact/notes have no equivalent drift risk since nothing
@@ -23,6 +26,8 @@ import type { WritingPassOutput } from './writing-schema.js';
  * guard (severity-vocabulary-guard.ts) uses for banned synonyms.
  */
 const DIGIT_PATTERN = /\d/;
+const ARRONDISSEMENT_ORDINAL_PATTERN =
+  /\b\d{1,2}(?:er|e|ème|eme|st|nd|rd|th)\s+arrondissement\b/giu;
 
 export interface ExecutiveSummaryDigitViolation {
   field: 'executiveSummary';
@@ -32,7 +37,11 @@ export interface ExecutiveSummaryDigitViolation {
 export function findExecutiveSummaryDigitViolations(
   output: WritingPassOutput,
 ): ExecutiveSummaryDigitViolation[] {
-  if (DIGIT_PATTERN.test(output.executiveSummary)) {
+  const withoutLocationOrdinals = output.executiveSummary.replace(
+    ARRONDISSEMENT_ORDINAL_PATTERN,
+    'arrondissement',
+  );
+  if (DIGIT_PATTERN.test(withoutLocationOrdinals)) {
     return [{ field: 'executiveSummary', text: output.executiveSummary }];
   }
   return [];
