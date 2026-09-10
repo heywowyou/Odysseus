@@ -364,6 +364,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [033](archive/033-report-render-qa-and-copy-review-trial.md) | Gate delivery on deterministic render QA and measure an advisory copy-review pass | P1 | L | none | DONE (2026-09-08; operator closure: atomic render gate and correction artifact shipped; overflow and permissioned campaign work deferred) |
 | [034](archive/034-hotel-outreach-v2-booking-detection.md) | Port booking detection to prospecting and ship hotel-outreach-v2 | P1 | M | none; gates 014 Step 3 | DONE (2026-09-08; incident during the bounded batch documented in trade-offs.md#75/issue #114; v2 approved, scored, diffed, and wave-1 cohort selected under it) |
 | [035](035-full-audit-checkpoint-and-resume.md) | Resume full audits across crashes and redeploys instead of restarting from zero | P1 | L | none | IMPLEMENTED (2026-09-09; resolves issue #124; live redeploy-resume acceptance is the operator's `DONE` gate) |
+| [036](036-lcen-publisher-identification-evidence.md) | Publish per-field detection evidence for the LCEN publisher-identification finding | P2 | M | none | PLANNED (2026-09-10; from the approved #161 design; operator signs the FR/EN copy at commit review) |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
