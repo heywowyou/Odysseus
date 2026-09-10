@@ -18,9 +18,27 @@
  * again: undici surfaces ENOTFOUND and the OpenSSL certificate codes on
  * `cause`, so a separate node:dns or node:tls probe would be a second round
  * trip to learn what the first one already reported.
+ *
+ * Every host this probe touches, the caller-supplied initial one and each
+ * redirect target, is resolved and checked against loopback, private,
+ * link-local and unique-local addresses before its request goes out (issue
+ * #158, posture approved 2026-09-10; see fetch-address-guard.ts). The check
+ * runs on the next hop only after the sameSite gate has accepted it, so the
+ * registrable-domain rule keeps deciding what counts as off-site and the
+ * guard decides where the network may actually connect.
  */
 
-const MAX_REDIRECT_HOPS = 5;
+import {
+  checkFetchTarget,
+  type FetchTargetVerdict,
+  type LookupAddresses,
+} from './fetch-address-guard.js';
+
+/** Shared with fetch-candidate-page.ts so the two helpers keep one redirect
+ *  budget: fetchPageText used to follow redirects with no bound at all, and
+ *  the posture decision for issue #158 reconciles it to this bound rather
+ *  than giving it a looser one. */
+export const MAX_REDIRECT_HOPS = 5;
 
 export type ProbeFailure =
   | 'dns-unresolved'
@@ -112,10 +130,17 @@ function isHtml(contentType: string | null): boolean {
  * @param sameSite decides whether a redirect destination counts as staying on
  *   the hotel's own site. Injected rather than computed here so the registrable
  *   domain rule stays in core, where the public suffix list already lives.
+ * @param options.lookupAddresses test seam over the guard's DNS resolution,
+ *   so refusal behaviour is testable without real lookups.
  */
 export async function probeUrl(
   url: string,
-  options: { timeoutMs: number; userAgent: string; sameSite: (candidateUrl: string) => boolean },
+  options: {
+    timeoutMs: number;
+    userAgent: string;
+    sameSite: (candidateUrl: string) => boolean;
+    lookupAddresses?: LookupAddresses | undefined;
+  },
 ): Promise<ProbeResult> {
   let currentUrl = url;
   const seen = new Set<string>();
@@ -131,6 +156,34 @@ export async function probeUrl(
       };
     }
     seen.add(currentUrl);
+
+    // Resolve then check before connecting, every hop including the first.
+    // Resolution errors are caught with the same classifier fetch errors go
+    // through, so an unresolvable host is reported exactly as it was before
+    // the guard existed.
+    let verdict: FetchTargetVerdict;
+    try {
+      verdict = await checkFetchTarget(currentUrl, {
+        lookupAddresses: options.lookupAddresses,
+      });
+    } catch (error) {
+      const { failure, detail } = classifyFetchError(error);
+      return { kind: 'failed', failure, detail, finalUrl: currentUrl };
+    }
+    if (verdict.kind === 'refused') {
+      // Reuses the dns-unresolved bucket rather than adding a ProbeFailure
+      // kind: the reachability table in check-hotel-site.ts is a total map
+      // over this union by design ("a new probe failure cannot reach the
+      // decision unclassified"), and from the campaign's point of view a
+      // host we refuse is a host that is not reachable. The detail keeps
+      // the refused address so stored loss reasons still say why.
+      return {
+        kind: 'failed',
+        failure: 'dns-unresolved',
+        detail: verdict.detail,
+        finalUrl: currentUrl,
+      };
+    }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), options.timeoutMs);

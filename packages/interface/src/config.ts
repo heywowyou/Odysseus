@@ -50,6 +50,35 @@ export const DEFAULT_PROSPECT_BATCH_SIZE = 2_000;
  *  requests (homepage, mentions-legales) - not the scanner's Chromium
  *  page timeout, which this stage never uses. */
 export const DEFAULT_PROSPECT_FETCH_TIMEOUT_MS = 15_000;
+/** Issue #158 (posture approved 2026-09-10): the prospecting fetch helpers
+ *  (probeUrl, fetchPageText) resolve every request host, initial or
+ *  redirected, and refuse answers on loopback, private, link-local or
+ *  unique-local addresses, so a prospect URL cannot probe the deployment's
+ *  own compose network. This comma-separated list is the operator's only
+ *  way back in, meant for local smoke against fixture servers. Entries are
+ *  hostnames or literal IPs matched against the URL host exactly
+ *  (case-insensitive, brackets stripped from IPv6 literals) and they bypass
+ *  both resolution and the address check for that host. Production keeps
+ *  this unset: anyone who can set it can re-open the hole the guard closes. */
+export const PROSPECT_FETCH_ALLOWLIST_ENV_VAR = 'ODYSSEUS_PROSPECT_FETCH_ALLOWLIST';
+
+/** Reads the allowlist fresh on every call, so a request picks up operator
+ *  edits without a restart and tests can scope it to a single case. */
+export function getProspectFetchAllowlist(): ReadonlySet<string> {
+  ensureEnvLoaded();
+  const raw = process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR];
+  if (raw === undefined || raw.trim() === '') return new Set<string>();
+  return new Set(
+    raw
+      .split(',')
+      .map((entry) => {
+        const trimmed = entry.trim().toLowerCase();
+        return trimmed.startsWith('[') && trimmed.endsWith(']') ? trimmed.slice(1, -1) : trimmed;
+      })
+      .filter((entry) => entry !== ''),
+  );
+}
+
 /** How often (in candidates processed) run-prospect-ingestion-job.ts
  *  persists its resume checkpoint, plus once more at batch end. A crash
  *  mid-batch loses at most this many candidates' worth of re-fetching,

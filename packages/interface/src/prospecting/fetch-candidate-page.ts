@@ -10,7 +10,19 @@
  * empty shell and no SIREN here - per the governing doc's own framing,
  * that is correct behavior ("a site publishing no resolvable SIREN is
  * dropped... it is not a prospect"), not a gap.
+ *
+ * fetchPageText follows redirects by hand (issue #158, posture approved
+ * 2026-09-10). It used to pass no redirect option at all, so fetch followed
+ * page-controlled chains with no hop bound and no address check; the
+ * posture decision reconciles it to probeUrl's discipline instead of
+ * adding an address check alone. Each hop is resolved and checked before
+ * it is requested (fetch-address-guard.ts), the chain stops at
+ * MAX_REDIRECT_HOPS, and one overall timeout keeps the shipped
+ * total-time budget for a whole chain rather than a per-hop one.
  */
+
+import { MAX_REDIRECT_HOPS } from './probe-url.js';
+import { checkFetchTarget, type LookupAddresses } from './fetch-address-guard.js';
 
 const SCRIPT_OR_STYLE_PATTERN = /<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi;
 const TAG_PATTERN = /<[^>]+>/g;
@@ -78,28 +90,67 @@ export interface FetchedPage {
   anchorUrls: string[];
 }
 
-/** Returns null on any failure (network, non-2xx, timeout) rather than
- *  throwing - matches obligation-stage.ts's "degrade, never crash the
- *  batch" posture. */
+export interface FetchPageTextOptions {
+  /** Test seam over the guard's DNS resolution, mirroring probeUrl's. */
+  lookupAddresses?: LookupAddresses | undefined;
+}
+
+/** Returns null on any failure (network, non-2xx, timeout, refused address,
+ *  redirect loop, exhausted hop budget) rather than throwing - matches
+ *  obligation-stage.ts's "degrade, never crash the batch" posture. */
 export async function fetchPageText(
   url: string,
   timeoutMs: number,
   userAgent: string,
+  options: FetchPageTextOptions = {},
 ): Promise<FetchedPage | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, {
-      headers: { 'User-Agent': userAgent },
-      signal: controller.signal,
-    });
-    if (!response.ok) return null;
-    const html = await response.text();
-    return {
-      url: response.url || url,
-      bodyText: htmlToText(html),
-      anchorUrls: extractAnchorHrefs(html, url),
-    };
+    let currentUrl = url;
+    const seen = new Set<string>([url]);
+    for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop += 1) {
+      // Resolve then check before connecting, every hop including the first.
+      // Refusals, like every other failure here, answer null.
+      const verdict = await checkFetchTarget(currentUrl, {
+        lookupAddresses: options.lookupAddresses,
+      });
+      if (verdict.kind === 'refused') return null;
+
+      const response = await fetch(currentUrl, {
+        headers: { 'User-Agent': userAgent },
+        redirect: 'manual',
+        signal: controller.signal,
+      });
+      // Same 3xx rule as probeUrl so the two helpers read one redirect
+      // posture, not two.
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (location === null) return null;
+        let next: URL;
+        try {
+          next = new URL(location, currentUrl);
+        } catch {
+          return null;
+        }
+        currentUrl = next.href;
+        if (seen.has(currentUrl)) return null; // redirect loop
+        seen.add(currentUrl);
+        continue;
+      }
+      if (!response.ok) return null;
+      const html = await response.text();
+      return {
+        url: currentUrl,
+        bodyText: htmlToText(html),
+        // The anchor base stays the requested url, exactly as before: the
+        // shipped 9a callers read these anchors, and hand them the landing
+        // page's own origin would change their behaviour for a redirected
+        // site.
+        anchorUrls: extractAnchorHrefs(html, url),
+      };
+    }
+    return null; // more than MAX_REDIRECT_HOPS redirects
   } catch {
     return null;
   } finally {

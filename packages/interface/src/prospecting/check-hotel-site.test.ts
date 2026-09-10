@@ -1,10 +1,23 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { OriginLock } from '@odysseus/scanner';
+import { PROSPECT_FETCH_ALLOWLIST_ENV_VAR } from '../config.js';
 import { checkHotelSite } from './check-hotel-site.js';
 
 const originalFetch = global.fetch;
+const originalAllowlist = process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR];
+
+beforeEach(() => {
+  // The fetch address guard (issue #158) resolves every probed host, and the
+  // stubs below answer for a fake domain that would not resolve: allowlist
+  // it so these tests stay hermetic. www is needed because the same-site
+  // redirect test follows the probe onto that host.
+  process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR] = 'hotel-exemple.fr,www.hotel-exemple.fr';
+});
+
 afterEach(() => {
   global.fetch = originalFetch;
+  if (originalAllowlist === undefined) delete process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR];
+  else process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR] = originalAllowlist;
   vi.restoreAllMocks();
 });
 

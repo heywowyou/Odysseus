@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { statSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PROSPECT_FETCH_ALLOWLIST_ENV_VAR } from '../../config.js';
 
 vi.mock('@odysseus/store', () => ({
   completeJob: vi.fn(),
@@ -91,10 +92,27 @@ function htmlMentionsLegales(domain: string): string {
   return `<html><body>SIREN ${QUALIFYING_SIREN}. Contact: contact@${domain}</body></html>`;
 }
 
+// The fetch address guard (issue #158) resolves every fetched host, and the
+// fetch stub answers for fake domains: these are allowlisted beforeAll so
+// the tests stay hermetic instead of asking real DNS about them. The
+// batch-candidate names are the synthetic domains the checkpoint-cadence
+// test generates.
+const allowlistedTestDomains = [
+  'example-org1.fr',
+  'example-org3.fr',
+  ...Array.from(
+    { length: PROSPECT_CHECKPOINT_WRITE_INTERVAL + 1 },
+    (_, i) => `batch-candidate-${i}.fr`,
+  ),
+];
+
+const originalAllowlist = process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR];
+
 beforeAll(async () => {
   process.env['ODYSSEUS_AFNIC_FILE_PATH'] = afnicFixture;
   process.env['ODYSSEUS_SIRENE_STOCK_PATH'] = sireneFixture;
   process.env['CRAWL_DELAY_MS'] = '1';
+  process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR] = allowlistedTestDomains.join(',');
   await mkdir(cacheDir, { recursive: true });
 });
 
@@ -103,6 +121,8 @@ afterAll(async () => {
   delete process.env['ODYSSEUS_AFNIC_FILE_PATH'];
   delete process.env['ODYSSEUS_SIRENE_STOCK_PATH'];
   delete process.env['CRAWL_DELAY_MS'];
+  if (originalAllowlist === undefined) delete process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR];
+  else process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR] = originalAllowlist;
 });
 
 const fakeConnection = {} as never;

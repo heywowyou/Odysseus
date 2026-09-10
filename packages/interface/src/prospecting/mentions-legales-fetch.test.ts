@@ -1,12 +1,23 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OriginLock } from '@odysseus/scanner';
+import { PROSPECT_FETCH_ALLOWLIST_ENV_VAR } from '../config.js';
 import { fetchMentionsLegalesData } from './mentions-legales-fetch.js';
 
 describe('fetchMentionsLegalesData', () => {
   const originalFetch = global.fetch;
+  const originalAllowlist = process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR];
+
+  beforeEach(() => {
+    // The fetch address guard (issue #158) resolves every fetched host, and
+    // the stubs below answer for a fake domain: allowlist it so these tests
+    // stay hermetic instead of asking real DNS about example.fr.
+    process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR] = 'example.fr';
+  });
 
   afterEach(() => {
     global.fetch = originalFetch;
+    if (originalAllowlist === undefined) delete process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR];
+    else process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR] = originalAllowlist;
     vi.restoreAllMocks();
   });
 

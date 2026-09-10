@@ -1,14 +1,25 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OriginLock } from '@odysseus/scanner';
+import { PROSPECT_FETCH_ALLOWLIST_ENV_VAR } from '../../config.js';
 import { fetchContactPages } from './fetch-contact-pages.js';
 
 const OPTIONS = { crawlDelayMs: 0, userAgent: 'OdysseusBot/1.0', timeoutMs: 5000 };
 
 describe('fetchContactPages', () => {
   const originalFetch = global.fetch;
+  const originalAllowlist = process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR];
+
+  beforeEach(() => {
+    // The fetch address guard (issue #158) resolves every probed host, and
+    // the stubs below answer for a fake domain: allowlist it so these tests
+    // stay hermetic.
+    process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR] = 'hotel-exemple.fr';
+  });
 
   afterEach(() => {
     global.fetch = originalFetch;
+    if (originalAllowlist === undefined) delete process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR];
+    else process.env[PROSPECT_FETCH_ALLOWLIST_ENV_VAR] = originalAllowlist;
     vi.restoreAllMocks();
   });
 
