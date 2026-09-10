@@ -4,6 +4,10 @@ Written 2026-09-09 against the working tree at commit `69a24e6`. Deliverable
 of issue #164; the six operator decisions below gate the follow-up build
 plan, and no code, type, or schema changes here.
 
+Status: **APPROVED 2026-09-10.** The operator approved all six defaults, so
+every decision below applies as its default states it, and a build plan can
+be written from this design when the work is scheduled.
+
 Drift check, run first per the plan: over `71da99a..HEAD` the plan's five
 files show one change, `docs/decisions/trade-offs.md`, 18 insertions, both
 amendments that landed after the plan was written: entry 23 for issue #162,

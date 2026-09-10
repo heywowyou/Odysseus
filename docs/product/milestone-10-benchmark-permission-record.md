@@ -1,14 +1,16 @@
 # Milestone 10 benchmark permission record
 
-Status: **DRAFT, not approved.** No request of any kind has been made to any
-candidate site. This is the instrument that decision 8 in
+Status: **APPROVED 2026-09-10** (approval block in section 7 complete). No
+request of any kind has been made to any candidate site yet. This is the
+instrument that decision 8 in
 `docs/product/milestone-10-benchmark-study-design.md` requires: one explicit
 permission record naming the benchmark purpose and the exact domain list,
-recorded before the first request. Nothing in this
-file is permission until the operator fills in the approval block in section
-7. Source evidence for every candidate lives in
-`docs/research/milestone-10-benchmark-cohort.md`. The instrument implements
-decision 8 of `docs/product/milestone-10-benchmark-study-design.md`.
+recorded before the first request. Source evidence for every candidate lives
+in `docs/research/milestone-10-benchmark-cohort.md`. The instrument
+implements decision 8 of `docs/product/milestone-10-benchmark-study-design.md`.
+Stage 1 qualification may start now; stage 2 scanning waits for the approved
+window (on or after 2026-09-15, never concurrent with pilot scanning), and
+section 8 is filled before the first scan request.
 
 ## 1. Purpose statement (the text being approved)
 
@@ -114,18 +116,16 @@ scanning; one crawl capacity at a time.
 
 ## 7. Approval block
 
-To be completed by the operator. Approval is valid only with a name, a date,
-and the scope lines ticked.
+Completed by the operator on 2026-09-10.
 
-- Decision 1, purpose and list: approved / amended (state the amendment):
-  ................
-- Decision 2, sector set: Option A / Option B:
-  ................
+- Decision 1, purpose and list: approved (section 1 and the 43-domain list
+  in section 4 as drafted).
+- Decision 2, sector set: **Option B**, the benchmark-scoped extension of
+  the qualification sector set to retail division 47 classes, for this
+  cohort's qualification only. The outreach sector set itself stays as is.
 - Decision 3, window on or after 2026-09-15, never concurrent with the
-  pilot: confirmed / changed (state):
-  ................
-- Name and date:
-  ................
+  pilot: confirmed.
+- Name and date: heywowyou (operator), 2026-09-10.
 
 ## 8. Post-approval record (filled before the first scan request)
 
