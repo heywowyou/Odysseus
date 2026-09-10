@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
-import { useParams, Link } from 'react-router';
+import { useParams, Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
@@ -20,7 +20,7 @@ import {
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
 import { vocabularyLabel } from '../lib/vocabulary';
-import { ApiError, fetchJson, sendJson } from '../lib/api';
+import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
 import { formatDateTime } from '../lib/format';
 import { usePolling } from '../lib/use-polling';
 import { prospectSubPages, qualificationBadgeTone, reviewBadgeTone } from './prospects-model';
@@ -98,8 +98,33 @@ function DefinitionRow(props: { label: string; value: ReactNode }): JSX.Element 
 export function ProspectDetailPage(): JSX.Element {
   const { candidateId } = useParams<{ candidateId: string }>();
   const { strings, language } = useI18n();
+  const navigate = useNavigate();
   const { data, error, refresh, isNotFound } = useProspectDetail(candidateId);
   const [pendingAction, setPendingAction] = useState<ReviewAction | null>(null);
+  const [scanStarting, setScanStarting] = useState(false);
+
+  // Plan 037: the one candidate-to-scan path. The server resolves the
+  // domain and validates the selection; the page only navigates to the
+  // created scan's progress view, never matching audits by domain.
+  const startOutreachScan = async (): Promise<void> => {
+    if (candidateId === undefined || scanStarting) return;
+    setScanStarting(true);
+    try {
+      const result = await postEmpty<{ started: boolean; jobId?: string; refusal?: string }>(
+        `/api/prospects/${encodeURIComponent(candidateId)}/outreach/full-scan`,
+      );
+      if (result.started && result.jobId !== undefined) {
+        toast.success(strings.prospectDetail.outreachScanQueued);
+        navigate(`/scans/${result.jobId}`);
+        return;
+      }
+      toast.error(strings.prospectDetail.outreachScanRefused);
+    } catch {
+      toast.error(strings.prospectDetail.outreachScanRefused);
+    } finally {
+      setScanStarting(false);
+    }
+  };
 
   const handleReview = async (action: ReviewAction): Promise<void> => {
     if (candidateId === undefined) return;
@@ -507,6 +532,21 @@ export function ProspectDetailPage(): JSX.Element {
 
         <Card>
           <div className="flex flex-wrap items-center gap-2">
+            {/* Plan 037: shown only when the server-side plan says the
+                scan may start, so the operator never clicks a button the
+                worker would have to refuse. */}
+            {data.outreachScan.canStart ? (
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={scanStarting}
+                onClick={() => {
+                  void startOutreachScan();
+                }}
+              >
+                {strings.prospectDetail.startOutreachScan}
+              </Button>
+            ) : null}
             {/* The audit link pre-fills the scan form with the hotel's own
                 site; it only exists when the prospect resolved to one. */}
             {data.ownRegistrableDomain !== null ? (

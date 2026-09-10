@@ -81,6 +81,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': vi.fn().mockResolvedValue(undefined),
         'hotel-prescan': vi.fn().mockResolvedValue(undefined),
         'outreach-draft-batch': vi.fn().mockResolvedValue(undefined),
+        'outreach-full-scan': vi.fn().mockResolvedValue(undefined),
         'outreach-followup-batch': vi.fn().mockResolvedValue(undefined),
       },
     });
@@ -107,6 +108,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': vi.fn().mockResolvedValue(undefined),
         'hotel-prescan': vi.fn().mockResolvedValue(undefined),
         'outreach-draft-batch': vi.fn().mockResolvedValue(undefined),
+        'outreach-full-scan': vi.fn().mockResolvedValue(undefined),
         'outreach-followup-batch': vi.fn().mockResolvedValue(undefined),
       },
     });
@@ -134,6 +136,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': vi.fn(),
         'hotel-prescan': vi.fn(),
         'outreach-draft-batch': vi.fn(),
+        'outreach-full-scan': vi.fn(),
         'outreach-followup-batch': vi.fn(),
       },
     });
@@ -161,6 +164,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': runProspectIngestionJob,
         'hotel-prescan': vi.fn().mockResolvedValue(undefined),
         'outreach-draft-batch': vi.fn().mockResolvedValue(undefined),
+        'outreach-full-scan': vi.fn().mockResolvedValue(undefined),
         'outreach-followup-batch': vi.fn().mockResolvedValue(undefined),
       },
     });
@@ -193,6 +197,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': runProspectIngestionJob,
         'hotel-prescan': vi.fn().mockResolvedValue(undefined),
         'outreach-draft-batch': vi.fn().mockResolvedValue(undefined),
+        'outreach-full-scan': vi.fn().mockResolvedValue(undefined),
         'outreach-followup-batch': vi.fn().mockResolvedValue(undefined),
       },
     });
@@ -221,6 +226,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': runProspectIngestionJob,
         'hotel-prescan': vi.fn().mockResolvedValue(undefined),
         'outreach-draft-batch': vi.fn().mockResolvedValue(undefined),
+        'outreach-full-scan': vi.fn().mockResolvedValue(undefined),
         'outreach-followup-batch': vi.fn().mockResolvedValue(undefined),
       },
     });
@@ -263,6 +269,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': vi.fn(),
         'hotel-prescan': vi.fn(),
         'outreach-draft-batch': vi.fn(),
+        'outreach-full-scan': vi.fn(),
         'outreach-followup-batch': vi.fn(),
       },
     });
@@ -294,6 +301,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': vi.fn(),
         'hotel-prescan': vi.fn(),
         'outreach-draft-batch': vi.fn(),
+        'outreach-full-scan': vi.fn(),
         'outreach-followup-batch': vi.fn(),
       },
     });
@@ -321,6 +329,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': vi.fn(),
         'hotel-prescan': vi.fn(),
         'outreach-draft-batch': vi.fn(),
+        'outreach-full-scan': vi.fn(),
         'outreach-followup-batch': vi.fn(),
       },
     });
@@ -354,6 +363,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': vi.fn(),
         'hotel-prescan': vi.fn(),
         'outreach-draft-batch': vi.fn(),
+        'outreach-full-scan': vi.fn(),
         'outreach-followup-batch': vi.fn(),
       },
     });
@@ -376,6 +386,7 @@ describe('JobQueue', () => {
         'prospect-ingestion': vi.fn(),
         'hotel-prescan': vi.fn(),
         'outreach-draft-batch': vi.fn(),
+        'outreach-full-scan': vi.fn(),
         'outreach-followup-batch': vi.fn(),
       },
     });

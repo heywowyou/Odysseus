@@ -493,6 +493,9 @@ export const fr: DashboardStrings = {
     openOutreach: 'Ouvrir la démarche',
     openSite: 'Ouvrir le site dans un nouvel onglet',
     launchAudit: 'Lancer un audit',
+    startOutreachScan: 'Lancer l’analyse complète de prospection',
+    outreachScanQueued: 'Analyse de prospection en file d’attente.',
+    outreachScanRefused: 'L’analyse n’a pas pu être lancée.',
     sourcesHeading: 'Sources',
     sources: {
       field: 'Champ',

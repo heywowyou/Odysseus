@@ -12,11 +12,13 @@ import {
 } from '@odysseus/core';
 import { generateOutreachPreviewHtml } from '@odysseus/report';
 import {
+  createJob,
   findOutreachThreadByCandidate,
   getOperatorProspect,
   getProspectPreviewView,
   getProspectQualificationHistory,
   listOperatorProspects,
+  planOutreachFullScan,
   recordHotelCandidateReview,
 } from '@odysseus/store';
 import type { ListOperatorProspectsOptions, OperatorProspectQueue } from '@odysseus/store';
@@ -32,6 +34,7 @@ import {
 } from '../outreach/publish-preview.js';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
+import type { JobQueue } from '../queue/job-queue.js';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 
@@ -257,8 +260,14 @@ function parseReviewBody(raw: unknown): ReviewBody {
 /** Registers the plan 013 slice 2 endpoints: the filterable prospect list,
  *  the composed prospect detail, and the manual review action. Every route
  *  here goes through operator-views / hotel-candidates store helpers; none
- *  queries Mongoose directly. */
-export function registerProspectRoutes(router: Router, connection: Connection): void {
+ *  queries Mongoose directly. `queue` is optional so unit tests can mount
+ *  the routes without a worker; the outreach full-scan start action only
+ *  uses it to wake the worker promptly. */
+export function registerProspectRoutes(
+  router: Router,
+  connection: Connection,
+  queue?: JobQueue,
+): void {
   router.get('/api/prospects', async ({ res, query }) => {
     let options: ListOperatorProspectsOptions;
     try {
@@ -292,7 +301,18 @@ export function registerProspectRoutes(router: Router, connection: Connection): 
       limit: DETAIL_QUALIFICATION_HISTORY_LIMIT,
       offset: 0,
     });
-    sendJson(res, 200, { ...detail, qualificationHistory });
+    // Plan 037: the same fail-closed plan the start action validates, so
+    // the action card can show the button (or the reason it is absent)
+    // without a second validation path drifting from the real one.
+    const plan = await planOutreachFullScan(connection, candidateId, {
+      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+    });
+    sendJson(res, 200, {
+      ...detail,
+      qualificationHistory,
+      outreachScan:
+        'refused' in plan ? { canStart: false, refusal: plan.refused } : { canStart: true },
+    });
   });
 
   router.post('/api/prospects/:candidateId/review', async ({ req, res, params }) => {
@@ -330,6 +350,42 @@ export function registerProspectRoutes(router: Router, connection: Connection): 
       reviewState: parsed.decision,
       changed: result.changed,
     });
+  });
+
+  // Plan 037: start a candidate-linked outreach full scan. The route takes
+  // no domain, no URL, and no options from the client: everything the scan
+  // needs is resolved server-side from the candidate record, and the plan
+  // helper's validations (cohort selection, current qualification, own
+  // domain, suppression, duplicates) are the only path in.
+  router.post('/api/prospects/:candidateId/outreach/full-scan', async ({ res, params }) => {
+    const candidateId = params['candidateId']!;
+    if (!isPlausibleCandidateId(candidateId)) {
+      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
+      return;
+    }
+    const plan = await planOutreachFullScan(connection, candidateId, {
+      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+    });
+    if ('refused' in plan) {
+      if (plan.refused === 'candidate-unknown') {
+        sendError(res, 404, 'candidate not found');
+        return;
+      }
+      sendJson(res, 200, { started: false, refusal: plan.refused });
+      return;
+    }
+    const job = await createJob(connection, {
+      type: 'outreach-full-scan',
+      siteUrl: `https://${plan.domain}`,
+      options: {
+        domain: plan.domain,
+        outreachCandidateId: plan.candidateId,
+        outreachCohortId: plan.cohortId,
+        outreachScoringVersion: plan.scoringVersion,
+      },
+    });
+    queue?.notify();
+    sendJson(res, 201, { started: true, jobId: job.jobId });
   });
 
   // Milestone 9c plan 030. The dashboard's Outreach sub-page reads this to

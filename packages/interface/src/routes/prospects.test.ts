@@ -10,6 +10,8 @@ vi.mock('@odysseus/store', () => ({
   recordHotelCandidateReview: vi.fn(),
   findOutreachThreadByCandidate: vi.fn(),
   getProspectPreviewView: vi.fn(),
+  planOutreachFullScan: vi.fn(),
+  createJob: vi.fn(),
 }));
 
 vi.mock('../outreach/draft-runtime.js', () => ({
@@ -36,11 +38,13 @@ vi.mock('@odysseus/report', () => ({
 }));
 
 import {
+  createJob,
   findOutreachThreadByCandidate,
   getOperatorProspect,
   getProspectPreviewView,
   getProspectQualificationHistory,
   listOperatorProspects,
+  planOutreachFullScan,
   recordHotelCandidateReview,
 } from '@odysseus/store';
 import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
@@ -213,6 +217,8 @@ beforeEach(() => {
     revoked: 0,
     alreadyRevoked: 0,
   } as never);
+  vi.mocked(planOutreachFullScan).mockResolvedValue({ refused: 'not-selected' } as never);
+  vi.mocked(createJob).mockResolvedValue({ jobId: 'job-new-1' } as never);
 });
 
 async function handle(url: string, options: FakeReqOptions = {}) {
@@ -321,9 +327,10 @@ describe('GET /api/prospects/:candidateId', () => {
   it('never carries contact-address, message-body, or hash fields', async () => {
     const res = await handle('/api/prospects/cand-1');
     const body = JSON.parse(res.body ?? '{}') as Record<string, unknown>;
-    // The route may add qualificationHistory and nothing else.
+    // The route may add qualificationHistory and outreachScan and nothing
+    // else.
     expect(Object.keys(body).sort()).toEqual(
-      [...Object.keys(makeDetail()), 'qualificationHistory'].sort(),
+      [...Object.keys(makeDetail()), 'qualificationHistory', 'outreachScan'].sort(),
     );
     const serialized = res.body ?? '';
     for (const forbidden of [
@@ -337,6 +344,81 @@ describe('GET /api/prospects/:candidateId', () => {
     ]) {
       expect(serialized).not.toContain(`"${forbidden}"`);
     }
+  });
+
+  it('carries the outreach-scan eligibility computed by the store plan', async () => {
+    vi.mocked(planOutreachFullScan).mockResolvedValue({
+      candidateId: 'cand-1',
+      domain: 'hotel-exemple.fr',
+      cohortId: 'co-1',
+      scoringVersion: 'hotel-outreach-v1',
+    });
+    const res = await handle('/api/prospects/cand-1');
+    const body = JSON.parse(res.body ?? '{}');
+    expect(body.outreachScan).toEqual({ canStart: true });
+    expect(planOutreachFullScan).toHaveBeenCalledWith(fakeConnection, 'cand-1', {
+      qualificationVersion: 'v3',
+    });
+  });
+});
+
+describe('POST /api/prospects/:candidateId/outreach/full-scan', () => {
+  it('creates the candidate-linked job with its provenance and no client-supplied domain', async () => {
+    vi.mocked(planOutreachFullScan).mockResolvedValue({
+      candidateId: 'cand-1',
+      domain: 'hotel-exemple.fr',
+      cohortId: 'co-1',
+      scoringVersion: 'hotel-outreach-v1',
+    });
+    const res = await handle('/api/prospects/cand-1/outreach/full-scan', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(201);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({ started: true, jobId: 'job-new-1' });
+    expect(createJob).toHaveBeenCalledWith(fakeConnection, {
+      type: 'outreach-full-scan',
+      siteUrl: 'https://hotel-exemple.fr',
+      options: {
+        domain: 'hotel-exemple.fr',
+        outreachCandidateId: 'cand-1',
+        outreachCohortId: 'co-1',
+        outreachScoringVersion: 'hotel-outreach-v1',
+      },
+    });
+  });
+
+  it('returns the typed refusal without creating a job', async () => {
+    vi.mocked(planOutreachFullScan).mockResolvedValue({ refused: 'already-in-flight' } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/full-scan', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      started: false,
+      refusal: 'already-in-flight',
+    });
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 for an unknown candidate', async () => {
+    vi.mocked(planOutreachFullScan).mockResolvedValue({ refused: 'candidate-unknown' } as never);
+    const res = await handle('/api/prospects/cand-1/outreach/full-scan', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(404);
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('rejects a malformed candidateId with 400 and never plans', async () => {
+    const res = await handle('/api/prospects/bad%0Aid/outreach/full-scan', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(400);
+    expect(planOutreachFullScan).not.toHaveBeenCalled();
   });
 });
 

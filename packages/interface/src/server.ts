@@ -16,6 +16,7 @@ import { createLoginRateLimiter, type LoginRateLimiter } from './auth/rate-limit
 import { createInMemorySessionStore, type SessionStore } from './auth/session-store.js';
 import { JobQueue } from './queue/job-queue.js';
 import { runFullAuditJob } from './queue/pipeline/run-full-audit-job.js';
+import { runOutreachFullScanJob } from './queue/pipeline/run-outreach-full-scan-job.js';
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
 import { runHotelPrescanJob } from './queue/pipeline/run-hotel-prescan-job.js';
 import { runProspectIngestionJob } from './queue/pipeline/run-prospect-ingestion-job.js';
@@ -89,6 +90,7 @@ export async function startInterfaceServer(
     concurrency: getQueueConcurrency(),
     runners: {
       'full-audit': runFullAuditJob,
+      'outreach-full-scan': runOutreachFullScanJob,
       prospecting: runProspectingJob,
       'prospect-ingestion': runProspectIngestionJob,
       'hotel-prescan': runHotelPrescanJob,
@@ -105,7 +107,7 @@ export async function startInterfaceServer(
   registerAuditRoutes(router, connection);
   registerReportPreparationRoutes(router, connection);
   registerProspectingRoutes(router, connection, queue);
-  registerProspectRoutes(router, connection);
+  registerProspectRoutes(router, connection, queue);
   registerProspectInsightRoutes(router, connection);
   registerOutreachRoutes(router, connection, queue);
   registerSessionRoutes(router, { getPasswordHash, sessionStore, rateLimiter });

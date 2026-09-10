@@ -304,6 +304,18 @@ export interface PrivacySecurityCoverage {
   cookieConsent: 'completed' | 'unavailable';
 }
 
+/** Plan 037: prospecting provenance stamped on one candidate-linked
+ *  outreach full scan. Presence marks the audit as selected-prospect
+ *  evidence, decided when the job was created and re-validated when the
+ *  worker claimed it; it is never inferred from a hostname after the fact.
+ *  Absent on every ordinary paid or CLI audit. Immutable after insert:
+ *  a later scan of the same site is a new audit with its own context. */
+export interface AuditOutreachContext {
+  candidateId: string;
+  cohortId: string;
+  scoringVersion: string;
+}
+
 export interface AuditManifest {
   auditId: string;
   kind: ManifestKind;
@@ -371,4 +383,7 @@ export interface AuditManifest {
    *  never "compared and found nothing", so the report section renders
    *  nothing rather than a false zero. */
   benchmarkPercentile?: SiteBenchmarkPercentile;
+  /** Plan 037. Present only on candidate-linked outreach full scans; see
+   *  AuditOutreachContext. */
+  outreach?: AuditOutreachContext;
 }

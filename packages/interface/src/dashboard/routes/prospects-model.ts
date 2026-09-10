@@ -313,6 +313,10 @@ export interface ProspectDetailResponse {
     limit: number;
     offset: number;
   };
+  /** Plan 037: whether this prospect may start an outreach full scan now,
+   *  computed server-side by the same fail-closed plan the start action
+   *  validates. When false, refusal names the typed reason. */
+  outreachScan: { canStart: boolean; refusal?: string };
   // prescan, evidence, score, and preview also cross the boundary; they
   // render on their own routes, which this page only links to.
 }

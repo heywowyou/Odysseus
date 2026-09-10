@@ -18,7 +18,8 @@ export type JobType =
   | 'prospect-ingestion'
   | 'hotel-prescan'
   | 'outreach-draft-batch'
-  | 'outreach-followup-batch';
+  | 'outreach-followup-batch'
+  | 'outreach-full-scan';
 export type JobStatus = 'queued' | 'running' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
 export type JobPhase =
   | 'queued'
@@ -111,6 +112,16 @@ export interface JobOptionsSnapshot {
   /** outreach-draft-batch jobs only. Follow-up drafts read the thread's own
    *  stored language instead - there is nothing to override. */
   language?: 'fr' | 'en';
+  /** outreach-full-scan jobs only (plan 037): the selected candidate this
+   *  scan was created from, with the cohort and scoring version whose
+   *  membership authorized it. Persisted so the resulting audit carries
+   *  prospect provenance by record rather than by hostname inference.
+   *  Validated server-side at creation (cohort membership, current
+   *  qualification, suppression, duplicates) and re-validated when the
+   *  worker claims the job. */
+  outreachCandidateId?: string;
+  outreachCohortId?: string;
+  outreachScoringVersion?: string;
 }
 
 export interface JobProgressCrawl {
@@ -283,6 +294,9 @@ const jobOptionsSchema = new Schema(
     prescanCandidateIds: { type: [String] },
     limit: { type: Number },
     language: { type: String, enum: ['fr', 'en'] },
+    outreachCandidateId: { type: String },
+    outreachCohortId: { type: String },
+    outreachScoringVersion: { type: String },
   },
   { _id: false },
 );
@@ -423,6 +437,7 @@ const jobSchema = new Schema<JobDocument>(
         'hotel-prescan',
         'outreach-draft-batch',
         'outreach-followup-batch',
+        'outreach-full-scan',
       ],
     },
     status: {

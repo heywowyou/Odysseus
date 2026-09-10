@@ -35,6 +35,7 @@ import {
   buildFindingsProvenance,
   type AuditConfigSnapshot,
   type AuditManifest,
+  type AuditOutreachContext,
   type Finding,
   type ObligationAssessment,
   type SiteSignalOverrides,
@@ -94,6 +95,11 @@ export interface RunAuditStageOptions {
    *  its auditId becomes the persisted audit's id. When absent (the CLI
    *  path) the stage mints a fresh startedAt exactly as before. */
   runIdentity?: { startedAt: Date; auditId: string };
+  /** Plan 037: prospecting provenance for a candidate-linked outreach full
+   *  scan. Stamped onto the manifest and the persisted audit so the
+   *  candidate association is a record fact. Never set for an ordinary
+   *  paid or CLI audit. */
+  outreachContext?: AuditOutreachContext;
 }
 
 export interface AuditStageResult {
@@ -297,6 +303,7 @@ export async function runAuditStage(
     const manifest: AuditManifest = {
       ...artifacts.manifest,
       findingsProvenance: buildFindingsProvenance(findings),
+      ...(options.outreachContext !== undefined ? { outreach: options.outreachContext } : {}),
     };
     await writeManifestFile(artifacts.auditDir, manifest);
 

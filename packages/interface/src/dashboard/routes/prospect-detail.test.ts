@@ -68,6 +68,7 @@ function detailWithContact(contact: ProspectDetailResponse['contact']): Prospect
     contact,
     thread: null,
     outcomes: { rows: [], total: 0, limit: 10, offset: 0 },
+    outreachScan: { canStart: false },
   };
 }
 

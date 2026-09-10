@@ -530,6 +530,9 @@ export interface DashboardStrings {
     openOutreach: string;
     openSite: string;
     launchAudit: string;
+    startOutreachScan: string;
+    outreachScanQueued: string;
+    outreachScanRefused: string;
     sourcesHeading: string;
     sources: {
       field: string;

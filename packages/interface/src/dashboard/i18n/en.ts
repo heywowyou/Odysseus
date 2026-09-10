@@ -489,6 +489,9 @@ export const en: DashboardStrings = {
     openOutreach: 'Open outreach',
     openSite: 'Open the site in a new tab',
     launchAudit: 'Run an audit',
+    startOutreachScan: 'Start the outreach full scan',
+    outreachScanQueued: 'The outreach full scan is queued.',
+    outreachScanRefused: 'The scan could not be started.',
     sourcesHeading: 'Sources',
     sources: {
       field: 'Field',

@@ -256,6 +256,18 @@ const findingsProvenanceSchema = new Schema(
   { _id: false },
 );
 
+// Plan 037: prospecting provenance on candidate-linked outreach full
+// scans. Mirrors core's AuditOutreachContext; without this sub-schema
+// Mongoose would silently strip the field on persist.
+const outreachContextSchema = new Schema(
+  {
+    candidateId: { type: String, required: true },
+    cohortId: { type: String, required: true },
+    scoringVersion: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const privacySecurityCoverageSchema = new Schema(
   {
     securityHeaders: { type: String, required: true, enum: ['completed', 'unavailable'] },
@@ -433,6 +445,7 @@ const auditSchema = new Schema<AuditDocument>(
     renormalizedAt: { type: Date },
     findingsProvenance: { type: findingsProvenanceSchema },
     privacySecurityCoverage: { type: privacySecurityCoverageSchema },
+    outreach: { type: outreachContextSchema },
     tool: { type: toolVersionsSchema, required: true },
     config: { type: configSnapshotSchema, required: true },
     crawl: { type: crawlStatsSchema, required: true },

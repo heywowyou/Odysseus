@@ -283,6 +283,20 @@ export type {
   ListOutreachPreviewsOptions,
 } from './outreach-previews.js';
 
+// Milestone 9c plan 037: candidate-linked outreach full scans. The plan
+// (start eligibility) and the exact audit resolution (which stored audit is
+// the candidate's outreach evidence) both live here so the route and the
+// queue runner cannot drift apart.
+export { planOutreachFullScan, resolveOutreachAuditForCandidate } from './outreach-scans.js';
+export { findActiveOutreachFullScanJob, findActiveScanJobForHost } from './outreach-scans.js';
+export type {
+  OutreachFullScanPlan,
+  OutreachFullScanStartRefusal,
+  OutreachFullScanVersionInputs,
+  OutreachAuditRefusal,
+  OutreachAuditResolution,
+} from './outreach-scans.js';
+
 // Milestone 9c plans 011 and 012: outreach threads and draft attempts.
 export { OUTREACH_THREAD_STATES } from './schemas/outreach-thread.schema.js';
 export type {
