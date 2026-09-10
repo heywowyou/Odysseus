@@ -6,7 +6,7 @@ import {
   selectOutreachProofCards,
   type OutreachProofCardCopyLookup,
 } from './outreach-preview-summary.js';
-import type { AuditCoverageSummary } from '../coverage-summary.js';
+import type { AuditCoverageSummary, CurrentAuditCoverageSummary } from '../coverage-summary.js';
 
 const COPY: Record<string, { fr: string; en: string }> = {
   'keyboard-trap': {
@@ -31,7 +31,6 @@ function finding(overrides: Partial<Finding> & Pick<Finding, 'ruleId'>): Finding
     auditId: 'audit-1',
     schemaVersion: 1,
     source: 'axe',
-    ruleId: overrides.ruleId,
     category: 'accessibility',
     severity: 'moderate',
     wcagCriteria: [],
@@ -48,7 +47,7 @@ function finding(overrides: Partial<Finding> & Pick<Finding, 'ruleId'>): Finding
   };
 }
 
-function currentCoverage(): AuditCoverageSummary {
+function currentCoverage(): CurrentAuditCoverageSummary {
   return {
     kind: 'current',
     inventoriedUrlCount: 12,
@@ -65,7 +64,9 @@ function currentCoverage(): AuditCoverageSummary {
   };
 }
 
-function buildInput(overrides: Partial<Parameters<typeof buildOutreachPreviewSummary>[0]> = {}) {
+function buildInput(
+  overrides: Partial<Parameters<typeof buildOutreachPreviewSummary>[0]> = {},
+): Parameters<typeof buildOutreachPreviewSummary>[0] {
   return {
     auditId: 'audit-1',
     observedAt: new Date('2026-09-11T00:00:00.000Z'),
@@ -79,7 +80,7 @@ function buildInput(overrides: Partial<Parameters<typeof buildOutreachPreviewSum
       finding({ ruleId: 'color-contrast' }),
       finding({ ruleId: 'meta-title-missing', category: 'seo', severity: 'minor' as const }),
     ],
-    recipient: { businessName: 'Hôtel de la Plage', dataOrigins: ['public-website'] as const },
+    recipient: { businessName: 'Hôtel de la Plage', dataOrigins: ['public-website'] },
     links: {
       offer: 'https://odysseusaudit.com/offre',
       privacy: 'https://odysseusaudit.com/confidentialite-prospection',
