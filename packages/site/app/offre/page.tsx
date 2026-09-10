@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { LanguageSection } from '../../lib/language';
 
 export const metadata: Metadata = {
   title: "L'audit complet",
@@ -15,161 +16,199 @@ export const metadata: Metadata = {
 };
 
 /**
- * The offer page a preview links to, milestone 9c plan 009.
+ * La page d'offre vers laquelle un aperçu renvoie, milestone 9c plan 009.
  *
- * The preview contract requires an `offer` link on this host, so this page has
- * to exist for a preview to be publishable at all.
+ * Le contrat de l'aperçu exige un lien `offer` sur cet hôte : cette page doit
+ * donc exister pour qu'un aperçu puisse être publié.
  *
- * **The price is published here, by operator decision on 2026-08-29.** The
- * number itself is owned by `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` in
- * `packages/core` (trade-off 42), and this page cannot import it: the site
- * deliberately depends on nothing in the workspace. So the figure is repeated
- * as literal text, and `packages/core/src/offer/pricing.test.ts` reads this file
- * and fails if the two ever disagree. The guard lives on the side that owns the
- * number, which is what keeps the site's isolation intact.
+ * **Le prix est publié ici, par décision de l'opérateur du 2026-08-29.** Le
+ * chiffre lui-même appartient à `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT` dans
+ * `packages/core` (trade-off 42), et cette page ne peut pas l'importer : le
+ * site ne dépend délibérément d'aucun autre paquet du dépôt. Le chiffre est
+ * donc répété en texte littéral, et `packages/core/src/offer/pricing.test.ts`
+ * lit ce fichier et échoue si les deux divergent un jour. Le garde-fou vit du
+ * côté qui possède le chiffre, ce qui préserve l'isolation du site.
  *
- * It also states no legal obligation. Whether any particular rule reaches a
- * given business is exactly the conclusion this project does not draw.
+ * La page n'affirme non plus aucune obligation légale. Savoir si une règle
+ * donnée s'applique à une entreprise donnée est précisément la conclusion
+ * que ce projet ne tire jamais.
+ *
+ * La phrase de limitation approuvée, section 2 de offer-positioning.md, est
+ * énoncée en tête de chaque langue, avant toute promesse.
+ *
+ * Réécriture éditoriale du 2026-09-10&#160;: texte français rédigé
+ * nativement, colonne anglaise traduite du français.
+ *
+ * Bascule de langue du 2026-09-10&#160;: les deux langues occupaient jusque
+ * là deux colonnes toujours visibles côte à côte, avec des liens
+ * d'ancrage qui faisaient semblant de « changer » de langue en défilant vers
+ * un contenu déjà affiché. La page entière (accroche comprise) est
+ * désormais dupliquée dans `LanguageSection`, pilotée par le vrai
+ * sélecteur du bandeau (`lib/site-chrome.tsx`) : une seule langue est
+ * visible à la fois, dans tout le document, pas seulement dans le corps.
  */
 export default function OfferPage() {
   return (
-    <main id="contenu" tabIndex={-1} className="mx-auto max-w-2xl flex-1 px-6 py-12 lg:max-w-6xl">
-      <h1 className="mb-4 text-2xl font-bold">L&apos;audit complet</h1>
+    <main id="contenu" tabIndex={-1} className="flex-1">
+      <LanguageSection lang="fr">
+        <section className="shell hero">
+          <p className="label">Offre</p>
+          <h1 className="title measure mt-4">L&apos;audit complet</h1>
+          <p className="lede measure mt-5">
+            L&apos;analyse de l&apos;ensemble de votre site, et un rapport qui précise, pour chaque
+            constat, la page et l&apos;élément concernés.
+          </p>
 
-      <nav aria-label="Langues" className="mb-10 flex gap-6 text-sm">
-        <a className="underline" href="#francais">
-          Français
-        </a>
-        <a className="underline" href="#english">
-          English
-        </a>
-      </nav>
+          <div className="statement measure mt-8">
+            <p className="label">Portée du diagnostic</p>
+            <p className="mt-2">
+              Ceci est un diagnostic technique, pas un audit RGAA. Il ne produit pas de taux de
+              conformité officiel et ne peut pas servir de base à une déclaration
+              d&apos;accessibilité.
+            </p>
+          </div>
+        </section>
 
-      <div className="lg:grid lg:grid-cols-2 lg:gap-12">
-        <div id="francais" className="border-t border-black/10 pt-8 dark:border-white/10">
-          <section>
-            <p className="mb-6 text-sm font-medium text-black/60 dark:text-white/60">Français</p>
-
-            <p className="mb-4">
-              L&apos;aperçu que vous avez peut-être reçu porte sur trois pages au plus et sur ce
-              qu&apos;une analyse automatisée peut voir en quelques minutes. L&apos;audit complet
-              est autre chose : il parcourt l&apos;ensemble du site.
+        <div className="shell section-tight">
+          <section className="prose measure">
+            <p>
+              Si vous avez reçu un aperçu, celui-ci portait sur trois pages au plus et se limitait à
+              ce qu&apos;une analyse automatisée peut relever en quelques minutes. L&apos;audit
+              complet porte sur l&apos;ensemble du site.
             </p>
 
-            <h2 className="mb-4 text-xl font-semibold">Ce qu&apos;il couvre</h2>
+            <h2>Périmètre</h2>
 
-            <ul className="mb-4 list-disc pl-6">
-              <li className="mb-2">
-                L&apos;accessibilité, vérifiée contre les critères WCAG 2.2 niveau AA et la norme
+            <ul>
+              <li>
+                L&apos;accessibilité, au regard des règles WCAG 2.2, niveau AA, et de la norme
                 européenne EN 301 549.
               </li>
-              <li className="mb-2">
-                Le référencement technique, y compris les écarts entre la page brute et la page une
-                fois le JavaScript exécuté, qui rendent certains sites en grande partie invisibles
-                aux moteurs de recherche.
+              <li>
+                Le référencement naturel, notamment les écarts entre la page brute et la page après
+                exécution du JavaScript, qui peuvent rendre une grande partie d&apos;un site
+                invisible aux moteurs de recherche.
               </li>
-              <li className="mb-2">
-                Les performances mesurées de chargement, les données structurées, et les en-têtes de
-                sécurité.
+              <li>La visibilité auprès des assistants d&apos;intelligence artificielle (IA).</li>
+              <li>
+                La vitesse de chargement, mesurée sur un échantillon représentatif de pages, les
+                données structurées et les en-têtes de sécurité.
               </li>
             </ul>
 
-            <h2 className="mb-4 text-xl font-semibold">Ce que vous recevez</h2>
+            <h2>Livrable</h2>
 
-            <p className="mb-4">
-              Un rapport en français et en anglais. Chaque constat renvoie à la page et à
-              l&apos;élément concernés, avec une capture d&apos;écran, une explication de ce qui ne
-              va pas et une instruction de correction. Rien n&apos;y figure qu&apos;un outil de
-              mesure n&apos;ait effectivement détecté : l&apos;analyse explique, hiérarchise et
-              traduit, elle n&apos;invente aucun constat.
+            <p>
+              Un rapport au format PDF, en français et en anglais. Chaque constat renvoie à la page
+              et à l&apos;élément concernés, et s&apos;accompagne d&apos;une capture d&apos;écran,
+              d&apos;une explication du problème et d&apos;une recommandation de correction. Le
+              rapport ne contient que des constats effectivement relevés par les outils de
+              mesure&#160;: l&apos;analyse les explique, les hiérarchise et les traduit, sans en
+              ajouter aucun.
             </p>
 
-            <p className="mb-4">
-              Le rapport reproduit également les critères réglementaires applicables au type
-              d&apos;activité et les données publiques du registre des entreprises, sans conclure à
-              leur application à votre cas. Cette question relève d&apos;un avocat, et le rapport le
-              dit.
+            <p>
+              Le rapport reproduit également les critères réglementaires applicables à votre type
+              d&apos;activité, ainsi que les données publiques du registre des entreprises, sans
+              conclure à leur application à votre cas. Cette question relève d&apos;un avocat, ce
+              que le rapport rappelle expressément.
             </p>
 
-            <h2 className="mb-4 text-xl font-semibold">Commander</h2>
-
-            <div className="rounded border border-black/20 p-6 dark:border-white/20">
-              <p className="mb-2 text-2xl font-bold">1&#160;600&#160;€ HT</p>
-              <p className="mb-4">
-                Tarif unique et publié. Il ne dépend ni de la taille du site, ni du nombre de
-                constats, et il vous sera confirmé par écrit avant tout engagement. Pour commander
-                ou poser une question, écrivez à contact@odysseusaudit.com.
-              </p>
-              <a className="btn-primary" href="mailto:contact@odysseusaudit.com">
-                Écrire pour commander
-              </a>
-            </div>
+            <h2>Commande</h2>
           </section>
+
+          <div className="card card-accent measure mt-6">
+            <p className="label">Tarif unique et publié</p>
+            <p className="price mt-3">1&#160;600&#160;€ HT</p>
+            <p className="soft mt-4">
+              Il ne dépend ni de la taille du site ni du nombre de constats, et vous est confirmé
+              par écrit avant tout engagement. Pour commander ou pour toute question&#160;:
+              contact@odysseusaudit.com.
+            </p>
+            <a className="btn btn-primary mt-6" href="mailto:contact@odysseusaudit.com">
+              Commander par e-mail
+            </a>
+          </div>
         </div>
+      </LanguageSection>
 
-        <div
-          id="english"
-          className="mt-12 border-t border-black/10 pt-8 lg:mt-0 dark:border-white/10"
-        >
-          <section lang="en">
-            <p className="mb-6 text-sm font-medium text-black/60 dark:text-white/60">English</p>
+      <LanguageSection lang="en">
+        <section className="shell hero">
+          <p className="label">Offer</p>
+          <h1 className="title measure mt-4">The full audit</h1>
+          <p className="lede measure mt-5">
+            An analysis of your whole site, and a report that names, for every finding, the page and
+            the element concerned.
+          </p>
 
-            <h1 className="mb-8 text-2xl font-bold">The full audit</h1>
+          <div className="statement measure mt-8">
+            <p className="label">Scope of the diagnostic</p>
+            <p className="mt-2">
+              This is a technical diagnostic, not an audit RGAA. It does not produce an official
+              conformity rate and cannot serve as the basis for an accessibility statement.
+            </p>
+          </div>
+        </section>
 
-            <p className="mb-4">
-              The preview you may have received covers at most three pages, and only what an
-              automated analysis can see in a few minutes. The full audit is a different thing: it
-              walks the whole site.
+        <div className="shell section-tight">
+          <section className="prose measure">
+            <p>
+              If you received a preview, it covered at most three pages and was limited to what an
+              automated analysis can pick up in a few minutes. The full audit covers the whole site.
             </p>
 
-            <h2 className="mb-4 text-xl font-semibold">What it covers</h2>
+            <h2>Scope</h2>
 
-            <ul className="mb-4 list-disc pl-6">
-              <li className="mb-2">
+            <ul>
+              <li>
                 Accessibility, checked against WCAG 2.2 level AA and the European standard EN 301
                 549.
               </li>
-              <li className="mb-2">
-                Technical search visibility, including the gap between the raw page and the page
-                once JavaScript has run, which leaves some sites largely invisible to search
+              <li>
+                Technical search optimisation, including the gaps between the raw page and the page
+                once JavaScript has run, which can leave a large part of a site invisible to search
                 engines.
               </li>
-              <li className="mb-2">
-                Measured loading performance, structured data, and security headers.
+              <li>Visibility to artificial intelligence (AI) assistants.</li>
+              <li>
+                Loading speed, measured on a representative sample of pages, structured data, and
+                security headers.
               </li>
             </ul>
 
-            <h2 className="mb-4 text-xl font-semibold">What you get</h2>
+            <h2>Deliverable</h2>
 
-            <p className="mb-4">
-              A report in French and English. Every finding points at the page and the element
-              concerned, with a screenshot, an explanation of what is wrong, and an instruction for
-              fixing it. Nothing appears in it that a measuring tool did not actually detect: the
-              analysis explains, prioritises and translates, it invents no findings.
+            <p>
+              A report in PDF format, in French and English. Every finding points to the page and
+              the element concerned, with a screenshot, an explanation of the problem, and a
+              recommendation for fixing it. The report contains only findings actually detected by
+              the measuring tools: the analysis explains, prioritises and translates them, without
+              adding any of its own.
             </p>
 
-            <p className="mb-4">
-              The report also reproduces the regulatory criteria that apply to the type of activity,
-              and the public business registry data, without concluding that they apply to your
-              case. That question is one for a lawyer, and the report says so.
+            <p>
+              The report also reproduces the regulatory criteria that apply to your type of
+              activity, along with public business registry data, without concluding that they apply
+              to your case. That question is for a lawyer, as the report expressly states.
             </p>
 
-            <h2 className="mb-4 text-xl font-semibold">Commissioning it</h2>
-
-            <div className="rounded border border-black/20 p-6 dark:border-white/20">
-              <p className="mb-2 text-2xl font-bold">EUR 1,600 excl. VAT</p>
-              <p className="mb-4">
-                One published price. It does not depend on the size of the site or on the number of
-                findings, and it is confirmed to you in writing before any commitment. To commission
-                an audit or ask a question, write to contact@odysseusaudit.com.
-              </p>
-              <a className="btn-primary" href="mailto:contact@odysseusaudit.com">
-                Write to commission
-              </a>
-            </div>
+            <h2>Ordering</h2>
           </section>
+
+          <div className="card card-accent measure mt-6">
+            <p className="label">One published price</p>
+            <p className="price mt-3">EUR 1,600 excl. VAT</p>
+            <p className="soft mt-4">
+              It does not depend on the size of the site or on the number of findings, and it is
+              confirmed to you in writing before any commitment. To order or for any question:
+              contact@odysseusaudit.com.
+            </p>
+            <a className="btn btn-primary mt-6" href="mailto:contact@odysseusaudit.com">
+              Order by email
+            </a>
+          </div>
         </div>
-      </div>
+      </LanguageSection>
     </main>
   );
 }

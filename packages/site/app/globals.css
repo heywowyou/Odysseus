@@ -1,81 +1,861 @@
 @import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* =========================================================================
+   Public site design system.
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+   One register for prose, one for measured facts, one for what a program
+   reads. That last distinction is the whole product, so it is drawn rather
+   than described: every surface standing for a machine's view of a page uses
+   the dark "machine" pair, in both colour schemes.
+   ========================================================================= */
+
+:root {
+  color-scheme: light;
+
+  /* The paper is the dashboard's accent white used as a ground. The operator
+     tool draws attention in that value; the client page stands on it. Ink is
+     a blue black rather than a true black, the colour of a printed technical
+     document rather than of a screen default. */
+  --paper: #f2f3f5;
+  --paper-raised: #ffffff;
+  --paper-sunk: #e7e9ec;
+  --ink: #0b0d10;
+  --ink-soft: #454b54;
+  --ink-muted: #5f666f;
+  --line: rgb(11 13 16 / 0.13);
+  --line-strong: rgb(11 13 16 / 0.26);
+
+  /* The machine register: the signature panel and every code block. Fixed in
+     both colour schemes, because it stands for a thing, not for a theme. */
+  --machine: #0b0d10;
+  --machine-raised: #16191d;
+  --machine-ink: #cfd4da;
+  --machine-ink-muted: #8b939d;
+  --machine-line: rgb(255 255 255 / 0.13);
+
+  /* The rendered page inside the signature panel. Also fixed: a page a person
+     sees is a light document, whatever theme this site happens to be in. */
+  --visitor: #ffffff;
+  --visitor-ink: #0b0d10;
+  --visitor-muted: #5f666f;
+  --visitor-line: rgb(11 13 16 / 0.12);
+  /* Tinted with the accent rather than ink: on every diff panel, blue marks
+     what is actually present and legible, and the neutral hatch marks what
+     is missing. The visitor panel is a fixed light document in both colour
+     schemes, so this value is not re-tuned by the dark-mode block below. */
+  --visitor-fill: rgb(37 92 181 / 0.82);
+  --visitor-fill-soft: rgb(37 92 181 / 0.22);
+
+  /* The one hue on an otherwise monochrome page: a controlled instrument
+     blue, used for signal (a timeline marker, a callout rule, a legible
+     value) and never for a measured quantity, which stays ink. */
+  --accent: #255cb5;
+  --accent-strong: #163e82;
+  --accent-soft: #e3ebfa;
+  --accent-line: rgb(37 92 181 / 0.4);
+
+  --measure: 40rem;
+  --shell: 70rem;
+
+  --font-mono-stack: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: dark;
+
+    --paper: #0b0d10;
+    --paper-raised: #14171b;
+    --paper-sunk: #16191d;
+    --ink: #f2f3f5;
+    --ink-soft: #b4bac2;
+    --ink-muted: #949ba4;
+    --line: rgb(255 255 255 / 0.12);
+    --line-strong: rgb(255 255 255 / 0.24);
+
+    --machine: #08090a;
+    --machine-raised: #121417;
+
+    /* Toned off pure white so the one light panel on a dark page reads as a
+       document rather than as a lamp. */
+    --visitor: #e7e9ec;
+    --visitor-fill: rgb(37 92 181 / 0.85);
+    --visitor-fill-soft: rgb(37 92 181 / 0.26);
+
+    /* Brightened for contrast against the dark ground; the visitor-panel
+       values above stay the light-mode blue on purpose (see comment there). */
+    --accent: #86adf7;
+    --accent-strong: #b7cdff;
+    --accent-soft: rgb(134 173 247 / 0.14);
+    --accent-line: rgb(134 173 247 / 0.45);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  /* Inter, self-hosted through next/font/local in app/layout.tsx. The variable
-     resolves to the family name next/font generates; the Arial stack after it
-     is only the pre-swap fallback. */
-  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
-  line-height: 1.6;
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-paper-sunk: var(--paper-sunk);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-machine: var(--machine);
+  --color-machine-ink: var(--machine-ink);
+  --color-accent: var(--accent);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-mono-stack);
 }
 
-/* Monochrome links: the brand has no accent colour, and the default blue fails
-   4.5:1 against the dark-mode background. Underline stays as the affordance. */
-a {
-  color: inherit;
-  text-underline-offset: 2px;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    /* Inter, self-hosted through next/font/local in app/layout.tsx. The
+       variable resolves to the family name next/font generates; the stack
+       after it is only the pre-swap fallback. */
+    font-family: var(--font-inter), ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    font-size: 1rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Monochrome links: the brand has no accent colour, and a default blue
+     fails 4.5:1 against the dark ground. The underline is the affordance. */
+  a {
+    color: inherit;
+    text-underline-offset: 0.18em;
+  }
+
+  ::selection {
+    background-color: var(--line-strong);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Inside a machine surface the page ink would be invisible, so the focus
+     ring switches with the surface it sits on. */
+  .machine :focus-visible,
+  .codeblock :focus-visible {
+    outline-color: var(--machine-ink);
+  }
+
+  /* Motion is decoration only; every state is fully readable without it. The
+     delay is reset alongside the duration, or a staggered reveal would hold
+     its start frame for the length of the stagger. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
-/* Visible keyboard focus in both colour schemes: the pair (foreground on
-   background) is the text pair itself, so the outline always clears 4.5:1. */
-:focus-visible {
-  outline: 2px solid var(--foreground);
-  outline-offset: 2px;
-}
+@layer components {
+  /* ---- Structure ------------------------------------------------------ */
 
-/* Inverted monochrome buttons. The pair (background on foreground) is the same
-   text pair reversed, so contrast is identical in both schemes. 44px is the
-   touch-target floor. */
-.btn-primary,
-.btn-secondary {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  border-radius: 4px;
-  padding: 0.75rem 1.25rem;
-  font-weight: 500;
-}
+  .shell {
+    margin-inline: auto;
+    width: 100%;
+    max-width: var(--shell);
+    padding-inline: 1.5rem;
+  }
 
-.btn-primary {
-  background: var(--foreground);
-  color: var(--background);
-}
+  @media (min-width: 40rem) {
+    .shell {
+      padding-inline: 2.5rem;
+    }
+  }
 
-.btn-primary:hover {
-  opacity: 0.85;
-}
+  .measure {
+    max-width: var(--measure);
+  }
 
-.btn-secondary {
-  border: 1px solid color-mix(in srgb, var(--foreground) 50%, transparent);
-}
+  /* Display type needs a longer line than prose does, or a headline set at
+     four rem breaks into a narrow stack beside an empty half page. */
+  .measure-display {
+    max-width: 20ch;
+  }
 
-.btn-secondary:hover {
-  border-color: var(--foreground);
-}
+  /* A wide row carrying a main column and a narrower aside. The aside is
+     placed by CSS rather than by document order, so a block that has to be
+     read first (the diagnostic limit, per the positioning rule) can lead the
+     document and still sit beside the prose rather than after it. */
+  .split {
+    display: grid;
+    gap: 2.5rem;
+    align-items: start;
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  ::before,
-  ::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+  @media (min-width: 64rem) {
+    .split {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+      gap: 4rem;
+    }
+
+    .split-main {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .split-aside {
+      grid-column: 2;
+      grid-row: 1;
+    }
+  }
+
+  .section {
+    padding-block: clamp(3.25rem, 1.5rem + 5vw, 6rem);
+  }
+
+  .section-tight {
+    padding-block: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+  }
+
+  .section-divided {
+    border-top: 1px solid var(--line);
+  }
+
+  .hero {
+    padding-block: clamp(3rem, 1.5rem + 6vw, 7rem) clamp(2.25rem, 1.5rem + 2.5vw, 3.5rem);
+  }
+
+  /* ---- Type registers -------------------------------------------------- */
+
+  /* The wordmark setting, reused for every label. Wide capitals read as an
+     instrument's nameplate, which is what this tool is; borrowing that
+     setting is the one identity move available without a logo. */
+  .label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-muted);
+  }
+
+  .wordmark {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .display {
+    font-size: clamp(2.125rem, 1.15rem + 3.9vw, 4rem);
+    font-weight: 600;
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+
+  .title {
+    font-size: clamp(1.875rem, 1.3rem + 2.2vw, 2.75rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .heading {
+    font-size: clamp(1.375rem, 1.15rem + 0.9vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .subheading {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+  }
+
+  .lede {
+    font-size: clamp(1.0625rem, 0.98rem + 0.4vw, 1.25rem);
+    line-height: 1.55;
+    color: var(--ink-soft);
+    text-wrap: pretty;
+  }
+
+  .small {
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  .muted {
+    color: var(--ink-muted);
+  }
+
+  .soft {
+    color: var(--ink-soft);
+  }
+
+  /* Prose is written, facts are measured: every price and count switches to
+     tabular figures so digits align and nothing shifts between values. */
+  .numeric {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    letter-spacing: -0.015em;
+  }
+
+  .mono {
+    font-family: var(--font-mono-stack);
+    font-size: 0.9em;
+    letter-spacing: 0;
+  }
+
+  /* ---- Prose blocks ---------------------------------------------------- */
+
+  .prose > * + * {
+    margin-top: 1rem;
+  }
+
+  .prose h2 {
+    margin-top: 2.5rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+  }
+
+  .prose h2:first-child {
+    margin-top: 0;
+  }
+
+  .prose ul {
+    padding-left: 1.15rem;
+    list-style: disc;
+  }
+
+  .prose li::marker {
+    color: var(--ink-muted);
+  }
+
+  .prose li + li {
+    margin-top: 0.5rem;
+  }
+
+  .prose strong {
+    font-weight: 600;
+  }
+
+  .prose a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-decoration-color: var(--line-strong);
+    transition: text-decoration-color 0.15s ease;
+  }
+
+  .prose a:hover {
+    text-decoration-color: currentColor;
+  }
+
+  /* ---- Controls -------------------------------------------------------- */
+
+  .btn {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 3px;
+    padding: 0.6875rem 1.25rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .btn-primary {
+    background-color: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--ink-soft);
+    border-color: var(--ink-soft);
+  }
+
+  .btn-secondary {
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--ink);
+    background-color: var(--line);
+  }
+
+  .navlink {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    font-size: 0.9375rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .navlink:hover {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 50;
+  }
+
+  .skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    border: 1px solid var(--ink);
+    border-radius: 3px;
+    background-color: var(--paper-raised);
+    padding-inline: 1rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* ---- Surfaces -------------------------------------------------------- */
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background-color: var(--paper-raised);
+    padding: clamp(1.5rem, 1rem + 2vw, 2.25rem);
+  }
+
+  /* The one sentence that has to be read before any claim about the product.
+     Given a rule and a ground rather than a box, so it reads as an entry in
+     the margin of a document rather than as a warning banner. The accent rule
+     marks it as worth noticing, the same way a margin note is marked in a
+     reviewed document. */
+  .statement {
+    border-left: 2px solid var(--accent);
+    background-color: var(--paper-raised);
+    padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* A surface worth a second look: the price card, mainly. The accent line
+     is a hairline, not a fill, so a measured figure inside it still reads on
+     plain ink. */
+  .card-accent {
+    border-color: var(--accent-line);
+  }
+
+  /* Every block of code sits in the machine register, the same pair as the
+     signature panel, so a program's view of a page always looks alike. */
+  .codeblock {
+    overflow-x: auto;
+    border: 1px solid var(--machine-line);
+    border-radius: 4px;
+    background-color: var(--machine);
+    color: var(--machine-ink);
+    padding: 1rem 1.25rem;
+    font-family: var(--font-mono-stack);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    -webkit-font-smoothing: auto;
+  }
+
+  /* ---- Capability list ------------------------------------------------- */
+
+  .capabilities {
+    display: grid;
+    gap: 1px;
+    background-color: var(--line);
+    border-block: 1px solid var(--line);
+  }
+
+  @media (min-width: 48rem) {
+    .capabilities {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .capability {
+    background-color: var(--paper);
+    padding: 1.75rem 0;
+  }
+
+  @media (min-width: 48rem) {
+    .capability {
+      padding: 2rem 2rem 2rem 0;
+    }
+
+    .capability:nth-child(even) {
+      padding-left: 2rem;
+      padding-right: 0;
+    }
+  }
+
+  /* ---- Claim and basis ------------------------------------------------- */
+
+  /* A set of guarantees, not a sequence of steps, so it carries no ordinal
+     markers: each row states a claim and, beside it, what the claim rests on.
+     That pairing is the report's own discipline, shown rather than asserted. */
+  .basis-row {
+    display: grid;
+    gap: 0.75rem 3rem;
+    border-top: 1px solid var(--line);
+    padding-block: 1.75rem;
+  }
+
+  @media (min-width: 56rem) {
+    .basis-row {
+      grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+      padding-block: 2.25rem;
+    }
+  }
+
+  .basis-row:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* ---- Price ----------------------------------------------------------- */
+
+  .price {
+    font-size: clamp(2rem, 1.55rem + 1.8vw, 2.75rem);
+    text-wrap: balance;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* ---- Language toggle --------------------------------------------------
+     A real switch, not a jump link: it shows one language and hides the
+     other (the `hidden` attribute, toggled by lib/language.tsx), rather than
+     scrolling to content that was already on the page. Lives once in the
+     header, so every route gets it without repeating it per page. */
+
+  .lang-toggle {
+    display: inline-flex;
+    gap: 2px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 2px;
+  }
+
+  .lang-toggle-btn {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    padding-inline: 0.9375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .lang-toggle-btn:hover {
+    color: var(--ink);
+  }
+
+  .lang-toggle-btn[aria-pressed='true'] {
+    background-color: var(--ink);
+    color: var(--paper);
+  }
+
+  .lang-toggle-btn[aria-pressed='true']:hover {
+    color: var(--paper);
+  }
+
+  /* ---- Signature: the render diff -------------------------------------- */
+
+  /* The product's characteristic artifact, drawn from the two views it
+     actually compares. Nothing here is a screenshot and nothing stands for a
+     measured result: the left panel is a real, generic empty application
+     shell, and the right names the kinds of element that shell never
+     delivered. */
+  .diff {
+    display: grid;
+    gap: 1px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background-color: var(--line);
+    overflow: hidden;
+  }
+
+  @media (min-width: 56rem) {
+    .diff {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .diff-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: clamp(1.25rem, 0.75rem + 1.6vw, 1.875rem);
+  }
+
+  .machine {
+    background-color: var(--machine);
+    color: var(--machine-ink);
+    -webkit-font-smoothing: auto;
+  }
+
+  .machine .label {
+    color: var(--machine-ink-muted);
+  }
+
+  .machine-code {
+    font-family: var(--font-mono-stack);
+    font-size: 0.8125rem;
+    line-height: 1.75;
+    white-space: pre;
+    overflow-x: auto;
+    color: var(--machine-ink);
+  }
+
+  /* Absence, drawn. A hatch rather than an empty box, so "there is nothing
+     here" reads as a finding about the page and not as a layout gap. */
+  .machine-empty {
+    margin-top: auto;
+    border: 1px dashed var(--machine-line);
+    border-radius: 3px;
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgb(255 255 255 / 0.05) 0 1px,
+      transparent 1px 7px
+    );
+    padding: 0.875rem 1rem;
+    font-size: 0.8125rem;
+    color: var(--machine-ink-muted);
+  }
+
+  .visitor {
+    background-color: var(--visitor);
+    color: var(--visitor-ink);
+  }
+
+  .visitor .label {
+    color: var(--visitor-muted);
+  }
+
+  .visitor-doc {
+    display: flex;
+    flex-direction: column;
+    gap: 1.125rem;
+  }
+
+  .visitor-el {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4375rem;
+  }
+
+  .visitor-el .label {
+    font-size: 0.625rem;
+    letter-spacing: 0.16em;
+  }
+
+  .visitor-bar {
+    height: 0.5rem;
+    border-radius: 2px;
+    background-color: var(--visitor-fill-soft);
+  }
+
+  .visitor-bar-strong {
+    height: 0.875rem;
+    background-color: var(--visitor-fill);
+  }
+
+  .visitor-bar-button {
+    height: 2rem;
+    width: 8rem;
+    border-radius: 3px;
+    background-color: var(--visitor-fill);
+  }
+
+  .visitor-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4375rem;
+  }
+
+  /* A mock form field for the accessibility illustration: a placeholder that
+     looks exactly like a normal, working input to a sighted visitor. */
+  .visitor-input {
+    display: flex;
+    align-items: center;
+    height: 2.25rem;
+    border: 1px solid var(--visitor-line);
+    border-radius: 3px;
+    padding-inline: 0.75rem;
+    background-color: var(--visitor);
+  }
+
+  .visitor-input-placeholder {
+    font-size: 0.875rem;
+    font-style: italic;
+    color: var(--visitor-muted);
+  }
+
+  /* The reveal: content arrives on the visitor side over about a second while
+     the crawler side stays exactly as it was. That gap is the argument. */
+  @keyframes render-in {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .render-step {
+    animation: render-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .render-step-1 {
+    animation-delay: 0.25s;
+  }
+
+  .render-step-2 {
+    animation-delay: 0.45s;
+  }
+
+  .render-step-3 {
+    animation-delay: 0.65s;
+  }
+
+  .render-step-4 {
+    animation-delay: 0.85s;
+  }
+
+  /* A second and third finding get the same machine/visitor grammar as the
+     signature diff above, at a smaller scale and without the reveal
+     animation: the animated moment stays the one the page opens with, and
+     these read as members of the same family rather than repeats of it. */
+  .diff-compact .diff-panel {
+    gap: 1rem;
+    padding: 1.125rem 1.25rem;
+  }
+
+  .diff-compact .machine-code {
+    font-size: 0.75rem;
+    line-height: 1.65;
+  }
+
+  /* ---- Timeline: the performance checkpoints ---------------------------
+     Three named instants along a track rather than a bar chart, because no
+     specific measured value may be implied here (offer-positioning.md
+     section 2): the shape teaches what is measured, a real report supplies
+     the numbers. */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  @media (min-width: 48rem) {
+    .timeline {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 0;
+    }
+  }
+
+  .timeline-point {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+  }
+
+  @media (min-width: 48rem) {
+    .timeline-point {
+      flex: 1;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding-inline-end: 1.5rem;
+    }
+
+    .timeline-point::before {
+      content: '';
+      position: absolute;
+      top: 0.3125rem;
+      left: 1.0625rem;
+      width: 100%;
+      height: 1px;
+      background-color: var(--line-strong);
+    }
+
+    .timeline-point:last-child::before {
+      display: none;
+    }
+  }
+
+  .timeline-dot {
+    flex-shrink: 0;
+    z-index: 1;
+    width: 0.6875rem;
+    height: 0.6875rem;
+    margin-top: 0.1875rem;
+    border-radius: 999px;
+    background-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--paper);
+  }
+
+  @media (min-width: 48rem) {
+    .timeline-dot {
+      margin-top: 0;
+    }
+  }
+
+  /* ---- Header and footer ----------------------------------------------- */
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    border-bottom: 1px solid var(--line);
+    background-color: var(--paper);
+  }
+
+  .site-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--line);
   }
 }

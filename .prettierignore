@@ -2,6 +2,9 @@
 **/node_modules/**
 **/dist/**
 **/.next/**
+# Written by `next build` and marked "should not be edited" by Next itself, so
+# formatting it only lasts until the next build.
+packages/site/next-env.d.ts
 artifacts/**
 coverage/**
 data/**

@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# written by `next dev` itself (generate-agent-files.js); not authored content
+AGENTS.md
+CLAUDE.md

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
+import { SiteChrome } from '../lib/site-chrome';
 
 /**
  * Inter, self-hosted. These are the four canonical woff2 files also used by
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
     template: '%s | Odysseus',
   },
   description:
-    'Diagnostic technique automatisé pour sites web : accessibilité, référencement technique et performance. Rapport en français et en anglais, prix publié de 1 600 € HT.',
+    'Diagnostic technique automatisé pour sites web : accessibilité, référencement naturel et performance. Rapport en français et en anglais, prix publié de 1 600 € HT.',
   alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
@@ -41,71 +42,22 @@ export const metadata: Metadata = {
     url: '/',
     title: 'Odysseus, diagnostic technique de site web',
     description:
-      'Diagnostic technique automatisé pour sites web : accessibilité, référencement technique et performance. Rapport en français et en anglais, prix publié de 1 600 € HT.',
+      'Diagnostic technique automatisé pour sites web : accessibilité, référencement naturel et performance. Rapport en français et en anglais, prix publié de 1 600 € HT.',
   },
   twitter: { card: 'summary' },
 };
 
-function SiteHeader() {
-  return (
-    <header className="border-b border-black/10 dark:border-white/10">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-4">
-        <a className="font-semibold tracking-tight" href="/">
-          Odysseus
-        </a>
-        <nav
-          aria-label="Navigation principale"
-          className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm"
-        >
-          <a className="hover:underline" href="/">
-            Accueil
-          </a>
-          <a className="hover:underline" href="/offre">
-            L&apos;offre
-          </a>
-          <a className="hover:underline" href="/bot">
-            OdysseusBot
-          </a>
-        </nav>
-      </div>
-    </header>
-  );
-}
-
-function SiteFooter() {
-  return (
-    <footer className="mt-16 border-t border-black/10 dark:border-white/10">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-6 text-sm">
-        <p className="font-semibold tracking-tight">Odysseus</p>
-        <a className="hover:underline" href="mailto:contact@odysseusaudit.com">
-          contact@odysseusaudit.com
-        </a>
-        <nav aria-label="Pages légales" className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <a className="hover:underline" href="/confidentialite-prospection">
-            Prospection et données personnelles
-          </a>
-          <a className="hover:underline" href="/desinscription">
-            Désinscription
-          </a>
-        </nav>
-      </div>
-    </footer>
-  );
-}
-
+/**
+ * Header, footer and skip link live in `../lib/site-chrome.tsx`: they need
+ * the language toggle's `useLanguage()`, which forces them into a client
+ * component, while this file must stay a server component to export
+ * `metadata`. See that file's docblock for the split.
+ */
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="fr" className={`h-full ${inter.variable}`}>
       <body className="flex min-h-full flex-col">
-        <a
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:bg-background focus:px-3 focus:py-2 focus:underline"
-          href="#contenu"
-        >
-          Aller au contenu
-        </a>
-        <SiteHeader />
-        {children}
-        <SiteFooter />
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );

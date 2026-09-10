@@ -43,10 +43,19 @@ const offer = prose(page('offre'));
 
 const rawSources = ['confidentialite-prospection', 'desinscription', 'bot', 'offre'];
 
-/** Both language sections exist, so a fact asserted once is not silently
- *  present in French only. */
+/**
+ * Both language sections exist, so a fact asserted once is not silently
+ * present in French only.
+ *
+ * Matched as a bare `lang="en"` attribute rather than a literal tag: since
+ * 2026-09-10 the English content is wrapped in a `<LanguageSection lang="en">`
+ * (`lib/language.tsx`), a real toggle rather than a jump link to content that
+ * was already visible, so the element carrying the attribute is a plain
+ * `<div>`, not necessarily a `<section>`. This asserts what the visitor
+ * reads, not how the toggle is implemented.
+ */
 function isBilingual(source: string): boolean {
-  return source.includes('<section lang="en">');
+  return /\blang="en"/u.test(source);
 }
 
 describe('prospecting privacy page', () => {
