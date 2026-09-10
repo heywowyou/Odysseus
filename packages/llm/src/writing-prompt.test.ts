@@ -86,8 +86,8 @@ describe('item 0.4: the writing prompt forbids the model from writing any count 
       roomCount: 8,
     });
 
-    expect(prompt).toContain('ne reprenez jamais le nombre de chambres avec un chiffre');
-    expect(prompt).toContain('écrivez-le en toutes lettres ou décrivez-le qualitativement');
+    expect(prompt).toContain('ne mentionnez jamais le nombre de chambres');
+    expect(prompt).toContain('ni avec un chiffre ni en toutes lettres');
   });
 
   it('keeps a numeric room count out of the English executiveSummary', () => {
@@ -100,8 +100,8 @@ describe('item 0.4: the writing prompt forbids the model from writing any count 
       roomCount: 8,
     });
 
-    expect(prompt).toContain('never repeat the room count as a digit');
-    expect(prompt).toContain('write it out in words or describe it qualitatively');
+    expect(prompt).toContain('never mention the room count');
+    expect(prompt).toContain('whether as a digit or in words');
   });
 });
 
