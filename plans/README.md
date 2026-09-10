@@ -366,6 +366,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [035](archive/035-full-audit-checkpoint-and-resume.md) | Resume full audits across crashes and redeploys instead of restarting from zero | P1 | L | none | DONE (2026-09-10; live acceptance on production: the operator-authorized forced redeploy during the Belleval full audit re-claimed the job from its crawl checkpoint with 30 reused pages and the audit completed without restarting from zero; resolves issue #124) |
 | [036](archive/036-lcen-publisher-identification-evidence.md) | Publish per-field detection evidence for the LCEN publisher-identification finding | P2 | M | none | DONE (2026-09-10; the authorized lescorderies.com full audit correctly left the finding silent, the site publishes SIREN 487901282 and TVA, the checked-page evidence payload is live in the scan artifact, and both language reports were reviewed with the approved copy and no legal conclusion; resolves issue #161) |
 | [037](037-full-scan-outreach-preview.md) | Replace the prescan outreach preview with a full-scan scorecard on the audit page | P1 | L | 034, 035, existing preview lifecycle | READY (operator-approved design, 2026-09-11) |
+| [038](038-public-site-evidence-dossier.md) | Recast the public site as a clear, evidence-led audit offer | P1 | M | none | READY (operator-approved design, 2026-09-11) |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:
 the hosted operator dashboard goes live before the rollout campaign so the
