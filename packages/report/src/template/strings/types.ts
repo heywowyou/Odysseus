@@ -813,6 +813,29 @@ export interface ReportStrings {
     realUserGapNote: string;
     inpLabel: string;
   };
+  /** Milestone 10. A deterministic splice comparing this site's own
+   *  severity-weighted score against the frozen benchmark cohort's
+   *  scores - never an LLM sentence (design doc, "In-report percentile
+   *  section"). Absent from a report entirely (see
+   *  hasBenchmarkPercentile in benchmark-percentile.ts) until manifest.ts's
+   *  optional benchmarkPercentile field is populated for that audit. */
+  benchmarkPercentile: {
+    eyebrow: string;
+    heading: string;
+    /** Template: {percentile}, {cohortSize}. The percentile is the design
+     *  doc's literal definition (share of the cohort with a strictly
+     *  lower, meaning better, score), stated as-is rather than reframed
+     *  as "you beat X%", so the report never claims more than the
+     *  computed fact says. */
+    scoredBodyTemplate: string;
+    /** Template: {earliest}, {latest}. Printed beside the percentile so
+     *  the reader sees the comparison's own provenance, never a bare
+     *  number. */
+    scanDateRangeTemplate: string;
+    /** Shown instead of a percentile when the cohort has not yet reached
+     *  the minimum floor - never a fabricated approximate number. */
+    tooSmallBody: string;
+  };
   /** Per-criterion status is trivially derived, never a legal judgment:
    *  buildConformanceRollup only ever lists a criterion when at least one
    *  finding failed it, so "non conformant" is a restatement of that

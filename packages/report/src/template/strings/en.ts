@@ -418,6 +418,15 @@ export const en: ReportStrings = {
       'A large gap between the values above and below is expected: the lab measurement deliberately simulates harsh conditions (CPU and network throttling, a single run), while real-user data reflects visitors on a variety of devices and connections. The two measure different questions, they do not contradict each other.',
     inpLabel: 'INP, responsiveness',
   },
+  benchmarkPercentile: {
+    eyebrow: 'Benchmark',
+    heading: 'Standing against the benchmark cohort',
+    scoredBodyTemplate:
+      '{percentile}% of the {cohortSize} sites in the benchmark cohort scored strictly better (fewer, less severe findings) than this site.',
+    scanDateRangeTemplate: 'Benchmark cohort scanned between {earliest} and {latest}.',
+    tooSmallBody:
+      'The benchmark cohort does not yet include enough scored sites to publish a reliable comparison for this audit.',
+  },
   accessibilityStatement: {
     eyebrow: 'Statement',
     heading: 'Draft accessibility statement',

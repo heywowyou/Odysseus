@@ -509,6 +509,15 @@ export const fr: ReportStrings = {
       'Un écart important entre les valeurs ci-dessus et ci-dessous est normal : la mesure de laboratoire simule volontairement des conditions difficiles (limitation CPU et réseau, un seul passage), tandis que les données réelles reflètent des visiteurs sur des appareils et connexions variés. Les deux mesures répondent à des questions différentes, elles ne se contredisent pas.',
     inpLabel: 'INP, réactivité',
   },
+  benchmarkPercentile: {
+    eyebrow: 'Référentiel',
+    heading: 'Positionnement par rapport à la cohorte de référence',
+    scoredBodyTemplate:
+      '{percentile} % des {cohortSize} sites de la cohorte de référence ont obtenu un score strictement meilleur (constats moins nombreux et moins sévères) que ce site.',
+    scanDateRangeTemplate: 'Cohorte de référence scannée entre le {earliest} et le {latest}.',
+    tooSmallBody:
+      'La cohorte de référence ne compte pas encore assez de sites scannés pour publier une comparaison fiable pour cet audit.',
+  },
   accessibilityStatement: {
     eyebrow: 'Déclaration',
     heading: "Projet de déclaration d'accessibilité",

@@ -45,6 +45,10 @@ import {
   renderCoreWebVitalsTable,
 } from './sections/core-web-vitals-table.js';
 import {
+  hasBenchmarkPercentile,
+  renderBenchmarkPercentile,
+} from './sections/benchmark-percentile.js';
+import {
   isArticle47Regime,
   renderAccessibilityStatement,
 } from './sections/accessibility-statement.js';
@@ -172,6 +176,10 @@ function renderBody(
   // section-06 is when it has nothing to show, so the TOC and every
   // later section's ordinal stay correct for an EAA-route client.
   if (!isArticle47Regime(analysis.obligationAssessment)) includedSectionIds.delete('section-10');
+  // Milestone 10: absent from every audit until manifest.benchmarkPercentile
+  // is populated (build slice 3 has not shipped yet), so this stays
+  // suppressed and today's reports are unchanged.
+  if (!hasBenchmarkPercentile(manifest)) includedSectionIds.delete('section-15');
   const n = computeSectionNumbers(includedSectionIds);
   // Every id in SECTION_IDS besides 'section-06' is unconditionally in
   // includedSectionIds above, so these lookups are always defined; the
@@ -255,6 +263,9 @@ function renderBody(
       renderDiffWrapperOrLegalExcludedCount,
     ),
     renderCoreWebVitalsTable(strings, ord('section-09'), analysis.language, manifest),
+    includedSectionIds.has('section-15')
+      ? renderBenchmarkPercentile(strings, ord('section-15'), analysis.language, manifest)
+      : '',
     includedSectionIds.has('section-10')
       ? renderAccessibilityStatement(
           strings,

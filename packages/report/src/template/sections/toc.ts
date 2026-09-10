@@ -45,7 +45,15 @@ export function renderToc(strings: ReportStrings, includedIds: ReadonlySet<Secti
     },
     {
       label: strings.toc.detailedEvidenceGroupLabel,
-      ids: ['section-06', 'section-07', 'section-08', 'section-09', 'section-10', 'section-14'],
+      ids: [
+        'section-06',
+        'section-07',
+        'section-08',
+        'section-09',
+        'section-15',
+        'section-10',
+        'section-14',
+      ],
     },
     { label: strings.toc.legalReferenceGroupLabel, ids: ['section-02'] },
     {

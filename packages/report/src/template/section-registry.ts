@@ -26,6 +26,7 @@ export const SECTION_IDS = [
   'section-07',
   'section-08',
   'section-09',
+  'section-15',
   'section-10',
   'section-14',
   'section-02',
@@ -77,6 +78,8 @@ export function sectionTitle(id: SectionId, strings: ReportStrings): string {
       return strings.renderDiffEvidence.eyebrow;
     case 'section-09':
       return strings.coreWebVitals.eyebrow;
+    case 'section-15':
+      return strings.benchmarkPercentile.eyebrow;
     case 'section-10':
       return strings.accessibilityStatement.eyebrow;
     case 'section-11':

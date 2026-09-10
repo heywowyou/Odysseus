@@ -6,10 +6,10 @@ import { SECTION_IDS, type SectionId } from '../section-registry.js';
 const ALL_SECTIONS = new Set<SectionId>(SECTION_IDS);
 
 describe('renderToc', () => {
-  it('numbers all 16 entries in order, starting at 1, when every section is included', () => {
+  it('numbers all 17 entries in order, starting at 1, when every section is included', () => {
     const html = renderToc(getStrings('fr'), ALL_SECTIONS);
 
-    for (let i = 1; i <= 16; i++) {
+    for (let i = 1; i <= 17; i++) {
       expect(html).toContain(
         `class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">${i}</span>`,
       );
@@ -35,7 +35,7 @@ describe('renderToc', () => {
     // The page-number pseudo-element now lives on the anchor itself
     // (class="toc-row"), not on a separate sibling span that never
     // carried the href attr() reads from - see paged.css.
-    expect((html.match(/class="toc-row"/g) ?? []).length).toBe(16);
+    expect((html.match(/class="toc-row"/g) ?? []).length).toBe(17);
   });
 
   it('B8: drops the old "page numbers are in the footer" footnote', () => {
@@ -79,7 +79,7 @@ describe('renderToc', () => {
       expect((tail.match(/href="#section-/g) ?? []).length).toBe(1);
     });
 
-    it('the glossary row is the 16th and last row', () => {
+    it('the glossary row is the 17th and last row', () => {
       const html = renderToc(getStrings('fr'), ALL_SECTIONS);
       const glossaryAnchor = html.indexOf('href="#section-13"');
       const rowStart = html.lastIndexOf(
@@ -87,7 +87,7 @@ describe('renderToc', () => {
         glossaryAnchor,
       );
       const row = html.slice(rowStart, glossaryAnchor);
-      expect(/flex:none">(\d+)<\/span>/.exec(row)?.[1]).toBe('16');
+      expect(/flex:none">(\d+)<\/span>/.exec(row)?.[1]).toBe('17');
       expect(html.lastIndexOf('href="#section-')).toBe(glossaryAnchor);
     });
   });
@@ -137,6 +137,7 @@ describe('renderToc', () => {
         'section-07',
         'section-08',
         'section-09',
+        'section-15',
         'section-10',
       ] as const) {
         expect(ordinalOf('section-14')).toBeGreaterThan(ordinalOf(evidenceId));
@@ -158,15 +159,15 @@ describe('renderToc', () => {
       expect(html).not.toContain('Observations');
     });
 
-    it('renumbers every section after the gap so the sequence stays contiguous 1..15', () => {
+    it('renumbers every section after the gap so the sequence stays contiguous 1..16', () => {
       const html = renderToc(getStrings('fr'), withoutObservations);
-      for (let i = 1; i <= 15; i++) {
+      for (let i = 1; i <= 16; i++) {
         expect(html).toContain(
           `class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">${i}</span>`,
         );
       }
       expect(html).not.toContain(
-        'class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">16</span>',
+        'class="n" style="font-size:12px;color:var(--color-accent-300);width:22px;flex:none">17</span>',
       );
     });
 

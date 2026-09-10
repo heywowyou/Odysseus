@@ -13,6 +13,7 @@ import type { FINDINGS_SCHEMA_VERSION } from './findings.js';
 import type { SiteSignals } from './compliance.js';
 import type { TranslationCluster } from '../normalize/translation-clusters.js';
 import type { FindingsProvenance } from '../normalize/findings-provenance.js';
+import type { SiteBenchmarkPercentile } from '../benchmark/percentile.js';
 
 export type ManifestKind = 'audit' | 'render-diff';
 
@@ -364,4 +365,10 @@ export interface AuditManifest {
    *  other", which is the correct answer for a monolingual site and the
    *  behaviour that shipped before this existed. */
   translationClusters?: TranslationCluster[];
+  /** Milestone 10. Absent on every audit until the benchmark cohort's
+   *  frozen scores exist (slice 3) and a report-generation step computes
+   *  this site's standing against them - absence means "not compared",
+   *  never "compared and found nothing", so the report section renders
+   *  nothing rather than a false zero. */
+  benchmarkPercentile?: SiteBenchmarkPercentile;
 }
