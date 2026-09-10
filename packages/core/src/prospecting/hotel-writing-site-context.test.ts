@@ -7,13 +7,11 @@ describe('resolveHotelCatalogueWritingSiteContext', () => {
       resolveHotelCatalogueWritingSiteContext({
         accommodationType: 'HÔTEL DE TOURISME',
         starRating: 4,
-        roomCount: 38,
         commune: 'GRENOBLE',
       }),
     ).toEqual({
       siteContext: {
         propertyType: 'HÔTEL DE TOURISME (4 étoiles)',
-        roomCount: 38,
         city: 'GRENOBLE',
         sector: 'hospitality',
       },
@@ -33,7 +31,7 @@ describe('resolveHotelCatalogueWritingSiteContext', () => {
         city: 'BARR',
         sector: 'hospitality',
       },
-      unknownReasons: { roomCount: 'missing-room-count' },
+      unknownReasons: {},
     });
   });
 
@@ -42,7 +40,6 @@ describe('resolveHotelCatalogueWritingSiteContext', () => {
       siteContext: {},
       unknownReasons: {
         propertyType: 'candidate-not-found',
-        roomCount: 'candidate-not-found',
         city: 'candidate-not-found',
         sector: 'candidate-not-found',
       },

@@ -113,11 +113,14 @@ function dominantMetricNote(
  *  note. Returns an empty string when none are present, which keeps the
  *  prompt byte-identical to the pre-plan-029 text - the common case until
  *  the follow-up plan wires the catalogue into these fields. Present facts
- *  license concreteness (naming the city, the property type, the size of
- *  the property), never invention beyond them and never a comparative
+ *  license concreteness (naming the city, the property type), never
+ *  invention beyond them and never a comparative
  *  ("the largest in town") that no stated fact supports; the note says so
  *  because the existing guards cover superlatives and counts, not silent
- *  extrapolation from a new fact source. */
+ *  extrapolation from a new fact source. The room count is deliberately
+ *  not among the facts (2026-09-10): the executiveSummary digit guard
+ *  rejects any digit, so a model-visible count is a guaranteed retry
+ *  hazard, and the prompt cannot both offer the fact and forbid its use. */
 export function businessFactsNote(
   language: ReportLanguage,
   siteContext: WritingSiteContext | undefined,
@@ -130,13 +133,6 @@ export function businessFactsNote(
         : `property type: ${siteContext.propertyType}`,
     );
   }
-  if (siteContext?.roomCount !== undefined) {
-    facts.push(
-      language === 'fr'
-        ? `nombre de chambres : ${siteContext.roomCount}`
-        : `room count: ${siteContext.roomCount}`,
-    );
-  }
   if (siteContext?.city !== undefined) {
     facts.push(language === 'fr' ? `ville : ${siteContext.city}` : `city: ${siteContext.city}`);
   }
@@ -147,15 +143,9 @@ export function businessFactsNote(
   }
   if (facts.length === 0) return '';
   const list = facts.join('; ');
-  const roomCountExecutiveSummaryNote =
-    siteContext?.roomCount === undefined
-      ? ''
-      : language === 'fr'
-        ? " Dans executiveSummary, ne mentionnez jamais le nombre de chambres, ni avec un chiffre ni en toutes lettres : nommez plutôt le type d'établissement ou la ville et réservez la taille de l'hôtel à businessImpact et recommendedActions."
-        : ' In executiveSummary, never mention the room count, whether as a digit or in words: name the property type or city instead, and reserve the property size for businessImpact and recommendedActions.';
   return language === 'fr'
-    ? `\n\nVous disposez de faits vérifiés sur cet établissement, issus des données d'entrée de l'audit : ${list}. Servez-vous en pour rendre votre prose concrète quand cela éclaire la conséquence pour ce client précis : nommer la ville ou le type d'établissement dans businessImpact, executiveSummary et recommendedActions, et mobiliser l'ordre de grandeur du site dans businessImpact et recommendedActions.${roomCountExecutiveSummaryNote} Ces faits se limitent à ceux énoncés ci-dessus : n'en inventez aucun autre (ni standing, ni chaîne, ni clientèle), et ils ne lèvent aucune des règles de ce prompt - toujours aucun nombre de pages, aucune conséquence légale, aucun superlatif commercial non nuancé, et jamais de comparaison avec d'autres établissements ("le plus grand de la ville"), qu'aucune donnée ne soutient.`
-    : `\n\nYou have verified facts about this property, from the audit's input data: ${list}. Use them to make your prose concrete where it clarifies the consequence for this particular client: name the city or property type in businessImpact, executiveSummary, and recommendedActions, and use the size of the property in businessImpact and recommendedActions.${roomCountExecutiveSummaryNote} These facts are limited to the ones stated above: invent no others (no star rating, no brand, no clientele), and they lift none of this prompt's rules - still no page counts, no legal consequences, no unhedged commercial superlatives, and never a comparison with other properties ("the largest in town"), which no stated fact supports.`;
+    ? `\n\nVous disposez de faits vérifiés sur cet établissement, issus des données d'entrée de l'audit : ${list}. Servez-vous en pour rendre votre prose concrète quand cela éclaire la conséquence pour ce client précis : nommer la ville ou le type d'établissement dans businessImpact, executiveSummary et recommendedActions. Ces faits se limitent à ceux énoncés ci-dessus : n'en inventez aucun autre (ni standing, ni chaîne, ni clientèle), et ils ne lèvent aucune des règles de ce prompt - toujours aucun nombre de pages, aucune conséquence légale, aucun superlatif commercial non nuancé, et jamais de comparaison avec d'autres établissements ("le plus grand de la ville"), qu'aucune donnée ne soutient.`
+    : `\n\nYou have verified facts about this property, from the audit's input data: ${list}. Use them to make your prose concrete where it clarifies the consequence for this particular client: name the city or property type in businessImpact, executiveSummary, and recommendedActions. These facts are limited to the ones stated above: invent no others (no star rating, no brand, no clientele), and they lift none of this prompt's rules - still no page counts, no legal consequences, no unhedged commercial superlatives, and never a comparison with other properties ("the largest in town"), which no stated fact supports.`;
 }
 
 /** System prompt for the writing pass: prose only, grouping decisions

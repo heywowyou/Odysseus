@@ -120,7 +120,6 @@ describe.skipIf(!mongoAvailable)('persistAnalysis', () => {
         languagesServed: [],
         targetMarkets: [],
         propertyType: 'HÔTEL DE TOURISME (3 étoiles)',
-        roomCount: 25,
         city: 'LA TREMBLADE',
         sector: 'hospitality',
       },
@@ -138,7 +137,6 @@ describe.skipIf(!mongoAvailable)('persistAnalysis', () => {
       languagesServed: [],
       targetMarkets: [],
       propertyType: 'HÔTEL DE TOURISME (3 étoiles)',
-      roomCount: 25,
       city: 'LA TREMBLADE',
       sector: 'hospitality',
     });

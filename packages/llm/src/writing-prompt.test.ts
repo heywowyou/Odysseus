@@ -76,32 +76,33 @@ describe('item 0.4: the writing prompt forbids the model from writing any count 
     );
   });
 
-  it('keeps a numeric room count out of the French executiveSummary', () => {
-    const prompt = buildWritingSystemPrompt('fr', false, null, undefined, {
+  // 2026-09-10: the catalogue room count was removed from the writing
+  // pass entirely (the executiveSummary digit guard rejects any digit, so
+  // a model-visible count is a guaranteed retry hazard). The prompt must
+  // never name or instruct about a room count again, for any facts.
+  it('never invites a room count into any field, in either language', () => {
+    const fr = buildWritingSystemPrompt('fr', false, null, undefined, {
       businessType: 'hôtellerie',
       primaryGoal: 'réservations',
       languagesServed: ['fr'],
       targetMarkets: ['fr'],
       propertyType: 'hôtel',
-      roomCount: 8,
+      city: 'Bordeaux',
+      sector: 'hospitality',
     });
-
-    expect(prompt).toContain('ne mentionnez jamais le nombre de chambres');
-    expect(prompt).toContain('ni avec un chiffre ni en toutes lettres');
-  });
-
-  it('keeps a numeric room count out of the English executiveSummary', () => {
-    const prompt = buildWritingSystemPrompt('en', false, null, undefined, {
+    const en = buildWritingSystemPrompt('en', false, null, undefined, {
       businessType: 'hospitality',
       primaryGoal: 'bookings',
       languagesServed: ['en'],
       targetMarkets: ['uk'],
       propertyType: 'hotel',
-      roomCount: 8,
+      city: 'Bordeaux',
+      sector: 'hospitality',
     });
 
-    expect(prompt).toContain('never mention the room count');
-    expect(prompt).toContain('whether as a digit or in words');
+    expect(fr).not.toContain('chambres');
+    expect(en).not.toContain('room count');
+    expect(en).not.toContain('size of the property');
   });
 });
 
@@ -733,7 +734,6 @@ describe('plan 029 lever F: concrete site facts in the writing prompt', () => {
   const factsContext = {
     ...coreOnlyContext,
     propertyType: 'hôtel 3 étoiles',
-    roomCount: 24,
     city: 'Bordeaux',
     sector: 'hébergement touristique',
   };
@@ -769,7 +769,7 @@ describe('plan 029 lever F: concrete site facts in the writing prompt', () => {
   it('weaves present facts into the French prompt', () => {
     const prompt = buildWritingSystemPrompt('fr', true, null, undefined, { ...factsContext });
     expect(prompt).toContain('hôtel 3 étoiles');
-    expect(prompt).toContain('nombre de chambres : 24');
+    expect(prompt).not.toContain('nombre de chambres');
     expect(prompt).toContain('ville : Bordeaux');
     expect(prompt).toContain('secteur : hébergement touristique');
     expect(prompt).toContain("n'en inventez aucun autre");
@@ -781,12 +781,11 @@ describe('plan 029 lever F: concrete site facts in the writing prompt', () => {
     const prompt = buildWritingSystemPrompt('en', false, null, undefined, {
       ...coreOnlyContext,
       propertyType: 'three-star hotel',
-      roomCount: 24,
       city: 'Bordeaux',
       sector: 'tourist accommodation',
     });
     expect(prompt).toContain('property type: three-star hotel');
-    expect(prompt).toContain('room count: 24');
+    expect(prompt).not.toContain('room count');
     expect(prompt).toContain('city: Bordeaux');
     expect(prompt).toContain('never a comparison with other properties');
   });
@@ -815,6 +814,6 @@ describe('plan 029 lever F: concrete site facts in the writing prompt', () => {
       dominantPerformanceMetric: null,
     });
     expect(userPrompt).toContain('"city": "Bordeaux"');
-    expect(userPrompt).toContain('"roomCount": 24');
+    expect(userPrompt).not.toContain('roomCount');
   });
 });

@@ -154,7 +154,10 @@ const analysisSiteContextSchemaMongo = new Schema<AnalysisSiteContext>(
     languagesServed: { type: [String], required: true },
     targetMarkets: { type: [String], required: true },
     propertyType: { type: String },
-    roomCount: { type: Number },
+    // Legacy rows may still store a roomCount under siteContext; the field
+    // is deliberately no longer mirrored (removed 2026-09-10): the writing
+    // pass must never see a catalogue count, and the type no longer
+    // carries one.
     city: { type: String },
     sector: { type: String },
   },

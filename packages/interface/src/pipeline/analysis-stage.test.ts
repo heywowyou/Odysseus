@@ -525,13 +525,16 @@ describe('runAnalysisStage', () => {
       fakeConnection,
     );
 
+    // The candidate deliberately still carries roomCount: the writing
+    // context must drop it (2026-09-10), since any model-visible count is
+    // a guaranteed executiveSummary digit-guard hazard.
     const expectedContext = {
       ...buildFallbackSiteContext(),
       propertyType: 'HÔTEL DE TOURISME (3 étoiles)',
-      roomCount: 25,
       city: 'LA TREMBLADE',
       sector: 'hospitality',
     };
+    expect(expectedContext).not.toHaveProperty('roomCount');
     expect(getLatestHotelCandidateByOwnRegistrableDomain).toHaveBeenCalledWith(
       fakeConnection,
       'example.com',

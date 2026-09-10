@@ -9,9 +9,12 @@ import type { HotelCandidate } from '../types/hotel-candidate.js';
 
 export interface HotelCatalogueWritingSiteContext {
   propertyType?: string;
-  roomCount?: number;
   city?: string;
   sector?: string;
+  // The room count is deliberately absent, removed 2026-09-10: the writing
+  // pass is forbidden any digit in executiveSummary (the report template
+  // owns every report figure), so a model-visible count is a guaranteed
+  // retry hazard. Any digit the model never sees is a digit it never writes.
 }
 
 /** The complete analysis context is persisted as generation provenance. */
@@ -20,7 +23,7 @@ export type AnalysisSiteContext = LlmInput['siteContext'] & HotelCatalogueWritin
 export type HotelCatalogueWritingSiteContextFact = keyof HotelCatalogueWritingSiteContext;
 
 export type HotelCatalogueWritingSiteContextUnknownReason =
-  'candidate-not-found' | 'missing-accommodation-type' | 'missing-room-count' | 'missing-commune';
+  'candidate-not-found' | 'missing-accommodation-type' | 'missing-commune';
 
 export interface HotelCatalogueWritingSiteContextResolution {
   siteContext: HotelCatalogueWritingSiteContext;
@@ -33,7 +36,7 @@ export interface HotelCatalogueWritingSiteContextResolution {
 
 type HotelWritingContextCandidate = Pick<
   HotelCandidate,
-  'accommodationType' | 'starRating' | 'roomCount' | 'commune'
+  'accommodationType' | 'starRating' | 'commune'
 >;
 
 function missingAllFacts(
@@ -43,7 +46,6 @@ function missingAllFacts(
     siteContext: {},
     unknownReasons: {
       propertyType: reason,
-      roomCount: reason,
       city: reason,
       sector: reason,
     },
@@ -72,12 +74,6 @@ export function resolveHotelCatalogueWritingSiteContext(
         ? candidate.accommodationType
         : `${candidate.accommodationType} (${candidate.starRating} étoiles)`;
     siteContext.sector = 'hospitality';
-  }
-
-  if (candidate.roomCount === undefined) {
-    unknownReasons.roomCount = 'missing-room-count';
-  } else {
-    siteContext.roomCount = candidate.roomCount;
   }
 
   if (candidate.commune === undefined) {

@@ -107,12 +107,15 @@ export interface WritingSiteStats {
 export type TransactionalFlowStatus = 'present' | 'absent' | 'inconclusive' | 'unknown';
 
 /** Plan 029 lever F: llm-side widening of the site context with the
- *  concrete, non-financial facts plan 027 named (property type, room
- *  count, city, sector). Deliberately local to this package: the shared
+ *  concrete, non-financial facts plan 027 named (property type, city,
+ *  sector). The room count was removed on 2026-09-10 and must not come
+ *  back: the executiveSummary digit guard rejects any digit, so a
+ *  model-visible count is a guaranteed retry hazard. Deliberately local
+ *  to this package: the shared
  *  `LlmInput['siteContext']` shape in core is a locked contract, and no
  *  caller outside this package's tests populates the new fields yet -
  *  wiring them from the intake data at call time is a separate plan
- *  (plans/029-writing-pass-open-levers.md step 3). All four are optional;
+ *  (plans/029-writing-pass-open-levers.md step 3). All are optional;
  *  when they are absent the writing prompt is byte-identical to the
  *  pre-plan-029 text and `fallbackNote` behaves exactly as before.
  *  A type intersection, not an interface extending the indexed access:
