@@ -28,6 +28,8 @@ export { hasMeasuredCoreWebVitals } from './template/sections/core-web-vitals-ta
  *  a report input into a preview input - the whole safety argument is that the
  *  unsafe fields have nowhere to go. */
 export { generateOutreachPreviewHtml } from './outreach-preview/render-html.js';
+export { generateOutreachPreviewHtmlV2 } from './outreach-preview/render-html-v2.js';
+export { generateOutreachPreviewPdf } from './outreach-preview/pdf-v2.js';
 export { embedOutreachEvidenceAsset } from './outreach-preview/evidence-input.js';
 export type { OutreachEvidenceSlot } from './outreach-preview/evidence-input.js';
 export { ReportIdentityUnconfirmedError } from './errors.js';
@@ -43,6 +45,7 @@ export type {
 } from './outreach-preview/types.js';
 
 import { launchBrowser } from '@odysseus/scanner';
+import { REPORT_PDF_CHROMIUM_ARGS } from './constants.js';
 import type { GenerateReportInput } from './types.js';
 import { resolveRenderDiffEvidence } from './screenshots.js';
 import { renderHtml } from './template/render-html.js';
@@ -73,7 +76,7 @@ import { ReportIdentityUnconfirmedError } from './errors.js';
  *  one launch (see LaunchBrowserOptions in packages/scanner/src/
  *  browser.ts) rather than scanner's own crawl/axe/Lighthouse browser,
  *  which never renders to PDF and has no reason to change. */
-export const REPORT_PDF_CHROMIUM_ARGS = ['--font-render-hinting=none'];
+export { REPORT_PDF_CHROMIUM_ARGS } from './constants.js';
 
 /** Issue #93: the reviewed FR/EN remediation copy per scanner rule and the
  *  French rule-title translations, re-exported so the operator dashboard's

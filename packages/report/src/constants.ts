@@ -17,3 +17,10 @@ export const EVIDENCE_INCLUSION_THRESHOLD_PERCENT = 5;
 /** docs/report/report-design-system.md section 3: section 08 shows the 3 worst
  *  pages by missingPercent, bars only, no screenshots. */
 export const EVIDENCE_MAX_RENDER_DIFF_PAGES = 3;
+
+/** Chromium args for the report's own print-to-PDF launch only (trade-off
+ *  19): the glyph-splitting fix, never applied to the scanner's browser.
+ *  Defined here rather than in index.ts so the outreach preview's PDF
+ *  sibling can share the exact same print launch without a circular
+ *  import. */
+export const REPORT_PDF_CHROMIUM_ARGS = ['--font-render-hinting=none'];
