@@ -104,12 +104,26 @@ export default function ProspectingPrivacyPage() {
             <h2>Analyses réalisées sur votre site</h2>
 
             <p>
-              Au plus trois pages, consultées publiquement comme le ferait un visiteur&#160;: votre
-              page d&apos;accueil, une page de réservation lorsqu&apos;elle existe, et une page de
-              contenu. Nous mesurons les écarts d&apos;affichage entre la page brute et la page
-              après exécution du JavaScript, et nous effectuons des contrôles d&apos;accessibilité
-              automatisés. Nous conservons des captures d&apos;écran et ces mesures. Nous ne créons
-              aucun compte, ne remplissons aucun formulaire et n&apos;effectuons aucune réservation.
+              La première passe consulte au plus trois pages, publiquement, comme le ferait un
+              visiteur&#160;: votre page d&apos;accueil, une page de réservation lorsqu&apos;elle
+              existe, et une page de contenu. Nous mesurons les écarts d&apos;affichage entre la
+              page brute et la page après exécution du JavaScript, et nous effectuons des contrôles
+              d&apos;accessibilité automatisés. Nous conservons des captures d&apos;écran et ces
+              mesures.
+            </p>
+
+            <p>
+              Pour un nombre restreint d&apos;établissements présélectionnés, une seconde passe
+              analyse l&apos;ensemble du site, selon la même méthode qu&apos;un audit
+              commandé&#160;: chaque page consultée reçoit les mêmes contrôles, et la vitesse de
+              chargement est mesurée sur un échantillon représentatif de pages. Aucune passe ne crée
+              de compte, ne remplit de formulaire et n&apos;effectue de réservation.
+            </p>
+
+            <p>
+              Le document envoyé aux établissements contactés présente une synthèse de la seconde
+              passe&#160;: des totaux et quelques constats résumés. Il ne contient ni capture
+              d&apos;écran, ni adresse de page, ni élément technique localisé.
             </p>
 
             <h2>Finalité et base légale</h2>
@@ -225,11 +239,23 @@ export default function ProspectingPrivacyPage() {
             <h2>Checks carried out on your site</h2>
 
             <p>
-              At most three pages, viewed publicly as a visitor would: your homepage, a booking page
-              where one exists, and a content page. We measure the display gaps between the raw page
-              and the page once JavaScript has run, and we run automated accessibility checks. We
-              keep screenshots and those measurements. We create no account, fill in no form, and
-              make no booking.
+              The first pass views at most three pages, publicly, as a visitor would: your homepage,
+              a booking page where one exists, and a content page. We measure the display gaps
+              between the raw page and the page once JavaScript has run, and we run automated
+              accessibility checks. We keep screenshots and those measurements.
+            </p>
+
+            <p>
+              For a small number of pre-selected establishments, a second pass analyses the whole
+              site, using the same method as a commissioned audit: every viewed page receives the
+              same checks, and loading speed is measured on a representative sample of pages.
+              Neither pass creates an account, fills in a form, or makes a booking.
+            </p>
+
+            <p>
+              The document sent to contacted establishments is a summary of the second pass: totals
+              and a few summarised findings. It contains no screenshot, no page address, and no
+              located technical element.
             </p>
 
             <h2>Purpose and legal basis</h2>

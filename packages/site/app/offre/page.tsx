@@ -46,6 +46,11 @@ export const metadata: Metadata = {
  * désormais dupliquée dans `LanguageSection`, pilotée par le vrai
  * sélecteur du bandeau (`lib/site-chrome.tsx`) : une seule langue est
  * visible à la fois, dans tout le document, pas seulement dans le corps.
+ *
+ * Mise à jour du 2026-09-11 (plan 037)&#160;: l'aperçu n'est plus limité à
+ * trois pages, il repose sur une analyse de l'ensemble du site dont il ne
+ * montre qu'une synthèse. L'audit complet reste établi à partir d'une
+ * nouvelle analyse, jamais de l'analyse ayant servi à l'aperçu.
  */
 export default function OfferPage() {
   return (
@@ -72,9 +77,10 @@ export default function OfferPage() {
         <div className="shell section-tight">
           <section className="prose measure">
             <p>
-              Si vous avez reçu un aperçu, celui-ci portait sur trois pages au plus et se limitait à
-              ce qu&apos;une analyse automatisée peut relever en quelques minutes. L&apos;audit
-              complet porte sur l&apos;ensemble du site.
+              Si vous avez reçu un aperçu, celui-ci repose sur une analyse de l&apos;ensemble du
+              site, dont il ne montre qu&apos;une synthèse&#160;: des totaux et quelques constats
+              résumés, sans détail technique. L&apos;audit complet est établi à partir d&apos;une
+              nouvelle analyse de votre site, et lui seul détaille chaque constat.
             </p>
 
             <h2>Périmètre</h2>
@@ -153,8 +159,10 @@ export default function OfferPage() {
         <div className="shell section-tight">
           <section className="prose measure">
             <p>
-              If you received a preview, it covered at most three pages and was limited to what an
-              automated analysis can pick up in a few minutes. The full audit covers the whole site.
+              If you received a preview, it was built from an analysis of the whole site, of which
+              it shows only a summary: totals and a few summarised findings, with no technical
+              detail. The full audit runs from a fresh analysis of your site, and it alone sets out
+              every finding in detail.
             </p>
 
             <h2>Scope</h2>

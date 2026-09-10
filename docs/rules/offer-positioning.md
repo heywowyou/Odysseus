@@ -43,8 +43,8 @@ to EUR 300 HT are likewise superseded here, the canonical source.
 
 | Deliverable | Price | Delivery |
 |---|---|---|
-| Outreach preview | Free | automated, sent to cold prospects before purchase, see `docs/rules/outreach-rules.md` |
-| Full audit | EUR 1,600 HT flat, published | automated PDF, no risk band, no freehand quote |
+| Outreach preview | Free | built from a candidate-linked full outreach scan, published by the operator from the audit page as an expiring token page; content rules in `docs/rules/outreach-rules.md` section 6bis |
+| Full audit | EUR 1,600 HT flat, published | automated PDF, no risk band, no freehand quote, always a fresh scan |
 | Re-audit | EUR 450 HT flat | 5 business days, a verification pass narrower in scope than a full re-scan |
 
 **Re-audit price confirmed 2026-08-19** (La Corniche review follow-up,
@@ -62,6 +62,17 @@ validator (in `llm`, which can only see `core`) has to recognise it in order to
 reject any other figure. The formatter normalizes the French thousands
 separator to U+00A0, so the rendered bytes do not change with the host's ICU
 version. The Stripe link amount is still updated by hand (trade-off 13).
+
+**A price change revokes and reissues every live preview, added 2026-09-11,
+plan 037.** The v2 preview shows the amount, so a stale live link is a
+misquoted offer. The procedure, recorded here because the amount is an offer
+fact: change `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT`, and in the same deployment
+revoke every live v2 preview (`revokePreviewsForDomain` per prospect, which
+deletes the public object before marking the record), then reissue from each
+candidate's audit page under the new amount. Existing first-touch drafts that
+quote the old amount are regenerated, not sent as-is. The public site's own
+price line moves in the same change (it is literal text pinned by
+`packages/core/src/offer/pricing.test.ts`, trade-off 43).
 
 **Displayed HT everywhere from the first day.** Reasoning and the VAT
 threshold that makes this urgent are in
@@ -200,10 +211,14 @@ count. The report states inventoried, content-checked, and
 performance-measured counts separately rather than one undifferentiated
 "pages scanned" figure.
 
-The free outreach preview sent before purchase (`docs/rules/outreach-rules.md`)
-is a different, deliberately thinner document, not a lighter tier of
-this one: it never contains selectors, finding IDs, or exact page
-locations, and its content rules are governed separately.
+The free outreach preview sent before purchase (`docs/rules/outreach-rules.md`
+section 6bis, revised 2026-09-11, plan 037) is a different, deliberately
+thinner document, not a lighter tier of this one. It is an aggregate scorecard
+of a candidate-linked full outreach scan: coverage counts, distinct-finding
+and affected-page totals, four severity totals, and three public-safe text
+proof cards. It never contains screenshots, selectors, finding IDs, exact
+page locations, remediation, or a conformity rate, and the paid audit is
+always a fresh scan rather than a release of the preview's own.
 
 ---
 

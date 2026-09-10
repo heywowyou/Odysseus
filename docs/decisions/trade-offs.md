@@ -1745,6 +1745,15 @@ cap instead; that decision is the operator's.
     rather than complete on a repetition, which is the conservative direction:
     three distinct things worth saying is what the contract is asserting.
 
+    **Amended 2026-09-11, plan 037.** The evidence contract itself is
+    unchanged: prescans still capture the crop and composite, completeness
+    still gates what it always gated, and the fixed bilingual allowlist still
+    feeds touch 2's observation selection. What changed is the consumer: the
+    outreach preview is no longer built from prescan evidence, so the assets
+    and summaries no longer reach the prospect at all. They are operator-side
+    scoring and selection evidence. The preview's replacement contract is the
+    v2 full-scan scorecard (trade-off 42's amendment below).
+
 37. **A redirect off the declared domain is classified by counting
     establishments, not by comparing names (2026-08-28).** Qualification v1
     rejected every off-domain landing as `redirect-offsite`. Measured against
@@ -2202,6 +2211,29 @@ evidence record carries a `ref` to a file; without it plan 009's publisher must
 reimplement the read, the caps and the PNG check. It re-verifies the recorded
 sha256, because a file replaced between prescan and send means a preview showing
 the wrong hotel's screenshot.
+
+**Amended 2026-09-11, plan 037: the v2 preview replaces the prescan-backed
+input for new outreach; the invariants stand.** The v1 input was structurally
+safe but evidence-poor: three to five allowlisted sentences and up to two
+screenshots drawn from a three-page prescan cannot show that a whole-site
+measurement found a pattern. The replacement (`OutreachPreviewSummary` and the
+v2 input, same file family, still in `core`, still sharing no type with
+`GenerateReportInput`) is a projection of one candidate-linked outreach full
+scan: coverage counts reported separately, distinct-finding and
+unique-affected-page totals, four severity totals, and exactly three text
+proof cards selected deterministically in code from an operator-approved
+bilingual copy catalog. Everything the five layers enforced still holds, and
+two prohibitions get stricter: no images at all, and the proof-card catalog is
+reviewed static copy, so no model ever writes card text. Fail-closed is
+retained and widened: fewer than three eligible, public-safe cards means the
+audit is not publishable as outreach evidence, and a failed coverage gate
+means no preview. The publication record is discriminated by source
+(`prescan` | `full-audit`) so v1 rows keep their required fields and stay
+listable and revocable until natural expiry; no new v1 preview or first-touch
+draft can be created. Touch-one assembly now consumes an already published v2
+preview instead of publishing as a side effect, which closes the old
+publish-per-draft behaviour. A preview built by subtracting fields from a
+paid-report input remains forbidden, now in both directions.
 
 
 ### 43. A preview is served by hashing the visitor's own token, and the public site never learns anything else

@@ -39,6 +39,11 @@ export const metadata: Metadata = {
  * deux colonnes toujours visibles et des liens d'ancrage qui ne changeaient
  * rien. Voir `app/offre/page.tsx` pour le même changement, documenté une
  * fois.
+ *
+ * Mise à jour du 2026-09-11 (plan 037)&#160;: la prospection comporte
+ * désormais deux passes. La description de la seconde passe, complète, est
+ * ajoutée parce qu'un propriétaire de site la verrait dans ses journaux,
+ * et que cette page doit rester vérifiable contre ce qu'il y lit.
  */
 export default function BotInfoPage() {
   return (
@@ -77,10 +82,13 @@ export default function BotInfoPage() {
             </p>
 
             <p>
-              <strong>Analyse de prospection</strong>&#160;: trois pages au plus, et{' '}
-              <strong>sans Lighthouse</strong>. Le robot charge chaque page deux fois, avec et sans
-              JavaScript, et exécute les contrôles d&apos;accessibilité. Il ne crée aucun compte, ne
-              soumet aucun formulaire et n&apos;effectue aucune réservation.
+              <strong>Analyse de prospection</strong>&#160;: dans un premier temps, au plus trois
+              pages, et <strong>sans Lighthouse</strong>. Le robot charge chaque page deux fois,
+              avec et sans JavaScript, et exécute les contrôles d&apos;accessibilité. Pour un nombre
+              restreint d&apos;établissements présélectionnés, une analyse complète du site suit
+              ensuite, selon la même méthode et le même rythme de requêtes qu&apos;un audit
+              commandé. Dans les deux cas, il ne crée aucun compte, ne soumet aucun formulaire et
+              n&apos;effectue aucune réservation.
             </p>
 
             <p>
@@ -159,10 +167,12 @@ export default function BotInfoPage() {
             </p>
 
             <p>
-              <strong>Prospecting analysis</strong>: at most three pages, and{' '}
+              <strong>Prospecting analysis</strong>: first, at most three pages, and{' '}
               <strong>without Lighthouse</strong>. The bot loads each page twice, with and without
-              JavaScript, and runs the accessibility checks. It creates no account, submits no form,
-              and makes no booking.
+              JavaScript, and runs the accessibility checks. For a small number of pre-selected
+              establishments, a full analysis of the whole site then follows, using the same method
+              and the same request pacing as a commissioned audit. In both cases it creates no
+              account, submits no form, and makes no booking.
             </p>
 
             <p>

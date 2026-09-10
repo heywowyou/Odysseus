@@ -170,6 +170,18 @@ kind of review hotels received, not by analogy.
 | Prospecting scan, Chromium | seconds to a minute | qualified only |
 | LLM outreach draft | one call | worthy only, per `docs/rules/llm-layer-rules.md` §10 |
 
+**Outreach full scan, added 2026-09-11, plan 037.** For the hotel campaign the
+browser-cost ladder continues past the prescan: hotel prescan (three pages, no
+Lighthouse) for scoring, immutable scoring and cohort selection as the cost
+gate, then one **outreach full scan** per selected cohort member the operator
+chooses to contact. It runs the paid audit's content-coverage policy over the
+whole site, several minutes of Chromium per hotel, and stops before the model
+analysis. It is prospecting: started by the operator from a selected prospect,
+one at a time, never automatic, and its artifacts stay prospecting evidence
+under the published 90-day retention. The rule this file enforces is
+unchanged and is what the ladder protects: Chromium capacity is spent only
+below the selection line.
+
 The plain HTTP stage must not use Chromium. It fetches two URLs and
 parses HTML for a SIREN pattern. Using the browser there would make the
 cheap stage as expensive as the expensive one.

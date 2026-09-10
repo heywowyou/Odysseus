@@ -137,20 +137,80 @@ facts block.
 One new piece of information per touch. Each is deterministic in
 substance; only the prose is generated.
 
+**Revised 2026-09-11, plan 037.** The first touch's evidence document is the
+full-scan scorecard preview (section 6bis), built from a candidate-linked
+full outreach scan rather than from the three-page prescan. Touch 1's render
+diff and measured failure crop belonged to the retired v1 preview, which
+carried images; the v2 preview carries none. The prescan evidence contract
+itself is unchanged and still feeds prescan completeness, scoring inputs,
+and the touch 2 observation, but the measured crop and composite no longer
+reach the prospect.
+
 | Touch | Content | Source |
 |---|---|---|
-| 1 | Render diff: what a crawler sees versus what a person sees; if no render composite exists, the measured failure crop | scan |
-| 2 | One different allowlisted observation, plus age framing where the sector fits | scan, behavioural checks |
+| 1 | The published full-scan scorecard preview: coverage counts, aggregate finding totals, three proof cards | outreach full scan |
+| 2 | One different allowlisted observation, plus age framing where the sector fits | prescan, behavioural checks |
 | 3 | Criteria, this company's registry data, and where the case law stands | `assessObligations()` |
 
-The render comparison is preferred for touch 1, not required. A server-rendered
-site can have a genuine measured failure without a render gap. In that case,
-touch 1 uses the measured failure crop and touch 2 takes a different allowlisted
-summary. If no distinct second observation exists, no three-touch draft is
+If no distinct second observation exists for touch 2, no three-touch draft is
 created.
 
 The deterministic facts block appears on touch 3 only. Assembly refuses it on
 touches 1 and 2, so legal context cannot be front-loaded into the cold opener.
+
+## 6bis. The full-scan scorecard preview
+
+**Added 2026-09-11, plan 037.** The preview sent at touch 1 is a versioned
+v2 document built from one candidate-linked **outreach full scan**: a full
+audit run with the paid audit's content-coverage policy, stopped before the
+model analysis. Cheap qualification, the prescan, immutable scoring, and
+cohort selection remain the cost gate; only selected cohort members receive
+one. It is started by the operator from a selected prospect, never
+automatically.
+
+What the preview shows, and nothing more:
+
+- coverage facts: inventoried, content-checked, and performance-measured
+  page counts, reported separately
+- the count of distinct findings and the count of unique affected pages
+- distinct-finding totals for each of the four severities
+- exactly three text proof cards, each a public-safe title with its category,
+  severity, and affected-page count, selected deterministically in code from
+  an operator-approved bilingual copy catalog
+- the deterministic facts block when the sources permit it (same
+  `buildOutreachFactsBlock` path as touch 3)
+- the code-owned EUR 1,600 HT price, with the ask being to reply and request
+  the audit, not a checkout link
+- the article 14 disclosures: identity, data origins, purpose, opt-out, and
+  the 30-day link expiry
+
+What it never contains: screenshots or any image, exact URLs, selectors,
+finding or rule IDs, occurrences, raw evidence, remediation, model prose, a
+0-to-100 score, statistics, or a legal conclusion about the business.
+
+Lifecycle rules:
+
+- The audit detail page owns the document: the operator renders the exact
+  unpublished preview there, downloads the operator PDF, then publishes,
+  copies the one-time token link, and only then can create the first draft.
+  The prospect page starts the scan and links to the audit; it has no
+  preview controls.
+- The public page is an opaque-token, noindex, no-store HTML page that
+  expires after 30 days. It offers no PDF. Only the operator downloads a PDF,
+  from the private audit page.
+- Nothing publishes automatically, and no first-touch draft exists before an
+  explicit publication. Suppression blocks publication and revokes every live
+  preview for the domain.
+- A paid audit is always a fresh scan; the preview's scan is dated
+  prospecting evidence, never a deliverable held back.
+- Changing the published price revokes and reissues every live v2 preview,
+  so no live link ever shows a stale amount.
+- A full-scan preview is built only after the audit's coverage gate passes;
+  a coverage failure means no preview, not a partial one.
+
+Existing v1 previews are neither rewritten nor invalidated early: they stay
+revocable and expire under their existing records, and no new v1 preview or
+first-touch draft can be created after plan 037 ships.
 
 Follow-ups generate only if no reply is detected on the thread. Spacing
 is a setting, not a constant in a prompt. Canonical defaults, added with

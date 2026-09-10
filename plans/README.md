@@ -88,6 +88,13 @@ suppression, retention, and outcome measurement.
 15. **Public previews minimize disclosure.** They contain vetted summaries and
     at most two evidence assets, not finding IDs, selectors, exact affected
     URLs, raw audit data, population claims, or legal conclusions.
+    Amended 2026-09-11, plan 037: new outreach previews are v2 full-scan
+    scorecards built from a candidate-linked outreach full scan. They carry
+    aggregate coverage and finding counts, four severity totals, and exactly
+    three text proof cards from an approved bilingual copy catalog; no
+    evidence assets, no screenshots, no model-written copy. The prescan
+    evidence contract of decisions 8 and 9 is unchanged for prescans and
+    scoring; it no longer feeds the preview.
 16. **Legal text and disclosures are deterministic.** The model writes only
     guarded connective prose. Hotel-sector wording remains source-gated and
     all user-facing output is French and English from the start.
@@ -365,7 +372,7 @@ plainly wherever plan 014's results are interpreted rather than described as
 | [034](archive/034-hotel-outreach-v2-booking-detection.md) | Port booking detection to prospecting and ship hotel-outreach-v2 | P1 | M | none; gates 014 Step 3 | DONE (2026-09-08; incident during the bounded batch documented in trade-offs.md#75/issue #114; v2 approved, scored, diffed, and wave-1 cohort selected under it) |
 | [035](archive/035-full-audit-checkpoint-and-resume.md) | Resume full audits across crashes and redeploys instead of restarting from zero | P1 | L | none | DONE (2026-09-10; live acceptance on production: the operator-authorized forced redeploy during the Belleval full audit re-claimed the job from its crawl checkpoint with 30 reused pages and the audit completed without restarting from zero; resolves issue #124) |
 | [036](archive/036-lcen-publisher-identification-evidence.md) | Publish per-field detection evidence for the LCEN publisher-identification finding | P2 | M | none | DONE (2026-09-10; the authorized lescorderies.com full audit correctly left the finding silent, the site publishes SIREN 487901282 and TVA, the checked-page evidence payload is live in the scan artifact, and both language reports were reviewed with the approved copy and no legal conclusion; resolves issue #161) |
-| [037](037-full-scan-outreach-preview.md) | Replace the prescan outreach preview with a full-scan scorecard on the audit page | P1 | L | 034, 035, existing preview lifecycle | READY (operator-approved design, 2026-09-11) |
+| [037](037-full-scan-outreach-preview.md) | Replace the prescan outreach preview with a full-scan scorecard on the audit page | P1 | L | 034, 035, existing preview lifecycle | IN PROGRESS (started 2026-09-11; slices 1 and the contract freeze landed first, proof-card catalog gate pending operator approval before slice 3) |
 | [038](038-public-site-evidence-dossier.md) | Recast the public site as a clear, evidence-led audit offer | P1 | M | none | READY (operator-approved design, 2026-09-11) |
 
 Plan 016 (added 2026-08-30, operator-approved) lands between 013 and 014:

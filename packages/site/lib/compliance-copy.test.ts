@@ -81,11 +81,22 @@ describe('prospecting privacy page', () => {
     for (const fact of required) expect(privacy).toContain(fact);
   });
 
-  it('states the three-page prospecting limit and that no booking is made', () => {
+  it('states the three-page first pass, discloses the full second pass, and that no booking is made', () => {
+    // Plan 037: prospecting now has two passes. The cheap three-page prescan
+    // keeps qualifying sites, and a small number of pre-selected establishments
+    // receive a full-site outreach scan. Hiding the second pass would make the
+    // page diverge from what a site owner sees in their own access logs.
     expect(privacy).toContain('trois pages');
     expect(privacy).toContain('three pages');
-    expect(privacy).toContain('aucune réservation');
-    expect(privacy).toContain('no booking');
+    expect(privacy).toContain('ensemble du site');
+    expect(privacy).toContain('whole site');
+    expect(privacy).toContain('n&apos;effectue de réservation');
+    expect(privacy).toContain('makes a booking');
+  });
+
+  it('states that the sent preview shows totals only, never a screenshot or a page address', () => {
+    expect(privacy).toContain('ni capture d&apos;écran, ni adresse de page');
+    expect(privacy).toContain('no screenshot, no page address');
   });
 
   it('does not claim data is bought or verified by a vendor', () => {
@@ -140,11 +151,15 @@ describe('bot page', () => {
     expect(bot).toContain('1000');
   });
 
-  it('distinguishes the commissioned audit from the prospecting prescan', () => {
+  it('distinguishes the commissioned audit from the prospecting passes', () => {
     expect(bot).toContain('Audit commandé');
     expect(bot).toContain('Commissioned audit');
     expect(bot).toContain('Analyse de prospection');
     expect(bot).toContain('Prospecting analysis');
+    // Plan 037: the full-site outreach pass is disclosed, because a site owner
+    // would see it in their access logs and the page must survive that check.
+    expect(bot).toContain('nombre restreint');
+    expect(bot).toContain('small number');
   });
 
   it('no longer claims Lighthouse runs during prospecting', () => {
@@ -184,6 +199,18 @@ describe('offer page', () => {
   it('says the price does not vary, because a prospect will ask', () => {
     expect(offer).toContain('ne dépend ni de la taille du site');
     expect(offer).toContain('does not depend on the size of the site');
+  });
+
+  it('describes the preview as a whole-site summary and the audit as a fresh scan', () => {
+    // Plan 037 replaced the three-page preview. The old claim must not come
+    // back, and the fresh-scan wording is what keeps the audit from reading as
+    // a paid unlock of the same scan the preview used.
+    expect(offer).toContain('analyse de l&apos;ensemble du site');
+    expect(offer).toContain('analysis of the whole site');
+    expect(offer).toContain('nouvelle analyse');
+    expect(offer).toContain('fresh analysis');
+    expect(offer).not.toContain('trois pages');
+    expect(offer).not.toContain('three pages');
   });
 
   it('states no obligation verdict', () => {
