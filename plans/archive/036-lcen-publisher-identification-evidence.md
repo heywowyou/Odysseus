@@ -15,6 +15,18 @@ written against `340ac39` and its drift is re-checked below.
   to writing reviewed client copy well.
 - **Depends on**: none. No active plan touches these files.
 - **Category**: full-audit finding quality, legal-reporting honesty
+- **Completed at**: 2026-09-10. Live real-scan review (trade-off 32) on the
+  operator-authorized full audit of `lescorderies.com` (audit
+  `032e2d58-f612-4348-be56-9549ff10c452`, 27 pages): the site publishes a
+  checksum-valid SIREN 487901282 and TVA FR48487901282 on its
+  mentions-legales page, so the finding correctly stayed silent, no LCEN
+  block or coverage sentence renders in either language (verified by text
+  extraction of both rendered PDFs and a visual page review), and the
+  checked-page evidence payload is live in the scan artifact
+  (`scan.mentionsLegales.checkedPages`, homepageFallback false). The firing
+  path stays covered by the spa-demo fixture pair. The legal exposure
+  section states published criteria and observed facts only, with the
+  legal-counsel disclaimer.
 
 ## Why this matters
 
