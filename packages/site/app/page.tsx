@@ -4,24 +4,26 @@ import { LanguageSection } from '../lib/language';
  * La page d'accueil. Rédigée en français d'abord ; la colonne anglaise est
  * une traduction du français, jamais l'inverse.
  *
- * Chaque affirmation se rattache à docs/rules/offer-positioning.md et au
- * brief du site. La limite est énoncée avant toute promesse, conformément à
- * la règle de positionnement : la phrase approuvée de la section 2 ouvre la
- * page. Aucun témoignage, aucune statistique, aucune urgence, aucune image :
- * rien de tout cela n'existe.
+ * Recast 2026-09-11, plan 038: the page now leads with the correction
+ * handoff rather than with a tour of the scanner. One illustrative dossier
+ * card (Constat, Preuve, Action) shows the shape of the deliverable; it
+ * carries generic format text only, never a fabricated finding, score, or
+ * metric. The former four-diagram block is gone: the raw-versus-rendered
+ * comparison survives as a compact inset under the search check, and the
+ * performance copy names LCP, CLS, and availability-qualified INP instead
+ * of a three-dot timeline.
  *
- * Quatre schémas illustrent les quatre familles de constats plutôt qu'une
- * seule : le rendu (crawler contre visiteur), l'accessibilité (lecteur
- * d'écran contre visiteur voyant), la visibilité IA (assistant contre
- * visiteur) et la performance (une frise de trois instants mesurés, sans
- * valeur chiffrée puisqu'aucune mesure réelle n'existe ici). Aucun ne
- * représente un résultat mesuré ni un site en particulier ; chacun illustre
- * un défaut réel que les outils de mesure détectent.
+ * Chaque affirmation se rattache à docs/rules/offer-positioning.md et aux
+ * décisions 14, 18 et 57 de docs/decisions/trade-offs.md : la visibilité IA
+ * est décrite comme des signaux techniques vérifiables, jamais comme une
+ * prédiction de citation ou de classement ; la performance de laboratoire
+ * reste un échantillon représentatif, jamais une mesure universelle. La
+ * limite RGAA complète reste énoncée en tête de la page offre ; ici, elle
+ * est résumée et renvoie vers cette page.
  *
- * Bascule de langue du 2026-09-10&#160;: la page, jusque là uniquement en
- * français ("mode persuasion, français d'abord"), est désormais bilingue
- * comme le reste du site, pilotée par le même sélecteur du bandeau. Voir
- * `app/offre/page.tsx` pour le mécanisme, documenté une fois.
+ * La garde de sens public vit dans lib/marketing-copy.test.ts ; les limites
+ * légales et le prix restent gardés par lib/compliance-copy.test.ts et par
+ * packages/core/src/offer/pricing.test.ts.
  */
 
 /** Une coquille générique de site en JavaScript côté client : la forme du
@@ -41,18 +43,6 @@ const RAW_DOCUMENT_EN = `<!doctype html>
     <script src="/app.js"></script>
   </body>
 </html>`;
-
-const NO_STRUCTURED_DATA_FR = `<!-- Aucune donnée structurée
-     détectée sur cette page -->`;
-
-const NO_STRUCTURED_DATA_EN = `<!-- No structured data
-     detected on this page -->`;
-
-const PLACEHOLDER_INPUT = `<input type="email"
-  placeholder="Adresse e-mail">`;
-
-const PLACEHOLDER_INPUT_EN = `<input type="email"
-  placeholder="Email address">`;
 
 const GUARANTEES_FR = [
   {
@@ -107,268 +97,292 @@ function HomeFr() {
   return (
     <>
       <section className="shell hero">
-        <p className="label">Accessibilité, référencement naturel, performance</p>
+        <p className="label">Diagnostic technique automatisé</p>
         <h1 className="display measure-display mt-5">
-          Un diagnostic technique de votre site, vérifiable constat par constat
+          Un diagnostic technique pour savoir quoi corriger, où, et dans quel ordre
         </h1>
 
-        <div className="split mt-10">
-          {/* Placée en premier dans le document pour que la limite soit lue
-              avant toute promesse, conformément à la règle de positionnement ;
-              disposée dans la seconde colonne sur grand écran, à côté du
-              chapeau plutôt qu'après lui. */}
-          <div className="statement split-aside">
-            <p className="label">Portée du diagnostic</p>
-            <p className="mt-2">
-              Ceci est un diagnostic technique, pas un audit RGAA. Il ne produit pas de taux de
-              conformité officiel et ne peut pas servir de base à une déclaration
-              d&apos;accessibilité.
-            </p>
-          </div>
-
+        <div className="split mt-10 hero-split">
           <div className="split-main">
             <p className="lede">
-              Odysseus analyse l&apos;ensemble de votre site au moyen de tests automatisés et
-              reproductibles, puis vous remet un rapport en français et en anglais. Pour chaque
-              constat, la page et l&apos;élément concernés sont précisés&#160;: votre prestataire
-              web peut le vérifier, puis le corriger.
+              Odysseus analyse l&apos;ensemble de votre site avec des outils de mesure automatisés,
+              puis remet un rapport en français et en anglais&#160;: une liste de corrections
+              hiérarchisée, vérifiable constat par constat, prête à transmettre à votre prestataire.
             </p>
 
+            {/* Résumé de la limite approuvée. La formulation complète reste en
+                tête de la page offre, qui reste la première localisation
+                faisant autorité (offer-positioning.md, section 2). */}
+            <div className="statement mt-8">
+              <p className="label">Portée du diagnostic</p>
+              <p className="mt-2">
+                Ceci est un diagnostic technique, pas un audit RGAA. La portée complète de cette
+                limite est énoncée sur la page{' '}
+                <a className="evidence-link" href="/offre">
+                  offre
+                </a>
+                .
+              </p>
+            </div>
+
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <a className="btn btn-primary" href="/offre">
+              <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+                Écrire à Odysseus
+              </a>
+              <a className="btn btn-secondary" href="/offre">
                 Consulter l&apos;offre
               </a>
-              <a className="btn btn-secondary" href="mailto:contact@odysseusaudit.com">
-                Nous écrire
-              </a>
             </div>
+          </div>
+
+          {/* La fiche constat signature. Structure de livrable, jamais un
+              résultat : aucun chiffre, aucun site réel, aucun constat inventé.
+              La règle orange annotant la ligne Action est le seul emploi de
+              cette couleur sur la page. */}
+          <aside className="split-aside" aria-label="Format d'un constat">
+            <div className="dossier">
+              <div className="dossier-head">
+                <p className="dossier-title">Ce que contient chaque constat</p>
+                <p className="dossier-stamp">Rapport Odysseus</p>
+              </div>
+              <dl>
+                <div className="dossier-row">
+                  <dt>Constat</dt>
+                  <dd>Le problème détecté, énoncé en une phrase claire, sans jargon.</dd>
+                </div>
+                <div className="dossier-row">
+                  <dt>Preuve</dt>
+                  <dd>
+                    La page et l&apos;élément concernés, avec la mesure qui établit le constat.
+                  </dd>
+                </div>
+                <div className="dossier-row dossier-row-action">
+                  <dt>Action</dt>
+                  <dd>La correction recommandée, classée dans l&apos;ordre des priorités.</dd>
+                </div>
+              </dl>
+              <p className="dossier-caption">
+                Illustration du format du rapport&#160;: elle ne représente ni un site réel, ni un
+                constat réel, ni le résultat d&apos;un audit.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section className="shell section section-divided" aria-labelledby="recevez">
+        <div className="measure">
+          <p className="label">Livrable</p>
+          <h2 id="recevez" className="heading mt-3">
+            Ce que vous recevez
+          </h2>
+          <p className="soft mt-4">Un document de travail, pas une démonstration d&apos;outil.</p>
+        </div>
+
+        <div className="receive-grid mt-9">
+          <div className="receive-item">
+            <p className="receive-title">Tout le site, page après page</p>
+            <p className="soft mt-2">
+              Chaque page explorée avec succès reçoit les vérifications de contenu, quel que soit
+              son rôle dans le site.
+            </p>
+          </div>
+          <div className="receive-item">
+            <p className="receive-title">Des corrections hiérarchisées</p>
+            <p className="soft mt-2">
+              Les constats sont classés par priorité, pour commencer le travail par ce qui compte le
+              plus.
+            </p>
+          </div>
+          <div className="receive-item">
+            <p className="receive-title">Un rapport bilingue</p>
+            <p className="soft mt-2">
+              Un PDF remis en français et en anglais, rédigé pour un dirigeant, pas pour un
+              technicien.
+            </p>
+          </div>
+          <div className="receive-item">
+            <p className="receive-title">Des preuves localisées</p>
+            <p className="soft mt-2">
+              Chaque constat nomme la page et l&apos;élément concernés, et s&apos;appuie sur une
+              mesure vérifiable.
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="shell section section-divided" aria-labelledby="couverture">
+      <section className="shell section section-divided" aria-labelledby="verifie">
         <div className="measure">
           <p className="label">Périmètre</p>
-          <h2 id="couverture" className="heading mt-3">
-            Ce que couvre le diagnostic
+          <h2 id="verifie" className="heading mt-3">
+            Ce que le diagnostic vérifie
           </h2>
           <p className="soft mt-4">
-            Quatre familles de constats, chacune illustrée par un exemple réel de ce que les outils
-            de mesure détectent.
+            Quatre familles de vérifications, chacune bornée à ce que des outils de mesure
+            établissent.
           </p>
         </div>
 
-        {/* Bloc 1 : référencement naturel. Le schéma signature de la page,
-            seul à porter l'animation de révélation. */}
-        <div className="mt-12">
-          <h3 className="subheading">Référencement naturel</h3>
-          <p className="soft mt-3 measure">
-            Sur de nombreux sites récents, le contenu des pages est généré par JavaScript, dans le
-            navigateur du visiteur. Celui-ci n&apos;y voit aucune différence&#160;; un robot
-            d&apos;indexation, en revanche, peut ne recevoir qu&apos;une page vide. Le diagnostic
-            charge donc chaque page deux fois, sans JavaScript puis dans un navigateur complet, et
-            compare les deux versions.
-          </p>
+        <div className="check-grid mt-10">
+          <div className="check">
+            <h3 className="subheading">Accessibilité</h3>
+            <p className="soft mt-3">
+              Chaque page est confrontée aux règles WCAG 2.2, niveau AA, et à la norme européenne EN
+              301 549, élément par élément, avec la preuve de chaque écart.
+            </p>
+          </div>
 
-          <div className="diff mt-6">
-            <div className="diff-panel machine">
-              <p className="label">Page reçue par un robot d&apos;indexation</p>
-              <pre className="machine-code">
-                <code>{RAW_DOCUMENT}</code>
-              </pre>
-              <p className="machine-empty">Ni titre, ni texte, ni lien.</p>
-            </div>
+          <div className="check">
+            <h3 className="subheading">Recherche et rendu</h3>
+            <p className="soft mt-3">
+              Chaque page est chargée deux fois, sans JavaScript puis dans un navigateur complet,
+              pour révéler ce qu&apos;un moteur de recherche reçoit à la place de votre contenu.
+            </p>
 
-            <div className="diff-panel visitor">
-              <p className="label">Page affichée à un visiteur</p>
-              <div className="visitor-doc" aria-hidden="true">
-                <div className="visitor-el render-step render-step-1">
-                  <p className="label">Titre de la page</p>
-                  <div className="visitor-bar visitor-bar-strong" style={{ width: '78%' }} />
-                </div>
-                <div className="visitor-el render-step render-step-2">
-                  <p className="label">Texte de présentation</p>
-                  <div className="visitor-lines">
-                    <div className="visitor-bar" />
-                    <div className="visitor-bar" style={{ width: '94%' }} />
-                    <div className="visitor-bar" style={{ width: '61%' }} />
+            {/* Encart réduit du comparatif brut contre rendu. Il illustre le
+                principe de mesure ; l'étiquette ci-dessous interdit de le lire
+                comme un résultat. */}
+            <div className="diff diff-compact mt-5">
+              <div className="diff-panel machine">
+                <p className="label">Page reçue par un robot d&apos;indexation</p>
+                <pre className="machine-code">
+                  <code>{RAW_DOCUMENT}</code>
+                </pre>
+                <p className="machine-empty">Ni titre, ni texte, ni lien.</p>
+              </div>
+              <div className="diff-panel visitor">
+                <p className="label">Page affichée à un visiteur</p>
+                <div className="visitor-doc" aria-hidden="true">
+                  {/* L'animation de révélation porte sur les barres, jamais
+                      sur le texte : un texte qui apparaît en fondu échoue aux
+                      seuils de contraste pendant l'animation. */}
+                  <div className="visitor-el">
+                    <p className="label">Titre de la page</p>
+                    <div
+                      className="visitor-bar visitor-bar-strong render-step render-step-1"
+                      style={{ width: '78%' }}
+                    />
+                  </div>
+                  <div className="visitor-el">
+                    <p className="label">Texte de présentation</p>
+                    <div className="visitor-lines render-step render-step-2">
+                      <div className="visitor-bar" />
+                      <div className="visitor-bar" style={{ width: '94%' }} />
+                      <div className="visitor-bar" style={{ width: '61%' }} />
+                    </div>
+                  </div>
+                  <div className="visitor-el">
+                    <p className="label">Bouton de contact</p>
+                    <div className="visitor-bar-button render-step render-step-3" />
                   </div>
                 </div>
-                <div className="visitor-el render-step render-step-3">
-                  <p className="label">Liens de navigation</p>
-                  <div className="visitor-lines">
-                    <div className="visitor-bar" style={{ width: '72%' }} />
-                    <div className="visitor-bar" style={{ width: '55%' }} />
-                  </div>
-                </div>
-                <div className="visitor-el render-step render-step-4">
-                  <p className="label">Bouton de contact</p>
-                  <div className="visitor-bar-button" />
-                </div>
+                <p className="small muted">
+                  Ce contenu n&apos;apparaît qu&apos;après l&apos;exécution du JavaScript&#160;: le
+                  robot d&apos;indexation ne l&apos;a jamais reçu.
+                </p>
               </div>
-              <p className="small muted">
-                Ce contenu n&apos;apparaît qu&apos;après l&apos;exécution du JavaScript&#160;; le
-                robot d&apos;indexation ne l&apos;a jamais reçu.
-              </p>
             </div>
+            <p className="small muted measure mt-3">
+              Schéma de principe&#160;: il ne représente ni un site réel, ni le résultat d&apos;un
+              audit.
+            </p>
           </div>
 
-          <p className="small muted measure mt-3">
-            Schéma de principe&#160;: il ne représente ni un site réel ni le résultat d&apos;un
-            audit.
-          </p>
-        </div>
-
-        {/* Bloc 2 : accessibilité. */}
-        <div className="mt-12">
-          <h3 className="subheading">Accessibilité</h3>
-          <p className="soft mt-3 measure">
-            Un espace réservé (placeholder) qui ressemble à une étiquette n&apos;en est pas une
-            &#160;: dès la première frappe, il disparaît, et rien ne demeure pour identifier le
-            champ. Les contrôles automatisés le signalent&#160;; un visiteur voyant ne le remarque
-            jamais.
-          </p>
-
-          <div className="diff diff-compact mt-6">
-            <div className="diff-panel machine">
-              <p className="label">Ce qu&apos;annonce un lecteur d&apos;écran</p>
-              <pre className="machine-code">
-                <code>{PLACEHOLDER_INPUT}</code>
-              </pre>
-              <p className="machine-empty">« Champ de saisie. » Aucune étiquette annoncée.</p>
-            </div>
-
-            <div className="diff-panel visitor">
-              <p className="label">Ce que voit un visiteur</p>
-              <div className="visitor-el" aria-hidden="true">
-                <p className="label">Champ de formulaire</p>
-                <div className="visitor-input">
-                  <span className="visitor-input-placeholder">Adresse e-mail</span>
-                </div>
-              </div>
-              <p className="small muted">
-                Le texte disparaît dès la première frappe&#160;: rien ne demeure pour un visiteur
-                qui utilise un lecteur d&apos;écran.
-              </p>
-            </div>
+          <div className="check">
+            <h3 className="subheading">Signaux de visibilité dans les moteurs et assistants IA</h3>
+            <p className="soft mt-3">
+              Le diagnostic vérifie des signaux techniques qui peuvent être établis&#160;: les
+              données structurées que votre site déclare, les règles d&apos;accès des robots
+              d&apos;indexation IA dans le fichier robots.txt, la présence d&apos;un fichier
+              llms.txt et du balisage FAQ. Il ne prédit pas si un assistant IA citera votre site, le
+              classera, le recommandera, ou répondra à une question sur votre activité.
+            </p>
           </div>
 
-          <p className="small muted measure mt-3">
-            Illustration d&apos;un défaut réel détecté par le diagnostic. Elle ne représente aucun
-            site en particulier.
-          </p>
-        </div>
+          <div className="check">
+            <h3 className="subheading">Performance et sécurité</h3>
 
-        {/* Bloc 3 : visibilité IA / GEO. */}
-        <div className="mt-12">
-          <h3 className="subheading">Visibilité auprès des assistants IA</h3>
-          <p className="soft mt-3 measure">
-            Un assistant d&apos;intelligence artificielle ne visite pas une page comme un
-            visiteur&#160;: il lit le code et les données structurées pour comprendre qui vous êtes,
-            où vous êtes, et ce que vous proposez. En leur absence, il ne peut que deviner, ou
-            passer votre page.
-          </p>
-
-          <div className="diff diff-compact mt-6">
-            <div className="diff-panel machine">
-              <p className="label">Données structurées de la page</p>
-              <pre className="machine-code">
-                <code>{NO_STRUCTURED_DATA_FR}</code>
-              </pre>
-              <p className="machine-empty">Nom, adresse et horaires non identifiés.</p>
-            </div>
-
-            <div className="diff-panel visitor">
-              <p className="label">Ce que comprend un visiteur</p>
-              <div className="visitor-doc" aria-hidden="true">
-                <div className="visitor-el">
-                  <p className="label">Nom de l&apos;établissement</p>
-                  <div className="visitor-bar visitor-bar-strong" style={{ width: '68%' }} />
-                </div>
-                <div className="visitor-el">
-                  <p className="label">Adresse</p>
-                  <div className="visitor-bar" style={{ width: '84%' }} />
-                </div>
-                <div className="visitor-el">
-                  <p className="label">Horaires d&apos;ouverture</p>
-                  <div className="visitor-bar" style={{ width: '58%' }} />
-                </div>
+            <div className="metric-row mt-4">
+              <div className="metric">
+                <p className="metric-name">Chargement du contenu principal (LCP)</p>
+                <p className="metric-desc">
+                  Le temps avant que l&apos;élément principal de la page soit affiché.
+                </p>
               </div>
-              <p className="small muted">
-                Ces informations existent sur la page. Sans données structurées, un assistant IA ne
-                les reçoit pas de la même façon.
-              </p>
+              <div className="metric">
+                <p className="metric-name">Stabilité visuelle (CLS)</p>
+                <p className="metric-desc">
+                  Les déplacements inattendus de la mise en page pendant le chargement.
+                </p>
+              </div>
+              <div className="metric">
+                <p className="metric-name">
+                  Réactivité réelle (INP, lorsque des données terrain sont disponibles)
+                </p>
+                <p className="metric-desc">
+                  La vitesse à laquelle la page répond aux interactions, quand des mesures réelles
+                  de visiteurs existent.
+                </p>
+              </div>
             </div>
+
+            <p className="soft mt-4">
+              La performance de laboratoire est mesurée sur un échantillon représentatif de
+              pages&#160;; les données terrain, lorsqu&apos;elles sont disponibles, viennent la
+              compléter.
+            </p>
+            <p className="soft mt-3">
+              Les en-têtes de sécurité du serveur sont vérifiés pour l&apos;ensemble du site,
+              indépendamment de la vitesse de chargement.
+            </p>
           </div>
-
-          <p className="small muted measure mt-3">
-            Illustration du principe mesuré par le diagnostic. Elle ne représente aucun site en
-            particulier.
-          </p>
         </div>
-
-        {/* Bloc 4 : performance et sécurité, frise plutôt que diff : aucune
-            valeur chiffrée n'est inventée ici. */}
-        <div className="mt-12">
-          <h3 className="subheading">Performance et sécurité</h3>
-          <p className="soft mt-3 measure">
-            Un site peut sembler chargé alors qu&apos;il ne répond pas encore aux clics ni au
-            défilement. Le diagnostic mesure trois instants distincts de ce chargement, sur un
-            échantillon représentatif de pages, et les compare aux seuils publics utilisés par les
-            moteurs de recherche. Les en-têtes de sécurité du serveur sont contrôlés en parallèle.
-          </p>
-
-          <div className="card mt-6">
-            <div className="timeline">
-              <div className="timeline-point">
-                <span className="timeline-dot" aria-hidden="true" />
-                <div>
-                  <p className="subheading" style={{ fontSize: '0.9375rem' }}>
-                    Premier affichage
-                  </p>
-                  <p className="small muted mt-1">Le navigateur commence à peindre la page.</p>
-                </div>
-              </div>
-              <div className="timeline-point">
-                <span className="timeline-dot" aria-hidden="true" />
-                <div>
-                  <p className="subheading" style={{ fontSize: '0.9375rem' }}>
-                    Contenu principal visible
-                  </p>
-                  <p className="small muted mt-1">
-                    L&apos;élément le plus visible de la page apparaît.
-                  </p>
-                </div>
-              </div>
-              <div className="timeline-point">
-                <span className="timeline-dot" aria-hidden="true" />
-                <div>
-                  <p className="subheading" style={{ fontSize: '0.9375rem' }}>
-                    Page réellement utilisable
-                  </p>
-                  <p className="small muted mt-1">La page répond aux clics et au défilement.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p className="small muted measure mt-3">
-            Trois instants mesurés par le diagnostic, illustrés ici sans valeur chiffrée&#160;:
-            chaque rapport indique les temps réellement observés sur votre site.
-          </p>
-        </div>
-
-        <p className="soft measure mt-12">
-          Le rapport est remis en français et en anglais, et rédigé pour des dirigeants sans
-          compétence technique particulière. Il est entièrement automatisé et ne comprend aucune
-          vérification manuelle.
-        </p>
       </section>
 
-      <section className="shell section section-divided" aria-labelledby="garanties">
+      <section className="shell section section-divided" aria-labelledby="remise">
         <div className="measure">
-          <p className="label">Méthode</p>
-          <h2 id="garanties" className="heading mt-3">
+          <p className="label">Déroulé</p>
+          <h2 id="remise" className="heading mt-3">
+            Comment la remise se déroule
+          </h2>
+          <p className="soft mt-4">
+            De l&apos;observation à la correction, quatre étapes dans l&apos;ordre.
+          </p>
+        </div>
+
+        <ol className="process mt-10">
+          <li>
+            <p className="process-step">Explorer</p>
+            <p className="soft mt-2">
+              L&apos;ensemble du site est parcouru, et chaque page est mesurée.
+            </p>
+          </li>
+          <li>
+            <p className="process-step">Localiser</p>
+            <p className="soft mt-2">
+              Chaque constat est rattaché à la page et à l&apos;élément concernés.
+            </p>
+          </li>
+          <li>
+            <p className="process-step">Hiérarchiser</p>
+            <p className="soft mt-2">
+              Les corrections sont classées, de la plus urgente à la moins urgente.
+            </p>
+          </li>
+          <li>
+            <p className="process-step">Corriger</p>
+            <p className="soft mt-2">
+              Vous transmettez la liste à votre prestataire, qui vérifie puis corrige, constat par
+              constat.
+            </p>
+          </li>
+        </ol>
+      </section>
+
+      <section className="shell section section-divided" aria-labelledby="methode">
+        <div className="measure">
+          <p className="label">Méthode et limites</p>
+          <h2 id="methode" className="heading mt-3">
             Des constats vérifiables
           </h2>
           <p className="soft mt-4">
@@ -377,49 +391,43 @@ function HomeFr() {
           </p>
         </div>
 
-        <div className="mt-9">
+        <div className="method-grid mt-9">
           {GUARANTEES_FR.map((guarantee) => (
-            <div className="basis-row" key={guarantee.claim}>
+            <div className="method-item" key={guarantee.claim}>
               <p className="subheading">{guarantee.claim}</p>
-              <p className="soft">{guarantee.basis}</p>
+              <p className="soft small mt-2">{guarantee.basis}</p>
             </div>
           ))}
         </div>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="tarif">
-        <div className="split">
-          <div className="split-main">
-            <p className="label">Tarif</p>
-            <h2 id="tarif" className="heading mt-3">
-              Un tarif unique et publié
-            </h2>
-            <p className="soft mt-4 max-w-md">
-              Il ne dépend ni de la taille du site ni du nombre de constats, et vous est confirmé
-              par écrit avant tout engagement.
-            </p>
-            <p className="small muted mt-6 max-w-md">
-              Le fonctionnement du robot qui réalise ces analyses, ainsi que la manière de lui
-              interdire l&apos;accès à votre site, sont décrits sur la page{' '}
-              <a className="underline" href="/bot">
-                OdysseusBot
-              </a>
-              .
-            </p>
-          </div>
-
-          <div className="card card-accent split-aside">
-            <p className="label">Audit complet</p>
-            <p className="price mt-3">1&#160;600&#160;€ HT</p>
-            <a className="btn btn-primary mt-6 w-full" href="mailto:contact@odysseusaudit.com">
-              Commander par e-mail
+        <div className="measure">
+          <p className="label">Tarif et contact</p>
+          <h2 id="tarif" className="heading mt-3">
+            Un tarif unique et publié
+          </h2>
+          <p className="price numeric mt-5">1&#160;600&#160;€ HT</p>
+          <p className="soft mt-4">
+            Il ne dépend ni de la taille du site ni du nombre de constats, et il vous est confirmé
+            par écrit avant tout engagement.
+          </p>
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+              Écrire à Odysseus
             </a>
-            <p className="small mt-4">
-              <a className="underline" href="/offre">
-                Consulter le détail de l&apos;offre
-              </a>
-            </p>
+            <a className="btn btn-secondary" href="/offre">
+              Consulter le détail de l&apos;offre
+            </a>
           </div>
+          <p className="small muted mt-7">
+            Le fonctionnement du robot qui réalise ces analyses, ainsi que la manière de lui
+            interdire l&apos;accès à votre site, sont décrits sur la page{' '}
+            <a className="evidence-link" href="/bot">
+              OdysseusBot
+            </a>
+            .
+          </p>
         </div>
       </section>
     </>
@@ -430,245 +438,270 @@ function HomeEn() {
   return (
     <>
       <section className="shell hero">
-        <p className="label">Accessibility, search optimisation, performance</p>
+        <p className="label">An automated technical diagnostic</p>
         <h1 className="display measure-display mt-5">
-          A technical diagnostic of your website, verifiable finding by finding
+          A technical diagnostic that tells you what to fix, where, and in what order
         </h1>
 
-        <div className="split mt-10">
-          <div className="statement split-aside">
-            <p className="label">Scope of the diagnostic</p>
-            <p className="mt-2">
-              This is a technical diagnostic, not an audit RGAA. It does not produce an official
-              conformity rate and cannot serve as the basis for an accessibility statement.
-            </p>
-          </div>
-
+        <div className="split mt-10 hero-split">
           <div className="split-main">
             <p className="lede">
-              Odysseus analyses your whole site using automated, reproducible tests, then hands you
-              a report in French and English. Every finding names the page and the element
-              concerned: your web provider can check it, then fix it.
+              Odysseus analyses your whole site with automated measuring tools, then delivers a
+              report in French and English: a prioritised list of corrections, verifiable finding by
+              finding, ready to hand to your web provider.
             </p>
 
+            <div className="statement mt-8">
+              <p className="label">Scope of the diagnostic</p>
+              <p className="mt-2">
+                This is a technical diagnostic, not an audit RGAA. The full wording of this
+                limitation is set out on the{' '}
+                <a className="evidence-link" href="/offre">
+                  offer page
+                </a>
+                .
+              </p>
+            </div>
+
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <a className="btn btn-primary" href="/offre">
+              <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+                Write to Odysseus
+              </a>
+              <a className="btn btn-secondary" href="/offre">
                 See the offer
               </a>
-              <a className="btn btn-secondary" href="mailto:contact@odysseusaudit.com">
-                Write to us
-              </a>
             </div>
+          </div>
+
+          <aside className="split-aside" aria-label="Shape of a finding">
+            <div className="dossier">
+              <div className="dossier-head">
+                <p className="dossier-title">What every finding contains</p>
+                <p className="dossier-stamp">Odysseus report</p>
+              </div>
+              <dl>
+                <div className="dossier-row">
+                  <dt>Finding</dt>
+                  <dd>The detected problem, stated in one clear sentence, without jargon.</dd>
+                </div>
+                <div className="dossier-row">
+                  <dt>Evidence</dt>
+                  <dd>
+                    The page and the element concerned, with the measurement that establishes the
+                    finding.
+                  </dd>
+                </div>
+                <div className="dossier-row dossier-row-action">
+                  <dt>Action</dt>
+                  <dd>The recommended correction, ranked by priority.</dd>
+                </div>
+              </dl>
+              <p className="dossier-caption">
+                An illustration of the report format: it represents neither a real site, nor a real
+                finding, nor an audit result.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section className="shell section section-divided" aria-labelledby="receive-en">
+        <div className="measure">
+          <p className="label">Deliverable</p>
+          <h2 id="receive-en" className="heading mt-3">
+            What you receive
+          </h2>
+          <p className="soft mt-4">A working document, not a product demo.</p>
+        </div>
+
+        <div className="receive-grid mt-9">
+          <div className="receive-item">
+            <p className="receive-title">The whole site, page by page</p>
+            <p className="soft mt-2">
+              Every successfully crawled page receives the content checks, whatever its role in the
+              site.
+            </p>
+          </div>
+          <div className="receive-item">
+            <p className="receive-title">Prioritised corrections</p>
+            <p className="soft mt-2">
+              Findings are ranked by priority, so the work starts with what matters most.
+            </p>
+          </div>
+          <div className="receive-item">
+            <p className="receive-title">A bilingual report</p>
+            <p className="soft mt-2">
+              A PDF delivered in French and English, written for a decision maker, not for a
+              technician.
+            </p>
+          </div>
+          <div className="receive-item">
+            <p className="receive-title">Located evidence</p>
+            <p className="soft mt-2">
+              Every finding names the page and the element concerned, and rests on a checkable
+              measurement.
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="shell section section-divided" aria-labelledby="scope-en">
+      <section className="shell section section-divided" aria-labelledby="checks-en">
         <div className="measure">
           <p className="label">Scope</p>
-          <h2 id="scope-en" className="heading mt-3">
-            What the diagnostic covers
+          <h2 id="checks-en" className="heading mt-3">
+            What the diagnostic checks
           </h2>
           <p className="soft mt-4">
-            Four families of findings, each illustrated with a real example of what the measuring
-            tools detect.
+            Four families of checks, each bounded to what measuring tools can establish.
           </p>
         </div>
 
-        <div className="mt-12">
-          <h3 className="subheading">Search optimisation</h3>
-          <p className="soft mt-3 measure">
-            On many recent sites, page content is generated by JavaScript, in the visitor&apos;s
-            browser. A visitor sees no difference; a crawler, on the other hand, may receive only an
-            empty page. The diagnostic loads every page twice, without JavaScript and then in a full
-            browser, and compares the two.
-          </p>
+        <div className="check-grid mt-10">
+          <div className="check">
+            <h3 className="subheading">Accessibility</h3>
+            <p className="soft mt-3">
+              Every page is checked element by element against WCAG 2.2 level AA and the European
+              standard EN 301 549, with the evidence for every gap.
+            </p>
+          </div>
 
-          <div className="diff mt-6">
-            <div className="diff-panel machine">
-              <p className="label">Page received by a crawler</p>
-              <pre className="machine-code">
-                <code>{RAW_DOCUMENT_EN}</code>
-              </pre>
-              <p className="machine-empty">No title, no text, no link.</p>
-            </div>
+          <div className="check">
+            <h3 className="subheading">Search and rendering</h3>
+            <p className="soft mt-3">
+              Every page is loaded twice, without JavaScript then in a full browser, to reveal what
+              a search engine receives in place of your content.
+            </p>
 
-            <div className="diff-panel visitor">
-              <p className="label">Page shown to a visitor</p>
-              <div className="visitor-doc" aria-hidden="true">
-                <div className="visitor-el render-step render-step-1">
-                  <p className="label">Page title</p>
-                  <div className="visitor-bar visitor-bar-strong" style={{ width: '78%' }} />
-                </div>
-                <div className="visitor-el render-step render-step-2">
-                  <p className="label">Introductory text</p>
-                  <div className="visitor-lines">
-                    <div className="visitor-bar" />
-                    <div className="visitor-bar" style={{ width: '94%' }} />
-                    <div className="visitor-bar" style={{ width: '61%' }} />
+            <div className="diff diff-compact mt-5">
+              <div className="diff-panel machine">
+                <p className="label">Page received by a crawler</p>
+                <pre className="machine-code">
+                  <code>{RAW_DOCUMENT_EN}</code>
+                </pre>
+                <p className="machine-empty">No title, no text, no link.</p>
+              </div>
+              <div className="diff-panel visitor">
+                <p className="label">Page shown to a visitor</p>
+                <div className="visitor-doc" aria-hidden="true">
+                  {/* The reveal animation applies to the bars only, never to
+                      text: fading text fails contrast thresholds while the
+                      animation runs. */}
+                  <div className="visitor-el">
+                    <p className="label">Page title</p>
+                    <div
+                      className="visitor-bar visitor-bar-strong render-step render-step-1"
+                      style={{ width: '78%' }}
+                    />
+                  </div>
+                  <div className="visitor-el">
+                    <p className="label">Introductory text</p>
+                    <div className="visitor-lines render-step render-step-2">
+                      <div className="visitor-bar" />
+                      <div className="visitor-bar" style={{ width: '94%' }} />
+                      <div className="visitor-bar" style={{ width: '61%' }} />
+                    </div>
+                  </div>
+                  <div className="visitor-el">
+                    <p className="label">Contact button</p>
+                    <div className="visitor-bar-button render-step render-step-3" />
                   </div>
                 </div>
-                <div className="visitor-el render-step render-step-3">
-                  <p className="label">Navigation links</p>
-                  <div className="visitor-lines">
-                    <div className="visitor-bar" style={{ width: '72%' }} />
-                    <div className="visitor-bar" style={{ width: '55%' }} />
-                  </div>
-                </div>
-                <div className="visitor-el render-step render-step-4">
-                  <p className="label">Contact button</p>
-                  <div className="visitor-bar-button" />
-                </div>
+                <p className="small muted">
+                  This content only appears once JavaScript has run: the crawler never received it.
+                </p>
               </div>
-              <p className="small muted">
-                This content only appears once JavaScript has run; the crawler never received it.
-              </p>
             </div>
+            <p className="small muted measure mt-3">
+              A schematic illustration: it represents neither a real site nor an audit result.
+            </p>
           </div>
 
-          <p className="small muted measure mt-3">
-            A schematic illustration: it represents neither a real site nor an audit result.
-          </p>
-        </div>
-
-        <div className="mt-12">
-          <h3 className="subheading">Accessibility</h3>
-          <p className="soft mt-3 measure">
-            A placeholder that looks like a label is not one: as soon as you start typing, it
-            disappears, and nothing remains to identify the field. Automated checks flag it; a
-            sighted visitor never notices.
-          </p>
-
-          <div className="diff diff-compact mt-6">
-            <div className="diff-panel machine">
-              <p className="label">What a screen reader announces</p>
-              <pre className="machine-code">
-                <code>{PLACEHOLDER_INPUT_EN}</code>
-              </pre>
-              <p className="machine-empty">&#8220;Edit text.&#8221; No label announced.</p>
-            </div>
-
-            <div className="diff-panel visitor">
-              <p className="label">What a visitor sees</p>
-              <div className="visitor-el" aria-hidden="true">
-                <p className="label">Form field</p>
-                <div className="visitor-input">
-                  <span className="visitor-input-placeholder">Email address</span>
-                </div>
-              </div>
-              <p className="small muted">
-                The text disappears at the first keystroke: nothing remains for a visitor using a
-                screen reader.
-              </p>
-            </div>
+          <div className="check">
+            <h3 className="subheading">AI visibility signals in search engines and assistants</h3>
+            <p className="soft mt-3">
+              The diagnostic checks technical signals that can be verified: the structured data your
+              site declares, the AI-crawler access rules declared in robots.txt, the presence of an
+              llms.txt file and of FAQ markup. It does not predict whether an AI assistant will cite
+              your site, rank it, recommend it, or answer a question about your business.
+            </p>
           </div>
 
-          <p className="small muted measure mt-3">
-            Illustration of a real defect the diagnostic detects. It represents no particular site.
-          </p>
-        </div>
+          <div className="check">
+            <h3 className="subheading">Performance and security</h3>
 
-        <div className="mt-12">
-          <h3 className="subheading">Visibility to AI assistants</h3>
-          <p className="soft mt-3 measure">
-            An artificial intelligence assistant does not visit a page like a visitor: it reads the
-            code and the structured data to understand who you are, where you are, and what you
-            offer. Without it, it can only guess, or skip your page.
-          </p>
-
-          <div className="diff diff-compact mt-6">
-            <div className="diff-panel machine">
-              <p className="label">Structured data on the page</p>
-              <pre className="machine-code">
-                <code>{NO_STRUCTURED_DATA_EN}</code>
-              </pre>
-              <p className="machine-empty">Name, address and hours not identified.</p>
-            </div>
-
-            <div className="diff-panel visitor">
-              <p className="label">What a visitor understands</p>
-              <div className="visitor-doc" aria-hidden="true">
-                <div className="visitor-el">
-                  <p className="label">Establishment name</p>
-                  <div className="visitor-bar visitor-bar-strong" style={{ width: '68%' }} />
-                </div>
-                <div className="visitor-el">
-                  <p className="label">Address</p>
-                  <div className="visitor-bar" style={{ width: '84%' }} />
-                </div>
-                <div className="visitor-el">
-                  <p className="label">Opening hours</p>
-                  <div className="visitor-bar" style={{ width: '58%' }} />
-                </div>
+            <div className="metric-row mt-4">
+              <div className="metric">
+                <p className="metric-name">Largest contentful paint (LCP)</p>
+                <p className="metric-desc">
+                  The time before the main element of the page is displayed.
+                </p>
               </div>
-              <p className="small muted">
-                This information exists on the page. Without structured data, an AI assistant does
-                not receive it the same way.
-              </p>
+              <div className="metric">
+                <p className="metric-name">Cumulative layout shift (CLS)</p>
+                <p className="metric-desc">
+                  Unexpected movements of the layout while the page loads.
+                </p>
+              </div>
+              <div className="metric">
+                <p className="metric-name">
+                  Interaction to next paint (INP, when field data is available)
+                </p>
+                <p className="metric-desc">
+                  How quickly the page responds to interactions, when real visitor measurements
+                  exist.
+                </p>
+              </div>
             </div>
+
+            <p className="soft mt-4">
+              Lab performance is measured on a representative sample of pages; field data, when
+              available, supplements it.
+            </p>
+            <p className="soft mt-3">
+              The server&apos;s security headers are checked across the whole site, independently of
+              loading speed.
+            </p>
           </div>
+        </div>
+      </section>
 
-          <p className="small muted measure mt-3">
-            Illustration of the principle the diagnostic measures. It represents no particular site.
-          </p>
+      <section className="shell section section-divided" aria-labelledby="handoff-en">
+        <div className="measure">
+          <p className="label">Sequence</p>
+          <h2 id="handoff-en" className="heading mt-3">
+            How the handoff works
+          </h2>
+          <p className="soft mt-4">From observation to correction, four steps in order.</p>
         </div>
 
-        <div className="mt-12">
-          <h3 className="subheading">Performance and security</h3>
-          <p className="soft mt-3 measure">
-            A site can look loaded while it still does not respond to clicks or scrolling. The
-            diagnostic measures three distinct instants of that loading, on a representative sample
-            of pages, and compares them against the public thresholds search engines use. The
-            server&apos;s security headers are checked at the same time.
-          </p>
-
-          <div className="card mt-6">
-            <div className="timeline">
-              <div className="timeline-point">
-                <span className="timeline-dot" aria-hidden="true" />
-                <div>
-                  <p className="subheading" style={{ fontSize: '0.9375rem' }}>
-                    First paint
-                  </p>
-                  <p className="small muted mt-1">The browser starts painting the page.</p>
-                </div>
-              </div>
-              <div className="timeline-point">
-                <span className="timeline-dot" aria-hidden="true" />
-                <div>
-                  <p className="subheading" style={{ fontSize: '0.9375rem' }}>
-                    Largest content visible
-                  </p>
-                  <p className="small muted mt-1">The page&apos;s largest element appears.</p>
-                </div>
-              </div>
-              <div className="timeline-point">
-                <span className="timeline-dot" aria-hidden="true" />
-                <div>
-                  <p className="subheading" style={{ fontSize: '0.9375rem' }}>
-                    Page actually usable
-                  </p>
-                  <p className="small muted mt-1">The page responds to clicks and scrolling.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p className="small muted measure mt-3">
-            Three instants the diagnostic measures, shown here with no numeric value: every report
-            states the times actually observed on your site.
-          </p>
-        </div>
-
-        <p className="soft measure mt-12">
-          The report is delivered in French and English, and written for executives without any
-          particular technical background. It is fully automated and includes no manual check.
-        </p>
+        <ol className="process mt-10">
+          <li>
+            <p className="process-step">Discover</p>
+            <p className="soft mt-2">The whole site is crawled, and every page is measured.</p>
+          </li>
+          <li>
+            <p className="process-step">Locate</p>
+            <p className="soft mt-2">
+              Every finding is tied to the page and the element concerned.
+            </p>
+          </li>
+          <li>
+            <p className="process-step">Prioritise</p>
+            <p className="soft mt-2">Corrections are ranked, most urgent first.</p>
+          </li>
+          <li>
+            <p className="process-step">Correct</p>
+            <p className="soft mt-2">
+              You hand the list to your web provider, who verifies then fixes it, finding by
+              finding.
+            </p>
+          </li>
+        </ol>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="method-en">
         <div className="measure">
-          <p className="label">Method</p>
+          <p className="label">Method and limits</p>
           <h2 id="method-en" className="heading mt-3">
             Verifiable findings
           </h2>
@@ -677,49 +710,43 @@ function HomeEn() {
           </p>
         </div>
 
-        <div className="mt-9">
+        <div className="method-grid mt-9">
           {GUARANTEES_EN.map((guarantee) => (
-            <div className="basis-row" key={guarantee.claim}>
+            <div className="method-item" key={guarantee.claim}>
               <p className="subheading">{guarantee.claim}</p>
-              <p className="soft">{guarantee.basis}</p>
+              <p className="soft small mt-2">{guarantee.basis}</p>
             </div>
           ))}
         </div>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="price-en">
-        <div className="split">
-          <div className="split-main">
-            <p className="label">Price</p>
-            <h2 id="price-en" className="heading mt-3">
-              One published price
-            </h2>
-            <p className="soft mt-4 max-w-md">
-              It does not depend on the size of the site or on the number of findings, and it is
-              confirmed to you in writing before any commitment.
-            </p>
-            <p className="small muted mt-6 max-w-md">
-              How the bot that runs these analyses works, and how to block it from your site, are
-              described on the{' '}
-              <a className="underline" href="/bot">
-                OdysseusBot
-              </a>{' '}
-              page.
-            </p>
-          </div>
-
-          <div className="card card-accent split-aside">
-            <p className="label">Full audit</p>
-            <p className="price mt-3">EUR 1,600 excl. VAT</p>
-            <a className="btn btn-primary mt-6 w-full" href="mailto:contact@odysseusaudit.com">
-              Order by email
+        <div className="measure">
+          <p className="label">Price and contact</p>
+          <h2 id="price-en" className="heading mt-3">
+            One published price
+          </h2>
+          <p className="price numeric mt-5">EUR 1,600 excl. VAT</p>
+          <p className="soft mt-4">
+            It does not depend on the size of the site or on the number of findings, and it is
+            confirmed to you in writing before any commitment.
+          </p>
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+              Write to Odysseus
             </a>
-            <p className="small mt-4">
-              <a className="underline" href="/offre">
-                See the offer in detail
-              </a>
-            </p>
+            <a className="btn btn-secondary" href="/offre">
+              See the offer in detail
+            </a>
           </div>
+          <p className="small muted mt-7">
+            How the bot that runs these analyses works, and how to block it from your site, are
+            described on the{' '}
+            <a className="evidence-link" href="/bot">
+              OdysseusBot
+            </a>{' '}
+            page.
+          </p>
         </div>
       </section>
     </>

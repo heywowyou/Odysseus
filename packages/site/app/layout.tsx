@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     template: '%s | Odysseus',
   },
   description:
-    'Diagnostic technique automatisé pour sites web : accessibilité, référencement naturel et performance. Rapport en français et en anglais, prix publié de 1 600 € HT.',
+    'Diagnostic technique automatisé pour sites web : accessibilité, référencement naturel, signaux de visibilité IA et performance. Rapport en français et en anglais, prix publié de 1 600 € HT.',
   alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     url: '/',
     title: 'Odysseus, diagnostic technique de site web',
     description:
-      'Diagnostic technique automatisé pour sites web : accessibilité, référencement naturel et performance. Rapport en français et en anglais, prix publié de 1 600 € HT.',
+      'Diagnostic technique automatisé pour sites web : accessibilité, référencement naturel, signaux de visibilité IA et performance. Rapport en français et en anglais, prix publié de 1 600 € HT.',
   },
   twitter: { card: 'summary' },
 };

@@ -201,14 +201,17 @@ describe('offer page', () => {
     expect(offer).toContain('does not depend on the size of the site');
   });
 
-  it('describes the preview as a whole-site summary and the audit as a fresh scan', () => {
-    // Plan 037 replaced the three-page preview. The old claim must not come
-    // back, and the fresh-scan wording is what keeps the audit from reading as
-    // a paid unlock of the same scan the preview used.
-    expect(offer).toContain('analyse de l&apos;ensemble du site');
-    expect(offer).toContain('analysis of the whole site');
-    expect(offer).toContain('nouvelle analyse');
-    expect(offer).toContain('fresh analysis');
+  it('no longer explains the outreach preview at all', () => {
+    // Plan 038 removed the preview paragraph: a general offer page does not
+    // describe a cold-outreach asset, so an outreach implementation change
+    // can never force a marketing rewrite here. Plan 037 slice 1 (db6db08)
+    // had pinned the interim whole-site-summary wording; plan 038 supersedes
+    // that pin, and the preview's own contract lives in outreach-rules 6bis,
+    // not on this page.
+    expect(offer).not.toContain('Si vous avez reçu un aperçu');
+    expect(offer).not.toContain('If you received a preview');
+    expect(offer).not.toContain('aperçu');
+    expect(offer).not.toContain('preview');
     expect(offer).not.toContain('trois pages');
     expect(offer).not.toContain('three pages');
   });

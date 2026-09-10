@@ -1,58 +1,79 @@
 @import 'tailwindcss';
 
 /* =========================================================================
-   Public site design system.
+   Public site design system: the evidence dossier.
 
-   One register for prose, one for measured facts, one for what a program
-   reads. That last distinction is the whole product, so it is drawn rather
-   than described: every surface standing for a machine's view of a page uses
-   the dark "machine" pair, in both colour schemes.
+   The identity is a working document, not a software landing page. Three
+   registers carry it: reader prose on cool paper, the report sheet as a
+   fixed light document (a delivered report is printed paper, whatever theme
+   the visitor browses in), and the machine register for what a program
+   reads. The navy spine anchors the report sheet; signal orange draws a
+   single annotation rule on it; evidence blue is reserved for links and the
+   raw-versus-rendered inset.
    ========================================================================= */
 
 :root {
   color-scheme: light;
 
-  /* The paper is the dashboard's accent white used as a ground. The operator
-     tool draws attention in that value; the client page stands on it. Ink is
-     a blue black rather than a true black, the colour of a printed technical
-     document rather than of a screen default. */
-  --paper: #f2f3f5;
+  /* Cool paper ground, not warm cream: the site stands on the same cool,
+     slightly blue stock as a technical document. Ink is a blue black rather
+     than a true black, the colour of printed text rather than of a screen
+     default. */
+  --paper: #e8edf3;
   --paper-raised: #ffffff;
-  --paper-sunk: #e7e9ec;
-  --ink: #0b0d10;
-  --ink-soft: #454b54;
-  --ink-muted: #5f666f;
-  --line: rgb(11 13 16 / 0.13);
-  --line-strong: rgb(11 13 16 / 0.26);
+  --paper-sunk: #dbe3ec;
+  --ink: #101b2a;
+  --ink-soft: #3f4c5e;
+  --ink-muted: #5c6878;
+  --line: rgb(16 27 42 / 0.14);
+  --line-strong: rgb(16 27 42 / 0.28);
 
-  /* The machine register: the signature panel and every code block. Fixed in
-     both colour schemes, because it stands for a thing, not for a theme. */
-  --machine: #0b0d10;
-  --machine-raised: #16191d;
+  /* The dossier anchors. Navy is the finding card's spine, the field labels
+     on the sheet, and the margin rules that mark document structure. Signal
+     orange draws exactly one annotation on the sheet and marks the keyboard
+     focus of the skip link; it is never a severity and never decoration. */
+  --navy: #18385d;
+  --navy-line: rgb(24 56 93 / 0.38);
+  --anchor: #18385d;
+  --signal: #d56832;
+
+  /* The report sheet: a fixed light document in both colour schemes, like
+     the visitor panel below, because it stands for the printed deliverable
+     rather than for this site's theme. */
+  --sheet: #ffffff;
+  --sheet-ink: #101b2a;
+  --sheet-ink-soft: #3f4c5e;
+  --sheet-muted: #5c6878;
+  --sheet-line: rgb(16 27 42 / 0.16);
+
+  /* The machine register: the raw-versus-rendered inset and every code
+     block. Fixed in both colour schemes, because it stands for a thing, not
+     for a theme. */
+  --machine: #0c121b;
+  --machine-raised: #141b26;
   --machine-ink: #cfd4da;
   --machine-ink-muted: #8b939d;
   --machine-line: rgb(255 255 255 / 0.13);
 
-  /* The rendered page inside the signature panel. Also fixed: a page a person
-     sees is a light document, whatever theme this site happens to be in. */
+  /* The rendered page inside the inset. Also fixed: a page a person sees is
+     a light document, whatever theme this site happens to be in. Tinted with
+     evidence blue rather than ink: blue marks what is actually present and
+     legible, and the neutral hatch marks what is missing. The visitor panel
+     is a fixed light document in both colour schemes, so these values are
+     not re-tuned by the dark-mode block below. */
   --visitor: #ffffff;
-  --visitor-ink: #0b0d10;
-  --visitor-muted: #5f666f;
-  --visitor-line: rgb(11 13 16 / 0.12);
-  /* Tinted with the accent rather than ink: on every diff panel, blue marks
-     what is actually present and legible, and the neutral hatch marks what
-     is missing. The visitor panel is a fixed light document in both colour
-     schemes, so this value is not re-tuned by the dark-mode block below. */
-  --visitor-fill: rgb(37 92 181 / 0.82);
-  --visitor-fill-soft: rgb(37 92 181 / 0.22);
+  --visitor-ink: #101b2a;
+  --visitor-muted: #5c6878;
+  --visitor-line: rgb(16 27 42 / 0.12);
+  --visitor-fill: rgb(53 105 180 / 0.82);
+  --visitor-fill-soft: rgb(53 105 180 / 0.22);
 
-  /* The one hue on an otherwise monochrome page: a controlled instrument
-     blue, used for signal (a timeline marker, a callout rule, a legible
-     value) and never for a measured quantity, which stays ink. */
-  --accent: #255cb5;
-  --accent-strong: #163e82;
-  --accent-soft: #e3ebfa;
-  --accent-line: rgb(37 92 181 / 0.4);
+  /* Evidence blue: links and the raw-versus-rendered inset only. Never a
+     measured quantity, which stays ink, and never a section decoration. */
+  --accent: #3569b4;
+  --accent-strong: #274f87;
+  --accent-soft: #e3ebf8;
+  --accent-line: rgb(53 105 180 / 0.4);
 
   --measure: 40rem;
   --shell: 70rem;
@@ -64,30 +85,39 @@
   :root {
     color-scheme: dark;
 
-    --paper: #0b0d10;
-    --paper-raised: #14171b;
-    --paper-sunk: #16191d;
-    --ink: #f2f3f5;
-    --ink-soft: #b4bac2;
-    --ink-muted: #949ba4;
-    --line: rgb(255 255 255 / 0.12);
-    --line-strong: rgb(255 255 255 / 0.24);
+    /* The ground darkens, but the sheet, the visitor panel, and the machine
+       register keep their identities instead of every colour inverting: the
+       report stays a light document on a dark desk. The anchor rule and the
+       evidence blue brighten so they keep their contrast on the dark ground;
+       the navy spine and the sheet's own tokens do not move, because the
+       surface they live on is still white. */
+    --paper: #0e141c;
+    --paper-raised: #16202c;
+    --paper-sunk: #18232f;
+    --ink: #e9eef5;
+    --ink-soft: #b6c1ce;
+    --ink-muted: #909cab;
+    --line: rgb(233 238 245 / 0.13);
+    --line-strong: rgb(233 238 245 / 0.26);
 
-    --machine: #08090a;
-    --machine-raised: #121417;
+    --anchor: #8fb4ee;
+    --navy-line: rgb(143 180 238 / 0.45);
+
+    --machine: #0a0e15;
+    --machine-raised: #121822;
 
     /* Toned off pure white so the one light panel on a dark page reads as a
        document rather than as a lamp. */
     --visitor: #e7e9ec;
-    --visitor-fill: rgb(37 92 181 / 0.85);
-    --visitor-fill-soft: rgb(37 92 181 / 0.26);
+    --visitor-fill: rgb(53 105 180 / 0.85);
+    --visitor-fill-soft: rgb(53 105 180 / 0.26);
 
     /* Brightened for contrast against the dark ground; the visitor-panel
        values above stay the light-mode blue on purpose (see comment there). */
-    --accent: #86adf7;
-    --accent-strong: #b7cdff;
-    --accent-soft: rgb(134 173 247 / 0.14);
-    --accent-line: rgb(134 173 247 / 0.45);
+    --accent: #8fb4ee;
+    --accent-strong: #b5cffa;
+    --accent-soft: rgb(143 180 238 / 0.15);
+    --accent-line: rgb(143 180 238 / 0.45);
   }
 }
 
@@ -126,8 +156,9 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Monochrome links: the brand has no accent colour, and a default blue
-     fails 4.5:1 against the dark ground. The underline is the affordance. */
+  /* Prose links stay in ink so the regulated pages read as plain text; on
+     the commercial pages content links opt into evidence blue with
+     `.evidence-link`. The underline is always the affordance. */
   a {
     color: inherit;
     text-underline-offset: 0.18em;
@@ -216,6 +247,13 @@
       grid-column: 2;
       grid-row: 1;
     }
+
+    /* The deliberate asymmetry of the hero: the dossier sheet sits a step
+       below the prose line, anchored by its navy spine, so the two read as
+       text and exhibit rather than as two equal columns. */
+    .hero-split .split-aside {
+      margin-top: 3rem;
+    }
   }
 
   .section {
@@ -232,6 +270,14 @@
 
   .hero {
     padding-block: clamp(3rem, 1.5rem + 6vw, 7rem) clamp(2.25rem, 1.5rem + 2.5vw, 3.5rem);
+  }
+
+  /* Sections of the offer page after the hero: document rhythm by hairline
+     rules and whitespace, not by stacked boxes. */
+  .offer-section {
+    margin-top: 3rem;
+    border-top: 1px solid var(--line);
+    padding-top: clamp(2rem, 1.25rem + 2vw, 3rem);
   }
 
   /* ---- Type registers -------------------------------------------------- */
@@ -423,6 +469,18 @@
     text-decoration-thickness: 1px;
   }
 
+  .evidence-link {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+    transition: color 0.15s ease;
+  }
+
+  .evidence-link:hover {
+    color: var(--accent-strong);
+  }
+
   .skip-link {
     position: absolute;
     left: -9999px;
@@ -430,13 +488,16 @@
     z-index: 50;
   }
 
+  /* The first thing a keyboard user sees carries the one warm accent on the
+     site: signal orange marks keyboard-visible emphasis, and this is its
+     second and last appearance. */
   .skip-link:focus {
     left: 1rem;
     top: 1rem;
     display: inline-flex;
     min-height: 44px;
     align-items: center;
-    border: 1px solid var(--ink);
+    border: 1px solid var(--signal);
     border-radius: 3px;
     background-color: var(--paper-raised);
     padding-inline: 1rem;
@@ -446,34 +507,20 @@
 
   /* ---- Surfaces -------------------------------------------------------- */
 
-  .card {
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    background-color: var(--paper-raised);
-    padding: clamp(1.5rem, 1rem + 2vw, 2.25rem);
-  }
-
   /* The one sentence that has to be read before any claim about the product.
      Given a rule and a ground rather than a box, so it reads as an entry in
-     the margin of a document rather than as a warning banner. The accent rule
-     marks it as worth noticing, the same way a margin note is marked in a
-     reviewed document. */
+     the margin of a document rather than as a warning banner. The anchor
+     rule marks it as worth noticing, the same way a margin note is marked in
+     a reviewed document. */
   .statement {
-    border-left: 2px solid var(--accent);
+    border-left: 2px solid var(--anchor);
     background-color: var(--paper-raised);
     padding: 1.25rem 1.25rem 1.25rem 1.5rem;
     border-radius: 0 4px 4px 0;
   }
 
-  /* A surface worth a second look: the price card, mainly. The accent line
-     is a hairline, not a fill, so a measured figure inside it still reads on
-     plain ink. */
-  .card-accent {
-    border-color: var(--accent-line);
-  }
-
   /* Every block of code sits in the machine register, the same pair as the
-     signature panel, so a program's view of a page always looks alike. */
+     inset panels, so a program's view of a page always looks alike. */
   .codeblock {
     overflow-x: auto;
     border: 1px solid var(--machine-line);
@@ -487,58 +534,224 @@
     -webkit-font-smoothing: auto;
   }
 
-  /* ---- Capability list ------------------------------------------------- */
+  /* ---- Dossier card ------------------------------------------------------
+     The signature element: one report sheet showing the shape of a finding.
+     A labelled header, a definition list with mono field labels in the navy
+     of the spine, and one orange annotation rule on the Action row. The
+     sheet stays white in dark mode on purpose: it is the printed report,
+     not a themed panel. */
 
-  .capabilities {
+  .dossier {
+    border: 1px solid var(--sheet-line);
+    border-inline-start: 3px solid var(--navy);
+    border-radius: 4px;
+    background-color: var(--sheet);
+    color: var(--sheet-ink);
+    padding: 1.5rem 1.5rem 1.25rem;
+    box-shadow:
+      0 1px 2px rgb(16 27 42 / 0.05),
+      0 12px 32px rgb(16 27 42 / 0.08);
+  }
+
+  .dossier-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    border-bottom: 1px solid var(--sheet-line);
+    padding-bottom: 0.875rem;
+  }
+
+  .dossier-title {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .dossier-stamp {
+    font-family: var(--font-mono-stack);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--sheet-muted);
+  }
+
+  .dossier dl {
+    margin: 0;
+    padding-top: 1.125rem;
+  }
+
+  .dossier-row + .dossier-row {
+    margin-top: 1.125rem;
+  }
+
+  .dossier dt {
+    font-family: var(--font-mono-stack);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--navy);
+  }
+
+  .dossier dd {
+    margin: 0.375rem 0 0;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--sheet-ink-soft);
+  }
+
+  /* The single annotation rule on the sheet: it marks the row that tells the
+     reader what to do. Orange is never a severity here and never appears
+     anywhere else on the sheet. */
+  .dossier-row-action {
+    border-inline-start: 2px solid var(--signal);
+    padding-inline-start: 0.875rem;
+  }
+
+  .dossier-caption {
+    margin-top: 1.25rem;
+    border-top: 1px solid var(--sheet-line);
+    padding-top: 0.875rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--sheet-muted);
+  }
+
+  /* ---- Statement grids ---------------------------------------------------
+     Entries separated by hairline rules and whitespace instead of stacked
+     rounded boxes: the rhythm of a document, not of a card wall. */
+
+  .receive-grid {
     display: grid;
-    gap: 1px;
-    background-color: var(--line);
-    border-block: 1px solid var(--line);
-  }
-
-  @media (min-width: 48rem) {
-    .capabilities {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  .capability {
-    background-color: var(--paper);
-    padding: 1.75rem 0;
-  }
-
-  @media (min-width: 48rem) {
-    .capability {
-      padding: 2rem 2rem 2rem 0;
-    }
-
-    .capability:nth-child(even) {
-      padding-left: 2rem;
-      padding-right: 0;
-    }
-  }
-
-  /* ---- Claim and basis ------------------------------------------------- */
-
-  /* A set of guarantees, not a sequence of steps, so it carries no ordinal
-     markers: each row states a claim and, beside it, what the claim rests on.
-     That pairing is the report's own discipline, shown rather than asserted. */
-  .basis-row {
-    display: grid;
-    gap: 0.75rem 3rem;
-    border-top: 1px solid var(--line);
-    padding-block: 1.75rem;
+    gap: 1.5rem 3rem;
   }
 
   @media (min-width: 56rem) {
-    .basis-row {
-      grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
-      padding-block: 2.25rem;
+    .receive-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 1.75rem 4rem;
     }
   }
 
-  .basis-row:last-child {
-    border-bottom: 1px solid var(--line);
+  .receive-item {
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+  }
+
+  .receive-title {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .check-grid {
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  @media (min-width: 56rem) {
+    .check-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem 4rem;
+    }
+  }
+
+  .check {
+    border-top: 1px solid var(--line-strong);
+    padding-top: 1.25rem;
+  }
+
+  /* The three performance metrics sit side by side but are not a sequence:
+     no connecting track, no implied chronology. */
+  .metric-row {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 48rem) {
+    .metric-row {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+  }
+
+  .metric {
+    border-top: 1px solid var(--line);
+    padding-top: 0.875rem;
+  }
+
+  .metric-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .metric-desc {
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  /* ---- Ordered handoff ---------------------------------------------------
+     A real ordered list, because exploration, location, prioritisation and
+     correction are actual stages of the deliverable; native numbering, not
+     ornament. */
+
+  .process {
+    display: grid;
+    gap: 1.5rem;
+    padding-left: 1.375rem;
+    list-style: decimal outside;
+  }
+
+  @media (min-width: 56rem) {
+    .process {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+    }
+  }
+
+  .process li {
+    border-top: 1px solid var(--line-strong);
+    padding-top: 0.875rem;
+  }
+
+  .process li::marker {
+    font-family: var(--font-mono-stack);
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .process-step {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* ---- Method grid ------------------------------------------------------- */
+
+  .method-grid {
+    display: grid;
+    gap: 1.75rem;
+  }
+
+  @media (min-width: 56rem) {
+    .method-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2.5rem;
+    }
+  }
+
+  .method-item {
+    border-top: 1px solid var(--line);
+    padding-top: 1.125rem;
+  }
+
+  .method-item .subheading {
+    font-size: 0.9375rem;
   }
 
   /* ---- Price ----------------------------------------------------------- */
@@ -599,13 +812,12 @@
     color: var(--paper);
   }
 
-  /* ---- Signature: the render diff -------------------------------------- */
+  /* ---- Signature: the raw-versus-rendered inset -------------------------
+     The one explanatory diagram the site keeps, reduced to a compact inset
+     under the search check and always labelled as a schematic. The left
+     panel is a real, generic empty application shell, and the right names
+     the kinds of element that shell never delivered. */
 
-  /* The product's characteristic artifact, drawn from the two views it
-     actually compares. Nothing here is a screenshot and nothing stands for a
-     measured result: the left panel is a real, generic empty application
-     shell, and the right names the kinds of element that shell never
-     delivered. */
   .diff {
     display: grid;
     gap: 1px;
@@ -672,6 +884,13 @@
     color: var(--visitor-muted);
   }
 
+  /* Muted text inside the fixed light visitor panel keeps the panel's own
+     ink: the page's muted token flips light in dark mode and would vanish
+     against this light surface. */
+  .visitor .muted {
+    color: var(--visitor-muted);
+  }
+
   .visitor-doc {
     display: flex;
     flex-direction: column;
@@ -713,24 +932,6 @@
     gap: 0.4375rem;
   }
 
-  /* A mock form field for the accessibility illustration: a placeholder that
-     looks exactly like a normal, working input to a sighted visitor. */
-  .visitor-input {
-    display: flex;
-    align-items: center;
-    height: 2.25rem;
-    border: 1px solid var(--visitor-line);
-    border-radius: 3px;
-    padding-inline: 0.75rem;
-    background-color: var(--visitor);
-  }
-
-  .visitor-input-placeholder {
-    font-size: 0.875rem;
-    font-style: italic;
-    color: var(--visitor-muted);
-  }
-
   /* The reveal: content arrives on the visitor side over about a second while
      the crawler side stays exactly as it was. That gap is the argument. */
   @keyframes render-in {
@@ -760,14 +961,6 @@
     animation-delay: 0.65s;
   }
 
-  .render-step-4 {
-    animation-delay: 0.85s;
-  }
-
-  /* A second and third finding get the same machine/visitor grammar as the
-     signature diff above, at a smaller scale and without the reveal
-     animation: the animated moment stays the one the page opens with, and
-     these read as members of the same family rather than repeats of it. */
   .diff-compact .diff-panel {
     gap: 1rem;
     padding: 1.125rem 1.25rem;
@@ -776,72 +969,6 @@
   .diff-compact .machine-code {
     font-size: 0.75rem;
     line-height: 1.65;
-  }
-
-  /* ---- Timeline: the performance checkpoints ---------------------------
-     Three named instants along a track rather than a bar chart, because no
-     specific measured value may be implied here (offer-positioning.md
-     section 2): the shape teaches what is measured, a real report supplies
-     the numbers. */
-  .timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 1.75rem;
-  }
-
-  @media (min-width: 48rem) {
-    .timeline {
-      flex-direction: row;
-      align-items: flex-start;
-      gap: 0;
-    }
-  }
-
-  .timeline-point {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    gap: 0.875rem;
-  }
-
-  @media (min-width: 48rem) {
-    .timeline-point {
-      flex: 1;
-      flex-direction: column;
-      gap: 0.75rem;
-      padding-inline-end: 1.5rem;
-    }
-
-    .timeline-point::before {
-      content: '';
-      position: absolute;
-      top: 0.3125rem;
-      left: 1.0625rem;
-      width: 100%;
-      height: 1px;
-      background-color: var(--line-strong);
-    }
-
-    .timeline-point:last-child::before {
-      display: none;
-    }
-  }
-
-  .timeline-dot {
-    flex-shrink: 0;
-    z-index: 1;
-    width: 0.6875rem;
-    height: 0.6875rem;
-    margin-top: 0.1875rem;
-    border-radius: 999px;
-    background-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--paper);
-  }
-
-  @media (min-width: 48rem) {
-    .timeline-dot {
-      margin-top: 0;
-    }
   }
 
   /* ---- Header and footer ----------------------------------------------- */
