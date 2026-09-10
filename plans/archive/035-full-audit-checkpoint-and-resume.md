@@ -164,7 +164,15 @@ authorized by this plan.
 
 IMPLEMENTED 2026-09-09 (all steps landed, suites green, `pnpm run check`
 green; decisions recorded in `docs/decisions/trade-offs.md` entry 76).
-`DONE` still needs the operator's live acceptance: one forced redeploy
-during a real audit, watched resuming from its checkpoint on the VPS. No
-live third-party scan is authorized by this plan; that acceptance is an
-operator step against production, on the operator's own timing.
+DONE 2026-09-10, live acceptance passed on production with the operator's
+same-day named-site authorization: the full audit of
+`belleval-hotel-paris.com` (job `b17b0e9e-5822-4200-9d28-46b5d7746c3b`,
+stable audit ID `c07fd0cb-8231-44ce-9c69-29af5d8cd004`) reached
+`content-scan` after a 30-page crawl with `crawl-checkpoint.json` (36,684
+bytes) on the artifacts volume; the operator-authorized forced recreate
+bounced only the app container; startup logged `orphanedCount: 1`,
+re-claimed the job under its stamped run identity, and logged `full audit
+resumed from the crawl checkpoint` with `reusedPages: 30`. The audit then
+completed without restarting from zero, and after the operator-authorized
+analysis stages and identity confirmation both language PDFs rendered and
+the job was marked complete. Resolves issue #124.
