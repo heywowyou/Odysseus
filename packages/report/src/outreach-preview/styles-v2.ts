@@ -114,6 +114,13 @@ section {
 }
 .tile .key { color: var(--muted); font-size: 0.8rem; margin-top: var(--space-1); }
 
+/* WCAG 1.4.10: at reflow widths the report's 3-up and 4-up tile rows
+   collapse to two columns, so a long tile label can never force the page
+   sideways at 320px. */
+@media (max-width: 480px) {
+  .tiles, .tiles.four { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* Severity tiles: the pair carries the meaning, the label carries the word. */
 .tile.severity-critical { background: var(--sev-critical-bg); }
 .tile.severity-critical .value { color: var(--sev-critical); }
