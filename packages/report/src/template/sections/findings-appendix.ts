@@ -502,13 +502,31 @@ function renderRuleGroup(
   // each page fragment it splits a group across, so pdf.ts can find every
   // fragment belonging to the same rule group after layout and, if a
   // fragment lost its `<thead>`, clone the header back in from the first
-  // fragment and re-paginate once. The cloned header carries
-  // `break-after:avoid` for exactly this reason: without it, a header
-  // inserted right before a continuation row can itself land alone at the
-  // very bottom of a page (an empty table fragment holding nothing but the
-  // header) while its own first row gets pushed to a further Paged.js
-  // continuation clone that lacks a header again - measured directly
-  // against a 30-row synthetic rule group before this rule was added.
+  // fragment and re-paginate once.
+  //
+  // Issue #172: the inline declaration on the thead below is load-bearing,
+  // but NOT through the mechanism an earlier comment claimed. It is not a
+  // keep-with-next: Paged.js only learns break-before/break-after from
+  // stylesheet declarations its breaks module parses (stamping
+  // data-previous-break-after attributes the chunker acts on), an inline
+  // style never passes that parser, and the stylesheet variant
+  // `table[data-appendix-rule-id] thead { break-after: avoid }` was measured
+  // (2026-09-11, 30-row synthetic rule group through the real pipeline) to
+  // stamp the attribute on the table's tbody while changing the paginated
+  // output not at all - the chunker splits tables between rows and never
+  // proposes the thead/tbody boundary as a break point. What the inline
+  // declaration measurably does do is decide whether the #45 repair loop
+  // converges on a split rule group: with it, a reinserted table whose rows
+  // overflow again keeps its cloned header on the continuation fragment
+  // (5/5 runs converge); without it the header is abandoned as a header-only
+  // fragment every pass and the splits never resolve (5/5 runs fail). The
+  // divergence appears only during pagination - pre-pagination geometry is
+  // byte-identical and Paged.js never reads thead computed styles - so the
+  // lever is Chromium-side, not the breaks parser. It therefore stays, and
+  // the guarantee a reader actually cares about - a header never prints
+  // stranded alone at a page bottom - comes from pdf.ts's post-layout work:
+  // the repair re-pagination followed by removeEmptyAppendixTableGhosts,
+  // which deletes any header-only table fragment once layout has settled.
   // Splitting each group into one table per
   // page-worth of rows cannot work either: sheet layout is decided by
   // Paged.js at render time, and a hand-split table would just break at

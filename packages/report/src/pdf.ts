@@ -491,7 +491,20 @@ export function extractAppendixTablePreambles(html: string): Map<string, string>
  *  from the DOM rather than left to print as a stray floating header line.
  *  Safe to run unconditionally after layout has settled: nothing else can
  *  reflow onto the space it leaves behind, since Paged.js already decided no
- *  more content fit there. */
+ *  more content fit there.
+ *
+ *  Issue #172: this cleanup, together with the repair re-pagination above,
+ *  is the whole guarantee that a cloned header never prints stranded - no
+ *  stylesheet break hint can do it. Paged.js reads break-before/break-after
+ *  only from stylesheet declarations its breaks module parses, never inline
+ *  styles, and the one stylesheet break-after: avoid tried on the thead
+ *  (2026-09-11, 30-row fixture, real pipeline) left pagination unchanged:
+ *  it stamped data-previous-break-after on the table's tbody, a boundary
+ *  the chunker never proposes as a break point (it breaks between rows).
+ *  The thead's inline break-after:avoid declaration (findings-appendix.ts)
+ *  stays for a different measured reason: the repair loop only converges on
+ *  a split rule group while it is present - without it every pass re-creates
+ *  header-only fragments and the splits never resolve. */
 async function removeEmptyAppendixTableGhosts(page: Page): Promise<void> {
   await page.evaluate(() => {
     const tables = Array.from(document.querySelectorAll('table[data-appendix-rule-id]'));
