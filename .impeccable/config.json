@@ -6,9 +6,20 @@
       {
         "rule": "overused-font",
         "value": "inter",
-        "files": ["packages/report/**"],
+        "files": [
+          "packages/report/**"
+        ],
         "createdAt": "2026-09-11T00:44:59.104Z",
         "reason": "Locked report design system (docs/report/report-design-system.md, plan 023): Inter is the deliberately kept print face, consciously ignored against this detector's own overused-font ban."
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "packages/site/app/globals.css"
+        ],
+        "createdAt": "2026-09-11T03:23:25.431Z",
+        "reason": "Pre-existing, documented deliberate motif (DESIGN.md 'Statement grids' anchor-rule margin note and the dossier navy spine); both the original and re-run critique name these specifically as the site's best design moves, not an AI-slop tell"
       }
     ]
   }
