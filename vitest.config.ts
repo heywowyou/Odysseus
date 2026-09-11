@@ -6,12 +6,20 @@ import { fileURLToPath } from 'node:url';
  * fixtures live under each package's src, so a single include glob is
  * enough.
  *
- * Two projects split the wall-clock cost of a full run without dropping
+ * Three projects split the wall-clock cost of a full run without dropping
  * any suite: `unit` (the default `pnpm test` loop) covers everything
- * except browser/pipeline end-to-end files, and `e2e` (pnpm run test:e2e)
+ * except browser/pipeline end-to-end files, `e2e` (pnpm run test:e2e)
  * covers the `*.e2e.test.ts` files that launch Chromium, vite fixture
- * servers, and forked Lighthouse runs. `pnpm run test:all` runs both, and
- * CI gates on exactly that, so the full suite is still mandatory.
+ * servers, and forked Lighthouse runs, and `e2e-serial` holds the
+ * CPU-bound pixel-constraint suite. Vitest schedules projects sharing a
+ * `sequence.groupOrder` together and runs groups strictly one after
+ * another, so group 1 gives image.e2e.test.ts the whole machine after
+ * every group 0 file has finished. Under full parallelism that suite
+ * repeatedly crossed its 15s per-test ceiling purely from CPU contention
+ * (it runs in 4-6s per test in isolation), which is why `test:e2e`
+ * selects both projects with the `e2e*` filter.
+ * `pnpm run test:all` runs all of them, and CI gates on exactly that, so
+ * the full suite is still mandatory.
  *
  * passWithNoTests: true because early phases had intentionally empty
  * suites; keeping it avoids breaking focused runs.
@@ -66,10 +74,24 @@ export default defineConfig({
         test: {
           name: 'e2e',
           include: ['packages/**/*.e2e.test.ts'],
+          exclude: [
+            ...configDefaults.exclude,
+            'packages/scanner/src/prescan/evidence/image.e2e.test.ts',
+          ],
           globalSetup: [
             './scripts/vitest-global-setup.mjs',
             './scripts/vitest-e2e-global-setup.mjs',
           ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'e2e-serial',
+          include: ['packages/scanner/src/prescan/evidence/image.e2e.test.ts'],
+          sequence: {
+            groupOrder: 1,
+          },
         },
       },
     ],

@@ -55,10 +55,10 @@ jobs:
         run: pnpm run test:deploy
 
       - name: Test
-        # test:all runs both vitest projects (unit and e2e): the same
-        # complete suite that a plain `vitest run` executed before the
-        # split. `pnpm test` deliberately covers only the unit project so
-        # the local loop stays fast.
+        # test:all runs all three vitest projects (unit, e2e, and the
+        # serial e2e project): the same complete suite that a plain
+        # `vitest run` executed before the split. `pnpm test` deliberately
+        # covers only the unit project so the local loop stays fast.
         run: pnpm run test:all
         env:
           MONGODB_TEST_URI: mongodb://localhost:27018/odysseus_test
