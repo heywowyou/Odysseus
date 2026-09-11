@@ -234,6 +234,7 @@ describe('previewState', () => {
     prescanVersion: 'v3',
     evidenceVersion: '1',
     previewContentVersion: 'v1',
+    sourceKind: 'prescan',
   };
   const now = Date.parse('2026-08-30T12:00:00.000Z');
 

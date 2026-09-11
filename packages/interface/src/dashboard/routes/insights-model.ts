@@ -143,9 +143,13 @@ export interface PreviewResponse {
   publicExpiresAt: string;
   revokedAt: string | null;
   revokedReason: string | null;
-  prescanVersion: string;
-  evidenceVersion: string;
+  /** v1 (prescan) rows only; null on v2 full-audit rows (plan 037). */
+  prescanVersion: string | null;
+  evidenceVersion: string | null;
   previewContentVersion: string;
+  /** Which generation produced the row: the retired prescan flow or the
+   *  audit page's full-scan scorecard. */
+  sourceKind: 'prescan' | 'full-audit';
 }
 
 /** The current preview is rendered on demand from the prescan evidence, not

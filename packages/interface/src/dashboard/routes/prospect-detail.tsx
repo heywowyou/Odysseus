@@ -534,8 +534,9 @@ export function ProspectDetailPage(): JSX.Element {
           <div className="flex flex-wrap items-center gap-2">
             {/* Plan 037: shown only when the server-side plan says the
                 scan may start, so the operator never clicks a button the
-                worker would have to refuse. */}
-            {data.outreachScan.canStart ? (
+                worker would have to refuse. Tolerates a payload that
+                predates the field by not rendering the button at all. */}
+            {data.outreachScan?.canStart ? (
               <Button
                 variant="primary"
                 size="sm"

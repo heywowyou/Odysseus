@@ -311,6 +311,58 @@ export const fr: DashboardStrings = {
       rendering: 'Rendu',
       privacy: 'Vie privée',
     },
+    outreachPreview: {
+      title: 'Aperçu de prospection',
+      description: 'Consulter, publier ou retirer la synthèse construite à partir de cet audit.',
+      viewScorecard: 'Afficher la synthèse',
+      hideScorecard: 'Masquer la synthèse',
+      downloadPdf: 'Télécharger le PDF',
+      unavailableWithReason: 'Aperçu indisponible ({refusal}).',
+      refusalReasons: {
+        'candidate-unknown': 'Ce prospect est inconnu.',
+        'no-audit': 'Aucune analyse complète de prospection n’est terminée pour ce prospect.',
+        'audit-in-flight': 'L’analyse complète de prospection de ce prospect est encore en cours.',
+        'audit-failed': 'La dernière analyse complète de prospection a échoué ou a été arrêtée.',
+        'domain-mismatch': 'L’audit enregistré ne correspond pas au domaine propre de ce prospect.',
+        suppressed: 'Ce domaine figure sur la liste à ne pas contacter.',
+        'address-suppressed': 'Cette adresse figure sur la liste à ne pas contacter.',
+        'stale-provenance':
+          'Cet audit est trop ancien : ses constats ne sont plus traçables, relancez une analyse.',
+        'coverage-incomplete':
+          'L’exploration du site est incomplète : la synthèse refuse d’inventer des chiffres.',
+        'insufficient-safe-cards':
+          'Pas assez de constats vérifiés pour construire une synthèse fiable.',
+        'not-an-outreach-audit': 'Cet audit n’est pas lié à un prospect de la campagne.',
+        'preview-not-published': 'Aucun aperçu publié ne correspond : publiez d’abord l’aperçu.',
+        'preview-revoked': 'Le lien publié a été retiré : réémettez un lien depuis cet audit.',
+        'preview-expired': 'Le lien publié a expiré : réémettez un lien depuis cet audit.',
+        'preview-wrong-audit':
+          'Le lien publié correspond à un autre audit : réémettez un lien depuis cet audit.',
+      },
+      renderError: 'Impossible de générer l’aperçu.',
+      publishAction: 'Publier l’aperçu',
+      reissueAction: 'Réémettre un lien',
+      publishConfirmTitle: 'Publier l’aperçu ?',
+      publishConfirmBody:
+        'Un lien public sera créé à partir de cet audit. Il n’est affiché qu’une seule fois : préparez-vous à le copier.',
+      linkOnceTitle: 'Conservez ce lien maintenant',
+      linkOnceWarning:
+        'Par confidentialité, ce lien n’est affiché qu’une seule fois et Odysseus ne le conserve jamais. Copiez-le dans un endroit sûr ; il ne pourra plus être affiché.',
+      linkCopy: 'Copier le lien',
+      linkCopied: 'Copié',
+      linkConfirmButton: 'J’ai enregistré le lien',
+      revokeAction: 'Retirer l’aperçu',
+      revokeConfirmTitle: 'Retirer l’aperçu ?',
+      revokeConfirmBody:
+        'Tous les liens publics de cet hôtel cessent de fonctionner immédiatement. C’est irréversible.',
+      revokedMessage: 'Aperçu retiré.',
+      draftAction: 'Créer le premier brouillon',
+      draftCreatedMessage: 'Brouillon créé. Voir Démarche > Brouillons.',
+      draftNeedsPreviewHint:
+        'Aucun lien publié n’est disponible dans cette session. Réémettez un lien, copiez-le, puis créez le brouillon.',
+      draftRefusedMessage: 'Rien n’a été rédigé ; l’orchestrateur a refusé cette action.',
+      actionError: 'Impossible de terminer cette action.',
+    },
   },
   prepareReport: {
     title: 'Préparer le rapport',
@@ -601,6 +653,8 @@ export const fr: DashboardStrings = {
     states: { live: 'En ligne', revoked: 'Retiré', expired: 'Expiré', none: 'Aucun' },
     openPublic: 'Ouvrir l’aperçu public',
     rendererNote: 'Le lien public n’est volontairement pas récupéré ici.',
+    retiredNote:
+      'La création d’un nouvel aperçu se fait désormais depuis la page de l’audit complet.',
     showCurrentPreview: 'Afficher l’aperçu actuel',
     hideCurrentPreview: 'Masquer l’aperçu actuel',
     currentPreviewNote:

@@ -469,6 +469,70 @@ describe('reports card PDF availability (issue #91)', () => {
   });
 });
 
+describe('outreach preview card on the audit page (plan 037 slice 5)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('offers publication, revocation, PDF, and the scorecard for a candidate-linked audit', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': {
+        ...emptyAudit,
+        outreach: { candidateId: 'candidate-1', hasLiveV2Preview: false },
+      },
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Aperçu de prospection');
+    expect(container.textContent).toContain('Consulter, publier ou retirer la synthèse');
+    expect(
+      [...container.querySelectorAll('button')].some((button) =>
+        button.textContent?.includes('Publier l’aperçu'),
+      ),
+    ).toBe(true);
+    expect(
+      [...container.querySelectorAll('button')].some((button) =>
+        button.textContent?.includes('Télécharger le PDF'),
+      ),
+    ).toBe(true);
+    // Nothing is published and no token is held in this session, so both
+    // the draft and the takedown start out unavailable.
+    const draft = [...container.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Créer le premier brouillon'),
+    );
+    expect(draft?.disabled).toBe(true);
+    const revoke = [...container.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Retirer l’aperçu'),
+    );
+    expect(revoke?.disabled).toBe(true);
+    root.unmount();
+  });
+
+  it('renders no publication actions for an audit with no outreach provenance', async () => {
+    stubRoutes({
+      '/api/audits/audit-1/report-preparation': null,
+      '/api/audits/audit-1': {
+        ...emptyAudit,
+        outreach: { candidateId: null, hasLiveV2Preview: false },
+      },
+    });
+    const { container, root } = await renderPage(createElement(AuditDetailPage), '/audits/audit-1');
+    await settle(container, 'Aperçu de prospection');
+    expect(
+      [...container.querySelectorAll('button')].some((button) =>
+        button.textContent?.includes('Publier l’aperçu'),
+      ),
+    ).toBe(false);
+    expect(
+      [...container.querySelectorAll('button')].some((button) =>
+        button.textContent?.includes('Afficher la synthèse'),
+      ),
+    ).toBe(true);
+    root.unmount();
+  });
+});
+
 describe('findings table rows and expansion (issue #93)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

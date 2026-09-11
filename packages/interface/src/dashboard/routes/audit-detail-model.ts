@@ -330,3 +330,97 @@ export function buildManualFieldsPatch(
   }
   return patch;
 }
+
+// ---------------------------------------------------------------------------
+// Plan 037 slice 5: outreach preview card responses and gates
+// ---------------------------------------------------------------------------
+
+/** GET /api/audits/:auditId/outreach-preview. A refusal is an expected,
+ *  correct outcome of the readiness gates; `refusal` is the server's
+ *  stable code, turned into operator copy by outreachRefusalSentence
+ *  below and never translated in place. */
+export type OutreachPreviewRenderResponse =
+  { rendered: true; html: string } | { rendered: false; refusal: string };
+
+/** POST /api/audits/:auditId/outreach-preview/publish. The url carries the
+ *  raw one-time token and exists only in this one response. */
+export type OutreachPreviewPublishResponse =
+  | { published: true; previewId: string; url: string; publicExpiresAt: string }
+  | { published: false; refusal: string };
+
+/** POST /api/audits/:auditId/outreach-preview/revoke. */
+export interface OutreachPreviewRevokeResponse {
+  revoked: number;
+  alreadyRevoked: number;
+}
+
+/** POST /api/prospects/:candidateId/outreach/draft. */
+export type OutreachDraftResponse = { created: true } | { created: false; refusal: string };
+
+/** The published url is `${publicBaseUrl}/apercu/${token}`; the raw
+ *  one-time token is its last path segment. This is the only place the
+ *  interface splits the token out, and it never leaves the page. */
+export function tokenFromPublishedUrl(url: string): string {
+  const segments = url.split('/');
+  return segments.at(-1) ?? '';
+}
+
+/** The first-draft gate: the page can only hand the draft route a token it
+ *  holds from a publish in this session, or trust a preview that the
+ *  server reports as currently live. */
+export function canCreateOutreachDraft(
+  sessionToken: string | null,
+  hasLiveV2Preview: boolean,
+): boolean {
+  return sessionToken !== null || hasLiveV2Preview;
+}
+
+/** The one short sentence per stable refusal code, in the interface
+ *  language. Refusal codes are stable API strings, so this table is the
+ *  only place that turns one into operator copy; a code with no entry
+ *  returns undefined and each caller picks its own fallback. */
+export function outreachRefusalCopy(
+  refusal: string,
+  language: DashboardLanguage,
+): string | undefined {
+  const table =
+    language === 'fr'
+      ? fr.auditDetail.outreachPreview.refusalReasons
+      : en.auditDetail.outreachPreview.refusalReasons;
+  return table[refusal];
+}
+
+/** Render and publish refusals always end up as a sentence: a known code
+ *  maps through outreachRefusalCopy, an unknown one falls back to the
+ *  unavailable notice carrying the raw code, deliberately untranslated. */
+export function outreachRefusalSentence(refusal: string, language: DashboardLanguage): string {
+  return (
+    outreachRefusalCopy(refusal, language) ??
+    (language === 'fr'
+      ? fr.auditDetail.outreachPreview.unavailableWithReason
+      : en.auditDetail.outreachPreview.unavailableWithReason
+    ).replace('{refusal}', refusal)
+  );
+}
+
+/** Draft refusals that mean "the published link is not usable": the
+ *  remedy is the same reissue-and-copy hint for all four. Any other code
+ *  (a suppression or contact refusal) stays a plain refusal message. */
+export function isPreviewUnavailableDraftRefusal(refusal: string): boolean {
+  return (
+    refusal === 'preview-not-published' ||
+    refusal === 'preview-revoked' ||
+    refusal === 'preview-expired' ||
+    refusal === 'preview-wrong-audit'
+  );
+}
+
+/** Revoke enablement: a live v2 preview exists, or this session published
+ *  one and the detail fetch has not caught up yet. An audit with neither
+ *  has nothing to take down. */
+export function canRevokeOutreachPreview(
+  hasLiveV2Preview: boolean,
+  sessionPublished: boolean,
+): boolean {
+  return hasLiveV2Preview || sessionPublished;
+}

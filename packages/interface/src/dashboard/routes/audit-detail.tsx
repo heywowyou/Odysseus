@@ -25,6 +25,7 @@ import {
 import { useI18n } from '../i18n/provider';
 import type { DashboardLanguage, DashboardStrings } from '../i18n/types';
 import { vocabularyLabel } from '../lib/vocabulary';
+import { CopyButton } from '../components/ui/copy-button';
 import { PrepareReportCard } from './prepare-report-card';
 import { ApiError, fetchJson, postEmpty, sendJson } from '../lib/api';
 import { cn } from '../lib/cn';
@@ -33,6 +34,8 @@ import { usePolling } from '../lib/use-polling';
 import {
   SEVERITIES,
   buildManualFieldsPatch,
+  canCreateOutreachDraft,
+  canRevokeOutreachPreview,
   countOccurrences,
   countPages,
   failureReasonKind,
@@ -43,17 +46,25 @@ import {
   firstElementSelector,
   hasPageCountWarning,
   hostnameOf,
+  isPreviewUnavailableDraftRefusal,
   isReportStageFailure,
   isSeverity,
   isValidSiren,
   manualFieldValuesFromResponse,
   normalizeSiren,
+  outreachRefusalCopy,
+  outreachRefusalSentence,
   sortFindings,
+  tokenFromPublishedUrl,
 } from './audit-detail-model';
 import type {
   ManualFieldKey,
   ManualFieldsPatch,
   ManualFieldValues,
+  OutreachDraftResponse,
+  OutreachPreviewPublishResponse,
+  OutreachPreviewRenderResponse,
+  OutreachPreviewRevokeResponse,
   RuleCopyMap,
   SectorChoice,
   TextManualFieldKey,
@@ -637,6 +648,321 @@ function PublisherIdentificationAlert(props: {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Plan 037 slice 5: the outreach preview card
+// ---------------------------------------------------------------------------
+
+type OutreachPendingAction = 'publish' | 'revoke';
+
+/** Outcome of fetching the operator PDF. The endpoint answers a readiness
+ *  refusal with 200 JSON, so the content type is inspected before the
+ *  bytes reach the browser: a refusal must become a sentence on the page,
+ *  never a corrupt downloaded file. */
+type OutreachPdfFetch =
+  { kind: 'pdf'; blob: Blob } | { kind: 'refused'; refusal: string } | { kind: 'failed' };
+
+async function fetchOutreachPreviewPdf(url: string): Promise<OutreachPdfFetch> {
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch {
+    return { kind: 'failed' };
+  }
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!response.ok || contentType.includes('application/json')) {
+    const body: unknown = await response.json().catch(() => ({}));
+    if (body !== null && typeof body === 'object' && 'refusal' in body) {
+      return { kind: 'refused', refusal: String((body as Record<string, unknown>)['refusal']) };
+    }
+    return { kind: 'failed' };
+  }
+  try {
+    return { kind: 'pdf', blob: await response.blob() };
+  } catch {
+    return { kind: 'failed' };
+  }
+}
+
+/** Same download dance as the reports card: the bytes are fetched first,
+ *  then handed to the browser as a blob, so a failed fetch can never
+ *  navigate the operator to a raw JSON page. */
+function savePdfFile(blob: Blob, fileName: string): void {
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  // Revoke late: the download may still be starting when this returns.
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+}
+
+/** The audit page's outreach preview section. Rendered for every audit;
+ *  the render and publish endpoints decide readiness and answer with
+ *  stable refusal codes. Every audit gets the on-demand scorecard (the
+ *  same HTML a published link serves) and the operator PDF; a
+ *  candidate-linked audit additionally gets publication, revocation, and
+ *  the first-draft action. */
+export function OutreachPreviewCard(props: {
+  auditId: string;
+  candidateId: string | null;
+  hasLiveV2Preview: boolean;
+  refresh: () => void;
+}): JSX.Element {
+  const { auditId, candidateId, hasLiveV2Preview, refresh } = props;
+  const { language, strings } = useI18n();
+  const copy = strings.auditDetail.outreachPreview;
+  const base = `/api/audits/${encodeURIComponent(auditId)}/outreach-preview`;
+
+  // Scorecard disclosure: fetched when first opened, exactly like the
+  // prospect preview page's current-preview disclosure.
+  const [isScorecardOpen, setIsScorecardOpen] = useState(false);
+  const [scorecardHtml, setScorecardHtml] = useState<string>();
+  const [scorecardRefusal, setScorecardRefusal] = useState<string>();
+  const [scorecardFailed, setScorecardFailed] = useState(false);
+  const [isLoadingScorecard, setIsLoadingScorecard] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  // Publication actions, candidate-linked only.
+  const [pendingAction, setPendingAction] = useState<OutreachPendingAction | null>(null);
+  const [isBusy, setIsBusy] = useState(false);
+  /** The one-time bearer link of a successful publish. Held only in this
+   *  component's memory for the single display, never stored anywhere. */
+  const [publishedLink, setPublishedLink] = useState<string | null>(null);
+  /** The raw token of that same publish, kept so the first-draft call can
+   *  hand it back; it never leaves this page. */
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [showDraftHint, setShowDraftHint] = useState(false);
+
+  const loadScorecard = async (): Promise<void> => {
+    if (isLoadingScorecard) return;
+    setIsLoadingScorecard(true);
+    setScorecardFailed(false);
+    setScorecardRefusal(undefined);
+    try {
+      const result = await fetchJson<OutreachPreviewRenderResponse>(base);
+      if (result.rendered) {
+        setScorecardHtml(result.html);
+      } else {
+        setScorecardRefusal(result.refusal);
+      }
+    } catch {
+      setScorecardFailed(true);
+    } finally {
+      setIsLoadingScorecard(false);
+    }
+  };
+
+  const toggleScorecard = (): void => {
+    const opening = !isScorecardOpen;
+    setIsScorecardOpen(opening);
+    if (
+      opening &&
+      scorecardHtml === undefined &&
+      scorecardRefusal === undefined &&
+      !scorecardFailed
+    ) {
+      void loadScorecard();
+    }
+  };
+
+  const downloadPdf = async (): Promise<void> => {
+    if (isDownloadingPdf) return;
+    setIsDownloadingPdf(true);
+    try {
+      const outcome = await fetchOutreachPreviewPdf(`${base}/pdf`);
+      if (outcome.kind === 'pdf') {
+        savePdfFile(outcome.blob, `apercu-${auditId}.pdf`);
+      } else if (outcome.kind === 'refused') {
+        toast.error(outreachRefusalSentence(outcome.refusal, language));
+      } else {
+        toast.error(copy.actionError);
+      }
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  const runPublish = async (): Promise<void> => {
+    if (candidateId === null || isBusy) return;
+    setIsBusy(true);
+    try {
+      const result = await postEmpty<OutreachPreviewPublishResponse>(`${base}/publish`);
+      if (result.published) {
+        setPublishedLink(result.url);
+        setSessionToken(tokenFromPublishedUrl(result.url));
+        setShowDraftHint(false);
+      } else {
+        toast.error(outreachRefusalSentence(result.refusal, language));
+      }
+      refresh();
+    } catch (error) {
+      toast.error(copy.actionError, {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const runRevoke = async (): Promise<void> => {
+    if (isBusy) return;
+    setIsBusy(true);
+    try {
+      await postEmpty<OutreachPreviewRevokeResponse>(`${base}/revoke`);
+      toast.success(copy.revokedMessage);
+      refresh();
+    } catch (error) {
+      toast.error(copy.actionError, {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const runCreateDraft = async (): Promise<void> => {
+    if (candidateId === null || isBusy) return;
+    setIsBusy(true);
+    setShowDraftHint(false);
+    try {
+      const result = await sendJson<OutreachDraftResponse>(
+        `/api/prospects/${encodeURIComponent(candidateId)}/outreach/draft`,
+        'POST',
+        // Without a token from a publish in this session the call still
+        // runs; the server fails it closed with 'preview-not-published',
+        // which the hint below turns into the reissue remedy.
+        { previewToken: sessionToken ?? '' },
+      );
+      if (result.created) {
+        toast.success(copy.draftCreatedMessage);
+      } else if (isPreviewUnavailableDraftRefusal(result.refusal)) {
+        setShowDraftHint(true);
+      } else {
+        toast.error(outreachRefusalCopy(result.refusal, language) ?? copy.draftRefusedMessage);
+      }
+    } catch (error) {
+      toast.error(copy.actionError, {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const isCandidateLinked = candidateId !== null;
+  const canDraft = canCreateOutreachDraft(sessionToken, hasLiveV2Preview);
+  const canRevoke = canRevokeOutreachPreview(hasLiveV2Preview, sessionToken !== null);
+
+  return (
+    <Card title={copy.title} description={copy.description}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" size="sm" onClick={toggleScorecard}>
+          {isScorecardOpen ? copy.hideScorecard : copy.viewScorecard}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          isLoading={isDownloadingPdf}
+          disabled={isDownloadingPdf}
+          onClick={() => void downloadPdf()}
+        >
+          {copy.downloadPdf}
+        </Button>
+        {isCandidateLinked ? (
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              isLoading={isBusy && pendingAction === 'publish'}
+              disabled={isBusy}
+              onClick={() => {
+                setPendingAction('publish');
+              }}
+            >
+              {hasLiveV2Preview ? copy.reissueAction : copy.publishAction}
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              isLoading={isBusy && pendingAction === 'revoke'}
+              disabled={isBusy || !canRevoke}
+              onClick={() => {
+                setPendingAction('revoke');
+              }}
+            >
+              {copy.revokeAction}
+            </Button>
+            <Button size="sm" disabled={isBusy || !canDraft} onClick={() => void runCreateDraft()}>
+              {copy.draftAction}
+            </Button>
+          </>
+        ) : null}
+      </div>
+      {showDraftHint ? (
+        <p className="mt-3 text-sm text-danger" role="alert">
+          {copy.draftNeedsPreviewHint}
+        </p>
+      ) : null}
+      {isScorecardOpen ? (
+        <div className="mt-3">
+          {isLoadingScorecard ? (
+            <Skeleton className="h-[48rem] w-full" />
+          ) : scorecardHtml !== undefined ? (
+            <iframe
+              title={copy.title}
+              className="h-[48rem] w-full rounded-lg border border-line bg-white"
+              sandbox=""
+              srcDoc={scorecardHtml}
+            />
+          ) : (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-raised p-3">
+              <p className="text-sm text-ink-soft">
+                {scorecardFailed
+                  ? copy.renderError
+                  : outreachRefusalSentence(scorecardRefusal ?? '', language)}
+              </p>
+              <Button variant="secondary" size="sm" onClick={() => void loadScorecard()}>
+                {strings.common.retry}
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : null}
+      {publishedLink !== null ? (
+        <div className="mt-3 rounded-lg border border-line bg-raised p-3">
+          <h3 className="text-sm font-semibold text-ink">{copy.linkOnceTitle}</h3>
+          <p className="mt-1 text-sm text-ink-soft" role="note">
+            {copy.linkOnceWarning}
+          </p>
+          <p className="mt-3 break-all font-mono text-xs text-ink">{publishedLink}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <CopyButton text={publishedLink} label={copy.linkCopy} copiedLabel={copy.linkCopied} />
+            <Button size="sm" onClick={() => setPublishedLink(null)}>
+              {copy.linkConfirmButton}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      <ConfirmDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingAction(null);
+        }}
+        title={pendingAction === 'revoke' ? copy.revokeConfirmTitle : copy.publishConfirmTitle}
+        description={pendingAction === 'revoke' ? copy.revokeConfirmBody : copy.publishConfirmBody}
+        confirmLabel={pendingAction === 'revoke' ? copy.revokeAction : copy.publishAction}
+        cancelLabel={strings.common.cancel}
+        onConfirm={async () => {
+          if (pendingAction === 'revoke') await runRevoke();
+          else if (pendingAction === 'publish') await runPublish();
+        }}
+      />
+    </Card>
+  );
+}
+
 interface TextFieldDef {
   key: TextManualFieldKey;
   label: `${TextManualFieldKey}Label`;
@@ -1199,6 +1525,15 @@ export function AuditDetailPage(): JSX.Element {
             refresh={refresh}
           />
         </div>
+        {/* Plan 037 slice 5: rendered for every audit; the endpoints decide
+            readiness, the card only reads the candidate link and the live
+            preview fact the detail response now carries. */}
+        <OutreachPreviewCard
+          auditId={data.auditId}
+          candidateId={data.outreach?.candidateId ?? null}
+          hasLiveV2Preview={data.outreach?.hasLiveV2Preview ?? false}
+          refresh={refresh}
+        />
         <FindingsCard
           findings={data.findings}
           ruleCopy={data.ruleCopy}

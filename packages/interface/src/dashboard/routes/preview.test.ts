@@ -8,6 +8,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/provider';
 import { PreviewPage } from './preview';
 
+// Plan 037: the prescan-backed v1 preview is retired. This suite keeps the
+// two behaviours the page still owns: the stored row's status display and
+// the revoke flow for legacy v1 rows.
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 function jsonResponse(body: unknown): Response {
@@ -60,7 +64,7 @@ async function renderPreview(): Promise<{ root: Root }> {
   return { root };
 }
 
-describe('PreviewPage current preview disclosure', () => {
+describe('PreviewPage status display', () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
@@ -81,7 +85,7 @@ describe('PreviewPage current preview disclosure', () => {
           previewContentVersion: 'v1',
         });
       }
-      return jsonResponse({ rendered: true, html: '<main>Current preview</main>' });
+      return jsonResponse({ revoked: 0, alreadyRevoked: 0 });
     });
     vi.stubGlobal('fetch', fetchMock);
   });
@@ -91,29 +95,30 @@ describe('PreviewPage current preview disclosure', () => {
     document.body.innerHTML = '';
   });
 
-  it('fetches only when opened and embeds the response in an empty sandbox', async () => {
+  it('shows the stored row status and no publication controls', async () => {
     const { root } = await renderPreview();
-    const renderUrl = '/api/prospects/candidate-1/outreach/preview-render';
 
     await waitFor(() =>
-      fetchMock.mock.calls.some(([url]) => String(url).endsWith('/preview')) ? true : undefined,
+      (document.body.textContent ?? '').includes('En ligne') ? true : undefined,
     );
-    expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain(renderUrl);
-
-    const button = await waitFor(() =>
-      [...document.querySelectorAll('button')].find((element) =>
-        element.textContent?.includes('aperçu actuel'),
+    // Plan 037: publication moved to the audit page's v2 card; the retired
+    // render iframe is gone too. The revoke action stays for legacy rows.
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(
+      [...document.querySelectorAll('button')].some((element) =>
+        element.textContent?.includes('Publier l’aperçu'),
       ),
-    );
-    await act(async () => {
-      button.click();
-    });
-
-    const iframe = await waitFor(() => document.querySelector('iframe') ?? undefined);
-    expect(fetchMock.mock.calls.map(([url]) => String(url))).toContain(renderUrl);
-    expect(iframe.hasAttribute('sandbox')).toBe(true);
-    expect(iframe.getAttribute('sandbox')).toBe('');
-    expect(iframe.getAttribute('srcdoc')).toBe('<main>Current preview</main>');
+    ).toBe(false);
+    expect(
+      [...document.querySelectorAll('button')].some((element) =>
+        element.textContent?.includes('Réémettre un lien'),
+      ),
+    ).toBe(false);
+    expect(
+      [...document.querySelectorAll('button')].some((element) =>
+        element.textContent?.includes('Retirer l’aperçu'),
+      ),
+    ).toBe(true);
 
     await act(async () => {
       root.unmount();
@@ -121,36 +126,28 @@ describe('PreviewPage current preview disclosure', () => {
   });
 });
 
-describe('PreviewPage publication actions (issue #97)', () => {
+describe('PreviewPage revoke action', () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
     fetchMock.mockReset();
     fetchMock.mockImplementation(async (url: string) => {
-      if (String(url).endsWith('/preview/publish')) {
-        return jsonResponse({
-          published: true,
-          previewId: 'preview-2',
-          url: 'https://www.odysseusaudit.com/apercu/one-time-token',
-          publicExpiresAt: '2026-10-08T00:00:00.000Z',
-        });
+      if (String(url).endsWith('/preview/revoke')) {
+        return jsonResponse({ revoked: 1, alreadyRevoked: 0 });
       }
-      if (String(url).endsWith('/preview')) {
-        return jsonResponse({
-          previewId: 'preview-1',
-          domain: 'hotel-exemple.fr',
-          language: 'fr',
-          status: 'live',
-          publishedAt: '2026-09-01T00:00:00.000Z',
-          publicExpiresAt: '2026-10-01T00:00:00.000Z',
-          revokedAt: null,
-          revokedReason: null,
-          prescanVersion: 'v3',
-          evidenceVersion: 'v2',
-          previewContentVersion: 'v1',
-        });
-      }
-      return jsonResponse({ rendered: true, html: '<main>Current preview</main>' });
+      return jsonResponse({
+        previewId: 'preview-1',
+        domain: 'hotel-exemple.fr',
+        language: 'fr',
+        status: 'live',
+        publishedAt: '2026-09-01T00:00:00.000Z',
+        publicExpiresAt: '2026-10-01T00:00:00.000Z',
+        revokedAt: null,
+        revokedReason: null,
+        prescanVersion: 'v3',
+        evidenceVersion: 'v2',
+        previewContentVersion: 'v1',
+      });
     });
     vi.stubGlobal('fetch', fetchMock);
   });
@@ -160,42 +157,39 @@ describe('PreviewPage publication actions (issue #97)', () => {
     document.body.innerHTML = '';
   });
 
-  async function clickButton(label: string): Promise<void> {
-    const button = await waitFor(() =>
-      [...document.querySelectorAll('button')].find((element) =>
-        element.textContent?.includes(label),
-      ),
-    );
-    if (button === undefined) throw new Error(`button not found: ${label}`);
-    await act(async () => {
-      button.click();
-    });
-    await pause();
-  }
-
-  it('shows the re-issued link exactly once, then drops it after confirmation', async () => {
+  it('withdraws the previews only after the confirmation dialog', async () => {
     const { root } = await renderPreview();
     await waitFor(() =>
       fetchMock.mock.calls.some(([url]) => String(url).endsWith('/preview')) ? true : undefined,
     );
     await pause();
 
-    await clickButton('Réémettre un lien');
+    const revoke = await waitFor(() =>
+      [...document.querySelectorAll('button')].find((element) =>
+        element.textContent?.includes('Retirer l’aperçu'),
+      ),
+    );
+    await act(async () => {
+      revoke.click();
+    });
+    await pause();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/preview/revoke'))).toBe(
+      false,
+    );
+
     // The confirm dialog is radix-mounted at the end of body, so its footer
     // button is the last match for the action label.
     const confirm = [...document.querySelectorAll('button')].at(-1);
-    expect(confirm?.textContent).toContain('Réémettre un lien');
+    expect(confirm?.textContent).toContain('Retirer l’aperçu');
     await act(async () => {
       confirm?.click();
     });
 
     await waitFor(() =>
-      (document.body.textContent ?? '').includes('one-time-token') ? true : undefined,
+      fetchMock.mock.calls.some(([url]) => String(url).endsWith('/preview/revoke'))
+        ? true
+        : undefined,
     );
-    expect(document.body.textContent ?? '').toContain('une seule fois');
-
-    await clickButton('J’ai enregistré le lien');
-    expect(document.body.textContent ?? '').not.toContain('one-time-token');
 
     await act(async () => {
       root.unmount();

@@ -149,6 +149,14 @@ export interface RuleCopyResponse {
   remediationEn?: string;
 }
 
+/** Plan 037 slice 5: the audit's prospecting provenance and current v2
+ *  preview state, present on every audit detail response. A non-candidate
+ *  audit reads as candidateId null and hasLiveV2Preview false. */
+export interface AuditOutreachStatusResponse {
+  candidateId: string | null;
+  hasLiveV2Preview: boolean;
+}
+
 /** The whole GET /api/audits/:auditId body. */
 export interface AuditDetailResponse {
   auditId: string;
@@ -169,6 +177,10 @@ export interface AuditDetailResponse {
   analysisIsStaticFallback: boolean;
   approval: ReportApprovalResponse | null;
   manualFields: ManualFieldsResponse | null;
+  /** Plan 037 slice 5: prospecting provenance and current preview state.
+   *  The server always sends it; optional here so an older cached page
+   *  tolerates a payload from before the field existed. */
+  outreach?: AuditOutreachStatusResponse;
   /** The scan's original signal, before a possible operator correction. */
   detectedTransactionalFlow?: boolean;
   /** Issue #90: the failed pipeline run behind this audit, when there was

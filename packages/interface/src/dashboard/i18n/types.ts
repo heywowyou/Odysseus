@@ -350,6 +350,43 @@ export interface DashboardStrings {
       'accessibility' | 'seo' | 'geo' | 'performance' | 'rendering' | 'privacy',
       string
     >;
+    /** Plan 037 slice 5: the outreach preview card. Rendered on every
+     *  audit; the endpoints decide readiness. refusalReasons maps each of
+     *  the server's stable refusal codes to one short sentence; an
+     *  unknown code falls back to unavailableWithReason carrying the raw
+     *  code, deliberately untranslated. */
+    outreachPreview: {
+      title: string;
+      description: string;
+      viewScorecard: string;
+      hideScorecard: string;
+      downloadPdf: string;
+      unavailableWithReason: string;
+      /** One sentence per stable refusal code the audit page can surface:
+       *  the store's outreach audit refusals, the v2 publish additions,
+       *  the publish-only not-an-outreach-audit code, and the draft
+       *  route's preview codes. */
+      refusalReasons: Record<string, string>;
+      renderError: string;
+      publishAction: string;
+      reissueAction: string;
+      publishConfirmTitle: string;
+      publishConfirmBody: string;
+      linkOnceTitle: string;
+      linkOnceWarning: string;
+      linkCopy: string;
+      linkCopied: string;
+      linkConfirmButton: string;
+      revokeAction: string;
+      revokeConfirmTitle: string;
+      revokeConfirmBody: string;
+      revokedMessage: string;
+      draftAction: string;
+      draftCreatedMessage: string;
+      draftNeedsPreviewHint: string;
+      draftRefusedMessage: string;
+      actionError: string;
+    };
   };
 
   /** Plan 019: the Prepare report card. The closed vocabulary option
@@ -634,6 +671,9 @@ export interface DashboardStrings {
     states: Record<'live' | 'revoked' | 'expired' | 'none', string>;
     openPublic: string;
     rendererNote: string;
+    /** Plan 037: creating a new preview moved to the audit detail page;
+     *  this page keeps the legacy records and their revocation only. */
+    retiredNote: string;
     showCurrentPreview: string;
     hideCurrentPreview: string;
     currentPreviewNote: string;

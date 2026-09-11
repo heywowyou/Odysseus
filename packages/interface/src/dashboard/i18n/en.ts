@@ -311,6 +311,57 @@ export const en: DashboardStrings = {
       rendering: 'Rendering',
       privacy: 'Privacy',
     },
+    outreachPreview: {
+      title: 'Outreach preview',
+      description: 'Inspect, publish, or take down the scorecard built from this audit.',
+      viewScorecard: 'View scorecard',
+      hideScorecard: 'Hide scorecard',
+      downloadPdf: 'Download PDF',
+      unavailableWithReason: 'Preview unavailable ({refusal}).',
+      refusalReasons: {
+        'candidate-unknown': 'This prospect is unknown.',
+        'no-audit': 'No completed outreach audit exists for this prospect yet.',
+        'audit-in-flight': 'The outreach audit for this prospect is still running.',
+        'audit-failed': 'The latest outreach audit failed or was stopped.',
+        'domain-mismatch': 'The stored audit does not match this prospect’s own domain.',
+        suppressed: 'This domain is on the do-not-contact list.',
+        'address-suppressed': 'This address is on the do-not-contact list.',
+        'stale-provenance':
+          'This audit is too old: its findings can no longer be traced, run a new audit.',
+        'coverage-incomplete':
+          'The site crawl is incomplete, so the scorecard refuses to invent numbers.',
+        'insufficient-safe-cards': 'Too few verified findings to build a reliable scorecard.',
+        'not-an-outreach-audit': 'This audit is not linked to a campaign prospect.',
+        'preview-not-published': 'No published preview matches: publish the preview first.',
+        'preview-revoked': 'The published link was taken down: reissue a link from this audit.',
+        'preview-expired': 'The published link expired: reissue a link from this audit.',
+        'preview-wrong-audit':
+          'The published link belongs to another audit: reissue a link from this audit.',
+      },
+      renderError: 'Could not render the preview.',
+      publishAction: 'Publish preview',
+      reissueAction: 'Reissue a link',
+      publishConfirmTitle: 'Publish the preview?',
+      publishConfirmBody:
+        'A public link will be created from this audit. It is shown only once, so be ready to copy it.',
+      linkOnceTitle: 'Save this link now',
+      linkOnceWarning:
+        'For privacy, this link is shown only once and Odysseus never stores it. Copy it somewhere safe; it cannot be shown again.',
+      linkCopy: 'Copy the link',
+      linkCopied: 'Copied',
+      linkConfirmButton: 'I saved the link',
+      revokeAction: 'Take the preview down',
+      revokeConfirmTitle: 'Take the preview down?',
+      revokeConfirmBody:
+        'Every public link for this hotel stops working immediately. This cannot be undone.',
+      revokedMessage: 'Preview taken down.',
+      draftAction: 'Create the first draft',
+      draftCreatedMessage: 'Draft created. See Outreach > Drafts.',
+      draftNeedsPreviewHint:
+        'No published link is available in this session. Reissue a link, copy it, then create the draft.',
+      draftRefusedMessage: 'Nothing was drafted; the orchestrator declined this action.',
+      actionError: 'Could not complete this action.',
+    },
   },
   prepareReport: {
     title: 'Prepare report',
@@ -591,6 +642,7 @@ export const en: DashboardStrings = {
     states: { live: 'Live', revoked: 'Taken down', expired: 'Expired', none: 'None' },
     openPublic: 'Open public preview',
     rendererNote: 'The public link is deliberately not recovered here.',
+    retiredNote: 'New previews are now published from the full audit page.',
     showCurrentPreview: 'Show current preview',
     hideCurrentPreview: 'Hide current preview',
     currentPreviewNote:
