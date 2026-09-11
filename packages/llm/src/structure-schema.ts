@@ -38,7 +38,7 @@ export type StructurePassOutput = z.infer<typeof structurePassOutputSchema>;
  *  produced by the model - see assignThemeKeys below. Lets the writing
  *  pass's per-language output be merged back onto the right structural
  *  theme regardless of what order the model returns themes in. */
-export const structureThemeWithKeySchema = structureThemeSchema.extend({
+const structureThemeWithKeySchema = structureThemeSchema.extend({
   themeKey: z.string().min(1),
 });
 export type StructureThemeWithKey = z.infer<typeof structureThemeWithKeySchema>;
@@ -52,7 +52,7 @@ const findingsProvenanceSchema = z
   .strict();
 
 /** The persisted analyses/<timestamp>-structure.json shape. */
-export const structureDocumentSchema = z
+const structureDocumentSchema = z
   .object({
     auditId: z.string().min(1),
     themes: z.array(structureThemeWithKeySchema).min(1).max(20),

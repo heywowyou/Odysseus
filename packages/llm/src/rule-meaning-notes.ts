@@ -24,7 +24,7 @@ import type { ReportLanguage } from '@odysseus/core';
  * chance that two languages describe the same fact differently because
  * neither was given a fixed description to work from.
  */
-export const RULE_MEANING_NOTES: Partial<Record<string, Record<ReportLanguage, string>>> = {
+const RULE_MEANING_NOTES: Partial<Record<string, Record<ReportLanguage, string>>> = {
   [ALT_TEXT_QUALITY_HEURISTIC_RULE_ID]: {
     fr: 'Le constat associé à la règle "alt-text-quality-heuristic" signale un texte alternatif d\'image présent mais probablement peu utile (par exemple un nom de fichier, un mot générique comme "image", ou une répétition du texte environnant). Ce n\'est ni une absence de texte alternatif, un autre constat couvre ce cas, ni une confirmation automatique que le texte est mauvais : c\'est un signal à vérifier manuellement. Décrivez-le ainsi dans votre prose, quelle que soit la langue de la réponse.',
     en: 'The finding tied to the rule "alt-text-quality-heuristic" flags image alt text that is present but likely low-value (for example a filename, a generic word like "image", or a repeat of the surrounding text). It is not a missing alt attribute, a different finding covers that, and it is not automatic confirmation the text is bad: it is a signal worth checking manually. Describe it this way in your prose, regardless of the response language.',

@@ -61,7 +61,7 @@ export type OutreachTouch3Output = z.infer<typeof outreachTouch3OutputSchema>;
 /** Used only to type the assembler's input at the package boundary. Never
  *  the parse target of a model call: outreach-client.ts parses exactly one
  *  touch's closed schema per call, keyed on the touch it was asked for. */
-export const outreachProseOutputSchema = z.discriminatedUnion('touch', [
+const outreachProseOutputSchema = z.discriminatedUnion('touch', [
   outreachTouch1OutputSchema,
   outreachTouch2OutputSchema,
   outreachTouch3OutputSchema,

@@ -176,7 +176,7 @@ export function logContainmentWarnings(
  *  packages/llm's own SEVERITY_VOCABULARY already use for this exact
  *  package boundary. Exported: enforceImpactEffortOrdering below reuses
  *  it directly rather than a third copy of the same two lines. */
-export function isQuickWinTheme(theme: Pick<StructureThemeWithKey, 'effort' | 'impact'>): boolean {
+function isQuickWinTheme(theme: Pick<StructureThemeWithKey, 'effort' | 'impact'>): boolean {
   return theme.effort === 'low' && theme.impact !== 'low';
 }
 

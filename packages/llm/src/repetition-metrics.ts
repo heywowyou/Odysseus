@@ -85,7 +85,7 @@ const DEVOIR_MODAL_POSITION_LIMIT = 18;
  * reach 6/10 = 60% - natural remediation-register usage that must stay a
  * pass. Two thirds separates a recurring frame from ordinary usage.
  */
-export const DEVOIR_OPENING_SHARE_LIMIT = 2 / 3;
+const DEVOIR_OPENING_SHARE_LIMIT = 2 / 3;
 
 /**
  * The sentence-final tail of an entry is the first TAIL_WORD_COUNT words
@@ -103,7 +103,7 @@ const TAIL_WORD_COUNT = 4;
  * below 24%. Above a quarter, one closing formula is carrying several
  * themes at once, which is the "client reads the scaffold" defect.
  */
-export const SHARED_SENTENCE_FINAL_TAIL_SHARE_LIMIT = 1 / 4;
+const SHARED_SENTENCE_FINAL_TAIL_SHARE_LIMIT = 1 / 4;
 
 function firstWords(text: string, count: number): string {
   return text.trim().split(/\s+/).slice(0, count).join(' ').toLowerCase();

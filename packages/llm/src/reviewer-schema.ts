@@ -40,7 +40,6 @@ export const reviewerPassOutputSchema = z
   })
   .strict();
 
-export type FieldReview = z.infer<typeof fieldReviewSchema>;
 export type ReviewerPassOutput = z.infer<typeof reviewerPassOutputSchema>;
 
 /** The reviewer sees exactly what the writer saw (WritingInput, the same
