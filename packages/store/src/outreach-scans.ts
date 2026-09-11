@@ -52,10 +52,18 @@ export interface OutreachFullScanVersionInputs {
   qualificationVersion: string;
 }
 
+export interface OutreachFullScanStartOptions {
+  /** Set by the runner's claim-time re-check: the job being validated is
+   *  already `running` when the check executes, so the in-flight search
+   *  must not match the job itself. */
+  excludeJobId?: string;
+}
+
 export async function planOutreachFullScan(
   connection: Connection,
   candidateId: string,
   versions: OutreachFullScanVersionInputs,
+  options: OutreachFullScanStartOptions = {},
 ): Promise<OutreachFullScanPlan | { refused: OutreachFullScanStartRefusal }> {
   const candidate = await getHotelCandidate(connection, candidateId);
   if (candidate === null) return { refused: 'candidate-unknown' };
@@ -97,7 +105,7 @@ export async function planOutreachFullScan(
 
   if (await isSuppressed(connection, domain)) return { refused: 'suppressed' };
 
-  if (await findActiveOutreachFullScanJob(connection, candidateId)) {
+  if (await findActiveOutreachFullScanJob(connection, candidateId, options.excludeJobId)) {
     return { refused: 'already-in-flight' };
   }
 
@@ -106,16 +114,20 @@ export async function planOutreachFullScan(
 
 /** The queued-or-running outreach full scan for one candidate, if any. Two
  *  concurrent scans of one prospect are always an operator mistake: the
- *  plan's volume gate is the cohort, not the queue. */
+ *  plan's volume gate is the cohort, not the queue. excludeJobId omits one
+ *  job from the search, which is how a claimed job re-validates itself
+ *  without refusing on its own running row. */
 export async function findActiveOutreachFullScanJob(
   connection: Connection,
   candidateId: string,
+  excludeJobId?: string,
 ): Promise<JobDocument | null> {
   return createJobModel(connection)
     .findOne({
       type: 'outreach-full-scan',
       status: { $in: ['queued', 'running'] },
       'options.outreachCandidateId': candidateId,
+      ...(excludeJobId === undefined ? {} : { jobId: { $ne: excludeJobId } }),
     })
     .sort({ createdAt: -1 })
     .lean<JobDocument>();

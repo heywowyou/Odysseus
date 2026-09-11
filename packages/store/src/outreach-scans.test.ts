@@ -328,6 +328,49 @@ describe.skipIf(!mongoAvailable)('planOutreachFullScan', () => {
     expect(active?.options.outreachCandidateId).toBe(candidate.candidateId);
   });
 
+  it('excludes the claimed job itself from the claim-time re-check', async () => {
+    const { candidate, cohortId } = await seedSelectedCandidate('selfclaim.fr');
+    const jobId = await seedJob({
+      type: 'outreach-full-scan',
+      status: 'running',
+      siteUrl: 'https://selfclaim.fr/',
+      candidateId: candidate.candidateId,
+    });
+    const plan = await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS, {
+      excludeJobId: jobId,
+    });
+    expect(plan).toMatchObject({
+      candidateId: candidate.candidateId,
+      domain: 'selfclaim.fr',
+      cohortId,
+      scoringVersion: 'hotel-outreach-v1',
+    });
+    expect(
+      await findActiveOutreachFullScanJob(connection!, candidate.candidateId, jobId),
+    ).toBeNull();
+  });
+
+  it('still refuses with an exclusion when a different scan is in flight', async () => {
+    const { candidate } = await seedSelectedCandidate('twoscan.fr');
+    const otherJobId = await seedJob({
+      type: 'outreach-full-scan',
+      status: 'queued',
+      siteUrl: 'https://twoscan.fr/',
+      candidateId: candidate.candidateId,
+    });
+    await seedJob({
+      type: 'outreach-full-scan',
+      status: 'running',
+      siteUrl: 'https://twoscan.fr/',
+      candidateId: candidate.candidateId,
+    });
+    expect(
+      await planOutreachFullScan(connection!, candidate.candidateId, VERSIONS, {
+        excludeJobId: otherJobId,
+      }),
+    ).toEqual({ refused: 'already-in-flight' });
+  });
+
   it('finds an active full-audit job for the same host', async () => {
     await seedJob({ type: 'full-audit', status: 'queued', siteUrl: 'https://www.busy.fr/' });
     expect(await findActiveScanJobForHost(connection!, 'busy.fr')).not.toBeNull();

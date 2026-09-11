@@ -87,9 +87,13 @@ describe('runOutreachFullScanJob', () => {
   it('re-validates the plan, runs the audit stage with outreach provenance, and stops before analysis', async () => {
     await runOutreachFullScanJob(fakeJob(), fakeContext());
 
-    expect(planOutreachFullScan).toHaveBeenCalledWith(fakeConnection, 'candidate-1', {
-      qualificationVersion: 'v-test',
-    });
+    expect(planOutreachFullScan).toHaveBeenCalledWith(
+      fakeConnection,
+      'candidate-1',
+      { qualificationVersion: 'v-test' },
+      // The claim-time re-check must not match the running job itself.
+      { excludeJobId: 'job-1' },
+    );
     expect(runAuditStage).toHaveBeenCalledTimes(1);
     const [, options] = vi.mocked(runAuditStage).mock.calls[0]!;
     expect(options.outreachContext).toEqual({

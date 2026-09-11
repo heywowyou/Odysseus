@@ -52,9 +52,14 @@ export async function runOutreachFullScanJob(
   const release = await originLock.acquire(origin);
 
   try {
-    const plan = await planOutreachFullScan(connection, outreachCandidateId, {
-      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
-    });
+    const plan = await planOutreachFullScan(
+      connection,
+      outreachCandidateId,
+      { qualificationVersion: CURRENT_QUALIFICATION_VERSION },
+      // The claim already flipped this job to `running`, so the in-flight
+      // check must exclude the job itself or every scan would refuse.
+      { excludeJobId: job.jobId },
+    );
     if ('refused' in plan) {
       await failJob(connection, job.jobId, `outreach full scan refused: ${plan.refused}`);
       return;
