@@ -8,6 +8,15 @@ services:
       - '27018:27017'
     volumes:
       - mongo-test-data:/data/db
+    # The suite opens one connection pool per worker database, and mongod
+    # spends a descriptor per socket and per WiredTiger file. On the
+    # inherited Docker default it eventually refuses every connection with
+    # "Too many open files" and the whole store tier flakes or skips; 64000
+    # is MongoDB's own production floor for exactly this reason.
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
 
 volumes:
   mongo-test-data:
