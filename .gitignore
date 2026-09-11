@@ -36,3 +36,10 @@ coverage/
 # docs/agents/session-template.md, folded into canonical docs, and retained
 # while uncommitted work still needs provenance.
 /docs/session/current-session.md
+
+# Impeccable live-mode runtime state (helper recreates these; a future
+# .impeccable/live/config.json, if deliberately committed, stays trackable)
+.impeccable/live/server.json
+.impeccable/live/roots.json
+.impeccable/live/sessions/
+.impeccable/live/annotations/

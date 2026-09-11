@@ -1,5 +1,7 @@
 # Product
 
+<!-- impeccable:product-schema 1 -->
+
 ## Platform
 
 web
@@ -65,8 +67,11 @@ Constraints and terminology that bind future work:
 Explicitly undecided product facts, held for the operator:
 
 - Which site becomes the first public case study (brief section 11, open question 7).
-- Whether WCAG 2.2 AA applies as a binding internal standard to all new surfaces (dashboard, site) or only to the client-facing PDF, where it is already enforced.
-- The comp-first versus code-first build path default for new visual work.
+
+Resolved since the 2026-09-02 draft (operator-confirmed 2026-09-11 via impeccable init):
+
+- WCAG 2.2 AA binds as the internal accessibility standard on all new surfaces (site, dashboard, future UI), not only the client PDF; see Accessibility & Inclusion.
+- The comp-first versus code-first build path does not arise: no agent harness used on this repository has image generation, so new visual work runs code-first by necessity. Revisit only if a harness gains image generation.
 
 ## Brand Commitments
 
@@ -96,8 +101,9 @@ Explicitly undecided product facts, held for the operator:
 
 ## Accessibility & Inclusion
 
+- WCAG 2.2 AA is the binding internal accessibility standard for every new surface, public site and dashboard alike, not only the client PDF (operator decision, 2026-09-11). Existing enforcement: the report's axe self-test, the site-wide axe sweep shipped with plan 038, and the dashboard v2 render axe e2e shipped with plan 037.
 - The client-facing PDF report is required to pass its own axe-core WCAG 2.2 AA self-test with zero violations (shipped in milestone 6.2 and enforced by a test). Report color tokens were lightened specifically to clear 4.5:1 contrast; do not revert them without re-running that test.
 - Bilingual French and English delivery is a product requirement, not a nice-to-have.
 - Reports are written for readers who are not developers: business impact, effort, and priority in plain language, with code detail confined to the appendix.
 
-<!-- Drafted 2026-09-02 from repository documents (docs/product/odysseus-project-brief.md, docs/rules/offer-positioning.md); operator-confirmed as drafted 2026-09-02 (plan 022 steps 1 and 5). The undecided product facts above stay held for the operator. -->
+<!-- Drafted 2026-09-02 from repository documents (docs/product/odysseus-project-brief.md, docs/rules/offer-positioning.md); operator-confirmed as drafted 2026-09-02 (plan 022 steps 1 and 5). Refreshed 2026-09-11 via impeccable init (schema marker added): WCAG 2.2 AA confirmed binding on all new surfaces, build-path question closed for lack of image generation; the case-study choice stays held for the operator. All other content reconfirmed unchanged on 2026-09-11. -->
