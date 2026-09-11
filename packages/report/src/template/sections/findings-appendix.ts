@@ -504,29 +504,32 @@ function renderRuleGroup(
   // fragment lost its `<thead>`, clone the header back in from the first
   // fragment and re-paginate once.
   //
-  // Issue #172: the inline declaration on the thead below is load-bearing,
-  // but NOT through the mechanism an earlier comment claimed. It is not a
-  // keep-with-next: Paged.js only learns break-before/break-after from
-  // stylesheet declarations its breaks module parses (stamping
-  // data-previous-break-after attributes the chunker acts on), an inline
-  // style never passes that parser, and the stylesheet variant
-  // `table[data-appendix-rule-id] thead { break-after: avoid }` was measured
-  // (2026-09-11, 30-row synthetic rule group through the real pipeline) to
-  // stamp the attribute on the table's tbody while changing the paginated
-  // output not at all - the chunker splits tables between rows and never
-  // proposes the thead/tbody boundary as a break point. What the inline
-  // declaration measurably does do is decide whether the #45 repair loop
-  // converges on a split rule group: with it, a reinserted table whose rows
-  // overflow again keeps its cloned header on the continuation fragment
-  // (5/5 runs converge); without it the header is abandoned as a header-only
-  // fragment every pass and the splits never resolve (5/5 runs fail). The
-  // divergence appears only during pagination - pre-pagination geometry is
-  // byte-identical and Paged.js never reads thead computed styles - so the
-  // lever is Chromium-side, not the breaks parser. It therefore stays, and
-  // the guarantee a reader actually cares about - a header never prints
-  // stranded alone at a page bottom - comes from pdf.ts's post-layout work:
-  // the repair re-pagination followed by removeEmptyAppendixTableGhosts,
-  // which deletes any header-only table fragment once layout has settled.
+  // Issue #172, resolved by #179: this thead used to carry an inline
+  // break-after:avoid that was measured load-bearing - the #45 repair loop
+  // only converged on a split rule group while it was present (5/5 with,
+  // 5/5 deterministic failures without) - but through no mechanism anyone
+  // could name. It was not a keep-with-next: Paged.js only learns
+  // break-before/break-after from stylesheet declarations its breaks module
+  // parses (stamping data-previous-break-after attributes the chunker acts
+  // on), an inline style never passes that parser, and the stylesheet
+  // equivalent `table[data-appendix-rule-id] thead { break-after: avoid }`
+  // was measured (2026-09-11, 30-row synthetic rule group through the real
+  // pipeline) to stamp the attribute on the table's tbody while changing
+  // the paginated output not at all - the chunker splits tables between
+  // rows and never proposes the thead/tbody boundary as a break point. The
+  // divergence appeared only during pagination - pre-pagination geometry
+  // was byte-identical and Paged.js never reads thead computed styles - so
+  // the lever was Chromium-side, undocumented, and one browser upgrade
+  // away from silently disappearing. The reliance is now gone by
+  // construction: the repair's own source patch marks each reopened table
+  // data-appendix-continuation and a stylesheet break-before: page
+  // (pdf.ts, insertRepeatedTheadsIntoHtml) makes it open at a page top
+  // with its rows under its header, so convergence is structural. The
+  // inline declaration is therefore removed, and the guarantee a reader
+  // actually cares about - a header never prints stranded alone at a page
+  // bottom - comes from pdf.ts's post-layout work: the repair
+  // re-pagination followed by removeEmptyAppendixTableGhosts, which
+  // deletes any header-only table fragment once layout has settled.
   // Splitting each group into one table per
   // page-worth of rows cannot work either: sheet layout is decided by
   // Paged.js at render time, and a hand-split table would just break at
@@ -558,7 +561,7 @@ function renderRuleGroup(
       </div>
       <table style="${APPENDIX_TABLE_STYLE}" data-appendix-rule-id="${escapeHtml(group.ruleId)}">
         <colgroup>${APPENDIX_COLUMN_WIDTHS.map((w) => `<col style="width:${w}">`).join('')}</colgroup>
-        <thead style="break-after:avoid">
+        <thead>
           <tr>
             ${headCell(a.findingIdColumnLabel, APPENDIX_COLUMN_WIDTHS[0])}
             ${headCell(a.pagesColumnLabel, APPENDIX_COLUMN_WIDTHS[1])}

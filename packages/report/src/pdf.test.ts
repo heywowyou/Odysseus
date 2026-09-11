@@ -252,6 +252,120 @@ describe('insertRepeatedTheadsIntoHtml', () => {
   });
 });
 
+// Issue #179: the repair's reopened tables are forced onto a fresh page by
+// a stylesheet rule, so the bounded repair loop converges by construction
+// instead of riding on browser internals.
+describe('insertRepeatedTheadsIntoHtml fresh-page guarantee', () => {
+  it('marks every reopened table with data-appendix-continuation and leaves the original unmarked', () => {
+    const html = buildAppendixTableHtml('rule-a', ['f001', 'f002', 'f003']);
+    const preambles = extractAppendixTablePreambles(html);
+    const splits: AppendixTableSplitPoint[] = [
+      { ruleId: 'rule-a', continuationRowId: 'annexref-f002' },
+    ];
+
+    const patched = insertRepeatedTheadsIntoHtml(html, splits, preambles);
+
+    expect(patched.match(/data-appendix-continuation="rule-a"/gu)).toHaveLength(1);
+    const secondTableStart = patched.indexOf('<table ', patched.indexOf('<table ') + 1);
+    expect(patched.slice(secondTableStart, secondTableStart + 60)).toContain(
+      'data-appendix-continuation',
+    );
+  });
+
+  it('injects the break-before: page rule once, before </head>', () => {
+    const html =
+      `<html><head><title>t</title></head><body>` +
+      buildAppendixTableHtml('rule-a', ['f001', 'f002']) +
+      `</body></html>`;
+    const preambles = extractAppendixTablePreambles(html);
+    const splits: AppendixTableSplitPoint[] = [
+      { ruleId: 'rule-a', continuationRowId: 'annexref-f002' },
+    ];
+
+    const patched = insertRepeatedTheadsIntoHtml(html, splits, preambles);
+
+    expect(patched.match(/table\[data-appendix-continuation\]/gu)).toHaveLength(1);
+    expect(patched).toContain('table[data-appendix-continuation] { break-before: page; }');
+    expect(patched.indexOf('break-before: page')).toBeLessThan(patched.indexOf('</head>'));
+  });
+
+  it('does not duplicate the injected rule when applied again across repair passes', () => {
+    const html =
+      `<html><head></head><body>` +
+      buildAppendixTableHtml('rule-a', ['f001', 'f002', 'f003']) +
+      `</body></html>`;
+    const preambles = extractAppendixTablePreambles(html);
+    const firstSplits: AppendixTableSplitPoint[] = [
+      { ruleId: 'rule-a', continuationRowId: 'annexref-f002' },
+    ];
+    const once = insertRepeatedTheadsIntoHtml(html, firstSplits, preambles);
+    const secondSplits: AppendixTableSplitPoint[] = [
+      { ruleId: 'rule-a', continuationRowId: 'annexref-f003' },
+    ];
+
+    const twice = insertRepeatedTheadsIntoHtml(once, secondSplits, preambles);
+
+    expect(twice.match(/<style>table\[data-appendix-continuation\]/gu)).toHaveLength(1);
+  });
+
+  it('leaves the reopened table unmarked when the split is the retreat shape (continuation at the group first row)', () => {
+    const html =
+      `<html><head></head><body>` +
+      buildAppendixTableHtml('rule-a', ['f001', 'f002', 'f003']) +
+      `</body></html>`;
+    const preambles = extractAppendixTablePreambles(html);
+    const splits: AppendixTableSplitPoint[] = [
+      { ruleId: 'rule-a', continuationRowId: 'annexref-f001' },
+    ];
+
+    const patched = insertRepeatedTheadsIntoHtml(html, splits, preambles);
+
+    expect(patched.match(/<table /gu)).toHaveLength(2);
+    expect(patched).not.toContain('data-appendix-continuation');
+    expect(patched).not.toContain('break-before: page');
+  });
+
+  it('leaves a strand-repaired rule id unmarked while still cloning its header, and marks a split-only rule in the same pass', () => {
+    const html =
+      `<html><head></head><body>` +
+      buildAppendixTableHtml('rule-a', ['f001', 'f002']) +
+      buildAppendixTableHtml('rule-b', ['g001', 'g002']) +
+      `</body></html>`;
+    const preambles = extractAppendixTablePreambles(html);
+    const splits: AppendixTableSplitPoint[] = [
+      { ruleId: 'rule-a', continuationRowId: 'annexref-f002' },
+      { ruleId: 'rule-b', continuationRowId: 'annexref-g002' },
+    ];
+
+    const patched = insertRepeatedTheadsIntoHtml(html, splits, preambles, new Set(['rule-a']));
+
+    expect(patched.match(/<table /gu)).toHaveLength(4);
+    expect(patched).not.toContain('data-appendix-continuation="rule-a"');
+    expect(patched).toContain('data-appendix-continuation="rule-b"');
+    expect(patched).toContain('break-before: page');
+  });
+
+  it('clones the header but skips the mark for a rule id outside scanner-id characters', () => {
+    // A space round-trips through the preamble extractor's rule-id capture
+    // but fails the scanner-id charset the attribute value is constrained
+    // to, which is exactly the drift the mark's guard exists for.
+    const html =
+      `<html><head></head><body>` +
+      buildAppendixTableHtml('rule id', ['f001', 'f002']) +
+      `</body></html>`;
+    const preambles = extractAppendixTablePreambles(html);
+    const splits: AppendixTableSplitPoint[] = [
+      { ruleId: 'rule id', continuationRowId: 'annexref-f002' },
+    ];
+
+    const patched = insertRepeatedTheadsIntoHtml(html, splits, preambles);
+
+    expect(patched.match(/<table /gu)).toHaveLength(2);
+    expect(patched).not.toContain('data-appendix-continuation');
+    expect(patched).not.toContain('break-before: page');
+  });
+});
+
 /** A 200x400 printable content rectangle (the coordinate space every case
  *  below shares) and a 100x50 painted box resting comfortably inside it. */
 function overflowContentRect(overrides: Partial<PagedRect> = {}): PagedRect {

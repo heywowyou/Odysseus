@@ -500,18 +500,23 @@ export function extractAppendixTablePreambles(html: string): Map<string, string>
  *  reflow onto the space it leaves behind, since Paged.js already decided no
  *  more content fit there.
  *
- *  Issue #172: this cleanup, together with the repair re-pagination above,
- *  is the whole guarantee that a cloned header never prints stranded - no
- *  stylesheet break hint can do it. Paged.js reads break-before/break-after
- *  only from stylesheet declarations its breaks module parses, never inline
- *  styles, and the one stylesheet break-after: avoid tried on the thead
- *  (2026-09-11, 30-row fixture, real pipeline) left pagination unchanged:
- *  it stamped data-previous-break-after on the table's tbody, a boundary
- *  the chunker never proposes as a break point (it breaks between rows).
- *  The thead's inline break-after:avoid declaration (findings-appendix.ts)
- *  stays for a different measured reason: the repair loop only converges on
- *  a split rule group while it is present - without it every pass re-creates
- *  header-only fragments and the splits never resolve. */
+ *  Issue #172, closed by #179: this cleanup was, together with the repair
+ *  re-pagination above, half of the guarantee that a cloned header never
+ *  prints stranded. The other half used to be an accident: the thead's
+ *  inline break-after:avoid (findings-appendix.ts) decided whether the
+ *  repair loop converged at all, through Chromium behaviour no one could
+ *  name. Paged.js reads forced breaks only from stylesheet declarations its
+ *  breaks module parses, never inline styles, and the stylesheet
+ *  break-after: avoid tried on the thead (2026-09-11, 30-row fixture, real
+ *  pipeline) left pagination unchanged: it stamped data-previous-break-after
+ *  on the table's tbody, a boundary the chunker never proposes as a break
+ *  point (it breaks between rows). #179 removed the reliance by
+ *  construction: the repair's reopened tables now carry
+ *  data-appendix-continuation and a stylesheet break-before: page, so they
+ *  open at a page top with at least one row under their header and
+ *  convergence no longer hinges on browser internals. This cleanup stays as
+ *  the unconditional post-layout backstop: any header-only fragment that
+ *  ever still appears is deleted here, before the gates run. */
 async function removeEmptyAppendixTableGhosts(page: Page): Promise<void> {
   await page.evaluate(() => {
     const tables = Array.from(document.querySelectorAll('table[data-appendix-rule-id]'));
@@ -523,6 +528,18 @@ async function removeEmptyAppendixTableGhosts(page: Page): Promise<void> {
   });
 }
 
+/** Marks a table the repair reopened so the injected stylesheet rule below
+ *  can force it onto a fresh page. The value is the rule id, for diagnostics
+ *  only - the selector deliberately does not key on it. */
+const APPENDIX_CONTINUATION_ATTR = 'data-appendix-continuation';
+
+/** The repair's convergence guarantee (issue #179), as a stylesheet rule:
+ *  a reopened table always opens at a page top, so its cloned header always
+ *  has at least one finding row under it. Stylesheet, not inline, because
+ *  Paged.js reads forced breaks only from declarations its breaks module
+ *  parses - the same channel forceBreakBeforeAppendixRuleGroups uses. */
+const APPENDIX_CONTINUATION_BREAK_RULE = `table[${APPENDIX_CONTINUATION_ATTR}] { break-before: page; }`;
+
 /** Pure string transform, no browser needed: for each detected split point,
  *  closes the currently-open table right before the continuation row and
  *  reopens a fresh, valid sibling `<table>` (same rule id, colgroup and a
@@ -531,20 +548,84 @@ async function removeEmptyAppendixTableGhosts(page: Page): Promise<void> {
  *  with two `<thead>` elements, and mirrors what Paged.js already treats
  *  each page's fragment as. Never forces a whole rule group onto one page
  *  (trade-off 17): it only ever duplicates the header markup that was
- *  already going to render at that exact row. */
+ *  already going to render at that exact row.
+ *
+ *  Issue #179: each reopened table is also marked
+ *  `data-appendix-continuation` and the matching break-before: page rule is
+ *  injected once before `</head>`. Without it, whether a reopened table
+ *  kept its cloned header instead of stranding it as a header-only fragment
+ *  at the page being closed decided the bounded repair loop's convergence,
+ *  and that decision rode on undocumented Chromium behaviour (the thead's
+ *  since-retired inline break-after:avoid, findings-appendix.ts). With it,
+ *  convergence is structural: the reopened table opens at a page top, so
+ *  the split it repairs cannot re-form at that boundary. The price is a
+ *  possibly shorter page before each reopened table, the same cost the #170
+ *  strand repair already pays for moving a group start. Rule ids are
+ *  constrained to scanner-id characters before being embedded in the
+ *  attribute value; anything else still gets the cloned header, just no
+ *  mark, and the fail-closed gates stay the backstop.
+ *
+ *  Two shapes are deliberately left unmarked, both measured:
+ *
+ *  A split whose continuation row is the group's FIRST finding row is not a
+ *  mid-table split - it is the retreat shape, where Paged.js keeps the
+ *  header with the group heading and moves every row (the #170 fixture
+ *  shape). Forcing that reopened table onto a fresh page would yank the
+ *  rows away from a heading the strand repair relocates in the very same
+ *  pass, and the heading would strand between the two forced breaks
+ *  (measured, filler 150mm of the heading-keep sweep).
+ *
+ *  A rule id the same pass also strand- or duplication-repairs
+ *  (strandRepairedRuleIds) gets no marks either: its group-level
+ *  break-before: page already relocates the group start, and stacking a
+ *  table-level forced break inside a group whose heading Paged.js clones at
+ *  internal fragment boundaries produced strand shapes the once-only group
+ *  rules cannot reach (measured on the stress fixture, paged-invariants'
+ *  #171 gauntlet). The exemption is per pass: a group whose strand clears
+ *  while its split persists gets marked on a later pass. In both shapes the
+ *  header clone still rides along, unmarked. */
 export function insertRepeatedTheadsIntoHtml(
   html: string,
   splits: readonly AppendixTableSplitPoint[],
   tablePreambleByRuleId: ReadonlyMap<string, string>,
+  strandRepairedRuleIds: ReadonlySet<string> = new Set(),
 ): string {
   let result = html;
+  let markedTables = 0;
   for (const { ruleId, continuationRowId } of splits) {
     const preamble = tablePreambleByRuleId.get(ruleId);
     if (!preamble) continue;
     const rowMarker = `<tr id="${continuationRowId}"`;
     const rowIndex = result.indexOf(rowMarker);
     if (rowIndex === -1) continue;
-    result = `${result.slice(0, rowIndex)}</tbody></table>${preamble}${result.slice(rowIndex)}`;
+    // The original table always precedes any reopened sibling, so this is
+    // the original table's opening tag.
+    const originalTableIndex = result.indexOf(preamble);
+    const firstRowIndex =
+      originalTableIndex === -1
+        ? -1
+        : result.indexOf('<tr id="annexref-', originalTableIndex + preamble.length);
+    const isRetreatShape = firstRowIndex !== -1 && result.startsWith(rowMarker, firstRowIndex);
+    const markable =
+      /^[a-z0-9._-]+$/i.test(ruleId) && !isRetreatShape && !strandRepairedRuleIds.has(ruleId);
+    if (markable) {
+      const markedPreamble = preamble.replace(
+        '<table',
+        `<table ${APPENDIX_CONTINUATION_ATTR}="${ruleId}"`,
+      );
+      result = `${result.slice(0, rowIndex)}</tbody></table>${markedPreamble}${result.slice(rowIndex)}`;
+      markedTables++;
+    } else {
+      result = `${result.slice(0, rowIndex)}</tbody></table>${preamble}${result.slice(rowIndex)}`;
+    }
+  }
+  const headClose = result.indexOf('</head>');
+  if (
+    markedTables > 0 &&
+    headClose !== -1 &&
+    !result.includes(`table[${APPENDIX_CONTINUATION_ATTR}]`)
+  ) {
+    result = `${result.slice(0, headClose)}<style>${APPENDIX_CONTINUATION_BREAK_RULE}</style>${result.slice(headClose)}`;
   }
   return result;
 }
@@ -793,10 +874,12 @@ export async function renderPdfWithPageCountFromHtml(
     let currentHtml = html;
     await runPagedjsPreview(currentHtml);
 
-    // Issue #45, second half + issue #170 + issue #171: repair, against the
-    // real post-layout DOM, the three appendix pagination defects the layout
-    // engine itself cannot be talked out of - a rule group continuation
-    // fragment missing its column header (#45), a rule group heading
+    // Issue #45, second half + issue #170 + issue #171 + issue #179: repair,
+    // against the real post-layout DOM, the three appendix pagination defects
+    // the layout engine itself cannot be talked out of - a rule group
+    // continuation fragment missing its column header (#45, whose repair
+    // also forces each reopened table onto a fresh page so convergence is
+    // structural, not a favour from browser internals), a rule group heading
     // stranded at a page bottom with its whole table on the next page
     // (#170), and a rule group heading Paged.js silently duplicated with no
     // console error (#171). All three repairs patch the pre-pagination HTML
@@ -822,9 +905,10 @@ export async function renderPdfWithPageCountFromHtml(
       );
       if (splits.length === 0 && stranded.length === 0 && duplicated.length === 0) break;
       const preambles = extractAppendixTablePreambles(currentHtml);
+      const strandIds = new Set([...stranded, ...duplicated]);
       const patched = forceBreakBeforeAppendixRuleGroups(
-        insertRepeatedTheadsIntoHtml(currentHtml, splits, preambles),
-        [...new Set([...stranded, ...duplicated])],
+        insertRepeatedTheadsIntoHtml(currentHtml, splits, preambles, strandIds),
+        [...strandIds],
       );
       if (patched === currentHtml) break;
       currentHtml = patched;
