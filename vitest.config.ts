@@ -44,6 +44,14 @@ export default defineConfig({
     passWithNoTests: true,
     environment: 'node',
     globalSetup: ['./scripts/vitest-global-setup.mjs'],
+    /** The 5s vitest default is a browser-era default, not a measured
+     *  bound: the store tier runs real Mongo I/O against the Docker
+     *  container, and under a full parallel run individual tests
+     *  routinely and randomly crossed 5s while their suites passed every
+     *  time in isolation. A ceiling only matters when a test is genuinely
+     *  stuck, and a stuck test is just as stuck at 20s; a passing suite
+     *  never waits on it. */
+    testTimeout: 20_000,
     projects: [
       {
         extends: true,
