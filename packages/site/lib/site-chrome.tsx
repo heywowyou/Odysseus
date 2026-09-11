@@ -17,7 +17,6 @@ const LABELS = {
   fr: {
     skip: 'Aller au contenu',
     mainNav: 'Navigation principale',
-    home: 'Accueil',
     offer: "L'offre",
     bot: 'OdysseusBot',
     legalNav: 'Pages légales',
@@ -30,7 +29,6 @@ const LABELS = {
   en: {
     skip: 'Skip to content',
     mainNav: 'Main navigation',
-    home: 'Home',
     offer: 'Offer',
     bot: 'OdysseusBot',
     legalNav: 'Legal pages',
@@ -56,10 +54,10 @@ function SiteHeader() {
         <a className="wordmark" href="/">
           Odysseus
         </a>
+        {/* No separate "Accueil"/"Home" link: the wordmark already goes
+            home, and repeating the destination in the nav read as a
+            duplicate link to the same place (critique, minor observations). */}
         <nav aria-label={t.mainNav} className="header-nav">
-          <a className="navlink" href="/">
-            {t.home}
-          </a>
           <a className="navlink" href="/offre">
             {t.offer}
           </a>

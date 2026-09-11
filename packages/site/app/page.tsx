@@ -104,7 +104,7 @@ function HomeFr() {
 
         <div className="split mt-10 hero-split">
           <div className="split-main">
-            <p className="lede">
+            <p className="lede measure">
               Odysseus analyse l&apos;ensemble de votre site avec des outils de mesure automatisés,
               puis remet un rapport en français et en anglais&#160;: une liste de corrections
               hiérarchisée, vérifiable constat par constat, prête à transmettre à votre prestataire.
@@ -469,7 +469,7 @@ function HomeEn() {
 
         <div className="split mt-10 hero-split">
           <div className="split-main">
-            <p className="lede">
+            <p className="lede measure">
               Odysseus analyses your whole site with automated measuring tools, then delivers a
               report in French and English: a prioritised list of corrections, verifiable finding by
               finding, ready to hand to your web provider.
