@@ -5,53 +5,73 @@ Read this before touching anything under `packages/report/src/template` or
 `packages/report/src/styles`.
 
 The visual design is not open for reinterpretation. It exists as source, not as
-a screenshot to approximate. The current baseline is the 2026-09-02 plan 023
-refinement (operator-picked direction "Refine Nocturne": keep the dark
-executive world and Inter; recompose the front matter, document the checklist's
-print mode, and restore spacing rhythm). A future revision re-runs plan 023's
-gate; it does not happen inline:
+a screenshot to approximate. The current baseline is the 2026-09-11 plan 039
+direction pick (operator-picked direction "carry the public site's design
+language": the site's dark near-navy scheme, sky accent, and Avenir Next
+replace the plan 023 Nocturne identity - ground `#161826`, violet accent,
+Inter - while plan 023's composition contracts are preserved unchanged). A
+future revision re-runs the same gate; it does not happen inline:
 
 | Artifact | Path | Status |
 | --- | --- | --- |
-| Design system CSS | `packages/report/src/styles/nocturne.css` | token source of truth; revise only per this document, plan 023 baseline |
+| Design system CSS | `packages/report/src/styles/nocturne.css` | token source of truth; revise only per this document, plan 039 baseline |
 | Paged media layer | `packages/report/src/styles/paged.css` | edit only per this doc |
 | Reference template | `packages/report/src/template/report.reference.html` | structural source of truth |
 
 If output does not match the reference, the template binding is wrong. Do not
 fix it by changing colours, sizes, spacing or inline styles.
 
-## Direction contract (plan 023, recorded 2026-09-02)
+## Direction contract (plan 039, recorded 2026-09-11)
 
-- **Thesis**: the report keeps the Nocturne identity; the refinement changes
-  completion, not character: composed front matter, one documented print-first
-  page, and real spacing rhythm.
-- **Own-world**: a dark, quiet executive dossier: `#161826` ground, panel and
-  hairline dividers, violet accent, muted severity pastels, Inter self-hosted
-  (400/500/600/700 plus the kept 400 italic). The one deliberate exception
-  stays: section 05's print inversion to `#f7f7f5`.
-- **Story**: a client opens a calm dark cover whose lower half ends
-  deliberately instead of trailing into void, reads a metadata sheet that
-  fills its page with intent, works through evenly spaced sections, and can
-  pull out the checklist to print or capture alone, the only light page, on
-  purpose.
-- **First viewport (cover)**: the radial glow and the mid-page title block
-  stay; the closing composition (accent rule, report type, date, Odysseus
-  signature) sits at roughly two-thirds page height, followed by quiet ground,
-  so the sheet ends by design. No new world elements.
-- **Form**: A4 paged PDF via Paged.js; one numbered section start per page;
-  dark everywhere except the documented print-inverted checklist; footers and
-  counters unchanged; no section-order or structure change.
+- **Thesis**: the report and the v2 outreach preview join the public
+  site's identity, the evidence desk's dark register. Identity changes,
+  structure does not: same sections, same composition contracts, same
+  pagination meaning, now wearing the site's near-navy world, ink ladder,
+  sky accent, typeface, and dossier card motif. Plan 023's composition
+  refinement (two-act front matter, per-section heading rhythm, the
+  `--space-12` sheet-level step) is preserved unchanged.
+- **Own-world**: dark near-navy from the site's dark scheme: ground
+  `#0e141c`, raised surfaces `#16202c`, ink `#e9eef5` / `#b6c1ce` /
+  `#909cab`, hairline dividers at 13 percent ink, sky accent `#38bdf8`
+  (the site's own dark-mode accent, Tailwind sky-400), Avenir Next
+  self-hosted (400/500/600/700 plus a real 400 italic for `.cross`;
+  operator-licensed for PDF and bucket-served web embedding, confirmed at
+  the plan 039 direction pick). The dossier marks (finding red `#dc2626`,
+  evidence = the accent, signal green `#43aa8b`) appear only as the
+  finding cards' row dashes and the preview proof-card mark: decoration,
+  never text, never severity (DESIGN.md, "The Dossier Rule Set"). The one
+  deliberate exception stays: section 05's print inversion to `#f7f7f5`.
+- **Story**: the same reading path as under plan 023, opening on a
+  sky-navy glow instead of violet, finding cards reading as the site's
+  dossier cards, the printable checklist still handing over as the one
+  light page, on purpose.
+- **First viewport (cover)**: the radial glow is recomposed in the
+  sky/navy family (a deep sky-navy bloom on the near-navy ground); the
+  mid-page title block and the two-thirds closing composition (accent
+  rule, report type, date, Odysseus signature) are unchanged in
+  structure. No new world elements.
+- **Form**: A4 paged PDF via Paged.js; one numbered section start per
+  page; dark everywhere except the documented print-inverted checklist;
+  footers and counters unchanged; the outreach preview renders fixed dark
+  matching the PDF (no `prefers-color-scheme` switch; its PDF export
+  prints through the same `#f7f7f5` block); no section-order or structure
+  change.
 
-Recorded at the plan 023 direction pick, while the Impeccable skill (removed
-after that plan, reinstalled persistently 2026-09-11, trade-offs.md#79)
-supplied detector input: Inter stays as the print face and the dark ground
-stays, both consciously kept against that skill's bans (its `overused-font`
-findings on Inter declarations and its dark-ground penalties were known
-noise for report HTML). The `monotonous-spacing` finding was not kept: the
-rhythm rules in section 2 are its fix. Since the 2026-09-11 reinstall, the
-`overused-font`/Inter finding stays suppressed for `packages/report/**` via
-a committed `.impeccable/config.json` ignore-value rather than by the skill
-being absent from the repo; see trade-offs.md#79 before changing it.
+Recorded at the plan 039 direction pick, from the read-only evidence pack
+of 2026-09-11 (`.impeccable/critique/2026-09-11T14-30-00Z__packages-report/`).
+The Impeccable skill's detector input, per trade-offs.md#79: the dark
+ground stays, consciously kept against the skill's dark-ground penalties.
+The former Inter keep is dissolved: Avenir Next replaces it, so the
+`overused-font` ignore for `packages/report/**` in
+`.impeccable/config.json` is dead and is removed by this plan (binding
+decision 9). The `kicker-above-heading` ban is consciously not applied to
+the report's numbered h6 eyebrow (`NN · SECTION NAME`): it is the
+section-header navigation device and its text is locked content; the
+preview's hero label string also stays, but its treatment is de-kickered
+(sentence case, body size, muted). The `skipped-heading` convention (h6
+eyebrow markup) is out of scope for visual revisions. The
+`monotonous-spacing` finding remains not kept: the rhythm rules in
+section 2 are its fix.
 
 ## 1. Why the previous approach failed
 
@@ -92,7 +112,9 @@ Rules:
   bleeds to the top edge).
 - `printBackground: true` and `print-color-adjust: exact`, or the dark ground
   does not print.
-- Inter is self-hosted in `packages/report/src/fonts` with `font-display: block`.
+- Avenir Next is self-hosted in `packages/report/src/fonts` (copied from the
+  operator's licensed kit, never imported from `packages/site`) with
+  `font-display: block`.
   No CDN, no `swap`. A swap during pagination changes measured heights and
   produces different page breaks on every run.
 - Every numbered section's `.sheet` starts on a fresh physical page: exactly
@@ -262,23 +284,41 @@ Canonical maps, taken from the design source:
 
 ```ts
 const SEVERITY = {
-  critical: { label: 'Critique', color: '#d97b82', bg: '#34232a' },
-  serious:  { label: 'Sérieux',  color: '#dba36c', bg: '#362a1c' },
-  moderate: { label: 'Modéré',   color: '#d6c96e', bg: '#35331c' },
-  minor:    { label: 'Mineur',   color: '#b2b6ca', bg: '#292b31' },
+  critical: { label: 'Critique', color: '#d97b82', bg: '#262028' },
+  serious:  { label: 'Sérieux',  color: '#dba36c', bg: '#272526' },
+  moderate: { label: 'Modéré',   color: '#d6c96e', bg: '#262a26' },
+  minor:    { label: 'Mineur',   color: '#b2b6ca', bg: '#222731' },
 };
 
 const CATEGORY = {
-  accessibility: { label: 'Accessibilité', color: '#9184d9', bg: '#2b2741' },
-  performance:   { label: 'Performance',   color: '#7fa8d9', bg: '#1f2a38' },
-  seo:           { label: 'SEO / légal',   color: '#6cbfae', bg: '#1c332e' },
-  rendering:     { label: 'Rendu / JS',    color: '#9397ab', bg: '#292b31' },
+  accessibility: { label: 'Accessibilité', color: '#7dd3fc', bg: '#1b2b37' },
+  performance:   { label: 'Performance',   color: '#7fa8d9', bg: '#1c2633' },
+  seo:           { label: 'SEO / légal',   color: '#6cbfae', bg: '#19292e' },
+  rendering:     { label: 'Rendu / JS',    color: '#909cab', bg: '#1a2530' },
 };
 
 const EFFORT = { low: 'Faible', medium: 'Moyen', high: 'Élevé' };
 const IMPACT = { low: 'Faible', medium: 'Moyen', high: 'Élevé' };
 const CATEGORY_ORDER = ['accessibility', 'seo', 'rendering', 'performance'];
 ```
+
+Severity and category tile fills are the documented 0.12-alpha tint of each
+pair's text colour over the ground `#0e141c`; the text colours are the
+plan 023 severity hues re-verified against the new tints (worst pair
+5.38:1, critical). The four severity text hexes deliberately do not match
+the dashboard's severity shades; that divergence predates this baseline
+and is recorded in the trade-off entry. The print block's severity-level
+pairs (checklist) are unchanged: they are derived against `#f7f7f5`,
+which this baseline does not move.
+
+The finding cards (section 04 priority/theme cards) carry the site's
+dossier card treatment: raised surface, hairline row separation, and a
+short round-capped dash (18px by 3px) before each evidence row's label -
+finding red on the problem row, the accent on the observed-evidence row,
+the signal green on the action row. The dashes are decoration in the
+site's own idiom (DESIGN.md, "The Dossier Rule Set"): the row labels
+carry the meaning, the dashes never encode severity, and they appear
+nowhere else in the document.
 
 ## 4. Invariants, assertable in a test
 

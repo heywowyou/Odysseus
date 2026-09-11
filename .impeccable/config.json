@@ -4,15 +4,6 @@
     "ignoreFiles": [],
     "ignoreValues": [
       {
-        "rule": "overused-font",
-        "value": "inter",
-        "files": [
-          "packages/report/**"
-        ],
-        "createdAt": "2026-09-11T00:44:59.104Z",
-        "reason": "Locked report design system (docs/report/report-design-system.md, plan 023): Inter is the deliberately kept print face, consciously ignored against this detector's own overused-font ban."
-      },
-      {
         "rule": "side-tab",
         "value": "*",
         "files": [

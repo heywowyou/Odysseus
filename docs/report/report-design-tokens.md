@@ -1,8 +1,8 @@
 # Report design tokens
 
 Source of truth: `docs/report/design/report-mockup-standalone.flat.html`, the
-"Nocturne" design system's plain-CSS mockup (tokens in a real `:root`
-block, real class names, Inter woff2 already inlined as data URIs). Read it
+plain-CSS mockup (tokens in a real `:root` block, real class names, the
+typeface's woff2 already inlined as data URIs). Read it
 directly as source, not from rendered pixels. The earlier generated PDFs and
 opaque bundled exports were removed after the flat sources became canonical.
 Where a section below still cites a page number, it has not yet been
@@ -11,6 +11,14 @@ reliable pass. The companion
 `docs/report/design/report-mockup-preview.flat.html` (outreach preview) reuses
 the same tokens rather than getting its own pass, since it is the same
 design system applied to a shorter document.
+
+Since plan 039 (2026-09-11) the flat sources carry the site-derived
+baseline: the palette is transcribed by hand from
+`packages/site/app/globals.css`'s dark scheme and the `DESIGN.md` "Site"
+sections (each value commented with its site origin in the flat file and
+in `nocturne.css`), not invented. The mockup remains the structural
+source (section skeletons, class names, composition); the colour, type,
+and card values come from the site.
 
 Applied to `packages/report/src/styles/nocturne.css` (tokens and the
 generic component layer) and `packages/report/src/styles/paged.css` (the
@@ -26,9 +34,12 @@ already uses (mm for spacing, pt for type), not re-eyeballed.
 
 Re-verified in full against the flat file on 2026-09-02 (plan 023 evidence
 step): every section below now reflects a source-to-source comparison, not
-sampled pixels. The earlier caveat (only the cover and metadata sheet
-verified) is discharged. What the verification found, and what this
-document now records:
+sampled pixels. Re-derived again on 2026-09-11 (plan 039): the palette,
+typeface, and card values were transcribed from the public site's dark
+scheme into the flat sources first, then into `nocturne.css`, so the
+source-to-source discipline now reads "flat file matches site tokens" for
+colour and type and "flat file matches mockup structure" for layout.
+What the plan 039 pass records:
 
 - **Match.** Tokens, generic component layer, cover skeleton, TOC rows,
   executive summary and its start-here list, stat/severity/category
@@ -36,106 +47,119 @@ document now records:
   maps match the flat source within the documented conversion rules.
 - **Documented intentional deviations, not drift** (each recorded in code
   and listed here once): 0.02em uppercase tracking everywhere (item 6,
-  Chromium text-run fix); `--accent`/`--crit` lightened for WCAG; missing
-  unicode-range font subsets; zero-count tile filtering (D7); theme-card
-  labelled boxes and meta grid (plan 018); checklist 7-column layout
-  (items 35/2.7); appendix real table, merged rule summaries, removed
-  minor-groups sub-table, per-finding URL rows (items 26/25/2.4/2.6);
-  next-steps prose synthesis (plan 018 step 7); TOC target-counter page
-  numbers (B8); relabelled jump links (item 5; their added underline was
-  dropped on operator direction 2026-09-03, so the labels now match the
-  flat source's non-underlined form); page numbers
+  Chromium text-run fix); severity/category text hexes kept from the plan
+  023 baseline where they clear 4.5:1 on the new tints (see the contrast
+  note); missing unicode-range font subsets; zero-count tile filtering
+  (D7); theme-card labelled boxes and meta grid (plan 018); checklist
+  7-column layout (items 35/2.7); appendix real table, merged rule
+  summaries, removed minor-groups sub-table, per-finding URL rows (items
+  26/25/2.4/2.6); next-steps prose synthesis (plan 018 step 7); TOC
+  target-counter page numbers (B8); relabelled jump links (item 5; their
+  added underline was dropped on operator direction 2026-09-03, so the
+  labels now match the flat source's non-underlined form); page numbers
   in `@page` margin boxes instead of markup; mm-based page geometry.
 - **Deliberate departures from the flat source, recorded where they
   live:** the metadata sheet's risk scale replaces the flat's single risk
   pill and severity legend (item 42, plan 018 step 4); the flat's TOC
   footnote is dropped (page numbers print since B8, making it stale) and
   the flat's conditional revenue-opportunity card is not ported (financial
-  wording moved to theme-card citations, plan 020). The plan 023
-  refinement then recomposed the cover's closing group and the metadata
-  sheet's risk band (see the cover and metadata bullets below) and
-  restored the per-section heading rhythm the live template had
-  flattened (see Spacing).
+  wording moved to theme-card citations, plan 020). Plan 023's
+  recomposition of the cover's closing group and the metadata sheet's
+  risk band, and its per-section heading rhythm, are preserved unchanged.
 - **Print-medium decision with no flat basis:** the checklist's light
   `@media print` inversion (`#f7f7f5`, paged.css). The flat mockup's
   checklist is dark; the inversion is guarded by the item 36 and item 0.1
-  suites and documented in the design-system document, section 2.
+  suites and documented in the design-system document, section 2. The
+  inversion keeps its reason under plan 039: the document stays dark, so
+  the one light print page stays a deliberate exception, and its
+  `#f7f7f5`/`#161826` pairs and severity-level print colours are
+  unchanged.
 
 ## Color
 
 All values are the ones actually shipped in `nocturne.css`'s `:root`
-block. Two (`--accent`, `--crit`) are deliberately lightened a few
-percent from the literal mockup pixel values - see "Contrast note" below.
+block. Since plan 039 the ground, ink ladder, accent, and hairline are
+transcribed from `packages/site/app/globals.css`'s dark scheme (each
+carrying a site-origin comment in the CSS); the severity and category
+tile fills are the documented 0.12-alpha tints of each pair's text colour
+over the new ground. The old Nocturne values (`#161826` ground, violet
+`#9184d9` accent, `#232532` surface) are retired.
 
-| Token | Value | Mockup source |
+| Token | Value | Site origin (dark scheme unless noted) |
 | --- | --- | --- |
-| `--bg` | `#161826` | page background |
-| `--panel` | `#232532` | card/tile fill |
-| `--panel-2` | `#2b2e40` | interpolated, one step lighter than `--panel` |
-| `--line` | `rgba(233, 233, 237, 0.16)` | divider/border |
-| `--ink` | `#e9e9ed` | primary text |
-| `--body` | `#cfd3e5` | secondary body text |
-| `--mute` | `#9397ab` | tertiary/meta labels |
-| `--accent` | `#9f94de` (mockup: `#9184d9`) | links, eyebrow labels, rank numbers |
-| `--accent-tint` | `rgba(145, 132, 217, 0.12)` | accent tile/badge fill |
-| `--crit` | `#dc848b` (mockup: `#d97b82`) | critical severity |
-| `--crit-tint` | `rgba(217, 123, 130, 0.12)` | |
-| `--maj` | `#dba36c` | serious/major severity |
-| `--maj-tint` | `rgba(219, 163, 108, 0.12)` | |
-| `--mod` | `#d6c96e` | moderate severity |
-| `--mod-tint` | `rgba(214, 201, 110, 0.12)` | |
-| `--min` | `#b2b6ca` | minor severity |
-| `--min-tint` | `rgba(178, 182, 202, 0.12)` | |
-| `--good` | `#7cd9a0` | quick-win / positive |
-| `--good-tint` | `rgba(124, 217, 160, 0.12)` | |
-| `--accent-200` | `#e7e5fe` | cover-only: kicker label on the radial-gradient ground (mockup `--color-accent-200`) |
-| `--section` | `#262a60` | cover-only: radial-gradient ground, outer stop (mockup `--color-section`) |
-| `--section-glow` | `#353b80` | cover-only: radial-gradient ground, inner stop (mockup `--color-section-glow`) |
+| `--bg` | `#0e141c` | site `--paper` |
+| `--panel` | `#16202c` | site `--paper-raised` |
+| `--panel-2` | `#1a2530` | one step above the site's raised on the same hue (site-family neutral-900) |
+| `--line` | `rgb(233 238 245 / 0.13)` | site `--line` |
+| `--ink` | `#e9eef5` | site `--ink` |
+| `--body` | `#b6c1ce` | site `--ink-soft` |
+| `--mute` | `#909cab` | site `--ink-muted` |
+| `--accent` | `#38bdf8` (sky-400) | site `--accent` (dark mode); links, eyebrow labels, rank numbers |
+| `--accent-tint` | `rgb(56 189 248 / 0.16)` | site `--accent-soft` |
+| `--crit` | `#d97b82` | plan 023 severity hue, re-verified (5.38:1 on its new tint) |
+| `--crit-tint` | `#262028` | 0.12 alpha of `--crit` over `--bg` |
+| `--maj` | `#dba36c` | plan 023 severity hue, re-verified (6.87:1) |
+| `--maj-tint` | `#272526` | 0.12 alpha over `--bg` |
+| `--mod` | `#d6c96e` | plan 023 severity hue, re-verified (8.63:1) |
+| `--mod-tint` | `#262a26` | 0.12 alpha over `--bg` |
+| `--min` | `#b2b6ca` | plan 023 severity hue, re-verified (7.44:1) |
+| `--min-tint` | `#222731` | 0.12 alpha over `--bg` |
+| `--good` | `#7cd9a0` | plan 023 positive green, re-verified (10.8:1 on `--bg`); quick-win fill `#1b2c2c` |
+| `--mark-finding` | `#dc2626` | site `--mark-finding`: the dossier problem-row dash only; never text |
+| `--mark-evidence` | `var(--accent)` | site `--mark-evidence`: the dossier evidence-row dash only |
+| `--signal` | `#43aa8b` | site `--signal`: the dossier action-row dash only; never text, never a severity |
+| `--accent-200` | `#cdeafd` | sky-200 (the accent's Tailwind family): cover-only kicker on the radial-gradient ground |
+| `--section` | `#0d1926` | sky-hued navy step on the site ground: cover gradient, outer stop |
+| `--section-glow` | `#14293e` | sky-hued navy step: cover gradient, inner stop |
+| `--section-ghost` | `#2a4666` | lighter ghost of the same family (mock content only) |
 
-Tint fills are a flat 0.12 alpha of the solid color over the surrounding
-background, matching the mockup's own approach (confirmed against the
-flat file's literal `rgba()`/`color-mix()` values, not just sampled
-pixels, now that the source is plain CSS).
+The neutral ramp is re-derived on the site ink's cool blue-grey hue
+(`--color-neutral-100` `#f0f4f9` through `--color-neutral-900` `#1a2530`),
+and the accent ramp is the accent's own Tailwind sky family
+(`--color-accent-100` `#eaf6fe` through `--color-accent-900` `#0c4a6e`),
+so tag and tile pairs read as one system. The violet second ramp
+(`--color-accent-2-*`) is kept unchanged: it now serves only the `geo`
+category (its former role as the accent's sibling is retired with the
+violet accent), and its text/fill pair still clears contrast on the new
+ground.
 
-**Contrast note.** The mockup's literal `--accent` (`#9184d9`) and
-`--crit` (`#d97b82`) clear 4.5:1 against plain `--bg` but drop to
-3.97:1 / 4.31:1 respectively when used as badge/tag text on a tinted
-`--panel` background (e.g. `.legal-tag`, `.sev-critical`) - a real
-combination this template renders. Caught by `render-html.axe.e2e.test.ts`,
-the report's own axe-core self-test against WCAG 2.2 AA. Both tokens are
-lightened just enough to clear 4.5:1 against that worst case with a
-small margin (visually indistinguishable from the mockup at normal
-viewing size). Do not revert to the literal mockup hex values without
-re-running that test.
+**Contrast note.** Every severity and category pair is computed, not
+eyed: text on its own 0.12 tint must clear 4.5:1, and the worst pair in
+the shipped palette is critical at 5.38:1. The four severity text hexes
+are deliberately the plan 023 hues rather than the dashboard's severity
+shades; the divergence predates this baseline and is recorded in the
+trade-off entry rather than silently harmonized. The checklist's print
+block pairs are unchanged (their ground `#f7f7f5` did not move).
+`render-html.axe.e2e.test.ts` and `render-html-v2.axe.e2e.test.ts` remain
+the gates: do not move any pair without re-running them.
 
 ## Typography
 
-Font: **Inter**, self-hosted as base64-embedded woff2, taken byte-for-byte
-from the flat mockup's own "latin" unicode-range `@font-face` blocks
-(weights 400/500/600/700) rather than re-sourced from `@fontsource/inter`
-separately - see the `@font-face` block at the top of `nocturne.css`.
-The mockup ships six other unicode-range subsets per weight (cyrillic,
-greek, vietnamese, etc.) that were left out: neither French nor English
-(this template's only two supported languages) needs them, and embedding
-all of it would nearly 7x the file's size on every report render. The
-mockup has no italic face at all; 400-italic (`.cross`, the
-diverted-finding strike-through note) is kept from the prior Inter
-embedding rather than dropped, so `.cross` keeps a real italic face
-instead of falling back to browser-synthesized fake italic.
+Font: **Avenir Next** (the public site's typeface), self-hosted in
+`packages/report/src/fonts` as woff2 files copied from the operator's
+licensed kit (Avenir Next Cyr cut, the same files the site ships: Regular
+400, Medium 500, Demi 600, Bold 700, plus Italic 400) and inlined as
+base64 data URIs at render time by `readStylesInlined()` - never imported
+from `packages/site`, and used only after the operator confirmed the
+licence covers PDF embedding and bucket-served web embedding (plan 039
+binding decision 9). `font-display: block`; no CDN, no `swap`. With
+Inter retired, the `overused-font` ignore for `packages/report/**` in
+`.impeccable/config.json` is dead and is removed by plan 039.
 
 | Weight | Style | Used for |
 | --- | --- | --- |
 | 400 | normal | body copy, table cells |
-| 400 | italic | `.cross` (diverted-finding strike-through note; not in the mockup, kept from the prior embedding) |
-| 500 | normal | `h1`/`h2`/`h3` (mockup's own `--font-heading-weight` token) |
-| 600 | normal | eyebrow labels, badges/chips read as headings (`.toc .n`, `.obs h3`, `.rule-title`, `.gloss-item dt`) |
+| 400 | italic | `.cross` (diverted-finding strike-through note); a real italic face, replacing the synthesized italic the Inter kit needed |
+| 500 | normal | medium emphasis inside prose (`.theme-meta .v`, strong-in-muted contexts that read better below 700) |
+| 600 | normal | `h1`-`h6` (`--font-heading-weight`, matching the site's heading weight), eyebrow labels, badges/chips (`.toc .n`, `.obs h3`, `.rule-title`, `.gloss-item dt`) |
 | 700 | normal | numeric emphasis only: `.rank`, `.tile b` (big stat numbers), `.theme-meta .v`, `.miss` |
 
-The mockup's badges/tags (severity pills, quick-win, legal-tag, chips)
-render at 400-500 weight in the source, not bold - `report.css` matches
-this (`.badge`, `.risk`, `.legal-tag`, `.qwin`, `.chip` all moved from
-700 to 500). This was the biggest single legibility difference from the
-old Roboto/GlassWire version, which set nearly everything to 700.
+Heading weight moves from Inter's 500 to Avenir Next's 600 because 600 is
+the site's heading weight (DESIGN.md, "Site" typography); the print-tuned
+size ramp (42/32/25/20/16/13px) and heading line-height are unchanged
+from the plan 023 baseline. Badges/tags stay 500-600, not bold, per the
+same baseline. The uppercase tracking values stay at the documented
+0.02em print fix.
 
 Font sizes and line-heights are **unchanged** from the pre-existing
 print-tuned pt scale everywhere except the cover (see "Port status"
@@ -147,12 +171,30 @@ this document.
 
 ## Shape
 
-- `--radius: 8px` - cards, tiles, panels (mockup `--radius-md`).
-- `--radius-sm: 6px` - badges, chips, pills (mockup `--radius-sm`). The
+- `--radius: 8px` - cards, tiles, panels (mockup `--radius-md`; the site
+  ladder's own schematic-panel step, so no conversion was needed).
+- `--radius-sm: 6px` - badges, chips, pills (mockup `--radius-sm`; the
+  site's dossier-card step). The
   previous `--radius-pill` (999px, full stadium shape) is gone: the
   mockup's badges are rounded rectangles, not pills, on every page
   checked (severity badges, quick-win, legal-tag, risk badge, `.chip`,
   `.obs-tag`).
+- `--radius-lg: 12px` (was 14px) - the few large containers that used it,
+  snapped to the site's raised-card corner (`site-card-lg`).
+
+**Finding cards carry the dossier motif** (operator pick, plan 039 step
+3): the section 04 priority/theme cards adopt the site's dossier card
+treatment - raised `--panel` surface, hairline separators between the
+evidence rows, and a short round-capped dash (18px by 3px, `border-radius:
+2px`) set above each evidence row's label: `--mark-finding` red on the
+problem row (`POURQUOI C'EST UN PROBLÈME`), `--mark-evidence` (the
+accent) on the observed-evidence row, `--signal` green on the action row.
+The dashes are decoration in the site's own idiom: the row labels carry
+the meaning, the dashes never encode severity, and the three colours
+appear nowhere else in the document. The v2 preview's three proof cards
+adopt the raised-card treatment with the single finding-red mark above
+the card title. No draw animation anywhere: print is designed from its
+finished frame.
 
 ## Spacing
 

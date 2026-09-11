@@ -3120,6 +3120,15 @@ under-reporting).
 
 ### 65. The report's visual design is the 2026-09-02 Nocturne refinement, and a render-identity change re-keys approvals (plan 023)
 
+**Superseded in one respect by trade-off 81 (plan 039, 2026-09-11):** the
+Nocturne identity this entry recorded is retired - the report and the v2
+preview now wear the public site's design language (dark near-navy, sky
+accent, Avenir Next, dossier motif on finding cards). This entry's
+composition record, its detector-ban bookkeeping (with Inter's keep now
+dissolved), and the approval re-keying rule remain the history and the
+mechanism of record; the fresh-approval consequence applies again from
+the plan 039 baseline.
+
 The report's visual layer had never been revised by anyone since the Nocturne
 mockup was ported; plans 018 through 021 reshaped its content on top of it.
 Plan 023 built an evidence pack over rendered fixtures (page images, a
@@ -4089,6 +4098,10 @@ pair on `packages/report/**`, with a recorded reason. Running the detector
 against the current `nocturne.css`/`paged.css` found no dark-ground or
 pure-black rule firing statically in the installed engine version (v0.1.5);
 do not add an ignore for a rule that has not actually been observed to fire.
+**Amended 2026-09-11, plan 039:** the Inter keep is dissolved - the report
+now runs Avenir Next (trade-off 81) - so that ignore-value is dead and is
+removed by plan 039; per this entry's own rule, no new ignore was added for
+any rule not observed to fire against the new stylesheets.
 
 Hook wiring: the installer's default lands the Claude Code
 PostToolUse/Stop hook in `.claude/settings.local.json` (gitignored,
@@ -4102,9 +4115,11 @@ Durable rules, binding on every agent:
 - This is a live install, not documentation. Do not remove it as a side
   effect of an unrelated change.
 - Do not widen the `packages/report/**` ignore beyond the one rule/value
-  pair it currently holds without checking
+  pair it holds without checking
   `docs/report/report-design-system.md` first; the report's design stays
   locked regardless of what the detector would otherwise flag there.
+  (Plan 039, trade-off 81, removed that one pair with the retired Inter
+  keep; the rule stands for any future ignore.)
 - `/impeccable init` (the `PRODUCT.md`/`DESIGN.md` interview) was
   deliberately not run in this session. It is an interactive interview with
   the operator, not something an agent fabricates on their behalf.
@@ -4220,3 +4235,54 @@ blind `--write`. CI's individual `docs:check`/`format:check`/`lint`/
 step in this pass - CI does not currently run the combined `check`
 script at all, so adding fallow there is a separate, not-yet-made
 decision, not a corollary of this one.
+
+### 81. The report and the v2 outreach preview wear the public site's design language; the Nocturne look is retired (plan 039, operator direction 2026-09-11)
+
+The two documents a prospect or client actually holds wore the plan 023
+Nocturne identity (ground `#161826`, violet `#9184d9` accent, Inter) while
+the public site they arrive from had been recast into its own evidence-desk
+world - a funnel discontinuity the plan 039 evidence pack scored as the
+documents' one P0. The operator picked the direction from that pack at the
+step 3 gate: **dark near-navy** (the site's dark scheme), **Avenir Next**
+(the operator confirmed at the pick that the licence covers PDF embedding
+and web embedding in a bucket-served document, plan 039 binding decision 9),
+severity **re-tuned for the new ground**, the **preview fixed dark matching
+the PDF**, and the **dossier card motif** adopted on the report's finding
+cards and the preview's three proof cards. What changed: ground `#0e141c`
+and raised `#16202c` from the site's dark tokens, ink ladder `#e9eef5`/
+`#b6c1ce`/`#909cab`, sky accent `#38bdf8` with its Tailwind-sky ramp,
+hairlines at 13 percent ink, Avenir Next self-hosted in
+`packages/report/src/fonts` (five faces: 400/400-italic/500/600/700, never
+imported from `packages/site`), heading weight 600, cover glow recomposed
+in the sky/navy family, and the site's dossier mark dashes (finding red,
+evidence accent, action signal green) as decoration on finding-card
+evidence rows. What did not change: section order and registry, the
+pagination contract's meaning, wording in both languages, the preview's
+schema/selection/element order, and plan 023's composition contracts
+(two-act front matter, per-section heading rhythm, the `--space-12` step).
+The checklist's print inversion to `#f7f7f5` keeps its reason - the report
+stays dark - and its print-safe pairs are unchanged; only its pixel
+baseline moved, with the typeface, in the same change.
+
+**Severity stays a severity scale.** The four severity text hexes are the
+plan 023 hues re-verified on the new 0.12-alpha tile tints (worst pair
+5.38:1); they deliberately do not match the dashboard's severity shades,
+and this divergence is recorded, not silently harmonized - the dashboard is
+untouched. The dossier's red/blue/green marks mean problem/evidence/action,
+never severity (DESIGN.md, "The Dossier Rule Set").
+
+**Retired:** the Nocturne palette and Inter as the report face. The
+`overused-font`/Inter ignore for `packages/report/**` in
+`.impeccable/config.json` is dead with that retirement and is removed; the
+`docs/report/design/` flat sources carry the new baseline (fonts swapped to
+Avenir Next, tokens transcribed from the site with site-origin comments),
+so trade-off 9's hand-maintained-CSS discipline continues unchanged. The
+`kicker-above-heading` ban is consciously not applied to the report's
+numbered h6 eyebrow (locked section-header text; the preview's hero label
+string also stays, de-kickered in treatment only).
+
+**Approval consequence (same rule as trade-off 65, re-keyed).** The
+stylesheet is part of render identity: previously approved reports keep
+their stored digests, and any report rendered after this baseline needs a
+fresh approval round. Already-published outreach previews are stored byte
+for byte and are not republished; only new renders get the new look.
