@@ -16,9 +16,9 @@
 
 import { createHash } from 'node:crypto';
 
-export const PREVIEW_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
+const PREVIEW_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
 
-export const PREVIEW_OBJECT_PREFIX = 'previews/';
+const PREVIEW_OBJECT_PREFIX = 'previews/';
 
 export function isValidPreviewToken(token: string): boolean {
   return PREVIEW_TOKEN_PATTERN.test(token);
