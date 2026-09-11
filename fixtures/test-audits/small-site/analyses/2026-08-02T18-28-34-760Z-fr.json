@@ -179,7 +179,7 @@
   "notes": "Aucun contexte métier n'a été fourni pour ce site : ni type d'activité, ni objectif principal, ni marchés ou langues visés. Les priorités présentées ici reposent donc uniquement sur la gravité technique des constats et sur le risque commercial générique associé, et non sur des objectifs d'entreprise déclarés. Certaines hypothèses de bon sens ont été faites (par exemple que la page de devis a une valeur commerciale) : elles devront être confirmées. Par ailleurs, les obligations légales en matière d'accessibilité dépendent de la taille et du secteur de l'entreprise, éléments non communiqués ; seuls les critères WCAG concernés sont cités, sans conclusion sur l'applicabilité d'un texte de loi particulier. Un échange de cadrage permettrait d'affiner cet ordre de priorités.",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "7b6dae8642b3a13a",
+    "normalizationFingerprint": "641924990b96eb15",
     "findingsDigest": "sha256:e6ab48337f18360cc9cb11673d3ded01c70716f7a56be74d46fd2ff3513110c6"
   },
   "analysisId": "8ce284db-a4a4-4e50-8eb8-58d7b8374da8"
