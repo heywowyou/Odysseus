@@ -37,6 +37,16 @@
   that outlived its only caller (`getVendorFingerprintAggregate`) was left
   in place, out of this slice's authorized scope, for `fallow dead-code` to
   triage separately (trade-off 80).
+- **Slice 3 landed 2026-09-12**: new sidebar per the approved IA ("Nouveau
+  scan" moved to the Audits page header it duplicated; "À traiter" and
+  "Résultats" added at their current URLs; a "Vérifier une adresse" footer
+  link); the font copy plugin and `theme.css` now serve Avenir Next instead
+  of Inter's removed files; the near-navy ground, ink ladder, hairlines, and
+  sky accent are transcribed from the report and site (trade-off 84); the
+  audit page links back to its prospect when one exists; `usePolling` pauses
+  while the tab is hidden and list pages share a 10-second interval. The
+  detail-page conditional 5-second-while-busy half of the poll policy is
+  deferred to slice 5, which restructures the audit page anyway.
 
 ## Why this matters
 

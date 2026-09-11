@@ -35,6 +35,8 @@ import {
   type UrlResultState,
 } from './scan-progress-model';
 
+// Plan 040 poll policy: scan progress stays at 3s while the job is running
+// (the `enabled` flag below already stops polling once it settles).
 const POLL_INTERVAL_MS = 3000;
 
 function fillProgressCopy(template: string, values: Record<string, number>): string {

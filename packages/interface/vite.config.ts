@@ -8,17 +8,19 @@ import { defineConfig, type Plugin } from 'vite';
 const packageRoot = dirname(fileURLToPath(import.meta.url));
 const fontSourceDir = resolve(packageRoot, '../report/src/fonts');
 
-/** The dashboard shares the client report's self-hosted Inter files. The
- *  canonical source stays packages/report/src/fonts: copied to dist/public
- *  at build time, and served from that same source directory by the dev
- *  middleware below, so both serving modes answer /fonts/Inter-*.woff2 from
- *  the same files and the two surfaces can never drift onto font versions.
+/** The dashboard shares the client report's self-hosted Avenir Next Cyr
+ *  files (plan 040 slice 3: Inter is retired here the way it was already
+ *  retired from the report in plan 039). The canonical source stays
+ *  packages/report/src/fonts: copied to dist/public at build time, and
+ *  served from that same source directory by the dev middleware below, so
+ *  both serving modes answer /fonts/AvenirNextCyr-*.woff2 from the same
+ *  files and the two surfaces can never drift onto font versions.
  *  theme.css requests exactly these paths. */
-const FONT_REQUEST_PATTERN = /^\/fonts\/(Inter-(?:Regular|Medium|SemiBold|Bold)\.woff2)$/;
+const FONT_REQUEST_PATTERN = /^\/fonts\/(AvenirNextCyr-(?:Regular|Medium|Demi|Bold)\.woff2)$/;
 
-function copyInterFonts(): Plugin {
+function copyAvenirNextFonts(): Plugin {
   return {
-    name: 'copy-inter-fonts',
+    name: 'copy-avenir-next-fonts',
     closeBundle() {
       const targetDir = resolve(packageRoot, 'dist/public/fonts');
       mkdirSync(targetDir, { recursive: true });
@@ -49,7 +51,7 @@ export default defineConfig({
   root: 'src/dashboard',
   base: '/',
   publicDir: false,
-  plugins: [react(), tailwindcss(), copyInterFonts()],
+  plugins: [react(), tailwindcss(), copyAvenirNextFonts()],
   build: {
     outDir: '../../dist/public',
     emptyOutDir: true,

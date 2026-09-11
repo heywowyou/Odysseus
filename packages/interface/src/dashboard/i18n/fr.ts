@@ -5,7 +5,8 @@ export const fr: DashboardStrings = {
     audits: 'Audits',
     newScan: 'Nouveau scan',
     prospects: 'Prospects',
-    outreach: 'Démarches',
+    outreach: 'À traiter',
+    results: 'Résultats',
   },
   shell: {
     tagline: 'Tableau de bord opérateur',
@@ -14,6 +15,7 @@ export const fr: DashboardStrings = {
     navigation: 'Navigation',
     openMenu: 'Ouvrir le menu',
     closeMenu: 'Fermer le menu',
+    checkAddress: 'Vérifier une adresse',
     language: 'Langue de l’interface',
   },
   common: {

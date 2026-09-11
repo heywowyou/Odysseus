@@ -8,7 +8,13 @@ export interface DashboardStrings {
     audits: string;
     newScan: string;
     prospects: string;
+    /** Sidebar label for /outreach, plan 040's "A traiter" (operator decision
+     *  2026-09-12): the URL is unchanged until slice 6 rebuilds it as the
+     *  landing page. */
     outreach: string;
+    /** Sidebar label for /outreach/outcomes, kept at its current URL until
+     *  slice 6 renames it to /resultats. */
+    results: string;
   };
   shell: {
     tagline: string;
@@ -20,6 +26,8 @@ export interface DashboardStrings {
     openMenu: string;
     closeMenu: string;
     language: string;
+    /** Footer link to the do-not-contact lookup (/outreach/do-not-contact). */
+    checkAddress: string;
   };
   common: {
     severityLabels: { critical: string; serious: string; moderate: string; minor: string };

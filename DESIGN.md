@@ -1,20 +1,20 @@
 ---
 name: Odysseus
-description: Monochrome dark audit dashboard and a typographic marketing site, recorded exactly as implemented today.
+description: Near-navy audit dashboard sharing the report and site's design language, plus a typographic marketing site, recorded exactly as implemented today.
 colors:
-  base: "#08090a"
-  panel: "#101112"
-  raised: "#17181a"
-  overlay: "#1e1f23"
-  line: "rgb(255 255 255 / 0.07)"
-  line-strong: "rgb(255 255 255 / 0.13)"
-  ink: "#f7f8f8"
-  ink-soft: "#9fa5ae"
-  ink-muted: "#898e96"
-  accent: "#f2f3f5"
-  accent-strong: "#d3d6db"
-  accent-bright: "#f7f8f8"
-  accent-tint: "rgb(255 255 255 / 0.09)"
+  base: "#0e141c"
+  panel: "#16202c"
+  raised: "#1a2530"
+  overlay: "#2b3642"
+  line: "rgb(233 238 245 / 0.07)"
+  line-strong: "rgb(233 238 245 / 0.13)"
+  ink: "#e9eef5"
+  ink-soft: "#b6c1ce"
+  ink-muted: "#96a2b0"
+  accent: "#e9eef5"
+  accent-strong: "#b6c1ce"
+  accent-bright: "#38bdf8"
+  accent-tint: "rgb(56 189 248 / 0.16)"
   danger: "#eb5757"
   sev-critical: "#f2555f"
   sev-serious: "#f08b3c"
@@ -65,19 +65,19 @@ typography:
     site-price-floor: "2rem"
     site-price-ceiling: "2.75rem"
   title:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
+    fontFamily: "Avenir Next, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
     fontSize: "1.25rem"
     fontWeight: 600
     lineHeight: 1.4
     letterSpacing: "-0.025em"
   body:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
+    fontFamily: "Avenir Next, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "normal"
   label:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
+    fontFamily: "Avenir Next, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
     fontSize: "0.75rem"
     fontWeight: 500
     lineHeight: 1.33
@@ -142,8 +142,8 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.accent}"
-    textColor: "#08090a"
-    typography: "Inter 500 0.875rem"
+    textColor: "#0e141c"
+    typography: "Avenir Next 500 0.875rem"
     rounded: "{rounded.lg}"
     height: "36px"
     padding: "0 16px"
@@ -152,7 +152,7 @@ components:
   button-secondary:
     backgroundColor: "{colors.raised}"
     textColor: "{colors.ink}"
-    typography: "Inter 500 0.875rem"
+    typography: "Avenir Next 500 0.875rem"
     rounded: "{rounded.lg}"
     height: "36px"
     padding: "0 16px"
@@ -160,7 +160,7 @@ components:
     backgroundColor: "{colors.overlay}"
   button-ghost:
     textColor: "{colors.ink-soft}"
-    typography: "Inter 500 0.875rem"
+    typography: "Avenir Next 500 0.875rem"
     rounded: "{rounded.lg}"
     height: "36px"
     padding: "0 16px"
@@ -168,19 +168,19 @@ components:
     backgroundColor: "{colors.raised}"
   button-danger:
     textColor: "{colors.danger}"
-    typography: "Inter 500 0.875rem"
+    typography: "Avenir Next 500 0.875rem"
     rounded: "{rounded.lg}"
     height: "36px"
     padding: "0 16px"
   input:
     backgroundColor: "{colors.raised}"
     textColor: "{colors.ink}"
-    typography: "Inter 400 0.875rem"
+    typography: "Avenir Next 400 0.875rem"
     rounded: "{rounded.lg}"
     height: "36px"
     padding: "0 12px"
   badge:
-    typography: "Inter 500 0.75rem"
+    typography: "Avenir Next 500 0.75rem"
     rounded: "{rounded.md}"
     padding: "2px 8px"
   card:
@@ -238,33 +238,33 @@ components:
 
 Odysseus sells findings a client can check, so both surfaces are places evidence is examined: the operator reads it in the dashboard, the prospect reads it on the site. That is what the North Star asks of any new screen: show what is actually known, never a number nobody can stand behind, and state the limit before the strength. A blank where a value failed to load is honest; a confident zero is not.
 
-The dashboard looks the part of a single-operator tool: a near-black, layered monochrome interface in the same family as Linear or Vercel's consoles. Surfaces stack from base through panel, raised, and overlay, separated by 7 percent white hairlines rather than shadows. The accent is white. Primary actions are the brightest object on screen, which means hierarchy is carried by brightness steps and typography, never by brand color. The only chromatic colors in the product are the four severity shades shared with the PDF report, plus a danger red for destructive and error states.
+The dashboard looks the part of a single-operator tool: a near-navy, layered interface in the same family as Linear or Vercel's consoles, since plan 040 slice 3 (2026-09-12) sharing its ground, ink ladder and hairlines with the report and site rather than the near-black look it wore before. Surfaces stack from base through panel, raised, and overlay, separated by 7 percent ink-hued hairlines rather than shadows. Primary buttons stay ink-inverted, not accent-filled, matching the site's own primary button; the accent's remaining job, as a sky-blue hue, is text and tint only (active navigation, links, badges). The other chromatic colors in the product are the four severity shades shared with the PDF report (deliberately not re-tuned to the new ground, trade-off 81) plus a danger red for destructive and error states.
 
-The marketing site is a different world, built around the conceit of a working document rather than a software landing page: reader prose and raised cards on cool, faintly blue paper (light or near-black, switched by the OS color scheme preference), plus a fixed dark "machine" register for what a program reads. It is a standalone Next.js deploy with no component library, and, since 2026-09-11, its own operator-licensed self-hosted Avenir Next (no longer shared with the dashboard's Inter), loaded through next/font/local from woff2 files copied into `packages/site/app/fonts`. A plain persistent frame (text wordmark, three-item nav, footer with the compliance links, a skip link) wraps every public page; the preview route handler still answers with standalone documents outside the frame. Since 2026-09-11 the site also carries its own accent pair, borrowed from Tailwind rather than invented: sky blue for links, the dossier stamp, and the schematics' evidence marks, and a three-colour rule set on the dossier card (red Constat, yellow Preuve, teal-green Action; the green is also the skip link's keyboard focus). The site intentionally depends on nothing in the workspace, so it shares no tokens with the dashboard; it is recorded here as its own minimal surface.
+The marketing site is a different world, built around the conceit of a working document rather than a software landing page: reader prose and raised cards on cool, faintly blue paper (light or near-black, switched by the OS color scheme preference), plus a fixed dark "machine" register for what a program reads. It is a standalone Next.js deploy with no component library, and, since 2026-09-11, its own operator-licensed self-hosted Avenir Next, loaded through next/font/local from woff2 files copied into `packages/site/app/fonts`; the dashboard and report self-host the same operator-licensed files independently (never imported from `packages/site`), so all three surfaces read the same typeface without sharing a build dependency. A plain persistent frame (text wordmark, three-item nav, footer with the compliance links, a skip link) wraps every public page; the preview route handler still answers with standalone documents outside the frame. Since 2026-09-11 the site also carries its own accent pair, borrowed from Tailwind rather than invented: sky blue for links, the dossier stamp, and the schematics' evidence marks, and a three-colour rule set on the dossier card (red Constat, yellow Preuve, teal-green Action; the green is also the skip link's keyboard focus). The site intentionally depends on nothing in the workspace, so it shares no tokens with the dashboard even though both now transcribe the same source values independently; it is recorded here as its own minimal surface.
 
-Motion is decoration only. Dashboard entrances use short, decelerating fades and slides (0.2 to 0.3 seconds, cubic-bezier(0.16, 1, 0.3, 1)), a `prefers-reduced-motion` rule collapses all of it, and every state stays fully readable without animation. Accessibility posture is visible in the base layer: a global 2px white focus outline, AA-contrast text pairs in both directions of the monochrome theme, and dark color-scheme declared at the root. The site carries the same posture in its own idioms: a global 2px focus outline in the foreground color with a 2px offset, and AA-contrast pairs computed in both schemes. Since 2026-09-11 the site has its own motion system, one curve (`--ease-out-expo`, cubic-bezier(0.16, 1, 0.3, 1)) and three kinds of moment. The hero dossier card assembles on load (the sheet lands, its rows are written in order, their rules are drawn red, yellow, green, the report stamp is pressed on; about 1.5 seconds, the headline never waits). Card groups settle on first scroll into view at a slight alternating tilt and a small blur-to-sharp, as if a printed sheet were set down on the desk (`lib/reveal.tsx`), and the meters of the `process` stages fill in stage order (`lib/steps.tsx`). Each check schematic plays its measurement once when on screen (`lib/exhibit.tsx`), under five seconds, with a replay button. Reduced motion keeps short opacity fades and drops every move, draw, meter fill, blur and replay; without JavaScript, everything renders in its finished state.
+Motion is decoration only. Dashboard entrances use short, decelerating fades and slides (0.2 to 0.3 seconds, cubic-bezier(0.16, 1, 0.3, 1)), a `prefers-reduced-motion` rule collapses all of it, and every state stays fully readable without animation. Accessibility posture is visible in the base layer: a global 2px focus outline in the ink color (not the accent hue, matching the site's own "foreground color" focus rule), AA-contrast text pairs in both directions of the theme, and dark color-scheme declared at the root. The site carries the same posture in its own idioms: a global 2px focus outline in the foreground color with a 2px offset, and AA-contrast pairs computed in both schemes. Since 2026-09-11 the site has its own motion system, one curve (`--ease-out-expo`, cubic-bezier(0.16, 1, 0.3, 1)) and three kinds of moment. The hero dossier card assembles on load (the sheet lands, its rows are written in order, their rules are drawn red, yellow, green, the report stamp is pressed on; about 1.5 seconds, the headline never waits). Card groups settle on first scroll into view at a slight alternating tilt and a small blur-to-sharp, as if a printed sheet were set down on the desk (`lib/reveal.tsx`), and the meters of the `process` stages fill in stage order (`lib/steps.tsx`). Each check schematic plays its measurement once when on screen (`lib/exhibit.tsx`), under five seconds, with a replay button. Reduced motion keeps short opacity fades and drops every move, draw, meter fill, blur and replay; without JavaScript, everything renders in its finished state.
 
-*Provenance: every token, measurement and rule in this file was read from the code. The North Star was confirmed by the operator on 2026-09-02; the descriptive colour names and the named rules remain derived language, still open to the operator's rewording. Re-merged 2026-09-11 (`/impeccable document`, merge mode, dashboard untouched) so the site sections match the shipped state: the raised-card system replacing hairline-only rows, the sky/orange-600 accent pair replacing the earlier desaturated blue and the dossier's fixed-white sheet, the settle-in scroll reveal, and the corrected layout, radius, and shadow facts below. Dashboard content below this point was last verified 2026-09-02 (plan 022) and is unchanged by this pass.*
+*Provenance: every token, measurement and rule in this file was read from the code. The North Star was confirmed by the operator on 2026-09-02; the descriptive colour names and the named rules remain derived language, still open to the operator's rewording. Re-merged 2026-09-11 (`/impeccable document`, merge mode, dashboard untouched) so the site sections match the shipped state: the raised-card system replacing hairline-only rows, the sky/orange-600 accent pair replacing the earlier desaturated blue and the dossier's fixed-white sheet, the settle-in scroll reveal, and the corrected layout, radius, and shadow facts below. Dashboard content below this point was last verified 2026-09-02 (plan 022) until plan 040 slice 3 (2026-09-12, trade-off 84) moved its colors and typeface onto the report and site's shared design language; layout, shape, elevation, and component structure are otherwise unchanged by that pass.*
 
 **Key Characteristics:**
-- Dashboard: layered near-black monochrome surfaces with hairline borders; depth by lightness, not shadow. The accent is white; color appears only as severity, at small sizes or 15 percent tints.
+- Dashboard: layered near-navy surfaces with hairline borders; depth by lightness, not shadow. Buttons stay ink-inverted; the sky accent appears only as text and tint (links, active navigation, badges), plus severity and danger at small sizes or 15 percent tints.
 - Site: reader prose and raised cards on cool paper, light or near-black by OS preference; a sky-blue and orange-600 accent pair, each with exactly one job (links/evidence, one warm annotation).
-- Self-hosted type on both surfaces, typeset small (14px dashboard body baseline, 20px titles as the ceiling, 16px site body); the dashboard and report keep Inter, the site typesets in its own licensed Avenir Next.
+- Self-hosted type on both surfaces, typeset small (14px dashboard body baseline, 20px titles as the ceiling, 16px site body); the dashboard, report, and site all typeset in independently self-hosted Avenir Next (Inter is retired everywhere).
 - Dashboard is genuinely flat: shadow belongs only to floating layers (dialogs, dropdown menus, toasts). The site is not: since 2026-09-11 its repeated feature grids and dossier are soft-shadowed raised cards.
 - Two independent radius ladders: dashboard 12px containers / 8px controls / 6px chips / full pills; site 10-12px cards / 6px dossier / 3px controls / full pill (language toggle only).
 - Dashboard motion: short decelerating fades and slides, decoration only, killed under reduced motion. Site motion: a load sequence on the hero dossier, scroll-triggered settles and rule draws, and one-shot schematic measurements with replay; reduced motion keeps fades only, and no-JS shows finished states.
 
 ## Colors
 
-The dashboard palette is one idea executed as a value scale: five near-black neutrals for structure, three soft greys for text hierarchy, four white-family tokens acting as the accent, and a single chromatic family reserved for severity.
+The dashboard palette is one idea executed as a value scale: five near-navy neutrals for structure, three cool greys for text hierarchy, an ink-inverted pair for buttons, a sky-blue pair for the accent's text-and-tint role, and a single chromatic family reserved for severity. Since plan 040 slice 3 (2026-09-12, trade-off 84), the neutrals, ink ladder, hairlines, and accent are all transcribed by value from the report and public site's own dark scheme (trade-off 81), the same source both already share; severity and `danger` are the one deliberate exception (trade-off 81, unchanged again here).
 
 ### Primary
-The accent family is white, not a hue. It draws primary buttons, active navigation, progress fills, and focus rings.
+Buttons stay ink-inverted, matching the site's own primary button (a light surface with a dark label, never filled with the accent hue); the accent itself is a sky-blue hue reserved for its text-and-tint role: active navigation, links, badges, and progress fills.
 
-- **Paper White Accent** (`accent`, #f2f3f5): the primary button surface. Light-on-dark inversion of the whole theme; its label is near-black #08090a so contrast holds both ways.
-- **Pressed White** (`accent-strong`, #d3d6db): primary button hover; the pressed step of the accent.
-- **Accent Text White** (`accent-bright`, #f7f8f8): the accent when it appears as text (links inside tables, active accent badges). Note it shares its exact value with `ink`.
-- **White Tint 9 Percent** (`accent-tint`, rgb(255 255 255 / 0.09)): active sidebar navigation, active segmented segments, text selection background, accent badge backgrounds. The quietest way the system says "selected".
+- **Ink Accent** (`accent`, #e9eef5): the primary button surface, equal to `ink`. Light-on-dark inversion of the whole theme; its label is the near-navy base #0e141c so contrast holds both ways.
+- **Ink Soft Accent** (`accent-strong`, #b6c1ce): primary button hover; equal to `ink-soft`, the same step the site's own button hover uses.
+- **Sky Accent Text** (`accent-bright`, #38bdf8): the accent's text role (links inside tables, active accent badges), transcribed from the site's own `--accent` dark value (Tailwind sky-400). No longer equal to `ink`: the accent's text role and the button's surface role are now two different tokens, unlike the retired white-accent scheme where both were the same near-white value.
+- **Sky Accent Tint** (`accent-tint`, rgb(56 189 248 / 0.16)): active sidebar navigation, active segmented segments, text selection background, accent badge backgrounds. Transcribed from the site's `--accent-soft` dark value. The quietest way the system says "selected".
 
 ### Tertiary (Severity, the only chromatic family)
 No secondary accent exists; the chromatic family that does exist is severity, shared 1:1 with the PDF report so a finding reads as the same shade in both places.
@@ -278,18 +278,18 @@ No secondary accent exists; the chromatic family that does exist is severity, sh
 Severity appears at full strength only as text and as 8px status dots; large surfaces use the shade at 15 percent opacity as a badge background.
 
 ### Neutral
-- **Near-Black Base** (`base`, #08090a): the app background, the deepest layer.
-- **Panel Charcoal** (`panel`, #101112): cards, KPI tiles, sidebar, top bar, dialogs.
-- **Raised Graphite** (`raised`, #17181a): inputs, secondary buttons, dropdown item hover, table row hover, progress track, skeletons.
-- **Overlay Slate** (`overlay`, #1e1f23): dropdown menu panels and toasts, the lightest floating layer.
-- **Hairline White 7 Percent** (`line`, rgb(255 255 255 / 0.07)): default borders and dividers everywhere.
-- **Hairline White 13 Percent** (`line-strong`, rgb(255 255 255 / 0.13)): emphasized borders on floating layers, secondary button borders, dashed empty-state borders.
-- **Ink White** (`ink`, #f7f8f8): primary text.
-- **Soft Steel** (`ink-soft`, #9fa5ae): secondary text, table cell text, inactive controls.
-- **Muted Slate Grey** (`ink-muted`, #898e96): hints, table headers, labels, icons, timestamps. Raised in plan 022 from #7b808a to the lightest grey step that clears 4.5:1 on every surface the class sits on (worst remaining pair 4.59:1 on the accent tint, 5.39:1 on raised).
+- **Near-Navy Base** (`base`, #0e141c): the app background, the deepest layer. Transcribed from the site's `--paper` dark value.
+- **Panel Navy** (`panel`, #16202c): cards, KPI tiles, sidebar, top bar, dialogs. Transcribed from the site's `--paper-raised` dark value.
+- **Raised Navy** (`raised`, #1a2530): inputs, secondary buttons, dropdown item hover, table row hover, progress track, skeletons. One hue step above the site's own raised, on the report's own neutral ramp (`nocturne.css`'s `--color-neutral-900`).
+- **Overlay Navy** (`overlay`, #2b3642): dropdown menu panels and toasts, the lightest floating layer. The next step of that same ramp (`--color-neutral-800`); the site itself has no fourth tonal layer to transcribe, so the dashboard continues the ramp on its own.
+- **Hairline Ink 7 Percent** (`line`, rgb(233 238 245 / 0.07)): default borders and dividers everywhere. The site defines only one hairline strength; this is the dashboard's own lighter second stop on the same hue.
+- **Hairline Ink 13 Percent** (`line-strong`, rgb(233 238 245 / 0.13)): emphasized borders on floating layers, secondary button borders, dashed empty-state borders. Transcribed from the site's `--line` dark value.
+- **Ink** (`ink`, #e9eef5): primary text. Transcribed from the site's `--ink` dark value.
+- **Ink Soft** (`ink-soft`, #b6c1ce): secondary text, table cell text, inactive controls. Transcribed from the site's `--ink-soft` dark value.
+- **Ink Muted** (`ink-muted`, #96a2b0): hints, table headers, labels, icons, timestamps. The site's own `--ink-muted` (#909cab) clears 4.5:1 on base/panel/raised but falls to 4.41:1 on `overlay`; nudged 15 percent toward `ink-soft` along the same hue to clear 4.5:1 everywhere (4.73:1 on overlay, the worst case), the same reasoning plan 022's #898e96 used against the old near-black grounds.
 
 ### Named Rules
-**The White Accent Rule.** The accent is white; there is no brand hue anywhere in the dashboard chrome. Hierarchy comes from brightness steps, borders, and type.
+**The Ink-Inverted Button Rule.** Buttons never fill with the accent hue; the primary surface is `ink` itself, matching the site's own primary button. The accent's sky hue is reserved for its text-and-tint role. Hierarchy comes from brightness steps, borders, and type, not brand color.
 
 **The Severity Monopoly Rule.** Chromatic color is reserved for severity and danger. Severity color appears as text, as 8px dots, or as 15 percent tinted badge backgrounds, never as large filled surfaces.
 
@@ -318,19 +318,19 @@ The public site is a fully separate palette: a light/dark cool-paper neutral sca
 
 ## Typography
 
-**Display Font:** Inter (self-hosted woff2 at 400, 500, 600, 700; fallbacks ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif)
-**Body Font:** Inter, same stack
+**Display Font:** Avenir Next (self-hosted Avenir Next Cyr woff2 at 400, 500, 600, 700, independently from the same operator-licensed files the report and site self-host; fallbacks ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif). Inter is retired here as of plan 040 slice 3 (2026-09-12, trade-off 84), the way it was already retired from the report in plan 039.
+**Body Font:** Avenir Next, same stack
 **Label/Mono Font:** ui-monospace, SFMono-Regular, Menlo, Consolas, monospace (URLs and IDs only)
 
-**Character:** One utilitarian workhorse family at deliberately small sizes. The dashboard resets the body to 14px (not Tailwind's 16px), keeps a tight-tracked semibold for titles, and stops at 20px; nothing in the product is display-sized. The site's own typeface and scale are a separate system; see Site below.
+**Character:** One utilitarian workhorse family at deliberately small sizes. The dashboard resets the body to 14px (not Tailwind's 16px), keeps a tight-tracked semibold for titles, and stops at 20px; nothing in the product is display-sized. The site's own scale is a separate system (its own fluid clamp-based sizes); see Site below.
 
 ### Hierarchy
-- **Title** (Inter 600, 20px / 28px, letter-spacing -0.025em): page titles and KPI values; the largest text in the product. Dialog titles sit one step down at 16px semibold.
-- **Section Label** (Inter 600, 12px, uppercase, tracking-wide): small section headers on the prospect detail page.
-- **Body** (Inter 400, 14px / 21px): the working size for almost everything, including buttons at 14px and card copy.
-- **Mid-step 13px** (Inter 500): a real, recurring size between xs and sm used for small buttons, field labels, and segmented control items; it exists only as the arbitrary value `text-[13px]`.
-- **Label** (Inter 500, 12px / 16px): badges, table headers, hints, timestamps. Uppercase only in the section labels noted above.
-- **Micro Label** (Inter, 11px, uppercase, tracking-wide): the smallest step, one below Label, used once (the report preparation card) for an uppercase micro heading. Rare, but a real role rather than drift, so it is on the ramp.
+- **Title** (Avenir Next 600, 20px / 28px, letter-spacing -0.025em): page titles and KPI values; the largest text in the product. Dialog titles sit one step down at 16px semibold.
+- **Section Label** (Avenir Next 600, 12px, uppercase, tracking-wide): small section headers on the prospect detail page.
+- **Body** (Avenir Next 400, 14px / 21px): the working size for almost everything, including buttons at 14px and card copy.
+- **Mid-step 13px** (Avenir Next 500): a real, recurring size between xs and sm used for small buttons, field labels, and segmented control items; it exists only as the arbitrary value `text-[13px]`.
+- **Label** (Avenir Next 500, 12px / 16px): badges, table headers, hints, timestamps. Uppercase only in the section labels noted above.
+- **Micro Label** (Avenir Next, 11px, uppercase, tracking-wide): the smallest step, one below Label, used once (the report preparation card) for an uppercase micro heading. Rare, but a real role rather than drift, so it is on the ramp.
 - **Mono** (12 to 13px): URLs and identifiers in scan and prospect views, set in the mono stack to survive long unbroken strings.
 
 ### Named Rules
@@ -387,7 +387,7 @@ Depth on the site is genuinely shadowed, not tonal, since the 2026-09-11 card re
 
 ## Shapes
 
-The form language is a strict radius ladder mapped to elevation: 12px (`rounded-xl`) for containers that hold content (cards, KPI tiles, dialogs, empty states, table wrappers), 8px (`rounded-lg`) for controls (all button variants, inputs, selects, textareas, nav items, dropdown panels, segmented containers, skeleton loading rows), 6px (`rounded-md`) for inner elements (badges, dropdown items, segmented segments), and full pills only for progress bars and status dots. Empty states are the one dashed border in the system: 1px dashed `line-strong` on a 60 percent panel background. Borders elsewhere are 1px solid hairlines (7 percent white, 13 percent for floating layers and secondary buttons).
+The form language is a strict radius ladder mapped to elevation: 12px (`rounded-xl`) for containers that hold content (cards, KPI tiles, dialogs, empty states, table wrappers), 8px (`rounded-lg`) for controls (all button variants, inputs, selects, textareas, nav items, dropdown panels, segmented containers, skeleton loading rows), 6px (`rounded-md`) for inner elements (badges, dropdown items, segmented segments), and full pills only for progress bars and status dots. Empty states are the one dashed border in the system: 1px dashed `line-strong` on a 60 percent panel background. Borders elsewhere are 1px solid hairlines (7 percent ink, 13 percent for floating layers and secondary buttons).
 
 The site has its own, independent radius ladder, tighter at every step than the dashboard's: 3px for controls (`.btn`, the skip link's focus box), 4px for the machine-register code block, 5px for the raw-versus-rendered inset, 6px for the dossier card, 10px for the diagnostic-scope statement (whose left corners stay square, carrying the `site-anchor` border-left), 12px for the repeated check/receive/method feature cards and the exhibits, 2px for bars inside the schematics, 8px for the panels inside a schematic (machine and visitor bands, the mock page, the file stack), and full pills for the language toggle, the replay button, status chips and schematic tags. Borders are the same 1px solid hairline convention as the dashboard, at the site's own opacities (14 percent / 28 percent).
 
@@ -395,7 +395,7 @@ The site has its own, independent radius ladder, tighter at every step than the 
 
 ### Buttons
 - **Shape:** 8px radius, 36px tall at the md size, inline-flex centered with a 8px icon gap.
-- **Primary:** white surface (`accent`) with near-black #08090a label at 14px medium; hover steps down to `accent-strong`.
+- **Primary:** ink surface (`accent`) with near-navy #0e141c label at 14px medium; hover steps down to `accent-strong`.
 - **Secondary:** `raised` surface with a `line-strong` border and `ink` label; hover lifts to `overlay`.
 - **Ghost:** no surface, `ink-soft` label; hover gains a `raised` background and brightens to `ink`.
 - **Danger:** transparent surface, `danger` label, `danger` at 40 percent border; hover gains a 10 percent `danger` tint.
@@ -403,7 +403,7 @@ The site has its own, independent radius ladder, tighter at every step than the 
 
 ### Badges
 - **Style:** 6px radius, 2px by 8px padding, 12px medium text; tone sets a 15 percent tinted background plus full-strength text color.
-- **State:** six tones: neutral (grey on grey), accent (white tint on white text), and one per severity (critical, serious, moderate, minor).
+- **State:** six tones: neutral (grey on grey), accent (sky tint on sky text), and one per severity (critical, serious, moderate, minor).
 
 ### Cards / Containers
 - **Corner Style:** 12px radius.
@@ -419,16 +419,16 @@ The site has its own, independent radius ladder, tighter at every step than the 
 - **Placeholder:** `ink-muted`.
 
 ### Navigation
-- **Style:** sidebar items are 8px-radius rows with a 16px icon and 14px medium label; default `ink-soft`, hover gains `raised` background and `ink` text, active is `accent-tint` background with `ink` text. The wordmark is text only (14px semibold, tight tracking; the operator direction is explicitly no logo mark). Dropdown menus are the floating pattern: `overlay` panel, 8px radius, `line-strong` border, shadow, 4px inner padding, 6px-radius items with `raised` hover and focus.
+- **Style:** sidebar items are 8px-radius rows with a 16px icon and 14px medium label; default `ink-soft`, hover gains `raised` background and `ink` text, active is `accent-tint` (sky-tinted since plan 040 slice 3) background with `ink` text. The wordmark is text only (14px semibold, tight tracking; the operator direction is explicitly no logo mark). Dropdown menus are the floating pattern: `overlay` panel, 8px radius, `line-strong` border, shadow, 4px inner padding, 6px-radius items with `raised` hover and focus.
 
 ### Empty States
 - **Style:** centered column in a 12px-radius, 1px dashed `line-strong` bordered box on `panel` at 60 percent, 40px padding; optional 24px muted icon, 14px medium title, 14px muted description, action button below.
 
 ### Signature Patterns
 - **KPI Tile:** 12px-radius bordered panel, 16px by 12px padding, 12px muted label over a 20px semibold tight-tracked value; the critical tone turns the value `sev-critical`. The value is tri-state since plan 022: loaded (the number), loading (skeleton), or unavailable (the localized Indisponible marker at a muted step), so a failed load never renders as a confident zero. Outreach hub counts use the same three states. Dashboards open with a staggered 4-tile row.
-- **Status Dot:** 8px full-strength circle: grey for queued and cancelled, white and pulsing for running, green for complete, red for failed.
-- **Progress Bar:** 6px full-round track on `raised`; the fill is white with a 300ms width transition, or a one-third-wide white segment slides forever for uncapped work (indeterminate means no real target exists).
-- **Skeleton:** `raised` block with a 110deg white 5 percent shimmer sweeping every 1.8s.
+- **Status Dot:** 8px full-strength circle: grey for queued and cancelled, ink-colored and pulsing for running (`accent`), green for complete, red for failed.
+- **Progress Bar:** 6px full-round track on `raised`; the fill is ink-colored (`accent`) with a 300ms width transition, or a one-third-wide ink segment slides forever for uncapped work (indeterminate means no real target exists).
+- **Skeleton:** `raised` block with a 110deg ink-hued 5 percent shimmer sweeping every 1.8s.
 - **Toasts:** Sonner, dark theme, top right, `overlay` background with `line-strong` border and `ink` text.
 - **InfoTip:** a 14px muted info icon on a focusable trigger; the hint opens on hover and keyboard focus in a portal-rendered floating panel (`overlay` background, `line-strong` border, 6px radius, 12px text), so it neither clips inside scrolling tables nor locks out keyboard users.
 
@@ -486,12 +486,12 @@ A 32px pill (`site-line-strong` border, `site-ink-soft` label, 14px counter-cloc
 - **Do** (site) render the dossier card through `lib/dossier.tsx` only.
 
 ### Don't:
-- **Don't** introduce a brand hue into dashboard chrome; white is the accent and severity is the only color.
+- **Don't** fill a dashboard button with the accent hue; buttons stay ink-inverted, matching the site's own primary button. The accent's sky hue is reserved for its text-and-tint role (links, active navigation, badges), alongside severity as the product's other chromatic family.
 - **Don't** put shadows on resting dashboard surfaces (cards, tiles, buttons, tables); shadow means "floating". The site's own cards are the deliberate exception; see Elevation & Depth, Site.
 - **Don't** typeset above 20px; below 14px the steps are 13, 12, and the single 11px micro-label in the report preparation card.
 - **Don't** fill large areas with severity colors; full-strength chroma belongs to text and dots only.
-- **Don't** import dashboard tokens into the site or treat the site as themed; it is deliberately standalone with its own light/dark scheme-swap token system and, since 2026-09-11, its own typeface (Avenir Next, licensed for the site only).
-- **Don't** replace the wordmark with a logo mark; the brand is the name, set in semibold Inter (dashboard) or Avenir Next (site).
+- **Don't** import dashboard tokens into the site or treat the site as themed; it is deliberately standalone with its own light/dark scheme-swap token system, even though the dashboard, report, and site now all independently self-host the same operator-licensed Avenir Next files.
+- **Don't** replace the wordmark with a logo mark; the brand is the name, set in semibold Avenir Next on every surface.
 - **Don't** (site) put a small uppercase label above a heading, or a coloured stripe down one side of a card or row.
 - **Don't** (site) use the dossier mark colours (`site-mark-finding`, `site-mark-evidence`, `site-signal`) anywhere but the dossier's rows and the skip link's focus, and never as text or as a severity.
 - **Don't** (site) animate text opacity inside a schematic or loop a schematic; reveal text with clip, and play once.
@@ -501,9 +501,9 @@ A 32px pill (`site-line-strong` border, `site-ink-soft` label, 14px counter-cloc
 
 These are facts about the incumbent implementation worth knowing before changing it:
 
-1. `ink` and `accent-bright` are the same value (#f7f8f8) under two names, and `accent` (#f2f3f5) differs from it by a few points; the accent family is nearly indistinguishable from the text greys by design.
+1. **Superseded 2026-09-12, plan 040 slice 3 (trade-off 84).** `ink` and `accent-bright` used to be the same value (#f7f8f8) under two names, with `accent` (#f2f3f5) a few points off it, so the accent family read as nearly indistinguishable from the text greys. The restyle deliberately splits this: `accent`/`accent-strong` now equal `ink`/`ink-soft` exactly (buttons stay ink-inverted), while `accent-bright`/`accent-tint` take the sky hue, a real, visible accent distinct from the grey ladder.
 2. Two reds coexist: `danger` #eb5757 (forms, destructive buttons) and `sev-critical` #f2555f (severity, failed jobs).
-3. The site does not share the dashboard's token system: it loads its own self-hosted typeface through next/font/local (Avenir Next since 2026-09-11, replacing the Inter it briefly shared with the dashboard under plan 022), and it keeps its own radius ladder (3px controls up to 12px cards, tighter at every step than the dashboard's), its own button and focus classes, and a cool-paper `prefers-color-scheme` swap with its own sky/orange accent pair rather than the dashboard's near-black monochrome-plus-severity scale.
+3. The site does not share the dashboard's token system, even though both now independently transcribe the same site/report source (trade-offs 81, 84): the site loads its own self-hosted typeface through next/font/local (Avenir Next since 2026-09-11), and it keeps its own radius ladder (3px controls up to 12px cards, tighter at every step than the dashboard's), its own button and focus classes, and a cool-paper `prefers-color-scheme` swap, unlike the dashboard's fixed dark-only theme.
 4. `text-[13px]` is an arbitrary value appearing in five files (small buttons, field labels, segmented items, scan URLs, report preparation copy); it is a real step of the scale that exists only as a literal.
 5. **RESOLVED 2026-09-02, plan 022 step 6: the self-hosted Inter now loads.** The four `@font-face` URLs in `theme.css` used to request `/dashboard/fonts/Inter-*.woff2`, which the built app resolved to `dist/public/dashboard/fonts/...` (a plain 404; `APP_ROUTE_PATTERN` did not cover the path either), so every `@font-face` failed and the dashboard rendered in the fallback stack. The URLs now point at `/fonts/Inter-*.woff2`, and the `copy-inter-fonts` Vite plugin both copies the canonical woff2 files to `dist/public/fonts` at build time and serves the same canonical files through a dev-server middleware, so dev and build answer identically. Verified 2026-09-02: all four URLs return 200 `font/woff2` from both the built `dist/public` output and the Vite dev server.
 
@@ -511,6 +511,7 @@ These are facts about the incumbent implementation worth knowing before changing
 7. **RESOLVED 2026-09-11, impeccable fix plan step 6.** The site typeface changed from the shared Inter to an operator-licensed, self-hosted Avenir Next, replacing the four Inter woff2 files in `packages/site/app/fonts` with four Avenir Next Cyr weights (Regular 400, Medium 500, Demi 600, Bold 700). The dashboard and report are unaffected and keep Inter (trade-off 79 and PRODUCT.md, Brand Commitments). The `overused-font` detector finding on the site no longer applies, since Inter is no longer the site's typeface; no ignore-value was needed or added for `packages/site`.
 8. **RESOLVED 2026-09-11, operator-requested card/color/motion pass (`impeccable live` plus direct edits).** Four site facts changed together: (a) the dossier, the diagnostic-scope statement, and the check/receive/method feature grids became raised cards with a shared `--shadow-card` token, reversing an explicit earlier "not a card wall" decision; (b) the evidence-blue accent moved from a desaturated corporate blue (#3569b4) to Tailwind's sky family, and signal orange moved from a muted burnt orange (#d56832) to orange-600 (#ea580c), both re-measured for contrast; (c) one authored scroll-triggered settle-in motion was added via a new `lib/reveal.tsx`; (d) a CSS grid `align-items: start` fix was needed on every multi-card grid, since the default `stretch` produced a large blank interior in a shorter card next to a taller sibling once cards became visible bordered surfaces (invisible before, when items were flat hairline rows). This pass also deleted the `--sheet-*` and `--navy`/`--navy-line` custom properties, dead since the dossier stopped consuming them; `--accent-line`, `--machine-raised`, `--visitor-line`, and the `@theme inline` block's `--color-*`/`--font-sans` entries remain unused but predate this pass and were left alone. This `DESIGN.md` file itself was stale before this entry: it recorded a `site-background`/`site-foreground` two-color token pair and a 672px `max-w-2xl` container that no longer matched the code, likely predating the "evidence dossier" system's introduction; `/impeccable document` (merge mode) regenerated every site section above from the current code, leaving the dashboard sections untouched.
 9. **RESOLVED 2026-09-11, operator live steer and corrective pass.** The home checks section became four exhibit cards with schematics (render diff restacked into two symmetric bands after its side-by-side panels squeezed the verdict into single-word lines; new accessibility and AI-signal schematics); the site motion system replaced the single settle-in, after the operator reported seeing no animation (the old render-in ran at page load, before anyone scrolled to it). The dossier moved into one shared component with a red/yellow/green row-rule set, the wordmark grew to 1.375rem, and the `.diff`, `.diff-panel`, `.machine-code`, `.machine-empty`, `.visitor` and `render-step` rules were deleted with the markup that used them.
+10. **RESOLVED 2026-09-12, plan 040 slice 3 (trade-off 84).** Items 5-7 above record that the dashboard kept Inter while the report and site moved to Avenir Next; that is now historical. The dashboard's four `@font-face` declarations, `vite.config.ts`'s font-copy plugin, and every color token were repointed to the near-navy/Avenir Next system items 5-7 describe for the other two surfaces, self-hosted independently rather than shared. The `overused-font` dismissal item 6 recorded for "the dashboard and report" pinning Inter no longer applies to the dashboard (the report's own dismissal had already been superseded by plan 039, trade-off 79, without this file being updated at the time); no new ignore was needed since the finding is now genuinely absent.
 
 ## Carrying this design into the report
 

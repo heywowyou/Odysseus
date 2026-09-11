@@ -43,7 +43,9 @@ import {
 } from './audits-model';
 import type { SeverityBadge, SeverityKey, SortOrder, StatusFilter } from './audits-model';
 
-const POLL_INTERVAL_MS = 5000;
+// Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
+// every poll while the tab is hidden).
+const POLL_INTERVAL_MS = 10_000;
 const SKELETON_ROW_COUNT = 8;
 
 const STATUS_OPTIONS: readonly JobStatus[] = [

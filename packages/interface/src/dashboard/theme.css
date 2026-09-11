@@ -1,64 +1,75 @@
 @import 'tailwindcss';
 
-/* Inter is self-hosted and shared with the client report; the woff2 files are
-   the canonical ones in packages/report/src/fonts, served at /fonts by the
-   vite config (copied next to the built app at build time, dev middleware in
-   serve mode) so the two surfaces never drift onto different font versions. */
+/* Avenir Next Cyr, self-hosted from the operator's licensed kit, the same
+   files packages/report/src/fonts and packages/site/app/fonts already ship
+   (plan 040 slice 3: the dashboard moves onto the report and site's shared
+   design language; Inter is retired here the way it already was retired
+   from the report in plan 039). Served at /fonts by the vite config (copied
+   next to the built app at build time, dev middleware in serve mode). */
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Avenir Next';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/Inter-Regular.woff2') format('woff2');
+  src: url('/fonts/AvenirNextCyr-Regular.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Avenir Next';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/fonts/Inter-Medium.woff2') format('woff2');
+  src: url('/fonts/AvenirNextCyr-Medium.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Avenir Next';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('/fonts/Inter-SemiBold.woff2') format('woff2');
+  src: url('/fonts/AvenirNextCyr-Demi.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Avenir Next';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/fonts/Inter-Bold.woff2') format('woff2');
+  src: url('/fonts/AvenirNextCyr-Bold.woff2') format('woff2');
 }
 
-/* Dashboard theme, Linear-grade monochrome dark. Layered near-black neutral
-   surfaces with hairline borders; the accent is white: primary buttons draw
-   a white surface with dark text (AA contrast), active states use a faint
-   white tint, and --color-accent-bright is the accent-as-text value. The one
-   color exception is severity: a severity reads as the same shade here and
-   in the PDF report. */
+/* Dashboard theme, plan 040 slice 3: the near-navy ground, ink ladder,
+   hairlines and sky accent are transcribed by value from the public site's
+   dark scheme (packages/site/app/globals.css) and packages/report's own
+   transcription of it (packages/report/src/styles/nocturne.css), so all
+   three surfaces read as one design language. Severity stays the
+   dashboard's own (trade-off 81, operator decision 2026-09-11); danger is
+   likewise untouched (no site equivalent exists to transcribe it from).
+   Primary buttons stay ink-inverted rather than sky-filled, matching the
+   site's own primary button (site-ink surface, site-paper label): the site
+   itself never fills a button with its accent hue, so accent/accent-strong
+   stay on the ink ladder and only accent-bright/accent-tint (the accent's
+   text-and-tint role: active nav, links, badges) take the sky hue. */
 @theme {
-  --color-base: #08090a;
-  --color-panel: #101112;
-  --color-raised: #17181a;
-  --color-overlay: #1e1f23;
-  --color-line: rgb(255 255 255 / 0.07);
-  --color-line-strong: rgb(255 255 255 / 0.13);
-  --color-ink: #f7f8f8;
-  --color-ink-soft: #9fa5ae;
-  /* One step lighter than the historical #7b808a: that value missed the 4.5:1
-     body-text floor on raised surfaces (4.48:1) and on the accent-tint box in
-     the report preparation card (3.81:1 composited). #898e96 clears 4.5:1 on
-     every surface the class sits on (base 6.05, panel 5.74, raised 5.39,
-     table row hover 5.60, accent tint over panel 4.59) while staying visibly
-     below ink-soft. */
-  --color-ink-muted: #898e96;
-  --color-accent: #f2f3f5;
-  --color-accent-strong: #d3d6db;
-  --color-accent-bright: #f7f8f8;
-  --color-accent-tint: rgb(255 255 255 / 0.09);
+  --color-base: #0e141c; /* site --paper (dark) */
+  --color-panel: #16202c; /* site --paper-raised (dark) */
+  --color-raised: #1a2530; /* nocturne --color-neutral-900: one hue step above the site's own raised, same family */
+  --color-overlay: #2b3642; /* nocturne --color-neutral-800: the next step in that same ramp, for dropdowns and toasts */
+  /* The site defines one hairline strength (--line, 13%); the dashboard
+     needs two. line-strong is that site value verbatim; line is the same
+     hue at half the alpha, the dashboard's own second stop. */
+  --color-line: rgb(233 238 245 / 0.07);
+  --color-line-strong: rgb(233 238 245 / 0.13); /* site --line (dark) */
+  --color-ink: #e9eef5; /* site --ink (dark) */
+  --color-ink-soft: #b6c1ce; /* site --ink-soft (dark) */
+  /* The site's own ink-muted (#909cab) clears 4.5:1 on base/panel/raised but
+     falls just short on this theme's overlay step (4.41:1, computed).
+     Nudged lighter along the same hue (15% toward ink-soft) to clear 4.5:1
+     on all four surfaces (4.73 on overlay, the worst case) while staying
+     visibly below ink-soft, the same reasoning the previous #898e96 value
+     used against the old near-black grounds. */
+  --color-ink-muted: #96a2b0;
+  --color-accent: #e9eef5; /* = ink: button surface stays ink-inverted, not hue-filled */
+  --color-accent-strong: #b6c1ce; /* = ink-soft: button hover step, matching the site's own ink -> ink-soft hover */
+  --color-accent-bright: #38bdf8; /* site --accent (dark; Tailwind sky-400): the accent's text/link role */
+  --color-accent-tint: rgb(56 189 248 / 0.16); /* site --accent-soft (dark) */
   --color-danger: #eb5757;
   --color-sev-critical: #f2555f;
   --color-sev-serious: #f08b3c;
@@ -66,14 +77,15 @@
   --color-sev-minor: #4cc98a;
   /* Certainty is drawn, not coloured: a measured quantity sits on solid ink,
      an unmeasured one on this hatch. Keeping it a texture rather than a fifth
-     hue leaves severity as the only colour that carries meaning. */
-  --color-hatch: rgb(255 255 255 / 0.11);
+     hue leaves severity as the only colour that carries meaning. Ink-hued
+     rather than pure white, matching the new ink ladder's own hue. */
+  --color-hatch: rgb(233 238 245 / 0.11);
   /* Two content widths. Forms and prose stay at a readable measure; the
      operator tables get the whole surface, because a ten-column prospect row
      wraps to three lines inside a reading column. */
   --container-reading: 46rem;
   --container-surface: 96rem;
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Avenir Next', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --animate-page-in: page-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-shimmer: shimmer 1.8s linear infinite;
@@ -154,6 +166,9 @@
     background-color: var(--color-accent-tint);
   }
   :focus-visible {
+    /* Ink, not the sky accent: the site's own rule keeps focus in "the
+       foreground color" rather than its link hue, and accent is now ink's
+       exact value (buttons stay ink-inverted, never sky-filled). */
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
@@ -170,13 +185,13 @@
 }
 
 @layer components {
-  /* The dashboard reads in two registers. Prose stays in Inter, which is
-     shared with the client report and must not drift from it. Every measured
-     quantity switches to tabular figures so a column of numbers aligns on its
-     digits and a changing counter does not jitter, and every identifier the
-     operator might copy (domain, job id, digest, selector) switches to the
-     mono face. The distinction is the point: prose is written, facts are
-     measured. */
+  /* The dashboard reads in two registers. Prose stays in Avenir Next, which
+     is shared with the client report and the public site and must not drift
+     from either. Every measured quantity switches to tabular figures so a
+     column of numbers aligns on its digits and a changing counter does not
+     jitter, and every identifier the operator might copy (domain, job id,
+     digest, selector) switches to the mono face. The distinction is the
+     point: prose is written, facts are measured. */
   .numeric {
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum' 1;
@@ -202,7 +217,7 @@
     background-image: linear-gradient(
       110deg,
       transparent 35%,
-      rgb(255 255 255 / 0.05) 50%,
+      rgb(233 238 245 / 0.05) 50%,
       transparent 65%
     );
     background-size: 200% 100%;

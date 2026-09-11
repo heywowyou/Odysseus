@@ -30,7 +30,9 @@ import { usePolling } from '../lib/use-polling';
 import { PAGE_SIZE, clampedOffset, pageState } from './outreach-model';
 import type { OutreachDraftRow, OutreachDraftsPage, OutreachDraftText } from './outreach-model';
 
-const POLL_INTERVAL_MS = 5000;
+// Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
+// every poll while the tab is hidden).
+const POLL_INTERVAL_MS = 10_000;
 const SKELETON_ROW_COUNT = 8;
 
 export function DraftsPage(): JSX.Element {

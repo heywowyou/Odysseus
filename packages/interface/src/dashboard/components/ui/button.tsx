@@ -5,10 +5,11 @@ import { cn } from '../../lib/cn';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md';
 
-/* The white primary draws a light surface, so its label is near-black text
-   (AA contrast holds in both directions of the monochrome theme). */
+/* The ink-inverted primary draws a light surface, so its label is the near-navy
+   base color (AA contrast holds in both directions of the theme), matching the
+   site's own primary button (site-ink surface, site-paper label). */
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-[#08090a] hover:bg-accent-strong',
+  primary: 'bg-accent text-[#0e141c] hover:bg-accent-strong',
   secondary: 'border border-line-strong bg-raised text-ink hover:bg-overlay',
   ghost: 'text-ink-soft hover:bg-raised hover:text-ink',
   danger: 'border border-danger/40 bg-transparent text-danger hover:bg-danger/10',

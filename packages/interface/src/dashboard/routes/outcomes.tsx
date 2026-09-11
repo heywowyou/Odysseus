@@ -30,7 +30,9 @@ import {
 } from './outreach-model';
 import type { OutcomesPage } from './outreach-model';
 
-const POLL_INTERVAL_MS = 5000;
+// Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
+// every poll while the tab is hidden).
+const POLL_INTERVAL_MS = 10_000;
 const SKELETON_ROW_COUNT = 8;
 
 /** Outcomes are mutually exclusive end states of one campaign, so the honest

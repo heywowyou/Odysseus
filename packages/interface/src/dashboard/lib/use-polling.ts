@@ -70,7 +70,28 @@ export function usePolling<T>(
       },
     });
     controller.start();
-    return () => controller.stop();
+
+    // Plan 040 poll policy: no poll runs while the tab is hidden. document
+    // is absent in non-jsdom test environments (route-model unit tests),
+    // so the listener is skippable rather than required.
+    const onVisibilityChange = (): void => {
+      if (document.hidden) {
+        controller.pause();
+      } else {
+        controller.resume();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      if (document.hidden) controller.pause();
+    }
+
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+      }
+      controller.stop();
+    };
     // `data` is read only to compute isLoading; keeping it out of the deps
     // stops an update-every-poll refetch loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps

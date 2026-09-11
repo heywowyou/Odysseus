@@ -33,7 +33,10 @@ export function PageHeader({
   meta,
   actions,
 }: {
-  eyebrow?: string | undefined;
+  /** A string title, or a breadcrumb built from a few inline elements (a
+   *  link back to a parent list, a separator, the current section) when the
+   *  page has one to show. */
+  eyebrow?: ReactNode;
   title: string;
   subject?: string | undefined;
   description?: string | undefined;

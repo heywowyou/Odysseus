@@ -103,4 +103,56 @@ describe('createPollingController', () => {
     expect(tick.pendingCount()).toBe(0);
     vi.useRealTimers();
   });
+
+  it('pause() cancels the pending timer but keeps an in-flight result', async () => {
+    vi.useFakeTimers();
+    const tick = harness(5_000);
+    tick.controller.start();
+    await tick.settle(1);
+    tick.controller.pause();
+    tick.advance(60_000);
+    expect(tick.pendingCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it('pause() during an in-flight fetch still delivers that result, then stays paused', async () => {
+    vi.useFakeTimers();
+    const tick = harness(5_000);
+    tick.controller.start();
+    tick.controller.pause();
+    await tick.settle(1);
+    expect(tick.events).toContain('update:1');
+    tick.advance(60_000);
+    expect(tick.pendingCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it('resume() fetches immediately and restarts the interval cadence', async () => {
+    vi.useFakeTimers();
+    const tick = harness(5_000);
+    tick.controller.start();
+    await tick.settle(1);
+    tick.controller.pause();
+    tick.advance(60_000);
+    expect(tick.pendingCount()).toBe(0);
+    tick.controller.resume();
+    expect(tick.pendingCount()).toBe(1);
+    await tick.settle(2);
+    tick.advance(5_000);
+    expect(tick.pendingCount()).toBe(1);
+    vi.useRealTimers();
+  });
+
+  it('resume() is a no-op when never paused or already stopped', async () => {
+    vi.useFakeTimers();
+    const tick = harness(5_000);
+    tick.controller.start();
+    await tick.settle(1);
+    tick.controller.resume();
+    expect(tick.pendingCount()).toBe(0);
+    tick.controller.stop();
+    tick.controller.resume();
+    expect(tick.pendingCount()).toBe(0);
+    vi.useRealTimers();
+  });
 });

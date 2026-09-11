@@ -5,7 +5,8 @@ export const en: DashboardStrings = {
     audits: 'Audits',
     newScan: 'New scan',
     prospects: 'Prospects',
-    outreach: 'Outreach',
+    outreach: 'To do',
+    results: 'Results',
   },
   shell: {
     tagline: 'Operator dashboard',
@@ -14,6 +15,7 @@ export const en: DashboardStrings = {
     navigation: 'Navigation',
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
+    checkAddress: 'Check an address',
     language: 'Interface language',
   },
   common: {

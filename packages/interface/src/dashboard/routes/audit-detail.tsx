@@ -1455,7 +1455,27 @@ export function AuditDetailPage(): JSX.Element {
   return (
     <article className={PAGE_WIDTH.surface}>
       <PageHeader
-        eyebrow={strings.common.typeLabels.fullAudit}
+        eyebrow={
+          // Plan 040 slice 1 finding: the audit page carried no link back to
+          // the prospect it was run for, though the payload already names
+          // it. A real hotel name in this breadcrumb waits for the hub
+          // (slice 4); this closes the missing-link gap now with what the
+          // page already has.
+          data.outreach?.candidateId !== null && data.outreach?.candidateId !== undefined ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Link
+                to={`/prospects/${data.outreach.candidateId}`}
+                className="transition-colors hover:text-ink"
+              >
+                {strings.nav.prospects}
+              </Link>
+              <span aria-hidden="true">›</span>
+              {strings.common.typeLabels.fullAudit}
+            </span>
+          ) : (
+            strings.common.typeLabels.fullAudit
+          )
+        }
         title={hostnameOf(data.siteUrl)}
         meta={
           <div className="flex flex-col gap-4">

@@ -490,6 +490,11 @@ means numbered entry 24, not a literal Markdown heading anchor.
     wording (`outreach-email-template.ts`), filled only with the formatted
     hotel name and that hotel's own preview proof-card categories. Change a
     sentence only with operator approval. → trade-offs.md#83
+84. The dashboard's grounds, ink ladder, hairlines and sky accent are
+    transcribed by value from the same site/report source trade-off 81
+    used; severity and `--color-danger` stay untouched, and primary
+    buttons stay ink-inverted, never sky-filled. Do not invent a token
+    value instead of transcribing one. → trade-offs.md#84
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node

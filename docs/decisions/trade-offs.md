@@ -4393,3 +4393,71 @@ operator decision. Change a sentence only with operator approval, and bump
 `template-v1`. The email names only categories from that hotel's own preview
 cards, never a fixed list. Every draft is still read before it is sent, which
 is also where a brand name `formatHotelName` recased badly is fixed.
+
+### 84. The dashboard wears the report and site's design language; Inter and the near-black ground are retired (plan 040 slice 3, 2026-09-12)
+
+The dashboard was the one surface still on the retired Nocturne-era look
+after trade-off 81 moved the report and preview onto the public site's dark
+scheme: near-black neutrals (`#08090a`/`#101112`/`#17181a`/`#1e1f23`), a
+white-only accent, and Inter, whose woff2 files plan 039 had already removed
+from `packages/report/src/fonts` (the dashboard's stated source), so the
+dashboard had been silently rendering in a system font and 404ing the font
+request on every load. Plan 040's IA audit named both as forced decisions
+rather than optional polish.
+
+**What changed.** Grounds, ink ladder and hairlines transcribed by value
+from the site's dark scheme the same way trade-off 81 did: base `#0e141c`,
+panel `#16202c` (site paper/paper-raised), raised `#1a2530` and overlay
+`#2b3642` (the next two steps of `nocturne.css`'s own neutral ramp, since
+the site itself only needs two tonal layers and the dashboard needs four),
+ink `#e9eef5`/`#b6c1ce`, hairlines at 7 and 13 percent of the site's ink
+hue (the site only defines the stronger one; the dashboard's second,
+lighter stop is its own addition on the same hue). Avenir Next Cyr replaces
+Inter, self-hosted from the same operator-licensed files
+`packages/report/src/fonts` and `packages/site/app/fonts` already ship
+(`vite.config.ts`'s font-copy plugin and `theme.css`'s `@font-face` block
+both repointed; no new files added). The accent's text-and-tint role
+(active nav, links, badges: `--color-accent-bright`/`--color-accent-tint`)
+takes the site's sky blue (`#38bdf8` / `rgb(56 189 248 / 0.16)`).
+
+**What did not change.** Severity (`trade-off 81`'s divergence stands,
+operator decision, plan 040's operator brainstorm) and `--color-danger`,
+which has no site-sourced equivalent to transcribe. Primary buttons stay
+ink-inverted (`--color-accent`/`--color-accent-strong` now literally equal
+ink/ink-soft) rather than becoming sky-filled: the site's own primary
+button is `site-ink` surface with `site-paper` label, never its accent hue,
+so filling a dashboard button with sky blue would have been inventing a
+site pattern that does not exist. `:focus-visible` stays on ink, matching
+the site's own "foreground color" focus rule, not the new link hue.
+
+**The one recalculated value.** The site's own `--ink-muted` (`#909cab`)
+clears 4.5:1 on the dashboard's base/panel/raised but falls to 4.41:1 on
+its fourth tonal step (`overlay`, used for dropdowns and toasts, which the
+site itself has no equivalent of). `--color-ink-muted` is nudged 15 percent
+toward `--ink-soft` along the same hue (`#96a2b0`, 4.73:1 on overlay, the
+worst case) rather than taken verbatim, the same reasoning the prior
+`#898e96` value used against the old near-black grounds (plan 022).
+Verified by contrast computation, not jsdom: axe's `color-contrast` rule
+cannot run in the dashboard's jsdom test environment (no real CSS engine),
+so this and every other pair here is a manual/live-review gate, per plan
+040's verification section.
+
+**Also landed in the same slice.** The sidebar drops "Nouveau scan" (already
+duplicated as the Audits page's own header button) and gains "Résultats"
+pointing at the existing `/outreach/outcomes`; "Démarches" is relabelled
+"À traiter" at its existing `/outreach` URL (operator decision, plan 040
+slice 1); both stay at their current URLs until slice 6 rebuilds them at
+`/resultats` and `/a-traiter`. A footer link to `/outreach/do-not-contact`
+was added; none existed before. `usePolling` gained `pause()`/`resume()`
+(`lib/polling.ts`) and now stops every poll while the browser tab is
+hidden; list pages (audits, drafts, replies, outcomes, prospects) moved to
+one shared 10-second interval (plan 040's poll policy), replacing their
+previous 5-8 second intervals. The audit page's header eyebrow becomes a
+breadcrumb linking to the prospect it was run for when one exists
+(`PageHeader`'s `eyebrow` prop widened from `string` to `ReactNode` to
+carry it); a real hotel name there waits for the hub (slice 4).
+
+**Approval consequence.** None: the dashboard has no render-identity
+approval gate like the report's (trade-off 44). This is a live tool the
+operator reads directly; DESIGN.md's dashboard section is updated in the
+same change rather than left to drift, per plan 040 binding decision 3.

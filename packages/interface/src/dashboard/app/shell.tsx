@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, ListChecks, Mail, Menu, Radar, X } from 'lucide-react';
+import { Building2, ClipboardCheck, ListChecks, Mail, Menu, ShieldCheck, X } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { Brand } from './brand';
 import { LanguageSwitcher } from './language-switcher';
@@ -12,22 +12,25 @@ export function AppShell() {
   const { pathname } = useLocation();
 
   /* Grouped by the two halves of the work rather than listed flat: measuring a
-     site and running a campaign are different jobs with different rhythms, and
-     the flat list gave no clue that "Nouveau scan" and "Audits" are two ends of
-     one thing. The groups encode that; they are not decoration. */
+     site and running a campaign are different jobs with different rhythms.
+     Plan 040 slice 3 (approved IA, docs/product/dashboard-ia.md): "Nouveau
+     scan" moves to a header button on the Audits page it sat next to
+     (removed here, not duplicated); "A traiter" and "Resultats" are new
+     Campagne entries at their current URLs (/outreach, /outreach/outcomes)
+     until slice 6 rebuilds them at /a-traiter and /resultats. */
   const navGroups = [
     {
       label: strings.shell.groupMeasure,
-      items: [
-        { to: '/scans/new', label: strings.nav.newScan, icon: Radar },
-        { to: '/audits', label: strings.nav.audits, icon: ListChecks },
-      ],
+      items: [{ to: '/audits', label: strings.nav.audits, icon: ListChecks, end: false }],
     },
     {
       label: strings.shell.groupCampaign,
       items: [
-        { to: '/prospects', label: strings.nav.prospects, icon: Building2 },
-        { to: '/outreach', label: strings.nav.outreach, icon: Mail },
+        // end: true so this item's own NavLink match does not also light up
+        // for the /outreach/outcomes item nested under the same prefix.
+        { to: '/outreach', label: strings.nav.outreach, icon: Mail, end: true },
+        { to: '/prospects', label: strings.nav.prospects, icon: Building2, end: false },
+        { to: '/outreach/outcomes', label: strings.nav.results, icon: ClipboardCheck, end: false },
       ],
     },
   ];
@@ -57,6 +60,7 @@ export function AppShell() {
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.end}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
@@ -76,6 +80,19 @@ export function AppShell() {
     </nav>
   );
 
+  const footer = (
+    <div className="mt-auto border-t border-line p-4">
+      <NavLink
+        to="/outreach/do-not-contact"
+        className="mb-3 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-raised hover:text-ink"
+      >
+        <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
+        {strings.shell.checkAddress}
+      </NavLink>
+      <LanguageSwitcher />
+    </div>
+  );
+
   return (
     <div className="min-h-dvh bg-base text-ink">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-panel md:flex">
@@ -84,9 +101,7 @@ export function AppShell() {
           <p className="mt-1 px-2 text-xs text-ink-muted">{strings.shell.tagline}</p>
         </div>
         {nav}
-        <div className="mt-auto border-t border-line p-4">
-          <LanguageSwitcher />
-        </div>
+        {footer}
       </aside>
 
       <header className="fixed inset-x-0 top-0 z-30 flex h-12 items-center justify-between border-b border-line bg-panel px-4 md:hidden">
@@ -121,9 +136,7 @@ export function AppShell() {
               </button>
             </div>
             {nav}
-            <div className="mt-auto border-t border-line p-4">
-              <LanguageSwitcher />
-            </div>
+            {footer}
           </aside>
         </div>
       ) : null}

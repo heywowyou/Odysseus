@@ -54,7 +54,9 @@ import type {
   ProspectRow,
 } from './prospects-model';
 
-const POLL_INTERVAL_MS = 8000;
+// Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
+// every poll while the tab is hidden).
+const POLL_INTERVAL_MS = 10_000;
 const SKELETON_ROW_COUNT = 8;
 /** Settling time for the search box: the list refetches from the server on
  *  every change, so keystrokes must batch into one request per pause. */
