@@ -17,6 +17,7 @@ reports/**
 .codex/**
 .impeccable/**
 packages/site/.impeccable/**
+packages/interface/.impeccable/**
 .mcp.json
 skills-lock.json
 
