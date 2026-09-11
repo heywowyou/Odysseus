@@ -20,7 +20,7 @@
 import { createHash } from 'node:crypto';
 import type { Page as BrowserPage } from 'playwright';
 
-export const PAGE_AUDIT_PROFILE_VERSION = 'v1';
+const PAGE_AUDIT_PROFILE_VERSION = 'v1';
 
 /** A signal is independent structural evidence found on the page. The
  *  planner counts distinct *kinds* present, never raw occurrence counts,

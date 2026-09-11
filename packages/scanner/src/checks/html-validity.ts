@@ -93,7 +93,7 @@ const validator = new HtmlValidate({
   extends: ['html-validate:recommended'],
 });
 
-export function selectReportableMessages(messages: readonly Message[]): HtmlValidityIssue[] {
+function selectReportableMessages(messages: readonly Message[]): HtmlValidityIssue[] {
   return messages
     .filter(
       (message): message is Message & { ruleId: string } =>

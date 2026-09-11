@@ -74,7 +74,7 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 let cachedConfig: SocialExclusionConfig | undefined;
 let cachedRegexes: RegExp[] | undefined;
 
-export function getSocialExclusionConfig(): SocialExclusionConfig {
+function getSocialExclusionConfig(): SocialExclusionConfig {
   if (cachedConfig) return cachedConfig;
   const filePath = path.join(moduleDir, 'config', 'social-exclusion.json');
   const raw = JSON.parse(readFileSync(filePath, 'utf-8'));

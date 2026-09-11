@@ -34,17 +34,9 @@
  * from URL shape alone is exactly what this module refuses to do.
  */
 
-import { isConfirmedListing } from './full-audit-plan.js';
 import type { ContinuationBasis, ContinuationGuardSummary } from '@odysseus/core';
-import type { PageAuditProfile } from './page-audit-profile.js';
 
-export { isConfirmedListing };
-export type {
-  ContinuationBasis,
-  ContinuationFamilyOmission,
-  ContinuationGuardSummary,
-} from '@odysseus/core';
-export type { PageAuditProfile };
+export type { ContinuationBasis, ContinuationGuardSummary } from '@odysseus/core';
 
 /** Bumped only for a deliberate, reviewed retune - never edited in place.
  *  See docs/session/current-session.md for the reasoning behind v1's

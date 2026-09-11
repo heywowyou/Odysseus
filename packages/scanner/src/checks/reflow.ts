@@ -38,7 +38,7 @@ import type { Page } from 'playwright';
 
 /** WCAG 1.4.10's own stated width. */
 export const REFLOW_VIEWPORT_WIDTH = 320;
-export const REFLOW_VIEWPORT_HEIGHT = 640;
+const REFLOW_VIEWPORT_HEIGHT = 640;
 
 /** Sub-pixel rounding and scrollbar gutters produce overflows of a pixel
  *  or two on layouts that are in fact correct. Chosen to sit above that

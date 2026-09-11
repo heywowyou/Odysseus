@@ -239,8 +239,8 @@ function persistPageIfConfigured(
  * closes; at most one tab per wedged page is acceptable against losing
  * the run.
  */
-export const RENDERED_ANALYSIS_WATCHDOG_MS = 420_000;
-export const FULL_SCAN_PAGE_WATCHDOG_MS = 600_000;
+const RENDERED_ANALYSIS_WATCHDOG_MS = 420_000;
+const FULL_SCAN_PAGE_WATCHDOG_MS = 600_000;
 
 /**
  * Resolves with `work`'s result, or, if `work` is still pending after
