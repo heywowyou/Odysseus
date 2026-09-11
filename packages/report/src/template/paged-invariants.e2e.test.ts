@@ -25,7 +25,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser, Page } from 'playwright';
 import { launchBrowser } from '@odysseus/scanner';
 import { renderHtml } from './render-html.js';
-import { analyzePagedjsOverflow, collectPagedjsOverflowModels } from '../pdf.js';
+import {
+  analyzePagedjsOverflow,
+  collectPagedjsOverflowModels,
+  renderPdfWithPageCountFromHtml,
+} from '../pdf.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import {
   buildStressFixture,
@@ -444,6 +448,21 @@ describe('Paged.js invariants against the stress fixture (docs/report/report-des
     expect(text).toContain('/Outlines');
     expect(text).toContain('/StructTreeRoot');
   });
+
+  // Issue #171: the raw pagination above runs no repair loop, so it can
+  // observe a defect the production path must repair or abort on (the
+  // fixture's 28 annex groups were measured paginating to 29 headings this
+  // way, Paged.js silently duplicating one). This is the one check that the
+  // full production render - thead, strand and duplication repairs plus the
+  // fail-closed structural, strand and overflow gates - composes into a
+  // working deliverable on the exact document the defects were measured
+  // against. A throw here means the pipeline correctly refused to ship a
+  // broken layout; a success means every gate stayed silent.
+  it('issue #171: the production render path (repairs plus gates) delivers the stress fixture', async () => {
+    const result = await renderPdfWithPageCountFromHtml(stressHtml, browser);
+    expect(result.pageCount).toBeGreaterThan(0);
+    expect(result.pdf.length).toBeGreaterThan(1000);
+  }, 300_000);
 });
 
 describe("Paged.js invariants against doc §5's two empty-branch variants", () => {

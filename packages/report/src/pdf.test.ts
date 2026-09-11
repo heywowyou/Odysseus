@@ -6,6 +6,7 @@ import {
   describePagedjsStructuralFailure,
   describeStrandedAppendixRuleHeadings,
   extractAppendixTablePreambles,
+  findDuplicatedAppendixHeadingRuleIds,
   findStrandedAppendixRuleIds,
   forceBreakBeforeAppendixRuleGroups,
   insertRepeatedTheadsIntoHtml,
@@ -13,6 +14,7 @@ import {
   PAGEDJS_OVERFLOW_TOLERANCE_PX,
   reportPageCountWarning,
   REPORT_PAGE_COUNT_WARNING_THRESHOLD,
+  type AppendixHeadingOccurrence,
   type AppendixTableSplitPoint,
   type PagedOverflowCandidate,
   type PagedPageModel,
@@ -87,6 +89,34 @@ describe('analyzePagedjsPages / describePagedjsStructuralFailure', () => {
     const pages: PagedPageModel[] = [
       page('Cover page'),
       page('Section one content', ['f001', 'f001']),
+    ];
+
+    expect(check(pages)).toBeUndefined();
+  });
+
+  // Issue #171: the stress fixture paginated to 29 annex headings for 28
+  // source groups, Paged.js having silently duplicated one heading with no
+  // console error. The heading text rides in atomicBlockTexts because the
+  // browser extraction now includes .appendix-rule-head in its selector.
+  it("fails when an appendix rule group heading's text appears on two different pages", () => {
+    const headingText =
+      'Critique Les listes déroulantes doivent avoir un nom accessible select-name 3 constats · 6 occurrences · 5 pages';
+    const pages: PagedPageModel[] = [
+      page('Cover page'),
+      page('Annex page one', [headingText]),
+      page('Annex page two', [headingText]),
+    ];
+
+    const message = check(pages);
+    expect(message).toContain('rendered the same block twice');
+    expect(message).toContain('Les listes déroulantes');
+  });
+
+  it('does not flag two different annex headings that merely share a page', () => {
+    const pages: PagedPageModel[] = [
+      page('Cover page'),
+      page('Annex page one', ['heading for select-name', 'heading for color-contrast']),
+      page('Annex page two', ['heading for image-weight']),
     ];
 
     expect(check(pages)).toBeUndefined();
@@ -357,6 +387,88 @@ describe('analyzePagedjsOverflow / describePagedjsOverflow (issue #118)', () => 
       overflowPageModel([paintedBox()]),
     ];
     expect(analyzePagedjsOverflow(pages)).toBeUndefined();
+  });
+});
+
+describe('findDuplicatedAppendixHeadingRuleIds (issue #171)', () => {
+  const occurrence = (
+    ruleId: string,
+    text: string,
+    pageIndex: number,
+  ): AppendixHeadingOccurrence => ({ ruleId, text, pageIndex });
+
+  it('returns the rule ids of headings whose text repeats on a later page, deduplicated in order', () => {
+    expect(
+      findDuplicatedAppendixHeadingRuleIds([
+        occurrence('select-name', 'heading select-name', 4),
+        occurrence('color-contrast', 'heading color-contrast', 5),
+        occurrence('select-name', 'heading select-name', 6),
+        occurrence('color-contrast', 'heading color-contrast', 7),
+        occurrence('color-contrast', 'heading color-contrast', 8),
+      ]),
+    ).toEqual(['select-name', 'color-contrast']);
+  });
+
+  it('returns nothing when every heading text appears once', () => {
+    expect(
+      findDuplicatedAppendixHeadingRuleIds([
+        occurrence('select-name', 'heading select-name', 3),
+        occurrence('color-contrast', 'heading color-contrast', 4),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('does not flag the same heading text repeated within a single page', () => {
+    expect(
+      findDuplicatedAppendixHeadingRuleIds([
+        occurrence('select-name', 'heading select-name', 3),
+        occurrence('select-name', 'heading select-name', 3),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('skips empty heading text so blank fragments never drive the repair', () => {
+    expect(
+      findDuplicatedAppendixHeadingRuleIds([
+        occurrence('select-name', '', 3),
+        occurrence('select-name', '', 4),
+      ]),
+    ).toEqual([]);
+  });
+
+  it('reports a repeated heading with an empty rule id so the gate can fail closed on markup drift', () => {
+    expect(
+      findDuplicatedAppendixHeadingRuleIds([
+        occurrence('', 'drifted heading', 3),
+        occurrence('', 'drifted heading', 4),
+      ]),
+    ).toEqual(['']);
+  });
+});
+
+describe('the issue #171 duplication repair trigger composes with the source patch', () => {
+  const doc =
+    '<html><head><style>body{}</style></head><body><div class="appendix-rule-group" data-appendix-rule-id="stress-minor-rule-0">group</div></body></html>';
+
+  it('feeds the duplicated rule ids into the same fresh-page source patch the strand repair uses', () => {
+    const duplicated = findDuplicatedAppendixHeadingRuleIds([
+      { ruleId: 'stress-minor-rule-0', text: 'heading stress-minor-rule-0', pageIndex: 3 },
+      { ruleId: 'stress-minor-rule-0', text: 'heading stress-minor-rule-0', pageIndex: 4 },
+    ]);
+    expect(duplicated).toEqual(['stress-minor-rule-0']);
+    expect(forceBreakBeforeAppendixRuleGroups(doc, duplicated)).toContain(
+      '.appendix-rule-group[data-appendix-rule-id="stress-minor-rule-0"] { break-before: page; }',
+    );
+  });
+
+  it('leaves a document whose duplication persisted with an unrepairable rule id unchanged, leaving it to the gate', () => {
+    // Markup drift: the repeated heading carries no usable rule id, so the
+    // repair makes no source progress and the structural gate aborts.
+    const duplicated = findDuplicatedAppendixHeadingRuleIds([
+      { ruleId: '', text: 'drifted heading', pageIndex: 0 },
+      { ruleId: '', text: 'drifted heading', pageIndex: 1 },
+    ]);
+    expect(forceBreakBeforeAppendixRuleGroups(doc, duplicated)).toBe(doc);
   });
 });
 

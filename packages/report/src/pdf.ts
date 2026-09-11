@@ -62,19 +62,26 @@ const PAGEDJS_LAYOUT_REPEATED_MARKER = 'Layout repeated';
  *  Checked structurally instead, against the real post-pagination DOM:
  *  every interior page (the cover is allowed to be visually sparse,
  *  same exemption invariant 2 in paged-invariants.test.ts already
- *  grants it) must carry some text, and no block from this report's own
- *  set of "atomic, never-split" classes (paged.css's `.card,
- *  .render-card, .theme-card, .glossary-entry, .section-head`) may
- *  have identical text content appearing on two different pages - a
- *  legitimate report never repeats a card or a glossary term verbatim,
- *  so any match is Paged.js duplicating a fragment, not real content.
- *  Scoped to those classes rather than every element on the page so a
- *  deliberately repeated short string (a rule id like "f001" appearing
- *  in both a priority card and the annex, for instance) never false-
- *  positives. Deliberately excludes `table`/`thead`: the appendix
+ *  grants it) must carry some text, and no block from this selector's
+ *  class list may have identical text content appearing on two
+ *  different pages - any match is Paged.js duplicating a fragment, not
+ *  real content. The property every class here shares is verbatim
+ *  uniqueness across a legitimate report, not CSS atomicity: the first
+ *  five (paged.css's `.card, .render-card, .theme-card, .glossary-entry,
+ *  .section-head`) are break-inside: avoid blocks a legitimate report
+ *  never repeats, and `.appendix-rule-head` (issue #171) is NOT atomic
+ *  (trade-off 17) but is still unique - one heading per annex rule
+ *  group, and its text renders the severity badge, rule code and
+ *  occurrence counts together, so the same rule id's heading in the
+ *  third-party partition always carries the vendor tag its first-party
+ *  copy lacks. Scoped to those classes rather than every element on the
+ *  page so a deliberately repeated short string (a rule id like "f001"
+ *  appearing in both a priority card and the annex, for instance) never
+ *  false-positives. Deliberately excludes `table`/`thead`: the appendix
  *  thead-repair pass below (issue #45) intentionally clones a rule group's
  *  header onto more than one page, which must never trip this check. */
-const ATOMIC_BLOCK_SELECTOR = '.card, .render-card, .theme-card, .glossary-entry, .section-head';
+const ATOMIC_BLOCK_SELECTOR =
+  '.card, .render-card, .theme-card, .glossary-entry, .section-head, .appendix-rule-head';
 
 /** Explicit opt-in only: unlike the legacy duplicate-fragment selector above,
  * this marker means the component is structurally bounded by its template and
@@ -577,6 +584,18 @@ async function detectStrandedAppendixRuleHeadings(page: Page): Promise<AppendixH
   });
 }
 
+/** Issue #171. One annex rule group heading observed in the paginated DOM:
+ *  the physical page it sits on, the group's data-appendix-rule-id, and the
+ *  heading's own text. The stress fixture (28 source groups) was measured
+ *  paginating to 29 headings with Paged.js silently duplicating the
+ *  stress-minor-rule-0 heading and logging no console error at all - the
+ *  console guard above cannot catch this variant by definition. */
+export interface AppendixHeadingOccurrence {
+  ruleId: string;
+  text: string;
+  pageIndex: number;
+}
+
 /** Pure decision over the collected placements, no DOM: the rule ids of
  *  stranded headings, deduplicated in document order. A heading whose rule
  *  id is empty (the source always sets one, so this would mean markup
@@ -590,6 +609,54 @@ export function findStrandedAppendixRuleIds(
     if (!followedByRow && !stranded.includes(ruleId)) stranded.push(ruleId);
   }
   return stranded;
+}
+
+/** Collects the per-page heading occurrences the pure check below decides
+ *  over, off the live post-pagination DOM. */
+async function detectAppendixHeadingOccurrences(page: Page): Promise<AppendixHeadingOccurrence[]> {
+  return page.evaluate(() => {
+    return Array.from(document.querySelectorAll('.pagedjs_page')).flatMap((pageEl, pageIndex) =>
+      Array.from(pageEl.querySelectorAll('.appendix-rule-head[data-appendix-rule-id]')).map(
+        (heading) => ({
+          ruleId: heading.getAttribute('data-appendix-rule-id') ?? '',
+          text: (heading.textContent ?? '').trim(),
+          pageIndex,
+        }),
+      ),
+    );
+  });
+}
+
+/** Pure decision over the collected occurrences, no DOM: the rule ids of
+ *  headings whose exact text shows up on more than one physical page,
+ *  deduplicated in document order. A legitimate report renders each annex
+ *  group heading exactly once, so a verbatim repeat across pages is always
+ *  Paged.js duplicating a fragment (issue #171), never content. A repeat
+ *  within a single page is deliberately not flagged here, matching the
+ *  cross-page semantics of the structural duplicate gate (which fails the
+ *  render below when a duplication survives repair). A heading with an
+ *  empty rule id that repeats still reports its (empty) id: it cannot be
+ *  repaired and is left for the gates to abort on, the same posture as
+ *  findStrandedAppendixRuleIds. */
+export function findDuplicatedAppendixHeadingRuleIds(
+  occurrences: readonly AppendixHeadingOccurrence[],
+): string[] {
+  const firstSeenByText = new Map<string, number>();
+  const duplicated: string[] = [];
+  for (const { ruleId, text, pageIndex } of occurrences) {
+    const key = text.trim();
+    if (key.length === 0) continue;
+    const firstSeenPage = firstSeenByText.get(key);
+    if (
+      firstSeenPage !== undefined &&
+      firstSeenPage !== pageIndex &&
+      !duplicated.includes(ruleId)
+    ) {
+      duplicated.push(ruleId);
+    }
+    if (firstSeenPage === undefined) firstSeenByText.set(key, pageIndex);
+  }
+  return duplicated;
 }
 
 /** Why the repair patches the SOURCE instead of the paginated DOM: Paged.js
@@ -726,29 +793,38 @@ export async function renderPdfWithPageCountFromHtml(
     let currentHtml = html;
     await runPagedjsPreview(currentHtml);
 
-    // Issue #45, second half + issue #170: repair, against the real
-    // post-layout DOM, the two appendix pagination defects the layout
+    // Issue #45, second half + issue #170 + issue #171: repair, against the
+    // real post-layout DOM, the three appendix pagination defects the layout
     // engine itself cannot be talked out of - a rule group continuation
-    // fragment missing its column header (#45), and a rule group heading
+    // fragment missing its column header (#45), a rule group heading
     // stranded at a page bottom with its whole table on the next page
-    // (#170). Both repairs patch the pre-pagination HTML source and
-    // re-lay-out from scratch. Reports with neither defect pay nothing
-    // extra - detection finds nothing and the loop exits after the very
-    // first pass, exactly as before these fixes. Bounded per
-    // MAX_APPENDIX_LAYOUT_REPAIR_PASSES: each pass only ever pushes
-    // content downward (a repeated header adds markup at an existing row
-    // boundary; a break spacer moves a group start to a fresh page), so
-    // one pass can expose a strand or a split further down that
-    // a later pass then repairs, but nothing can loop - and anything still
-    // stranded after the bound is caught by the gate below and aborts.
+    // (#170), and a rule group heading Paged.js silently duplicated with no
+    // console error (#171). All three repairs patch the pre-pagination HTML
+    // source and re-lay-out from scratch; for a duplication the source patch
+    // is the same fresh-page start the strand repair uses, which moves the
+    // group's boundary away from the heading Paged.js kept re-cloning.
+    // Reports with none of the defects pay nothing extra - detection finds
+    // nothing and the loop exits after the very first pass, exactly as
+    // before these fixes. Bounded per MAX_APPENDIX_LAYOUT_REPAIR_PASSES:
+    // each pass only ever pushes content downward (a repeated header adds
+    // markup at an existing row boundary; a break rule moves a group start
+    // to a fresh page), so one pass can expose a strand, a split or a
+    // duplication further down that a later pass then repairs, but nothing
+    // can loop. Anything still broken after the bound is caught by the
+    // gates below and aborts: a persistent duplication fails the structural
+    // gate (the selector now covers .appendix-rule-head), so a client PDF
+    // can never ship a duplicated rule heading.
     for (let attempt = 0; attempt < MAX_APPENDIX_LAYOUT_REPAIR_PASSES; attempt++) {
       const splits = await detectAppendixTableSplits(page);
       const stranded = findStrandedAppendixRuleIds(await detectStrandedAppendixRuleHeadings(page));
-      if (splits.length === 0 && stranded.length === 0) break;
+      const duplicated = findDuplicatedAppendixHeadingRuleIds(
+        await detectAppendixHeadingOccurrences(page),
+      );
+      if (splits.length === 0 && stranded.length === 0 && duplicated.length === 0) break;
       const preambles = extractAppendixTablePreambles(currentHtml);
       const patched = forceBreakBeforeAppendixRuleGroups(
         insertRepeatedTheadsIntoHtml(currentHtml, splits, preambles),
-        stranded,
+        [...new Set([...stranded, ...duplicated])],
       );
       if (patched === currentHtml) break;
       currentHtml = patched;
