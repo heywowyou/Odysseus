@@ -140,4 +140,29 @@ describe('runOutreachFullScanJob', () => {
     );
     expect(runAuditStage).not.toHaveBeenCalled();
   });
+
+  it('keeps the run identity and checkpoints across a failed attempt, so a retry resumes', async () => {
+    vi.mocked(runAuditStage).mockRejectedValueOnce(new Error('chromium crashed'));
+    await expect(runOutreachFullScanJob(fakeJob(), fakeContext())).rejects.toThrow(
+      'chromium crashed',
+    );
+    // Nothing terminal happened, and nothing resume-relevant was dropped:
+    // the checkpoint and state file outlive the failed attempt.
+    expect(completeJob).not.toHaveBeenCalled();
+    expect(failJob).not.toHaveBeenCalled();
+    expect(deleteCrawlCheckpoint).not.toHaveBeenCalled();
+    expect(deleteCrawlStateFile).not.toHaveBeenCalled();
+
+    await runOutreachFullScanJob(fakeJob(), fakeContext());
+    // The retry re-derives the SAME job's run identity rather than minting a
+    // new scan; picking the crawl back up is the audit stage's business, and
+    // it needs this identity to recognize its own checkpoints.
+    expect(ensureJobRunIdentity).toHaveBeenCalledTimes(2);
+    expect(ensureJobRunIdentity).toHaveBeenNthCalledWith(2, fakeConnection, 'job-1');
+    const [, secondOptions] = vi.mocked(runAuditStage).mock.calls[1]!;
+    expect(secondOptions.runIdentity).toEqual({
+      startedAt: new Date('2026-09-11T00:00:00.000Z'),
+      auditId: 'audit-1',
+    });
+  });
 });
