@@ -5,9 +5,9 @@
  * Playwright's Chromium with a print stylesheet: one browser dependency,
  * no second renderer, and therefore no possibility of the PDF showing the
  * prospect something the HTML does not, or vice versa. The print treatment
- * (light ground, print-safe severity pairs) lives in the preview's own
- * `@media print` block, the same way the paid report prints through
- * paged.css.
+ * lives in the preview's own `@media print` block: the same dark tokens as
+ * the screen (operator direction 2026-09-11, trade-offs.md#81), with only
+ * print layout and the CTA text-run rule differing.
  *
  * This is an operator artifact: it is returned from the authenticated audit
  * route with a download disposition, never persisted as a public object,
@@ -33,7 +33,10 @@ export async function generateOutreachPreviewPdf(html: string): Promise<Buffer> 
       await page.setContent(html, { waitUntil: 'load' });
       return await page.pdf({
         printBackground: true,
-        margin: { top: '14mm', right: '14mm', bottom: '14mm', left: '14mm' },
+        // The stylesheet's own @page rule (margin 0, full-bleed dark)
+        // governs; this zero is the matching fallback, never a second
+        // geometry.
+        margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
         preferCSSPageSize: true,
         tagged: true,
       });

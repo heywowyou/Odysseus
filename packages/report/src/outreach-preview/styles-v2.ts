@@ -15,8 +15,6 @@
  *   to the report, spacing rhythm, radius ladder)
  * - packages/report/src/template/design-tokens.ts (the severity tile
  *   pairs, the report-design doc's source of truth for badges)
- * - packages/report/src/styles/paged.css's print block (the light print
- *   ground #f7f7f5 and its measured print-safe text colors)
  * - the site's dossier motif (DESIGN.md, "The Dossier Rule Set") for the
  *   three proof cards: raised card with the finding-red mark above the
  *   title, decoration only, never a severity
@@ -24,10 +22,15 @@
  *   base64 data URIs to keep the document zero-network;
  *   font-display: block
  *
- * The print block is what the operator PDF prints through: the dark screen
- * ground inverts to the report's print ground so a downloaded PDF is not a
- * wall of ink, and the severity tiles swap to the same print-safe pairs the
- * paid report uses for text on that light background.
+ * The operator PDF prints through the same dark tokens as the screen
+ * document (operator direction 2026-09-11 during plan 037's workflow
+ * review, superseding plan 039's light print ground for this artifact):
+ * the PDF is not a wall of ink exception any more, it is dark like every
+ * other report and PDF this product ships. The print block only keeps
+ * what printing genuinely needs: full-width layout, the A4 cover page,
+ * zero body padding inside the @page margin, and the CTA's
+ * 0.02em/no-uppercase treatment from the report's Chromium text-run
+ * doctrine.
  */
 
 export const OUTREACH_PREVIEW_STYLES_V2 = `
@@ -92,6 +95,13 @@ export const OUTREACH_PREVIEW_STYLES_V2 = `
 }
 
 * { box-sizing: border-box; }
+
+html {
+  /* The ground propagates from the root element, so the printed sheet's
+     @page margin bands take the dark ground too instead of showing the
+     UA's light canvas as a frame around every PDF page. */
+  background-color: var(--bg);
+}
 
 body {
   margin: 0;
@@ -311,45 +321,26 @@ section:not(.disclosure) {
 }
 .cta:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 
-/* The operator PDF prints through this block: the dark ground inverts to
-   the paid report's print ground, and the severity tiles swap to the same
-   print-safe pairs paged.css derives for #f7f7f5, all measured at 4.5:1
-   or better. The scheme declaration flips with it so UA chrome (page
-   margins, scrollbars in the print preview) matches the light ground. */
+/* The operator PDF prints through this block on the same dark tokens as
+   the screen (operator direction 2026-09-11, trade-offs.md#81): only
+   print layout and the Chromium text-run treatment differ. The severity
+   tiles keep their screen pairs, already measured at 4.5:1 or better on
+   their tints over the dark ground.
+
+   Full-bleed pagination: native Chromium prints @page margin bands as
+   white paper no matter what backgrounds declare, so the page margin is
+   zero and every top-level block carries the vertical inset itself.
+   break-inside: avoid keeps page breaks between blocks, so each page
+   starts at a block's own padding-top, never mid-paragraph at the paper
+   edge; every block in this document is far shorter than a page. */
 @media print {
-  :root {
-    color-scheme: light;
-    --bg: #f7f7f5;
-    --surface: #ffffff;
-    --text: #161826;
-    --muted: #595d6c;
-    --faint: #595d6c;
-    --accent: #423a6a;
-    --accent-strong: #423a6a;
-    --accent-soft: rgba(66, 58, 106, 0.12);
-    --divider: rgba(22, 24, 38, 0.2);
-    --mark-finding: #a52a37;
-    --sev-critical: #a52a37; --sev-critical-bg: #ffffff;
-    --sev-serious: #8a5a1e;  --sev-serious-bg: #ffffff;
-    --sev-moderate: #6e6a1f; --sev-moderate-bg: #ffffff;
-    --sev-minor: #595d6c;    --sev-minor-bg: #ffffff;
-  }
-  /* The light print wash applies on the element that paints the cover
-     gradient (body), not on .cover, or the printed page keeps the dark
-     screen glow under print ink. */
-  body {
-    padding: 0;
-    --cover-glow: #dfe9f2;
-    --cover-ground: #eef3f8;
-  }
-  main { max-width: none; }
-  .cover {
-    min-height: 268mm;
-  }
-  section:not(.disclosure) { border-color: var(--divider); }
-  .card { background: var(--surface); }
-  .cta { background: var(--accent); color: #ffffff; letter-spacing: 0.02em; text-transform: none; }
+  body { padding: 0; }
+  main { max-width: none; padding: 0 14mm; }
+  main > * { break-inside: avoid; }
+  main > section { padding: 8mm 0 0; }
+  .cover { min-height: 296mm; break-after: page; }
+  .cta { letter-spacing: 0.02em; text-transform: none; }
 }
 
-@page { size: A4; margin: 14mm; }
+@page { size: A4; margin: 0; }
 `.trim();
