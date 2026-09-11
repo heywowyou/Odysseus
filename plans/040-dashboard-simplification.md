@@ -1,0 +1,219 @@
+# Plan 040: Simplify the operator dashboard around the hotel file, then carry the site's design language
+
+> **Executor instructions**: Follow this plan slice by slice. Run every
+> verification command and confirm the expected result before moving to the
+> next slice. If anything in the "STOP conditions" section occurs, stop and
+> report. Do not improvise. When a slice lands, update this plan's status row
+> in `plans/README.md`.
+>
+> **Drift check (run first)**:
+> `git diff --stat 1017199..HEAD -- packages/interface docs/product DESIGN.md plans/README.md`
+> Stop if dashboard routes, i18n, or the IA document moved without this plan
+> or a trade-off entry explaining it.
+
+## Status
+
+- **Priority**: P2
+- **Effort**: L
+- **Risk**: MEDIUM (the operator's daily tool; every slice must ship working;
+  FR/EN parity everywhere)
+- **Depends on**: 037 (the preview lifecycle the IA builds on), 039 (the
+  design language reference); operator attendance at the slice 1 approval
+  gate and the slices 8+ fill-in
+- **Category**: dashboard, information architecture, design
+- **Planned at**: commit `1017199`, 2026-09-11
+- **Issue**: none; operator-requested brainstorm 2026-09-11
+
+## Why this matters
+
+The dashboard grew one feature at a time and the operator now finds it
+confusing. Facts from the 2026-09-11 audit sweep:
+
+- 18 routes exist, 4 are in the sidebar; 13 pages are reachable only through
+  in-page links or direct URL.
+- The outreach flow crosses 3 nav areas and 5+ pages; the only bridge from
+  "draft created" back to the queue is a toast message.
+- Duplicate controls: create-first-draft in 3 places, regenerate in 3, revoke
+  preview in 2, with inconsistent 409 semantics documented in code comments.
+- Dead weight: the orphan `/vendors` page (zero inbound links), the retired
+  v1 preview page rendering two "this moved" notes, v1 endpoints the UI never
+  calls, retired i18n strings in both languages.
+- The audit page stacks 6 conditional cards in one 1,556-line file plus a
+  705-line card.
+- The dashboard loads Inter through `theme.css` `@font-face` from files copied
+  out of `packages/report/src/fonts`, which plan 039 emptied of Inter. The
+  requests 404 today and the dashboard silently renders in a system font. A
+  font decision is already forced.
+- Meanwhile the report and the public site share one design language (plan
+  039: near-navy ground, Avenir Next, dossier motif) and the dashboard wears
+  a different one (neutral near-black, white accent).
+
+## Operator decisions (interactive brainstorm, 2026-09-11)
+
+1. Audit first, then one rebuild pass; the design language is applied as each
+   screen is rebuilt, never styled twice.
+2. Goals, in work order: clarity (find things fast), fewer clicks in the core
+   loop, brand consistency rides along.
+3. Scope: full restructure delivered in working slices, no big-bang cutover.
+4. Target structure: one page per hotel is the hub; queues become lists that
+   lead into hubs.
+5. Slice 1 is a full UX audit ending in an IA proposal the operator approves
+   before any rebuild starts.
+6. The known dead weight is cleaned early, as its own small slice.
+7. Severity colors stay the dashboard's own; the trade-off 81 divergence
+   stands, deliberately.
+8. One plan, with the IA approval as an internal gate.
+9. Artifact-derived features come after the rework, as their own slices
+   (slices 8+ below).
+10. The kit contents are filled in by Claude Code, which created the six
+    artifacts and can read them back; ZCode cannot (they sit behind the
+    claude.ai login).
+
+## Binding decisions
+
+1. **The IA proposal gates the rebuild.** No slice 3+ work before the
+   operator approves `docs/product/dashboard-ia.md` through the interactive
+   question mechanism. A rejection sends work back to slice 1, never into
+   improvised structure.
+2. **Hotel-hub structure is settled.** The audit validates details (what
+   merges, what redirects, the slice order) but does not reopen the
+   one-page-per-hotel decision.
+3. **Design transcription, not import.** Tokens and fonts are transcribed by
+   value into `packages/interface`'s own theme layer with comments naming
+   their origin (trade-off 59: separate stacks, no workspace imports in the
+   browser bundle). Tailwind 4 stays; dark-only stays the incumbent; the
+   dashboard keeps its own severity shades (operator decision above; note it
+   in `DESIGN.md`'s dashboard section when the restyle lands, with a
+   trade-off entry for the restyle itself).
+4. **Outreach locks ride along.** Trade-offs 82 and 83: no model writes
+   outreach, and template wording changes need operator approval. Warm-up
+   automation stays out of scope (`plans/README.md`, "Explicitly deferred");
+   a warm-up kit-derived surface is informational (for example warm-up status
+   feeding runbook gate I) unless the operator deliberately reopens scope.
+5. **No new dependencies.** WCAG 2.2 AA is the binding floor on rebuilt
+   surfaces (PRODUCT.md decision). FR/EN parity tests stay green in every
+   slice.
+6. **Cleanup deletes only confirmed-dead things.** The legacy v1 preview page
+   and route, the v1 endpoints verifiably uncalled by the UI, and their
+   retired strings. The `/vendors` destiny (delete or link) is an IA-proposal
+   decision, not a cleanup decision.
+
+## Slices
+
+### Slice 1: Full UX audit and IA proposal (gate)
+
+- Run the dashboard locally with fixture or test data. Walk every operator
+  flow in the browser with screenshots: new scan, watch queue, open audit,
+  report preparation, outreach preview (render, PDF, publish, one-time link,
+  revoke), draft creation and review, replies, outcomes, prospect
+  management, do-not-contact lookup.
+- Catalogue: steps and clicks per flow today; duplicate controls; dead ends;
+  the jargon inventory (prescan, full audit, outreach scan, scorecard, SIREN,
+  transactional flow) with proposed plain-language FR and EN labels; poll
+  intervals; missing back links.
+- Write `docs/product/dashboard-ia.md`: the target navigation map, a
+  per-page destiny table (keep, merge, delete, redirect), flow-by-flow
+  before/after step counts, the rebuild slice order, and the `/vendors` and
+  suppressions destiny.
+- STOP: present the proposal to the operator through the interactive question
+  mechanism. No rebuild work before approval.
+
+### Slice 2: Dead-weight cleanup (small, independent)
+
+- Delete the retired `/prospects/:id/preview` page and route, the v1 preview
+  endpoints the UI verifiably never calls, and their retired i18n strings
+  (FR and EN together).
+- Update the narrowest tests; route tests prove the removed endpoints are
+  gone and the kept ones still answer.
+- May run while the slice 1 proposal awaits approval; must not pre-empt its
+  decisions (nothing here is load-bearing for the IA).
+
+### Slice 3: Shell, navigation, fonts, tokens
+
+- New navigation per the approved IA; cross-links and back links; one poll
+  policy.
+- Avenir Next: fix the `vite.config.ts` font copy (the Inter plugin copies
+  files that no longer exist), then `theme.css` `@font-face` and
+  `--font-sans`.
+- Transcribe the near-navy token set (grounds, ink ladder, hairlines, sky
+  accent) from `docs/report/report-design-tokens.md` and
+  `packages/site/app/globals.css` into `theme.css` by value, each with an
+  origin comment. Severity shades unchanged (binding decision 3).
+- The rebuilt shell passes axe WCAG 2.2 AA in FR and EN.
+
+### Slice 4: Hotel hub
+
+- One page per hotel per the approved proposal: identity and catalogue,
+  qualification, scans and audits, preview, thread, outcome as sections of
+  one page. The five single-purpose prospect subpages retire or become deep
+  links exactly as the proposal says.
+- One primary action per state (review, start scan, publish, draft);
+  duplicates removed.
+
+### Slice 5: Audit page restructure
+
+- Split `audit-detail.tsx` into composed sections per the proposal; one
+  regenerate affordance policy; a visible link to the hotel it serves.
+
+### Slice 6: Queues as lists into the hub
+
+- Drafts, replies, outcomes, and do-not-contact become lists whose rows open
+  the hotel hub; one create-draft entry point; the suppressions page destiny
+  per the proposal.
+
+### Slice 7: Language and labels pass
+
+- Rename operator-facing labels to the proposal's plain-language FR and EN
+  vocabulary; i18n parity tests updated; UI vocabulary only, no API renames.
+
+### Slices 8+: Artifact-derived features (PLACEHOLDER, owner: Claude Code)
+
+> **Instruction to Claude Code.** You created the six operator artifacts
+> below in your own session, so you can read them back there; ZCode cannot
+> reach them (they sit behind the claude.ai login) and never receives their
+> contents. Their IDs:
+>
+> - `6e911287-69be-4a6b-bd4b-56d1be1f4dc8` (the email warm-up kit)
+> - `f647f63c-c4cf-4a4c-8d0a-651c09bc0473`
+> - `75aaf0ad-0e1a-4178-85f9-ca0fa70b51c0`
+> - `6fb93cee-c929-4c1f-9830-67764ffea852`
+> - `b823775b-40f3-4d2b-8ec5-fba2c974aa0e`
+> - `336eb25d-7067-4403-87bb-d75ec2a42e2f`
+>
+> Read them from your own session, decide with the operator which ones still
+> matter, and replace this placeholder with concrete feature slices, one per
+> retained kit. Each slice must state: the dashboard feature in one sentence,
+> where it lives in the approved IA, its data source (kit content transcribed
+> into code-owned bilingual constants, operator-approved wording only), and
+> its constraints. Every slice must respect:
+>
+> - trade-offs 82 and 83 (no model writes outreach; template wording changes
+>   need operator approval);
+> - `plans/README.md` "Explicitly deferred": no automatic send, warm-up
+>   automation, or volume ramping; a warm-up kit may only become an
+>   informational surface (for example warm-up status feeding runbook gate I)
+>   unless the operator explicitly reopens that scope;
+> - FR and EN from the start; no new dependencies; features land only after
+>   slices 3 through 7 are done.
+>
+> Present the filled slices to the operator for approval (interactive
+> question) before any implementation.
+
+## STOP conditions
+
+- A locked contract (`findings.ts`, `severity.ts`, `llm-output.ts`) needs a
+  change: stop and ask.
+- A slice wants a new dependency: stop and ask.
+- Any change to approved outreach template wording without an operator
+  approval gate: forbidden.
+- `packages/report` or `packages/site` drift: out of scope, revert.
+- Store or API removals beyond the slice 2 confirmed-dead list: stop and ask.
+
+## Verification
+
+- Every slice: the narrowest affected suites, then `pnpm run check` green.
+- Slices 3 through 7: axe WCAG 2.2 AA on rebuilt pages, FR and EN; i18n
+  parity tests green.
+- Close-out: the operator walks the full outreach flow (scan to draft) on the
+  rebuilt dashboard and accepts it; the walkthrough screenshots are archived
+  beside the IA document.
