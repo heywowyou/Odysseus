@@ -705,23 +705,6 @@ export const fr: DashboardStrings = {
     actionRefused: 'Rien n’a été rédigé ; l’orchestrateur a refusé cette action.',
     actionError: 'Impossible de terminer cette action.',
   },
-  vendors: {
-    title: 'Systèmes de réservation observés',
-    description:
-      'Systèmes de réservation qui reviennent souvent aux contrôles rapides, et fréquence des échecs.',
-    columns: {
-      vendor: 'Système de réservation',
-      candidates: 'Prospects',
-      failures: 'Échecs',
-      failureRate: 'Taux d’échec',
-    },
-    kindLabels: {
-      'booking-host': 'Système de réservation',
-      'booking-mechanism': 'Mode de réservation',
-      'failure-rule': 'Échec récurrent',
-    },
-    empty: 'Aucune donnée de contrôle rapide pour l’instant.',
-  },
   outreachIndex: {
     title: 'Démarches',
     description: 'Brouillons, réponses, liste à ne pas contacter et résultats en revue opérateur.',

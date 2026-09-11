@@ -29,6 +29,14 @@
   `/vendors`, to keep sector-neutral naming and the `/prospects` URLs, to keep
   the preview status page until slice 4 absorbs it, and to leave every label
   fix to slice 7.
+- **Slice 2 landed 2026-09-12**: `/vendors` (page, route, endpoint, strings,
+  dashboard model) is deleted, and the two genuinely uncalled v1 preview
+  endpoints (`POST /preview/publish`, `GET /outreach/preview-render`) are
+  removed from `prospects.ts`. The preview status page and its revoke
+  endpoint stay, per the slice 1 decision, until slice 4. Store-level code
+  that outlived its only caller (`getVendorFingerprintAggregate`) was left
+  in place, out of this slice's authorized scope, for `fallow dead-code` to
+  triage separately (trade-off 80).
 
 ## Why this matters
 

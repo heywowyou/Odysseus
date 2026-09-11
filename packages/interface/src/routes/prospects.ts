@@ -7,11 +7,6 @@ import type {
   HotelQualificationOutcome,
 } from '@odysseus/core';
 import {
-  HOTEL_EVIDENCE_MIN_SUMMARIES,
-  HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
-} from '@odysseus/core';
-import { generateOutreachPreviewHtml } from '@odysseus/report';
-import {
   createJob,
   findOutreachThreadByCandidate,
   getOperatorProspect,
@@ -22,16 +17,10 @@ import {
   recordHotelCandidateReview,
 } from '@odysseus/store';
 import type { ListOperatorProspectsOptions, OperatorProspectQueue } from '@odysseus/store';
-import { getPreviewPublicBaseUrl } from '../config.js';
 import { createFollowUpForCandidate, createTouchOneDraft } from '../outreach/draft-runtime.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-preview-store.js';
-import {
-  buildPreviewInput,
-  publishPreview,
-  revokePreviewsForDomain,
-  type PublishPreviewRefusal,
-} from '../outreach/publish-preview.js';
+import { revokePreviewsForDomain } from '../outreach/publish-preview.js';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import type { JobQueue } from '../queue/job-queue.js';
@@ -219,15 +208,6 @@ const REVIEW_REASON_FALLBACK = 'dashboard-review';
 
 const REASON_MAX_LENGTH = 500;
 
-type PreviewRenderRefusal = Exclude<PublishPreviewRefusal, 'suppressed'>;
-
-type PreviewRenderResponse =
-  { rendered: true; html: string } | { rendered: false; refusal: PreviewRenderRefusal };
-
-function previewRenderRefusal(refusal: PreviewRenderRefusal): PreviewRenderResponse {
-  return { rendered: false, refusal };
-}
-
 interface ReviewBody {
   decision: 'accepted' | 'rejected';
   reason: string;
@@ -411,57 +391,6 @@ export function registerProspectRoutes(
     });
   });
 
-  // This renders from the current stored evidence rather than attempting to
-  // recover the bearer-token URL or published object. The same mapping as
-  // publication makes a re-render safe to inspect while leaving publication
-  // state and every bucket operation out of this read path.
-  router.get('/api/prospects/:candidateId/outreach/preview-render', async ({ res, params }) => {
-    const candidateId = params['candidateId']!;
-    if (!isPlausibleCandidateId(candidateId)) {
-      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
-      return;
-    }
-
-    const store = createMongoOutreachPreviewStore(connection, {
-      prescanVersion: CURRENT_PRESCAN_VERSION,
-      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
-    });
-    const row = await store.findPublicationRow(candidateId);
-    // The port deliberately collapses a missing candidate and a missing
-    // current-version prescan, exactly as publication does. It must not add a
-    // second store read solely to make this dashboard response more specific.
-    if (row === null) {
-      sendJson(res, 200, previewRenderRefusal('candidate-unknown'));
-      return;
-    }
-
-    const evidence = row.evidence;
-    if (evidence === undefined || evidence.status !== 'complete') {
-      sendJson(res, 200, previewRenderRefusal('evidence-incomplete'));
-      return;
-    }
-    if (evidence.schemaVersion !== HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION) {
-      sendJson(res, 200, previewRenderRefusal('evidence-schema-outdated'));
-      return;
-    }
-    if (evidence.summaries.length < HOTEL_EVIDENCE_MIN_SUMMARIES) {
-      sendJson(res, 200, previewRenderRefusal('evidence-incomplete'));
-      return;
-    }
-    if (row.prescanExpiresAt.getTime() <= Date.now()) {
-      sendJson(res, 200, previewRenderRefusal('prescan-expired'));
-      return;
-    }
-
-    const input = await buildPreviewInput({
-      row,
-      evidence,
-      language: 'fr',
-      publicBaseUrl: getPreviewPublicBaseUrl(),
-    });
-    sendJson(res, 200, { rendered: true, html: generateOutreachPreviewHtml(input) });
-  });
-
   // Single-candidate, single-touch action: one LLM call, one preview
   // publish, one Gmail draft call, the same synchronous-route shape as
   // `/review` above rather than the job queue, which plan 030 reserves for
@@ -525,71 +454,6 @@ export function registerProspectRoutes(
     }
     const { configured: _configured, ...result } = outcome;
     sendJson(res, 200, result);
-  });
-
-  // Issue #97: the dashboard counterpart of `odysseus prospect preview
-  // publish`, reusing the very same server-side function (publishPreview) and
-  // the same input contract and evidence guards, so neither path can drift.
-  // Serves both dashboard actions that create a link: the first publish for a
-  // candidate with no preview, and re-issue for one that already has a record.
-  // The raw bearer token exists only in this response body (plan 009): it is
-  // never stored, never logged, and the response is marked no-store so no
-  // cache holds what the UI shows exactly once. A refusal is an expected
-  // evidence-gate outcome (200 with the typed refusal), while an unconfigured
-  // bucket is an operator setup problem (503), the same split the draft
-  // routes make.
-  router.post('/api/prospects/:candidateId/preview/publish', async ({ req, res, params }) => {
-    const candidateId = params['candidateId']!;
-    if (!isPlausibleCandidateId(candidateId)) {
-      sendError(res, 400, 'candidateId must be a non-empty string without control characters');
-      return;
-    }
-    // Optional body; the dashboard normally sends none. The only recognised
-    // field is language, the one publish option the CLI also takes.
-    const body = await readJsonBodyOrRespond(req, res);
-    if (body === jsonBodyNotRead) return;
-    const rawLanguage =
-      body !== null && typeof body === 'object'
-        ? (body as Record<string, unknown>)['language']
-        : undefined;
-    if (rawLanguage !== undefined && rawLanguage !== 'fr' && rawLanguage !== 'en') {
-      sendError(res, 400, 'language must be "fr" or "en"');
-      return;
-    }
-
-    let publisher;
-    try {
-      publisher = createConfiguredPreviewPublisher();
-    } catch {
-      sendError(res, 503, 'the preview bucket is not configured on this machine');
-      return;
-    }
-    const result = await publishPreview({
-      store: createMongoOutreachPreviewStore(connection, {
-        prescanVersion: CURRENT_PRESCAN_VERSION,
-        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
-      }),
-      publisher,
-      publicBaseUrl: getPreviewPublicBaseUrl(),
-      candidateId,
-      language: rawLanguage === 'en' ? 'en' : 'fr',
-      dryRun: false,
-    });
-    if (result.published) {
-      res.setHeader('cache-control', 'no-store');
-      sendJson(res, 200, {
-        published: true,
-        previewId: result.previewId,
-        url: result.url,
-        publicExpiresAt: result.publicExpiresAt,
-      });
-      return;
-    }
-    if (result.refusal === 'candidate-unknown') {
-      sendError(res, 404, 'candidate not found');
-      return;
-    }
-    sendJson(res, 200, { published: false, refusal: result.refusal });
   });
 
   // Issue #97: the dashboard counterpart of `odysseus prospect preview

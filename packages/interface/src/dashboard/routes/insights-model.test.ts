@@ -5,11 +5,9 @@ import {
   distinctBookingKinds,
   evidenceAssetRows,
   formatByteSize,
-  formatFailureRate,
   prescanRows,
   previewState,
   scoreDiffRows,
-  vendorRows,
 } from './insights-model';
 import type {
   EvidenceResponse,
@@ -17,7 +15,6 @@ import type {
   PreviewResponse,
   ScoreDiffResponse,
   ScoreResponse,
-  VendorAggregateResponse,
 } from './insights-model';
 
 const prescan: PrescanResponse = {
@@ -252,61 +249,5 @@ describe('previewState', () => {
 
   it('reads an absent preview as none', () => {
     expect(previewState(null, now)).toBe('none');
-  });
-});
-
-describe('vendorRows', () => {
-  const aggregate: VendorAggregateResponse = {
-    prescanVersion: 'v3',
-    prescansRead: 40,
-    minimumGroupSize: 5,
-    bookingHosts: [{ value: 'booking.example.com', hotels: 12 }],
-    bookingMechanisms: [{ value: 'booking-form', hotels: 30 }],
-    failureRules: [{ value: 'color-contrast', hotels: 8 }],
-  };
-
-  it('keeps list order and tags each row with its kind', () => {
-    expect(vendorRows(aggregate)).toEqual([
-      {
-        kind: 'booking-host',
-        value: 'booking.example.com',
-        candidates: 12,
-        failures: null,
-        failureRate: null,
-      },
-      {
-        kind: 'booking-mechanism',
-        value: 'booking-form',
-        candidates: 30,
-        failures: null,
-        failureRate: null,
-      },
-      {
-        kind: 'failure-rule',
-        value: 'color-contrast',
-        candidates: 8,
-        failures: 8,
-        failureRate: 20,
-      },
-    ]);
-  });
-
-  it('computes the failure rate against the prescans actually read', () => {
-    const rows = vendorRows({ ...aggregate, prescansRead: 0, failureRules: [] });
-    expect(rows.every((row) => row.failureRate === null)).toBe(true);
-  });
-});
-
-describe('formatFailureRate', () => {
-  it('formats with the French decimal comma', () => {
-    expect(formatFailureRate(12.5, 'fr')).toBe('12,5%');
-  });
-
-  it('formats with the English decimal point', () => {
-    expect(formatFailureRate(12.5, 'en')).toBe('12.5%');
-  });
-
-  it('leaves whole numbers without decimals', () => {
-    expect(formatFailureRate(20, 'fr')).toBe('20%');
   });
 });

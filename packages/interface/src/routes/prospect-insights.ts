@@ -9,22 +9,20 @@ import {
   getProspectPrescanView,
   getProspectScoreDiffView,
   getProspectScoreView,
-  getVendorFingerprintAggregate,
 } from '@odysseus/store';
 import { buildArtifactBucketKey, getPrescansRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { sendError, sendJson } from '../http-utils.js';
-import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 
-/** Plan 013 slice 3 owns this module: prescan, score, evidence, preview
- *  inspection, and vendor aggregate views. Routes here must call
- *  operator-views store helpers, never query Mongoose models directly, and
- *  every response body is the store view unchanged: the projections already
- *  exclude token hashes, object keys, artifact paths, and address material,
- *  and this boundary never adds any of it back. */
+/** Plan 013 slice 3 owns this module: prescan, score, evidence, and preview
+ *  inspection views. Routes here must call operator-views store helpers,
+ *  never query Mongoose models directly, and every response body is the
+ *  store view unchanged: the projections already exclude token hashes,
+ *  object keys, artifact paths, and address material, and this boundary
+ *  never adds any of it back. */
 
 /** Issue #92: URL names for the two evidence assets, kebab-case forms of the
  *  store's evidence field names. The JSON evidence view keeps carrying no
@@ -45,21 +43,6 @@ function isPlausibleToken(value: unknown): value is string {
     value.length <= 128 &&
     !/[\s\x00-\x1f]/.test(value)
   );
-}
-
-/** Reads and validates one query parameter as a positive whole number.
- *  Value undefined when absent, so the store helper keeps its own default. */
-function parsePositiveIntQuery(
-  query: URLSearchParams,
-  key: string,
-): { ok: true; value: number | undefined } | { ok: false; error: string } {
-  const raw = query.get(key);
-  if (raw === null) return { ok: true, value: undefined };
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return { ok: false, error: `${key} must be a positive whole number` };
-  }
-  return { ok: true, value: parsed };
 }
 
 function requireCandidateId(params: Record<string, string>): string | null {
@@ -204,29 +187,5 @@ export function registerProspectInsightRoutes(router: Router, connection: Connec
     // raw token that publication returned exactly once and never stored, so
     // the operator surface cannot reconstruct it and must not guess at it.
     sendJson(res, 200, view);
-  });
-
-  router.get('/api/vendors', async ({ res, query }) => {
-    // The prescan generation is pinned server-side to the same constant the
-    // prescan job and the CLI default to, so the aggregate always describes
-    // the current scan generation; only the group size threshold is a
-    // caller choice, and every other query parameter is a typo.
-    for (const key of query.keys()) {
-      if (key !== 'minimumGroupSize') {
-        sendError(res, 400, `unknown query parameter "${key}"`);
-        return;
-      }
-    }
-    const groupSize = parsePositiveIntQuery(query, 'minimumGroupSize');
-    if (!groupSize.ok) {
-      sendError(res, 400, groupSize.error);
-      return;
-    }
-    const aggregate = await getVendorFingerprintAggregate(
-      connection,
-      CURRENT_PRESCAN_VERSION,
-      groupSize.value,
-    );
-    sendJson(res, 200, aggregate);
   });
 }

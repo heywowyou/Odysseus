@@ -4,11 +4,4 @@
  *  silently 404 on refresh or a deep link because the fallback was never
  *  told about it. Keep this in sync with the top-level <Route path> values
  *  in dashboard/App.tsx whenever a route is added or removed. */
-export const APP_ROUTE_PREFIXES = [
-  'audits',
-  'scans',
-  'login',
-  'prospects',
-  'vendors',
-  'outreach',
-] as const;
+export const APP_ROUTE_PREFIXES = ['audits', 'scans', 'login', 'prospects', 'outreach'] as const;

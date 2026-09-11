@@ -16,7 +16,6 @@ import { RepliesPage } from './routes/replies';
 import { ScanProgressPage } from './routes/scan-progress';
 import { ScorePage } from './routes/score';
 import { SuppressionsPage } from './routes/suppressions';
-import { VendorsPage } from './routes/vendors';
 import { OutreachIndexPage } from './routes/outreach-index';
 
 export function App() {
@@ -38,7 +37,6 @@ export function App() {
         <Route path="prospects/:candidateId/evidence" element={<EvidencePage />} />
         <Route path="prospects/:candidateId/preview" element={<PreviewPage />} />
         <Route path="prospects/:candidateId/outreach" element={<OutreachThreadPage />} />
-        <Route path="vendors" element={<VendorsPage />} />
         <Route path="outreach" element={<OutreachIndexPage />} />
         <Route path="outreach/drafts" element={<DraftsPage />} />
         <Route path="outreach/replies" element={<RepliesPage />} />

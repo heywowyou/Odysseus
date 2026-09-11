@@ -23,7 +23,6 @@ import { RepliesPage } from './routes/replies';
 import { ScanProgressPage } from './routes/scan-progress';
 import { ScorePage } from './routes/score';
 import { SuppressionsPage } from './routes/suppressions';
-import { VendorsPage } from './routes/vendors';
 
 /** Plan 013 step 5, extended by plan 022 step 6: axe must report zero
  *  violations on every dashboard route. The pages render through the real
@@ -392,23 +391,6 @@ describe('operator page accessibility (plan 013 step 5, extended plan 022 step 6
       pattern: 'prospects/:candidateId/preview',
     });
     await settle(container, 'Aperçu');
-    await expectNoAxeViolations(container);
-    root.unmount();
-  });
-
-  it('vendors page has no axe violations in its empty state', async () => {
-    stubRoutes({
-      '/api/vendors': {
-        prescanVersion: 'v1',
-        prescansRead: 0,
-        minimumGroupSize: 3,
-        bookingHosts: [],
-        bookingMechanisms: [],
-        failureRules: [],
-      },
-    });
-    const { container, root } = await renderPage(createElement(VendorsPage));
-    await settle(container, 'Aucune donnée de contrôle rapide');
     await expectNoAxeViolations(container);
     root.unmount();
   });

@@ -693,22 +693,6 @@ export const en: DashboardStrings = {
     actionRefused: 'Nothing was drafted; the orchestrator declined this action.',
     actionError: 'Could not complete this action.',
   },
-  vendors: {
-    title: 'Booking systems seen',
-    description: 'Booking systems that come back often in quick checks, and how often checks fail.',
-    columns: {
-      vendor: 'Booking system',
-      candidates: 'Prospects',
-      failures: 'Failures',
-      failureRate: 'Failure rate',
-    },
-    kindLabels: {
-      'booking-host': 'Booking system',
-      'booking-mechanism': 'Booking method',
-      'failure-rule': 'Recurring failure',
-    },
-    empty: 'No quick-check data yet.',
-  },
   outreachIndex: {
     title: 'Outreach',
     description: 'Drafts, replies, do-not-contact checks, and outcomes under operator review.',

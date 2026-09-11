@@ -5,7 +5,7 @@ import { usePolling } from '../lib/use-polling';
 /**
  * Response types of the plan 013 insight routes (packages/interface/src/
  * routes/prospect-insights.ts) plus the display logic of the prescan,
- * score, evidence, preview, and vendor pages.
+ * score, evidence, and preview pages.
  *
  * The types are declared by value rather than imported from @odysseus/store:
  * they describe what crosses the HTTP boundary (dates arrive as ISO strings),
@@ -159,20 +159,6 @@ export interface PreviewRevokeResponse {
   alreadyRevoked: number;
 }
 
-export interface VendorFingerprintResponse {
-  value: string;
-  hotels: number;
-}
-
-export interface VendorAggregateResponse {
-  prescanVersion: string;
-  prescansRead: number;
-  minimumGroupSize: number;
-  bookingHosts: VendorFingerprintResponse[];
-  bookingMechanisms: VendorFingerprintResponse[];
-  failureRules: VendorFingerprintResponse[];
-}
-
 // ---------------------------------------------------------------------------
 // Shared header identity
 // ---------------------------------------------------------------------------
@@ -195,8 +181,7 @@ export function candidateCityLabel(identity: {
 // ---------------------------------------------------------------------------
 
 /** Distinct booking evidence kinds across the prescan's pages, in stable
- *  order: the per-candidate counterpart of the vendors page's booking
- *  mechanism aggregate. */
+ *  order. */
 export function distinctBookingKinds(prescan: PrescanResponse): string[] {
   const kinds = new Set<string>();
   for (const page of prescan.pages) {
@@ -329,72 +314,6 @@ export function previewState(preview: PreviewResponse | null, now: number): Prev
   if (preview === null) return 'none';
   if (preview.status === 'revoked') return 'revoked';
   return Date.parse(preview.publicExpiresAt) <= now ? 'expired' : 'live';
-}
-
-// ---------------------------------------------------------------------------
-// Vendor aggregate display logic
-// ---------------------------------------------------------------------------
-
-/** Which list a fingerprint row came from, shown as the raw vocabulary key
- *  so the three kinds stay distinguishable in the single aggregate table. */
-export type VendorRowKind = 'booking-host' | 'booking-mechanism' | 'failure-rule';
-
-export interface VendorRow {
-  kind: VendorRowKind;
-  value: string;
-  /** Hotels the fingerprint recurs on. */
-  candidates: number;
-  /** Hotel count for failure rules, null for booking fingerprints where a
-   *  "failure" reading would be wrong. */
-  failures: number | null;
-  /** Share of the scanned population, in percent, for failure rules. */
-  failureRate: number | null;
-}
-
-/** One table row per fingerprint, in list order. The failure rate divides by
- *  the prescans actually read, so the percentage always has the denominator
- *  the aggregate counted against. */
-export function vendorRows(aggregate: VendorAggregateResponse): VendorRow[] {
-  const rate = (hotels: number): number | null =>
-    aggregate.prescansRead > 0 ? Math.round((hotels / aggregate.prescansRead) * 1000) / 10 : null;
-  const rows: VendorRow[] = [];
-  for (const host of aggregate.bookingHosts) {
-    rows.push({
-      kind: 'booking-host',
-      value: host.value,
-      candidates: host.hotels,
-      failures: null,
-      failureRate: null,
-    });
-  }
-  for (const mechanism of aggregate.bookingMechanisms) {
-    rows.push({
-      kind: 'booking-mechanism',
-      value: mechanism.value,
-      candidates: mechanism.hotels,
-      failures: null,
-      failureRate: null,
-    });
-  }
-  for (const rule of aggregate.failureRules) {
-    rows.push({
-      kind: 'failure-rule',
-      value: rule.value,
-      candidates: rule.hotels,
-      failures: rule.hotels,
-      failureRate: rate(rule.hotels),
-    });
-  }
-  return rows;
-}
-
-/** Percent share with the operator's decimal conventions, unit suffix
- *  included: 12.5 renders as 12,5% in French and 12.5% in English. */
-export function formatFailureRate(rate: number, language: 'fr' | 'en'): string {
-  const formatted = rate.toLocaleString(language === 'fr' ? 'fr-FR' : 'en-GB', {
-    maximumFractionDigits: 1,
-  });
-  return `${formatted}%`;
 }
 
 // ---------------------------------------------------------------------------

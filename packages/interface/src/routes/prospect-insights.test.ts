@@ -10,7 +10,6 @@ vi.mock('@odysseus/store', () => ({
   getProspectEvidenceView: vi.fn(),
   getProspectEvidenceAssetSource: vi.fn(),
   getProspectPreviewView: vi.fn(),
-  getVendorFingerprintAggregate: vi.fn(),
 }));
 
 vi.mock('@odysseus/scanner', () => ({
@@ -37,16 +36,13 @@ import {
   getProspectPrescanView,
   getProspectScoreDiffView,
   getProspectScoreView,
-  getVendorFingerprintAggregate,
   type OperatorEvidenceAssetSource,
   type OperatorEvidenceView,
   type OperatorPreviewView,
   type OperatorPrescanView,
   type OperatorScoreDiffView,
   type OperatorScoreView,
-  type PrescanVendorAggregate,
 } from '@odysseus/store';
-import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { Router } from '../router.js';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import { registerProspectInsightRoutes } from './prospect-insights.js';
@@ -179,15 +175,6 @@ const previewView: OperatorPreviewView = {
   sourceKind: 'prescan',
 };
 
-const vendorAggregate: PrescanVendorAggregate = {
-  prescanVersion: CURRENT_PRESCAN_VERSION,
-  prescansRead: 40,
-  minimumGroupSize: 5,
-  bookingHosts: [{ value: 'booking.example.com', hotels: 12 }],
-  bookingMechanisms: [{ value: 'booking-form', hotels: 30 }],
-  failureRules: [{ value: 'color-contrast', hotels: 8 }],
-};
-
 const assetSource: OperatorEvidenceAssetSource = {
   prescanId: 'prescan-1',
   domain: 'hotel-exemple.fr',
@@ -209,7 +196,6 @@ beforeEach(() => {
   vi.mocked(getProspectScoreDiffView).mockResolvedValue(diffView);
   vi.mocked(getProspectEvidenceView).mockResolvedValue(evidenceView);
   vi.mocked(getProspectPreviewView).mockResolvedValue(previewView);
-  vi.mocked(getVendorFingerprintAggregate).mockResolvedValue(vendorAggregate);
 });
 
 async function handle(url: string): Promise<{
@@ -380,43 +366,6 @@ describe('GET /api/prospects/:candidateId/preview', () => {
   });
 });
 
-describe('GET /api/vendors', () => {
-  it('aggregates the pinned current prescan version by default', async () => {
-    const { statusCode, body } = await handle('/api/vendors');
-    expect(statusCode).toBe(200);
-    expect(getVendorFingerprintAggregate).toHaveBeenCalledWith(
-      fakeConnection,
-      CURRENT_PRESCAN_VERSION,
-      undefined,
-    );
-    expect(JSON.parse(body ?? '{}')).toEqual(vendorAggregate);
-  });
-
-  it('passes a validated minimumGroupSize override', async () => {
-    const { statusCode } = await handle('/api/vendors?minimumGroupSize=10');
-    expect(statusCode).toBe(200);
-    expect(getVendorFingerprintAggregate).toHaveBeenCalledWith(
-      fakeConnection,
-      CURRENT_PRESCAN_VERSION,
-      10,
-    );
-  });
-
-  it('rejects a non-integer or non-positive group size with 400', async () => {
-    expect((await handle('/api/vendors?minimumGroupSize=2.5')).statusCode).toBe(400);
-    expect((await handle('/api/vendors?minimumGroupSize=0')).statusCode).toBe(400);
-    expect((await handle('/api/vendors?minimumGroupSize=-3')).statusCode).toBe(400);
-    expect((await handle('/api/vendors?minimumGroupSize=lots')).statusCode).toBe(400);
-    expect(getVendorFingerprintAggregate).not.toHaveBeenCalled();
-  });
-
-  it('rejects unknown query parameters with 400', async () => {
-    expect((await handle('/api/vendors?version=v2')).statusCode).toBe(400);
-    expect((await handle('/api/vendors?minimumGroupSize=5&extra=1')).statusCode).toBe(400);
-    expect(getVendorFingerprintAggregate).not.toHaveBeenCalled();
-  });
-});
-
 describe('response leak scan', () => {
   it('never carries preview token hashes or object keys in any body', async () => {
     const urls = [
@@ -425,7 +374,6 @@ describe('response leak scan', () => {
       '/api/prospects/cand-1/score/diff?from=v1&to=v2',
       '/api/prospects/cand-1/evidence',
       '/api/prospects/cand-1/preview',
-      '/api/vendors',
     ];
     for (const url of urls) {
       const { body } = await handle(url);

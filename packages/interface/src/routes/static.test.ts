@@ -51,17 +51,13 @@ describe('resolveStaticPath', () => {
     });
   });
 
-  it('falls back for the dashboard prospects, vendors, and outreach routes', async () => {
+  it('falls back for the dashboard prospects and outreach routes', async () => {
     const entry = path.join(publicDir, 'index.html');
     expect(await resolveStaticPath(publicDir, '/prospects')).toEqual({
       kind: 'spa-fallback',
       filePath: entry,
     });
     expect(await resolveStaticPath(publicDir, '/prospects/abc/evidence')).toEqual({
-      kind: 'spa-fallback',
-      filePath: entry,
-    });
-    expect(await resolveStaticPath(publicDir, '/vendors')).toEqual({
       kind: 'spa-fallback',
       filePath: entry,
     });

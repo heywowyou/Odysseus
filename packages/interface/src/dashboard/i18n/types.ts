@@ -717,13 +717,6 @@ export interface DashboardStrings {
     actionRefused: string;
     actionError: string;
   };
-  vendors: {
-    title: string;
-    description: string;
-    columns: { vendor: string; candidates: string; failures: string; failureRate: string };
-    kindLabels: Record<'booking-host' | 'booking-mechanism' | 'failure-rule', string>;
-    empty: string;
-  };
   outreachIndex: {
     title: string;
     description: string;
