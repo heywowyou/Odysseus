@@ -4159,3 +4159,27 @@ Durable rules, binding on every agent:
 - Known false-positive classes live in `.fallowrc.json` entries, not in
   per-file suppressions; re-derive them if the spawn or invocation
   mechanism changes.
+
+**Triage pass, 2026-09-11.** Every unused export/type was traced and
+either un-exported (used only inside its own file - the majority),
+deleted (genuinely zero usage, including three dead re-export lines in
+`continuation-guard.ts`'s facade), or kept with a recorded reason in
+`.fallowrc.json`'s `ignoreExports`:
+`page-audit-profile.ts`'s `SITE_WIDE_CHROME_SELECTOR` (its own comment
+says it's exported for `page-audit-profile.test.ts` to pin the selector
+vocabulary, but the test currently hardcodes the literal instead of
+importing it - test drift, not dead code) and
+`CURRENT_OUTREACH_PROMPT_VERSION` in both `create-follow-up-draft.ts`
+and `create-outreach-draft.ts` (genuinely independent version knobs for
+two touch families, deliberately identical today, aliased apart in
+`index.ts` - the other duplicate-export pair, `BadgeTone`, was real
+accidental duplication and was consolidated onto
+`components/ui/badge.tsx` instead). Two `unused_dependency_overrides`
+findings not previously named in this entry's count (`nth-check`,
+`validator` in `pnpm-workspace.yaml`) turned out to be the same CVE-fix
+pattern as the documented `lodash.pick` override beside them; recorded in
+`ignoreDependencyOverrides` rather than removed. The pipeline cycle
+(#176) and the undeclared mongoose/playwright/jsdom/vitest-axe imports
+(#177) were fixed; the dead dashboard file (#175) was deliberately left
+for the plan 037 stream to delete once its slice 7 close-out lands.
+Residual baseline: 1 finding (#175 itself).
