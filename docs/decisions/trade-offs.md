@@ -4091,7 +4091,7 @@ Durable rules, binding on every agent:
   deliberately not run in this session. It is an interactive interview with
   the operator, not something an agent fabricates on their behalf.
 
-### 80. fallow adopted as an advisory codebase-intelligence CLI, never a gate (operator decision, 2026-09-11)
+### 80. fallow adopted as an advisory codebase-intelligence CLI, promoted to a local gate after triage (operator decision, 2026-09-11)
 
 The repo had no tooling for dead code, circular imports, duplication, or
 cross-package boundary drift: ESLint runs recommended-only with no import
@@ -4108,9 +4108,10 @@ wired into package.json, test-read design CSS, the dashboard Vite root at
 
 Footprint: root devDependency `fallow` pinned exact (3.24.1), the
 `pnpm run audit:code` script (`fallow dead-code`), and `.fallowrc.json`.
-`fallow dupes` and `fallow health` stay manual passes, not scripts. The
-advisory script is deliberately not in `pnpm run check`, the pre-push hook,
-or CI; it exits non-zero while findings exist.
+`fallow dupes` and `fallow health` stay manual passes, not scripts. It
+exits non-zero while findings exist. It was deliberately excluded from
+`pnpm run check` (and, by extension, the pre-push hook, which runs
+`check`) and CI until triage landed; see "Gate promotion" below.
 
 What `.fallowrc.json` encodes: `entry` seeds real runtime roots fallow
 cannot discover (scripts/*.mjs invoked from docs, the dashboard Vite entry,
@@ -4145,10 +4146,11 @@ never be consolidated by an agent to satisfy the tool.
 
 Durable rules, binding on every agent:
 
-- Advisory only. Do not add `audit:code` to `check`, CI, or hooks, and do
-  not promote its findings into deletions, until each unused export has
-  been verified with `fallow dead-code --trace <file>:<export>`.
-  Promotion is a deliberate operator decision.
+- `audit:code` is now wired into `pnpm run check` (see "Gate promotion"
+  below); do not promote a fallow finding straight into a deletion
+  without verifying it first with
+  `fallow dead-code --trace <file>:<export>` - the triage discipline this
+  entry established stays required, it is just enforced earlier now.
 - Static layer only. fallow's paid runtime tier records which functions
   execute in production; it must never be enabled on this repo. The
   GitHub Action stays unused (deploys are local, entry 61).
@@ -4183,3 +4185,20 @@ pattern as the documented `lodash.pick` override beside them; recorded in
 (#177) were fixed; the dead dashboard file (#175) was deliberately left
 for the plan 037 stream to delete once its slice 7 close-out lands.
 Residual baseline: 1 finding (#175 itself).
+
+**Gate promotion, 2026-09-11.** Once stream A's slice 7 close-out landed,
+#175 was the only finding left: `dropdown-menu.tsx` had zero importers
+and was deleted (which also left `@radix-ui/react-dropdown-menu` unused
+in `packages/interface/package.json`, removed alongside it). With the
+baseline at zero, the operator ordered promotion:
+`pnpm run check` now runs `audit:code` as its last step, which also
+gates the pre-push hook (`.githooks/pre-push` runs `check`). fallow's
+findings are no longer merely advisory on this repo, but everything else
+in this entry is unchanged: still local-CLI-only, still never the paid
+runtime tier or the GitHub Action, and a new finding still gets the
+delete/keep-intentional/contract-locked triage before any fix, never a
+blind `--write`. CI's individual `docs:check`/`format:check`/`lint`/
+`typecheck` steps were deliberately not given a matching `audit:code`
+step in this pass - CI does not currently run the combined `check`
+script at all, so adding fallow there is a separate, not-yet-made
+decision, not a corollary of this one.

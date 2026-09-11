@@ -468,11 +468,12 @@ means numbered entry 24, not a literal Markdown heading anchor.
     `.impeccable/config.json`; do not widen that ignore, and do not let it
     touch the locked report design system otherwise. → trade-offs.md#79
 
-80. fallow is the advisory codebase-intelligence CLI (`pnpm run audit:code`,
+80. fallow is the codebase-intelligence CLI (`pnpm run audit:code`,
     `.fallowrc.json`): dead code, cycles, duplicate exports, dependency
-    hygiene, and boundary zones mirroring the charter package walls.
-    Advisory only: never wire it into `check` or CI, never enable its
-    runtime tier, and verify any dead-code finding with
+    hygiene, and boundary zones mirroring the charter package walls. Gated
+    in `pnpm run check` (and so the pre-push hook) since the 2026-09-11
+    triage cleared the baseline to zero; never wire it into CI, never
+    enable its runtime tier, and verify any dead-code finding with
     `fallow dead-code --trace` before deleting anything. → trade-offs.md#80
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
