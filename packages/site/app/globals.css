@@ -660,18 +660,27 @@
   }
 
   .check {
+    container-type: inline-size;
     border-top: 1px solid var(--line-strong);
     padding-top: 1.25rem;
   }
 
   /* The three performance metrics sit side by side but are not a sequence:
-     no connecting track, no implied chronology. */
+     no connecting track, no implied chronology.
+
+     A viewport breakpoint got this wrong on the offer and home pages: at
+     56rem the check sits in a half-width column of check-grid, so a
+     three-column row still had to fit inside roughly half the space the
+     breakpoint assumed, and the INP label wrapped four lines. A container
+     query asks the actual available width instead of the viewport, so
+     three columns appear only where the check itself is wide enough,
+     whether that check is stacked full-width or sitting beside another. */
   .metric-row {
     display: grid;
     gap: 1.25rem;
   }
 
-  @media (min-width: 48rem) {
+  @container (min-width: 30rem) {
     .metric-row {
       grid-template-columns: repeat(3, 1fr);
       gap: 1.5rem;
