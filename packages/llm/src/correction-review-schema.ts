@@ -47,6 +47,7 @@ export const correctionReviewOutputSchema = z
 
 export type CorrectionProposal = z.infer<typeof correctionProposalSchema>;
 export type CorrectionReviewOutput = z.infer<typeof correctionReviewOutputSchema>;
+export type CorrectionCheck = z.infer<typeof correctionCheckSchema>;
 
 /** The correction pass sees exactly the accepted writer input and output. It
  * intentionally has no slot for HTML, PDFs, screenshots, fetched URLs, or the

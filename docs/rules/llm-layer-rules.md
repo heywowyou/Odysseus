@@ -945,6 +945,39 @@ French/English outputs, zero unsafe proposals, and a documented useful-catch
 rate that outweighs false-positive review burden. Until then it remains an
 advisory artifact only.
 
+**Measurement campaign, 2026-09-11: the correction reviewer is NOT promotable,
+and its `unsupported-specific-claim` stream reproduces the reviewer bias.**
+With current operator authorization for 10 named stored audits spanning low,
+medium, and high finding counts, 20 fresh French/English analyses were
+generated and re-measured with the read-only command
+`packages/llm/src/measure-correction-review.ts` (one call per file, no retry).
+Sample: 13 measured outputs plus 7 skipped by the pass (35 percent, all
+correlation mismatches where the model returned a strict subset of the
+eligible field set, extras none). The 13 measured outputs reviewed 444 prose
+fields and returned 151 propose-change verdicts and 0 unsure, for 282,106
+tokens and 5.4 to 19.6 seconds per call. Adjudication (performed by the
+measuring agent at the operator's explicit delegation of the same day,
+against the four step-6 categories): 5 true useful catches (3.3 percent of
+proposals: two causality hedges, one repetition reword, one wrong
+metric-related word, one missing article), 43 valid but not useful editorial
+preferences, 100 false positives, and 3 unsafe proposals. The zero-unsafe
+promotion threshold therefore fails, and the useful-catch rate does not
+outweigh the false-positive review burden: the pass stays advisory-only and
+no promotion wiring may be built from this evidence. The dominant failure
+repeats trade-off 55's 2026-08-29 finding on the current model: 70 of the 73
+`unsupported-specific-claim` proposals strike the hedged generic commercial
+consequences the writing prompt itself requires, including page-type and
+audience framing derived from the findings, despite the prompt's explicit
+carve-out; no prompt repair is attempted for the same reason as 2026-08-29
+(the carve-out was already present). Among the false positives, 26 proposals
+replace a field with text identical to the current prose. The 3 unsafe
+proposals, redacted: one rewrites the notes' WCAG 2.2 version statement into
+an unversioned wording, one rewrites a remediation's "WCAG 2.2 AA" into
+"WCAG 2 AA", and one deletes "visible" from a visible-labels remediation,
+each changing an audited fact or admitting a wrong implementation. Full
+per-entry verdicts live in a local, gitignored worksheet under the artifacts
+root; aggregate counts only are recorded here.
+
 ---
 
 ## 13. GitHub issue lifecycle for model-driven work

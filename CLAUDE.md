@@ -355,6 +355,10 @@ means numbered entry 24, not a literal Markdown heading anchor.
     an always-on shadow reviewer returns evidence-bound prose verdicts without
     ever blocking; it was measured not promotable on the Mistral-era medium
     model; re-measure on the current provider before any promotion decision.
+    The plan 033 correction-review pass was measured on 2026-09-11 (151
+    proposals, 20 FR/EN outputs): 3 unsafe and 100 false positives against 5
+    useful catches, so it is not promotable and its propose-change verdicts
+    stay advisory-only.
     → trade-offs.md#55
 61. Production deploys locally: the operator runs `deploy/odysseus-deploy.sh`
     against the Hostinger box, which renders the compose file and writes it to

@@ -1,9 +1,27 @@
-import type { ReportLanguage } from '@odysseus/core';
+import type { ObligationAssessment, ReportLanguage } from '@odysseus/core';
 import type { TransactionalFlowStatus, WritingPassOutput } from './writing-schema.js';
 
 export interface TransactionalFlowViolation {
   field: string;
   matched: string;
+}
+
+/** Derives the writing pass's transactional-flow steering status from the
+ *  deterministic obligation assessment. The analysis stage and the plan 033
+ *  measurement command must derive it identically, so this is the single
+ *  implementation of that rule. */
+export function deriveTransactionalFlowStatus(
+  assessment: ObligationAssessment,
+): TransactionalFlowStatus {
+  const resolution = assessment.siteSignalResolutions?.['hasTransactionalFlow'];
+  if (resolution?.value === true) return 'present';
+  if (resolution === undefined) return 'unknown';
+  const facts = assessment.basis.flatMap((basis) => basis.facts);
+  if (facts.some((fact) => fact.kind === 'transactional-flow-inconclusive')) {
+    return 'inconclusive';
+  }
+  if (facts.some((fact) => fact.kind === 'transactional-flow-unknown')) return 'unknown';
+  return 'absent';
 }
 
 function writingProseFields(output: WritingPassOutput): { field: string; text: string }[] {

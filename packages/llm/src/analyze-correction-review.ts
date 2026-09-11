@@ -1,4 +1,4 @@
-import { callOpenAiForCorrectionReview } from './client.js';
+import { callOpenAiForCorrectionReview, type WritingCallUsage } from './client.js';
 import { OPENAI_MODEL, OPENAI_TEMPERATURE } from './constants.js';
 import {
   describeCorrectionFieldMismatch,
@@ -7,7 +7,13 @@ import {
 } from './correction-review-schema.js';
 
 export type CorrectionReviewOutcome =
-  | { status: 'ok'; output: CorrectionReviewOutput; model: string; temperature: number }
+  | {
+      status: 'ok';
+      output: CorrectionReviewOutput;
+      model: string;
+      temperature: number;
+      usage?: WritingCallUsage;
+    }
   | { status: 'skipped'; reason: string; model: string; temperature: number };
 
 /** One advisory call, no retry. Any provider, parse, or correlation failure
@@ -16,7 +22,7 @@ export async function analyzeCorrectionReview(
   input: CorrectionReviewInput,
 ): Promise<CorrectionReviewOutcome> {
   try {
-    const { output } = await callOpenAiForCorrectionReview(input);
+    const { output, usage } = await callOpenAiForCorrectionReview(input);
     const mismatch = describeCorrectionFieldMismatch(input, output);
     if (mismatch !== undefined) {
       return {
@@ -26,7 +32,13 @@ export async function analyzeCorrectionReview(
         temperature: OPENAI_TEMPERATURE,
       };
     }
-    return { status: 'ok', output, model: OPENAI_MODEL, temperature: OPENAI_TEMPERATURE };
+    return {
+      status: 'ok',
+      output,
+      model: OPENAI_MODEL,
+      temperature: OPENAI_TEMPERATURE,
+      ...(usage ? { usage } : {}),
+    };
   } catch (error) {
     return {
       status: 'skipped',

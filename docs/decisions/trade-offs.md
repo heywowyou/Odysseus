@@ -2589,6 +2589,24 @@ correlation guard, and one-shot skip behavior. The campaign has not run: it
 requires current operator authorization naming the stored audits. No promotion
 decision follows from implementation alone.
 
+**Plan 033 correction-review campaign, 2026-09-11.** The deferred measurement
+campaign ran with named-audit authorization over 10 stored audits (low,
+medium, and high finding counts), 20 fresh French/English analysis outputs,
+and the read-only command `measure-correction-review.ts`. Result: 151
+propose-change verdicts over 444 fields, adjudicated as 5 true useful catches
+(3.3 percent), 43 valid but not useful, 100 false positives (26 of them
+no-ops whose replacement equals the current text), and 3 unsafe proposals,
+plus a 35 percent correlation-skip rate. The zero-unsafe threshold fails and
+the useful-catch rate does not outweigh the false-positive review burden, so
+the pass is not promotable and stays advisory-only; do not wire its
+propose-change verdicts into report fields on this evidence. The dominant
+false-positive pattern is the same bias measured on 2026-08-29: 70 of 73
+`unsupported-specific-claim` proposals strike the hedged generic commercial
+consequences the writing prompt requires, carve-out and all, so the limit is
+a model-capability limit that survived a provider and prompt generation. The
+per-analysis inline call stays insert-only advisory; the full verdict
+worksheet is local-only under the artifacts root and must never be committed.
+
 
 ### 56. The tool cannot send, and the only thing making that true is the shape of the port
 

@@ -40,6 +40,7 @@ import {
   buildWritingInput,
   computeDominantPerformanceMetric,
   computeSiteStats,
+  deriveTransactionalFlowStatus,
   filterFindingsForLlm,
   findUnreferencedStructureFindingIds,
   mergeAnalysisPasses,
@@ -50,7 +51,6 @@ import {
   type AnalyzeWritingResult,
   type SiteContextInput,
   type StructureDocument,
-  type TransactionalFlowStatus,
   type WritingInput,
   type WritingSiteContext,
 } from '@odysseus/llm';
@@ -114,18 +114,6 @@ function timestampForFilename(date: Date): string {
     .toISOString()
     .replace(/\.\d{3}Z$/, 'Z')
     .replace(/:/g, '-');
-}
-
-function transactionalFlowStatus(assessment: ObligationAssessment): TransactionalFlowStatus {
-  const resolution = assessment.siteSignalResolutions?.['hasTransactionalFlow'];
-  if (resolution?.value === true) return 'present';
-  if (resolution === undefined) return 'unknown';
-  const facts = assessment.basis.flatMap((basis) => basis.facts);
-  if (facts.some((fact) => fact.kind === 'transactional-flow-inconclusive')) {
-    return 'inconclusive';
-  }
-  if (facts.some((fact) => fact.kind === 'transactional-flow-unknown')) return 'unknown';
-  return 'absent';
 }
 
 /**
@@ -361,7 +349,7 @@ export async function runAnalysisStage(
       options.language,
       siteStats,
       dominantPerformanceMetric,
-      transactionalFlowStatus(obligationAssessment),
+      deriveTransactionalFlowStatus(obligationAssessment),
       // Seeds the provider-phrase choice. The auditId is stable across a
       // re-run and across both languages, so regenerating a report never
       // renames the client's provider and the FR/EN pair stays consistent.

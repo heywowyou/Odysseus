@@ -354,6 +354,7 @@ export async function callOpenAiForReview(input: ReviewerInput): Promise<RawRevi
 
 export interface RawCorrectionReviewCallResult {
   output: CorrectionReviewOutput;
+  usage?: WritingCallUsage;
 }
 
 /** A separate, one-shot structured call for advisory correction proposals.
@@ -404,5 +405,23 @@ export async function callOpenAiForCorrectionReview(
       'odysseus analyze (correction review): OpenAI response content was not a plain string (unexpected shape)',
     );
   }
-  return { output: correctionReviewOutputSchema.parse(JSON.parse(content)) };
+  const output = correctionReviewOutputSchema.parse(JSON.parse(content));
+  // Plan 033 step 6: the measurement command records tokens, so this maps
+  // the same usage fields the writing pass maps. The pass itself is unchanged.
+  const usage = response.usage;
+  return {
+    output,
+    ...(usage
+      ? {
+          usage: {
+            promptTokens: usage.prompt_tokens,
+            completionTokens: usage.completion_tokens,
+            totalTokens: usage.total_tokens,
+            ...(usage.completion_tokens_details?.reasoning_tokens !== undefined
+              ? { reasoningTokens: usage.completion_tokens_details.reasoning_tokens }
+              : {}),
+          },
+        }
+      : {}),
+  };
 }

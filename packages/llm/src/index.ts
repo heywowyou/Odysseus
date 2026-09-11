@@ -56,6 +56,7 @@ export {
   eligibleCorrectionFields,
 } from './correction-review-schema.js';
 export type {
+  CorrectionCheck,
   CorrectionProposal,
   CorrectionReviewInput,
   CorrectionReviewOutput,
@@ -81,7 +82,10 @@ export type {
   WritingTheme,
   WritingSiteStats,
 } from './writing-schema.js';
-export { findTransactionalFlowViolations } from './transactional-flow-guard.js';
+export {
+  deriveTransactionalFlowStatus,
+  findTransactionalFlowViolations,
+} from './transactional-flow-guard.js';
 export type { TransactionalFlowViolation } from './transactional-flow-guard.js';
 
 export {
