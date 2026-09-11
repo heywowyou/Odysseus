@@ -148,6 +148,10 @@ export function generateOutreachPreviewHtmlV2(input: OutreachPreviewSummary): st
     '</head>',
     '<body>',
     '<main>',
+    // The cover wraps the document's own opening elements (label, business
+    // name, lede, scan date) in the order they already had - a class hook
+    // for the cover treatment, no content and no order change (plan 039).
+    '<header class="cover">',
     `<p class="label">${escapeHtml(s.heroLabel)}</p>`,
     `<h1>${escapeHtml(validated.recipient.businessName)}</h1>`,
     `<p class="lede">${escapeHtml(s.lede)}</p>`,
@@ -156,6 +160,7 @@ export function generateOutreachPreviewHtmlV2(input: OutreachPreviewSummary): st
         date: formatDate(new Date(validated.observedAt), validated.language),
       }),
     )}</p>`,
+    '</header>',
     renderCoverage(validated, s),
     renderTotals(validated, s),
     renderCards(validated, s),
