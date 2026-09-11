@@ -134,7 +134,7 @@
   --color-machine-ink: var(--machine-ink);
   --color-accent: var(--accent);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-avenir), ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
   --font-mono: var(--font-mono-stack);
 }
 
@@ -146,10 +146,12 @@
   body {
     background-color: var(--paper);
     color: var(--ink);
-    /* Inter, self-hosted through next/font/local in app/layout.tsx. The
-       variable resolves to the family name next/font generates; the stack
-       after it is only the pre-swap fallback. */
-    font-family: var(--font-inter), ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    /* Avenir Next, self-hosted through next/font/local in app/layout.tsx,
+       site-only (operator-licensed 2026-09-11; the report and dashboard
+       keep the locked Inter system). The variable resolves to the family
+       name next/font generates; the stack after it is only the pre-swap
+       fallback. */
+    font-family: var(--font-avenir), ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
     font-size: 1rem;
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;

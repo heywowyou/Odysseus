@@ -4,20 +4,22 @@ import './globals.css';
 import { SiteChrome } from '../lib/site-chrome';
 
 /**
- * Inter, self-hosted. These are the four canonical woff2 files also used by
- * the report and the dashboard (PRODUCT.md, Evidence on Hand); they are copied
- * into app/fonts because this package deliberately imports nothing from the
- * workspace. next/font/local is part of Next itself, so no dependency is added.
+ * Avenir Next, self-hosted, site-only (operator-licensed 2026-09-11; see
+ * PRODUCT.md, Evidence on Hand). The report and dashboard keep the locked
+ * Inter system untouched (docs/report/report-design-system.md); this
+ * package deliberately imports nothing from the workspace, so its own copy
+ * lives in app/fonts. next/font/local is part of Next itself, so no
+ * dependency is added.
  */
-const inter = localFont({
+const avenirNext = localFont({
   src: [
-    { path: './fonts/Inter-Regular.woff2', weight: '400', style: 'normal' },
-    { path: './fonts/Inter-Medium.woff2', weight: '500', style: 'normal' },
-    { path: './fonts/Inter-SemiBold.woff2', weight: '600', style: 'normal' },
-    { path: './fonts/Inter-Bold.woff2', weight: '700', style: 'normal' },
+    { path: './fonts/AvenirNextCyr-Regular.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/AvenirNextCyr-Medium.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/AvenirNextCyr-Demi.woff2', weight: '600', style: 'normal' },
+    { path: './fonts/AvenirNextCyr-Bold.woff2', weight: '700', style: 'normal' },
   ],
   display: 'swap',
-  variable: '--font-inter',
+  variable: '--font-avenir',
 });
 
 /**
@@ -55,7 +57,7 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="fr" className={`h-full ${inter.variable}`}>
+    <html lang="fr" className={`h-full ${avenirNext.variable}`}>
       <body className="flex min-h-full flex-col">
         <SiteChrome>{children}</SiteChrome>
       </body>

@@ -58,13 +58,13 @@ typography:
     lineHeight: 1.5
     letterSpacing: "normal"
   site-title:
-    fontFamily: "Inter, Arial, Helvetica, sans-serif"
+    fontFamily: "Avenir Next, Arial, Helvetica, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 700
     lineHeight: 1.33
     letterSpacing: "normal"
   site-body:
-    fontFamily: "Inter, Arial, Helvetica, sans-serif"
+    fontFamily: "Avenir Next, Arial, Helvetica, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.5
@@ -144,7 +144,7 @@ Odysseus sells findings a client can check, so both surfaces are places evidence
 
 The dashboard looks the part of a single-operator tool: a near-black, layered monochrome interface in the same family as Linear or Vercel's consoles. Surfaces stack from base through panel, raised, and overlay, separated by 7 percent white hairlines rather than shadows. The accent is white. Primary actions are the brightest object on screen, which means hierarchy is carried by brightness steps and typography, never by brand color. The only chromatic colors in the product are the four severity shades shared with the PDF report, plus a danger red for destructive and error states.
 
-The marketing site is a different, deliberately spartan world. It is a standalone Next.js deploy with no component library: white or near-black pages (switched by the OS color scheme preference), single-column documents, and, since plan 022, the same self-hosted Inter as the dashboard, loaded through next/font/local from the canonical woff2 files copied into `packages/site/app/fonts`. A plain persistent frame (text wordmark, three-item nav, footer with the compliance links, a skip link) wraps every public page; the preview route handler still answers with standalone documents outside the frame. The site intentionally depends on nothing in the workspace, so it shares no tokens with the dashboard; it is recorded here as its own minimal surface.
+The marketing site is a different, deliberately spartan world. It is a standalone Next.js deploy with no component library: white or near-black pages (switched by the OS color scheme preference), single-column documents, and, since 2026-09-11, its own operator-licensed self-hosted Avenir Next (no longer shared with the dashboard's Inter), loaded through next/font/local from woff2 files copied into `packages/site/app/fonts`. A plain persistent frame (text wordmark, three-item nav, footer with the compliance links, a skip link) wraps every public page; the preview route handler still answers with standalone documents outside the frame. The site intentionally depends on nothing in the workspace, so it shares no tokens with the dashboard; it is recorded here as its own minimal surface.
 
 Motion is decoration only. Entrances use short, decelerating fades and slides (0.2 to 0.3 seconds, cubic-bezier(0.16, 1, 0.3, 1)), a `prefers-reduced-motion` rule collapses all of it, and every state stays fully readable without animation. Accessibility posture is visible in the base layer: a global 2px white focus outline, AA-contrast text pairs in both directions of the monochrome theme, and dark color-scheme declared at the root. The site carries the same posture in its own idioms: a global 2px focus outline in the foreground color with a 2px offset, its own `prefers-reduced-motion` collapse (nothing on the site animates), and AA-contrast pairs computed in both schemes.
 
@@ -153,7 +153,7 @@ Motion is decoration only. Entrances use short, decelerating fades and slides (0
 **Key Characteristics:**
 - Layered near-black monochrome surfaces with hairline borders; depth by lightness, not shadow.
 - The accent is white; color appears only as severity, at small sizes or 15 percent tints.
-- One typeface on both surfaces (self-hosted Inter), typeset small: 14px dashboard body baseline, 20px titles as the ceiling, 16px site body.
+- Self-hosted type on both surfaces, typeset small (14px dashboard body baseline, 20px titles as the ceiling, 16px site body); the dashboard and report keep Inter, the site now typesets in its own licensed Avenir Next.
 - Genuinely flat: shadow belongs only to floating layers (dialogs, dropdown menus, toasts).
 - Radius ladder: 12px containers, 8px controls, 6px chips, full pills only for progress and dots.
 - Short decelerating motion, decoration only, killed entirely under reduced motion.
@@ -206,7 +206,7 @@ Severity appears at full strength only as text and as 8px status dots; large sur
 **Body Font:** Inter, same stack
 **Label/Mono Font:** ui-monospace, SFMono-Regular, Menlo, Consolas, monospace (URLs and IDs only)
 
-**Character:** One utilitarian workhorse family at deliberately small sizes. The dashboard resets the body to 14px (not Tailwind's 16px), keeps a tight-tracked semibold for titles, and stops at 20px; nothing in the product is display-sized. The site typesets in the same self-hosted Inter (next/font/local, weights 400, 500, 600, 700; the site roles fall back to Arial, Helvetica, sans-serif), h1 bold 24px, h2 semibold 20px, body 16px.
+**Character:** One utilitarian workhorse family at deliberately small sizes. The dashboard resets the body to 14px (not Tailwind's 16px), keeps a tight-tracked semibold for titles, and stops at 20px; nothing in the product is display-sized. The site typesets in its own self-hosted Avenir Next (next/font/local, weights 400, 500, 600, 700; the site roles fall back to Arial, Helvetica, sans-serif), h1 bold 24px, h2 semibold 20px, body 16px.
 
 ### Hierarchy
 - **Title** (Inter 600, 20px / 28px, letter-spacing -0.025em): page titles and KPI values; the largest text in the product. Dialog titles sit one step down at 16px semibold.
@@ -300,7 +300,7 @@ The form language is a strict radius ladder mapped to elevation: 12px (`rounded-
 - **Don't** put shadows on resting surfaces (cards, tiles, buttons, tables); shadow means "floating".
 - **Don't** typeset above 20px; below 14px the steps are 13, 12, and the single 11px micro-label in the report preparation card.
 - **Don't** fill large areas with severity colors; full-strength chroma belongs to text and dots only.
-- **Don't** import dashboard tokens into the site or treat the site as themed; it is deliberately standalone with its own two-color scheme-swap system. Sharing the Inter font files (plan 022) is not token sharing.
+- **Don't** import dashboard tokens into the site or treat the site as themed; it is deliberately standalone with its own two-color scheme-swap system and, since 2026-09-11, its own typeface (Avenir Next, licensed for the site only).
 - **Don't** replace the wordmark with a logo mark; the brand is the name, set in semibold Inter.
 
 ## Observed Inconsistencies (recorded, not judged)
@@ -309,8 +309,9 @@ These are facts about the incumbent implementation worth knowing before changing
 
 1. `ink` and `accent-bright` are the same value (#f7f8f8) under two names, and `accent` (#f2f3f5) differs from it by a few points; the accent family is nearly indistinguishable from the text greys by design.
 2. Two reds coexist: `danger` #eb5757 (forms, destructive buttons) and `sev-critical` #f2555f (severity, failed jobs).
-3. The site does not share the dashboard's token system: since plan 022 it loads the same self-hosted Inter files through next/font/local, but it keeps its own radius step (4px vs 8px), its own button and focus classes, and a pure black/white `prefers-color-scheme` swap instead of the near-black token scale.
+3. The site does not share the dashboard's token system: it loads its own self-hosted typeface through next/font/local (Avenir Next since 2026-09-11, replacing the Inter it briefly shared with the dashboard under plan 022), and it keeps its own radius step (4px vs 8px), its own button and focus classes, and a pure black/white `prefers-color-scheme` swap instead of the near-black token scale.
 4. `text-[13px]` is an arbitrary value appearing in five files (small buttons, field labels, segmented items, scan URLs, report preparation copy); it is a real step of the scale that exists only as a literal.
 5. **RESOLVED 2026-09-02, plan 022 step 6: the self-hosted Inter now loads.** The four `@font-face` URLs in `theme.css` used to request `/dashboard/fonts/Inter-*.woff2`, which the built app resolved to `dist/public/dashboard/fonts/...` (a plain 404; `APP_ROUTE_PATTERN` did not cover the path either), so every `@font-face` failed and the dashboard rendered in the fallback stack. The URLs now point at `/fonts/Inter-*.woff2`, and the `copy-inter-fonts` Vite plugin both copies the canonical woff2 files to `dist/public/fonts` at build time and serves the same canonical files through a dev-server middleware, so dev and build answer identically. Verified 2026-09-02: all four URLs return 200 `font/woff2` from both the built `dist/public` output and the Vite dev server.
 
-6. **RESOLVED 2026-09-02, plan 022 step 6.** The sidebar wordmark's one-off 15px step moved to the standard `text-sm` (14px), matching the same component's topbar variant. The detector's only real dashboard font-size finding is cleared; the four remaining `overused-font` findings on Inter are dismissed by the recorded decision to pin Inter across dashboard, report, and site.
+6. **RESOLVED 2026-09-02, plan 022 step 6.** The sidebar wordmark's one-off 15px step moved to the standard `text-sm` (14px), matching the same component's topbar variant. The detector's only real dashboard font-size finding is cleared; the `overused-font` findings on Inter across the dashboard and report are dismissed by the recorded decision to pin Inter there. See item 7 for the site's own typeface, which no longer shares this dismissal.
+7. **RESOLVED 2026-09-11, impeccable fix plan step 6.** The site typeface changed from the shared Inter to an operator-licensed, self-hosted Avenir Next, replacing the four Inter woff2 files in `packages/site/app/fonts` with four Avenir Next Cyr weights (Regular 400, Medium 500, Demi 600, Bold 700). The dashboard and report are unaffected and keep Inter (trade-off 79 and PRODUCT.md, Brand Commitments). The `overused-font` detector finding on the site no longer applies, since Inter is no longer the site's typeface; no ignore-value was needed or added for `packages/site`.
