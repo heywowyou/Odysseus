@@ -53,9 +53,14 @@ describe('the price published on the public offer page', () => {
     expect(rendered).toContain(formatFullAuditPrice(language));
   });
 
-  it('quotes no other euro figure that could contradict it', () => {
+  // The re-audit price (packages/report/src/template/html-utils.ts,
+  // ODYSSEUS_REAUDIT_PRICE_EUR_HT = 450) is a second real, published figure,
+  // approved 2026-09-11 to appear alongside the full-audit price on this
+  // page; the site cannot import it (package isolation), so it is literal
+  // text here too. The guard still rejects any third figure.
+  it('quotes only the two published figures, never a third that could contradict them', () => {
     const figures = rendered.match(/[\d\u00a0\u202f,. ]*\d(?:\s?(?:€|EUR))/gu) ?? [];
     const distinct = new Set(figures.map((figure) => figure.trim()));
-    expect([...distinct]).toEqual(['1\u00a0600\u00a0€']);
+    expect([...distinct].sort()).toEqual(['1\u00a0600\u00a0€', '450\u00a0€'].sort());
   });
 });

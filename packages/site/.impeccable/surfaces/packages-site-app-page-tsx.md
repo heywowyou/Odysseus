@@ -18,10 +18,15 @@ Job: understand the offer quickly, trust it (honest limits stated first, diagnos
 Constraints:
 - French first; English sections exist on compliance pages; FR and EN parity maintained.
 - Never break the /apercu/[token] route contract: hash-token serving and the RGPD article 14 disclosures stay intact (trade-offs 42 and 43).
-- No new dependency; the site stays isolated from the workspace packages (no imports, no shared fonts or tokens today).
-- Accessibility floor: 4.5:1 body-text contrast, visible keyboard focus, complete states, reduced motion respected.
+- No new dependency; the site stays isolated from the workspace packages (no imports; the self-hosted Inter woff2 files are copied in, not shared via a token system).
+- Accessibility floor: WCAG 2.2 AA (operator decision, 2026-09-11), verified with axe-core against the live DOM.
+- The euro-figure guard in `packages/core/src/offer/pricing.test.ts` reads offre's literal text and fails on any third figure: the full-audit price (1 600 EUR HT) and the re-audit price (450 EUR HT) are the only two allowed.
 
-Unresolved decisions (operator, step 5):
-- What the one-screen homepage should promise (currently a construction placeholder).
-- Whether the offre page gets a price block and a single primary contact action.
+Resolved (refreshed 2026-09-11, impeccable fix plan, steps 1 to 2):
+- Home leads with the correction handoff, not a construction placeholder (settled by plan 038, 2026-09-11).
+- Offre has a price block, a single "Écrire à Odysseus" contact action, and now its own hero artifact: a three-row dossier card (repérage/preuve, preuve, priorité et action) mirroring home's, replacing the former five-item receive-grid that overflowed the heuristic's "over-limit grid" check. Every primary CTA cluster (home hero, home price, offre hero, offre price) pairs the mailto with the visible address and a "read personally" reassurance; offre's price section states the EUR 450 HT re-audit fact and a three-step post-contact sequence (Réponse/Questionnaire/Proposition écrite).
+- The "Ce que le diagnostic vérifie" check-grid still repeats home's four-category prose close to verbatim: the marketing-copy test pins the exact bounded AI-visibility sentence, the three metric names with the field-data qualifier, and the coverage/security-header phrases on this page too (both home and offre are in `commercialSources`), so trimming that duplication further needs a test update alongside it, not a copy-only change. Left as-is in this pass; a genuine differentiation (condensing to a summary that links home for the full wording, then narrowing the pinned assertions to fire on home only) is the next opportunity if the operator wants to close this out.
+
+Open decision (not resolved this pass):
+- The kicker-above-heading nameplate pattern (a `<p className="label">` above nearly every heading, sitewide) is impeccable's craft-floor's one absolute ban ("no brief earns it back"), but it is also the site's committed, operator-praised identity system (critique: "the nameplate system itself"). Removing it site-wide is a design decision bigger than this fix pass; it was deliberately not applied to the new offre hero artifact or the new "Après votre message" section (neither carries a new kicker), but the existing kickers elsewhere on offre and home were left untouched. Flagging for an explicit operator call rather than deciding unilaterally either way.
 - Whether a visual-world replacement for the public pages is wanted at all: that is a separate new-work session with its own direction contract, never a slice of this plan.

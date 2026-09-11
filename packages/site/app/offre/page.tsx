@@ -57,36 +57,81 @@ export default function OfferPage() {
         <section className="shell hero">
           <p className="label">Offre</p>
           <h1 className="title measure mt-4">Diagnostic technique complet</h1>
-          <p className="lede measure mt-5">
-            Un rapport qui dit quoi corriger, où, et dans quel ordre, sur l&apos;ensemble de votre
-            site.
-          </p>
 
-          <div className="statement measure mt-8">
-            <p className="label">Portée du diagnostic</p>
-            <p className="mt-2">
-              Ceci est un diagnostic technique, pas un audit RGAA. Il ne produit pas de taux de
-              conformité officiel et ne peut pas servir de base à une déclaration
-              d&apos;accessibilité.
-            </p>
-          </div>
+          <div className="split mt-10 hero-split">
+            <div className="split-main">
+              <p className="lede measure">
+                Un rapport qui dit quoi corriger, où, et dans quel ordre, sur l&apos;ensemble de
+                votre site.
+              </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <p className="price numeric">1&#160;600&#160;€ HT</p>
-            <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
-              Écrire à Odysseus
-            </a>
+              <div className="statement measure mt-8">
+                <p className="label">Portée du diagnostic</p>
+                <p className="mt-2">
+                  Ceci est un diagnostic technique, pas un audit RGAA. Il ne produit pas de taux de
+                  conformité officiel et ne peut pas servir de base à une déclaration
+                  d&apos;accessibilité.
+                </p>
+              </div>
+
+              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <p className="price numeric">1&#160;600&#160;€ HT</p>
+                <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+                  Écrire à Odysseus
+                </a>
+              </div>
+              <p className="small muted mt-3">
+                Tarif unique et publié, confirmé par écrit avant tout engagement. Une nouvelle
+                vérification, si vous en demandez une après correction, est facturée
+                450&#160;€&#160;HT, sous cinq jours ouvrés.
+              </p>
+              <p className="small muted mt-3">
+                Un message lu personnellement, jamais par un système automatisé&#160;:{' '}
+                <a className="evidence-link" href="mailto:contact@odysseusaudit.com">
+                  contact@odysseusaudit.com
+                </a>
+                .
+              </p>
+            </div>
+
+            {/* La même fiche constat signature que la page d'accueil,
+                condensée à trois rangées plutôt que cinq : le format
+                illustré, jamais un résultat. Repère et preuve d'un côté,
+                lecture et priorité réunies dans la rangée Action pour
+                rester au même gabarit que la fiche d'accueil. */}
+            <aside className="split-aside" aria-label="Ce que contient chaque constat">
+              <div className="dossier">
+                <div className="dossier-head">
+                  <p className="dossier-title">Ce que contient chaque constat</p>
+                  <p className="dossier-stamp">Rapport Odysseus</p>
+                </div>
+                <dl>
+                  <div className="dossier-row">
+                    <dt>Repérage</dt>
+                    <dd>La page et l&apos;élément concernés, jamais noyés dans une moyenne.</dd>
+                  </div>
+                  <div className="dossier-row">
+                    <dt>Preuve</dt>
+                    <dd>
+                      Une capture d&apos;écran ou la mesure qui établit le constat, vérifiable par
+                      votre prestataire.
+                    </dd>
+                  </div>
+                  <div className="dossier-row dossier-row-action">
+                    <dt>Priorité et action</dt>
+                    <dd>
+                      Le problème expliqué pour un lecteur sans compétence technique, avec la
+                      correction recommandée et son rang de priorité.
+                    </dd>
+                  </div>
+                </dl>
+                <p className="dossier-caption">
+                  Illustration du format du rapport&#160;: elle ne représente ni un site réel, ni un
+                  constat réel.
+                </p>
+              </div>
+            </aside>
           </div>
-          <p className="small muted mt-3">
-            Tarif unique et publié, confirmé par écrit avant tout engagement.
-          </p>
-          <p className="small muted mt-3">
-            Un message lu personnellement, jamais par un système automatisé&#160;:{' '}
-            <a className="evidence-link" href="mailto:contact@odysseusaudit.com">
-              contact@odysseusaudit.com
-            </a>
-            .
-          </p>
         </section>
 
         <div className="shell section-tight">
@@ -167,51 +212,15 @@ export default function OfferPage() {
           <section aria-labelledby="livrable-offre" className="offer-section">
             <div className="measure">
               <h2 id="livrable-offre" className="heading">
-                Ce que contient le rapport
+                Rigueur du rapport
               </h2>
               <p className="soft mt-4">
-                Un rapport au format PDF, remis en français et en anglais. Chaque constat rassemble
-                les mêmes cinq éléments.
+                Un rapport au format PDF, remis en français et en anglais, au format présenté plus
+                haut. Deux garanties encadrent son contenu.
               </p>
             </div>
 
-            <div className="receive-grid mt-8">
-              <div className="receive-item">
-                <p className="receive-title">La page et l&apos;élément</p>
-                <p className="soft mt-2">
-                  Chaque constat nomme la page et l&apos;élément concernés, sans les noyer dans une
-                  moyenne.
-                </p>
-              </div>
-              <div className="receive-item">
-                <p className="receive-title">La preuve</p>
-                <p className="soft mt-2">
-                  Une capture d&apos;écran ou la mesure qui établit le constat, vérifiable par votre
-                  prestataire.
-                </p>
-              </div>
-              <div className="receive-item">
-                <p className="receive-title">L&apos;explication</p>
-                <p className="soft mt-2">
-                  Le problème, formulé pour un lecteur sans compétence technique particulière.
-                </p>
-              </div>
-              <div className="receive-item">
-                <p className="receive-title">La priorité</p>
-                <p className="soft mt-2">
-                  L&apos;ordre recommandé pour traiter les corrections, de la plus urgente à la
-                  moins urgente.
-                </p>
-              </div>
-              <div className="receive-item">
-                <p className="receive-title">La recommandation</p>
-                <p className="soft mt-2">
-                  La correction à apporter, rédigée pour être transmise telle quelle.
-                </p>
-              </div>
-            </div>
-
-            <div className="prose measure mt-10">
+            <div className="prose measure mt-8">
               <p>
                 Le rapport ne contient que des constats effectivement relevés par les outils de
                 mesure&#160;: l&apos;analyse les explique, les hiérarchise et les traduit, sans en
@@ -300,34 +309,75 @@ export default function OfferPage() {
         <section className="shell hero">
           <p className="label">Offer</p>
           <h1 className="title measure mt-4">The complete technical diagnostic</h1>
-          <p className="lede measure mt-5">
-            A report that tells you what to fix, where, and in what order, across your whole site.
-          </p>
 
-          <div className="statement measure mt-8">
-            <p className="label">Scope of the diagnostic</p>
-            <p className="mt-2">
-              This is a technical diagnostic, not an audit RGAA. It does not produce an official
-              conformity rate and cannot serve as the basis for an accessibility statement.
-            </p>
-          </div>
+          <div className="split mt-10 hero-split">
+            <div className="split-main">
+              <p className="lede measure">
+                A report that tells you what to fix, where, and in what order, across your whole
+                site.
+              </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <p className="price numeric">EUR 1,600 excl. VAT</p>
-            <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
-              Write to Odysseus
-            </a>
+              <div className="statement measure mt-8">
+                <p className="label">Scope of the diagnostic</p>
+                <p className="mt-2">
+                  This is a technical diagnostic, not an audit RGAA. It does not produce an official
+                  conformity rate and cannot serve as the basis for an accessibility statement.
+                </p>
+              </div>
+
+              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <p className="price numeric">EUR 1,600 excl. VAT</p>
+                <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+                  Write to Odysseus
+                </a>
+              </div>
+              <p className="small muted mt-3">
+                One published price, confirmed to you in writing before any commitment. A re-audit,
+                if you request one after corrections, is billed at EUR 450 excl. VAT, within five
+                business days.
+              </p>
+              <p className="small muted mt-3">
+                Read personally, never by an automated system:{' '}
+                <a className="evidence-link" href="mailto:contact@odysseusaudit.com">
+                  contact@odysseusaudit.com
+                </a>
+                .
+              </p>
+            </div>
+
+            <aside className="split-aside" aria-label="What every finding contains">
+              <div className="dossier">
+                <div className="dossier-head">
+                  <p className="dossier-title">What every finding contains</p>
+                  <p className="dossier-stamp">Odysseus report</p>
+                </div>
+                <dl>
+                  <div className="dossier-row">
+                    <dt>Location</dt>
+                    <dd>The page and the element concerned, never dissolved into an average.</dd>
+                  </div>
+                  <div className="dossier-row">
+                    <dt>Evidence</dt>
+                    <dd>
+                      A screenshot or the measurement that establishes the finding, checkable by
+                      your web provider.
+                    </dd>
+                  </div>
+                  <div className="dossier-row dossier-row-action">
+                    <dt>Priority and action</dt>
+                    <dd>
+                      The problem explained for a reader without a technical background, with the
+                      recommended correction and its priority rank.
+                    </dd>
+                  </div>
+                </dl>
+                <p className="dossier-caption">
+                  An illustration of the report format: it represents neither a real site nor a real
+                  finding.
+                </p>
+              </div>
+            </aside>
           </div>
-          <p className="small muted mt-3">
-            One published price, confirmed to you in writing before any commitment.
-          </p>
-          <p className="small muted mt-3">
-            Read personally, never by an automated system:{' '}
-            <a className="evidence-link" href="mailto:contact@odysseusaudit.com">
-              contact@odysseusaudit.com
-            </a>
-            .
-          </p>
         </section>
 
         <div className="shell section-tight">
@@ -407,50 +457,15 @@ export default function OfferPage() {
           <section aria-labelledby="deliverable-offre-en" className="offer-section">
             <div className="measure">
               <h2 id="deliverable-offre-en" className="heading">
-                What the report contains
+                Rigour of the report
               </h2>
               <p className="soft mt-4">
-                A report in PDF format, delivered in French and English. Every finding brings
-                together the same five elements.
+                A report in PDF format, delivered in French and English, in the format shown above.
+                Two guarantees govern its content.
               </p>
             </div>
 
-            <div className="receive-grid mt-8">
-              <div className="receive-item">
-                <p className="receive-title">The page and the element</p>
-                <p className="soft mt-2">
-                  Every finding names the page and the element concerned, never dissolved into an
-                  average.
-                </p>
-              </div>
-              <div className="receive-item">
-                <p className="receive-title">The evidence</p>
-                <p className="soft mt-2">
-                  A screenshot or the measurement that establishes the finding, checkable by your
-                  web provider.
-                </p>
-              </div>
-              <div className="receive-item">
-                <p className="receive-title">The explanation</p>
-                <p className="soft mt-2">
-                  The problem, phrased for a reader without any particular technical background.
-                </p>
-              </div>
-              <div className="receive-item">
-                <p className="receive-title">The priority</p>
-                <p className="soft mt-2">
-                  The recommended sequence for the corrections, most urgent first.
-                </p>
-              </div>
-              <div className="receive-item">
-                <p className="receive-title">The recommendation</p>
-                <p className="soft mt-2">
-                  The correction to make, written so it can be handed on as it stands.
-                </p>
-              </div>
-            </div>
-
-            <div className="prose measure mt-10">
+            <div className="prose measure mt-8">
               <p>
                 The report contains only findings actually detected by the measuring tools: the
                 analysis explains, prioritises and translates them, without adding any of its own.
