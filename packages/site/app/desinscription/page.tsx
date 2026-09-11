@@ -50,8 +50,7 @@ export default function OptOutPage() {
     <main id="contenu" tabIndex={-1} className="flex-1">
       <LanguageSection lang="fr">
         <section className="shell hero">
-          <p className="label">Opposition à la prospection</p>
-          <h1 className="title measure mt-4">Ne plus être contacté</h1>
+          <h1 className="title measure">Ne plus être contacté</h1>
           <p className="lede measure mt-5">
             Une simple demande suffit. Elle est gratuite et ne requiert aucune justification.
           </p>
@@ -122,8 +121,7 @@ export default function OptOutPage() {
 
       <LanguageSection lang="en">
         <section className="shell hero">
-          <p className="label">Prospecting opt-out</p>
-          <h1 className="title measure mt-4">Stop being contacted</h1>
+          <h1 className="title measure">Stop being contacted</h1>
           <p className="lede measure mt-5">
             A simple request is enough. It is free and requires no justification.
           </p>

@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "app/globals.css"
+        ],
+        "createdAt": "2026-09-11T13:54:44.581Z",
+        "reason": "Existing sanctioned exception re-keyed for the packages/site cwd: the .statement anchor-rule margin note already carries this ignore in the repo-root config (DESIGN.md anchor-rule motif, both critiques)"
+      }
+    ]
+  }
+}

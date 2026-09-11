@@ -44,14 +44,18 @@ export const metadata: Metadata = {
  * désormais deux passes. La description de la seconde passe, complète, est
  * ajoutée parce qu'un propriétaire de site la verrait dans ses journaux,
  * et que cette page doit rester vérifiable contre ce qu'il y lit.
+ *
+ * Passe éditoriale du 2026-09-11 : « une requête toutes les 1000 ms au
+ * minimum » se lisait comme un plancher de fréquence ; reformulé en
+ * intervalle minimal entre deux requêtes, sens inchangé (règle 5 de
+ * CLAUDE.md, politesse du robot).
  */
 export default function BotInfoPage() {
   return (
     <main id="contenu" tabIndex={-1} className="flex-1">
       <LanguageSection lang="fr">
         <section className="shell hero">
-          <p className="label">Robot d&apos;analyse</p>
-          <h1 className="title measure mt-4">OdysseusBot</h1>
+          <h1 className="title measure">OdysseusBot</h1>
           <p className="lede measure mt-5">
             Ce que fait ce robot lorsqu&apos;il visite un site, ce qu&apos;il conserve, et comment
             lui interdire l&apos;accès.
@@ -77,7 +81,7 @@ export default function BotInfoPage() {
               <dt className="receive-title">Fréquence</dt>
               <dd className="soft mt-2">
                 <a className="evidence-link" href="#frequence-bot">
-                  Une requête toutes les 1000&#160;ms au minimum
+                  Au moins 1000&#160;ms entre deux requêtes
                 </a>
               </dd>
             </div>
@@ -141,7 +145,7 @@ export default function BotInfoPage() {
             </pre>
 
             <p id="frequence-bot">
-              Fréquence des requêtes&#160;: une requête toutes les 1000&#160;ms au minimum. Si votre
+              Fréquence des requêtes&#160;: au moins 1000&#160;ms entre deux requêtes. Si votre
               fichier robots.txt définit une directive Crawl-delay plus longue, c&apos;est elle qui
               s&apos;applique. Le fichier robots.txt est lu avant toute visite, et les pages
               interdites ne sont jamais chargées.
@@ -178,8 +182,7 @@ export default function BotInfoPage() {
 
       <LanguageSection lang="en">
         <section className="shell hero">
-          <p className="label">Analysis bot</p>
-          <h1 className="title measure mt-4">OdysseusBot</h1>
+          <h1 className="title measure">OdysseusBot</h1>
           <p className="lede measure mt-5">
             What this bot does when it visits a site, what it retains, and how to block it.
           </p>
@@ -199,7 +202,7 @@ export default function BotInfoPage() {
               <dt className="receive-title">Pacing</dt>
               <dd className="soft mt-2">
                 <a className="evidence-link" href="#pacing-bot-en">
-                  One request every 1000ms at minimum
+                  At least 1000ms between two requests
                 </a>
               </dd>
             </div>
@@ -260,7 +263,7 @@ export default function BotInfoPage() {
             </pre>
 
             <p id="pacing-bot-en">
-              Request rate: one request every 1000ms at minimum. If your robots.txt file defines a
+              Request rate: at least 1000ms between two requests. If your robots.txt file defines a
               longer Crawl-delay, that value applies instead. robots.txt is read before any page is
               visited, and disallowed pages are never loaded.
             </p>

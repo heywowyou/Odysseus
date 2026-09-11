@@ -28,7 +28,12 @@ colors:
   site-line: "rgb(16 27 42 / 0.14)"
   site-line-strong: "rgb(16 27 42 / 0.28)"
   site-anchor: "#18385d"
-  site-signal: "#ea580c"
+  site-signal: "#43aa8b"
+  site-mark-finding: "#dc2626"
+  site-mark-evidence: "#0369a1"
+  site-visitor-fill-faint: "rgb(53 105 180 / 0.09)"
+  site-machine-highlight: "rgb(255 255 255 / 0.11)"
+  site-visitor-accent: "#075985"
   site-accent: "#0369a1"
   site-accent-strong: "#075985"
   site-accent-soft: "rgb(14 165 233 / 0.12)"
@@ -47,6 +52,18 @@ typography:
     site-heading: "clamp(1.375rem, 1.15rem + 0.9vw, 1.75rem)"
     site-body: "1rem"
     site-label: "0.6875rem"
+    site-wordmark: "1.8rem"
+    site-lede: "clamp(1.0625rem, 0.98rem + 0.4vw, 1.25rem)"
+    site-exhibit-title: "clamp(1.125rem, 1.02rem + 0.4vw, 1.3125rem)"
+    site-price: "clamp(2rem, 1.55rem + 1.8vw, 2.75rem)"
+    site-subheading: "1.0625rem"
+    site-control: "0.9375rem"
+    site-figure-label: "0.8125rem"
+    site-micro-label: "0.6875rem"
+    site-exhibit-title-floor: "1.125rem"
+    site-exhibit-title-ceiling: "1.3125rem"
+    site-price-floor: "2rem"
+    site-price-ceiling: "2.75rem"
   title:
     fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
     fontSize: "1.25rem"
@@ -107,6 +124,7 @@ rounded:
   lg: "8px"
   xl: "12px"
   full: "9999px"
+  site-bar: "2px"
   site-control: "3px"
   site-md: "6px"
   site-card: "10px"
@@ -172,17 +190,17 @@ components:
   site-button-primary:
     backgroundColor: "{colors.site-ink}"
     textColor: "{colors.site-paper}"
-    typography: "Avenir Next 500 0.9375rem"
-    rounded: "{rounded.site-control}"
-    height: "44px"
-    padding: "0 1.25rem"
+    typography: "Avenir Next 600 0.875rem uppercase 0.14em"
+    rounded: "4px"
+    height: "52px"
+    padding: "0 1.625rem"
   site-button-secondary:
     backgroundColor: "transparent"
     textColor: "{colors.site-ink}"
-    typography: "Avenir Next 500 0.9375rem"
-    rounded: "{rounded.site-control}"
-    height: "44px"
-    padding: "0 1.25rem"
+    typography: "Avenir Next 600 0.875rem uppercase 0.14em"
+    rounded: "4px"
+    height: "52px"
+    padding: "0 1.625rem"
   site-card:
     backgroundColor: "{colors.site-paper-raised}"
     textColor: "{colors.site-ink}"
@@ -199,6 +217,17 @@ components:
     typography: "Avenir Next 600 0.6875rem"
     rounded: "{rounded.site-control}"
     padding: "3px 8px"
+  site-exhibit:
+    backgroundColor: "{colors.site-paper-raised}"
+    textColor: "{colors.site-ink}"
+    rounded: "{rounded.site-card-lg}"
+    padding: "clamp(1.375rem, 0.9rem + 1.6vw, 2.25rem)"
+  site-replay-button:
+    textColor: "{colors.site-ink-soft}"
+    typography: "Avenir Next 500 0.8125rem"
+    rounded: "{rounded.site-full}"
+    height: "32px"
+    padding: "0 0.875rem 0 0.75rem"
 ---
 
 # Design System: Odysseus
@@ -211,9 +240,9 @@ Odysseus sells findings a client can check, so both surfaces are places evidence
 
 The dashboard looks the part of a single-operator tool: a near-black, layered monochrome interface in the same family as Linear or Vercel's consoles. Surfaces stack from base through panel, raised, and overlay, separated by 7 percent white hairlines rather than shadows. The accent is white. Primary actions are the brightest object on screen, which means hierarchy is carried by brightness steps and typography, never by brand color. The only chromatic colors in the product are the four severity shades shared with the PDF report, plus a danger red for destructive and error states.
 
-The marketing site is a different world, built around the conceit of a working document rather than a software landing page: reader prose and raised cards on cool, faintly blue paper (light or near-black, switched by the OS color scheme preference), plus a fixed dark "machine" register for what a program reads. It is a standalone Next.js deploy with no component library, and, since 2026-09-11, its own operator-licensed self-hosted Avenir Next (no longer shared with the dashboard's Inter), loaded through next/font/local from woff2 files copied into `packages/site/app/fonts`. A plain persistent frame (text wordmark, three-item nav, footer with the compliance links, a skip link) wraps every public page; the preview route handler still answers with standalone documents outside the frame. Since 2026-09-11 the site also carries its own accent pair, borrowed from Tailwind rather than invented: sky blue for links, the dossier stamp, and the raw-versus-rendered inset, and orange-600 for exactly one warm annotation (the dossier's Action row and the skip link's keyboard focus). The site intentionally depends on nothing in the workspace, so it shares no tokens with the dashboard; it is recorded here as its own minimal surface.
+The marketing site is a different world, built around the conceit of a working document rather than a software landing page: reader prose and raised cards on cool, faintly blue paper (light or near-black, switched by the OS color scheme preference), plus a fixed dark "machine" register for what a program reads. It is a standalone Next.js deploy with no component library, and, since 2026-09-11, its own operator-licensed self-hosted Avenir Next (no longer shared with the dashboard's Inter), loaded through next/font/local from woff2 files copied into `packages/site/app/fonts`. A plain persistent frame (text wordmark, three-item nav, footer with the compliance links, a skip link) wraps every public page; the preview route handler still answers with standalone documents outside the frame. Since 2026-09-11 the site also carries its own accent pair, borrowed from Tailwind rather than invented: sky blue for links, the dossier stamp, and the schematics' evidence marks, and a three-colour rule set on the dossier card (red Constat, yellow Preuve, teal-green Action; the green is also the skip link's keyboard focus). The site intentionally depends on nothing in the workspace, so it shares no tokens with the dashboard; it is recorded here as its own minimal surface.
 
-Motion is decoration only. Dashboard entrances use short, decelerating fades and slides (0.2 to 0.3 seconds, cubic-bezier(0.16, 1, 0.3, 1)), a `prefers-reduced-motion` rule collapses all of it, and every state stays fully readable without animation. Accessibility posture is visible in the base layer: a global 2px white focus outline, AA-contrast text pairs in both directions of the monochrome theme, and dark color-scheme declared at the root. The site carries the same posture in its own idioms: a global 2px focus outline in the foreground color with a 2px offset, and AA-contrast pairs computed in both schemes. Since 2026-09-11 the site also has one authored motion of its own: repeated cards (the dossier, the diagnostic-scope statement, and the check/receive/method grids) settle into place at a slight alternating tilt on first scroll into view, as if a printed sheet were being set down on the desk, via a small IntersectionObserver component (`lib/reveal.tsx`); it is skipped entirely under `prefers-reduced-motion` and without JavaScript.
+Motion is decoration only. Dashboard entrances use short, decelerating fades and slides (0.2 to 0.3 seconds, cubic-bezier(0.16, 1, 0.3, 1)), a `prefers-reduced-motion` rule collapses all of it, and every state stays fully readable without animation. Accessibility posture is visible in the base layer: a global 2px white focus outline, AA-contrast text pairs in both directions of the monochrome theme, and dark color-scheme declared at the root. The site carries the same posture in its own idioms: a global 2px focus outline in the foreground color with a 2px offset, and AA-contrast pairs computed in both schemes. Since 2026-09-11 the site has its own motion system, one curve (`--ease-out-expo`, cubic-bezier(0.16, 1, 0.3, 1)) and three kinds of moment. The hero dossier card assembles on load (the sheet lands, its rows are written in order, their rules are drawn red, yellow, green, the report stamp is pressed on; about 1.5 seconds, the headline never waits). Card groups settle on first scroll into view at a slight alternating tilt and a small blur-to-sharp, as if a printed sheet were set down on the desk (`lib/reveal.tsx`), and the meters of the `process` stages fill in stage order (`lib/steps.tsx`). Each check schematic plays its measurement once when on screen (`lib/exhibit.tsx`), under five seconds, with a replay button. Reduced motion keeps short opacity fades and drops every move, draw, meter fill, blur and replay; without JavaScript, everything renders in its finished state.
 
 *Provenance: every token, measurement and rule in this file was read from the code. The North Star was confirmed by the operator on 2026-09-02; the descriptive colour names and the named rules remain derived language, still open to the operator's rewording. Re-merged 2026-09-11 (`/impeccable document`, merge mode, dashboard untouched) so the site sections match the shipped state: the raised-card system replacing hairline-only rows, the sky/orange-600 accent pair replacing the earlier desaturated blue and the dossier's fixed-white sheet, the settle-in scroll reveal, and the corrected layout, radius, and shadow facts below. Dashboard content below this point was last verified 2026-09-02 (plan 022) and is unchanged by this pass.*
 
@@ -223,7 +252,7 @@ Motion is decoration only. Dashboard entrances use short, decelerating fades and
 - Self-hosted type on both surfaces, typeset small (14px dashboard body baseline, 20px titles as the ceiling, 16px site body); the dashboard and report keep Inter, the site typesets in its own licensed Avenir Next.
 - Dashboard is genuinely flat: shadow belongs only to floating layers (dialogs, dropdown menus, toasts). The site is not: since 2026-09-11 its repeated feature grids and dossier are soft-shadowed raised cards.
 - Two independent radius ladders: dashboard 12px containers / 8px controls / 6px chips / full pills; site 10-12px cards / 6px dossier / 3px controls / full pill (language toggle only).
-- Dashboard motion: short decelerating fades and slides, decoration only, killed under reduced motion. Site motion: the same posture plus one authored scroll-triggered settle-in on its cards, likewise killed under reduced motion or without JS.
+- Dashboard motion: short decelerating fades and slides, decoration only, killed under reduced motion. Site motion: a load sequence on the hero dossier, scroll-triggered settles and rule draws, and one-shot schematic measurements with replay; reduced motion keeps fades only, and no-JS shows finished states.
 
 ## Colors
 
@@ -268,7 +297,7 @@ Severity appears at full strength only as text and as 8px status dots; large sur
 
 ### Site
 
-The public site is a fully separate palette: a light/dark cool-paper neutral scale (site prefix below), one sky-blue accent pair, and one warm orange reserved for a single annotation. Recast 2026-09-11: the accent moved from a desaturated corporate blue to Tailwind's sky family, and the dossier card stopped being a fixed white "printed sheet" that ignored the site's own theme.
+The public site is a fully separate palette: a light/dark cool-paper neutral scale (site prefix below), one sky-blue accent pair, and a three-colour row-rule set reserved for the dossier card. Recast 2026-09-11: the accent moved from a desaturated corporate blue to Tailwind's sky family, and the dossier card stopped being a fixed white "printed sheet" that ignored the site's own theme.
 
 - **Cool Paper** (`site-paper`, #e8edf3 light / #0e141c dark): the site background; a faintly blue-tinted neutral in light mode rather than warm cream, a near-navy black in dark mode. Also the dossier's own surface since 2026-09-11 (previously a fixed white "sheet" regardless of theme).
 - **Raised Paper** (`site-paper-raised`, #ffffff light / #16202c dark): every raised card (the diagnostic-scope statement, and, since 2026-09-11, the check/receive/method feature grids).
@@ -276,14 +305,16 @@ The public site is a fully separate palette: a light/dark cool-paper neutral sca
 - **Sky Accent** (`site-accent`, #0369a1 light / #38bdf8 dark): links, the dossier stamp badge, the raw-versus-rendered inset. Recast 2026-09-11 for more vibrancy; sky-700 is the darkest step of Tailwind's sky family that still clears 4.5:1 body-text contrast on `site-paper` (measured 5.0:1). The lighter sky-400/500 steps read at only 2.4:1 to 3.5:1 against the light background and are reserved for dark-mode text and for tints/borders, never for light-mode links or body copy.
 - **Sky Accent Strong** (`site-accent-strong`, #075985 light / #7dd3fc dark): link hover, and the dossier stamp's own text color (chosen over plain `site-accent` because the stamp's real alpha-composited background, `site-accent-soft` over the dossier surface, measures right at 4.5:1 with `site-accent` and 5.7:1 with this stronger step).
 - **Sky Accent Soft** (`site-accent-soft`, `rgb(14 165 233 / 0.12)` light / `rgb(56 189 248 / 0.16)` dark): the dossier stamp's tinted background only.
-- **Signal Orange** (`site-signal`, #ea580c): recast 2026-09-11 from a muted burnt orange to Tailwind's orange-600 for more vibrancy, staying in the same warm family. Never used as text, only as a border, so the AA text-contrast floor never applied; it clears the 3:1 non-text floor against every surface it borders. Used exactly twice: the dossier's Action-row rule, and the skip-link's keyboard focus border.
+- **Signal** (`site-signal`, #43aa8b): the dossier's Action-row rule and the skip link's keyboard focus border. Changed during the 2026-09-11 live session from orange-600 (#ea580c) to this teal green. Never text.
+- **Mark Finding / Mark Evidence** (`site-mark-finding`, #dc2626; `site-mark-evidence`, the page's own `site-accent`, #0369a1 light / #38bdf8 dark): the dossier's Constat and Preuve row marks, added 2026-09-11 at the operator's request; Preuve moved from yellow to blue the same day because yellow read as a warning to a client. With Signal they mark the three parts of one finding in reading order (problem, evidence, action), not a severity scale; they are decoration and the row labels carry the meaning. Never text, never anywhere but the dossier.
+- **Visitor Accent** (`site-visitor-accent`, #075985, with a `rgb(14 165 233 / 0.14)` soft tint): evidence blue as it reads on the fixed light documents inside the schematics (pins, dashed flag outlines, the scan line, the JavaScript progress bar). Not re-tuned in dark mode, because those documents stay light in both schemes.
 - **Anchor** (`site-anchor`, #18385d light / #8fb4ee dark): the diagnostic-scope statement's left border only. Historically also the dossier's spine before its 2026-09-11 recast; the dossier no longer uses it.
 - **Machine Ink on Machine** (`site-machine`, #0c121b / #0a0e15 dark; `site-machine-ink`, #cfd4da): the raw-versus-rendered inset and every code block, fixed in both color schemes because it represents a thing (a program's view), not this site's own theme.
 
 ### Named Rules
-**The Signal Monopoly Rule.** Orange never appears as text and never appears more than twice on any page: the dossier's Action-row annotation, and the skip link's keyboard focus. Any third use is a defect, not a new accent.
+**The Dossier Rule Set.** Red, blue and the signal green appear only as the dossier's three row dashes (plus the signal on the skip link's focus). Never text, never a severity, never a section decoration; any other use is a defect, not a new accent.
 
-**The Card Recast Rule.** Since 2026-09-11 the dossier, the diagnostic-scope statement, and the repeated check/receive/method grids are raised cards (`site-paper-raised` background, hairline border, soft ink-tinted shadow), reversing an earlier "not a card wall" decision at the operator's explicit request. The `process` ordered-list steps were deliberately left as flat hairline rows: their native numbered-list marker already carries the sequence, so a card would compete with it rather than support it.
+**The Card Recast Rule.** Since 2026-09-11 the dossier, the diagnostic-scope statement, and the repeated check/receive/method grids are raised cards (`site-paper-raised` background, hairline border, soft ink-tinted shadow), reversing an earlier "not a card wall" decision at the operator's explicit request. The `process` stages and the `method-grid` principles each sit in one raised panel divided by hairlines, never a card per item (operator pick in live mode, 2026-09-11, replacing flat hairline rows that read too faint): larger titles, full-size body text, and on the stages a short meter filled up to each stage's position, the last stage in `--signal` green. `lib/steps.tsx` renders the stages on both the home and offer pages so the two cannot drift.
 
 ## Typography
 
@@ -315,7 +346,10 @@ The public site is a fully separate palette: a light/dark cool-paper neutral sca
 - **Site Title** (600, `clamp(1.875rem, 1.3rem + 2.2vw, 2.75rem)` / 1.1, -0.03em): page `<h1>`.
 - **Site Heading** (600, `clamp(1.375rem, 1.15rem + 0.9vw, 1.75rem)` / 1.2, -0.02em): section `<h2>`.
 - **Site Body** (400, 1rem / 1.65): running prose; the lede variant steps up to a fluid `clamp(1.0625rem, 0.98rem + 0.4vw, 1.25rem)` in `ink-soft`.
-- **Site Label** (600, 0.6875rem, uppercase, 0.18em tracking): the wordmark setting reused for every label and kicker; wide capitals read as an instrument's nameplate.
+- **Site Label** (600, 0.6875rem, uppercase, 0.18em tracking): the wordmark setting, for labels of a word or two inside a component (the statement's « Portée du diagnostic », the dossier's row terms, the table-of-contents and footer labels). Never a kicker above a heading: all 24 were removed 2026-09-11 (operator decision, detector rule `kicker-above-heading`).
+- **Figure Label** (600, 0.8125rem, sentence case): captions inside a schematic, which run to a whole phrase; uppercase would read as all-caps body text.
+- **Site Wordmark** (700, 1.8rem, uppercase, 0.2em tracking): header and footer. Raised twice on 2026-09-11 at the operator's request, from 0.9375rem to 1.375rem, then 30 percent more to 1.8rem. In the header below 26rem it steps down to 1.5rem so it still shares one row with the language toggle at 390px.
+- **Site Button** (600, 0.875rem, uppercase, 0.14em tracking, 52px tall): every `.btn`, set in the wordmark's nameplate register (operator pick in live mode, 2026-09-11). A primary button that opens an email carries a drawn arrow (masked SVG, label colour) that slides 3px on hover.
 
 ### Named Rules
 **The Fluid Scale Rule.** Display, title, and heading sizes are `clamp()` expressions tied to viewport width, not fixed steps; a value is never quoted as a single px/rem number without its clamp range.
@@ -326,9 +360,9 @@ The dashboard is a fixed-chrome operator app. A 240px sidebar (`w-60`, panel bac
 
 Every route opens with the same PageHeader: a 20px semibold title with an optional muted description on the left and action buttons on the right, followed by a 32px gap. KPI tiles sit in a 2-column grid that becomes 4 columns at 1024px, with 12px gaps and a staggered entrance of 50ms per tile. Tables live inside a 12px-radius bordered panel and scroll horizontally rather than reflowing. Breakpoints in actual use are Tailwind's `md` (768px) and `lg` (1024px).
 
-The site's container system is two custom widths, not a Tailwind `max-w-*` utility: `.shell` (1120px, `--shell: 70rem`, 24px side padding under 40rem / 40px above) holds every section, and `.measure` (640px, `--measure: 40rem`) narrows prose and the hero lede to a readable line length inside it. The hero breaks from single-column at 64rem into `.split`: a flexible main column plus a fixed 26rem aside carrying the dossier card, deliberately offset 3rem below the prose's first line so the two read as text-and-exhibit rather than two equal columns. Below 64rem the aside stacks under the prose in DOM order. Sections are separated by hairline rules and fluid vertical padding (`clamp()`-based, 3.25rem to 6rem), never by cards; that hairline-and-whitespace rhythm is unchanged by the 2026-09-11 recast, which only changed the repeated item-level grids inside sections. A persistent frame (text wordmark, three-item nav, footer with the compliance links, a skip link) wraps every public page; the preview route handler still answers outside the frame with standalone documents. The header collapses from two items per row to a stacked two-row layout below 26rem, DOM order unchanged.
+The site's container system is two custom widths, not a Tailwind `max-w-*` utility: `.shell` (1120px, `--shell: 70rem`, 24px side padding under 40rem / 40px above) holds every section, and `.measure` (640px, `--measure: 40rem`) narrows prose and the hero lede to a readable line length inside it. The hero breaks from single-column at 64rem into `.split`: a flexible main column plus a fixed 26rem aside carrying the dossier card, deliberately offset 3rem below the prose's first line so the two read as text-and-exhibit rather than two equal columns. Below 64rem the aside stacks under the prose in DOM order. Sections are separated by hairline rules and fluid vertical padding (`clamp()`-based, 3.25rem to 6rem), never by cards; that hairline-and-whitespace rhythm is unchanged by the 2026-09-11 recast, which only changed the repeated item-level grids inside sections. A persistent frame (text wordmark, three-item nav, footer with the compliance links, a skip link) wraps every public page; the preview route handler still answers outside the frame with standalone documents. The header collapses from two items per row to a stacked two-row layout below 26rem, DOM order unchanged. The home page's checks section is a single column of full-width exhibit cards (2026-09-11, replacing a two-by-two grid): prose in a 4fr column, which sticks beside a taller figure from 60rem up, and the schematic in a 7fr column that is its own `inline-size` container, so each schematic lays out by its real width rather than the viewport's.
 
-Since 2026-09-11 four repeated grids (`check-grid`, `receive-grid`, `method-grid`, and the `process` ordered list) hold `align-items: start` rather than the CSS grid default of `stretch`: with the items now visible bordered cards, a taller sibling in the same row used to stretch its shorter neighbor into a card with a large blank interior, which was invisible back when the items were flat hairline rows. Each card now hugs its own content height instead.
+Since 2026-09-11 the two card grids (`check-grid`, `receive-grid`) hold `align-items: start` rather than the CSS grid default of `stretch`: with the items now visible bordered cards, a taller sibling in the same row used to stretch its shorter neighbor into a card with a large blank interior, which was invisible back when the items were flat hairline rows. Each card now hugs its own content height instead.
 
 ## Elevation & Depth
 
@@ -342,11 +376,11 @@ Depth is tonal, not shadowed. The four surface steps (base, panel, raised, overl
 
 ### Site
 
-Depth on the site is genuinely shadowed, not tonal, since the 2026-09-11 card recast: the dossier card, the diagnostic-scope statement, and the check/receive/method feature grids all carry a soft, ink-tinted resting shadow (never a neutral black one, so raised surfaces stay part of the cool-paper register). The `process` ordered-list steps are the deliberate exception, kept flat with only a hairline top border, because their native numbered marker already carries the sequence.
+Depth on the site is genuinely shadowed, not tonal, since the 2026-09-11 card recast: the dossier card, the diagnostic-scope statement, the check/receive feature grids, and the single `process` and `method-grid` panels all carry a soft, ink-tinted resting shadow (never a neutral black one, so raised surfaces stay part of the cool-paper register).
 
 ### Shadow Vocabulary
-- **Card** (`--shadow-card`; light: `0 1px 2px rgb(16 27 42 / 0.06), 0 10px 28px rgb(16 27 42 / 0.1)`; dark: `0 1px 2px rgb(0 0 0 / 0.35), 0 14px 32px rgb(0 0 0 / 0.45)`): the dossier, the diagnostic-scope statement, and every check/receive/method grid item.
-- **Button hover** (`box-shadow: 0 8px 20px rgb(16 27 42 / 0.16)`, plus a 1px `translateY` lift): `.btn-primary` only, on hover.
+- **Card** (`--shadow-card`; light: `0 1px 2px rgb(16 27 42 / 0.06), 0 10px 28px rgb(16 27 42 / 0.1)`; dark: `0 1px 2px rgb(0 0 0 / 0.35), 0 14px 32px rgb(0 0 0 / 0.45)`): the dossier, the diagnostic-scope statement, every check/receive grid item, and the `process` and `method-grid` panels.
+- **Button** (`inset 0 1px 0 rgb(255 255 255 / 0.14)` over `--shadow-card`, plus a 1px `translateY` lift on hover): `.btn-primary` at rest; the secondary button stays flat with a hairline border.
 
 ### Named Rules
 **The Card Shadow Rule.** Every site card shares one shadow token (`--shadow-card`); a new raised element reuses it rather than inventing a bespoke box-shadow.
@@ -355,7 +389,7 @@ Depth on the site is genuinely shadowed, not tonal, since the 2026-09-11 card re
 
 The form language is a strict radius ladder mapped to elevation: 12px (`rounded-xl`) for containers that hold content (cards, KPI tiles, dialogs, empty states, table wrappers), 8px (`rounded-lg`) for controls (all button variants, inputs, selects, textareas, nav items, dropdown panels, segmented containers, skeleton loading rows), 6px (`rounded-md`) for inner elements (badges, dropdown items, segmented segments), and full pills only for progress bars and status dots. Empty states are the one dashed border in the system: 1px dashed `line-strong` on a 60 percent panel background. Borders elsewhere are 1px solid hairlines (7 percent white, 13 percent for floating layers and secondary buttons).
 
-The site has its own, independent radius ladder, tighter at every step than the dashboard's: 3px for controls (`.btn`, the skip link's focus box), 4px for the machine-register code block, 5px for the raw-versus-rendered inset, 6px for the dossier card, 10px for the diagnostic-scope statement (whose left corners stay square, carrying the `site-anchor` border-left), 12px for the repeated check/receive/method feature cards, and a full pill for the language toggle only. Borders are the same 1px solid hairline convention as the dashboard, at the site's own opacities (14 percent / 28 percent).
+The site has its own, independent radius ladder, tighter at every step than the dashboard's: 3px for controls (`.btn`, the skip link's focus box), 4px for the machine-register code block, 5px for the raw-versus-rendered inset, 6px for the dossier card, 10px for the diagnostic-scope statement (whose left corners stay square, carrying the `site-anchor` border-left), 12px for the repeated check/receive/method feature cards and the exhibits, 2px for bars inside the schematics, 8px for the panels inside a schematic (machine and visitor bands, the mock page, the file stack), and full pills for the language toggle, the replay button, status chips and schematic tags. Borders are the same 1px solid hairline convention as the dashboard, at the site's own opacities (14 percent / 28 percent).
 
 ## Components
 
@@ -415,10 +449,19 @@ The site has its own, independent radius ladder, tighter at every step than the 
 - **Grid behavior:** `align-items: start` on every multi-card grid, so a card hugs its own content instead of stretching to a taller row-mate (2026-09-11 fix; see Layout, Site).
 
 #### Signature: the Dossier
-The recurring "what every finding contains" card: a labelled header (title plus a sky-accent stamp badge), a definition list of Constat/Preuve/Action-style rows separated by hairlines, and a caption disclaiming that the content is illustrative. The Action row alone carries the site's one orange annotation, a 2px `site-signal` border-inline-start. Recast 2026-09-11: previously a fixed white "printed sheet" that never changed with the site's theme; it now sits on `site-paper` like every other card, in both color schemes.
+The "what every finding contains" card, rendered from one component on every page that shows it (`lib/dossier.tsx`; two hand-kept copies had drifted to different row names, now guarded by `marketing-copy.test.ts`). A labelled header (title plus a sky-accent stamp badge), three definition-list rows separated by hairlines (Constat, Preuve, Action), each with its label (0.6875rem, uppercase, 0.16em tracking) stacked above its sentence so the sentence gets the card's full width, and a caption disclaiming that the content is illustrative. The stamp never wraps; the title wraps in its own column instead. Each label opens with a short round-capped dash (1.125rem by 3px, a `::before` on the `dt`) in the row's colour: red, blue, then the signal green on Action, whose text alone steps up to `site-ink`; the load sequence draws the three dashes in order. A full-height 4px stripe down each row was tried first and replaced, because the side stripe is the detector's `side-tab` tell. Layout picked in a live polish pass, 2026-09-11. It sits on `site-paper` in both colour schemes.
 
-#### Signature: the Raw-Versus-Rendered Inset
-A two-panel comparison (the `machine` register showing what a crawler receives, a light `visitor` panel showing what a person sees), with the visitor panel's content revealing over about a second via a `render-in` keyframe on load. Fixed dark/light registers regardless of the site's own theme, because each panel represents a thing (a crawler's view, a rendered page), not this site's theme.
+#### Signature: Exhibits and Schematics
+Each check on the home page is an exhibit card: its prose beside a schematic of what the check measures (`lib/schematics.tsx`). Every schematic shares one grammar, the **artifact a program reads beside the readout a person reads**, so the three read as one instrument:
+- **Render diff:** two stacked bands in the order they happen, a dark machine band (the empty application shell, and a hatched "no title, no text, no link" verdict) above a light visitor band (a JavaScript progress bar, then content bars, then a tinted verdict). Each band splits artifact and verdict side by side from a 30rem figure width, so the two loads line up column for column.
+- **Accessibility:** a light mock page crossed by a scan line; each flagged element gets a dashed visitor-accent outline and a numbered pin, matched by a readout row naming the problem, the element (`<img>`, `<p>`, `<input>`) and the WCAG criterion axe-core tags that rule with.
+- **AI signals:** a stack of machine-register files (robots.txt, llms.txt, the page head's JSON-LD) whose decisive lines get a highlighter sweep as they are read, matched by readout rows with status chips: present (sky tint, check), blocked (sunk paper, struck circle), missing (dashed outline, dashed circle).
+The artifact side is `aria-hidden`; the readout side is real text. Every figure carries the caption "Schéma de principe : il ne représente ni un site réel, ni le résultat d'un audit." and never shows a real site, a real finding, or a figure.
+
+Motion primitives, one per element with a `--d` delay: `fx-clip` (left-to-right clip reveal, for text), `fx-rise`, `fx-pop` (pins and chips), `fx-grow-x`/`fx-grow-y` (bars and rules), `fx-mark` (highlighter sweep), `fx-flag` (outline tightening onto an element). A primitive's resting style is always its finished frame; the start frame exists only while an armed exhibit has not yet run.
+
+#### Replay Button
+A 32px pill (`site-line-strong` border, `site-ink-soft` label, 14px counter-clockwise arrow) under each schematic beside its caption. The only way to see a measurement again; hidden under reduced motion and without JavaScript.
 
 #### Language Toggle
 - **Style:** a pill-shaped segmented control (999px radius, 1px `site-line-strong` border, 4px padding); the active segment fills `site-ink` with `site-paper` text.
@@ -439,6 +482,8 @@ A two-panel comparison (the `machine` register showing what a crawler receives, 
 - **Do** keep every public site page inside the shared frame with its skip link; only the preview route handler answers bare.
 - **Do** (site) reuse `--shadow-card` for any new raised surface rather than inventing a bespoke box-shadow; keep `align-items: start` on any new multi-card grid.
 - **Do** (site) keep the sky accent's light-mode text usage at sky-700 or darker; sky-400/500 read at only 2.4:1 to 3.5:1 against the light `site-paper` background and are reserved for dark-mode text, tints, and borders.
+- **Do** (site) build any new explanatory figure in the schematic grammar: artifact beside readout, readout as real text, captioned as a schematic, resting on its finished state, one run under five seconds with a replay button.
+- **Do** (site) render the dossier card through `lib/dossier.tsx` only.
 
 ### Don't:
 - **Don't** introduce a brand hue into dashboard chrome; white is the accent and severity is the only color.
@@ -447,8 +492,10 @@ A two-panel comparison (the `machine` register showing what a crawler receives, 
 - **Don't** fill large areas with severity colors; full-strength chroma belongs to text and dots only.
 - **Don't** import dashboard tokens into the site or treat the site as themed; it is deliberately standalone with its own light/dark scheme-swap token system and, since 2026-09-11, its own typeface (Avenir Next, licensed for the site only).
 - **Don't** replace the wordmark with a logo mark; the brand is the name, set in semibold Inter (dashboard) or Avenir Next (site).
-- **Don't** (site) use `site-signal` (orange) anywhere but the dossier's Action row and the skip link's keyboard focus, and never as text.
-- **Don't** (site) add a card to the `process` ordered-list steps; they are deliberately kept flat so the native numbered marker carries the sequence uncontested.
+- **Don't** (site) put a small uppercase label above a heading, or a coloured stripe down one side of a card or row.
+- **Don't** (site) use the dossier mark colours (`site-mark-finding`, `site-mark-evidence`, `site-signal`) anywhere but the dossier's rows and the skip link's focus, and never as text or as a severity.
+- **Don't** (site) animate text opacity inside a schematic or loop a schematic; reveal text with clip, and play once.
+- **Don't** (site) split the `process` stages or the `method-grid` principles into a card per item; each group is one panel divided by hairlines, and only the stages carry a meter and numeral, because only they are a sequence.
 
 ## Observed Inconsistencies (recorded, not judged)
 
@@ -463,3 +510,8 @@ These are facts about the incumbent implementation worth knowing before changing
 6. **RESOLVED 2026-09-02, plan 022 step 6.** The sidebar wordmark's one-off 15px step moved to the standard `text-sm` (14px), matching the same component's topbar variant. The detector's only real dashboard font-size finding is cleared; the `overused-font` findings on Inter across the dashboard and report are dismissed by the recorded decision to pin Inter there. See item 7 for the site's own typeface, which no longer shares this dismissal.
 7. **RESOLVED 2026-09-11, impeccable fix plan step 6.** The site typeface changed from the shared Inter to an operator-licensed, self-hosted Avenir Next, replacing the four Inter woff2 files in `packages/site/app/fonts` with four Avenir Next Cyr weights (Regular 400, Medium 500, Demi 600, Bold 700). The dashboard and report are unaffected and keep Inter (trade-off 79 and PRODUCT.md, Brand Commitments). The `overused-font` detector finding on the site no longer applies, since Inter is no longer the site's typeface; no ignore-value was needed or added for `packages/site`.
 8. **RESOLVED 2026-09-11, operator-requested card/color/motion pass (`impeccable live` plus direct edits).** Four site facts changed together: (a) the dossier, the diagnostic-scope statement, and the check/receive/method feature grids became raised cards with a shared `--shadow-card` token, reversing an explicit earlier "not a card wall" decision; (b) the evidence-blue accent moved from a desaturated corporate blue (#3569b4) to Tailwind's sky family, and signal orange moved from a muted burnt orange (#d56832) to orange-600 (#ea580c), both re-measured for contrast; (c) one authored scroll-triggered settle-in motion was added via a new `lib/reveal.tsx`; (d) a CSS grid `align-items: start` fix was needed on every multi-card grid, since the default `stretch` produced a large blank interior in a shorter card next to a taller sibling once cards became visible bordered surfaces (invisible before, when items were flat hairline rows). This pass also deleted the `--sheet-*` and `--navy`/`--navy-line` custom properties, dead since the dossier stopped consuming them; `--accent-line`, `--machine-raised`, `--visitor-line`, and the `@theme inline` block's `--color-*`/`--font-sans` entries remain unused but predate this pass and were left alone. This `DESIGN.md` file itself was stale before this entry: it recorded a `site-background`/`site-foreground` two-color token pair and a 672px `max-w-2xl` container that no longer matched the code, likely predating the "evidence dossier" system's introduction; `/impeccable document` (merge mode) regenerated every site section above from the current code, leaving the dashboard sections untouched.
+9. **RESOLVED 2026-09-11, operator live steer and corrective pass.** The home checks section became four exhibit cards with schematics (render diff restacked into two symmetric bands after its side-by-side panels squeezed the verdict into single-word lines; new accessibility and AI-signal schematics); the site motion system replaced the single settle-in, after the operator reported seeing no animation (the old render-in ran at page load, before anyone scrolled to it). The dossier moved into one shared component with a red/yellow/green row-rule set, the wordmark grew to 1.375rem, and the `.diff`, `.diff-panel`, `.machine-code`, `.machine-empty`, `.visitor` and `render-step` rules were deleted with the markup that used them.
+
+## Carrying this design into the report
+
+The operator intends to restyle the client PDF from this site design once the site settles. What transfers cleanly: the cool-paper and ink tokens, Avenir Next if its licence covers PDF embedding (to confirm; the report currently embeds Inter), the dossier card and its three-colour row rules as the finding layout, and the schematic grammar (artifact beside readout, captioned) for any explanatory figure. What does not: all motion (print has none; every schematic must be designed from its finished frame, which the site already guarantees), sticky and container-query layout that has no paged equivalent, and dark mode. Constraints that still bind the report and must be revisited deliberately, not by drift: the Nocturne system is locked (`docs/report/report-design-system.md`, trade-off 9: CSS hand-maintained from `docs/report/design/`, no Tailwind), the report's axe self-test must stay at zero violations, PDF glyph rendering relies on `REPORT_PDF_CHROMIUM_ARGS` (trade-off 19), and annex pagination rules (trade-offs 17 and 32) are independent of any visual change.

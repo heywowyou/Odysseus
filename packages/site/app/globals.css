@@ -7,10 +7,10 @@
    registers carry it: reader prose and cards on cool paper (the dossier
    finding card, the diagnostic-scope statement, and the repeated feature
    grids all sit on the page's own light/dark surface, since 2026-09-11), and
-   the machine register for what a program reads. Signal orange draws a
-   single annotation rule on the dossier's Action row; evidence blue (now
-   Tailwind's sky family) is reserved for links, the dossier's stamp badge,
-   and the raw-versus-rendered inset.
+   the machine register for what a program reads. The dossier card carries
+   the only warm colours, one rule per row (red, yellow, signal green);
+   evidence blue (Tailwind's sky family) is reserved for links, the
+   dossier's stamp badge, and the schematics' evidence marks.
    ========================================================================= */
 
 :root {
@@ -30,18 +30,22 @@
   --line-strong: rgb(16 27 42 / 0.28);
 
   /* The anchor rule marks the one margin note worth noticing (the
-     diagnostic-scope statement) and, historically, the dossier's spine
-     before its 2026-09-11 recast; the dossier no longer uses it. Signal
-     orange draws exactly one annotation, on the dossier's Action row, and
-     marks the keyboard focus of the skip link; it is never a severity and
-     never decoration. */
+     diagnostic-scope statement). The signal colour draws the dossier's
+     Action-row rule and marks the keyboard focus of the skip link; it is
+     never text and never a severity. Teal green since the 2026-09-11 live
+     session (previously orange-600, #ea580c); as a non-text rule it clears
+     no contrast floor of its own, the row label carries the meaning. */
   --anchor: #18385d;
-  /* Recast 2026-09-11 (operator request, more vibrant palette): moved from a
-     muted burnt orange to Tailwind's orange-600, staying in the same warm
-     family the rest of the codebase names "signal orange" (never text, so
-     the AA text-contrast floor does not apply; it clears the 3:1 non-text
-     floor against every surface it borders). */
-  --signal: #ea580c;
+  --signal: #43aa8b;
+
+  /* The dossier card's two other row marks (2026-09-11, operator request):
+     red on Constat, evidence blue on Preuve (the page's own --accent, so it
+     follows the colour scheme), beside the Action row's --signal green. They
+     mark the three parts of one finding in reading order, not a severity
+     scale, and are decoration only: the row labels carry the meaning. Blue
+     replaced an earlier yellow, which read as a warning to a client. */
+  --mark-finding: #dc2626;
+  --mark-evidence: var(--accent);
 
   /* The machine register: the raw-versus-rendered inset and every code
      block. Fixed in both colour schemes, because it stands for a thing, not
@@ -51,6 +55,9 @@
   --machine-ink: #cfd4da;
   --machine-ink-muted: #8b939d;
   --machine-line: rgb(255 255 255 / 0.13);
+  /* A neutral highlighter on machine text: white, not the sky accent,
+     because cyan on a dark terminal is the generated-UI cliche. */
+  --machine-highlight: rgb(255 255 255 / 0.11);
 
   /* The rendered page inside the inset. Also fixed: a page a person sees is
      a light document, whatever theme this site happens to be in. Tinted with
@@ -64,6 +71,13 @@
   --visitor-line: rgb(16 27 42 / 0.12);
   --visitor-fill: rgb(53 105 180 / 0.82);
   --visitor-fill-soft: rgb(53 105 180 / 0.22);
+  /* Evidence blue as it reads on that light document: the schematics' pins,
+     outlines and scan line. Sky-800, not the page's own --accent, because
+     the page accent brightens in dark mode and would wash out here. */
+  --visitor-accent: #075985;
+  --visitor-accent-soft: rgb(14 165 233 / 0.14);
+  /* The one deliberately pale line on the accessibility mock page. */
+  --visitor-fill-faint: rgb(53 105 180 / 0.09);
 
   /* Evidence blue: links and the raw-versus-rendered inset only. Never a
      measured quantity, which stays ink, and never a section decoration.
@@ -82,10 +96,16 @@
      black, so raised surfaces stay part of the cool-paper register. */
   --shadow-card: 0 1px 2px rgb(16 27 42 / 0.06), 0 10px 28px rgb(16 27 42 / 0.1);
 
-  --measure: 40rem;
+  /* 34rem holds running prose near 75 characters a line in Avenir Next at
+     16px; 40rem ran past 90. */
+  --measure: 34rem;
   --shell: 70rem;
 
   --font-mono-stack: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+
+  /* The one arrival curve every entrance on the site shares: fast out of
+     the gate, long quiet settle, no overshoot. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -189,14 +209,18 @@
 
   /* Inside a machine surface the page ink would be invisible, so the focus
      ring switches with the surface it sits on. */
-  .machine :focus-visible,
+  .band-machine :focus-visible,
   .codeblock :focus-visible {
     outline-color: var(--machine-ink);
   }
 
-  /* Motion is decoration only; every state is fully readable without it. The
-     delay is reset alongside the duration, or a staggered reveal would hold
-     its start frame for the length of the stagger. */
+  /* Motion is decoration only; every state is fully readable without it.
+     Reduced motion keeps arrivals as short fades and drops every spatial
+     move (the per-component overrides sit at the end of the components
+     layer, where they outrank the rules they cancel). Keyframe sequences
+     jump straight to their last frame, which is always the finished,
+     readable state. The delay is reset alongside the duration, or a
+     staggered sequence would hold its first frame for the stagger. */
   @media (prefers-reduced-motion: reduce) {
     *,
     ::before,
@@ -204,37 +228,28 @@
       animation-duration: 0.01ms !important;
       animation-delay: 0ms !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
-
-    /* The reveal system below hides content until JS confirms it is in
-       view; with transitions collapsed by the rule above that confirmation
-       would otherwise never visibly resolve, so reduced motion shows
-       everything already in place instead. */
-    .reveal > * {
-      opacity: 1;
-      transform: none;
+      scroll-behavior: auto !important;
     }
   }
 
   /* ---- Scroll reveal ----------------------------------------------------
-     The one authored motion moment on the site (2026-09-11, operator
-     request for a more premium feel): the evidence-desk conceit, not a
-     generic fade-and-rise. Each card enters at a slight, alternating tilt
-     and settles flat, as if a printed sheet were just set down on the
-     desk, via lib/reveal.tsx's IntersectionObserver. Direct children
-     stagger by up to four steps, matching the largest grid (four checks,
-     four receive items, four process steps). */
+     Groups of cards settle into place once when scrolled into view, via
+     lib/reveal.tsx's IntersectionObserver: each enters at a slight,
+     alternating tilt and lands flat, as
+     if a printed sheet were just set down on the desk. Direct children
+     stagger by up to four steps, matching the largest grid. The checks
+     section does not use this: its exhibits run their own sequence
+     (lib/exhibit.tsx). */
   .reveal > * {
     opacity: 0;
-    transform: translateY(18px) rotate(-0.7deg) scale(0.985);
+    transform: translateY(26px) rotate(-0.7deg) scale(0.98);
     transition:
-      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity 0.75s var(--ease-out-expo),
+      transform 0.75s var(--ease-out-expo);
   }
 
   .reveal > *:nth-child(even) {
-    transform: translateY(18px) rotate(0.7deg) scale(0.985);
+    transform: translateY(26px) rotate(0.7deg) scale(0.98);
   }
 
   .reveal.is-visible > * {
@@ -243,15 +258,15 @@
   }
 
   .reveal > *:nth-child(2) {
-    transition-delay: 90ms;
+    transition-delay: 100ms;
   }
 
   .reveal > *:nth-child(3) {
-    transition-delay: 180ms;
+    transition-delay: 200ms;
   }
 
   .reveal > *:nth-child(4) {
-    transition-delay: 270ms;
+    transition-delay: 300ms;
   }
 
   /* Without JS the IntersectionObserver in lib/reveal.tsx never adds
@@ -336,8 +351,10 @@
     border-top: 1px solid var(--line);
   }
 
+  /* Top gap halved 2026-09-11 (operator request, every page): the page used
+     to open with up to 7rem of empty paper under the header. */
   .hero {
-    padding-block: clamp(3rem, 1.5rem + 6vw, 7rem) clamp(2.25rem, 1.5rem + 2.5vw, 3.5rem);
+    padding-block: clamp(1.5rem, 0.75rem + 3vw, 3.5rem) clamp(2.25rem, 1.5rem + 2.5vw, 3.5rem);
   }
 
   /* Sections of the offer page after the hero: document rhythm by hairline
@@ -362,8 +379,12 @@
     color: var(--ink-muted);
   }
 
+  /* Raised 2026-09-11 (operator request, at least 40 percent larger): at
+     15px the nameplate read as a nav item rather than as the identity.
+     Raised again the same day by 30 percent (operator request, 22px to
+     about 29px). */
   .wordmark {
-    font-size: 0.9375rem;
+    font-size: 1.8rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.2em;
@@ -483,23 +504,30 @@
 
   /* ---- Controls -------------------------------------------------------- */
 
+  /* Recast 2026-09-11 (operator pick in live mode): buttons take the
+     wordmark's nameplate setting, spaced capitals, so every action reads as
+     part of the same instrument as the identity rather than as a generic
+     web button. Taller than the 44px touch floor, at 52px. */
   .btn {
     display: inline-flex;
-    min-height: 44px;
+    min-height: 52px;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    border-radius: 3px;
-    padding: 0.6875rem 1.25rem;
-    font-size: 0.9375rem;
-    font-weight: 500;
+    gap: 0.75rem;
+    border-radius: 4px;
+    padding: 0.875rem 1.625rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
     text-decoration: none;
     transition:
       background-color 0.15s ease,
       border-color 0.15s ease,
       color 0.15s ease,
-      transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
-      box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      transform 0.2s var(--ease-out-expo);
   }
 
   .btn:hover {
@@ -507,19 +535,38 @@
   }
 
   .btn:active {
-    transform: translateY(0);
+    transform: none;
   }
 
   .btn-primary {
     background-color: var(--ink);
     color: var(--paper);
     border: 1px solid var(--ink);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      var(--shadow-card);
   }
 
   .btn-primary:hover {
     background-color: var(--ink-soft);
     border-color: var(--ink-soft);
-    box-shadow: 0 8px 20px rgb(16 27 42 / 0.16);
+  }
+
+  /* A drawn arrow (masked SVG, so it takes the label's colour) on every
+     button that opens an email: the one action on the site that leaves it. */
+  .btn-primary[href^='mailto:']::after {
+    content: '';
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    background-color: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8h10M9 4l4 4-4 4'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    transition: transform 0.25s var(--ease-out-expo);
+  }
+
+  .btn-primary[href^='mailto:']:hover::after {
+    transform: translateX(3px);
   }
 
   .btn-secondary {
@@ -567,9 +614,9 @@
     z-index: 50;
   }
 
-  /* The first thing a keyboard user sees carries the one warm accent on the
-     site: signal orange marks keyboard-visible emphasis, and this is its
-     second and last appearance. */
+  /* The first thing a keyboard user sees carries the signal colour, the
+     same one that marks the dossier's Action row; this is its second and
+     last appearance. */
   .skip-link:focus {
     left: 1rem;
     top: 1rem;
@@ -617,11 +664,11 @@
   /* ---- Dossier card ------------------------------------------------------
      The signature element: one report sheet showing the shape of a finding.
      A labelled header, a definition list with accent-tinted field labels,
-     and one orange annotation rule on the Action row.
+     and a coloured rule on each row: red Constat, yellow Preuve, green
+     Action. One copy renders on every page (lib/dossier.tsx).
      Recast 2026-09-11 (impeccable live, operator request): the sheet no
      longer stays a literal white paper cutout against the page; it now sits
-     on the page's own dark surface. The Action row's orange rule is
-     unchanged and remains the only use of that color on the page. */
+     on the page's own surface. */
 
   .dossier {
     border: 1px solid var(--line-strong);
@@ -629,15 +676,14 @@
     background-color: var(--paper);
     color: var(--ink);
     padding: 1.5rem 1.5rem 1.25rem;
-    box-shadow:
-      0 1px 2px rgb(0 0 0 / 0.3),
-      0 12px 32px rgb(0 0 0 / 0.45);
+    box-shadow: var(--shadow-card);
   }
 
+  /* The title wraps inside its own column rather than pushing the stamp
+     onto a line of its own (live polish, 2026-09-11). */
   .dossier-head {
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0.5rem 1rem;
     border-bottom: 1px solid var(--line);
@@ -652,6 +698,8 @@
   }
 
   .dossier-stamp {
+    flex-shrink: 0;
+    white-space: nowrap;
     font-size: 0.6875rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -668,17 +716,20 @@
 
   .dossier dl {
     display: grid;
-    gap: 0.875rem;
+    gap: 1rem;
     margin: 0;
-    padding-top: 1.125rem;
+    padding-top: 1.25rem;
   }
 
+  /* Each label sits above its sentence, so the sentence gets the card's
+     full width instead of a column beside an 88px label (live polish,
+     2026-09-11, operator's pick). */
   .dossier-row {
+    position: relative;
     display: grid;
-    grid-template-columns: 88px 1fr;
-    gap: 0.75rem;
-    padding-bottom: 0.75rem;
+    gap: 0.3125rem;
     border-bottom: 1px solid var(--line);
+    padding-bottom: 1rem;
   }
 
   .dossier-row:last-of-type {
@@ -687,26 +738,118 @@
   }
 
   .dossier dt {
-    font-size: 0.72rem;
+    font-size: 0.6875rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.16em;
     color: var(--ink-muted);
   }
 
   .dossier dd {
     margin: 0;
-    font-size: 0.9375rem;
-    line-height: 1.5;
+    font-size: 0.96875rem;
+    line-height: 1.55;
     color: var(--ink-soft);
   }
 
-  /* The single annotation rule on the sheet: it marks the row that tells the
-     reader what to do. Orange is never a severity here and never appears
-     anywhere else on the sheet. */
+  /* Each label opens with a short coloured dash, a legend key rather than a
+     stripe down the card's edge (the full-height side stripe is the
+     generated-UI "side-tab" tell, flagged by the detector 2026-09-11). */
+  .dossier dt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .dossier dt::before {
+    content: '';
+    flex: none;
+    width: 1.125rem;
+    height: 3px;
+    border-radius: 999px;
+    background-color: var(--row-mark, var(--line-strong));
+    transform-origin: left;
+  }
+
+  .dossier-row-finding {
+    --row-mark: var(--mark-finding);
+  }
+
+  .dossier-row-evidence {
+    --row-mark: var(--mark-evidence);
+  }
+
   .dossier-row-action {
-    border-inline-start: 2px solid var(--signal);
-    padding-inline-start: 0.625rem;
+    --row-mark: var(--signal);
+  }
+
+  /* The authored load moment: the sheet lands, its three rows are written
+     in reading order, their dashes are drawn red, blue, green, then the
+     report stamp is pressed on. About a second and a half; the headline never waits on
+     it. */
+  @keyframes dossier-land {
+    from {
+      opacity: 0;
+      transform: translateY(22px) rotate(0.9deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes stamp-press {
+    from {
+      opacity: 0;
+      transform: scale(1.7) rotate(-7deg);
+    }
+    60% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .hero .dossier {
+    animation: dossier-land 0.8s var(--ease-out-expo) 0.1s both;
+  }
+
+  .hero .dossier-row {
+    animation: fx-clip-in 0.6s var(--ease-out-expo) both;
+  }
+
+  .hero .dossier-row:nth-of-type(1) {
+    animation-delay: 0.45s;
+  }
+
+  .hero .dossier-row:nth-of-type(2) {
+    animation-delay: 0.6s;
+  }
+
+  .hero .dossier-row:nth-of-type(3) {
+    animation-delay: 0.75s;
+  }
+
+  .hero .dossier dt::before {
+    animation: fx-grow-x-in 0.5s var(--ease-out-expo) both;
+  }
+
+  .hero .dossier-row:nth-of-type(1) dt::before {
+    animation-delay: 0.95s;
+  }
+
+  .hero .dossier-row:nth-of-type(2) dt::before {
+    animation-delay: 1.1s;
+  }
+
+  .hero .dossier-row:nth-of-type(3) dt::before {
+    animation-delay: 1.25s;
+  }
+
+  .hero .dossier-stamp {
+    animation: stamp-press 0.45s var(--ease-out-expo) 1.5s both;
   }
 
   .dossier-row-action dd {
@@ -823,39 +966,121 @@
   }
 
   /* ---- Ordered handoff ---------------------------------------------------
-     A real ordered list, because exploration, location, prioritisation and
-     correction are actual stages of the deliverable; native numbering, not
-     ornament. */
+     A real ordered list, because the stages are actual stages of the
+     deliverable (lib/steps.tsx renders it on the home and offer pages).
+     Recast 2026-09-11 (operator pick in live mode): one raised panel
+     divided into stages, titles at subheading size and body text at full
+     size for legibility, and a short meter per stage filled up to its own
+     position, so the order reads at a glance even once the row wraps. The
+     last stage fills in --signal, the dossier's Action green, because it is
+     where the correction happens. The numeral comes from a counter: here
+     the sequence is the information, not ornament. */
 
   .process {
     display: grid;
-    align-items: start;
-    gap: 1.5rem;
-    padding-left: 1.375rem;
-    list-style: decimal outside;
+    counter-reset: process;
+    list-style: none;
+    padding: 0;
+    background-color: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .process > li {
+    counter-increment: process;
+    padding: 2rem 1.75rem;
+  }
+
+  .process > li + li {
+    border-top: 1px solid var(--line);
   }
 
   @media (min-width: 56rem) {
     .process {
-      grid-template-columns: repeat(4, 1fr);
-      gap: 2rem;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(0, 1fr);
+    }
+
+    .process > li + li {
+      border-top: 0;
+      border-inline-start: 1px solid var(--line);
     }
   }
 
-  .process li {
-    border-top: 1px solid var(--line-strong);
-    padding-top: 0.875rem;
+  .process-meter {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 4px;
+    margin-bottom: 1.25rem;
   }
 
-  .process li::marker {
-    font-family: var(--font-mono-stack);
-    font-weight: 600;
-    color: var(--ink-muted);
+  .process-meter i {
+    height: 4px;
+    border-radius: 999px;
+    background-color: var(--line);
+    transform-origin: left;
+    transition: transform 0.6s var(--ease-out-expo);
+  }
+
+  .process-meter i.is-filled {
+    background-color: var(--ink-muted);
+  }
+
+  .process > li:last-child .process-meter i {
+    background-color: var(--signal);
   }
 
   .process-step {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    font-size: 1.125rem;
     font-weight: 600;
+    line-height: 1.3;
     letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .process-step::before {
+    content: counter(process);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-muted);
+  }
+
+  .process-text {
+    margin-top: 0.5rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    text-wrap: pretty;
+  }
+
+  /* The stages fade and lift a little (a tilt reads wrong inside one
+     panel), then the meters fill in stage order. */
+  .process.reveal > li,
+  .process.reveal > li:nth-child(even) {
+    transform: translateY(8px);
+  }
+
+  .process.reveal.is-visible > li {
+    transform: none;
+  }
+
+  .process.reveal:not(.is-visible) .process-meter i {
+    transform: scaleX(0);
+  }
+
+  .process.reveal > li:nth-child(2) .process-meter i {
+    transition-delay: 0.15s;
+  }
+
+  .process.reveal > li:nth-child(3) .process-meter i {
+    transition-delay: 0.3s;
+  }
+
+  .process.reveal > li:nth-child(4) .process-meter i {
+    transition-delay: 0.45s;
   }
 
   /* ---- Table of contents ---------------------------------------------
@@ -876,28 +1101,57 @@
     color: var(--ink-muted);
   }
 
-  /* ---- Method grid ------------------------------------------------------- */
+  /* ---- Method grid -------------------------------------------------------
+     The three principles, set in the same raised panel as the ordered
+     stages (2026-09-11, operator request that the two sections read alike
+     and more legibly), without the meter or numeral: principles are not a
+     sequence. */
 
   .method-grid {
     display: grid;
-    align-items: start;
-    gap: 1.75rem;
+    background-color: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .method-item {
+    padding: 2rem 1.75rem;
+  }
+
+  .method-item + .method-item {
+    border-top: 1px solid var(--line);
   }
 
   @media (min-width: 56rem) {
     .method-grid {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2.5rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .method-item + .method-item {
+      border-top: 0;
+      border-inline-start: 1px solid var(--line);
     }
   }
 
-  .method-item {
-    border-top: 1px solid var(--line);
-    padding-top: 1.125rem;
+  .method-item .subheading {
+    font-size: 1.125rem;
+    line-height: 1.35;
+    text-wrap: balance;
   }
 
-  .method-item .subheading {
-    font-size: 0.9375rem;
+  .method-item .soft {
+    line-height: 1.6;
+    text-wrap: pretty;
+  }
+
+  .method-grid.reveal > .method-item,
+  .method-grid.reveal > .method-item:nth-child(even) {
+    transform: translateY(8px);
+  }
+
+  .method-grid.reveal.is-visible > .method-item {
+    transform: none;
   }
 
   /* ---- Price ----------------------------------------------------------- */
@@ -958,83 +1212,399 @@
     color: var(--paper);
   }
 
-  /* ---- Signature: the raw-versus-rendered inset -------------------------
-     The one explanatory diagram the site keeps, reduced to a compact inset
-     under the search check and always labelled as a schematic. The left
-     panel is a real, generic empty application shell, and the right names
-     the kinds of element that shell never delivered. */
+  /* ---- Exhibits: the checks section ------------------------------------
+     Each check is one full-width card: its prose on the left, and on the
+     right a schematic of what it measures (lib/schematics.tsx). Every
+     schematic shares one grammar, the artifact a program reads beside the
+     readout a person reads, and plays its measurement once when it comes
+     on screen (lib/exhibit.tsx). Replaced, 2026-09-11, a two-by-two grid
+     whose half-width cards squeezed the render diff into two narrow
+     columns and left the other checks as unillustrated text. */
 
-  .diff {
+  .exhibits {
     display: grid;
-    gap: 1px;
-    border: 1px solid var(--line);
-    border-radius: 5px;
-    background-color: var(--line);
-    overflow: hidden;
+    gap: 1.5rem;
   }
 
-  @media (min-width: 56rem) {
-    .diff {
-      grid-template-columns: 1fr 1fr;
+  .exhibit {
+    display: grid;
+    gap: 1.75rem;
+    background-color: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: clamp(1.375rem, 0.9rem + 1.6vw, 2.25rem);
+    box-shadow: var(--shadow-card);
+    transition:
+      opacity 0.8s var(--ease-out-expo),
+      transform 0.8s var(--ease-out-expo);
+  }
+
+  @media (min-width: 60rem) {
+    .exhibits {
+      gap: 2rem;
+    }
+
+    .exhibit {
+      grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+      column-gap: 3rem;
+      align-items: start;
     }
   }
 
-  .diff-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    padding: clamp(1.25rem, 0.75rem + 1.6vw, 1.875rem);
+  .exhibit.is-armed:not(.is-visible) {
+    opacity: 0;
+    transform: translateY(32px) rotate(-0.6deg) scale(0.98);
   }
 
-  .machine {
+  .exhibit.is-armed:nth-child(even):not(.is-visible) {
+    transform: translateY(32px) rotate(0.6deg) scale(0.98);
+  }
+
+  /* On a wide screen the figure is often taller than the prose, so the
+     prose rides along beside it instead of leaving an empty column. */
+  @media (min-width: 60rem) {
+    .exhibit-copy {
+      position: sticky;
+      top: 7rem;
+    }
+  }
+
+  .exhibit-copy .subheading {
+    font-size: clamp(1.125rem, 1.02rem + 0.4vw, 1.3125rem);
+    line-height: 1.3;
+    text-wrap: balance;
+  }
+
+  .exhibit-figure {
+    container: exhibit-figure / inline-size;
+    display: grid;
+    gap: 0.875rem;
+    margin: 0;
+  }
+
+  .schematic-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .replay {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    gap: 0.4375rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: none;
+    padding-inline: 0.75rem 0.875rem;
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .replay:hover {
+    border-color: var(--ink);
+    background-color: var(--line);
+    color: var(--ink);
+  }
+
+  .replay svg {
+    transition: transform 0.45s var(--ease-out-expo);
+  }
+
+  .replay:active svg {
+    transform: rotate(-140deg);
+    transition-duration: 0.1s;
+  }
+
+  /* Replaying needs the script; without it the button would do nothing. */
+  @media (scripting: none) {
+    .replay {
+      display: none;
+    }
+  }
+
+  /* ---- Schematic motion primitives --------------------------------------
+     Each element in a schematic names one primitive and a `--d` delay. The
+     resting style of every primitive is its finished frame; the start frame
+     only exists while an armed exhibit has not yet run, so server HTML, a
+     failed script, and reduced motion all show the finished figure. */
+
+  @keyframes fx-clip-in {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes fx-pop-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    65% {
+      opacity: 1;
+      transform: scale(1.12);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes fx-rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes fx-grow-x-in {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes fx-grow-y-in {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes fx-mark-in {
+    from {
+      background-size: 0% 100%;
+    }
+    to {
+      background-size: 100% 100%;
+    }
+  }
+
+  @keyframes fx-flag-in {
+    from {
+      outline-color: transparent;
+      outline-offset: 9px;
+    }
+    to {
+      outline-color: var(--visitor-accent);
+      outline-offset: 3px;
+    }
+  }
+
+  @keyframes fx-scan {
+    0% {
+      opacity: 1;
+      transform: translateY(-100%);
+    }
+    88% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .exhibit.is-armed:not(.is-running) .fx-clip {
+      clip-path: inset(0 100% 0 0);
+    }
+
+    .exhibit.is-armed:not(.is-running) .fx-pop,
+    .exhibit.is-armed:not(.is-running) .fx-rise {
+      opacity: 0;
+    }
+
+    .exhibit.is-armed:not(.is-running) .fx-grow-x {
+      transform: scaleX(0);
+    }
+
+    .exhibit.is-armed:not(.is-running) .fx-mark {
+      background-size: 0% 100%;
+    }
+
+    .exhibit.is-armed:not(.is-running) .fx-flag {
+      outline-color: transparent;
+    }
+  }
+
+  .exhibit.is-running .fx-clip {
+    animation: fx-clip-in 0.5s var(--ease-out-expo) var(--d, 0s) both;
+  }
+
+  .exhibit.is-running .fx-pop {
+    animation: fx-pop-in 0.42s var(--ease-out-expo) var(--d, 0s) both;
+  }
+
+  .exhibit.is-running .fx-rise {
+    animation: fx-rise-in 0.45s var(--ease-out-expo) var(--d, 0s) both;
+  }
+
+  .exhibit.is-running .fx-grow-x {
+    animation: fx-grow-x-in 0.9s cubic-bezier(0.65, 0, 0.35, 1) var(--d, 0s) both;
+  }
+
+  .exhibit.is-running .fx-mark {
+    animation: fx-mark-in 0.4s var(--ease-out-expo) var(--d, 0s) both;
+  }
+
+  .exhibit.is-running .fx-flag {
+    animation: fx-flag-in 0.5s var(--ease-out-expo) var(--d, 0s) both;
+  }
+
+  /* ---- Search and rendering: two loads, stacked ------------------------ */
+
+  .bands {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .band {
+    display: grid;
+    gap: 0.875rem;
+    border-radius: 8px;
+    padding: 1rem 1.125rem 1.125rem;
+  }
+
+  .band-machine {
     background-color: var(--machine);
     color: var(--machine-ink);
     -webkit-font-smoothing: auto;
   }
 
-  .machine .label {
+  .band-machine .label {
     color: var(--machine-ink-muted);
   }
 
-  .machine-code {
-    font-family: var(--font-mono-stack);
-    font-size: 0.8125rem;
-    line-height: 1.75;
-    white-space: pre;
-    overflow-x: auto;
-    color: var(--machine-ink);
-  }
-
-  /* Absence, drawn. A hatch rather than an empty box, so "there is nothing
-     here" reads as a finding about the page and not as a layout gap. */
-  .machine-empty {
-    margin-top: auto;
-    border: 1px dashed var(--machine-line);
-    border-radius: 3px;
-    background-image: repeating-linear-gradient(
-      -45deg,
-      rgb(255 255 255 / 0.05) 0 1px,
-      transparent 1px 7px
-    );
-    padding: 0.875rem 1rem;
-    font-size: 0.8125rem;
-    color: var(--machine-ink-muted);
-  }
-
-  .visitor {
+  .band-visitor {
+    border: 1px solid var(--visitor-line);
     background-color: var(--visitor);
     color: var(--visitor-ink);
   }
 
-  .visitor .label {
+  .band-visitor .label {
     color: var(--visitor-muted);
   }
 
-  /* Muted text inside the fixed light visitor panel keeps the panel's own
-     ink: the page's muted token flips light in dark mode and would vanish
-     against this light surface. */
-  .visitor .muted {
+  /* Figure captions inside a schematic run long (a whole phrase), so they
+     stay in sentence case: uppercase is kept for labels of a word or two. */
+  .figure-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ink-muted);
+  }
+
+  .band-machine .figure-label {
+    color: var(--machine-ink-muted);
+  }
+
+  .band-visitor .figure-label {
     color: var(--visitor-muted);
+  }
+
+  .band-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+  }
+
+  .band-tag {
+    border-radius: 999px;
+    padding: 2px 9px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .band-machine .band-tag {
+    background-color: rgb(255 255 255 / 0.08);
+    color: var(--machine-ink);
+  }
+
+  .band-visitor .band-tag {
+    background-color: var(--visitor-accent-soft);
+    color: var(--visitor-accent);
+  }
+
+  /* Artifact beside verdict whenever the figure is wide enough to hold
+     both without wrapping the code; stacked otherwise. Same split in both
+     bands, so the two loads line up column for column. */
+  .band-body {
+    display: grid;
+    gap: 0.875rem;
+  }
+
+  @container exhibit-figure (min-width: 30rem) {
+    .band-body {
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+      gap: 1.125rem;
+    }
+  }
+
+  .band-code {
+    margin: 0;
+    font-family: var(--font-mono-stack);
+    font-size: 0.75rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--machine-ink);
+  }
+
+  .code-line {
+    display: block;
+  }
+
+  .band-verdict {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    border-radius: 6px;
+    padding: 0.75rem 0.875rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  /* Absence, drawn: a dashed outline on a slightly raised ground, so "there
+     is nothing here" reads as a finding about the page and not as a layout
+     gap. (A diagonal hatch here read at 3.1:1 behind its text.) */
+  .band-verdict-empty {
+    border: 1px dashed var(--machine-line);
+    background-color: var(--machine-raised);
+    color: var(--machine-ink-muted);
+  }
+
+  .band-verdict-found {
+    border: 1px solid rgb(14 165 233 / 0.35);
+    background-color: var(--visitor-accent-soft);
+    color: var(--visitor-ink);
   }
 
   .visitor-doc {
@@ -1050,7 +1620,7 @@
   }
 
   .visitor-el .label {
-    font-size: 0.625rem;
+    font-size: 0.6875rem;
     letter-spacing: 0.16em;
   }
 
@@ -1078,43 +1648,355 @@
     gap: 0.4375rem;
   }
 
-  /* The reveal: content arrives on the visitor side over about a second while
-     the crawler side stays exactly as it was. That gap is the argument. */
-  @keyframes render-in {
-    from {
-      opacity: 0;
-      transform: translateY(5px);
+  .js-run {
+    display: grid;
+    gap: 0.375rem;
+  }
+
+  .js-run-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--visitor-muted);
+  }
+
+  .js-run-track {
+    display: block;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 999px;
+    background-color: var(--visitor-line);
+  }
+
+  .js-run-fill {
+    display: block;
+    height: 100%;
+    background-color: var(--visitor-accent);
+    transform-origin: left;
+  }
+
+  /* ---- Accessibility and AI signals: artifact beside readout ---------- */
+
+  .pairing {
+    display: grid;
+    gap: 1.125rem;
+  }
+
+  @container exhibit-figure (min-width: 30rem) {
+    .pairing {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      align-items: center;
+      gap: 1.5rem;
     }
-    to {
-      opacity: 1;
-      transform: none;
-    }
   }
 
-  .render-step {
-    animation: render-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* A generic light page, the same fixed document as the visitor band, that
+     a scan line crosses from top to bottom; each element it flags gets an
+     outline and a numbered pin matching the readout. */
+  .mock-page {
+    position: relative;
+    display: grid;
+    gap: 0.75rem;
+    overflow: hidden;
+    border: 1px solid var(--visitor-line);
+    border-radius: 8px;
+    background-color: var(--visitor);
+    padding: 0.875rem 1rem 1.125rem;
   }
 
-  .render-step-1 {
-    animation-delay: 0.25s;
+  .mock-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--visitor-line);
+    padding-bottom: 0.625rem;
   }
 
-  .render-step-2 {
-    animation-delay: 0.45s;
+  .mock-logo {
+    width: 3.5rem;
+    height: 0.5rem;
+    border-radius: 2px;
+    background-color: var(--visitor-fill);
   }
 
-  .render-step-3 {
-    animation-delay: 0.65s;
+  .mock-links {
+    width: 5rem;
+    height: 0.375rem;
+    border-radius: 2px;
+    background-color: var(--visitor-fill-soft);
   }
 
-  .diff-compact .diff-panel {
-    gap: 1rem;
-    padding: 1.125rem 1.25rem;
+  .mock-el {
+    position: relative;
+    border-radius: 4px;
+    outline: 1.5px dashed transparent;
+    outline-offset: 3px;
   }
 
-  .diff-compact .machine-code {
+  .mock-el.fx-flag {
+    outline-color: var(--visitor-accent);
+  }
+
+  .mock-image {
+    display: grid;
+    height: 4.75rem;
+    place-items: center;
+    background-color: var(--visitor-fill-soft);
+    color: var(--visitor-fill);
+  }
+
+  .mock-heading {
+    width: 72%;
+    height: 0.875rem;
+    border-radius: 2px;
+    background-color: var(--visitor-fill);
+  }
+
+  .mock-text {
+    display: grid;
+    gap: 0.4375rem;
+  }
+
+  .mock-text > span:not(.pin) {
+    display: block;
+    height: 0.4375rem;
+    border-radius: 2px;
+    background-color: var(--visitor-fill-soft);
+  }
+
+  /* Deliberately pale: the one line of text on the mock page that would not
+     clear a contrast threshold. */
+  .mock-faint > span:not(.pin) {
+    background-color: var(--visitor-fill-faint);
+  }
+
+  /* Extra room above the two flagged elements at the foot of the page, so
+     their pins never sit on each other's outline. */
+  .mock-faint {
+    margin-top: 0.375rem;
+  }
+
+  .mock-form {
+    margin-top: 0.625rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .mock-field {
+    flex: 1;
+    height: 1.75rem;
+    border: 1px solid rgb(16 27 42 / 0.25);
+    border-radius: 3px;
+    background-color: #ffffff;
+  }
+
+  .mock-submit {
+    width: 4.25rem;
+    height: 1.75rem;
+    border-radius: 3px;
+    background-color: var(--visitor-fill);
+  }
+
+  .pin {
+    display: inline-grid;
+    flex-shrink: 0;
+    width: 1.3125rem;
+    height: 1.3125rem;
+    place-items: center;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mock-el > .pin {
+    position: absolute;
+    top: -0.625rem;
+    right: -0.625rem;
+    z-index: 3;
+    background-color: var(--visitor-accent);
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgb(7 89 133 / 0.35);
+  }
+
+  .pin-static {
+    margin-top: 0.0625rem;
+    background-color: var(--accent);
+    color: var(--paper-raised);
+  }
+
+  .scan-line {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    opacity: 0;
+    pointer-events: none;
+    border-bottom: 2px solid var(--visitor-accent);
+  }
+
+  .exhibit.is-running .scan-line {
+    animation: fx-scan 2.2s linear 0.2s both;
+  }
+
+  .readout {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .readout-list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .readout-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    border-top: 1px solid var(--line);
+    padding-block: 0.6875rem;
+  }
+
+  .readout-row:last-child {
+    padding-bottom: 0;
+  }
+
+  .readout-text {
+    display: grid;
+    min-width: 0;
+    gap: 0.125rem;
+  }
+
+  .readout-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--ink);
+  }
+
+  .readout-ref {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
+  .readout-ref .mono {
+    font-size: 0.75rem;
+  }
+
+  .signal-row {
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.375rem 0.75rem;
+  }
+
+  .status {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.3125rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 0.125rem 0.5625rem 0.125rem 0.4375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .status-present {
+    background-color: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  .status-blocked {
+    border-color: var(--line-strong);
+    background-color: var(--paper-sunk);
+    color: var(--ink);
+  }
+
+  .status-absent {
+    border-color: var(--line-strong);
+    border-style: dashed;
+    color: var(--ink-soft);
+  }
+
+  /* The files a program reads for these signals, in the machine register:
+     each line the check acts on gets highlighted as it is read. */
+  .files {
+    display: grid;
+    gap: 1px;
+    overflow: hidden;
+    border-radius: 8px;
+    background-color: var(--machine-line);
+  }
+
+  .file {
+    display: grid;
+    gap: 0.375rem;
+    background-color: var(--machine);
+    padding: 0.75rem 0.9375rem 0.875rem;
+    -webkit-font-smoothing: auto;
+  }
+
+  .file-name {
+    font-family: var(--font-mono-stack);
+    font-size: 0.6875rem;
+    color: var(--machine-ink-muted);
+  }
+
+  .file-code {
+    display: grid;
+    font-family: var(--font-mono-stack);
     font-size: 0.75rem;
     line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--machine-ink);
+  }
+
+  .file-line {
+    display: block;
+    margin-inline: -0.375rem;
+    border-radius: 3px;
+    padding-inline: 0.375rem;
+  }
+
+  .file-hit,
+  .file-missing {
+    background-image: linear-gradient(var(--machine-highlight), var(--machine-highlight));
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: #f2f7fb;
+  }
+
+  .file-missing {
+    font-family: var(--font-avenir), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  /* ---- Performance: the three metrics, one per row ---------------------- */
+
+  .metric-stack {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @container exhibit-figure (min-width: 30rem) {
+    .metric-stack .metric {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+      gap: 1.5rem;
+    }
+
+    .metric-stack .metric-desc {
+      margin-top: 0;
+    }
   }
 
   /* ---- Header and footer ----------------------------------------------- */
@@ -1165,10 +2047,48 @@
       order: 2;
       margin-inline-start: auto;
     }
+
+    /* At the full 1.8rem the wordmark and the toggle overflow one 390px
+       row and the header falls back to three rows; 1.5rem keeps the two. */
+    .header-bar > .wordmark {
+      font-size: 1.5rem;
+    }
   }
 
   .site-footer {
     margin-top: auto;
     border-top: 1px solid var(--line);
+  }
+
+  /* ---- Reduced motion ----------------------------------------------------
+     Arrivals stay as short fades; every move, tilt, blur, draw, meter fill and replay
+     goes. Last in the layer so it outranks the rules it cancels. */
+  @media (prefers-reduced-motion: reduce) {
+    .reveal > *,
+    .reveal > *:nth-child(even),
+    .process.reveal > li,
+    .process.reveal > li:nth-child(even),
+    .method-grid.reveal > .method-item,
+    .method-grid.reveal > .method-item:nth-child(even),
+    .exhibit.is-armed:not(.is-visible),
+    .exhibit.is-armed:nth-child(even):not(.is-visible) {
+      transform: none;
+      filter: none;
+      transition: opacity 0.3s ease;
+      transition-delay: 0ms;
+    }
+
+    .process.reveal:not(.is-visible) .process-meter i {
+      transform: none;
+    }
+
+    .btn:hover,
+    .btn-primary[href^='mailto:']:hover::after {
+      transform: none;
+    }
+
+    .replay {
+      display: none;
+    }
   }
 }

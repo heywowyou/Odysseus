@@ -142,6 +142,37 @@ describe('both commercial pages', () => {
     expect(prose).not.toContain('preview');
   });
 
+  it.each(commercialSources)(
+    '%s does not sell the two report languages as a feature',
+    (_name, source) => {
+      // Operator decision 2026-09-11: a client receives the report in their own
+      // language, which is normal service, not a selling point. The offer page
+      // keeps one factual "en français ou en anglais" line; nothing more.
+      const prose = readable(source);
+      expect(prose).not.toContain('bilingue');
+      expect(prose).not.toContain('bilingual');
+      expect(prose).not.toContain('en français et en anglais');
+      expect(prose).not.toContain('in French and English');
+    },
+  );
+
+  it.each(commercialSources)('%s renders the one shared dossier card', (_name, source) => {
+    // Two hand-kept copies of this card drifted apart once (different row
+    // names on each page). The card now lives only in lib/dossier.tsx.
+    expect(source).toContain('<Dossier lang="fr" />');
+    expect(source).toContain('<Dossier lang="en" />');
+    expect(source).not.toContain('className="dossier"');
+  });
+
+  it.each(commercialSources)(
+    '%s does not repeat a reassurance line under the contact button',
+    (_name, source) => {
+      const prose = readable(source);
+      expect(prose).not.toContain('jamais par un système automatisé');
+      expect(prose).not.toContain('never by an automated system');
+    },
+  );
+
   it.each(commercialSources)('%s uses no em or en dash', (_name, source) => {
     expect(source).not.toMatch(/[\u2013\u2014]/u);
   });
@@ -160,8 +191,8 @@ describe('home page', () => {
   });
 
   it('has one primary write-to-us action rather than an order commitment', () => {
-    expect(home).toContain('Écrire à Odysseus');
-    expect(home).toContain('Write to Odysseus');
+    expect(home).toContain('Nous écrire');
+    expect(home).toContain('Write to us');
     expect(home).not.toContain('Commander');
     expect(home).not.toContain('Order');
   });
@@ -184,8 +215,8 @@ describe('offer page', () => {
   });
 
   it('uses one contact action that describes the actual act', () => {
-    expect(offer).toContain('Écrire à Odysseus');
-    expect(offer).toContain('Write to Odysseus');
+    expect(offer).toContain('Nous écrire');
+    expect(offer).toContain('Write to us');
     expect(offer).not.toContain('Commander');
     expect(offer).not.toContain('Order');
   });
@@ -194,6 +225,7 @@ describe('offer page', () => {
 describe('root metadata', () => {
   it('describes the full accurate scope, including the bounded AI signals', () => {
     expect(layout).toContain('signaux de visibilité IA');
+    expect(layout).not.toContain('français et en anglais');
     expect(layout).not.toContain('Premier affichage');
     expect(layout).not.toMatch(/[\u2013\u2014]/u);
   });

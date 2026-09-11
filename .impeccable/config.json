@@ -20,6 +20,24 @@
         ],
         "createdAt": "2026-09-11T03:23:25.431Z",
         "reason": "Pre-existing, documented deliberate motif (DESIGN.md 'Statement grids' anchor-rule margin note and the dossier navy spine); both the original and re-run critique name these specifically as the site's best design moves, not an AI-slop tell"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "packages/site/lib/schematics.tsx"
+        ],
+        "createdAt": "2026-09-11T12:27:59.834Z",
+        "reason": "agent triage: the flagged lines are the string literal '<img>' naming an element in schematic readout copy, not an img tag"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "1.5rem",
+        "files": [
+          "packages/site/lib/preview-response.ts"
+        ],
+        "createdAt": "2026-09-11T13:36:41.815Z",
+        "reason": "agent triage: the outreach preview is a standalone fenced document with its own type (trade-offs 42/43), not the site's type ramp"
       }
     ]
   }

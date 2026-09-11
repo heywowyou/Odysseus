@@ -45,8 +45,7 @@ export default function ProspectingPrivacyPage() {
     <main id="contenu" tabIndex={-1} className="flex-1">
       <LanguageSection lang="fr">
         <section className="shell hero">
-          <p className="label">Protection des données</p>
-          <h1 className="title measure mt-4">Prospection et données personnelles</h1>
+          <h1 className="title measure">Prospection et données personnelles</h1>
           <p className="lede measure mt-5">
             L&apos;origine des données que nous détenons sur votre établissement, leur utilisation,
             leur durée de conservation et la manière de vous y opposer.
@@ -235,8 +234,7 @@ export default function ProspectingPrivacyPage() {
 
       <LanguageSection lang="en">
         <section className="shell hero">
-          <p className="label">Data protection</p>
-          <h1 className="title measure mt-4">Prospecting and personal data</h1>
+          <h1 className="title measure">Prospecting and personal data</h1>
           <p className="lede measure mt-5">
             Where the data we hold about your establishment comes from, how it is used, how long we
             keep it, and how to object.

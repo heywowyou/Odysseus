@@ -13,11 +13,10 @@ export default function NotFound() {
     <main id="contenu" tabIndex={-1} className="flex-1">
       <LanguageSection lang="fr">
         <section className="shell hero">
-          <p className="label numeric">Erreur 404</p>
-          <h1 className="title measure mt-4">Page introuvable</h1>
+          <h1 className="title measure">Page introuvable</h1>
           <p className="lede measure mt-5">
-            La page demandée n&apos;existe pas ou n&apos;est plus disponible. Voici les pages
-            existantes.
+            Erreur 404&#160;: la page demandée n&apos;existe pas ou n&apos;est plus disponible.
+            Voici les pages du site.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -36,10 +35,10 @@ export default function NotFound() {
 
       <LanguageSection lang="en">
         <section className="shell hero">
-          <p className="label numeric">Error 404</p>
-          <h1 className="title measure mt-4">Page not found</h1>
+          <h1 className="title measure">Page not found</h1>
           <p className="lede measure mt-5">
-            The requested page does not exist or is no longer available. Here are the pages that do.
+            Error 404: the requested page does not exist or is no longer available. Here are the
+            pages of the site.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
