@@ -107,15 +107,17 @@ interface FakeStore extends OutreachPreviewStorePort {
   revoked: { previewId: string; reason: string }[];
 }
 
-function fakeStore(options: {
-  publicationRow?: PreviewPublicationRow | null;
-  suppressed?: boolean;
-  live?: LivePreviewRef[];
-  onRecord?: () => void;
-  /** Simulates an objection's suppression write landing between the publish
-   *  path's own gate and the record: the store refuses and self-revokes. */
-  recordRefusedSuppressed?: boolean;
-} = {}): FakeStore {
+function fakeStore(
+  options: {
+    publicationRow?: PreviewPublicationRow | null;
+    suppressed?: boolean;
+    live?: LivePreviewRef[];
+    onRecord?: () => void;
+    /** Simulates an objection's suppression write landing between the publish
+     *  path's own gate and the record: the store refuses and self-revokes. */
+    recordRefusedSuppressed?: boolean;
+  } = {},
+): FakeStore {
   const recorded: RecordPreviewInput[] = [];
   const revoked: { previewId: string; reason: string }[] = [];
   const alreadyRevoked = new Set<string>();
