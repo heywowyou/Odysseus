@@ -1,0 +1,40 @@
+{
+  "entry": [
+    "scripts/*.mjs",
+    "packages/interface/src/dashboard/index.html",
+    "packages/interface/src/dashboard/main.tsx",
+    "packages/llm/src/lint-stored-analyses.ts",
+    "packages/llm/src/measure-reasoning-effort.ts",
+    "packages/report/src/styles/*.css",
+    "packages/scanner/src/lighthouse-worker.ts"
+  ],
+  "ignorePatterns": [
+    "fixtures/hotel-demo/**",
+    "fixtures/prospecting/**",
+    "fixtures/test-audits/**",
+    "docs/report/design/**"
+  ],
+  "boundaries": {
+    "zones": [
+      { "name": "core", "patterns": ["packages/core/src/**"] },
+      { "name": "scanner", "patterns": ["packages/scanner/src/**"] },
+      { "name": "store", "patterns": ["packages/store/src/**"] },
+      { "name": "llm", "patterns": ["packages/llm/src/**"] },
+      { "name": "report", "patterns": ["packages/report/src/**"] },
+      { "name": "interface", "patterns": ["packages/interface/src/**"] },
+      { "name": "cli", "patterns": ["packages/cli/src/**"] },
+      { "name": "site", "patterns": ["packages/site/app/**", "packages/site/lib/**"] }
+    ],
+    "rules": [
+      { "from": "core", "allow": [] },
+      { "from": "scanner", "allow": ["core"] },
+      { "from": "store", "allow": ["core"] },
+      { "from": "llm", "allow": ["core"] },
+      { "from": "report", "allow": ["core", "llm", "scanner"] },
+      { "from": "interface", "allow": ["core", "llm", "report", "scanner", "store"] },
+      { "from": "cli", "allow": ["core", "llm", "report", "scanner", "store", "interface"] },
+      { "from": "site", "allow": [] }
+    ],
+    "coverage": { "requireAllFiles": false }
+  }
+}

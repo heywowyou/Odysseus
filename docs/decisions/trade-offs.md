@@ -4090,3 +4090,72 @@ Durable rules, binding on every agent:
 - `/impeccable init` (the `PRODUCT.md`/`DESIGN.md` interview) was
   deliberately not run in this session. It is an interactive interview with
   the operator, not something an agent fabricates on their behalf.
+
+### 80. fallow adopted as an advisory codebase-intelligence CLI, never a gate (operator decision, 2026-09-11)
+
+The repo had no tooling for dead code, circular imports, duplication, or
+cross-package boundary drift: ESLint runs recommended-only with no import
+rules, and the only boundary guard was the hand-written site isolation test.
+With three agent streams sharing one working tree, that drift accumulates
+quietly. The operator approved fallow (https://fallow.tools,
+github.com/fallow-rs/fallow) on 2026-09-11 under a conditional path: run it
+ad hoc first, adopt only if the signal survived contact with the known
+intentional duplications, and keep it advisory until triage lands. The
+signal did: of 19 raw "unused file" findings, 17 were explainable false
+positives (dynamically spawned worker, operator scripts documented but not
+wired into package.json, test-read design CSS, the dashboard Vite root at
+`src/dashboard`), and the residue was one genuinely dead file.
+
+Footprint: root devDependency `fallow` pinned exact (3.24.1), the
+`pnpm run audit:code` script (`fallow dead-code`), and `.fallowrc.json`.
+`fallow dupes` and `fallow health` stay manual passes, not scripts. The
+advisory script is deliberately not in `pnpm run check`, the pre-push hook,
+or CI; it exits non-zero while findings exist.
+
+What `.fallowrc.json` encodes: `entry` seeds real runtime roots fallow
+cannot discover (scripts/*.mjs invoked from docs, the dashboard Vite entry,
+lighthouse-worker.ts spawned through a constructed URL, the report design
+CSS sources read by tests); `ignorePatterns` drops the three fixture
+directories without package.json and the flat design mockups in
+`docs/report/design/` whose pseudo-imports are not real modules; and
+`boundaries` declares one zone per workspace package with rules mirroring
+both the declared dependency graph and the charter walls (site imports no
+workspace package; llm depends on core only; core on nothing). Boundary
+coverage (`requireAllFiles`) is left off: repo-root configs and fixtures sit
+outside every zone by design, and coverage bookkeeping there is noise. The
+boundary rules are the enforcement aid for charter package roles, so
+widening an allow list is a charter question, never a lint tweak.
+
+Measured baseline at adoption (`fallow dead-code`, 3.24.1): 78 findings.
+One genuinely dead file,
+`packages/interface/src/dashboard/components/ui/dropdown-menu.tsx` (zero
+importers; left in place for the plan 037 stream and operator, not deleted
+by the adopting session). One true cycle: interface pipeline
+`audit-evidence.ts` and `regenerate-writing.ts` import each other. Two
+duplicate exports (`BadgeTone`, `CURRENT_OUTREACH_PROMPT_VERSION`). Four
+undeclared-dependency imports (jsdom, mongoose, playwright, vitest-axe used
+somewhere without a declaration; the interface package importing mongoose
+and playwright directly is charter-boundary relevant and issue material).
+58 unused exports and 9 unused types, untriaged. Boundaries: zero
+violations on the current graph, which is the point of recording the
+baseline. `fallow dupes` separately measures 5.4 percent duplication across
+147 clone groups; duplication already declared deliberate and guarded by
+red tests (the site key derivation, the dashboard-local validators) must
+never be consolidated by an agent to satisfy the tool.
+
+Durable rules, binding on every agent:
+
+- Advisory only. Do not add `audit:code` to `check`, CI, or hooks, and do
+  not promote its findings into deletions, until each unused export has
+  been verified with `fallow dead-code --trace <file>:<export>`.
+  Promotion is a deliberate operator decision.
+- Static layer only. fallow's paid runtime tier records which functions
+  execute in production; it must never be enabled on this repo. The
+  GitHub Action stays unused (deploys are local, entry 61).
+- When fallow flags a known-intentional pattern class, extend the
+  `entry`/`ignorePatterns` lists in `.fallowrc.json` with the reason in
+  this entry or a why-comment, rather than scattering inline
+  `fallow-ignore` comments.
+- Known false-positive classes live in `.fallowrc.json` entries, not in
+  per-file suppressions; re-derive them if the spawn or invocation
+  mechanism changes.
