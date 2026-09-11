@@ -628,6 +628,8 @@ describe('GET /api/prospects/:candidateId/outreach/preview-render', () => {
 });
 
 describe('POST /api/prospects/:candidateId/outreach/draft', () => {
+  // Since plan 037 the body must carry the one-time token of the already
+  // published v2 preview; drafting never publishes as a side effect.
   it('returns 200 and the result when a draft is created', async () => {
     vi.mocked(createTouchOneDraft).mockResolvedValue({
       configured: true,
@@ -636,10 +638,28 @@ describe('POST /api/prospects/:candidateId/outreach/draft', () => {
     } as never);
     const res = await handle('/api/prospects/cand-1/outreach/draft', {
       method: 'POST',
-      body: {},
+      body: { previewToken: 'raw-one-time-token' },
     });
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res.body ?? '{}')).toEqual({ created: true, draftId: 'draft-1' });
+    expect(createTouchOneDraft).toHaveBeenCalledWith(
+      fakeConnection,
+      'cand-1',
+      expect.objectContaining({ previewToken: 'raw-one-time-token' }),
+    );
+  });
+
+  it('refuses without drafting when the body carries no preview token', async () => {
+    const res = await handle('/api/prospects/cand-1/outreach/draft', {
+      method: 'POST',
+      body: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body ?? '{}')).toEqual({
+      created: false,
+      refusal: 'preview-not-published',
+    });
+    expect(createTouchOneDraft).not.toHaveBeenCalled();
   });
 
   it('returns 200 with the refusal code when the orchestrator refuses', async () => {
@@ -650,7 +670,7 @@ describe('POST /api/prospects/:candidateId/outreach/draft', () => {
     } as never);
     const res = await handle('/api/prospects/cand-1/outreach/draft', {
       method: 'POST',
-      body: {},
+      body: { previewToken: 'raw-one-time-token' },
     });
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res.body ?? '{}')).toEqual({
@@ -666,7 +686,7 @@ describe('POST /api/prospects/:candidateId/outreach/draft', () => {
     } as never);
     const res = await handle('/api/prospects/cand-1/outreach/draft', {
       method: 'POST',
-      body: {},
+      body: { previewToken: 'raw-one-time-token' },
     });
     expect(res.statusCode).toBe(503);
   });

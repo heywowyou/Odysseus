@@ -59,11 +59,15 @@ describe('runOutreachDraftBatchJob', () => {
     const job = fakeJob(5, 'en');
     await runOutreachDraftBatchJob(job, ctx);
 
+    // Batches never carry a one-time token, so every member without an
+    // already published preview refuses 'preview-not-published'.
     expect(createTouchOneDraft).toHaveBeenNthCalledWith(1, fakeConnection, 'cand-1', {
       language: 'en',
+      previewToken: '',
     });
     expect(createTouchOneDraft).toHaveBeenNthCalledWith(2, fakeConnection, 'cand-2', {
       language: 'en',
+      previewToken: '',
     });
     expect(completeJob).toHaveBeenCalledWith(fakeConnection, 'job-1', {
       outreachBatchResults: [
@@ -84,7 +88,10 @@ describe('runOutreachDraftBatchJob', () => {
 
     await runOutreachDraftBatchJob(fakeJob(1), ctx);
 
-    expect(createTouchOneDraft).toHaveBeenCalledWith(fakeConnection, 'cand-1', { language: 'fr' });
+    expect(createTouchOneDraft).toHaveBeenCalledWith(fakeConnection, 'cand-1', {
+      language: 'fr',
+      previewToken: '',
+    });
   });
 
   it('throws when the mailbox is not configured, stopping the batch', async () => {
