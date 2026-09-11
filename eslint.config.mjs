@@ -30,6 +30,7 @@ export default defineConfig(
     '.claude/**',
     '.codex/**',
     '.zcode/**',
+    '.playwright-mcp/**',
   ]),
   {
     files: sourceFiles,

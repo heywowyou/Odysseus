@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { LanguageSection } from '../../lib/language';
+import { Reveal } from '../../lib/reveal';
 
 export const metadata: Metadata = {
   title: 'Diagnostic technique complet',
@@ -65,14 +66,16 @@ export default function OfferPage() {
                 votre site.
               </p>
 
-              <div className="statement measure mt-8">
-                <p className="label">Portée du diagnostic</p>
-                <p className="mt-2">
-                  Ceci est un diagnostic technique, pas un audit RGAA. Il ne produit pas de taux de
-                  conformité officiel et ne peut pas servir de base à une déclaration
-                  d&apos;accessibilité.
-                </p>
-              </div>
+              <Reveal className="measure mt-8">
+                <div className="statement">
+                  <p className="label">Portée du diagnostic</p>
+                  <p className="mt-2">
+                    Ceci est un diagnostic technique, pas un audit RGAA. Il ne produit pas de taux
+                    de conformité officiel et ne peut pas servir de base à une déclaration
+                    d&apos;accessibilité.
+                  </p>
+                </div>
+              </Reveal>
 
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <p className="price numeric">1&#160;600&#160;€ HT</p>
@@ -140,7 +143,7 @@ export default function OfferPage() {
               Ce que le diagnostic vérifie
             </h2>
 
-            <div className="check-grid mt-8">
+            <Reveal className="check-grid mt-8">
               <div className="check">
                 <h3 className="subheading">Accessibilité</h3>
                 <p className="soft mt-3">
@@ -206,7 +209,7 @@ export default function OfferPage() {
                   indépendamment de la vitesse de chargement.
                 </p>
               </div>
-            </div>
+            </Reveal>
           </section>
 
           <section aria-labelledby="livrable-offre" className="offer-section">
@@ -279,7 +282,7 @@ export default function OfferPage() {
               </h2>
             </div>
 
-            <ol className="process mt-9">
+            <Reveal as="ol" className="process mt-9">
               <li>
                 <p className="process-step">Réponse</p>
                 <p className="soft mt-2">
@@ -300,7 +303,7 @@ export default function OfferPage() {
                   engagement.
                 </p>
               </li>
-            </ol>
+            </Reveal>
           </section>
         </div>
       </LanguageSection>
@@ -317,13 +320,16 @@ export default function OfferPage() {
                 site.
               </p>
 
-              <div className="statement measure mt-8">
-                <p className="label">Scope of the diagnostic</p>
-                <p className="mt-2">
-                  This is a technical diagnostic, not an audit RGAA. It does not produce an official
-                  conformity rate and cannot serve as the basis for an accessibility statement.
-                </p>
-              </div>
+              <Reveal className="measure mt-8">
+                <div className="statement">
+                  <p className="label">Scope of the diagnostic</p>
+                  <p className="mt-2">
+                    This is a technical diagnostic, not an audit RGAA. It does not produce an
+                    official conformity rate and cannot serve as the basis for an accessibility
+                    statement.
+                  </p>
+                </div>
+              </Reveal>
 
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <p className="price numeric">EUR 1,600 excl. VAT</p>
@@ -386,7 +392,7 @@ export default function OfferPage() {
               What the diagnostic checks
             </h2>
 
-            <div className="check-grid mt-8">
+            <Reveal className="check-grid mt-8">
               <div className="check">
                 <h3 className="subheading">Accessibility</h3>
                 <p className="soft mt-3">
@@ -451,7 +457,7 @@ export default function OfferPage() {
                   independently of loading speed.
                 </p>
               </div>
-            </div>
+            </Reveal>
           </section>
 
           <section aria-labelledby="deliverable-offre-en" className="offer-section">
@@ -519,7 +525,7 @@ export default function OfferPage() {
               </h2>
             </div>
 
-            <ol className="process mt-9">
+            <Reveal as="ol" className="process mt-9">
               <li>
                 <p className="process-step">Reply</p>
                 <p className="soft mt-2">
@@ -540,7 +546,7 @@ export default function OfferPage() {
                   before any commitment.
                 </p>
               </li>
-            </ol>
+            </Reveal>
           </section>
         </div>
       </LanguageSection>

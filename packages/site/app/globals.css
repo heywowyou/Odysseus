@@ -35,7 +35,12 @@
   --navy: #18385d;
   --navy-line: rgb(24 56 93 / 0.38);
   --anchor: #18385d;
-  --signal: #d56832;
+  /* Recast 2026-09-11 (operator request, more vibrant palette): moved from a
+     muted burnt orange to Tailwind's orange-600, staying in the same warm
+     family the rest of the codebase names "signal orange" (never text, so
+     the AA text-contrast floor does not apply; it clears the 3:1 non-text
+     floor against every surface it borders). */
+  --signal: #ea580c;
 
   /* The report sheet: a fixed light document in both colour schemes, like
      the visitor panel below, because it stands for the printed deliverable
@@ -69,11 +74,21 @@
   --visitor-fill-soft: rgb(53 105 180 / 0.22);
 
   /* Evidence blue: links and the raw-versus-rendered inset only. Never a
-     measured quantity, which stays ink, and never a section decoration. */
-  --accent: #3569b4;
-  --accent-strong: #274f87;
-  --accent-soft: #e3ebf8;
-  --accent-line: rgb(53 105 180 / 0.4);
+     measured quantity, which stays ink, and never a section decoration.
+     Recast 2026-09-11 (operator request, more vibrant palette): moved from a
+     desaturated corporate blue to Tailwind's sky family. Sky-700 is the
+     darkest step of that family that still clears 4.5:1 body-text contrast
+     on --paper (5.0:1, measured); the lighter sky-400/500 steps read at
+     roughly 2.4:1 to 3.5:1 here and are reserved for tints, borders, and
+     dark-mode text, never for light-mode body copy or links. */
+  --accent: #0369a1;
+  --accent-strong: #075985;
+  --accent-soft: rgb(14 165 233 / 0.12);
+  --accent-line: rgb(14 165 233 / 0.4);
+
+  /* Soft depth for the card system below: an ink-tinted shadow, not neutral
+     black, so raised surfaces stay part of the cool-paper register. */
+  --shadow-card: 0 1px 2px rgb(16 27 42 / 0.06), 0 10px 28px rgb(16 27 42 / 0.1);
 
   --measure: 40rem;
   --shell: 70rem;
@@ -113,11 +128,16 @@
     --visitor-fill-soft: rgb(53 105 180 / 0.26);
 
     /* Brightened for contrast against the dark ground; the visitor-panel
-       values above stay the light-mode blue on purpose (see comment there). */
-    --accent: #8fb4ee;
-    --accent-strong: #b5cffa;
-    --accent-soft: rgb(143 180 238 / 0.15);
-    --accent-line: rgb(143 180 238 / 0.45);
+       values above stay the light-mode blue on purpose (see comment there).
+       Sky-400/sky-300 read at 8.6:1+ against the dark paper, so the lighter,
+       more saturated steps of the family are available here where they are
+       not in light mode. */
+    --accent: #38bdf8;
+    --accent-strong: #7dd3fc;
+    --accent-soft: rgb(56 189 248 / 0.16);
+    --accent-line: rgb(56 189 248 / 0.45);
+
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35), 0 14px 32px rgb(0 0 0 / 0.45);
   }
 }
 
@@ -194,6 +214,61 @@
       animation-delay: 0ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+    }
+
+    /* The reveal system below hides content until JS confirms it is in
+       view; with transitions collapsed by the rule above that confirmation
+       would otherwise never visibly resolve, so reduced motion shows
+       everything already in place instead. */
+    .reveal > * {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ---- Scroll reveal ----------------------------------------------------
+     The one authored motion moment on the site (2026-09-11, operator
+     request for a more premium feel): the evidence-desk conceit, not a
+     generic fade-and-rise. Each card enters at a slight, alternating tilt
+     and settles flat, as if a printed sheet were just set down on the
+     desk, via lib/reveal.tsx's IntersectionObserver. Direct children
+     stagger by up to four steps, matching the largest grid (four checks,
+     four receive items, four process steps). */
+  .reveal > * {
+    opacity: 0;
+    transform: translateY(18px) rotate(-0.7deg) scale(0.985);
+    transition:
+      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal > *:nth-child(even) {
+    transform: translateY(18px) rotate(0.7deg) scale(0.985);
+  }
+
+  .reveal.is-visible > * {
+    opacity: 1;
+    transform: none;
+  }
+
+  .reveal > *:nth-child(2) {
+    transition-delay: 90ms;
+  }
+
+  .reveal > *:nth-child(3) {
+    transition-delay: 180ms;
+  }
+
+  .reveal > *:nth-child(4) {
+    transition-delay: 270ms;
+  }
+
+  /* Without JS the IntersectionObserver in lib/reveal.tsx never adds
+     is-visible, so content must not depend on it to become visible. */
+  @media (scripting: none) {
+    .reveal > * {
+      opacity: 1;
+      transform: none;
     }
   }
 }
@@ -431,7 +506,17 @@
     transition:
       background-color 0.15s ease,
       border-color 0.15s ease,
-      color 0.15s ease;
+      color 0.15s ease,
+      transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn:active {
+    transform: translateY(0);
   }
 
   .btn-primary {
@@ -443,6 +528,7 @@
   .btn-primary:hover {
     background-color: var(--ink-soft);
     border-color: var(--ink-soft);
+    box-shadow: 0 8px 20px rgb(16 27 42 / 0.16);
   }
 
   .btn-secondary {
@@ -518,7 +604,8 @@
     border-left: 2px solid var(--anchor);
     background-color: var(--paper-raised);
     padding: 1.25rem 1.25rem 1.25rem 1.5rem;
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 10px 10px 0;
+    box-shadow: var(--shadow-card);
   }
 
   /* Every block of code sits in the machine register, the same pair as the
@@ -538,21 +625,22 @@
 
   /* ---- Dossier card ------------------------------------------------------
      The signature element: one report sheet showing the shape of a finding.
-     A labelled header, a definition list with mono field labels in the navy
-     of the spine, and one orange annotation rule on the Action row. The
-     sheet stays white in dark mode on purpose: it is the printed report,
-     not a themed panel. */
+     A labelled header, a definition list with accent-tinted field labels,
+     and one orange annotation rule on the Action row.
+     Recast 2026-09-11 (impeccable live, operator request): the sheet no
+     longer stays a literal white paper cutout against the page; it now sits
+     on the page's own dark surface. The Action row's orange rule is
+     unchanged and remains the only use of that color on the page. */
 
   .dossier {
-    border: 1px solid var(--sheet-line);
-    border-inline-start: 3px solid var(--navy);
-    border-radius: 4px;
-    background-color: var(--sheet);
-    color: var(--sheet-ink);
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    background-color: var(--paper);
+    color: var(--ink);
     padding: 1.5rem 1.5rem 1.25rem;
     box-shadow:
-      0 1px 2px rgb(16 27 42 / 0.05),
-      0 12px 32px rgb(16 27 42 / 0.08);
+      0 1px 2px rgb(0 0 0 / 0.3),
+      0 12px 32px rgb(0 0 0 / 0.45);
   }
 
   .dossier-head {
@@ -561,7 +649,7 @@
     align-items: baseline;
     justify-content: space-between;
     gap: 0.5rem 1rem;
-    border-bottom: 1px solid var(--sheet-line);
+    border-bottom: 1px solid var(--line);
     padding-bottom: 0.875rem;
   }
 
@@ -569,40 +657,57 @@
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: -0.01em;
+    color: var(--ink);
   }
 
   .dossier-stamp {
-    font-family: var(--font-mono-stack);
     font-size: 0.6875rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.16em;
-    color: var(--sheet-muted);
+    letter-spacing: 0.08em;
+    border-radius: 4px;
+    padding: 3px 8px;
+    /* accent-strong, not accent: against the real alpha-composited badge
+       background (accent-soft over the dossier surface) --accent measures
+       right at 4.5:1 in light mode with no margin; accent-strong clears
+       5.7:1. */
+    color: var(--accent-strong);
+    background-color: var(--accent-soft);
   }
 
   .dossier dl {
+    display: grid;
+    gap: 0.875rem;
     margin: 0;
     padding-top: 1.125rem;
   }
 
-  .dossier-row + .dossier-row {
-    margin-top: 1.125rem;
+  .dossier-row {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .dossier-row:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
   }
 
   .dossier dt {
-    font-family: var(--font-mono-stack);
-    font-size: 0.6875rem;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.16em;
-    color: var(--navy);
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
   }
 
   .dossier dd {
-    margin: 0.375rem 0 0;
+    margin: 0;
     font-size: 0.9375rem;
-    line-height: 1.55;
-    color: var(--sheet-ink-soft);
+    line-height: 1.5;
+    color: var(--ink-soft);
   }
 
   /* The single annotation rule on the sheet: it marks the row that tells the
@@ -610,37 +715,52 @@
      anywhere else on the sheet. */
   .dossier-row-action {
     border-inline-start: 2px solid var(--signal);
-    padding-inline-start: 0.875rem;
+    padding-inline-start: 0.625rem;
+  }
+
+  .dossier-row-action dd {
+    color: var(--ink);
   }
 
   .dossier-caption {
-    margin-top: 1.25rem;
-    border-top: 1px solid var(--sheet-line);
-    padding-top: 0.875rem;
+    margin-top: 1rem;
     font-size: 0.8125rem;
     line-height: 1.5;
-    color: var(--sheet-muted);
+    color: var(--ink-muted);
   }
 
   /* ---- Statement grids ---------------------------------------------------
-     Entries separated by hairline rules and whitespace instead of stacked
-     rounded boxes: the rhythm of a document, not of a card wall. */
+     Recast 2026-09-11 (operator request): these repeated content grids now
+     sit in raised cards (surface, hairline border, soft ink-tinted shadow)
+     instead of hairline-separated rows, so the page reads with real depth
+     instead of everything sitting flat on the page background. The larger
+     structural rhythm between whole page sections (offer-section,
+     section-divided) is unchanged and stays hairline-and-whitespace; only
+     these item-level grids became cards. */
 
+  /* align-items: start so a card hugs its own content instead of stretching
+     to match a taller sibling in the same row, which reads as a large blank
+     interior now that each item is a visible bordered surface rather than a
+     hairline row. */
   .receive-grid {
     display: grid;
-    gap: 1.5rem 3rem;
+    align-items: start;
+    gap: 1.25rem;
   }
 
   @media (min-width: 56rem) {
     .receive-grid {
       grid-template-columns: 1fr 1fr;
-      gap: 1.75rem 4rem;
+      gap: 1.5rem 2rem;
     }
   }
 
   .receive-item {
-    border-top: 1px solid var(--line);
-    padding-top: 1rem;
+    background-color: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-card);
   }
 
   .receive-title {
@@ -651,20 +771,24 @@
 
   .check-grid {
     display: grid;
-    gap: 2.5rem;
+    align-items: start;
+    gap: 1.25rem;
   }
 
   @media (min-width: 56rem) {
     .check-grid {
       grid-template-columns: 1fr 1fr;
-      gap: 3rem 4rem;
+      gap: 1.5rem 2rem;
     }
   }
 
   .check {
     container-type: inline-size;
-    border-top: 1px solid var(--line-strong);
-    padding-top: 1.25rem;
+    background-color: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-card);
   }
 
   /* The three performance metrics sit side by side but are not a sequence:
@@ -714,6 +838,7 @@
 
   .process {
     display: grid;
+    align-items: start;
     gap: 1.5rem;
     padding-left: 1.375rem;
     list-style: decimal outside;
@@ -764,6 +889,7 @@
 
   .method-grid {
     display: grid;
+    align-items: start;
     gap: 1.75rem;
   }
 

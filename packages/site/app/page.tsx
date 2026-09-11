@@ -1,4 +1,5 @@
 import { LanguageSection } from '../lib/language';
+import { Reveal } from '../lib/reveal';
 
 /**
  * La page d'accueil. Rédigée en français d'abord ; la colonne anglaise est
@@ -113,17 +114,19 @@ function HomeFr() {
             {/* Résumé de la limite approuvée. La formulation complète reste en
                 tête de la page offre, qui reste la première localisation
                 faisant autorité (offer-positioning.md, section 2). */}
-            <div className="statement mt-8">
-              <p className="label">Portée du diagnostic</p>
-              <p className="mt-2">
-                Ceci est un diagnostic technique, pas un audit RGAA. La portée complète de cette
-                limite est énoncée sur la page{' '}
-                <a className="evidence-link" href="/offre">
-                  offre
-                </a>
-                .
-              </p>
-            </div>
+            <Reveal className="mt-8">
+              <div className="statement">
+                <p className="label">Portée du diagnostic</p>
+                <p className="mt-2">
+                  Ceci est un diagnostic technique, pas un audit RGAA. La portée complète de cette
+                  limite est énoncée sur la page{' '}
+                  <a className="evidence-link" href="/offre">
+                    offre
+                  </a>
+                  .
+                </p>
+              </div>
+            </Reveal>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
@@ -196,7 +199,7 @@ function HomeFr() {
           <p className="soft mt-4">Un document de travail, pas une démonstration d&apos;outil.</p>
         </div>
 
-        <div className="receive-grid mt-9">
+        <Reveal className="receive-grid mt-9">
           <div className="receive-item">
             <p className="receive-title">Tout le site, page après page</p>
             <p className="soft mt-2">
@@ -225,7 +228,7 @@ function HomeFr() {
               mesure vérifiable.
             </p>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="verifie">
@@ -240,7 +243,7 @@ function HomeFr() {
           </p>
         </div>
 
-        <div className="check-grid mt-10">
+        <Reveal className="check-grid mt-10">
           <div className="check">
             <h3 className="subheading">Accessibilité</h3>
             <p className="soft mt-3">
@@ -353,7 +356,7 @@ function HomeFr() {
               indépendamment de la vitesse de chargement.
             </p>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="remise">
@@ -367,7 +370,7 @@ function HomeFr() {
           </p>
         </div>
 
-        <ol className="process mt-10">
+        <Reveal as="ol" className="process mt-10">
           <li>
             <p className="process-step">Explorer</p>
             <p className="soft mt-2">
@@ -393,7 +396,7 @@ function HomeFr() {
               constat.
             </p>
           </li>
-        </ol>
+        </Reveal>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="methode">
@@ -408,14 +411,14 @@ function HomeFr() {
           </p>
         </div>
 
-        <div className="method-grid mt-9">
+        <Reveal className="method-grid mt-9">
           {GUARANTEES_FR.map((guarantee) => (
             <div className="method-item" key={guarantee.claim}>
               <p className="subheading">{guarantee.claim}</p>
               <p className="soft small mt-2">{guarantee.basis}</p>
             </div>
           ))}
-        </div>
+        </Reveal>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="tarif">
@@ -475,17 +478,19 @@ function HomeEn() {
               finding, ready to hand to your web provider.
             </p>
 
-            <div className="statement mt-8">
-              <p className="label">Scope of the diagnostic</p>
-              <p className="mt-2">
-                This is a technical diagnostic, not an audit RGAA. The full wording of this
-                limitation is set out on the{' '}
-                <a className="evidence-link" href="/offre">
-                  offer page
-                </a>
-                .
-              </p>
-            </div>
+            <Reveal className="mt-8">
+              <div className="statement">
+                <p className="label">Scope of the diagnostic</p>
+                <p className="mt-2">
+                  This is a technical diagnostic, not an audit RGAA. The full wording of this
+                  limitation is set out on the{' '}
+                  <a className="evidence-link" href="/offre">
+                    offer page
+                  </a>
+                  .
+                </p>
+              </div>
+            </Reveal>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
@@ -546,7 +551,7 @@ function HomeEn() {
           <p className="soft mt-4">A working document, not a product demo.</p>
         </div>
 
-        <div className="receive-grid mt-9">
+        <Reveal className="receive-grid mt-9">
           <div className="receive-item">
             <p className="receive-title">The whole site, page by page</p>
             <p className="soft mt-2">
@@ -574,7 +579,7 @@ function HomeEn() {
               measurement.
             </p>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="checks-en">
@@ -588,7 +593,7 @@ function HomeEn() {
           </p>
         </div>
 
-        <div className="check-grid mt-10">
+        <Reveal className="check-grid mt-10">
           <div className="check">
             <h3 className="subheading">Accessibility</h3>
             <p className="soft mt-3">
@@ -694,7 +699,7 @@ function HomeEn() {
               loading speed.
             </p>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="handoff-en">
@@ -706,7 +711,7 @@ function HomeEn() {
           <p className="soft mt-4">From observation to correction, four steps in order.</p>
         </div>
 
-        <ol className="process mt-10">
+        <Reveal as="ol" className="process mt-10">
           <li>
             <p className="process-step">Discover</p>
             <p className="soft mt-2">The whole site is crawled, and every page is measured.</p>
@@ -728,7 +733,7 @@ function HomeEn() {
               finding.
             </p>
           </li>
-        </ol>
+        </Reveal>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="method-en">
@@ -742,14 +747,14 @@ function HomeEn() {
           </p>
         </div>
 
-        <div className="method-grid mt-9">
+        <Reveal className="method-grid mt-9">
           {GUARANTEES_EN.map((guarantee) => (
             <div className="method-item" key={guarantee.claim}>
               <p className="subheading">{guarantee.claim}</p>
               <p className="soft small mt-2">{guarantee.basis}</p>
             </div>
           ))}
-        </div>
+        </Reveal>
       </section>
 
       <section className="shell section section-divided" aria-labelledby="price-en">
