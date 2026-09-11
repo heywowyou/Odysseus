@@ -3,6 +3,8 @@ import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
   buildFindingsProvenance,
+  buildOutreachPreviewSummary,
+  coverageFactsFromAudit,
   isValidSiren,
   summarizeAuditCoverage,
   type AuditManifest,
@@ -14,17 +16,21 @@ import {
 } from '@odysseus/core';
 import {
   createJobModel,
+  findLatestLiveV2PreviewForCandidate,
   getAudit,
   getAuditRuntimeFields,
   getFindingsForAudit,
+  getHotelCandidate,
   getLatestReport,
   getLatestReportApproval,
   getSeverityRollup,
   approvalMatchesReportPair,
   listReportLanguages,
   persistReportApproval,
+  resolveOutreachAuditForCandidate,
   resolveSelectedAnalysisPairForAudit,
   setAuditManualFields,
+  type AuditDocumentFields,
   type JobDocument,
   type ReportDocument,
   type SelectedAuditAnalysisPairResolution,
@@ -32,11 +38,26 @@ import {
 import { buildArtifactBucketKey, buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import {
   classifyReportFreshness,
+  generateOutreachPreviewHtmlV2,
+  generateOutreachPreviewPdf,
+  OUTREACH_PROOF_CARD_COPY,
   remediationFor,
   RULE_TRANSLATIONS_FR,
   type ReportFreshness,
   type StoredAnalysis,
 } from '@odysseus/report';
+import { getPreviewPublicBaseUrl } from '../config.js';
+import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
+import { createMongoOutreachPreviewStore } from '../outreach/mongo-outreach-preview-store.js';
+import { createMongoOutreachPreviewStoreV2 } from '../outreach/mongo-outreach-preview-store-v2.js';
+import { previewLinks, revokePreviewsForDomain } from '../outreach/publish-preview.js';
+import {
+  buildOutreachPreviewSummaryV2,
+  publishPreviewV2,
+  type PublishPreviewV2Refusal,
+} from '../outreach/publish-preview-v2.js';
+import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
+import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
@@ -267,6 +288,65 @@ async function getFailedJobForAudit(
     .lean<JobDocument | null>();
 }
 
+/** Plan 037 slice 5: the outreach preview section of the audit detail page.
+ *  One build path for both the on-page render and the operator PDF: a
+ *  candidate-linked audit goes through the exact resolution and summary
+ *  build publication uses, so what the operator inspects here is what a
+ *  published link would serve; any other audit gets an internal view built
+ *  straight from the stored audit and findings (French, no recipient
+ *  facts). Refusal names are the stable API strings the store and the v2
+ *  publish path already use; they are never translated. */
+type OutreachPreviewBuildOutcome =
+  { state: 'rendered'; html: string } | { state: 'refused'; refusal: PublishPreviewV2Refusal };
+
+async function buildAuditOutreachPreviewHtml(
+  connection: Connection,
+  audit: AuditDocumentFields,
+): Promise<OutreachPreviewBuildOutcome> {
+  const publicBaseUrl = getPreviewPublicBaseUrl();
+  const candidateId = audit.outreach?.candidateId;
+
+  if (candidateId !== undefined) {
+    const resolution = await resolveOutreachAuditForCandidate(connection, candidateId);
+    if (resolution.state === 'refused') {
+      return { state: 'refused', refusal: resolution.reason };
+    }
+    const store = createMongoOutreachPreviewStoreV2(connection, {
+      qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+    });
+    const row = await store.findPublicationRow(candidateId);
+    if ('refused' in row) return { state: 'refused', refusal: row.refused };
+    const built = buildOutreachPreviewSummaryV2({ row, language: 'fr', publicBaseUrl });
+    if ('refused' in built) return { state: 'refused', refusal: built.refused };
+    // Validates and lints; throws on either, so nothing half-formed is shown.
+    return { state: 'rendered', html: generateOutreachPreviewHtmlV2(built.summary) };
+  }
+
+  const coverage = coverageFactsFromAudit(summarizeAuditCoverage(audit));
+  if (coverage === undefined) {
+    return { state: 'refused', refusal: 'coverage-incomplete' };
+  }
+  const findings = await getFindingsForAudit(connection, audit.auditId);
+  const built = buildOutreachPreviewSummary({
+    auditId: audit.auditId,
+    observedAt: audit.finishedAt,
+    coverage,
+    findings,
+    recipient: {
+      businessName: audit.manualFields?.nomCommercial?.value ?? 'Le site audité',
+      dataOrigins: ['public-website'],
+    },
+    links: previewLinks(publicBaseUrl),
+    language: 'fr',
+    facts: { state: 'omitted' },
+    proofCardCopy: (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId],
+  });
+  if (built.state === 'refused') {
+    return { state: 'refused', refusal: built.reason };
+  }
+  return { state: 'rendered', html: generateOutreachPreviewHtmlV2(built.summary) };
+}
+
 export function registerAuditRoutes(router: Router, connection: Connection): void {
   // Issue #63: built once, since a caller with no bucket configured must
   // never pay a per-request cost for constructing one, and every read
@@ -350,8 +430,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       selectedPair.kind !== 'none' &&
       provenanceMatches(selectedPair.fr.findingsProvenance, audit.findingsProvenance) &&
       provenanceMatches(selectedPair.en.findingsProvenance, audit.findingsProvenance),
-    );
-    // Plan 032 (issue #162): the selected pair was produced by the audit
+    ); // Plan 032 (issue #162): the selected pair was produced by the audit
     // fallback gate, so its reports carry no model-written analysis. The
     // operator sees why the report has no themes instead of reading the
     // absence as a failure. Absent pair reads as false: no analysis exists
@@ -370,6 +449,13 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         : analysed
           ? 'analysed'
           : 'scanned';
+    // Plan 037 slice 5: prospecting provenance and current preview state,
+    // so the audit page knows which outreach actions exist without a
+    // second request. A non-candidate audit reads as null/false.
+    const outreachCandidateId = audit.outreach?.candidateId ?? null;
+    const hasLiveV2Preview =
+      outreachCandidateId !== null &&
+      (await findLatestLiveV2PreviewForCandidate(connection, outreachCandidateId)) !== null;
 
     sendJson(res, 200, {
       auditId: audit.auditId,
@@ -389,6 +475,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       analysisIsStaticFallback,
       approval: approved ? approval : null,
       manualFields: audit.manualFields,
+      outreach: { candidateId: outreachCandidateId, hasLiveV2Preview },
       // Issue #90: the failed job's own record, so the audit pages can show
       // the reason and its prescribed fix instead of a bare failed badge.
       ...(failureJob !== null
@@ -750,5 +837,127 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     res.statusCode = 200;
     res.setHeader('content-type', 'application/pdf');
     res.end(pdf);
+  });
+
+  // Plan 037 slice 5: the four outreach-preview actions of the audit page.
+  // Render and PDF share buildAuditOutreachPreviewHtml above; a refusal is
+  // an expected, correct outcome (200 with the typed refusal code, so the
+  // page can say why), while an unknown audit is 404 as everywhere else.
+  router.get('/api/audits/:auditId/outreach-preview', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const audit = await getAudit(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    const outcome = await buildAuditOutreachPreviewHtml(connection, audit);
+    if (outcome.state === 'refused') {
+      sendJson(res, 200, { rendered: false, refusal: outcome.refusal });
+      return;
+    }
+    sendJson(res, 200, { rendered: true, html: outcome.html });
+  });
+
+  router.get('/api/audits/:auditId/outreach-preview/pdf', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const audit = await getAudit(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    const outcome = await buildAuditOutreachPreviewHtml(connection, audit);
+    if (outcome.state === 'refused') {
+      sendJson(res, 200, { rendered: false, refusal: outcome.refusal });
+      return;
+    }
+    const pdf = await generateOutreachPreviewPdf(outcome.html);
+    res.statusCode = 200;
+    res.setHeader('content-type', 'application/pdf');
+    res.setHeader('content-disposition', `attachment; filename="apercu-${auditId}.pdf"`);
+    res.end(pdf);
+  });
+
+  // Publication stays candidate-linked only: the v2 preview is the
+  // scorecard of one candidate's resolved outreach audit, so an audit with
+  // no outreach provenance refuses instead of guessing a candidate.
+  router.post('/api/audits/:auditId/outreach-preview/publish', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const audit = await getAudit(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    const candidateId = audit.outreach?.candidateId;
+    if (candidateId === undefined) {
+      sendJson(res, 409, { published: false, refusal: 'not-an-outreach-audit' });
+      return;
+    }
+    let publisher;
+    try {
+      publisher = createConfiguredPreviewPublisher();
+    } catch {
+      sendError(res, 503, 'the preview bucket is not configured on this machine');
+      return;
+    }
+    const result = await publishPreviewV2({
+      store: createMongoOutreachPreviewStoreV2(connection, {
+        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+      }),
+      publisher,
+      publicBaseUrl: getPreviewPublicBaseUrl(),
+      candidateId,
+      language: 'fr',
+      dryRun: false,
+    });
+    if (result.published) {
+      // The url carries the raw one-time token: never cached anywhere.
+      res.setHeader('cache-control', 'no-store');
+      sendJson(res, 200, {
+        published: true,
+        previewId: result.previewId,
+        url: result.url,
+        publicExpiresAt: result.publicExpiresAt,
+      });
+      return;
+    }
+    sendJson(res, 200, { published: false, refusal: result.refusal });
+  });
+
+  // Withdrawal goes through the same domain-wide revoke as the CLI and the
+  // prospect page (v1 store adapter on purpose: it lists and revokes across
+  // v1 and v2 rows), so a published link can never outlive this action.
+  // The domain never comes from the client: the candidate's own registrable
+  // domain when the audit is candidate-linked, the audit host otherwise.
+  router.post('/api/audits/:auditId/outreach-preview/revoke', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const audit = await getAudit(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+    const candidateId = audit.outreach?.candidateId;
+    let domain = new URL(audit.siteUrl).hostname;
+    if (candidateId !== undefined) {
+      const candidate = await getHotelCandidate(connection, candidateId);
+      const ownDomain = candidate?.ownRegistrableDomain;
+      if (ownDomain !== undefined && ownDomain !== '') domain = ownDomain;
+    }
+    let publisher;
+    try {
+      publisher = createConfiguredPreviewPublisher();
+    } catch {
+      sendError(res, 503, 'the preview bucket is not configured on this machine');
+      return;
+    }
+    const result = await revokePreviewsForDomain({
+      store: createMongoOutreachPreviewStore(connection, {
+        prescanVersion: CURRENT_PRESCAN_VERSION,
+        qualificationVersion: CURRENT_QUALIFICATION_VERSION,
+      }),
+      publisher,
+      domain,
+      reason: 'operator-revoke',
+    });
+    sendJson(res, 200, { revoked: result.revoked, alreadyRevoked: result.alreadyRevoked });
   });
 }
