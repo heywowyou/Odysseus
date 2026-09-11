@@ -25,12 +25,9 @@ import type { CreateOutreachDraftResult } from './create-outreach-draft.js';
 import { createOutreachDraft } from './create-outreach-draft.js';
 import { createMongoFollowUpDraftStore } from './mongo-follow-up-draft-store.js';
 import { createMongoOutreachDraftStore } from './mongo-outreach-draft-store.js';
-import { createMongoOutreachPreviewStore } from './mongo-outreach-preview-store.js';
 import { resolvePublishedPreviewForDraft } from './publish-preview-v2.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
-import { createConfiguredPreviewPublisher } from './configured-preview-publisher.js';
-import { createInMemoryPreviewPublisher } from './in-memory-preview-publisher.js';
 import { findOutreachPreviewByTokenHash, resolveOutreachAuditForCandidate } from '@odysseus/store';
 import { getPreviewPublicBaseUrl, missingMailboxEnvVars } from '../config.js';
 import { CURRENT_CONTACT_VERSION } from '../prospecting/hotel-contacts/discover-contacts.js';
@@ -89,7 +86,10 @@ export async function createTouchOneDraft(
     }),
     mailbox,
     preview: {
-      async resolvePublished(id, token, language) {
+      // The language argument goes unused on purpose: a published preview is
+      // already rendered and its link is language-independent, so the v2
+      // resolution has nothing to choose.
+      async resolvePublished(id, token, _language) {
         if (token === '') return { refusal: 'preview-not-published' };
         return resolvePublishedPreviewForDraft({
           findByTokenHash: async (tokenHash) => {

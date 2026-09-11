@@ -1,31 +1,31 @@
 /**
  * Publishing and withdrawing outreach previews, milestone 9c plan 009.
  *
+ * Plan 037 retired publication: `publishPreview` refuses with 'v1-retired'
+ * and never assembles a new prescan-backed document. What remains live here
+ * is the read and teardown half of the contract: the stored row's render
+ * input (`buildPreviewInput`, for the legacy operator view), the domain
+ * revoke, and the small helpers the v2 port (`publish-preview-v2.ts`)
+ * reuses so both document kinds keep one definition of a link's shape.
+ *
  * The document itself is plan 008's work and is not re-decided here. This
  * module's whole job is the part that can go wrong: checking that this hotel
  * may still be contacted, assembling the preview input out of facts a prescan
  * already recorded, and keeping the object in the bucket and the record in
  * Mongo from disagreeing about whether a link is live.
  *
- * **Assembly is a mapping, never a re-derivation.** Summaries, images and their
- * alt text come from `HotelPrescanEvidence` exactly as plan 005 wrote them.
- * Nothing here decides what is worth showing a hotel; if it were, the preview
- * could say something the evidence contract had already rejected.
- *
- * **Order is chosen for the failure that matters.** Publishing writes the
+ * **Order is chosen for the failure that matters.** Publishing wrote the
  * object first and the record second, because an object with no record is a
  * file nobody can reach (its key is a hash of a token that was never handed
  * out), while a record with no object would be a link we told someone to open
  * that 404s. Revoking is the mirror image: the object goes first, because a
  * record marked revoked while the file is still served is exactly the outcome
- * revocation exists to prevent.
+ * revocation exists to prevent. The v2 port keeps exactly this ordering.
  */
 
 import path from 'node:path';
 import {
   HOTEL_EVIDENCE_MAX_SUMMARIES,
-  HOTEL_EVIDENCE_MIN_SUMMARIES,
-  HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
   buildOutreachFactsBlock,
   type HotelEvidenceCapturedAsset,
   type HotelPrescanEvidence,
@@ -33,10 +33,8 @@ import {
   type OutreachPreviewInput,
   type PublicFindingSummary,
 } from '@odysseus/core';
-import { embedOutreachEvidenceAsset, generateOutreachPreviewHtml } from '@odysseus/report';
+import { embedOutreachEvidenceAsset } from '@odysseus/report';
 import { effectifBandLabelFr } from '../prospecting/sirene-stock-index.js';
-import { logger } from '../logger.js';
-import { createPreviewToken, deriveObjectKey, hashPreviewToken } from './preview-token.js';
 import type { PreviewPublisher } from './preview-publisher.js';
 
 /** Bumped by hand when the assembled document's shape changes, so a stored
@@ -249,117 +247,14 @@ function refuse(refusal: PublishPreviewRefusal): PublishPreviewResult {
 }
 
 export async function publishPreview(
-  options: PublishPreviewOptions,
+  _options: PublishPreviewOptions,
 ): Promise<PublishPreviewResult> {
   // Plan 037: the prescan-backed preview is retired. No path may create a
   // new v1 preview, so this is a refusal before any gate, any build, and
   // any write - the function survives only because stored v1 rows keep
-  // their render and revocation paths until they expire.
+  // their render and revocation paths until they expire. The retired
+  // publication body itself lives in git history (the slice 6 commit).
   return refuse('v1-retired');
-}
-
-/** Kept as the documented shape of the retired v1 flow; unreachable as an
- *  implementation body since the v1-retired refusal above. */
-async function publishPreviewV1Unreachable(
-  options: PublishPreviewOptions,
-): Promise<PublishPreviewResult> {
-  const now = options.now ?? new Date();
-  const row = await options.store.findPublicationRow(options.candidateId);
-  if (row === null) return refuse('candidate-unknown');
-
-  // Suppression before anything else, and again in the CLI before a send. An
-  // objection has to stop the next thing we do, not the next batch.
-  if (await options.store.isSuppressed(row.domain)) return refuse('suppressed');
-
-  const evidence = row.evidence;
-  if (evidence === undefined || evidence.status !== 'complete')
-    return refuse('evidence-incomplete');
-  if (evidence.schemaVersion !== HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION) {
-    return refuse('evidence-schema-outdated');
-  }
-  if (evidence.summaries.length < HOTEL_EVIDENCE_MIN_SUMMARIES)
-    return refuse('evidence-incomplete');
-  // A prescan past its own retention describes a site as it was too long ago to
-  // show anybody, and its screenshots may already have been swept.
-  if (row.prescanExpiresAt.getTime() <= now.getTime()) return refuse('prescan-expired');
-
-  if (options.dryRun) {
-    return {
-      published: false,
-      plan: {
-        wouldPublish: true,
-        domain: row.domain,
-        language: options.language,
-        summaries: evidence.summaries.length,
-        images: capturedAssets(evidence).length,
-      },
-    };
-  }
-
-  const input = await buildPreviewInput({
-    row,
-    evidence,
-    language: options.language,
-    publicBaseUrl: options.publicBaseUrl,
-  });
-  // Validates and lints, and throws on either. Nothing is published if it does.
-  const html = generateOutreachPreviewHtml(input);
-
-  const token = createPreviewToken();
-  const tokenHash = hashPreviewToken(token);
-  const objectKey = deriveObjectKey(tokenHash);
-  const publishedAt = now;
-  const publicExpiresAt = new Date(publishedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-  await options.publisher.put({ objectKey, html, publicExpiresAt });
-
-  let recorded: { recorded: true; previewId: string; publicExpiresAt: Date } | { recorded: false };
-  try {
-    recorded = await options.store.recordPreview({
-      tokenHash,
-      objectKey,
-      candidateId: row.candidateId,
-      prescanId: row.prescanId,
-      domain: row.domain,
-      language: options.language,
-      prescanVersion: row.prescanVersion,
-      evidenceVersion: String(evidence.schemaVersion),
-      previewContentVersion: CURRENT_PREVIEW_CONTENT_VERSION,
-      publishedAt,
-    });
-  } catch (error) {
-    try {
-      await options.publisher.delete(objectKey);
-    } catch {
-      // Both halves failed. The object is unreachable anyway - its key is the
-      // hash of a token that was never returned - but it is real and it counts
-      // against retention, so it is named here loudly enough to be swept by
-      // hand. The key, never the token and never the document.
-      logger.error({ objectKey, candidateId: row.candidateId }, 'orphaned preview object');
-    }
-    throw error;
-  }
-
-  if (!recorded.recorded) {
-    // An objection landed between the suppression gate and this write. The
-    // store refused and revoked the row it had inserted, so the object it
-    // would have served must not outlive that row. If the delete fails the
-    // key is named loudly enough to be swept by hand, exactly as the orphan
-    // path above: the key, never the token and never the document.
-    try {
-      await options.publisher.delete(objectKey);
-    } catch {
-      logger.error({ objectKey, candidateId: row.candidateId }, 'orphaned preview object');
-    }
-    return refuse('suppressed');
-  }
-
-  return {
-    published: true,
-    previewId: recorded.previewId,
-    url: previewUrl(options.publicBaseUrl, token),
-    publicExpiresAt: recorded.publicExpiresAt,
-  };
 }
 
 export interface RevokePreviewsResult {
