@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { FINDINGS_SCHEMA_VERSION, type AuditManifest, type Finding } from '@odysseus/core';
+import { getAudit } from './audits.js';
 import { persistAudit } from './persist-audit.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
@@ -226,6 +227,82 @@ describe.skipIf(!mongoAvailable)('persistAudit', () => {
     expect(stored?.pages[0]?.analysisCoverage).toEqual(manifest.pages[0]?.analysisCoverage);
     expect(stored?.pages[1]?.analysisCoverage?.passes.lighthouse.outcome).toBe('not-planned');
     expect(stored?.continuationGuardSummary).toEqual(manifest.continuationGuardSummary);
+  });
+
+  // Issue #173: these four fields were absent from audit.schema.ts, so
+  // Mongoose strict mode stripped them from persistAudit's $set upsert and
+  // the operator never saw them back through getAudit.
+  it('round-trips site signals, CrUX field data, translation clusters, and the benchmark percentile', async () => {
+    const manifest = buildManifest({
+      auditId: 'persist-manifest-extras',
+      siteSignals: {
+        hasTransactionalFlow: true,
+        transactionalFlowEvidence: [
+          {
+            kind: 'booking-engine-domain-reference',
+            selector: 'script#booking-config',
+            pageUrl: 'https://example.com/',
+            detail: 'Inline booking config references the delegated engine domain.',
+            providerUrl: 'https://booking.example-engine.com/',
+          },
+        ],
+        transactionalFlowRedirectChecks: [
+          {
+            pageUrl: 'https://example.com/',
+            linkUrl: 'https://booking.example-engine.com/property',
+            destinationUrl: 'https://booking.example-engine.com/property?id=1',
+            resolution: 'single-property',
+            detail: 'Redirect followed to a single-property booking engine.',
+          },
+        ],
+        transactionalFlowAmbiguities: [
+          {
+            selector: 'a.item__booking-link',
+            pageUrl: 'https://example.com/chambres',
+            href: 'javascript:void(0)',
+            matchedVia: ['text', 'class'],
+            detail: 'Booking-intent anchor whose destination could not be established.',
+          },
+        ],
+        siren: '552100554',
+        mentionsLegalesPageUrl: 'https://example.com/mentions-legales',
+        siteName: 'Example',
+      },
+      cruxFieldData: {
+        available: true,
+        lcp: { p75: 2340.5 },
+        cls: { p75: 0.08 },
+        inp: { p75: 180 },
+      },
+      translationClusters: [
+        {
+          canonicalPageUrl: 'https://example.com/',
+          members: [
+            { pageUrl: 'https://example.com/', lang: 'fr' },
+            { pageUrl: 'https://example.com/en', lang: 'en' },
+            { pageUrl: 'https://example.com/pt-pt' },
+          ],
+        },
+      ],
+      benchmarkPercentile: {
+        kind: 'scored',
+        siteId: 'example.com',
+        score: 12,
+        percentile: 40,
+        cohortSize: 20,
+        scanDateRange: { earliest: '2026-08-01', latest: '2026-08-31' },
+      },
+    });
+
+    await persistAudit(connection!, manifest, []);
+
+    const stored = await getAudit(connection!, manifest.auditId);
+    expect(stored).not.toBeNull();
+    expect(stored?.siteSignals).toEqual(manifest.siteSignals);
+    expect(stored?.siteSignals?.hasTransactionalFlow).toBe(true);
+    expect(stored?.cruxFieldData).toEqual(manifest.cruxFieldData);
+    expect(stored?.translationClusters).toEqual(manifest.translationClusters);
+    expect(stored?.benchmarkPercentile).toEqual(manifest.benchmarkPercentile);
   });
 
   it('removes findings that are absent when the same audit is persisted again', async () => {

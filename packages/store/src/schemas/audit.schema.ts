@@ -276,6 +276,136 @@ const privacySecurityCoverageSchema = new Schema(
   { _id: false },
 );
 
+// Issue #173: the four manifest fields below (siteSignals, cruxFieldData,
+// translationClusters, benchmarkPercentile) were mirrored only in the
+// docblock, so Mongoose v9 strict mode silently stripped them from
+// persist-audit.ts's findOneAndUpdate $set and they never reached the
+// audits collection. Each sub-schema mirrors its core type, the same way
+// plan 037 declared outreach.
+
+const transactionalFlowEvidenceSchema = new Schema(
+  {
+    kind: {
+      type: String,
+      required: true,
+      enum: [
+        'booking-engine-script',
+        'checkout-form',
+        'payment-embed',
+        'delegated-booking-redirect',
+        'booking-engine-domain-reference',
+        'booking-iframe',
+      ],
+    },
+    selector: { type: String, required: true },
+    pageUrl: { type: String, required: true },
+    detail: { type: String, required: true },
+    providerUrl: { type: String },
+  },
+  { _id: false },
+);
+
+const transactionalFlowRedirectCheckSchema = new Schema(
+  {
+    pageUrl: { type: String, required: true },
+    linkUrl: { type: String, required: true },
+    destinationUrl: { type: String },
+    resolution: {
+      type: String,
+      required: true,
+      enum: ['single-property', 'marketplace', 'undetermined'],
+    },
+    detail: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+const transactionalFlowAmbiguitySchema = new Schema(
+  {
+    selector: { type: String, required: true },
+    pageUrl: { type: String, required: true },
+    href: { type: String },
+    matchedVia: { type: [String], required: true },
+    detail: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+const siteSignalsSchema = new Schema(
+  {
+    hasTransactionalFlow: { type: Boolean, required: true },
+    transactionalFlowEvidence: { type: [transactionalFlowEvidenceSchema], required: true },
+    transactionalFlowRedirectChecks: {
+      type: [transactionalFlowRedirectCheckSchema],
+      default: undefined,
+    },
+    transactionalFlowAmbiguities: { type: [transactionalFlowAmbiguitySchema], default: undefined },
+    siren: { type: String },
+    mentionsLegalesPageUrl: { type: String },
+    siteName: { type: String },
+  },
+  { _id: false },
+);
+
+const cruxMetricResultSchema = new Schema(
+  {
+    p75: { type: Number, required: true },
+  },
+  { _id: false },
+);
+
+const cruxFieldDataSchema = new Schema(
+  {
+    available: { type: Boolean, required: true },
+    lcp: { type: cruxMetricResultSchema },
+    cls: { type: cruxMetricResultSchema },
+    inp: { type: cruxMetricResultSchema },
+    fetchError: { type: String },
+  },
+  { _id: false },
+);
+
+const translationClusterMemberSchema = new Schema(
+  {
+    pageUrl: { type: String, required: true },
+    lang: { type: String },
+  },
+  { _id: false },
+);
+
+const translationClusterSchema = new Schema(
+  {
+    canonicalPageUrl: { type: String, required: true },
+    members: { type: [translationClusterMemberSchema], required: true },
+  },
+  { _id: false },
+);
+
+const benchmarkScanDateRangeSchema = new Schema(
+  {
+    earliest: { type: String, required: true },
+    latest: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+// SiteBenchmarkPercentile is a discriminated union in core (kind 'scored'
+// carries the site's standing against the cohort, kind 'too-small' the
+// cohort floor). Mongoose stores the union's fields flatly with only the
+// ones the kind requires, the same way writingCandidateStateSchema does.
+const benchmarkPercentileSchema = new Schema(
+  {
+    kind: { type: String, required: true, enum: ['scored', 'too-small'] },
+    siteId: { type: String },
+    score: { type: Number },
+    percentile: { type: Number },
+    cohortSize: { type: Number, required: true },
+    scanDateRange: { type: benchmarkScanDateRangeSchema },
+    minimumCohortSize: { type: Number },
+  },
+  { _id: false },
+);
+
 // Report preparation (plan 019). The enum validators mirror core's closed
 // vocabularies the same way analysis.schema.ts mirrors Theme['category'].
 const localizedOptionalTextSchema = new Schema(
@@ -435,7 +565,9 @@ const reportPreparationSchema = new Schema(
   { _id: false },
 );
 
-const auditSchema = new Schema<AuditDocument>(
+// Exported for schemas/audit.schema.test.ts's AuditManifest-vs-paths diff
+// guard; the rest of the package keeps going through createAuditModel.
+export const auditSchema = new Schema<AuditDocument>(
   {
     auditId: { type: String, required: true, unique: true },
     kind: { type: String, required: true, enum: ['audit', 'render-diff'] },
@@ -451,6 +583,10 @@ const auditSchema = new Schema<AuditDocument>(
     crawl: { type: crawlStatsSchema, required: true },
     pages: { type: [manifestPageEntrySchema], default: [] },
     continuationGuardSummary: { type: continuationGuardSummarySchema },
+    siteSignals: { type: siteSignalsSchema },
+    cruxFieldData: { type: cruxFieldDataSchema },
+    translationClusters: { type: [translationClusterSchema], default: undefined },
+    benchmarkPercentile: { type: benchmarkPercentileSchema },
     manualFields: { type: manualFieldsSchema },
     reportPreparation: { type: reportPreparationSchema },
   },
