@@ -23,7 +23,7 @@ import type { FindingCandidate } from './candidate.js';
 import { severityFromCustom } from './severity.js';
 
 export const HREFLANG_NO_RETURN_LINK_RULE_ID = 'hreflang-no-return-link';
-export const HREFLANG_MISSING_RULE_ID = 'hreflang-missing';
+const HREFLANG_MISSING_RULE_ID = 'hreflang-missing';
 
 /** A first path segment that is a language code, optionally with a region
  *  suffix ("/fr/...", "/pt-pt/..."). Mirrors scanner's

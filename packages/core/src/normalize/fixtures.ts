@@ -7,7 +7,6 @@
 import type { AxeNodeInput, AxeResultsInput, AxeViolationInput } from './normalize-axe.js';
 import type {
   LighthouseAuditInput,
-  LighthouseAuditRefInput,
   LighthouseCategoryInput,
   LighthouseResultInput,
 } from './normalize-lighthouse.js';
@@ -58,7 +57,7 @@ export function buildLighthouseAudit(
   };
 }
 
-export function buildLighthouseCategory(
+function buildLighthouseCategory(
   overrides: Partial<LighthouseCategoryInput> = {},
 ): LighthouseCategoryInput {
   return {
@@ -90,12 +89,6 @@ export function buildLighthouseResultInput(
       'largest-contentful-paint': buildLighthouseAudit(),
     },
   };
-}
-
-export function buildLighthouseAuditRef(
-  overrides: Partial<LighthouseAuditRefInput> = {},
-): LighthouseAuditRefInput {
-  return { id: 'largest-contentful-paint', weight: 25, ...overrides };
 }
 
 export function buildRenderDiffResult(overrides: Partial<RenderDiffResult> = {}): RenderDiffResult {
