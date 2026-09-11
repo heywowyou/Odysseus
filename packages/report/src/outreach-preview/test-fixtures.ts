@@ -15,7 +15,7 @@ import {
 
 /** A one-pixel PNG. The renderer only ever base64s and embeds it, so a real
  *  screenshot would make the fixtures large without testing anything more. */
-export const PREVIEW_TEST_PNG_BASE64 =
+const PREVIEW_TEST_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
 const PNG_BYTES = Buffer.from(PREVIEW_TEST_PNG_BASE64, 'base64').byteLength;

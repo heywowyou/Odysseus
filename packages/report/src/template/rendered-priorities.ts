@@ -125,10 +125,7 @@ function selectThemes(
   return selected.sort((a, b) => a.priorityRank - b.priorityRank);
 }
 
-export function classifyPriorityOwnership(
-  finding: Finding,
-  manifest: AuditManifest,
-): PriorityOwnership {
+function classifyPriorityOwnership(finding: Finding, manifest: AuditManifest): PriorityOwnership {
   const diversion = classifyDiversion(finding, buildMissingPercentIndex(manifest));
   if (diversion === 'legal' || diversion === 'regime-dependent') return 'verify-intent';
   if (diversion === 'wrapper' || isThirdPartyFinding(finding)) return 'third-party-escalation';

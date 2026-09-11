@@ -299,7 +299,7 @@ export function sheet(innerHtml: string, extraClass = '', id?: string): string {
  *  10 is deliberate and unchanged from checklist.ts's original value: the
  *  ids exist so the reader has something to look up in the annex, not so
  *  the card enumerates every one. The annex is already the complete list. */
-export const FINDING_ID_LIST_CAP = 10;
+const FINDING_ID_LIST_CAP = 10;
 
 function capFindingIds(findingIds: readonly string[]): { shown: string[]; remaining: number } {
   const sorted = [...findingIds].sort();

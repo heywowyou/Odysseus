@@ -547,9 +547,7 @@ export interface AppendixHeadingPlacement {
  *  pre-pagination HTML source and re-laid-out from scratch (see
  *  forceBreakBeforeAppendixRuleGroups), never by patching the DOM Paged.js
  *  already fragmented. */
-export async function detectStrandedAppendixRuleHeadings(
-  page: Page,
-): Promise<AppendixHeadingPlacement[]> {
+async function detectStrandedAppendixRuleHeadings(page: Page): Promise<AppendixHeadingPlacement[]> {
   return page.evaluate(() => {
     return Array.from(document.querySelectorAll('.appendix-rule-head[data-appendix-rule-id]')).map(
       (heading) => {

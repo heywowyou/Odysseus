@@ -54,7 +54,7 @@ export interface OutreachPreviewStringsV2 {
   optOutLink: string;
 }
 
-export const OUTREACH_PREVIEW_STRINGS_V2_FR: OutreachPreviewStringsV2 = {
+const OUTREACH_PREVIEW_STRINGS_V2_FR: OutreachPreviewStringsV2 = {
   documentTitle: 'Aperçu de votre site',
   heroLabel: 'Aperçu gratuit',
   lede:
@@ -136,7 +136,7 @@ export const OUTREACH_PREVIEW_STRINGS_V2_FR: OutreachPreviewStringsV2 = {
   optOutLink: 'Ne plus être contacté',
 };
 
-export const OUTREACH_PREVIEW_STRINGS_V2_EN: OutreachPreviewStringsV2 = {
+const OUTREACH_PREVIEW_STRINGS_V2_EN: OutreachPreviewStringsV2 = {
   documentTitle: 'Preview of your website',
   heroLabel: 'Free preview',
   lede:

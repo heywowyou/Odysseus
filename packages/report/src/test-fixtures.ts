@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEST_AUDITS_ROOT = path.resolve(__dirname, '../../../fixtures/test-audits');
 const COMMITTED_TEST_AUDITS = ['small-site', 'multi-page', 'large-rule-families'] as const;
 
-export const SMALL_SITE_AUDIT_DIR = path.resolve(TEST_AUDITS_ROOT, 'small-site');
+const SMALL_SITE_AUDIT_DIR = path.resolve(TEST_AUDITS_ROOT, 'small-site');
 
 /** The fixture follows the artifacts layout, `<timestamp>-<language>.json`,
  *  because report-env-loading.e2e.test.ts copies it and runs the real CLI

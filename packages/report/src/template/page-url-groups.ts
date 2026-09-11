@@ -20,7 +20,7 @@
  * reporting a defect that was not found there.
  */
 
-import type { AuditManifest, Finding, TranslationCluster } from '@odysseus/core';
+import type { AuditManifest, TranslationCluster } from '@odysseus/core';
 
 export interface PageUrlDisplayGroup {
   /** The URL printed for this group. */
@@ -109,8 +109,4 @@ export function groupPageUrlsByTranslation(
  *  are grouped: one per translation group, plus every ungrouped page. */
 export function countDistinctPlaces(pageUrls: readonly string[], lookup: ClusterLookup): number {
   return groupPageUrlsByTranslation(pageUrls, lookup).length;
-}
-
-export function findingPageUrls(finding: Finding): readonly string[] {
-  return finding.pageUrls;
 }
