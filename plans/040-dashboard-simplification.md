@@ -23,6 +23,12 @@
 - **Category**: dashboard, information architecture, design
 - **Planned at**: commit `1017199`, 2026-09-11
 - **Issue**: none; operator-requested brainstorm 2026-09-11
+- **Slice 1 landed 2026-09-12**: `docs/product/dashboard-ia.md` is written and
+  operator-approved, so the binding-decision-1 gate is cleared. That document
+  now governs slices 2 through 7, including the operator's decisions to delete
+  `/vendors`, to keep sector-neutral naming and the `/prospects` URLs, to keep
+  the preview status page until slice 4 absorbs it, and to leave every label
+  fix to slice 7.
 
 ## Why this matters
 

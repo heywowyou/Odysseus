@@ -64,6 +64,7 @@ canonical document says was superseded.
 | `docs/rules/offer-positioning.md` | Current pricing, scope, sales claims, and offer framing |
 | `docs/report/report-design-system.md` and `docs/report/report-design-tokens.md` | Report visual language and implementation tokens; readable canonical design sources are under `docs/report/design/` |
 | `docs/rules/manual-accessibility-checklist.md` | Known limits of automated accessibility detection |
+| `docs/product/dashboard-ia.md` | Operator dashboard navigation map, page destinies, and operator vocabulary (plan 040) |
 | `docs/adr/` and package ADR directories | Accepted architectural decisions at their documented scope |
 | `docs/agents/coding-conventions.md` | Shared source formatting, lint, naming, testing, commenting, and product-writing conventions |
 
