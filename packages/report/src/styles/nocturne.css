@@ -1,67 +1,83 @@
-/* Odysseus report design system - "Nocturne"
+/* Odysseus report design system - plan 039 baseline (2026-09-11)
    Token source of truth. Revise only per
-   docs/report/report-design-system.md's plan 023 baseline (2026-09-02,
-   direction "Refine Nocturne"); templates reference tokens, never
-   literal hex values. Inter is self-hosted in packages/report/src/fonts.
-   No CDN. */
+   docs/report/report-design-system.md's plan 039 direction (the public
+   site's design language: dark near-navy ground, sky accent, Avenir
+   Next, dossier motif on finding cards); templates reference tokens,
+   never literal hex values. Avenir Next is self-hosted in
+   packages/report/src/fonts (operator-licensed; never imported from
+   packages/site). No CDN. */
 
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Avenir Next';
   font-style: normal;
   font-weight: 400;
   font-display: block;
-  src: url('../fonts/Inter-Regular.woff2') format('woff2');
+  src: url('../fonts/AvenirNextCyr-Regular.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Avenir Next';
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+  src: url('../fonts/AvenirNextCyr-Italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Avenir Next';
   font-style: normal;
   font-weight: 500;
   font-display: block;
-  src: url('../fonts/Inter-Medium.woff2') format('woff2');
+  src: url('../fonts/AvenirNextCyr-Medium.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Avenir Next';
   font-style: normal;
   font-weight: 600;
   font-display: block;
-  src: url('../fonts/Inter-SemiBold.woff2') format('woff2');
+  src: url('../fonts/AvenirNextCyr-Demi.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Inter';
+  font-family: 'Avenir Next';
   font-style: normal;
   font-weight: 700;
   font-display: block;
-  src: url('../fonts/Inter-Bold.woff2') format('woff2');
+  src: url('../fonts/AvenirNextCyr-Bold.woff2') format('woff2');
 }
 
 :root {
-  --color-bg: #161826;
-  --color-surface: #232532;
-  --color-text: #e9e9ed;
-  --color-accent: #9184d9;
-  --color-accent-2: #a7a1db; /* the machine-derived stand-in follows: same
-     hue, same L 0.734, chroma at the same 2:3 proportion it held */
-  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
+  /* plan 039: the ground, ink ladder, accent, hairline and card values
+     are transcribed by hand from packages/site/app/globals.css's dark
+     scheme and the DESIGN.md "Site" sections; document structure stays
+     with the original Nocturne mockup. The violet Nocturne palette is
+     retired. */
+  --color-bg: #0e141c; /* site --paper (dark) */
+  --color-surface: #16202c; /* site --paper-raised (dark) */
+  --color-text: #e9eef5; /* site --ink (dark) */
+  --color-accent: #38bdf8; /* site --accent (dark; Tailwind sky-400) */
+  --color-accent-2: #a7a1db; /* retired with the violet accent; kept only
+     as the geo category's hue family (the --color-accent-2-* ramp) */
+  --color-divider: color-mix(in srgb, #e9eef5 13%, transparent); /* site --line (dark) */
 
-  --color-neutral-100: #f3f5fe;
-  --color-neutral-200: #e4e7f5;
-  --color-neutral-300: #cfd3e5;
-  --color-neutral-400: #b2b6ca;
-  --color-neutral-500: #9397ab;
-  --color-neutral-600: #75798c;
-  --color-neutral-700: #595d6c;
-  --color-neutral-800: #3f424d;
-  --color-neutral-900: #292b31;
+  /* Tonal ramps: the neutrals re-derived on the site ink's cool blue-grey
+     hue; the accent ramp is the accent's own Tailwind sky family. */
+  --color-neutral-100: #f0f4f9;
+  --color-neutral-200: #dbe3ec;
+  --color-neutral-300: #b6c1ce; /* site --ink-soft (dark) */
+  --color-neutral-400: #909cab; /* site --ink-muted (dark) */
+  --color-neutral-500: #76828f;
+  --color-neutral-600: #5c6875;
+  --color-neutral-700: #434e5a;
+  --color-neutral-800: #2b3642;
+  --color-neutral-900: #1a2530;
 
-  --color-accent-100: #f5f4ff;
-  --color-accent-200: #e7e5fe;
-  --color-accent-300: #d2cefd;
-  --color-accent-400: #b5abfc;
-  --color-accent-500: #968ae0;
-  --color-accent-600: #796cbf;
-  --color-accent-700: #5d5294;
-  --color-accent-800: #423a6a;
-  --color-accent-900: #2b2741;
+  --color-accent-100: #eaf6fe;
+  --color-accent-200: #cdeafd;
+  --color-accent-300: #7dd3fc; /* site --accent-strong (dark; sky-300) */
+  --color-accent-400: #38bdf8;
+  --color-accent-500: #0ea5e9;
+  --color-accent-600: #0284c7;
+  --color-accent-700: #0369a1; /* site --accent (light mode value) */
+  --color-accent-800: #075985; /* site --accent-strong (light mode value) */
+  --color-accent-900: #0c4a6e;
 
   --color-accent-2-100: #f5f4ff;
   --color-accent-2-200: #e7e5fe;
@@ -73,13 +89,22 @@
   --color-accent-2-800: #423e5d;
   --color-accent-2-900: #2b293a;
 
-  --color-section: #262a60;
-  --color-section-glow: #353b80;
-  --color-section-ghost: #4c5397;
+  /* Cover gradient: the violet-indigo glow recomposed in the accent's own
+     sky family at cover depth, on the site's near-navy ground. */
+  --color-section: #0d1926;
+  --color-section-glow: #14293e;
+  --color-section-ghost: #2a4666;
 
-  --font-heading: 'Inter', system-ui, sans-serif;
-  --font-heading-weight: 500;
-  --font-body: 'Inter', system-ui, sans-serif;
+  /* Dossier marks (site tokens, plan 039): the finding cards' row dashes.
+     Decoration only, never text, never a severity; the row label carries
+     the meaning (DESIGN.md, "The Dossier Rule Set"). */
+  --color-mark-finding: #dc2626; /* site --mark-finding */
+  --color-mark-evidence: var(--color-accent); /* site --mark-evidence */
+  --color-signal: #43aa8b; /* site --signal */
+
+  --font-heading: 'Avenir Next', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-heading-weight: 600; /* the site's heading weight */
+  --font-body: 'Avenir Next', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
 
   --space-1: 2.8px;
   --space-2: 5.6px;
@@ -94,11 +119,11 @@
 
   --radius-sm: 4px;
   --radius-md: 8px;
-  --radius-lg: 14px;
+  --radius-lg: 12px; /* site raised-card corner (site-card-lg); was 14px */
 
-  --shadow-sm: 0 0 0 1px #3f424d;
-  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0, 0, 0, 0.65);
+  --shadow-sm: 0 0 0 1px #2b3642;
+  --shadow-md: 0 0 0 1px #434e5a, 0 6px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 0 0 1px #76828f, 0 16px 40px rgba(0, 0, 0, 0.65);
 }
 
 body {
@@ -453,6 +478,39 @@ textarea.input {
 .tag-outline {
   border: 1px solid var(--color-accent);
   color: var(--color-accent);
+}
+
+/* Quick win (plan 039): positive badge; fill is the 0.12 tint of the green
+   over the ground, text verified 7.9:1 on it. The value moved here from
+   the theme template's inline styles so every colour lives with the
+   tokens. */
+.tag.qw {
+  background: #1b2c2c;
+  color: #7cd9a0;
+}
+
+/* Dossier motif rows (plan 039, operator pick): a finding card's evidence
+   rows carry the site dossier's mark dashes - problem red, evidence
+   accent, action signal. Decoration only: the row label carries the
+   meaning, the dash never encodes severity, and these three colours
+   appear nowhere else in the document. Print has no motion: the dashes
+   are designed from their finished frame. */
+.theme-row::before {
+  content: '';
+  display: block;
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  margin-bottom: 4px;
+}
+.theme-row-problem::before {
+  background: var(--color-mark-finding);
+}
+.theme-row-evidence::before {
+  background: var(--color-mark-evidence);
+}
+.theme-row-action::before {
+  background: var(--color-signal);
 }
 
 /* - navigation - */

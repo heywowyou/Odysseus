@@ -101,7 +101,7 @@ function renderObservationBox(
           page: evidence.representativePageUrl,
         })
       : fillTemplate(t.observationNoPageTemplate, sharedParams);
-  return `<div style="margin-top:4px">
+  return `<div class="theme-row theme-row-evidence" style="margin-top:4px">
           <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.observationLabel)}</div>
           <p style="font-size:12.5px;opacity:0.9;margin:0;overflow-wrap:anywhere;word-break:normal;hyphens:none">${escapeHtml(text)}</p>
         </div>`;
@@ -437,7 +437,7 @@ function renderTheme(
   const categoryTag = `<span class="tag" style="background:${category.bg};color:${category.color}">${escapeHtml(strings.findingsAppendix.categoryLabels[theme.category])}</span>`;
   const quickWinBadge =
     showQuickWinBadge && isQuickWinTheme(theme)
-      ? `<span class="tag qw" style="display:inline-flex;align-items:center;gap:4px;background:#1c3a2c;color:#7cd9a0">${QUICK_WIN_ICON}${escapeHtml(t.quickWinBadgeLabel)}</span>`
+      ? `<span class="tag qw" style="display:inline-flex;align-items:center;gap:4px">${QUICK_WIN_ICON}${escapeHtml(t.quickWinBadgeLabel)}</span>`
       : '';
 
   const isNonConformant = theme.legalRelevance !== undefined;
@@ -541,13 +541,13 @@ function renderTheme(
   // The stored technical title is kept as is in this plan; presentation
   // order is the only change.
   const whyItMattersBox = `
-        <div style="margin-top:4px">
+        <div class="theme-row theme-row-problem" style="margin-top:4px">
           <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.whyItMattersLabel)}</div>
           <p class="card-body" style="opacity:0.9">${escapeProse(theme.businessImpact)}</p>
         </div>`;
   const observationBox = priority ? renderObservationBox(strings, language, priority.evidence) : '';
   const whatYouCanDoBox = `
-        <div style="margin-top:4px">
+        <div class="theme-row theme-row-action" style="margin-top:4px">
           <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:0.02em;margin-bottom:4px">${escapeHtml(t.whatYouCanDoLabel)}</div>
           ${recommendedActionsBox}
           ${deterministicActionsBox}

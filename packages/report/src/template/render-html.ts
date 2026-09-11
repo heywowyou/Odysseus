@@ -4,7 +4,8 @@
  * tags rather than linked, because setContent() has no base URL to resolve
  * a relative stylesheet (or a relative @font-face url()) against - Paged.js's
  * own CSS parser throws on an unresolved relative url() with no base URL,
- * confirmed against a real render. The four Inter woff2 files are base64
+ * confirmed against a real render. The five Avenir Next woff2 files are
+ * base64
  * data-URI-embedded into the inlined CSS text for the same reason: the
  * whole document must be a zero-network render, since a missing font fetch
  * would fail silently (or, for Paged.js, not so silently) and produce an
@@ -62,10 +63,11 @@ import { buildRenderedPriorities } from './rendered-priorities.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const FONT_FILES = [
-  'Inter-Regular.woff2',
-  'Inter-Medium.woff2',
-  'Inter-SemiBold.woff2',
-  'Inter-Bold.woff2',
+  'AvenirNextCyr-Regular.woff2',
+  'AvenirNextCyr-Italic.woff2',
+  'AvenirNextCyr-Medium.woff2',
+  'AvenirNextCyr-Demi.woff2',
+  'AvenirNextCyr-Bold.woff2',
 ];
 
 /** Resolves from this file's own __dirname the same way readReportCss used

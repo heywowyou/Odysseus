@@ -12,54 +12,54 @@ import type { FindingCategory, Severity } from '@odysseus/core';
  * (never colour alone), which is what satisfies WCAG 1.4.1 here - no
  * separate glyph shape is needed on top of that, unlike the pre-redesign
  * severity-badge.ts.
+ *
+ * Plan 039 (2026-09-11): the ground moved from the retired Nocturne
+ * #161826 to the site's dark near-navy #0e141c, and every tile fill was
+ * re-derived as the documented 0.12-alpha tint of its text colour over
+ * that ground. The four severity text hexes are the plan 023 hues,
+ * re-verified on the new tints (worst pair: critical at 5.38:1); they
+ * deliberately do not match the dashboard's severity shades, and that
+ * divergence is recorded in trade-offs.md#81 rather than harmonized.
  */
 export const SEVERITY: Record<Severity, { color: string; bg: string }> = {
-  critical: { color: '#d97b82', bg: '#34232a' },
-  serious: { color: '#dba36c', bg: '#362a1c' },
-  moderate: { color: '#d6c96e', bg: '#35331c' },
-  minor: { color: '#b2b6ca', bg: '#292b31' },
+  critical: { color: '#d97b82', bg: '#262028' },
+  serious: { color: '#dba36c', bg: '#272526' },
+  moderate: { color: '#d6c96e', bg: '#262a26' },
+  minor: { color: '#b2b6ca', bg: '#222731' },
 };
 
-/** accessibility.color deviates from the doc's literal #9184d9: at the
- *  11px size these tags render at, #9184d9 on #2b2741 measures 4.42:1,
- *  just under WCAG 1.4.3's 4.5:1 minimum for small text (confirmed via
- *  axe-core against the real sas-fernande.fr report,
- *  render-html.axe.test.ts). Swapped for nocturne.css's own
- *  --color-accent-300 token (9.52:1 on the same background) rather than a
- *  new invented hex - same hue family, already a locked token, and this
- *  package's own product cannot ship a color pair its own audit would
- *  flag.
+/** accessibility.color stays var(--color-accent-300): under plan 039 that
+ *  token is sky-300 #7dd3fc, and on the re-derived 0.12 tint fill #1b2b37
+ *  it measures 8.70:1 - comfortably over 1.4.3's 4.5:1 at the 11px size
+ *  these tags render at (the original swap away from the literal accent
+ *  happened for the same reason; the gate is still
+ *  render-html.axe.test.ts against a real rendered report).
  *
  *  geo.color/geo.bg (added milestone 8.5c) has no mockup entry to
  *  re-derive from - geo postdates docs/report/report-design-system.md's
  *  canonical mockups entirely (trade-off 14 added the FindingCategory
- *  value the same day the mockups were finalized). Rather than invent a
- *  one-off hex, it reuses nocturne.css's second, otherwise-unused accent
- *  hue scale (--color-accent-2-300/-900), the same "reuse an existing
- *  token" reasoning as the accessibility swap above. Re-run
- *  render-html.axe.test.ts once a geo finding is in the fixture to
- *  confirm this pairing also clears 1.4.3 - not assumed just because the
- *  parallel scale mirrors the primary one.
+ *  value the same day the mockups were finalized). It reuses
+ *  nocturne.css's second accent hue scale (--color-accent-2-300/-900),
+ *  which plan 039 keeps unchanged as the geo category's own violet
+ *  family: #d2cefd on #2b293a measures 9.44:1 on the new ground.
  *
  *  privacy.color/privacy.bg (added 2026-08-24 with the FindingCategory
- *  value itself) is the first entry that could not reuse an existing
- *  token: both accent scales are already spoken for (accessibility,
- *  geo), and the three remaining hues are performance's blue, seo's teal
- *  and rendering's grey. A warm gold is the only clearly distinct hue
- *  left, and privacy postdates the canonical mockups by even further
- *  than geo does, so there is nothing to re-derive from. The pair was
- *  chosen by computing WCAG contrast rather than by eye: #e5c07b on
- *  #332a19 is 8.18:1, and 10.19:1 against the page background - both
- *  well clear of 1.4.3's 4.5:1. render-html.axe.test.ts confirms it
- *  against a real rendered report, the same way the accessibility swap
- *  was confirmed rather than assumed. */
+ *  value itself) could not reuse an existing token: both accent scales
+ *  are already spoken for (accessibility, geo), and the three remaining
+ *  hues are performance's blue, seo's teal and rendering's grey. A warm
+ *  gold is the only clearly distinct hue left. Plan 039 re-derives the
+ *  fill with the same 0.12-tint rule as every other pair (#e5c07b on
+ *  #282927 is 8.46:1; 10.71:1 against the page background) - both well
+ *  clear of 1.4.3's 4.5:1. render-html.axe.test.ts confirms it against
+ *  a real rendered report, the same way the accessibility swap was
+ *  confirmed rather than assumed. */
 export const CATEGORY: Record<FindingCategory, { color: string; bg: string }> = {
-  accessibility: { color: 'var(--color-accent-300)', bg: '#2b2741' },
-  performance: { color: '#7fa8d9', bg: '#1f2a38' },
-  seo: { color: '#6cbfae', bg: '#1c332e' },
-  rendering: { color: '#9397ab', bg: '#292b31' },
+  accessibility: { color: 'var(--color-accent-300)', bg: '#1b2b37' },
+  performance: { color: '#7fa8d9', bg: '#1c2633' },
+  seo: { color: '#6cbfae', bg: '#19292e' },
+  rendering: { color: 'var(--color-neutral-400)', bg: 'var(--color-neutral-900)' },
   geo: { color: 'var(--color-accent-2-300)', bg: 'var(--color-accent-2-900)' },
-  privacy: { color: '#e5c07b', bg: '#332a19' },
+  privacy: { color: '#e5c07b', bg: '#282927' },
 };
 
 export const CATEGORY_ORDER: readonly FindingCategory[] = [

@@ -95,7 +95,7 @@ describe('the rendered report HTML passes its own axe-core audit', () => {
       renderDiffEvidencePages,
     });
 
-    expect(html).toContain('style="background:#332a19;color:#e5c07b"');
+    expect(html).toContain('style="background:#282927;color:#e5c07b"');
 
     const context = await browser.newContext();
     try {
