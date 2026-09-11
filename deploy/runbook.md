@@ -561,7 +561,7 @@ const manifest = JSON.parse(readFileSync(dir + '/manifest.json', 'utf8'));
 const findings = JSON.parse(readFileSync(dir + '/findings.json', 'utf8'));
 const analysisFile = readdirSync(dir + '/analyses').filter((f) => f.endsWith('-fr.json')).sort().at(-1);
 const raw = JSON.parse(readFileSync(dir + '/analyses/' + analysisFile, 'utf8'));
-const pdf = await generateReportPdf({
+const { pdf, pageCount } = await generateReportPdf({
   auditDir: dir,
   manifest,
   findings,
@@ -569,7 +569,7 @@ const pdf = await generateReportPdf({
   analysis: { ...raw, generatedAt: new Date(raw.generatedAt) },
 });
 writeFileSync('/tmp/glyph-smoke.pdf', pdf);
-console.log('wrote /tmp/glyph-smoke.pdf,', pdf.length, 'bytes');
+console.log('wrote /tmp/glyph-smoke.pdf,', pdf.length, 'bytes,', pageCount, 'pages');
 "
 ```
 
