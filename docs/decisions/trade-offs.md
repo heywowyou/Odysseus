@@ -4286,3 +4286,18 @@ stylesheet is part of render identity: previously approved reports keep
 their stored digests, and any report rendered after this baseline needs a
 fresh approval round. Already-published outreach previews are stored byte
 for byte and are not republished; only new renders get the new look.
+
+**Amendment, 2026-09-11 (plan 037's workflow review, operator direction).**
+The v2 preview's operator PDF prints dark. The direction pick above made
+the preview fixed dark on screen while its print block inverted to a light
+ground; the operator, reviewing the real artifact end to end, overrode that
+for this artifact: the operator PDF wears the same dark tokens as the
+screen document, like every other report and PDF the product ships. The
+preview's `@media print` block now keeps only full-width layout, the A4
+cover page, zero body padding inside the `@page` margin, and the CTA's
+0.02em/no-uppercase Chromium text-run treatment. The severity tiles keep
+their screen pairs (4.5:1+ on their tints over the dark ground). The paid
+report's checklist print inversion is a separate page with its own recorded
+reason and is unchanged. The approval consequence above applies again:
+already-published previews are not republished; only PDFs generated after
+this amendment get the dark ground.
