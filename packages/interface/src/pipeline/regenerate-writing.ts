@@ -29,16 +29,9 @@ import {
 import { pauseBetweenLanguagePasses } from '@odysseus/llm';
 import { runAnalysisStage } from './analysis-stage.js';
 import { readAuditEvidence } from './audit-evidence.js';
+import { RegenerationConflictError } from './regeneration-conflict-error.js';
 
-/** Thrown when regeneration cannot start: the cost confirmation is
- *  missing, a run is already in flight, or the warning acknowledgement is
- *  missing or stale. Routes map these to 409. */
-export class RegenerationConflictError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'RegenerationConflictError';
-  }
-}
+export { RegenerationConflictError } from './regeneration-conflict-error.js';
 
 /** Thrown when the stored warning acknowledgement does not match the
  *  current inputs; carries the typed warnings the client must show before

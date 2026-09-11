@@ -10,7 +10,7 @@ import path from 'node:path';
 import type { AuditManifest, Finding } from '@odysseus/core';
 import type { AuditDocument } from '@odysseus/store';
 import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
-import { RegenerationConflictError } from './regenerate-writing.js';
+import { RegenerationConflictError } from './regeneration-conflict-error.js';
 
 export interface AuditEvidence {
   auditDir: string;
