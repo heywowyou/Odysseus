@@ -80,6 +80,13 @@ export default function OfferPage() {
           <p className="small muted mt-3">
             Tarif unique et publié, confirmé par écrit avant tout engagement.
           </p>
+          <p className="small muted mt-3">
+            Un message lu personnellement, jamais par un système automatisé&#160;:{' '}
+            <a className="evidence-link" href="mailto:contact@odysseusaudit.com">
+              contact@odysseusaudit.com
+            </a>
+            .
+          </p>
         </section>
 
         <div className="shell section-tight">
@@ -254,6 +261,38 @@ export default function OfferPage() {
               </p>
             </div>
           </section>
+
+          <section aria-labelledby="suite-offre" className="offer-section">
+            <div className="measure">
+              <p className="label">Après votre message</p>
+              <h2 id="suite-offre" className="heading mt-3">
+                Trois étapes avant l&apos;audit
+              </h2>
+            </div>
+
+            <ol className="process mt-9">
+              <li>
+                <p className="process-step">Réponse</p>
+                <p className="soft mt-2">
+                  Une personne lit votre message et vous répond, sans questionnaire automatisé.
+                </p>
+              </li>
+              <li>
+                <p className="process-step">Questionnaire</p>
+                <p className="soft mt-2">
+                  Un questionnaire écrit, huit à douze questions ciblées sur votre site et votre
+                  activité.
+                </p>
+              </li>
+              <li>
+                <p className="process-step">Proposition écrite</p>
+                <p className="soft mt-2">
+                  Une proposition écrite confirmant le tarif et le délai, à valider avant tout
+                  engagement.
+                </p>
+              </li>
+            </ol>
+          </section>
         </div>
       </LanguageSection>
 
@@ -281,6 +320,13 @@ export default function OfferPage() {
           </div>
           <p className="small muted mt-3">
             One published price, confirmed to you in writing before any commitment.
+          </p>
+          <p className="small muted mt-3">
+            Read personally, never by an automated system:{' '}
+            <a className="evidence-link" href="mailto:contact@odysseusaudit.com">
+              contact@odysseusaudit.com
+            </a>
+            .
           </p>
         </section>
 
@@ -448,6 +494,38 @@ export default function OfferPage() {
               </div>
               <p className="small muted mt-5">For any question: contact@odysseusaudit.com.</p>
             </div>
+          </section>
+
+          <section aria-labelledby="next-offre-en" className="offer-section">
+            <div className="measure">
+              <p className="label">After your message</p>
+              <h2 id="next-offre-en" className="heading mt-3">
+                Three steps before the audit
+              </h2>
+            </div>
+
+            <ol className="process mt-9">
+              <li>
+                <p className="process-step">Reply</p>
+                <p className="soft mt-2">
+                  A person reads your message and replies, with no automated questionnaire.
+                </p>
+              </li>
+              <li>
+                <p className="process-step">Questionnaire</p>
+                <p className="soft mt-2">
+                  A written questionnaire, eight to twelve targeted questions about your site and
+                  your business.
+                </p>
+              </li>
+              <li>
+                <p className="process-step">Written proposal</p>
+                <p className="soft mt-2">
+                  A written proposal confirming the price and the timeline, for you to approve
+                  before any commitment.
+                </p>
+              </li>
+            </ol>
           </section>
         </div>
       </LanguageSection>

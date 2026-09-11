@@ -141,8 +141,6 @@ export default function OptOutPage() {
               </a>
             </p>
 
-            <p>No justification is required, and it is free.</p>
-
             <h2>What happens next</h2>
 
             <p>

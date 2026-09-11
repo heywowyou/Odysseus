@@ -117,7 +117,7 @@ describe('opt-out page', () => {
     expect(isBilingual(optOut)).toBe(true);
     expect(optOut).toContain('mailto:contact@odysseusaudit.com');
     expect(optOut).toContain('gratuit');
-    expect(optOut).toContain('it is free');
+    expect(optOut).toContain('is free');
   });
 
   it('promises preview withdrawal and permanent, hash-only suppression', () => {

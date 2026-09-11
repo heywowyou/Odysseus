@@ -133,6 +133,13 @@ function HomeFr() {
                 Consulter l&apos;offre
               </a>
             </div>
+            <p className="small muted mt-3">
+              Un message lu personnellement, jamais par un système automatisé&#160;:{' '}
+              <a className="evidence-link" href="mailto:contact@odysseusaudit.com">
+                contact@odysseusaudit.com
+              </a>
+              .
+            </p>
           </div>
 
           {/* La fiche constat signature. Structure de livrable, jamais un
@@ -417,9 +424,16 @@ function HomeFr() {
               Écrire à Odysseus
             </a>
             <a className="btn btn-secondary" href="/offre">
-              Consulter le détail de l&apos;offre
+              Consulter l&apos;offre
             </a>
           </div>
+          <p className="small muted mt-3">
+            Un message lu personnellement, jamais par un système automatisé&#160;:{' '}
+            <a className="evidence-link" href="mailto:contact@odysseusaudit.com">
+              contact@odysseusaudit.com
+            </a>
+            .
+          </p>
           <p className="small muted mt-7">
             Le fonctionnement du robot qui réalise ces analyses, ainsi que la manière de lui
             interdire l&apos;accès à votre site, sont décrits sur la page{' '}
@@ -471,6 +485,13 @@ function HomeEn() {
                 See the offer
               </a>
             </div>
+            <p className="small muted mt-3">
+              Read personally, never by an automated system:{' '}
+              <a className="evidence-link" href="mailto:contact@odysseusaudit.com">
+                contact@odysseusaudit.com
+              </a>
+              .
+            </p>
           </div>
 
           <aside className="split-aside" aria-label="Shape of a finding">
@@ -736,9 +757,16 @@ function HomeEn() {
               Write to Odysseus
             </a>
             <a className="btn btn-secondary" href="/offre">
-              See the offer in detail
+              See the offer
             </a>
           </div>
+          <p className="small muted mt-3">
+            Read personally, never by an automated system:{' '}
+            <a className="evidence-link" href="mailto:contact@odysseusaudit.com">
+              contact@odysseusaudit.com
+            </a>
+            .
+          </p>
           <p className="small muted mt-7">
             How the bot that runs these analyses works, and how to block it from your site, are
             described on the{' '}
