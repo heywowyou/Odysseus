@@ -61,12 +61,12 @@ Carry-forward notes from the reconciliation:
 | D | Usable own-domain yield 8,000-15,000, or approved Overpass | PASS (waived) | Measured v2 yield is 5,995, below the 8,000 floor. Waived by the operator on 2026-09-08 with reference to the recorded 2026-08-27 Overpass deferral (`plans/README.md`, "Explicitly deferred"): the floor was set against a national-campaign target, and 5,995 supports the first-100 experiment many times over. |
 | E | `hotel-outreach-v2` score calibration approved and cohort selected | PASS | Plan 034 complete 2026-09-08: `hotel-outreach-v2` approved by the operator; scored one domain at a time for the 119 approved-and-scanned candidates (110 unapproved incident candidates excluded, verified unreachable by cohort selection); v1-to-v2 diff reviewed by the operator; `prospect score select` recorded cohort `3b5c6b0c-6d93-4c51-bdf8-3b78449d9baa`, 6 hotels. Full detail: `plans/archive/034-hotel-outreach-v2-booking-detection.md`. |
 | F | Preview 200/410/revoke/noindex/robots, privacy-safe logs | PASS | Suite covers publish, expiry, revoke, and log behavior. Live probe 2026-09-08 against `www.odysseusaudit.com`: robots.txt `Disallow: /apercu/`; unknown token returns 404 with `x-robots-tag: noindex, nofollow, noarchive`, `cache-control: private, no-store`, `referrer-policy: no-referrer`, CSP `default-src 'none'`. |
-| G | Privacy, opt-out, bot, identity, postal/SIRET, legitimate-interest review | OPEN | Pages are live (`confidentialite-prospection`, `desinscription`, `bot`, `offre`). Owner: the operator's recorded review pass; may be combined with gate L's reviewer. |
+| G | Privacy, opt-out, bot, identity, postal/SIRET, legitimate-interest review | PASS | Pages are live (`confidentialite-prospection`, `desinscription`, `bot`, `offre`). Review pass completed by the second reviewer, reported by the operator 2026-09-10. |
 | H | Role-address-only and permanent suppression tests | PASS | Suite green 2026-09-08: allowlist and MX tests for role addresses, suppression-gate tests on both draft paths. |
 | I | Sending domain separation, SPF/DKIM/DMARC, monitored replies, warmup complete | OPEN (warmup in progress) | Decision recorded 2026-09-08: provision `odysseusaudit.fr` now and size the first wave to warmup state, a reduced pilot at first, reaching the full 20 to 30 daily volume only after warmup completes. Operator reports warmup phase 1 under way: low daily volume to known mailboxes with limited back-and-forth exchanges, the standard warmup pattern. Interim sender `contact@odysseusaudit.com` remains a recorded knowing deviation (`outreach-rules.md` section 10) until the switch. Gate closes on evidence: SPF, DKIM and DMARC verified on `.fr`, warmup complete (not just begun), and `ODYSSEUS_MAILBOX_SENDER_ADDRESS` repointed before the first real send. Owner: operator provisioning; agent verifies and records. |
 | J | Gmail adapter static proof of no send capability | PASS | Frozen endpoint table and scope list re-read 2026-09-08; forbidden-capability assertion in `mailbox-draft-adapter.test.ts`. |
 | K | Date no earlier than 2026-09-15, no competing blackout | PASS | No send is possible before 2026-09-15 under any path. Operator confirmed 2026-09-08 no competing blackout is anticipated; reconfirm at actual scheduling if the date slips. |
-| L | Legal-copy gate: approved deterministic block, or argument-A-only, reconciled in canonical docs | OPEN (reviewer name pending) | Ruled 2026-09-08: `obligation-basis.md` governs; hotels at `secondary` status may receive the deterministic argument-B facts block from the first send, superseding the trade-offs 9c note's primary-status requirement; the stale e-commerce sentence in `obligation-basis.md` is amended accordingly. Still open before the first real send: name the second human reviewer and complete the disclosure review the plan's test section requires. |
+| L | Legal-copy gate: approved deterministic block, or argument-A-only, reconciled in canonical docs | PASS | Ruled 2026-09-08: `obligation-basis.md` governs; hotels at `secondary` status may receive the deterministic argument-B facts block from the first send, superseding the trade-offs 9c note's primary-status requirement; the stale e-commerce sentence in `obligation-basis.md` is amended accordingly. Second human reviewer named and disclosure/argument-B review completed, reported by the operator 2026-09-10. |
 
 Reconciliation rule: no gate is waived verbally. Each OPEN gate gets its
 ruling recorded in the decision log below before the pilot starts.
@@ -78,7 +78,7 @@ ruling recorded in the decision log below before the pilot starts.
    (gate I).
 2. Name the second human reviewer for disclosures and argument-B copy, and
    schedule the privacy and legitimate-interest review pass with them
-   (gates L and G).
+   (gates L and G): **done, reported by the operator 2026-09-10.**
 3. Confirm no competing blackout when the wave is scheduled (gate K).
 4. Scan permission for all 10 named pilot domains: **granted 2026-09-08.**
    The leftover plan 030 manual real-hotel dashboard pass is still due before
@@ -133,6 +133,7 @@ been scanned or contacted yet - the bounded prescan and manual review in plan
 | 2026-09-08 | Step 4 | Operator granted current scan permission for all 10 pilot domains. |
 | 2026-09-08 | I | Operator reports warmup phase 1 in progress on the new sending setup: low daily volume to known mailboxes, limited exchanges. Gate stays OPEN until SPF/DKIM/DMARC are verified and warmup is reported complete, not merely begun. |
 | 2026-09-08 | K | Operator confirmed no competing blackout is anticipated for the eventual wave date. |
+| 2026-09-10 | L, G | Second human reviewer named; disclosure/argument-B review and the privacy/legitimate-interest review pass both completed, reported by the operator. Gates L and G close. Remaining OPEN gate before pilot send: I (domain warmup, still early phase 1). |
 
 ## Standing operating rules (unchanged from the plan)
 
