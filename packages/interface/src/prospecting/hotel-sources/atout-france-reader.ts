@@ -34,11 +34,11 @@ import {
   type HotelSourceEmission,
 } from './hotel-catalogue-source.js';
 
-export const ATOUT_FRANCE_LICENCE = 'fr-lo';
+const ATOUT_FRANCE_LICENCE = 'fr-lo';
 /** The one typology this campaign ingests. The export also carries campings,
  *  tourist residences, holiday villages, residential leisure parks, and
  *  collective hostels, none of which are in scope. */
-export const ATOUT_FRANCE_HOTEL_TYPOLOGY = 'HÔTEL DE TOURISME';
+const ATOUT_FRANCE_HOTEL_TYPOLOGY = 'HÔTEL DE TOURISME';
 
 const COLUMN = {
   typology: 'TYPOLOGIE ÉTABLISSEMENT',
@@ -65,7 +65,7 @@ function deriveSourceId(record: Record<string, string>): string {
   return createHash('sha256').update(parts.join('|'), 'utf8').digest('hex').slice(0, 16);
 }
 
-export function fingerprintFile(filePath: string): string {
+function fingerprintFile(filePath: string): string {
   const stats = statSync(filePath);
   return `${stats.size}:${stats.mtimeMs}`;
 }

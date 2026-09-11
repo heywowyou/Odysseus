@@ -1,4 +1,5 @@
 import type { DashboardStrings } from '../i18n/types';
+import type { BadgeTone } from '../components/ui/badge';
 
 /**
  * Pure model for the prospect list and detail pages: everything the route
@@ -186,8 +187,6 @@ export function locationLabel(row: ProspectRow): string {
   }
   return row.commune ?? row.postcode ?? '';
 }
-
-export type BadgeTone = 'neutral' | 'accent' | 'critical' | 'serious' | 'moderate' | 'minor';
 
 /** Review state tone: a pending decision is the queue's work item, an
  *  accepted one its good end, a rejected one settled history. */

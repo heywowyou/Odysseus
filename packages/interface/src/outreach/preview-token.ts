@@ -19,7 +19,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 /** 32 bytes, which base64url encodes to 43 characters with no padding. */
-export const PREVIEW_TOKEN_BYTES = 32;
+const PREVIEW_TOKEN_BYTES = 32;
 
 /** Anchored, and length-exact: a token is validated before it is hashed, so a
  *  malformed path never reaches the bucket as a lookup. */

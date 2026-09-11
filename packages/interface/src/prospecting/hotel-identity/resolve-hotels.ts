@@ -60,7 +60,7 @@ export interface HotelCandidateStorePort {
   upsert(candidates: HotelCandidate[]): Promise<{ created: number; updated: number }>;
 }
 
-export const RESOLVE_BATCH_SIZE = 500;
+const RESOLVE_BATCH_SIZE = 500;
 
 /** Bumped by hand when a resolution rule changes, never edited in place. A new
  *  version re-resolves from the same source records into a parallel generation

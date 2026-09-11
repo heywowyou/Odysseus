@@ -11,8 +11,6 @@ import { en } from './en';
 import { fr } from './fr';
 import type { DashboardLanguage, DashboardStrings } from './types';
 
-export type { DashboardLanguage, DashboardStrings } from './types';
-
 const STORAGE_KEY = 'odysseus.dashboard.language';
 
 export const DEFAULT_DASHBOARD_LANGUAGE: DashboardLanguage = 'fr';

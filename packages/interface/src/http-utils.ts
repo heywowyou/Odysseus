@@ -5,7 +5,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
  *  sending data would grow memory without limit. */
 const MAX_JSON_BODY_BYTES = 1_000_000;
 
-export class PayloadTooLargeError extends Error {
+class PayloadTooLargeError extends Error {
   constructor() {
     super('request body exceeds the maximum allowed size');
     this.name = 'PayloadTooLargeError';

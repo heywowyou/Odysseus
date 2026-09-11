@@ -152,41 +152,6 @@ export interface PreviewResponse {
   sourceKind: 'prescan' | 'full-audit';
 }
 
-/** The current preview is rendered on demand from the prescan evidence, not
- *  retrieved from the published object. A refusal is an expected result of
- *  that evidence gate, while a rejected request remains an ApiError. */
-export type PreviewRenderResponse =
-  | { rendered: true; html: string }
-  | {
-      rendered: false;
-      refusal:
-        | 'candidate-unknown'
-        | 'no-prescan'
-        | 'evidence-incomplete'
-        | 'evidence-schema-outdated'
-        | 'prescan-expired';
-    };
-
-/** Issue #97: result of the publish action (first publish and re-issue
- *  alike). The url carries the raw bearer token and exists only in this one
- *  response, exactly as the CLI's one-time output does. */
-export type PreviewPublishResponse =
-  | {
-      published: true;
-      previewId: string;
-      url: string;
-      publicExpiresAt: string;
-    }
-  | {
-      published: false;
-      refusal:
-        | 'no-prescan'
-        | 'evidence-incomplete'
-        | 'evidence-schema-outdated'
-        | 'prescan-expired'
-        | 'suppressed';
-    };
-
 /** Issue #97: result of the revoke action over every live preview of the
  *  hotel's domain. */
 export interface PreviewRevokeResponse {

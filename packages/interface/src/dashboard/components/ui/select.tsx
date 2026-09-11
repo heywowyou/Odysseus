@@ -2,7 +2,7 @@ import type { JSX, SelectHTMLAttributes } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
-export const selectStyles: string = cn(
+const selectStyles: string = cn(
   'h-9 w-full appearance-none rounded-lg border border-line bg-raised pl-3 pr-9 text-sm text-ink',
   'placeholder:text-ink-muted outline-none transition-colors',
   'focus:border-accent/70 focus:ring-2 focus:ring-accent/25 disabled:opacity-50',

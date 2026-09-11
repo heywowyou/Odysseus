@@ -114,8 +114,6 @@ export const OUTCOME_VALUES = [
   'lost',
 ] as const;
 
-export type OutcomeValue = (typeof OUTCOME_VALUES)[number];
-
 export interface OutcomeCount {
   outcome: string;
   count: number;

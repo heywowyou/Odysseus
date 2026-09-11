@@ -180,7 +180,7 @@ export function findingDisplayTitle(
 /** Short French gloss under the rule, for the cryptic detector codes the
  *  report itself explains; English reports render none, again matching
  *  the PDF. */
-export function findingGloss(
+function findingGloss(
   finding: FindingResponse,
   ruleCopy: RuleCopyMap | undefined,
 ): string | undefined {
@@ -212,12 +212,12 @@ export function firstElementSelector(finding: FindingResponse): string | undefin
 /** How many affected pages the expansion lists before the "+ N autres"
  *  line; pageUrls is uncapped in storage, so the slice is what keeps a
  *  90-page finding from taking over the card. */
-export const FINDING_PAGE_PREVIEW_COUNT = 8;
+const FINDING_PAGE_PREVIEW_COUNT = 8;
 
 /** How many occurrences (selector, snippet, page) the expansion lists
  *  before the "+ N autres" line; elements are already a capped sample in
  *  storage, this only bounds the rendered height. */
-export const FINDING_ELEMENT_PREVIEW_COUNT = 5;
+const FINDING_ELEMENT_PREVIEW_COUNT = 5;
 
 export interface FindingExpansionView {
   remediation: string | undefined;

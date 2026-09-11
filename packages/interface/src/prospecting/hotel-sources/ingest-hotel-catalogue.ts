@@ -19,7 +19,7 @@ import { insertHotelSourceRecords, type NewHotelSourceRecordInput } from '@odyss
 import type { Connection } from 'mongoose';
 import type { HotelCatalogueSource } from './hotel-catalogue-source.js';
 
-export const HOTEL_INGEST_BATCH_SIZE = 500;
+const HOTEL_INGEST_BATCH_SIZE = 500;
 
 export interface HotelIngestReport {
   source: string;

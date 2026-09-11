@@ -29,7 +29,7 @@ import { resolvePublishedPreviewForDraft } from './publish-preview-v2.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
 import { findOutreachPreviewByTokenHash, resolveOutreachAuditForCandidate } from '@odysseus/store';
-import { getPreviewPublicBaseUrl, missingMailboxEnvVars } from '../config.js';
+import { getPreviewPublicBaseUrl } from '../config.js';
 import { CURRENT_CONTACT_VERSION } from '../prospecting/hotel-contacts/discover-contacts.js';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
 import { CURRENT_QUALIFICATION_VERSION } from '../prospecting/hotel-qualification/qualify-hotels.js';
@@ -158,5 +158,3 @@ export async function createFollowUpForCandidate(
   const result = await createFollowUpDraft({ store, mailbox, threadId, dryRun });
   return { configured: true, ...result };
 }
-
-export { missingMailboxEnvVars };

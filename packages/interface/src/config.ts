@@ -187,9 +187,9 @@ export function getProspectBatchSize(): number {
  *  it opens (`OutreachThreadSpacing`), never read live at due-date check time,
  *  so a later change to these defaults cannot retroactively redate a thread
  *  already in flight. */
-export const DEFAULT_OUTREACH_TOUCH2_AFTER_DAYS = 4;
-export const DEFAULT_OUTREACH_TOUCH3_AFTER_DAYS = 11;
-export const DEFAULT_OUTREACH_REPLY_WINDOW_DAYS = 14;
+const DEFAULT_OUTREACH_TOUCH2_AFTER_DAYS = 4;
+const DEFAULT_OUTREACH_TOUCH3_AFTER_DAYS = 11;
+const DEFAULT_OUTREACH_REPLY_WINDOW_DAYS = 14;
 
 function positiveIntEnv(name: string, fallback: number): number {
   ensureEnvLoaded();
@@ -225,11 +225,11 @@ export function getPublicDir(): string {
  *  named recipient on the prospecting privacy page and a French host in a
  *  French region is the shortest truthful sentence to write there; it is plain
  *  S3, so the choice is reversible in configuration alone. */
-export const DEFAULT_PREVIEW_BUCKET_ENDPOINT = 'https://s3.fr-par.scw.cloud';
-export const DEFAULT_PREVIEW_BUCKET_REGION = 'fr-par';
+const DEFAULT_PREVIEW_BUCKET_ENDPOINT = 'https://s3.fr-par.scw.cloud';
+const DEFAULT_PREVIEW_BUCKET_REGION = 'fr-par';
 /** `www`, deliberately. The apex 308-redirects to it, and a redirect would
  *  carry a live preview token through a second host's request log. */
-export const DEFAULT_PREVIEW_PUBLIC_BASE_URL = 'https://www.odysseusaudit.com';
+const DEFAULT_PREVIEW_PUBLIC_BASE_URL = 'https://www.odysseusaudit.com';
 
 export function getPreviewBucketEndpoint(): string {
   ensureEnvLoaded();

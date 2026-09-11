@@ -22,14 +22,14 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export interface SocialExclusionPattern {
+interface SocialExclusionPattern {
   pattern: string;
   rationale: string;
   confidence: 'high' | 'medium' | 'low';
   enabled: boolean;
 }
 
-export interface SocialExclusionConfig {
+interface SocialExclusionConfig {
   version: string;
   sourceNote: string;
   patterns: SocialExclusionPattern[];

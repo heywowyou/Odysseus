@@ -8,7 +8,7 @@ import { getSeverityRollups, type SeverityRollup } from '@odysseus/store';
  *  here is safe. Entries are also dropped wholesale whenever the poll's
  *  auditId set changes, so a newly linked or deleted audit is never shown
  *  from a stale key set. */
-export const DEFAULT_ROLLUP_CACHE_TTL_MS = 30_000;
+const DEFAULT_ROLLUP_CACHE_TTL_MS = 30_000;
 
 export interface SeverityRollupCacheOptions {
   ttlMs?: number;

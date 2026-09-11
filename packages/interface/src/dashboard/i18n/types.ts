@@ -3,12 +3,6 @@ import type { ProgressPhase } from '../lib/phase-order';
 
 export type DashboardLanguage = 'fr' | 'en';
 
-/** Copy for one dashboard page: the header block shown by PageHeader. */
-export interface PageCopy {
-  title: string;
-  description: string;
-}
-
 export interface DashboardStrings {
   nav: {
     audits: string;

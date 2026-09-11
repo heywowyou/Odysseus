@@ -23,7 +23,7 @@ import { containsProhibitedPreviewContent } from '@odysseus/core';
  *  wildcards: preview links are minted by the publisher, so any host not
  *  listed here is a bug or an injection. Edit deliberately; see
  *  `docs/product/first-100-rollout-runbook.md`, carry-forward 4 and gate I. */
-export const APPROVED_OUTREACH_LINK_HOSTS: readonly string[] = [
+const APPROVED_OUTREACH_LINK_HOSTS: readonly string[] = [
   'odysseusaudit.com',
   'www.odysseusaudit.com',
 ];

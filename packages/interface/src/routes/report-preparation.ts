@@ -48,7 +48,7 @@ function isReportLanguage(value: string): value is 'fr' | 'en' {
   return value === 'fr' || value === 'en';
 }
 
-export interface PreparationView {
+interface PreparationView {
   preparation: ReportPreparation;
   preview: ReportPreparationPreview;
   suggestions: readonly JourneySuggestion[];

@@ -16,7 +16,7 @@ export interface AuditsKpis {
   critical: number;
 }
 
-export const SEVERITY_ORDER = ['critical', 'serious', 'moderate', 'minor'] as const;
+const SEVERITY_ORDER = ['critical', 'serious', 'moderate', 'minor'] as const;
 
 export type SeverityKey = (typeof SEVERITY_ORDER)[number];
 
