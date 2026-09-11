@@ -54,8 +54,57 @@ export default function ProspectingPrivacyPage() {
         </section>
 
         <div className="shell section-tight">
+          {/* Sommaire ajouté le 2026-09-11 (impeccable, critique P2 :
+              « pas d'ancrage, pas de sommaire »). Reprend les huit titres
+              ci-dessous mot pour mot ; aucune formulation nouvelle. */}
+          <nav aria-label="Sommaire" className="measure mb-10">
+            <p className="label">Sommaire</p>
+            <ol className="toc mt-4">
+              <li>
+                <a className="evidence-link" href="#objet-confid">
+                  Objet de cette page
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#responsable-confid">
+                  Responsable du traitement
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#origine-confid">
+                  Origine des données
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#analyses-confid">
+                  Analyses réalisées sur votre site
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#finalite-confid">
+                  Finalité et base légale
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#duree-confid">
+                  Durée de conservation
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#destinataires-confid">
+                  Destinataires des données
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#droits-confid">
+                  Vos droits
+                </a>
+              </li>
+            </ol>
+          </nav>
+
           <section className="prose measure">
-            <h2>Objet de cette page</h2>
+            <h2 id="objet-confid">Objet de cette page</h2>
 
             <p>
               Vous avez sans doute reçu un message d&apos;Odysseus, ou un lien vers un aperçu
@@ -66,7 +115,7 @@ export default function ProspectingPrivacyPage() {
               cette page.
             </p>
 
-            <h2>Responsable du traitement</h2>
+            <h2 id="responsable-confid">Responsable du traitement</h2>
 
             <p>
               Jules Fontaine, entreprise individuelle (micro-entrepreneur), France. Contact&#160;:
@@ -74,7 +123,7 @@ export default function ProspectingPrivacyPage() {
               personne, et non traités automatiquement.
             </p>
 
-            <h2>Origine des données</h2>
+            <h2 id="origine-confid">Origine des données</h2>
 
             <ul>
               <li>
@@ -101,7 +150,7 @@ export default function ProspectingPrivacyPage() {
               de vérification d&apos;adresses e-mail.
             </p>
 
-            <h2>Analyses réalisées sur votre site</h2>
+            <h2 id="analyses-confid">Analyses réalisées sur votre site</h2>
 
             <p>
               La première passe consulte au plus trois pages, publiquement, comme le ferait un
@@ -126,7 +175,7 @@ export default function ProspectingPrivacyPage() {
               d&apos;écran, ni adresse de page, ni élément technique localisé.
             </p>
 
-            <h2>Finalité et base légale</h2>
+            <h2 id="finalite-confid">Finalité et base légale</h2>
 
             <p>
               Ces données servent à vous proposer une prestation d&apos;audit de site web, et à ne
@@ -136,7 +185,7 @@ export default function ProspectingPrivacyPage() {
               prestation, assortie d&apos;un moyen simple de s&apos;y opposer.
             </p>
 
-            <h2>Durée de conservation</h2>
+            <h2 id="duree-confid">Durée de conservation</h2>
 
             <p>
               Les données de prospection, captures d&apos;écran comprises, sont conservées
@@ -155,7 +204,7 @@ export default function ProspectingPrivacyPage() {
               nouveau prospect.
             </p>
 
-            <h2>Destinataires des données</h2>
+            <h2 id="destinataires-confid">Destinataires des données</h2>
 
             <p>
               Ces données ne sont communiquées à aucun tiers pour son propre usage, et ne sont ni
@@ -166,7 +215,7 @@ export default function ProspectingPrivacyPage() {
               accessibles que par le lien qui vous a été envoyé.
             </p>
 
-            <h2>Vos droits</h2>
+            <h2 id="droits-confid">Vos droits</h2>
 
             <p>
               Vous disposez d&apos;un droit d&apos;accès, de rectification et d&apos;effacement de
@@ -195,8 +244,54 @@ export default function ProspectingPrivacyPage() {
         </section>
 
         <div className="shell section-tight">
+          <nav aria-label="Table of contents" className="measure mb-10">
+            <p className="label">Table of contents</p>
+            <ol className="toc mt-4">
+              <li>
+                <a className="evidence-link" href="#objet-confid-en">
+                  Purpose of this page
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#responsable-confid-en">
+                  Data controller
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#origine-confid-en">
+                  Sources of the data
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#analyses-confid-en">
+                  Checks carried out on your site
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#finalite-confid-en">
+                  Purpose and legal basis
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#duree-confid-en">
+                  Retention period
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#destinataires-confid-en">
+                  Recipients of the data
+                </a>
+              </li>
+              <li>
+                <a className="evidence-link" href="#droits-confid-en">
+                  Your rights
+                </a>
+              </li>
+            </ol>
+          </nav>
+
           <section className="prose measure">
-            <h2>Purpose of this page</h2>
+            <h2 id="objet-confid-en">Purpose of this page</h2>
 
             <p>
               You have probably received a message from Odysseus, or a link to a preview of an
@@ -206,7 +301,7 @@ export default function ProspectingPrivacyPage() {
               used. That is the purpose of this page.
             </p>
 
-            <h2>Data controller</h2>
+            <h2 id="responsable-confid-en">Data controller</h2>
 
             <p>
               Jules Fontaine, sole proprietorship (micro-entrepreneur), France. Contact:
@@ -214,7 +309,7 @@ export default function ProspectingPrivacyPage() {
               processed automatically.
             </p>
 
-            <h2>Sources of the data</h2>
+            <h2 id="origine-confid-en">Sources of the data</h2>
 
             <ul>
               <li>
@@ -236,7 +331,7 @@ export default function ProspectingPrivacyPage() {
 
             <p>We buy no prospecting lists, and use no email verification service.</p>
 
-            <h2>Checks carried out on your site</h2>
+            <h2 id="analyses-confid-en">Checks carried out on your site</h2>
 
             <p>
               The first pass views at most three pages, publicly, as a visitor would: your homepage,
@@ -258,7 +353,7 @@ export default function ProspectingPrivacyPage() {
               located technical element.
             </p>
 
-            <h2>Purpose and legal basis</h2>
+            <h2 id="finalite-confid-en">Purpose and legal basis</h2>
 
             <p>
               This data is used to offer you a website audit, and to contact you only where the
@@ -267,7 +362,7 @@ export default function ProspectingPrivacyPage() {
               matches the service, with a simple way to object.
             </p>
 
-            <h2>Retention period</h2>
+            <h2 id="duree-confid-en">Retention period</h2>
 
             <p>
               Ninety days: that is how long prospecting data, screenshots included, is kept.
@@ -285,7 +380,7 @@ export default function ProspectingPrivacyPage() {
               reappear as a new prospect.
             </p>
 
-            <h2>Recipients of the data</h2>
+            <h2 id="destinataires-confid-en">Recipients of the data</h2>
 
             <p>
               This data is not shared with any third party for its own purposes, and is neither sold
@@ -295,7 +390,7 @@ export default function ProspectingPrivacyPage() {
               privately and are reachable only through the link sent to you.
             </p>
 
-            <h2>Your rights</h2>
+            <h2 id="droits-confid-en">Your rights</h2>
 
             <p>
               You have a right of access, rectification and erasure of your data, a right to

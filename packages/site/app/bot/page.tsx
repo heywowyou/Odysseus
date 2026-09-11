@@ -59,6 +59,46 @@ export default function BotInfoPage() {
         </section>
 
         <div className="shell section-tight">
+          {/* Couche de repérage ajoutée le 2026-09-11 (impeccable, critique
+              P2 : « pas d'ancrage, pas de sommaire »). Purement structurel :
+              chaque valeur reprend un mot ou un chiffre déjà présent dans le
+              texte ci-dessous, et chaque lien pointe vers le paragraphe qui
+              le dit en entier ; aucune formulation nouvelle. */}
+          <dl className="receive-grid mt-2 mb-10">
+            <div className="receive-item">
+              <dt className="receive-title">Identification</dt>
+              <dd className="soft mt-2">
+                <a className="evidence-link" href="#identification-bot">
+                  En-tête User-Agent, règle de blocage
+                </a>
+              </dd>
+            </div>
+            <div className="receive-item">
+              <dt className="receive-title">Fréquence</dt>
+              <dd className="soft mt-2">
+                <a className="evidence-link" href="#frequence-bot">
+                  Une requête toutes les 1000&#160;ms au minimum
+                </a>
+              </dd>
+            </div>
+            <div className="receive-item">
+              <dt className="receive-title">Prospection</dt>
+              <dd className="soft mt-2">
+                <a className="evidence-link" href="#prospection-bot">
+                  Trois pages au maximum, dans un premier temps
+                </a>
+              </dd>
+            </div>
+            <div className="receive-item">
+              <dt className="receive-title">Conservation</dt>
+              <dd className="soft mt-2">
+                <a className="evidence-link" href="#conservation-bot">
+                  90 jours, puis suppression automatique
+                </a>
+              </dd>
+            </div>
+          </dl>
+
           <section className="prose measure">
             <p>
               Odysseus est un outil d&apos;audit technique de sites web. S&apos;il visite votre
@@ -81,7 +121,7 @@ export default function BotInfoPage() {
               (axe-core) et de performance (Lighthouse) sur une sélection de pages représentatives.
             </p>
 
-            <p>
+            <p id="prospection-bot">
               <strong>Analyse de prospection</strong>&#160;: dans un premier temps, au plus trois
               pages, et <strong>sans Lighthouse</strong>. Le robot charge chaque page deux fois,
               avec et sans JavaScript, et exécute les contrôles d&apos;accessibilité. Pour un nombre
@@ -91,7 +131,7 @@ export default function BotInfoPage() {
               n&apos;effectue aucune réservation.
             </p>
 
-            <p>
+            <p id="identification-bot">
               Identification&#160;: l&apos;en-tête User-Agent de ses requêtes contient la mention
               OdysseusBot/1.0. Pour le bloquer, ajoutez ceci à votre fichier robots.txt&#160;:
             </p>
@@ -100,14 +140,14 @@ export default function BotInfoPage() {
               <code>{'User-agent: OdysseusBot\nDisallow: /'}</code>
             </pre>
 
-            <p>
+            <p id="frequence-bot">
               Fréquence des requêtes&#160;: une requête toutes les 1000&#160;ms au minimum. Si votre
               fichier robots.txt définit une directive Crawl-delay plus longue, c&apos;est elle qui
               s&apos;applique. Le fichier robots.txt est lu avant toute visite, et les pages
               interdites ne sont jamais chargées.
             </p>
 
-            <p>
+            <p id="conservation-bot">
               Données conservées&#160;: le rendu des pages et des captures d&apos;écran, à des fins
               d&apos;audit uniquement, supprimées automatiquement après 90 jours. Ces données ne
               sont ni vendues ni partagées avec des tiers. Pour une analyse de prospection,
@@ -146,6 +186,41 @@ export default function BotInfoPage() {
         </section>
 
         <div className="shell section-tight">
+          <dl className="receive-grid mt-2 mb-10">
+            <div className="receive-item">
+              <dt className="receive-title">Identification</dt>
+              <dd className="soft mt-2">
+                <a className="evidence-link" href="#identification-bot-en">
+                  User-Agent header, block rule
+                </a>
+              </dd>
+            </div>
+            <div className="receive-item">
+              <dt className="receive-title">Pacing</dt>
+              <dd className="soft mt-2">
+                <a className="evidence-link" href="#pacing-bot-en">
+                  One request every 1000ms at minimum
+                </a>
+              </dd>
+            </div>
+            <div className="receive-item">
+              <dt className="receive-title">Prospecting</dt>
+              <dd className="soft mt-2">
+                <a className="evidence-link" href="#prospecting-bot-en">
+                  At most three pages, at first
+                </a>
+              </dd>
+            </div>
+            <div className="receive-item">
+              <dt className="receive-title">Retention</dt>
+              <dd className="soft mt-2">
+                <a className="evidence-link" href="#retention-bot-en">
+                  90 days, then automatic deletion
+                </a>
+              </dd>
+            </div>
+          </dl>
+
           <section className="prose measure">
             <p>
               Odysseus is a website auditing tool. If it visited your site, one of two things is
@@ -166,7 +241,7 @@ export default function BotInfoPage() {
               representative sample of pages.
             </p>
 
-            <p>
+            <p id="prospecting-bot-en">
               <strong>Prospecting analysis</strong>: first, at most three pages, and{' '}
               <strong>without Lighthouse</strong>. The bot loads each page twice, with and without
               JavaScript, and runs the accessibility checks. For a small number of pre-selected
@@ -175,7 +250,7 @@ export default function BotInfoPage() {
               account, submits no form, and makes no booking.
             </p>
 
-            <p>
+            <p id="identification-bot-en">
               Identification: the User-Agent header on its requests carries the token
               OdysseusBot/1.0. To block it, add this to your robots.txt file:
             </p>
@@ -184,13 +259,13 @@ export default function BotInfoPage() {
               <code>{'User-agent: OdysseusBot\nDisallow: /'}</code>
             </pre>
 
-            <p>
+            <p id="pacing-bot-en">
               Request rate: one request every 1000ms at minimum. If your robots.txt file defines a
               longer Crawl-delay, that value applies instead. robots.txt is read before any page is
               visited, and disallowed pages are never loaded.
             </p>
 
-            <p>
+            <p id="retention-bot-en">
               Data retained: rendered pages and screenshots, for audit purposes only, automatically
               deleted after 90 days. This data is never sold or shared with third parties. For a
               prospecting analysis, where the data came from, what it is used for, and how to object
