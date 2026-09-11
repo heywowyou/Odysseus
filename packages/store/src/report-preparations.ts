@@ -248,7 +248,7 @@ export async function getAnalysisById(
   return AnalysisModel.findOne({ analysisId, auditId }).lean<AnalysisDocument>();
 }
 
-export async function listAnalysesForAudit(
+async function listAnalysesForAudit(
   connection: Connection,
   auditId: string,
 ): Promise<AnalysisDocument[]> {

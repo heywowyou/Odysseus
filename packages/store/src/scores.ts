@@ -114,25 +114,6 @@ export async function listLatestHotelScores(
   ]);
 }
 
-export interface ListHotelScoresOptions {
-  scoringVersion: string;
-  limit: number;
-  after?: string;
-}
-
-export async function listHotelScores(
-  connection: Connection,
-  options: ListHotelScoresOptions,
-): Promise<HotelScoreDocument[]> {
-  const filter: Record<string, unknown> = { scoringVersion: options.scoringVersion };
-  if (options.after !== undefined) filter['candidateId'] = { $gt: options.after };
-  return createHotelScoreModel(connection)
-    .find(filter)
-    .sort({ candidateId: 1 })
-    .limit(options.limit)
-    .lean<HotelScoreDocument[]>();
-}
-
 export interface ListCandidatesToScoreOptions {
   resolutionVersion: string;
   qualificationVersion: string;

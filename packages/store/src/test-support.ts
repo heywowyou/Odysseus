@@ -34,7 +34,7 @@ export function scopedMongoTestUri(scope: string, uri: string = MONGODB_TEST_URI
  *  each file warning separately. The literal path is duplicated there
  *  rather than imported, to keep that script plain JS outside the tsc -b
  *  project-reference graph; keep the two in sync if this changes. */
-export const MONGO_SKIP_MARKER_PATH = join(tmpdir(), 'odysseus-store-mongo-skip.log');
+const MONGO_SKIP_MARKER_PATH = join(tmpdir(), 'odysseus-store-mongo-skip.log');
 
 function getWorkerMongoUri(uri: string): string {
   const workerId = process.env['VITEST_POOL_ID'];

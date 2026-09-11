@@ -31,10 +31,7 @@
  */
 
 export type { OperatorViewPage, OperatorViewPageOptions } from './operator-views/shared.js';
-export {
-  buildProspectSearchPattern,
-  listOperatorProspects,
-} from './operator-views/prospect-list.js';
+export { listOperatorProspects } from './operator-views/prospect-list.js';
 export type {
   ListOperatorProspectsOptions,
   OperatorProspectQueue,

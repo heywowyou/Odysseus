@@ -74,7 +74,7 @@ function escapeRegexLiteral(text: string): string {
 
 /** The class content comes only from the fixed table above, so its
  *  characters never need in-class escaping. */
-export function buildProspectSearchPattern(search: string): RegExp {
+function buildProspectSearchPattern(search: string): RegExp {
   let source = '';
   for (const char of search.toLowerCase()) {
     const fold = ACCENT_FOLD_CLASSES[char];

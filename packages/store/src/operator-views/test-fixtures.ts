@@ -252,7 +252,7 @@ export function qualificationInput(
   };
 }
 
-export function contactInput(
+function contactInput(
   candidateId: string,
   overrides: Partial<RecordHotelContactInput> = {},
 ): RecordHotelContactInput {

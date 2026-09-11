@@ -231,7 +231,6 @@ export {
 export type {
   RecordHotelScoreInput,
   RecordHotelScoresResult,
-  ListHotelScoresOptions,
   ListCandidatesToScoreOptions,
   HotelScoreSummary,
   HotelScoreDiff,
