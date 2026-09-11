@@ -3,13 +3,14 @@
 /* =========================================================================
    Public site design system: the evidence dossier.
 
-   The identity is a working document, not a software landing page. Three
-   registers carry it: reader prose on cool paper, the report sheet as a
-   fixed light document (a delivered report is printed paper, whatever theme
-   the visitor browses in), and the machine register for what a program
-   reads. The navy spine anchors the report sheet; signal orange draws a
-   single annotation rule on it; evidence blue is reserved for links and the
-   raw-versus-rendered inset.
+   The identity is a working document, not a software landing page. Two
+   registers carry it: reader prose and cards on cool paper (the dossier
+   finding card, the diagnostic-scope statement, and the repeated feature
+   grids all sit on the page's own light/dark surface, since 2026-09-11), and
+   the machine register for what a program reads. Signal orange draws a
+   single annotation rule on the dossier's Action row; evidence blue (now
+   Tailwind's sky family) is reserved for links, the dossier's stamp badge,
+   and the raw-versus-rendered inset.
    ========================================================================= */
 
 :root {
@@ -28,12 +29,12 @@
   --line: rgb(16 27 42 / 0.14);
   --line-strong: rgb(16 27 42 / 0.28);
 
-  /* The dossier anchors. Navy is the finding card's spine, the field labels
-     on the sheet, and the margin rules that mark document structure. Signal
-     orange draws exactly one annotation on the sheet and marks the keyboard
-     focus of the skip link; it is never a severity and never decoration. */
-  --navy: #18385d;
-  --navy-line: rgb(24 56 93 / 0.38);
+  /* The anchor rule marks the one margin note worth noticing (the
+     diagnostic-scope statement) and, historically, the dossier's spine
+     before its 2026-09-11 recast; the dossier no longer uses it. Signal
+     orange draws exactly one annotation, on the dossier's Action row, and
+     marks the keyboard focus of the skip link; it is never a severity and
+     never decoration. */
   --anchor: #18385d;
   /* Recast 2026-09-11 (operator request, more vibrant palette): moved from a
      muted burnt orange to Tailwind's orange-600, staying in the same warm
@@ -41,15 +42,6 @@
      the AA text-contrast floor does not apply; it clears the 3:1 non-text
      floor against every surface it borders). */
   --signal: #ea580c;
-
-  /* The report sheet: a fixed light document in both colour schemes, like
-     the visitor panel below, because it stands for the printed deliverable
-     rather than for this site's theme. */
-  --sheet: #ffffff;
-  --sheet-ink: #101b2a;
-  --sheet-ink-soft: #3f4c5e;
-  --sheet-muted: #5c6878;
-  --sheet-line: rgb(16 27 42 / 0.16);
 
   /* The machine register: the raw-versus-rendered inset and every code
      block. Fixed in both colour schemes, because it stands for a thing, not
@@ -100,12 +92,12 @@
   :root {
     color-scheme: dark;
 
-    /* The ground darkens, but the sheet, the visitor panel, and the machine
-       register keep their identities instead of every colour inverting: the
-       report stays a light document on a dark desk. The anchor rule and the
-       evidence blue brighten so they keep their contrast on the dark ground;
-       the navy spine and the sheet's own tokens do not move, because the
-       surface they live on is still white. */
+    /* The ground darkens, but the visitor panel and the machine register
+       keep their identities instead of every colour inverting: a page a
+       visitor actually sees is still a light document, and code is still
+       read off a dark terminal, regardless of this site's own theme. The
+       anchor rule and the evidence blue brighten so they keep their
+       contrast on the dark ground. */
     --paper: #0e141c;
     --paper-raised: #16202c;
     --paper-sunk: #18232f;
@@ -116,7 +108,6 @@
     --line-strong: rgb(233 238 245 / 0.26);
 
     --anchor: #8fb4ee;
-    --navy-line: rgb(143 180 238 / 0.45);
 
     --machine: #0a0e15;
     --machine-raised: #121822;
@@ -325,9 +316,9 @@
       grid-row: 1;
     }
 
-    /* The deliberate asymmetry of the hero: the dossier sheet sits a step
-       below the prose line, anchored by its navy spine, so the two read as
-       text and exhibit rather than as two equal columns. */
+    /* The deliberate asymmetry of the hero: the dossier card sits a step
+       below the prose line, so the two read as text and exhibit rather than
+       as two equal columns. */
     .hero-split .split-aside {
       margin-top: 3rem;
     }
