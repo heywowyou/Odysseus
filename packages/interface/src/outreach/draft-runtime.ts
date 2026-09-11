@@ -26,11 +26,12 @@ import { createOutreachDraft } from './create-outreach-draft.js';
 import { createMongoFollowUpDraftStore } from './mongo-follow-up-draft-store.js';
 import { createMongoOutreachDraftStore } from './mongo-outreach-draft-store.js';
 import { createMongoOutreachPreviewStore } from './mongo-outreach-preview-store.js';
+import { resolvePublishedPreviewForDraft } from './publish-preview-v2.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
 import { createConfiguredPreviewPublisher } from './configured-preview-publisher.js';
 import { createInMemoryPreviewPublisher } from './in-memory-preview-publisher.js';
-import { publishPreview } from './publish-preview.js';
+import { findOutreachPreviewByTokenHash, resolveOutreachAuditForCandidate } from '@odysseus/store';
 import { getPreviewPublicBaseUrl, missingMailboxEnvVars } from '../config.js';
 import { CURRENT_CONTACT_VERSION } from '../prospecting/hotel-contacts/discover-contacts.js';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
@@ -40,6 +41,11 @@ export type DraftRuntimeRefusal = 'no-mailbox-configured';
 
 export interface CreateTouchOneDraftOptions {
   language: 'fr' | 'en';
+  /** Plan 037: the one-time token of the already published v2 preview the
+   *  first email will link. Absent, every draft refuses with
+   *  'preview-not-published': batch drafting without a published, reviewed
+   *  preview is deliberately impossible. */
+  previewToken?: string;
   prescanVersion?: string;
   qualificationVersion?: string;
   contactVersion?: string;
@@ -83,32 +89,39 @@ export async function createTouchOneDraft(
     }),
     mailbox,
     preview: {
-      async publish(id, language) {
-        const published = await publishPreview({
-          store: createMongoOutreachPreviewStore(connection, {
-            prescanVersion,
-            qualificationVersion,
-          }),
-          publisher: dryRun ? createInMemoryPreviewPublisher() : createConfiguredPreviewPublisher(),
-          publicBaseUrl: getPreviewPublicBaseUrl(),
+      async resolvePublished(id, token, language) {
+        if (token === '') return { refusal: 'preview-not-published' };
+        return resolvePublishedPreviewForDraft({
+          findByTokenHash: async (tokenHash) => {
+            const record = await findOutreachPreviewByTokenHash(connection, tokenHash);
+            if (record === null) return null;
+            return {
+              previewId: record.previewId,
+              status: record.status,
+              ...(record.sourceKind !== undefined ? { sourceKind: record.sourceKind } : {}),
+              previewContentVersion: record.previewContentVersion,
+              candidateId: record.candidateId,
+              ...(record.auditId !== undefined ? { auditId: record.auditId } : {}),
+              publicExpiresAt: record.publicExpiresAt,
+            };
+          },
+          resolveOutreachAudit: async (candidateId) => {
+            const resolution = await resolveOutreachAuditForCandidate(connection, candidateId);
+            return resolution.state === 'resolved'
+              ? { state: 'resolved', audit: { auditId: resolution.audit.auditId } }
+              : { state: 'refused' };
+          },
           candidateId: id,
-          language,
-          dryRun: false,
+          previewToken: token,
+          publicBaseUrl: getPreviewPublicBaseUrl(),
         });
-        if (!published.published || published.url === undefined) {
-          return { refusal: published.refusal ?? 'unknown' };
-        }
-        return {
-          previewId: published.previewId as string,
-          url: published.url,
-          publicExpiresAt: published.publicExpiresAt as Date,
-        };
       },
     },
     publicBaseUrl: getPreviewPublicBaseUrl(),
     candidateId,
     language: options.language,
     dryRun,
+    previewToken: options.previewToken ?? '',
   });
 
   return { configured: true, ...result };

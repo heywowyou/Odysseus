@@ -22,9 +22,11 @@ import { parsePositiveInt } from './shared.js';
  * Milestone 9c plan 009: publish, list and withdraw the expiring outreach
  * preview for one hotel.
  *
- * Publication is inline rather than a queued job for the reason hotel-ingest
- * gives: this writes one object built from data already stored, contacts no
- * third-party site, and launches no browser.
+ * Since plan 037 the prescan-backed v1 publish path is retired: `preview
+ * publish` refuses with 'v1-retired' and never renders a new prescan-backed
+ * preview. Previews are published from the audit detail page instead, where
+ * the v2 full-scan scorecard lives. `revoke` and `list` stay live: the
+ * records and objects that already exist still need withdrawing and reading.
  *
  * Every command here takes a real bucket. A dry run is the only path that
  * does not, and it deliberately uses the in-memory publisher rather than
@@ -41,8 +43,9 @@ export function registerPreviewCommand(prospect: Command): void {
   preview
     .command('publish <candidateId>')
     .description(
-      'Render the preview for one candidate, store it under an unguessable token, and print ' +
-        'the link. The link is printed once and is not recoverable afterwards.',
+      'Retired by plan 037: the prescan-backed v1 preview is no longer published from the ' +
+        'CLI and every call refuses with "v1-retired". Publish the v2 full-scan scorecard ' +
+        'from the audit detail page in the dashboard instead.',
     )
     .option('--language <fr|en>', 'Language of the rendered preview', 'fr')
     .option('--prescan-version <version>', 'Prescan generation to read', CURRENT_PRESCAN_VERSION)
@@ -91,10 +94,21 @@ export function registerPreviewCommand(prospect: Command): void {
 
           if (!result.published && !opts.dryRun) {
             // A refusal is a correct outcome, not a crash, but it must not read
-            // as success to a script or to a person skimming the output.
-            console.error(
-              `odysseus prospect preview publish: nothing published (${result.refusal ?? 'unknown reason'})`,
-            );
+            // as success to a script or to a person skimming the output. The
+            // retirement gets its own line: an operator hitting it needs the
+            // new path, not a refusal code.
+            if (result.refusal === 'v1-retired') {
+              console.error(
+                `odysseus prospect preview publish: the prescan-backed preview path is ` +
+                  `retired (plan 037). Run the full-scan outreach scan for this candidate, ` +
+                  `then publish the scorecard preview from its audit detail page in the ` +
+                  `dashboard.`,
+              );
+            } else {
+              console.error(
+                `odysseus prospect preview publish: nothing published (${result.refusal ?? 'unknown reason'})`,
+              );
+            }
             process.exitCode = 1;
           }
         } catch (error) {

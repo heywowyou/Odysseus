@@ -275,7 +275,9 @@ export {
   revokeOutreachPreview,
   listOutreachPreviews,
   listLivePreviewsForDomain,
+  findLatestLiveV2PreviewForCandidate,
 } from './outreach-previews.js';
+export { findOutreachPreviewByTokenHash } from './outreach-previews.js';
 export type {
   RecordOutreachPreviewInput,
   RecordedOutreachPreview,

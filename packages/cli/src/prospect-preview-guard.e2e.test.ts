@@ -61,9 +61,11 @@ describe('odysseus prospect preview', () => {
     const publishHelp = await runCli(['prospect', 'preview', 'publish', '--help']);
     expect(publishHelp.code).toBe(0);
     expect(publishHelp.stdout).toContain('--dry-run');
-    // The link is unrecoverable, and a person running this for the first time
-    // should learn that from the help rather than from a support request.
-    expect(publishHelp.stdout).toContain('not recoverable');
+    // Since plan 037 the prescan-backed publish path is retired: someone
+    // running it for the first time should learn that from the help itself,
+    // along with where the live path moved, rather than from a refusal code.
+    expect(publishHelp.stdout).toContain('Retired by plan 037');
+    expect(publishHelp.stdout).toContain('audit detail page');
   }, 60_000);
 
   it('offers one command that both withdraws the preview and suppresses the domain', async () => {

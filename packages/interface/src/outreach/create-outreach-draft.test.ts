@@ -177,7 +177,7 @@ function harness(
   };
 
   const preview: OutreachPreviewPort = {
-    publish: () => {
+    resolvePublished: () => {
       state.publishCalls += 1;
       if (overrides.previewRefusal !== undefined) {
         return Promise.resolve({ refusal: overrides.previewRefusal });
@@ -199,6 +199,7 @@ function harness(
       candidateId: 'candidate-1',
       language: 'fr',
       dryRun: overrides.dryRun ?? false,
+      previewToken: 'token-abc',
       now: NOW,
       generateProse: generate as unknown as CreateOutreachDraftOptions['generateProse'],
     },
@@ -366,7 +367,7 @@ describe('createOutreachDraft, refusals before anything is spent', () => {
   it('refuses when the preview cannot be published', async () => {
     const h = harness({ previewRefusal: 'evidence-incomplete' });
     await expect(createOutreachDraft(h.options)).resolves.toMatchObject({
-      refusal: 'preview-publication-failed',
+      refusal: 'preview-not-published',
     });
     // No link means no draft: a first touch with a dead preview URL is worse
     // than no message at all.

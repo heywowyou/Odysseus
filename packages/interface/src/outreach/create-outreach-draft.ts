@@ -14,15 +14,17 @@
  * merely the next batch. `publish-preview.ts` states the same rule for the
  * same reason.
  *
- * **Why this module publishes the preview rather than looking one up.** A
- * preview link is the only access control on one hotel's evidence, so plan 009
- * stores the token's hash and never the token: the raw URL is returned exactly
- * once, at publication, and nothing can recover it afterwards. A draft needs a
- * working link, so the only honest options were to publish here or to make the
- * operator paste a URL by hand. Publishing here is chosen because it also
- * makes the link's 30-day lifetime start when the draft is written rather than
- * whenever a preview happened to be made, so a draft sitting in review for a
- * week still carries a link that outlives the conversation.
+ * **Plan 037: the draft consumes an already published preview.** A preview
+ * link is the only access control on one hotel's evidence, so the raw token
+ * exists only where it was first shown: at publication, on the audit page,
+ * exactly once. Under the v1 flow this module published its own preview for
+ * that reason; under v2 that side effect is forbidden, because an unreviewed
+ * publication must never be a side effect of drafting. The caller supplies
+ * the token the operator copied after reviewing and publishing, and the
+ * adapter validates it live, unrevoked, unexpired, and attached to the
+ * candidate's current outreach audit. A draft sitting in review now risks
+ * its link expiring rather than a stale one being minted for it, which is
+ * the fail-closed direction.
  *
  * Refusals are returned, never thrown, matching `assembleOutreachDraft` and
  * `publishPreview`: the caller is a bounded batch, and one hotel that cannot
@@ -70,7 +72,10 @@ export type CreateOutreachDraftRefusal =
   | 'draft-already-live'
   | 'suppressed-before-generation'
   | 'suppressed-before-provider'
-  | 'preview-publication-failed'
+  | 'preview-not-published'
+  | 'preview-revoked'
+  | 'preview-expired'
+  | 'preview-wrong-audit'
   | 'assembly-refused'
   | 'provider-draft-unrecorded';
 
@@ -183,11 +188,14 @@ export interface PublishedPreviewRef {
   publicExpiresAt: Date;
 }
 
-/** Narrow view of plan 009's publication path, so this module depends on the
- *  act of publishing rather than on `publishPreview`'s whole option surface. */
+/** Plan 037: the draft consumes an ALREADY published v2 preview, resolved
+ *  from the one-time token the operator copied at publication. This module
+ *  can no longer publish, render, scan, or reissue as a side effect, and a
+ *  missing, revoked, expired, or wrong-audit preview refuses the draft. */
 export interface OutreachPreviewPort {
-  publish(
+  resolvePublished(
     candidateId: string,
+    previewToken: string,
     language: 'fr' | 'en',
   ): Promise<PublishedPreviewRef | { refusal: string }>;
 }
@@ -200,6 +208,10 @@ export interface CreateOutreachDraftOptions {
   candidateId: string;
   language: 'fr' | 'en';
   dryRun: boolean;
+  /** The one-time token of the v2 preview the operator published and copied
+   *  from the audit page. Required: without a published preview there is no
+   *  link for the email to carry, and publishing one here is forbidden. */
+  previewToken: string;
   now?: Date;
   /** Injected so tests never reach the live model, matching the LLM package's
    *  own stubbed-client discipline. */
@@ -224,6 +236,17 @@ export interface CreateOutreachDraftResult {
     language: 'fr' | 'en';
     touch: number;
   };
+}
+
+function mapPreviewRefusal(refusal: string): CreateOutreachDraftRefusal {
+  switch (refusal) {
+    case 'preview-revoked':
+    case 'preview-expired':
+    case 'preview-wrong-audit':
+      return refusal;
+    default:
+      return 'preview-not-published';
+  }
 }
 
 function refuse(refusal: CreateOutreachDraftRefusal): CreateOutreachDraftResult {
@@ -309,10 +332,15 @@ export async function createOutreachDraft(
     selection.touch1.observationKey,
   );
 
-  // Published after generation, so a run the model could not satisfy leaves no
-  // orphan preview object behind.
-  const published = await options.preview.publish(options.candidateId, options.language);
-  if ('refusal' in published) return refuse('preview-publication-failed');
+  // Resolved after generation, so a run the model could not satisfy does no
+  // preview work at all. The draft consumes the already published v2 preview
+  // the operator's token names; it can never publish or reissue one itself.
+  const published = await options.preview.resolvePublished(
+    options.candidateId,
+    options.previewToken,
+    options.language,
+  );
+  if ('refusal' in published) return refuse(mapPreviewRefusal(published.refusal));
 
   const thread = await options.store.openThread({
     candidateId: row.candidateId,

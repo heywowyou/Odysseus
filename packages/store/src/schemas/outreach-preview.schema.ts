@@ -30,6 +30,13 @@ import { Schema, type Connection, type Model } from 'mongoose';
 
 export type OutreachPreviewStatus = 'live' | 'revoked';
 
+/** Plan 037: which scan a preview was built from. v1 rows (all prescan)
+ *  predate the field; absence reads as 'prescan', so every existing row
+ *  keeps its required prescan fields and its list/revoke/expiry behaviour
+ *  unchanged. New publications are always 'full-audit' with content
+ *  version 'v2'. */
+export type OutreachPreviewSourceKind = 'prescan' | 'full-audit';
+
 export interface OutreachPreviewDocumentFields {
   previewId: string;
   /** SHA-256 of the raw token, lowercase hex. Unique: two previews cannot
@@ -38,15 +45,22 @@ export interface OutreachPreviewDocumentFields {
   tokenHash: string;
   objectKey: string;
   candidateId: string;
-  prescanId: string;
+  /** v1 rows only. Optional at the schema level so a v2 full-audit row can
+   *  exist; the record helper enforces the per-version required fields. */
+  prescanId?: string;
   domain: string;
   language: 'fr' | 'en';
   /** The contract versions the document was built under, so a preview served
    *  today can be told apart from one built before an evidence or preview
-   *  schema change, without reopening the object. */
-  prescanVersion: string;
-  evidenceVersion: string;
+   *  schema change, without reopening the object. v1 rows only for the two
+   *  prescan versions. */
+  prescanVersion?: string;
+  evidenceVersion?: string;
   previewContentVersion: string;
+  sourceKind?: OutreachPreviewSourceKind;
+  /** full-audit rows only: the one audit the document aggregates. A rerun
+   *  or a later audit of the same domain can never substitute for it. */
+  auditId?: string;
   publishedAt: Date;
   publicExpiresAt: Date;
   expiresAt: Date;
@@ -64,12 +78,14 @@ const outreachPreviewSchema = new Schema<OutreachPreviewDocument>(
     tokenHash: { type: String, required: true, unique: true },
     objectKey: { type: String, required: true },
     candidateId: { type: String, required: true },
-    prescanId: { type: String, required: true },
+    prescanId: { type: String },
     domain: { type: String, required: true },
     language: { type: String, required: true, enum: ['fr', 'en'] },
-    prescanVersion: { type: String, required: true },
-    evidenceVersion: { type: String, required: true },
+    prescanVersion: { type: String },
+    evidenceVersion: { type: String },
     previewContentVersion: { type: String, required: true },
+    sourceKind: { type: String, enum: ['prescan', 'full-audit'] },
+    auditId: { type: String },
     publishedAt: { type: Date, required: true },
     publicExpiresAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true },

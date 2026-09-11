@@ -45,6 +45,7 @@ import type { PreviewPublisher } from './preview-publisher.js';
 export const CURRENT_PREVIEW_CONTENT_VERSION = 'v1';
 
 export type PublishPreviewRefusal =
+  | 'v1-retired'
   | 'candidate-unknown'
   | 'no-prescan'
   | 'evidence-incomplete'
@@ -248,6 +249,18 @@ function refuse(refusal: PublishPreviewRefusal): PublishPreviewResult {
 }
 
 export async function publishPreview(
+  options: PublishPreviewOptions,
+): Promise<PublishPreviewResult> {
+  // Plan 037: the prescan-backed preview is retired. No path may create a
+  // new v1 preview, so this is a refusal before any gate, any build, and
+  // any write - the function survives only because stored v1 rows keep
+  // their render and revocation paths until they expire.
+  return refuse('v1-retired');
+}
+
+/** Kept as the documented shape of the retired v1 flow; unreachable as an
+ *  implementation body since the v1-retired refusal above. */
+async function publishPreviewV1Unreachable(
   options: PublishPreviewOptions,
 ): Promise<PublishPreviewResult> {
   const now = options.now ?? new Date();

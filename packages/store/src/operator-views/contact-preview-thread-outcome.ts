@@ -32,7 +32,10 @@ import type {
   OutreachDraftStatus,
 } from '../schemas/outreach-draft.schema.js';
 import { createOutreachOutcomeModel } from '../schemas/outreach-outcome.schema.js';
-import type { OutreachPreviewStatus } from '../schemas/outreach-preview.schema.js';
+import type {
+  OutreachPreviewSourceKind,
+  OutreachPreviewStatus,
+} from '../schemas/outreach-preview.schema.js';
 import {
   pageBounds,
   THREAD_DRAFT_HISTORY_LIMIT,
@@ -100,9 +103,11 @@ export interface OperatorPreviewView {
   publicExpiresAt: Date;
   revokedAt: Date | null;
   revokedReason: string | null;
-  prescanVersion: string;
-  evidenceVersion: string;
+  /** v1 (prescan) rows only; null on v2 full-audit rows (plan 037). */
+  prescanVersion: string | null;
+  evidenceVersion: string | null;
   previewContentVersion: string;
+  sourceKind: OutreachPreviewSourceKind;
 }
 
 /** The latest published preview for one candidate. `tokenHash` and
@@ -126,9 +131,10 @@ export async function getProspectPreviewView(
     publicExpiresAt: latest.publicExpiresAt,
     revokedAt: latest.revokedAt ?? null,
     revokedReason: latest.revokedReason ?? null,
-    prescanVersion: latest.prescanVersion,
-    evidenceVersion: latest.evidenceVersion,
+    prescanVersion: latest.prescanVersion ?? null,
+    evidenceVersion: latest.evidenceVersion ?? null,
     previewContentVersion: latest.previewContentVersion,
+    sourceKind: latest.sourceKind ?? 'prescan',
   };
 }
 

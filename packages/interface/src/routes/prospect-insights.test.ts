@@ -176,6 +176,7 @@ const previewView: OperatorPreviewView = {
   prescanVersion: 'v3',
   evidenceVersion: '1',
   previewContentVersion: 'v1',
+  sourceKind: 'prescan',
 };
 
 const vendorAggregate: PrescanVendorAggregate = {

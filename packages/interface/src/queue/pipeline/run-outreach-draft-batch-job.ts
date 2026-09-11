@@ -45,7 +45,14 @@ export async function runOutreachDraftBatchJob(
   for (const member of members) {
     if (cancellation.isRequested(job.jobId)) throw new JobCancelledError(job.jobId);
 
-    const outcome = await createTouchOneDraft(connection, member.candidateId, { language });
+    const outcome = await createTouchOneDraft(connection, member.candidateId, {
+      language,
+      // Plan 037: a batch carries no one-time preview token, so every
+      // member without an already published v2 preview refuses
+      // 'preview-not-published' instead of a preview being published as a
+      // side effect of the batch.
+      previewToken: '',
+    });
     if (!outcome.configured) {
       throw new Error(`no mailbox is configured (${outcome.refusal})`);
     }

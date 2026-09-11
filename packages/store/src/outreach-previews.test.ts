@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import {
+  findLatestLiveV2PreviewForCandidate,
   findOutreachPreviewByTokenHash,
   getOutreachPreview,
   listLivePreviewsForDomain,
@@ -45,6 +46,26 @@ function input(overrides: Partial<RecordOutreachPreviewInput> = {}): RecordOutre
     prescanVersion: 'v3',
     evidenceVersion: 'v2',
     previewContentVersion: 'v1',
+    publishedAt: PUBLISHED_AT,
+    ...overrides,
+  };
+}
+
+/** A clean v2 full-audit input: no prescan identity at all, which is the shape
+ *  `publishPreviewV2` records. */
+function fullAuditInput(
+  overrides: Partial<RecordOutreachPreviewInput> = {},
+): RecordOutreachPreviewInput {
+  const tokenHash = hashOf(token());
+  return {
+    tokenHash,
+    objectKey: `previews/${tokenHash}.html`,
+    candidateId: randomUUID(),
+    domain: 'hotel-exemple.fr',
+    language: 'fr',
+    previewContentVersion: 'v2',
+    sourceKind: 'full-audit',
+    auditId: randomUUID(),
     publishedAt: PUBLISHED_AT,
     ...overrides,
   };
@@ -226,5 +247,103 @@ describe.skipIf(!mongoAvailable)('outreach previews', () => {
     expect(ttl).toHaveLength(1);
     expect(ttl[0]?.['key']).toEqual({ expiresAt: 1 });
     expect(ttl[0]?.['expireAfterSeconds']).toBe(0);
+  });
+
+  it('defaults an absent sourceKind to the v1 prescan kind', async () => {
+    if (!connection) return;
+    const recorded = await recordLivePreview();
+    const stored = await getOutreachPreview(connection, recorded.previewId);
+    expect(stored?.sourceKind).toBe('prescan');
+  });
+
+  it('refuses a prescan row missing any part of its prescan identity', async () => {
+    if (!connection) return;
+    for (const field of ['prescanId', 'prescanVersion', 'evidenceVersion'] as const) {
+      const missing = input();
+      delete missing[field];
+      await expect(recordOutreachPreview(connection, missing), field).rejects.toThrow(
+        /prescan row requires/,
+      );
+    }
+  });
+
+  it('refuses a full-audit row without its audit id', async () => {
+    if (!connection) return;
+    const missingAuditId = fullAuditInput();
+    delete missingAuditId.auditId;
+    await expect(recordOutreachPreview(connection, missingAuditId)).rejects.toThrow(
+      /full-audit row requires auditId/,
+    );
+  });
+
+  it('records a full-audit v2 row with its audit id and no prescan identity', async () => {
+    if (!connection) return;
+    const auditId = randomUUID();
+    const outcome = await recordOutreachPreview(connection, fullAuditInput({ auditId }));
+    if (outcome.outcome !== 'recorded') throw new Error('expected the record to be accepted');
+
+    const stored = await getOutreachPreview(connection, outcome.previewId);
+    expect(stored?.sourceKind).toBe('full-audit');
+    expect(stored?.auditId).toBe(auditId);
+    expect(stored?.previewContentVersion).toBe('v2');
+    expect(stored?.prescanId).toBeUndefined();
+    expect(stored?.status).toBe('live');
+  });
+
+  it('finds the newest live v2 full-audit preview and nothing else', async () => {
+    if (!connection) return;
+    const candidateId = randomUUID();
+
+    // The expected answer: a live v2 full-audit preview, superseded by none.
+    const expectedAuditId = randomUUID();
+    const expected = await recordOutreachPreview(
+      connection,
+      fullAuditInput({
+        candidateId,
+        auditId: expectedAuditId,
+        publishedAt: new Date('2026-08-20T09:00:00.000Z'),
+      }),
+    );
+    if (expected.outcome !== 'recorded') throw new Error('expected the record to be accepted');
+
+    // An older live v2 preview for the same candidate loses on publishedAt.
+    await recordOutreachPreview(
+      connection,
+      fullAuditInput({
+        candidateId,
+        publishedAt: new Date('2026-08-10T09:00:00.000Z'),
+      }),
+    );
+    // A revoked v2 preview is out even though it is the newest.
+    const revoked = await recordOutreachPreview(
+      connection,
+      fullAuditInput({
+        candidateId,
+        publishedAt: new Date('2026-08-25T09:00:00.000Z'),
+      }),
+    );
+    if (revoked.outcome !== 'recorded') throw new Error('expected the record to be accepted');
+    await revokeOutreachPreview(connection, revoked.previewId, 'operator request');
+    // A public-expired v2 preview is out: past its promised lifetime.
+    await recordOutreachPreview(
+      connection,
+      fullAuditInput({
+        candidateId,
+        publishedAt: new Date('2026-06-01T09:00:00.000Z'),
+      }),
+    );
+    // A v1 prescan row for the same candidate never answers the v2 lookup.
+    await recordLivePreview({
+      candidateId,
+      publishedAt: new Date('2026-08-28T09:00:00.000Z'),
+    });
+    // Another candidate's v2 preview is out.
+    await recordOutreachPreview(connection, fullAuditInput({}));
+
+    const found = await findLatestLiveV2PreviewForCandidate(connection, candidateId);
+    expect(found?.previewId).toBe(expected.previewId);
+    expect(found?.sourceKind).toBe('full-audit');
+    expect(found?.previewContentVersion).toBe('v2');
+    expect(found?.auditId).toBe(expectedAuditId);
   });
 });

@@ -17,6 +17,7 @@ import { isSuppressed } from './suppression.js';
 import {
   createOutreachPreviewModel,
   type OutreachPreviewDocument,
+  type OutreachPreviewSourceKind,
 } from './schemas/outreach-preview.schema.js';
 
 /** The lifetime promised to the recipient: the link stops working after this. */
@@ -33,13 +34,19 @@ export interface RecordOutreachPreviewInput {
   tokenHash: string;
   objectKey: string;
   candidateId: string;
-  prescanId: string;
   domain: string;
   language: 'fr' | 'en';
-  prescanVersion: string;
-  evidenceVersion: string;
   previewContentVersion: string;
   publishedAt: Date;
+  /** Plan 037: which scan the document came from. Absent means the v1
+   *  default, 'prescan', so v1 callers keep their shape. */
+  sourceKind?: OutreachPreviewSourceKind;
+  /** full-audit rows only; required when sourceKind is 'full-audit'. */
+  auditId?: string;
+  /** v1 rows only; required when sourceKind is absent or 'prescan'. */
+  prescanId?: string;
+  prescanVersion?: string;
+  evidenceVersion?: string;
 }
 
 export interface RecordedOutreachPreview {
@@ -68,17 +75,39 @@ export async function recordOutreachPreview(
   const expiresAt = new Date(input.publishedAt.getTime() + PREVIEW_RETENTION_DAYS * DAY_MS);
   const previewId = randomUUID();
 
+  // The discriminated source's required fields are enforced here rather
+  // than in the Mongoose schema, because the pairing is per-version: a
+  // prescan row without its prescan identity, or a full-audit row without
+  // its audit id, is a record that could not answer "which scan was
+  // published?" - exactly the ambiguity plan 037 exists to close.
+  const sourceKind: OutreachPreviewSourceKind = input.sourceKind ?? 'prescan';
+  if (sourceKind === 'prescan') {
+    if (
+      input.prescanId === undefined ||
+      input.prescanVersion === undefined ||
+      input.evidenceVersion === undefined
+    ) {
+      throw new Error(
+        'outreach preview: a prescan row requires prescanId, prescanVersion, and evidenceVersion',
+      );
+    }
+  } else if (input.auditId === undefined) {
+    throw new Error('outreach preview: a full-audit row requires auditId');
+  }
+
   await PreviewModel.create({
     previewId,
     tokenHash: input.tokenHash,
     objectKey: input.objectKey,
     candidateId: input.candidateId,
-    prescanId: input.prescanId,
+    ...(input.prescanId !== undefined ? { prescanId: input.prescanId } : {}),
     domain: input.domain,
     language: input.language,
-    prescanVersion: input.prescanVersion,
-    evidenceVersion: input.evidenceVersion,
+    ...(input.prescanVersion !== undefined ? { prescanVersion: input.prescanVersion } : {}),
+    ...(input.evidenceVersion !== undefined ? { evidenceVersion: input.evidenceVersion } : {}),
     previewContentVersion: input.previewContentVersion,
+    sourceKind,
+    ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
     publishedAt: input.publishedAt,
     publicExpiresAt,
     expiresAt,
@@ -183,4 +212,24 @@ export async function listLivePreviewsForDomain(
   return createOutreachPreviewModel(connection)
     .find({ domain: normalizeDomainForHash(domain), status: 'live' })
     .lean<OutreachPreviewDocument[]>();
+}
+
+/** The candidate's current live full-audit (v2) preview, if one exists and
+ *  has not passed its public expiry. This is the readiness fact the audit
+ *  page and the first-draft gate both read: a revoked or expired preview
+ *  is absent here, which is exactly the fail-closed answer. */
+export async function findLatestLiveV2PreviewForCandidate(
+  connection: Connection,
+  candidateId: string,
+): Promise<OutreachPreviewDocument | null> {
+  return createOutreachPreviewModel(connection)
+    .findOne({
+      candidateId,
+      status: 'live',
+      sourceKind: 'full-audit',
+      previewContentVersion: 'v2',
+      publicExpiresAt: { $gt: new Date() },
+    })
+    .sort({ publishedAt: -1 })
+    .lean<OutreachPreviewDocument>();
 }

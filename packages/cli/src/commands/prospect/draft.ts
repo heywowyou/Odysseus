@@ -39,6 +39,10 @@ export function registerDraftCommand(prospect: Command): void {
         'validate the prose, and create the draft in the mailbox for review. Never sends.',
     )
     .option('--language <fr|en>', 'Language of the draft', 'fr')
+    .option(
+      '--preview-token <token>',
+      'The one-time token of the published v2 preview to link (from the audit page)',
+    )
     .option('--prescan-version <version>', 'Prescan generation to read', CURRENT_PRESCAN_VERSION)
     .option(
       '--qualification-version <version>',
@@ -55,6 +59,7 @@ export function registerDraftCommand(prospect: Command): void {
       async (
         candidateId: string,
         opts: {
+          previewToken?: string;
           language: string;
           prescanVersion: string;
           qualificationVersion: string;
@@ -89,6 +94,7 @@ export function registerDraftCommand(prospect: Command): void {
             qualificationVersion: opts.qualificationVersion,
             contactVersion: opts.contactVersion,
             dryRun: opts.dryRun,
+            ...(opts.previewToken !== undefined ? { previewToken: opts.previewToken } : {}),
           });
 
           if (!outcome.configured) {
@@ -131,6 +137,11 @@ export function registerDraftCommand(prospect: Command): void {
     )
     .requiredOption('--limit <n>', 'Maximum drafts to prepare', parsePositiveInt)
     .option('--language <fr|en>', 'Language of the drafts', 'fr')
+    .option(
+      '--preview-token <token>',
+      'One-time token of an already published v2 preview; without one every ' +
+        'candidate without a published preview refuses (no batch publishing)',
+    )
     .option('--prescan-version <version>', 'Prescan generation to read', CURRENT_PRESCAN_VERSION)
     .option(
       '--qualification-version <version>',
@@ -142,6 +153,7 @@ export function registerDraftCommand(prospect: Command): void {
     .action(
       async (opts: {
         limit: number;
+        previewToken?: string;
         language: string;
         prescanVersion: string;
         qualificationVersion: string;
@@ -179,6 +191,11 @@ export function registerDraftCommand(prospect: Command): void {
               qualificationVersion: opts.qualificationVersion,
               contactVersion: opts.contactVersion,
               dryRun: opts.dryRun,
+              // Batch drafting carries no one-time token, so every member
+              // without an already published preview refuses
+              // 'preview-not-published'. Publishing is never a batch side
+              // effect.
+              ...(opts.previewToken !== undefined ? { previewToken: opts.previewToken } : {}),
             });
             if (!outcome.configured) {
               // A mailbox that stopped authenticating mid-batch is the same

@@ -471,15 +471,29 @@ export function registerProspectRoutes(
   // typed refusal code in the body for the dashboard to read, exactly like
   // the CLI's own JSON output. Only "no mailbox configured" is a genuine
   // operator setup problem, so that alone is a non-2xx (503).
-  router.post('/api/prospects/:candidateId/outreach/draft', async ({ res, params }) => {
+  router.post('/api/prospects/:candidateId/outreach/draft', async ({ req, res, params }) => {
     const candidateId = params['candidateId']!;
     if (!isPlausibleCandidateId(candidateId)) {
       sendError(res, 400, 'candidateId must be a non-empty string without control characters');
       return;
     }
+    // Plan 037: the body carries the one-time token of the already
+    // published v2 preview the email will link. The route can no longer
+    // publish or reissue a preview as a side effect of drafting.
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
+    const rawToken =
+      body !== null && typeof body === 'object'
+        ? (body as Record<string, unknown>)['previewToken']
+        : undefined;
+    if (typeof rawToken !== 'string' || rawToken.trim() === '') {
+      sendJson(res, 200, { created: false, refusal: 'preview-not-published' });
+      return;
+    }
     const outcome = await createTouchOneDraft(connection, candidateId, {
       language: 'fr',
       dryRun: false,
+      previewToken: rawToken.trim(),
     });
     if (!outcome.configured) {
       sendError(res, 503, `no mailbox is configured (${outcome.refusal})`);
