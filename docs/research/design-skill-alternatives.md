@@ -1,5 +1,12 @@
 # Design skill candidates: Impeccable and alternatives
 
+**Resolution, 2026-09-11.** The operator adopted Impeccable as a persistent
+install, answering the open questions below: native installer (not the
+skills CLI route), the `claude` and `codex` providers, project scope, hooks
+enabled, and every surface including the report, protected by a per-rule
+`.impeccable/config.json` ignore rather than a whole-surface exclusion.
+Full record: `docs/decisions/trade-offs.md#79`.
+
 Research date: 2026-09-01. All repository facts come from the GitHub API, raw repository files, the npm registry, the skills.sh registry CLI (`npx skills@latest search`), or the vendor documentation pages listed in Sources, queried on that date. Star and install counts are point in time. Any claim that could not be confirmed from a primary source is marked UNVERIFIED. This document does not recommend a choice; it records verified facts and a neutral fit analysis.
 
 ## Purpose and scope
