@@ -1008,6 +1008,46 @@
     background-color: var(--paper);
   }
 
+  .header-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 0.5rem;
+  }
+
+  .header-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 1.5rem;
+    margin-inline-start: auto;
+  }
+
+  .header-bar > .lang-toggle {
+    margin-inline-start: 2rem;
+  }
+
+  /* Below this width the wordmark, nav and toggle no longer fit two to a
+     row at their natural size, and used to fall back to three stacked
+     rows, pushing the page's own content down by a third of the 390px
+     viewport before anything else was visible. The toggle is short enough
+     to share the wordmark's row; the nav (three links) gets a full row of
+     its own below it. DOM order is untouched, so reading and tab order
+     stay exactly what they are above this width; only the visual position
+     of the toggle moves. */
+  @media (max-width: 26rem) {
+    .header-nav {
+      order: 3;
+      flex-basis: 100%;
+      margin-inline-start: 0;
+    }
+
+    .header-bar > .lang-toggle {
+      order: 2;
+      margin-inline-start: auto;
+    }
+  }
+
   .site-footer {
     margin-top: auto;
     border-top: 1px solid var(--line);

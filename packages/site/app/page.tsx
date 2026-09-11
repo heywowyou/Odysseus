@@ -140,6 +140,16 @@ function HomeFr() {
               </a>
               .
             </p>
+            {/* Sur mobile, le tarif est autrement à sept écrans de profondeur
+                (section « Tarif et contact », plus bas). Une mention brève
+                ici évite qu'un visiteur abandonne avant de savoir qu'un prix
+                unique existe ; la version complète, avec ses conditions,
+                reste uniquement dans cette section plus bas. Masquée à partir
+                de md car la mise en page desktop n'a pas ce problème de
+                profondeur. */}
+            <p className="small muted mt-3 md:hidden">
+              Tarif unique et publié&#160;: 1&#160;600&#160;€ HT.
+            </p>
           </div>
 
           {/* La fiche constat signature. Structure de livrable, jamais un
@@ -492,6 +502,7 @@ function HomeEn() {
               </a>
               .
             </p>
+            <p className="small muted mt-3 md:hidden">One published price: EUR 1,600 excl. VAT.</p>
           </div>
 
           <aside className="split-aside" aria-label="Shape of a finding">

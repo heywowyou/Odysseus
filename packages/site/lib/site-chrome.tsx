@@ -52,24 +52,22 @@ function SiteHeader() {
   const t = LABELS[language];
   return (
     <header className="site-header">
-      <div className="shell flex flex-wrap items-center justify-between gap-x-8 gap-y-2 py-3">
+      <div className="shell header-bar py-3">
         <a className="wordmark" href="/">
           Odysseus
         </a>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <nav aria-label={t.mainNav} className="flex flex-wrap items-center gap-x-6 gap-y-0">
-            <a className="navlink" href="/">
-              {t.home}
-            </a>
-            <a className="navlink" href="/offre">
-              {t.offer}
-            </a>
-            <a className="navlink" href="/bot">
-              {t.bot}
-            </a>
-          </nav>
-          <LanguageToggle />
-        </div>
+        <nav aria-label={t.mainNav} className="header-nav">
+          <a className="navlink" href="/">
+            {t.home}
+          </a>
+          <a className="navlink" href="/offre">
+            {t.offer}
+          </a>
+          <a className="navlink" href="/bot">
+            {t.bot}
+          </a>
+        </nav>
+        <LanguageToggle />
       </div>
     </header>
   );
