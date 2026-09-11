@@ -31,8 +31,7 @@ export interface LanguageComplianceViolation {
  * independent vote via `options.dualDetect` - see the doc comment this
  * carried before extraction, preserved on `findLanguageComplianceViolations`
  * below, for why the writing pass needs the dual vote on some fields and not
- * others. Outreach prose is uniformly short, which is exactly the franc weak
- * spot the dual detector exists for, so every outreach field requests it.
+ * others.
  *
  * `franc()` is called with `only: ['fra', 'eng']` rather than its default
  * 82-language candidate set, which measurably improves accuracy on short
@@ -40,7 +39,7 @@ export interface LanguageComplianceViolation {
  * `'und'` result (franc could not confidently pick) is treated as no signal
  * rather than a violation.
  */
-export function findLanguageComplianceViolationsInFields(
+function findLanguageComplianceViolationsInFields(
   fields: readonly ProseField[],
   language: ReportLanguage,
   options: { dualDetect: boolean },

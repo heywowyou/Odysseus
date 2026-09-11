@@ -142,7 +142,7 @@ function HomeFr() {
             </Reveal>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+              <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
                 Nous écrire
               </a>
               <a className="btn btn-secondary" href="/offre">
@@ -340,7 +340,7 @@ function HomeFr() {
             par écrit avant tout engagement.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
-            <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+            <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
               Nous écrire
             </a>
             <a className="btn btn-secondary" href="/offre">
@@ -392,7 +392,7 @@ function HomeEn() {
             </Reveal>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+              <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
                 Write to us
               </a>
               <a className="btn btn-secondary" href="/offre">
@@ -578,7 +578,7 @@ function HomeEn() {
             confirmed to you in writing before any commitment.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
-            <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+            <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
               Write to us
             </a>
             <a className="btn btn-secondary" href="/offre">

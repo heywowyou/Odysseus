@@ -81,8 +81,8 @@ function SiteFooter() {
         <div>
           <p className="wordmark">Odysseus</p>
           <p className="small muted mt-2 max-w-sm">{t.tagline}</p>
-          <a className="small mt-3 inline-block underline" href="mailto:contact@odysseusaudit.com">
-            contact@odysseusaudit.com
+          <a className="small mt-3 inline-block underline" href="mailto:contact@odysseusaudit.fr">
+            contact@odysseusaudit.fr
           </a>
         </div>
         <nav aria-label={t.legalNav} className="flex flex-col items-start gap-1 md:items-end">

@@ -1,5 +1,7 @@
 /**
- * Plain-text RFC 5322 message construction, milestone 9c plan 011.
+ * RFC 5322 message construction, milestone 9c plan 011; a
+ * `multipart/alternative` pair (plain text, then light HTML) since trade-off
+ * 82, because that is the shape a hand-typed Gmail message leaves in.
  *
  * One function, used by every adapter, so the message the in-memory double
  * validates is byte-for-byte the message the Gmail adapter uploads. If the
@@ -29,11 +31,18 @@
  * should stop the run rather than be quietly repaired.
  */
 
+import { createHash } from 'node:crypto';
+
 export interface BuildDraftMimeInput {
   to: string;
   from: string;
+  /** Shown in the recipient's From column beside the address. */
+  fromName: string;
   subject: string;
+  /** The plain-text part. */
   body: string;
+  /** The HTML part, rendered from the same blocks as `body`. */
+  htmlBody: string;
 }
 
 const CRLF = '\r\n';
@@ -76,24 +85,66 @@ function encodeSubject(subject: string): string {
   return `=?UTF-8?B?${Buffer.from(subject, 'utf8').toString('base64')}?=`;
 }
 
+/** A display name as an RFC 5322 phrase: quoted when plain ASCII (the
+ *  parentheses in "Jules Fontaine (Odysseus)" would otherwise read as a
+ *  comment), an encoded word when not. */
+function encodeDisplayName(name: string): string {
+  if (!isAscii(name)) return encodeSubject(name);
+  return `"${name.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
+}
+
+function base64Part(contentType: string, content: string): string {
+  return [
+    `Content-Type: ${contentType}; charset="UTF-8"`,
+    'Content-Transfer-Encoding: base64',
+    '',
+    wrap(Buffer.from(content, 'utf8').toString('base64')),
+  ].join(CRLF);
+}
+
+/** Derived from the content so the same draft always produces the same bytes
+ *  (the in-memory double and the Gmail adapter must agree), and so it cannot
+ *  occur inside either base64 part: base64 has no underscore. */
+function boundaryFor(input: BuildDraftMimeInput): string {
+  const digest = createHash('sha256')
+    .update(input.subject)
+    .update('\0')
+    .update(input.body)
+    .update('\0')
+    .update(input.htmlBody)
+    .digest('hex')
+    .slice(0, 24);
+  return `odysseus_alt_${digest}`;
+}
+
 export function buildDraftMime(input: BuildDraftMimeInput): string {
   assertHeaderSafe(input.to, 'recipient');
   assertHeaderSafe(input.from, 'sender');
+  assertHeaderSafe(input.fromName, 'sender name');
   assertHeaderSafe(input.subject, 'subject');
   if (input.body.trim() === '') throw new Error('Draft body is empty');
+  if (input.htmlBody.trim() === '') throw new Error('Draft HTML body is empty');
 
+  const boundary = boundaryFor(input);
   const headers = [
-    `From: ${input.from}`,
+    `From: ${encodeDisplayName(input.fromName)} <${input.from}>`,
     `To: ${input.to}`,
     `Subject: ${encodeSubject(input.subject)}`,
     'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset="UTF-8"',
-    'Content-Transfer-Encoding: base64',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
   ];
 
-  const encodedBody = wrap(Buffer.from(input.body, 'utf8').toString('base64'));
+  // Plain text first: RFC 2046 orders alternatives from least to most
+  // faithful, and a client shows the last one it can render.
+  const body = [
+    `--${boundary}`,
+    base64Part('text/plain', input.body),
+    `--${boundary}`,
+    base64Part('text/html', input.htmlBody),
+    `--${boundary}--`,
+  ].join(CRLF);
 
-  return `${headers.join(CRLF)}${HEADER_BODY_SEPARATOR}${encodedBody}${CRLF}`;
+  return `${headers.join(CRLF)}${HEADER_BODY_SEPARATOR}${body}${CRLF}`;
 }
 
 /**

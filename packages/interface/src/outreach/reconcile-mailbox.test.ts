@@ -17,7 +17,7 @@ import {
   type ThreadToSync,
 } from './reconcile-mailbox.js';
 
-const SENDER = 'contact@odysseusaudit.com';
+const SENDER = 'contact@odysseusaudit.fr';
 const NOW = new Date('2026-08-30T09:00:00.000Z');
 
 interface StoreCall {
@@ -76,6 +76,7 @@ describe('reconcileMailbox', () => {
       to: 'direction@hotel-exemple.fr',
       subject: 'Votre site web',
       body: 'Bonjour,\n\nUn constat mesuré.\n\nCordialement',
+      htmlBody: '<div>Bonjour,</div><div>Un constat mesuré.</div>',
     });
     mailbox.markDraftSent(draft.providerDraftId, NOW);
 
@@ -120,6 +121,7 @@ describe('reconcileMailbox', () => {
       to: 'direction@hotel-exemple.fr',
       subject: 'Votre site web',
       body: 'Bonjour,\n\nUn constat mesuré.\n\nCordialement',
+      htmlBody: '<div>Bonjour,</div><div>Un constat mesuré.</div>',
     });
     mailbox.markDraftSent(draft.providerDraftId, NOW);
     mailbox.injectInboundMessage(draft.providerThreadId, {
@@ -160,6 +162,7 @@ describe('reconcileMailbox', () => {
       to: 'direction@hotel-exemple.fr',
       subject: 'Votre site web',
       body: 'Bonjour,\n\nUn constat mesuré.\n\nCordialement',
+      htmlBody: '<div>Bonjour,</div><div>Un constat mesuré.</div>',
     });
     mailbox.markDraftSent(draft.providerDraftId, NOW);
     mailbox.injectInboundMessage(draft.providerThreadId, {
@@ -188,6 +191,7 @@ describe('reconcileMailbox', () => {
       to: 'direction@hotel-exemple.fr',
       subject: 'Votre site web',
       body: 'Bonjour,\n\nUn constat mesuré.\n\nCordialement',
+      htmlBody: '<div>Bonjour,</div><div>Un constat mesuré.</div>',
     });
     mailbox.markDraftSent(draft.providerDraftId, NOW);
     mailbox.injectInboundMessage(draft.providerThreadId, {
@@ -241,6 +245,7 @@ describe('reconcileMailbox', () => {
       to: 'direction@hotel-exemple.fr',
       subject: 'Votre site web',
       body: 'Bonjour,\n\nUn constat mesuré.\n\nCordialement',
+      htmlBody: '<div>Bonjour,</div><div>Un constat mesuré.</div>',
     });
     mailbox.markDraftSent(draft.providerDraftId, NOW);
 
@@ -271,6 +276,7 @@ describe('reconcileMailbox', () => {
       to: 'direction@hotel-exemple.fr',
       subject: 'Votre site web',
       body: 'Bonjour,\n\nUn constat mesuré.\n\nCordialement',
+      htmlBody: '<div>Bonjour,</div><div>Un constat mesuré.</div>',
     });
 
     const { store, calls } = fakeStore([
@@ -294,6 +300,7 @@ describe('reconcileMailbox', () => {
       to: 'direction@hotel-exemple.fr',
       subject: 'Votre site web',
       body: 'Bonjour,\n\nUn constat mesuré.\n\nCordialement',
+      htmlBody: '<div>Bonjour,</div><div>Un constat mesuré.</div>',
     });
     mailbox.markDraftSent(draft.providerDraftId, sentAt);
 

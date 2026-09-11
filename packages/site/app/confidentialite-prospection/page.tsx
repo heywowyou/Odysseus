@@ -118,7 +118,7 @@ export default function ProspectingPrivacyPage() {
 
             <p>
               Jules Fontaine, entreprise individuelle (micro-entrepreneur), France. Contact&#160;:
-              contact@odysseusaudit.com. Les messages adressés à cette adresse sont lus par une
+              contact@odysseusaudit.fr. Les messages adressés à cette adresse sont lus par une
               personne, et non traités automatiquement.
             </p>
 
@@ -219,7 +219,7 @@ export default function ProspectingPrivacyPage() {
             <p>
               Vous disposez d&apos;un droit d&apos;accès, de rectification et d&apos;effacement de
               vos données, d&apos;un droit à la limitation de leur traitement et d&apos;un droit
-              d&apos;opposition à la prospection. Écrivez à contact@odysseusaudit.com, ou répondez
+              d&apos;opposition à la prospection. Écrivez à contact@odysseusaudit.fr, ou répondez
               simplement au message que vous avez reçu. La démarche est gratuite et ne requiert
               aucune justification. La page{' '}
               <a className="underline" href="/desinscription">
@@ -303,7 +303,7 @@ export default function ProspectingPrivacyPage() {
 
             <p>
               Jules Fontaine, sole proprietorship (micro-entrepreneur), France. Contact:
-              contact@odysseusaudit.com. Messages sent to this address are read by a person, not
+              contact@odysseusaudit.fr. Messages sent to this address are read by a person, not
               processed automatically.
             </p>
 
@@ -393,7 +393,7 @@ export default function ProspectingPrivacyPage() {
             <p>
               You have a right of access, rectification and erasure of your data, a right to
               restrict its processing, and a right to object to prospecting. Write to
-              contact@odysseusaudit.com, or simply reply to the message you received. The process is
+              contact@odysseusaudit.fr, or simply reply to the message you received. The process is
               free and requires no justification. The{' '}
               <a className="underline" href="/desinscription">
                 opt-out page

@@ -281,6 +281,7 @@ describe('resolvePublishedPreviewForDraft', () => {
           state: 'resolved' as const,
           audit: { auditId: overrides.auditAuditId ?? 'audit-1' },
         }),
+      findingsForAudit: () => Promise.resolve(row().findings),
       candidateId: overrides.candidateId ?? 'candidate-1',
       previewToken: overrides.previewToken ?? TOKEN,
       publicBaseUrl: BASE_URL,
@@ -291,6 +292,10 @@ describe('resolvePublishedPreviewForDraft', () => {
   it('resolves a live v2 preview of the current candidate audit', async () => {
     const result = await resolvePublishedPreviewForDraft(draftHarness());
     expect(result).toMatchObject({ previewId: 'preview-1' });
+    // The categories the email may name are those of the preview's own cards.
+    expect(result).toMatchObject({
+      proofCardCategories: ['accessibility', 'accessibility', 'accessibility'],
+    });
     expect((result as { url: string }).url).toContain(`${BASE_URL}/apercu/${TOKEN}`);
   });
 
@@ -318,6 +323,14 @@ describe('resolvePublishedPreviewForDraft', () => {
               ? 'preview-not-published'
               : 'preview-wrong-audit',
     });
+  });
+
+  it('refuses when the audit no longer yields any proof card', async () => {
+    const result = await resolvePublishedPreviewForDraft({
+      ...draftHarness(),
+      findingsForAudit: () => Promise.resolve([]),
+    });
+    expect(result).toEqual({ refusal: 'preview-wrong-audit' });
   });
 
   it('refuses when the resolution refuses the candidate outright', async () => {

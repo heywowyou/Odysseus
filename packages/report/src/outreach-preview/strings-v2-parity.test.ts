@@ -1,3 +1,4 @@
+import { OUTREACH_CONTACT } from '@odysseus/core';
 import { describe, expect, it } from 'vitest';
 import { outreachPreviewStringsV2 } from './strings-v2.js';
 
@@ -41,4 +42,17 @@ describe('the v2 scorecard strings', () => {
       expect(value, key).not.toContain('\u202f');
     }
   });
+});
+
+describe('the v2 scorecard sender', () => {
+  it.each(['fr', 'en'] as const)(
+    '%s names the same person and mailbox as the cold email it is linked from',
+    (language) => {
+      const strings = outreachPreviewStringsV2(language);
+      expect(strings.privacyController).toContain(OUTREACH_CONTACT.name);
+      expect(strings.privacyController).toContain(OUTREACH_CONTACT.address);
+      expect(strings.privacyRights).toContain(OUTREACH_CONTACT.address);
+      expect(JSON.stringify(strings)).not.toContain('contact@odysseusaudit.com');
+    },
+  );
 });

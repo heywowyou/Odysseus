@@ -1,5 +1,4 @@
 import type { ReportLanguage } from '@odysseus/core';
-import type { OutreachProseOutput } from './outreach/outreach-schema.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
 /**
@@ -63,37 +62,4 @@ export function normalizeWritingOutputTypography(
       ),
     })),
   };
-}
-
-/** Applies normalizeReportTypography to every prose field of one outreach
- *  touch's response, keyed on the same touch discriminant outreach-schema.ts
- *  uses elsewhere. Same posture as normalizeWritingOutputTypography: runs
- *  after every rejecting guard in generate-outreach-prose.ts, never before,
- *  so a guard never inspects text this rewrote. */
-export function normalizeOutreachOutputTypography(
-  output: OutreachProseOutput,
-  language: ReportLanguage,
-): OutreachProseOutput {
-  switch (output.touch) {
-    case 1:
-      return {
-        ...output,
-        subject: normalizeReportTypography(output.subject, language),
-        opening: normalizeReportTypography(output.opening, language),
-        evidenceSentence: normalizeReportTypography(output.evidenceSentence, language),
-        question: normalizeReportTypography(output.question, language),
-      };
-    case 2:
-      return {
-        ...output,
-        sentences: output.sentences.map((sentence) =>
-          normalizeReportTypography(sentence, language),
-        ),
-      };
-    case 3:
-      return {
-        ...output,
-        closing: normalizeReportTypography(output.closing, language),
-      };
-  }
 }

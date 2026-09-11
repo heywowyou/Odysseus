@@ -95,6 +95,7 @@ describe.skipIf(!mongoAvailable)('outreach campaign aggregate', () => {
       roleAddress: 'direction@hotel-secret.fr',
       subject: 'Sujet confidentiel',
       body: 'Corps confidentiel qui ne doit jamais sortir.',
+      htmlBody: '<div>Corps confidentiel.</div>',
       touch1EvidenceSlot: 'specific-failure',
       previewId: randomUUID(),
       previewUrl: 'https://www.odysseusaudit.com/apercu/secret',

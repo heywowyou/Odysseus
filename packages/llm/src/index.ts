@@ -99,15 +99,3 @@ export type { LanguageComplianceViolation } from './language-guard.js';
 
 export { ensureEnvLoaded, getOpenAiApiKey, getOpenAiBaseUrl } from './config.js';
 export { pauseBetweenLanguagePasses } from './rate-limit-pacing.js';
-
-export { buildOutreachProseInput } from './outreach/outreach-input.js';
-export type { OutreachEvidenceForModel, OutreachProseInput } from './outreach/outreach-input.js';
-export { outreachProseFields } from './outreach/outreach-schema.js';
-export type {
-  OutreachProseOutput,
-  OutreachTouch1Output,
-  OutreachTouch2Output,
-  OutreachTouch3Output,
-} from './outreach/outreach-schema.js';
-export { generateOutreachProse } from './outreach/generate-outreach-prose.js';
-export type { GenerateOutreachProseResult } from './outreach/generate-outreach-prose.js';

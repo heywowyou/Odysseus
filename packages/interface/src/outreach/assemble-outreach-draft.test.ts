@@ -1,34 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import { buildOutreachFactsBlock, type OutreachFactsBlock } from '@odysseus/core';
-import type { OutreachProseOutput } from '@odysseus/llm';
-import { assembleOutreachDraft, type AssembledOutreachDraft } from './assemble-outreach-draft.js';
+import {
+  assembleOutreachDraft,
+  type AssembleOutreachDraftOptions,
+  type AssembledOutreachDraft,
+} from './assemble-outreach-draft.js';
 
 const PREVIEW_URL = 'https://www.odysseusaudit.com/apercu/abc123';
 const PRIVACY_URL = 'https://www.odysseusaudit.com/confidentialite-prospection';
 const OPT_OUT_URL = 'https://www.odysseusaudit.com/desinscription';
 
-const TOUCH1_PROSE: OutreachProseOutput = {
+const TOUCH1_BASE: AssembleOutreachDraftOptions = {
   touch: 1,
-  evidenceRef: 'e1',
-  subject: 'Un point rapide sur votre site',
-  opening: "Nous avons regardé le site de votre établissement comme n'importe quel visiteur.",
-  evidenceSentence:
-    'Une partie du contenu ne se voit pas avant que le JavaScript ait fini de charger.',
-  question: 'Est-ce voulu ?',
+  language: 'fr',
+  hotelName: 'Hôtel des Tilleuls',
+  variantSeed: 'candidate-1',
+  categories: ['accessibility', 'seo', 'performance'],
+  previewUrl: PREVIEW_URL,
+  dataOrigins: ['public-hotel-catalogue', 'public-website'],
+  privacyUrl: PRIVACY_URL,
+  optOutUrl: OPT_OUT_URL,
 };
 
-const TOUCH2_PROSE: OutreachProseOutput = {
+const TOUCH2_BASE: AssembleOutreachDraftOptions = {
   touch: 2,
-  evidenceRef: 'e2',
-  sentences: [
-    'Le bouton de réservation ne répond pas au clavier seul.',
-    'Un client pressé peut abandonner avant même de voir vos tarifs.',
-  ],
-};
-
-const TOUCH3_PROSE: OutreachProseOutput = {
-  touch: 3,
-  closing: 'Nous restons disponibles si utile.',
+  language: 'fr',
+  hotelName: 'Hôtel des Tilleuls',
+  variantSeed: 'candidate-1',
+  previousSubject: 'Un point rapide sur votre site',
 };
 
 function assertAssembled(
@@ -60,102 +59,142 @@ function assertGreetsExactlyOnce(body: string): void {
 
 describe('assembleOutreachDraft - touch 1', () => {
   it('assembles a complete draft', () => {
-    const result = assembleOutreachDraft({
-      prose: TOUCH1_PROSE,
-      language: 'fr',
-      previewUrl: PREVIEW_URL,
-      dataOrigins: ['public-hotel-catalogue', 'public-website'],
-      privacyUrl: PRIVACY_URL,
-      optOutUrl: OPT_OUT_URL,
-    });
+    const result = assembleOutreachDraft(TOUCH1_BASE);
     assertAssembled(result);
 
-    expect(result.subject).toBe(TOUCH1_PROSE.subject);
+    expect(result.subject).toBe(
+      'Hôtel des Tilleuls\u00a0: accessibilité, référencement et performance',
+    );
     expect(result.body).toContain('Bonjour,');
     assertGreetsExactlyOnce(result.body);
-    expect(result.body).toContain(TOUCH1_PROSE.opening);
-    expect(result.body).toContain(TOUCH1_PROSE.evidenceSentence);
-    expect(result.body).toContain(TOUCH1_PROSE.question);
-    expect(result.body).toContain(PREVIEW_URL);
+    expect(result.body).toContain("le site de l'Hôtel des Tilleuls");
     expect(result.body).toContain(
-      'Le responsable de traitement est Odysseus Audit, Jules Fontaine, contact@odysseusaudit.com.',
+      "notamment en matière d'accessibilité, de référencement dans les moteurs de recherche et de vitesse de chargement.",
     );
-    expect(result.body).toContain('le classement public des hébergements touristiques');
-    expect(result.body).toContain('votre site web accessible publiquement');
+    expect(result.body).toContain(
+      `Vous trouverez un résumé de notre analyse ici\u00a0:\n${PREVIEW_URL}`,
+    );
+    expect(result.body).toContain('la page concernée et la correction à apporter.');
+    expect(result.body).toContain(
+      'Responsable du traitement\u00a0: Jules Fontaine (Odysseus), contact@odysseusaudit.fr.',
+    );
+    expect(result.body).toContain(
+      'le classement public des hébergements touristiques (Atout France), votre site internet.',
+    );
+    expect(result.body).toContain('deux relances au plus');
+    expect(result.body).toContain('Bien cordialement,');
+    expect(result.body).toContain('Jules Fontaine\nFondateur, Odysseus\nAudit de sites web');
     expect(result.body).toContain(PRIVACY_URL);
     expect(result.body).toContain(OPT_OUT_URL);
+    expect(result.body).not.toContain('odysseusaudit.com.');
     // No touch 3 content leaks into touch 1.
     expect(result.body).not.toContain('Le cadre applicable');
   });
 
-  it('refuses when the preview link is missing', () => {
+  it('names only the categories it is given, folding rendering into search', () => {
     const result = assembleOutreachDraft({
-      prose: TOUCH1_PROSE,
-      language: 'fr',
-      dataOrigins: ['public-website'],
-      privacyUrl: PRIVACY_URL,
-      optOutUrl: OPT_OUT_URL,
+      ...TOUCH1_BASE,
+      categories: ['rendering', 'seo', 'seo'],
     });
+    assertAssembled(result);
+    expect(result.subject).toBe('Hôtel des Tilleuls\u00a0: référencement');
+    expect(result.body).toContain(
+      'notamment en matière de référencement dans les moteurs de recherche.',
+    );
+    expect(result.body).not.toContain("d'affichage de votre contenu");
+    expect(result.body).not.toContain('accessibilité');
+  });
+
+  it('falls back to "Votre site" when the name makes the subject too long', () => {
+    const result = assembleOutreachDraft({
+      ...TOUCH1_BASE,
+      hotelName: 'Hôtel Restaurant Campanile Toulouse Ouest Purpan Aéroport Blagnac Centre',
+    });
+    assertAssembled(result);
+    expect(result.subject).toBe('Votre site\u00a0: accessibilité, référencement et performance');
+  });
+
+  it('writes "votre établissement" when there is no usable name', () => {
+    const result = assembleOutreachDraft({ ...TOUCH1_BASE, hotelName: '  ' });
+    assertAssembled(result);
+    expect(result.body).toContain('le site de votre établissement');
+    expect(result.subject.startsWith('Votre site')).toBe(true);
+  });
+
+  it('always picks the same wording for the same hotel, and varies across hotels', () => {
+    const first = assembleOutreachDraft(TOUCH1_BASE);
+    const again = assembleOutreachDraft(TOUCH1_BASE);
+    assertAssembled(first);
+    assertAssembled(again);
+    expect(again.body).toBe(first.body);
+    const bodies = new Set(
+      Array.from({ length: 12 }, (_, index) => {
+        const result = assembleOutreachDraft({ ...TOUCH1_BASE, variantSeed: `candidate-${index}` });
+        assertAssembled(result);
+        return result.body;
+      }),
+    );
+    expect(bodies.size).toBeGreaterThan(1);
+  });
+
+  it('refuses when no category is supplied', () => {
+    expect(assembleOutreachDraft({ ...TOUCH1_BASE, categories: [] })).toEqual({
+      assembled: false,
+      refusal: 'missing-categories',
+    });
+  });
+
+  it('writes the English template for an English draft', () => {
+    const result = assembleOutreachDraft({ ...TOUCH1_BASE, language: 'en' });
+    assertAssembled(result);
+    expect(result.subject).toBe('Hôtel des Tilleuls: accessibility, search and performance');
+    expect(result.body).toContain('the website of Hôtel des Tilleuls');
+    expect(result.body).toContain(
+      'notably in accessibility, search engine visibility and loading speed.',
+    );
+  });
+
+  it('refuses when the preview link is missing', () => {
+    const { previewUrl: _omitted, ...withoutPreview } = TOUCH1_BASE;
+    const result = assembleOutreachDraft(withoutPreview);
     expect(result).toEqual({ assembled: false, refusal: 'missing-preview-url' });
   });
 
   it('refuses when no data origins are supplied', () => {
-    const result = assembleOutreachDraft({
-      prose: TOUCH1_PROSE,
-      language: 'fr',
-      previewUrl: PREVIEW_URL,
-      dataOrigins: [],
-      privacyUrl: PRIVACY_URL,
-      optOutUrl: OPT_OUT_URL,
-    });
+    const result = assembleOutreachDraft({ ...TOUCH1_BASE, dataOrigins: [] });
     expect(result).toEqual({ assembled: false, refusal: 'missing-data-origins' });
   });
 
   it('refuses when the privacy link is missing', () => {
-    const result = assembleOutreachDraft({
-      prose: TOUCH1_PROSE,
-      language: 'fr',
-      previewUrl: PREVIEW_URL,
-      dataOrigins: ['public-website'],
-      optOutUrl: OPT_OUT_URL,
-    });
+    const { privacyUrl: _omitted, ...withoutPrivacy } = TOUCH1_BASE;
+    const result = assembleOutreachDraft(withoutPrivacy);
     expect(result).toEqual({ assembled: false, refusal: 'missing-privacy-url' });
   });
 
   it('refuses when the opt-out link is missing', () => {
-    const result = assembleOutreachDraft({
-      prose: TOUCH1_PROSE,
-      language: 'fr',
-      previewUrl: PREVIEW_URL,
-      dataOrigins: ['public-website'],
-      privacyUrl: PRIVACY_URL,
-    });
+    const { optOutUrl: _omitted, ...withoutOptOut } = TOUCH1_BASE;
+    const result = assembleOutreachDraft(withoutOptOut);
     expect(result).toEqual({ assembled: false, refusal: 'missing-opt-out-url' });
   });
 });
 
 describe('assembleOutreachDraft - touch 2', () => {
   it('assembles a complete draft with a reply-based opt-out and no new link', () => {
-    const result = assembleOutreachDraft({
-      prose: TOUCH2_PROSE,
-      language: 'fr',
-      previousSubject: 'Un point rapide sur votre site',
-    });
+    const result = assembleOutreachDraft(TOUCH2_BASE);
     assertAssembled(result);
 
     expect(result.subject).toBe('Re: Un point rapide sur votre site');
-    expect(result.body).toContain(TOUCH2_PROSE.sentences[0]);
-    expect(result.body).toContain(TOUCH2_PROSE.sentences[1]);
+    expect(result.body).toContain("l'analyse du site de l'Hôtel des Tilleuls");
     expect(result.body).toContain(
-      "Vous pouvez répondre à ce message pour ne plus recevoir d'e-mail de notre part.",
+      'Pour ne plus recevoir de message de notre part, répondez simplement à celui-ci.',
     );
     expect(result.body).not.toMatch(/https?:\/\//u);
+    expect(result.htmlBody).not.toContain('<a ');
   });
 
   it('does not double-prefix a subject that already carries Re:', () => {
     const result = assembleOutreachDraft({
-      prose: TOUCH2_PROSE,
-      language: 'fr',
+      ...TOUCH2_BASE,
       previousSubject: 'Re: Un point rapide sur votre site',
     });
     assertAssembled(result);
@@ -163,7 +202,8 @@ describe('assembleOutreachDraft - touch 2', () => {
   });
 
   it('refuses when the previous subject is missing', () => {
-    const result = assembleOutreachDraft({ prose: TOUCH2_PROSE, language: 'fr' });
+    const { previousSubject: _omitted, ...withoutSubject } = TOUCH2_BASE;
+    const result = assembleOutreachDraft(withoutSubject);
     expect(result).toEqual({ assembled: false, refusal: 'missing-previous-subject' });
   });
 });
@@ -171,43 +211,102 @@ describe('assembleOutreachDraft - touch 2', () => {
 describe('assembleOutreachDraft - touch 3', () => {
   it('assembles a complete draft with the rebuilt facts block spliced in', () => {
     const expectedFacts = touch3ExpectedFacts();
-    const result = assembleOutreachDraft({
-      prose: TOUCH3_PROSE,
-      language: 'fr',
-      previousSubject: 'Un point rapide sur votre site',
-      expectedFacts,
-    });
+    const result = assembleOutreachDraft({ ...TOUCH2_BASE, touch: 3, expectedFacts });
     assertAssembled(result);
 
     expect(result.subject).toBe('Re: Un point rapide sur votre site');
-    expect(result.body).toContain(TOUCH3_PROSE.closing);
+    expect(result.body).toContain(
+      "Ce sera notre dernier message au sujet du site de l'Hôtel des Tilleuls.",
+    );
+    expect(result.body).toContain(
+      'Nous restons à votre disposition si vous souhaitez recevoir le détail de notre analyse.',
+    );
     if (expectedFacts.state !== 'rendered') throw new Error('expected a rendered facts block');
     expect(result.body).toContain(expectedFacts.heading);
     for (const paragraph of expectedFacts.paragraphs) expect(result.body).toContain(paragraph);
     expect(result.body).toContain(
-      'Si vous préférez que nous supprimions cette donnée de registre, répondez à ce message ' +
-        'et nous la supprimerons.',
+      'Si vous souhaitez que nous effacions ces données de registre, répondez simplement à ' +
+        'ce message\u00a0: nous les supprimerons.',
     );
     expect(result.body).not.toMatch(/https?:\/\//u);
+    expect(result.htmlBody).not.toContain('<a ');
+    // The facts block reads before the sign-off, never below the signature.
+    expect(result.body.indexOf(expectedFacts.heading)).toBeLessThan(
+      result.body.indexOf('Bien cordialement,'),
+    );
   });
 
   it('refuses when the facts block was not supplied', () => {
-    const result = assembleOutreachDraft({
-      prose: TOUCH3_PROSE,
-      language: 'fr',
-      previousSubject: 'Un point rapide sur votre site',
-    });
+    const result = assembleOutreachDraft({ ...TOUCH2_BASE, touch: 3 });
     expect(result).toEqual({ assembled: false, refusal: 'missing-facts-inputs' });
   });
 
   it('refuses when the supplied facts block does not match a fresh rebuild', () => {
     const stale: OutreachFactsBlock = { state: 'omitted' };
-    const result = assembleOutreachDraft({
-      prose: TOUCH3_PROSE,
-      language: 'fr',
-      previousSubject: 'Un point rapide sur votre site',
-      expectedFacts: stale,
-    });
+    const result = assembleOutreachDraft({ ...TOUCH2_BASE, touch: 3, expectedFacts: stale });
     expect(result).toEqual({ assembled: false, refusal: 'facts-block-mismatch' });
+  });
+});
+
+/** What a reader sees in the HTML part, links left out: tags dropped,
+ *  entities decoded, whitespace collapsed. */
+function visibleHtmlTextWithoutLinks(html: string): string {
+  return html
+    .replaceAll(/<a [^>]*>.*?<\/a>/gu, ' ')
+    .replaceAll(/<br>/gu, ' ')
+    .replaceAll(/<[^>]+>/gu, ' ')
+    .replaceAll('&#39;', "'")
+    .replaceAll('&quot;', '"')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&nbsp;', '\u00a0')
+    .replaceAll(/\s+/gu, ' ')
+    .trim();
+}
+
+/** The text part with every line that carries a URL left out: those are the
+ *  link lines, which the HTML part shows as anchors. */
+function visibleTextWithoutLinks(text: string): string {
+  return text
+    .split('\n')
+    .filter((line) => !line.includes('https://'))
+    .join('\n')
+    .replaceAll(/\s+/gu, ' ')
+    .trim();
+}
+
+describe('assembleOutreachDraft - the text and HTML parts say the same thing', () => {
+  const cases: Array<{ name: string; options: AssembleOutreachDraftOptions }> = [
+    { name: 'touch 1', options: TOUCH1_BASE },
+    { name: 'touch 2', options: TOUCH2_BASE },
+    {
+      name: 'touch 3',
+      options: { ...TOUCH2_BASE, touch: 3, expectedFacts: touch3ExpectedFacts() },
+    },
+  ];
+
+  it.each(cases)('$name', ({ options }) => {
+    const result = assembleOutreachDraft(options);
+    assertAssembled(result);
+    expect(visibleHtmlTextWithoutLinks(result.htmlBody)).toBe(visibleTextWithoutLinks(result.body));
+  });
+
+  it('writes touch 1 links as anchors with their labels, never raw URLs', () => {
+    const result = assembleOutreachDraft({ ...TOUCH1_BASE, dataOrigins: ['public-website'] });
+    assertAssembled(result);
+    expect(result.htmlBody).toContain(
+      `ici\u00a0:<br><a href="${PREVIEW_URL}">Consulter l&#39;aperçu de votre site</a>`,
+    );
+    expect(result.htmlBody).toContain(`href="${OPT_OUT_URL}"`);
+    expect(result.htmlBody).toContain(`href="${PRIVACY_URL}"`);
+    expect(result.htmlBody.match(/<a /gu)).toHaveLength(3);
+    expect(result.htmlBody).not.toMatch(/<img|src=|url\(/iu);
+  });
+
+  it('escapes the hotel name in the HTML part', () => {
+    const result = assembleOutreachDraft({ ...TOUCH1_BASE, hotelName: 'Hôtel & Spa des Pêcheurs' });
+    assertAssembled(result);
+    expect(result.htmlBody).toContain('Hôtel &amp; Spa des Pêcheurs');
   });
 });

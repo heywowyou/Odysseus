@@ -28,7 +28,11 @@ import { createMongoOutreachDraftStore } from './mongo-outreach-draft-store.js';
 import { resolvePublishedPreviewForDraft } from './publish-preview-v2.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
-import { findOutreachPreviewByTokenHash, resolveOutreachAuditForCandidate } from '@odysseus/store';
+import {
+  findOutreachPreviewByTokenHash,
+  getFindingsForAudit,
+  resolveOutreachAuditForCandidate,
+} from '@odysseus/store';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { CURRENT_CONTACT_VERSION } from '../prospecting/hotel-contacts/discover-contacts.js';
 import { CURRENT_PRESCAN_VERSION } from '../prospecting/hotel-prescan/prescan-hotels.js';
@@ -111,6 +115,7 @@ export async function createTouchOneDraft(
               ? { state: 'resolved', audit: { auditId: resolution.audit.auditId } }
               : { state: 'refused' };
           },
+          findingsForAudit: (auditId) => getFindingsForAudit(connection, auditId),
           candidateId: id,
           previewToken: token,
           publicBaseUrl: getPreviewPublicBaseUrl(),

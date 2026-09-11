@@ -24,6 +24,8 @@ afterAll(async () => {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CREATED_AT = new Date('2026-08-30T09:00:00.000Z');
 const BODY = 'Bonjour,\n\nUn constat mesuré sur votre site.\n\nCordialement';
+const HTML_BODY =
+  '<div dir="ltr"><div>Bonjour,</div><div>Un constat mesuré sur votre site.</div></div>';
 
 function input(overrides: Partial<RecordOutreachDraftInput> = {}): RecordOutreachDraftInput {
   return {
@@ -34,6 +36,7 @@ function input(overrides: Partial<RecordOutreachDraftInput> = {}): RecordOutreac
     roleAddress: 'direction@hotel-exemple.fr',
     subject: 'Votre site web',
     body: BODY,
+    htmlBody: HTML_BODY,
     touch1EvidenceSlot: 'render-comparison',
     previewId: randomUUID(),
     previewUrl: 'https://www.odysseusaudit.com/apercu/token',
@@ -58,6 +61,11 @@ describe.skipIf(!mongoAvailable)('outreach drafts', () => {
     const draft = await recordOutreachDraft(connection, input());
 
     expect(draft.status).toBe('created');
+    // Declared on the schema, or Mongoose would silently strip it on save.
+    const stored = await createOutreachDraftModel(connection)
+      .findOne({ draftId: draft.draftId })
+      .lean();
+    expect(stored?.htmlBody).toBe(HTML_BODY);
     expect(draft.expiresAt.getTime() - CREATED_AT.getTime()).toBe(
       OUTREACH_DRAFT_RETENTION_DAYS * DAY_MS,
     );

@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { ensureEnvLoaded, findWorkspaceRoot } from '@odysseus/scanner';
+import { OUTREACH_CONTACT } from '@odysseus/core';
 
 export const DEFAULT_INTERFACE_PORT = 4600;
 /** Binds to loopback only by default: this is what makes the dashboard a
@@ -336,9 +337,11 @@ export function isArtifactsBucketConfigured(): boolean {
  * fails at Google with a message about tokens.
  *
  * The sending address is deliberately separate from `odysseusaudit.com`, per
- * plan 011's operator preflight. Nothing here enforces that, because the check
- * belongs where a person can see the answer: the preflight checklist in
- * `docs/rules/outreach-rules.md`.
+ * plan 011's operator preflight. `getMailboxSenderAddress` enforces it: the
+ * configured sender must be `OUTREACH_CONTACT.address`, the one address every
+ * draft and preview names, or nothing mailbox-related runs. A draft sent from
+ * one address while its body names another would tell the prospect to object
+ * to a mailbox the campaign does not read.
  */
 export const MAILBOX_ENV_VARS = [
   'ODYSSEUS_MAILBOX_CLIENT_ID',
@@ -387,5 +390,13 @@ export function getMailboxRefreshToken(): string {
 }
 
 export function getMailboxSenderAddress(): string {
-  return requiredMailboxEnv('ODYSSEUS_MAILBOX_SENDER_ADDRESS');
+  const address = requiredMailboxEnv('ODYSSEUS_MAILBOX_SENDER_ADDRESS');
+  if (address.trim().toLowerCase() !== OUTREACH_CONTACT.address) {
+    // Names the expected address only, never the configured value.
+    throw new Error(
+      `ODYSSEUS_MAILBOX_SENDER_ADDRESS must be ${OUTREACH_CONTACT.address}, the address ` +
+        'every outreach draft and preview names; outreach draft creation refuses otherwise',
+    );
+  }
+  return OUTREACH_CONTACT.address;
 }

@@ -46,9 +46,11 @@ export interface CreateMailboxDraftInput {
    *  here, but this field is the last place the value is readable. */
   to: string;
   subject: string;
-  /** Plain text only. There is no HTML field and no attachment field, because
-   *  outreach doctrine allows neither. */
+  /** The plain-text part. */
   body: string;
+  /** The light HTML part, rendered from the same blocks as `body` (trade-off
+   *  82). There is no attachment field, because outreach doctrine allows none. */
+  htmlBody: string;
   /** Touches 2 and 3 only: the provider thread this reply belongs to, so a
    *  follow-up lands in the conversation rather than starting a new one. */
   providerThreadId?: string;

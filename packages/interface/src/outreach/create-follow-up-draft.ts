@@ -2,10 +2,15 @@
  * Follow-up draft orchestration, milestone 9c plan 012 step 4.
  *
  * A sibling of `create-outreach-draft.ts`'s `createOutreachDraft`, sharing its
- * refusal-not-throw discipline and its two suppression gates (immediately
- * before generation, and again immediately before the provider call, for the
- * same reason: an objection arriving during a model round trip has to stop
- * the draft in flight, not merely the next batch).
+ * refusal-not-throw discipline and its two suppression gates (at the start,
+ * and again immediately before the provider call, for the same reason: an
+ * objection arriving while the draft is being built has to stop the draft in
+ * flight, not merely the next batch).
+ *
+ * **No evidence gate since trade-off 83.** Touch 2 used to carry a second
+ * prescan observation written up by the model, and refused when the prescan
+ * had none. It is now an approved reminder that names no finding, so a hotel
+ * is never left without its reminder for lack of a second observation.
  *
  * **Why this module publishes no preview and adds no link.** Touch 1 needs a
  * fresh access-controlled link because it is the hotel's first contact.
@@ -31,23 +36,20 @@
 
 import {
   buildOutreachFactsBlock,
-  HOTEL_EVIDENCE_MIN_SUMMARIES,
-  HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION,
-  selectOutreachEvidence,
   type HotelPrescanEvidence,
   type OutreachThreadState,
-  type SelectedOutreachEvidence,
 } from '@odysseus/core';
-import { buildOutreachProseInput, generateOutreachProse } from '@odysseus/llm';
-import type { OutreachProseOutput } from '@odysseus/llm';
 import { assembleOutreachDraft } from './assemble-outreach-draft.js';
+import { formatHotelName } from './hotel-name.js';
 import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import { registryAssessment, type PreviewSireneFacts } from './publish-preview.js';
 
 export const SECOND_TOUCH = 2;
 export const THIRD_TOUCH = 3;
 
-export const CURRENT_OUTREACH_PROMPT_VERSION = 'v1';
+/** Same value and meaning as `create-outreach-draft.ts`'s constant: the
+ *  approved template behind the text, not a model prompt (trade-off 83). */
+export const CURRENT_OUTREACH_PROMPT_VERSION = 'template-v1';
 
 export type CreateFollowUpDraftRefusal =
   | 'thread-unknown'
@@ -91,6 +93,7 @@ export interface RecordFollowUpDraftFacts {
   roleAddress: string;
   subject: string;
   body: string;
+  htmlBody: string;
   prescanVersion: string;
   evidenceVersion: string;
   outreachPromptVersion: string;
@@ -138,9 +141,6 @@ export interface CreateFollowUpDraftOptions {
   threadId: string;
   dryRun: boolean;
   now?: Date;
-  /** Injected so tests never reach the live model, matching the LLM
-   *  package's own stubbed-client discipline. */
-  generateProse?: typeof generateOutreachProse;
 }
 
 export interface CreateFollowUpDraftResult {
@@ -181,7 +181,6 @@ export async function createFollowUpDraft(
   options: CreateFollowUpDraftOptions,
 ): Promise<CreateFollowUpDraftResult> {
   const now = options.now ?? new Date();
-  const generate = options.generateProse ?? generateOutreachProse;
 
   const row = await options.store.findFollowUpRow(options.threadId);
   if (row === null) return refuse('thread-unknown');
@@ -200,37 +199,6 @@ export async function createFollowUpDraft(
   const previousDraft = await options.store.findPreviousDraft(row.threadId, touch - 1);
   if (previousDraft === null) return refuse('previous-draft-missing');
 
-  let selectedForTouch2: SelectedOutreachEvidence | undefined;
-
-  if (touch === SECOND_TOUCH) {
-    const evidence = row.evidence;
-    if (evidence === undefined || evidence.status !== 'complete')
-      return refuse('evidence-incomplete');
-    if (evidence.schemaVersion !== HOTEL_PRESCAN_EVIDENCE_SCHEMA_VERSION) {
-      return refuse('evidence-schema-outdated');
-    }
-    if (evidence.summaries.length < HOTEL_EVIDENCE_MIN_SUMMARIES)
-      return refuse('evidence-incomplete');
-    // A prescan past its own retention describes a site as it was too long
-    // ago to write to anybody about, and its screenshots may already be
-    // swept.
-    if (row.prescanExpiresAt.getTime() <= now.getTime()) return refuse('prescan-expired');
-
-    const selection = selectOutreachEvidence(evidence);
-    if (selection.state !== 'selected') {
-      return refuse(
-        selection.refusal === 'no-distinct-second-observation'
-          ? 'no-distinct-second-observation'
-          : selection.refusal === 'observation-not-in-allowlist'
-            ? 'observation-not-in-allowlist'
-            : selection.refusal === 'evidence-schema-outdated'
-              ? 'evidence-schema-outdated'
-              : 'evidence-incomplete',
-      );
-    }
-    selectedForTouch2 = selection.touch2;
-  }
-
   if (options.dryRun) {
     return {
       created: false,
@@ -244,19 +212,7 @@ export async function createFollowUpDraft(
     };
   }
 
-  const prose = await generate(
-    buildOutreachProseInput({
-      language: row.language,
-      touch,
-      businessName: row.businessName,
-      selected: selectedForTouch2,
-      ageFramingPermitted: true,
-    }),
-    selectedForTouch2?.observationKey,
-  );
-
-  const evidenceVersion =
-    selectedForTouch2 !== undefined ? String(row.evidence?.schemaVersion ?? '') : '';
+  const evidenceVersion = '';
   const failureFacts = {
     threadId: row.threadId,
     candidateId: row.candidateId,
@@ -279,8 +235,10 @@ export async function createFollowUpDraft(
         })
       : undefined;
   const assembled = assembleOutreachDraft({
-    prose: prose.output as OutreachProseOutput,
+    touch,
     language: row.language,
+    hotelName: formatHotelName(row.businessName),
+    variantSeed: row.candidateId,
     previousSubject: previousDraft.subject,
     ...(assessment !== undefined ? { assessment } : {}),
     ...(expectedFacts !== undefined ? { expectedFacts } : {}),
@@ -304,6 +262,7 @@ export async function createFollowUpDraft(
     to: row.roleAddress,
     subject: assembled.subject,
     body: assembled.body,
+    htmlBody: assembled.htmlBody,
     ...(row.providerThreadId !== undefined ? { providerThreadId: row.providerThreadId } : {}),
   });
 
@@ -313,6 +272,7 @@ export async function createFollowUpDraft(
       ...failureFacts,
       subject: assembled.subject,
       body: assembled.body,
+      htmlBody: assembled.htmlBody,
       providerDraftId: providerDraft.providerDraftId,
       providerMessageId: providerDraft.providerMessageId,
       providerThreadId: providerDraft.providerThreadId,

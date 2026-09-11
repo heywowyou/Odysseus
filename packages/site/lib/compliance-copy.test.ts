@@ -64,7 +64,7 @@ describe('prospecting privacy page', () => {
   });
 
   it.each([
-    ['the controller', ['Jules Fontaine', 'contact@odysseusaudit.com']],
+    ['the controller', ['Jules Fontaine', 'contact@odysseusaudit.fr']],
     // Article 14 requires the source, per prospect and accurately. Naming the
     // registers is the whole point; "public sources" would not be a disclosure.
     ['the exact sources', ['Atout France', 'data.gouv.fr', 'Sirene']],
@@ -115,7 +115,7 @@ describe('prospecting privacy page', () => {
 describe('opt-out page', () => {
   it('is bilingual and offers a free mailto route', () => {
     expect(isBilingual(optOut)).toBe(true);
-    expect(optOut).toContain('mailto:contact@odysseusaudit.com');
+    expect(optOut).toContain('mailto:contact@odysseusaudit.fr');
     expect(optOut).toContain('gratuit');
     expect(optOut).toContain('is free');
   });
@@ -235,7 +235,10 @@ describe('every compliance page', () => {
     // One address across every surface a prospect can reach. Two would mean an
     // objection sent to whichever one the reader happened to see, and only one
     // of them is the mailbox this campaign monitors.
-    expect(source).toContain('contact@odysseusaudit.com');
+    // The .fr address is the cold-outreach mailbox, and it must match
+    // OUTREACH_CONTACT in packages/core (hand-kept: site imports no package).
+    expect(source).toContain('contact@odysseusaudit.fr');
+    expect(source).not.toContain('contact@odysseusaudit.com');
     expect(source).not.toContain('julesfontaine.com');
   });
 

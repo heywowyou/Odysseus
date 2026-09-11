@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { OutreachProseOutput } from './outreach/outreach-schema.js';
-import { normalizeOutreachOutputTypography, normalizeReportTypography } from './typography.js';
+import { normalizeReportTypography } from './typography.js';
 
 const NBSP = ' ';
 
@@ -57,49 +56,5 @@ describe('normalizeReportTypography', () => {
   it('is idempotent', () => {
     const once = normalizeReportTypography('Un texte « cité » avec – un tiret.', 'fr');
     expect(normalizeReportTypography(once, 'fr')).toBe(once);
-  });
-});
-
-describe('normalizeOutreachOutputTypography', () => {
-  it('normalizes every touch 1 field', () => {
-    const output: OutreachProseOutput = {
-      touch: 1,
-      evidenceRef: 'e1',
-      subject: 'Un « point rapide »',
-      opening: 'Un point – nous avons regardé votre site.',
-      evidenceSentence: 'Une partie du contenu « ne s’affiche pas ».',
-      question: 'Est-ce voulu ?',
-    };
-    const out = normalizeOutreachOutputTypography(output, 'fr');
-    if (out.touch !== 1) throw new Error('expected touch 1');
-    expect(out.subject).toBe(`Un «${NBSP}point rapide${NBSP}»`);
-    expect(out.opening).toBe('Un point - nous avons regardé votre site.');
-    expect(out.evidenceSentence).toContain(`«${NBSP}ne s’affiche pas${NBSP}»`);
-    expect(out.question).toBe('Est-ce voulu ?');
-  });
-
-  it('normalizes every touch 2 sentence', () => {
-    const output: OutreachProseOutput = {
-      touch: 2,
-      evidenceRef: 'e2',
-      sentences: ['Un premier « exemple ».', 'Un second – exemple.'],
-    };
-    const out = normalizeOutreachOutputTypography(output, 'fr');
-    if (out.touch !== 2) throw new Error('expected touch 2');
-    expect(out.sentences[0]).toBe(`Un premier «${NBSP}exemple${NBSP}».`);
-    expect(out.sentences[1]).toBe('Un second - exemple.');
-  });
-
-  it('normalizes the touch 3 closing field', () => {
-    const output: OutreachProseOutput = { touch: 3, closing: 'Un dernier mot – bref.' };
-    const out = normalizeOutreachOutputTypography(output, 'fr');
-    if (out.touch !== 3) throw new Error('expected touch 3');
-    expect(out.closing).toBe('Un dernier mot - bref.');
-  });
-
-  it('leaves an already-normalized response unchanged', () => {
-    const output: OutreachProseOutput = { touch: 3, closing: 'Un dernier mot - bref.' };
-    const out = normalizeOutreachOutputTypography(output, 'fr');
-    expect(out).toEqual(output);
   });
 });

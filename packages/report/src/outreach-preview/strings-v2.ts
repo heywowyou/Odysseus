@@ -2,7 +2,13 @@
  * Bilingual strings for the v2 full-scan scorecard preview (plan 037).
  * Same discipline as the v1 strings: one interface, two complete tables,
  * no English fallback, no em or en dashes.
+ *
+ * The controller's name and address come from `OUTREACH_CONTACT`, the same
+ * constant the cold email interpolates, so the two documents a prospect
+ * receives can never name different mailboxes.
  */
+
+import { OUTREACH_CONTACT, OUTREACH_SENDER_DISPLAY_NAME } from '@odysseus/core';
 
 export interface OutreachPreviewStringsV2 {
   documentTitle: string;
@@ -110,7 +116,8 @@ const OUTREACH_PREVIEW_STRINGS_V2_FR: OutreachPreviewStringsV2 = {
   offerLinkLabel: 'Détails de l’offre',
   privacyHeading: 'Vos données et ce document',
   privacyController:
-    'Ce document vous est adressé par Jules Fontaine (Odysseus), ' + 'contact@odysseusaudit.com.',
+    `Ce document vous est adressé par ${OUTREACH_SENDER_DISPLAY_NAME}, ` +
+    `${OUTREACH_CONTACT.address}.`,
   privacyData:
     'Il repose sur une analyse de votre site réalisée par notre robot, ' +
     'identifiable dans vos journaux, et sur des données publiques.',
@@ -130,7 +137,7 @@ const OUTREACH_PREVIEW_STRINGS_V2_FR: OutreachPreviewStringsV2 = {
     'sans justification.',
   privacyExpiry: 'Ce lien cesse de fonctionner 30 jours après son envoi.',
   privacyRights:
-    'Accès, rectification, effacement : écrivez à contact@odysseusaudit.com. ' +
+    `Accès, rectification, effacement : écrivez à ${OUTREACH_CONTACT.address}. ` +
     'La page prospection et données personnelles détaille tout cela.',
   privacyLink: 'Prospection et données personnelles',
   optOutLink: 'Ne plus être contacté',
@@ -190,7 +197,8 @@ const OUTREACH_PREVIEW_STRINGS_V2_EN: OutreachPreviewStringsV2 = {
   offerLinkLabel: 'Offer details',
   privacyHeading: 'Your data and this document',
   privacyController:
-    'This document was sent to you by Jules Fontaine (Odysseus), ' + 'contact@odysseusaudit.com.',
+    `This document was sent to you by ${OUTREACH_SENDER_DISPLAY_NAME}, ` +
+    `${OUTREACH_CONTACT.address}.`,
   privacyData:
     'It rests on an analysis of your site carried out by our robot, ' +
     'identifiable in your server logs, and on public data.',
@@ -209,7 +217,7 @@ const OUTREACH_PREVIEW_STRINGS_V2_EN: OutreachPreviewStringsV2 = {
     'justification required.',
   privacyExpiry: 'This link stops working 30 days after it is sent.',
   privacyRights:
-    'Access, rectification, erasure: write to contact@odysseusaudit.com. The ' +
+    `Access, rectification, erasure: write to ${OUTREACH_CONTACT.address}. The ` +
     'prospecting and personal data page sets all of this out.',
   privacyLink: 'Prospecting and personal data',
   optOutLink: 'Stop being contacted',

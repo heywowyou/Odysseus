@@ -1,19 +1,14 @@
 /**
- * Milestone 9c plan 010: assembling one send-ready draft out of already
- * validated prose plus everything that must never come from a model.
+ * Milestone 9c plan 010, reworked by trade-off 83: assembling one send-ready
+ * draft entirely from code-owned content. No model writes any part of it; the
+ * body is the operator-approved wording in `outreach-email-template.ts`, filled
+ * with the hotel's formatted name and its own proof-card categories, and the
+ * frame (greeting, sign-off, signature, disclosures) is `outreach-draft-copy.ts`.
+ * This module's job is to put them in the order `docs/rules/outreach-rules.md`
+ * sections 6 and 7 require, and to refuse rather than send if a required input
+ * is missing or a splice does not check out.
  *
- * The prose (`options.prose`) has already been generated and passed every
- * guard in `generateOutreachProse` before it reaches here - this module
- * never calls the model and never repairs anything. Its own job is narrower
- * and entirely deterministic: splice the touch's fixed content around that
- * prose in the order `docs/rules/outreach-rules.md` sections 6 and 7 require, and
- * refuse rather than send if a required input is missing or a splice does not
- * check out.
- *
- * **Why the facts block is rebuilt rather than trusted.** The plan's stated
- * reason for a byte-identity check ("a model that altered the block once will
- * do it again") does not hold here - the model never sees the facts block, it
- * is not part of `OutreachProseInput`, so it cannot alter it. The real threat
+ * **Why the facts block is rebuilt rather than trusted.** The real threat
  * is a *caller* that rebuilt or mutated `expectedFacts` between whenever it
  * was first produced (typically alongside this hotel's published preview) and
  * the moment it hands it to this function. So the check is rebuild-and-compare
@@ -34,16 +29,29 @@ import {
   type OutreachFactsBlock,
   type ReportLanguage,
 } from '@odysseus/core';
-import type { OutreachProseOutput } from '@odysseus/llm';
-import { assertOutreachDraftBody } from './draft-body-lint.js';
+import { assertOutreachDraftBody, assertOutreachDraftHtml } from './draft-body-lint.js';
 import { findMissingDraftDisclosures } from './draft-disclosure-guard.js';
 import { outreachDraftCopy } from './outreach-draft-copy.js';
+import {
+  composeOutreachSubject,
+  composeTouchOneBody,
+  composeTouchThreeFrame,
+  composeTouchTwoBody,
+  pickOutreachVariants,
+  type OutreachCategory,
+} from './outreach-email-template.js';
+import {
+  renderOutreachDraft,
+  type DraftBodyBlock,
+  type DraftFooterLine,
+} from './render-outreach-draft.js';
 
 export type OutreachDataOrigin =
   'public-hotel-catalogue' | 'public-website' | 'public-business-registry';
 
 export type AssembleOutreachDraftRefusal =
   | 'missing-preview-url'
+  | 'missing-categories'
   | 'missing-previous-subject'
   | 'missing-data-origins'
   | 'missing-privacy-url'
@@ -55,8 +63,17 @@ export type AssembleOutreachDraftRefusal =
   | 'missing-disclosure';
 
 export interface AssembleOutreachDraftOptions {
-  prose: OutreachProseOutput;
+  touch: 1 | 2 | 3;
   language: ReportLanguage;
+  /** Already formatted for a letter (`formatHotelName`); absent or blank falls
+   *  back to "votre établissement". */
+  hotelName?: string;
+  /** Picks the approved wording variants; the candidate id, so one hotel
+   *  always receives the same combination. */
+  variantSeed: string;
+  /** Touch 1 only: the categories of the published preview's proof cards,
+   *  the only problems the email may name. */
+  categories?: readonly OutreachCategory[];
   /** Touch 1 only: the link to this hotel's already-published preview. */
   previewUrl?: string;
   /** Touch 2 and 3 only: the exact subject line touch 1 was sent with -
@@ -81,7 +98,11 @@ export interface AssembleOutreachDraftOptions {
 export interface AssembledOutreachDraft {
   assembled: true;
   subject: string;
+  /** The plain-text part, and the canonical content the drafts collection
+   *  hashes. */
   body: string;
+  /** The HTML part, rendered from the same blocks as `body`. */
+  htmlBody: string;
 }
 
 export type AssembleOutreachDraftResult =
@@ -89,17 +110,6 @@ export type AssembleOutreachDraftResult =
 
 function refuse(refusal: AssembleOutreachDraftRefusal): AssembleOutreachDraftResult {
   return { assembled: false, refusal };
-}
-
-function proseBodyText(prose: OutreachProseOutput): string {
-  switch (prose.touch) {
-    case 1:
-      return [prose.opening, prose.evidenceSentence, prose.question].join(' ');
-    case 2:
-      return prose.sentences.join(' ');
-    case 3:
-      return prose.closing;
-  }
 }
 
 /** `Re: <subject>`, never doubled - a touch 2 built on a touch 3's own subject
@@ -111,14 +121,17 @@ function replySubject(previousSubject: string): string {
 export function assembleOutreachDraft(
   options: AssembleOutreachDraftOptions,
 ): AssembleOutreachDraftResult {
-  const { prose, language } = options;
-  const touch = prose.touch;
+  const { touch, language } = options;
   const copy = outreachDraftCopy(language);
+  const variants = pickOutreachVariants(options.variantSeed);
 
   if ((touch === 2 || touch === 3) && options.previousSubject === undefined) {
     return refuse('missing-previous-subject');
   }
   if (touch === 1 && options.previewUrl === undefined) return refuse('missing-preview-url');
+  if (touch === 1 && (options.categories === undefined || options.categories.length === 0)) {
+    return refuse('missing-categories');
+  }
   if (touch === 1 && (options.dataOrigins === undefined || options.dataOrigins.length === 0)) {
     return refuse('missing-data-origins');
   }
@@ -128,6 +141,7 @@ export function assembleOutreachDraft(
 
   let factsText: string | undefined;
   let factsHeading: string | undefined;
+  let factsParagraphs: string[] | undefined;
 
   if (touch === 3) {
     // Rebuilt from the same inputs a caller would have used originally, never
@@ -145,46 +159,72 @@ export function assembleOutreachDraft(
     // no facts to carry has nothing left to send.
     if (rebuilt.state !== 'rendered') return refuse('facts-block-omitted');
     factsHeading = rebuilt.heading;
-    factsText = [rebuilt.heading, ...rebuilt.paragraphs].join('\n\n');
+    factsParagraphs = [rebuilt.heading, ...rebuilt.paragraphs];
+    // Blocks render joined by a blank line, so this is the exact run of text
+    // the splice check below looks for.
+    factsText = factsParagraphs.join('\n\n');
   }
 
   const subject =
     touch === 1
-      ? prose.subject
+      ? composeOutreachSubject({
+          language,
+          hotelName: options.hotelName,
+          categories: options.categories as readonly OutreachCategory[],
+        })
       : replySubject(
           // Validated non-undefined above; narrowed here for TypeScript.
           options.previousSubject as string,
         );
 
-  const paragraphs: string[] = [copy.salutation, proseBodyText(prose)];
-
-  if (touch === 1) paragraphs.push(options.previewUrl as string);
-  if (touch === 3) paragraphs.push(factsText as string);
-
-  paragraphs.push(copy.senderIdentity, copy.replyInvite);
-
+  let bodyBlocks: DraftBodyBlock[];
   if (touch === 1) {
-    const origins = options.dataOrigins as OutreachDataOrigin[];
-    paragraphs.push(
-      `${copy.originIntro} ${origins.map((origin) => copy.dataOrigin[origin]).join(', ')}.`,
-      copy.purpose,
-      `${copy.privacyLinkLabel} : ${options.privacyUrl as string}`,
-    );
+    bodyBlocks = composeTouchOneBody({
+      language,
+      hotelName: options.hotelName,
+      categories: options.categories as readonly OutreachCategory[],
+      variants,
+      previewLink: { label: copy.previewLinkLabel, url: options.previewUrl as string },
+    });
+  } else if (touch === 2) {
+    bodyBlocks = composeTouchTwoBody({ language, hotelName: options.hotelName, variants });
+  } else {
+    const frame = composeTouchThreeFrame({ language, hotelName: options.hotelName });
+    bodyBlocks = [
+      { kind: 'paragraph', text: frame.intro },
+      ...(factsParagraphs as string[]).map((text): DraftBodyBlock => ({ kind: 'paragraph', text })),
+      { kind: 'paragraph', text: frame.closing },
+    ];
   }
 
-  paragraphs.push(
-    touch === 1 ? `${copy.optOutLabel} : ${options.optOutUrl as string}` : copy.optOutByReply,
-  );
+  const footer: DraftFooterLine[] = [];
+  if (touch === 1) {
+    const origins = options.dataOrigins as OutreachDataOrigin[];
+    footer.push(
+      { kind: 'text', text: copy.purpose },
+      {
+        kind: 'text',
+        text: `${copy.originIntro} ${origins.map((origin) => copy.dataOrigin[origin]).join(', ')}.`,
+      },
+      { kind: 'text', text: `${copy.senderIdentity} ${copy.replyInvite}` },
+      { kind: 'link', link: { label: copy.optOutLabel, url: options.optOutUrl as string } },
+      { kind: 'link', link: { label: copy.privacyLinkLabel, url: options.privacyUrl as string } },
+    );
+  } else {
+    footer.push(
+      { kind: 'text', text: copy.senderIdentity },
+      { kind: 'text', text: copy.optOutByReply },
+    );
+    if (touch === 3) footer.push({ kind: 'text', text: copy.deletionOffer });
+  }
 
-  if (touch === 3) paragraphs.push(copy.deletionOffer);
-
-  const body = paragraphs.join('\n\n');
+  const rendered = renderOutreachDraft({ language, body: bodyBlocks, footer });
+  const body = rendered.text;
 
   if (touch === 3) {
     // The rebuild-and-compare above confirms the *content* is fresh; this
     // confirms the *splice* put exactly one unaltered copy of it into the
-    // body, rather than trusting the join above never dropped or duplicated
-    // it.
+    // body, rather than trusting the render never dropped or duplicated it.
     if (body.split(factsText as string).length !== 2) return refuse('facts-block-splice-failed');
   }
 
@@ -192,6 +232,7 @@ export function assembleOutreachDraft(
     (url): url is string => url !== undefined,
   );
   assertOutreachDraftBody(body, allowedUrls);
+  assertOutreachDraftHtml(rendered.html, allowedUrls);
 
   const missing = findMissingDraftDisclosures({
     body,
@@ -203,5 +244,5 @@ export function assembleOutreachDraft(
   });
   if (missing.length > 0) return refuse('missing-disclosure');
 
-  return { assembled: true, subject, body };
+  return { assembled: true, subject, body, htmlBody: rendered.html };
 }

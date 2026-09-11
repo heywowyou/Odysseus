@@ -89,3 +89,48 @@ export function assertOutreachDraftBody(body: string, allowedUrls: string[]): vo
   const rule = lintOutreachDraftBody(body, allowedUrls);
   if (rule !== null) throw new OutreachDraftLintError(rule);
 }
+
+/** Tags the HTML part may contain: what a hand-typed message is made of, and
+ *  nothing that loads, runs, or restyles. */
+const ALLOWED_HTML_TAGS = new Set(['div', 'br', 'a', 'span', 'hr']);
+
+/** Attributes the HTML part may carry. `style` is allowed because the footer
+ *  is grey, and is separately checked for anything that fetches. */
+const ALLOWED_HTML_ATTRIBUTES = new Set(['dir', 'lang', 'href', 'style']);
+
+/**
+ * The HTML counterpart of `lintOutreachDraftBody`, run over the rendered HTML
+ * part. The text part carries the substantive checks (the two parts come from
+ * the same blocks); this one guards what only HTML can do wrong: load a
+ * remote resource, run script, or link anywhere but the draft's own URLs.
+ * Returns the first rule that fired, or null.
+ */
+export function lintOutreachDraftHtml(html: string, allowedUrls: string[]): string | null {
+  for (const match of html.matchAll(/<\/?\s*([a-z0-9]+)([^>]*)>/giu)) {
+    const tag = (match[1] ?? '').toLowerCase();
+    if (!ALLOWED_HTML_TAGS.has(tag)) return 'html-tag';
+    const attributes = match[2] ?? '';
+    // Only double-quoted attributes are ever rendered; anything else left
+    // over (an unquoted or single-quoted value) is rejected rather than parsed.
+    if (attributes.replaceAll(/\s*[a-z-]+\s*=\s*"[^"]*"/giu, '').trim() !== '') {
+      return 'html-attribute';
+    }
+    for (const attribute of attributes.matchAll(/([a-z-]+)\s*=\s*"([^"]*)"/giu)) {
+      const name = (attribute[1] ?? '').toLowerCase();
+      const value = attribute[2] ?? '';
+      if (!ALLOWED_HTML_ATTRIBUTES.has(name)) return 'html-attribute';
+      if (name === 'style' && /url\s*\(|expression\s*\(|@import/iu.test(value)) {
+        return 'html-remote-style';
+      }
+      if (name === 'href' && !allowedUrls.includes(value.replaceAll('&amp;', '&'))) {
+        return 'html-href';
+      }
+    }
+  }
+  return null;
+}
+
+export function assertOutreachDraftHtml(html: string, allowedUrls: string[]): void {
+  const rule = lintOutreachDraftHtml(html, allowedUrls);
+  if (rule !== null) throw new OutreachDraftLintError(rule);
+}

@@ -99,7 +99,7 @@ rules) is `docs/rules/operator-obligations.md`. Prospecting is governed by
    scope with a lawyer. Never state that a specific business is bound,
    never give a deadline, never state a sanction amount for that client,
    never present scope as settled. Binds report templates and the
-   outreach LLM prompt equally. Full rule and legal basis:
+   outreach email templates equally. Full rule and legal basis:
    `docs/rules/obligation-basis.md` section 7 and `docs/rules/operator-obligations.md`
    section 2.
 
@@ -480,6 +480,16 @@ means numbered entry 24, not a literal Markdown heading anchor.
     triage cleared the baseline to zero; never wire it into CI, never
     enable its runtime tier, and verify any dead-code finding with
     `fallow dead-code --trace` before deleting anything. → trade-offs.md#80
+
+82. Outreach drafts are light HTML plus a plain-text twin from one block
+    model, naming only `OUTREACH_CONTACT` (`contact@odysseusaudit.fr`).
+    Never add an image, remote asset, tracking, or stylesheet to a draft,
+    and never spell the prospect address outside that constant.
+    → trade-offs.md#82
+83. No model writes outreach: every email is operator-approved template
+    wording (`outreach-email-template.ts`), filled only with the formatted
+    hotel name and that hotel's own preview proof-card categories. Change a
+    sentence only with operator approval. → trade-offs.md#83
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node

@@ -31,6 +31,7 @@
  * the narrower request despite being two entries.
  */
 
+import { OUTREACH_SENDER_DISPLAY_NAME } from '@odysseus/core';
 import { buildDraftMime, encodeDraftMimeForTransport } from './draft-mime.js';
 import type {
   CreateMailboxDraftInput,
@@ -187,8 +188,10 @@ export function createGmailDraftAdapter(options: GmailDraftAdapterOptions): Mail
       const mime = buildDraftMime({
         to: input.to,
         from: options.senderAddress,
+        fromName: OUTREACH_SENDER_DISPLAY_NAME,
         subject: input.subject,
         body: input.body,
+        htmlBody: input.htmlBody,
       });
       const message: Record<string, string> = { raw: encodeDraftMimeForTransport(mime) };
       if (input.providerThreadId !== undefined) message['threadId'] = input.providerThreadId;

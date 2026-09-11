@@ -18,8 +18,10 @@
 import {
   buildOutreachPreviewSummary,
   coverageFactsFromAudit,
+  selectOutreachProofCards,
   summarizeAuditCoverage,
   type OutreachPreviewSummary,
+  type OutreachProofCard,
 } from '@odysseus/core';
 import type { AuditDocumentFields } from '@odysseus/store';
 import type { Finding } from '@odysseus/core';
@@ -156,6 +158,16 @@ export interface ResolvedPublishedPreview {
   previewId: string;
   url: string;
   publicExpiresAt: Date;
+  proofCardCategories: OutreachProofCard['category'][];
+}
+
+/** The categories of the three proof cards a preview of these findings
+ *  shows, in card order. The same deterministic selection publication ran
+ *  over the same audit, so the email names what the linked page names. */
+function proofCardCategoriesFor(findings: readonly Finding[]): OutreachProofCard['category'][] {
+  return selectOutreachProofCards(findings, (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId])
+    .slice(0, 3)
+    .map((card) => card.category);
 }
 
 /** Validates the one-time token the operator copied at publication against
@@ -177,6 +189,8 @@ export async function resolvePublishedPreviewForDraft(options: {
   resolveOutreachAudit: (
     candidateId: string,
   ) => Promise<{ state: 'resolved'; audit: { auditId: string } } | { state: 'refused' }>;
+  /** The audit's findings, read only to recompute the proof-card categories. */
+  findingsForAudit: (auditId: string) => Promise<readonly Finding[]>;
   candidateId: string;
   previewToken: string;
   publicBaseUrl: string;
@@ -196,10 +210,17 @@ export async function resolvePublishedPreviewForDraft(options: {
   if (resolution.state !== 'resolved' || resolution.audit.auditId !== record.auditId) {
     return { refusal: 'preview-wrong-audit' };
   }
+  // A published preview always had three cards; none now means the audit's
+  // findings changed under it, and the email must not guess what it showed.
+  const proofCardCategories = proofCardCategoriesFor(
+    await options.findingsForAudit(resolution.audit.auditId),
+  );
+  if (proofCardCategories.length === 0) return { refusal: 'preview-wrong-audit' };
   return {
     previewId: record.previewId,
     url: previewUrl(options.publicBaseUrl, options.previewToken),
     publicExpiresAt: record.publicExpiresAt,
+    proofCardCategories,
   };
 }
 

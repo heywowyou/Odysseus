@@ -4301,3 +4301,95 @@ report's checklist print inversion is a separate page with its own recorded
 reason and is unchanged. The approval consequence above applies again:
 already-published previews are not republished; only PDFs generated after
 this amendment get the dark ground.
+
+### 82. Outreach drafts are light HTML with a plain-text twin, written as the firm in native French, from one prospect contact address (operator decision, 2026-09-11)
+
+The first touch read as English carried into French: the privacy lines were
+stiff ("une prestation d'audit, une fois", which was also false, since two
+reminders exist), the voice mixed "je" and "nous", there was no sign-off or
+signature, the body named `contact@odysseusaudit.com` while warmup was moving
+sending to `.fr`, and the model's worked example offered to send a preview
+link the message already carried.
+
+**What was chosen.** Drafts are `multipart/alternative`: a plain-text part
+and a light HTML part rendered from one ordered block model
+(`render-outreach-draft.ts`), so the two cannot say different things. The
+HTML is what a hand-typed Gmail message looks like (div paragraphs, link
+text, a signature, a small grey footer); that pair is the ordinary shape of
+personal mail, where a bare `text/plain` cold email is the unusual one. The
+text part stays the canonical content `bodyHash` covers; `htmlBody` is
+stored beside it. Article 14 disclosures move to the footer below the
+signature, the purpose line states the real sequence (two reminders at
+most), and every code-owned line is French first, "nous", with U+00A0 before
+French high punctuation. The prompt (v2) asks for the firm's plural voice,
+names the calques that betray a translation, tells touch 1 the link is
+already below, and bans sign-offs; `outreach-voice-guard.ts` rejects any
+first person singular and the vocabulary guard rejects a trailing closing
+formula, both inside the retry loop.
+
+**One address.** `OUTREACH_CONTACT` (`packages/core`) names the person and
+the mailbox; the email copy and the v2 preview interpolate it, the site
+carries a hand-kept copy pinned by its compliance test, and
+`getMailboxSenderAddress` refuses any configured sender but that address.
+Every prospect-facing surface, the whole public site included (its footer
+is on every page, and a prospect must meet one address), names
+`contact@odysseusaudit.fr`; the paid report keeps `.com`.
+
+**Rejected.** Branded HTML with a logo: a newsletter shape, remote images
+blocked by most clients and a spam signal in a cold message. Plain text with
+a signature only: best for deliverability in theory, but raw URLs and an
+unusual shape for personal mail. A byte-identical controller sentence shared
+by email and preview: they are different documents, so parity is on the
+facts (the constant), not the bytes.
+
+**Durable rules.** Never add an image, a remote asset, a tracking pixel or
+link parameter, or a stylesheet to a draft; `lintOutreachDraftHtml` allows
+only div/br/a/span/hr, double-quoted attributes, and links on the draft's
+own URL list. Never spell the prospect contact address anywhere but
+`OUTREACH_CONTACT` (and the site's pinned copy). The touch 3 facts block is
+unchanged and still byte-identical with the preview. Already-published
+previews are stored bytes and are not republished; new renders carry `.fr`.
+
+**Superseded in part by trade-off 83, same day.** The prompt v2, its
+examples, and the voice and sign-off guards described above are removed with
+the model; the HTML format, the footer, the signature, and the single
+contact address all stand.
+
+### 83. Outreach emails are fixed operator-approved templates; no model writes outreach (operator decision, 2026-09-11)
+
+The operator read the model-written drafts, including the trade-off 82
+revision with its French-native prompt and voice guard, and rejected them as
+still reading translated. The wording was then written with the operator
+sentence by sentence and approved: a first email naming the hotel and the
+problem categories its preview shows, a short reminder at day +4, and a last
+message at day +11 that introduces the unchanged legal facts block.
+
+**What was chosen.** `outreach-email-template.ts` holds the approved French
+wording (English translated from it) with two approved variants for each
+rotating sentence; the variant is derived from the candidate id (FNV-1a), so
+one hotel always gets the same combination and neighbouring hotels differ.
+Code fills in two things only. The hotel's name, recased from the catalogue's
+capitals by `formatHotelName` and given its French article by `frenchOfHotel`
+("de l'Hôtel", "du Domaine", "de la Villa"). And the categories of the three
+proof cards the published preview shows, recomputed from the same audit by
+the same deterministic selection, so the email names exactly what the linked
+page names ("notamment" keeps the list honest). The subject is the hotel's
+name plus those categories as short nouns, falling back to "Votre site" past
+78 characters.
+
+**What went.** `packages/llm/src/outreach` (prompt, schema, client, retry
+loop, every prose guard including trade-off 82's voice guard) is deleted;
+`generateOutreachProse` has no caller. Touch 2 no longer needs a second
+prescan observation, so it is no longer gated on one. Drafts record
+`outreachPromptVersion: 'template-v1'`, the field name predating this entry.
+
+**Rejected.** A tighter prompt: the variation the operator disliked is the
+model's, and no prompt removes it. One fixed text for every hotel: identical
+emails are the signature of mass mail to recipients and filters alike, hence
+the approved variants.
+
+**Durable rules.** Never reintroduce a model into outreach wording without an
+operator decision. Change a sentence only with operator approval, and bump
+`template-v1`. The email names only categories from that hotel's own preview
+cards, never a fixed list. Every draft is still read before it is sent, which
+is also where a brand name `formatHotelName` recased badly is fixed.

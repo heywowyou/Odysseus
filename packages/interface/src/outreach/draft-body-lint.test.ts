@@ -3,6 +3,7 @@ import {
   lintOutreachDraftBody,
   OutreachDraftLintError,
   assertOutreachDraftBody,
+  lintOutreachDraftHtml,
 } from './draft-body-lint.js';
 
 const PREVIEW_URL = 'https://www.odysseusaudit.com/apercu/abc123';
@@ -10,7 +11,7 @@ const CLEAN_BODY = [
   'Bonjour,',
   'Un texte de démonstration sans rien de problématique.',
   PREVIEW_URL,
-  'Le responsable de traitement est Odysseus Audit, Jules Fontaine, contact@odysseusaudit.com.',
+  'Responsable du traitement : Jules Fontaine (Odysseus), contact@odysseusaudit.fr.',
 ].join('\n\n');
 
 describe('lintOutreachDraftBody', () => {
@@ -91,5 +92,36 @@ describe('assertOutreachDraftBody', () => {
       expect(error).toBeInstanceOf(OutreachDraftLintError);
       expect((error as OutreachDraftLintError).rule).toBe('markdown-emphasis');
     }
+  });
+});
+
+describe('lintOutreachDraftHtml', () => {
+  const URL = 'https://odysseusaudit.com/apercu/abc';
+
+  it('accepts the hand-typed shape the renderer produces', () => {
+    const html =
+      '<div dir="ltr" lang="fr"><div>Bonjour,</div><div><br></div>' +
+      `<div><a href="${URL}">Consulter</a></div>` +
+      '<div style="color:#6b6b6b;font-size:12px">Pied</div></div>';
+    expect(lintOutreachDraftHtml(html, [URL])).toBeNull();
+  });
+
+  it.each([
+    ['an image', '<div><img src="https://tracker.example/p.gif"></div>', 'html-tag'],
+    ['a script', '<script>alert(1)</script>', 'html-tag'],
+    ['a link to an unlisted URL', '<a href="https://odysseusaudit.com/autre">x</a>', 'html-href'],
+    ['an event handler', '<div onclick="x()">x</div>', 'html-attribute'],
+    [
+      'an unquoted attribute',
+      '<a href=https://odysseusaudit.com/apercu/abc>x</a>',
+      'html-attribute',
+    ],
+    [
+      'a remote style',
+      '<div style="background:url(https://x.example/a.png)">x</div>',
+      'html-remote-style',
+    ],
+  ])('rejects %s', (_name, html, rule) => {
+    expect(lintOutreachDraftHtml(html, [URL])).toBe(rule);
   });
 });

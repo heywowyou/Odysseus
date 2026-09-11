@@ -72,7 +72,7 @@ describe('both commercial pages', () => {
   });
 
   it.each(commercialSources)('%s names the one monitored contact address', (_name, source) => {
-    expect(source).toContain('contact@odysseusaudit.com');
+    expect(source).toContain('contact@odysseusaudit.fr');
   });
 
   it.each(commercialSources)(

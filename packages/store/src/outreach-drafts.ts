@@ -53,6 +53,7 @@ export interface RecordOutreachDraftInput {
   roleAddress: string;
   subject: string;
   body: string;
+  htmlBody: string;
   /** Present on touch 1 only; follow-ups do not replace the opener variant. */
   touch1EvidenceSlot?: OutreachEvidenceSlot;
   /** Touch 1 only - see the schema's own note. */
@@ -99,6 +100,7 @@ export async function recordOutreachDraft(
     roleAddress: input.roleAddress,
     subject: input.subject,
     body: input.body,
+    htmlBody: input.htmlBody,
     subjectHash: hash(input.subject),
     bodyHash: hash(input.body),
     ...(input.touch1EvidenceSlot === undefined

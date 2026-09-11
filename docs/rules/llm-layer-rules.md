@@ -761,6 +761,10 @@ belong in `packages/core`, since both the report path and the
 prospecting path need the same numbers and neither should duplicate the
 scoring logic.
 
+**Outreach email generation, retired 2026-09-11 (trade-off 83).** No model
+call writes outreach any more; the paragraph below is kept as history. The
+worthiness gate still decides who is worth scanning and contacting.
+
 **Outreach email generation is a new call, same governing rule.** When a
 prospect clears the worthiness gate, the LLM writes the cold email
 itself, not just a one-sentence hook, but it does not choose which
@@ -780,6 +784,13 @@ produces real distribution data across many scanned sites, not before.
 ---
 
 ## 11. Outreach generation, additional constraints
+
+**Retired 2026-09-11 (trade-off 83).** No model writes outreach; every email
+is fixed operator-approved wording in
+`packages/interface/src/outreach/outreach-email-template.ts`. The content
+rules below (no legal content, no statistics, no conclusions, no conformity
+claims) still bind those templates; the prompt and retry mechanics described
+here were removed with `packages/llm/src/outreach`.
 
 Section 10 governs whether the model is called for a prospect. This
 section governs what it may write once called. `docs/rules/outreach-rules.md`

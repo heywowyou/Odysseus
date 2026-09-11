@@ -164,7 +164,7 @@ export default function BotInfoPage() {
             </p>
 
             <p>
-              Contact&#160;: contact@odysseusaudit.com, pour toute question, ou pour demander le
+              Contact&#160;: contact@odysseusaudit.fr, pour toute question, ou pour demander le
               retrait de votre site de toute analyse en cours ou future. La page{' '}
               <a className="underline" href="/desinscription">
                 désinscription
@@ -280,7 +280,7 @@ export default function BotInfoPage() {
             </p>
 
             <p>
-              Contact: contact@odysseusaudit.com, for any question, or to opt your site out of any
+              Contact: contact@odysseusaudit.fr, for any question, or to opt your site out of any
               current or future scan. The{' '}
               <a className="underline" href="/desinscription">
                 opt-out page

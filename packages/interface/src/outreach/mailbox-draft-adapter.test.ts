@@ -120,6 +120,7 @@ const VALID_DRAFT = {
   to: 'contact@hotel-example.fr',
   subject: 'Votre site web',
   body: 'Bonjour,\n\nUn constat mesuré sur votre site.\n\nCordialement',
+  htmlBody: '<div dir="ltr"><div>Bonjour,</div><div>Un constat mesuré sur votre site.</div></div>',
 };
 
 describe.each(IMPLEMENTATIONS)('$name adapter contract', ({ create }) => {
@@ -173,6 +174,12 @@ describe.each(IMPLEMENTATIONS)('$name adapter contract', ({ create }) => {
 
   it('refuses a draft with an empty body', async () => {
     await expect(create().createDraft({ ...VALID_DRAFT, body: '   ' })).rejects.toThrow(/empty/);
+  });
+
+  it('refuses a draft with an empty HTML part', async () => {
+    await expect(create().createDraft({ ...VALID_DRAFT, htmlBody: ' ' })).rejects.toThrow(
+      /HTML body is empty/,
+    );
   });
 });
 
@@ -298,9 +305,10 @@ describe('gmail adapter transport', () => {
     );
     const body = (await create?.json()) as { message: { raw: string } };
     const mime = Buffer.from(body.message.raw, 'base64url').toString('utf8');
-    expect(mime).toContain('From: contact@example-sending-domain.fr');
+    expect(mime).toContain('From: "Jules Fontaine (Odysseus)" <contact@example-sending-domain.fr>');
     expect(mime).toContain('To: contact@hotel-example.fr');
+    expect(mime).toContain('Content-Type: multipart/alternative');
     expect(mime).toContain('Content-Type: text/plain; charset="UTF-8"');
-    expect(mime).not.toContain('multipart');
+    expect(mime).toContain('Content-Type: text/html; charset="UTF-8"');
   });
 });

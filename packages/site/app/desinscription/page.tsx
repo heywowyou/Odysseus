@@ -42,7 +42,7 @@ const MAILTO_BODY =
   'Je vous demande de ne plus me contacter et de retirer tout aperçu en ligne concernant mon établissement.\n\n' +
   'Site concerné : ';
 const MAILTO =
-  `mailto:contact@odysseusaudit.com?subject=${encodeURIComponent(MAILTO_SUBJECT)}` +
+  `mailto:contact@odysseusaudit.fr?subject=${encodeURIComponent(MAILTO_SUBJECT)}` +
   `&body=${encodeURIComponent(MAILTO_BODY)}`;
 
 export default function OptOutPage() {
@@ -59,8 +59,8 @@ export default function OptOutPage() {
         <div className="shell section-tight">
           <section className="prose measure">
             <p>
-              Envoyez un message à contact@odysseusaudit.com, ou répondez simplement à celui que
-              vous avez reçu.
+              Envoyez un message à contact@odysseusaudit.fr, ou répondez simplement à celui que vous
+              avez reçu.
             </p>
 
             <p>
@@ -130,7 +130,7 @@ export default function OptOutPage() {
         <div className="shell section-tight">
           <section className="prose measure">
             <p>
-              Send a message to contact@odysseusaudit.com, or simply reply to the one you received.
+              Send a message to contact@odysseusaudit.fr, or simply reply to the one you received.
             </p>
 
             <p>

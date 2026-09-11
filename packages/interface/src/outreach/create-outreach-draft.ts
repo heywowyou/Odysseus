@@ -8,8 +8,8 @@
  *
  * **The two suppression checks are the point of the module.** One immediately
  * before the model call, one immediately before the provider call. They look
- * redundant and are not: everything between them takes real time (a model
- * round trip, a preview publication, four validators), and an objection that
+ * redundant and are not: everything between them takes real time (a preview
+ * resolution, an audit read, four validators), and an objection that
  * arrives during that window has to stop the draft that is in flight, not
  * merely the next batch. `publish-preview.ts` states the same rule for the
  * same reason.
@@ -42,14 +42,14 @@ import {
   type OutreachEvidenceSlot,
   type OutreachThreadState,
 } from '@odysseus/core';
-import { buildOutreachProseInput, type OutreachProseOutput } from '@odysseus/llm';
-import { generateOutreachProse } from '@odysseus/llm';
 import {
   getOutreachReplyWindowDays,
   getOutreachTouch2AfterDays,
   getOutreachTouch3AfterDays,
 } from '../config.js';
 import { assembleOutreachDraft, type OutreachDataOrigin } from './assemble-outreach-draft.js';
+import { formatHotelName } from './hotel-name.js';
+import type { OutreachCategory } from './outreach-email-template.js';
 import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import { previewLinks, registryAssessment, type PreviewSireneFacts } from './publish-preview.js';
 
@@ -58,7 +58,10 @@ import { previewLinks, registryAssessment, type PreviewSireneFacts } from './pub
  *  012's job, and creating them before that exists would be a sequencer. */
 export const FIRST_TOUCH = 1;
 
-export const CURRENT_OUTREACH_PROMPT_VERSION = 'v1';
+/** Recorded on every draft as `outreachPromptVersion` (the field predates
+ *  trade-off 83): which approved template produced the text. `template-v1` is
+ *  the operator-approved wording of 2026-09-11; there is no model prompt. */
+export const CURRENT_OUTREACH_PROMPT_VERSION = 'template-v1';
 
 export type CreateOutreachDraftRefusal =
   | 'candidate-unknown'
@@ -120,6 +123,7 @@ export interface RecordDraftFacts {
   roleAddress: string;
   subject: string;
   body: string;
+  htmlBody: string;
   touch1EvidenceSlot: OutreachEvidenceSlot;
   previewId: string;
   previewUrl: string;
@@ -186,6 +190,10 @@ export interface PublishedPreviewRef {
   previewId: string;
   url: string;
   publicExpiresAt: Date;
+  /** The categories of the preview's three proof cards, recomputed from the
+   *  same audit by the same deterministic selection: the only problems the
+   *  email may name. */
+  proofCardCategories: OutreachCategory[];
 }
 
 /** Plan 037: the draft consumes an ALREADY published v2 preview, resolved
@@ -213,9 +221,6 @@ export interface CreateOutreachDraftOptions {
    *  link for the email to carry, and publishing one here is forbidden. */
   previewToken: string;
   now?: Date;
-  /** Injected so tests never reach the live model, matching the LLM package's
-   *  own stubbed-client discipline. */
-  generateProse?: typeof generateOutreachProse;
 }
 
 export interface CreateOutreachDraftResult {
@@ -268,7 +273,6 @@ export async function createOutreachDraft(
 ): Promise<CreateOutreachDraftResult> {
   const now = options.now ?? new Date();
   const touch = FIRST_TOUCH;
-  const generate = options.generateProse ?? generateOutreachProse;
 
   const row = await options.store.findDraftRow(options.candidateId);
   if (row === null) return refuse('candidate-unknown');
@@ -321,20 +325,8 @@ export async function createOutreachDraft(
     };
   }
 
-  const prose = await generate(
-    buildOutreachProseInput({
-      language: options.language,
-      touch,
-      businessName: row.businessName,
-      selected: selection.touch1,
-      ageFramingPermitted: true,
-    }),
-    selection.touch1.observationKey,
-  );
-
-  // Resolved after generation, so a run the model could not satisfy does no
-  // preview work at all. The draft consumes the already published v2 preview
-  // the operator's token names; it can never publish or reissue one itself.
+  // The draft consumes the already published v2 preview the operator's token
+  // names; it can never publish or reissue one itself.
   const published = await options.preview.resolvePublished(
     options.candidateId,
     options.previewToken,
@@ -378,8 +370,11 @@ export async function createOutreachDraft(
 
   const links = previewLinks(options.publicBaseUrl);
   const assembled = assembleOutreachDraft({
-    prose: prose.output as OutreachProseOutput,
+    touch: 1,
     language: options.language,
+    hotelName: formatHotelName(row.businessName),
+    variantSeed: row.candidateId,
+    categories: published.proofCardCategories,
     previewUrl: published.url,
     dataOrigins: dataOriginsFor(row),
     privacyUrl: links.privacy,
@@ -404,6 +399,7 @@ export async function createOutreachDraft(
     to: row.contact.address,
     subject: assembled.subject,
     body: assembled.body,
+    htmlBody: assembled.htmlBody,
     ...(thread.providerThreadId !== undefined ? { providerThreadId: thread.providerThreadId } : {}),
   });
 
@@ -413,6 +409,7 @@ export async function createOutreachDraft(
       ...failureFacts,
       subject: assembled.subject,
       body: assembled.body,
+      htmlBody: assembled.htmlBody,
       touch1EvidenceSlot: selection.touch1.slot,
       providerDraftId: providerDraft.providerDraftId,
       providerMessageId: providerDraft.providerMessageId,

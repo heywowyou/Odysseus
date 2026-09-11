@@ -7,8 +7,8 @@
  * flight. Each fault is injected at the exact point it would occur in
  * production rather than simulated by calling an internal.
  *
- * No test reaches the live model: `generateProse` is injected, matching the
- * LLM package's own stubbed-client discipline.
+ * No model is involved (trade-off 83): the email is the approved template, so
+ * "work spent" is measured by preview resolutions and provider drafts.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -84,22 +84,6 @@ function row(
   } as OutreachDraftRow;
 }
 
-/** Valid touch-1 prose, already past every guard, as `generateOutreachProse`
- *  would return it. */
-function prose(): { output: unknown; model: string; temperature: number } {
-  return {
-    output: {
-      touch: 1,
-      subject: 'Votre site et vos réservations',
-      opening: 'Je me permets de vous écrire au sujet de votre site.',
-      evidenceSentence: 'Un point de votre parcours de réservation ne se termine pas correctement.',
-      question: 'Souhaitez-vous que je vous montre ce que nous avons observé ?',
-    },
-    model: 'stub',
-    temperature: 0,
-  };
-}
-
 interface RecordedTransition {
   threadId: string;
   from: readonly OutreachThreadState[];
@@ -113,7 +97,6 @@ interface Harness {
   recordedFailures: RecordFailureFacts[];
   transitions: RecordedTransition[];
   mailbox: ReturnType<typeof createInMemoryMailboxDraftAdapter>;
-  generate: ReturnType<typeof vi.fn>;
   suppressed: Set<string>;
   publishCalls: number;
 }
@@ -136,7 +119,6 @@ function harness(
   const mailbox = createInMemoryMailboxDraftAdapter({
     senderAddress: 'contact@example-sending-domain.fr',
   });
-  const generate = vi.fn().mockResolvedValue(prose());
   let suppressionChecks = 0;
   const state = { publishCalls: 0 };
 
@@ -186,6 +168,7 @@ function harness(
         previewId: 'preview-1',
         url: 'https://www.odysseusaudit.com/apercu/token-abc',
         publicExpiresAt: new Date('2026-09-29T09:00:00.000Z'),
+        proofCardCategories: ['accessibility', 'seo', 'performance'],
       });
     },
   };
@@ -201,14 +184,12 @@ function harness(
       dryRun: overrides.dryRun ?? false,
       previewToken: 'token-abc',
       now: NOW,
-      generateProse: generate as unknown as CreateOutreachDraftOptions['generateProse'],
     },
     store,
     recordedDrafts,
     recordedFailures,
     transitions,
     mailbox,
-    generate,
     suppressed,
     get publishCalls() {
       return state.publishCalls;
@@ -240,7 +221,7 @@ describe('createOutreachDraft, happy path', () => {
     expect(h.mailbox.recorded()[0]?.to).toBe('direction@hotel-exemple.fr');
   });
 
-  it('sends plain text carrying exactly one link, the preview', async () => {
+  it('sends a text and HTML pair carrying exactly one preview link', async () => {
     const h = harness();
     const result = await createOutreachDraft(h.options);
     const body = result.body ?? '';
@@ -248,8 +229,11 @@ describe('createOutreachDraft, happy path', () => {
     const links = body.match(/https?:\/\/\S+/gu) ?? [];
     const previewLinksFound = links.filter((link) => link.includes('/apercu/'));
     expect(previewLinksFound).toHaveLength(1);
-    expect(h.mailbox.recorded()[0]?.mime).toContain('Content-Type: text/plain');
-    expect(h.mailbox.recorded()[0]?.mime).not.toContain('multipart');
+    const recorded = h.mailbox.recorded()[0];
+    expect(recorded?.mime).toContain('Content-Type: multipart/alternative');
+    expect(recorded?.mime).toContain('Content-Type: text/plain; charset="UTF-8"');
+    expect(recorded?.mime).toContain('Content-Type: text/html; charset="UTF-8"');
+    expect(recorded?.htmlBody.match(/href="[^"]*\/apercu\/[^"]*"/gu)).toHaveLength(1);
   });
 
   it('discloses privacy and opt-out routes in the first touch', async () => {
@@ -262,7 +246,26 @@ describe('createOutreachDraft, happy path', () => {
   it('declares the registry origin only when registry facts exist', async () => {
     const withoutRegistry = await createOutreachDraft(harness().options);
     // No `assessment` on the row, so no registry origin may be claimed.
-    expect(withoutRegistry.body).not.toContain('registre');
+    expect(withoutRegistry.body).not.toContain('Sirene');
+  });
+
+  it('writes the approved email for this hotel and its own proof-card categories', async () => {
+    const result = await createOutreachDraft(
+      harness({ draftRow: row({ businessName: 'HÔTEL DE LA POSTE' }) }).options,
+    );
+    expect(result.subject).toBe(
+      'Hôtel de la Poste\u00a0: accessibilité, référencement et performance',
+    );
+    expect(result.body).toContain("le site de l'Hôtel de la Poste");
+    expect(result.body).toContain(
+      "en matière d'accessibilité, de référencement dans les moteurs de recherche et de vitesse de chargement.",
+    );
+  });
+
+  it('records the template version, not a model prompt', async () => {
+    const h = harness();
+    await createOutreachDraft(h.options);
+    expect(h.recordedDrafts[0]?.outreachPromptVersion).toBe('template-v1');
   });
 
   it('moves the thread from open to e1-drafted once the draft is recorded', async () => {
@@ -273,14 +276,14 @@ describe('createOutreachDraft, happy path', () => {
 });
 
 describe('createOutreachDraft, the two suppression gates', () => {
-  it('makes no model call when suppressed before generation', async () => {
+  it('does no work when suppressed at the start', async () => {
     const h = harness();
     h.suppressed.add('hotel-exemple.fr');
 
     const result = await createOutreachDraft(h.options);
 
     expect(result.refusal).toBe('suppressed-before-generation');
-    expect(h.generate).not.toHaveBeenCalled();
+    expect(h.publishCalls).toBe(0);
     expect(h.publishCalls).toBe(0);
     expect(h.mailbox.recorded()).toHaveLength(0);
   });
@@ -291,9 +294,9 @@ describe('createOutreachDraft, the two suppression gates', () => {
     const result = await createOutreachDraft(h.options);
 
     expect(result.refusal).toBe('suppressed-before-provider');
-    // The model ran and the preview was published; that is the cost of an
-    // objection landing mid-run, and is why the second gate exists at all.
-    expect(h.generate).toHaveBeenCalledTimes(1);
+    // The preview was resolved; that is the cost of an objection landing
+    // mid-run, and is why the second gate exists at all.
+    expect(h.publishCalls).toBe(1);
     expect(h.mailbox.recorded()).toHaveLength(0);
     expect(h.recordedFailures[0]?.failureReason).toBe('suppressed-before-provider');
   });
@@ -312,7 +315,7 @@ describe('createOutreachDraft, refusals before anything is spent', () => {
     await expect(createOutreachDraft(h.options)).resolves.toMatchObject({
       refusal: 'candidate-unknown',
     });
-    expect(h.generate).not.toHaveBeenCalled();
+    expect(h.publishCalls).toBe(0);
   });
 
   it.each([
@@ -324,7 +327,7 @@ describe('createOutreachDraft, refusals before anything is spent', () => {
     await expect(createOutreachDraft(h.options)).resolves.toMatchObject({
       refusal: 'no-usable-contact',
     });
-    expect(h.generate).not.toHaveBeenCalled();
+    expect(h.publishCalls).toBe(0);
   });
 
   it('refuses incomplete evidence', async () => {
@@ -345,7 +348,7 @@ describe('createOutreachDraft, refusals before anything is spent', () => {
     await expect(createOutreachDraft(h.options)).resolves.toMatchObject({
       refusal: 'prescan-expired',
     });
-    expect(h.generate).not.toHaveBeenCalled();
+    expect(h.publishCalls).toBe(0);
   });
 
   it('refuses a second live draft for the same touch', async () => {
@@ -398,7 +401,7 @@ describe('createOutreachDraft, partial provider success', () => {
 });
 
 describe('createOutreachDraft, dry run', () => {
-  it('observes nothing: no model call, no preview, no draft', async () => {
+  it('observes nothing: no preview, no draft', async () => {
     const h = harness({ dryRun: true });
 
     const result = await createOutreachDraft(h.options);
@@ -410,7 +413,7 @@ describe('createOutreachDraft, dry run', () => {
       roleAddress: 'direction@hotel-exemple.fr',
       touch: 1,
     });
-    expect(h.generate).not.toHaveBeenCalled();
+    expect(h.publishCalls).toBe(0);
     expect(h.publishCalls).toBe(0);
     expect(h.mailbox.recorded()).toHaveLength(0);
   });

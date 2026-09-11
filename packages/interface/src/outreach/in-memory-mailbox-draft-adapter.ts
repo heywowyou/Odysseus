@@ -21,6 +21,7 @@
  * forgot to pass the id, which is the mistake worth catching.
  */
 
+import { OUTREACH_SENDER_DISPLAY_NAME } from '@odysseus/core';
 import { buildDraftMime } from './draft-mime.js';
 import type {
   CreateMailboxDraftInput,
@@ -35,6 +36,7 @@ export interface RecordedDraft extends MailboxDraft {
   from: string;
   subject: string;
   body: string;
+  htmlBody: string;
   /** The exact message `buildDraftMime` produced, so a test can assert on
    *  headers and encoding rather than only on the structured input. */
   mime: string;
@@ -105,8 +107,10 @@ export function createInMemoryMailboxDraftAdapter(
       const mime = buildDraftMime({
         to: input.to,
         from: senderAddress,
+        fromName: OUTREACH_SENDER_DISPLAY_NAME,
         subject: input.subject,
         body: input.body,
+        htmlBody: input.htmlBody,
       });
 
       const providerDraftId = nextId('draft');
@@ -121,6 +125,7 @@ export function createInMemoryMailboxDraftAdapter(
         from: senderAddress,
         subject: input.subject,
         body: input.body,
+        htmlBody: input.htmlBody,
         mime,
         createdAt: new Date(),
       });

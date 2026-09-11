@@ -47,6 +47,10 @@ export interface OutreachDraftDocumentFields {
   roleAddress: string;
   subject: string;
   body: string;
+  /** The HTML part, rendered from the same blocks as `body` (trade-off 82).
+   *  Absent on drafts created before the HTML part existed and on failures;
+   *  `body` stays the canonical text that `bodyHash` covers. */
+  htmlBody?: string;
   subjectHash: string;
   bodyHash: string;
   /** Which deterministic evidence family opened touch 1. Absent on follow-ups
@@ -102,6 +106,7 @@ const outreachDraftSchema = new Schema<OutreachDraftDocument>(
     // nothing was created.
     subject: { type: String, required: requiredWhenCreated, default: '' },
     body: { type: String, required: requiredWhenCreated, default: '' },
+    htmlBody: { type: String },
     subjectHash: { type: String, required: true },
     bodyHash: { type: String, required: true },
     touch1EvidenceSlot: {

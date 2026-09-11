@@ -16,6 +16,7 @@
 
 import {
   formatFullAuditPrice,
+  OUTREACH_CONTACT,
   outreachPreviewSummarySchema,
   type OutreachPreviewSummary,
 } from '@odysseus/core';
@@ -99,7 +100,7 @@ function renderOffer(input: OutreachPreviewSummary, s: OutreachPreviewStringsV2)
     `<p>${escapeHtml(
       fillTemplate(s.offerBody, { price: formatFullAuditPrice(input.language) }),
     )}</p>`,
-    `<p><a class="cta" href="mailto:contact@odysseusaudit.com?subject=${encodeURIComponent(
+    `<p><a class="cta" href="mailto:${OUTREACH_CONTACT.address}?subject=${encodeURIComponent(
       s.offerHeading,
     )}">${escapeHtml(s.offerReplyLabel)}</a></p>`,
     `<p class="actions"><a href="${escapeHtml(input.links.offer)}">${escapeHtml(

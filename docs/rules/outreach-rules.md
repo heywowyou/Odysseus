@@ -1,7 +1,16 @@
 # Outreach rules
 
 Messaging doctrine for prospecting. Governs milestone 9c and the
-outreach prompt in `packages/llm`. Written 2026-08-15.
+outreach email templates in `packages/interface/src/outreach`. Written
+2026-08-15.
+
+**Amended 2026-09-11, trade-off 83: no model writes outreach.** Every
+email is fixed operator-approved wording
+(`outreach-email-template.ts`), two approved variants per rotating
+sentence, filled only with the hotel's formatted name and the categories
+of its own preview's proof cards. Where this document says "the model" or
+"the prompt", the rule now binds those templates; the model-era
+mechanics (prompt, prose guards, touch word limits) are retired.
 
 Companions: `docs/rules/obligation-basis.md` for what may be claimed about the
 client, `docs/rules/operator-obligations.md` for what binds us,
@@ -121,7 +130,8 @@ compliance section. The model writes around it, never rewrites it, never
 paraphrases it, never summarises it into the subject line.
 
 Stated in the outreach prompt directly. Not inherited from the audit
-prompt.
+prompt. Since trade-off 83 there is no outreach prompt: the whole email is
+code-owned, which keeps this rule by construction.
 
 The model never receives the facts block. When assembling touch 3, code rebuilds
 the block from the obligation assessment, compares it with the block expected by
@@ -135,7 +145,8 @@ facts block.
 ## 6. Touch sequence
 
 One new piece of information per touch. Each is deterministic in
-substance; only the prose is generated.
+substance; since trade-off 83 the wording is too (approved templates, no
+model).
 
 **Revised 2026-09-11, plan 037.** The first touch's evidence document is the
 full-scan scorecard preview (section 6bis), built from a candidate-linked
@@ -149,11 +160,12 @@ reach the prospect.
 | Touch | Content | Source |
 |---|---|---|
 | 1 | The published full-scan scorecard preview: coverage counts, aggregate finding totals, three proof cards | outreach full scan |
-| 2 | One different allowlisted observation, plus age framing where the sector fits | prescan, behavioural checks |
+| 2 | A short reminder pointing back to the preview; names no finding (trade-off 83) | approved template |
 | 3 | Criteria, this company's registry data, and where the case law stands | `assessObligations()` |
 
-If no distinct second observation exists for touch 2, no three-touch draft is
-created.
+Touch 2 no longer carries a second observation, so it is no longer gated on
+the prescan having one (trade-off 83); the reminder is the operator's
+approved wording and names no finding.
 
 The deterministic facts block appears on touch 3 only. Assembly refuses it on
 touches 1 and 2, so legal context cannot be front-loaded into the cold opener.
@@ -222,16 +234,10 @@ touch 3 no earlier than day +11. A thread with no reply 14 days after
 touch 3 is confirmed sent moves to `sequence-complete` and is
 suppressed; no fourth touch exists.
 
-**Touch shape**, added with milestone 9c plan 010. Each row is what
-`packages/llm/src/outreach/outreach-limits.ts` enforces, so a change here
-must change that file's constants in the same commit, and
-`outreach-limits.test.ts` reads this table to keep the two from drifting.
-
-| Touch | Words | Sentences | Links |
-|---|---|---|---|
-| 1 | 60 to 90 | (bounded per field, not as one count) | one preview link, no new link on 2 or 3 |
-| 2 | up to 60 | exactly two | none |
-| 3 | up to 40 | exactly one closing sentence, before the deterministic deletion and opt-out lines | none |
+**Touch shape**, since trade-off 83: the approved templates themselves. Touch
+1 carries exactly one body link (the published preview) plus the footer's
+opt-out and privacy links; touches 2 and 3 carry no link at all. The model-era
+word and sentence limits (`outreach-limits.ts`) are retired with the model.
 
 ---
 
@@ -259,6 +265,16 @@ replaces the operator source.
 
 A validator confirms identity, origin and opt-out are present before a
 draft is created. The human confirms again at review.
+
+**Placement and wording, revised 2026-09-11 (trade-off 82).** The
+disclosures sit in a small footer below the sign-off and signature, never
+in the body. The purpose line states the whole sequence: a first message
+followed by two reminders at most, never "once", because the reminders
+exist. Every code-owned line is written in French first, in the firm's
+plural voice, and translated to English from there. Who is writing comes
+from `OUTREACH_CONTACT` (`packages/core`), which the v2 preview
+interpolates too, so the email and the preview it links to name one
+person and one mailbox.
 
 ---
 
@@ -362,6 +378,14 @@ rather than silently drafting nowhere. What has to exist first:
    change; the sender is configuration precisely so that this switch stays a
    one-line change rather than a migration. The `.fr` 308 redirect is retained
    either way, and adding mail records to it does not disturb it.
+
+   **Interim closed in code, 2026-09-11 (trade-off 82).** The operator
+   repointed `ODYSSEUS_MAILBOX_SENDER_ADDRESS` to `contact@odysseusaudit.fr`,
+   and `getMailboxSenderAddress` now refuses any other value, so a draft can
+   no longer leave from one address while its body names another. Every
+   prospect-facing surface (drafts, the v2 preview, the whole public site)
+   names `.fr`; the paid report keeps `.com`. Warmup completion is still what
+   closes runbook gate I, not this change.
 2. **An OAuth client of user type Internal.** This is the load-bearing
    setting. An External client left in Testing is issued refresh tokens that
    expire after seven days, and moving it out of Testing means Google

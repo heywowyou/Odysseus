@@ -301,6 +301,7 @@ export async function seedDraft(
     roleAddress: 'direction@hotel-exemple.fr',
     subject: `Objet du message ${candidateId}`,
     body: `Corps du message ${candidateId}`,
+    htmlBody: '<div>Corps confidentiel.</div>',
     ...(touch === 1
       ? {
           touch1EvidenceSlot: 'summary' as const,
@@ -389,6 +390,7 @@ const FORBIDDEN_KEYS = [
   'sourceUrl',
   'subject',
   'body',
+  'htmlBody',
   'subjectHash',
   'bodyHash',
   'tokenHash',

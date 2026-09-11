@@ -74,6 +74,7 @@ export * from './prospecting/free-mail-domains.js';
 export * from './prospecting/discover-role-contact.js';
 export * from './prospecting/role-address.js';
 export * from './prospecting/suppression-hash.js';
+export * from './prospecting/outreach-contact.js';
 export * from './normalize/severity.js';
 export * from './normalize/constants.js';
 export * from './normalize/cwv-thresholds.js';

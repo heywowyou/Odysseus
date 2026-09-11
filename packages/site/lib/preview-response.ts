@@ -57,8 +57,8 @@ const PREVIEW_FAILURE_STYLES = `
 
 const PREVIEW_FAILURE_HELP = `
       <hr>
-      <p>Si ce lien vous a été envoyé par Odysseus et ne fonctionne plus, répondez simplement au message reçu, ou écrivez à <a href="mailto:contact@odysseusaudit.com">contact@odysseusaudit.com</a>.</p>
-      <p lang="en">If Odysseus sent you this link and it no longer works, simply reply to the message you received, or write to <a href="mailto:contact@odysseusaudit.com">contact@odysseusaudit.com</a>.</p>
+      <p>Si ce lien vous a été envoyé par Odysseus et ne fonctionne plus, répondez simplement au message reçu, ou écrivez à <a href="mailto:contact@odysseusaudit.fr">contact@odysseusaudit.fr</a>.</p>
+      <p lang="en">If Odysseus sent you this link and it no longer works, simply reply to the message you received, or write to <a href="mailto:contact@odysseusaudit.fr">contact@odysseusaudit.fr</a>.</p>
       <p><a href="/">Retour à la page d'accueil / Back to the home page</a></p>`;
 
 function previewFailurePage(title: string, heading: string, french: string, english: string) {

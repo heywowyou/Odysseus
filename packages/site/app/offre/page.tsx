@@ -110,7 +110,7 @@ export default function OfferPage() {
 
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <p className="price numeric">1&#160;600&#160;€ HT</p>
-                <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+                <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
                   Nous écrire
                 </a>
               </div>
@@ -266,7 +266,7 @@ export default function OfferPage() {
                 confirmé par écrit avant tout engagement.
               </p>
               <div className="mt-7">
-                <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+                <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
                   Nous écrire
                 </a>
               </div>
@@ -309,7 +309,7 @@ export default function OfferPage() {
 
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <p className="price numeric">EUR 1,600 excl. VAT</p>
-                <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+                <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
                   Write to us
                 </a>
               </div>
@@ -459,7 +459,7 @@ export default function OfferPage() {
                 confirmed to you in writing before any commitment.
               </p>
               <div className="mt-7">
-                <a className="btn btn-primary" href="mailto:contact@odysseusaudit.com">
+                <a className="btn btn-primary" href="mailto:contact@odysseusaudit.fr">
                   Write to us
                 </a>
               </div>
