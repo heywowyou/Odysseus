@@ -460,6 +460,13 @@ means numbered entry 24, not a literal Markdown heading anchor.
     only when a reviewed deterministic extractor for that exact field
     lands, never by rewording, severity, or copy. Full audits only.
     → trade-offs.md#78
+79. Impeccable (pbakaus/impeccable) is now a persistent native-installer
+    skill install (`.claude/skills/impeccable`, `.agents/skills/impeccable`,
+    hooks enabled in `.claude/settings.json`/`.codex/hooks.json`), not a
+    one-off run like plans 022/023 were. Its detector is ignored for
+    `overused-font`/Inter on `packages/report/**` only, via
+    `.impeccable/config.json`; do not widen that ignore, and do not let it
+    touch the locked report design system otherwise. → trade-offs.md#79
 
 Node 22, TypeScript strict, pnpm workspace, ESM.
 Playwright (Chromium), `@axe-core/playwright`, Lighthouse as a Node
@@ -755,6 +762,16 @@ facts no host listing has (audit-rehearsal) and for routing.
 - **frontend-design** (anthropics/skills) — visual design guidance when
   building new UI or reshaping existing UI: aesthetic direction,
   typography, and choices that do not read as templated defaults.
+- **impeccable** (pbakaus/impeccable) — design critique, audit, and
+  refinement commands (`/impeccable <command>`) plus a deterministic
+  post-edit detector, persistently installed 2026-09-11 (trade-off 79),
+  unlike its one-off use in plans 022/023. Its `overused-font`/Inter
+  finding is ignored on `packages/report/**` only, via
+  `.impeccable/config.json`, because the report's Nocturne design is
+  locked; do not widen that ignore or treat the report as open for its
+  suggestions otherwise. Hooks report, they never auto-fix. Never run
+  `/impeccable init` without the operator present: it interviews them to
+  write `PRODUCT.md`/`DESIGN.md`, not something to fabricate.
 - **audit-rehearsal** — asked to "dogfood a hotel" or "run an audit
   rehearsal": audits a real, not-yet-scanned catalogue hotel end to end,
   then critiques the bilingual report in character as the hotel's

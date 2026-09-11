@@ -42,12 +42,16 @@ fix it by changing colours, sizes, spacing or inline styles.
   dark everywhere except the documented print-inverted checklist; footers and
   counters unchanged; no section-order or structure change.
 
-Recorded at the plan 023 direction pick, while the since-removed Impeccable
-skill supplied detector input: Inter stays as the print face and the dark
-ground stays, both consciously kept against that skill's bans (its
-`overused-font` findings on Inter declarations and its dark-ground penalties
-were known noise for report HTML). The `monotonous-spacing` finding was not
-kept: the rhythm rules in section 2 are its fix.
+Recorded at the plan 023 direction pick, while the Impeccable skill (removed
+after that plan, reinstalled persistently 2026-09-11, trade-offs.md#79)
+supplied detector input: Inter stays as the print face and the dark ground
+stays, both consciously kept against that skill's bans (its `overused-font`
+findings on Inter declarations and its dark-ground penalties were known
+noise for report HTML). The `monotonous-spacing` finding was not kept: the
+rhythm rules in section 2 are its fix. Since the 2026-09-11 reinstall, the
+`overused-font`/Inter finding stays suppressed for `packages/report/**` via
+a committed `.impeccable/config.json` ignore-value rather than by the skill
+being absent from the repo; see trade-offs.md#79 before changing it.
 
 ## 1. Why the previous approach failed
 

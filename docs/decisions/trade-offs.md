@@ -4040,3 +4040,53 @@ Durable rules, binding on every agent:
 - This finding's client-facing disclosure renders only in full audits
   (prospecting and hotel prescans emit no findings at all, trade-off 35);
   do not surface it in a prospecting or preview surface.
+
+### 79. Impeccable reinstalled persistently, not as a one-off run (operator decision, 2026-09-11)
+
+Plans 022 and 023 each ran the Impeccable design skill (pbakaus/impeccable,
+https://impeccable.style) as a deliberate one-off: installed, used as
+read-only or advisory input, then removed (2026-09-09), per
+`docs/research/design-skill-alternatives.md`. The operator asked for a
+persistent, full install this time, answering that research doc's open
+questions directly: the native installer (`npx impeccable install`), not the
+skills CLI route; the `claude` and `codex` providers, project scope; hooks
+enabled; and every surface including the report, with a documented per-rule
+exclusion rather than a whole-surface ban.
+
+Footprint: `.claude/skills/impeccable/` and `.agents/skills/impeccable/`
+(each roughly 18 MB, including a compiled per-platform detector binary,
+duplicated because the native installer compiles separate provider payloads
+rather than using skills-lock.json's shared-file-plus-symlink convention
+every other skill here follows), `.claude/agents/impeccable-*.md` (four
+subagent prompts), `.codex/hooks.json`. None of this is tracked in
+skills-lock.json; that file's provenance model does not cover per-provider
+compiled payloads.
+
+Report exclusion: the locked Nocturne design system directly conflicts with
+the detector's `overused-font` ban, since self-hosted Inter is the report's
+deliberately kept print face (`docs/report/report-design-system.md`). Rather
+than excluding packages/report wholesale, a shared, committed
+`.impeccable/config.json` scopes an ignore-value to exactly that rule/value
+pair on `packages/report/**`, with a recorded reason. Running the detector
+against the current `nocturne.css`/`paged.css` found no dark-ground or
+pure-black rule firing statically in the installed engine version (v0.1.5);
+do not add an ignore for a rule that has not actually been observed to fire.
+
+Hook wiring: the installer's default lands the Claude Code
+PostToolUse/Stop hook in `.claude/settings.local.json` (gitignored,
+session-local). Since the operator asked for the hook enabled as part of a
+repo-wide, not session-local, install, it was moved into tracked
+`.claude/settings.json` and removed from the local file to avoid double
+firing.
+
+Durable rules, binding on every agent:
+
+- This is a live install, not documentation. Do not remove it as a side
+  effect of an unrelated change.
+- Do not widen the `packages/report/**` ignore beyond the one rule/value
+  pair it currently holds without checking
+  `docs/report/report-design-system.md` first; the report's design stays
+  locked regardless of what the detector would otherwise flag there.
+- `/impeccable init` (the `PRODUCT.md`/`DESIGN.md` interview) was
+  deliberately not run in this session. It is an interactive interview with
+  the operator, not something an agent fabricates on their behalf.
