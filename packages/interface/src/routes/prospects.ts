@@ -608,6 +608,16 @@ export function registerProspectRoutes(
   // same on-demand scoring pass the wave-add action uses, so one click ends
   // with a score instead of leaving a second CLI command for the operator
   // to remember.
+  //
+  // rescan: true (issue #204, found while rescanning the hotels issue #203
+  // affected): a candidate that already carries a prescan at the current
+  // version is exactly who an operator clicks this for - to check a fix or
+  // recover from a bad prior scan, the way 1924 HOTEL needed. The plain CLI
+  // batch mirrors this route's job shape everywhere else, but that command
+  // sweeps an unscanned population and rescan:false there is the right
+  // default; this route is always one operator naming one hotel, and a
+  // silent no-op here (0 hotels prescanned, reported as success) is the
+  // same failure shape #202 already was.
   router.post('/api/prospects/:candidateId/prescan', async ({ res, params }) => {
     const candidateId = params['candidateId']!;
     if (!isPlausibleCandidateId(candidateId)) {
@@ -633,7 +643,7 @@ export function registerProspectRoutes(
         domain,
         maxPages: 1,
         concurrency: 1,
-        rescan: false,
+        rescan: true,
       },
     });
     queue?.notify();

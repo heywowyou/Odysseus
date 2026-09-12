@@ -1046,10 +1046,29 @@ describe('POST /api/prospects/:candidateId/prescan (issue #201)', () => {
         domain: 'hotel-exemple.fr',
         maxPages: 1,
         concurrency: 1,
-        rescan: false,
+        rescan: true,
       },
     });
     expect(JSON.parse(res.body ?? '{}')).toEqual({ started: true, jobId: 'job-new-1' });
+  });
+
+  // Issue #204: this route used to hardcode rescan: false, which mirrors
+  // the CLI batch's own default but is wrong here - a candidate that
+  // already has a prescan at the current version is exactly who clicks
+  // "Run quick check" (to verify a fix, or recover from a bad prior scan),
+  // and rescan: false silently prescanned nothing for exactly that
+  // candidate, reporting success with 0 hotels prescanned.
+  it('forces a rescan even for a candidate already prescanned at the current version', async () => {
+    vi.mocked(getHotelCandidate).mockResolvedValue({
+      candidateId: 'cand-1',
+      ownRegistrableDomain: 'hotel-exemple.fr',
+      prescan: { prescanId: 'old-prescan', prescanVersion: CURRENT_PRESCAN_VERSION },
+    } as never);
+    await handle('/api/prospects/cand-1/prescan', { method: 'POST' });
+    expect(createJob).toHaveBeenCalledWith(
+      fakeConnection,
+      expect.objectContaining({ options: expect.objectContaining({ rescan: true }) }),
+    );
   });
 
   it('refuses a candidate with no own domain and 404s an unknown candidate', async () => {
