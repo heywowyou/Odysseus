@@ -247,7 +247,9 @@ function HomeFr() {
               <p className="soft mt-3">
                 Le diagnostic contrôle des signaux techniques vérifiables&#160;: les données
                 structurées déclarées par votre site, les règles d&apos;accès des robots
-                d&apos;indexation IA, le fichier llms.txt et le balisage FAQ.
+                d&apos;indexation IA, le fichier llms.txt (un fichier que certains assistants IA
+                consultent avant d&apos;explorer un site) et le balisage FAQ (des données qui
+                signalent qu&apos;une page répond à des questions courantes).
               </p>
               <p className="soft mt-3">
                 Il ne prédit pas si un assistant IA citera votre site, le classera, le recommandera,
@@ -484,8 +486,9 @@ function HomeEn() {
               <h3 className="subheading">AI visibility signals in search engines and assistants</h3>
               <p className="soft mt-3">
                 The diagnostic checks technical signals that can be verified: the structured data
-                your site declares, the access rules for AI crawlers, the llms.txt file and FAQ
-                markup.
+                your site declares, the access rules for AI crawlers, the llms.txt file (a file some
+                AI assistants check before crawling a site) and FAQ markup (data that marks a page
+                as answering common questions).
               </p>
               <p className="soft mt-3">
                 It does not predict whether an AI assistant will cite your site, rank it, recommend

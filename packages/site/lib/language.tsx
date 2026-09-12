@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
+import { PAGE_META } from './page-meta';
 
 export type SiteLanguage = 'fr' | 'en';
 
@@ -44,6 +46,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
+
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const meta = PAGE_META[pathname];
+    if (!meta) return;
+    const { title, description } = meta[language];
+    document.title = title;
+    const tag = document.querySelector('meta[name="description"]');
+    if (tag) tag.setAttribute('content', description);
+  }, [language, pathname]);
 
   const setLanguage = useCallback((next: SiteLanguage) => {
     setLanguageState(next);

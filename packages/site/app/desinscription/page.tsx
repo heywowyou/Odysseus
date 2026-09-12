@@ -36,14 +36,23 @@ export const metadata: Metadata = {
  * `LanguageSection`, pilotée par le sélecteur du bandeau. Voir
  * `app/offre/page.tsx` pour le même changement, documenté une fois.
  */
-const MAILTO_SUBJECT = 'Opposition à la prospection';
-const MAILTO_BODY =
+const MAILTO_SUBJECT_FR = 'Opposition à la prospection';
+const MAILTO_BODY_FR =
   'Bonjour,\n\n' +
   'Je vous demande de ne plus me contacter et de retirer tout aperçu en ligne concernant mon établissement.\n\n' +
   'Site concerné : ';
-const MAILTO =
-  `mailto:contact@odysseusaudit.fr?subject=${encodeURIComponent(MAILTO_SUBJECT)}` +
-  `&body=${encodeURIComponent(MAILTO_BODY)}`;
+const MAILTO_FR =
+  `mailto:contact@odysseusaudit.fr?subject=${encodeURIComponent(MAILTO_SUBJECT_FR)}` +
+  `&body=${encodeURIComponent(MAILTO_BODY_FR)}`;
+
+const MAILTO_SUBJECT_EN = 'Opt-out request';
+const MAILTO_BODY_EN =
+  'Hello,\n\n' +
+  'Please stop contacting me and remove any online preview concerning my establishment.\n\n' +
+  'Website concerned: ';
+const MAILTO_EN =
+  `mailto:contact@odysseusaudit.fr?subject=${encodeURIComponent(MAILTO_SUBJECT_EN)}` +
+  `&body=${encodeURIComponent(MAILTO_BODY_EN)}`;
 
 export default function OptOutPage() {
   return (
@@ -64,7 +73,7 @@ export default function OptOutPage() {
             </p>
 
             <p>
-              <a className="btn btn-primary" href={MAILTO}>
+              <a className="btn btn-primary" href={MAILTO_FR}>
                 Demander la désinscription par e-mail
               </a>
             </p>
@@ -134,7 +143,7 @@ export default function OptOutPage() {
             </p>
 
             <p>
-              <a className="btn btn-primary" href={MAILTO}>
+              <a className="btn btn-primary" href={MAILTO_EN}>
                 Request opt-out by email
               </a>
             </p>

@@ -135,18 +135,17 @@ export default function OfferPage() {
               <div className="check">
                 <h3 className="subheading">Accessibilité</h3>
                 <p className="soft mt-3">
-                  Chaque page est contrôlée élément par élément au regard des règles WCAG 2.2,
-                  niveau AA, et de la norme européenne EN 301 549. Chaque écart relevé est
-                  accompagné de sa preuve.
+                  Élément par élément, au regard de la norme WCAG 2.2 niveau AA et de la norme
+                  européenne EN 301 549, avec preuve à l&apos;appui de chaque écart relevé.
                 </p>
               </div>
 
               <div className="check">
                 <h3 className="subheading">Recherche et rendu</h3>
                 <p className="soft mt-3">
-                  Chaque page est chargée deux fois, sans JavaScript puis dans un navigateur
-                  complet. La comparaison montre ce qu&apos;un moteur de recherche reçoit
-                  réellement, et ce qui lui échappe de votre contenu.
+                  Chaque page est comparée telle que reçue par un moteur de recherche sans
+                  JavaScript, et telle qu&apos;affichée dans un navigateur complet, pour repérer ce
+                  que le premier manque du second.
                 </p>
               </div>
 
@@ -157,7 +156,9 @@ export default function OfferPage() {
                 <p className="soft mt-3">
                   Le diagnostic contrôle des signaux techniques vérifiables&#160;: les données
                   structurées déclarées par votre site, les règles d&apos;accès des robots
-                  d&apos;indexation IA, le fichier llms.txt et le balisage FAQ. Il ne prédit pas si
+                  d&apos;indexation IA, le fichier llms.txt (un fichier que certains assistants IA
+                  consultent avant d&apos;explorer un site) et le balisage FAQ (des données qui
+                  signalent qu&apos;une page répond à des questions courantes). Il ne prédit pas si
                   un assistant IA citera votre site, le classera, le recommandera, ou répondra à une
                   question sur votre activité.
                 </p>
@@ -334,17 +335,16 @@ export default function OfferPage() {
               <div className="check">
                 <h3 className="subheading">Accessibility</h3>
                 <p className="soft mt-3">
-                  Every page is checked element by element against WCAG 2.2 level AA and the
-                  European standard EN 301 549. Every gap found comes with its evidence.
+                  Element by element, against WCAG 2.2 level AA and the European standard EN 301
+                  549, with evidence attached to every gap found.
                 </p>
               </div>
 
               <div className="check">
                 <h3 className="subheading">Search and rendering</h3>
                 <p className="soft mt-3">
-                  Every page is loaded twice, without JavaScript then in a full browser. The
-                  comparison shows what a search engine actually receives, and which of your content
-                  it misses.
+                  Each page is compared as a search engine receives it without JavaScript against
+                  how it appears in a full browser, to find what the first one misses of the second.
                 </p>
               </div>
 
@@ -354,9 +354,11 @@ export default function OfferPage() {
                 </h3>
                 <p className="soft mt-3">
                   The diagnostic checks technical signals that can be verified: the structured data
-                  your site declares, the access rules for AI crawlers, the llms.txt file and FAQ
-                  markup. It does not predict whether an AI assistant will cite your site, rank it,
-                  recommend it, or answer a question about your business.
+                  your site declares, the access rules for AI crawlers, the llms.txt file (a file
+                  some AI assistants check before crawling a site) and FAQ markup (data that marks a
+                  page as answering common questions). It does not predict whether an AI assistant
+                  will cite your site, rank it, recommend it, or answer a question about your
+                  business.
                 </p>
               </div>
 

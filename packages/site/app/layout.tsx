@@ -29,7 +29,7 @@ const avenirNext = localFont({
  * that renders correctly without an image.
  */
 export const metadata: Metadata = {
-  metadataBase: new URL('https://odysseusaudit.com'),
+  metadataBase: new URL('https://www.odysseusaudit.com'),
   title: {
     default: 'Odysseus, diagnostic technique de site web',
     template: '%s | Odysseus',
