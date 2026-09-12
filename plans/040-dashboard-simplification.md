@@ -94,6 +94,23 @@
   outcome rows carry an additive `hotelName` resolved by one bounded
   batch lookup, null when the candidate row is gone; the sidebar shows
   the À traiter count badge from a single drafts call.
+- **Slice 7 landed 2026-09-12**: the operator vocabulary from the
+  approved IA table, in French and English together: "Contrôle rapide"
+  ends the three-names prescan problem, "Audit de prospection" for the
+  outreach full scan, "Premier email" where "Relance 1 en brouillon"
+  misread, "Pas encore évalué" where `not-evaluated` fell back to
+  "Autre", "hôtels sélectionnés" over "cohorte contactable",
+  "Réservation ou vente en ligne directe" for the transactional flow,
+  SIREN expanded on first use per screen, "Dans Gmail" instead of the
+  raw provider code, and candidateId and version codes only behind
+  "Détails techniques". The orphan-audit scorecard is retitled
+  "Aperçu"; the identity card's empty-sources text is its own sentence;
+  scan progress's audit link is retitled to match its target; hub
+  anchor deep links (#hub-preview, #hub-emails, #hub-outcome) now
+  scroll to their section; i18n keys retired by slices 4 through 6 are
+  swept. "Retour aux prospects" needed no change: its only render is
+  the hub's not-found state and it already targets /prospects. UI
+  strings only; no API renames.
 
 ## Why this matters
 
