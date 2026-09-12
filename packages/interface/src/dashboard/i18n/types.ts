@@ -726,6 +726,12 @@ export interface DashboardStrings {
        *  open-audit link. */
       pickerLabel: string;
       standaloneHint: string;
+      /** Plan 044: the paid deliverable scan's launch on this tab. */
+      launchFullAudit: string;
+      launchConfirmTitle: string;
+      launchConfirmBody: string;
+      launchQueued: string;
+      launchRefusals: Record<'no-own-domain' | 'already-in-flight' | 'no-cohort', string>;
     };
     /** Plan 042 slice 3: the paid report chain's tab, visible once the
      *  hotel is sold (outcome `won`) or revealed manually from the Audit

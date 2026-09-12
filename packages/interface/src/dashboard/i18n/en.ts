@@ -663,6 +663,16 @@ export const en: DashboardStrings = {
       pickerLabel: 'Audit shown',
       standaloneHint:
         'Standalone view: the full audit page remains available; nothing here duplicates it.',
+      launchFullAudit: 'Launch a full audit',
+      launchConfirmTitle: 'Launch a full audit?',
+      launchConfirmBody:
+        'The audit re-runs the full pass on the site, then produces the analysis and the reports: this is the billable scan of the client chain. Production is then driven from the audit page.',
+      launchQueued: 'Full audit launched.',
+      launchRefusals: {
+        'no-own-domain': 'No website of its own is attached to this hotel.',
+        'already-in-flight': 'A scan of this site is already running.',
+        'no-cohort': 'No selection recorded yet: run a selection (score select) first.',
+      },
     },
     report: {
       description:

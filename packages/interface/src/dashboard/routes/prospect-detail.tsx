@@ -228,6 +228,8 @@ export function ProspectDetailPage(): JSX.Element {
   /** Plan 043: the open wave-roster dialog, if any. The mutation itself is
    *  shared with the prospects list via wave-dialog.tsx. */
   const [waveDialog, setWaveDialog] = useState<'add' | 'remove' | null>(null);
+  /** Plan 044: the paid full audit's confirm dialog. */
+  const [isFullAuditOpen, setIsFullAuditOpen] = useState(false);
 
   // Plan 040 slice 7: the a-traiter rows and the audit page's preview note
   // deep-link into a hub section (/prospects/:id#hub-emails and friends).
@@ -416,6 +418,32 @@ export function ProspectDetailPage(): JSX.Element {
     }
   };
 
+  const launchFullAudit = async (): Promise<void> => {
+    if (candidateId === undefined) return;
+    try {
+      const result = await postEmpty<{ started: boolean; jobId?: string; refusal?: string }>(
+        `/api/prospects/${encodedId}/full-audit`,
+      );
+      if (result.started && result.jobId !== undefined) {
+        toast.success(strings.hub.audit.launchQueued);
+        navigate(`/scans/${result.jobId}`);
+        return;
+      }
+      const refusal =
+        result.refusal !== undefined
+          ? strings.hub.audit.launchRefusals[
+              result.refusal as keyof typeof strings.hub.audit.launchRefusals
+            ]
+          : undefined;
+      toast.error(refusal ?? strings.operator.actionError);
+      refresh();
+    } catch (caught) {
+      toast.error(strings.operator.actionError, {
+        description: caught instanceof Error ? caught.message : undefined,
+      });
+    }
+  };
+
   if (isNotFound) {
     return (
       <article className={PAGE_WIDTH.surface}>
@@ -485,6 +513,7 @@ export function ProspectDetailPage(): JSX.Element {
             onPickAudit={setPickedAuditId}
             showReportReveal={!sold && !reportRevealed}
             onRevealReport={() => setReportRevealed(true)}
+            onLaunchFullAudit={() => setIsFullAuditOpen(true)}
           />
         );
       case 'report':
@@ -697,6 +726,16 @@ export function ProspectDetailPage(): JSX.Element {
       >
         {sectionFor(activeTab)}
       </div>
+
+      <ConfirmDialog
+        open={isFullAuditOpen}
+        onOpenChange={setIsFullAuditOpen}
+        title={strings.hub.audit.launchConfirmTitle}
+        description={strings.hub.audit.launchConfirmBody}
+        confirmLabel={strings.hub.audit.launchFullAudit}
+        cancelLabel={strings.common.cancel}
+        onConfirm={launchFullAudit}
+      />
 
       <WaveDialog
         open={waveDialog !== null}

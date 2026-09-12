@@ -670,6 +670,16 @@ export const fr: DashboardStrings = {
       pickerLabel: 'Audit affiché',
       standaloneHint:
         "Vue autonome : la page d'audit complète reste disponible, sans rien refaire ici.",
+      launchFullAudit: 'Lancer un audit complet',
+      launchConfirmTitle: 'Lancer un audit complet ?',
+      launchConfirmBody:
+        "L'audit refait un passage complet sur le site, puis produit l'analyse et les rapports : c'est le scan facturable de la chaîne client. La production se pilote ensuite depuis la page d'audit.",
+      launchQueued: 'Audit complet lancé.',
+      launchRefusals: {
+        'no-own-domain': "Aucun site propre n'est rattaché à cet hôtel.",
+        'already-in-flight': 'Un scan de ce site est déjà en cours.',
+        'no-cohort': "Aucune sélection enregistrée : lancez d'abord une sélection (score select).",
+      },
     },
     report: {
       description:

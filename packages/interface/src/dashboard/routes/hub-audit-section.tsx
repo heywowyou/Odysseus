@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { useApi } from '../lib/use-api';
 import { Badge } from '../components/ui/badge';
 import type { BadgeTone } from '../components/ui/badge';
-import { buttonStyles } from '../components/ui/button';
+import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { SegmentedControl } from '../components/ui/segmented';
 import { Select } from '../components/ui/select';
@@ -57,8 +57,12 @@ export function HubAuditSection(props: {
    *  revealed): the reveal link shows at the bottom of this section. */
   showReportReveal: boolean;
   onRevealReport: () => void;
+  /** Plan 044: the paid deliverable scan's launch, owned by the page
+   *  (it navigates to the new job on success). */
+  onLaunchFullAudit?: () => void;
 }): JSX.Element {
-  const { detail, auditId, onPickAudit, showReportReveal, onRevealReport } = props;
+  const { detail, auditId, onPickAudit, showReportReveal, onRevealReport, onLaunchFullAudit } =
+    props;
   const { strings, language } = useI18n();
 
   const choices = auditChoices(detail);
@@ -160,6 +164,11 @@ export function HubAuditSection(props: {
             >
               {strings.hub.audit.openAudit}
             </Link>
+            {onLaunchFullAudit !== undefined ? (
+              <Button variant="secondary" size="sm" onClick={onLaunchFullAudit}>
+                {strings.hub.audit.launchFullAudit}
+              </Button>
+            ) : null}
             <span className="text-xs text-ink-muted">{strings.hub.audit.standaloneHint}</span>
           </div>
 

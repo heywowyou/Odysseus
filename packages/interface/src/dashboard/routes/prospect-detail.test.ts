@@ -292,6 +292,9 @@ describe('ProspectDetailPage tabs (plan 042 slice 1)', () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/report-preparation')) return notFoundResponse();
+      if (url.endsWith('/full-audit')) {
+        return jsonResponse({ started: true, jobId: 'job-9' });
+      }
       if (url.endsWith('/wave')) {
         return jsonResponse({
           added: true,
@@ -533,5 +536,71 @@ describe('ProspectDetailPage wave roster (plan 043)', () => {
     );
     expect(removeCall).toBeDefined();
     expect(JSON.parse(String((removeCall?.[1] as RequestInit).body))).toEqual({ wave: 'wave-1' });
+  });
+});
+
+describe('ProspectDetailPage full-audit launch (plan 044)', () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (method === 'POST' && url.endsWith('/full-audit')) {
+        return jsonResponse({ started: true, jobId: 'job-9' });
+      }
+      if (url.endsWith('/api/audits/audit-1')) {
+        return jsonResponse({
+          auditId: 'audit-1',
+          lifecycle: 'scanned',
+          severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+          findings: [],
+          ruleCopy: {},
+          reportLanguages: [],
+          reports: [
+            { language: 'fr', status: 'unverified', pdfAvailable: false },
+            { language: 'en', status: 'unverified', pdfAvailable: false },
+          ],
+          approval: null,
+          manualFields: null,
+        });
+      }
+      return jsonResponse({
+        ...detailWithContact(null),
+        outreachScan: { canStart: false },
+        outreachAudit: {
+          auditId: 'audit-1',
+          startedAt: '2026-09-01T10:00:00.000Z',
+          severityRollup: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+        },
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('launches the paid full audit from the Audit tab after confirmation', async () => {
+    await renderDetail();
+    await waitFor(() => (pageText().includes('Hôtel Exemple') ? true : undefined));
+    await pause();
+
+    // The launch lives on the Audit tab.
+    await clickButton('Audit');
+    await clickButton('Lancer un audit complet');
+    await clickButton(
+      'Lancer un audit complet',
+      document.querySelector('[role="dialog"]') ?? undefined,
+    );
+    await pause();
+    const launchCall = fetchMock.mock.calls.find(
+      (call) =>
+        String(call[0]).endsWith('/full-audit') && (call[1] as RequestInit).method === 'POST',
+    );
+    expect(launchCall).toBeDefined();
   });
 });
