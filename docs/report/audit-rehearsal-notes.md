@@ -599,3 +599,46 @@ the cosmetic residue, none blocking on its own:
   algorithm.
 - Issues filed: none — both findings were fixed directly this session at the
   operator's instruction rather than filed for later triage.
+
+## 2026-09-12 — hotelcasarose.fr
+
+- Track: paid-report.
+- Hotel: Hotel Casarose, Mandelieu-la-Napoule (06), https://hotelcasarose.fr/
+- Candidate ID: `ec87f23c-65af-4a47-ab08-fb5fb93aa329` (qualification v3,
+  outcome `qualified`, own registrable domain confirmed, no prior audit).
+- Job ID: `402f98ad-5363-4062-bd3e-22adbccfdfc1`; Audit ID:
+  `7b78d567-623a-459f-bc65-f9f62c81c856`.
+- Environment note: no candidate in the qualified catalogue (0 of 5,995)
+  currently carries a Sirene join (`identityStatus: unmatched` on every
+  row) -- the backfill has never been run against qualification v3. Not
+  fixed here (needs a local INSEE stock file and a production write);
+  operator supplied the hotel's SIREN (351566294) manually so the legal
+  section would exercise its normal path rather than the untested
+  siren-missing one.
+- Outcome: **PARTIAL**. Crawl completed cleanly (242 URLs). The
+  `content-scan` phase never finished: it stalled twice under a Chromium
+  renderer-process leak that first drove the VPS to a genuine kernel
+  OOM-kill (102 live renderer processes at 229/242, `docker stats`
+  showing the app container at 14.06GiB/15.62GiB, `free -h` at 164MB
+  free) and, after a container restart recovered it, stalled a second
+  time outright at 190/242 with the job heartbeat frozen and zero app
+  log output for 15+ minutes. No PDF was ever generated, so no owner/GM
+  critique was possible.
+- Verdict: not applicable -- the pipeline itself did not survive to
+  produce a report.
+- Top concern: this is a reliability defect in the audit pipeline itself,
+  not a report-content defect, but it blocks every paid audit long
+  enough to hit it, which is more urgent than anything a report critique
+  would have found.
+- Nits: none assessed.
+- Issues filed: [#200](https://github.com/heywowyou/Odysseus/issues/200),
+  `Full audit content-scan phase can hang, leaking Chromium renderer
+  processes until OOM`, plus a follow-up comment noting that
+  `POST /api/scans/:jobId/cancel` stops the job's bookkeeping but does
+  not release the leaked renderer processes -- only a container restart
+  does.
+- Job cancelled via the dashboard API once the finding was captured;
+  the app container was restarted a second time afterward to fully clear
+  the leaked processes (confirmed: 2 renderers, 14GiB free). Artifacts
+  live only on the VPS/database under this auditId; nothing local to
+  clean up.
