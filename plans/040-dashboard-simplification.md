@@ -66,6 +66,34 @@
   already carries includes each draft's id and review outcome, so the
   Emails section needs no second list call; the hotel-name half of that
   item stays with slice 6.
+- **Slice 5 landed 2026-09-12**: the audit page restructured around
+  findings first and the five-step "Rapport client" stepper (Préparer /
+  Rédiger / Choisir la version / Produire les PDF / Approuver pour
+  livraison) with one Enregistrer per the duplicate-controls decision.
+  The header Regenerate and Approve buttons are gone; the failure card
+  routes to the step that redoes the work; the audit page's own outreach
+  preview card is retired in favour of a one-line link to the hub's
+  Aperçu section (orphan audits keep a read-only scorecard and operator
+  PDF note); the handed-over hotel-information form draft was completed
+  inside the Préparer step with its SIREN helper. The page polls every
+  5 s only while the stepper reports work in flight. Recorded
+  deviations, both to keep the failure card's promised route working:
+  producing the PDFs also unlocks from a stored (not only fresh) report
+  pair, and the retired preview card's now-unused response type and one
+  dead string were removed because `fallow dead-code` fails the gate on
+  them. Draft-action and session-token interaction coverage retired with
+  the old cards; hub page-level tests are the place to rebuild them.
+- **Slice 6 landed 2026-09-12**: `/a-traiter` is the landing page, with
+  the four bounded queues (drafts, replies, identities to verify, audits
+  needing input) and the batch actions moved off the retired outreach
+  index. `/outreach` URLs rename to `/a-traiter`, `/resultats`, and
+  `/ne-pas-contacter` with redirects so old bookmarks keep working; the
+  separate drafts and replies pages are deleted (their rows open the
+  hub's Emails section); the outcomes page drops the opt-out column
+  (opt-out lives in the hub's Résultat section); draft, reply, and
+  outcome rows carry an additive `hotelName` resolved by one bounded
+  batch lookup, null when the candidate row is gone; the sidebar shows
+  the À traiter count badge from a single drafts call.
 
 ## Why this matters
 
