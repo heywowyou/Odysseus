@@ -213,20 +213,26 @@ mid-design):
   two already-reviewed cost gates use: 0 critical/0 serious/moderate
   under 5 is `isAuditFallbackEligible`'s own definition of "clean enough"
   (grade A); critical at least 1, or serious at least 2, is
-  `isProspectingWorthy`'s own definition of "clearly broken" (grade F).
-  The two bands in between (a lone serious finding graded D; a clean site
-  at or above the moderate-volume cutoff graded B) are exhaustively
-  derived from the same two gates' thresholds, not separately invented.
-  No per-page normalization, matching the fact that neither existing gate
-  normalizes by page count either. `grade.test.ts` cross-checks both
-  gates directly (calling the real `isAuditFallbackEligible`/
-  `isProspectingWorthy` functions against synthetic findings) so future
-  drift between the grade and the gates fails a test, not silently.
+  `isProspectingWorthy`'s own definition of "clearly broken" (grade D,
+  the floor of the scale). The two bands in between (a lone serious
+  finding graded C; a clean site at or above the moderate-volume cutoff
+  graded B) are exhaustively derived from the same two gates' thresholds,
+  not separately invented. **The scale is A/B/C/D, not A-F**: revised
+  2026-09-12, after the operator raised that telling an uninvited
+  outreach recipient their site "failed" reads as an insult rather than
+  an opportunity. The underlying severity cutoffs are unchanged; only the
+  worst grade's letter moved from F to D. No per-page normalization,
+  matching the fact that neither existing gate normalizes by page count
+  either. `grade.test.ts` cross-checks both gates directly (calling the
+  real `isAuditFallbackEligible`/`isProspectingWorthy` functions against
+  synthetic findings) so future drift between the grade and the gates
+  fails a test, not silently.
 - Percentile-based grade (report only): a direct banding of
-  `BenchmarkPercentileResult`'s percentile (e.g. top-band "A" at or above
-  the 80th percentile, down to "F" below the 20th) - lower-stakes to fix
+  `BenchmarkPercentileResult`'s percentile into the same A/B/C/D scale
+  (top band "A" beaten by fewer than 20 percent of the cohort, down to
+  "D" for everything beaten by 80 percent or more) - lower-stakes to fix
   now since a percentile is already a 0-100 comparative scale, unlike the
-  own-counts index.
+  own-counts bands.
 - Render sites: report cover/metadata sheet (beside the existing
   low/medium/high risk badge, visually and conceptually separated from
   it per the brainstorm's rule-1 finding: the grade is deterministic, the

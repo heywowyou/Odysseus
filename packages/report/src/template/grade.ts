@@ -30,11 +30,16 @@
  * and both are exhaustively derived rather than invented (a lone serious
  * finding is one below the "clearly broken" line; a clean site with
  * moderate volume at or above 5 is one over the "clean enough" line).
+ *
+ * Both grades use a four-letter A/B/C/D scale, not A-F: an outreach
+ * document telling an uninvited recipient their site "failed" reads as an
+ * insult rather than an opportunity, so D is the floor everywhere in this
+ * module (operator direction, 2026-09-12).
  */
 
 import type { BenchmarkPercentileResult, Severity } from '@odysseus/core';
 
-export type Grade = 'A' | 'B' | 'C' | 'D' | 'F';
+export type Grade = 'A' | 'B' | 'C' | 'D';
 
 export interface SeverityGrade {
   grade: Grade;
@@ -56,14 +61,20 @@ export interface ComparativeGrade {
 
 /** Own-counts grade over distinct-finding severity counts, unnormalized -
  *  see the module doc comment for why each cutoff is the exact number an
- *  already-reviewed cost gate uses, not a newly invented one. */
+ *  already-reviewed cost gate uses, not a newly invented one.
+ *
+ * Floor is D, not F: an unsolicited cold-outreach document telling a
+ * stranger their site "failed" risks reading as an insult rather than an
+ * opportunity, working against the whole point of the preview. The same
+ * underlying severity cutoffs decide the floor either way - only the
+ * label changed (operator direction, 2026-09-12). */
 export function computeSeverityGrade(
   severityCounts: Readonly<Record<Severity, number>>,
 ): SeverityGrade {
   const { critical, serious, moderate } = severityCounts;
-  if (critical >= 1) return { grade: 'F', reason: 'critical-finding' };
-  if (serious >= 2) return { grade: 'F', reason: 'multiple-serious-findings' };
-  if (serious === 1) return { grade: 'D', reason: 'one-serious-finding' };
+  if (critical >= 1) return { grade: 'D', reason: 'critical-finding' };
+  if (serious >= 2) return { grade: 'D', reason: 'multiple-serious-findings' };
+  if (serious === 1) return { grade: 'C', reason: 'one-serious-finding' };
   if (moderate >= 5) return { grade: 'B', reason: 'moderate-volume' };
   return { grade: 'A', reason: 'clean' };
 }
@@ -94,5 +105,5 @@ export function computeComparativeGrade(outcome: BenchmarkPercentileResult): Com
   const band = COMPARATIVE_PERCENTILE_BANDS.find(
     (candidate) => outcome.percentile < candidate.maxPercentile,
   );
-  return { grade: band?.grade ?? 'F', percentile: outcome.percentile };
+  return { grade: band?.grade ?? 'D', percentile: outcome.percentile };
 }

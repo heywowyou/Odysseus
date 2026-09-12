@@ -52,23 +52,23 @@ describe('computeSeverityGrade', () => {
     });
   });
 
-  it('grades a single serious finding D, one below isProspectingWorthy’s own cutoff of 2', () => {
+  it('grades a single serious finding C, one below isProspectingWorthy’s own cutoff of 2', () => {
     expect(computeSeverityGrade({ critical: 0, serious: 1, moderate: 100, minor: 0 })).toEqual({
-      grade: 'D',
+      grade: 'C',
       reason: 'one-serious-finding',
     });
   });
 
-  it('grades F for any critical finding, exactly isProspectingWorthy’s own cutoff', () => {
+  it('grades D for any critical finding, exactly isProspectingWorthy’s own cutoff', () => {
     expect(computeSeverityGrade({ critical: 1, serious: 0, moderate: 0, minor: 0 })).toEqual({
-      grade: 'F',
+      grade: 'D',
       reason: 'critical-finding',
     });
   });
 
-  it('grades F for two or more serious findings, exactly isProspectingWorthy’s own cutoff', () => {
+  it('grades D for two or more serious findings, exactly isProspectingWorthy’s own cutoff', () => {
     expect(computeSeverityGrade({ critical: 0, serious: 2, moderate: 0, minor: 0 })).toEqual({
-      grade: 'F',
+      grade: 'D',
       reason: 'multiple-serious-findings',
     });
   });
@@ -105,7 +105,7 @@ describe('computeSeverityGrade', () => {
     for (const counts of cases) {
       const worthy = isProspectingWorthy(findingsFor(counts));
       const { grade } = computeSeverityGrade(counts);
-      expect(worthy, JSON.stringify(counts)).toBe(grade === 'F');
+      expect(worthy, JSON.stringify(counts)).toBe(grade === 'D');
     }
   });
 });
@@ -130,6 +130,6 @@ describe('computeComparativeGrade', () => {
       cohortSize: 40,
       scanDateRange: { earliest: '2026-01-01', latest: '2026-02-01' },
     });
-    expect(result.grade).toBe('F');
+    expect(result.grade).toBe('D');
   });
 });

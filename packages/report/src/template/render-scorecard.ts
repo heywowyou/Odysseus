@@ -4,14 +4,12 @@ import type { Grade } from './grade.js';
 
 /** Reuses the existing severity color ramp (design-tokens.ts's `SEVERITY`,
  *  trade-off 84: never invent a token value instead of transcribing one).
- *  Five grades over four tones, so D and F share `critical` - both read as
- *  the worst tone, and the letter itself still distinguishes them. */
+ *  Four grades, four tones - one each, no sharing needed. */
 const GRADE_COLOR: Record<Grade, { color: string; bg: string }> = {
   A: SEVERITY.minor,
   B: SEVERITY.moderate,
   C: SEVERITY.serious,
   D: SEVERITY.critical,
-  F: SEVERITY.critical,
 };
 
 /** Renders a deterministic letter grade with its mandatory disclaimer

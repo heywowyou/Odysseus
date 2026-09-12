@@ -130,11 +130,13 @@ describe('generateOutreachPreviewHtmlV2', () => {
   });
 
   it('plan 041 Part A: shows an own-counts grade with its mandatory disclaimer', () => {
-    // The base fixture has a critical finding, which is F under
-    // computeSeverityGrade (matching isProspectingWorthy's own cutoff).
+    // The base fixture has a critical finding, which is D under
+    // computeSeverityGrade (matching isProspectingWorthy's own cutoff; the
+    // scale has no F, an unsolicited outreach document should not tell a
+    // stranger their site "failed").
     const html = generateOutreachPreviewHtmlV2(summary());
     expect(html).toContain('Note de constats');
-    expect(html).toContain('>F</span>');
+    expect(html).toContain('>D</span>');
     expect(html).toContain(
       'Cette note mesure les constats des scanners, pas la conformité légale.',
     );
